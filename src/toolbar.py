@@ -2,7 +2,7 @@
 toolbar.py — Top toolbar for drawing tools, layer toggles, and project actions.
 """
 
-from PyQt6.QtWidgets import QToolBar, QLabel, QSeparator
+from PyQt6.QtWidgets import QToolBar, QLabel
 from PyQt6.QtGui import QAction, QActionGroup, QIcon
 from PyQt6.QtCore import pyqtSignal, Qt
 

@@ -32,12 +32,28 @@ from src.climate     import get_zone, zone_label
 import src.project as project_io
 
 
+def _init_database():
+    """Bootstrap the plant database; show a warning on failure (don't crash)."""
+    try:
+        from src.db.plants import init_db
+        init_db()
+    except Exception as exc:
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.warning(
+            None, "Database Warning",
+            f"Could not initialise the plant database:\n{exc}\n\n"
+            "The plant panel will be empty. "
+            "Try running:  python -m src.db.seed_data"
+        )
+
+
 class MainWindow(QMainWindow):
 
     AUTOSAVE_INTERVAL_MS = 5 * 60 * 1000   # 5 minutes
 
     def __init__(self):
         super().__init__()
+        _init_database()
         self.setWindowTitle("PermaDesign — Permaculture Landscape Designer")
         self.resize(1400, 860)
         self.setMinimumSize(900, 600)
@@ -178,8 +194,8 @@ class MainWindow(QMainWindow):
     def _set_zone_display(self, zone):
         self._current_zone = zone
         self._sb_zone.setText(zone_label(zone))
-        # Update project
         self._project["properties"]["hardiness_zone"] = zone
+        self.plant_panel.set_zone(zone)
 
     def _set_mode_label(self, text: str):
         self._sb_mode.setText(f"Mode: {text}")
@@ -239,7 +255,6 @@ class MainWindow(QMainWindow):
         self._placed_plants.append({
             "plant_id": plant_id, "common_name": common_name, "lat": lat, "lng": lng
         })
-        # Add to project features
         self._project["features"].append({
             "type": "Feature",
             "geometry": {"type": "Point", "coordinates": [lng, lat]},
@@ -250,6 +265,7 @@ class MainWindow(QMainWindow):
                 "quantity": 1
             }
         })
+        self.plant_panel.on_plant_placed(plant_id, common_name)
         self._modified = True
 
     def _on_zone_center_placed(self, lat: float, lng: float):
@@ -289,6 +305,8 @@ class MainWindow(QMainWindow):
         self._current_zone = None
         self._sb_zone.setText("Zone: —")
         self.map_widget.clear_all()
+        self.plant_panel.clear_placed()
+        self.plant_panel.set_zone(None)
         self.setWindowTitle("PermaDesign — New Design")
         self._set_mode_label("Ready")
 
@@ -327,6 +345,8 @@ class MainWindow(QMainWindow):
                 p["plant_id"], p["common_name"], p["lat"], p["lng"]
             )
             self._placed_plants.append(p)
+
+        self.plant_panel.load_placed(data["plants"])
 
         if data["zone_center"]:
             self.map_widget.load_zone_center(*data["zone_center"])
