@@ -214,9 +214,22 @@ class MainWindow(QMainWindow):
 
     def _enter_plant_mode(self, plant_id: int, common_name: str):
         self._current_mode = 'plant'
-        self.map_widget.set_mode('plant', plant_id, common_name)
+        spacing_m, plant_type = self._plant_size(plant_id)
+        self.map_widget.set_mode('plant', plant_id, common_name, spacing_m, plant_type)
         self.toolbar.enter_plant_mode()
         self._set_mode_label(f"Placing: {common_name} — click map, press Esc to cancel")
+
+    @staticmethod
+    def _plant_size(plant_id: int) -> tuple[float, str]:
+        """Return (spacing_meters, plant_type) for a plant, with safe defaults."""
+        try:
+            from src.db.plants import get_plant
+            p = get_plant(plant_id)
+            if p:
+                return float(p.get("spacing_meters") or 1.0), p.get("plant_type") or "herb"
+        except Exception:
+            pass
+        return 1.0, "herb"
 
     def _cancel_draw(self):
         self._current_mode = 'none'
@@ -341,8 +354,10 @@ class MainWindow(QMainWindow):
             )
 
         for p in data["plants"]:
+            spacing_m, plant_type = self._plant_size(p["plant_id"])
             self.map_widget.load_plant_marker(
-                p["plant_id"], p["common_name"], p["lat"], p["lng"]
+                p["plant_id"], p["common_name"], p["lat"], p["lng"],
+                spacing_m, plant_type
             )
             self._placed_plants.append(p)
 

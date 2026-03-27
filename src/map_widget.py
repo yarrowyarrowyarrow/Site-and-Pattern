@@ -106,12 +106,15 @@ class MapWidget(QWebEngineView):
     def run_js(self, js: str):
         self.page().runJavaScript(js)
 
-    def set_mode(self, mode: str, plant_id: int = 0, common_name: str = ""):
+    def set_mode(self, mode: str, plant_id: int = 0, common_name: str = "",
+                 spacing_m: float = 1.0, plant_type: str = "herb"):
         """Switch the map interaction mode ('none'|'boundary'|'plant'|'zone')."""
         if mode == 'plant' and plant_id:
             js = (
                 f"setMode('plant', {{id: {plant_id}, "
-                f"common_name: {repr(common_name)}}});"
+                f"common_name: {repr(common_name)}, "
+                f"spacing_m: {spacing_m}, "
+                f"plant_type: {repr(plant_type)}}});"
             )
         else:
             js = f"setMode({repr(mode)});"
@@ -143,9 +146,11 @@ class MapWidget(QWebEngineView):
         import json
         self.run_js(f"loadBoundary({json.dumps(json.dumps(coords))});")
 
-    def load_plant_marker(self, plant_id: int, common_name: str, lat: float, lng: float):
+    def load_plant_marker(self, plant_id: int, common_name: str, lat: float, lng: float,
+                          spacing_m: float = 1.0, plant_type: str = "herb"):
         self.run_js(
-            f"loadPlantMarker({plant_id}, {repr(common_name)}, {lat}, {lng});"
+            f"loadPlantMarker({plant_id}, {repr(common_name)}, {lat}, {lng}, "
+            f"{spacing_m}, {repr(plant_type)});"
         )
 
     def load_zone_center(self, lat: float, lng: float):

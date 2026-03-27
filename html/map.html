@@ -104,7 +104,8 @@
       if (currentMode === 'boundary') {
         handleBoundaryClick(lat, lng);
       } else if (currentMode === 'plant' && currentPlant) {
-        placePlantMarker(currentPlant.id, currentPlant.common_name, lat, lng);
+        placePlantMarker(currentPlant.id, currentPlant.common_name, lat, lng,
+                         currentPlant.spacing_m, currentPlant.plant_type);
         if (bridge) bridge.onPlantPlaced(currentPlant.id, currentPlant.common_name, lat, lng);
         // Stay in plant mode so user can place multiple
       } else if (currentMode === 'zone') {
@@ -198,24 +199,38 @@
       setMode('none');
     }
 
+    // ── Plant type colours ───────────────────────────────────────────────────
+    var TYPE_COLORS = {
+      'tree':        '#2e7d32',
+      'shrub':       '#558b2f',
+      'herb':        '#7cb342',
+      'groundcover': '#c6a817',
+      'vine':        '#00838f',
+      'root':        '#6d4c41'
+    };
+
     // ── Plant markers ────────────────────────────────────────────────────────
-    function placePlantMarker(plantId, commonName, lat, lng) {
+    // spacingM  : plant spacing in metres (used as circle diameter on the map)
+    // plantType : 'tree' | 'shrub' | 'herb' | 'groundcover' | 'vine' | 'root'
+    function placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType) {
       var markerId = plantId + '_' + Date.now();
-      var icon = L.divIcon({
-        className: '',
-        html: '<div style="width:14px;height:14px;border-radius:50%;background:#66bb6a;border:2px solid #1b5e20;"></div>',
-        iconSize: [14, 14],
-        iconAnchor: [7, 7]
-      });
-      var marker = L.marker([lat, lng], { icon: icon })
-        .bindTooltip(commonName, { permanent: false, className: 'plant-marker-label' })
+      var radius   = Math.max((spacingM || 1.0) / 2, 1.0);   // half-diameter, min 1 m
+      var color    = TYPE_COLORS[plantType] || '#66bb6a';
+
+      var circle = L.circle([lat, lng], {
+        radius:      radius,
+        color:       color,
+        weight:      1.5,
+        fillColor:   color,
+        fillOpacity: 0.35
+      }).bindTooltip(commonName, { permanent: false, className: 'plant-marker-label' })
         .addTo(map);
 
-      marker.on('click', function() {
+      circle.on('click', function() {
         if (bridge) bridge.onPlantMarkerClick(markerId, plantId, lat, lng);
       });
 
-      plantMarkers[markerId] = marker;
+      plantMarkers[markerId] = circle;
       return markerId;
     }
 
@@ -329,8 +344,8 @@
       map.fitBounds(boundaryLayer.getBounds());
     }
 
-    function loadPlantMarker(plantId, commonName, lat, lng) {
-      placePlantMarker(plantId, commonName, lat, lng);
+    function loadPlantMarker(plantId, commonName, lat, lng, spacingM, plantType) {
+      placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType);
     }
 
     function loadZoneCenter(lat, lng) {
