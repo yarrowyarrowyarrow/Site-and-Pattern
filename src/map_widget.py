@@ -9,6 +9,7 @@ functions defined in map.html.
 import os
 from PyQt6.QtCore import QObject, pyqtSlot, pyqtSignal, QUrl
 from PyQt6.QtWebEngineWidgets import QWebEngineView
+from PyQt6.QtWebEngineCore import QWebEngineSettings
 from PyQt6.QtWebChannel import QWebChannel
 
 
@@ -88,6 +89,11 @@ class MapWidget(QWebEngineView):
         self._channel = QWebChannel(self.page())
         self._channel.registerObject("bridge", self.bridge)
         self.page().setWebChannel(self._channel)
+
+        # Allow the local HTML file to load remote tile/CDN URLs (needed on Windows)
+        s = self.page().settings()
+        s.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
+        s.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
 
         html_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
