@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>PermaDesign Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet Draw CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #1a1a2e; }
+    #map { width: 100%; height: 100%; }
+
+    .plant-marker-label {
+      background: rgba(30, 40, 30, 0.85);
+      border: 1px solid #5a8a5a;
+      border-radius: 4px;
+      color: #c8e6c9;
+      font-size: 11px;
+      padding: 2px 6px;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .zone-circle-label {
+      background: transparent;
+      border: none;
+      color: rgba(255,255,255,0.6);
+      font-size: 12px;
+      font-weight: bold;
+      text-shadow: 0 0 3px #000;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet Draw -->
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <!-- Qt WebChannel -->
+  <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+
+  <script>
+    // ── State ────────────────────────────────────────────────────────────────
+    var map, osmLayer, satelliteLayer, drawnItems, drawControl;
+    var boundaryLayer = null;
+    var plantMarkers  = {};   // id -> marker
+    var zoneCircles   = [];
+    var bridge        = null; // Python QObject exposed via QWebChannel
+    var currentMode   = 'none'; // 'none' | 'boundary' | 'plant' | 'zone'
+    var currentPlant  = null;   // {id, common_name} when in plant-placement mode
+
+    // Polygon drawing state (manual mode)
+    var drawingPolygon  = false;
+    var polygonPoints   = [];
+    var polygonPolyline = null;
+    var polygonPreview  = null;
+
+    // ── Map init ─────────────────────────────────────────────────────────────
+    function initMap() {
+      map = L.map('map', {
+        center: [53.5461, -113.4938],
+        zoom: 12,
+        zoomControl: true
+      });
+
+      osmLayer = L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        { attribution: '© OpenStreetMap contributors', maxZoom: 19 }
+      ).addTo(map);
+
+      satelliteLayer = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { attribution: '© Esri', maxZoom: 19 }
+      );
+
+      drawnItems = new L.FeatureGroup().addTo(map);
+
+      // Map click handler
+      map.on('click', onMapClick);
+      map.on('mousemove', onMapMouseMove);
+      map.on('dblclick', onMapDblClick);
+    }
+
+    // ── Click / move handlers ────────────────────────────────────────────────
+    function onMapClick(e) {
+      var lat = e.latlng.lat;
+      var lng = e.latlng.lng;
+
+      if (bridge) {
+        bridge.onMapClick(lat, lng);
+      }
+
+      if (currentMode === 'boundary') {
+        handleBoundaryClick(lat, lng);
+      } else if (currentMode === 'plant' && currentPlant) {
+        placePlantMarker(currentPlant.id, currentPlant.common_name, lat, lng);
+        if (bridge) bridge.onPlantPlaced(currentPlant.id, currentPlant.common_name, lat, lng);
+        // Stay in plant mode so user can place multiple
+      } else if (currentMode === 'zone') {
+        placeZoneCircles(lat, lng);
+        if (bridge) bridge.onZoneCenterPlaced(lat, lng);
+        setMode('none');
+      }
+    }
+
+    function onMapMouseMove(e) {
+      if (bridge) {
+        bridge.onMouseMove(e.latlng.lat, e.latlng.lng);
+      }
+      if (currentMode === 'boundary' && drawingPolygon && polygonPoints.length > 0) {
+        updatePolygonPreview(e.latlng);
+      }
+    }
+
+    function onMapDblClick(e) {
+      L.DomEvent.stop(e);
+      if (currentMode === 'boundary' && drawingPolygon) {
+        finishBoundaryPolygon();
+      }
+    }
+
+    // ── Boundary drawing (manual polygon) ────────────────────────────────────
+    function handleBoundaryClick(lat, lng) {
+      // If clicking near the first point, close the polygon
+      if (polygonPoints.length >= 3) {
+        var first = polygonPoints[0];
+        var firstPx = map.latLngToContainerPoint(L.latLng(first));
+        var clickPx = map.latLngToContainerPoint(L.latLng(lat, lng));
+        var dist = Math.sqrt(Math.pow(firstPx.x - clickPx.x, 2) + Math.pow(firstPx.y - clickPx.y, 2));
+        if (dist < 12) {
+          finishBoundaryPolygon();
+          return;
+        }
+      }
+
+      polygonPoints.push([lat, lng]);
+      drawingPolygon = true;
+      refreshPolygonPolyline();
+    }
+
+    function refreshPolygonPolyline() {
+      if (polygonPolyline) { map.removeLayer(polygonPolyline); }
+      if (polygonPoints.length >= 2) {
+        polygonPolyline = L.polyline(polygonPoints, {
+          color: '#66bb6a', weight: 2, dashArray: '6 4', opacity: 0.9
+        }).addTo(map);
+      }
+      // Draw a circle on first point so user knows they can close it
+      if (polygonPoints.length === 1) {
+        L.circleMarker(polygonPoints[0], {
+          radius: 6, color: '#66bb6a', fillColor: '#66bb6a', fillOpacity: 0.7
+        }).addTo(drawnItems);
+      }
+    }
+
+    function updatePolygonPreview(latlng) {
+      if (polygonPreview) { map.removeLayer(polygonPreview); }
+      var pts = polygonPoints.concat([[latlng.lat, latlng.lng]]);
+      polygonPreview = L.polyline(pts, {
+        color: '#66bb6a', weight: 2, dashArray: '4 4', opacity: 0.5
+      }).addTo(map);
+    }
+
+    function finishBoundaryPolygon() {
+      if (polygonPoints.length < 3) return;
+
+      // Cleanup drawing helpers
+      if (polygonPolyline) { map.removeLayer(polygonPolyline); polygonPolyline = null; }
+      if (polygonPreview)  { map.removeLayer(polygonPreview);  polygonPreview  = null; }
+      drawnItems.clearLayers();
+
+      // Remove existing boundary
+      if (boundaryLayer) { map.removeLayer(boundaryLayer); }
+
+      boundaryLayer = L.polygon(polygonPoints, {
+        color: '#66bb6a', weight: 2,
+        fillColor: '#388e3c', fillOpacity: 0.15
+      }).addTo(map);
+
+      // Notify Python
+      if (bridge) {
+        bridge.onBoundaryComplete(JSON.stringify(polygonPoints));
+      }
+
+      drawingPolygon = false;
+      polygonPoints  = [];
+      setMode('none');
+    }
+
+    // ── Plant markers ────────────────────────────────────────────────────────
+    function placePlantMarker(plantId, commonName, lat, lng) {
+      var markerId = plantId + '_' + Date.now();
+      var icon = L.divIcon({
+        className: '',
+        html: '<div style="width:14px;height:14px;border-radius:50%;background:#66bb6a;border:2px solid #1b5e20;"></div>',
+        iconSize: [14, 14],
+        iconAnchor: [7, 7]
+      });
+      var marker = L.marker([lat, lng], { icon: icon })
+        .bindTooltip(commonName, { permanent: false, className: 'plant-marker-label' })
+        .addTo(map);
+
+      marker.on('click', function() {
+        if (bridge) bridge.onPlantMarkerClick(markerId, plantId, lat, lng);
+      });
+
+      plantMarkers[markerId] = marker;
+      return markerId;
+    }
+
+    // ── Zone circles ─────────────────────────────────────────────────────────
+    function placeZoneCircles(lat, lng) {
+      // Clear existing zone circles
+      zoneCircles.forEach(function(c) { map.removeLayer(c); });
+      zoneCircles = [];
+
+      var radii  = [10, 30, 60, 120, 240];  // metres (visual reference)
+      var colors = ['#ef5350','#ff9800','#ffee58','#66bb6a','#42a5f5'];
+      var labels = ['Z0','Z1','Z2','Z3','Z4'];
+
+      radii.forEach(function(r, i) {
+        var circle = L.circle([lat, lng], {
+          radius: r,
+          color: colors[i], weight: 1.5,
+          fillColor: colors[i], fillOpacity: 0.04,
+          interactive: false
+        }).addTo(map);
+
+        var labelIcon = L.divIcon({
+          className: 'zone-circle-label',
+          html: labels[i],
+          iconSize: [20, 12]
+        });
+        L.marker([lat, lng + metresToLng(r, lat)], { icon: labelIcon, interactive: false }).addTo(map);
+
+        zoneCircles.push(circle);
+      });
+    }
+
+    function metresToLng(metres, lat) {
+      return (metres / 111320) / Math.cos(lat * Math.PI / 180);
+    }
+
+    // ── Mode control (called from Python) ────────────────────────────────────
+    function setMode(mode, plantData) {
+      currentMode  = mode;
+      currentPlant = plantData || null;
+
+      switch (mode) {
+        case 'boundary':
+          map.getContainer().style.cursor = 'crosshair';
+          drawingPolygon = false;
+          polygonPoints  = [];
+          drawnItems.clearLayers();
+          break;
+        case 'plant':
+          map.getContainer().style.cursor = 'cell';
+          break;
+        case 'zone':
+          map.getContainer().style.cursor = 'crosshair';
+          break;
+        default:
+          map.getContainer().style.cursor = '';
+          if (polygonPolyline) { map.removeLayer(polygonPolyline); polygonPolyline = null; }
+          if (polygonPreview)  { map.removeLayer(polygonPreview);  polygonPreview  = null; }
+          drawingPolygon = false;
+          polygonPoints  = [];
+          drawnItems.clearLayers();
+      }
+    }
+
+    // ── Layer visibility ──────────────────────────────────────────────────────
+    function setSatelliteVisible(visible) {
+      if (visible) {
+        satelliteLayer.addTo(map);
+        osmLayer.remove();
+      } else {
+        osmLayer.addTo(map);
+        satelliteLayer.remove();
+      }
+    }
+
+    function setBoundaryVisible(visible) {
+      if (boundaryLayer) {
+        if (visible) boundaryLayer.addTo(map); else map.removeLayer(boundaryLayer);
+      }
+    }
+
+    function setZonesVisible(visible) {
+      zoneCircles.forEach(function(c) {
+        if (visible) c.addTo(map); else map.removeLayer(c);
+      });
+    }
+
+    function setPlantsVisible(visible) {
+      Object.values(plantMarkers).forEach(function(m) {
+        if (visible) m.addTo(map); else map.removeLayer(m);
+      });
+    }
+
+    // ── Project load/clear ────────────────────────────────────────────────────
+    function clearAll() {
+      if (boundaryLayer) { map.removeLayer(boundaryLayer); boundaryLayer = null; }
+      zoneCircles.forEach(function(c) { map.removeLayer(c); });
+      zoneCircles = [];
+      Object.values(plantMarkers).forEach(function(m) { map.removeLayer(m); });
+      plantMarkers = {};
+      drawnItems.clearLayers();
+    }
+
+    function loadBoundary(coordsJson) {
+      var coords = JSON.parse(coordsJson);
+      if (boundaryLayer) { map.removeLayer(boundaryLayer); }
+      boundaryLayer = L.polygon(coords, {
+        color: '#66bb6a', weight: 2,
+        fillColor: '#388e3c', fillOpacity: 0.15
+      }).addTo(map);
+      map.fitBounds(boundaryLayer.getBounds());
+    }
+
+    function loadPlantMarker(plantId, commonName, lat, lng) {
+      placePlantMarker(plantId, commonName, lat, lng);
+    }
+
+    function loadZoneCenter(lat, lng) {
+      placeZoneCircles(lat, lng);
+    }
+
+    function setView(lat, lng, zoom) {
+      map.setView([lat, lng], zoom || 14);
+    }
+
+    function cancelDraw() {
+      setMode('none');
+    }
+
+    // ── QWebChannel bootstrap ─────────────────────────────────────────────────
+    function initChannel() {
+      if (typeof QWebChannel === 'undefined') {
+        // Running outside Qt (browser dev) — skip channel
+        initMap();
+        return;
+      }
+      new QWebChannel(qt.webChannelTransport, function(channel) {
+        bridge = channel.objects.bridge;
+        initMap();
+        if (bridge && bridge.onMapReady) bridge.onMapReady();
+      });
+    }
+
+    window.addEventListener('load', initChannel);
+  </script>
+</body>
+</html>
