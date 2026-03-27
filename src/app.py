@@ -182,6 +182,9 @@ class MainWindow(QMainWindow):
         # Plant panel → map (plant placement)
         self.plant_panel.place_plant_requested.connect(self._enter_plant_mode)
 
+        # Map → remove plant marker
+        b.plant_removed.connect(self._on_plant_removed)
+
     # ── Map-ready ─────────────────────────────────────────────────────────────
 
     def _on_map_ready(self):
@@ -285,6 +288,35 @@ class MainWindow(QMainWindow):
             }
         })
         self.plant_panel.on_plant_placed(plant_id, common_name)
+        self._mark_modified()
+
+    def _on_plant_removed(self, marker_id: str, plant_id: int, lat: float, lng: float):
+        # Remove matching entry from placed list (match by plant_id + coords)
+        for i, p in enumerate(self._placed_plants):
+            if (p["plant_id"] == plant_id
+                    and abs(p["lat"] - lat) < 1e-7
+                    and abs(p["lng"] - lng) < 1e-7):
+                self._placed_plants.pop(i)
+                break
+
+        # Remove matching feature from project
+        removed = False
+        kept = []
+        for f in self._project["features"]:
+            props = f.get("properties", {})
+            coords = f.get("geometry", {}).get("coordinates", [])
+            if (not removed
+                    and props.get("element_type") == "plant"
+                    and props.get("plant_id") == plant_id
+                    and coords
+                    and abs(coords[1] - lat) < 1e-7
+                    and abs(coords[0] - lng) < 1e-7):
+                removed = True
+            else:
+                kept.append(f)
+        self._project["features"] = kept
+
+        self.plant_panel.on_plant_removed(plant_id)
         self._mark_modified()
 
     def _on_zone_center_placed(self, lat: float, lng: float):

@@ -128,13 +128,12 @@ SEED_PLANTS: list[tuple] = [
         "Tart orange-red berries high in vitamin C."
     ),
     (
-        "Sea Buckthorn", "Hippophae rhamnoides", "shrub", 3, 7,
-        "full_sun", "low", "Europe/Asia",
-        "nitrogen_fixer,windbreak,food_forest,dynamic_accumulator",
-        2.0, 4.0,
-        "Nitrogen-fixing, thorny, dense windbreak. "
-        "Bright orange berries extremely high in vitamins. "
-        "Plant one male per 6-8 females for fruiting."
+        "Prickly Rose", "Rosa acicularis", "shrub", 1, 7,
+        "full_sun", "low", "Western Canada",
+        "food_forest,pollinator,wildlife_habitat,medicine",
+        1.5, 1.5,
+        "Alberta's provincial flower. Native. Fragrant pink blooms June-July. "
+        "Large orange-red rose hips very high in vitamin C. Essential for pollinators and birds."
     ),
     (
         "Black Currant", "Ribes nigrum", "shrub", 3, 7,
@@ -193,12 +192,12 @@ SEED_PLANTS: list[tuple] = [
         "Excellent for erosion control along waterways."
     ),
     (
-        "Caragana", "Caragana arborescens", "shrub", 2, 7,
-        "full_sun", "low", "Siberia/China",
-        "nitrogen_fixer,windbreak,wildlife_habitat,pioneer",
-        1.5, 5.0,
-        "Classic prairie shelterbelt shrub. Nitrogen-fixing. Extremely hardy "
-        "and drought-tolerant. Yellow pea flowers feed bees."
+        "Snowberry", "Symphoricarpos albus", "shrub", 2, 7,
+        "partial_shade", "low", "Western Canada",
+        "wildlife_habitat,pioneer,groundcover",
+        1.0, 1.2,
+        "Native understory shrub. White berries persist all winter — important bird food. "
+        "Tolerates shade. Spreads by rhizomes to form dense colonies."
     ),
     (
         "Elderberry", "Sambucus canadensis", "shrub", 3, 7,
@@ -300,28 +299,28 @@ SEED_PLANTS: list[tuple] = [
         "Excellent back-of-border plant. Attracts beneficial wasps."
     ),
     (
-        "Spearmint", "Mentha spicata", "herb", 3, 9,
-        "partial_shade", "medium", "Europe",
-        "pest_repellent,pollinator,medicine",
-        0.3, 0.5,
-        "Aromatic and spreads vigorously. Plant in containers or where spreading "
-        "is acceptable. Repels aphids and flea beetles."
+        "Wild Mint", "Mentha arvensis", "herb", 3, 8,
+        "partial_shade", "high", "Western Canada",
+        "medicine,pollinator,pest_repellent",
+        0.3, 0.4,
+        "The only mint truly native to Alberta. Grows along stream banks and moist "
+        "meadows. Aromatic — edible and medicinal. Spreads by runners in moist soil."
     ),
     (
-        "Chamomile (German)", "Matricaria chamomilla", "herb", 3, 9,
-        "full_sun", "low", "Europe",
-        "pollinator,medicine,pioneer,dynamic_accumulator",
-        0.2, 0.5,
-        "Self-seeding annual. Attracts beneficial insects in huge numbers. "
-        "Companion for brassicas. Medicinal (calming tea)."
+        "Prairie Crocus", "Pulsatilla patens", "herb", 2, 7,
+        "full_sun", "low", "Western Canada",
+        "pollinator,pioneer",
+        0.2, 0.2,
+        "Alberta's provincial wildflower. One of the very first plants to bloom in "
+        "spring (March-April). Silky purple blooms. Deep taproot — do not transplant."
     ),
     (
-        "Dandelion", "Taraxacum officinale", "herb", 3, 9,
-        "full_sun", "medium", "Europe (naturalized)",
-        "dynamic_accumulator,pollinator,food_forest,medicine",
-        0.3, 0.3,
-        "Deep taproot breaks up compaction and mines minerals. "
-        "Entire plant is edible. Earliest spring food for pollinators."
+        "Fireweed", "Chamerion angustifolium", "herb", 2, 7,
+        "full_sun", "medium", "Western Canada",
+        "pioneer,pollinator,biomass,medicine",
+        0.3, 1.5,
+        "Iconic native pioneer — first to colonize burned or disturbed land. "
+        "Tall magenta spikes July-August. Edible young shoots. Outstanding bee plant."
     ),
     (
         "Stinging Nettle", "Urtica dioica", "herb", 3, 9,
@@ -332,12 +331,36 @@ SEED_PLANTS: list[tuple] = [
         "Host plant for several butterfly species. Handle with gloves."
     ),
     (
-        "Valerian", "Valeriana officinalis", "herb", 3, 9,
-        "partial_shade", "medium", "Europe",
-        "pollinator,medicine,dynamic_accumulator",
-        0.4, 1.5,
-        "Deep-rooted dynamic accumulator. Attracts earthworms and beneficial insects. "
-        "Medicinal (sleep support). White flowers in mid-summer."
+        "Canada Goldenrod", "Solidago canadensis", "herb", 2, 8,
+        "full_sun", "low", "Western Canada",
+        "pollinator,dynamic_accumulator,wildlife_habitat,pioneer",
+        0.4, 1.2,
+        "Native prairie flower. Spectacular golden plumes late summer. Supports 100+ "
+        "insect species. Spreads by rhizomes — give it space. Important late-season nectar."
+    ),
+    (
+        "Blanketflower", "Gaillardia aristata", "herb", 3, 8,
+        "full_sun", "low", "Western Canada",
+        "pollinator,pioneer,wildlife_habitat",
+        0.3, 0.6,
+        "Bold native daisy with red-and-yellow petals. Blooms all summer. "
+        "Very drought-tolerant. One of the longest-blooming native Alberta wildflowers."
+    ),
+    (
+        "Harebell", "Campanula rotundifolia", "herb", 2, 8,
+        "full_sun", "low", "Western Canada",
+        "pollinator,pioneer",
+        0.2, 0.4,
+        "Dainty native wildflower with nodding blue-violet bells. Found in meadows "
+        "and open woodlands. Blooms July-September. Long-lived once established."
+    ),
+    (
+        "Wild Lupine", "Lupinus argenteus", "herb", 3, 7,
+        "full_sun", "low", "Western Canada",
+        "nitrogen_fixer,pollinator,pioneer,wildlife_habitat",
+        0.3, 0.6,
+        "Native nitrogen-fixing prairie wildflower. Blue-purple flower spikes June-July. "
+        "Drought-tolerant. Note: seeds are toxic — do not ingest."
     ),
 
     # ── GROUNDCOVER ────────────────────────────────────────────────────────

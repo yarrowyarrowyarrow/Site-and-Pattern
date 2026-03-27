@@ -226,11 +226,19 @@
         weight:      1.5,
         fillColor:   color,
         fillOpacity: 0.35
-      }).bindTooltip(commonName, { permanent: false, className: 'plant-marker-label' })
+      }).bindTooltip(commonName + '<br><span style="color:#78909c;font-size:10px">Right-click to remove</span>',
+          { permanent: false, className: 'plant-marker-label' })
         .addTo(map);
 
       circle.on('click', function() {
         if (bridge) bridge.onPlantMarkerClick(markerId, plantId, lat, lng);
+      });
+
+      circle.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        map.removeLayer(circle);
+        delete plantMarkers[markerId];
+        if (bridge) bridge.onPlantRemoved(markerId, plantId, lat, lng);
       });
 
       plantMarkers[markerId] = circle;

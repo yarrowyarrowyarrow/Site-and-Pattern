@@ -40,6 +40,9 @@ class MapBridge(QObject):
     # A plant marker was clicked
     plant_marker_clicked = pyqtSignal(str, int, float, float)  # markerId, plantId, lat, lng
 
+    # A plant marker was right-click removed
+    plant_removed = pyqtSignal(str, int, float, float)         # markerId, plantId, lat, lng
+
     # ── Slots (called from JS) ────────────────────────────────────────────────
 
     @pyqtSlot()
@@ -74,6 +77,10 @@ class MapBridge(QObject):
     @pyqtSlot(str, int, float, float)
     def onPlantMarkerClick(self, marker_id: str, plant_id: int, lat: float, lng: float):
         self.plant_marker_clicked.emit(marker_id, plant_id, lat, lng)
+
+    @pyqtSlot(str, int, float, float)
+    def onPlantRemoved(self, marker_id: str, plant_id: int, lat: float, lng: float):
+        self.plant_removed.emit(marker_id, plant_id, lat, lng)
 
 
 class MapWidget(QWebEngineView):

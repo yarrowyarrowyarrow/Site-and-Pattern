@@ -424,6 +424,14 @@ class PlantPanel(QWidget):
         if self._zone_filter_btn.isChecked():
             self._run_search()
 
+    def on_plant_removed(self, plant_id: int):
+        """Notify the panel that a plant marker was removed from the map."""
+        if plant_id in self._placed_counts:
+            self._placed_counts[plant_id] -= 1
+            if self._placed_counts[plant_id] <= 0:
+                del self._placed_counts[plant_id]
+        self._refresh_placed_list()
+
     def on_plant_placed(self, plant_id: int, common_name: str):
         """Notify the panel that a plant was placed on the map."""
         self._placed_counts[plant_id] = self._placed_counts.get(plant_id, 0) + 1

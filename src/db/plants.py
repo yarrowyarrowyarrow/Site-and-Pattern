@@ -46,8 +46,11 @@ def init_db() -> None:
             conn.executescript(f.read())
         conn.commit()
 
-        # Auto-seed if empty
-        if conn.execute("SELECT COUNT(*) FROM plants").fetchone()[0] == 0:
+        # Auto-seed if empty or outdated (old list had 49 plants)
+        count = conn.execute("SELECT COUNT(*) FROM plants").fetchone()[0]
+        if count < 53:
+            conn.execute("DELETE FROM plants")
+            conn.commit()
             from src.db.seed_data import SEED_PLANTS
             _insert_plants(conn, SEED_PLANTS)
     finally:
