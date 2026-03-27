@@ -189,6 +189,9 @@
         fillColor: '#388e3c', fillOpacity: 0.15
       }).addTo(map);
 
+      // Zoom to fit the drawn boundary
+      map.fitBounds(boundaryLayer.getBounds(), { padding: [30, 30] });
+
       // Notify Python
       if (bridge) {
         bridge.onBoundaryComplete(JSON.stringify(polygonPoints));
@@ -257,9 +260,10 @@
           html: labels[i],
           iconSize: [20, 12]
         });
-        L.marker([lat, lng + metresToLng(r, lat)], { icon: labelIcon, interactive: false }).addTo(map);
+        var lm = L.marker([lat, lng + metresToLng(r, lat)], { icon: labelIcon, interactive: false }).addTo(map);
 
         zoneCircles.push(circle);
+        zoneCircles.push(lm);  // track labels so they toggle/clear with the circles
       });
     }
 

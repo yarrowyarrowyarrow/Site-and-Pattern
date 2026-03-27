@@ -21,7 +21,8 @@ from datetime import datetime
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QSplitter,
-    QStatusBar, QLabel, QMessageBox, QFileDialog, QSizePolicy
+    QStatusBar, QLabel, QMessageBox, QFileDialog, QSizePolicy,
+    QInputDialog,
 )
 from PyQt6.QtCore import Qt, QTimer
 
@@ -200,6 +201,11 @@ class MainWindow(QMainWindow):
     def _set_mode_label(self, text: str):
         self._sb_mode.setText(f"Mode: {text}")
 
+    def _mark_modified(self):
+        self._modified = True
+        if not self.windowTitle().endswith(' *'):
+            self.setWindowTitle(self.windowTitle() + ' *')
+
     # ── Drawing modes ─────────────────────────────────────────────────────────
 
     def _enter_boundary_mode(self):
@@ -260,7 +266,7 @@ class MainWindow(QMainWindow):
         clng = sum(lngs) / len(lngs)
         self._set_zone_display(get_zone(clat, clng))
 
-        self._modified = True
+        self._mark_modified()
         self.toolbar.reset_draw_buttons()
         self._set_mode_label("Boundary set — " + zone_label(self._current_zone))
 
@@ -279,7 +285,7 @@ class MainWindow(QMainWindow):
             }
         })
         self.plant_panel.on_plant_placed(plant_id, common_name)
-        self._modified = True
+        self._mark_modified()
 
     def _on_zone_center_placed(self, lat: float, lng: float):
         # Remove previous zone centre from project
@@ -295,7 +301,7 @@ class MainWindow(QMainWindow):
                 "zone_radii": [10, 30, 60, 120, 240]
             }
         })
-        self._modified = True
+        self._mark_modified()
         self.toolbar.reset_draw_buttons()
         self._set_mode_label("Zone circles placed")
 
@@ -311,7 +317,14 @@ class MainWindow(QMainWindow):
             if r != QMessageBox.StandardButton.Yes:
                 return
 
-        self._project      = project_io.new_project()
+        name, ok = QInputDialog.getText(
+            self, "New Design", "Project name:", text="My Food Forest"
+        )
+        if not ok:
+            return
+        name = name.strip() or "Untitled Design"
+
+        self._project      = project_io.new_project(name)
         self._project_path = None
         self._modified     = False
         self._placed_plants.clear()
@@ -320,7 +333,7 @@ class MainWindow(QMainWindow):
         self.map_widget.clear_all()
         self.plant_panel.clear_placed()
         self.plant_panel.set_zone(None)
-        self.setWindowTitle("PermaDesign — New Design")
+        self.setWindowTitle(f"PermaDesign — {name}")
         self._set_mode_label("Ready")
 
     def _on_open(self):
