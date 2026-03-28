@@ -81,8 +81,9 @@ def _normalize_plant(raw: dict) -> dict:
     Map a Permapeople API plant object to our internal schema dict.
     Unknown / absent fields are left as None so callers can decide defaults.
     """
-    # Permapeople uses 'data' sub-key for extended attributes
-    data = raw.get("data") or {}
+    # Permapeople uses 'data' sub-key for extended attributes (must be a dict)
+    _data_raw = raw.get("data")
+    data = _data_raw if isinstance(_data_raw, dict) else {}
 
     def _get(*keys):
         """Try each key in order, return first non-None / non-empty value."""
@@ -314,7 +315,7 @@ class PermapeopleWorker(QObject):
             else:
                 items = raw if isinstance(raw, list) else []
 
-            plants = [_normalize_plant(p) for p in items]
+            plants = [_normalize_plant(p) for p in items if isinstance(p, dict)]
             self.results_ready.emit(plants)
         except Exception as exc:
             self.error_occurred.emit(str(exc))
