@@ -11,9 +11,9 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QComboBox, QListWidget, QListWidgetItem, QFrame,
     QPushButton, QSizePolicy, QScrollArea, QSplitter,
-    QFormLayout, QGroupBox,
+    QFormLayout, QGroupBox, QTabWidget,
 )
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QSize
+from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QSize
 from PyQt6.QtGui import QColor, QIcon, QPixmap, QPainter, QFont, QBrush
 
 # ── Type colours ──────────────────────────────────────────────────────────────
@@ -134,7 +134,14 @@ class PlantPanel(QWidget):
         self._selected_plant: Optional[dict] = None
         self._placed_counts: dict[int, int] = {}   # plant_id -> count
 
-        # Debounce timer for search
+        # Permapeople API keys (set via set_api_keys)
+        self._pp_key_id:     str = ""
+        self._pp_key_secret: str = ""
+        self._pp_thread:     Optional[QThread]  = None
+        self._pp_worker                         = None
+        self._pp_pending_plants: list[dict]     = []   # search results from API
+
+        # Debounce timer for local search
         self._search_timer = QTimer(self)
         self._search_timer.setSingleShot(True)
         self._search_timer.setInterval(200)
@@ -159,14 +166,19 @@ class PlantPanel(QWidget):
         )
         root.addWidget(header)
 
-        # Main split: browser (top) vs detail+placed (bottom)
+        # Main split: browser tabs (top) vs detail+placed (bottom)
         splitter = QSplitter(Qt.Orientation.Vertical)
         splitter.setChildrenCollapsible(False)
         root.addWidget(splitter)
 
-        # ── Top: search + filters + results ───────────────────────────────
-        top = QWidget()
-        top_layout = QVBoxLayout(top)
+        # ── Tab widget: Local | Permapeople ───────────────────────────────
+        self._tabs = QTabWidget()
+        self._tabs.setStyleSheet(_TAB_STYLE)
+        splitter.addWidget(self._tabs)
+
+        # ── Tab 0: Local database ─────────────────────────────────────────
+        local_tab = QWidget()
+        top_layout = QVBoxLayout(local_tab)
         top_layout.setContentsMargins(8, 8, 8, 4)
         top_layout.setSpacing(4)
 
@@ -210,7 +222,7 @@ class PlantPanel(QWidget):
         # Zone + native filter row
         zone_row = QHBoxLayout()
         zone_row.setSpacing(4)
-        self._zone_filter_btn = QPushButton("Filter by current zone")
+        self._zone_filter_btn = QPushButton("Filter by zone")
         self._zone_filter_btn.setCheckable(True)
         self._zone_filter_btn.setToolTip(
             "When checked, only shows plants suitable for the detected hardiness zone"
@@ -218,7 +230,7 @@ class PlantPanel(QWidget):
         self._zone_filter_btn.toggled.connect(self._run_search)
         self._zone_label = QLabel("Zone: —")
         self._zone_label.setStyleSheet("color: #78909c; font-size: 11px;")
-        self._native_filter_btn = QPushButton("Native AB only")
+        self._native_filter_btn = QPushButton("Native AB")
         self._native_filter_btn.setCheckable(True)
         self._native_filter_btn.setToolTip("Only show plants native to Alberta")
         self._native_filter_btn.toggled.connect(self._run_search)
@@ -242,7 +254,52 @@ class PlantPanel(QWidget):
         self._results_list.itemDoubleClicked.connect(self._on_place_clicked)
         top_layout.addWidget(self._results_list)
 
-        splitter.addWidget(top)
+        self._tabs.addTab(local_tab, "Local")
+
+        # ── Tab 1: Permapeople API ─────────────────────────────────────────
+        pp_tab = QWidget()
+        pp_layout = QVBoxLayout(pp_tab)
+        pp_layout.setContentsMargins(8, 8, 8, 4)
+        pp_layout.setSpacing(6)
+
+        pp_search_row = QHBoxLayout()
+        pp_search_row.setSpacing(4)
+        self._pp_search_box = QLineEdit()
+        self._pp_search_box.setPlaceholderText("Search Permapeople…")
+        self._pp_search_box.setClearButtonEnabled(True)
+        self._pp_search_box.returnPressed.connect(self._pp_search)
+        self._pp_search_btn = QPushButton("Search")
+        self._pp_search_btn.setFixedWidth(60)
+        self._pp_search_btn.clicked.connect(self._pp_search)
+        pp_search_row.addWidget(self._pp_search_box)
+        pp_search_row.addWidget(self._pp_search_btn)
+        pp_layout.addLayout(pp_search_row)
+
+        self._pp_status = QLabel("Enter a search term and press Search.")
+        self._pp_status.setStyleSheet("color: #78909c; font-size: 11px;")
+        self._pp_status.setWordWrap(True)
+        pp_layout.addWidget(self._pp_status)
+
+        self._pp_results_list = QListWidget()
+        self._pp_results_list.setSpacing(1)
+        self._pp_results_list.setUniformItemSizes(False)
+        self._pp_results_list.setStyleSheet(_RESULTS_LIST_STYLE)
+        self._pp_results_list.currentItemChanged.connect(self._pp_on_selection_changed)
+        pp_layout.addWidget(self._pp_results_list)
+
+        self._pp_import_btn = QPushButton("Import to Local Database")
+        self._pp_import_btn.setEnabled(False)
+        self._pp_import_btn.setToolTip(
+            "Save selected Permapeople plant to your local database so you can place it on the map"
+        )
+        self._pp_import_btn.clicked.connect(self._pp_import)
+        self._pp_import_btn.setStyleSheet(_PLACE_BTN_STYLE)
+        pp_layout.addWidget(self._pp_import_btn)
+
+        self._tabs.addTab(pp_tab, "Permapeople")
+
+        # Show a lock icon on the Permapeople tab if no keys configured
+        self._pp_update_tab_label()
 
         # ── Bottom: detail view + placed plants ───────────────────────────
         bottom = QWidget()
@@ -493,7 +550,163 @@ class PlantPanel(QWidget):
                 self._selected_plant["common_name"],
             )
 
+    # ── Permapeople tab ────────────────────────────────────────────────────────
+
+    def _pp_update_tab_label(self):
+        has_keys = bool(self._pp_key_id and self._pp_key_secret)
+        label = "Permapeople" if has_keys else "Permapeople 🔑"
+        self._tabs.setTabText(1, label)
+        if not has_keys:
+            self._pp_status.setText(
+                "No API key configured. Open  Settings → Permapeople API  to add your key."
+            )
+            self._pp_search_btn.setEnabled(False)
+        else:
+            if self._pp_status.text().startswith("No API"):
+                self._pp_status.setText("Enter a search term and press Search.")
+            self._pp_search_btn.setEnabled(True)
+
+    def _pp_search(self):
+        query = self._pp_search_box.text().strip()
+        if not query:
+            return
+        if not (self._pp_key_id and self._pp_key_secret):
+            self._pp_status.setText("API key not set. Go to Settings first.")
+            return
+
+        # Cancel any running thread
+        if self._pp_thread and self._pp_thread.isRunning():
+            self._pp_thread.quit()
+            self._pp_thread.wait()
+
+        self._pp_results_list.clear()
+        self._pp_import_btn.setEnabled(False)
+        self._pp_status.setText(f"Searching for "{query}"…")
+        self._pp_search_btn.setEnabled(False)
+
+        from src.api.permapeople import PermapeopleWorker
+        self._pp_thread = QThread(self)
+        self._pp_worker = PermapeopleWorker(self._pp_key_id, self._pp_key_secret)
+        self._pp_worker.set_query(query)
+        self._pp_worker.moveToThread(self._pp_thread)
+
+        self._pp_thread.started.connect(self._pp_worker.search)
+        self._pp_worker.results_ready.connect(self._pp_on_results)
+        self._pp_worker.error_occurred.connect(self._pp_on_error)
+        self._pp_worker.finished.connect(self._pp_thread.quit)
+        self._pp_worker.finished.connect(
+            lambda: self._pp_search_btn.setEnabled(True)
+        )
+
+        self._pp_thread.start()
+
+    def _pp_on_results(self, plants: list):
+        self._pp_pending_plants = plants
+        self._pp_results_list.clear()
+        if not plants:
+            self._pp_status.setText("No results found.")
+            return
+        for p in plants:
+            item = QListWidgetItem()
+            item.setIcon(_type_icon(p.get("plant_type", "")))
+            sci = p.get("scientific_name") or ""
+            label = f"{p.get('common_name', 'Unknown')}\n{sci}"
+            item.setText(label)
+            item.setData(_PLANT_OBJ_ROLE, p)
+            item.setSizeHint(QSize(0, 48))
+            self._pp_results_list.addItem(item)
+        self._pp_status.setText(f"{len(plants)} result{'s' if len(plants) != 1 else ''} found.")
+
+    def _pp_on_error(self, msg: str):
+        self._pp_status.setText(f"Error: {msg}")
+
+    def _pp_on_selection_changed(self, current: Optional[QListWidgetItem], _prev):
+        if current is None:
+            self._pp_import_btn.setEnabled(False)
+            self._selected_plant = None
+            self._detail_group.setVisible(False)
+            self._place_btn.setEnabled(False)
+            return
+        plant = current.data(_PLANT_OBJ_ROLE)
+        # Show in detail panel (no DB id yet, so place btn stays off)
+        self._selected_plant = None
+        self._show_detail(plant)
+        self._place_btn.setEnabled(False)
+        self._pp_import_btn.setEnabled(True)
+
+    def _pp_import(self):
+        """Import the selected Permapeople plant into the local database."""
+        row = self._pp_results_list.currentRow()
+        if row < 0 or row >= len(self._pp_pending_plants):
+            return
+        plant = self._pp_pending_plants[row]
+        try:
+            from src.db.plants import get_connection
+            conn = get_connection()
+            try:
+                cur = conn.execute(
+                    """INSERT OR IGNORE INTO plants
+                       (common_name, scientific_name, plant_type,
+                        hardiness_zone_min, hardiness_zone_max,
+                        sun_requirement, water_needs,
+                        native_region, permaculture_uses,
+                        spacing_meters, mature_height_meters, notes,
+                        bloom_period, fruit_period, native_to_alberta,
+                        edible_parts, deciduous_evergreen,
+                        soil_ph_min, soil_ph_max, perennial_or_annual)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (
+                        plant.get("common_name") or "Unknown",
+                        plant.get("scientific_name"),
+                        plant.get("plant_type") or "herb",
+                        plant.get("hardiness_zone_min"),
+                        plant.get("hardiness_zone_max"),
+                        plant.get("sun_requirement"),
+                        plant.get("water_needs"),
+                        plant.get("native_region"),
+                        plant.get("permaculture_uses"),
+                        plant.get("spacing_meters"),
+                        plant.get("mature_height_meters"),
+                        plant.get("notes"),
+                        plant.get("bloom_period"),
+                        plant.get("fruit_period"),
+                        0,  # not native to alberta
+                        plant.get("edible_parts"),
+                        plant.get("deciduous_evergreen"),
+                        plant.get("soil_ph_min"),
+                        plant.get("soil_ph_max"),
+                        plant.get("perennial_or_annual"),
+                    )
+                )
+                conn.commit()
+                new_id = cur.lastrowid
+            finally:
+                conn.close()
+
+            self._pp_status.setText(
+                f"Imported "{plant.get('common_name')}" → Local database."
+            )
+            # Refresh local search and switch to Local tab
+            self._run_search()
+            self._tabs.setCurrentIndex(0)
+
+            # Select the newly imported plant in the local list
+            for i in range(self._results_list.count()):
+                item = self._results_list.item(i)
+                if item and item.data(_PLANT_ID_ROLE) == new_id:
+                    self._results_list.setCurrentItem(item)
+                    break
+
+        except Exception as exc:
+            self._pp_status.setText(f"Import failed: {exc}")
+
     # ── Public API ────────────────────────────────────────────────────────────
+
+    def set_api_keys(self, key_id: str, key_secret: str):
+        """Called by the main window after the user saves API credentials."""
+        self._pp_key_id     = key_id
+        self._pp_key_secret = key_secret
+        self._pp_update_tab_label()
 
     def set_zone(self, zone: Optional[int]):
         """Called by the main window when the hardiness zone changes."""
@@ -598,4 +811,28 @@ QPushButton {
 QPushButton:hover  { background: #388e3c; }
 QPushButton:pressed { background: #1b5e20; }
 QPushButton:disabled { background: #2a3a2a; color: #4a6a4a; }
+"""
+
+_TAB_STYLE = """
+QTabWidget::pane {
+    border: none;
+    background: #1a2a1a;
+}
+QTabBar::tab {
+    background: #1b2b1b;
+    color: #78909c;
+    border: 1px solid #2e4a2e;
+    border-bottom: none;
+    padding: 5px 12px;
+    font-size: 12px;
+}
+QTabBar::tab:selected {
+    background: #1a2a1a;
+    color: #a5d6a7;
+    font-weight: bold;
+}
+QTabBar::tab:hover:!selected {
+    background: #243824;
+    color: #c8e6c9;
+}
 """

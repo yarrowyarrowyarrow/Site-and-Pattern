@@ -30,6 +30,7 @@ from src.map_widget  import MapWidget
 from src.plant_panel import PlantPanel
 from src.toolbar     import MainToolbar
 from src.climate     import get_zone, zone_label
+from src.settings    import SettingsDialog, get_api_keys
 import src.project as project_io
 
 
@@ -72,6 +73,7 @@ class MainWindow(QMainWindow):
         self._build_ui()
         self._connect_signals()
         self._start_autosave()
+        self._load_api_keys()
 
     # ── UI construction ───────────────────────────────────────────────────────
 
@@ -185,10 +187,25 @@ class MainWindow(QMainWindow):
         # Map → remove plant marker
         b.plant_removed.connect(self._on_plant_removed)
 
+        # Toolbar → settings
+        self.toolbar.settings_requested.connect(self._on_settings)
+
     # ── Map-ready ─────────────────────────────────────────────────────────────
 
     def _on_map_ready(self):
         self._set_mode_label("Ready")
+
+    # ── Settings ──────────────────────────────────────────────────────────────
+
+    def _load_api_keys(self):
+        """Push stored API keys into the plant panel on startup."""
+        kid, ksec = get_api_keys()
+        self.plant_panel.set_api_keys(kid, ksec)
+
+    def _on_settings(self):
+        dlg = SettingsDialog(self)
+        if dlg.exec():
+            self._load_api_keys()
 
     # ── Status bar updates ────────────────────────────────────────────────────
 

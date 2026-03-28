@@ -24,6 +24,9 @@ class MainToolbar(QToolBar):
     zones_toggled      = pyqtSignal(bool)
     plants_toggled     = pyqtSignal(bool)
 
+    # Settings
+    settings_requested = pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__("Tools", parent)
         self.setMovable(False)
@@ -89,6 +92,13 @@ class MainToolbar(QToolBar):
         self._act_plants_layer.setStatusTip("Toggle plant markers visibility")
         self._act_plants_layer.toggled.connect(self.plants_toggled)
         self.addAction(self._act_plants_layer)
+
+        self.addSeparator()
+
+        act_settings = QAction("⚙ Settings", self)
+        act_settings.setStatusTip("Configure API keys and preferences")
+        act_settings.triggered.connect(self.settings_requested)
+        self.addAction(act_settings)
 
     # ── Internal handlers ─────────────────────────────────────────────────────
 
