@@ -581,7 +581,7 @@ class PlantPanel(QWidget):
 
         self._pp_results_list.clear()
         self._pp_import_btn.setEnabled(False)
-        self._pp_status.setText(f"Searching for "{query}"…")
+        self._pp_status.setText(f'Searching for "{query}"...')
         self._pp_search_btn.setEnabled(False)
 
         from src.api.permapeople import PermapeopleWorker
@@ -684,7 +684,7 @@ class PlantPanel(QWidget):
                 conn.close()
 
             self._pp_status.setText(
-                f"Imported "{plant.get('common_name')}" → Local database."
+                f'Imported "{plant.get("common_name")}" to local database.'
             )
             # Refresh local search and switch to Local tab
             self._run_search()
