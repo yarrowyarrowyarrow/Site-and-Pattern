@@ -3,6 +3,7 @@ import os
 
 from PyQt6.QtCore import QObject, QUrl, pyqtSignal, pyqtSlot
 from PyQt6.QtWebChannel import QWebChannel
+from PyQt6.QtWebEngineCore import QWebEngineSettings
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
 
@@ -48,6 +49,11 @@ class MapWidget(QWebEngineView):
         self.channel = QWebChannel()
         self.channel.registerObject("bridge", self.bridge)
         self.page().setWebChannel(self.channel)
+
+        # Allow local HTML to load remote CDN resources (Leaflet tiles & JS)
+        settings = self.page().settings()
+        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
 
         html_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), "html", "map.html"
