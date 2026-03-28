@@ -24,15 +24,18 @@ permadesign/
 │   ├── app.py               # QApplication setup, main window
 │   ├── map_widget.py         # QtWebEngine + Leaflet map
 │   ├── plant_panel.py        # Side panel: plant browser, search, filters
+│   ├── guild_panel.py        # Guild builder: create, edit, place, import/export guilds
 │   ├── toolbar.py            # Drawing tools, mode switching
 │   ├── project.py            # Save/load project as GeoJSON
 │   ├── climate.py            # Hardiness zone lookup
 │   └── db/
 │       ├── __init__.py
-│       ├── schema.sql        # SQLite schema for plant database
-│       ├── seed_data.py      # Script to populate initial plant data
-│       └── plants.py         # Database access layer
+│       ├── schema.sql        # SQLite schema for plants + guilds
+│       ├── seed_data.py      # Populate initial plants + starter guilds from data/plants.json
+│       ├── plants.py         # Plant database access layer
+│       └── guilds.py         # Guild database access layer (CRUD, import/export)
 ├── data/
+│   ├── plants.json           # Canonical plant data (loaded by seed_data.py)
 │   └── hardiness_zones.json  # Simplified zone lookup data (lat/lng → zone)
 ├── html/
 │   └── map.html              # Leaflet map HTML loaded by QtWebEngine
@@ -88,6 +91,53 @@ permadesign/
       notes TEXT
   );
   ```
+
+- **Guilds** — reusable groups of companion plants that work together:
+
+  ```sql
+  CREATE TABLE guilds (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      center_plant_id INTEGER REFERENCES plants(id),  -- anchor/canopy plant
+      created TEXT DEFAULT (datetime('now')),
+      modified TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE guild_members (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id INTEGER NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
+      plant_id INTEGER NOT NULL REFERENCES plants(id),
+      role TEXT,  -- canopy, understory, groundcover, nitrogen_fixer, pest_repellent, pollinator, etc.
+      offset_x REAL DEFAULT 0,  -- relative position from center plant (meters)
+      offset_y REAL DEFAULT 0,
+      notes TEXT
+  );
+  ```
+
+  Guild features:
+  - **Create guilds** from the plant panel: select plants, assign roles (canopy, understory, groundcover, nitrogen fixer, pest repellent, pollinator, etc.), and save as a named guild
+  - **Place guilds on map**: click to stamp an entire guild at once — the center plant goes where you click, members are placed at their relative offsets
+  - **Guild library**: guilds are stored in the project database AND can be exported/imported as `.guild.json` files for reuse across designs
+  - **Edit guilds**: add/remove members, adjust spacing offsets, rename
+  - **Built-in starter guilds**: seed 3-5 example guilds (e.g., "Classic Apple Guild": apple tree + comfrey + chives + white clover + yarrow)
+
+  Portable guild format (`.guild.json`):
+  ```json
+  {
+    "name": "Classic Apple Guild",
+    "description": "Traditional fruit tree guild for zone 3-4",
+    "members": [
+      {"common_name": "Apple (Goodland)", "role": "canopy", "offset_x": 0, "offset_y": 0},
+      {"common_name": "Comfrey", "role": "dynamic_accumulator", "offset_x": 1.5, "offset_y": 0},
+      {"common_name": "Chives", "role": "pest_repellent", "offset_x": 0, "offset_y": 1.0},
+      {"common_name": "White Clover", "role": "nitrogen_fixer", "offset_x": 0, "offset_y": 0},
+      {"common_name": "Yarrow", "role": "pollinator", "offset_x": -1.5, "offset_y": 0}
+    ]
+  }
+  ```
+  When importing, match members to the local plant database by `common_name` (warn if a plant isn't found).
+
 - Seed with 40-60 plants relevant to **Canadian prairies / Alberta (Zone 3-4)**. Include a good mix:
   - Trees: poplar, spruce, birch, apple (hardy varieties like Goodland, Norland), cherry (Evans, Romance series), plum (Brookgold, Pembina), haskap, Siberian larch
   - Shrubs: saskatoon berry, chokecherry, buffalo berry, sea buckthorn, currant, gooseberry, raspberry, nanking cherry, potentilla, dogwood
@@ -106,14 +156,32 @@ permadesign/
 - “Place on Map” button → enters plant placement mode on the map
 - Placed plants list at the bottom: shows all plants currently on the design with count
 
-### 5. Climate/Hardiness Zone Lookup (climate.py)
+### 5. Guild Panel (guild_panel.py)
+
+- Displayed as a tab or collapsible section alongside the plant panel
+- **Guild list**: shows all guilds in the current project database
+- **Create guild**:
+  1. Click "New Guild", give it a name and optional description
+  2. Pick a center/canopy plant from the plant database
+  3. Add members — for each, choose plant, assign a role, and set X/Y offset (meters from center)
+  4. Visual preview: simple top-down diagram showing relative plant positions with role-colored dots
+- **Place guild on map**: select a guild, click "Place on Map", then click the map — the center plant marker goes at the click point, members are placed at their offsets. All markers in a placed guild share a visual group indicator (matching border color or label prefix)
+- **Edit guild**: double-click a guild to modify members, offsets, roles, or name
+- **Delete guild**: remove from library (does NOT remove already-placed instances from the map)
+- **Export/Import**:
+  - "Export Guild" → saves selected guild as a `.guild.json` file
+  - "Import Guild" → loads a `.guild.json`, matches plant names to local DB, adds to library
+  - Warn on import if any member plants are missing from the database
+- **Duplicate guild**: copy an existing guild as a starting point for a variation
+
+### 6. Climate/Hardiness Zone Lookup (climate.py)
 
 - Given a latitude/longitude, return the approximate USDA/Canadian hardiness zone
 - For V1, use a simplified lookup: bundle a JSON file that maps lat/lng ranges to zones for Western Canada. Doesn’t need to be pixel-perfect — approximate zone assignment is fine.
 - When the user draws a property boundary, auto-detect the zone from the centroid and display it in the status bar
 - Filter the plant panel to highlight plants suitable for the detected zone
 
-### 6. Project Save/Load (project.py)
+### 7. Project Save/Load (project.py)
 
 - Save format: GeoJSON with custom properties
   
@@ -149,6 +217,19 @@ permadesign/
           "element_type": "zone_center",
           "zone_radii": [5, 15, 30, 60, 120]
         }
+      },
+      {
+        "type": "Feature",
+        "geometry": { "type": "Point", "coordinates": [-113.49, 53.54] },
+        "properties": {
+          "element_type": "guild_placement",
+          "guild_id": 1,
+          "guild_name": "Classic Apple Guild",
+          "members": [
+            {"plant_id": 5, "common_name": "Apple (Goodland)", "role": "canopy", "offset_x": 0, "offset_y": 0},
+            {"plant_id": 22, "common_name": "Comfrey", "role": "dynamic_accumulator", "offset_x": 1.5, "offset_y": 0}
+          ]
+        }
       }
     ]
   }
@@ -176,7 +257,7 @@ permadesign/
 ## What NOT to Build Yet (Future Versions)
 
 - Google Earth Engine / AlphaEarth Foundations integration (requires API auth setup — V2)
-- Companion planting / guild validation logic
+- Automated companion planting validation / conflict detection between guilds
 - Water flow or slope analysis
 - Sun path calculation
 - PDF/image export of designs
@@ -195,8 +276,10 @@ The app is done when:
 1. The hardiness zone updates in the status bar based on the boundary location
 1. You can search/filter plants in the side panel
 1. You can click “Place on Map” and drop a plant marker on the map
-1. You can save the design to a .perma.geojson file and reload it
-1. The plant database contains real, zone-appropriate species for Alberta
+1. You can create a guild from multiple plants, assign roles and offsets, and place the entire guild on the map with one click
+1. You can export a guild as `.guild.json` and import it into another design
+1. You can save the design (including guild placements) to a .perma.geojson file and reload it
+1. The plant database contains real, zone-appropriate species for Alberta (loaded from data/plants.json)
 
 -----
 
