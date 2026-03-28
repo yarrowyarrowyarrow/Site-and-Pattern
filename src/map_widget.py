@@ -1,109 +1,205 @@
-import json
-import os
+"""
+map_widget.py — QtWebEngine wrapper around the Leaflet map.
 
-from PyQt6.QtCore import QObject, QUrl, pyqtSignal, pyqtSlot
-from PyQt6.QtWebChannel import QWebChannel
-from PyQt6.QtWebEngineCore import QWebEngineSettings
+Exposes a MapBridge QObject whose slots are callable from JavaScript via
+QWebChannel. Python code calls self.map_widget.run_js(...) to invoke JS
+functions defined in map.html.
+"""
+
+import os
+from PyQt6.QtCore import QObject, pyqtSlot, pyqtSignal, QUrl
 from PyQt6.QtWebEngineWidgets import QWebEngineView
+from PyQt6.QtWebEngineCore import QWebEngineSettings
+from PyQt6.QtWebChannel import QWebChannel
 
 
 class MapBridge(QObject):
-    """Bridge between JavaScript map and Python."""
+    """
+    Python ↔ JS bridge. Slots are callable from JS; signals notify Python
+    listeners (primarily MainWindow / AppWindow).
+    """
 
-    mapClicked = pyqtSignal(float, float)
-    mouseMoved = pyqtSignal(float, float)
-    boundaryCompleted = pyqtSignal(str)  # JSON coords
-    plantPlaced = pyqtSignal(int, str, float, float)  # id, name, lat, lng
-    guildPlaced = pyqtSignal(str, float, float)  # guild JSON, lat, lng
-    zonesDrawn = pyqtSignal(float, float, str)  # lat, lng, radii JSON
+    # Emitted when the JS map finishes initialising
+    map_ready = pyqtSignal()
+
+    # Mouse move → current lat/lng for the status bar
+    mouse_moved = pyqtSignal(float, float)        # lat, lng
+
+    # User clicked on the map (generic)
+    map_clicked = pyqtSignal(float, float)         # lat, lng
+
+    # A property boundary polygon was completed
+    boundary_complete = pyqtSignal(list)           # list of [lat, lng] pairs
+
+    # A plant was placed on the map
+    plant_placed = pyqtSignal(int, str, float, float)  # id, name, lat, lng
+
+    # The zone-centre point was placed
+    zone_center_placed = pyqtSignal(float, float)  # lat, lng
+
+    # A plant marker was clicked
+    plant_marker_clicked = pyqtSignal(str, int, float, float)  # markerId, plantId, lat, lng
+
+    # A plant marker was right-click removed
+    plant_removed = pyqtSignal(str, int, float, float)         # markerId, plantId, lat, lng
+
+    # Annotation requests
+    annotate_requested = pyqtSignal(float, float)              # lat, lng
+    annotation_removed = pyqtSignal(str)                       # annotation id
+
+    # ── Slots (called from JS) ────────────────────────────────────────────────
+
+    @pyqtSlot()
+    def onMapReady(self):
+        self.map_ready.emit()
 
     @pyqtSlot(float, float)
-    def onMapClick(self, lat, lng):
-        self.mapClicked.emit(lat, lng)
+    def onMouseMove(self, lat: float, lng: float):
+        self.mouse_moved.emit(lat, lng)
 
     @pyqtSlot(float, float)
-    def onMouseMove(self, lat, lng):
-        self.mouseMoved.emit(lat, lng)
+    def onMapClick(self, lat: float, lng: float):
+        self.map_clicked.emit(lat, lng)
 
     @pyqtSlot(str)
-    def onBoundaryComplete(self, coords_json):
-        self.boundaryCompleted.emit(coords_json)
+    def onBoundaryComplete(self, coords_json: str):
+        import json
+        try:
+            coords = json.loads(coords_json)
+            self.boundary_complete.emit(coords)
+        except Exception:
+            pass
 
     @pyqtSlot(int, str, float, float)
-    def onPlantPlaced(self, plant_id, name, lat, lng):
-        self.plantPlaced.emit(plant_id, name, lat, lng)
+    def onPlantPlaced(self, plant_id: int, common_name: str, lat: float, lng: float):
+        self.plant_placed.emit(plant_id, common_name, lat, lng)
 
-    @pyqtSlot(str, float, float)
-    def onGuildPlaced(self, guild_json, lat, lng):
-        self.guildPlaced.emit(guild_json, lat, lng)
+    @pyqtSlot(float, float)
+    def onZoneCenterPlaced(self, lat: float, lng: float):
+        self.zone_center_placed.emit(lat, lng)
 
-    @pyqtSlot(float, float, str)
-    def onZonesDrawn(self, lat, lng, radii_json):
-        self.zonesDrawn.emit(lat, lng, radii_json)
+    @pyqtSlot(str, int, float, float)
+    def onPlantMarkerClick(self, marker_id: str, plant_id: int, lat: float, lng: float):
+        self.plant_marker_clicked.emit(marker_id, plant_id, lat, lng)
+
+    @pyqtSlot(str, int, float, float)
+    def onPlantRemoved(self, marker_id: str, plant_id: int, lat: float, lng: float):
+        self.plant_removed.emit(marker_id, plant_id, lat, lng)
+
+    @pyqtSlot(float, float)
+    def onAnnotateRequested(self, lat: float, lng: float):
+        self.annotate_requested.emit(lat, lng)
+
+    @pyqtSlot(str)
+    def onAnnotationRemoved(self, annotation_id: str):
+        self.annotation_removed.emit(annotation_id)
 
 
 class MapWidget(QWebEngineView):
+    """
+    QWebEngineView subclass that hosts the Leaflet map defined in
+    html/map.html.  Provides helper methods for every JS function so that
+    callers never have to format JS strings themselves.
+    """
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.bridge = MapBridge()
-        self.channel = QWebChannel()
-        self.channel.registerObject("bridge", self.bridge)
-        self.page().setWebChannel(self.channel)
+        self._channel = QWebChannel(self.page())
+        self._channel.registerObject("bridge", self.bridge)
+        self.page().setWebChannel(self._channel)
 
-        # Allow local HTML to load remote CDN resources (Leaflet tiles & JS)
-        settings = self.page().settings()
-        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
+        # Allow the local HTML file to load remote tile/CDN URLs (needed on Windows)
+        s = self.page().settings()
+        s.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
+        s.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
 
         html_path = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)), "html", "map.html"
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "html", "map.html"
         )
-        self.setUrl(QUrl.fromLocalFile(html_path))
+        self.load(QUrl.fromLocalFile(html_path))
 
-    def run_js(self, js):
+    # ── JS helpers ────────────────────────────────────────────────────────────
+
+    def run_js(self, js: str):
         self.page().runJavaScript(js)
 
-    def set_drawing_mode(self, mode):
-        self.run_js(f"setDrawingMode('{mode}')" if mode else "setDrawingMode(null)")
+    def set_mode(self, mode: str, plant_id: int = 0, common_name: str = "",
+                 spacing_m: float = 1.0, plant_type: str = "herb",
+                 quantity: int = 1, custom_color: str = ""):
+        """Switch the map interaction mode ('none'|'boundary'|'plant'|'zone')."""
+        if mode == 'plant' and plant_id:
+            color_js = f", custom_color: '{custom_color}'" if custom_color else ""
+            js = (
+                f"setMode('plant', {{id: {plant_id}, "
+                f"common_name: {repr(common_name)}, "
+                f"spacing_m: {spacing_m}, "
+                f"plant_type: {repr(plant_type)}, "
+                f"quantity: {quantity}"
+                f"{color_js}}});"
+            )
+        else:
+            js = f"setMode({repr(mode)});"
+        self.run_js(js)
 
-    def set_pending_plant(self, plant_id, name, plant_type):
-        name_escaped = name.replace("'", "\\'")
-        type_escaped = plant_type.replace("'", "\\'")
-        self.run_js(f"setPendingPlant({plant_id}, '{name_escaped}', '{type_escaped}')")
-        self.set_drawing_mode("plant")
-
-    def set_pending_guild(self, guild_data):
-        guild_json = json.dumps(guild_data).replace("'", "\\'")
-        self.run_js(f"setPendingGuild('{guild_json}')")
-        self.set_drawing_mode("guild")
-
-    def clear_pending(self):
-        self.run_js("clearPending()")
-
-    def toggle_satellite(self):
-        self.run_js("toggleSatellite()")
+    def cancel_draw(self):
+        self.run_js("cancelDraw();")
 
     def clear_all(self):
-        self.run_js("clearAllMarkers()")
+        self.run_js("clearAll();")
 
-    def draw_zone_circles(self, lat, lng, radii):
-        radii_json = json.dumps(radii)
-        self.run_js(f"drawZoneCircles({lat}, {lng}, {radii_json})")
+    def set_satellite_visible(self, visible: bool):
+        v = 'true' if visible else 'false'
+        self.run_js(f"setSatelliteVisible({v});")
 
-    def load_boundary(self, coords):
-        self.run_js(f"loadBoundary('{json.dumps(coords)}')")
+    def set_boundary_visible(self, visible: bool):
+        v = 'true' if visible else 'false'
+        self.run_js(f"setBoundaryVisible({v});")
 
-    def load_plant(self, plant_id, name, plant_type, lat, lng):
-        name_escaped = name.replace("'", "\\'")
-        type_escaped = plant_type.replace("'", "\\'")
-        self.run_js(f"loadPlant({plant_id}, '{name_escaped}', '{type_escaped}', {lat}, {lng})")
+    def set_zones_visible(self, visible: bool):
+        v = 'true' if visible else 'false'
+        self.run_js(f"setZonesVisible({v});")
 
-    def load_zones(self, lat, lng, radii):
-        self.run_js(f"loadZones({lat}, {lng}, '{json.dumps(radii)}')")
+    def set_plants_visible(self, visible: bool):
+        v = 'true' if visible else 'false'
+        self.run_js(f"setPlantsVisible({v});")
 
-    def load_guild(self, guild_data, lat, lng):
-        guild_json = json.dumps(guild_data).replace("'", "\\'")
-        self.run_js(f"loadGuild('{guild_json}', {lat}, {lng})")
+    def load_boundary(self, coords: list):
+        import json
+        self.run_js(f"loadBoundary({json.dumps(json.dumps(coords))});")
 
-    def fit_to_boundary(self):
-        self.run_js("fitToBoundary()")
+    def load_plant_marker(self, plant_id: int, common_name: str, lat: float, lng: float,
+                          spacing_m: float = 1.0, plant_type: str = "herb",
+                          custom_color: str = ""):
+        color_arg = f", '{custom_color}'" if custom_color else ", null"
+        self.run_js(
+            f"loadPlantMarker({plant_id}, {repr(common_name)}, {lat}, {lng}, "
+            f"{spacing_m}, {repr(plant_type)}{color_arg});"
+        )
+
+    def load_zone_center(self, lat: float, lng: float):
+        self.run_js(f"loadZoneCenter({lat}, {lng});")
+
+    def set_view(self, lat: float, lng: float, zoom: int = 14):
+        self.run_js(f"setView({lat}, {lng}, {zoom});")
+
+    def set_labels_visible(self, visible: bool):
+        v = 'true' if visible else 'false'
+        self.run_js(f"setLabelsVisible({v});")
+
+    def update_marker_color(self, plant_id: int, color: str):
+        self.run_js(f"updateMarkerColor({plant_id}, '{color}');")
+
+    def place_annotation(self, ann_id: str, lat: float, lng: float, text: str):
+        self.run_js(
+            f"placeAnnotation({repr(ann_id)}, {lat}, {lng}, {repr(text)});"
+        )
+
+    def set_canopy_visible(self, visible: bool):
+        v = 'true' if visible else 'false'
+        self.run_js(f"setCanopyVisible({v});")
+
+    def set_snap_enabled(self, enabled: bool, grid_size: float = 1.0):
+        e = 'true' if enabled else 'false'
+        self.run_js(f"setSnapEnabled({e}, {grid_size});")

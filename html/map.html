@@ -1,272 +1,716 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PermaDesign Map</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
-<style>
-    * { margin: 0; padding: 0; }
-    html, body, #map { width: 100%; height: 100%; }
-</style>
+  <meta charset="utf-8" />
+  <title>PermaDesign Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet Draw CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #1a1a2e; }
+    #map { width: 100%; height: 100%; }
+
+    .plant-marker-label {
+      background: rgba(30, 40, 30, 0.85);
+      border: 1px solid #5a8a5a;
+      border-radius: 4px;
+      color: #c8e6c9;
+      font-size: 11px;
+      padding: 2px 6px;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .zone-circle-label {
+      background: transparent;
+      border: none;
+      color: rgba(255,255,255,0.6);
+      font-size: 12px;
+      font-weight: bold;
+      text-shadow: 0 0 3px #000;
+    }
+
+    .measure-label {
+      background: rgba(253, 216, 53, 0.9);
+      border: 1px solid #f9a825;
+      border-radius: 4px;
+      color: #1a1a2e;
+      font-size: 12px;
+      font-weight: bold;
+      padding: 2px 8px;
+      white-space: nowrap;
+    }
+
+    .annotation-label span {
+      background: rgba(30, 40, 30, 0.85);
+      border: 1px solid #7cb342;
+      border-radius: 4px;
+      color: #e8f5e9;
+      font-size: 12px;
+      padding: 3px 8px;
+      white-space: nowrap;
+      cursor: move;
+    }
+  </style>
 </head>
 <body>
-<div id="map"></div>
-<script>
-// --- Map setup ---
-var map = L.map('map').setView([53.5461, -113.4938], 12);
+  <div id="map"></div>
 
-var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors',
-    maxZoom: 19
-}).addTo(map);
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet Draw -->
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <!-- Qt WebChannel -->
+  <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
 
-var satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    attribution: '&copy; Esri',
-    maxZoom: 19
-});
+  <script>
+    // ── State ────────────────────────────────────────────────────────────────
+    var map, osmLayer, satelliteLayer, drawnItems, drawControl;
+    var boundaryLayer = null;
+    var plantMarkers  = {};   // id -> marker
+    var zoneCircles   = [];
+    var bridge        = null; // Python QObject exposed via QWebChannel
+    var currentMode   = 'none'; // 'none' | 'boundary' | 'plant' | 'zone' | 'measure' | 'annotate'
+    var currentPlant  = null;   // {id, common_name} when in plant-placement mode
 
-var currentBase = 'osm';
+    // Measurement state
+    var measureStart  = null;   // L.latLng or null
+    var measureLine   = null;   // L.polyline
+    var measureLabel  = null;   // L.tooltip
+    var measureMarkers = [];    // start/end markers
 
-// --- State ---
-var bridge = null;
-var drawingMode = null; // null, 'boundary', 'plant', 'zones', 'guild'
-var boundaryPolygon = null;
-var boundaryPoints = [];
-var boundaryMarkers = [];
-var plantMarkers = [];
-var zoneCircles = [];
-var guildMarkers = [];
-var pendingPlant = null;
-var pendingGuild = null;
-var tempLine = null;
+    // Annotation state
+    var annotations   = {};     // id -> {marker, text}
 
-// Plant type colors
-var typeColors = {
-    'tree': '#228B22',
-    'shrub': '#6B8E23',
-    'herb': '#DAA520',
-    'groundcover': '#32CD32',
-    'vine': '#8B4513',
-    'root': '#CD853F'
-};
+    // Polygon drawing state (manual mode)
+    var drawingPolygon  = false;
+    var polygonPoints   = [];
+    var polygonPolyline = null;
+    var polygonPreview  = null;
 
-// --- QWebChannel bridge ---
-new QWebChannel(qt.webChannelTransport, function(channel) {
-    bridge = channel.objects.bridge;
-});
+    // ── Map init ─────────────────────────────────────────────────────────────
+    function initMap() {
+      map = L.map('map', {
+        center: [53.5461, -113.4938],
+        zoom: 12,
+        maxZoom: 22,
+        zoomControl: true
+      });
 
-// --- Map events ---
-map.on('click', function(e) {
-    var lat = e.latlng.lat;
-    var lng = e.latlng.lng;
-
-    if (bridge) {
-        bridge.onMapClick(lat, lng);
-    }
-
-    if (drawingMode === 'boundary') {
-        addBoundaryPoint(lat, lng);
-    } else if (drawingMode === 'plant' && pendingPlant) {
-        placePlantMarker(pendingPlant.id, pendingPlant.name, pendingPlant.type, lat, lng);
-        if (bridge) bridge.onPlantPlaced(pendingPlant.id, pendingPlant.name, lat, lng);
-    } else if (drawingMode === 'guild' && pendingGuild) {
-        placeGuildOnMap(pendingGuild, lat, lng);
-        if (bridge) bridge.onGuildPlaced(JSON.stringify(pendingGuild), lat, lng);
-    }
-});
-
-map.on('dblclick', function(e) {
-    if (drawingMode === 'boundary' && boundaryPoints.length >= 3) {
-        finishBoundary();
-    }
-});
-
-map.on('mousemove', function(e) {
-    if (bridge) {
-        bridge.onMouseMove(e.latlng.lat, e.latlng.lng);
-    }
-    if (drawingMode === 'boundary' && boundaryPoints.length > 0) {
-        if (tempLine) map.removeLayer(tempLine);
-        var pts = boundaryPoints.concat([[e.latlng.lat, e.latlng.lng]]);
-        tempLine = L.polyline(pts, {color: '#ff6600', dashArray: '5,10'}).addTo(map);
-    }
-});
-
-// --- Boundary drawing ---
-function addBoundaryPoint(lat, lng) {
-    boundaryPoints.push([lat, lng]);
-    var marker = L.circleMarker([lat, lng], {
-        radius: 5, color: '#ff6600', fillColor: '#ff6600', fillOpacity: 1
-    }).addTo(map);
-    boundaryMarkers.push(marker);
-
-    // Click first point to close
-    if (boundaryPoints.length > 2) {
-        var first = boundaryPoints[0];
-        var dist = map.distance([lat, lng], first);
-        if (dist < 20) {
-            boundaryPoints.pop();
-            boundaryMarkers.pop();
-            map.removeLayer(marker);
-            finishBoundary();
+      osmLayer = L.tileLayer(
+        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        {
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: 'abcd',
+          maxZoom: 22,
+          maxNativeZoom: 19
         }
+      ).addTo(map);
+
+      satelliteLayer = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { attribution: '© Esri', maxZoom: 22, maxNativeZoom: 19 }
+      );
+
+      drawnItems = new L.FeatureGroup().addTo(map);
+
+      // Map click handler
+      map.on('click', onMapClick);
+      map.on('mousemove', onMapMouseMove);
+      map.on('dblclick', onMapDblClick);
     }
-}
 
-function finishBoundary() {
-    if (boundaryPolygon) map.removeLayer(boundaryPolygon);
-    if (tempLine) { map.removeLayer(tempLine); tempLine = null; }
+    // ── Click / move handlers ────────────────────────────────────────────────
+    function onMapClick(e) {
+      var lat = e.latlng.lat;
+      var lng = e.latlng.lng;
 
-    boundaryMarkers.forEach(function(m) { map.removeLayer(m); });
-    boundaryMarkers = [];
+      // Apply snap if enabled and in a placement mode
+      if (snapEnabled && (currentMode === 'plant' || currentMode === 'zone')) {
+        var snapped = snapLatLng(lat, lng);
+        lat = snapped[0];
+        lng = snapped[1];
+      }
 
-    boundaryPolygon = L.polygon(boundaryPoints, {
-        color: '#ff6600', weight: 2, fillColor: '#ff6600', fillOpacity: 0.1
-    }).addTo(map);
+      if (bridge) {
+        bridge.onMapClick(lat, lng);
+      }
 
-    var coords = boundaryPoints.map(function(p) { return [p[1], p[0]]; });
-    drawingMode = null;
-
-    if (bridge) {
-        bridge.onBoundaryComplete(JSON.stringify(coords));
+      if (currentMode === 'boundary') {
+        handleBoundaryClick(lat, lng);
+      } else if (currentMode === 'plant' && currentPlant) {
+        var qty = currentPlant.quantity || 1;
+        var cc  = currentPlant.custom_color || null;
+        if (qty > 1) {
+          placeGroupMarkers(currentPlant.id, currentPlant.common_name, lat, lng,
+                            currentPlant.spacing_m, currentPlant.plant_type, cc, qty);
+        } else {
+          placePlantMarker(currentPlant.id, currentPlant.common_name, lat, lng,
+                           currentPlant.spacing_m, currentPlant.plant_type, cc);
+          if (bridge) bridge.onPlantPlaced(currentPlant.id, currentPlant.common_name, lat, lng);
+        }
+        // Stay in plant mode so user can place multiple
+      } else if (currentMode === 'zone') {
+        placeZoneCircles(lat, lng);
+        if (bridge) bridge.onZoneCenterPlaced(lat, lng);
+        setMode('none');
+      } else if (currentMode === 'measure') {
+        handleMeasureClick(lat, lng);
+      } else if (currentMode === 'annotate') {
+        handleAnnotateClick(lat, lng);
+      }
     }
-}
 
-// --- Plant markers ---
-function placePlantMarker(id, name, type, lat, lng) {
-    var color = typeColors[type] || '#888888';
-    var marker = L.circleMarker([lat, lng], {
-        radius: 8, color: color, fillColor: color, fillOpacity: 0.7, weight: 2
-    }).addTo(map);
-    marker.bindTooltip(name);
-    marker.plantData = {id: id, name: name, type: type};
-    plantMarkers.push(marker);
-    return marker;
-}
+    function onMapMouseMove(e) {
+      if (bridge) {
+        bridge.onMouseMove(e.latlng.lat, e.latlng.lng);
+      }
+      if (currentMode === 'boundary' && drawingPolygon && polygonPoints.length > 0) {
+        updatePolygonPreview(e.latlng);
+      }
+    }
 
-// --- Guild placement ---
-function placeGuildOnMap(guild, centerLat, centerLng) {
-    var groupColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
-    var members = guild.members || [];
+    function onMapDblClick(e) {
+      L.DomEvent.stop(e);
+      if (currentMode === 'boundary' && drawingPolygon) {
+        finishBoundaryPolygon();
+      }
+    }
 
-    members.forEach(function(m) {
-        // Convert meter offsets to approximate lat/lng offsets
-        var latOffset = (m.offset_y || 0) / 111320;
-        var lngOffset = (m.offset_x || 0) / (111320 * Math.cos(centerLat * Math.PI / 180));
-        var lat = centerLat + latOffset;
-        var lng = centerLng + lngOffset;
+    // ── Boundary drawing (manual polygon) ────────────────────────────────────
+    function handleBoundaryClick(lat, lng) {
+      // If clicking near the first point, close the polygon
+      if (polygonPoints.length >= 3) {
+        var first = polygonPoints[0];
+        var firstPx = map.latLngToContainerPoint(L.latLng(first));
+        var clickPx = map.latLngToContainerPoint(L.latLng(lat, lng));
+        var dist = Math.sqrt(Math.pow(firstPx.x - clickPx.x, 2) + Math.pow(firstPx.y - clickPx.y, 2));
+        if (dist < 12) {
+          finishBoundaryPolygon();
+          return;
+        }
+      }
 
-        var color = typeColors[m.plant_type] || '#888888';
-        var marker = L.circleMarker([lat, lng], {
-            radius: 8, color: groupColor, fillColor: color, fillOpacity: 0.7, weight: 3
+      polygonPoints.push([lat, lng]);
+      drawingPolygon = true;
+      refreshPolygonPolyline();
+    }
+
+    function refreshPolygonPolyline() {
+      if (polygonPolyline) { map.removeLayer(polygonPolyline); }
+      if (polygonPoints.length >= 2) {
+        polygonPolyline = L.polyline(polygonPoints, {
+          color: '#66bb6a', weight: 2, dashArray: '6 4', opacity: 0.9
         }).addTo(map);
-        marker.bindTooltip('[' + guild.name + '] ' + m.common_name + ' (' + (m.role || '') + ')');
-        marker.guildData = {guild_name: guild.name, member: m};
-        guildMarkers.push(marker);
-    });
-}
+      }
+      // Draw a circle on first point so user knows they can close it
+      if (polygonPoints.length === 1) {
+        L.circleMarker(polygonPoints[0], {
+          radius: 6, color: '#66bb6a', fillColor: '#66bb6a', fillOpacity: 0.7
+        }).addTo(drawnItems);
+      }
+    }
 
-// --- Zone circles ---
-function drawZoneCircles(lat, lng, radii) {
-    clearZoneCircles();
-    var colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6'];
-    radii.forEach(function(r, i) {
+    function updatePolygonPreview(latlng) {
+      if (polygonPreview) { map.removeLayer(polygonPreview); }
+      var pts = polygonPoints.concat([[latlng.lat, latlng.lng]]);
+      polygonPreview = L.polyline(pts, {
+        color: '#66bb6a', weight: 2, dashArray: '4 4', opacity: 0.5
+      }).addTo(map);
+    }
+
+    function finishBoundaryPolygon() {
+      if (polygonPoints.length < 3) return;
+
+      // Cleanup drawing helpers
+      if (polygonPolyline) { map.removeLayer(polygonPolyline); polygonPolyline = null; }
+      if (polygonPreview)  { map.removeLayer(polygonPreview);  polygonPreview  = null; }
+      drawnItems.clearLayers();
+
+      // Remove existing boundary
+      if (boundaryLayer) { map.removeLayer(boundaryLayer); }
+
+      boundaryLayer = L.polygon(polygonPoints, {
+        color: '#66bb6a', weight: 2,
+        fillColor: '#388e3c', fillOpacity: 0.15
+      }).addTo(map);
+
+      // Zoom to fit the drawn boundary
+      map.fitBounds(boundaryLayer.getBounds(), { padding: [30, 30] });
+
+      // Notify Python
+      if (bridge) {
+        bridge.onBoundaryComplete(JSON.stringify(polygonPoints));
+      }
+
+      drawingPolygon = false;
+      polygonPoints  = [];
+      setMode('none');
+    }
+
+    // ── Plant type colours ───────────────────────────────────────────────────
+    var TYPE_COLORS = {
+      'tree':        '#2e7d32',
+      'shrub':       '#558b2f',
+      'herb':        '#7cb342',
+      'groundcover': '#c6a817',
+      'vine':        '#00838f',
+      'root':        '#6d4c41'
+    };
+
+    // ── Plant labels state ───────────────────────────────────────────────────
+    var labelsVisible = false;
+    var plantLabels   = {};   // markerId -> L.tooltip (permanent)
+
+    // ── Plant markers ────────────────────────────────────────────────────────
+    // spacingM    : plant spacing in metres (used as circle diameter on the map)
+    // plantType   : 'tree' | 'shrub' | 'herb' | 'groundcover' | 'vine' | 'root'
+    // customColor : optional hex colour override (e.g. '#ff5722')
+    function placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor) {
+      var markerId = plantId + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      var radius   = Math.max((spacingM || 1.0) / 2, 1.0);   // half-diameter, min 1 m
+      var color    = customColor || TYPE_COLORS[plantType] || '#66bb6a';
+
+      var circle = L.circle([lat, lng], {
+        radius:      radius,
+        color:       color,
+        weight:      1.5,
+        fillColor:   color,
+        fillOpacity: 0.35
+      }).bindTooltip(commonName + '<br><span style="color:#78909c;font-size:10px">Right-click to remove</span>',
+          { permanent: false, className: 'plant-marker-label' })
+        .addTo(map);
+
+      // Store metadata on the circle for later use
+      circle._pd = { plantId: plantId, commonName: commonName, lat: lat, lng: lng,
+                      spacingM: spacingM, plantType: plantType, customColor: customColor };
+
+      circle.on('click', function() {
+        if (bridge) bridge.onPlantMarkerClick(markerId, plantId, lat, lng);
+      });
+
+      circle.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        map.removeLayer(circle);
+        // Remove permanent label if any
+        if (plantLabels[markerId]) {
+          map.removeLayer(plantLabels[markerId]);
+          delete plantLabels[markerId];
+        }
+        delete plantMarkers[markerId];
+        if (bridge) bridge.onPlantRemoved(markerId, plantId, lat, lng);
+      });
+
+      plantMarkers[markerId] = circle;
+
+      // Add permanent label if labels are turned on
+      if (labelsVisible) {
+        _addPermanentLabel(markerId, circle, commonName);
+      }
+
+      return markerId;
+    }
+
+    // Place a group of plants in a hex cluster pattern
+    function placeGroupMarkers(plantId, commonName, lat, lng, spacingM, plantType, customColor, quantity) {
+      if (quantity <= 1) {
+        placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor);
+        if (bridge) bridge.onPlantPlaced(plantId, commonName, lat, lng);
+        return;
+      }
+      var spacing = spacingM || 1.0;
+      // Place in concentric hex rings around centre
+      var placed = 0;
+      var ring = 0;
+      var positions = [[lat, lng]];
+      while (positions.length < quantity) {
+        ring++;
+        for (var side = 0; side < 6; side++) {
+          for (var step = 0; step < ring; step++) {
+            if (positions.length >= quantity) break;
+            var angle = (side * 60 + step * (60 / ring)) * Math.PI / 180;
+            var dLat = (ring * spacing * Math.cos(angle)) / 111320;
+            var dLng = (ring * spacing * Math.sin(angle)) / (111320 * Math.cos(lat * Math.PI / 180));
+            positions.push([lat + dLat, lng + dLng]);
+          }
+        }
+      }
+      for (var i = 0; i < quantity && i < positions.length; i++) {
+        var p = positions[i];
+        placePlantMarker(plantId, commonName, p[0], p[1], spacingM, plantType, customColor);
+        if (bridge) bridge.onPlantPlaced(plantId, commonName, p[0], p[1]);
+      }
+    }
+
+    // ── Label management ──────────────────────────────────────────────────────
+    function _addPermanentLabel(markerId, circle, name) {
+      var label = L.tooltip({
+        permanent: true,
+        direction: 'top',
+        offset: [0, -8],
+        className: 'plant-marker-label',
+        opacity: 0.9
+      }).setContent(name).setLatLng(circle.getLatLng());
+      label.addTo(map);
+      plantLabels[markerId] = label;
+    }
+
+    function setLabelsVisible(visible) {
+      labelsVisible = visible;
+      if (visible) {
+        // Add permanent labels to all existing markers
+        Object.keys(plantMarkers).forEach(function(mid) {
+          if (!plantLabels[mid]) {
+            var c = plantMarkers[mid];
+            _addPermanentLabel(mid, c, c._pd ? c._pd.commonName : '');
+          }
+        });
+      } else {
+        // Remove all permanent labels
+        Object.keys(plantLabels).forEach(function(mid) {
+          map.removeLayer(plantLabels[mid]);
+        });
+        plantLabels = {};
+      }
+    }
+
+    // ── Update marker colour (called from Python) ─────────────────────────────
+    function updateMarkerColor(plantId, newColor) {
+      Object.keys(plantMarkers).forEach(function(mid) {
+        var c = plantMarkers[mid];
+        if (c._pd && c._pd.plantId === plantId) {
+          c.setStyle({ color: newColor, fillColor: newColor });
+          c._pd.customColor = newColor;
+        }
+      });
+    }
+
+    // ── Zone circles ─────────────────────────────────────────────────────────
+    function placeZoneCircles(lat, lng) {
+      // Clear existing zone circles
+      zoneCircles.forEach(function(c) { map.removeLayer(c); });
+      zoneCircles = [];
+
+      var radii  = [10, 30, 60, 120, 240];  // metres (visual reference)
+      var colors = ['#ef5350','#ff9800','#ffee58','#66bb6a','#42a5f5'];
+      var labels = ['Z0','Z1','Z2','Z3','Z4'];
+
+      radii.forEach(function(r, i) {
         var circle = L.circle([lat, lng], {
-            radius: r, color: colors[i % colors.length],
-            fillOpacity: 0.05, weight: 2, dashArray: '5,5'
+          radius: r,
+          color: colors[i], weight: 1.5,
+          fillColor: colors[i], fillOpacity: 0.04,
+          interactive: false
         }).addTo(map);
-        circle.bindTooltip('Zone ' + i);
+
+        var labelIcon = L.divIcon({
+          className: 'zone-circle-label',
+          html: labels[i],
+          iconSize: [20, 12]
+        });
+        var lm = L.marker([lat, lng + metresToLng(r, lat)], { icon: labelIcon, interactive: false }).addTo(map);
+
         zoneCircles.push(circle);
-    });
-    if (bridge) {
-        bridge.onZonesDrawn(lat, lng, JSON.stringify(radii));
+        zoneCircles.push(lm);  // track labels so they toggle/clear with the circles
+      });
     }
-}
 
-function clearZoneCircles() {
-    zoneCircles.forEach(function(c) { map.removeLayer(c); });
-    zoneCircles = [];
-}
-
-// --- Functions called from Python ---
-function setDrawingMode(mode) {
-    drawingMode = mode;
-    if (mode === 'boundary') {
-        if (boundaryPolygon) { map.removeLayer(boundaryPolygon); boundaryPolygon = null; }
-        boundaryPoints = [];
-        boundaryMarkers.forEach(function(m) { map.removeLayer(m); });
-        boundaryMarkers = [];
+    function metresToLng(metres, lat) {
+      return (metres / 111320) / Math.cos(lat * Math.PI / 180);
     }
-    map.getContainer().style.cursor = mode ? 'crosshair' : '';
-}
 
-function setPendingPlant(id, name, type) {
-    pendingPlant = {id: id, name: name, type: type};
-}
+    // ── Snap to grid ──────────────────────────────────────────────────────────
+    var snapEnabled  = false;
+    var snapGridSize = 1.0;  // metres
+    var gridOverlay  = null;
 
-function setPendingGuild(guildJson) {
-    pendingGuild = JSON.parse(guildJson);
-}
+    function setSnapEnabled(enabled, gridSize) {
+      snapEnabled  = enabled;
+      snapGridSize = gridSize || 1.0;
+      if (enabled) {
+        drawGridOverlay();
+        map.on('moveend', drawGridOverlay);
+        map.on('zoomend', drawGridOverlay);
+      } else {
+        if (gridOverlay) { map.removeLayer(gridOverlay); gridOverlay = null; }
+        map.off('moveend', drawGridOverlay);
+        map.off('zoomend', drawGridOverlay);
+      }
+    }
 
-function clearPending() {
-    pendingPlant = null;
-    pendingGuild = null;
-    drawingMode = null;
-    map.getContainer().style.cursor = '';
-}
+    function snapLatLng(lat, lng) {
+      if (!snapEnabled) return [lat, lng];
+      var gridLat = snapGridSize / 111320;
+      var gridLng = snapGridSize / (111320 * Math.cos(lat * Math.PI / 180));
+      return [
+        Math.round(lat / gridLat) * gridLat,
+        Math.round(lng / gridLng) * gridLng
+      ];
+    }
 
-function toggleSatellite() {
-    if (currentBase === 'osm') {
-        map.removeLayer(osmLayer);
-        satLayer.addTo(map);
-        currentBase = 'sat';
-    } else {
-        map.removeLayer(satLayer);
+    function drawGridOverlay() {
+      if (gridOverlay) { map.removeLayer(gridOverlay); gridOverlay = null; }
+      if (!snapEnabled || map.getZoom() < 17) return; // only show grid when zoomed in
+
+      var bounds = map.getBounds();
+      var gridLat = snapGridSize / 111320;
+      var centerLat = bounds.getCenter().lat;
+      var gridLng = snapGridSize / (111320 * Math.cos(centerLat * Math.PI / 180));
+      var lines = [];
+
+      var startLat = Math.floor(bounds.getSouth() / gridLat) * gridLat;
+      var startLng = Math.floor(bounds.getWest() / gridLng) * gridLng;
+
+      for (var lt = startLat; lt <= bounds.getNorth(); lt += gridLat) {
+        lines.push([[lt, bounds.getWest()], [lt, bounds.getEast()]]);
+      }
+      for (var ln = startLng; ln <= bounds.getEast(); ln += gridLng) {
+        lines.push([[bounds.getSouth(), ln], [bounds.getNorth(), ln]]);
+      }
+
+      gridOverlay = L.layerGroup(lines.map(function(pts) {
+        return L.polyline(pts, { color: '#4a7a4a', weight: 0.5, opacity: 0.4, interactive: false });
+      })).addTo(map);
+    }
+
+    // ── Canopy preview ───────────────────────────────────────────────────────
+    var canopyVisible = false;
+    var canopyCircles = [];
+
+    function setCanopyVisible(visible) {
+      canopyVisible = visible;
+      if (visible) {
+        drawCanopies();
+      } else {
+        canopyCircles.forEach(function(c) { map.removeLayer(c); });
+        canopyCircles = [];
+      }
+    }
+
+    function drawCanopies() {
+      canopyCircles.forEach(function(c) { map.removeLayer(c); });
+      canopyCircles = [];
+      if (!canopyVisible) return;
+
+      Object.keys(plantMarkers).forEach(function(mid) {
+        var m = plantMarkers[mid];
+        if (!m._pd) return;
+        var radius = Math.max((m._pd.spacingM || 1.0) / 2, 0.5);
+        var c = L.circle(m.getLatLng(), {
+          radius: radius,
+          color: '#a5d6a7', weight: 1, dashArray: '4 3',
+          fillColor: '#a5d6a7', fillOpacity: 0.08,
+          interactive: false
+        }).addTo(map);
+        canopyCircles.push(c);
+      });
+    }
+
+    // ── Measurement tool ───────────────────────────────────────────────────────
+    function handleMeasureClick(lat, lng) {
+      if (!measureStart) {
+        // First click — set start point
+        clearMeasure();
+        measureStart = L.latLng(lat, lng);
+        var mk = L.circleMarker([lat, lng], {
+          radius: 5, color: '#fdd835', fillColor: '#fdd835', fillOpacity: 1
+        }).addTo(map);
+        measureMarkers.push(mk);
+      } else {
+        // Second click — draw line + show distance
+        var end = L.latLng(lat, lng);
+        var dist = measureStart.distanceTo(end);
+        var label = dist < 1000
+          ? dist.toFixed(1) + ' m'
+          : (dist / 1000).toFixed(2) + ' km';
+
+        measureLine = L.polyline([measureStart, end], {
+          color: '#fdd835', weight: 2, dashArray: '8 4', opacity: 0.9
+        }).addTo(map);
+
+        var mk = L.circleMarker([lat, lng], {
+          radius: 5, color: '#fdd835', fillColor: '#fdd835', fillOpacity: 1
+        }).addTo(map);
+        measureMarkers.push(mk);
+
+        // Midpoint label
+        var mid = L.latLng(
+          (measureStart.lat + end.lat) / 2,
+          (measureStart.lng + end.lng) / 2
+        );
+        measureLabel = L.tooltip({
+          permanent: true, direction: 'top', offset: [0, -10],
+          className: 'measure-label', opacity: 0.95
+        }).setContent(label).setLatLng(mid).addTo(map);
+
+        measureStart = null; // ready for next measurement
+      }
+    }
+
+    function clearMeasure() {
+      if (measureLine)  { map.removeLayer(measureLine);  measureLine  = null; }
+      if (measureLabel) { map.removeLayer(measureLabel); measureLabel = null; }
+      measureMarkers.forEach(function(m) { map.removeLayer(m); });
+      measureMarkers = [];
+      measureStart = null;
+    }
+
+    // ── Annotations ───────────────────────────────────────────────────────────
+    function handleAnnotateClick(lat, lng) {
+      if (bridge) bridge.onAnnotateRequested(lat, lng);
+    }
+
+    function placeAnnotation(id, lat, lng, text) {
+      var icon = L.divIcon({
+        className: 'annotation-label',
+        html: '<span>' + text + '</span>',
+        iconSize: [0, 0],
+        iconAnchor: [0, 0]
+      });
+      var marker = L.marker([lat, lng], { icon: icon, draggable: true }).addTo(map);
+      marker.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        map.removeLayer(marker);
+        delete annotations[id];
+        if (bridge) bridge.onAnnotationRemoved(id);
+      });
+      marker.on('dragend', function() {
+        var pos = marker.getLatLng();
+        annotations[id].lat = pos.lat;
+        annotations[id].lng = pos.lng;
+      });
+      annotations[id] = { marker: marker, text: text, lat: lat, lng: lng };
+    }
+
+    function clearAnnotations() {
+      Object.keys(annotations).forEach(function(id) {
+        map.removeLayer(annotations[id].marker);
+      });
+      annotations = {};
+    }
+
+    // ── Mode control (called from Python) ────────────────────────────────────
+    function setMode(mode, plantData) {
+      currentMode  = mode;
+      currentPlant = plantData || null;
+
+      switch (mode) {
+        case 'boundary':
+          map.getContainer().style.cursor = 'crosshair';
+          drawingPolygon = false;
+          polygonPoints  = [];
+          drawnItems.clearLayers();
+          break;
+        case 'plant':
+          map.getContainer().style.cursor = 'cell';
+          break;
+        case 'zone':
+          map.getContainer().style.cursor = 'crosshair';
+          break;
+        case 'measure':
+          map.getContainer().style.cursor = 'crosshair';
+          clearMeasure();
+          break;
+        case 'annotate':
+          map.getContainer().style.cursor = 'text';
+          break;
+        default:
+          map.getContainer().style.cursor = '';
+          if (polygonPolyline) { map.removeLayer(polygonPolyline); polygonPolyline = null; }
+          if (polygonPreview)  { map.removeLayer(polygonPreview);  polygonPreview  = null; }
+          drawingPolygon = false;
+          polygonPoints  = [];
+          drawnItems.clearLayers();
+      }
+    }
+
+    // ── Layer visibility ──────────────────────────────────────────────────────
+    function setSatelliteVisible(visible) {
+      if (visible) {
+        satelliteLayer.addTo(map);
+        osmLayer.remove();
+      } else {
         osmLayer.addTo(map);
-        currentBase = 'osm';
+        satelliteLayer.remove();
+      }
     }
-}
 
-function clearAllMarkers() {
-    plantMarkers.forEach(function(m) { map.removeLayer(m); });
-    plantMarkers = [];
-    guildMarkers.forEach(function(m) { map.removeLayer(m); });
-    guildMarkers = [];
-    if (boundaryPolygon) { map.removeLayer(boundaryPolygon); boundaryPolygon = null; }
-    boundaryPoints = [];
-    clearZoneCircles();
-}
-
-function loadBoundary(coordsJson) {
-    var coords = JSON.parse(coordsJson);
-    if (boundaryPolygon) map.removeLayer(boundaryPolygon);
-    // coords are [lng, lat], convert to [lat, lng]
-    boundaryPoints = coords.map(function(c) { return [c[1], c[0]]; });
-    boundaryPolygon = L.polygon(boundaryPoints, {
-        color: '#ff6600', weight: 2, fillColor: '#ff6600', fillOpacity: 0.1
-    }).addTo(map);
-}
-
-function loadPlant(id, name, type, lat, lng) {
-    placePlantMarker(id, name, type, lat, lng);
-}
-
-function loadZones(lat, lng, radiiJson) {
-    drawZoneCircles(lat, lng, JSON.parse(radiiJson));
-}
-
-function loadGuild(guildJson, lat, lng) {
-    placeGuildOnMap(JSON.parse(guildJson), lat, lng);
-}
-
-function fitToBoundary() {
-    if (boundaryPolygon) {
-        map.fitBounds(boundaryPolygon.getBounds().pad(0.1));
+    function setBoundaryVisible(visible) {
+      if (boundaryLayer) {
+        if (visible) boundaryLayer.addTo(map); else map.removeLayer(boundaryLayer);
+      }
     }
-}
-</script>
+
+    function setZonesVisible(visible) {
+      zoneCircles.forEach(function(c) {
+        if (visible) c.addTo(map); else map.removeLayer(c);
+      });
+    }
+
+    function setPlantsVisible(visible) {
+      Object.values(plantMarkers).forEach(function(m) {
+        if (visible) m.addTo(map); else map.removeLayer(m);
+      });
+    }
+
+    // ── Project load/clear ────────────────────────────────────────────────────
+    function clearAll() {
+      if (boundaryLayer) { map.removeLayer(boundaryLayer); boundaryLayer = null; }
+      zoneCircles.forEach(function(c) { map.removeLayer(c); });
+      zoneCircles = [];
+      Object.values(plantMarkers).forEach(function(m) { map.removeLayer(m); });
+      plantMarkers = {};
+      Object.values(plantLabels).forEach(function(l) { map.removeLayer(l); });
+      plantLabels = {};
+      drawnItems.clearLayers();
+    }
+
+    function loadBoundary(coordsJson) {
+      var coords = JSON.parse(coordsJson);
+      if (boundaryLayer) { map.removeLayer(boundaryLayer); }
+      boundaryLayer = L.polygon(coords, {
+        color: '#66bb6a', weight: 2,
+        fillColor: '#388e3c', fillOpacity: 0.15
+      }).addTo(map);
+      map.fitBounds(boundaryLayer.getBounds());
+    }
+
+    function loadPlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor) {
+      placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor || null);
+    }
+
+    function loadZoneCenter(lat, lng) {
+      placeZoneCircles(lat, lng);
+    }
+
+    function setView(lat, lng, zoom) {
+      map.setView([lat, lng], zoom || 14);
+    }
+
+    function cancelDraw() {
+      setMode('none');
+    }
+
+    // ── QWebChannel bootstrap ─────────────────────────────────────────────────
+    function initChannel() {
+      if (typeof QWebChannel === 'undefined') {
+        // Running outside Qt (browser dev) — skip channel
+        initMap();
+        return;
+      }
+      new QWebChannel(qt.webChannelTransport, function(channel) {
+        bridge = channel.objects.bridge;
+        initMap();
+        if (bridge && bridge.onMapReady) bridge.onMapReady();
+      });
+    }
+
+    window.addEventListener('load', initChannel);
+  </script>
 </body>
 </html>

@@ -1,5 +1,18 @@
 import json
-from .plants import get_connection, get_plant_by_name
+from .plants import get_connection
+
+
+def __get_plant_by_name(common_name):
+    """Look up a plant by common_name (case-insensitive)."""
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT * FROM plants WHERE LOWER(common_name) = LOWER(?)",
+            (common_name,)
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
 
 
 def get_all_guilds():
@@ -140,7 +153,7 @@ def import_guild(data):
     # Find center plant (offset 0,0 or first member)
     for m in data.get("members", []):
         if m.get("offset_x", 0) == 0 and m.get("offset_y", 0) == 0:
-            plant = get_plant_by_name(m["common_name"])
+            plant = _get_plant_by_name(m["common_name"])
             if plant:
                 center_plant_id = plant["id"]
             break
@@ -152,7 +165,7 @@ def import_guild(data):
     )
 
     for m in data.get("members", []):
-        plant = get_plant_by_name(m["common_name"])
+        plant = _get_plant_by_name(m["common_name"])
         if plant:
             add_guild_member(
                 guild_id,

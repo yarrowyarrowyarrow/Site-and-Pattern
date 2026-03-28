@@ -23,7 +23,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from .db import guilds, plants
+from src.db import guilds
+from src.db import plants as plants_db
 
 
 ROLES = [
@@ -48,7 +49,7 @@ class AddMemberDialog(QDialog):
         layout = QFormLayout(self)
 
         self.plant_combo = QComboBox()
-        all_plants = plants.get_all_plants()
+        all_plants = plants_db.get_all_plants()
         for p in all_plants:
             self.plant_combo.addItem(
                 f"{p['common_name']} ({p['plant_type']})", p["id"]
