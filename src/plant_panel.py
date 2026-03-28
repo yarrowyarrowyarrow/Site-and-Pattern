@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
     QComboBox, QListWidget, QListWidgetItem, QFrame,
     QPushButton, QSizePolicy, QScrollArea, QSplitter,
     QFormLayout, QGroupBox, QTabWidget, QGridLayout,
+    QSpinBox, QColorDialog,
 )
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QSize
 from PyQt6.QtGui import QColor, QIcon, QPixmap, QPainter, QFont, QBrush
@@ -151,7 +152,8 @@ def _make_list_item(plant: dict) -> QListWidgetItem:
 class PlantPanel(QWidget):
     """Right-hand panel for browsing, filtering and placing plants."""
 
-    place_plant_requested = pyqtSignal(int, str)   # plant_id, common_name
+    place_plant_requested = pyqtSignal(int, str, int)   # plant_id, common_name, quantity
+    color_changed = pyqtSignal(int, str)               # plant_id, hex_color
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -438,13 +440,47 @@ class PlantPanel(QWidget):
 
         bot_layout.addWidget(self._calendar_group)
 
+        # ── Placement controls: quantity + colour + place button ───────
+        place_row = QHBoxLayout()
+        place_row.setSpacing(4)
+
+        # Quantity spinner
+        qty_label = QLabel("Qty:")
+        qty_label.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self._qty_spin = QSpinBox()
+        self._qty_spin.setMinimum(1)
+        self._qty_spin.setMaximum(50)
+        self._qty_spin.setValue(1)
+        self._qty_spin.setFixedWidth(55)
+        self._qty_spin.setToolTip("Number of plants to place in a group")
+        self._qty_spin.setStyleSheet(
+            "QSpinBox { background: #1a2a1a; color: #c8e6c9; border: 1px solid #2e4a2e; "
+            "border-radius: 3px; padding: 2px; }"
+        )
+        place_row.addWidget(qty_label)
+        place_row.addWidget(self._qty_spin)
+
+        # Colour picker button
+        self._color_btn = QPushButton("●")
+        self._color_btn.setFixedSize(28, 28)
+        self._color_btn.setToolTip("Set custom marker colour for this plant")
+        self._color_btn.clicked.connect(self._on_color_pick)
+        self._color_btn.setStyleSheet(
+            "QPushButton { background: #2e4a2e; border: 1px solid #4a7a4a; "
+            "border-radius: 14px; font-size: 16px; color: #78909c; }"
+            "QPushButton:hover { background: #3a5a3a; }"
+        )
+        place_row.addWidget(self._color_btn)
+
         # Place on Map button
         self._place_btn = QPushButton("Place on Map")
         self._place_btn.setEnabled(False)
         self._place_btn.setToolTip("Click to enter plant-placement mode on the map")
         self._place_btn.clicked.connect(self._on_place_clicked)
         self._place_btn.setStyleSheet(_PLACE_BTN_STYLE)
-        bot_layout.addWidget(self._place_btn)
+        place_row.addWidget(self._place_btn)
+
+        bot_layout.addLayout(place_row)
 
         # Placed plants section
         placed_header = QLabel("On This Design")
@@ -592,6 +628,9 @@ class PlantPanel(QWidget):
         # Load planting calendar
         self._show_calendar(plant.get("id"))
 
+        # Update colour picker button
+        self._update_color_btn(plant.get("marker_color") or "")
+
         self._detail_group.setVisible(True)
 
     def _load_companions(self, plant_id: Optional[int]):
@@ -665,6 +704,47 @@ class PlantPanel(QWidget):
             self.place_plant_requested.emit(
                 self._selected_plant["id"],
                 self._selected_plant["common_name"],
+                self._qty_spin.value(),
+            )
+
+    def _on_color_pick(self):
+        """Open a colour picker to set a custom marker colour for the selected plant."""
+        if not self._selected_plant or not self._selected_plant.get("id"):
+            return
+        plant = self._selected_plant
+        current = plant.get("marker_color") or ""
+        initial = QColor(current) if current else QColor(
+            _TYPE_COLORS.get(plant.get("plant_type", ""), "#66bb6a")
+        )
+        color = QColorDialog.getColor(initial, self, "Choose marker colour")
+        if not color.isValid():
+            return
+        hex_color = color.name()  # e.g. '#ff5722'
+        # Save to DB
+        try:
+            from src.db.plants import update_marker_color
+            update_marker_color(plant["id"], hex_color)
+            self._selected_plant["marker_color"] = hex_color
+        except Exception:
+            pass
+        # Update the colour button preview
+        self._update_color_btn(hex_color)
+        # Signal the map to update existing markers
+        self.color_changed.emit(plant["id"], hex_color)
+
+    def _update_color_btn(self, hex_color: str):
+        """Update the colour picker button to show the current plant's colour."""
+        if hex_color:
+            self._color_btn.setStyleSheet(
+                f"QPushButton {{ background: {hex_color}; border: 1px solid #4a7a4a; "
+                f"border-radius: 14px; font-size: 16px; color: {hex_color}; }}"
+                f"QPushButton:hover {{ border-color: #8aca8a; }}"
+            )
+        else:
+            self._color_btn.setStyleSheet(
+                "QPushButton { background: #2e4a2e; border: 1px solid #4a7a4a; "
+                "border-radius: 14px; font-size: 16px; color: #78909c; }"
+                "QPushButton:hover { background: #3a5a3a; }"
             )
 
     # ── Permapeople tab ────────────────────────────────────────────────────────

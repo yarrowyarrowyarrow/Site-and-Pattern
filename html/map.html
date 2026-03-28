@@ -34,6 +34,28 @@
       font-weight: bold;
       text-shadow: 0 0 3px #000;
     }
+
+    .measure-label {
+      background: rgba(253, 216, 53, 0.9);
+      border: 1px solid #f9a825;
+      border-radius: 4px;
+      color: #1a1a2e;
+      font-size: 12px;
+      font-weight: bold;
+      padding: 2px 8px;
+      white-space: nowrap;
+    }
+
+    .annotation-label span {
+      background: rgba(30, 40, 30, 0.85);
+      border: 1px solid #7cb342;
+      border-radius: 4px;
+      color: #e8f5e9;
+      font-size: 12px;
+      padding: 3px 8px;
+      white-space: nowrap;
+      cursor: move;
+    }
   </style>
 </head>
 <body>
@@ -53,8 +75,17 @@
     var plantMarkers  = {};   // id -> marker
     var zoneCircles   = [];
     var bridge        = null; // Python QObject exposed via QWebChannel
-    var currentMode   = 'none'; // 'none' | 'boundary' | 'plant' | 'zone'
+    var currentMode   = 'none'; // 'none' | 'boundary' | 'plant' | 'zone' | 'measure' | 'annotate'
     var currentPlant  = null;   // {id, common_name} when in plant-placement mode
+
+    // Measurement state
+    var measureStart  = null;   // L.latLng or null
+    var measureLine   = null;   // L.polyline
+    var measureLabel  = null;   // L.tooltip
+    var measureMarkers = [];    // start/end markers
+
+    // Annotation state
+    var annotations   = {};     // id -> {marker, text}
 
     // Polygon drawing state (manual mode)
     var drawingPolygon  = false;
@@ -67,6 +98,7 @@
       map = L.map('map', {
         center: [53.5461, -113.4938],
         zoom: 12,
+        maxZoom: 22,
         zoomControl: true
       });
 
@@ -75,13 +107,14 @@
         {
           attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
           subdomains: 'abcd',
-          maxZoom: 19
+          maxZoom: 22,
+          maxNativeZoom: 19
         }
       ).addTo(map);
 
       satelliteLayer = L.tileLayer(
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        { attribution: '© Esri', maxZoom: 19 }
+        { attribution: '© Esri', maxZoom: 22, maxNativeZoom: 19 }
       );
 
       drawnItems = new L.FeatureGroup().addTo(map);
@@ -97,6 +130,13 @@
       var lat = e.latlng.lat;
       var lng = e.latlng.lng;
 
+      // Apply snap if enabled and in a placement mode
+      if (snapEnabled && (currentMode === 'plant' || currentMode === 'zone')) {
+        var snapped = snapLatLng(lat, lng);
+        lat = snapped[0];
+        lng = snapped[1];
+      }
+
       if (bridge) {
         bridge.onMapClick(lat, lng);
       }
@@ -104,14 +144,25 @@
       if (currentMode === 'boundary') {
         handleBoundaryClick(lat, lng);
       } else if (currentMode === 'plant' && currentPlant) {
-        placePlantMarker(currentPlant.id, currentPlant.common_name, lat, lng,
-                         currentPlant.spacing_m, currentPlant.plant_type);
-        if (bridge) bridge.onPlantPlaced(currentPlant.id, currentPlant.common_name, lat, lng);
+        var qty = currentPlant.quantity || 1;
+        var cc  = currentPlant.custom_color || null;
+        if (qty > 1) {
+          placeGroupMarkers(currentPlant.id, currentPlant.common_name, lat, lng,
+                            currentPlant.spacing_m, currentPlant.plant_type, cc, qty);
+        } else {
+          placePlantMarker(currentPlant.id, currentPlant.common_name, lat, lng,
+                           currentPlant.spacing_m, currentPlant.plant_type, cc);
+          if (bridge) bridge.onPlantPlaced(currentPlant.id, currentPlant.common_name, lat, lng);
+        }
         // Stay in plant mode so user can place multiple
       } else if (currentMode === 'zone') {
         placeZoneCircles(lat, lng);
         if (bridge) bridge.onZoneCenterPlaced(lat, lng);
         setMode('none');
+      } else if (currentMode === 'measure') {
+        handleMeasureClick(lat, lng);
+      } else if (currentMode === 'annotate') {
+        handleAnnotateClick(lat, lng);
       }
     }
 
@@ -212,13 +263,18 @@
       'root':        '#6d4c41'
     };
 
+    // ── Plant labels state ───────────────────────────────────────────────────
+    var labelsVisible = false;
+    var plantLabels   = {};   // markerId -> L.tooltip (permanent)
+
     // ── Plant markers ────────────────────────────────────────────────────────
-    // spacingM  : plant spacing in metres (used as circle diameter on the map)
-    // plantType : 'tree' | 'shrub' | 'herb' | 'groundcover' | 'vine' | 'root'
-    function placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType) {
-      var markerId = plantId + '_' + Date.now();
+    // spacingM    : plant spacing in metres (used as circle diameter on the map)
+    // plantType   : 'tree' | 'shrub' | 'herb' | 'groundcover' | 'vine' | 'root'
+    // customColor : optional hex colour override (e.g. '#ff5722')
+    function placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor) {
+      var markerId = plantId + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
       var radius   = Math.max((spacingM || 1.0) / 2, 1.0);   // half-diameter, min 1 m
-      var color    = TYPE_COLORS[plantType] || '#66bb6a';
+      var color    = customColor || TYPE_COLORS[plantType] || '#66bb6a';
 
       var circle = L.circle([lat, lng], {
         radius:      radius,
@@ -230,6 +286,10 @@
           { permanent: false, className: 'plant-marker-label' })
         .addTo(map);
 
+      // Store metadata on the circle for later use
+      circle._pd = { plantId: plantId, commonName: commonName, lat: lat, lng: lng,
+                      spacingM: spacingM, plantType: plantType, customColor: customColor };
+
       circle.on('click', function() {
         if (bridge) bridge.onPlantMarkerClick(markerId, plantId, lat, lng);
       });
@@ -237,12 +297,97 @@
       circle.on('contextmenu', function(e) {
         L.DomEvent.stop(e);
         map.removeLayer(circle);
+        // Remove permanent label if any
+        if (plantLabels[markerId]) {
+          map.removeLayer(plantLabels[markerId]);
+          delete plantLabels[markerId];
+        }
         delete plantMarkers[markerId];
         if (bridge) bridge.onPlantRemoved(markerId, plantId, lat, lng);
       });
 
       plantMarkers[markerId] = circle;
+
+      // Add permanent label if labels are turned on
+      if (labelsVisible) {
+        _addPermanentLabel(markerId, circle, commonName);
+      }
+
       return markerId;
+    }
+
+    // Place a group of plants in a hex cluster pattern
+    function placeGroupMarkers(plantId, commonName, lat, lng, spacingM, plantType, customColor, quantity) {
+      if (quantity <= 1) {
+        placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor);
+        if (bridge) bridge.onPlantPlaced(plantId, commonName, lat, lng);
+        return;
+      }
+      var spacing = spacingM || 1.0;
+      // Place in concentric hex rings around centre
+      var placed = 0;
+      var ring = 0;
+      var positions = [[lat, lng]];
+      while (positions.length < quantity) {
+        ring++;
+        for (var side = 0; side < 6; side++) {
+          for (var step = 0; step < ring; step++) {
+            if (positions.length >= quantity) break;
+            var angle = (side * 60 + step * (60 / ring)) * Math.PI / 180;
+            var dLat = (ring * spacing * Math.cos(angle)) / 111320;
+            var dLng = (ring * spacing * Math.sin(angle)) / (111320 * Math.cos(lat * Math.PI / 180));
+            positions.push([lat + dLat, lng + dLng]);
+          }
+        }
+      }
+      for (var i = 0; i < quantity && i < positions.length; i++) {
+        var p = positions[i];
+        placePlantMarker(plantId, commonName, p[0], p[1], spacingM, plantType, customColor);
+        if (bridge) bridge.onPlantPlaced(plantId, commonName, p[0], p[1]);
+      }
+    }
+
+    // ── Label management ──────────────────────────────────────────────────────
+    function _addPermanentLabel(markerId, circle, name) {
+      var label = L.tooltip({
+        permanent: true,
+        direction: 'top',
+        offset: [0, -8],
+        className: 'plant-marker-label',
+        opacity: 0.9
+      }).setContent(name).setLatLng(circle.getLatLng());
+      label.addTo(map);
+      plantLabels[markerId] = label;
+    }
+
+    function setLabelsVisible(visible) {
+      labelsVisible = visible;
+      if (visible) {
+        // Add permanent labels to all existing markers
+        Object.keys(plantMarkers).forEach(function(mid) {
+          if (!plantLabels[mid]) {
+            var c = plantMarkers[mid];
+            _addPermanentLabel(mid, c, c._pd ? c._pd.commonName : '');
+          }
+        });
+      } else {
+        // Remove all permanent labels
+        Object.keys(plantLabels).forEach(function(mid) {
+          map.removeLayer(plantLabels[mid]);
+        });
+        plantLabels = {};
+      }
+    }
+
+    // ── Update marker colour (called from Python) ─────────────────────────────
+    function updateMarkerColor(plantId, newColor) {
+      Object.keys(plantMarkers).forEach(function(mid) {
+        var c = plantMarkers[mid];
+        if (c._pd && c._pd.plantId === plantId) {
+          c.setStyle({ color: newColor, fillColor: newColor });
+          c._pd.customColor = newColor;
+        }
+      });
     }
 
     // ── Zone circles ─────────────────────────────────────────────────────────
@@ -279,6 +424,176 @@
       return (metres / 111320) / Math.cos(lat * Math.PI / 180);
     }
 
+    // ── Snap to grid ──────────────────────────────────────────────────────────
+    var snapEnabled  = false;
+    var snapGridSize = 1.0;  // metres
+    var gridOverlay  = null;
+
+    function setSnapEnabled(enabled, gridSize) {
+      snapEnabled  = enabled;
+      snapGridSize = gridSize || 1.0;
+      if (enabled) {
+        drawGridOverlay();
+        map.on('moveend', drawGridOverlay);
+        map.on('zoomend', drawGridOverlay);
+      } else {
+        if (gridOverlay) { map.removeLayer(gridOverlay); gridOverlay = null; }
+        map.off('moveend', drawGridOverlay);
+        map.off('zoomend', drawGridOverlay);
+      }
+    }
+
+    function snapLatLng(lat, lng) {
+      if (!snapEnabled) return [lat, lng];
+      var gridLat = snapGridSize / 111320;
+      var gridLng = snapGridSize / (111320 * Math.cos(lat * Math.PI / 180));
+      return [
+        Math.round(lat / gridLat) * gridLat,
+        Math.round(lng / gridLng) * gridLng
+      ];
+    }
+
+    function drawGridOverlay() {
+      if (gridOverlay) { map.removeLayer(gridOverlay); gridOverlay = null; }
+      if (!snapEnabled || map.getZoom() < 17) return; // only show grid when zoomed in
+
+      var bounds = map.getBounds();
+      var gridLat = snapGridSize / 111320;
+      var centerLat = bounds.getCenter().lat;
+      var gridLng = snapGridSize / (111320 * Math.cos(centerLat * Math.PI / 180));
+      var lines = [];
+
+      var startLat = Math.floor(bounds.getSouth() / gridLat) * gridLat;
+      var startLng = Math.floor(bounds.getWest() / gridLng) * gridLng;
+
+      for (var lt = startLat; lt <= bounds.getNorth(); lt += gridLat) {
+        lines.push([[lt, bounds.getWest()], [lt, bounds.getEast()]]);
+      }
+      for (var ln = startLng; ln <= bounds.getEast(); ln += gridLng) {
+        lines.push([[bounds.getSouth(), ln], [bounds.getNorth(), ln]]);
+      }
+
+      gridOverlay = L.layerGroup(lines.map(function(pts) {
+        return L.polyline(pts, { color: '#4a7a4a', weight: 0.5, opacity: 0.4, interactive: false });
+      })).addTo(map);
+    }
+
+    // ── Canopy preview ───────────────────────────────────────────────────────
+    var canopyVisible = false;
+    var canopyCircles = [];
+
+    function setCanopyVisible(visible) {
+      canopyVisible = visible;
+      if (visible) {
+        drawCanopies();
+      } else {
+        canopyCircles.forEach(function(c) { map.removeLayer(c); });
+        canopyCircles = [];
+      }
+    }
+
+    function drawCanopies() {
+      canopyCircles.forEach(function(c) { map.removeLayer(c); });
+      canopyCircles = [];
+      if (!canopyVisible) return;
+
+      Object.keys(plantMarkers).forEach(function(mid) {
+        var m = plantMarkers[mid];
+        if (!m._pd) return;
+        var radius = Math.max((m._pd.spacingM || 1.0) / 2, 0.5);
+        var c = L.circle(m.getLatLng(), {
+          radius: radius,
+          color: '#a5d6a7', weight: 1, dashArray: '4 3',
+          fillColor: '#a5d6a7', fillOpacity: 0.08,
+          interactive: false
+        }).addTo(map);
+        canopyCircles.push(c);
+      });
+    }
+
+    // ── Measurement tool ───────────────────────────────────────────────────────
+    function handleMeasureClick(lat, lng) {
+      if (!measureStart) {
+        // First click — set start point
+        clearMeasure();
+        measureStart = L.latLng(lat, lng);
+        var mk = L.circleMarker([lat, lng], {
+          radius: 5, color: '#fdd835', fillColor: '#fdd835', fillOpacity: 1
+        }).addTo(map);
+        measureMarkers.push(mk);
+      } else {
+        // Second click — draw line + show distance
+        var end = L.latLng(lat, lng);
+        var dist = measureStart.distanceTo(end);
+        var label = dist < 1000
+          ? dist.toFixed(1) + ' m'
+          : (dist / 1000).toFixed(2) + ' km';
+
+        measureLine = L.polyline([measureStart, end], {
+          color: '#fdd835', weight: 2, dashArray: '8 4', opacity: 0.9
+        }).addTo(map);
+
+        var mk = L.circleMarker([lat, lng], {
+          radius: 5, color: '#fdd835', fillColor: '#fdd835', fillOpacity: 1
+        }).addTo(map);
+        measureMarkers.push(mk);
+
+        // Midpoint label
+        var mid = L.latLng(
+          (measureStart.lat + end.lat) / 2,
+          (measureStart.lng + end.lng) / 2
+        );
+        measureLabel = L.tooltip({
+          permanent: true, direction: 'top', offset: [0, -10],
+          className: 'measure-label', opacity: 0.95
+        }).setContent(label).setLatLng(mid).addTo(map);
+
+        measureStart = null; // ready for next measurement
+      }
+    }
+
+    function clearMeasure() {
+      if (measureLine)  { map.removeLayer(measureLine);  measureLine  = null; }
+      if (measureLabel) { map.removeLayer(measureLabel); measureLabel = null; }
+      measureMarkers.forEach(function(m) { map.removeLayer(m); });
+      measureMarkers = [];
+      measureStart = null;
+    }
+
+    // ── Annotations ───────────────────────────────────────────────────────────
+    function handleAnnotateClick(lat, lng) {
+      if (bridge) bridge.onAnnotateRequested(lat, lng);
+    }
+
+    function placeAnnotation(id, lat, lng, text) {
+      var icon = L.divIcon({
+        className: 'annotation-label',
+        html: '<span>' + text + '</span>',
+        iconSize: [0, 0],
+        iconAnchor: [0, 0]
+      });
+      var marker = L.marker([lat, lng], { icon: icon, draggable: true }).addTo(map);
+      marker.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        map.removeLayer(marker);
+        delete annotations[id];
+        if (bridge) bridge.onAnnotationRemoved(id);
+      });
+      marker.on('dragend', function() {
+        var pos = marker.getLatLng();
+        annotations[id].lat = pos.lat;
+        annotations[id].lng = pos.lng;
+      });
+      annotations[id] = { marker: marker, text: text, lat: lat, lng: lng };
+    }
+
+    function clearAnnotations() {
+      Object.keys(annotations).forEach(function(id) {
+        map.removeLayer(annotations[id].marker);
+      });
+      annotations = {};
+    }
+
     // ── Mode control (called from Python) ────────────────────────────────────
     function setMode(mode, plantData) {
       currentMode  = mode;
@@ -296,6 +611,13 @@
           break;
         case 'zone':
           map.getContainer().style.cursor = 'crosshair';
+          break;
+        case 'measure':
+          map.getContainer().style.cursor = 'crosshair';
+          clearMeasure();
+          break;
+        case 'annotate':
+          map.getContainer().style.cursor = 'text';
           break;
         default:
           map.getContainer().style.cursor = '';
@@ -343,6 +665,8 @@
       zoneCircles = [];
       Object.values(plantMarkers).forEach(function(m) { map.removeLayer(m); });
       plantMarkers = {};
+      Object.values(plantLabels).forEach(function(l) { map.removeLayer(l); });
+      plantLabels = {};
       drawnItems.clearLayers();
     }
 
@@ -356,8 +680,8 @@
       map.fitBounds(boundaryLayer.getBounds());
     }
 
-    function loadPlantMarker(plantId, commonName, lat, lng, spacingM, plantType) {
-      placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType);
+    function loadPlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor) {
+      placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor || null);
     }
 
     function loadZoneCenter(lat, lng) {

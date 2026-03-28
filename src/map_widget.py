@@ -43,6 +43,10 @@ class MapBridge(QObject):
     # A plant marker was right-click removed
     plant_removed = pyqtSignal(str, int, float, float)         # markerId, plantId, lat, lng
 
+    # Annotation requests
+    annotate_requested = pyqtSignal(float, float)              # lat, lng
+    annotation_removed = pyqtSignal(str)                       # annotation id
+
     # ── Slots (called from JS) ────────────────────────────────────────────────
 
     @pyqtSlot()
@@ -82,6 +86,14 @@ class MapBridge(QObject):
     def onPlantRemoved(self, marker_id: str, plant_id: int, lat: float, lng: float):
         self.plant_removed.emit(marker_id, plant_id, lat, lng)
 
+    @pyqtSlot(float, float)
+    def onAnnotateRequested(self, lat: float, lng: float):
+        self.annotate_requested.emit(lat, lng)
+
+    @pyqtSlot(str)
+    def onAnnotationRemoved(self, annotation_id: str):
+        self.annotation_removed.emit(annotation_id)
+
 
 class MapWidget(QWebEngineView):
     """
@@ -114,14 +126,18 @@ class MapWidget(QWebEngineView):
         self.page().runJavaScript(js)
 
     def set_mode(self, mode: str, plant_id: int = 0, common_name: str = "",
-                 spacing_m: float = 1.0, plant_type: str = "herb"):
+                 spacing_m: float = 1.0, plant_type: str = "herb",
+                 quantity: int = 1, custom_color: str = ""):
         """Switch the map interaction mode ('none'|'boundary'|'plant'|'zone')."""
         if mode == 'plant' and plant_id:
+            color_js = f", custom_color: '{custom_color}'" if custom_color else ""
             js = (
                 f"setMode('plant', {{id: {plant_id}, "
                 f"common_name: {repr(common_name)}, "
                 f"spacing_m: {spacing_m}, "
-                f"plant_type: {repr(plant_type)}}});"
+                f"plant_type: {repr(plant_type)}, "
+                f"quantity: {quantity}"
+                f"{color_js}}});"
             )
         else:
             js = f"setMode({repr(mode)});"
@@ -154,10 +170,12 @@ class MapWidget(QWebEngineView):
         self.run_js(f"loadBoundary({json.dumps(json.dumps(coords))});")
 
     def load_plant_marker(self, plant_id: int, common_name: str, lat: float, lng: float,
-                          spacing_m: float = 1.0, plant_type: str = "herb"):
+                          spacing_m: float = 1.0, plant_type: str = "herb",
+                          custom_color: str = ""):
+        color_arg = f", '{custom_color}'" if custom_color else ", null"
         self.run_js(
             f"loadPlantMarker({plant_id}, {repr(common_name)}, {lat}, {lng}, "
-            f"{spacing_m}, {repr(plant_type)});"
+            f"{spacing_m}, {repr(plant_type)}{color_arg});"
         )
 
     def load_zone_center(self, lat: float, lng: float):
@@ -165,3 +183,23 @@ class MapWidget(QWebEngineView):
 
     def set_view(self, lat: float, lng: float, zoom: int = 14):
         self.run_js(f"setView({lat}, {lng}, {zoom});")
+
+    def set_labels_visible(self, visible: bool):
+        v = 'true' if visible else 'false'
+        self.run_js(f"setLabelsVisible({v});")
+
+    def update_marker_color(self, plant_id: int, color: str):
+        self.run_js(f"updateMarkerColor({plant_id}, '{color}');")
+
+    def place_annotation(self, ann_id: str, lat: float, lng: float, text: str):
+        self.run_js(
+            f"placeAnnotation({repr(ann_id)}, {lat}, {lng}, {repr(text)});"
+        )
+
+    def set_canopy_visible(self, visible: bool):
+        v = 'true' if visible else 'false'
+        self.run_js(f"setCanopyVisible({v});")
+
+    def set_snap_enabled(self, enabled: bool, grid_size: float = 1.0):
+        e = 'true' if enabled else 'false'
+        self.run_js(f"setSnapEnabled({e}, {grid_size});")

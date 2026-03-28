@@ -19,7 +19,7 @@ _DB_PATH     = os.path.join(_DATA_DIR, "permadesign.db")
 _SCHEMA_PATH = os.path.join(_HERE, "schema.sql")
 
 # Current schema version — bump when adding columns/tables
-_SCHEMA_VERSION = 3
+_SCHEMA_VERSION = 4
 
 
 def _ensure_data_dir():
@@ -77,6 +77,15 @@ def _migrate_to_v2(conn: sqlite3.Connection):
     conn.commit()
 
 
+def _migrate_to_v4(conn: sqlite3.Connection):
+    """Add marker_color column introduced in schema v4."""
+    try:
+        conn.execute("ALTER TABLE plants ADD COLUMN marker_color TEXT")
+    except sqlite3.OperationalError:
+        pass  # column already present
+    conn.commit()
+
+
 def init_db() -> None:
     """
     Create tables (if absent), run migrations, and seed the plant catalogue
@@ -94,6 +103,9 @@ def init_db() -> None:
 
         if current_version < 2:
             _migrate_to_v2(conn)
+
+        if current_version < 4:
+            _migrate_to_v4(conn)
 
         # Reseed if empty, count is low, or schema was just upgraded
         count = conn.execute("SELECT COUNT(*) FROM plants").fetchone()[0]
@@ -374,5 +386,20 @@ def get_current_month_tasks() -> list[dict]:
             (month,)
         ).fetchall()
         return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+# ── Marker customisation ──────────────────────────────────────────────────────
+
+def update_marker_color(plant_id: int, color: Optional[str]) -> None:
+    """Set or clear the custom marker colour for a plant."""
+    conn = get_connection()
+    try:
+        conn.execute(
+            "UPDATE plants SET marker_color = ? WHERE id = ?",
+            (color, plant_id)
+        )
+        conn.commit()
     finally:
         conn.close()

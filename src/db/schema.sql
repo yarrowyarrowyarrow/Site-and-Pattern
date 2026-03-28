@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS plants (
     deciduous_evergreen TEXT,       -- deciduous | evergreen | herbaceous
     soil_ph_min REAL,
     soil_ph_max REAL,
-    perennial_or_annual TEXT        -- perennial | annual | biennial
+    perennial_or_annual TEXT,       -- perennial | annual | biennial
+    marker_color TEXT               -- custom hex colour for map markers (e.g. '#ff5722')
 );
 
 CREATE TABLE IF NOT EXISTS companion_friends (

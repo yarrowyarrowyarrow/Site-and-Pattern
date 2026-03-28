@@ -18,6 +18,7 @@ Layout
 import json
 import os
 from datetime import datetime
+from typing import Optional
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QSplitter,
@@ -25,6 +26,7 @@ from PyQt6.QtWidgets import (
     QInputDialog,
 )
 from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QKeySequence, QShortcut
 
 from src.map_widget  import MapWidget
 from src.plant_panel import PlantPanel
@@ -69,6 +71,11 @@ class MainWindow(QMainWindow):
 
         # Placed plants list: [{plant_id, common_name, lat, lng}, ...]
         self._placed_plants = []
+
+        # Undo/redo stacks
+        self._undo_stack: list[dict] = []   # each entry: {action, data}
+        self._redo_stack: list[dict] = []
+        self._max_undo = 50
 
         self._build_ui()
         self._connect_signals()
@@ -130,6 +137,19 @@ class MainWindow(QMainWindow):
     def _build_menu(self):
         mb = self.menuBar()
 
+        # Edit menu
+        edit_menu = mb.addMenu("&Edit")
+
+        self._act_undo = edit_menu.addAction("&Undo")
+        self._act_undo.setShortcut(QKeySequence.StandardKey.Undo)
+        self._act_undo.setEnabled(False)
+        self._act_undo.triggered.connect(self._do_undo)
+
+        self._act_redo = edit_menu.addAction("&Redo")
+        self._act_redo.setShortcut(QKeySequence.StandardKey.Redo)
+        self._act_redo.setEnabled(False)
+        self._act_redo.triggered.connect(self._do_redo)
+
         # File menu
         file_menu = mb.addMenu("&File")
 
@@ -150,6 +170,12 @@ class MainWindow(QMainWindow):
         act_save_as = file_menu.addAction("Save &As…")
         act_save_as.setShortcut("Ctrl+Shift+S")
         act_save_as.triggered.connect(self._on_save_as)
+
+        file_menu.addSeparator()
+
+        act_shopping = file_menu.addAction("Export &Shopping List…")
+        act_shopping.setStatusTip("Export a list of all placed plants with quantities")
+        act_shopping.triggered.connect(self._on_export_shopping_list)
 
         file_menu.addSeparator()
 
@@ -174,18 +200,30 @@ class MainWindow(QMainWindow):
         # Toolbar → map
         self.toolbar.draw_boundary_requested.connect(self._enter_boundary_mode)
         self.toolbar.draw_zone_requested.connect(self._enter_zone_mode)
+        self.toolbar.measure_requested.connect(self._enter_measure_mode)
+        self.toolbar.annotate_requested.connect(self._enter_annotate_mode)
         self.toolbar.cancel_draw_requested.connect(self._cancel_draw)
 
         self.toolbar.satellite_toggled.connect(self.map_widget.set_satellite_visible)
         self.toolbar.boundary_toggled.connect(self.map_widget.set_boundary_visible)
         self.toolbar.zones_toggled.connect(self.map_widget.set_zones_visible)
         self.toolbar.plants_toggled.connect(self.map_widget.set_plants_visible)
+        self.toolbar.labels_toggled.connect(self.map_widget.set_labels_visible)
+        self.toolbar.canopy_toggled.connect(self.map_widget.set_canopy_visible)
+        self.toolbar.snap_toggled.connect(
+            lambda on: self.map_widget.set_snap_enabled(on)
+        )
 
-        # Plant panel → map (plant placement)
+        # Plant panel → map (plant placement + colour)
         self.plant_panel.place_plant_requested.connect(self._enter_plant_mode)
+        self.plant_panel.color_changed.connect(self._on_plant_color_changed)
 
         # Map → remove plant marker
         b.plant_removed.connect(self._on_plant_removed)
+
+        # Map → annotations
+        b.annotate_requested.connect(self._on_annotate_requested)
+        b.annotation_removed.connect(self._on_annotation_removed)
 
         # Toolbar → settings
         self.toolbar.settings_requested.connect(self._on_settings)
@@ -206,6 +244,10 @@ class MainWindow(QMainWindow):
         dlg = SettingsDialog(self)
         if dlg.exec():
             self._load_api_keys()
+
+    def _on_plant_color_changed(self, plant_id: int, hex_color: str):
+        """Update all existing markers for this plant on the map."""
+        self.map_widget.update_marker_color(plant_id, hex_color)
 
     # ── Status bar updates ────────────────────────────────────────────────────
 
@@ -238,24 +280,70 @@ class MainWindow(QMainWindow):
         self.map_widget.set_mode('zone')
         self._set_mode_label("Zone circles — click to place zone centre")
 
-    def _enter_plant_mode(self, plant_id: int, common_name: str):
+    def _enter_plant_mode(self, plant_id: int, common_name: str,
+                          quantity: int = 1):
         self._current_mode = 'plant'
-        spacing_m, plant_type = self._plant_size(plant_id)
-        self.map_widget.set_mode('plant', plant_id, common_name, spacing_m, plant_type)
+        spacing_m, plant_type, custom_color = self._plant_info(plant_id)
+        self.map_widget.set_mode('plant', plant_id, common_name, spacing_m,
+                                 plant_type, quantity, custom_color)
         self.toolbar.enter_plant_mode()
-        self._set_mode_label(f"Placing: {common_name} — click map, press Esc to cancel")
+        qty_str = f" ×{quantity}" if quantity > 1 else ""
+        self._set_mode_label(
+            f"Placing: {common_name}{qty_str} — click map, press Esc to cancel"
+        )
 
     @staticmethod
-    def _plant_size(plant_id: int) -> tuple[float, str]:
-        """Return (spacing_meters, plant_type) for a plant, with safe defaults."""
+    def _plant_info(plant_id: int) -> tuple[float, str, str]:
+        """Return (spacing_meters, plant_type, marker_color) for a plant."""
         try:
             from src.db.plants import get_plant
             p = get_plant(plant_id)
             if p:
-                return float(p.get("spacing_meters") or 1.0), p.get("plant_type") or "herb"
+                return (
+                    float(p.get("spacing_meters") or 1.0),
+                    p.get("plant_type") or "herb",
+                    p.get("marker_color") or "",
+                )
         except Exception:
             pass
-        return 1.0, "herb"
+        return 1.0, "herb", ""
+
+    def _enter_measure_mode(self):
+        self._current_mode = 'measure'
+        self.map_widget.set_mode('measure')
+        self._set_mode_label("Measure — click two points to see distance")
+
+    def _enter_annotate_mode(self):
+        self._current_mode = 'annotate'
+        self.map_widget.set_mode('annotate')
+        self._set_mode_label("Annotate — click map to place a note")
+
+    def _on_annotate_requested(self, lat: float, lng: float):
+        text, ok = QInputDialog.getText(
+            self, "Add Note", "Note text:", text=""
+        )
+        if not ok or not text.strip():
+            return
+        ann_id = f"ann_{int(lat*1e6)}_{int(lng*1e6)}_{id(self)}"
+        self.map_widget.place_annotation(ann_id, lat, lng, text.strip())
+        # Save to project
+        self._project["features"].append({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [lng, lat]},
+            "properties": {
+                "element_type": "annotation",
+                "annotation_id": ann_id,
+                "text": text.strip(),
+            }
+        })
+        self._mark_modified()
+
+    def _on_annotation_removed(self, ann_id: str):
+        self._project["features"] = [
+            f for f in self._project["features"]
+            if f.get("properties", {}).get("annotation_id") != ann_id
+        ]
+        self._mark_modified()
 
     def _cancel_draw(self):
         self._current_mode = 'none'
@@ -291,6 +379,11 @@ class MainWindow(QMainWindow):
         self._set_mode_label("Boundary set — " + zone_label(self._current_zone))
 
     def _on_plant_placed(self, plant_id: int, common_name: str, lat: float, lng: float):
+        self._push_undo({
+            "action": "place_plant",
+            "plant_id": plant_id, "common_name": common_name,
+            "lat": lat, "lng": lng,
+        })
         self._placed_plants.append({
             "plant_id": plant_id, "common_name": common_name, "lat": lat, "lng": lng
         })
@@ -377,6 +470,7 @@ class MainWindow(QMainWindow):
         self._project_path = None
         self._modified     = False
         self._placed_plants.clear()
+        self._clear_undo()
         self._current_zone = None
         self._sb_zone.setText("Zone: —")
         self.map_widget.clear_all()
@@ -403,6 +497,7 @@ class MainWindow(QMainWindow):
         self._project_path = path
         self._modified     = False
         self._placed_plants.clear()
+        self._clear_undo()
 
         self.map_widget.clear_all()
         data = project_io.project_to_map_data(proj)
@@ -416,10 +511,10 @@ class MainWindow(QMainWindow):
             )
 
         for p in data["plants"]:
-            spacing_m, plant_type = self._plant_size(p["plant_id"])
+            spacing_m, plant_type, custom_color = self._plant_info(p["plant_id"])
             self.map_widget.load_plant_marker(
                 p["plant_id"], p["common_name"], p["lat"], p["lng"],
-                spacing_m, plant_type
+                spacing_m, plant_type, custom_color
             )
             self._placed_plants.append(p)
 
@@ -476,6 +571,168 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
+    # ── Shopping list export ─────────────────────────────────────────────────
+
+    def _on_export_shopping_list(self):
+        if not self._placed_plants:
+            QMessageBox.information(self, "Shopping List", "No plants placed yet.")
+            return
+
+        # Count by plant_id
+        from collections import Counter
+        counts: Counter = Counter()
+        names: dict[int, str] = {}
+        for p in self._placed_plants:
+            pid = p["plant_id"]
+            counts[pid] += 1
+            names[pid] = p["common_name"]
+
+        # Build list with type info
+        try:
+            from src.db.plants import get_plant
+            lines = ["PermaDesign — Shopping List", "=" * 40, ""]
+            type_groups: dict[str, list[str]] = {}
+            total = 0
+            for pid, qty in sorted(counts.items(), key=lambda x: names.get(x[0], "")):
+                plant = get_plant(pid)
+                ptype = plant.get("plant_type", "other") if plant else "other"
+                sci = plant.get("scientific_name", "") if plant else ""
+                line = f"  {names[pid]}"
+                if sci:
+                    line += f"  ({sci})"
+                line += f"  ×{qty}"
+                type_groups.setdefault(ptype, []).append(line)
+                total += qty
+
+            type_order = ["tree", "shrub", "herb", "groundcover", "vine", "root"]
+            for t in type_order:
+                if t in type_groups:
+                    lines.append(f"{t.upper()}S")
+                    lines.extend(sorted(type_groups[t]))
+                    lines.append("")
+
+            lines.append(f"{'=' * 40}")
+            lines.append(f"Total: {total} plants ({len(counts)} species)")
+        except Exception:
+            lines = [f"{names.get(pid, '?')}  ×{qty}" for pid, qty in counts.items()]
+
+        text = "\n".join(lines)
+
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Export Shopping List", "shopping_list.txt",
+            "Text Files (*.txt);;CSV (*.csv);;All Files (*)"
+        )
+        if not path:
+            return
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(text)
+            self.statusBar().showMessage(f"Shopping list saved: {path}", 3000)
+        except Exception as exc:
+            QMessageBox.critical(self, "Export failed", str(exc))
+
+    # ── Undo / Redo ────────────────────────────────────────────────────────
+
+    def _push_undo(self, entry: dict):
+        self._undo_stack.append(entry)
+        if len(self._undo_stack) > self._max_undo:
+            self._undo_stack.pop(0)
+        self._redo_stack.clear()
+        self._act_undo.setEnabled(True)
+        self._act_redo.setEnabled(False)
+
+    def _do_undo(self):
+        if not self._undo_stack:
+            return
+        entry = self._undo_stack.pop()
+        action = entry["action"]
+
+        if action == "place_plant":
+            # Remove the most recent marker matching this plant + coords
+            pid, lat, lng = entry["plant_id"], entry["lat"], entry["lng"]
+            self.map_widget.run_js(
+                f"(function() {{"
+                f"  var keys = Object.keys(plantMarkers);"
+                f"  for (var i = keys.length - 1; i >= 0; i--) {{"
+                f"    var m = plantMarkers[keys[i]];"
+                f"    if (m._pd && m._pd.plantId === {pid}"
+                f"        && Math.abs(m._pd.lat - {lat}) < 1e-7"
+                f"        && Math.abs(m._pd.lng - {lng}) < 1e-7) {{"
+                f"      map.removeLayer(m);"
+                f"      if (plantLabels[keys[i]]) {{ map.removeLayer(plantLabels[keys[i]]); delete plantLabels[keys[i]]; }}"
+                f"      delete plantMarkers[keys[i]];"
+                f"      break;"
+                f"    }}"
+                f"  }}"
+                f"}})()"
+            )
+            # Remove from placed list
+            for i in range(len(self._placed_plants) - 1, -1, -1):
+                p = self._placed_plants[i]
+                if (p["plant_id"] == pid
+                        and abs(p["lat"] - lat) < 1e-7
+                        and abs(p["lng"] - lng) < 1e-7):
+                    self._placed_plants.pop(i)
+                    break
+            # Remove from project features
+            kept = []
+            removed = False
+            for f in reversed(self._project["features"]):
+                props = f.get("properties", {})
+                coords = f.get("geometry", {}).get("coordinates", [])
+                if (not removed
+                        and props.get("element_type") == "plant"
+                        and props.get("plant_id") == pid
+                        and coords
+                        and abs(coords[1] - lat) < 1e-7
+                        and abs(coords[0] - lng) < 1e-7):
+                    removed = True
+                else:
+                    kept.append(f)
+            self._project["features"] = list(reversed(kept))
+            self.plant_panel.on_plant_removed(pid)
+            self._redo_stack.append(entry)
+            self.statusBar().showMessage("Undo: removed plant", 2000)
+
+        self._act_undo.setEnabled(bool(self._undo_stack))
+        self._act_redo.setEnabled(bool(self._redo_stack))
+        self._mark_modified()
+
+    def _do_redo(self):
+        if not self._redo_stack:
+            return
+        entry = self._redo_stack.pop()
+        action = entry["action"]
+
+        if action == "place_plant":
+            pid = entry["plant_id"]
+            name = entry["common_name"]
+            lat, lng = entry["lat"], entry["lng"]
+            spacing_m, plant_type, custom_color = self._plant_info(pid)
+            self.map_widget.load_plant_marker(
+                pid, name, lat, lng, spacing_m, plant_type, custom_color
+            )
+            self._placed_plants.append({
+                "plant_id": pid, "common_name": name, "lat": lat, "lng": lng
+            })
+            self._project["features"].append({
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [lng, lat]},
+                "properties": {
+                    "element_type": "plant",
+                    "plant_id": pid,
+                    "common_name": name,
+                    "quantity": 1
+                }
+            })
+            self.plant_panel.on_plant_placed(pid, name)
+            self._undo_stack.append(entry)
+            self.statusBar().showMessage("Redo: placed plant", 2000)
+
+        self._act_undo.setEnabled(bool(self._undo_stack))
+        self._act_redo.setEnabled(bool(self._redo_stack))
+        self._mark_modified()
+
     # ── Window close ─────────────────────────────────────────────────────────
 
     def closeEvent(self, event):
@@ -497,6 +754,13 @@ class MainWindow(QMainWindow):
             self._cancel_draw()
         else:
             super().keyPressEvent(event)
+
+    def _clear_undo(self):
+        """Clear undo/redo stacks (e.g. on New/Open project)."""
+        self._undo_stack.clear()
+        self._redo_stack.clear()
+        self._act_undo.setEnabled(False)
+        self._act_redo.setEnabled(False)
 
 
 # ── Helper widgets ────────────────────────────────────────────────────────────
