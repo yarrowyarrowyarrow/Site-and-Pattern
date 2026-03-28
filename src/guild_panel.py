@@ -160,11 +160,20 @@ class GuildPanel(QWidget):
         label = QLabel("<b>Guild Library</b>")
         layout.addWidget(label)
 
+        # Search/filter box
+        self._search_box = QLineEdit()
+        self._search_box.setPlaceholderText("Search guilds...")
+        self._search_box.setClearButtonEnabled(True)
+        self._search_box.textChanged.connect(self._refresh_guild_list)
+        layout.addWidget(self._search_box)
+
         # Guild tree (parent guilds + variations as children)
         self.guild_tree = QTreeWidget()
         self.guild_tree.setHeaderHidden(True)
         self.guild_tree.setIndentation(16)
+        self.guild_tree.setMouseTracking(True)
         self.guild_tree.currentItemChanged.connect(self._on_guild_selected)
+        self.guild_tree.itemDoubleClicked.connect(self._on_double_click_place)
         layout.addWidget(self.guild_tree)
 
         # Buttons row 1
@@ -234,20 +243,72 @@ class GuildPanel(QWidget):
         btn_row2.addWidget(self.import_btn)
         layout.addLayout(btn_row2)
 
-    def _refresh_guild_list(self):
+    def _refresh_guild_list(self, _filter_text=None):
         self.guild_tree.clear()
+        search = (self._search_box.text().strip().lower()
+                  if hasattr(self, '_search_box') else "")
+
         for g in guilds.get_all_guilds(top_level_only=True):
+            guild_detail = guilds.get_guild_by_id(g["id"])
+            members = guild_detail.get("members", []) if guild_detail else []
+            member_names = [m["common_name"] for m in members]
+
+            # Search filter: match guild name, description, or member names
+            children = guilds.get_guild_children(g["id"])
+            child_match = False
+            if search:
+                guild_match = (
+                    search in g["name"].lower()
+                    or search in (g.get("description") or "").lower()
+                    or any(search in n.lower() for n in member_names)
+                )
+                for child in children:
+                    cd = guilds.get_guild_by_id(child["id"])
+                    cm = [m["common_name"] for m in (cd.get("members", []) if cd else [])]
+                    if (search in child["name"].lower()
+                            or any(search in n.lower() for n in cm)):
+                        child_match = True
+                if not guild_match and not child_match:
+                    continue
+
+            # Build tooltip: member summary
+            roles_summary = ", ".join(
+                f"{m['common_name']} ({(m.get('role') or '').replace('_',' ')})"
+                for m in members[:5]
+            )
+            if len(members) > 5:
+                roles_summary += f", +{len(members)-5} more"
+            tooltip = f"{g['name']}\n{g.get('description', '')[:120]}\n\nMembers: {roles_summary}"
+
             item = QTreeWidgetItem([g["name"]])
             item.setData(0, Qt.ItemDataRole.UserRole, g["id"])
+            item.setToolTip(0, tooltip)
             self.guild_tree.addTopLevelItem(item)
-            # Add child variations
-            children = guilds.get_guild_children(g["id"])
+
             for child in children:
+                cd = guilds.get_guild_by_id(child["id"])
+                cm = cd.get("members", []) if cd else []
+                child_roles = ", ".join(
+                    f"{m['common_name']} ({(m.get('role') or '').replace('_',' ')})"
+                    for m in cm[:5]
+                )
+                child_tooltip = f"{child['name']}\n{child.get('description','')[:120]}\n\nMembers: {child_roles}"
+
                 child_item = QTreeWidgetItem([child["name"]])
                 child_item.setData(0, Qt.ItemDataRole.UserRole, child["id"])
+                child_item.setToolTip(0, child_tooltip)
                 item.addChild(child_item)
             if children:
                 item.setExpanded(True)
+
+    def _on_double_click_place(self, item, column):
+        """Double-click a guild to immediately enter placement mode."""
+        guild_id = item.data(0, Qt.ItemDataRole.UserRole)
+        if guild_id is None:
+            return
+        guild = guilds.get_guild_by_id(guild_id)
+        if guild:
+            self.placeGuildRequested.emit(guild)
 
     def _on_guild_selected(self, current, previous):
         has_selection = current is not None
@@ -351,7 +412,7 @@ class GuildPanel(QWidget):
                 data["offset_x"], data["offset_y"]
             )
             # Re-select to refresh members
-            self._on_guild_selected(self.guild_list.currentItem(), None)
+            self._on_guild_selected(self.guild_tree.currentItem(), None)
 
     def _on_remove_member(self):
         item = self.members_list.currentItem()
@@ -359,7 +420,7 @@ class GuildPanel(QWidget):
             return
         member_id = item.data(Qt.ItemDataRole.UserRole)
         guilds.remove_guild_member(member_id)
-        self._on_guild_selected(self.guild_list.currentItem(), None)
+        self._on_guild_selected(self.guild_tree.currentItem(), None)
 
     def _on_place(self):
         guild_id = self._get_selected_guild_id()

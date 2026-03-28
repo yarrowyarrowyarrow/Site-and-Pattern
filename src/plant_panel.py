@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
     QComboBox, QListWidget, QListWidgetItem, QFrame,
     QPushButton, QSizePolicy, QScrollArea, QSplitter,
     QFormLayout, QGroupBox, QTabWidget, QGridLayout,
-    QSpinBox, QColorDialog,
+    QSpinBox, QColorDialog, QMenu,
 )
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QSize
 from PyQt6.QtGui import QColor, QIcon, QPixmap, QPainter, QFont, QBrush
@@ -120,7 +120,7 @@ _PLANT_ID_ROLE  = Qt.ItemDataRole.UserRole
 _PLANT_OBJ_ROLE = Qt.ItemDataRole.UserRole + 1
 
 
-def _make_list_item(plant: dict) -> QListWidgetItem:
+def _make_list_item(plant: dict, placed_count: int = 0) -> QListWidgetItem:
     """Build a two-line QListWidgetItem for the results list."""
     zone_str = ""
     zmin = plant.get("hardiness_zone_min")
@@ -131,11 +131,12 @@ def _make_list_item(plant: dict) -> QListWidgetItem:
         zone_str = f"Z{zmin}+"
 
     sci  = plant.get("scientific_name") or ""
+    count_badge = f"  [{placed_count}x]" if placed_count > 0 else ""
     line = f"{sci}  ·  {zone_str}" if sci else zone_str
 
     item = QListWidgetItem()
     item.setIcon(_type_icon(plant.get("plant_type", "")))
-    item.setText(f"{plant['common_name']}\n{line}")
+    item.setText(f"{plant['common_name']}{count_badge}\n{line}")
     item.setData(_PLANT_ID_ROLE,  plant["id"])
     item.setData(_PLANT_OBJ_ROLE, plant)
     item.setSizeHint(QSize(0, 48))
@@ -326,6 +327,8 @@ class PlantPanel(QWidget):
         self._results_list.setStyleSheet(_RESULTS_LIST_STYLE)
         self._results_list.currentItemChanged.connect(self._on_selection_changed)
         self._results_list.itemDoubleClicked.connect(self._on_place_clicked)
+        self._results_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._results_list.customContextMenuRequested.connect(self._on_plant_context_menu)
         top_layout.addWidget(self._results_list)
 
         self._tabs.addTab(local_tab, "Local")
@@ -606,7 +609,8 @@ class PlantPanel(QWidget):
 
         self._results_list.clear()
         for p in plants:
-            self._results_list.addItem(_make_list_item(p))
+            count = self._placed_counts.get(p["id"], 0)
+            self._results_list.addItem(_make_list_item(p, count))
 
         n = len(plants)
         self._result_count.setText(f"Results: {n}")
@@ -758,6 +762,44 @@ class PlantPanel(QWidget):
                 self._selected_plant["common_name"],
                 self._qty_spin.value(),
             )
+
+    def _on_plant_context_menu(self, pos):
+        """Right-click context menu for plant results list."""
+        item = self._results_list.itemAt(pos)
+        if not item:
+            return
+        plant = item.data(_PLANT_OBJ_ROLE)
+        if not plant:
+            return
+
+        menu = QMenu(self)
+        menu.setStyleSheet(
+            "QMenu { background: #1e2e1e; color: #c8e6c9; border: 1px solid #2e4a2e; }"
+            "QMenu::item:selected { background: #2e4a2e; }"
+        )
+
+        act_place = menu.addAction(f"Place {plant['common_name']} on Map")
+        act_place.triggered.connect(lambda: self._quick_place(plant))
+
+        act_place5 = menu.addAction("Place x5 on Map")
+        act_place5.triggered.connect(lambda: self._quick_place(plant, 5))
+
+        menu.addSeparator()
+
+        act_companions = menu.addAction("View Companions")
+        act_companions.triggered.connect(lambda: self._show_companions(plant))
+
+        menu.exec(self._results_list.viewport().mapToGlobal(pos))
+
+    def _quick_place(self, plant, qty=1):
+        """Place a plant directly from context menu."""
+        self.place_plant_requested.emit(plant["id"], plant["common_name"], qty)
+
+    def _show_companions(self, plant):
+        """Show companion info in the detail view."""
+        self._selected_plant = plant
+        self._show_detail(plant)
+        self._detail_group.setVisible(True)
 
     def _on_color_pick(self):
         """Open a colour picker to set a custom marker colour for the selected plant."""

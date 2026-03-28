@@ -127,11 +127,16 @@ class MainWindow(QMainWindow):
         self._sb_coords.setMinimumWidth(220)
         self._sb_zone.setMinimumWidth(100)
 
+        self._sb_tasks = QLabel("")
+        self._sb_tasks.setStyleSheet("color: #a5d6a7; font-size: 11px;")
+        self._load_seasonal_tasks()
+
         sb = QStatusBar(self)
         sb.addWidget(self._sb_coords)
         sb.addWidget(_vsep())
         sb.addWidget(self._sb_zone)
         sb.addWidget(_vsep())
+        sb.addWidget(self._sb_tasks, 1)
         sb.addPermanentWidget(self._sb_mode)
         self.setStatusBar(sb)
 
@@ -277,6 +282,32 @@ class MainWindow(QMainWindow):
         self._modified = True
         if not self.windowTitle().endswith(' *'):
             self.setWindowTitle(self.windowTitle() + ' *')
+
+    # ── Seasonal tasks ────────────────────────────────────────────────────────
+
+    def _load_seasonal_tasks(self):
+        """Show current month's planting tasks in the status bar."""
+        try:
+            from src.db.plants import get_current_month_tasks
+            from datetime import datetime
+            month_name = datetime.now().strftime("%B")
+            tasks = get_current_month_tasks()
+            if tasks:
+                # Group by status
+                by_status = {}
+                for t in tasks[:8]:  # Limit to avoid overflow
+                    s = t["status"].replace("_", " ").title()
+                    by_status.setdefault(s, []).append(t["common_name"])
+                parts = []
+                for status, names in by_status.items():
+                    parts.append(f"{status}: {', '.join(names[:3])}")
+                    if len(names) > 3:
+                        parts[-1] += f" +{len(names)-3}"
+                self._sb_tasks.setText(f"{month_name}: {' | '.join(parts)}")
+            else:
+                self._sb_tasks.setText(f"{month_name}: No active tasks")
+        except Exception:
+            pass
 
     # ── Drawing modes ─────────────────────────────────────────────────────────
 
@@ -850,8 +881,26 @@ class MainWindow(QMainWindow):
     # ── Keyboard shortcuts ────────────────────────────────────────────────────
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key.Key_Escape:
+        key = event.key()
+        if key == Qt.Key.Key_Escape:
             self._cancel_draw()
+        elif key == Qt.Key.Key_B and not event.modifiers():
+            self._enter_boundary_mode()
+        elif key == Qt.Key.Key_P and not event.modifiers():
+            # Switch to Plants tab
+            self._side_tabs.setCurrentWidget(self.plant_panel)
+        elif key == Qt.Key.Key_G and not event.modifiers():
+            # Switch to Guilds tab
+            self._side_tabs.setCurrentWidget(self.guild_panel)
+        elif key == Qt.Key.Key_M and not event.modifiers():
+            self._enter_measure_mode()
+        elif key == Qt.Key.Key_Z and not event.modifiers():
+            self._enter_zone_mode()
+        elif key == Qt.Key.Key_N and not event.modifiers():
+            self._enter_annotate_mode()
+        elif key == Qt.Key.Key_L and not event.modifiers():
+            # Toggle map legend
+            self.map_widget.run_js("toggleLegend();")
         else:
             super().keyPressEvent(event)
 

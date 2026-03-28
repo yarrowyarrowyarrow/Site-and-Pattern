@@ -268,6 +268,235 @@ EXAMPLE_GUILDS = [
             },
         ],
     },
+    # ── Edmonton-specific guilds designed for Zone 3-4 ──────────────────────
+    {
+        "name": "Evans Cherry Guild",
+        "description": "Fruit tree guild centred on Evans Cherry, a hardy sour cherry bred for "
+                       "prairie climates. Comfrey mines deep nutrients and provides chop-and-drop "
+                       "mulch. Chives and garlic repel aphids and borers common on cherries. "
+                       "White clover fixes nitrogen as a living mulch, while bee balm attracts "
+                       "native pollinators for improved fruit set. Wild strawberry suppresses "
+                       "weeds and yields an additional ground-level harvest.",
+        "members": [
+            ("Evans Cherry",              "canopy",              0,    0),
+            ("Comfrey",                   "dynamic_accumulator", 1.8,  0),
+            ("Chives",                    "pest_repellent",     -1.0,  1.2),
+            ("White Clover",              "nitrogen_fixer",      0,    2.0),
+            ("Bee Balm (Wild Bergamot)",  "pollinator",         -1.5, -1.0),
+            ("Wild Strawberry",           "groundcover",         1.0, -1.5),
+            ("Garlic",                    "pest_repellent",      0,   -1.3),
+        ],
+        "variations": [
+            {
+                "name": "Native Understory",
+                "description": "Evans Cherry guild variant using exclusively native prairie plants. "
+                               "Replaces comfrey and garlic with native dynamic accumulators and "
+                               "pest repellents. Yarrow is a native nutrient accumulator and "
+                               "pollinator attractor; nodding onion replaces chives as a native "
+                               "allium pest deterrent.",
+                "members": [
+                    ("Evans Cherry",              "canopy",              0,    0),
+                    ("Yarrow",                    "dynamic_accumulator", 1.8,  0),
+                    ("Nodding Onion",             "pest_repellent",     -1.0,  1.2),
+                    ("Alfalfa",                   "nitrogen_fixer",      0,    2.0),
+                    ("Bee Balm (Wild Bergamot)",  "pollinator",         -1.5, -1.0),
+                    ("Wild Strawberry",           "groundcover",         1.0, -1.5),
+                    ("Purple Coneflower",         "pollinator",          0,   -1.3),
+                ],
+            },
+        ],
+    },
+    {
+        "name": "Bur Oak Guild",
+        "description": "Large shade-tree guild modelled on natural oak savanna ecosystems of the "
+                       "aspen parkland. Bur oak provides a long-lived canopy with edible acorns. "
+                       "Beaked hazelnut is a native understory shrub that naturally co-occurs with "
+                       "oak and produces edible nuts. Wild lupine and white prairie clover fix "
+                       "nitrogen in the dappled light. Comfrey accumulates nutrients from deep "
+                       "soil layers. Dotted blazingstar is a premier pollinator magnet for native "
+                       "bumble bees. Kinnikinnick forms an evergreen groundcover that suppresses "
+                       "weeds under the spreading canopy.",
+        "members": [
+            ("Bur Oak",                   "canopy",              0,    0),
+            ("Beaked Hazelnut",           "understory",          3.0,  1.5),
+            ("Wild Lupine",               "nitrogen_fixer",     -2.0,  2.5),
+            ("Comfrey",                   "dynamic_accumulator", 2.5, -1.5),
+            ("Dotted Blazingstar",        "pollinator",         -2.5, -2.0),
+            ("Kinnikinnick (Bearberry)",  "groundcover",         1.5, -2.5),
+            ("White Prairie Clover",      "nitrogen_fixer",     -1.0,  3.0),
+        ],
+        "variations": [
+            {
+                "name": "Edible Savanna",
+                "description": "Bur oak guild variant emphasizing food production. Saskatoon berry "
+                               "and gooseberry replace hazelnut for more fruit. Canada goldenrod "
+                               "provides late-season pollinator support.",
+                "members": [
+                    ("Bur Oak",                   "canopy",              0,    0),
+                    ("Saskatoon Berry",           "understory",          3.0,  1.5),
+                    ("Gooseberry",                "understory",         -2.5,  1.0),
+                    ("Alfalfa",                   "nitrogen_fixer",     -2.0,  2.5),
+                    ("Yarrow",                    "dynamic_accumulator", 2.5, -1.5),
+                    ("Canada Goldenrod",          "pollinator",         -2.5, -2.0),
+                    ("Wild Strawberry",           "groundcover",         1.5, -2.5),
+                ],
+            },
+        ],
+    },
+    {
+        "name": "Prairie Pollinator Garden",
+        "description": "Native wildflower grouping designed to provide continuous bloom from "
+                       "spring through fall for Edmonton-area pollinators. Based on aspen parkland "
+                       "ecoregion recommendations. Prairie crocus blooms first in spring, followed "
+                       "by wild bergamot and blanketflower in summer, with goldenrod and smooth "
+                       "aster extending into late fall. Purple prairie clover is a critical native "
+                       "bumble bee food source. Rough fescue provides overwintering habitat for "
+                       "native bees. Group plants in clumps of 3-8 as recommended by pollinator "
+                       "habitat guides.",
+        "members": [
+            ("Bee Balm (Wild Bergamot)",  "pollinator",          0,    0),
+            ("Blanketflower",             "pollinator",          0.8,  0.5),
+            ("Purple Prairie Clover",     "nitrogen_fixer",     -0.7,  0.6),
+            ("Canada Goldenrod",          "pollinator",          0.5, -0.8),
+            ("Smooth Aster",              "pollinator",         -0.8, -0.5),
+            ("Prairie Crocus",            "pollinator",          0,    0.9),
+            ("Rough Fescue",              "other",              -0.5, -0.9),
+        ],
+        "variations": [
+            {
+                "name": "Tall Prairie Meadow",
+                "description": "Taller prairie pollinator variant featuring sunflowers and "
+                               "penstemons. Giant sunflower anchors the centre, providing seeds "
+                               "for birds. Maximilian sunflower, black-eyed Susan, and smooth "
+                               "blue beardtongue create a dramatic mid-to-late summer display. "
+                               "Wild blue flax adds early blue blooms that attract mason bees.",
+                "members": [
+                    ("Giant Sunflower",           "pollinator",          0,    0),
+                    ("Maximilian Sunflower",      "pollinator",          0.8,  0.5),
+                    ("Black-eyed Susan",          "pollinator",         -0.7,  0.6),
+                    ("Smooth Blue Beardtongue",   "pollinator",          0.5, -0.8),
+                    ("Wild Blue Flax",            "pollinator",         -0.8, -0.5),
+                    ("Purple Prairie Clover",     "nitrogen_fixer",      0,    0.9),
+                    ("Switchgrass",               "other",              -0.5, -0.9),
+                ],
+            },
+        ],
+    },
+    {
+        "name": "Boreal Shade Guild",
+        "description": "Understory guild for shaded or north-facing areas beneath existing "
+                       "spruce, poplar, or birch canopy. Modelled on natural boreal forest floor "
+                       "communities. Wild sarsaparilla, bunchberry, and twinflower are classic "
+                       "boreal companions found growing together in Alberta woodlands. Highbush "
+                       "cranberry is a shade-tolerant native shrub that produces edible fruit. "
+                       "Star-flowered Solomon's seal thrives in dappled woodland light. All "
+                       "species tolerate the acidic soils typical under conifer canopy.",
+        "members": [
+            ("White Spruce",                    "canopy",              0,    0),
+            ("Highbush Cranberry",              "understory",          2.5,  1.0),
+            ("Wild Sarsaparilla",               "other",              -1.5,  1.5),
+            ("Bunchberry",                      "groundcover",         1.0, -1.5),
+            ("Twinflower",                      "groundcover",        -1.0, -1.8),
+            ("Star-flowered Solomon's Seal",    "other",               1.8,  1.8),
+            ("Wild Lily-of-the-valley",         "groundcover",        -2.0, -0.5),
+        ],
+        "variations": [
+            {
+                "name": "Edible Boreal Understory",
+                "description": "Boreal shade guild variant emphasizing edible plants. Low-bush "
+                               "cranberry and Labrador tea replace ornamental groundcovers. Wild "
+                               "mint fills the ground layer with a useful aromatic herb that "
+                               "thrives in moist shade. Red osier dogwood provides winter colour "
+                               "and bird habitat.",
+                "members": [
+                    ("White Spruce",              "canopy",              0,    0),
+                    ("Low-bush Cranberry",        "understory",          2.5,  1.0),
+                    ("Red Osier Dogwood",         "understory",         -2.0,  1.5),
+                    ("Labrador Tea",              "other",               1.0, -1.5),
+                    ("Wild Mint",                 "groundcover",        -1.0, -1.8),
+                    ("Wild Sarsaparilla",         "other",               1.8,  1.8),
+                    ("Bog Cranberry",             "groundcover",        -2.0, -0.5),
+                ],
+            },
+        ],
+    },
+    {
+        "name": "Medicinal Herb Circle",
+        "description": "Traditional medicinal plant guild arranged in a circle garden. Centred on "
+                       "purple coneflower (Echinacea), North America's most popular herbal immune "
+                       "support. Yarrow is used by First Nations for wound care and fever. Wild "
+                       "mint and giant hyssop provide digestive and respiratory remedies. "
+                       "Valerian is a traditional sleep aid. Self-heal (Prunella vulgaris) is "
+                       "a widely used wound herb. All species are hardy perennials proven in "
+                       "Zone 3 Alberta gardens.",
+        "members": [
+            ("Purple Coneflower",         "pollinator",          0,    0),
+            ("Yarrow",                    "dynamic_accumulator", 0.8,  0.5),
+            ("Wild Mint",                 "pest_repellent",     -0.7,  0.7),
+            ("Giant Hyssop",              "pollinator",          0.5, -0.8),
+            ("Valerian",                  "other",              -0.8, -0.3),
+            ("Self-heal",                 "other",               0.3,  0.9),
+            ("Bee Balm (Wild Bergamot)",  "pollinator",         -0.4, -0.8),
+        ],
+        "variations": [
+            {
+                "name": "First Nations Medicine Wheel",
+                "description": "Medicinal herb circle variant drawing on traditional Indigenous "
+                               "prairie plant uses. Sweetgrass is a sacred ceremonial plant. Rat "
+                               "root (Acorus calamus) is used for throat and stomach ailments. "
+                               "Seneca snakeroot is a traditional respiratory remedy. Prairie sage "
+                               "provides smudging material. Wild licorice root was used as a "
+                               "general tonic.",
+                "members": [
+                    ("Purple Coneflower",         "pollinator",          0,    0),
+                    ("Sweetgrass",                "other",               0.8,  0.5),
+                    ("Prairie Sage",              "pest_repellent",     -0.7,  0.7),
+                    ("Rat Root",                  "other",               0.5, -0.8),
+                    ("Wild Licorice",             "other",              -0.8, -0.3),
+                    ("Seneca Snakeroot",          "other",               0.3,  0.9),
+                    ("Yarrow",                    "dynamic_accumulator",-0.4, -0.8),
+                ],
+            },
+        ],
+    },
+    {
+        "name": "Native Berry Hedge",
+        "description": "Linear guild for property edges and windbreaks, arranged as a layered "
+                       "hedgerow. Combines native berry-producing shrubs with nitrogen fixers and "
+                       "pollinator plants to create a productive living fence. Saskatoon berry and "
+                       "chokecherry form the tall backbone spaced 2-3m apart. Haskap fills the "
+                       "mid layer at 1m spacing. Wild rose and raspberry provide thorny security "
+                       "at the base. Alfalfa fixes nitrogen between shrubs. Use offset_y as "
+                       "distance along the hedge line.",
+        "members": [
+            ("Saskatoon Berry",           "canopy",              0,    0),
+            ("Chokecherry",               "understory",          0,    3.0),
+            ("Haskap (Blue Honeysuckle)", "understory",          0,    1.5),
+            ("Raspberry",                 "understory",          0.8,  0.8),
+            ("Prickly Rose",              "other",               0.8,  2.2),
+            ("Alfalfa",                   "nitrogen_fixer",      0.5,  3.8),
+            ("Canada Goldenrod",          "pollinator",         -0.5,  1.0),
+        ],
+        "variations": [
+            {
+                "name": "Wildlife Corridor Hedge",
+                "description": "Native berry hedge variant optimized for bird and pollinator "
+                               "habitat. Highbush cranberry and elderberry provide fall and winter "
+                               "bird food. Snowberry adds winter interest and food for waxwings. "
+                               "Buffalo berry fixes nitrogen while producing tart edible fruit. "
+                               "Wolf willow provides silver-leaved windbreak at the base.",
+                "members": [
+                    ("Highbush Cranberry",        "canopy",              0,    0),
+                    ("Elderberry",                "understory",          0,    3.0),
+                    ("Buffalo Berry",             "nitrogen_fixer",      0,    1.5),
+                    ("Snowberry",                 "understory",          0.8,  0.8),
+                    ("Wolf Willow",               "windbreak",           0.8,  2.2),
+                    ("Nanking Cherry",            "understory",         -0.5,  3.8),
+                    ("Bee Balm (Wild Bergamot)",  "pollinator",         -0.5,  1.0),
+                ],
+            },
+        ],
+    },
 ]
 
 

@@ -56,10 +56,103 @@
       white-space: nowrap;
       cursor: move;
     }
+
+    /* ── Map legend ─────────────────────────────────────────────────── */
+    #map-legend {
+      position: absolute;
+      bottom: 30px;
+      left: 10px;
+      z-index: 1000;
+      background: rgba(26, 42, 26, 0.92);
+      border: 1px solid #4a7a4a;
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: #c8e6c9;
+      font-size: 11px;
+      max-width: 200px;
+      display: none;
+    }
+    #map-legend.visible { display: block; }
+    #map-legend h4 {
+      margin: 0 0 6px 0;
+      font-size: 12px;
+      color: #a5d6a7;
+      border-bottom: 1px solid #2e4a2e;
+      padding-bottom: 4px;
+    }
+    #map-legend .legend-section {
+      margin-bottom: 6px;
+    }
+    #map-legend .legend-section-title {
+      font-size: 10px;
+      color: #78909c;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    #map-legend .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 1px 0;
+    }
+    #map-legend .legend-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.2);
+      flex-shrink: 0;
+    }
+    #map-legend .legend-swatch.outline-only {
+      background: transparent !important;
+      border: 2px dashed;
+    }
+    #legend-toggle {
+      position: absolute;
+      bottom: 30px;
+      left: 10px;
+      z-index: 1001;
+      background: rgba(26, 42, 26, 0.9);
+      border: 1px solid #4a7a4a;
+      border-radius: 4px;
+      color: #a5d6a7;
+      font-size: 11px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+    #legend-toggle:hover { background: rgba(46, 74, 46, 0.95); }
+    #legend-toggle.active { display: none; }
   </style>
 </head>
 <body>
   <div id="map"></div>
+
+  <button id="legend-toggle" onclick="toggleLegend()">Legend</button>
+  <div id="map-legend">
+    <h4>Legend <span style="float:right;cursor:pointer;font-size:14px;" onclick="toggleLegend()">&times;</span></h4>
+    <div class="legend-section">
+      <div class="legend-section-title">Plant Types</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#2e7d32;"></span> Tree</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#558b2f;"></span> Shrub</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#7cb342;"></span> Herb</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#c6a817;"></span> Groundcover</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#00838f;"></span> Vine</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#6d4c41;"></span> Root</div>
+    </div>
+    <div class="legend-section">
+      <div class="legend-section-title">Guild Roles</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#1b5e20;"></span> Canopy</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#388e3c;"></span> Understory</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#66bb6a;"></span> Groundcover</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#43a047;"></span> N-Fixer</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#aed581;"></span> Pollinator</div>
+      <div class="legend-item"><span class="legend-swatch outline-only" style="border-color:#a5d6a7;"></span> Guild outline</div>
+    </div>
+    <div class="legend-section">
+      <div class="legend-section-title">Other</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#66bb6a; border-radius:2px;"></span> Boundary</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#fdd835;"></span> Measurement</div>
+    </div>
+  </div>
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -807,6 +900,22 @@
 
     function cancelDraw() {
       setMode('none');
+    }
+
+    // ── Legend toggle ──────────────────────────────────────────────────────
+    function toggleLegend() {
+      var legend = document.getElementById('map-legend');
+      var btn    = document.getElementById('legend-toggle');
+      var show   = !legend.classList.contains('visible');
+      legend.classList.toggle('visible', show);
+      btn.classList.toggle('active', show);
+    }
+
+    function setLegendVisible(visible) {
+      var legend = document.getElementById('map-legend');
+      var btn    = document.getElementById('legend-toggle');
+      legend.classList.toggle('visible', visible);
+      btn.classList.toggle('active', visible);
     }
 
     // ── QWebChannel bootstrap ─────────────────────────────────────────────────
