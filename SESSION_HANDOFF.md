@@ -7,7 +7,7 @@
 
 ---
 
-## What Has Been Built (Steps 1–4 + A + B + C + D)
+## What Has Been Built (Steps 1–4 + A + B)
 
 ### Core App (Steps 1–4)
 - **Map** (`html/map.html`) — Leaflet.js with CartoDB Voyager tiles, Esri
@@ -33,7 +33,7 @@
   `companion_friends(plant_id_a, plant_id_b)` — bidirectional
   `companion_enemies(plant_id_a, plant_id_b)` — bidirectional
 - Auto-migration in `init_db()` via ALTER TABLE (safe on existing databases)
-- Schema version tracking in `_schema_version` table (current = 3)
+- Schema version tracking in `_schema_version` table (current = 2)
 - 52 seed plants fully populated with new fields
 - Detail panel shows all new fields including colour-coded companion display
 
@@ -48,29 +48,6 @@
   (live search + import-to-DB button)
 - Imported plants land in the local DB and can be placed on the map
 
-### Step C — Edmonton Planting Calendar (NEW)
-- New DB table: `planting_calendar(plant_id, month, status, notes)`
-  - Status values: `dormant`, `start_indoors`, `direct_sow`, `transplant`,
-    `growing`, `harvest`, `pruning`
-- Full 12-month calendar data for all 52 seed plants, tuned for Edmonton
-  Zone 3b (last frost ~May 20, first frost ~Sep 20)
-- Colour-coded 12-month grid in the plant detail panel, with:
-  - Current month highlighted with a yellow border
-  - Tooltip per cell showing status + notes
-  - Legend for all status colours
-  - "This month" summary note showing current month's task
-- Data stored in `src/db/calendar_data.py` (624 entries = 52 plants × 12 months)
-- Auto-seeded on first run via schema v3 migration
-- Query functions: `get_calendar(plant_id)` and `get_current_month_tasks()`
-
-### Step D — USDA Bulk CSV Import (NEW)
-- `src/db/import_usda.py` — standalone CLI script to update `native_to_alberta`
-  flag from the USDA PLANTS database CSV
-- Supports both manual CSV path and auto-download
-- Matches on normalised scientific name (Genus species, case-insensitive)
-- Dry-run mode (`--dry-run`) for safe preview
-- Reports: matched, newly flagged, not-found summary
-
 ### Plant Catalogue
 - 52 plants: 10 trees, 16 shrubs, 16 herbs/perennials, 5 groundcovers,
   3 vines, 2 roots
@@ -80,7 +57,6 @@
 - 10 native Edmonton species added (Prickly Rose, Snowberry, Wild Mint,
   Prairie Crocus, Fireweed, Canada Goldenrod, Blanketflower, Harebell,
   Wild Lupine, Wild Clematis)
-- Companion planting relationships populated (30+ pairs in SEED_COMPANIONS)
 
 ---
 
@@ -96,18 +72,16 @@ PermaDesign/
 │   ├── app.py                  MainWindow — project state, signal wiring
 │   ├── climate.py              get_zone(lat, lng), zone_label()
 │   ├── map_widget.py           MapBridge (QObject) + MapWidget (QWebEngineView)
-│   ├── plant_panel.py          PlantPanel — Local + Permapeople tabs + calendar grid
+│   ├── plant_panel.py          PlantPanel — Local + Permapeople tabs
 │   ├── project.py              GeoJSON save/load helpers
 │   ├── settings.py             Config file + SettingsDialog
 │   ├── toolbar.py              MainToolbar
 │   ├── api/
 │   │   └── permapeople.py      Permapeople API client + QThread worker
 │   └── db/
-│       ├── plants.py           DB access layer — init, search, get, companions, calendar
-│       ├── schema.sql          SQL schema (v3) — plants + companion + calendar tables
-│       ├── seed_data.py        52 seed plants + SEED_COMPANIONS + SEED_CALENDAR import
-│       ├── calendar_data.py    624 month-by-month entries for 52 plants (Edmonton 3b)
-│       └── import_usda.py      USDA PLANTS CSV import for native_to_alberta flag
+│       ├── plants.py           DB access layer — init, search, get, companions
+│       ├── schema.sql          SQL schema (v2) — plants + companion tables
+│       └── seed_data.py        52 seed plants + SEED_COMPANIONS list
 ├── data/
 │   ├── hardiness_zones.json    35 bounding-box hardiness regions
 │   └── permadesign.db          SQLite DB (git-ignored, auto-created)
@@ -117,32 +91,44 @@ PermaDesign/
 
 ---
 
-## Next Steps (Ideas for Future Development)
+## Next Steps (Steps C and D — Not Yet Started)
 
-### Step E — Layer Management & Plant Guilds
-- Group plants into permaculture guilds (e.g. apple guild, nitrogen-fixer ring)
-- Visual guild overlay on the map with toggle
-- Guild template library for common food forest patterns
+### Step C — Edmonton Planting Calendar
+**Goal:** Month-by-month planting/growing status per plant, specific to
+Zone 3b Edmonton (last frost ~May 20, first frost ~Sep 20).
 
-### Step F — Seasonal Timeline View
-- Timeline showing all plants' activities across the year in one view
-- Gantt-chart style display: "What's happening in my garden in July?"
-- Export as printable monthly task sheet
+**What to build:**
+- New DB table: `planting_calendar(plant_id, month, status)` where status is
+  one of: `start_indoors` | `direct_sow` | `transplant` | `harvest` |
+  `dormant` | `growing`
+- Populate calendar data for all 52 seed plants
+- New panel or tab showing a 12-month grid for the selected plant,
+  colour-coded by status
+- Optionally: a "What to do this month" summary based on current date
 
-### Step G — Soil & Microclimate Overlays
-- Paint soil type zones on the map (clay, sand, loam)
-- Shade analysis from tree canopy projections
-- Moisture gradient overlay based on slope/drainage
+**Schema addition:**
+```sql
+CREATE TABLE IF NOT EXISTS planting_calendar (
+    plant_id INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+    month    INTEGER NOT NULL CHECK (month BETWEEN 1 AND 12),
+    status   TEXT NOT NULL,
+    notes    TEXT,
+    PRIMARY KEY (plant_id, month)
+);
+```
 
-### Step H — Export & Reporting
-- Export plant list as CSV/PDF with full details
-- Generate planting plan document with calendar
-- Print-ready map export at scale
+### Step D — USDA Bulk CSV Import for Native Species Flag
+**Goal:** Use the USDA PLANTS database bulk CSV to automatically populate
+the `native_to_alberta` flag from authoritative data rather than manual entry.
 
-### Step I — Multi-Project & Collaboration
-- Multiple project tabs
-- Project templates for common Edmonton lot sizes
-- Share/import project files with other users
+**What to build:**
+- Download script or one-time import script that reads the USDA PLANTS CSV
+- Match on scientific name to existing plants in local DB
+- Update `native_to_alberta = 1` where USDA data confirms Alberta nativity
+- The USDA CSV is available at: plants.usda.gov/csvdownload (State = Alberta
+  or Province AB lookup)
+
+**Key file:** `src/db/import_usda.py` (new script, run once via CLI)
 
 ---
 
@@ -153,11 +139,11 @@ PermaDesign/
 - Permapeople API response format: `POST /api/search` with JSON body `{"q":"term"}`;
   the `data` field in each plant object may be a list rather than a dict —
   already guarded against in `_normalize_plant()`
+- Companion planting data in `SEED_COMPANIONS` in `seed_data.py` is currently
+  an empty list `[]` — a future task is to populate known companion relationships
+  for the 52 seed plants
 - The Permapeople `_normalize_plant()` field mapping is best-effort; some fields
   (hardiness zone, spacing) may come back as None for plants with sparse data
-- USDA import script (`import_usda.py`) auto-download may fail if the USDA API
-  changes; manual CSV download is the reliable fallback
-- Calendar data is Edmonton-specific; other zones would need different timing
 
 ---
 
@@ -174,11 +160,16 @@ Paste this at the start of your next Claude Code session:
 > **Repository:** yarrowyarrowyarrow/PermaDesign
 > **Branch:** `claude/build-step-1-v1-hTpZB`
 >
-> Steps 1–4 (core app), Step A (expanded schema), Step B (Permapeople API),
-> Step C (Edmonton planting calendar), and Step D (USDA CSV import) are
-> complete and working.
+> Steps 1–4 (core app), Step A (expanded plant schema with bloom/fruit/native/
+> edible/pH/companion fields), and Step B (Permapeople live API search + import)
+> are complete and working.
 >
 > Please read `SESSION_HANDOFF.md` in the repo root for the full current state,
-> file structure, and ideas for next steps.
+> file structure, and detailed specs for the next steps.
+>
+> **Today's goal is Step C:** an Edmonton-specific planting calendar
+> (Zone 3b, last frost ~May 20, first frost ~Sep 20) showing month-by-month
+> status per plant, and Step D: USDA bulk CSV import to populate the
+> `native_to_alberta` flag from authoritative data.
 >
 > Please read the relevant files before making any changes.
