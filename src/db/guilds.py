@@ -2,7 +2,7 @@ import json
 from .plants import get_connection
 
 
-def __get_plant_by_name(common_name):
+def _get_plant_by_name(common_name):
     """Look up a plant by common_name (case-insensitive)."""
     conn = get_connection()
     try:
@@ -178,3 +178,62 @@ def import_guild(data):
             warnings.append(f"Plant not found: {m['common_name']}")
 
     return guild_id, warnings
+
+
+# ── Example guild presets ────────────────────────────────────────────────────
+
+EXAMPLE_GUILDS = [
+    {
+        "name": "Apple Tree Guild",
+        "description": "Classic permaculture fruit tree guild for Zone 3-4. "
+                       "Apple at centre with support plants filling understory and ground layer.",
+        "members": [
+            # (common_name, role, offset_x, offset_y)
+            ("Goodland Apple",    "canopy",              0,    0),
+            ("Comfrey",           "dynamic_accumulator", 1.5,  0.8),
+            ("Chives",            "pest_repellent",     -1.2,  1.0),
+            ("White Clover",      "nitrogen_fixer",      0,    1.5),
+            ("Yarrow",            "pollinator",          1.0, -1.2),
+            ("Wild Strawberry",   "groundcover",        -0.8, -1.0),
+        ],
+    },
+    {
+        "name": "Saskatoon Berry Guild",
+        "description": "Prairie-adapted shrub guild built around Saskatoon berry. "
+                       "Great for Zone 2-4 food forests with native plants.",
+        "members": [
+            ("Saskatoon Berry",   "canopy",              0,    0),
+            ("Wild Lupine",       "nitrogen_fixer",      1.0,  0.5),
+            ("Yarrow",            "dynamic_accumulator",-0.8,  0.8),
+            ("Wild Strawberry",   "groundcover",         0.5, -0.8),
+            ("Chives",            "pest_repellent",     -0.5, -0.6),
+            ("Bee Balm (Wild Bergamot)", "pollinator",   0.8, -0.5),
+        ],
+    },
+]
+
+
+def seed_example_guilds():
+    """Create example guilds if none exist yet. Safe to call multiple times."""
+    conn = get_connection()
+    try:
+        count = conn.execute("SELECT COUNT(*) FROM guilds").fetchone()[0]
+        if count > 0:
+            return  # Already have guilds, don't re-seed
+    finally:
+        conn.close()
+
+    for guild_def in EXAMPLE_GUILDS:
+        # Find center plant
+        center_name = guild_def["members"][0][0]
+        center_plant = _get_plant_by_name(center_name)
+        center_id = center_plant["id"] if center_plant else None
+
+        guild_id = create_guild(
+            guild_def["name"], guild_def["description"], center_id
+        )
+
+        for common_name, role, ox, oy in guild_def["members"]:
+            plant = _get_plant_by_name(common_name)
+            if plant:
+                add_guild_member(guild_id, plant["id"], role, ox, oy)

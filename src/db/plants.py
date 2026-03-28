@@ -126,8 +126,102 @@ def init_db() -> None:
             _seed_calendar(conn)
 
         _set_schema_version(conn, _SCHEMA_VERSION)
+
+        # Import extended plant list from JSON (adds new plants, skips duplicates)
+        _import_plants_json(conn)
     finally:
         conn.close()
+
+    # Seed example guilds (after plants are ready)
+    try:
+        from src.db.guilds import seed_example_guilds
+        seed_example_guilds()
+    except Exception:
+        pass  # Non-critical; guilds can be created manually
+
+
+def _import_plants_json(conn: sqlite3.Connection) -> None:
+    """Import plants from data/plants.json, skipping any that already exist by name."""
+    json_path = os.path.join(_DATA_DIR, "plants.json")
+    if not os.path.exists(json_path):
+        return
+
+    import json
+    with open(json_path, "r", encoding="utf-8") as f:
+        entries = json.load(f)
+
+    # Get existing plant names for dedup
+    existing = {
+        row[0].lower()
+        for row in conn.execute("SELECT common_name FROM plants").fetchall()
+    }
+
+    # Field mapping: JSON key → DB column
+    added = 0
+    for p in entries:
+        if p.get("common_name", "").lower() in existing:
+            continue
+
+        # Map JSON fields to the 20-column INSERT
+        uses = p.get("permaculture_uses", "")
+        if isinstance(uses, list):
+            uses = ", ".join(uses)
+
+        row = (
+            p.get("common_name", ""),
+            p.get("scientific_name", ""),
+            p.get("plant_type", "herb"),
+            p.get("hardiness_zone_min"),
+            p.get("hardiness_zone_max"),
+            p.get("sun_requirement", ""),
+            p.get("water_needs", ""),
+            p.get("native_region", ""),
+            uses,
+            p.get("spacing_m") or p.get("spacing_meters"),
+            p.get("mature_height_m") or p.get("mature_height_meters"),
+            p.get("notes", ""),
+            p.get("bloom_period", ""),
+            p.get("fruit_period", ""),
+            1 if "alberta" in (p.get("native_region") or "").lower() else 0,
+            p.get("edible_parts", ""),
+            p.get("deciduous_evergreen", ""),
+            p.get("soil_ph_min"),
+            p.get("soil_ph_max"),
+            p.get("perennial_annual") or p.get("perennial_or_annual", ""),
+        )
+
+        conn.execute(
+            """INSERT INTO plants
+               (common_name, scientific_name, plant_type,
+                hardiness_zone_min, hardiness_zone_max,
+                sun_requirement, water_needs,
+                native_region, permaculture_uses,
+                spacing_meters, mature_height_meters, notes,
+                bloom_period, fruit_period, native_to_alberta,
+                edible_parts, deciduous_evergreen,
+                soil_ph_min, soil_ph_max, perennial_or_annual)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            row,
+        )
+        added += 1
+
+        # Import calendar data from cal_jan..cal_dec if present
+        plant_id = conn.execute(
+            "SELECT id FROM plants WHERE common_name = ?", (p["common_name"],)
+        ).fetchone()[0]
+        months = ["cal_jan", "cal_feb", "cal_mar", "cal_apr", "cal_may", "cal_jun",
+                   "cal_jul", "cal_aug", "cal_sep", "cal_oct", "cal_nov", "cal_dec"]
+        for i, key in enumerate(months, 1):
+            status = p.get(key)
+            if status and status != "dormant":
+                conn.execute(
+                    "INSERT OR IGNORE INTO planting_calendar (plant_id, month, status, notes) "
+                    "VALUES (?, ?, ?, NULL)",
+                    (plant_id, i, status),
+                )
+
+    if added:
+        conn.commit()
 
 
 def _insert_plants(conn: sqlite3.Connection, plants: list[tuple]) -> None:

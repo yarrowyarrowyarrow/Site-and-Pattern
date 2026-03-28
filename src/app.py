@@ -356,14 +356,13 @@ class MainWindow(QMainWindow):
         self._mark_modified()
 
     def _enter_guild_mode(self, guild_data: dict):
-        """Place a guild on the map — each member becomes a plant marker."""
+        """Place a guild on the map — click to place centre."""
         self._current_mode = 'guild'
         self._pending_guild = guild_data
-        self.map_widget.set_mode('plant')  # reuse plant click mode
+        self.map_widget.run_js("map.getContainer().style.cursor = 'crosshair';")
         self._set_mode_label(
             f"Placing guild: {guild_data.get('name', '?')} — click map to place centre"
         )
-        # Override the next map click to place the whole guild
         try:
             self.map_widget.bridge.map_clicked.disconnect(self._on_guild_click)
         except TypeError:
@@ -374,22 +373,51 @@ class MainWindow(QMainWindow):
         """Handle map click while in guild placement mode."""
         if self._current_mode != 'guild' or not hasattr(self, '_pending_guild'):
             return
+        import json as _json
+        import math
+
         guild = self._pending_guild
         members = guild.get("members", [])
+
+        # Enrich member data with spacing/height for the JS visualisation
+        enriched_members = []
         for m in members:
-            # Convert meter offsets to approximate lat/lng offsets
-            import math
-            lat_offset = (m.get("offset_y", 0)) / 111320
-            lng_offset = (m.get("offset_x", 0)) / (111320 * math.cos(lat * math.pi / 180))
+            spacing_m, plant_type, _ = self._plant_info(m["plant_id"])
+            try:
+                from src.db.plants import get_plant
+                p = get_plant(m["plant_id"])
+                height = float(p.get("mature_height_meters") or 1.0) if p else 1.0
+            except Exception:
+                height = 1.0
+            enriched_members.append({
+                "plant_id": m["plant_id"],
+                "common_name": m["common_name"],
+                "plant_type": plant_type,
+                "role": m.get("role", "other"),
+                "offset_x": m.get("offset_x", 0),
+                "offset_y": m.get("offset_y", 0),
+                "spacing_meters": spacing_m,
+                "mature_height_meters": height,
+            })
+
+        guild_js = {
+            "name": guild.get("name", "Guild"),
+            "members": enriched_members,
+        }
+
+        # Call JS placeGuildOnMap for visual rendering
+        js_data = _json.dumps(guild_js).replace("'", "\\'")
+        self.map_widget.run_js(
+            f"placeGuildOnMap(JSON.parse('{js_data}'), {lat}, {lng});"
+        )
+
+        # Track each member in project state
+        for m in enriched_members:
+            lat_offset = (m["offset_y"]) / 111320
+            lng_offset = (m["offset_x"]) / (111320 * math.cos(lat * math.pi / 180))
             mlat = lat + lat_offset
             mlng = lng + lng_offset
 
-            spacing_m = m.get("spacing_meters", 1.0)
-            plant_type = m.get("plant_type", "herb")
-            self.map_widget.load_plant_marker(
-                m["plant_id"], m["common_name"], mlat, mlng,
-                spacing_m, plant_type
-            )
             self._placed_plants.append({
                 "plant_id": m["plant_id"], "common_name": m["common_name"],
                 "lat": mlat, "lng": mlng
@@ -414,7 +442,7 @@ class MainWindow(QMainWindow):
         except TypeError:
             pass
         self.statusBar().showMessage(
-            f"Placed guild '{guild.get('name', '')}' with {len(members)} members", 3000
+            f"Placed guild '{guild.get('name', '')}' with {len(enriched_members)} members", 3000
         )
 
     def _cancel_draw(self):

@@ -594,6 +594,117 @@
       annotations = {};
     }
 
+    // ── Guild visualisation ─────────────────────────────────────────────────
+    // Guilds are drawn as overlapping canopy circles (like the oak guild diagram).
+    // The canopy tree is the largest circle; understory/groundcover nest inside.
+    var guildGroups = [];  // array of L.layerGroup
+
+    var ROLE_COLORS = {
+      'canopy':              '#1b5e20',
+      'understory':          '#388e3c',
+      'groundcover':         '#66bb6a',
+      'nitrogen_fixer':      '#43a047',
+      'dynamic_accumulator': '#2e7d32',
+      'pest_repellent':      '#7cb342',
+      'pollinator':          '#aed581',
+      'windbreak':           '#558b2f',
+      'other':               '#81c784'
+    };
+
+    function placeGuildOnMap(guildData, centerLat, centerLng) {
+      var members = guildData.members || [];
+      var group = L.layerGroup().addTo(map);
+
+      // Sort members: canopy first (largest), then by descending height
+      var sorted = members.slice().sort(function(a, b) {
+        if (a.role === 'canopy' && b.role !== 'canopy') return -1;
+        if (b.role === 'canopy' && a.role !== 'canopy') return 1;
+        return (b.mature_height_meters || 1) - (a.mature_height_meters || 1);
+      });
+
+      // Find the biggest canopy radius (based on spacing of the canopy tree)
+      var maxRadius = 2;
+      sorted.forEach(function(m) {
+        var r = Math.max((m.spacing_meters || 1) / 2, 0.5);
+        if (r > maxRadius) maxRadius = r;
+      });
+
+      sorted.forEach(function(m) {
+        var latOff = (m.offset_y || 0) / 111320;
+        var lngOff = (m.offset_x || 0) / (111320 * Math.cos(centerLat * Math.PI / 180));
+        var mlat = centerLat + latOff;
+        var mlng = centerLng + lngOff;
+
+        var role = m.role || 'other';
+        var color = ROLE_COLORS[role] || '#81c784';
+        var radius = Math.max((m.spacing_meters || 1) / 2, 0.5);
+
+        // Draw filled canopy circle
+        var canopy = L.circle([mlat, mlng], {
+          radius: radius,
+          color: color,
+          weight: 1.5,
+          fillColor: color,
+          fillOpacity: 0.30,
+          className: 'guild-canopy'
+        }).addTo(group);
+
+        canopy.bindTooltip(
+          '<b>' + (guildData.name || 'Guild') + '</b><br>' +
+          m.common_name + ' <span style="color:#aaa">(' + role.replace(/_/g, ' ') + ')</span>',
+          { className: 'plant-marker-label' }
+        );
+
+        // Store metadata for undo/project tracking
+        canopy._pd = {
+          plantId: m.plant_id, commonName: m.common_name,
+          lat: mlat, lng: mlng,
+          spacingM: m.spacing_meters, plantType: m.plant_type,
+          guildName: guildData.name
+        };
+
+        // Also register in plantMarkers so labels/canopy-toggle works
+        var mid = m.plant_id + '_g_' + Date.now() + '_' + Math.random().toString(36).substr(2,5);
+        plantMarkers[mid] = canopy;
+
+        canopy.on('contextmenu', function(e) {
+          L.DomEvent.stop(e);
+          // Remove entire guild group on right-click
+          map.removeLayer(group);
+          // Clean up plantMarkers references
+          group.eachLayer(function(layer) {
+            Object.keys(plantMarkers).forEach(function(k) {
+              if (plantMarkers[k] === layer) delete plantMarkers[k];
+            });
+          });
+          var idx = guildGroups.indexOf(group);
+          if (idx >= 0) guildGroups.splice(idx, 1);
+        });
+      });
+
+      // Draw a dashed outline around the whole guild footprint
+      var outline = L.circle([centerLat, centerLng], {
+        radius: maxRadius * 1.1,
+        color: '#a5d6a7',
+        weight: 1.5,
+        dashArray: '6 4',
+        fillOpacity: 0,
+        interactive: false
+      }).addTo(group);
+
+      // Add guild name label at center
+      var labelIcon = L.divIcon({
+        className: 'plant-marker-label',
+        html: '<b>' + (guildData.name || 'Guild') + '</b>',
+        iconSize: [0, 0],
+        iconAnchor: [0, -8]
+      });
+      L.marker([centerLat, centerLng], { icon: labelIcon, interactive: false }).addTo(group);
+
+      guildGroups.push(group);
+      return group;
+    }
+
     // ── Mode control (called from Python) ────────────────────────────────────
     function setMode(mode, plantData) {
       currentMode  = mode;
@@ -667,6 +778,8 @@
       plantMarkers = {};
       Object.values(plantLabels).forEach(function(l) { map.removeLayer(l); });
       plantLabels = {};
+      guildGroups.forEach(function(g) { map.removeLayer(g); });
+      guildGroups = [];
       drawnItems.clearLayers();
     }
 

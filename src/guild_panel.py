@@ -39,27 +39,39 @@ ROLES = [
     "other",
 ]
 
+# Role → preferred plant_type filters (used to sort/filter the plant combo)
+ROLE_TYPE_HINTS = {
+    "canopy":              ["tree"],
+    "understory":          ["shrub", "vine"],
+    "groundcover":         ["groundcover", "herb"],
+    "nitrogen_fixer":      None,  # filter by permaculture_uses instead
+    "dynamic_accumulator": None,
+    "pest_repellent":      ["herb", "shrub"],
+    "pollinator":          ["herb", "shrub"],
+    "windbreak":           ["tree", "shrub"],
+    "other":               None,  # show all
+}
+
 
 class AddMemberDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Add Guild Member")
-        self.setMinimumWidth(350)
+        self.setMinimumWidth(380)
+
+        self._all_plants = plants_db.get_all_plants()
 
         layout = QFormLayout(self)
 
-        self.plant_combo = QComboBox()
-        all_plants = plants_db.get_all_plants()
-        for p in all_plants:
-            self.plant_combo.addItem(
-                f"{p['common_name']} ({p['plant_type']})", p["id"]
-            )
-        layout.addRow("Plant:", self.plant_combo)
-
+        # Role comes first — it filters the plant list
         self.role_combo = QComboBox()
         for r in ROLES:
             self.role_combo.addItem(r.replace("_", " ").title(), r)
+        self.role_combo.currentIndexChanged.connect(self._on_role_changed)
         layout.addRow("Role:", self.role_combo)
+
+        self.plant_combo = QComboBox()
+        layout.addRow("Plant:", self.plant_combo)
 
         self.offset_x = QDoubleSpinBox()
         self.offset_x.setRange(-50, 50)
@@ -79,6 +91,48 @@ class AddMemberDialog(QDialog):
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addRow(buttons)
+
+        # Populate plant list for the default role
+        self._on_role_changed()
+
+    def _on_role_changed(self):
+        """Filter plant combo based on selected role."""
+        role = self.role_combo.currentData()
+        type_hints = ROLE_TYPE_HINTS.get(role)
+
+        self.plant_combo.clear()
+
+        # Special filtering for function-based roles
+        perm_keyword = None
+        if role == "nitrogen_fixer":
+            perm_keyword = "nitrogen"
+        elif role == "dynamic_accumulator":
+            perm_keyword = "accumulator"
+
+        preferred = []
+        others = []
+
+        for p in self._all_plants:
+            label = f"{p['common_name']} ({p['plant_type']})"
+            ptype = p.get("plant_type", "")
+            puses = (p.get("permaculture_uses") or "").lower()
+
+            if perm_keyword and perm_keyword in puses:
+                preferred.append((label, p["id"]))
+            elif type_hints and ptype in type_hints:
+                preferred.append((label, p["id"]))
+            else:
+                others.append((label, p["id"]))
+
+        # Show matching plants first, then a separator, then the rest
+        for label, pid in preferred:
+            self.plant_combo.addItem(label, pid)
+
+        if preferred and others:
+            self.plant_combo.insertSeparator(len(preferred))
+
+        for label, pid in others:
+            self.plant_combo.addItem(label, pid)
 
     def get_data(self):
         return {
