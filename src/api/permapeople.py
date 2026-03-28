@@ -24,9 +24,9 @@ _BASE_URL = "https://permapeople.org/api"
 
 # ── Low-level request helper ──────────────────────────────────────────────────
 
-def _request(path: str, key_id: str, key_secret: str,
-             params: Optional[dict] = None) -> dict | list:
-    """Make a GET request and return parsed JSON.  Raises on HTTP / network errors."""
+def _get(path: str, key_id: str, key_secret: str,
+         params: Optional[dict] = None) -> dict | list:
+    """Make a GET request and return parsed JSON."""
     url = _BASE_URL + path
     if params:
         query = "&".join(
@@ -34,12 +34,31 @@ def _request(path: str, key_id: str, key_secret: str,
         )
         url = url + "?" + query
 
-    req = urllib.request.Request(url)
-    req.add_header("x-permapeople-key-id",     key_id)
-    req.add_header("x-permapeople-key-secret",  key_secret)
-    req.add_header("Accept",                    "application/json")
-    req.add_header("User-Agent",                "PermaDesign/1.0")
+    req = urllib.request.Request(url, method="GET")
+    req.add_header("x-permapeople-key-id",    key_id)
+    req.add_header("x-permapeople-key-secret", key_secret)
+    req.add_header("Accept",                   "application/json")
+    req.add_header("User-Agent",               "PermaDesign/1.0")
+    return _execute(req)
 
+
+def _post(path: str, key_id: str, key_secret: str,
+          body: dict) -> dict | list:
+    """Make a POST request with a JSON body and return parsed JSON."""
+    url = _BASE_URL + path
+    data = json.dumps(body).encode("utf-8")
+
+    req = urllib.request.Request(url, data=data, method="POST")
+    req.add_header("x-permapeople-key-id",    key_id)
+    req.add_header("x-permapeople-key-secret", key_secret)
+    req.add_header("Content-Type",             "application/json")
+    req.add_header("Accept",                   "application/json")
+    req.add_header("User-Agent",               "PermaDesign/1.0")
+    return _execute(req)
+
+
+def _execute(req: urllib.request.Request) -> dict | list:
+    """Execute a prepared request and return parsed JSON."""
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
             raw = resp.read().decode("utf-8")
@@ -282,15 +301,16 @@ class PermapeopleWorker(QObject):
 
     def search(self):
         try:
-            raw = _request(
-                "/plants/search",
-                self._key_id,
-                self._key_secret,
-                params={"q": self._query}
-            )
-            # Handle {plants: [...]} or [...] directly
+            # Permapeople API: POST /api/search  {"q": "<term>"}
+            raw = _post("/search", self._key_id, self._key_secret,
+                        body={"q": self._query})
+
+            # Response may be {plants: [...]} or a bare list
             if isinstance(raw, dict):
-                items = raw.get("plants") or raw.get("data") or raw.get("results") or []
+                items = (raw.get("plants")
+                         or raw.get("data")
+                         or raw.get("results")
+                         or [])
             else:
                 items = raw if isinstance(raw, list) else []
 
