@@ -47,6 +47,18 @@ _WATER_LABELS: dict[str, str] = {
     "high":   "High",
 }
 
+_DECIDUOUS_LABELS: dict[str, str] = {
+    "deciduous":  "Deciduous",
+    "evergreen":  "Evergreen",
+    "herbaceous": "Herbaceous (dies back)",
+}
+
+_LIFECYCLE_LABELS: dict[str, str] = {
+    "perennial": "Perennial",
+    "annual":    "Annual",
+    "biennial":  "Biennial",
+}
+
 _USE_LABELS: dict[str, str] = {
     "nitrogen_fixer":    "Nitrogen Fixer",
     "dynamic_accumulator": "Dynamic Accumulator",
@@ -195,7 +207,7 @@ class PlantPanel(QWidget):
         row2.addWidget(self._use_combo)
         top_layout.addLayout(row2)
 
-        # Zone filter toggle
+        # Zone + native filter row
         zone_row = QHBoxLayout()
         zone_row.setSpacing(4)
         self._zone_filter_btn = QPushButton("Filter by current zone")
@@ -206,7 +218,12 @@ class PlantPanel(QWidget):
         self._zone_filter_btn.toggled.connect(self._run_search)
         self._zone_label = QLabel("Zone: —")
         self._zone_label.setStyleSheet("color: #78909c; font-size: 11px;")
+        self._native_filter_btn = QPushButton("Native AB only")
+        self._native_filter_btn.setCheckable(True)
+        self._native_filter_btn.setToolTip("Only show plants native to Alberta")
+        self._native_filter_btn.toggled.connect(self._run_search)
         zone_row.addWidget(self._zone_filter_btn)
+        zone_row.addWidget(self._native_filter_btn)
         zone_row.addWidget(self._zone_label)
         zone_row.addStretch()
         top_layout.addLayout(zone_row)
@@ -250,9 +267,18 @@ class PlantPanel(QWidget):
         self._d_uses.setWordWrap(True)
         self._d_spacing = QLabel()
         self._d_height  = QLabel()
+        self._d_bloom   = QLabel()
+        self._d_fruit   = QLabel()
+        self._d_edible  = QLabel()
+        self._d_growth  = QLabel()
+        self._d_ph      = QLabel()
+        self._d_native  = QLabel()
         self._d_notes   = QLabel()
         self._d_notes.setWordWrap(True)
         self._d_notes.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self._d_companions = QLabel()
+        self._d_companions.setWordWrap(True)
+        self._d_companions.setStyleSheet("font-size: 11px;")
 
         bold_font = QFont()
         bold_font.setBold(True)
@@ -263,16 +289,23 @@ class PlantPanel(QWidget):
         self._d_sci.setFont(italic_font)
         self._d_sci.setStyleSheet("color: #90a4ae;")
 
-        detail_layout.addRow("",           self._d_common)
-        detail_layout.addRow("Species:",   self._d_sci)
-        detail_layout.addRow("Type:",      self._d_type)
-        detail_layout.addRow("Zones:",     self._d_zones)
-        detail_layout.addRow("Sun:",       self._d_sun)
-        detail_layout.addRow("Water:",     self._d_water)
-        detail_layout.addRow("Spacing:",   self._d_spacing)
-        detail_layout.addRow("Height:",    self._d_height)
-        detail_layout.addRow("Uses:",      self._d_uses)
-        detail_layout.addRow("Notes:",     self._d_notes)
+        detail_layout.addRow("",             self._d_common)
+        detail_layout.addRow("Species:",     self._d_sci)
+        detail_layout.addRow("Type:",        self._d_type)
+        detail_layout.addRow("Zones:",       self._d_zones)
+        detail_layout.addRow("Sun:",         self._d_sun)
+        detail_layout.addRow("Water:",       self._d_water)
+        detail_layout.addRow("Spacing:",     self._d_spacing)
+        detail_layout.addRow("Height:",      self._d_height)
+        detail_layout.addRow("Bloom:",       self._d_bloom)
+        detail_layout.addRow("Fruit:",       self._d_fruit)
+        detail_layout.addRow("Edible:",      self._d_edible)
+        detail_layout.addRow("Growth:",      self._d_growth)
+        detail_layout.addRow("Soil pH:",     self._d_ph)
+        detail_layout.addRow("Native AB:",   self._d_native)
+        detail_layout.addRow("Uses:",        self._d_uses)
+        detail_layout.addRow("Companions:",  self._d_companions)
+        detail_layout.addRow("Notes:",       self._d_notes)
 
         bot_layout.addWidget(self._detail_group)
 
@@ -348,6 +381,7 @@ class PlantPanel(QWidget):
                 water_needs = self._combo_value(self._water_combo),
                 perm_use    = self._combo_value(self._use_combo),
                 zone        = zone,
+                native_only = self._native_filter_btn.isChecked(),
             )
         except Exception as exc:
             self._result_count.setText(f"Error: {exc}")
@@ -385,6 +419,20 @@ class PlantPanel(QWidget):
             for u in uses_raw.split(",") if u.strip()
         )
 
+        ph_min = plant.get("soil_ph_min")
+        ph_max = plant.get("soil_ph_max")
+        ph_str = f"{ph_min} – {ph_max}" if ph_min and ph_max else "—"
+
+        edible_raw = plant.get("edible_parts") or ""
+        edible_str = edible_raw.replace(",", ", ") if edible_raw else "—"
+
+        native_ab = plant.get("native_to_alberta")
+        native_str = "Yes" if native_ab else "No"
+        if native_ab:
+            self._d_native.setStyleSheet("color: #81c784; font-weight: bold;")
+        else:
+            self._d_native.setStyleSheet("color: #78909c;")
+
         self._d_common.setText(plant.get("common_name", ""))
         self._d_sci.setText(plant.get("scientific_name") or "—")
         self._d_type.setText(_TYPE_LABELS.get(plant.get("plant_type", ""), "—"))
@@ -395,10 +443,46 @@ class PlantPanel(QWidget):
         height  = plant.get("mature_height_meters")
         self._d_spacing.setText(f"{spacing} m" if spacing else "—")
         self._d_height.setText(f"{height} m" if height else "—")
+        self._d_bloom.setText(plant.get("bloom_period") or "—")
+        self._d_fruit.setText(plant.get("fruit_period") or "—")
+        self._d_edible.setText(edible_str)
+        self._d_growth.setText(
+            _DECIDUOUS_LABELS.get(plant.get("deciduous_evergreen", ""), "—")
+            + "  ·  "
+            + _LIFECYCLE_LABELS.get(plant.get("perennial_or_annual", ""), "—")
+        )
+        self._d_ph.setText(ph_str)
+        self._d_native.setText(native_str)
         self._d_uses.setText(uses_nice or "—")
         self._d_notes.setText(plant.get("notes") or "")
 
+        # Load companion info
+        self._load_companions(plant.get("id"))
+
         self._detail_group.setVisible(True)
+
+    def _load_companions(self, plant_id: Optional[int]):
+        if not plant_id:
+            self._d_companions.setText("—")
+            return
+        try:
+            from src.db.plants import get_companions
+            data = get_companions(plant_id)
+            friends = [p["common_name"] for p in data.get("friends", [])]
+            enemies = [p["common_name"] for p in data.get("enemies", [])]
+            parts = []
+            if friends:
+                parts.append(
+                    f'<span style="color:#81c784">+ {", ".join(friends)}</span>'
+                )
+            if enemies:
+                parts.append(
+                    f'<span style="color:#ef9a9a">– {", ".join(enemies)}</span>'
+                )
+            self._d_companions.setText("<br>".join(parts) if parts else "—")
+            self._d_companions.setTextFormat(Qt.TextFormat.RichText)
+        except Exception:
+            self._d_companions.setText("—")
 
     # ── Place on map ──────────────────────────────────────────────────────────
 
