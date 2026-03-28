@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QComboBox, QListWidget, QListWidgetItem, QFrame,
     QPushButton, QSizePolicy, QScrollArea, QSplitter,
-    QFormLayout, QGroupBox, QTabWidget,
+    QFormLayout, QGroupBox, QTabWidget, QGridLayout,
 )
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QSize
 from PyQt6.QtGui import QColor, QIcon, QPixmap, QPainter, QFont, QBrush
@@ -72,6 +72,31 @@ _USE_LABELS: dict[str, str] = {
     "groundcover":       "Groundcover",
     "pest_repellent":    "Pest Repellent",
 }
+
+
+# ── Calendar status colours & labels ─────────────────────────────────────────
+_CALENDAR_STATUS_COLORS: dict[str, str] = {
+    "dormant":       "#37474f",   # dark grey
+    "start_indoors": "#7b1fa2",   # purple
+    "direct_sow":    "#00838f",   # teal
+    "transplant":    "#1565c0",   # blue
+    "growing":       "#2e7d32",   # green
+    "harvest":       "#e65100",   # orange
+    "pruning":       "#6d4c41",   # brown
+}
+
+_CALENDAR_STATUS_LABELS: dict[str, str] = {
+    "dormant":       "Dormant",
+    "start_indoors": "Start Indoors",
+    "direct_sow":    "Direct Sow",
+    "transplant":    "Transplant",
+    "growing":       "Growing",
+    "harvest":       "Harvest",
+    "pruning":       "Pruning",
+}
+
+_MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 
 def _type_icon(plant_type: str) -> QIcon:
@@ -366,6 +391,53 @@ class PlantPanel(QWidget):
 
         bot_layout.addWidget(self._detail_group)
 
+        # ── Calendar grid (shown when a plant is selected) ─────────────
+        self._calendar_group = QGroupBox("Planting Calendar — Edmonton Zone 3b")
+        self._calendar_group.setVisible(False)
+        cal_outer = QVBoxLayout(self._calendar_group)
+        cal_outer.setContentsMargins(6, 6, 6, 6)
+        cal_outer.setSpacing(4)
+
+        # 12-month grid: header row + colour cells
+        cal_grid = QGridLayout()
+        cal_grid.setSpacing(2)
+        self._cal_cells: list[QLabel] = []
+        for col, abbr in enumerate(_MONTH_ABBR):
+            hdr = QLabel(abbr)
+            hdr.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            hdr.setStyleSheet("color: #90a4ae; font-size: 10px; font-weight: bold;")
+            cal_grid.addWidget(hdr, 0, col)
+
+            cell = QLabel()
+            cell.setFixedHeight(28)
+            cell.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            cell.setStyleSheet("border-radius: 3px; font-size: 9px; color: #e0e0e0;")
+            cell.setToolTip("")
+            cal_grid.addWidget(cell, 1, col)
+            self._cal_cells.append(cell)
+
+        cal_outer.addLayout(cal_grid)
+
+        # Legend row
+        legend_layout = QHBoxLayout()
+        legend_layout.setSpacing(6)
+        for status, color in _CALENDAR_STATUS_COLORS.items():
+            if status == "dormant":
+                continue  # skip dormant in legend to save space
+            dot = QLabel(f"● {_CALENDAR_STATUS_LABELS[status]}")
+            dot.setStyleSheet(f"color: {color}; font-size: 9px;")
+            legend_layout.addWidget(dot)
+        legend_layout.addStretch()
+        cal_outer.addLayout(legend_layout)
+
+        # Notes label for the current month
+        self._cal_notes = QLabel()
+        self._cal_notes.setWordWrap(True)
+        self._cal_notes.setStyleSheet("color: #b0bec5; font-size: 11px; padding: 2px;")
+        cal_outer.addWidget(self._cal_notes)
+
+        bot_layout.addWidget(self._calendar_group)
+
         # Place on Map button
         self._place_btn = QPushButton("Place on Map")
         self._place_btn.setEnabled(False)
@@ -457,6 +529,7 @@ class PlantPanel(QWidget):
         if current is None:
             self._selected_plant = None
             self._detail_group.setVisible(False)
+            self._calendar_group.setVisible(False)
             self._place_btn.setEnabled(False)
             return
 
@@ -516,6 +589,9 @@ class PlantPanel(QWidget):
         # Load companion info
         self._load_companions(plant.get("id"))
 
+        # Load planting calendar
+        self._show_calendar(plant.get("id"))
+
         self._detail_group.setVisible(True)
 
     def _load_companions(self, plant_id: Optional[int]):
@@ -540,6 +616,47 @@ class PlantPanel(QWidget):
             self._d_companions.setTextFormat(Qt.TextFormat.RichText)
         except Exception:
             self._d_companions.setText("—")
+
+    def _show_calendar(self, plant_id: Optional[int]):
+        """Populate the 12-month calendar grid for a plant."""
+        if not plant_id:
+            self._calendar_group.setVisible(False)
+            return
+        try:
+            from src.db.plants import get_calendar
+            from datetime import datetime
+            cal = get_calendar(plant_id)
+            current_month = datetime.now().month
+            current_note = None
+
+            for i, entry in enumerate(cal):
+                status = entry["status"]
+                color = _CALENDAR_STATUS_COLORS.get(status, "#37474f")
+                label = _CALENDAR_STATUS_LABELS.get(status, status)
+                cell = self._cal_cells[i]
+                cell.setText(label[:3])  # abbreviate to 3 chars
+
+                # Highlight current month with a border
+                border = "2px solid #fdd835" if (i + 1) == current_month else "none"
+                cell.setStyleSheet(
+                    f"background: {color}; border-radius: 3px; "
+                    f"font-size: 9px; color: #e0e0e0; border: {border};"
+                )
+                tooltip = f"{_MONTH_ABBR[i]}: {label}"
+                if entry["notes"]:
+                    tooltip += f"\n{entry['notes']}"
+                cell.setToolTip(tooltip)
+
+                if (i + 1) == current_month:
+                    note_parts = [f"This month ({_MONTH_ABBR[i]}): {label}"]
+                    if entry["notes"]:
+                        note_parts.append(entry["notes"])
+                    current_note = " — ".join(note_parts)
+
+            self._cal_notes.setText(current_note or "")
+            self._calendar_group.setVisible(True)
+        except Exception:
+            self._calendar_group.setVisible(False)
 
     # ── Place on map ──────────────────────────────────────────────────────────
 
@@ -625,6 +742,7 @@ class PlantPanel(QWidget):
             self._pp_import_btn.setEnabled(False)
             self._selected_plant = None
             self._detail_group.setVisible(False)
+            self._calendar_group.setVisible(False)
             self._place_btn.setEnabled(False)
             return
         plant = current.data(_PLANT_OBJ_ROLE)

@@ -19,7 +19,7 @@ _DB_PATH     = os.path.join(_DATA_DIR, "permadesign.db")
 _SCHEMA_PATH = os.path.join(_HERE, "schema.sql")
 
 # Current schema version — bump when adding columns/tables
-_SCHEMA_VERSION = 2
+_SCHEMA_VERSION = 3
 
 
 def _ensure_data_dir():
@@ -108,6 +108,10 @@ def init_db() -> None:
             _insert_plants(conn, SEED_PLANTS)
             from src.db.seed_data import SEED_COMPANIONS
             _insert_companions(conn, SEED_COMPANIONS)
+
+        # Seed planting calendar if table is empty or schema upgraded to v3
+        if current_version < 3:
+            _seed_calendar(conn)
 
         _set_schema_version(conn, _SCHEMA_VERSION)
     finally:
@@ -303,3 +307,72 @@ def get_distinct_permaculture_uses() -> list[str]:
             if tag:
                 uses.add(tag)
     return sorted(uses)
+
+
+# ── Planting calendar ─────────────────────────────────────────────────────────
+
+def _seed_calendar(conn: sqlite3.Connection):
+    """Populate planting_calendar from seed_data if the table is empty."""
+    count = conn.execute("SELECT COUNT(*) FROM planting_calendar").fetchone()[0]
+    if count > 0:
+        return
+    from src.db.seed_data import SEED_CALENDAR
+    # Resolve common_name -> id
+    name_to_id: dict[str, int] = {}
+    for row in conn.execute("SELECT id, common_name FROM plants"):
+        name_to_id[row["common_name"]] = row["id"]
+    rows: list[tuple] = []
+    for common_name, month, status, notes in SEED_CALENDAR:
+        pid = name_to_id.get(common_name)
+        if pid is None:
+            continue
+        rows.append((pid, month, status, notes))
+    conn.executemany(
+        "INSERT OR IGNORE INTO planting_calendar (plant_id, month, status, notes) "
+        "VALUES (?,?,?,?)", rows
+    )
+    conn.commit()
+
+
+def get_calendar(plant_id: int) -> list[dict]:
+    """
+    Return the 12-month planting calendar for a given plant.
+    Returns a list of dicts with keys: month, status, notes.
+    Missing months are filled with 'dormant'.
+    """
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT month, status, notes FROM planting_calendar "
+            "WHERE plant_id = ? ORDER BY month", (plant_id,)
+        ).fetchall()
+    finally:
+        conn.close()
+    by_month = {r["month"]: {"month": r["month"], "status": r["status"],
+                              "notes": r["notes"]} for r in rows}
+    return [by_month.get(m, {"month": m, "status": "dormant", "notes": None})
+            for m in range(1, 13)]
+
+
+def get_current_month_tasks() -> list[dict]:
+    """
+    Return plants with active tasks for the current month.
+    Each dict: {plant_id, common_name, plant_type, status, notes}.
+    Excludes dormant and growing (those aren't actionable).
+    """
+    from datetime import datetime
+    month = datetime.now().month
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            """SELECT p.id AS plant_id, p.common_name, p.plant_type,
+                      c.status, c.notes
+               FROM planting_calendar c
+               JOIN plants p ON p.id = c.plant_id
+               WHERE c.month = ? AND c.status NOT IN ('dormant', 'growing')
+               ORDER BY c.status, p.common_name""",
+            (month,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()

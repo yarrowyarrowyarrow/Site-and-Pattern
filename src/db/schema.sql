@@ -35,6 +35,18 @@ CREATE TABLE IF NOT EXISTS companion_enemies (
     PRIMARY KEY (plant_id_a, plant_id_b)
 );
 
+CREATE TABLE IF NOT EXISTS planting_calendar (
+    plant_id INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+    month    INTEGER NOT NULL CHECK (month BETWEEN 1 AND 12),
+    status   TEXT NOT NULL CHECK (status IN (
+        'dormant', 'start_indoors', 'direct_sow', 'transplant',
+        'growing', 'harvest', 'pruning'
+    )),
+    notes    TEXT,
+    PRIMARY KEY (plant_id, month)
+);
+
 CREATE INDEX IF NOT EXISTS idx_plants_type    ON plants(plant_type);
 CREATE INDEX IF NOT EXISTS idx_plants_zone    ON plants(hardiness_zone_min, hardiness_zone_max);
 CREATE INDEX IF NOT EXISTS idx_plants_native  ON plants(native_to_alberta);
+CREATE INDEX IF NOT EXISTS idx_calendar_plant ON planting_calendar(plant_id);

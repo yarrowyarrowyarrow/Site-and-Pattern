@@ -17,6 +17,9 @@ env/
 # Database (auto-created on first run by src/db/seed_data.py)
 data/permadesign.db
 
+# USDA download artifact (created by import_usda.py)
+data/usda_plants_raw.txt
+
 # Editor / OS
 .idea/
 .vscode/

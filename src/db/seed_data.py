@@ -679,6 +679,10 @@ SEED_COMPANIONS: list[tuple] = [
 ]
 
 
+# ── Planting calendar data (imported from separate module for readability) ─────
+from src.db.calendar_data import SEED_CALENDAR  # noqa: E402
+
+
 # ── CLI entry point ────────────────────────────────────────────────────────────
 
 def reseed() -> None:
