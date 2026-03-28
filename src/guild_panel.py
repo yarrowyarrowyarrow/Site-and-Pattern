@@ -1,6 +1,7 @@
 import json
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QPointF, QRectF
+from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont
 from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -55,11 +56,98 @@ ROLE_TYPE_HINTS = {
 }
 
 
+class OffsetCanvas(QWidget):
+    """Mini canvas for visually positioning a guild member by clicking."""
+
+    offsetChanged = pyqtSignal(float, float)  # offset_x, offset_y in metres
+
+    def __init__(self, radius_m: float = 10.0, parent=None):
+        super().__init__(parent)
+        self._radius_m = radius_m   # half-width of canvas in metres
+        self._offset_x = 0.0
+        self._offset_y = 0.0
+        self.setFixedSize(180, 180)
+        self.setToolTip("Click to set member offset from guild centre")
+        self.setCursor(Qt.CursorShape.CrossCursor)
+
+    def set_offset(self, x: float, y: float):
+        self._offset_x = max(-self._radius_m, min(self._radius_m, x))
+        self._offset_y = max(-self._radius_m, min(self._radius_m, y))
+        self.update()
+
+    def offset(self) -> tuple[float, float]:
+        return self._offset_x, self._offset_y
+
+    def mousePressEvent(self, event):
+        self._update_from_mouse(event.position())
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.MouseButton.LeftButton:
+            self._update_from_mouse(event.position())
+
+    def _update_from_mouse(self, pos: QPointF):
+        w, h = self.width(), self.height()
+        cx, cy = w / 2, h / 2
+        scale = self._radius_m / (min(w, h) / 2)
+        self._offset_x = round((pos.x() - cx) * scale, 1)
+        self._offset_y = round((cy - pos.y()) * scale, 1)  # Y flipped
+        self._offset_x = max(-self._radius_m, min(self._radius_m, self._offset_x))
+        self._offset_y = max(-self._radius_m, min(self._radius_m, self._offset_y))
+        self.update()
+        self.offsetChanged.emit(self._offset_x, self._offset_y)
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        w, h = self.width(), self.height()
+        cx, cy = w / 2, h / 2
+
+        # Background
+        p.fillRect(0, 0, w, h, QColor(20, 32, 20))
+
+        # Grid lines
+        pen = QPen(QColor(46, 74, 46), 1)
+        p.setPen(pen)
+        steps = 5
+        for i in range(steps + 1):
+            frac = i / steps
+            x = int(frac * w)
+            y = int(frac * h)
+            p.drawLine(x, 0, x, h)
+            p.drawLine(0, y, w, y)
+
+        # Crosshair at centre
+        pen.setColor(QColor(100, 160, 100))
+        pen.setStyle(Qt.PenStyle.DashLine)
+        p.setPen(pen)
+        p.drawLine(int(cx), 0, int(cx), h)
+        p.drawLine(0, int(cy), w, int(cy))
+
+        # Centre dot
+        p.setBrush(QBrush(QColor(102, 187, 106)))
+        p.setPen(Qt.PenStyle.NoPen)
+        p.drawEllipse(QPointF(cx, cy), 4, 4)
+
+        # Member position dot
+        scale = (min(w, h) / 2) / self._radius_m
+        mx = cx + self._offset_x * scale
+        my = cy - self._offset_y * scale  # Y flipped
+        p.setBrush(QBrush(QColor(255, 167, 38)))
+        p.drawEllipse(QPointF(mx, my), 6, 6)
+
+        # Label
+        p.setPen(QColor(200, 230, 201))
+        p.setFont(QFont("Arial", 8))
+        p.drawText(4, 12, f"±{self._radius_m}m")
+        p.drawText(4, h - 4, f"({self._offset_x:.1f}, {self._offset_y:.1f})m")
+        p.end()
+
+
 class AddMemberDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Add Guild Member")
-        self.setMinimumWidth(380)
+        self.setMinimumWidth(420)
 
         self._all_plants = plants_db.get_all_plants()
 
@@ -75,17 +163,42 @@ class AddMemberDialog(QDialog):
         self.plant_combo = QComboBox()
         layout.addRow("Plant:", self.plant_combo)
 
+        # Visual offset editor
+        offset_group = QGroupBox("Position (click or drag to set offset)")
+        offset_layout = QHBoxLayout(offset_group)
+
+        self._canvas = OffsetCanvas(radius_m=10.0)
+        offset_layout.addWidget(self._canvas)
+
+        # Spin boxes alongside for fine-tuning
+        spin_col = QVBoxLayout()
+        spin_col.addStretch()
+        x_row = QHBoxLayout()
+        x_row.addWidget(QLabel("X:"))
         self.offset_x = QDoubleSpinBox()
         self.offset_x.setRange(-50, 50)
         self.offset_x.setSuffix(" m")
         self.offset_x.setDecimals(1)
-        layout.addRow("Offset X:", self.offset_x)
+        x_row.addWidget(self.offset_x)
+        spin_col.addLayout(x_row)
 
+        y_row = QHBoxLayout()
+        y_row.addWidget(QLabel("Y:"))
         self.offset_y = QDoubleSpinBox()
         self.offset_y.setRange(-50, 50)
         self.offset_y.setSuffix(" m")
         self.offset_y.setDecimals(1)
-        layout.addRow("Offset Y:", self.offset_y)
+        y_row.addWidget(self.offset_y)
+        spin_col.addLayout(y_row)
+        spin_col.addStretch()
+        offset_layout.addLayout(spin_col)
+
+        layout.addRow(offset_group)
+
+        # Sync canvas ↔ spinboxes
+        self._canvas.offsetChanged.connect(self._on_canvas_offset)
+        self.offset_x.valueChanged.connect(self._on_spin_offset)
+        self.offset_y.valueChanged.connect(self._on_spin_offset)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
@@ -96,6 +209,19 @@ class AddMemberDialog(QDialog):
 
         # Populate plant list for the default role
         self._on_role_changed()
+
+    def _on_canvas_offset(self, x: float, y: float):
+        self.offset_x.blockSignals(True)
+        self.offset_y.blockSignals(True)
+        self.offset_x.setValue(x)
+        self.offset_y.setValue(y)
+        self.offset_x.blockSignals(False)
+        self.offset_y.blockSignals(False)
+
+    def _on_spin_offset(self):
+        self._canvas.blockSignals(True)
+        self._canvas.set_offset(self.offset_x.value(), self.offset_y.value())
+        self._canvas.blockSignals(False)
 
     def _on_role_changed(self):
         """Filter plant combo based on selected role."""
