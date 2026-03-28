@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PermaDesign Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+<style>
+    * { margin: 0; padding: 0; }
+    html, body, #map { width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+// --- Map setup ---
+var map = L.map('map').setView([53.5461, -113.4938], 12);
+
+var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19
+}).addTo(map);
+
+var satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '&copy; Esri',
+    maxZoom: 19
+});
+
+var currentBase = 'osm';
+
+// --- State ---
+var bridge = null;
+var drawingMode = null; // null, 'boundary', 'plant', 'zones', 'guild'
+var boundaryPolygon = null;
+var boundaryPoints = [];
+var boundaryMarkers = [];
+var plantMarkers = [];
+var zoneCircles = [];
+var guildMarkers = [];
+var pendingPlant = null;
+var pendingGuild = null;
+var tempLine = null;
+
+// Plant type colors
+var typeColors = {
+    'tree': '#228B22',
+    'shrub': '#6B8E23',
+    'herb': '#DAA520',
+    'groundcover': '#32CD32',
+    'vine': '#8B4513',
+    'root': '#CD853F'
+};
+
+// --- QWebChannel bridge ---
+new QWebChannel(qt.webChannelTransport, function(channel) {
+    bridge = channel.objects.bridge;
+});
+
+// --- Map events ---
+map.on('click', function(e) {
+    var lat = e.latlng.lat;
+    var lng = e.latlng.lng;
+
+    if (bridge) {
+        bridge.onMapClick(lat, lng);
+    }
+
+    if (drawingMode === 'boundary') {
+        addBoundaryPoint(lat, lng);
+    } else if (drawingMode === 'plant' && pendingPlant) {
+        placePlantMarker(pendingPlant.id, pendingPlant.name, pendingPlant.type, lat, lng);
+        if (bridge) bridge.onPlantPlaced(pendingPlant.id, pendingPlant.name, lat, lng);
+    } else if (drawingMode === 'guild' && pendingGuild) {
+        placeGuildOnMap(pendingGuild, lat, lng);
+        if (bridge) bridge.onGuildPlaced(JSON.stringify(pendingGuild), lat, lng);
+    }
+});
+
+map.on('dblclick', function(e) {
+    if (drawingMode === 'boundary' && boundaryPoints.length >= 3) {
+        finishBoundary();
+    }
+});
+
+map.on('mousemove', function(e) {
+    if (bridge) {
+        bridge.onMouseMove(e.latlng.lat, e.latlng.lng);
+    }
+    if (drawingMode === 'boundary' && boundaryPoints.length > 0) {
+        if (tempLine) map.removeLayer(tempLine);
+        var pts = boundaryPoints.concat([[e.latlng.lat, e.latlng.lng]]);
+        tempLine = L.polyline(pts, {color: '#ff6600', dashArray: '5,10'}).addTo(map);
+    }
+});
+
+// --- Boundary drawing ---
+function addBoundaryPoint(lat, lng) {
+    boundaryPoints.push([lat, lng]);
+    var marker = L.circleMarker([lat, lng], {
+        radius: 5, color: '#ff6600', fillColor: '#ff6600', fillOpacity: 1
+    }).addTo(map);
+    boundaryMarkers.push(marker);
+
+    // Click first point to close
+    if (boundaryPoints.length > 2) {
+        var first = boundaryPoints[0];
+        var dist = map.distance([lat, lng], first);
+        if (dist < 20) {
+            boundaryPoints.pop();
+            boundaryMarkers.pop();
+            map.removeLayer(marker);
+            finishBoundary();
+        }
+    }
+}
+
+function finishBoundary() {
+    if (boundaryPolygon) map.removeLayer(boundaryPolygon);
+    if (tempLine) { map.removeLayer(tempLine); tempLine = null; }
+
+    boundaryMarkers.forEach(function(m) { map.removeLayer(m); });
+    boundaryMarkers = [];
+
+    boundaryPolygon = L.polygon(boundaryPoints, {
+        color: '#ff6600', weight: 2, fillColor: '#ff6600', fillOpacity: 0.1
+    }).addTo(map);
+
+    var coords = boundaryPoints.map(function(p) { return [p[1], p[0]]; });
+    drawingMode = null;
+
+    if (bridge) {
+        bridge.onBoundaryComplete(JSON.stringify(coords));
+    }
+}
+
+// --- Plant markers ---
+function placePlantMarker(id, name, type, lat, lng) {
+    var color = typeColors[type] || '#888888';
+    var marker = L.circleMarker([lat, lng], {
+        radius: 8, color: color, fillColor: color, fillOpacity: 0.7, weight: 2
+    }).addTo(map);
+    marker.bindTooltip(name);
+    marker.plantData = {id: id, name: name, type: type};
+    plantMarkers.push(marker);
+    return marker;
+}
+
+// --- Guild placement ---
+function placeGuildOnMap(guild, centerLat, centerLng) {
+    var groupColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+    var members = guild.members || [];
+
+    members.forEach(function(m) {
+        // Convert meter offsets to approximate lat/lng offsets
+        var latOffset = (m.offset_y || 0) / 111320;
+        var lngOffset = (m.offset_x || 0) / (111320 * Math.cos(centerLat * Math.PI / 180));
+        var lat = centerLat + latOffset;
+        var lng = centerLng + lngOffset;
+
+        var color = typeColors[m.plant_type] || '#888888';
+        var marker = L.circleMarker([lat, lng], {
+            radius: 8, color: groupColor, fillColor: color, fillOpacity: 0.7, weight: 3
+        }).addTo(map);
+        marker.bindTooltip('[' + guild.name + '] ' + m.common_name + ' (' + (m.role || '') + ')');
+        marker.guildData = {guild_name: guild.name, member: m};
+        guildMarkers.push(marker);
+    });
+}
+
+// --- Zone circles ---
+function drawZoneCircles(lat, lng, radii) {
+    clearZoneCircles();
+    var colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6'];
+    radii.forEach(function(r, i) {
+        var circle = L.circle([lat, lng], {
+            radius: r, color: colors[i % colors.length],
+            fillOpacity: 0.05, weight: 2, dashArray: '5,5'
+        }).addTo(map);
+        circle.bindTooltip('Zone ' + i);
+        zoneCircles.push(circle);
+    });
+    if (bridge) {
+        bridge.onZonesDrawn(lat, lng, JSON.stringify(radii));
+    }
+}
+
+function clearZoneCircles() {
+    zoneCircles.forEach(function(c) { map.removeLayer(c); });
+    zoneCircles = [];
+}
+
+// --- Functions called from Python ---
+function setDrawingMode(mode) {
+    drawingMode = mode;
+    if (mode === 'boundary') {
+        if (boundaryPolygon) { map.removeLayer(boundaryPolygon); boundaryPolygon = null; }
+        boundaryPoints = [];
+        boundaryMarkers.forEach(function(m) { map.removeLayer(m); });
+        boundaryMarkers = [];
+    }
+    map.getContainer().style.cursor = mode ? 'crosshair' : '';
+}
+
+function setPendingPlant(id, name, type) {
+    pendingPlant = {id: id, name: name, type: type};
+}
+
+function setPendingGuild(guildJson) {
+    pendingGuild = JSON.parse(guildJson);
+}
+
+function clearPending() {
+    pendingPlant = null;
+    pendingGuild = null;
+    drawingMode = null;
+    map.getContainer().style.cursor = '';
+}
+
+function toggleSatellite() {
+    if (currentBase === 'osm') {
+        map.removeLayer(osmLayer);
+        satLayer.addTo(map);
+        currentBase = 'sat';
+    } else {
+        map.removeLayer(satLayer);
+        osmLayer.addTo(map);
+        currentBase = 'osm';
+    }
+}
+
+function clearAllMarkers() {
+    plantMarkers.forEach(function(m) { map.removeLayer(m); });
+    plantMarkers = [];
+    guildMarkers.forEach(function(m) { map.removeLayer(m); });
+    guildMarkers = [];
+    if (boundaryPolygon) { map.removeLayer(boundaryPolygon); boundaryPolygon = null; }
+    boundaryPoints = [];
+    clearZoneCircles();
+}
+
+function loadBoundary(coordsJson) {
+    var coords = JSON.parse(coordsJson);
+    if (boundaryPolygon) map.removeLayer(boundaryPolygon);
+    // coords are [lng, lat], convert to [lat, lng]
+    boundaryPoints = coords.map(function(c) { return [c[1], c[0]]; });
+    boundaryPolygon = L.polygon(boundaryPoints, {
+        color: '#ff6600', weight: 2, fillColor: '#ff6600', fillOpacity: 0.1
+    }).addTo(map);
+}
+
+function loadPlant(id, name, type, lat, lng) {
+    placePlantMarker(id, name, type, lat, lng);
+}
+
+function loadZones(lat, lng, radiiJson) {
+    drawZoneCircles(lat, lng, JSON.parse(radiiJson));
+}
+
+function loadGuild(guildJson, lat, lng) {
+    placeGuildOnMap(JSON.parse(guildJson), lat, lng);
+}
+
+function fitToBoundary() {
+    if (boundaryPolygon) {
+        map.fitBounds(boundaryPolygon.getBounds().pad(0.1));
+    }
+}
+</script>
+</body>
+</html>

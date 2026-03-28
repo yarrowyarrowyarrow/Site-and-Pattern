@@ -1,0 +1,25 @@
+{
+  "description": "Simplified hardiness zone lookup for Western Canada. Maps latitude/longitude ranges to approximate zones.",
+  "zones": [
+    {"lat_min": 58, "lat_max": 90, "lng_min": -141, "lng_max": -50, "zone": 0},
+    {"lat_min": 56, "lat_max": 58, "lng_min": -141, "lng_max": -100, "zone": 1},
+    {"lat_min": 56, "lat_max": 58, "lng_min": -100, "lng_max": -50, "zone": 1},
+    {"lat_min": 54, "lat_max": 56, "lng_min": -130, "lng_max": -110, "zone": 2},
+    {"lat_min": 54, "lat_max": 56, "lng_min": -110, "lng_max": -90, "zone": 2},
+    {"lat_min": 52, "lat_max": 54, "lng_min": -125, "lng_max": -115, "zone": 3},
+    {"lat_min": 52, "lat_max": 54, "lng_min": -115, "lng_max": -100, "zone": 3},
+    {"lat_min": 52, "lat_max": 54, "lng_min": -100, "lng_max": -90, "zone": 2},
+    {"lat_min": 50, "lat_max": 52, "lng_min": -120, "lng_max": -110, "zone": 4},
+    {"lat_min": 50, "lat_max": 52, "lng_min": -110, "lng_max": -100, "zone": 3},
+    {"lat_min": 50, "lat_max": 52, "lng_min": -100, "lng_max": -90, "zone": 3},
+    {"lat_min": 49, "lat_max": 50, "lng_min": -125, "lng_max": -120, "zone": 6},
+    {"lat_min": 49, "lat_max": 50, "lng_min": -120, "lng_max": -110, "zone": 4},
+    {"lat_min": 49, "lat_max": 50, "lng_min": -110, "lng_max": -100, "zone": 4},
+    {"lat_min": 49, "lat_max": 50, "lng_min": -100, "lng_max": -90, "zone": 3},
+    {"lat_min": 53, "lat_max": 54, "lng_min": -114, "lng_max": -113, "zone": 3, "note": "Edmonton area"},
+    {"lat_min": 51, "lat_max": 52, "lng_min": -115, "lng_max": -113, "zone": 4, "note": "Calgary area"},
+    {"lat_min": 52, "lat_max": 53, "lng_min": -107, "lng_max": -106, "zone": 3, "note": "Saskatoon area"},
+    {"lat_min": 50, "lat_max": 51, "lng_min": -105, "lng_max": -104, "zone": 3, "note": "Regina area"},
+    {"lat_min": 49, "lat_max": 50, "lng_min": -98, "lng_max": -97, "zone": 3, "note": "Winnipeg area"}
+  ]
+}
