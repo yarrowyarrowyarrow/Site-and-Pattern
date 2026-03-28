@@ -566,17 +566,6 @@ SEED_PLANTS: list[tuple] = [
         6.0, 8.0, "perennial"
     ),
     (
-        "Virginia Creeper", "Parthenocissus quinquefolia", "vine", 3, 9,
-        "partial_shade", "low", "North America",
-        "wildlife_habitat,pioneer,windbreak",
-        0.6, 15.0,
-        "Native vine with spectacular crimson fall colour. Fast cover for fences "
-        "and walls. Berries are important bird food in autumn.",
-        "June–July", "September–October", 1,
-        None, "deciduous",
-        6.0, 7.0, "perennial"
-    ),
-    (
         "Hardy Kiwi", "Actinidia arguta", "vine", 3, 8,
         "full_sun", "medium", "East Asia",
         "food_forest,pollinator",

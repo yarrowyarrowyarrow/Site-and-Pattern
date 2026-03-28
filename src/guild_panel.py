@@ -19,6 +19,8 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QSplitter,
     QTextEdit,
+    QTreeWidget,
+    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -158,10 +160,12 @@ class GuildPanel(QWidget):
         label = QLabel("<b>Guild Library</b>")
         layout.addWidget(label)
 
-        # Guild list
-        self.guild_list = QListWidget()
-        self.guild_list.currentItemChanged.connect(self._on_guild_selected)
-        layout.addWidget(self.guild_list)
+        # Guild tree (parent guilds + variations as children)
+        self.guild_tree = QTreeWidget()
+        self.guild_tree.setHeaderHidden(True)
+        self.guild_tree.setIndentation(16)
+        self.guild_tree.currentItemChanged.connect(self._on_guild_selected)
+        layout.addWidget(self.guild_tree)
 
         # Buttons row 1
         btn_row1 = QHBoxLayout()
@@ -178,6 +182,12 @@ class GuildPanel(QWidget):
         self.dup_btn.setEnabled(False)
         self.dup_btn.clicked.connect(self._on_duplicate_guild)
         btn_row1.addWidget(self.dup_btn)
+
+        self.variation_btn = QPushButton("+ Variation")
+        self.variation_btn.setEnabled(False)
+        self.variation_btn.setToolTip("Create a variation of this guild")
+        self.variation_btn.clicked.connect(self._on_add_variation)
+        btn_row1.addWidget(self.variation_btn)
         layout.addLayout(btn_row1)
 
         # Detail area
@@ -225,11 +235,19 @@ class GuildPanel(QWidget):
         layout.addLayout(btn_row2)
 
     def _refresh_guild_list(self):
-        self.guild_list.clear()
-        for g in guilds.get_all_guilds():
-            item = QListWidgetItem(g["name"])
-            item.setData(Qt.ItemDataRole.UserRole, g["id"])
-            self.guild_list.addItem(item)
+        self.guild_tree.clear()
+        for g in guilds.get_all_guilds(top_level_only=True):
+            item = QTreeWidgetItem([g["name"]])
+            item.setData(0, Qt.ItemDataRole.UserRole, g["id"])
+            self.guild_tree.addTopLevelItem(item)
+            # Add child variations
+            children = guilds.get_guild_children(g["id"])
+            for child in children:
+                child_item = QTreeWidgetItem([child["name"]])
+                child_item.setData(0, Qt.ItemDataRole.UserRole, child["id"])
+                item.addChild(child_item)
+            if children:
+                item.setExpanded(True)
 
     def _on_guild_selected(self, current, previous):
         has_selection = current is not None
@@ -238,13 +256,16 @@ class GuildPanel(QWidget):
         self.place_btn.setEnabled(has_selection)
         self.export_btn.setEnabled(has_selection)
         self.add_member_btn.setEnabled(has_selection)
+        # Only allow adding variations to top-level guilds
+        is_top_level = has_selection and (current.parent() is None)
+        self.variation_btn.setEnabled(is_top_level)
 
         if not has_selection:
             self.detail_text.clear()
             self.members_list.clear()
             return
 
-        guild_id = current.data(Qt.ItemDataRole.UserRole)
+        guild_id = current.data(0, Qt.ItemDataRole.UserRole)
         guild = guilds.get_guild_by_id(guild_id)
         if not guild:
             return
@@ -256,6 +277,10 @@ class GuildPanel(QWidget):
         if guild.get("description"):
             lines.append(guild["description"])
         lines.append(f"Members: {len(guild.get('members', []))}")
+        # Show variation count for top-level
+        children = guilds.get_guild_children(guild_id)
+        if children:
+            lines.append(f"Variations: {len(children)}")
         self.detail_text.setHtml("<br>".join(lines))
 
         self.members_list.clear()
@@ -272,8 +297,8 @@ class GuildPanel(QWidget):
         )
 
     def _get_selected_guild_id(self):
-        item = self.guild_list.currentItem()
-        return item.data(Qt.ItemDataRole.UserRole) if item else None
+        item = self.guild_tree.currentItem()
+        return item.data(0, Qt.ItemDataRole.UserRole) if item else None
 
     def _on_new_guild(self):
         name, ok = QInputDialog.getText(self, "New Guild", "Guild name:")
@@ -302,6 +327,15 @@ class GuildPanel(QWidget):
         guild_id = self._get_selected_guild_id()
         if guild_id:
             guilds.duplicate_guild(guild_id)
+            self._refresh_guild_list()
+
+    def _on_add_variation(self):
+        """Create a variation of the selected top-level guild."""
+        guild_id = self._get_selected_guild_id()
+        if guild_id is None:
+            return
+        new_id = guilds.duplicate_guild(guild_id, as_variation=True)
+        if new_id:
             self._refresh_guild_list()
 
     def _on_add_member(self):

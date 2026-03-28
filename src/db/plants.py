@@ -107,6 +107,13 @@ def init_db() -> None:
         if current_version < 4:
             _migrate_to_v4(conn)
 
+        # Add parent_id to guilds if missing (v5)
+        try:
+            conn.execute("ALTER TABLE guilds ADD COLUMN parent_id INTEGER REFERENCES guilds(id) ON DELETE SET NULL")
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass  # column already present
+
         # Reseed if empty, count is low, or schema was just upgraded
         count = conn.execute("SELECT COUNT(*) FROM plants").fetchone()[0]
         needs_reseed = (count < 52) or (current_version < 2 and count > 0)
@@ -182,7 +189,7 @@ def _import_plants_json(conn: sqlite3.Connection) -> None:
             p.get("notes", ""),
             p.get("bloom_period", ""),
             p.get("fruit_period", ""),
-            1 if "alberta" in (p.get("native_region") or "").lower() else 0,
+            p.get("native_to_alberta", 1 if "canada" in (p.get("native_region") or "").lower() else 0),
             p.get("edible_parts", ""),
             p.get("deciduous_evergreen", ""),
             p.get("soil_ph_min"),
@@ -312,6 +319,11 @@ def search_plants(
     perm_use: str = "",
     zone: Optional[int] = None,
     native_only: bool = False,
+    edible_only: bool = False,
+    medicinal_only: bool = False,
+    nfixer_only: bool = False,
+    pollinator_only: bool = False,
+    perennial_only: bool = False,
 ) -> list[dict]:
     """
     Return plants matching all supplied filters.
@@ -321,9 +333,9 @@ def search_plants(
     params: list = []
 
     if query:
-        sql += " AND (LOWER(common_name) LIKE ? OR LOWER(scientific_name) LIKE ?)"
+        sql += " AND (LOWER(common_name) LIKE ? OR LOWER(scientific_name) LIKE ? OR LOWER(permaculture_uses) LIKE ?)"
         q = f"%{query.lower()}%"
-        params += [q, q]
+        params += [q, q, q]
 
     if plant_type:
         sql += " AND plant_type = ?"
@@ -347,6 +359,21 @@ def search_plants(
 
     if native_only:
         sql += " AND native_to_alberta = 1"
+
+    if edible_only:
+        sql += " AND edible_parts IS NOT NULL AND edible_parts != ''"
+
+    if medicinal_only:
+        sql += " AND LOWER(permaculture_uses) LIKE '%medicinal%'"
+
+    if nfixer_only:
+        sql += " AND LOWER(permaculture_uses) LIKE '%nitrogen%'"
+
+    if pollinator_only:
+        sql += " AND LOWER(permaculture_uses) LIKE '%pollinator%'"
+
+    if perennial_only:
+        sql += " AND LOWER(perennial_or_annual) = 'perennial'"
 
     sql += " ORDER BY plant_type, common_name"
 

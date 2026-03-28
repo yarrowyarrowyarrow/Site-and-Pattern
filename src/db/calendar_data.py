@@ -713,20 +713,6 @@ SEED_CALENDAR: list[tuple] = [
     ("Hops", 11, "dormant",       None),
     ("Hops", 12, "dormant",       None),
 
-    # Virginia Creeper
-    ("Virginia Creeper", 1,  "dormant",    None),
-    ("Virginia Creeper", 2,  "dormant",    None),
-    ("Virginia Creeper", 3,  "dormant",    None),
-    ("Virginia Creeper", 4,  "dormant",    None),
-    ("Virginia Creeper", 5,  "transplant", "Plant container stock; attach to support"),
-    ("Virginia Creeper", 6,  "growing",    "Rapid growth; self-clinging tendrils"),
-    ("Virginia Creeper", 7,  "growing",    None),
-    ("Virginia Creeper", 8,  "growing",    None),
-    ("Virginia Creeper", 9,  "growing",    "Spectacular crimson fall colour"),
-    ("Virginia Creeper", 10, "dormant",    "Berries for birds; leaf drop"),
-    ("Virginia Creeper", 11, "dormant",    None),
-    ("Virginia Creeper", 12, "dormant",    None),
-
     # Hardy Kiwi
     ("Hardy Kiwi", 1,  "dormant",    None),
     ("Hardy Kiwi", 2,  "dormant",    None),

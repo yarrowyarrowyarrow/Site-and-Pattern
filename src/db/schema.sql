@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS guilds (
     name TEXT NOT NULL,
     description TEXT,
     center_plant_id INTEGER REFERENCES plants(id),
+    parent_id INTEGER REFERENCES guilds(id) ON DELETE SET NULL,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -15,13 +15,14 @@ def _get_plant_by_name(common_name):
         conn.close()
 
 
-def get_all_guilds():
+def get_all_guilds(top_level_only=True):
     conn = get_connection()
-    rows = conn.execute(
-        "SELECT g.*, p.common_name AS center_plant_name "
-        "FROM guilds g LEFT JOIN plants p ON g.center_plant_id = p.id "
-        "ORDER BY g.name"
-    ).fetchall()
+    sql = ("SELECT g.*, p.common_name AS center_plant_name "
+           "FROM guilds g LEFT JOIN plants p ON g.center_plant_id = p.id ")
+    if top_level_only:
+        sql += "WHERE g.parent_id IS NULL "
+    sql += "ORDER BY g.name"
+    rows = conn.execute(sql).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
@@ -49,16 +50,31 @@ def get_guild_by_id(guild_id):
     return guild
 
 
-def create_guild(name, description, center_plant_id):
+def create_guild(name, description, center_plant_id, parent_id=None):
     conn = get_connection()
     cur = conn.execute(
-        "INSERT INTO guilds (name, description, center_plant_id) VALUES (?, ?, ?)",
-        (name, description, center_plant_id),
+        "INSERT INTO guilds (name, description, center_plant_id, parent_id) VALUES (?, ?, ?, ?)",
+        (name, description, center_plant_id, parent_id),
     )
     guild_id = cur.lastrowid
     conn.commit()
     conn.close()
     return guild_id
+
+
+def get_guild_children(parent_id):
+    """Get all variation guilds under a parent guild."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT g.*, p.common_name AS center_plant_name "
+            "FROM guilds g LEFT JOIN plants p ON g.center_plant_id = p.id "
+            "WHERE g.parent_id = ? ORDER BY g.name",
+            (parent_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
 
 
 def add_guild_member(guild_id, plant_id, role, offset_x, offset_y, notes=""):
@@ -113,12 +129,24 @@ def update_guild(guild_id, name=None, description=None):
     conn.close()
 
 
-def duplicate_guild(guild_id):
+def duplicate_guild(guild_id, as_variation=False):
+    """Duplicate a guild. If as_variation=True, create it as a child variation."""
     guild = get_guild_by_id(guild_id)
     if not guild:
         return None
+
+    if as_variation:
+        # Count existing variations to auto-name
+        children = get_guild_children(guild_id)
+        var_num = len(children) + 1
+        new_name = f"Variation {var_num}"
+        parent_id = guild_id
+    else:
+        new_name = f"{guild['name']} (copy)"
+        parent_id = guild.get("parent_id")
+
     new_id = create_guild(
-        f"{guild['name']} (copy)", guild["description"], guild["center_plant_id"]
+        new_name, guild["description"], guild["center_plant_id"], parent_id
     )
     for m in guild.get("members", []):
         add_guild_member(new_id, m["plant_id"], m["role"], m["offset_x"], m["offset_y"])
@@ -196,6 +224,21 @@ EXAMPLE_GUILDS = [
             ("Yarrow",            "pollinator",          1.0, -1.2),
             ("Wild Strawberry",   "groundcover",        -0.8, -1.0),
         ],
+        "variations": [
+            {
+                "name": "Shade-Tolerant",
+                "description": "Apple guild variant using shade-tolerant understory plants. "
+                               "Better for north-facing or partially shaded sites.",
+                "members": [
+                    ("Goodland Apple",  "canopy",              0,    0),
+                    ("Comfrey",         "dynamic_accumulator", 1.5,  0.8),
+                    ("Wild Mint",       "pest_repellent",     -1.2,  1.0),
+                    ("White Clover",    "nitrogen_fixer",      0,    1.5),
+                    ("Gooseberry",      "understory",          1.0, -1.2),
+                    ("Kinnikinnick (Bearberry)", "groundcover",-0.8, -1.0),
+                ],
+            },
+        ],
     },
     {
         "name": "Saskatoon Berry Guild",
@@ -208,6 +251,21 @@ EXAMPLE_GUILDS = [
             ("Wild Strawberry",   "groundcover",         0.5, -0.8),
             ("Chives",            "pest_repellent",     -0.5, -0.6),
             ("Bee Balm (Wild Bergamot)", "pollinator",   0.8, -0.5),
+        ],
+        "variations": [
+            {
+                "name": "Berry Focus",
+                "description": "Saskatoon guild variant emphasizing fruit production. "
+                               "Adds more berry-producing understory shrubs.",
+                "members": [
+                    ("Saskatoon Berry",  "canopy",             0,    0),
+                    ("Wild Lupine",      "nitrogen_fixer",     1.0,  0.5),
+                    ("Gooseberry",       "understory",        -0.8,  0.8),
+                    ("Wild Strawberry",  "groundcover",        0.5, -0.8),
+                    ("Red Currant",      "understory",        -0.5, -0.6),
+                    ("Yarrow",           "pollinator",         0.8, -0.5),
+                ],
+            },
         ],
     },
 ]
@@ -237,3 +295,19 @@ def seed_example_guilds():
             plant = _get_plant_by_name(common_name)
             if plant:
                 add_guild_member(guild_id, plant["id"], role, ox, oy)
+
+        # Create variations as child guilds
+        for var_def in guild_def.get("variations", []):
+            var_center_name = var_def["members"][0][0]
+            var_center = _get_plant_by_name(var_center_name)
+            var_center_id = var_center["id"] if var_center else None
+
+            var_id = create_guild(
+                var_def["name"], var_def["description"],
+                var_center_id, parent_id=guild_id
+            )
+
+            for common_name, role, ox, oy in var_def["members"]:
+                plant = _get_plant_by_name(common_name)
+                if plant:
+                    add_guild_member(var_id, plant["id"], role, ox, oy)

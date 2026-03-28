@@ -267,6 +267,53 @@ class PlantPanel(QWidget):
         zone_row.addStretch()
         top_layout.addLayout(zone_row)
 
+        # Extra filter row: Edible, Medicinal, N-Fixer, Pollinator, Perennial
+        _toggle_style = (
+            "QPushButton { background: #1e2e1e; color: #78909c; border: 1px solid #2e4a2e; "
+            "border-radius: 3px; padding: 2px 6px; font-size: 11px; }"
+            "QPushButton:checked { background: #2e5a2e; color: #a5d6a7; border-color: #66bb6a; }"
+            "QPushButton:hover { border-color: #4a7a4a; }"
+        )
+        extra_row = QHBoxLayout()
+        extra_row.setSpacing(3)
+
+        self._edible_btn = QPushButton("Edible")
+        self._edible_btn.setCheckable(True)
+        self._edible_btn.setToolTip("Only show plants with edible parts")
+        self._edible_btn.setStyleSheet(_toggle_style)
+        self._edible_btn.toggled.connect(self._run_search)
+        extra_row.addWidget(self._edible_btn)
+
+        self._medicinal_btn = QPushButton("Medicinal")
+        self._medicinal_btn.setCheckable(True)
+        self._medicinal_btn.setToolTip("Only show plants with medicinal uses")
+        self._medicinal_btn.setStyleSheet(_toggle_style)
+        self._medicinal_btn.toggled.connect(self._run_search)
+        extra_row.addWidget(self._medicinal_btn)
+
+        self._nfixer_btn = QPushButton("N-Fixer")
+        self._nfixer_btn.setCheckable(True)
+        self._nfixer_btn.setToolTip("Only show nitrogen-fixing plants")
+        self._nfixer_btn.setStyleSheet(_toggle_style)
+        self._nfixer_btn.toggled.connect(self._run_search)
+        extra_row.addWidget(self._nfixer_btn)
+
+        self._pollinator_btn = QPushButton("Pollinator")
+        self._pollinator_btn.setCheckable(True)
+        self._pollinator_btn.setToolTip("Only show pollinator-friendly plants")
+        self._pollinator_btn.setStyleSheet(_toggle_style)
+        self._pollinator_btn.toggled.connect(self._run_search)
+        extra_row.addWidget(self._pollinator_btn)
+
+        self._perennial_btn = QPushButton("Perennial")
+        self._perennial_btn.setCheckable(True)
+        self._perennial_btn.setToolTip("Only show perennial plants")
+        self._perennial_btn.setStyleSheet(_toggle_style)
+        self._perennial_btn.toggled.connect(self._run_search)
+        extra_row.addWidget(self._perennial_btn)
+
+        top_layout.addLayout(extra_row)
+
         # Result count label
         self._result_count = QLabel("Results: —")
         self._result_count.setStyleSheet("color: #78909c; font-size: 11px;")
@@ -547,6 +594,11 @@ class PlantPanel(QWidget):
                 perm_use    = self._combo_value(self._use_combo),
                 zone        = zone,
                 native_only = self._native_filter_btn.isChecked(),
+                edible_only = self._edible_btn.isChecked(),
+                medicinal_only = self._medicinal_btn.isChecked(),
+                nfixer_only = self._nfixer_btn.isChecked(),
+                pollinator_only = self._pollinator_btn.isChecked(),
+                perennial_only = self._perennial_btn.isChecked(),
             )
         except Exception as exc:
             self._result_count.setText(f"Error: {exc}")
