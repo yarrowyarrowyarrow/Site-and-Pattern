@@ -501,12 +501,9 @@ class PlantPanel(QWidget):
         self._qty_spin.setMinimum(1)
         self._qty_spin.setMaximum(50)
         self._qty_spin.setValue(1)
-        self._qty_spin.setFixedWidth(55)
+        self._qty_spin.setFixedWidth(65)
         self._qty_spin.setToolTip("Number of plants to place in a group")
-        self._qty_spin.setStyleSheet(
-            "QSpinBox { background: #1a2a1a; color: #c8e6c9; border: 1px solid #2e4a2e; "
-            "border-radius: 3px; padding: 2px; }"
-        )
+        self._qty_spin.setStyleSheet(_QTY_SPIN_STYLE)
         place_row.addWidget(qty_label)
         place_row.addWidget(self._qty_spin)
 
@@ -532,23 +529,30 @@ class PlantPanel(QWidget):
 
         bot_layout.addLayout(place_row)
 
-        # Placed plants section
-        placed_header = QLabel("On This Design")
-        placed_header.setStyleSheet(
-            "color: #a5d6a7; font-weight: bold; border-top: 1px solid #2e4a2e; "
-            "padding-top: 6px;"
+        # Placed plants section — collapsible
+        self._placed_header_btn = QPushButton("▼ On This Design")
+        self._placed_header_btn.setStyleSheet(
+            "QPushButton { color: #a5d6a7; font-weight: bold; border: none; "
+            "border-top: 1px solid #2e4a2e; padding-top: 6px; text-align: left; "
+            "background: transparent; }"
+            "QPushButton:hover { color: #c8e6c9; }"
         )
-        bot_layout.addWidget(placed_header)
+        self._placed_header_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._placed_header_btn.clicked.connect(self._toggle_placed_section)
+        bot_layout.addWidget(self._placed_header_btn)
 
         self._placed_count_label = QLabel("None placed yet")
         self._placed_count_label.setStyleSheet("color: #78909c; font-size: 11px;")
         bot_layout.addWidget(self._placed_count_label)
 
         self._placed_list = QListWidget()
-        self._placed_list.setMaximumHeight(120)
+        self._placed_list.setMinimumHeight(60)
         self._placed_list.setStyleSheet(_RESULTS_LIST_STYLE)
         self._placed_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        bot_layout.addWidget(self._placed_list)
+        self._placed_list.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
+        bot_layout.addWidget(self._placed_list, 1)  # stretch factor
 
         splitter.addWidget(bottom)
         splitter.setSizes([320, 240])
@@ -1013,6 +1017,14 @@ class PlantPanel(QWidget):
         if self._zone_filter_btn.isChecked():
             self._run_search()
 
+    def _toggle_placed_section(self):
+        """Expand or collapse the placed-plants list."""
+        visible = not self._placed_list.isVisible()
+        self._placed_list.setVisible(visible)
+        self._placed_count_label.setVisible(visible)
+        arrow = "▼" if visible else "▶"
+        self._placed_header_btn.setText(f"{arrow} On This Design")
+
     def on_plant_removed(self, plant_id: int):
         """Notify the panel that a plant marker was removed from the map."""
         if plant_id in self._placed_counts:
@@ -1103,6 +1115,47 @@ QPushButton {
 QPushButton:hover  { background: #388e3c; }
 QPushButton:pressed { background: #1b5e20; }
 QPushButton:disabled { background: #2a3a2a; color: #4a6a4a; }
+"""
+
+_QTY_SPIN_STYLE = """
+QSpinBox {
+    background: #1a2a1a;
+    color: #c8e6c9;
+    border: 1px solid #2e4a2e;
+    border-radius: 3px;
+    padding: 2px 4px;
+    font-size: 13px;
+}
+QSpinBox::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 18px;
+    border-left: 1px solid #2e4a2e;
+    background: #243824;
+}
+QSpinBox::up-button:hover { background: #2e5a2e; }
+QSpinBox::up-arrow {
+    image: none;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 5px solid #a5d6a7;
+    width: 0; height: 0;
+}
+QSpinBox::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    width: 18px;
+    border-left: 1px solid #2e4a2e;
+    background: #243824;
+}
+QSpinBox::down-button:hover { background: #2e5a2e; }
+QSpinBox::down-arrow {
+    image: none;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #a5d6a7;
+    width: 0; height: 0;
+}
 """
 
 _TAB_STYLE = """
