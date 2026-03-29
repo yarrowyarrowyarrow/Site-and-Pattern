@@ -39,16 +39,22 @@ def load_project(path: str) -> dict:
 def project_to_map_data(project: dict) -> dict:
     """
     Extract map elements from the project for loading into the map widget.
-    Returns {'boundary': [...], 'plants': [...], 'zone_center': (lat, lng) or None}
+    Returns dict with boundary, plants, zone_center, structures, hedgerows, shapes.
     """
-    result = {"boundary": None, "plants": [], "zone_center": None}
+    result = {
+        "boundary": None,
+        "plants": [],
+        "zone_center": None,
+        "structures": [],
+        "hedgerows": [],
+        "shapes": [],
+    }
     for feature in project.get("features", []):
         props = feature.get("properties", {})
         geom  = feature.get("geometry", {})
         etype = props.get("element_type")
 
         if etype == "property_boundary" and geom.get("type") == "Polygon":
-            # GeoJSON uses [lng, lat]; Leaflet wants [lat, lng]
             ring = geom["coordinates"][0]
             result["boundary"] = [[pt[1], pt[0]] for pt in ring]
 
@@ -64,5 +70,40 @@ def project_to_map_data(project: dict) -> dict:
         elif etype == "zone_center" and geom.get("type") == "Point":
             lng, lat = geom["coordinates"]
             result["zone_center"] = (lat, lng)
+
+        elif etype == "structure" and geom.get("type") == "Point":
+            lng, lat = geom["coordinates"]
+            result["structures"].append({
+                "lat": lat,
+                "lng": lng,
+                "struct_def": props.get("struct_def", {}),
+            })
+
+        elif etype == "hedgerow" and geom.get("type") == "LineString":
+            points = [[pt[1], pt[0]] for pt in geom["coordinates"]]
+            result["hedgerows"].append({
+                "points": points,
+                "style": props.get("style", "hedge"),
+                "color": props.get("color", "#4caf50"),
+                "width_m": props.get("width_m", 1.5),
+                "spacing_m": props.get("spacing_m", 1.0),
+                "species": props.get("species", ""),
+            })
+
+        elif etype == "custom_shape" and geom.get("type") == "Polygon":
+            ring = geom["coordinates"][0]
+            points = [[pt[1], pt[0]] for pt in ring]
+            # Remove closing duplicate if present
+            if len(points) > 1 and points[0] == points[-1]:
+                points = points[:-1]
+            result["shapes"].append({
+                "points": points,
+                "shape_type": props.get("shape_type", "Custom"),
+                "label": props.get("label", ""),
+                "fill_color": props.get("fill_color", "#4caf50"),
+                "stroke_color": props.get("stroke_color", "#2e7d32"),
+                "fill_opacity": props.get("fill_opacity", 0.25),
+                "dash_array": props.get("dash_array", ""),
+            })
 
     return result

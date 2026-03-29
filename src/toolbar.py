@@ -21,13 +21,14 @@ class MainToolbar(QToolBar):
     cancel_draw_requested     = pyqtSignal()
 
     # Layer visibility signals
-    satellite_toggled  = pyqtSignal(bool)
-    boundary_toggled   = pyqtSignal(bool)
-    zones_toggled      = pyqtSignal(bool)
-    plants_toggled     = pyqtSignal(bool)
-    labels_toggled     = pyqtSignal(bool)
-    canopy_toggled     = pyqtSignal(bool)
-    snap_toggled       = pyqtSignal(bool)
+    satellite_toggled    = pyqtSignal(bool)
+    boundary_toggled     = pyqtSignal(bool)
+    zones_toggled        = pyqtSignal(bool)
+    plants_toggled       = pyqtSignal(bool)
+    labels_toggled       = pyqtSignal(bool)
+    canopy_toggled       = pyqtSignal(bool)
+    snap_toggled         = pyqtSignal(bool)
+    structures_toggled   = pyqtSignal(bool)
 
     # Settings
     settings_requested = pyqtSignal()
@@ -127,6 +128,13 @@ class MainToolbar(QToolBar):
         self._act_canopy.setToolTip("Toggle semi-transparent canopy circles showing mature plant spread")
         self._act_canopy.toggled.connect(self.canopy_toggled)
         self.addAction(self._act_canopy)
+
+        self._act_structures_layer = QAction("🏗 Structures", self)
+        self._act_structures_layer.setCheckable(True)
+        self._act_structures_layer.setChecked(True)
+        self._act_structures_layer.setStatusTip("Toggle structures/hedgerows/shapes visibility")
+        self._act_structures_layer.toggled.connect(self.structures_toggled)
+        self.addAction(self._act_structures_layer)
 
         self._act_snap = QAction("# Grid", self)
         self._act_snap.setCheckable(True)

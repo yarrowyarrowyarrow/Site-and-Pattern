@@ -28,12 +28,13 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QKeySequence, QShortcut
 
-from src.map_widget   import MapWidget
-from src.plant_panel  import PlantPanel
-from src.guild_panel  import GuildPanel
-from src.toolbar      import MainToolbar
-from src.climate      import get_zone, zone_label
-from src.settings     import SettingsDialog, get_api_keys
+from src.map_widget       import MapWidget
+from src.plant_panel      import PlantPanel
+from src.guild_panel      import GuildPanel
+from src.structure_panel  import StructurePanel
+from src.toolbar          import MainToolbar
+from src.climate          import get_zone, zone_label
+from src.settings         import SettingsDialog, get_api_keys
 import src.project as project_io
 
 
@@ -91,14 +92,16 @@ class MainWindow(QMainWindow):
         self.addToolBar(self.toolbar)
 
         # Central area
-        self.map_widget  = MapWidget(self)
-        self.plant_panel = PlantPanel(self)
-        self.guild_panel = GuildPanel(self)
+        self.map_widget      = MapWidget(self)
+        self.plant_panel     = PlantPanel(self)
+        self.guild_panel     = GuildPanel(self)
+        self.structure_panel = StructurePanel(self)
 
-        # Tabbed side panel: Plants + Guilds
+        # Tabbed side panel: Plants + Guilds + Structures
         self._side_tabs = QTabWidget()
         self._side_tabs.addTab(self.plant_panel, "Plants")
         self._side_tabs.addTab(self.guild_panel, "Guilds")
+        self._side_tabs.addTab(self.structure_panel, "Structures")
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(self.map_widget)
@@ -243,6 +246,22 @@ class MainWindow(QMainWindow):
         # Guild panel → map (guild placement)
         self.guild_panel.placeGuildRequested.connect(self._enter_guild_mode)
 
+        # Structure panel → map
+        self.structure_panel.place_structure_requested.connect(self._enter_structure_mode)
+        self.structure_panel.place_hedgerow_requested.connect(self._enter_hedgerow_mode)
+        self.structure_panel.place_shape_requested.connect(self._enter_shape_mode)
+
+        # Map → structures/hedgerows/shapes
+        b.structure_placed.connect(self._on_structure_placed)
+        b.structure_removed.connect(self._on_structure_removed)
+        b.hedgerow_complete.connect(self._on_hedgerow_complete)
+        b.hedgerow_removed.connect(self._on_hedgerow_removed)
+        b.shape_complete.connect(self._on_shape_complete)
+        b.shape_removed.connect(self._on_shape_removed)
+
+        # Toolbar → structures layer toggle
+        self.toolbar.structures_toggled.connect(self.map_widget.set_structures_visible)
+
     # ── Map-ready ─────────────────────────────────────────────────────────────
 
     def _on_map_ready(self):
@@ -383,6 +402,144 @@ class MainWindow(QMainWindow):
         self._project["features"] = [
             f for f in self._project["features"]
             if f.get("properties", {}).get("annotation_id") != ann_id
+        ]
+        self._mark_modified()
+
+    # ── Structure / Hedgerow / Shape modes ──────────────────────────────────
+
+    def _enter_structure_mode(self, struct_def: dict):
+        self._current_mode = 'structure'
+        self.map_widget.set_structure_mode(struct_def)
+        self.toolbar.reset_draw_buttons()
+        self._set_mode_label(
+            f"Placing: {struct_def.get('icon', '')} {struct_def.get('name', 'Structure')} — click map, Esc to cancel"
+        )
+
+    def _on_structure_placed(self, struct_id: str, name: str, lat: float, lng: float, size_m: float):
+        from src.db.structures import get_structure
+        struct_def = get_structure(struct_id)
+        if struct_def:
+            struct_def = dict(struct_def)
+            struct_def["size_m"] = size_m
+        else:
+            struct_def = {"id": struct_id, "name": name, "size_m": size_m}
+
+        self._project["features"].append({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [lng, lat]},
+            "properties": {
+                "element_type": "structure",
+                "struct_id": struct_id,
+                "name": name,
+                "size_m": size_m,
+                "struct_def": struct_def,
+            }
+        })
+        self._mark_modified()
+        self.statusBar().showMessage(f"Placed {name}", 2000)
+
+    def _on_structure_removed(self, marker_id: str, struct_id: str, lat: float, lng: float):
+        kept = []
+        removed = False
+        for f in self._project["features"]:
+            props = f.get("properties", {})
+            coords = f.get("geometry", {}).get("coordinates", [])
+            if (not removed
+                    and props.get("element_type") == "structure"
+                    and props.get("struct_id") == struct_id
+                    and coords
+                    and abs(coords[1] - lat) < 1e-7
+                    and abs(coords[0] - lng) < 1e-7):
+                removed = True
+            else:
+                kept.append(f)
+        self._project["features"] = kept
+        self._mark_modified()
+
+    def _enter_hedgerow_mode(self, hedge_config: dict):
+        self._current_mode = 'hedgerow'
+        self.map_widget.set_hedgerow_mode(hedge_config)
+        self.toolbar.reset_draw_buttons()
+        self._set_mode_label(
+            "Drawing hedgerow — click to add points, double-click to finish"
+        )
+
+    def _on_hedgerow_complete(self, hedge_id: str, points_json: str, species: str,
+                               style: str, length_m: float, num_plants: int):
+        import json as _json
+        points = _json.loads(points_json)
+        # Store as GeoJSON LineString (lng, lat order)
+        coords = [[pt[1], pt[0]] for pt in points]
+        self._project["features"].append({
+            "type": "Feature",
+            "geometry": {"type": "LineString", "coordinates": coords},
+            "properties": {
+                "element_type": "hedgerow",
+                "hedge_id": hedge_id,
+                "species": species,
+                "style": style,
+                "length_m": length_m,
+                "num_plants": num_plants,
+                "color": "#4caf50",
+                "width_m": 1.5,
+                "spacing_m": 1.0,
+            }
+        })
+        self._mark_modified()
+        self._set_mode_label("Ready")
+        self.statusBar().showMessage(
+            f"Hedgerow placed: {length_m:.1f}m, ~{num_plants} plants", 3000
+        )
+
+    def _on_hedgerow_removed(self, hedge_id: str, points_json: str):
+        self._project["features"] = [
+            f for f in self._project["features"]
+            if f.get("properties", {}).get("hedge_id") != hedge_id
+        ]
+        self._mark_modified()
+
+    def _enter_shape_mode(self, shape_config: dict):
+        self._current_mode = 'shape'
+        self.map_widget.set_shape_mode(shape_config)
+        self.toolbar.reset_draw_buttons()
+        self._set_mode_label(
+            "Drawing shape — click points, double-click or click first point to close"
+        )
+
+    def _on_shape_complete(self, shape_id: str, points_json: str, label: str,
+                            shape_type: str, fill_color: str, stroke_color: str,
+                            fill_opacity: float, dash_array: str, area_m2: float):
+        import json as _json
+        points = _json.loads(points_json)
+        # Store as GeoJSON Polygon (lng, lat; closed ring)
+        ring = [[pt[1], pt[0]] for pt in points]
+        ring.append(ring[0])  # close the ring
+        self._project["features"].append({
+            "type": "Feature",
+            "geometry": {"type": "Polygon", "coordinates": [ring]},
+            "properties": {
+                "element_type": "custom_shape",
+                "shape_id": shape_id,
+                "label": label,
+                "shape_type": shape_type,
+                "fill_color": fill_color,
+                "stroke_color": stroke_color,
+                "fill_opacity": fill_opacity,
+                "dash_array": dash_array,
+                "area_m2": area_m2,
+            }
+        })
+        self._mark_modified()
+        self._set_mode_label("Ready")
+        area_str = f"{area_m2:.1f} m²" if area_m2 < 10000 else f"{area_m2/10000:.2f} ha"
+        self.statusBar().showMessage(
+            f"Shape placed: {label or shape_type} ({area_str})", 3000
+        )
+
+    def _on_shape_removed(self, shape_id: str):
+        self._project["features"] = [
+            f for f in self._project["features"]
+            if f.get("properties", {}).get("shape_id") != shape_id
         ]
         self._mark_modified()
 
@@ -654,6 +811,15 @@ class MainWindow(QMainWindow):
         if data["zone_center"]:
             self.map_widget.load_zone_center(*data["zone_center"])
 
+        for s in data.get("structures", []):
+            self.map_widget.load_structure(s["struct_def"], s["lat"], s["lng"])
+
+        for h in data.get("hedgerows", []):
+            self.map_widget.load_hedgerow(h)
+
+        for sh in data.get("shapes", []):
+            self.map_widget.load_shape(sh)
+
         name = proj.get("properties", {}).get("project_name", "Design")
         self.setWindowTitle(f"PermaDesign — {name}")
 
@@ -892,6 +1058,9 @@ class MainWindow(QMainWindow):
         elif key == Qt.Key.Key_G and not event.modifiers():
             # Switch to Guilds tab
             self._side_tabs.setCurrentWidget(self.guild_panel)
+        elif key == Qt.Key.Key_S and not event.modifiers():
+            # Switch to Structures tab
+            self._side_tabs.setCurrentWidget(self.structure_panel)
         elif key == Qt.Key.Key_M and not event.modifiers():
             self._enter_measure_mode()
         elif key == Qt.Key.Key_Z and not event.modifiers():

@@ -47,6 +47,19 @@ class MapBridge(QObject):
     annotate_requested = pyqtSignal(float, float)              # lat, lng
     annotation_removed = pyqtSignal(str)                       # annotation id
 
+    # Structure signals
+    structure_placed = pyqtSignal(str, str, float, float, float)  # structId, name, lat, lng, sizeM
+    structure_removed = pyqtSignal(str, str, float, float)        # markerId, structId, lat, lng
+
+    # Hedgerow signals
+    hedgerow_complete = pyqtSignal(str, str, str, str, float, int)  # id, pointsJson, species, style, lengthM, numPlants
+    hedgerow_removed = pyqtSignal(str, str)                         # id, pointsJson
+
+    # Shape signals
+    shape_complete = pyqtSignal(str, str, str, str, str, str, float, str, float)
+        # id, pointsJson, label, shapeType, fillColor, strokeColor, fillOpacity, dashArray, areaM2
+    shape_removed = pyqtSignal(str)                                 # id
+
     # ── Slots (called from JS) ────────────────────────────────────────────────
 
     @pyqtSlot()
@@ -93,6 +106,40 @@ class MapBridge(QObject):
     @pyqtSlot(str)
     def onAnnotationRemoved(self, annotation_id: str):
         self.annotation_removed.emit(annotation_id)
+
+    # ── Structure slots ───────────────────────────────────────────────────────
+
+    @pyqtSlot(str, str, float, float, float)
+    def onStructurePlaced(self, struct_id: str, name: str, lat: float, lng: float, size_m: float):
+        self.structure_placed.emit(struct_id, name, lat, lng, size_m)
+
+    @pyqtSlot(str, str, float, float)
+    def onStructureRemoved(self, marker_id: str, struct_id: str, lat: float, lng: float):
+        self.structure_removed.emit(marker_id, struct_id, lat, lng)
+
+    # ── Hedgerow slots ────────────────────────────────────────────────────────
+
+    @pyqtSlot(str, str, str, str, float, int)
+    def onHedgerowComplete(self, hedge_id: str, points_json: str, species: str,
+                           style: str, length_m: float, num_plants: int):
+        self.hedgerow_complete.emit(hedge_id, points_json, species, style, length_m, num_plants)
+
+    @pyqtSlot(str, str)
+    def onHedgerowRemoved(self, hedge_id: str, points_json: str):
+        self.hedgerow_removed.emit(hedge_id, points_json)
+
+    # ── Shape slots ───────────────────────────────────────────────────────────
+
+    @pyqtSlot(str, str, str, str, str, str, float, str, float)
+    def onShapeComplete(self, shape_id: str, points_json: str, label: str,
+                        shape_type: str, fill_color: str, stroke_color: str,
+                        fill_opacity: float, dash_array: str, area_m2: float):
+        self.shape_complete.emit(shape_id, points_json, label, shape_type,
+                                 fill_color, stroke_color, fill_opacity, dash_array, area_m2)
+
+    @pyqtSlot(str)
+    def onShapeRemoved(self, shape_id: str):
+        self.shape_removed.emit(shape_id)
 
 
 class MapWidget(QWebEngineView):
@@ -203,3 +250,59 @@ class MapWidget(QWebEngineView):
     def set_snap_enabled(self, enabled: bool, grid_size: float = 1.0):
         e = 'true' if enabled else 'false'
         self.run_js(f"setSnapEnabled({e}, {grid_size});")
+
+    # ── Structure helpers ─────────────────────────────────────────────────────
+
+    def set_structure_mode(self, struct_def: dict):
+        """Enter structure placement mode with a structure definition."""
+        import json
+        js_data = json.dumps(struct_def).replace("'", "\\'")
+        self.run_js(f"setMode('structure', JSON.parse('{js_data}'));")
+
+    def load_structure(self, struct_def: dict, lat: float, lng: float):
+        """Load a structure from a saved project."""
+        import json
+        js_data = json.dumps(struct_def).replace("'", "\\'")
+        self.run_js(f"loadStructure(JSON.parse('{js_data}'), {lat}, {lng});")
+
+    # ── Hedgerow helpers ──────────────────────────────────────────────────────
+
+    def set_hedgerow_mode(self, hedge_config: dict):
+        """Enter hedgerow drawing mode."""
+        import json
+        js_data = json.dumps(hedge_config).replace("'", "\\'")
+        self.run_js(f"setMode('hedgerow', JSON.parse('{js_data}'));")
+
+    def load_hedgerow(self, hedge_def: dict):
+        """Load a hedgerow from a saved project."""
+        import json
+        js_data = json.dumps(hedge_def).replace("'", "\\'")
+        self.run_js(f"loadHedgerow(JSON.parse('{js_data}'));")
+
+    # ── Shape helpers ─────────────────────────────────────────────────────────
+
+    def set_shape_mode(self, shape_config: dict):
+        """Enter custom shape drawing mode."""
+        import json
+        js_data = json.dumps(shape_config).replace("'", "\\'")
+        self.run_js(f"setMode('shape', JSON.parse('{js_data}'));")
+
+    def load_shape(self, shape_def: dict):
+        """Load a custom shape from a saved project."""
+        import json
+        js_data = json.dumps(shape_def).replace("'", "\\'")
+        self.run_js(f"loadShape(JSON.parse('{js_data}'));")
+
+    def set_structures_visible(self, visible: bool):
+        v = 'true' if visible else 'false'
+        self.run_js(
+            f"Object.values(structureMarkers).forEach(function(g) {{"
+            f"  if ({v}) g.addTo(map); else map.removeLayer(g);"
+            f"}});"
+            f"Object.values(hedgerowLayers).forEach(function(g) {{"
+            f"  if ({v}) g.addTo(map); else map.removeLayer(g);"
+            f"}});"
+            f"Object.values(shapeLayers).forEach(function(g) {{"
+            f"  if ({v}) g.addTo(map); else map.removeLayer(g);"
+            f"}});"
+        )

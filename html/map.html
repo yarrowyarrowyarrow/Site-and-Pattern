@@ -121,6 +121,44 @@
     }
     #legend-toggle:hover { background: rgba(46, 74, 46, 0.95); }
     #legend-toggle.active { display: none; }
+
+    /* ── Structure labels ───────────────────────────────────────── */
+    .structure-label {
+      background: rgba(30, 42, 30, 0.88);
+      border: 1px solid #78909c;
+      border-radius: 4px;
+      color: #e0e0e0;
+      font-size: 11px;
+      padding: 2px 6px;
+      white-space: nowrap;
+      text-align: center;
+    }
+    .structure-label .struct-icon {
+      font-size: 14px;
+    }
+
+    /* ── Hedgerow labels ────────────────────────────────────────── */
+    .hedgerow-label {
+      background: rgba(30, 50, 30, 0.85);
+      border: 1px solid #66bb6a;
+      border-radius: 4px;
+      color: #c8e6c9;
+      font-size: 11px;
+      padding: 2px 6px;
+      white-space: nowrap;
+    }
+
+    /* ── Custom shape labels ────────────────────────────────────── */
+    .shape-label {
+      background: rgba(30, 42, 30, 0.85);
+      border: 1px solid #78909c;
+      border-radius: 4px;
+      color: #e0e0e0;
+      font-size: 12px;
+      font-weight: bold;
+      padding: 3px 8px;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -148,8 +186,18 @@
       <div class="legend-item"><span class="legend-swatch outline-only" style="border-color:#a5d6a7;"></span> Guild outline</div>
     </div>
     <div class="legend-section">
+      <div class="legend-section-title">Structures</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#42a5f5;"></span> Water</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#8d6e63;"></span> Growing</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#ffca28;"></span> Animal</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#795548;"></span> Storage</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#90a4ae;"></span> Infrastructure</div>
+    </div>
+    <div class="legend-section">
       <div class="legend-section-title">Other</div>
       <div class="legend-item"><span class="legend-swatch" style="background:#66bb6a; border-radius:2px;"></span> Boundary</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#4caf50; border-radius:2px;"></span> Hedgerow</div>
+      <div class="legend-item"><span class="legend-swatch outline-only" style="border-color:#78909c;"></span> Custom shape</div>
       <div class="legend-item"><span class="legend-swatch" style="background:#fdd835;"></span> Measurement</div>
     </div>
   </div>
@@ -168,8 +216,24 @@
     var plantMarkers  = {};   // id -> marker
     var zoneCircles   = [];
     var bridge        = null; // Python QObject exposed via QWebChannel
-    var currentMode   = 'none'; // 'none' | 'boundary' | 'plant' | 'zone' | 'measure' | 'annotate'
+    var currentMode   = 'none'; // 'none' | 'boundary' | 'plant' | 'zone' | 'measure' | 'annotate' | 'structure' | 'hedgerow' | 'shape'
     var currentPlant  = null;   // {id, common_name} when in plant-placement mode
+
+    // Structure state
+    var structureMarkers = {};  // id -> L.layerGroup
+    var currentStructure = null; // structure def when in structure-placement mode
+
+    // Hedgerow state
+    var hedgerowLayers  = {};   // id -> L.layerGroup
+    var hedgerowPoints  = [];   // points being drawn
+    var hedgerowPreview = null; // preview polyline
+    var currentHedgerow = null; // hedgerow config when drawing
+
+    // Custom shape state
+    var shapeLayers     = {};   // id -> L.layerGroup
+    var shapePoints     = [];   // points being drawn
+    var shapePreview    = null; // preview polyline
+    var currentShape    = null; // shape config when drawing
 
     // Measurement state
     var measureStart  = null;   // L.latLng or null
@@ -252,6 +316,14 @@
         placeZoneCircles(lat, lng);
         if (bridge) bridge.onZoneCenterPlaced(lat, lng);
         setMode('none');
+      } else if (currentMode === 'structure' && currentStructure) {
+        placeStructureOnMap(currentStructure, lat, lng);
+        if (bridge) bridge.onStructurePlaced(currentStructure.id, currentStructure.name, lat, lng, currentStructure.size_m);
+        // Stay in structure mode for multiple placements
+      } else if (currentMode === 'hedgerow') {
+        handleHedgerowClick(lat, lng);
+      } else if (currentMode === 'shape') {
+        handleShapeClick(lat, lng);
       } else if (currentMode === 'measure') {
         handleMeasureClick(lat, lng);
       } else if (currentMode === 'annotate') {
@@ -266,12 +338,22 @@
       if (currentMode === 'boundary' && drawingPolygon && polygonPoints.length > 0) {
         updatePolygonPreview(e.latlng);
       }
+      if (currentMode === 'hedgerow' && hedgerowPoints.length > 0) {
+        updateHedgerowPreview(e.latlng);
+      }
+      if (currentMode === 'shape' && shapePoints.length > 0) {
+        updateShapePreview(e.latlng);
+      }
     }
 
     function onMapDblClick(e) {
       L.DomEvent.stop(e);
       if (currentMode === 'boundary' && drawingPolygon) {
         finishBoundaryPolygon();
+      } else if (currentMode === 'hedgerow' && hedgerowPoints.length >= 2) {
+        finishHedgerow();
+      } else if (currentMode === 'shape' && shapePoints.length >= 3) {
+        finishShape();
       }
     }
 
@@ -687,6 +769,461 @@
       annotations = {};
     }
 
+    // ── Structure placement (S1) ───────────────────────────────────────────
+    function placeStructureOnMap(structDef, lat, lng) {
+      var id = 'struct_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      var group = L.layerGroup().addTo(map);
+      var sizeM = structDef.size_m || 3.0;
+      var widthM = structDef.width_m || sizeM;
+      var color = structDef.color || '#78909c';
+      var fillColor = structDef.fill_color || color;
+      var fillOpacity = structDef.fill_opacity || 0.35;
+      var shape = structDef.shape || 'rectangle';
+      var name = structDef.name || 'Structure';
+      var icon = structDef.icon || '';
+
+      var mainLayer;
+
+      if (shape === 'circle' || shape === 'ellipse' || shape === 'spiral' || shape === 'keyhole') {
+        // Render as circle
+        mainLayer = L.circle([lat, lng], {
+          radius: sizeM / 2,
+          color: color,
+          weight: 2,
+          fillColor: fillColor,
+          fillOpacity: fillOpacity
+        }).addTo(group);
+
+        // Spiral: add decorative inner arcs
+        if (shape === 'spiral') {
+          var innerR = sizeM / 4;
+          L.circle([lat, lng], {
+            radius: innerR,
+            color: color,
+            weight: 1.5,
+            fillOpacity: 0,
+            dashArray: '4 3'
+          }).addTo(group);
+        }
+
+        // Keyhole: add a small notch indicator
+        if (shape === 'keyhole') {
+          var notchLat = lat - (sizeM * 0.3) / 111320;
+          L.circle([notchLat, lng], {
+            radius: sizeM / 6,
+            color: '#5d4037',
+            weight: 1.5,
+            fillColor: '#8d6e63',
+            fillOpacity: 0.5
+          }).addTo(group);
+        }
+
+      } else {
+        // Rectangle: use L.rectangle
+        var halfLen = sizeM / 2;
+        var halfWid = widthM / 2;
+        var dLat = halfLen / 111320;
+        var dLng = halfWid / (111320 * Math.cos(lat * Math.PI / 180));
+        var bounds = [[lat - dLat, lng - dLng], [lat + dLat, lng + dLng]];
+        mainLayer = L.rectangle(bounds, {
+          color: color,
+          weight: 2,
+          fillColor: fillColor,
+          fillOpacity: fillOpacity
+        }).addTo(group);
+      }
+
+      // Label with icon
+      var labelIcon = L.divIcon({
+        className: 'structure-label',
+        html: '<span class="struct-icon">' + icon + '</span> ' + name,
+        iconSize: [0, 0],
+        iconAnchor: [0, 12]
+      });
+      L.marker([lat, lng], { icon: labelIcon, interactive: false }).addTo(group);
+
+      // Tooltip on hover
+      mainLayer.bindTooltip(
+        '<b>' + icon + ' ' + name + '</b><br>' +
+        '<span style="color:#78909c;font-size:10px">' + (sizeM) + 'm' +
+        (structDef.maintenance_hours_year ? ' · ~' + structDef.maintenance_hours_year + ' hrs/yr' : '') +
+        '<br>Right-click to remove</span>',
+        { className: 'plant-marker-label' }
+      );
+
+      // Store metadata
+      mainLayer._struct = {
+        id: id,
+        structId: structDef.id,
+        name: name,
+        icon: icon,
+        lat: lat,
+        lng: lng,
+        sizeM: sizeM,
+        widthM: widthM,
+        maintenance: structDef.maintenance_hours_year || 0
+      };
+
+      // Right-click to remove
+      mainLayer.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        map.removeLayer(group);
+        delete structureMarkers[id];
+        if (bridge) bridge.onStructureRemoved(id, structDef.id, lat, lng);
+      });
+
+      structureMarkers[id] = group;
+      return id;
+    }
+
+    // Load a structure from saved project
+    function loadStructure(structDef, lat, lng) {
+      placeStructureOnMap(structDef, lat, lng);
+    }
+
+    // ── Hedgerow drawing (S2) ────────────────────────────────────────────────
+    function handleHedgerowClick(lat, lng) {
+      hedgerowPoints.push([lat, lng]);
+
+      // Draw vertex marker
+      L.circleMarker([lat, lng], {
+        radius: 4,
+        color: currentHedgerow ? currentHedgerow.color : '#4caf50',
+        fillColor: currentHedgerow ? currentHedgerow.color : '#4caf50',
+        fillOpacity: 1
+      }).addTo(drawnItems);
+
+      refreshHedgerowPolyline();
+    }
+
+    function refreshHedgerowPolyline() {
+      if (hedgerowPreview) { map.removeLayer(hedgerowPreview); hedgerowPreview = null; }
+      if (hedgerowPoints.length >= 2) {
+        var color = currentHedgerow ? currentHedgerow.color : '#4caf50';
+        hedgerowPreview = L.polyline(hedgerowPoints, {
+          color: color, weight: 3, opacity: 0.7, dashArray: '6 4'
+        }).addTo(map);
+      }
+    }
+
+    function updateHedgerowPreview(latlng) {
+      if (hedgerowPreview) { map.removeLayer(hedgerowPreview); }
+      var color = currentHedgerow ? currentHedgerow.color : '#4caf50';
+      var pts = hedgerowPoints.concat([[latlng.lat, latlng.lng]]);
+      hedgerowPreview = L.polyline(pts, {
+        color: color, weight: 3, opacity: 0.5, dashArray: '4 4'
+      }).addTo(map);
+    }
+
+    function finishHedgerow() {
+      if (hedgerowPoints.length < 2) return;
+      if (hedgerowPreview) { map.removeLayer(hedgerowPreview); hedgerowPreview = null; }
+      drawnItems.clearLayers();
+
+      var id = 'hedge_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      var cfg = currentHedgerow || {};
+      var color   = cfg.color    || '#4caf50';
+      var widthM  = cfg.width_m  || 1.5;
+      var spacing = cfg.spacing_m || 1.0;
+      var style   = cfg.style    || 'hedge';
+      var species = cfg.species  || '';
+      var group   = L.layerGroup().addTo(map);
+
+      // Style definitions
+      var styleMap = {
+        'hedge':       { weight: 6, opacity: 0.6, dashArray: null,    fillDots: true },
+        'fence':       { weight: 3, opacity: 0.8, dashArray: '8 6',  fillDots: false },
+        'living_fence':{ weight: 5, opacity: 0.6, dashArray: '12 4', fillDots: true },
+        'windbreak':   { weight: 8, opacity: 0.5, dashArray: null,    fillDots: true }
+      };
+      var s = styleMap[style] || styleMap['hedge'];
+
+      // Main polyline
+      var mainLine = L.polyline(hedgerowPoints, {
+        color: color,
+        weight: s.weight,
+        opacity: s.opacity,
+        dashArray: s.dashArray,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(group);
+
+      // Plant markers along the line
+      if (s.fillDots) {
+        var totalLen = 0;
+        var segments = [];
+        for (var i = 1; i < hedgerowPoints.length; i++) {
+          var from = L.latLng(hedgerowPoints[i-1]);
+          var to   = L.latLng(hedgerowPoints[i]);
+          var segLen = from.distanceTo(to);
+          segments.push({ from: from, to: to, len: segLen });
+          totalLen += segLen;
+        }
+        var numPlants = Math.floor(totalLen / spacing) + 1;
+        var distAlong = 0;
+        var segIdx = 0;
+        var segDist = 0;
+        for (var p = 0; p < numPlants; p++) {
+          var target = p * spacing;
+          while (segIdx < segments.length - 1 && segDist + segments[segIdx].len < target) {
+            segDist += segments[segIdx].len;
+            segIdx++;
+          }
+          var seg = segments[segIdx];
+          var frac = seg.len > 0 ? (target - segDist) / seg.len : 0;
+          frac = Math.max(0, Math.min(1, frac));
+          var ptLat = seg.from.lat + (seg.to.lat - seg.from.lat) * frac;
+          var ptLng = seg.from.lng + (seg.to.lng - seg.from.lng) * frac;
+
+          var dotColor = style === 'living_fence' ?
+            (p % 2 === 0 ? color : shiftColor(color, 30)) : color;
+          L.circleMarker([ptLat, ptLng], {
+            radius: 3.5,
+            color: dotColor,
+            fillColor: dotColor,
+            fillOpacity: 0.8,
+            weight: 1
+          }).addTo(group);
+        }
+      }
+
+      // Label at midpoint
+      var midIdx = Math.floor(hedgerowPoints.length / 2);
+      var labelText = species || (style.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); }));
+      var labelIcon = L.divIcon({
+        className: 'hedgerow-label',
+        html: labelText,
+        iconSize: [0, 0],
+        iconAnchor: [0, 12]
+      });
+      L.marker(hedgerowPoints[midIdx], { icon: labelIcon, interactive: false }).addTo(group);
+
+      // Tooltip
+      var tooltipText = '<b>Hedgerow</b>';
+      if (species) tooltipText += '<br>' + species;
+      tooltipText += '<br><span style="color:#78909c;font-size:10px">~' + numPlants + ' plants · ' +
+        totalLen.toFixed(1) + 'm<br>Right-click to remove</span>';
+      mainLine.bindTooltip(tooltipText, { className: 'plant-marker-label' });
+
+      // Store metadata
+      mainLine._hedge = {
+        id: id,
+        points: hedgerowPoints.slice(),
+        style: style,
+        color: color,
+        widthM: widthM,
+        spacingM: spacing,
+        species: species,
+        lengthM: totalLen,
+        numPlants: numPlants
+      };
+
+      // Right-click to remove
+      mainLine.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        map.removeLayer(group);
+        delete hedgerowLayers[id];
+        if (bridge) bridge.onHedgerowRemoved(id, JSON.stringify(hedgerowPoints));
+      });
+
+      hedgerowLayers[id] = group;
+
+      // Notify Python
+      if (bridge) bridge.onHedgerowComplete(id, JSON.stringify(hedgerowPoints.slice()), species, style, totalLen, numPlants);
+
+      hedgerowPoints = [];
+      setMode('none');
+    }
+
+    // Load a hedgerow from saved project
+    function loadHedgerow(hedgeDef) {
+      hedgerowPoints = hedgeDef.points || [];
+      currentHedgerow = hedgeDef;
+      if (hedgerowPoints.length >= 2) {
+        finishHedgerow();
+      }
+      hedgerowPoints = [];
+    }
+
+    // ── Custom shape drawing (S3) ────────────────────────────────────────────
+    function handleShapeClick(lat, lng) {
+      // Close polygon if clicking near first point
+      if (shapePoints.length >= 3) {
+        var first = shapePoints[0];
+        var firstPx = map.latLngToContainerPoint(L.latLng(first));
+        var clickPx = map.latLngToContainerPoint(L.latLng(lat, lng));
+        var dist = Math.sqrt(Math.pow(firstPx.x - clickPx.x, 2) + Math.pow(firstPx.y - clickPx.y, 2));
+        if (dist < 12) {
+          finishShape();
+          return;
+        }
+      }
+
+      shapePoints.push([lat, lng]);
+
+      // Draw vertex marker
+      var strokeColor = currentShape ? currentShape.stroke_color : '#2e7d32';
+      L.circleMarker([lat, lng], {
+        radius: 4, color: strokeColor,
+        fillColor: strokeColor, fillOpacity: 1
+      }).addTo(drawnItems);
+
+      // Show close indicator on first point
+      if (shapePoints.length === 1) {
+        L.circleMarker([lat, lng], {
+          radius: 6, color: strokeColor,
+          fillColor: strokeColor, fillOpacity: 0.5
+        }).addTo(drawnItems);
+      }
+
+      refreshShapePolyline();
+    }
+
+    function refreshShapePolyline() {
+      if (shapePreview) { map.removeLayer(shapePreview); shapePreview = null; }
+      if (shapePoints.length >= 2) {
+        var color = currentShape ? currentShape.stroke_color : '#2e7d32';
+        shapePreview = L.polyline(shapePoints, {
+          color: color, weight: 2, opacity: 0.7, dashArray: '6 4'
+        }).addTo(map);
+      }
+    }
+
+    function updateShapePreview(latlng) {
+      if (shapePreview) { map.removeLayer(shapePreview); }
+      var color = currentShape ? currentShape.stroke_color : '#2e7d32';
+      var pts = shapePoints.concat([[latlng.lat, latlng.lng]]);
+      // Close preview polygon
+      if (pts.length >= 3) {
+        pts.push(pts[0]);
+      }
+      shapePreview = L.polyline(pts, {
+        color: color, weight: 2, opacity: 0.5, dashArray: '4 4'
+      }).addTo(map);
+    }
+
+    function finishShape() {
+      if (shapePoints.length < 3) return;
+      if (shapePreview) { map.removeLayer(shapePreview); shapePreview = null; }
+      drawnItems.clearLayers();
+
+      var id = 'shape_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      var cfg = currentShape || {};
+      var fillColor   = cfg.fill_color   || '#4caf50';
+      var strokeColor = cfg.stroke_color || '#2e7d32';
+      var fillOpacity = cfg.fill_opacity !== undefined ? cfg.fill_opacity : 0.25;
+      var dashArray   = cfg.dash_array   || '';
+      var label       = cfg.label        || '';
+      var shapeType   = cfg.shape_type   || 'Custom';
+
+      var group = L.layerGroup().addTo(map);
+
+      // Main polygon
+      var polygon = L.polygon(shapePoints, {
+        color: strokeColor,
+        weight: 2,
+        fillColor: fillColor,
+        fillOpacity: fillOpacity,
+        dashArray: dashArray || null
+      }).addTo(group);
+
+      // Calculate area
+      var areaM2 = _polygonArea(shapePoints);
+      var areaStr = areaM2 < 10000 ?
+        areaM2.toFixed(1) + ' m²' :
+        (areaM2 / 10000).toFixed(2) + ' ha';
+
+      // Centre label
+      var center = polygon.getBounds().getCenter();
+      if (label || shapeType !== 'Custom') {
+        var displayLabel = label || shapeType;
+        var labelIcon = L.divIcon({
+          className: 'shape-label',
+          html: displayLabel,
+          iconSize: [0, 0],
+          iconAnchor: [0, 8]
+        });
+        L.marker(center, { icon: labelIcon, interactive: false }).addTo(group);
+      }
+
+      // Tooltip
+      polygon.bindTooltip(
+        '<b>' + (label || shapeType) + '</b><br>' +
+        '<span style="color:#78909c;font-size:10px">Area: ' + areaStr + '<br>Right-click to remove</span>',
+        { className: 'plant-marker-label' }
+      );
+
+      // Metadata
+      polygon._shape = {
+        id: id,
+        points: shapePoints.slice(),
+        shapeType: shapeType,
+        label: label,
+        fillColor: fillColor,
+        strokeColor: strokeColor,
+        fillOpacity: fillOpacity,
+        dashArray: dashArray,
+        areaM2: areaM2
+      };
+
+      // Right-click to remove
+      polygon.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        map.removeLayer(group);
+        delete shapeLayers[id];
+        if (bridge) bridge.onShapeRemoved(id);
+      });
+
+      shapeLayers[id] = group;
+
+      // Notify Python
+      if (bridge) bridge.onShapeComplete(id, JSON.stringify(shapePoints.slice()), label, shapeType, fillColor, strokeColor, fillOpacity, dashArray, areaM2);
+
+      shapePoints = [];
+      setMode('none');
+    }
+
+    // Load a shape from saved project
+    function loadShape(shapeDef) {
+      var pts = shapeDef.points || [];
+      if (pts.length < 3) return;
+      shapePoints = pts;
+      currentShape = shapeDef;
+      finishShape();
+      shapePoints = [];
+    }
+
+    // Approximate polygon area in m² using the Shoelace formula
+    function _polygonArea(pts) {
+      if (pts.length < 3) return 0;
+      // Convert to metres relative to first point
+      var refLat = pts[0][0];
+      var refLng = pts[0][1];
+      var mPts = pts.map(function(p) {
+        return [
+          (p[1] - refLng) * 111320 * Math.cos(refLat * Math.PI / 180),
+          (p[0] - refLat) * 111320
+        ];
+      });
+      var area = 0;
+      for (var i = 0; i < mPts.length; i++) {
+        var j = (i + 1) % mPts.length;
+        area += mPts[i][0] * mPts[j][1];
+        area -= mPts[j][0] * mPts[i][1];
+      }
+      return Math.abs(area / 2);
+    }
+
+    // Utility: shift a hex colour's hue slightly
+    function shiftColor(hex, amount) {
+      var r = parseInt(hex.slice(1,3), 16);
+      var g = parseInt(hex.slice(3,5), 16);
+      var b = parseInt(hex.slice(5,7), 16);
+      r = Math.min(255, r + amount);
+      g = Math.max(0, g - amount / 2);
+      return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    }
+
     // ── Guild visualisation ─────────────────────────────────────────────────
     // Guilds are drawn as overlapping canopy circles (like the oak guild diagram).
     // The canopy tree is the largest circle; understory/groundcover nest inside.
@@ -799,9 +1336,12 @@
     }
 
     // ── Mode control (called from Python) ────────────────────────────────────
-    function setMode(mode, plantData) {
+    function setMode(mode, data) {
       currentMode  = mode;
-      currentPlant = plantData || null;
+      currentPlant = null;
+      currentStructure = null;
+      currentHedgerow  = null;
+      currentShape     = null;
 
       switch (mode) {
         case 'boundary':
@@ -811,6 +1351,7 @@
           drawnItems.clearLayers();
           break;
         case 'plant':
+          currentPlant = data || null;
           map.getContainer().style.cursor = 'cell';
           break;
         case 'zone':
@@ -823,12 +1364,30 @@
         case 'annotate':
           map.getContainer().style.cursor = 'text';
           break;
+        case 'structure':
+          currentStructure = data || null;
+          map.getContainer().style.cursor = 'crosshair';
+          break;
+        case 'hedgerow':
+          currentHedgerow = data || null;
+          hedgerowPoints = [];
+          map.getContainer().style.cursor = 'crosshair';
+          break;
+        case 'shape':
+          currentShape = data || null;
+          shapePoints = [];
+          map.getContainer().style.cursor = 'crosshair';
+          break;
         default:
           map.getContainer().style.cursor = '';
           if (polygonPolyline) { map.removeLayer(polygonPolyline); polygonPolyline = null; }
           if (polygonPreview)  { map.removeLayer(polygonPreview);  polygonPreview  = null; }
+          if (hedgerowPreview) { map.removeLayer(hedgerowPreview); hedgerowPreview = null; }
+          if (shapePreview)    { map.removeLayer(shapePreview);    shapePreview    = null; }
           drawingPolygon = false;
           polygonPoints  = [];
+          hedgerowPoints = [];
+          shapePoints    = [];
           drawnItems.clearLayers();
       }
     }
@@ -873,6 +1432,12 @@
       plantLabels = {};
       guildGroups.forEach(function(g) { map.removeLayer(g); });
       guildGroups = [];
+      Object.values(structureMarkers).forEach(function(g) { map.removeLayer(g); });
+      structureMarkers = {};
+      Object.values(hedgerowLayers).forEach(function(g) { map.removeLayer(g); });
+      hedgerowLayers = {};
+      Object.values(shapeLayers).forEach(function(g) { map.removeLayer(g); });
+      shapeLayers = {};
       drawnItems.clearLayers();
     }
 

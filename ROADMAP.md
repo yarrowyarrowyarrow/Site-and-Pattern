@@ -10,9 +10,9 @@ Placeable landscape elements beyond plants.
 
 | ID | Feature | Description | Status |
 |----|---------|-------------|--------|
-| S1 | **Structures library** | Placeable icons/shapes for: pond, herb spiral, hugelkultur bed, swale, rain garden, compost bin, greenhouse, cold frame, chicken coop/tractor, shed, raised bed, keyhole bed, fire pit, beehive, rain barrel, fence/wall | Planned |
-| S2 | **Hedgerow / fence line tool** | Draw a polyline that renders as a hedge or fence with selectable plant species along it | Planned |
-| S3 | **Custom shape drawing** | Free-form polygon drawing for garden beds, pathways, patios — with fill color/pattern and labels | Planned |
+| S1 | **Structures library** | Placeable icons/shapes for: pond, herb spiral, hugelkultur bed, swale, rain garden, compost bin, greenhouse, cold frame, chicken coop/tractor, shed, raised bed, keyhole bed, fire pit, beehive, rain barrel, fence/wall | Done |
+| S2 | **Hedgerow / fence line tool** | Draw a polyline that renders as a hedge or fence with selectable plant species along it | Done |
+| S3 | **Custom shape drawing** | Free-form polygon drawing for garden beds, pathways, patios — with fill color/pattern and labels | Done |
 
 ---
 
@@ -96,6 +96,9 @@ Features for long-term planning and tracking.
 | Shopping list export | Done |
 | Undo/redo | Done |
 | Permapeople API integration | Done |
+| Structures library (16 placeable structures across 5 categories) | Done |
+| Hedgerow / fence line tool (4 styles, plant spacing, species) | Done |
+| Custom shape drawing (7 presets, fill/stroke, labels, area calc) | Done |
 
 ---
 
