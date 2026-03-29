@@ -200,6 +200,14 @@
       <div class="legend-item"><span class="legend-swatch outline-only" style="border-color:#78909c;"></span> Custom shape</div>
       <div class="legend-item"><span class="legend-swatch" style="background:#fdd835;"></span> Measurement</div>
     </div>
+    <div class="legend-section">
+      <div class="legend-section-title">Analysis</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#ffb300;"></span> Sun path</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#455a64;"></span> Shadow</div>
+      <div class="legend-item"><span class="legend-swatch outline-only" style="border-color:#ff9800;"></span> Sector wedge</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#795548;"></span> Contour</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#42a5f5;"></span> Wind</div>
+    </div>
   </div>
 
   <!-- Leaflet JS -->
@@ -316,6 +324,8 @@
         placeZoneCircles(lat, lng);
         if (bridge) bridge.onZoneCenterPlaced(lat, lng);
         setMode('none');
+      } else if (currentMode === 'contour') {
+        handleContourClick(lat, lng);
       } else if (currentMode === 'structure' && currentStructure) {
         placeStructureOnMap(currentStructure, lat, lng);
         if (bridge) bridge.onStructurePlaced(currentStructure.id, currentStructure.name, lat, lng, currentStructure.size_m);
@@ -344,6 +354,9 @@
       if (currentMode === 'shape' && shapePoints.length > 0) {
         updateShapePreview(e.latlng);
       }
+      if (currentMode === 'contour' && contourPoints.length > 0) {
+        updateContourPreview(e.latlng);
+      }
     }
 
     function onMapDblClick(e) {
@@ -354,6 +367,8 @@
         finishHedgerow();
       } else if (currentMode === 'shape' && shapePoints.length >= 3) {
         finishShape();
+      } else if (currentMode === 'contour' && contourPoints.length >= 2) {
+        finishContour();
       }
     }
 
@@ -1378,16 +1393,23 @@
           shapePoints = [];
           map.getContainer().style.cursor = 'crosshair';
           break;
+        case 'contour':
+          currentContour = data || null;
+          contourPoints = [];
+          map.getContainer().style.cursor = 'crosshair';
+          break;
         default:
           map.getContainer().style.cursor = '';
           if (polygonPolyline) { map.removeLayer(polygonPolyline); polygonPolyline = null; }
           if (polygonPreview)  { map.removeLayer(polygonPreview);  polygonPreview  = null; }
           if (hedgerowPreview) { map.removeLayer(hedgerowPreview); hedgerowPreview = null; }
           if (shapePreview)    { map.removeLayer(shapePreview);    shapePreview    = null; }
+          if (contourPreview)  { map.removeLayer(contourPreview);  contourPreview  = null; }
           drawingPolygon = false;
           polygonPoints  = [];
           hedgerowPoints = [];
           shapePoints    = [];
+          contourPoints  = [];
           drawnItems.clearLayers();
       }
     }
@@ -1438,6 +1460,10 @@
       hedgerowLayers = {};
       Object.values(shapeLayers).forEach(function(g) { map.removeLayer(g); });
       shapeLayers = {};
+      clearSunPath();
+      clearSectors();
+      clearContours();
+      clearWindOverlay();
       drawnItems.clearLayers();
     }
 
@@ -1465,6 +1491,539 @@
 
     function cancelDraw() {
       setMode('none');
+    }
+
+    // ── A1: Sun path / shadow overlay ──────────────────────────────────────
+    var sunPathLayer = null;  // L.layerGroup
+
+    function drawSunPath(data) {
+      clearSunPath();
+      sunPathLayer = L.layerGroup().addTo(map);
+      var center = map.getCenter();
+      var lat = center.lat;
+      var lng = center.lng;
+      var positions = data.positions || [];  // [{altitude, azimuth, hour}, ...]
+      var dateLabel = data.date_label || '';
+      var showShadows = data.show_shadows !== false;
+      var showShadowLength = data.show_shadow_length || false;
+      var sunriseHour = data.sunrise_hour || 6;
+      var sunsetHour = data.sunset_hour || 18;
+
+      if (positions.length < 2) return;
+
+      // Draw sun arc as a series of colored dots on the map
+      // Map azimuth/altitude to screen positions around the centre
+      var arcRadius = 80; // metres from centre for arc display
+      var arcPoints = [];
+      var keyPositions = []; // morning, noon, evening
+
+      positions.forEach(function(pos, i) {
+        if (pos.altitude < 0) return;
+        // Place dot on map at azimuth direction from centre
+        var azRad = (pos.azimuth) * Math.PI / 180;
+        var dist = arcRadius * (1 - pos.altitude / 90 * 0.3); // higher sun = closer to centre
+        var dLat = dist * Math.cos(azRad) / 111320;
+        var dLng = dist * Math.sin(azRad) / (111320 * Math.cos(lat * Math.PI / 180));
+        var ptLat = lat + dLat;
+        var ptLng = lng + dLng;
+        arcPoints.push([ptLat, ptLng]);
+
+        // Color gradient: sunrise orange → noon yellow → sunset orange
+        var frac = positions.indexOf(pos) / (positions.length - 1);
+        var r = Math.round(255);
+        var g = Math.round(200 + 55 * (1 - Math.abs(frac - 0.5) * 2));
+        var b = Math.round(50 * (1 - Math.abs(frac - 0.5) * 2));
+        var color = 'rgb(' + r + ',' + g + ',' + b + ')';
+
+        var size = 3 + pos.altitude / 15;
+        L.circleMarker([ptLat, ptLng], {
+          radius: size,
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.8,
+          weight: 1,
+          interactive: false
+        }).addTo(sunPathLayer);
+
+        // Mark key times
+        if (Math.abs(pos.hour - sunriseHour) < 0.5 ||
+            Math.abs(pos.hour - 12) < 0.3 ||
+            Math.abs(pos.hour - sunsetHour) < 0.5) {
+          keyPositions.push(pos);
+          var timeStr = Math.floor(pos.hour) + ':' + ('0' + Math.round((pos.hour % 1) * 60)).slice(-2);
+          var altStr = pos.altitude.toFixed(0) + '°';
+          var labelIcon = L.divIcon({
+            className: 'measure-label',
+            html: '<span style="font-size:10px">' + timeStr + ' ☀ ' + altStr + '</span>',
+            iconSize: [0, 0],
+            iconAnchor: [0, 14]
+          });
+          L.marker([ptLat, ptLng], { icon: labelIcon, interactive: false }).addTo(sunPathLayer);
+        }
+      });
+
+      // Connect arc points with a smooth line
+      if (arcPoints.length >= 2) {
+        L.polyline(arcPoints, {
+          color: '#ffb300',
+          weight: 2.5,
+          opacity: 0.7,
+          dashArray: '6 3',
+          interactive: false
+        }).addTo(sunPathLayer);
+      }
+
+      // Shadow direction arrows at key times
+      if (showShadows) {
+        var shadowTimes = [
+          { hour: sunriseHour + 1, label: 'Morning' },
+          { hour: 12, label: 'Noon' },
+          { hour: sunsetHour - 1, label: 'Evening' }
+        ];
+        shadowTimes.forEach(function(st) {
+          var closest = null;
+          var minDiff = 999;
+          positions.forEach(function(p) {
+            var diff = Math.abs(p.hour - st.hour);
+            if (diff < minDiff && p.altitude > 0) { minDiff = diff; closest = p; }
+          });
+          if (!closest) return;
+
+          // Shadow goes opposite to sun
+          var shadowAz = (closest.azimuth + 180) % 360;
+          var shadowRad = shadowAz * Math.PI / 180;
+          var arrowLen = 40; // metres
+          if (showShadowLength && closest.altitude > 0) {
+            arrowLen = Math.min(80, 20 / Math.tan(closest.altitude * Math.PI / 180));
+          }
+          var dLat = arrowLen * Math.cos(shadowRad) / 111320;
+          var dLng = arrowLen * Math.sin(shadowRad) / (111320 * Math.cos(lat * Math.PI / 180));
+
+          // Draw shadow arrow
+          var arrowLine = L.polyline(
+            [[lat, lng], [lat + dLat, lng + dLng]],
+            { color: '#455a64', weight: 3, opacity: 0.6, interactive: false }
+          ).addTo(sunPathLayer);
+
+          // Arrowhead
+          var headLen = 8 / 111320;
+          var headAngle = Math.PI / 6;
+          var endLat = lat + dLat;
+          var endLng = lng + dLng;
+          var angle = Math.atan2(dLng, dLat);
+          L.polyline([
+            [endLat - headLen * Math.cos(angle - headAngle),
+             endLng - headLen * Math.sin(angle - headAngle)],
+            [endLat, endLng],
+            [endLat - headLen * Math.cos(angle + headAngle),
+             endLng - headLen * Math.sin(angle + headAngle)]
+          ], { color: '#455a64', weight: 2.5, opacity: 0.6, interactive: false }).addTo(sunPathLayer);
+
+          // Label
+          var labelIcon = L.divIcon({
+            className: 'structure-label',
+            html: '<span style="font-size:10px">' + st.label + ' shadow</span>',
+            iconSize: [0, 0],
+            iconAnchor: [0, -4]
+          });
+          L.marker([lat + dLat, lng + dLng], { icon: labelIcon, interactive: false }).addTo(sunPathLayer);
+        });
+      }
+
+      // Centre marker
+      L.circleMarker([lat, lng], {
+        radius: 4, color: '#ff6f00', fillColor: '#ffb300', fillOpacity: 1,
+        weight: 2, interactive: false
+      }).addTo(sunPathLayer);
+
+      // Title label
+      var titleIcon = L.divIcon({
+        className: 'measure-label',
+        html: '☀ ' + dateLabel,
+        iconSize: [0, 0],
+        iconAnchor: [0, 24]
+      });
+      L.marker([lat, lng], { icon: titleIcon, interactive: false }).addTo(sunPathLayer);
+    }
+
+    function clearSunPath() {
+      if (sunPathLayer) { map.removeLayer(sunPathLayer); sunPathLayer = null; }
+    }
+
+    // ── A2: Sector analysis wedges ──────────────────────────────────────────
+    var sectorLayer = null;
+
+    function drawSectors(data) {
+      clearSectors();
+      sectorLayer = L.layerGroup().addTo(map);
+      var center = map.getCenter();
+      var lat = center.lat;
+      var lng = center.lng;
+      var sectors = data.sectors || [];
+      var radiusM = data.radius_m || 80;
+
+      sectors.forEach(function(sec) {
+        var azimuth = sec.azimuth || 0;     // centre of wedge, degrees from N
+        var spread  = sec.spread || 45;     // total wedge width in degrees
+        var color   = sec.color || '#ff9800';
+        var name    = sec.name || 'Sector';
+
+        var startAngle = azimuth - spread / 2;
+        var endAngle   = azimuth + spread / 2;
+
+        // Build polygon points for the wedge
+        var pts = [[lat, lng]]; // centre
+        var steps = Math.max(12, Math.round(spread / 3));
+        for (var i = 0; i <= steps; i++) {
+          var angle = (startAngle + (endAngle - startAngle) * i / steps) * Math.PI / 180;
+          var dLat = radiusM * Math.cos(angle) / 111320;
+          var dLng = radiusM * Math.sin(angle) / (111320 * Math.cos(lat * Math.PI / 180));
+          pts.push([lat + dLat, lng + dLng]);
+        }
+        pts.push([lat, lng]); // close back to centre
+
+        var wedge = L.polygon(pts, {
+          color: color,
+          weight: 1.5,
+          fillColor: color,
+          fillOpacity: 0.15,
+          interactive: false
+        }).addTo(sectorLayer);
+
+        // Label at the outer midpoint
+        var midAngle = azimuth * Math.PI / 180;
+        var labelDist = radiusM * 0.65;
+        var labelLat = lat + labelDist * Math.cos(midAngle) / 111320;
+        var labelLng = lng + labelDist * Math.sin(midAngle) / (111320 * Math.cos(lat * Math.PI / 180));
+
+        var labelIcon = L.divIcon({
+          className: 'structure-label',
+          html: '<span style="color:' + color + ';font-size:11px;font-weight:bold">' + name + '</span>',
+          iconSize: [0, 0],
+          iconAnchor: [0, 8]
+        });
+        L.marker([labelLat, labelLng], { icon: labelIcon, interactive: false }).addTo(sectorLayer);
+      });
+
+      // Centre marker
+      L.circleMarker([lat, lng], {
+        radius: 5, color: '#fff', fillColor: '#263238', fillOpacity: 0.8,
+        weight: 2, interactive: false
+      }).addTo(sectorLayer);
+    }
+
+    function clearSectors() {
+      if (sectorLayer) { map.removeLayer(sectorLayer); sectorLayer = null; }
+    }
+
+    // ── A3: Contour lines ───────────────────────────────────────────────────
+    var contourLayers = [];  // array of L.layerGroup (one per contour line)
+
+    // Contour drawing state
+    var contourPoints  = [];
+    var contourPreview = null;
+    var currentContour = null;
+
+    function handleContourClick(lat, lng) {
+      contourPoints.push([lat, lng]);
+      var color = currentContour ? currentContour.color : '#795548';
+      L.circleMarker([lat, lng], {
+        radius: 3, color: color, fillColor: color, fillOpacity: 1
+      }).addTo(drawnItems);
+      refreshContourPreview();
+    }
+
+    function refreshContourPreview() {
+      if (contourPreview) { map.removeLayer(contourPreview); contourPreview = null; }
+      if (contourPoints.length >= 2) {
+        var color = currentContour ? currentContour.color : '#795548';
+        contourPreview = L.polyline(contourPoints, {
+          color: color, weight: 2, opacity: 0.6, dashArray: '6 4'
+        }).addTo(map);
+      }
+    }
+
+    function updateContourPreview(latlng) {
+      if (contourPreview) { map.removeLayer(contourPreview); }
+      var color = currentContour ? currentContour.color : '#795548';
+      var pts = contourPoints.concat([[latlng.lat, latlng.lng]]);
+      contourPreview = L.polyline(pts, {
+        color: color, weight: 2, opacity: 0.5, dashArray: '4 4'
+      }).addTo(map);
+    }
+
+    function finishContour() {
+      if (contourPoints.length < 2) return;
+      if (contourPreview) { map.removeLayer(contourPreview); contourPreview = null; }
+      drawnItems.clearLayers();
+
+      var cfg = currentContour || {};
+      var color = cfg.color || '#795548';
+      var elevation = cfg.elevation_m || 0;
+      var showLabels = cfg.show_labels !== false;
+      var showSlope = cfg.show_slope_arrows || false;
+
+      var group = L.layerGroup().addTo(map);
+
+      // Main contour line
+      var line = L.polyline(contourPoints, {
+        color: color,
+        weight: 2.5,
+        opacity: 0.7,
+        interactive: false
+      }).addTo(group);
+
+      // Elevation labels along the line
+      if (showLabels && contourPoints.length >= 2) {
+        var labelPositions = [0, Math.floor(contourPoints.length / 2), contourPoints.length - 1];
+        labelPositions.forEach(function(idx) {
+          if (idx >= contourPoints.length) return;
+          var pt = contourPoints[idx];
+          var labelIcon = L.divIcon({
+            className: 'structure-label',
+            html: '<span style="font-size:9px;color:' + color + '">' + elevation.toFixed(1) + 'm</span>',
+            iconSize: [0, 0],
+            iconAnchor: [0, 8]
+          });
+          L.marker(pt, { icon: labelIcon, interactive: false }).addTo(group);
+        });
+      }
+
+      // Slope arrows (perpendicular to contour, pointing downhill)
+      if (showSlope && contourPoints.length >= 2) {
+        var midIdx = Math.floor(contourPoints.length / 2);
+        var p1 = contourPoints[Math.max(0, midIdx - 1)];
+        var p2 = contourPoints[Math.min(contourPoints.length - 1, midIdx + 1)];
+        // Perpendicular direction (right-hand rule → downhill assumed to the right)
+        var dx = p2[1] - p1[1];
+        var dy = p2[0] - p1[0];
+        var perpAngle = Math.atan2(dx, dy) - Math.PI / 2;
+        var arrowLen = 15; // metres
+        var mid = contourPoints[midIdx];
+        var dLat = arrowLen * Math.cos(perpAngle) / 111320;
+        var dLng = arrowLen * Math.sin(perpAngle) / (111320 * Math.cos(mid[0] * Math.PI / 180));
+
+        L.polyline(
+          [mid, [mid[0] + dLat, mid[1] + dLng]],
+          { color: color, weight: 2, opacity: 0.5, dashArray: '4 2', interactive: false }
+        ).addTo(group);
+        // Small arrowhead
+        var endLat = mid[0] + dLat;
+        var endLng = mid[1] + dLng;
+        var headLen = 5 / 111320;
+        var headAngle = Math.PI / 5;
+        L.polyline([
+          [endLat - headLen * Math.cos(perpAngle - headAngle),
+           endLng - headLen * Math.sin(perpAngle - headAngle)],
+          [endLat, endLng],
+          [endLat - headLen * Math.cos(perpAngle + headAngle),
+           endLng - headLen * Math.sin(perpAngle + headAngle)]
+        ], { color: color, weight: 2, opacity: 0.5, interactive: false }).addTo(group);
+
+        var arrowLabel = L.divIcon({
+          className: 'structure-label',
+          html: '<span style="font-size:9px;color:' + color + '">▼ downhill</span>',
+          iconSize: [0, 0],
+          iconAnchor: [0, -2]
+        });
+        L.marker([endLat, endLng], { icon: arrowLabel, interactive: false }).addTo(group);
+      }
+
+      // Store for right-click removal
+      line._contour = { points: contourPoints.slice(), elevation: elevation };
+      line.on = undefined; // non-interactive, handled by group
+
+      contourLayers.push(group);
+
+      // Notify Python
+      if (bridge) bridge.onContourComplete(
+        JSON.stringify(contourPoints.slice()),
+        elevation, color
+      );
+
+      contourPoints = [];
+      setMode('none');
+    }
+
+    function clearContours() {
+      contourLayers.forEach(function(g) { map.removeLayer(g); });
+      contourLayers = [];
+    }
+
+    // ── A4: Wind overlay ────────────────────────────────────────────────────
+    var windLayer = null;
+
+    function drawWindOverlay(data) {
+      clearWindOverlay();
+      windLayer = L.layerGroup().addTo(map);
+      var center = map.getCenter();
+      var lat = center.lat;
+      var lng = center.lng;
+      var dirFrom  = data.direction_from || 315; // degrees (where wind comes FROM)
+      var speedLabel = data.speed_label || 'Moderate';
+      var showShelter = data.show_shelter !== false;
+      var showArrows  = data.show_arrows !== false;
+
+      // Wind blows FROM dirFrom TOWARDS dirFrom+180
+      var windToward = (dirFrom + 180) % 360;
+      var windRad = windToward * Math.PI / 180;
+
+      // Speed-based visual parameters
+      var speedMap = { 'Light': 1, 'Moderate': 2, 'Strong': 3, 'Very Strong': 4 };
+      var speedLevel = speedMap[speedLabel] || 2;
+
+      if (showArrows) {
+        // Draw a grid of wind flow arrows across the map view
+        var bounds = map.getBounds();
+        var stepLat = (bounds.getNorth() - bounds.getSouth()) / 6;
+        var stepLng = (bounds.getEast() - bounds.getWest()) / 6;
+        var arrowLen = stepLat * 111320 * 0.3; // metres
+
+        for (var r = 1; r < 6; r++) {
+          for (var c = 1; c < 6; c++) {
+            var aLat = bounds.getSouth() + r * stepLat;
+            var aLng = bounds.getWest() + c * stepLng;
+            var dLat = arrowLen * Math.cos(windRad) / 111320;
+            var dLng = arrowLen * Math.sin(windRad) / (111320 * Math.cos(aLat * Math.PI / 180));
+
+            var opacity = 0.15 + speedLevel * 0.08;
+            var weight = 1 + speedLevel * 0.5;
+
+            L.polyline(
+              [[aLat, aLng], [aLat + dLat, aLng + dLng]],
+              { color: '#42a5f5', weight: weight, opacity: opacity, interactive: false }
+            ).addTo(windLayer);
+
+            // Arrowhead
+            var endLat = aLat + dLat;
+            var endLng = aLng + dLng;
+            var headLen = arrowLen * 0.25 / 111320;
+            var headAngle = Math.PI / 5;
+            L.polyline([
+              [endLat - headLen * Math.cos(windRad - headAngle),
+               endLng - headLen * Math.sin(windRad - headAngle)],
+              [endLat, endLng],
+              [endLat - headLen * Math.cos(windRad + headAngle),
+               endLng - headLen * Math.sin(windRad + headAngle)]
+            ], { color: '#42a5f5', weight: weight, opacity: opacity, interactive: false }).addTo(windLayer);
+          }
+        }
+      }
+
+      // Direction indicator at centre
+      var indicatorLen = 60;
+      var fromRad = dirFrom * Math.PI / 180;
+      var fromLat = lat + indicatorLen * Math.cos(fromRad) / 111320;
+      var fromLng = lng + indicatorLen * Math.sin(fromRad) / (111320 * Math.cos(lat * Math.PI / 180));
+
+      L.polyline(
+        [[fromLat, fromLng], [lat, lng]],
+        { color: '#1565c0', weight: 3, opacity: 0.8, interactive: false }
+      ).addTo(windLayer);
+
+      var dirLabel = L.divIcon({
+        className: 'measure-label',
+        html: '<span style="font-size:10px">Wind from ' + dirFrom + '° (' + speedLabel + ')</span>',
+        iconSize: [0, 0],
+        iconAnchor: [0, 14]
+      });
+      L.marker([fromLat, fromLng], { icon: dirLabel, interactive: false }).addTo(windLayer);
+
+      // Show shelter zones behind windbreak hedgerows/structures
+      if (showShelter) {
+        drawWindShelterZones(windRad, speedLevel);
+      }
+    }
+
+    function drawWindShelterZones(windRad, speedLevel) {
+      // Check hedgerows
+      Object.keys(hedgerowLayers).forEach(function(hid) {
+        var group = hedgerowLayers[hid];
+        group.eachLayer(function(layer) {
+          if (layer._hedge) {
+            var pts = layer._hedge.points;
+            if (!pts || pts.length < 2) return;
+            // Average height estimate for hedgerow: 2-4m
+            var height = (layer._hedge.style === 'windbreak') ? 6 : 3;
+            var shelterLen = height * 10; // 10× height
+            _drawShelterBehindLine(pts, windRad, shelterLen);
+          }
+        });
+      });
+
+      // Check structures that are windbreaks
+      Object.keys(structureMarkers).forEach(function(sid) {
+        var group = structureMarkers[sid];
+        group.eachLayer(function(layer) {
+          if (layer._struct && (layer._struct.name === 'Fence / Wall' || layer._struct.name === 'Tool Shed')) {
+            var height = 2.0;
+            var lat = layer._struct.lat;
+            var lng = layer._struct.lng;
+            var shelterLen = height * 10;
+            // Simple shelter rectangle behind the structure
+            var dLat = shelterLen * Math.cos(windRad) / 111320;
+            var dLng = shelterLen * Math.sin(windRad) / (111320 * Math.cos(lat * Math.PI / 180));
+            var halfW = (layer._struct.sizeM || 3) / 2;
+            var perpRad = windRad + Math.PI / 2;
+            var pLat = halfW * Math.cos(perpRad) / 111320;
+            var pLng = halfW * Math.sin(perpRad) / (111320 * Math.cos(lat * Math.PI / 180));
+
+            var shelterPoly = L.polygon([
+              [lat - pLat, lng - pLng],
+              [lat + pLat, lng + pLng],
+              [lat + pLat + dLat, lng + pLng + dLng],
+              [lat - pLat + dLat, lng - pLng + dLng]
+            ], {
+              color: '#81d4fa',
+              weight: 1,
+              fillColor: '#81d4fa',
+              fillOpacity: 0.12,
+              dashArray: '4 3',
+              interactive: false
+            }).addTo(windLayer);
+          }
+        });
+      });
+    }
+
+    function _drawShelterBehindLine(pts, windRad, shelterLen) {
+      // Create a shelter polygon behind the hedgerow line
+      if (pts.length < 2) return;
+      var shelterPts = [];
+      // Forward side (the hedgerow itself)
+      pts.forEach(function(p) { shelterPts.push(p); });
+      // Back side (offset in wind direction)
+      for (var i = pts.length - 1; i >= 0; i--) {
+        var p = pts[i];
+        var dLat = shelterLen * Math.cos(windRad) / 111320;
+        var dLng = shelterLen * Math.sin(windRad) / (111320 * Math.cos(p[0] * Math.PI / 180));
+        shelterPts.push([p[0] + dLat, p[1] + dLng]);
+      }
+
+      L.polygon(shelterPts, {
+        color: '#81d4fa',
+        weight: 1,
+        fillColor: '#b3e5fc',
+        fillOpacity: 0.10,
+        dashArray: '4 3',
+        interactive: false
+      }).addTo(windLayer);
+
+      // Label
+      var mid = pts[Math.floor(pts.length / 2)];
+      var dLat = shelterLen * 0.5 * Math.cos(windRad) / 111320;
+      var dLng = shelterLen * 0.5 * Math.sin(windRad) / (111320 * Math.cos(mid[0] * Math.PI / 180));
+      var labelIcon = L.divIcon({
+        className: 'structure-label',
+        html: '<span style="font-size:9px;color:#81d4fa">Shelter zone (' + shelterLen.toFixed(0) + 'm)</span>',
+        iconSize: [0, 0],
+        iconAnchor: [0, 8]
+      });
+      L.marker([mid[0] + dLat, mid[1] + dLng], { icon: labelIcon, interactive: false }).addTo(windLayer);
+    }
+
+    function clearWindOverlay() {
+      if (windLayer) { map.removeLayer(windLayer); windLayer = null; }
     }
 
     // ── Legend toggle ──────────────────────────────────────────────────────

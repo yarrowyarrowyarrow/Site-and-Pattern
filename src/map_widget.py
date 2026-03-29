@@ -60,6 +60,9 @@ class MapBridge(QObject):
         # id, pointsJson, label, shapeType, fillColor, strokeColor, fillOpacity, dashArray, areaM2
     shape_removed = pyqtSignal(str)                                 # id
 
+    # Contour signals
+    contour_complete = pyqtSignal(str, float, str)                  # pointsJson, elevation, color
+
     # ── Slots (called from JS) ────────────────────────────────────────────────
 
     @pyqtSlot()
@@ -140,6 +143,12 @@ class MapBridge(QObject):
     @pyqtSlot(str)
     def onShapeRemoved(self, shape_id: str):
         self.shape_removed.emit(shape_id)
+
+    # ── Contour slots ─────────────────────────────────────────────────────────
+
+    @pyqtSlot(str, float, str)
+    def onContourComplete(self, points_json: str, elevation: float, color: str):
+        self.contour_complete.emit(points_json, elevation, color)
 
 
 class MapWidget(QWebEngineView):
@@ -306,3 +315,41 @@ class MapWidget(QWebEngineView):
             f"  if ({v}) g.addTo(map); else map.removeLayer(g);"
             f"}});"
         )
+
+    # ── Analysis overlay helpers (A1-A4) ──────────────────────────────────────
+
+    def draw_sun_path(self, data: dict):
+        """Draw the sun path arc and shadow arrows on the map."""
+        import json
+        js_data = json.dumps(data).replace("'", "\\'")
+        self.run_js(f"drawSunPath(JSON.parse('{js_data}'));")
+
+    def clear_sun_path(self):
+        self.run_js("clearSunPath();")
+
+    def draw_sectors(self, data: dict):
+        """Draw sector analysis wedges on the map."""
+        import json
+        js_data = json.dumps(data).replace("'", "\\'")
+        self.run_js(f"drawSectors(JSON.parse('{js_data}'));")
+
+    def clear_sectors(self):
+        self.run_js("clearSectors();")
+
+    def set_contour_mode(self, config: dict):
+        """Enter contour drawing mode."""
+        import json
+        js_data = json.dumps(config).replace("'", "\\'")
+        self.run_js(f"setMode('contour', JSON.parse('{js_data}'));")
+
+    def clear_contours(self):
+        self.run_js("clearContours();")
+
+    def draw_wind_overlay(self, data: dict):
+        """Draw wind direction arrows and shelter zones."""
+        import json
+        js_data = json.dumps(data).replace("'", "\\'")
+        self.run_js(f"drawWindOverlay(JSON.parse('{js_data}'));")
+
+    def clear_wind_overlay(self):
+        self.run_js("clearWindOverlay();")

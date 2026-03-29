@@ -32,6 +32,7 @@ from src.map_widget       import MapWidget
 from src.plant_panel      import PlantPanel
 from src.guild_panel      import GuildPanel
 from src.structure_panel  import StructurePanel
+from src.analysis_panel   import AnalysisPanel
 from src.toolbar          import MainToolbar
 from src.climate          import get_zone, zone_label
 from src.settings         import SettingsDialog, get_api_keys
@@ -96,12 +97,14 @@ class MainWindow(QMainWindow):
         self.plant_panel     = PlantPanel(self)
         self.guild_panel     = GuildPanel(self)
         self.structure_panel = StructurePanel(self)
+        self.analysis_panel  = AnalysisPanel(self)
 
-        # Tabbed side panel: Plants + Guilds + Structures
+        # Tabbed side panel: Plants + Guilds + Structures + Analysis
         self._side_tabs = QTabWidget()
         self._side_tabs.addTab(self.plant_panel, "Plants")
         self._side_tabs.addTab(self.guild_panel, "Guilds")
         self._side_tabs.addTab(self.structure_panel, "Structures")
+        self._side_tabs.addTab(self.analysis_panel, "Analysis")
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(self.map_widget)
@@ -261,6 +264,19 @@ class MainWindow(QMainWindow):
 
         # Toolbar → structures layer toggle
         self.toolbar.structures_toggled.connect(self.map_widget.set_structures_visible)
+
+        # Analysis panel → map (A1-A4)
+        self.analysis_panel.sun_path_requested.connect(self._on_sun_path_requested)
+        self.analysis_panel.sun_path_cleared.connect(self.map_widget.clear_sun_path)
+        self.analysis_panel.sector_requested.connect(self._on_sector_requested)
+        self.analysis_panel.sector_cleared.connect(self.map_widget.clear_sectors)
+        self.analysis_panel.contour_requested.connect(self._on_contour_requested)
+        self.analysis_panel.contour_cleared.connect(self._on_contour_cleared)
+        self.analysis_panel.wind_requested.connect(self._on_wind_requested)
+        self.analysis_panel.wind_cleared.connect(self.map_widget.clear_wind_overlay)
+
+        # Map → contour complete
+        b.contour_complete.connect(self._on_contour_complete)
 
     # ── Map-ready ─────────────────────────────────────────────────────────────
 
@@ -543,6 +559,101 @@ class MainWindow(QMainWindow):
         ]
         self._mark_modified()
 
+    # ── Analysis overlays (A1-A4) ──────────────────────────────────────────
+
+    def _on_sun_path_requested(self, config: dict):
+        """A1: Compute sun positions and send to map for rendering."""
+        from datetime import date as _date
+        from src.solar import sun_path_for_date, sunrise_sunset, EDMONTON_LAT, EDMONTON_LNG
+
+        d = _date.fromisoformat(config["date"])
+        # Use boundary centroid if available, else Edmonton default
+        lat, lng = EDMONTON_LAT, EDMONTON_LNG
+        for f in self._project.get("features", []):
+            if f.get("properties", {}).get("element_type") == "property_boundary":
+                ring = f["geometry"]["coordinates"][0]
+                lat = sum(pt[1] for pt in ring) / len(ring)
+                lng = sum(pt[0] for pt in ring) / len(ring)
+                break
+
+        positions = sun_path_for_date(lat, lng, d, steps=72)
+        sr, ss = sunrise_sunset(lat, lng, d)
+
+        pos_data = [
+            {"altitude": p.altitude, "azimuth": p.azimuth, "hour": p.hour}
+            for p in positions
+        ]
+
+        self.map_widget.draw_sun_path({
+            "positions": pos_data,
+            "date_label": config.get("date_label", d.isoformat()),
+            "show_shadows": config.get("show_shadows", True),
+            "show_shadow_length": config.get("show_shadow_length", False),
+            "sunrise_hour": sr,
+            "sunset_hour": ss,
+        })
+
+        # Update info label
+        noon_alt = max((p.altitude for p in positions), default=0)
+        daylight = ss - sr
+        self.analysis_panel.set_sun_info(
+            f"Sunrise: {_fmt_time(sr)} | Sunset: {_fmt_time(ss)}\n"
+            f"Daylight: {daylight:.1f} hrs | Max altitude: {noon_alt:.1f}°"
+        )
+        self._set_mode_label(f"Sun path: {config.get('date_label', d.isoformat())}")
+
+    def _on_sector_requested(self, config: dict):
+        """A2: Draw sector analysis wedges."""
+        self.map_widget.draw_sectors(config)
+        names = [s["name"] for s in config.get("sectors", [])]
+        self._set_mode_label(f"Sectors: {', '.join(names)}")
+
+    def _on_contour_requested(self, config: dict):
+        """A3: Enter contour drawing mode."""
+        self._current_mode = 'contour'
+        self.map_widget.set_contour_mode(config)
+        self.toolbar.reset_draw_buttons()
+        elev = config.get("elevation_m", 0)
+        self._set_mode_label(
+            f"Drawing contour at {elev:.1f}m — click points, double-click to finish"
+        )
+
+    def _on_contour_complete(self, points_json: str, elevation: float, color: str):
+        """Save contour line to project."""
+        import json as _json
+        points = _json.loads(points_json)
+        coords = [[pt[1], pt[0]] for pt in points]
+        self._project["features"].append({
+            "type": "Feature",
+            "geometry": {"type": "LineString", "coordinates": coords},
+            "properties": {
+                "element_type": "contour_line",
+                "elevation_m": elevation,
+                "color": color,
+            }
+        })
+        self._mark_modified()
+        self._set_mode_label("Ready")
+        self.statusBar().showMessage(
+            f"Contour line at {elevation:.1f}m placed", 2000
+        )
+
+    def _on_contour_cleared(self):
+        """Clear all contours from map and project."""
+        self.map_widget.clear_contours()
+        self._project["features"] = [
+            f for f in self._project["features"]
+            if f.get("properties", {}).get("element_type") != "contour_line"
+        ]
+        self._mark_modified()
+
+    def _on_wind_requested(self, config: dict):
+        """A4: Draw wind overlay with shelter zones."""
+        self.map_widget.draw_wind_overlay(config)
+        self._set_mode_label(
+            f"Wind from {config.get('direction_from', '?')}° ({config.get('speed_label', '')})"
+        )
+
     def _enter_guild_mode(self, guild_data: dict):
         """Place a guild on the map — click to place centre."""
         self._current_mode = 'guild'
@@ -820,6 +931,21 @@ class MainWindow(QMainWindow):
         for sh in data.get("shapes", []):
             self.map_widget.load_shape(sh)
 
+        # Contour lines are loaded via JS (finishContour re-uses the drawing logic)
+        # We redraw them directly as polylines
+        for ctr in data.get("contours", []):
+            import json as _json
+            ctr_js = _json.dumps(ctr).replace("'", "\\'")
+            self.map_widget.run_js(
+                f"(function() {{"
+                f"  var d = JSON.parse('{ctr_js}');"
+                f"  contourPoints = d.points;"
+                f"  currentContour = d;"
+                f"  finishContour();"
+                f"  contourPoints = [];"
+                f"}})()"
+            )
+
         name = proj.get("properties", {}).get("project_name", "Design")
         self.setWindowTitle(f"PermaDesign — {name}")
 
@@ -1061,6 +1187,9 @@ class MainWindow(QMainWindow):
         elif key == Qt.Key.Key_S and not event.modifiers():
             # Switch to Structures tab
             self._side_tabs.setCurrentWidget(self.structure_panel)
+        elif key == Qt.Key.Key_A and not event.modifiers():
+            # Switch to Analysis tab
+            self._side_tabs.setCurrentWidget(self.analysis_panel)
         elif key == Qt.Key.Key_M and not event.modifiers():
             self._enter_measure_mode()
         elif key == Qt.Key.Key_Z and not event.modifiers():
@@ -1082,6 +1211,15 @@ class MainWindow(QMainWindow):
 
 
 # ── Helper widgets ────────────────────────────────────────────────────────────
+
+def _fmt_time(decimal_hour: float) -> str:
+    """Format a decimal hour (e.g. 6.5) as '6:30 AM'."""
+    h = int(decimal_hour)
+    m = int((decimal_hour - h) * 60)
+    ampm = "AM" if h < 12 else "PM"
+    h12 = h % 12 or 12
+    return f"{h12}:{m:02d} {ampm}"
+
 
 def _vsep() -> QWidget:
     """Thin vertical separator widget for the status bar."""

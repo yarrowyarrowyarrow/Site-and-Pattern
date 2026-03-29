@@ -48,6 +48,7 @@ def project_to_map_data(project: dict) -> dict:
         "structures": [],
         "hedgerows": [],
         "shapes": [],
+        "contours": [],
     }
     for feature in project.get("features", []):
         props = feature.get("properties", {})
@@ -104,6 +105,14 @@ def project_to_map_data(project: dict) -> dict:
                 "stroke_color": props.get("stroke_color", "#2e7d32"),
                 "fill_opacity": props.get("fill_opacity", 0.25),
                 "dash_array": props.get("dash_array", ""),
+            })
+
+        elif etype == "contour_line" and geom.get("type") == "LineString":
+            points = [[pt[1], pt[0]] for pt in geom["coordinates"]]
+            result["contours"].append({
+                "points": points,
+                "elevation_m": props.get("elevation_m", 0),
+                "color": props.get("color", "#795548"),
             })
 
     return result
