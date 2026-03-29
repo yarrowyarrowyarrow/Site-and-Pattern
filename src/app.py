@@ -33,6 +33,7 @@ from src.plant_panel      import PlantPanel
 from src.guild_panel      import GuildPanel
 from src.structure_panel  import StructurePanel
 from src.analysis_panel   import AnalysisPanel
+from src.planning_panel   import PlanningPanel
 from src.toolbar          import MainToolbar
 from src.climate          import get_zone, zone_label
 from src.settings         import SettingsDialog, get_api_keys
@@ -98,13 +99,15 @@ class MainWindow(QMainWindow):
         self.guild_panel     = GuildPanel(self)
         self.structure_panel = StructurePanel(self)
         self.analysis_panel  = AnalysisPanel(self)
+        self.planning_panel  = PlanningPanel(self)
 
-        # Tabbed side panel: Plants + Guilds + Structures + Analysis
+        # Tabbed side panel
         self._side_tabs = QTabWidget()
         self._side_tabs.addTab(self.plant_panel, "Plants")
         self._side_tabs.addTab(self.guild_panel, "Guilds")
         self._side_tabs.addTab(self.structure_panel, "Structures")
         self._side_tabs.addTab(self.analysis_panel, "Analysis")
+        self._side_tabs.addTab(self.planning_panel, "Planning")
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(self.map_widget)
@@ -195,6 +198,10 @@ class MainWindow(QMainWindow):
         act_shopping.setStatusTip("Export a list of all placed plants with quantities")
         act_shopping.triggered.connect(self._on_export_shopping_list)
 
+        act_pdf = file_menu.addAction("Export &PDF…")
+        act_pdf.setStatusTip("Export design as a presentation-quality PDF")
+        act_pdf.triggered.connect(self._on_export_pdf)
+
         file_menu.addSeparator()
 
         act_exit = file_menu.addAction("E&xit")
@@ -277,6 +284,9 @@ class MainWindow(QMainWindow):
 
         # Map → contour complete
         b.contour_complete.connect(self._on_contour_complete)
+
+        # Planning panel → project notes
+        self.planning_panel.notes_changed.connect(self._on_notes_changed)
 
     # ── Map-ready ─────────────────────────────────────────────────────────────
 
@@ -453,6 +463,7 @@ class MainWindow(QMainWindow):
         })
         self._mark_modified()
         self.statusBar().showMessage(f"Placed {name}", 2000)
+        self._sync_planning_panel()
 
     def _on_structure_removed(self, marker_id: str, struct_id: str, lat: float, lng: float):
         kept = []
@@ -798,6 +809,7 @@ class MainWindow(QMainWindow):
         })
         self.plant_panel.on_plant_placed(plant_id, common_name)
         self._mark_modified()
+        self._sync_planning_panel()
 
     def _on_plant_removed(self, marker_id: str, plant_id: int, lat: float, lng: float):
         # Remove matching entry from placed list (match by plant_id + coords)
@@ -827,6 +839,7 @@ class MainWindow(QMainWindow):
 
         self.plant_panel.on_plant_removed(plant_id)
         self._mark_modified()
+        self._sync_planning_panel()
 
     def _on_zone_center_placed(self, lat: float, lng: float):
         # Remove previous zone centre from project
@@ -875,6 +888,9 @@ class MainWindow(QMainWindow):
         self.map_widget.clear_all()
         self.plant_panel.clear_placed()
         self.plant_panel.set_zone(None)
+        self.planning_panel.set_notes("")
+        self.planning_panel.set_placed_plants([])
+        self.planning_panel.set_structures([])
         self.setWindowTitle(f"PermaDesign — {name}")
         self._set_mode_label("Ready")
 
@@ -946,8 +962,14 @@ class MainWindow(QMainWindow):
                 f"}})()"
             )
 
+        # Load notes
+        notes = proj.get("properties", {}).get("notes", "")
+        self.planning_panel.set_notes(notes)
+
         name = proj.get("properties", {}).get("project_name", "Design")
         self.setWindowTitle(f"PermaDesign — {name}")
+
+        self._sync_planning_panel()
 
     def _on_save(self):
         if self._project_path:
@@ -1055,6 +1077,83 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Export failed", str(exc))
 
     # ── Undo / Redo ────────────────────────────────────────────────────────
+
+    # ── PDF export (V3) ────────────────────────────────────────────────────
+
+    def _on_export_pdf(self):
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Export PDF", "design.pdf",
+            "PDF Files (*.pdf);;All Files (*)"
+        )
+        if not path:
+            return
+        if not path.endswith(".pdf"):
+            path += ".pdf"
+
+        try:
+            from src.pdf_export import export_pdf
+
+            # Enrich placed plants with type info for the PDF
+            enriched = []
+            for p in self._placed_plants:
+                entry = dict(p)
+                try:
+                    from src.db.plants import get_plant
+                    plant_data = get_plant(p["plant_id"])
+                    if plant_data:
+                        entry["plant_type"] = plant_data.get("plant_type", "herb")
+                except Exception:
+                    pass
+                enriched.append(entry)
+
+            # Capture map screenshot
+            pixmap = self.map_widget.grab()
+
+            # Gather structures from project
+            structs = [
+                f["properties"].get("struct_def", {})
+                for f in self._project.get("features", [])
+                if f.get("properties", {}).get("element_type") == "structure"
+            ]
+
+            notes = self.planning_panel.get_notes()
+
+            export_pdf(path, self._project, enriched, structs, notes, pixmap)
+            self.statusBar().showMessage(f"PDF exported: {path}", 3000)
+        except Exception as exc:
+            QMessageBox.critical(self, "PDF Export Failed", str(exc))
+
+    # ── Design notes (V4) ────────────────────────────────────────────────
+
+    def _on_notes_changed(self, text: str):
+        self._project["properties"]["notes"] = text
+        self._mark_modified()
+
+    # ── Planning panel sync ──────────────────────────────────────────────
+
+    def _sync_planning_panel(self):
+        """Push current placed plants and structures to the planning panel."""
+        enriched = []
+        for p in self._placed_plants:
+            entry = dict(p)
+            try:
+                from src.db.plants import get_plant
+                plant_data = get_plant(p["plant_id"])
+                if plant_data:
+                    entry["plant_type"] = plant_data.get("plant_type", "herb")
+                    entry["water_needs"] = plant_data.get("water_needs", "medium")
+            except Exception:
+                pass
+            enriched.append(entry)
+        self.planning_panel.set_placed_plants(enriched)
+
+        structs = []
+        for f in self._project.get("features", []):
+            props = f.get("properties", {})
+            if props.get("element_type") == "structure":
+                sd = props.get("struct_def", {})
+                structs.append(sd)
+        self.planning_panel.set_structures(structs)
 
     def _push_undo(self, entry: dict):
         self._undo_stack.append(entry)
@@ -1190,6 +1289,9 @@ class MainWindow(QMainWindow):
         elif key == Qt.Key.Key_A and not event.modifiers():
             # Switch to Analysis tab
             self._side_tabs.setCurrentWidget(self.analysis_panel)
+        elif key == Qt.Key.Key_T and not event.modifiers():
+            # Switch to Planning tab
+            self._side_tabs.setCurrentWidget(self.planning_panel)
         elif key == Qt.Key.Key_M and not event.modifiers():
             self._enter_measure_mode()
         elif key == Qt.Key.Key_Z and not event.modifiers():

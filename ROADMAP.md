@@ -36,11 +36,11 @@ Features for long-term planning and tracking.
 | ID | Feature | Description | Status |
 |----|---------|-------------|--------|
 | P1 | **Succession / timeline planner** | A time slider showing how the design evolves: Year 1 (annuals), Year 3 (young shrubs), Year 10 (full canopy). Plants grow/appear based on their mature size over time | Planned |
-| P2 | **Maintenance / labor estimator** | Each element gets estimated hours/year. The app totals it up so you know if you're over-designing for your available time | Planned |
-| P3 | **Harvest calendar** | Monthly view of what you'll be harvesting from placed plants — "August: Saskatoon berries, raspberries, chokecherries" | Planned |
+| P2 | **Maintenance / labor estimator** | Each element gets estimated hours/year. The app totals it up so you know if you're over-designing for your available time | Done |
+| P3 | **Harvest calendar** | Monthly view of what you'll be harvesting from placed plants — "August: Saskatoon berries, raspberries, chokecherries" | Done |
 | P4 | **Crop rotation tracker** | For annual beds, track what was planted where each season to avoid repeating families | Planned |
 | P5 | **Input/output mapping** | Tag elements with inputs (water, fertilizer) and outputs (manure, mulch, food). Highlight "energy leaks" where outputs aren't connected to nearby inputs | Planned |
-| P6 | **Water budget calculator** | Estimate total water needs of placed plants vs. rainfall + any catchment (rain barrels, swales, pond) | Planned |
+| P6 | **Water budget calculator** | Estimate total water needs of placed plants vs. rainfall + any catchment (rain barrels, swales, pond) | Done |
 
 ---
 
@@ -50,8 +50,8 @@ Features for long-term planning and tracking.
 |----|---------|-------------|--------|
 | V1 | **Food forest layer indicators** | Visual markers for the 7 food forest layers (canopy, understory, shrub, herbaceous, groundcover, vine, root) with layer toggle | Planned |
 | V2 | **Season view toggle** | Switch map appearance between spring/summer/fall/winter to see deciduous vs. evergreen coverage | Planned |
-| V3 | **Print / PDF export** | Export the current map view as a presentation-quality PDF with legend, title block, and plant list | Planned |
-| V4 | **Design notes / journal** | Per-project text area for recording observations, soil test results, and design rationale | Planned |
+| V3 | **Print / PDF export** | Export the current map view as a presentation-quality PDF with legend, title block, and plant list | Done |
+| V4 | **Design notes / journal** | Per-project text area for recording observations, soil test results, and design rationale | Done |
 | V5 | **Photo overlay** | Import a site photo or drone image as a semi-transparent overlay under the map for reference | Planned |
 
 ---
@@ -103,6 +103,11 @@ Features for long-term planning and tracking.
 | Sector analysis (8 presets: sun, wind, frost, noise, views, fire) | Done |
 | Slope / contour indicator (manual contour lines, elevation labels, slope arrows) | Done |
 | Wind sector & windbreak effect (16 directions, shelter zones 10× height) | Done |
+| Maintenance / labour estimator (plants + structures, capacity check) | Done |
+| Harvest calendar (monthly table from DB + fruit_period parsing) | Done |
+| Water budget calculator (demand vs rainfall + catchment) | Done |
+| Print / PDF export (map screenshot, plant list, notes, title block) | Done |
+| Design notes / journal (per-project, timestamps, saved in GeoJSON) | Done |
 
 ---
 
