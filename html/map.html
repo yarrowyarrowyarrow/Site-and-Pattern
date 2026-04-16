@@ -727,6 +727,53 @@
 
     function drawCanopies() { rebuildCanopyGroup(); }
 
+    // ── Timeline / succession visualization ─────────────────────────────────
+    var timelineActive = false;
+    var originalRadii = {};  // markerId -> original radius (for reset)
+
+    function setTimelineYearByPlantId(year, pidFactors) {
+      // pidFactors: {plantId: scaleFactor} where scaleFactor is 0.1 to 1.0
+      if (year === 0) {
+        // Reset all markers to original size
+        timelineActive = false;
+        Object.keys(originalRadii).forEach(function(mid) {
+          var m = plantMarkers[mid];
+          if (m && m.setRadius) {
+            m.setRadius(originalRadii[mid]);
+            m.setStyle({fillOpacity: 0.35, opacity: 1.0});
+          }
+        });
+        originalRadii = {};
+        if (canopyVisible) rebuildCanopyGroup();
+        return;
+      }
+
+      timelineActive = true;
+
+      Object.keys(plantMarkers).forEach(function(mid) {
+        var m = plantMarkers[mid];
+        if (!m || !m._pd || !m.setRadius) return;
+        var factor = pidFactors[m._pd.plantId];
+        if (factor === undefined) return;
+
+        // Save original radius on first timeline activation
+        if (!originalRadii[mid]) {
+          originalRadii[mid] = m.getRadius();
+        }
+
+        var matureRadius = originalRadii[mid];
+        var currentRadius = matureRadius * factor;
+        m.setRadius(Math.max(currentRadius, 0.3));
+
+        // Young plants more transparent
+        var opacity = 0.15 + 0.20 * factor;
+        m.setStyle({fillOpacity: opacity, opacity: 0.4 + 0.6 * factor});
+      });
+
+      // Rebuild canopy if visible (canopy scales with markers)
+      if (canopyVisible) rebuildCanopyGroup();
+    }
+
     // ── Measurement tool ───────────────────────────────────────────────────────
     function handleMeasureClick(lat, lng) {
       if (!measureStart) {

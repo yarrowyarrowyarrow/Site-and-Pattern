@@ -289,7 +289,8 @@ class MainWindow(QMainWindow):
         b.contour_complete.connect(self._on_contour_complete)
         b.contour_removed.connect(self._on_contour_removed)
 
-        # Planning panel → project notes
+        # Planning panel → timeline / notes
+        self.planning_panel.timeline_year_changed.connect(self._on_timeline_year_changed)
         self.planning_panel.notes_changed.connect(self._on_notes_changed)
 
     # ── Map-ready ─────────────────────────────────────────────────────────────
@@ -1182,6 +1183,113 @@ class MainWindow(QMainWindow):
     def _on_notes_changed(self, text: str):
         self._project["properties"]["notes"] = text
         self._mark_modified()
+
+    # ── Timeline / succession ──────────────────────────────────────────────
+
+    def _on_timeline_year_changed(self, year: int):
+        """Compute per-plant scale factors for the timeline year and send to JS."""
+        import json as _json
+        import math
+
+        from src.db.plants import get_plant
+
+        _DEFAULT_YTM = {"tree": 15, "shrub": 5, "herb": 2, "groundcover": 1, "vine": 2, "root": 2}
+
+        scale_data = []
+        # Build a mapping from markerId patterns to placed plants
+        # MarkerIds follow pattern: {plantId}_{timestamp}_{random}
+        # We need to iterate plantMarkers in JS, so we build scale data keyed by markerIds
+        # Since we don't have JS markerIds in Python, we build per-plant-id scale factors
+        # and let JS match by plantId
+        plant_cache = {}  # plant_id -> (ytm, curve)
+        summary_trees = 0
+        summary_mature = 0
+        summary_total = len(self._placed_plants)
+
+        for p in self._placed_plants:
+            pid = p["plant_id"]
+            if pid not in plant_cache:
+                plant = get_plant(pid)
+                if plant:
+                    ytm = plant.get("years_to_maturity") or _DEFAULT_YTM.get(
+                        plant.get("plant_type", "herb"), 2)
+                    curve = plant.get("growth_curve") or "steady"
+                    ptype = plant.get("plant_type", "herb")
+                else:
+                    ytm = 2
+                    curve = "steady"
+                    ptype = "herb"
+                plant_cache[pid] = (ytm, curve, ptype)
+
+            ytm, curve, ptype = plant_cache[pid]
+
+            if year == 0:
+                factor = 1.0
+            elif year >= ytm:
+                factor = 1.0
+            else:
+                ratio = year / ytm
+                if curve == "fast_early":
+                    factor = math.sqrt(ratio)
+                elif curve == "slow_start":
+                    factor = ratio ** 1.5
+                else:  # steady
+                    factor = ratio
+            factor = max(0.1, min(1.0, factor))
+
+            if ptype == "tree":
+                summary_trees += 1
+            if factor >= 0.95:
+                summary_mature += 1
+
+        # Build summary text
+        if year == 0:
+            summary = "Planting day — all plants at initial size."
+        else:
+            pct_mature = int(summary_mature / max(1, summary_total) * 100)
+            summary = (
+                f"Year {year}: {summary_mature}/{summary_total} plants at maturity "
+                f"({pct_mature}%)."
+            )
+            if summary_trees > 0:
+                # Find avg tree scale
+                tree_scales = []
+                for p in self._placed_plants:
+                    pid = p["plant_id"]
+                    ytm, curve, ptype = plant_cache[pid]
+                    if ptype == "tree":
+                        ratio = min(1.0, year / ytm)
+                        if curve == "fast_early":
+                            tree_scales.append(math.sqrt(ratio))
+                        elif curve == "slow_start":
+                            tree_scales.append(ratio ** 1.5)
+                        else:
+                            tree_scales.append(ratio)
+                avg_tree = sum(tree_scales) / len(tree_scales) if tree_scales else 0
+                summary += f"\nTrees: ~{int(avg_tree * 100)}% of mature canopy."
+
+        self.planning_panel.update_timeline_summary(summary)
+
+        # Send scale data to JS — we use a per-plantId approach
+        # JS will iterate plantMarkers and look up scaleFactor by plantId
+        pid_factors = {}
+        for pid, (ytm, curve, ptype) in plant_cache.items():
+            if year == 0:
+                factor = 1.0
+            elif year >= ytm:
+                factor = 1.0
+            else:
+                ratio = year / ytm
+                if curve == "fast_early":
+                    factor = math.sqrt(ratio)
+                elif curve == "slow_start":
+                    factor = ratio ** 1.5
+                else:
+                    factor = ratio
+            pid_factors[pid] = max(0.1, min(1.0, factor))
+
+        js_data = _json.dumps(pid_factors)
+        self.map_widget.run_js(f"setTimelineYearByPlantId({year}, {js_data});")
 
     # ── Planning panel sync ──────────────────────────────────────────────
 

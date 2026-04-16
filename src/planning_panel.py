@@ -17,8 +17,9 @@ from PyQt6.QtWidgets import (
     QTabWidget, QTextEdit, QFrame, QScrollArea, QFormLayout,
     QDoubleSpinBox, QSpinBox, QGroupBox, QGridLayout,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
+    QSlider,
 )
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QColor, QFont
 
 
@@ -66,6 +67,9 @@ class PlanningPanel(QWidget):
     # V4 signal: notes changed
     notes_changed = pyqtSignal(str)
 
+    # Timeline signal: year slider changed
+    timeline_year_changed = pyqtSignal(int)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._placed_plants: list[dict] = []
@@ -84,6 +88,7 @@ class PlanningPanel(QWidget):
         self._build_maintenance_tab()
         self._build_harvest_tab()
         self._build_water_tab()
+        self._build_timeline_tab()
         self._build_notes_tab()
 
         layout.addWidget(self._tabs)
@@ -589,6 +594,80 @@ class PlanningPanel(QWidget):
         self.notes_changed.emit(text)
 
     # ── Public API ─────────────────────────────────────────────────────────
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  P1 — Succession / Timeline Planner
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def _build_timeline_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(8)
+
+        info = QLabel(
+            "Visualise how your landscape changes over time.\n"
+            "Drag the slider to see plant sizes at different\n"
+            "stages of maturity (species-specific growth curves)."
+        )
+        info.setWordWrap(True)
+        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        layout.addWidget(info)
+
+        # Year slider
+        slider_row = QHBoxLayout()
+        slider_row.addWidget(QLabel("Year:"))
+        self._year_slider = QSlider(Qt.Orientation.Horizontal)
+        self._year_slider.setRange(0, 20)
+        self._year_slider.setValue(0)
+        self._year_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self._year_slider.setTickInterval(1)
+        self._year_slider.setPageStep(5)
+        slider_row.addWidget(self._year_slider)
+        self._year_label = QLabel("Year 0 (Planting)")
+        self._year_label.setMinimumWidth(110)
+        self._year_label.setStyleSheet("font-weight: bold; color: #a5d6a7;")
+        slider_row.addWidget(self._year_label)
+        layout.addLayout(slider_row)
+
+        # Debounce timer for slider
+        self._timeline_timer = QTimer()
+        self._timeline_timer.setSingleShot(True)
+        self._timeline_timer.setInterval(100)
+        self._timeline_timer.timeout.connect(self._emit_timeline_year)
+
+        self._year_slider.valueChanged.connect(self._on_year_slider_changed)
+
+        # Summary display
+        self._timeline_summary = QLabel("")
+        self._timeline_summary.setWordWrap(True)
+        self._timeline_summary.setStyleSheet("color: #b0bec5; font-size: 11px; padding: 8px;")
+        layout.addWidget(self._timeline_summary)
+
+        # Reset button
+        btn_row = QHBoxLayout()
+        reset_btn = QPushButton("Reset to Planting (Year 0)")
+        reset_btn.clicked.connect(lambda: self._year_slider.setValue(0))
+        btn_row.addWidget(reset_btn)
+        btn_row.addStretch()
+        layout.addLayout(btn_row)
+
+        layout.addStretch()
+        self._tabs.addTab(tab, "Timeline")
+
+    def _on_year_slider_changed(self, value: int):
+        labels = {0: "Year 0 (Planting)", 1: "Year 1", 3: "Year 3",
+                  5: "Year 5", 10: "Year 10", 15: "Year 15", 20: "Year 20"}
+        self._year_label.setText(labels.get(value, f"Year {value}"))
+        self._timeline_timer.start()  # debounce
+
+    def _emit_timeline_year(self):
+        year = self._year_slider.value()
+        self.timeline_year_changed.emit(year)
+
+    def update_timeline_summary(self, summary: str):
+        """Called from app.py with a text summary of the landscape at this year."""
+        self._timeline_summary.setText(summary)
 
     def set_placed_plants(self, plants: list[dict]):
         """Update the list of placed plants (from app.py)."""
