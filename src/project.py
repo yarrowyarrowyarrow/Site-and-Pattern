@@ -9,16 +9,29 @@ import json
 import os
 from datetime import datetime
 
+SCHEMA_VERSION = "1.5"
+
 
 def new_project(name: str = "Untitled Design") -> dict:
     """Return a fresh empty project dict."""
     return {
         "type": "FeatureCollection",
         "properties": {
+            "schema_version": SCHEMA_VERSION,
             "project_name": name,
             "created": datetime.utcnow().isoformat(),
             "hardiness_zone": None,
-            "notes": ""
+            "notes": "",
+            "site_config": {
+                "latitude": None,
+                "longitude": None,
+                "area_m2": None,
+                "hardiness_zone": None,
+                "soil_type": None,
+                "sun_exposure": None,
+                "wind_exposure": None,
+                "priorities": [],
+            }
         },
         "features": []
     }
