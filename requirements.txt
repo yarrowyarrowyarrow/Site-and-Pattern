@@ -1,2 +1,5 @@
 PyQt6>=6.6.0
 PyQt6-WebEngine>=6.6.0
+
+# Build / packaging (not needed to run from source)
+# pyinstaller>=6.0

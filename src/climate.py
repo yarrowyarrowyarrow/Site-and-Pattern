@@ -10,10 +10,9 @@ import os
 from functools import lru_cache
 from typing import Optional
 
-_DATA_FILE = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "data", "hardiness_zones.json"
-)
+from src.paths import resource_path
+
+_DATA_FILE = resource_path(os.path.join("data", "hardiness_zones.json"))
 
 
 @lru_cache(maxsize=1)

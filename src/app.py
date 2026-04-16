@@ -581,7 +581,8 @@ class MainWindow(QMainWindow):
     def _on_sun_path_requested(self, config: dict):
         """A1: Compute sun positions and send to map for rendering."""
         from datetime import date as _date
-        from src.solar import sun_path_for_date, sunrise_sunset, EDMONTON_LAT, EDMONTON_LNG
+        from src.solar import (sun_path_for_date, sunrise_sunset,
+                                EDMONTON_LAT, EDMONTON_LNG)
 
         d = _date.fromisoformat(config["date"])
         # Use boundary centroid if available, else Edmonton default
@@ -596,6 +597,20 @@ class MainWindow(QMainWindow):
         positions = sun_path_for_date(lat, lng, d, steps=72)
         sr, ss = sunrise_sunset(lat, lng, d)
 
+        # Solstice reference arcs for seasonal context
+        summer_sol = _date(d.year, 6, 21)
+        winter_sol = _date(d.year, 12, 21)
+        summer_arc = [
+            {"altitude": p.altitude, "azimuth": p.azimuth}
+            for p in sun_path_for_date(lat, lng, summer_sol, steps=72)
+            if p.altitude >= 0
+        ]
+        winter_arc = [
+            {"altitude": p.altitude, "azimuth": p.azimuth}
+            for p in sun_path_for_date(lat, lng, winter_sol, steps=72)
+            if p.altitude >= 0
+        ]
+
         pos_data = [
             {"altitude": p.altitude, "azimuth": p.azimuth, "hour": p.hour}
             for p in positions
@@ -608,6 +623,8 @@ class MainWindow(QMainWindow):
             "show_shadow_length": config.get("show_shadow_length", False),
             "sunrise_hour": sr,
             "sunset_hour": ss,
+            "summer_arc": summer_arc,
+            "winter_arc": winter_arc,
         })
 
         # Update info label

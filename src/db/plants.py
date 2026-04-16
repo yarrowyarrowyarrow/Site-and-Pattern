@@ -7,23 +7,32 @@ is loaded automatically.
 """
 
 import os
+import sys
 import sqlite3
 from typing import Optional
+
+from src.paths import resource_path, user_data_dir
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
 _HERE        = os.path.dirname(os.path.abspath(__file__))
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(_HERE))
-_DATA_DIR    = os.path.join(_PROJECT_ROOT, "data")
-_DB_PATH     = os.path.join(_DATA_DIR, "permadesign.db")
-_SCHEMA_PATH = os.path.join(_HERE, "schema.sql")
+# Read-only resource data (plants.json, etc.) — always from bundle or project
+_DATA_DIR    = resource_path("data")
+# Writable DB: stored in user home when bundled so it persists across runs
+_DB_PATH     = os.path.join(
+    user_data_dir() if getattr(sys, "frozen", False) else _DATA_DIR,
+    "permadesign.db"
+)
+_SCHEMA_PATH = (resource_path(os.path.join("src", "db", "schema.sql"))
+                if getattr(sys, "frozen", False)
+                else os.path.join(_HERE, "schema.sql"))
 
 # Current schema version — bump when adding columns/tables
 _SCHEMA_VERSION = 5
 
 
 def _ensure_data_dir():
-    os.makedirs(_DATA_DIR, exist_ok=True)
+    os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
 
 
 # ── Connection (per-call; SQLite is fast for local files) ─────────────────────

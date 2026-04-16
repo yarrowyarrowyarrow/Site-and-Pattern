@@ -1611,150 +1611,268 @@
     // ── A1: Sun path / shadow overlay ──────────────────────────────────────
     var sunPathLayer = null;  // L.layerGroup
 
+    // Convert sun altitude (0–90°) to a warm colour for arc gradient
+    function _sunAltColor(alt) {
+      var t = Math.min(1, Math.max(0, alt / 55));
+      var g = Math.round(241 - 98 * t);
+      var b = Math.round(118 - 118 * t);
+      return 'rgb(255,' + g + ',' + b + ')';
+    }
+
+    // Project a lat/lng offset for a given azimuth + distance (metres)
+    function _offsetLatLng(baseLat, baseLng, azDeg, distM) {
+      var azRad = azDeg * Math.PI / 180;
+      var dLat = distM * Math.cos(azRad) / 111320;
+      var dLng = distM * Math.sin(azRad) / (111320 * Math.cos(baseLat * Math.PI / 180));
+      return [baseLat + dLat, baseLng + dLng];
+    }
+
+    // Map a sun position onto the sky-dome arc display
+    function _arcPt(baseLat, baseLng, pos, arcRadius) {
+      return _offsetLatLng(baseLat, baseLng, pos.azimuth,
+                           arcRadius * (1 - pos.altitude / 90 * 0.3));
+    }
+
+    // Collect placed structures and trees/shrubs for shadow projection
+    function _getShadowFeatures() {
+      var features = [];
+      var plantHeights = { tree: 8, shrub: 2.5, vine: 1.5 };
+      var structHeights = {
+        greenhouse: 2.5, shed: 3.0, fence: 2.0, chicken_coop: 1.5,
+        rain_barrel: 1.2, compost_bin: 1.2, hugelkultur: 1.5
+      };
+
+      Object.keys(plantMarkers).forEach(function(mid) {
+        var m = plantMarkers[mid];
+        if (!m || !m._pd) return;
+        var h = plantHeights[m._pd.plantType];
+        if (!h || h < 1) return;
+        features.push({ lat: m._pd.lat, lng: m._pd.lng,
+                         radius: Math.max((m._pd.spacingM || 1) / 2, 0.5),
+                         height: h, label: m._pd.commonName || '' });
+      });
+
+      Object.keys(structureMarkers).forEach(function(sid) {
+        var group = structureMarkers[sid];
+        group.eachLayer(function(layer) {
+          if (!layer._struct) return;
+          var s = layer._struct;
+          var h = (structHeights[s.structId] !== undefined)
+                    ? structHeights[s.structId] : 2.0;
+          if (h < 1) return;
+          features.push({ lat: s.lat, lng: s.lng,
+                           radius: (s.sizeM || 2) / 2,
+                           height: h, label: s.name || '' });
+        });
+      });
+      return features;
+    }
+
     function drawSunPath(data) {
       clearSunPath();
       sunPathLayer = L.layerGroup().addTo(map);
       var center = map.getCenter();
       var lat = center.lat;
       var lng = center.lng;
-      var positions = data.positions || [];  // [{altitude, azimuth, hour}, ...]
-      var dateLabel = data.date_label || '';
-      var showShadows = data.show_shadows !== false;
+      var positions    = data.positions || [];
+      var summerArc    = data.summer_arc || [];
+      var winterArc    = data.winter_arc || [];
+      var dateLabel    = data.date_label || '';
+      var showShadows  = data.show_shadows !== false;
       var showShadowLength = data.show_shadow_length || false;
-      var sunriseHour = data.sunrise_hour || 6;
-      var sunsetHour = data.sunset_hour || 18;
+      var sunriseHour  = data.sunrise_hour || 6;
+      var sunsetHour   = data.sunset_hour  || 18;
+      var arcRadius    = 80; // metres from centre
 
       if (positions.length < 2) return;
 
-      // Draw sun arc as a single polyline (not individual dots) for performance
-      var arcRadius = 80; // metres from centre for arc display
-      var arcPoints = [];
-      var positionMap = {}; // index -> {ptLat, ptLng, pos}
-
-      positions.forEach(function(pos, i) {
-        if (pos.altitude < 0) return;
-        var azRad = (pos.azimuth) * Math.PI / 180;
-        var dist = arcRadius * (1 - pos.altitude / 90 * 0.3);
-        var dLat = dist * Math.cos(azRad) / 111320;
-        var dLng = dist * Math.sin(azRad) / (111320 * Math.cos(lat * Math.PI / 180));
-        var ptLat = lat + dLat;
-        var ptLng = lng + dLng;
-        arcPoints.push([ptLat, ptLng]);
-        positionMap[arcPoints.length - 1] = { ptLat: ptLat, ptLng: ptLng, pos: pos };
-      });
-
-      // Single polyline for the arc (replaces ~48 individual circleMarkers)
-      if (arcPoints.length >= 2) {
-        L.polyline(arcPoints, {
-          color: '#ffb300',
-          weight: 3,
-          opacity: 0.8,
+      // ── 1. Background reference arcs (solstice context) ────────────────────
+      function _drawRefArc(arcData, color, label) {
+        var pts = arcData
+          .filter(function(p) { return p.altitude >= 0; })
+          .map(function(p) { return _arcPt(lat, lng, p, arcRadius); });
+        if (pts.length < 2) return;
+        L.polyline(pts, {
+          color: color, weight: 1.5, opacity: 0.45,
+          dashArray: '5 5', interactive: false
+        }).addTo(sunPathLayer);
+        // Small label at the midpoint of the arc
+        var mid = pts[Math.floor(pts.length / 2)];
+        L.marker(mid, {
+          icon: L.divIcon({
+            className: 'measure-label',
+            html: '<span style="font-size:9px;opacity:0.7">' + label + '</span>',
+            iconSize: [0, 0], iconAnchor: [0, 12]
+          }),
           interactive: false
         }).addTo(sunPathLayer);
       }
 
-      // Only place markers at key times: sunrise, solar noon, sunset (~3 markers)
-      positions.forEach(function(pos, i) {
+      // Only draw solstice refs when the selected date isn't itself a solstice
+      var isSummerSol = (dateLabel.toLowerCase().indexOf('summer') >= 0);
+      var isWinterSol = (dateLabel.toLowerCase().indexOf('winter') >= 0);
+      if (!isSummerSol && summerArc.length >= 2)
+        _drawRefArc(summerArc, '#ff8f00', 'Jun 21');
+      if (!isWinterSol && winterArc.length >= 2)
+        _drawRefArc(winterArc, '#90a4ae', 'Dec 21');
+
+      // ── 2. Main arc — gradient coloured by altitude ────────────────────────
+      var above = positions.filter(function(p) { return p.altitude >= 0; });
+      for (var i = 0; i < above.length - 1; i++) {
+        var p0 = above[i], p1 = above[i + 1];
+        var midAlt = (p0.altitude + p1.altitude) / 2;
+        L.polyline([_arcPt(lat, lng, p0, arcRadius),
+                    _arcPt(lat, lng, p1, arcRadius)], {
+          color: _sunAltColor(midAlt),
+          weight: 3, opacity: 0.9, interactive: false
+        }).addTo(sunPathLayer);
+      }
+
+      // ── 3. Hourly dot markers every 2 hours ───────────────────────────────
+      var labelledHours = {};
+      positions.forEach(function(pos) {
         if (pos.altitude < 0) return;
-        var isKey = Math.abs(pos.hour - sunriseHour) < 0.5 ||
-                    Math.abs(pos.hour - 12) < 0.3 ||
-                    Math.abs(pos.hour - sunsetHour) < 0.5;
-        if (!isKey) return;
+        var h = Math.round(pos.hour);
+        if (h % 2 !== 0 || labelledHours[h]) return;
+        labelledHours[h] = true;
+        var pt = _arcPt(lat, lng, pos, arcRadius);
 
-        var azRad = (pos.azimuth) * Math.PI / 180;
-        var dist = arcRadius * (1 - pos.altitude / 90 * 0.3);
-        var dLat = dist * Math.cos(azRad) / 111320;
-        var dLng = dist * Math.sin(azRad) / (111320 * Math.cos(lat * Math.PI / 180));
-        var ptLat = lat + dLat;
-        var ptLng = lng + dLng;
+        var isSunrise = Math.abs(pos.hour - sunriseHour) < 0.5;
+        var isSunset  = Math.abs(pos.hour - sunsetHour)  < 0.5;
+        var isNoon    = Math.abs(pos.hour - 12) < 0.35;
+        var r = (isSunrise || isSunset || isNoon) ? 5 : 3;
+        var col = _sunAltColor(pos.altitude);
 
-        L.circleMarker([ptLat, ptLng], {
-          radius: 5, color: '#ffb300', fillColor: '#ffb300',
-          fillOpacity: 0.9, weight: 1.5, interactive: false
+        L.circleMarker(pt, {
+          radius: r, color: col, fillColor: col,
+          fillOpacity: 0.95, weight: 1.5, interactive: false
         }).addTo(sunPathLayer);
 
-        var timeStr = Math.floor(pos.hour) + ':' + ('0' + Math.round((pos.hour % 1) * 60)).slice(-2);
-        var altStr = pos.altitude.toFixed(0) + '°';
-        var labelIcon = L.divIcon({
-          className: 'measure-label',
-          html: '<span style="font-size:10px">' + timeStr + ' ☀ ' + altStr + '</span>',
-          iconSize: [0, 0],
-          iconAnchor: [0, 14]
-        });
-        L.marker([ptLat, ptLng], { icon: labelIcon, interactive: false }).addTo(sunPathLayer);
+        if (isSunrise || isSunset || isNoon) {
+          var hStr  = Math.floor(pos.hour) + ':' +
+                      ('0' + Math.round((pos.hour % 1) * 60)).slice(-2);
+          var altStr = pos.altitude.toFixed(0) + '°';
+          L.marker(pt, {
+            icon: L.divIcon({
+              className: 'measure-label',
+              html: '<span style="font-size:10px">' + hStr + ' ☀ ' + altStr + '</span>',
+              iconSize: [0, 0], iconAnchor: [0, 14]
+            }),
+            interactive: false
+          }).addTo(sunPathLayer);
+        }
       });
 
-      // Shadow direction arrows at key times
+      // ── 4. Shadow footprints from structures and trees (at noon) ──────────
       if (showShadows) {
+        // Find noon position
+        var noonPos = null;
+        var minDiff = 999;
+        positions.forEach(function(p) {
+          var d = Math.abs(p.hour - 12);
+          if (d < minDiff && p.altitude > 0) { minDiff = d; noonPos = p; }
+        });
+
+        if (noonPos) {
+          var noonShadowAz = (noonPos.azimuth + 180) % 360;
+          var features = _getShadowFeatures();
+
+          features.forEach(function(feat) {
+            if (noonPos.altitude <= 2) return; // sun too low
+            var shadowLen = feat.height / Math.tan(noonPos.altitude * Math.PI / 180);
+            shadowLen = Math.min(shadowLen, feat.height * 5);
+            var shadowTip = _offsetLatLng(feat.lat, feat.lng, noonShadowAz, shadowLen);
+
+            // Shadow ellipse: elongated in shadow direction
+            var halfLen = shadowLen / 2;
+            var shadowMidLat = (feat.lat + shadowTip[0]) / 2;
+            var shadowMidLng = (feat.lng + shadowTip[1]) / 2;
+
+            // Draw as a semi-transparent dark ellipse approximated by a circle
+            // at the shadow midpoint, sized by the average of len and radius
+            var dispRadius = Math.max(feat.radius * 0.8,
+                                      Math.min(halfLen, feat.radius * 3));
+            L.circle([shadowMidLat, shadowMidLng], {
+              radius: dispRadius,
+              color: 'transparent',
+              fillColor: '#1a237e',
+              fillOpacity: 0.22,
+              interactive: false
+            }).addTo(sunPathLayer);
+
+            // Short line from feature to shadow tip
+            L.polyline([[feat.lat, feat.lng], shadowTip], {
+              color: '#37474f', weight: 1, opacity: 0.4,
+              dashArray: '3 4', interactive: false
+            }).addTo(sunPathLayer);
+          });
+        }
+
+        // ── 5. General shadow direction arrows at 3 key times ────────────────
         var shadowTimes = [
-          { hour: sunriseHour + 1, label: 'Morning' },
-          { hour: 12, label: 'Noon' },
-          { hour: sunsetHour - 1, label: 'Evening' }
+          { hour: sunriseHour + 1.5, label: 'Morning' },
+          { hour: 12,                label: 'Noon' },
+          { hour: sunsetHour - 1.5,  label: 'Evening' }
         ];
         shadowTimes.forEach(function(st) {
           var closest = null;
-          var minDiff = 999;
+          var minD = 999;
           positions.forEach(function(p) {
-            var diff = Math.abs(p.hour - st.hour);
-            if (diff < minDiff && p.altitude > 0) { minDiff = diff; closest = p; }
+            var d = Math.abs(p.hour - st.hour);
+            if (d < minD && p.altitude > 3) { minD = d; closest = p; }
           });
           if (!closest) return;
 
-          // Shadow goes opposite to sun
           var shadowAz = (closest.azimuth + 180) % 360;
-          var shadowRad = shadowAz * Math.PI / 180;
-          var arrowLen = 40; // metres
+          var arrowLen = 40;
           if (showShadowLength && closest.altitude > 0) {
             arrowLen = Math.min(80, 20 / Math.tan(closest.altitude * Math.PI / 180));
           }
-          var dLat = arrowLen * Math.cos(shadowRad) / 111320;
-          var dLng = arrowLen * Math.sin(shadowRad) / (111320 * Math.cos(lat * Math.PI / 180));
+          var tip = _offsetLatLng(lat, lng, shadowAz, arrowLen);
 
-          // Draw shadow arrow
-          var arrowLine = L.polyline(
-            [[lat, lng], [lat + dLat, lng + dLng]],
-            { color: '#455a64', weight: 3, opacity: 0.6, interactive: false }
-          ).addTo(sunPathLayer);
+          L.polyline([[lat, lng], tip], {
+            color: '#455a64', weight: 2.5, opacity: 0.55, interactive: false
+          }).addTo(sunPathLayer);
 
           // Arrowhead
           var headLen = 8 / 111320;
           var headAngle = Math.PI / 6;
-          var endLat = lat + dLat;
-          var endLng = lng + dLng;
-          var angle = Math.atan2(dLng, dLat);
+          var dLat = tip[0] - lat, dLng = tip[1] - lng;
+          var ang = Math.atan2(dLng, dLat);
           L.polyline([
-            [endLat - headLen * Math.cos(angle - headAngle),
-             endLng - headLen * Math.sin(angle - headAngle)],
-            [endLat, endLng],
-            [endLat - headLen * Math.cos(angle + headAngle),
-             endLng - headLen * Math.sin(angle + headAngle)]
-          ], { color: '#455a64', weight: 2.5, opacity: 0.6, interactive: false }).addTo(sunPathLayer);
+            [tip[0] - headLen * Math.cos(ang - headAngle),
+             tip[1] - headLen * Math.sin(ang - headAngle)],
+            tip,
+            [tip[0] - headLen * Math.cos(ang + headAngle),
+             tip[1] - headLen * Math.sin(ang + headAngle)]
+          ], { color: '#455a64', weight: 2, opacity: 0.55, interactive: false }
+          ).addTo(sunPathLayer);
 
-          // Label
-          var labelIcon = L.divIcon({
-            className: 'structure-label',
-            html: '<span style="font-size:10px">' + st.label + ' shadow</span>',
-            iconSize: [0, 0],
-            iconAnchor: [0, -4]
-          });
-          L.marker([lat + dLat, lng + dLng], { icon: labelIcon, interactive: false }).addTo(sunPathLayer);
+          L.marker(tip, {
+            icon: L.divIcon({
+              className: 'structure-label',
+              html: '<span style="font-size:10px">' + st.label + ' shadow</span>',
+              iconSize: [0, 0], iconAnchor: [0, -4]
+            }),
+            interactive: false
+          }).addTo(sunPathLayer);
         });
       }
 
-      // Centre marker
+      // ── 6. Centre marker + title ───────────────────────────────────────────
       L.circleMarker([lat, lng], {
-        radius: 4, color: '#ff6f00', fillColor: '#ffb300', fillOpacity: 1,
-        weight: 2, interactive: false
+        radius: 4, color: '#ff6f00', fillColor: '#ffb300',
+        fillOpacity: 1, weight: 2, interactive: false
       }).addTo(sunPathLayer);
 
-      // Title label
-      var titleIcon = L.divIcon({
-        className: 'measure-label',
-        html: '☀ ' + dateLabel,
-        iconSize: [0, 0],
-        iconAnchor: [0, 24]
-      });
-      L.marker([lat, lng], { icon: titleIcon, interactive: false }).addTo(sunPathLayer);
+      L.marker([lat, lng], {
+        icon: L.divIcon({
+          className: 'measure-label',
+          html: '☀ ' + escH(dateLabel),
+          iconSize: [0, 0], iconAnchor: [0, 24]
+        }),
+        interactive: false
+      }).addTo(sunPathLayer);
     }
 
     function clearSunPath() {

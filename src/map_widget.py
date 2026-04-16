@@ -8,6 +8,7 @@ functions defined in map.html.
 
 import os
 from PyQt6.QtCore import QObject, pyqtSlot, pyqtSignal, QUrl
+from src.paths import resource_path
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineSettings
 from PyQt6.QtWebChannel import QWebChannel
@@ -186,10 +187,7 @@ class MapWidget(QWebEngineView):
         s.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
         s.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
 
-        html_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "html", "map.html"
-        )
+        html_path = resource_path(os.path.join("html", "map.html"))
         self.load(QUrl.fromLocalFile(html_path))
 
     # ── JS helpers ────────────────────────────────────────────────────────────
