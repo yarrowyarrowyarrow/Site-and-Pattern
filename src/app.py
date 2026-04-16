@@ -281,6 +281,7 @@ class MainWindow(QMainWindow):
         self.analysis_panel.contour_cleared.connect(self._on_contour_cleared)
         self.analysis_panel.wind_requested.connect(self._on_wind_requested)
         self.analysis_panel.wind_cleared.connect(self.map_widget.clear_wind_overlay)
+        self.analysis_panel.season_changed.connect(self._on_season_changed)
 
         # Map → guild removal
         b.guild_removed.connect(self._on_guild_removed)
@@ -687,6 +688,51 @@ class MainWindow(QMainWindow):
         self._set_mode_label(
             f"Wind from {config.get('direction_from', '?')}° ({config.get('speed_label', '')})"
         )
+
+    def _on_season_changed(self, season: str):
+        """Apply seasonal view to the map — adjusts plant visibility by type."""
+        import json as _json
+        from src.db.plants import get_plant
+
+        # Seasonal opacity rules based on deciduous_evergreen field
+        # Summer: everything full
+        # Winter: deciduous → 0.15, herbaceous → 0.05, evergreen → 1.0
+        # Spring/Fall: intermediate
+        season_opacity = {
+            "Summer":  {"deciduous": 1.0, "evergreen": 1.0, "herbaceous": 1.0},
+            "Spring":  {"deciduous": 0.7, "evergreen": 1.0, "herbaceous": 0.6},
+            "Fall":    {"deciduous": 0.5, "evergreen": 1.0, "herbaceous": 0.4},
+            "Winter":  {"deciduous": 0.15, "evergreen": 1.0, "herbaceous": 0.05},
+        }
+        rules = season_opacity.get(season, season_opacity["Summer"])
+
+        pid_vis = {}
+        plant_cache = {}
+        for p in self._placed_plants:
+            pid = p["plant_id"]
+            if pid not in plant_cache:
+                plant = get_plant(pid)
+                if plant:
+                    de = (plant.get("deciduous_evergreen") or "").lower()
+                    if de in ("evergreen",):
+                        plant_cache[pid] = "evergreen"
+                    elif de in ("deciduous",):
+                        plant_cache[pid] = "deciduous"
+                    else:
+                        # Herbs, groundcover, etc. treated as herbaceous
+                        ptype = plant.get("plant_type", "herb")
+                        if ptype in ("tree", "shrub"):
+                            plant_cache[pid] = "deciduous"
+                        else:
+                            plant_cache[pid] = "herbaceous"
+                else:
+                    plant_cache[pid] = "herbaceous"
+
+            pid_vis[pid] = rules[plant_cache[pid]]
+
+        js_data = _json.dumps(pid_vis)
+        self.map_widget.run_js(f"setSeasonView('{season}', {js_data});")
+        self._set_mode_label(f"Season: {season}")
 
     def _enter_guild_mode(self, guild_data: dict):
         """Place a guild on the map — click to place centre."""

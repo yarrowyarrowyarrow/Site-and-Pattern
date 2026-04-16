@@ -41,6 +41,9 @@ class AnalysisPanel(QWidget):
     wind_requested = pyqtSignal(dict)       # {direction, speed_label, show_shelter}
     wind_cleared = pyqtSignal()
 
+    # Season view
+    season_changed = pyqtSignal(str)        # "Spring" | "Summer" | "Fall" | "Winter"
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._build_ui()
@@ -57,6 +60,7 @@ class AnalysisPanel(QWidget):
         self._build_sector_tab()
         self._build_contour_tab()
         self._build_wind_tab()
+        self._build_season_tab()
 
         layout.addWidget(self._tabs)
 
@@ -482,3 +486,48 @@ class AnalysisPanel(QWidget):
             "show_shelter": self._wind_shelter.isChecked(),
             "show_arrows": self._wind_arrows.isChecked(),
         })
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  Season View
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def _build_season_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(8)
+
+        info = QLabel(
+            "Preview how your landscape looks in different\n"
+            "seasons. Deciduous plants fade in winter,\n"
+            "herbaceous perennials disappear, evergreens\n"
+            "stay full."
+        )
+        info.setWordWrap(True)
+        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        layout.addWidget(info)
+
+        row = QHBoxLayout()
+        row.addWidget(QLabel("Season:"))
+        self._season_combo = QComboBox()
+        self._season_combo.addItems(["Summer", "Spring", "Fall", "Winter"])
+        self._season_combo.setCurrentIndex(0)
+        row.addWidget(self._season_combo)
+        layout.addLayout(row)
+
+        apply_btn = QPushButton("Apply Season View")
+        apply_btn.clicked.connect(self._on_season_apply)
+        layout.addWidget(apply_btn)
+
+        reset_btn = QPushButton("Reset (Summer)")
+        reset_btn.clicked.connect(lambda: (
+            self._season_combo.setCurrentIndex(0),
+            self._on_season_apply(),
+        ))
+        layout.addWidget(reset_btn)
+
+        layout.addStretch()
+        self._tabs.addTab(tab, "Season")
+
+    def _on_season_apply(self):
+        self.season_changed.emit(self._season_combo.currentText())
