@@ -222,6 +222,7 @@
     var map, osmLayer, satelliteLayer, drawnItems, drawControl;
     var boundaryLayer = null;
     var plantMarkers  = {};   // id -> marker
+    var plantLayerGroup = null; // L.layerGroup for batch visibility toggle
     var zoneCircles   = [];
     var bridge        = null; // Python QObject exposed via QWebChannel
     var currentMode   = 'none'; // 'none' | 'boundary' | 'plant' | 'zone' | 'measure' | 'annotate' | 'structure' | 'hedgerow' | 'shape'
@@ -283,11 +284,15 @@
       );
 
       drawnItems = new L.FeatureGroup().addTo(map);
+      plantLayerGroup = L.layerGroup().addTo(map);
 
       // Map click handler
       map.on('click', onMapClick);
       map.on('mousemove', onMapMouseMove);
       map.on('dblclick', onMapDblClick);
+
+      // Zoom-dependent label visibility
+      map.on('zoomend', updateLabelVisibility);
     }
 
     // ── Click / move handlers ────────────────────────────────────────────────
@@ -474,7 +479,7 @@
         fillOpacity: 0.35
       }).bindTooltip(commonName + '<br><span style="color:#78909c;font-size:10px">Right-click to remove</span>',
           { permanent: false, className: 'plant-marker-label' })
-        .addTo(map);
+        .addTo(plantLayerGroup);
 
       // Store metadata on the circle for later use
       circle._pd = { plantId: plantId, commonName: commonName, lat: lat, lng: lng,
@@ -486,7 +491,7 @@
 
       circle.on('contextmenu', function(e) {
         L.DomEvent.stop(e);
-        map.removeLayer(circle);
+        plantLayerGroup.removeLayer(circle);
         // Remove permanent label if any
         if (plantLabels[markerId]) {
           map.removeLayer(plantLabels[markerId]);
@@ -552,7 +557,13 @@
 
     function setLabelsVisible(visible) {
       labelsVisible = visible;
-      if (visible) {
+      updateLabelVisibility();
+    }
+
+    function updateLabelVisibility() {
+      var zoom = map.getZoom();
+      var shouldShow = labelsVisible && zoom >= 18;
+      if (shouldShow) {
         // Add permanent labels to all existing markers
         Object.keys(plantMarkers).forEach(function(mid) {
           if (!plantLabels[mid]) {
@@ -561,11 +572,11 @@
           }
         });
       } else {
-        // Remove all permanent labels
+        // Remove all permanent labels from map (keep refs if labels still toggled on)
         Object.keys(plantLabels).forEach(function(mid) {
           map.removeLayer(plantLabels[mid]);
         });
-        plantLabels = {};
+        if (!labelsVisible) plantLabels = {};
       }
     }
 
@@ -614,22 +625,36 @@
       return (metres / 111320) / Math.cos(lat * Math.PI / 180);
     }
 
+    // ── Canvas renderer for non-interactive overlays (better perf than SVG) ──
+    var canvasRenderer = L.canvas({ padding: 0.5 });
+
+    // ── Utilities ─────────────────────────────────────────────────────────────
+    function debounce(fn, delay) {
+      var timer = null;
+      return function() {
+        var args = arguments, ctx = this;
+        clearTimeout(timer);
+        timer = setTimeout(function() { fn.apply(ctx, args); }, delay);
+      };
+    }
+
     // ── Snap to grid ──────────────────────────────────────────────────────────
     var snapEnabled  = false;
     var snapGridSize = 1.0;  // metres
     var gridOverlay  = null;
+    var debouncedGridRedraw = debounce(drawGridOverlay, 150);
 
     function setSnapEnabled(enabled, gridSize) {
       snapEnabled  = enabled;
       snapGridSize = gridSize || 1.0;
       if (enabled) {
         drawGridOverlay();
-        map.on('moveend', drawGridOverlay);
-        map.on('zoomend', drawGridOverlay);
+        map.on('moveend', debouncedGridRedraw);
+        map.on('zoomend', debouncedGridRedraw);
       } else {
         if (gridOverlay) { map.removeLayer(gridOverlay); gridOverlay = null; }
-        map.off('moveend', drawGridOverlay);
-        map.off('zoomend', drawGridOverlay);
+        map.off('moveend', debouncedGridRedraw);
+        map.off('zoomend', debouncedGridRedraw);
       }
     }
 
@@ -664,42 +689,43 @@
       }
 
       gridOverlay = L.layerGroup(lines.map(function(pts) {
-        return L.polyline(pts, { color: '#4a7a4a', weight: 0.5, opacity: 0.4, interactive: false });
+        return L.polyline(pts, { color: '#4a7a4a', weight: 0.5, opacity: 0.4, interactive: false, renderer: canvasRenderer });
       })).addTo(map);
     }
 
     // ── Canopy preview ───────────────────────────────────────────────────────
     var canopyVisible = false;
-    var canopyCircles = [];
+    var canopyGroup = L.layerGroup();  // single group for all canopy circles
 
     function setCanopyVisible(visible) {
       canopyVisible = visible;
       if (visible) {
-        drawCanopies();
+        rebuildCanopyGroup();
+        canopyGroup.addTo(map);
       } else {
-        canopyCircles.forEach(function(c) { map.removeLayer(c); });
-        canopyCircles = [];
+        map.removeLayer(canopyGroup);
       }
     }
 
-    function drawCanopies() {
-      canopyCircles.forEach(function(c) { map.removeLayer(c); });
-      canopyCircles = [];
+    function rebuildCanopyGroup() {
+      canopyGroup.clearLayers();
       if (!canopyVisible) return;
 
       Object.keys(plantMarkers).forEach(function(mid) {
         var m = plantMarkers[mid];
         if (!m._pd) return;
+        if (m._isGuildMember) return;  // guild members already have canopy circles
         var radius = Math.max((m._pd.spacingM || 1.0) / 2, 0.5);
-        var c = L.circle(m.getLatLng(), {
+        L.circle(m.getLatLng(), {
           radius: radius,
           color: '#a5d6a7', weight: 1, dashArray: '4 3',
           fillColor: '#a5d6a7', fillOpacity: 0.08,
           interactive: false
-        }).addTo(map);
-        canopyCircles.push(c);
+        }).addTo(canopyGroup);
       });
     }
+
+    function drawCanopies() { rebuildCanopyGroup(); }
 
     // ── Measurement tool ───────────────────────────────────────────────────────
     function handleMeasureClick(lat, lng) {
@@ -1311,6 +1337,7 @@
         // Also register in plantMarkers so labels/canopy-toggle works
         var mid = m.plant_id + '_g_' + Date.now() + '_' + Math.random().toString(36).substr(2,5);
         plantMarkers[mid] = canopy;
+        plantMarkers[mid]._isGuildMember = true;
 
         canopy.on('contextmenu', function(e) {
           L.DomEvent.stop(e);
@@ -1440,9 +1467,11 @@
     }
 
     function setPlantsVisible(visible) {
-      Object.values(plantMarkers).forEach(function(m) {
-        if (visible) m.addTo(map); else map.removeLayer(m);
-      });
+      if (visible) {
+        plantLayerGroup.addTo(map);
+      } else {
+        map.removeLayer(plantLayerGroup);
+      }
     }
 
     // ── Project load/clear ────────────────────────────────────────────────────
@@ -1450,7 +1479,7 @@
       if (boundaryLayer) { map.removeLayer(boundaryLayer); boundaryLayer = null; }
       zoneCircles.forEach(function(c) { map.removeLayer(c); });
       zoneCircles = [];
-      Object.values(plantMarkers).forEach(function(m) { map.removeLayer(m); });
+      plantLayerGroup.clearLayers();
       plantMarkers = {};
       Object.values(plantLabels).forEach(function(l) { map.removeLayer(l); });
       plantLabels = {};
@@ -1513,67 +1542,63 @@
 
       if (positions.length < 2) return;
 
-      // Draw sun arc as a series of colored dots on the map
-      // Map azimuth/altitude to screen positions around the centre
+      // Draw sun arc as a single polyline (not individual dots) for performance
       var arcRadius = 80; // metres from centre for arc display
       var arcPoints = [];
-      var keyPositions = []; // morning, noon, evening
+      var positionMap = {}; // index -> {ptLat, ptLng, pos}
 
       positions.forEach(function(pos, i) {
         if (pos.altitude < 0) return;
-        // Place dot on map at azimuth direction from centre
         var azRad = (pos.azimuth) * Math.PI / 180;
-        var dist = arcRadius * (1 - pos.altitude / 90 * 0.3); // higher sun = closer to centre
+        var dist = arcRadius * (1 - pos.altitude / 90 * 0.3);
         var dLat = dist * Math.cos(azRad) / 111320;
         var dLng = dist * Math.sin(azRad) / (111320 * Math.cos(lat * Math.PI / 180));
         var ptLat = lat + dLat;
         var ptLng = lng + dLng;
         arcPoints.push([ptLat, ptLng]);
-
-        // Color gradient: sunrise orange → noon yellow → sunset orange
-        var frac = positions.indexOf(pos) / (positions.length - 1);
-        var r = Math.round(255);
-        var g = Math.round(200 + 55 * (1 - Math.abs(frac - 0.5) * 2));
-        var b = Math.round(50 * (1 - Math.abs(frac - 0.5) * 2));
-        var color = 'rgb(' + r + ',' + g + ',' + b + ')';
-
-        var size = 3 + pos.altitude / 15;
-        L.circleMarker([ptLat, ptLng], {
-          radius: size,
-          color: color,
-          fillColor: color,
-          fillOpacity: 0.8,
-          weight: 1,
-          interactive: false
-        }).addTo(sunPathLayer);
-
-        // Mark key times
-        if (Math.abs(pos.hour - sunriseHour) < 0.5 ||
-            Math.abs(pos.hour - 12) < 0.3 ||
-            Math.abs(pos.hour - sunsetHour) < 0.5) {
-          keyPositions.push(pos);
-          var timeStr = Math.floor(pos.hour) + ':' + ('0' + Math.round((pos.hour % 1) * 60)).slice(-2);
-          var altStr = pos.altitude.toFixed(0) + '°';
-          var labelIcon = L.divIcon({
-            className: 'measure-label',
-            html: '<span style="font-size:10px">' + timeStr + ' ☀ ' + altStr + '</span>',
-            iconSize: [0, 0],
-            iconAnchor: [0, 14]
-          });
-          L.marker([ptLat, ptLng], { icon: labelIcon, interactive: false }).addTo(sunPathLayer);
-        }
+        positionMap[arcPoints.length - 1] = { ptLat: ptLat, ptLng: ptLng, pos: pos };
       });
 
-      // Connect arc points with a smooth line
+      // Single polyline for the arc (replaces ~48 individual circleMarkers)
       if (arcPoints.length >= 2) {
         L.polyline(arcPoints, {
           color: '#ffb300',
-          weight: 2.5,
-          opacity: 0.7,
-          dashArray: '6 3',
+          weight: 3,
+          opacity: 0.8,
           interactive: false
         }).addTo(sunPathLayer);
       }
+
+      // Only place markers at key times: sunrise, solar noon, sunset (~3 markers)
+      positions.forEach(function(pos, i) {
+        if (pos.altitude < 0) return;
+        var isKey = Math.abs(pos.hour - sunriseHour) < 0.5 ||
+                    Math.abs(pos.hour - 12) < 0.3 ||
+                    Math.abs(pos.hour - sunsetHour) < 0.5;
+        if (!isKey) return;
+
+        var azRad = (pos.azimuth) * Math.PI / 180;
+        var dist = arcRadius * (1 - pos.altitude / 90 * 0.3);
+        var dLat = dist * Math.cos(azRad) / 111320;
+        var dLng = dist * Math.sin(azRad) / (111320 * Math.cos(lat * Math.PI / 180));
+        var ptLat = lat + dLat;
+        var ptLng = lng + dLng;
+
+        L.circleMarker([ptLat, ptLng], {
+          radius: 5, color: '#ffb300', fillColor: '#ffb300',
+          fillOpacity: 0.9, weight: 1.5, interactive: false
+        }).addTo(sunPathLayer);
+
+        var timeStr = Math.floor(pos.hour) + ':' + ('0' + Math.round((pos.hour % 1) * 60)).slice(-2);
+        var altStr = pos.altitude.toFixed(0) + '°';
+        var labelIcon = L.divIcon({
+          className: 'measure-label',
+          html: '<span style="font-size:10px">' + timeStr + ' ☀ ' + altStr + '</span>',
+          iconSize: [0, 0],
+          iconAnchor: [0, 14]
+        });
+        L.marker([ptLat, ptLng], { icon: labelIcon, interactive: false }).addTo(sunPathLayer);
+      });
 
       // Shadow direction arrows at key times
       if (showShadows) {
@@ -1890,14 +1915,14 @@
       var speedLevel = speedMap[speedLabel] || 2;
 
       if (showArrows) {
-        // Draw a grid of wind flow arrows across the map view
+        // Draw a 3x3 grid of wind flow arrows (reduced from 5x5 for performance)
         var bounds = map.getBounds();
-        var stepLat = (bounds.getNorth() - bounds.getSouth()) / 6;
-        var stepLng = (bounds.getEast() - bounds.getWest()) / 6;
+        var stepLat = (bounds.getNorth() - bounds.getSouth()) / 4;
+        var stepLng = (bounds.getEast() - bounds.getWest()) / 4;
         var arrowLen = stepLat * 111320 * 0.3; // metres
 
-        for (var r = 1; r < 6; r++) {
-          for (var c = 1; c < 6; c++) {
+        for (var r = 1; r < 4; r++) {
+          for (var c = 1; c < 4; c++) {
             var aLat = bounds.getSouth() + r * stepLat;
             var aLng = bounds.getWest() + c * stepLng;
             var dLat = arrowLen * Math.cos(windRad) / 111320;
