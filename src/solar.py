@@ -85,11 +85,12 @@ def sun_path_for_date(lat: float, lng: float, d: date,
     Returns only positions where sun is above the horizon.
     """
     positions = []
-    for i in range(steps + 1):
+    for i in range(steps):
         frac = i / steps
         utc_hour = frac * 24
-        dt = datetime(d.year, d.month, d.day, int(utc_hour),
-                      int((utc_hour % 1) * 60))
+        h = int(utc_hour) % 24  # defensive clamp: prevent hour=24 crash
+        m = int((utc_hour % 1) * 60)
+        dt = datetime(d.year, d.month, d.day, h, m)
         pos = sun_position(lat, lng, dt)
         if pos.altitude > -2:  # include just below horizon for arc drawing
             positions.append(pos)
