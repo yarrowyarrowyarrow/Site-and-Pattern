@@ -60,8 +60,12 @@ class MapBridge(QObject):
         # id, pointsJson, label, shapeType, fillColor, strokeColor, fillOpacity, dashArray, areaM2
     shape_removed = pyqtSignal(str)                                 # id
 
+    # Guild removal signal
+    guild_removed = pyqtSignal(str, float, float)                   # guildName, centerLat, centerLng
+
     # Contour signals
     contour_complete = pyqtSignal(str, float, str)                  # pointsJson, elevation, color
+    contour_removed = pyqtSignal(str, float, str)                   # pointsJson, elevation, color
 
     # ── Slots (called from JS) ────────────────────────────────────────────────
 
@@ -149,6 +153,18 @@ class MapBridge(QObject):
     @pyqtSlot(str, float, str)
     def onContourComplete(self, points_json: str, elevation: float, color: str):
         self.contour_complete.emit(points_json, elevation, color)
+
+    # ── Guild slots ───────────────────────────────────────────────────────────
+
+    @pyqtSlot(str, float, float)
+    def onGuildRemoved(self, guild_name: str, center_lat: float, center_lng: float):
+        self.guild_removed.emit(guild_name, center_lat, center_lng)
+
+    # ── Contour removal slot ──────────────────────────────────────────────────
+
+    @pyqtSlot(str, float, str)
+    def onContourRemoved(self, points_json: str, elevation: float, color: str):
+        self.contour_removed.emit(points_json, elevation, color)
 
 
 class MapWidget(QWebEngineView):

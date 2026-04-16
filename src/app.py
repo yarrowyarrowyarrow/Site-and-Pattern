@@ -282,8 +282,12 @@ class MainWindow(QMainWindow):
         self.analysis_panel.wind_requested.connect(self._on_wind_requested)
         self.analysis_panel.wind_cleared.connect(self.map_widget.clear_wind_overlay)
 
-        # Map → contour complete
+        # Map → guild removal
+        b.guild_removed.connect(self._on_guild_removed)
+
+        # Map → contour complete / removal
         b.contour_complete.connect(self._on_contour_complete)
+        b.contour_removed.connect(self._on_contour_removed)
 
         # Planning panel → project notes
         self.planning_panel.notes_changed.connect(self._on_notes_changed)
@@ -649,6 +653,24 @@ class MainWindow(QMainWindow):
             f"Contour line at {elevation:.1f}m placed", 2000
         )
 
+    def _on_contour_removed(self, points_json: str, elevation: float, color: str):
+        """Remove a single contour line from project state."""
+        kept = []
+        removed = False
+        for f in self._project["features"]:
+            props = f.get("properties", {})
+            if (not removed
+                    and props.get("element_type") == "contour_line"
+                    and abs(props.get("elevation_m", -1) - elevation) < 0.01):
+                removed = True
+            else:
+                kept.append(f)
+        self._project["features"] = kept
+        self._mark_modified()
+        self.statusBar().showMessage(
+            f"Contour line at {elevation:.1f}m removed", 2000
+        )
+
     def _on_contour_cleared(self):
         """Clear all contours from map and project."""
         self.map_widget.clear_contours()
@@ -838,6 +860,38 @@ class MainWindow(QMainWindow):
         self._project["features"] = kept
 
         self.plant_panel.on_plant_removed(plant_id)
+        self._mark_modified()
+        self._sync_planning_panel()
+
+    def _on_guild_removed(self, guild_name: str, center_lat: float, center_lng: float):
+        """Remove all guild member plant features from project state."""
+        # Remove from placed plants list (guild members are near center with offsets)
+        kept_plants = []
+        for p in self._placed_plants:
+            coords_match = (abs(p.get("lat", 0) - center_lat) < 0.001
+                            and abs(p.get("lng", 0) - center_lng) < 0.001)
+            if not coords_match:
+                kept_plants.append(p)
+        removed_count = len(self._placed_plants) - len(kept_plants)
+        self._placed_plants = kept_plants
+
+        # Remove matching features from project
+        kept_features = []
+        for f in self._project["features"]:
+            props = f.get("properties", {})
+            if props.get("element_type") == "plant" and props.get("guild_name") == guild_name:
+                coords = f.get("geometry", {}).get("coordinates", [])
+                if coords:
+                    lng, lat = coords[0], coords[1]
+                    if (abs(lat - center_lat) < 0.001
+                            and abs(lng - center_lng) < 0.001):
+                        continue  # skip = remove this guild member
+            kept_features.append(f)
+        self._project["features"] = kept_features
+
+        # Update plant panel counts
+        for _ in range(removed_count):
+            self.plant_panel.on_plant_removed(0)
         self._mark_modified()
         self._sync_planning_panel()
 

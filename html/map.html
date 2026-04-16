@@ -1324,6 +1324,8 @@
           });
           var idx = guildGroups.indexOf(group);
           if (idx >= 0) guildGroups.splice(idx, 1);
+          // Notify Python so project state is cleaned up
+          if (bridge) bridge.onGuildRemoved(guildData.name || '', centerLat, centerLng);
         });
       });
 
@@ -1765,12 +1767,12 @@
 
       var group = L.layerGroup().addTo(map);
 
-      // Main contour line
+      // Main contour line (interactive for right-click delete)
       var line = L.polyline(contourPoints, {
         color: color,
         weight: 2.5,
         opacity: 0.7,
-        interactive: false
+        interactive: true
       }).addTo(group);
 
       // Elevation labels along the line
@@ -1829,9 +1831,24 @@
         L.marker([endLat, endLng], { icon: arrowLabel, interactive: false }).addTo(group);
       }
 
-      // Store for right-click removal
-      line._contour = { points: contourPoints.slice(), elevation: elevation };
-      line.on = undefined; // non-interactive, handled by group
+      // Save a copy of points for the removal signal
+      var savedPoints = contourPoints.slice();
+
+      // Right-click to delete individual contour
+      line.bindTooltip(
+        '<b>Contour: ' + elevation.toFixed(1) + 'm</b>' +
+        '<br><span style="color:#78909c;font-size:10px">Right-click to remove</span>',
+        { className: 'plant-marker-label' }
+      );
+      line.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        map.removeLayer(group);
+        var idx = contourLayers.indexOf(group);
+        if (idx >= 0) contourLayers.splice(idx, 1);
+        if (bridge) bridge.onContourRemoved(
+          JSON.stringify(savedPoints), elevation, color
+        );
+      });
 
       contourLayers.push(group);
 
