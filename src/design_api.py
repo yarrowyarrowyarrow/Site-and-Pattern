@@ -18,7 +18,7 @@ from typing import Optional
 
 from src.project import new_project, SCHEMA_VERSION
 from src.db.plants import get_plant, search_plants
-from src.db.guilds import get_guild_by_id, get_guild_members
+from src.db.guilds import get_guild_by_id
 
 
 class DesignGenerator:
@@ -80,9 +80,11 @@ class DesignGenerator:
 
     def add_guild(self, guild_id: int, center_lat: float, center_lng: float) -> None:
         """Place a full guild at the given center coordinates."""
-        members = get_guild_members(guild_id)
         guild = get_guild_by_id(guild_id)
-        guild_name = guild["name"] if guild else f"Guild #{guild_id}"
+        if not guild:
+            return
+        guild_name = guild["name"]
+        members = guild.get("members", [])
 
         for m in members:
             lat_offset = (m.get("offset_y", 0)) / 111320

@@ -799,7 +799,9 @@ class MainWindow(QMainWindow):
 
             self._placed_plants.append({
                 "plant_id": m["plant_id"], "common_name": m["common_name"],
-                "lat": mlat, "lng": mlng
+                "lat": mlat, "lng": mlng,
+                "guild_name": guild.get("name", ""),
+                "guild_center_lat": lat, "guild_center_lng": lng,
             })
             self._project["features"].append({
                 "type": "Feature",
@@ -809,6 +811,8 @@ class MainWindow(QMainWindow):
                     "plant_id": m["plant_id"],
                     "common_name": m["common_name"],
                     "guild_name": guild.get("name", ""),
+                    "guild_center_lat": lat,
+                    "guild_center_lng": lng,
                     "quantity": 1
                 }
             })
@@ -911,28 +915,42 @@ class MainWindow(QMainWindow):
         self._sync_planning_panel()
 
     def _on_guild_removed(self, guild_name: str, center_lat: float, center_lng: float):
-        """Remove all guild member plant features from project state."""
-        # Remove from placed plants list (guild members are near center with offsets)
+        """Remove all guild member plant features from project state.
+
+        Members are identified by the guild_center_{lat,lng} anchor they were
+        tagged with at placement time — the previous approach of matching
+        each plant's own coordinate against the center with a 0.001-degree
+        (~111 m) tolerance both missed members farther than 100 m from the
+        center and could match plants from adjacent guilds with identical
+        names.
+        """
+        # 1e-7 deg ≈ 1 cm — plenty tight while absorbing float round-trip noise.
+        TOL = 1e-7
+
+        def _anchors_match(anchor_lat, anchor_lng):
+            if anchor_lat is None or anchor_lng is None:
+                return False
+            return (abs(anchor_lat - center_lat) < TOL
+                    and abs(anchor_lng - center_lng) < TOL)
+
         kept_plants = []
         for p in self._placed_plants:
-            coords_match = (abs(p.get("lat", 0) - center_lat) < 0.001
-                            and abs(p.get("lng", 0) - center_lng) < 0.001)
-            if not coords_match:
-                kept_plants.append(p)
+            if (p.get("guild_name") == guild_name
+                    and _anchors_match(p.get("guild_center_lat"),
+                                       p.get("guild_center_lng"))):
+                continue  # drop this guild member
+            kept_plants.append(p)
         removed_count = len(self._placed_plants) - len(kept_plants)
         self._placed_plants = kept_plants
 
-        # Remove matching features from project
         kept_features = []
         for f in self._project["features"]:
             props = f.get("properties", {})
-            if props.get("element_type") == "plant" and props.get("guild_name") == guild_name:
-                coords = f.get("geometry", {}).get("coordinates", [])
-                if coords:
-                    lng, lat = coords[0], coords[1]
-                    if (abs(lat - center_lat) < 0.001
-                            and abs(lng - center_lng) < 0.001):
-                        continue  # skip = remove this guild member
+            if (props.get("element_type") == "plant"
+                    and props.get("guild_name") == guild_name
+                    and _anchors_match(props.get("guild_center_lat"),
+                                       props.get("guild_center_lng"))):
+                continue  # drop this guild member
             kept_features.append(f)
         self._project["features"] = kept_features
 

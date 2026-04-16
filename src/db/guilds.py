@@ -130,13 +130,16 @@ def update_guild(guild_id, name=None, description=None):
 
 
 def duplicate_guild(guild_id, as_variation=False):
-    """Duplicate a guild. If as_variation=True, create it as a child variation."""
+    """Duplicate a guild. If as_variation=True, create it as a child variation.
+
+    The guild row and all member rows are written in a single transaction so
+    a mid-operation failure cannot leave behind a half-populated guild.
+    """
     guild = get_guild_by_id(guild_id)
     if not guild:
         return None
 
     if as_variation:
-        # Count existing variations to auto-name
         children = get_guild_children(guild_id)
         var_num = len(children) + 1
         new_name = f"Variation {var_num}"
@@ -145,12 +148,30 @@ def duplicate_guild(guild_id, as_variation=False):
         new_name = f"{guild['name']} (copy)"
         parent_id = guild.get("parent_id")
 
-    new_id = create_guild(
-        new_name, guild["description"], guild["center_plant_id"], parent_id
-    )
-    for m in guild.get("members", []):
-        add_guild_member(new_id, m["plant_id"], m["role"], m["offset_x"], m["offset_y"])
-    return new_id
+    members = guild.get("members", [])
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "INSERT INTO guilds (name, description, center_plant_id, parent_id) "
+            "VALUES (?, ?, ?, ?)",
+            (new_name, guild["description"], guild["center_plant_id"], parent_id),
+        )
+        new_id = cur.lastrowid
+        for m in members:
+            conn.execute(
+                "INSERT INTO guild_members "
+                "(guild_id, plant_id, role, offset_x, offset_y, notes) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (new_id, m["plant_id"], m["role"],
+                 m["offset_x"], m["offset_y"], m.get("notes", "")),
+            )
+        conn.commit()
+        return new_id
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def export_guild(guild_id):

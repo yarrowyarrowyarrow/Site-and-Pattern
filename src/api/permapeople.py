@@ -22,6 +22,20 @@ from PyQt6.QtCore import QObject, QThread, pyqtSignal
 _BASE_URL = "https://permapeople.org/api"
 
 
+def _sanitize_text(value):
+    """Strip HTML-tag and control characters from free-text fields returned
+    by the remote API. Plant names and descriptions never legitimately
+    contain `<`, `>`, or NULs; removing them is defense-in-depth against
+    stored XSS if any of these strings are ever rendered as HTML (see
+    html/map.html sinks). Non-strings pass through unchanged.
+    """
+    if not isinstance(value, str):
+        return value
+    return (
+        value.replace("<", "").replace(">", "").replace("\x00", "").strip()
+    )
+
+
 # ── Low-level request helper ──────────────────────────────────────────────────
 
 def _get(path: str, key_id: str, key_secret: str,
@@ -118,20 +132,20 @@ def _normalize_plant(raw: dict) -> dict:
     return {
         # Identity
         "permapeople_id":  _get("id", "slug"),
-        "common_name":     _get("name", "common_name", "title") or "Unknown Plant",
-        "scientific_name": _get("latin_name", "scientific_name", "binomial"),
+        "common_name":     _sanitize_text(_get("name", "common_name", "title")) or "Unknown Plant",
+        "scientific_name": _sanitize_text(_get("latin_name", "scientific_name", "binomial")),
         # Classification
         "plant_type":      plant_type or "herb",
         "sun_requirement": sun,
         "water_needs":     water,
         "permaculture_uses": perm_uses,
-        "native_region":   _get("native_range", "origin", "native_region"),
+        "native_region":   _sanitize_text(_get("native_range", "origin", "native_region")),
         # Size
         "spacing_meters":      spacing,
         "mature_height_meters": height,
         # New schema fields
-        "bloom_period":         _get("bloom_time", "flowering_period", "bloom_period"),
-        "fruit_period":         _get("harvest_time", "fruiting_period", "fruit_period"),
+        "bloom_period":         _sanitize_text(_get("bloom_time", "flowering_period", "bloom_period")),
+        "fruit_period":         _sanitize_text(_get("harvest_time", "fruiting_period", "fruit_period")),
         "edible_parts":         _normalize_edible(_get("edible_parts", "edible")),
         "deciduous_evergreen":  _map_deciduous(_get("deciduous_evergreen", "foliage")),
         "perennial_or_annual":  _map_lifecycle(_get("life_cycle", "lifecycle")),
@@ -139,7 +153,7 @@ def _normalize_plant(raw: dict) -> dict:
         "hardiness_zone_min":   _parse_zone(_get("hardiness", "usda_zone", "zone_min")),
         "hardiness_zone_max":   _parse_zone(_get("zone_max", "hardiness_max")),
         # Notes
-        "notes": _get("description", "notes", "summary") or "",
+        "notes": _sanitize_text(_get("description", "notes", "summary")) or "",
         # Always mark as non-native since sourced from external API
         "native_to_alberta": 0,
     }

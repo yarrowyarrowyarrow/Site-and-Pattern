@@ -448,6 +448,17 @@
       setMode('none');
     }
 
+    // ── HTML escaping (guard against stored-XSS via project files and
+    //     Permapeople imports). Every user/file-sourced string that is
+    //     concatenated into Leaflet `html:` / `bindTooltip` / `setContent`
+    //     MUST flow through escH() first. ────────────────────────────────────
+    function escH(s) {
+      if (s === null || s === undefined) return '';
+      var d = document.createElement('div');
+      d.textContent = String(s);
+      return d.innerHTML;
+    }
+
     // ── Plant type colours ───────────────────────────────────────────────────
     var TYPE_COLORS = {
       'tree':        '#2e7d32',
@@ -477,7 +488,7 @@
         weight:      1.5,
         fillColor:   color,
         fillOpacity: 0.35
-      }).bindTooltip(commonName + '<br><span style="color:#78909c;font-size:10px">Right-click to remove</span>',
+      }).bindTooltip(escH(commonName) + '<br><span style="color:#78909c;font-size:10px">Right-click to remove</span>',
           { permanent: false, className: 'plant-marker-label' })
         .addTo(plantLayerGroup);
 
@@ -550,7 +561,7 @@
         offset: [0, -8],
         className: 'plant-marker-label',
         opacity: 0.9
-      }).setContent(name).setLatLng(circle.getLatLng());
+      }).setContent(escH(name)).setLatLng(circle.getLatLng());
       label.addTo(map);
       plantLabels[markerId] = label;
     }
@@ -857,7 +868,7 @@
     function placeAnnotation(id, lat, lng, text) {
       var icon = L.divIcon({
         className: 'annotation-label',
-        html: '<span>' + text + '</span>',
+        html: '<span>' + escH(text) + '</span>',
         iconSize: [0, 0],
         iconAnchor: [0, 0]
       });
@@ -950,7 +961,7 @@
       // Label with icon
       var labelIcon = L.divIcon({
         className: 'structure-label',
-        html: '<span class="struct-icon">' + icon + '</span> ' + name,
+        html: '<span class="struct-icon">' + escH(icon) + '</span> ' + escH(name),
         iconSize: [0, 0],
         iconAnchor: [0, 12]
       });
@@ -958,9 +969,9 @@
 
       // Tooltip on hover
       mainLayer.bindTooltip(
-        '<b>' + icon + ' ' + name + '</b><br>' +
-        '<span style="color:#78909c;font-size:10px">' + (sizeM) + 'm' +
-        (structDef.maintenance_hours_year ? ' · ~' + structDef.maintenance_hours_year + ' hrs/yr' : '') +
+        '<b>' + escH(icon) + ' ' + escH(name) + '</b><br>' +
+        '<span style="color:#78909c;font-size:10px">' + Number(sizeM) + 'm' +
+        (structDef.maintenance_hours_year ? ' · ~' + Number(structDef.maintenance_hours_year) + ' hrs/yr' : '') +
         '<br>Right-click to remove</span>',
         { className: 'plant-marker-label' }
       );
@@ -1106,7 +1117,7 @@
       var labelText = species || (style.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); }));
       var labelIcon = L.divIcon({
         className: 'hedgerow-label',
-        html: labelText,
+        html: escH(labelText),
         iconSize: [0, 0],
         iconAnchor: [0, 12]
       });
@@ -1114,8 +1125,8 @@
 
       // Tooltip
       var tooltipText = '<b>Hedgerow</b>';
-      if (species) tooltipText += '<br>' + species;
-      tooltipText += '<br><span style="color:#78909c;font-size:10px">~' + numPlants + ' plants · ' +
+      if (species) tooltipText += '<br>' + escH(species);
+      tooltipText += '<br><span style="color:#78909c;font-size:10px">~' + Number(numPlants) + ' plants · ' +
         totalLen.toFixed(1) + 'm<br>Right-click to remove</span>';
       mainLine.bindTooltip(tooltipText, { className: 'plant-marker-label' });
 
@@ -1253,7 +1264,7 @@
         var displayLabel = label || shapeType;
         var labelIcon = L.divIcon({
           className: 'shape-label',
-          html: displayLabel,
+          html: escH(displayLabel),
           iconSize: [0, 0],
           iconAnchor: [0, 8]
         });
@@ -1262,8 +1273,8 @@
 
       // Tooltip
       polygon.bindTooltip(
-        '<b>' + (label || shapeType) + '</b><br>' +
-        '<span style="color:#78909c;font-size:10px">Area: ' + areaStr + '<br>Right-click to remove</span>',
+        '<b>' + escH(label || shapeType) + '</b><br>' +
+        '<span style="color:#78909c;font-size:10px">Area: ' + escH(areaStr) + '<br>Right-click to remove</span>',
         { className: 'plant-marker-label' }
       );
 
@@ -1394,8 +1405,8 @@
         }).addTo(group);
 
         canopy.bindTooltip(
-          '<b>' + (guildData.name || 'Guild') + '</b><br>' +
-          m.common_name + ' <span style="color:#aaa">(' + role.replace(/_/g, ' ') + ')</span>',
+          '<b>' + escH(guildData.name || 'Guild') + '</b><br>' +
+          escH(m.common_name) + ' <span style="color:#aaa">(' + escH(role.replace(/_/g, ' ')) + ')</span>',
           { className: 'plant-marker-label' }
         );
 
@@ -1442,7 +1453,7 @@
       // Add guild name label at center
       var labelIcon = L.divIcon({
         className: 'plant-marker-label',
-        html: '<b>' + (guildData.name || 'Guild') + '</b>',
+        html: '<b>' + escH(guildData.name || 'Guild') + '</b>',
         iconSize: [0, 0],
         iconAnchor: [0, -8]
       });
