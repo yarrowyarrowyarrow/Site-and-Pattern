@@ -197,7 +197,7 @@ class MapWidget(QWebEngineView):
 
     def set_mode(self, mode: str, plant_id: int = 0, common_name: str = "",
                  spacing_m: float = 1.0, plant_type: str = "herb",
-                 quantity: int = 1, custom_color: str = ""):
+                 quantity: int = 1, custom_color: str = "", height_m: float = 0.0):
         """Switch the map interaction mode ('none'|'boundary'|'plant'|'zone')."""
         if mode == 'plant' and plant_id:
             color_js = f", custom_color: '{custom_color}'" if custom_color else ""
@@ -206,7 +206,8 @@ class MapWidget(QWebEngineView):
                 f"common_name: {repr(common_name)}, "
                 f"spacing_m: {spacing_m}, "
                 f"plant_type: {repr(plant_type)}, "
-                f"quantity: {quantity}"
+                f"quantity: {quantity}, "
+                f"height_m: {height_m}"
                 f"{color_js}}});"
             )
         else:
@@ -269,6 +270,9 @@ class MapWidget(QWebEngineView):
     def set_canopy_visible(self, visible: bool):
         v = 'true' if visible else 'false'
         self.run_js(f"setCanopyVisible({v});")
+
+    def toggle_food_forest_panel(self):
+        self.run_js("toggleFoodForestPanel();")
 
     def set_snap_enabled(self, enabled: bool, grid_size: float = 1.0):
         e = 'true' if enabled else 'false'

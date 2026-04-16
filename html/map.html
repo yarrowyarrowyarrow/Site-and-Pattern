@@ -122,6 +122,45 @@
     #legend-toggle:hover { background: rgba(46, 74, 46, 0.95); }
     #legend-toggle.active { display: none; }
 
+    /* ── Food forest layer panel ────────────────────────────────── */
+    #ff-layer-panel {
+      position: absolute;
+      top: 70px;
+      right: 10px;
+      z-index: 1000;
+      background: rgba(26, 36, 26, 0.93);
+      border: 1px solid #4a7a4a;
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: #c8e6c9;
+      font-size: 11px;
+      min-width: 180px;
+      display: none;
+    }
+    #ff-layer-panel h4 {
+      margin: 0 0 8px 0;
+      font-size: 12px;
+      color: #a5d6a7;
+      border-bottom: 1px solid #2e4a2e;
+      padding-bottom: 4px;
+    }
+    .ff-layer-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 3px 0;
+      cursor: pointer;
+    }
+    .ff-layer-row:hover { opacity: 0.8; }
+    .ff-layer-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 1.5px solid rgba(255,255,255,0.3);
+    }
+    .ff-layer-row input[type=checkbox] { margin: 0; cursor: pointer; }
+
     /* ── Structure labels ───────────────────────────────────────── */
     .structure-label {
       background: rgba(30, 42, 30, 0.88);
@@ -207,6 +246,49 @@
       <div class="legend-item"><span class="legend-swatch outline-only" style="border-color:#ff9800;"></span> Sector wedge</div>
       <div class="legend-item"><span class="legend-swatch" style="background:#795548;"></span> Contour</div>
       <div class="legend-item"><span class="legend-swatch" style="background:#42a5f5;"></span> Wind</div>
+    </div>
+  </div>
+
+  <!-- Food forest layer panel -->
+  <div id="ff-layer-panel">
+    <h4>🌳 Food Forest Layers <span style="float:right;cursor:pointer;font-size:14px;" onclick="toggleFoodForestPanel()">&times;</span></h4>
+    <div class="ff-layer-row" onclick="document.getElementById('ff-cb-canopy').click()">
+      <span class="ff-layer-dot" style="background:#1a237e;"></span>
+      <input type="checkbox" id="ff-cb-canopy" checked onchange="setFoodForestLayerVisible('canopy',this.checked)">
+      <span>Canopy (tall trees)</span>
+    </div>
+    <div class="ff-layer-row" onclick="document.getElementById('ff-cb-understory').click()">
+      <span class="ff-layer-dot" style="background:#1565c0;"></span>
+      <input type="checkbox" id="ff-cb-understory" checked onchange="setFoodForestLayerVisible('understory',this.checked)">
+      <span>Understory (small trees)</span>
+    </div>
+    <div class="ff-layer-row" onclick="document.getElementById('ff-cb-shrub').click()">
+      <span class="ff-layer-dot" style="background:#2e7d32;"></span>
+      <input type="checkbox" id="ff-cb-shrub" checked onchange="setFoodForestLayerVisible('shrub',this.checked)">
+      <span>Shrub layer</span>
+    </div>
+    <div class="ff-layer-row" onclick="document.getElementById('ff-cb-herbaceous').click()">
+      <span class="ff-layer-dot" style="background:#558b2f;"></span>
+      <input type="checkbox" id="ff-cb-herbaceous" checked onchange="setFoodForestLayerVisible('herbaceous',this.checked)">
+      <span>Herbaceous</span>
+    </div>
+    <div class="ff-layer-row" onclick="document.getElementById('ff-cb-groundcover').click()">
+      <span class="ff-layer-dot" style="background:#f9a825;"></span>
+      <input type="checkbox" id="ff-cb-groundcover" checked onchange="setFoodForestLayerVisible('groundcover',this.checked)">
+      <span>Groundcover</span>
+    </div>
+    <div class="ff-layer-row" onclick="document.getElementById('ff-cb-vine').click()">
+      <span class="ff-layer-dot" style="background:#e65100;"></span>
+      <input type="checkbox" id="ff-cb-vine" checked onchange="setFoodForestLayerVisible('vine',this.checked)">
+      <span>Vine / climber</span>
+    </div>
+    <div class="ff-layer-row" onclick="document.getElementById('ff-cb-root').click()">
+      <span class="ff-layer-dot" style="background:#6d4c41;"></span>
+      <input type="checkbox" id="ff-cb-root" checked onchange="setFoodForestLayerVisible('root',this.checked)">
+      <span>Root / rhizosphere</span>
+    </div>
+    <div style="margin-top:6px;border-top:1px solid #2e4a2e;padding-top:5px;font-size:9px;color:#78909c;">
+      Rings on plant circles show layer
     </div>
   </div>
 
@@ -316,12 +398,13 @@
       } else if (currentMode === 'plant' && currentPlant) {
         var qty = currentPlant.quantity || 1;
         var cc  = currentPlant.custom_color || null;
+        var hm  = currentPlant.height_m || 0;
         if (qty > 1) {
           placeGroupMarkers(currentPlant.id, currentPlant.common_name, lat, lng,
-                            currentPlant.spacing_m, currentPlant.plant_type, cc, qty);
+                            currentPlant.spacing_m, currentPlant.plant_type, cc, qty, hm);
         } else {
           placePlantMarker(currentPlant.id, currentPlant.common_name, lat, lng,
-                           currentPlant.spacing_m, currentPlant.plant_type, cc);
+                           currentPlant.spacing_m, currentPlant.plant_type, cc, hm);
           if (bridge) bridge.onPlantPlaced(currentPlant.id, currentPlant.common_name, lat, lng);
         }
         // Stay in plant mode so user can place multiple
@@ -469,6 +552,42 @@
       'root':        '#6d4c41'
     };
 
+    // ── Food forest layer system ─────────────────────────────────────────────
+    // 7 layers: canopy, understory, shrub, herbaceous, groundcover, vine, root
+    var FF_LAYER_COLORS = {
+      'canopy':      '#1a237e',  // deep navy
+      'understory':  '#1565c0',  // dark blue
+      'shrub':       '#2e7d32',  // forest green
+      'herbaceous':  '#558b2f',  // olive green
+      'groundcover': '#f9a825',  // amber
+      'vine':        '#e65100',  // deep orange
+      'root':        '#6d4c41'   // brown
+    };
+    var FF_LAYER_LABELS = {
+      'canopy':      'Canopy (tall trees)',
+      'understory':  'Understory (small trees)',
+      'shrub':       'Shrub layer',
+      'herbaceous':  'Herbaceous layer',
+      'groundcover': 'Groundcover',
+      'vine':        'Vine / climber',
+      'root':        'Root / rhizosphere'
+    };
+    // Which layers are currently visible (all on by default)
+    var ffLayerVisible = {
+      'canopy': true, 'understory': true, 'shrub': true,
+      'herbaceous': true, 'groundcover': true, 'vine': true, 'root': true
+    };
+
+    function _getFoodForestLayer(plantType, heightM) {
+      if (plantType === 'tree') return (heightM >= 4) ? 'canopy' : 'understory';
+      if (plantType === 'shrub')       return 'shrub';
+      if (plantType === 'herb')        return 'herbaceous';
+      if (plantType === 'groundcover') return 'groundcover';
+      if (plantType === 'vine')        return 'vine';
+      if (plantType === 'root')        return 'root';
+      return 'herbaceous';  // default
+    }
+
     // ── Plant labels state ───────────────────────────────────────────────────
     var labelsVisible = false;
     var plantLabels   = {};   // markerId -> L.tooltip (permanent)
@@ -477,10 +596,13 @@
     // spacingM    : plant spacing in metres (used as circle diameter on the map)
     // plantType   : 'tree' | 'shrub' | 'herb' | 'groundcover' | 'vine' | 'root'
     // customColor : optional hex colour override (e.g. '#ff5722')
-    function placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor) {
+    // heightM     : mature height in metres (used for food forest layer)
+    function placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor, heightM) {
       var markerId = plantId + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
       var radius   = Math.max((spacingM || 1.0) / 2, 1.0);   // half-diameter, min 1 m
       var color    = customColor || TYPE_COLORS[plantType] || '#66bb6a';
+      var ffLayer  = _getFoodForestLayer(plantType, heightM || 0);
+      var layerColor = FF_LAYER_COLORS[ffLayer] || '#66bb6a';
 
       var circle = L.circle([lat, lng], {
         radius:      radius,
@@ -488,13 +610,34 @@
         weight:      1.5,
         fillColor:   color,
         fillOpacity: 0.35
-      }).bindTooltip(escH(commonName) + '<br><span style="color:#78909c;font-size:10px">Right-click to remove</span>',
+      }).bindTooltip(
+          escH(commonName) + '<br>'
+          + '<span style="background:' + layerColor + ';color:#fff;border-radius:3px;padding:0 4px;font-size:9px">'
+          + escH(FF_LAYER_LABELS[ffLayer] || ffLayer) + '</span>'
+          + '<br><span style="color:#78909c;font-size:10px">Right-click to remove</span>',
           { permanent: false, className: 'plant-marker-label' })
         .addTo(plantLayerGroup);
 
+      // Outer ring showing food forest layer
+      var layerRing = L.circle([lat, lng], {
+        radius: radius * 1.35,
+        color: layerColor,
+        weight: 2,
+        fillOpacity: 0,
+        interactive: false
+      }).addTo(plantLayerGroup);
+      circle._layerRing = layerRing;
+
       // Store metadata on the circle for later use
       circle._pd = { plantId: plantId, commonName: commonName, lat: lat, lng: lng,
-                      spacingM: spacingM, plantType: plantType, customColor: customColor };
+                      spacingM: spacingM, plantType: plantType, customColor: customColor,
+                      heightM: heightM || 0, ffLayer: ffLayer };
+
+      // Hide if this layer is currently toggled off
+      if (!ffLayerVisible[ffLayer]) {
+        plantLayerGroup.removeLayer(circle);
+        plantLayerGroup.removeLayer(layerRing);
+      }
 
       circle.on('click', function() {
         if (bridge) bridge.onPlantMarkerClick(markerId, plantId, lat, lng);
@@ -503,6 +646,7 @@
       circle.on('contextmenu', function(e) {
         L.DomEvent.stop(e);
         plantLayerGroup.removeLayer(circle);
+        if (circle._layerRing) plantLayerGroup.removeLayer(circle._layerRing);
         // Remove permanent label if any
         if (plantLabels[markerId]) {
           map.removeLayer(plantLabels[markerId]);
@@ -523,15 +667,14 @@
     }
 
     // Place a group of plants in a hex cluster pattern
-    function placeGroupMarkers(plantId, commonName, lat, lng, spacingM, plantType, customColor, quantity) {
+    function placeGroupMarkers(plantId, commonName, lat, lng, spacingM, plantType, customColor, quantity, heightM) {
       if (quantity <= 1) {
-        placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor);
+        placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor, heightM);
         if (bridge) bridge.onPlantPlaced(plantId, commonName, lat, lng);
         return;
       }
       var spacing = spacingM || 1.0;
       // Place in concentric hex rings around centre
-      var placed = 0;
       var ring = 0;
       var positions = [[lat, lng]];
       while (positions.length < quantity) {
@@ -548,7 +691,7 @@
       }
       for (var i = 0; i < quantity && i < positions.length; i++) {
         var p = positions[i];
-        placePlantMarker(plantId, commonName, p[0], p[1], spacingM, plantType, customColor);
+        placePlantMarker(plantId, commonName, p[0], p[1], spacingM, plantType, customColor, heightM);
         if (bridge) bridge.onPlantPlaced(plantId, commonName, p[0], p[1]);
       }
     }
@@ -737,6 +880,39 @@
     }
 
     function drawCanopies() { rebuildCanopyGroup(); }
+
+    // ── Food forest layer visibility ─────────────────────────────────────────
+    function setFoodForestLayerVisible(layerName, visible) {
+      ffLayerVisible[layerName] = visible;
+      Object.keys(plantMarkers).forEach(function(mid) {
+        var m = plantMarkers[mid];
+        if (!m || !m._pd || m._pd.ffLayer !== layerName) return;
+        if (visible) {
+          m.addTo(plantLayerGroup);
+          if (m._layerRing) m._layerRing.addTo(plantLayerGroup);
+          if (plantLabels[mid] && labelsVisible) plantLabels[mid].addTo(map);
+        } else {
+          plantLayerGroup.removeLayer(m);
+          if (m._layerRing) plantLayerGroup.removeLayer(m._layerRing);
+          if (plantLabels[mid]) map.removeLayer(plantLabels[mid]);
+        }
+      });
+      _updateFoodForestPanelCheckboxes();
+    }
+
+    function toggleFoodForestPanel() {
+      var panel = document.getElementById('ff-layer-panel');
+      if (!panel) return;
+      var isVisible = panel.style.display !== 'none';
+      panel.style.display = isVisible ? 'none' : 'block';
+    }
+
+    function _updateFoodForestPanelCheckboxes() {
+      Object.keys(ffLayerVisible).forEach(function(layer) {
+        var cb = document.getElementById('ff-cb-' + layer);
+        if (cb) cb.checked = ffLayerVisible[layer];
+      });
+    }
 
     // ── Timeline / succession visualization ─────────────────────────────────
     var timelineActive = false;

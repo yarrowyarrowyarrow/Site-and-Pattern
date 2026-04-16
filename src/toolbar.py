@@ -30,6 +30,12 @@ class MainToolbar(QToolBar):
     snap_toggled         = pyqtSignal(bool)
     structures_toggled   = pyqtSignal(bool)
 
+    # Food forest layer panel toggle
+    food_forest_panel_requested = pyqtSignal()
+
+    # 3D view
+    view3d_requested = pyqtSignal()
+
     # Settings
     settings_requested = pyqtSignal()
 
@@ -142,6 +148,20 @@ class MainToolbar(QToolBar):
         self._act_snap.setToolTip("Enable 1m grid overlay; plant placement snaps to grid intersections")
         self._act_snap.toggled.connect(self.snap_toggled)
         self.addAction(self._act_snap)
+
+        self._act_ff_layers = QAction("🌿 FF Layers", self)
+        self._act_ff_layers.setStatusTip("Show/hide food forest layer panel (7 layers with toggles)")
+        self._act_ff_layers.setToolTip("Toggle the food forest layer panel — filter plant markers by canopy, shrub, herbaceous, etc.")
+        self._act_ff_layers.triggered.connect(self.food_forest_panel_requested)
+        self.addAction(self._act_ff_layers)
+
+        self.addSeparator()
+
+        act_view3d = QAction("🧊 3D View", self)
+        act_view3d.setStatusTip("Open 3D view of the current design")
+        act_view3d.setToolTip("Opens a Three.js 3D visualisation showing plants and structures at their real heights")
+        act_view3d.triggered.connect(self.view3d_requested)
+        self.addAction(act_view3d)
 
         self.addSeparator()
 

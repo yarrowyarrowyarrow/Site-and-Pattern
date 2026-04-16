@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PermaDesign 3D View</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a2a1a; overflow: hidden; font-family: sans-serif; color: #c8e6c9; }
+  #canvas-container { width: 100vw; height: 100vh; }
+  #overlay {
+    position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+    background: rgba(20,35,20,0.88); border: 1px solid #4a7a4a;
+    border-radius: 6px; padding: 6px 16px; font-size: 12px; color: #a5d6a7;
+    pointer-events: none; text-align: center; z-index: 10;
+  }
+  #controls-hint {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(20,35,20,0.80); border: 1px solid #3a5a3a;
+    border-radius: 5px; padding: 5px 14px; font-size: 11px; color: #78909c;
+    pointer-events: none; z-index: 10;
+  }
+  #legend {
+    position: fixed; top: 10px; right: 10px;
+    background: rgba(20,35,20,0.88); border: 1px solid #4a7a4a;
+    border-radius: 6px; padding: 8px 12px; font-size: 10px; z-index: 10;
+    min-width: 130px;
+  }
+  #legend h4 { font-size: 11px; color: #a5d6a7; margin-bottom: 6px; }
+  .leg-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  #sun-control {
+    position: fixed; bottom: 50px; right: 10px;
+    background: rgba(20,35,20,0.88); border: 1px solid #4a7a4a;
+    border-radius: 6px; padding: 8px 12px; font-size: 11px; z-index: 10;
+    width: 150px;
+  }
+  #sun-control label { display: block; margin-bottom: 4px; color: #a5d6a7; }
+  #sun-slider { width: 100%; margin-bottom: 8px; }
+  #season-btns button {
+    background: rgba(40,60,40,0.8); border: 1px solid #4a7a4a; color: #c8e6c9;
+    border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer; margin: 2px 2px 0 0;
+  }
+  #season-btns button.active { background: #2e7d32; }
+</style>
+</head>
+<body>
+<div id="canvas-container"></div>
+<div id="overlay">🌿 PermaDesign — 3D View &nbsp;|&nbsp; <span id="plant-count">Loading…</span></div>
+<div id="controls-hint">🖱 Left drag: orbit &nbsp;|&nbsp; Right drag / scroll: zoom &nbsp;|&nbsp; Middle drag: pan</div>
+<div id="legend">
+  <h4>Food Forest Layers</h4>
+  <div class="leg-row"><div class="leg-dot" style="background:#1a237e"></div> Canopy</div>
+  <div class="leg-row"><div class="leg-dot" style="background:#1565c0"></div> Understory</div>
+  <div class="leg-row"><div class="leg-dot" style="background:#2e7d32"></div> Shrub</div>
+  <div class="leg-row"><div class="leg-dot" style="background:#558b2f"></div> Herbaceous</div>
+  <div class="leg-row"><div class="leg-dot" style="background:#f9a825"></div> Groundcover</div>
+  <div class="leg-row"><div class="leg-dot" style="background:#e65100"></div> Vine</div>
+  <div class="leg-row"><div class="leg-dot" style="background:#6d4c41"></div> Root</div>
+  <hr style="border-color:#2e4a2e;margin:6px 0">
+  <div class="leg-row"><div class="leg-dot" style="background:#90a4ae;border-radius:2px"></div> Structure</div>
+</div>
+<div id="sun-control">
+  <label>☀ Sun angle: <span id="sun-val">45°</span></label>
+  <input type="range" id="sun-slider" min="0" max="90" value="45">
+  <div id="season-btns">
+    <button onclick="setSeason('spring')">Spring</button>
+    <button onclick="setSeason('summer')" class="active">Summer</button>
+    <button onclick="setSeason('fall')">Fall</button>
+    <button onclick="setSeason('winter')">Winter</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// ── Three.js scene setup ──────────────────────────────────────────────────────
+var renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.setClearColor(0x2d4a2d);
+document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+var scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x2d4a2d, 80, 300);
+
+var camera = new THREE.PerspectiveCamera(50, 1, 0.1, 500);
+camera.position.set(0, 40, 70);
+camera.lookAt(0, 0, 0);
+
+var controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI / 2.05;
+controls.minDistance = 5;
+controls.maxDistance = 200;
+
+// ── Lighting ──────────────────────────────────────────────────────────────────
+var ambientLight = new THREE.AmbientLight(0x7cb87c, 0.6);
+scene.add(ambientLight);
+
+var sunLight = new THREE.DirectionalLight(0xfffde7, 1.2);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.width  = 2048;
+sunLight.shadow.mapSize.height = 2048;
+sunLight.shadow.camera.near = 1;
+sunLight.shadow.camera.far  = 300;
+sunLight.shadow.camera.left = sunLight.shadow.camera.bottom = -80;
+sunLight.shadow.camera.right = sunLight.shadow.camera.top = 80;
+scene.add(sunLight);
+
+var fillLight = new THREE.HemisphereLight(0x80b080, 0x2d5a2d, 0.4);
+scene.add(fillLight);
+
+// ── Ground plane ──────────────────────────────────────────────────────────────
+var groundGeo  = new THREE.PlaneGeometry(250, 250);
+var groundMat  = new THREE.MeshLambertMaterial({ color: 0x2d5a2d });
+var ground     = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// ── Sun slider ────────────────────────────────────────────────────────────────
+var sunSlider = document.getElementById('sun-slider');
+function updateSunPosition() {
+  var altDeg = parseFloat(sunSlider.value);
+  document.getElementById('sun-val').textContent = altDeg + '°';
+  var altRad = altDeg * Math.PI / 180;
+  var dist = 100;
+  sunLight.position.set(-dist * Math.cos(altRad), dist * Math.sin(altRad), 30);
+}
+sunSlider.addEventListener('input', updateSunPosition);
+updateSunPosition();
+
+var seasonAlts = { spring: 40, summer: 60, fall: 35, winter: 15 };
+function setSeason(s) {
+  sunSlider.value = seasonAlts[s] || 45;
+  updateSunPosition();
+  document.querySelectorAll('#season-btns button').forEach(function(b) {
+    b.classList.toggle('active', b.textContent.toLowerCase() === s);
+  });
+}
+
+// ── Food forest layer colours (hex as integers) ───────────────────────────────
+var FF_COLORS = {
+  canopy:      0x1a237e,
+  understory:  0x1565c0,
+  shrub:       0x2e7d32,
+  herbaceous:  0x558b2f,
+  groundcover: 0xf9a825,
+  vine:        0xe65100,
+  root:        0x6d4c41
+};
+
+function getFoodForestLayer(plantType, heightM) {
+  if (plantType === 'tree') return (heightM >= 4) ? 'canopy' : 'understory';
+  if (plantType === 'shrub')       return 'shrub';
+  if (plantType === 'herb')        return 'herbaceous';
+  if (plantType === 'groundcover') return 'groundcover';
+  if (plantType === 'vine')        return 'vine';
+  if (plantType === 'root')        return 'root';
+  return 'herbaceous';
+}
+
+// ── Lat/lng → flat XZ coordinate space (metres from centroid) ────────────────
+var originLat = 0, originLng = 0;
+
+function latLngToXZ(lat, lng) {
+  var dLat = lat - originLat;
+  var dLng = lng - originLng;
+  var x = dLng * 111320 * Math.cos(originLat * Math.PI / 180);
+  var z = -dLat * 111320;
+  return [x, z];
+}
+
+// ── Plant geometry helpers ────────────────────────────────────────────────────
+function makeTrunk(x, z, heightM, radiusM, color) {
+  var trunkH  = Math.max(heightM * 0.55, 0.3);
+  var trunkR  = Math.max(radiusM * 0.12, 0.05);
+  var geo     = new THREE.CylinderGeometry(trunkR, trunkR * 1.2, trunkH, 7);
+  var mat     = new THREE.MeshLambertMaterial({ color: 0x5d4037 });
+  var mesh    = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, trunkH / 2, z);
+  mesh.castShadow = true;
+  return mesh;
+}
+
+function makeCanopyBall(x, z, heightM, radiusM, color) {
+  var trunkH  = Math.max(heightM * 0.55, 0.3);
+  var canopyR = Math.max(radiusM, 0.5);
+  var geo     = new THREE.SphereGeometry(canopyR, 10, 8);
+  var mat     = new THREE.MeshLambertMaterial({ color: color });
+  var mesh    = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, trunkH + canopyR * 0.8, z);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+function makeHerbMound(x, z, radiusM, color) {
+  var r   = Math.max(radiusM, 0.3);
+  var geo = new THREE.SphereGeometry(r * 0.6, 8, 6);
+  var mat = new THREE.MeshLambertMaterial({ color: color });
+  var mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, r * 0.35, z);
+  mesh.castShadow = true;
+  return mesh;
+}
+
+function makeGroundcoverDisk(x, z, radiusM, color) {
+  var r   = Math.max(radiusM, 0.3);
+  var geo = new THREE.CylinderGeometry(r, r * 0.9, 0.15, 10);
+  var mat = new THREE.MeshLambertMaterial({ color: color });
+  var mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, 0.08, z);
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+function makeVinePost(x, z, heightM, color) {
+  var h   = Math.max(heightM, 1.5);
+  var geo = new THREE.CylinderGeometry(0.06, 0.08, h, 6);
+  var mat = new THREE.MeshLambertMaterial({ color: color });
+  var mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, h / 2, z);
+  mesh.castShadow = true;
+  return mesh;
+}
+
+// ── Structure geometry ────────────────────────────────────────────────────────
+var STRUCT_HEIGHTS = {
+  greenhouse: 2.5, shed: 3.0, fence: 2.0, chicken_coop: 1.5,
+  rain_barrel: 1.2, compost_bin: 1.0, hugelkultur: 1.2,
+  beehive: 1.0, herb_spiral: 0.8, raised_bed: 0.4, keyhole_bed: 0.5,
+  cold_frame: 0.35, fire_pit: 0.3, swale: 0.3, pond: 0.1,
+  rain_garden: 0.2
+};
+
+function makeStructure(x, z, sizeM, heightM, structId) {
+  var h   = heightM || STRUCT_HEIGHTS[structId] || 2.0;
+  var s   = Math.max(sizeM || 2, 0.5);
+  var col = (structId === 'pond') ? 0x42a5f5
+          : (structId === 'greenhouse' || structId === 'cold_frame') ? 0xa5d6a7
+          : (structId === 'shed') ? 0x8d6e63
+          : (structId === 'fence') ? 0x795548
+          : 0x90a4ae;
+
+  var geo = new THREE.BoxGeometry(s, h, s);
+  var mat = new THREE.MeshLambertMaterial({ color: col, opacity: 0.85, transparent: true });
+  var mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, h / 2, z);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+// ── Property boundary outline ─────────────────────────────────────────────────
+function makeBoundaryOutline(coords) {
+  var points = coords.map(function(c) {
+    var xz = latLngToXZ(c[1], c[0]);
+    return new THREE.Vector3(xz[0], 0.05, xz[1]);
+  });
+  points.push(points[0].clone()); // close the loop
+  var geo  = new THREE.BufferGeometry().setFromPoints(points);
+  var mat  = new THREE.LineBasicMaterial({ color: 0x66bb6a, linewidth: 2 });
+  return new THREE.Line(geo, mat);
+}
+
+// ── Plant label sprites ───────────────────────────────────────────────────────
+function makeLabel(text, x, y, z) {
+  var canvas  = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 48;
+  var ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'rgba(20,35,20,0.7)';
+  ctx.roundRect(2, 8, 252, 34, 5);
+  ctx.fill();
+  ctx.fillStyle = '#c8e6c9';
+  ctx.font = '18px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(text, 128, 32);
+  var tex  = new THREE.CanvasTexture(canvas);
+  var mat  = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+  var sprite = new THREE.Sprite(mat);
+  sprite.position.set(x, y, z);
+  sprite.scale.set(4, 1, 1);
+  return sprite;
+}
+
+// ── Scene population ──────────────────────────────────────────────────────────
+function populateScene(projectData) {
+  // Clear previous objects (keep ground, lights)
+  var toRemove = [];
+  scene.traverse(function(obj) {
+    if (obj.isMesh || obj.isLine || obj.isSprite) {
+      if (obj !== ground) toRemove.push(obj);
+    }
+  });
+  toRemove.forEach(function(o) { scene.remove(o); });
+
+  var features = (projectData && projectData.features) || [];
+  var plantCount = 0;
+
+  // Compute centroid from property boundary for coordinate origin
+  for (var i = 0; i < features.length; i++) {
+    var f = features[i];
+    if (f.properties && f.properties.element_type === 'property_boundary') {
+      var ring = f.geometry.coordinates[0];
+      originLat = ring.reduce(function(s, c) { return s + c[1]; }, 0) / ring.length;
+      originLng = ring.reduce(function(s, c) { return s + c[0]; }, 0) / ring.length;
+      scene.add(makeBoundaryOutline(ring));
+      break;
+    }
+  }
+
+  // Collect all plant features
+  var allBounds = [];
+
+  for (var i = 0; i < features.length; i++) {
+    var f = features[i];
+    var props = f.properties || {};
+    var coords = f.geometry && f.geometry.coordinates;
+    if (!coords) continue;
+
+    if (props.element_type === 'plant') {
+      var xz = latLngToXZ(coords[1], coords[0]);
+      var x = xz[0], z = xz[1];
+      var hM  = parseFloat(props.mature_height_meters || props.height_m || 1.5);
+      var rM  = parseFloat(props.spacing_meters || 1.0) / 2;
+      var pType = props.plant_type || 'herb';
+      var layer = getFoodForestLayer(pType, hM);
+      var col   = FF_COLORS[layer] || 0x558b2f;
+      var name  = props.common_name || '';
+
+      if (pType === 'tree') {
+        scene.add(makeTrunk(x, z, hM, rM, col));
+        scene.add(makeCanopyBall(x, z, hM, rM, col));
+      } else if (pType === 'shrub') {
+        scene.add(makeTrunk(x, z, Math.min(hM, 1.5), rM * 0.7, col));
+        scene.add(makeCanopyBall(x, z, Math.min(hM, 1.5), rM, col));
+      } else if (pType === 'groundcover') {
+        scene.add(makeGroundcoverDisk(x, z, rM, col));
+      } else if (pType === 'vine') {
+        scene.add(makeVinePost(x, z, hM, col));
+      } else {
+        scene.add(makeHerbMound(x, z, rM, col));
+      }
+
+      allBounds.push([x, z]);
+      plantCount++;
+
+    } else if (props.element_type === 'structure') {
+      var xz = latLngToXZ(coords[1], coords[0]);
+      var sizeM = parseFloat(props.size_m || 2);
+      var hM = STRUCT_HEIGHTS[props.struct_id] || 2.0;
+      scene.add(makeStructure(xz[0], xz[1], sizeM, hM, props.struct_id || ''));
+      allBounds.push([xz[0], xz[1]]);
+    }
+  }
+
+  // Auto-fit camera to scene bounds
+  if (allBounds.length > 0) {
+    var minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    allBounds.forEach(function(p) {
+      minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]);
+      minZ = Math.min(minZ, p[1]); maxZ = Math.max(maxZ, p[1]);
+    });
+    var cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
+    var span = Math.max(maxX - minX, maxZ - minZ, 20);
+    controls.target.set(cx, 0, cz);
+    camera.position.set(cx, span * 0.7, cz + span * 0.9);
+    camera.lookAt(cx, 0, cz);
+    controls.update();
+
+    // Update shadow camera to cover scene
+    var half = span * 0.6 + 20;
+    sunLight.shadow.camera.left = sunLight.shadow.camera.bottom = -half;
+    sunLight.shadow.camera.right = sunLight.shadow.camera.top = half;
+    sunLight.shadow.camera.updateProjectionMatrix();
+  }
+
+  document.getElementById('plant-count').textContent =
+    plantCount + ' plant' + (plantCount !== 1 ? 's' : '') + ' in scene';
+}
+
+// ── Resize handler ────────────────────────────────────────────────────────────
+function onResize() {
+  var w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', onResize);
+onResize();
+
+// ── Render loop ───────────────────────────────────────────────────────────────
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+// ── QWebChannel bridge — receives project data from Python ───────────────────
+if (typeof QWebChannel !== 'undefined' && typeof qt !== 'undefined') {
+  new QWebChannel(qt.webChannelTransport, function(channel) {
+    window.bridge = channel.objects.bridge;
+    if (bridge && bridge.get3DProjectData) {
+      bridge.get3DProjectData(function(jsonStr) {
+        try { populateScene(JSON.parse(jsonStr)); }
+        catch(e) { console.error('3D parse error:', e); }
+      });
+    }
+  });
+} else {
+  // Standalone / preview mode with demo data
+  populateScene(null);
+}
+
+// Exposed for Python to call directly via runJavaScript
+function loadProjectData(jsonStr) {
+  try { populateScene(JSON.parse(jsonStr)); }
+  catch(e) { console.error('loadProjectData error:', e); }
+}
+</script>
+</body>
+</html>

@@ -238,6 +238,10 @@ class MainWindow(QMainWindow):
         self.toolbar.snap_toggled.connect(
             lambda on: self.map_widget.set_snap_enabled(on)
         )
+        self.toolbar.food_forest_panel_requested.connect(
+            self.map_widget.toggle_food_forest_panel
+        )
+        self.toolbar.view3d_requested.connect(self._on_view3d_requested)
 
         # Plant panel → map (plant placement + colour)
         self.plant_panel.place_plant_requested.connect(self._enter_plant_mode)
@@ -311,6 +315,11 @@ class MainWindow(QMainWindow):
         if dlg.exec():
             self._load_api_keys()
 
+    def _on_view3d_requested(self):
+        from src.view3d import View3DDialog
+        dlg = View3DDialog(self._project, self)
+        dlg.show()
+
     def _on_plant_color_changed(self, plant_id: int, hex_color: str):
         """Update all existing markers for this plant on the map."""
         self.map_widget.update_marker_color(plant_id, hex_color)
@@ -375,9 +384,9 @@ class MainWindow(QMainWindow):
     def _enter_plant_mode(self, plant_id: int, common_name: str,
                           quantity: int = 1):
         self._current_mode = 'plant'
-        spacing_m, plant_type, custom_color = self._plant_info(plant_id)
+        spacing_m, plant_type, custom_color, height_m = self._plant_info(plant_id)
         self.map_widget.set_mode('plant', plant_id, common_name, spacing_m,
-                                 plant_type, quantity, custom_color)
+                                 plant_type, quantity, custom_color, height_m)
         self.toolbar.enter_plant_mode()
         qty_str = f" ×{quantity}" if quantity > 1 else ""
         self._set_mode_label(
@@ -385,8 +394,8 @@ class MainWindow(QMainWindow):
         )
 
     @staticmethod
-    def _plant_info(plant_id: int) -> tuple[float, str, str]:
-        """Return (spacing_meters, plant_type, marker_color) for a plant."""
+    def _plant_info(plant_id: int) -> tuple[float, str, str, float]:
+        """Return (spacing_meters, plant_type, marker_color, mature_height_m)."""
         try:
             from src.db.plants import get_plant
             p = get_plant(plant_id)
@@ -395,10 +404,11 @@ class MainWindow(QMainWindow):
                     float(p.get("spacing_meters") or 1.0),
                     p.get("plant_type") or "herb",
                     p.get("marker_color") or "",
+                    float(p.get("mature_height_meters") or 0.0),
                 )
         except Exception:
             pass
-        return 1.0, "herb", ""
+        return 1.0, "herb", "", 0.0
 
     def _enter_measure_mode(self):
         self._current_mode = 'measure'
