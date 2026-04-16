@@ -21,7 +21,11 @@ CREATE TABLE IF NOT EXISTS plants (
     soil_ph_min REAL,
     soil_ph_max REAL,
     perennial_or_annual TEXT,       -- perennial | annual | biennial
-    marker_color TEXT               -- custom hex colour for map markers (e.g. '#ff5722')
+    marker_color TEXT,              -- custom hex colour for map markers (e.g. '#ff5722')
+    -- Growth data (schema v5) for succession/timeline planning
+    growth_rate TEXT,               -- slow | moderate | fast
+    years_to_maturity INTEGER,      -- estimated years to reach mature size
+    growth_curve TEXT               -- fast_early | steady | slow_start
 );
 
 CREATE TABLE IF NOT EXISTS companion_friends (

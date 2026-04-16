@@ -19,7 +19,7 @@ _DB_PATH     = os.path.join(_DATA_DIR, "permadesign.db")
 _SCHEMA_PATH = os.path.join(_HERE, "schema.sql")
 
 # Current schema version — bump when adding columns/tables
-_SCHEMA_VERSION = 4
+_SCHEMA_VERSION = 5
 
 
 def _ensure_data_dir():
@@ -86,6 +86,21 @@ def _migrate_to_v4(conn: sqlite3.Connection):
     conn.commit()
 
 
+def _migrate_to_v5(conn: sqlite3.Connection):
+    """Add growth rate, years to maturity, and growth curve for succession planning."""
+    new_columns = [
+        ("growth_rate", "TEXT"),            # slow | moderate | fast
+        ("years_to_maturity", "INTEGER"),   # estimated years to reach mature size
+        ("growth_curve", "TEXT"),           # fast_early | steady | slow_start
+    ]
+    for col_name, col_def in new_columns:
+        try:
+            conn.execute(f"ALTER TABLE plants ADD COLUMN {col_name} {col_def}")
+        except sqlite3.OperationalError:
+            pass  # column already present
+    conn.commit()
+
+
 def init_db() -> None:
     """
     Create tables (if absent), run migrations, and seed the plant catalogue
@@ -107,7 +122,10 @@ def init_db() -> None:
         if current_version < 4:
             _migrate_to_v4(conn)
 
-        # Add parent_id to guilds if missing (v5)
+        if current_version < 5:
+            _migrate_to_v5(conn)
+
+        # Add parent_id to guilds if missing
         try:
             conn.execute("ALTER TABLE guilds ADD COLUMN parent_id INTEGER REFERENCES guilds(id) ON DELETE SET NULL")
             conn.commit()
@@ -117,6 +135,10 @@ def init_db() -> None:
         # Reseed if empty, count is low, or schema was just upgraded
         count = conn.execute("SELECT COUNT(*) FROM plants").fetchone()[0]
         needs_reseed = (count < 52) or (current_version < 2 and count > 0)
+
+        # Update growth data from plants.json for existing plants (v5+)
+        if current_version < 5:
+            _update_growth_data(conn)
 
         if needs_reseed:
             conn.execute("DELETE FROM plants")
@@ -195,6 +217,9 @@ def _import_plants_json(conn: sqlite3.Connection) -> None:
             p.get("soil_ph_min"),
             p.get("soil_ph_max"),
             p.get("perennial_annual") or p.get("perennial_or_annual", ""),
+            p.get("growth_rate"),
+            p.get("years_to_maturity"),
+            p.get("growth_curve"),
         )
 
         conn.execute(
@@ -206,8 +231,9 @@ def _import_plants_json(conn: sqlite3.Connection) -> None:
                 spacing_meters, mature_height_meters, notes,
                 bloom_period, fruit_period, native_to_alberta,
                 edible_parts, deciduous_evergreen,
-                soil_ph_min, soil_ph_max, perennial_or_annual)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                soil_ph_min, soil_ph_max, perennial_or_annual,
+                growth_rate, years_to_maturity, growth_curve)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             row,
         )
         added += 1
@@ -228,6 +254,35 @@ def _import_plants_json(conn: sqlite3.Connection) -> None:
                 )
 
     if added:
+        conn.commit()
+
+
+def _update_growth_data(conn: sqlite3.Connection) -> None:
+    """Update existing plants with growth_rate/years_to_maturity/growth_curve from plants.json."""
+    json_path = os.path.join(_DATA_DIR, "plants.json")
+    if not os.path.exists(json_path):
+        return
+
+    import json
+    with open(json_path, "r", encoding="utf-8") as f:
+        entries = json.load(f)
+
+    updated = 0
+    for p in entries:
+        name = p.get("common_name", "")
+        gr = p.get("growth_rate")
+        ytm = p.get("years_to_maturity")
+        gc = p.get("growth_curve")
+        if not name or not any([gr, ytm, gc]):
+            continue
+        conn.execute(
+            """UPDATE plants SET growth_rate = ?, years_to_maturity = ?, growth_curve = ?
+               WHERE common_name = ? AND (growth_rate IS NULL OR years_to_maturity IS NULL)""",
+            (gr, ytm, gc, name),
+        )
+        updated += conn.total_changes
+
+    if updated:
         conn.commit()
 
 
