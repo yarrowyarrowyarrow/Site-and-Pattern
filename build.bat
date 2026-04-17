@@ -4,7 +4,7 @@ REM Run from the project root in a terminal. Produces dist\PermaDesign\PermaDesi
 
 echo Installing / updating build dependencies...
 python -m pip install --upgrade pip
-python -m pip install PyQt6>=6.6.0 "PyQt6-WebEngine>=6.6.0" pyinstaller
+python -m pip install "PyQt6>=6.6.0" "PyQt6-WebEngine>=6.6.0" pyinstaller
 
 echo.
 echo Building PermaDesign...
