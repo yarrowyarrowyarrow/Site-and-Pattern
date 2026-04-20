@@ -1,22 +1,45 @@
 """
-plants.py — SQLite database access layer for the plant catalogue.
+plants.py -- SQLite database access layer for the plant catalogue.
 
-The database file is created automatically on first use at data/permadesign.db
-(relative to the project root).  If the plants table is empty the seed data
-is loaded automatically.
+The database file is stored in a user-writable location:
+  Windows : %APPDATA%/PermaDesign/permadesign.db
+  macOS   : ~/Library/Application Support/PermaDesign/permadesign.db
+  Linux   : $XDG_DATA_HOME/PermaDesign/permadesign.db  (default ~/.local/share/)
+
+On first run the DB is created, schema applied, and seed data loaded.
+If an old DB exists next to the executable it is migrated automatically.
 """
 
 import os
+import pathlib
+import shutil
 import sqlite3
+import sys
 from typing import Optional
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
 _HERE        = os.path.dirname(os.path.abspath(__file__))
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(_HERE))
-_DATA_DIR    = os.path.join(_PROJECT_ROOT, "data")
-_DB_PATH     = os.path.join(_DATA_DIR, "permadesign.db")
 _SCHEMA_PATH = os.path.join(_HERE, "schema.sql")
+
+
+def _user_data_dir() -> pathlib.Path:
+    """Return a writable per-user data directory regardless of install location."""
+    if sys.platform == "win32":
+        base = os.environ.get("APPDATA") or pathlib.Path.home()
+    elif sys.platform == "darwin":
+        base = pathlib.Path.home() / "Library" / "Application Support"
+    else:
+        base = os.environ.get("XDG_DATA_HOME") or (pathlib.Path.home() / ".local" / "share")
+    return pathlib.Path(base) / "PermaDesign"
+
+
+_DATA_DIR = str(_user_data_dir())
+_DB_PATH  = str(_user_data_dir() / "permadesign.db")
+
+# Legacy path (DB next to exe / project root) — used only for one-time migration
+_PROJECT_ROOT    = os.path.dirname(os.path.dirname(_HERE))
+_LEGACY_DB_PATH  = os.path.join(_PROJECT_ROOT, "data", "permadesign.db")
 
 # Current schema version — bump when adding columns/tables
 _SCHEMA_VERSION = 5
@@ -24,6 +47,15 @@ _SCHEMA_VERSION = 5
 
 def _ensure_data_dir():
     os.makedirs(_DATA_DIR, exist_ok=True)
+
+
+def _migrate_legacy_db():
+    """One-time copy of the old project-root DB to the new user-data location."""
+    if os.path.exists(_LEGACY_DB_PATH) and not os.path.exists(_DB_PATH):
+        try:
+            shutil.copy2(_LEGACY_DB_PATH, _DB_PATH)
+        except OSError:
+            pass
 
 
 # ── Connection (per-call; SQLite is fast for local files) ─────────────────────
@@ -107,6 +139,7 @@ def init_db() -> None:
     if it is empty or outdated.  Safe to call multiple times.
     """
     _ensure_data_dir()
+    _migrate_legacy_db()
     conn = get_connection()
     try:
         # Apply full schema (creates any missing tables)

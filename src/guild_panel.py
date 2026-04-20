@@ -352,6 +352,11 @@ class GuildPanel(QWidget):
         member_btns.addWidget(self.remove_member_btn)
         layout.addLayout(member_btns)
 
+        # Wire once here — NOT inside _on_guild_selected to avoid accumulation
+        self.members_list.currentItemChanged.connect(
+            lambda c, p: self.remove_member_btn.setEnabled(c is not None)
+        )
+
         # Action buttons
         btn_row2 = QHBoxLayout()
         self.place_btn = QPushButton("Place on Map")
@@ -479,9 +484,6 @@ class GuildPanel(QWidget):
             self.members_list.addItem(item)
 
         self.remove_member_btn.setEnabled(False)
-        self.members_list.currentItemChanged.connect(
-            lambda c, p: self.remove_member_btn.setEnabled(c is not None)
-        )
 
     def _get_selected_guild_id(self):
         item = self.guild_tree.currentItem()
@@ -496,7 +498,11 @@ class GuildPanel(QWidget):
         if not ok:
             desc = ""
 
-        guild_id = guilds.create_guild(name.strip(), desc.strip(), None)
+        try:
+            guilds.create_guild(name.strip(), desc.strip(), None)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Could not create guild:\n{e}")
+            return
         self._refresh_guild_list()
 
     def _on_delete_guild(self):
@@ -507,21 +513,34 @@ class GuildPanel(QWidget):
             self, "Delete Guild", "Delete this guild from the library?"
         )
         if reply == QMessageBox.StandardButton.Yes:
-            guilds.delete_guild(guild_id)
+            try:
+                guilds.delete_guild(guild_id)
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Could not delete guild:\n{e}")
+                return
             self._refresh_guild_list()
 
     def _on_duplicate_guild(self):
         guild_id = self._get_selected_guild_id()
-        if guild_id:
+        if not guild_id:
+            return
+        try:
             guilds.duplicate_guild(guild_id)
-            self._refresh_guild_list()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Could not duplicate guild:\n{e}")
+            return
+        self._refresh_guild_list()
 
     def _on_add_variation(self):
         """Create a variation of the selected top-level guild."""
         guild_id = self._get_selected_guild_id()
         if guild_id is None:
             return
-        new_id = guilds.duplicate_guild(guild_id, as_variation=True)
+        try:
+            new_id = guilds.duplicate_guild(guild_id, as_variation=True)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Could not create variation:\n{e}")
+            return
         if new_id:
             self._refresh_guild_list()
 
@@ -533,10 +552,18 @@ class GuildPanel(QWidget):
         dialog = AddMemberDialog(self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             data = dialog.get_data()
-            guilds.add_guild_member(
-                guild_id, data["plant_id"], data["role"],
-                data["offset_x"], data["offset_y"]
-            )
+            if data["plant_id"] is None:
+                QMessageBox.warning(self, "No Plant Selected",
+                                    "Please select a plant before adding a member.")
+                return
+            try:
+                guilds.add_guild_member(
+                    guild_id, data["plant_id"], data["role"],
+                    data["offset_x"], data["offset_y"]
+                )
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Could not add member:\n{e}")
+                return
             # Re-select to refresh members
             self._on_guild_selected(self.guild_tree.currentItem(), None)
 
@@ -545,7 +572,11 @@ class GuildPanel(QWidget):
         if item is None:
             return
         member_id = item.data(Qt.ItemDataRole.UserRole)
-        guilds.remove_guild_member(member_id)
+        try:
+            guilds.remove_guild_member(member_id)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Could not remove member:\n{e}")
+            return
         self._on_guild_selected(self.guild_tree.currentItem(), None)
 
     def _on_place(self):

@@ -17,49 +17,57 @@ def _get_plant_by_name(common_name):
 
 def get_all_guilds(top_level_only=True):
     conn = get_connection()
-    sql = ("SELECT g.*, p.common_name AS center_plant_name "
-           "FROM guilds g LEFT JOIN plants p ON g.center_plant_id = p.id ")
-    if top_level_only:
-        sql += "WHERE g.parent_id IS NULL "
-    sql += "ORDER BY g.name"
-    rows = conn.execute(sql).fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
+    try:
+        sql = ("SELECT g.*, p.common_name AS center_plant_name "
+               "FROM guilds g LEFT JOIN plants p ON g.center_plant_id = p.id ")
+        if top_level_only:
+            sql += "WHERE g.parent_id IS NULL "
+        sql += "ORDER BY g.name"
+        rows = conn.execute(sql).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
 
 
 def get_guild_by_id(guild_id):
     conn = get_connection()
-    row = conn.execute(
-        "SELECT g.*, p.common_name AS center_plant_name "
-        "FROM guilds g LEFT JOIN plants p ON g.center_plant_id = p.id "
-        "WHERE g.id = ?",
-        (guild_id,),
-    ).fetchone()
-    if not row:
+    try:
+        row = conn.execute(
+            "SELECT g.*, p.common_name AS center_plant_name "
+            "FROM guilds g LEFT JOIN plants p ON g.center_plant_id = p.id "
+            "WHERE g.id = ?",
+            (guild_id,),
+        ).fetchone()
+        if not row:
+            return None
+        guild = dict(row)
+        members = conn.execute(
+            "SELECT gm.*, p.common_name, p.plant_type "
+            "FROM guild_members gm JOIN plants p ON gm.plant_id = p.id "
+            "WHERE gm.guild_id = ? ORDER BY gm.id",
+            (guild_id,),
+        ).fetchall()
+        guild["members"] = [dict(m) for m in members]
+        return guild
+    finally:
         conn.close()
-        return None
-    guild = dict(row)
-    members = conn.execute(
-        "SELECT gm.*, p.common_name, p.plant_type "
-        "FROM guild_members gm JOIN plants p ON gm.plant_id = p.id "
-        "WHERE gm.guild_id = ? ORDER BY gm.id",
-        (guild_id,),
-    ).fetchall()
-    guild["members"] = [dict(m) for m in members]
-    conn.close()
-    return guild
 
 
 def create_guild(name, description, center_plant_id, parent_id=None):
     conn = get_connection()
-    cur = conn.execute(
-        "INSERT INTO guilds (name, description, center_plant_id, parent_id) VALUES (?, ?, ?, ?)",
-        (name, description, center_plant_id, parent_id),
-    )
-    guild_id = cur.lastrowid
-    conn.commit()
-    conn.close()
-    return guild_id
+    try:
+        cur = conn.execute(
+            "INSERT INTO guilds (name, description, center_plant_id, parent_id) VALUES (?, ?, ?, ?)",
+            (name, description, center_plant_id, parent_id),
+        )
+        guild_id = cur.lastrowid
+        conn.commit()
+        return guild_id
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def get_guild_children(parent_id):
@@ -78,55 +86,77 @@ def get_guild_children(parent_id):
 
 
 def add_guild_member(guild_id, plant_id, role, offset_x, offset_y, notes=""):
+    if plant_id is None:
+        raise ValueError("plant_id must not be None")
     conn = get_connection()
-    conn.execute(
-        "INSERT INTO guild_members (guild_id, plant_id, role, offset_x, offset_y, notes) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (guild_id, plant_id, role, offset_x, offset_y, notes),
-    )
-    conn.execute(
-        "UPDATE guilds SET modified = datetime('now') WHERE id = ?", (guild_id,)
-    )
-    conn.commit()
-    conn.close()
+    try:
+        conn.execute(
+            "INSERT INTO guild_members (guild_id, plant_id, role, offset_x, offset_y, notes) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (guild_id, plant_id, role, offset_x, offset_y, notes),
+        )
+        conn.execute(
+            "UPDATE guilds SET modified = datetime('now') WHERE id = ?", (guild_id,)
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def remove_guild_member(member_id):
     conn = get_connection()
-    row = conn.execute(
-        "SELECT guild_id FROM guild_members WHERE id = ?", (member_id,)
-    ).fetchone()
-    conn.execute("DELETE FROM guild_members WHERE id = ?", (member_id,))
-    if row:
-        conn.execute(
-            "UPDATE guilds SET modified = datetime('now') WHERE id = ?",
-            (row["guild_id"],),
-        )
-    conn.commit()
-    conn.close()
+    try:
+        row = conn.execute(
+            "SELECT guild_id FROM guild_members WHERE id = ?", (member_id,)
+        ).fetchone()
+        conn.execute("DELETE FROM guild_members WHERE id = ?", (member_id,))
+        if row:
+            conn.execute(
+                "UPDATE guilds SET modified = datetime('now') WHERE id = ?",
+                (row["guild_id"],),
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def delete_guild(guild_id):
     conn = get_connection()
-    conn.execute("DELETE FROM guild_members WHERE guild_id = ?", (guild_id,))
-    conn.execute("DELETE FROM guilds WHERE id = ?", (guild_id,))
-    conn.commit()
-    conn.close()
+    try:
+        conn.execute("DELETE FROM guild_members WHERE guild_id = ?", (guild_id,))
+        conn.execute("DELETE FROM guilds WHERE id = ?", (guild_id,))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def update_guild(guild_id, name=None, description=None):
     conn = get_connection()
-    if name is not None:
-        conn.execute("UPDATE guilds SET name = ? WHERE id = ?", (name, guild_id))
-    if description is not None:
+    try:
+        if name is not None:
+            conn.execute("UPDATE guilds SET name = ? WHERE id = ?", (name, guild_id))
+        if description is not None:
+            conn.execute(
+                "UPDATE guilds SET description = ? WHERE id = ?", (description, guild_id)
+            )
         conn.execute(
-            "UPDATE guilds SET description = ? WHERE id = ?", (description, guild_id)
+            "UPDATE guilds SET modified = datetime('now') WHERE id = ?", (guild_id,)
         )
-    conn.execute(
-        "UPDATE guilds SET modified = datetime('now') WHERE id = ?", (guild_id,)
-    )
-    conn.commit()
-    conn.close()
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def duplicate_guild(guild_id, as_variation=False):
