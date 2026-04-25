@@ -714,9 +714,9 @@ class MainWindow(QMainWindow):
                 plant = get_plant(pid)
                 if plant:
                     de = (plant.get("deciduous_evergreen") or "").lower()
-                    if de in ("evergreen",):
+                    if de == "evergreen":
                         plant_cache[pid] = "evergreen"
-                    elif de in ("deciduous",):
+                    elif de in ("deciduous", "semi-evergreen"):
                         plant_cache[pid] = "deciduous"
                     else:
                         # Herbs, groundcover, etc. treated as herbaceous

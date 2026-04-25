@@ -41,6 +41,9 @@ _DB_PATH  = str(_user_data_dir() / "permadesign.db")
 _PROJECT_ROOT    = os.path.dirname(os.path.dirname(_HERE))
 _LEGACY_DB_PATH  = os.path.join(_PROJECT_ROOT, "data", "permadesign.db")
 
+# Bundled plant data lives in the project's data/ directory
+_BUNDLED_DATA_DIR = os.path.join(_PROJECT_ROOT, "data")
+
 # Current schema version — bump when adding columns/tables
 _SCHEMA_VERSION = 5
 
@@ -203,9 +206,16 @@ def init_db() -> None:
 
 
 def _import_plants_json(conn: sqlite3.Connection) -> None:
-    """Import plants from data/plants.json, skipping any that already exist by name."""
-    json_path = os.path.join(_DATA_DIR, "plants.json")
-    if not os.path.exists(json_path):
+    """Import plants from data/plants_master.json (or plants.json), skipping duplicates."""
+    for candidate in (
+        os.path.join(_BUNDLED_DATA_DIR, "plants_master.json"),
+        os.path.join(_BUNDLED_DATA_DIR, "plants.json"),
+        os.path.join(_DATA_DIR, "plants.json"),
+    ):
+        if os.path.exists(candidate):
+            json_path = candidate
+            break
+    else:
         return
 
     import json
@@ -229,6 +239,12 @@ def _import_plants_json(conn: sqlite3.Connection) -> None:
         if isinstance(uses, list):
             uses = ", ".join(uses)
 
+        ytm_raw = p.get("years_to_maturity")
+        try:
+            ytm = int(ytm_raw) if ytm_raw is not None else None
+        except (ValueError, TypeError):
+            ytm = None
+
         row = (
             p.get("common_name", ""),
             p.get("scientific_name", ""),
@@ -251,8 +267,9 @@ def _import_plants_json(conn: sqlite3.Connection) -> None:
             p.get("soil_ph_max"),
             p.get("perennial_annual") or p.get("perennial_or_annual", ""),
             p.get("growth_rate"),
-            p.get("years_to_maturity"),
+            ytm,
             p.get("growth_curve"),
+            p.get("marker_color"),
         )
 
         conn.execute(
@@ -265,8 +282,9 @@ def _import_plants_json(conn: sqlite3.Connection) -> None:
                 bloom_period, fruit_period, native_to_alberta,
                 edible_parts, deciduous_evergreen,
                 soil_ph_min, soil_ph_max, perennial_or_annual,
-                growth_rate, years_to_maturity, growth_curve)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                growth_rate, years_to_maturity, growth_curve,
+                marker_color)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             row,
         )
         added += 1
@@ -291,9 +309,16 @@ def _import_plants_json(conn: sqlite3.Connection) -> None:
 
 
 def _update_growth_data(conn: sqlite3.Connection) -> None:
-    """Update existing plants with growth_rate/years_to_maturity/growth_curve from plants.json."""
-    json_path = os.path.join(_DATA_DIR, "plants.json")
-    if not os.path.exists(json_path):
+    """Update existing plants with growth_rate/years_to_maturity/growth_curve from plants_master.json."""
+    for candidate in (
+        os.path.join(_BUNDLED_DATA_DIR, "plants_master.json"),
+        os.path.join(_BUNDLED_DATA_DIR, "plants.json"),
+        os.path.join(_DATA_DIR, "plants.json"),
+    ):
+        if os.path.exists(candidate):
+            json_path = candidate
+            break
+    else:
         return
 
     import json

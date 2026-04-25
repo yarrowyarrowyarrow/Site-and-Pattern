@@ -25,6 +25,11 @@ _TYPE_COLORS: dict[str, str] = {
     "groundcover": "#c6a817",
     "vine":        "#00838f",
     "root":        "#6d4c41",
+    "grass":       "#aed581",
+    "sedge":       "#8d6e63",
+    "aquatic":     "#0288d1",
+    "rush":        "#78909c",
+    "fern":        "#26a69a",
 }
 
 _TYPE_LABELS: dict[str, str] = {
@@ -34,6 +39,11 @@ _TYPE_LABELS: dict[str, str] = {
     "groundcover": "Groundcover",
     "vine":        "Vine",
     "root":        "Root / Bulb",
+    "grass":       "Grass",
+    "sedge":       "Sedge",
+    "aquatic":     "Aquatic",
+    "rush":        "Rush",
+    "fern":        "Fern",
 }
 
 _SUN_LABELS: dict[str, str] = {
