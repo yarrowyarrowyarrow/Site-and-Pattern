@@ -220,10 +220,27 @@
   <script>
     // ── State ────────────────────────────────────────────────────────────────
     var map, osmLayer, satelliteLayer, drawnItems, drawControl;
-    var boundaryLayer     = null;
-    var boundaryLabels    = null;  // L.layerGroup of per-edge length markers
-    var boundaryAreaLabel = null;  // L.marker showing area at centroid
-    var boundaryAreaUnit  = 0;     // 0=m² 1=ha 2=acre 3=km²
+
+    // ── Multi-boundary state ─────────────────────────────────────────────────
+    // Each entry: {id, layer, labelsLayer, areaLabel, points, color, showLengths, showArea}
+    var boundaries      = [];
+    var boundaryAreaUnit = 0;          // 0=m² 1=ha 2=acre 3=km²
+    // Legacy single refs used only by setBoundaryVisible/clearAll redirects
+    var _legacyBoundaryLayer = null;   // unused sentinel
+
+    // Edit-mode state for boundary vertex dragging
+    var boundaryEditId      = null;    // id of boundary currently in edit mode
+    var boundaryEditHandles = [];      // draggable vertex handle markers
+    var boundaryBboxHandles = [];      // corner scale handle markers
+    var _bboxDragState      = null;    // {origPts, origBounds, cornerIdx, centerLat, centerLng}
+    var _polyDragState      = null;    // {startLat, startLng, origPts}
+
+    // Context menu element
+    var _ctxMenu = null;
+
+    // Zoom sensitivity (zoomDelta applied to map.options at runtime)
+    var _zoomSensitivity = 'fine';     // 'fine'|'normal'|'fast'|'coarse'
+
     var seasonOverlay     = null;  // NASA GIBS seasonal tile layer
     var measureVisible    = true;  // whether measure result is shown
     var plantMarkers  = {};   // id -> marker
@@ -258,6 +275,9 @@
     // Annotation state
     var annotations   = {};     // id -> {marker, text}
 
+    // Anchor placement preview marker (sun path / sector placement modes)
+    var _anchorPreviewMarker = null;
+
     // Polygon drawing state (manual mode)
     var drawingPolygon  = false;
     var polygonPoints   = [];
@@ -270,7 +290,10 @@
         center: [53.5461, -113.4938],
         zoom: 12,
         maxZoom: 22,
-        zoomControl: true
+        zoomControl: true,
+        zoomSnap: 0.1,
+        zoomDelta: 0.15,          // ~1.1× per scroll tick ("fine" default)
+        wheelPxPerZoomLevel: 60
       });
 
       osmLayer = L.tileLayer(
@@ -295,6 +318,26 @@
       map.on('click', onMapClick);
       map.on('mousemove', onMapMouseMove);
       map.on('dblclick', onMapDblClick);
+
+      // Right-click cancels anchor-placement modes; suppress native browser menu
+      map.on('contextmenu', function(e) {
+        if (currentMode === 'sun_anchor' || currentMode === 'sector_anchor') {
+          L.DomEvent.stop(e);
+          setMode('none');
+          if (bridge) bridge.onAnchorCancelled(currentMode);
+        }
+      });
+
+      // Escape exits edit mode / cancels in-progress polygon
+      document.addEventListener('keydown', function(ev) {
+        if (ev.key === 'Escape') {
+          if (boundaryEditId !== null) {
+            exitBoundaryEditMode();
+          } else if (currentMode !== 'none') {
+            setMode('none');
+          }
+        }
+      });
 
       // Zoom-dependent label visibility
       map.on('zoomend', updateLabelVisibility);
@@ -348,6 +391,13 @@
         handleMeasureClick(lat, lng);
       } else if (currentMode === 'annotate') {
         handleAnnotateClick(lat, lng);
+      } else if (currentMode === 'sun_anchor') {
+        // Place sun-path anchor then render via Python callback
+        setMode('none');
+        if (bridge) bridge.onSunAnchorPlaced(lat, lng);
+      } else if (currentMode === 'sector_anchor') {
+        setMode('none');
+        if (bridge) bridge.onSectorAnchorPlaced(lat, lng);
       }
     }
 
@@ -367,6 +417,9 @@
       if (currentMode === 'contour' && contourPoints.length > 0) {
         updateContourPreview(e.latlng);
       }
+      if ((currentMode === 'sun_anchor' || currentMode === 'sector_anchor') && _anchorPreviewMarker) {
+        _anchorPreviewMarker.setLatLng(e.latlng);
+      }
     }
 
     function onMapDblClick(e) {
@@ -381,6 +434,109 @@
         finishContour();
       }
     }
+
+    // ── Boundary color palette ────────────────────────────────────────────────
+    var BOUNDARY_COLORS = {
+      'green':      { stroke: '#4caf50', fill: '#4caf50' },
+      'red':        { stroke: '#f44336', fill: '#f44336' },
+      'blue':       { stroke: '#2196f3', fill: '#2196f3' },
+      'lightblue':  { stroke: '#03a9f4', fill: '#03a9f4' },
+      'yellow':     { stroke: '#f9a825', fill: '#f9a825' },
+      'orange':     { stroke: '#ff9800', fill: '#ff9800' },
+      'purple':     { stroke: '#9c27b0', fill: '#9c27b0' },
+      'magenta':    { stroke: '#e91e63', fill: '#e91e63' },
+      'brown':      { stroke: '#795548', fill: '#795548' },
+      'black':      { stroke: '#212121', fill: '#212121' },
+      'lightgreen': { stroke: '#8bc34a', fill: '#8bc34a' },
+      'grey':       { stroke: '#9e9e9e', fill: '#9e9e9e' }
+    };
+    var _nextBoundaryColor = (function() {
+      var _colorNames = Object.keys(BOUNDARY_COLORS);
+      var _idx = 0;
+      return function() { return _colorNames[_idx++ % _colorNames.length]; };
+    })();
+
+    // ── Context menu ─────────────────────────────────────────────────────────
+    function showContextMenu(x, y, items) {
+      hideContextMenu();
+      var div = document.createElement('div');
+      div.id = '_pd_ctx_menu';
+      div.style.cssText = [
+        'position:fixed', 'left:' + x + 'px', 'top:' + y + 'px',
+        'background:#263238', 'border:1px solid #546e7a', 'border-radius:4px',
+        'box-shadow:0 2px 10px rgba(0,0,0,0.55)', 'z-index:9999',
+        'min-width:170px', 'padding:4px 0', 'font-size:13px', 'color:#eceff1',
+        'user-select:none'
+      ].join(';');
+
+      items.forEach(function(item) {
+        if (item === 'sep') {
+          var sep = document.createElement('div');
+          sep.style.cssText = 'height:1px;background:#546e7a;margin:3px 0';
+          div.appendChild(sep);
+          return;
+        }
+        var btn = document.createElement('div');
+        btn.style.cssText = 'padding:6px 14px;cursor:pointer;display:flex;align-items:center;gap:8px';
+        if (item.checked !== undefined) {
+          var chk = document.createElement('span');
+          chk.textContent = item.checked ? '✓' : '  ';
+          chk.style.cssText = 'font-size:11px;width:12px;display:inline-block;color:#80cbc4';
+          btn.appendChild(chk);
+        }
+        var lbl = document.createElement('span');
+        lbl.textContent = item.label;
+        btn.appendChild(lbl);
+        btn.addEventListener('mouseover', function() { btn.style.background = '#37474f'; });
+        btn.addEventListener('mouseout',  function() { btn.style.background = ''; });
+        btn.addEventListener('click', function(ev) {
+          ev.stopPropagation();
+          hideContextMenu();
+          item.action();
+        });
+        div.appendChild(btn);
+      });
+
+      // Color swatches row for boundaries
+      if (items._colorTarget !== undefined) {
+        var swatchDiv = document.createElement('div');
+        swatchDiv.style.cssText = 'padding:6px 14px;display:flex;flex-wrap:wrap;gap:5px;';
+        Object.keys(BOUNDARY_COLORS).forEach(function(name) {
+          var sw = document.createElement('div');
+          sw.title = name;
+          sw.style.cssText = 'width:16px;height:16px;border-radius:3px;cursor:pointer;border:2px solid transparent;';
+          sw.style.background = BOUNDARY_COLORS[name].stroke;
+          if (name === items._colorTarget) sw.style.border = '2px solid #fff';
+          sw.addEventListener('click', function(ev) {
+            ev.stopPropagation();
+            hideContextMenu();
+            items._colorAction(name);
+          });
+          swatchDiv.appendChild(sw);
+        });
+        div.appendChild(swatchDiv);
+      }
+
+      document.body.appendChild(div);
+      _ctxMenu = div;
+      setTimeout(function() {
+        document.addEventListener('click', hideContextMenu, { once: true, capture: true });
+      }, 50);
+    }
+
+    function hideContextMenu() {
+      if (_ctxMenu && _ctxMenu.parentNode) {
+        _ctxMenu.parentNode.removeChild(_ctxMenu);
+      }
+      _ctxMenu = null;
+    }
+
+    // Suppress native browser context menu everywhere in the map container
+    document.addEventListener('contextmenu', function(e) {
+      if (e.target.closest && e.target.closest('#map')) {
+        e.preventDefault();
+      }
+    });
 
     // ── Boundary drawing (manual polygon) ────────────────────────────────────
     function handleBoundaryClick(lat, lng) {
@@ -437,26 +593,8 @@
     }
 
     function addBoundaryLengthLabels(points) {
-      if (boundaryLabels) { map.removeLayer(boundaryLabels); }
-      boundaryLabels = L.layerGroup().addTo(map);
-      var n = points.length;
-      for (var i = 0; i < n; i++) {
-        var a = points[i];
-        var b = points[(i + 1) % n];
-        var midLat = (a[0] + b[0]) / 2;
-        var midLng = (a[1] + b[1]) / 2;
-        var dist = haversineMeters(a, b);
-        var label = dist >= 10 ? Math.round(dist) + ' m' : dist.toFixed(1) + ' m';
-        L.marker([midLat, midLng], {
-          icon: L.divIcon({
-            className: '',
-            html: '<div style="background:rgba(255,255,255,0.88);border:1px solid #66bb6a;border-radius:3px;padding:1px 6px;font-size:11px;font-weight:600;color:#2e7d32;white-space:nowrap;pointer-events:none;">' + escH(label) + '</div>',
-            iconSize: null,
-            iconAnchor: null
-          }),
-          interactive: false
-        }).addTo(boundaryLabels);
-      }
+      // Legacy stub — used only during loadBoundary; real implementation is _makeBoundaryLengthLabels
+      return _makeBoundaryLengthLabels(points, BOUNDARY_COLORS['green'].stroke);
     }
 
     function calcPolygonAreaM2(points) {
@@ -492,26 +630,12 @@
     }
 
     function addBoundaryAreaLabel(points) {
-      if (boundaryAreaLabel) { map.removeLayer(boundaryAreaLabel); boundaryAreaLabel = null; }
-      if (!points || points.length < 3) return;
-      var areaM2 = calcPolygonAreaM2(points);
-      var clat = 0, clng = 0;
-      for (var i = 0; i < points.length; i++) { clat += points[i][0]; clng += points[i][1]; }
-      clat /= points.length; clng /= points.length;
+      // Legacy stub — used only during loadBoundary
+      return _makeBoundaryAreaLabel(points);
+    }
 
-      function makeIcon() {
-        var txt = _fmtArea(areaM2, boundaryAreaUnit);
-        return L.divIcon({
-          className: '',
-          html: '<div style="background:rgba(255,255,255,0.92);border:1.5px solid #388e3c;border-radius:4px;padding:3px 9px;font-size:12px;font-weight:700;color:#1b5e20;white-space:nowrap;cursor:pointer;user-select:none;">⬡ ' + escH(txt) + '</div>',
-          iconSize: null, iconAnchor: null
-        });
-      }
-      boundaryAreaLabel = L.marker([clat, clng], { icon: makeIcon(), interactive: true }).addTo(map);
-      boundaryAreaLabel.on('click', function() {
-        boundaryAreaUnit = (boundaryAreaUnit + 1) % 4;
-        boundaryAreaLabel.setIcon(makeIcon());
-      });
+    function _makeBoundaryId() {
+      return 'b' + Date.now() + Math.random().toString(36).slice(2, 6);
     }
 
     function finishBoundaryPolygon() {
@@ -522,29 +646,371 @@
       if (polygonPreview)  { map.removeLayer(polygonPreview);  polygonPreview  = null; }
       drawnItems.clearLayers();
 
-      // Remove existing boundary and labels
-      if (boundaryLayer) { map.removeLayer(boundaryLayer); }
-
-      boundaryLayer = L.polygon(polygonPoints, {
-        color: '#66bb6a', weight: 2,
-        fillColor: '#388e3c', fillOpacity: 0.15
-      }).addTo(map);
-
-      addBoundaryLengthLabels(polygonPoints);
-      addBoundaryAreaLabel(polygonPoints);
+      var bid   = _makeBoundaryId();
+      var color = _nextBoundaryColor();
+      _addBoundaryToMap(bid, polygonPoints, color, true, true);
 
       // Zoom to fit the drawn boundary
-      map.fitBounds(boundaryLayer.getBounds(), { padding: [30, 30] });
+      var bEntry = _getBoundaryEntry(bid);
+      if (bEntry && bEntry.layer) {
+        map.fitBounds(bEntry.layer.getBounds(), { padding: [30, 30] });
+      }
 
       // Notify Python
       if (bridge) {
-        bridge.onBoundaryComplete(JSON.stringify(polygonPoints));
+        bridge.onBoundaryComplete(bid, JSON.stringify(polygonPoints), color);
       }
 
       drawingPolygon = false;
       polygonPoints  = [];
       setMode('none');
     }
+
+    // ── Multi-boundary helpers ────────────────────────────────────────────────
+
+    function _getBoundaryEntry(id) {
+      for (var i = 0; i < boundaries.length; i++) {
+        if (boundaries[i].id === id) return boundaries[i];
+      }
+      return null;
+    }
+
+    function _addBoundaryToMap(id, pts, colorName, showLengths, showArea) {
+      var c = BOUNDARY_COLORS[colorName] || BOUNDARY_COLORS['green'];
+      var layer = L.polygon(pts, {
+        color: c.stroke, weight: 2,
+        fillColor: c.fill, fillOpacity: 0.18,
+        interactive: true
+      }).addTo(map);
+
+      var labelsLayer = showLengths ? _makeBoundaryLengthLabels(pts, c.stroke) : null;
+      var areaLabel   = showArea   ? _makeBoundaryAreaLabel(pts)              : null;
+
+      var entry = {
+        id: id, layer: layer, labelsLayer: labelsLayer, areaLabel: areaLabel,
+        points: pts, color: colorName, showLengths: showLengths, showArea: showArea
+      };
+      boundaries.push(entry);
+
+      // Click → enter edit mode
+      layer.on('click', function(e) {
+        L.DomEvent.stop(e);
+        if (currentMode === 'none') {
+          enterBoundaryEditMode(id);
+        }
+      });
+
+      // Right-click → context menu
+      layer.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        _showBoundaryContextMenu(e.originalEvent.clientX, e.originalEvent.clientY, id);
+      });
+
+      return entry;
+    }
+
+    function _removeBoundaryEntry(id) {
+      for (var i = 0; i < boundaries.length; i++) {
+        if (boundaries[i].id === id) {
+          var b = boundaries[i];
+          map.removeLayer(b.layer);
+          if (b.labelsLayer) map.removeLayer(b.labelsLayer);
+          if (b.areaLabel)   map.removeLayer(b.areaLabel);
+          boundaries.splice(i, 1);
+          return;
+        }
+      }
+    }
+
+    function _refreshBoundaryLabels(id) {
+      var b = _getBoundaryEntry(id);
+      if (!b) return;
+      var c = BOUNDARY_COLORS[b.color] || BOUNDARY_COLORS['green'];
+      if (b.labelsLayer) { map.removeLayer(b.labelsLayer); b.labelsLayer = null; }
+      if (b.areaLabel)   { map.removeLayer(b.areaLabel);   b.areaLabel   = null; }
+      if (b.showLengths) b.labelsLayer = _makeBoundaryLengthLabels(b.points, c.stroke);
+      if (b.showArea)    b.areaLabel   = _makeBoundaryAreaLabel(b.points);
+    }
+
+    function _showBoundaryContextMenu(x, y, id) {
+      var b = _getBoundaryEntry(id);
+      if (!b) return;
+      var items = [
+        {
+          label: 'Edge Labels',
+          checked: b.showLengths,
+          action: function() {
+            b.showLengths = !b.showLengths;
+            _refreshBoundaryLabels(id);
+            if (bridge) bridge.onBoundaryPropsChanged(id, b.color, b.showLengths, b.showArea);
+          }
+        },
+        {
+          label: 'Area Label',
+          checked: b.showArea,
+          action: function() {
+            b.showArea = !b.showArea;
+            _refreshBoundaryLabels(id);
+            if (bridge) bridge.onBoundaryPropsChanged(id, b.color, b.showLengths, b.showArea);
+          }
+        },
+        'sep',
+        { label: 'Color:', action: function() {} }
+      ];
+      items._colorTarget = b.color;
+      items._colorAction = function(newColor) {
+        _setBoundaryColor(id, newColor);
+      };
+      items.push('sep');
+      items.push({
+        label: 'Remove Boundary',
+        action: function() {
+          if (boundaryEditId === id) exitBoundaryEditMode();
+          _removeBoundaryEntry(id);
+          if (bridge) bridge.onBoundaryRemoved(id);
+        }
+      });
+      showContextMenu(x, y, items);
+    }
+
+    function _setBoundaryColor(id, newColor) {
+      var b = _getBoundaryEntry(id);
+      if (!b) return;
+      b.color = newColor;
+      var c = BOUNDARY_COLORS[newColor] || BOUNDARY_COLORS['green'];
+      b.layer.setStyle({ color: c.stroke, fillColor: c.fill });
+      _refreshBoundaryLabels(id);
+      if (bridge) bridge.onBoundaryPropsChanged(id, newColor, b.showLengths, b.showArea);
+    }
+
+    // ── Boundary label factories (use fresh layer groups each time) ───────────
+    function _makeBoundaryLengthLabels(points, strokeColor) {
+      var lg = L.layerGroup().addTo(map);
+      var n = points.length;
+      for (var i = 0; i < n; i++) {
+        var a = points[i];
+        var b = points[(i + 1) % n];
+        var midLat = (a[0] + b[0]) / 2;
+        var midLng = (a[1] + b[1]) / 2;
+        var dist = haversineMeters(a, b);
+        var label = dist >= 10 ? Math.round(dist) + ' m' : dist.toFixed(1) + ' m';
+        L.marker([midLat, midLng], {
+          icon: L.divIcon({
+            className: '',
+            html: '<div style="background:rgba(255,255,255,0.88);border:1px solid ' + escH(strokeColor) + ';border-radius:3px;padding:1px 6px;font-size:11px;font-weight:600;color:#1b5e20;white-space:nowrap;pointer-events:none;">' + escH(label) + '</div>',
+            iconSize: null, iconAnchor: null
+          }),
+          interactive: false
+        }).addTo(lg);
+      }
+      return lg;
+    }
+
+    function _makeBoundaryAreaLabel(points) {
+      if (!points || points.length < 3) return null;
+      var areaM2 = calcPolygonAreaM2(points);
+      var clat = 0, clng = 0;
+      for (var i = 0; i < points.length; i++) { clat += points[i][0]; clng += points[i][1]; }
+      clat /= points.length; clng /= points.length;
+
+      var txt = _fmtArea(areaM2, boundaryAreaUnit);
+      var icon = L.divIcon({
+        className: '',
+        html: '<div style="background:rgba(255,255,255,0.92);border:1.5px solid #388e3c;border-radius:4px;padding:3px 9px;font-size:12px;font-weight:700;color:#1b5e20;white-space:nowrap;cursor:pointer;user-select:none;">⬡ ' + escH(txt) + '</div>',
+        iconSize: null, iconAnchor: null
+      });
+      var marker = L.marker([clat, clng], { icon: icon, interactive: true }).addTo(map);
+      marker.on('click', function() {
+        boundaryAreaUnit = (boundaryAreaUnit + 1) % 4;
+        // Refresh all area labels
+        boundaries.forEach(function(b) {
+          if (b.showArea && b.areaLabel) {
+            map.removeLayer(b.areaLabel);
+            b.areaLabel = _makeBoundaryAreaLabel(b.points);
+          }
+        });
+      });
+      return marker;
+    }
+
+    // ── Boundary edit mode ────────────────────────────────────────────────────
+
+    function enterBoundaryEditMode(id) {
+      if (boundaryEditId !== null) exitBoundaryEditMode();
+      var b = _getBoundaryEntry(id);
+      if (!b) return;
+      boundaryEditId = id;
+      map.getContainer().style.cursor = 'move';
+
+      // Vertex handles
+      b.points.forEach(function(pt, idx) {
+        var h = L.circleMarker([pt[0], pt[1]], {
+          radius: 7, color: '#fff', fillColor: '#1565c0', fillOpacity: 1,
+          weight: 2, interactive: true, draggable: false
+        }).addTo(map);
+        _makeVertexDraggable(h, id, idx);
+        boundaryEditHandles.push(h);
+      });
+
+      // Bounding-box corner handles for uniform scale
+      _refreshBboxHandles(id);
+
+      // Drag on polygon interior → translate whole polygon
+      b.layer.on('mousedown', _onBoundaryPolyMousedown);
+    }
+
+    function _makeVertexDraggable(marker, bid, idx) {
+      var isDragging = false, startX, startY, startLatLng;
+
+      marker.on('mousedown', function(e) {
+        L.DomEvent.stop(e);
+        isDragging = true;
+        startLatLng = marker.getLatLng();
+        map.dragging.disable();
+
+        function onMove(ev) {
+          if (!isDragging) return;
+          var ll = map.containerPointToLatLng([ev.clientX, ev.clientY]);
+          marker.setLatLng(ll);
+          var b = _getBoundaryEntry(bid);
+          if (!b) return;
+          b.points[idx] = [ll.lat, ll.lng];
+          b.layer.setLatLngs(b.points);
+          _refreshBoundaryLabels(bid);
+          _refreshBboxHandles(bid);
+        }
+        function onUp() {
+          isDragging = false;
+          map.dragging.enable();
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          var b = _getBoundaryEntry(bid);
+          if (b && bridge) bridge.onBoundaryGeomChanged(bid, JSON.stringify(b.points));
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+    }
+
+    function _refreshBboxHandles(id) {
+      boundaryBboxHandles.forEach(function(h) { map.removeLayer(h); });
+      boundaryBboxHandles = [];
+      var b = _getBoundaryEntry(id);
+      if (!b) return;
+
+      var lats = b.points.map(function(p) { return p[0]; });
+      var lngs = b.points.map(function(p) { return p[1]; });
+      var minLat = Math.min.apply(null, lats), maxLat = Math.max.apply(null, lats);
+      var minLng = Math.min.apply(null, lngs), maxLng = Math.max.apply(null, lngs);
+      var corners = [
+        [minLat, minLng], [minLat, maxLng],
+        [maxLat, maxLng], [maxLat, minLng]
+      ];
+      var cLat = (minLat + maxLat) / 2, cLng = (minLng + maxLng) / 2;
+
+      corners.forEach(function(corner, ci) {
+        var h = L.circleMarker(corner, {
+          radius: 6, color: '#fff', fillColor: '#f57c00', fillOpacity: 1,
+          weight: 2, interactive: true
+        }).addTo(map);
+        _makeScaleDraggable(h, id, ci, cLat, cLng, minLat, maxLat, minLng, maxLng);
+        boundaryBboxHandles.push(h);
+      });
+    }
+
+    function _makeScaleDraggable(handle, bid, cornerIdx, cLat, cLng, minLat, maxLat, minLng, maxLng) {
+      handle.on('mousedown', function(e) {
+        L.DomEvent.stop(e);
+        var b = _getBoundaryEntry(bid);
+        if (!b) return;
+        var origPts = b.points.map(function(p) { return [p[0], p[1]]; });
+        var origDiag = Math.sqrt(Math.pow(maxLat - minLat, 2) + Math.pow(maxLng - minLng, 2));
+        map.dragging.disable();
+
+        function onMove(ev) {
+          var ll = map.containerPointToLatLng([ev.clientX, ev.clientY]);
+          var dx = ll.lat - cLat, dy = ll.lng - cLng;
+          var newDiag = Math.sqrt(dx * dx + dy * dy) * 2;
+          var scale = origDiag > 0 ? newDiag / origDiag : 1;
+          var b2 = _getBoundaryEntry(bid);
+          if (!b2) return;
+          b2.points = origPts.map(function(p) {
+            return [cLat + (p[0] - cLat) * scale, cLng + (p[1] - cLng) * scale];
+          });
+          b2.layer.setLatLngs(b2.points);
+          _refreshBoundaryLabels(bid);
+          _refreshBboxHandles(bid);
+          // Reposition vertex handles
+          boundaryEditHandles.forEach(function(vh, vi) {
+            if (b2.points[vi]) vh.setLatLng(b2.points[vi]);
+          });
+        }
+        function onUp() {
+          map.dragging.enable();
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          var b3 = _getBoundaryEntry(bid);
+          if (b3 && bridge) bridge.onBoundaryGeomChanged(bid, JSON.stringify(b3.points));
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+    }
+
+    function _onBoundaryPolyMousedown(e) {
+      if (e.originalEvent.button !== 0) return;
+      L.DomEvent.stop(e);
+      var bid = boundaryEditId;
+      var startLL = e.latlng;
+      var b = _getBoundaryEntry(bid);
+      if (!b) return;
+      var origPts = b.points.map(function(p) { return [p[0], p[1]]; });
+      map.dragging.disable();
+
+      function onMove(ev) {
+        var ll = map.containerPointToLatLng(map.mouseEventToContainerPoint(ev));
+        var dLat = ll.lat - startLL.lat;
+        var dLng = ll.lng - startLL.lng;
+        var b2 = _getBoundaryEntry(bid);
+        if (!b2) return;
+        b2.points = origPts.map(function(p) { return [p[0] + dLat, p[1] + dLng]; });
+        b2.layer.setLatLngs(b2.points);
+        _refreshBoundaryLabels(bid);
+        boundaryEditHandles.forEach(function(vh, vi) {
+          if (b2.points[vi]) vh.setLatLng(b2.points[vi]);
+        });
+        _refreshBboxHandles(bid);
+      }
+      function onUp() {
+        map.dragging.enable();
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        var b3 = _getBoundaryEntry(bid);
+        if (b3 && bridge) bridge.onBoundaryGeomChanged(bid, JSON.stringify(b3.points));
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    }
+
+    function exitBoundaryEditMode() {
+      if (boundaryEditId === null) return;
+      var b = _getBoundaryEntry(boundaryEditId);
+      if (b) b.layer.off('mousedown', _onBoundaryPolyMousedown);
+      boundaryEditHandles.forEach(function(h) { map.removeLayer(h); });
+      boundaryEditHandles = [];
+      boundaryBboxHandles.forEach(function(h) { map.removeLayer(h); });
+      boundaryBboxHandles = [];
+      boundaryEditId = null;
+      map.getContainer().style.cursor = '';
+    }
+
+    // Click on map background while in boundary-edit → exit edit mode
+    map.on('click', function(e) {
+      if (boundaryEditId !== null && currentMode === 'none') {
+        // Check that click is not on a handle (they stop propagation)
+        exitBoundaryEditMode();
+      }
+    });
 
     // ── HTML escaping (guard against stored-XSS via project files and
     //     Permapeople imports). Every user/file-sourced string that is
@@ -1631,6 +2097,14 @@
           contourPoints = [];
           map.getContainer().style.cursor = 'crosshair';
           break;
+        case 'sun_anchor':
+        case 'sector_anchor':
+          map.getContainer().style.cursor = 'crosshair';
+          _anchorPreviewMarker = L.circleMarker(map.getCenter(), {
+            radius: 7, color: '#ffb300', fillColor: '#fff', fillOpacity: 0.8,
+            weight: 2, interactive: false, dashArray: '4 3'
+          }).addTo(map);
+          break;
         default:
           map.getContainer().style.cursor = '';
           if (polygonPolyline) { map.removeLayer(polygonPolyline); polygonPolyline = null; }
@@ -1638,6 +2112,7 @@
           if (hedgerowPreview) { map.removeLayer(hedgerowPreview); hedgerowPreview = null; }
           if (shapePreview)    { map.removeLayer(shapePreview);    shapePreview    = null; }
           if (contourPreview)  { map.removeLayer(contourPreview);  contourPreview  = null; }
+          if (_anchorPreviewMarker) { map.removeLayer(_anchorPreviewMarker); _anchorPreviewMarker = null; }
           drawingPolygon = false;
           polygonPoints  = [];
           hedgerowPoints = [];
@@ -1659,15 +2134,17 @@
     }
 
     function setBoundaryVisible(visible) {
-      if (boundaryLayer) {
-        if (visible) boundaryLayer.addTo(map); else map.removeLayer(boundaryLayer);
-      }
-      if (boundaryLabels) {
-        if (visible) boundaryLabels.addTo(map); else map.removeLayer(boundaryLabels);
-      }
-      if (boundaryAreaLabel) {
-        if (visible) boundaryAreaLabel.addTo(map); else map.removeLayer(boundaryAreaLabel);
-      }
+      boundaries.forEach(function(b) {
+        if (visible) {
+          b.layer.addTo(map);
+          if (b.labelsLayer) b.labelsLayer.addTo(map);
+          if (b.areaLabel)   b.areaLabel.addTo(map);
+        } else {
+          map.removeLayer(b.layer);
+          if (b.labelsLayer) map.removeLayer(b.labelsLayer);
+          if (b.areaLabel)   map.removeLayer(b.areaLabel);
+        }
+      });
     }
 
     function setZonesVisible(visible) {
@@ -1686,9 +2163,13 @@
 
     // ── Project load/clear ────────────────────────────────────────────────────
     function clearAll() {
-      if (boundaryLayer)     { map.removeLayer(boundaryLayer);     boundaryLayer     = null; }
-      if (boundaryLabels)    { map.removeLayer(boundaryLabels);    boundaryLabels    = null; }
-      if (boundaryAreaLabel) { map.removeLayer(boundaryAreaLabel); boundaryAreaLabel = null; }
+      if (boundaryEditId !== null) exitBoundaryEditMode();
+      boundaries.forEach(function(b) {
+        map.removeLayer(b.layer);
+        if (b.labelsLayer) map.removeLayer(b.labelsLayer);
+        if (b.areaLabel)   map.removeLayer(b.areaLabel);
+      });
+      boundaries = [];
       zoneCircles.forEach(function(c) { map.removeLayer(c); });
       zoneCircles = [];
       plantLayerGroup.clearLayers();
@@ -1710,16 +2191,23 @@
       drawnItems.clearLayers();
     }
 
-    function loadBoundary(coordsJson) {
-      var coords = JSON.parse(coordsJson);
-      if (boundaryLayer) { map.removeLayer(boundaryLayer); }
-      boundaryLayer = L.polygon(coords, {
-        color: '#66bb6a', weight: 2,
-        fillColor: '#388e3c', fillOpacity: 0.15
-      }).addTo(map);
-      addBoundaryLengthLabels(coords);
-      addBoundaryAreaLabel(coords);
-      map.fitBounds(boundaryLayer.getBounds());
+    function loadBoundary(dataJson) {
+      // dataJson: JSON string of {id, points, color, showLengths, showArea}
+      // or legacy: JSON string of [[lat,lng],...] (old single-boundary format)
+      var data = JSON.parse(dataJson);
+      var pts, bid, color, showLengths, showArea;
+      if (Array.isArray(data)) {
+        // Legacy format
+        pts = data; bid = _makeBoundaryId(); color = 'green';
+        showLengths = true; showArea = true;
+      } else {
+        pts = data.points; bid = data.id || _makeBoundaryId();
+        color = data.color || 'green';
+        showLengths = data.showLengths !== false;
+        showArea    = data.showArea !== false;
+      }
+      var entry = _addBoundaryToMap(bid, pts, color, showLengths, showArea);
+      map.fitBounds(entry.layer.getBounds());
     }
 
     function loadPlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor) {
@@ -1738,15 +2226,41 @@
       setMode('none');
     }
 
-    // ── A1: Sun path / shadow overlay ──────────────────────────────────────
-    var sunPathLayer = null;  // L.layerGroup
+    // ── Zoom sensitivity ──────────────────────────────────────────────────────
+    var _ZOOM_DELTAS = { fine: 0.15, normal: 0.33, fast: 0.58, coarse: 1.0 };
+    function setZoomSensitivity(level) {
+      _zoomSensitivity = level;
+      var delta = _ZOOM_DELTAS[level] || 0.15;
+      map.options.zoomDelta = delta;
+      map.options.zoomSnap  = Math.min(delta, 0.5);
+    }
 
-    function drawSunPath(data) {
+    // ── A1: Sun path / shadow overlay ──────────────────────────────────────
+    var sunPathLayer   = null;   // L.layerGroup
+    var _sunPathData   = null;   // last drawSunPath payload (for redraw on zoom)
+    var _sunPathAnchor = null;   // {lat, lng}
+
+    function _viewportRadiusMetres(lat) {
+      // Returns a radius that is ~22% of the shorter viewport dimension, in metres.
+      // This keeps the arc legible at any zoom level.
+      var size = map.getSize();
+      var pxRadius = Math.min(size.x, size.y) * 0.22;
+      // Metres per pixel at current zoom and latitude
+      var metersPerPx = 40075016.686 * Math.cos(lat * Math.PI / 180) / Math.pow(2, map.getZoom() + 8);
+      return pxRadius * metersPerPx;
+    }
+
+    function drawSunPath(data, anchorLat, anchorLng) {
       clearSunPath();
+      _sunPathData = data;
       sunPathLayer = L.layerGroup().addTo(map);
-      var center = map.getCenter();
-      var lat = center.lat;
-      var lng = center.lng;
+
+      var lat = (anchorLat !== undefined) ? anchorLat
+              : (_sunPathAnchor ? _sunPathAnchor.lat : map.getCenter().lat);
+      var lng = (anchorLng !== undefined) ? anchorLng
+              : (_sunPathAnchor ? _sunPathAnchor.lng : map.getCenter().lng);
+      if (anchorLat !== undefined) _sunPathAnchor = { lat: lat, lng: lng };
+
       var positions = data.positions || [];  // [{altitude, azimuth, hour}, ...]
       var dateLabel = data.date_label || '';
       var showShadows = data.show_shadows !== false;
@@ -1756,8 +2270,13 @@
 
       if (positions.length < 2) return;
 
-      // Draw sun arc as a single polyline (not individual dots) for performance
-      var arcRadius = data.arc_radius || 80; // metres from centre for arc display
+      // Arc radius: viewport-relative so arc is always legible regardless of zoom.
+      // The user-supplied arc_radius (metres) is still honoured if explicitly provided
+      // and larger than the auto value, giving them override capability.
+      var autoRadius = _viewportRadiusMetres(lat);
+      var arcRadius  = data.arc_radius ? Math.max(data.arc_radius, autoRadius * 0.5)
+                                       : autoRadius;
+
       var arcPoints = [];
       var positionMap = {}; // index -> {ptLat, ptLng, pos}
 
@@ -1871,16 +2390,26 @@
         });
       }
 
-      // Centre marker
-      L.circleMarker([lat, lng], {
-        radius: 4, color: '#ff6f00', fillColor: '#ffb300', fillOpacity: 1,
-        weight: 2, interactive: false
+      // Centre marker — interactive for right-click remove
+      var centerMk = L.circleMarker([lat, lng], {
+        radius: 6, color: '#ff6f00', fillColor: '#ffb300', fillOpacity: 1,
+        weight: 2, interactive: true
       }).addTo(sunPathLayer);
+      centerMk.bindTooltip('Sun path · right-click to remove', { sticky: true, offset: [10, 0] });
+      centerMk.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        showContextMenu(e.originalEvent.clientX, e.originalEvent.clientY, [
+          { label: 'Remove Sun Path', action: function() {
+            clearSunPath();
+            if (bridge) bridge.onSunPathRemoved();
+          }}
+        ]);
+      });
 
       // Title label
       var titleIcon = L.divIcon({
         className: 'measure-label',
-        html: '☀ ' + dateLabel,
+        html: '☀ ' + escH(dateLabel),
         iconSize: [0, 0],
         iconAnchor: [0, 24]
       });
@@ -1889,73 +2418,239 @@
 
     function clearSunPath() {
       if (sunPathLayer) { map.removeLayer(sunPathLayer); sunPathLayer = null; }
+      _sunPathData   = null;
+      _sunPathAnchor = null;
     }
 
     // ── A2: Sector analysis wedges ──────────────────────────────────────────
-    var sectorLayers = [];  // array — each "Add Sectors" call pushes a new layer group
+    // Each group: {id, layer, centerMk, rotateMk, resizeMk, lat, lng, radiusM,
+    //              rotationDeg, sectorsData, selected}
+    var sectorGroups = [];
 
-    function drawSectors(data) {
-      var sectorLayer = L.layerGroup().addTo(map);
-      sectorLayers.push(sectorLayer);
-      var center = map.getCenter();
-      var lat = center.lat;
-      var lng = center.lng;
-      var sectors = data.sectors || [];
-      var radiusM = data.radius_m || 80;
+    function _makeSectorId() {
+      return 's' + Date.now() + Math.random().toString(36).slice(2, 6);
+    }
 
-      sectors.forEach(function(sec) {
-        var azimuth = sec.azimuth || 0;     // centre of wedge, degrees from N
-        var spread  = sec.spread || 45;     // total wedge width in degrees
+    function _buildSectorWedges(group) {
+      // Remove old content but keep the group layer
+      group.layer.clearLayers();
+      var lat = group.lat, lng = group.lng;
+      var radiusM = group.radiusM;
+      var rotDeg  = group.rotationDeg || 0;
+
+      group.sectorsData.forEach(function(sec) {
+        var azimuth = (sec.azimuth || 0) + rotDeg;
+        var spread  = sec.spread || 45;
         var color   = sec.color || '#ff9800';
         var name    = sec.name || 'Sector';
 
         var startAngle = azimuth - spread / 2;
         var endAngle   = azimuth + spread / 2;
-
-        // Build polygon points for the wedge
-        var pts = [[lat, lng]]; // centre
         var steps = Math.max(12, Math.round(spread / 3));
+
+        var pts = [[lat, lng]];
         for (var i = 0; i <= steps; i++) {
           var angle = (startAngle + (endAngle - startAngle) * i / steps) * Math.PI / 180;
           var dLat = radiusM * Math.cos(angle) / 111320;
           var dLng = radiusM * Math.sin(angle) / (111320 * Math.cos(lat * Math.PI / 180));
           pts.push([lat + dLat, lng + dLng]);
         }
-        pts.push([lat, lng]); // close back to centre
+        pts.push([lat, lng]);
 
-        var wedge = L.polygon(pts, {
-          color: color,
-          weight: 1.5,
-          fillColor: color,
-          fillOpacity: 0.15,
-          interactive: false
-        }).addTo(sectorLayer);
+        L.polygon(pts, {
+          color: color, weight: 1.5, fillColor: color,
+          fillOpacity: 0.15, interactive: false
+        }).addTo(group.layer);
 
-        // Label at the outer midpoint
         var midAngle = azimuth * Math.PI / 180;
         var labelDist = radiusM * 0.65;
         var labelLat = lat + labelDist * Math.cos(midAngle) / 111320;
         var labelLng = lng + labelDist * Math.sin(midAngle) / (111320 * Math.cos(lat * Math.PI / 180));
+        L.marker([labelLat, labelLng], {
+          icon: L.divIcon({
+            className: 'structure-label',
+            html: '<span style="color:' + escH(color) + ';font-size:11px;font-weight:bold">' + escH(name) + '</span>',
+            iconSize: [0, 0], iconAnchor: [0, 8]
+          }),
+          interactive: false
+        }).addTo(group.layer);
+      });
+    }
 
-        var labelIcon = L.divIcon({
-          className: 'structure-label',
-          html: '<span style="color:' + color + ';font-size:11px;font-weight:bold">' + name + '</span>',
-          iconSize: [0, 0],
-          iconAnchor: [0, 8]
-        });
-        L.marker([labelLat, labelLng], { icon: labelIcon, interactive: false }).addTo(sectorLayer);
+    function _positionSectorHandles(group) {
+      if (!group.centerMk) return;
+      group.centerMk.setLatLng([group.lat, group.lng]);
+      if (group.rotateMk) {
+        // Rotation handle: north of center at 110% of radius
+        var rLat = group.lat + group.radiusM * 1.1 / 111320;
+        group.rotateMk.setLatLng([rLat, group.lng]);
+      }
+      if (group.resizeMk) {
+        // Resize handle: east of center at the outer radius
+        var angle90 = 90 * Math.PI / 180;
+        var rsLat = group.lat + group.radiusM * Math.cos(angle90) / 111320;
+        var rsLng = group.lng + group.radiusM * Math.sin(angle90) / (111320 * Math.cos(group.lat * Math.PI / 180));
+        group.resizeMk.setLatLng([rsLat, rsLng]);
+      }
+    }
+
+    function drawSectors(data, anchorLat, anchorLng) {
+      var lat = (anchorLat !== undefined) ? anchorLat : map.getCenter().lat;
+      var lng = (anchorLng !== undefined) ? anchorLng : map.getCenter().lng;
+      var sectors = data.sectors || [];
+      var radiusM = data.radius_m || 80;
+      var sid = _makeSectorId();
+
+      var group = {
+        id: sid, lat: lat, lng: lng, radiusM: radiusM,
+        rotationDeg: 0, sectorsData: sectors,
+        layer: L.layerGroup().addTo(map),
+        centerMk: null, rotateMk: null, resizeMk: null, selected: false
+      };
+      sectorGroups.push(group);
+
+      _buildSectorWedges(group);
+
+      // Centre drag marker
+      var centerMk = L.circleMarker([lat, lng], {
+        radius: 7, color: '#fff', fillColor: '#263238', fillOpacity: 0.9,
+        weight: 2, interactive: true
+      }).addTo(map);
+      centerMk.bindTooltip('Drag to move · right-click to remove', { sticky: true, offset: [10, 0] });
+      group.centerMk = centerMk;
+      _makeSectorMoveDraggable(centerMk, group);
+      centerMk.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        showContextMenu(e.originalEvent.clientX, e.originalEvent.clientY, [
+          { label: 'Remove Sector Group', action: function() {
+            _removeSectorGroup(sid);
+            if (bridge) bridge.onSectorGroupRemoved(sid);
+          }}
+        ]);
       });
 
-      // Centre marker
-      L.circleMarker([lat, lng], {
-        radius: 5, color: '#fff', fillColor: '#263238', fillOpacity: 0.8,
-        weight: 2, interactive: false
-      }).addTo(sectorLayer);
+      // Rotate handle (small circle connected by thin line, placed north of center)
+      var rLat = lat + radiusM * 1.1 / 111320;
+      var rotateMk = L.circleMarker([rLat, lng], {
+        radius: 5, color: '#fff', fillColor: '#9c27b0', fillOpacity: 1,
+        weight: 2, interactive: true
+      }).addTo(map);
+      rotateMk.bindTooltip('Drag to rotate', { sticky: true });
+      group.rotateMk = rotateMk;
+      _makeSectorRotateDraggable(rotateMk, group);
+
+      // Resize handle (east at outer radius)
+      var angle90 = 90 * Math.PI / 180;
+      var rsLat = lat + radiusM * Math.cos(angle90) / 111320;
+      var rsLng = lng + radiusM * Math.sin(angle90) / (111320 * Math.cos(lat * Math.PI / 180));
+      var resizeMk = L.circleMarker([rsLat, rsLng], {
+        radius: 5, color: '#fff', fillColor: '#f57c00', fillOpacity: 1,
+        weight: 2, interactive: true
+      }).addTo(map);
+      resizeMk.bindTooltip('Drag to resize', { sticky: true });
+      group.resizeMk = resizeMk;
+      _makeSectorResizeDraggable(resizeMk, group);
+
+      return sid;
+    }
+
+    function _makeSectorMoveDraggable(marker, group) {
+      marker.on('mousedown', function(e) {
+        if (e.originalEvent.button !== 0) return;
+        L.DomEvent.stop(e);
+        var startLL = e.latlng;
+        var origLat = group.lat, origLng = group.lng;
+        map.dragging.disable();
+        function onMove(ev) {
+          var ll = map.containerPointToLatLng(map.mouseEventToContainerPoint(ev));
+          group.lat = origLat + (ll.lat - startLL.lat);
+          group.lng = origLng + (ll.lng - startLL.lng);
+          _buildSectorWedges(group);
+          _positionSectorHandles(group);
+        }
+        function onUp() {
+          map.dragging.enable();
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          if (bridge) bridge.onSectorGroupMoved(group.id, group.lat, group.lng);
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+    }
+
+    function _makeSectorRotateDraggable(marker, group) {
+      marker.on('mousedown', function(e) {
+        if (e.originalEvent.button !== 0) return;
+        L.DomEvent.stop(e);
+        var origRot = group.rotationDeg;
+        var startAngle = Math.atan2(e.latlng.lng - group.lng, e.latlng.lat - group.lat) * 180 / Math.PI;
+        map.dragging.disable();
+        function onMove(ev) {
+          var ll = map.containerPointToLatLng(map.mouseEventToContainerPoint(ev));
+          var curAngle = Math.atan2(ll.lng - group.lng, ll.lat - group.lat) * 180 / Math.PI;
+          group.rotationDeg = origRot + (curAngle - startAngle);
+          _buildSectorWedges(group);
+          _positionSectorHandles(group);
+        }
+        function onUp() {
+          map.dragging.enable();
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          if (bridge) bridge.onSectorGroupRotated(group.id, group.rotationDeg);
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+    }
+
+    function _makeSectorResizeDraggable(marker, group) {
+      marker.on('mousedown', function(e) {
+        if (e.originalEvent.button !== 0) return;
+        L.DomEvent.stop(e);
+        var origRadius = group.radiusM;
+        map.dragging.disable();
+        function onMove(ev) {
+          var ll = map.containerPointToLatLng(map.mouseEventToContainerPoint(ev));
+          var dLat = (ll.lat - group.lat) * 111320;
+          var dLng = (ll.lng - group.lng) * 111320 * Math.cos(group.lat * Math.PI / 180);
+          group.radiusM = Math.max(10, Math.sqrt(dLat * dLat + dLng * dLng));
+          _buildSectorWedges(group);
+          _positionSectorHandles(group);
+        }
+        function onUp() {
+          map.dragging.enable();
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          if (bridge) bridge.onSectorGroupResized(group.id, group.radiusM);
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+    }
+
+    function _removeSectorGroup(sid) {
+      for (var i = 0; i < sectorGroups.length; i++) {
+        var g = sectorGroups[i];
+        if (g.id === sid) {
+          map.removeLayer(g.layer);
+          if (g.centerMk) map.removeLayer(g.centerMk);
+          if (g.rotateMk) map.removeLayer(g.rotateMk);
+          if (g.resizeMk) map.removeLayer(g.resizeMk);
+          sectorGroups.splice(i, 1);
+          return;
+        }
+      }
     }
 
     function clearSectors() {
-      sectorLayers.forEach(function(l) { map.removeLayer(l); });
-      sectorLayers = [];
+      sectorGroups.forEach(function(g) {
+        map.removeLayer(g.layer);
+        if (g.centerMk) map.removeLayer(g.centerMk);
+        if (g.rotateMk) map.removeLayer(g.rotateMk);
+        if (g.resizeMk) map.removeLayer(g.resizeMk);
+      });
+      sectorGroups = [];
     }
 
     // ── A3: Contour lines ───────────────────────────────────────────────────

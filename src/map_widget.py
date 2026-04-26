@@ -28,8 +28,17 @@ class MapBridge(QObject):
     # User clicked on the map (generic)
     map_clicked = pyqtSignal(float, float)         # lat, lng
 
-    # A property boundary polygon was completed
-    boundary_complete = pyqtSignal(list)           # list of [lat, lng] pairs
+    # A property boundary polygon was completed (id, points list, color name)
+    boundary_complete = pyqtSignal(str, list, str)
+
+    # Boundary geometry changed via vertex/move/scale drag (id, new points)
+    boundary_geom_changed = pyqtSignal(str, list)
+
+    # Boundary color or label toggles changed (id, color, showLengths, showArea)
+    boundary_props_changed = pyqtSignal(str, str, bool, bool)
+
+    # Boundary removed via context menu (id)
+    boundary_removed = pyqtSignal(str)
 
     # A plant was placed on the map
     plant_placed = pyqtSignal(int, str, float, float)  # id, name, lat, lng
@@ -67,6 +76,18 @@ class MapBridge(QObject):
     contour_complete = pyqtSignal(str, float, str)                  # pointsJson, elevation, color
     contour_removed = pyqtSignal(str, float, str)                   # pointsJson, elevation, color
 
+    # Sun path signals
+    sun_anchor_placed = pyqtSignal(float, float)   # lat, lng — user clicked anchor
+    sun_path_removed  = pyqtSignal()
+    anchor_cancelled  = pyqtSignal(str)            # mode that was cancelled
+
+    # Sector signals
+    sector_anchor_placed   = pyqtSignal(float, float)     # lat, lng
+    sector_group_removed   = pyqtSignal(str)              # sid
+    sector_group_moved     = pyqtSignal(str, float, float) # sid, lat, lng
+    sector_group_rotated   = pyqtSignal(str, float)        # sid, rotationDeg
+    sector_group_resized   = pyqtSignal(str, float)        # sid, radiusM
+
     # ── Slots (called from JS) ────────────────────────────────────────────────
 
     @pyqtSlot()
@@ -81,14 +102,63 @@ class MapBridge(QObject):
     def onMapClick(self, lat: float, lng: float):
         self.map_clicked.emit(lat, lng)
 
-    @pyqtSlot(str)
-    def onBoundaryComplete(self, coords_json: str):
+    @pyqtSlot(str, str, str)
+    def onBoundaryComplete(self, bid: str, coords_json: str, color: str):
         import json
         try:
             coords = json.loads(coords_json)
-            self.boundary_complete.emit(coords)
+            self.boundary_complete.emit(bid, coords, color)
         except Exception:
             pass
+
+    @pyqtSlot(str, str)
+    def onBoundaryGeomChanged(self, bid: str, coords_json: str):
+        import json
+        try:
+            coords = json.loads(coords_json)
+            self.boundary_geom_changed.emit(bid, coords)
+        except Exception:
+            pass
+
+    @pyqtSlot(str, str, bool, bool)
+    def onBoundaryPropsChanged(self, bid: str, color: str, show_lengths: bool, show_area: bool):
+        self.boundary_props_changed.emit(bid, color, show_lengths, show_area)
+
+    @pyqtSlot(str)
+    def onBoundaryRemoved(self, bid: str):
+        self.boundary_removed.emit(bid)
+
+    @pyqtSlot(float, float)
+    def onSunAnchorPlaced(self, lat: float, lng: float):
+        self.sun_anchor_placed.emit(lat, lng)
+
+    @pyqtSlot()
+    def onSunPathRemoved(self):
+        self.sun_path_removed.emit()
+
+    @pyqtSlot(str)
+    def onAnchorCancelled(self, mode: str):
+        self.anchor_cancelled.emit(mode)
+
+    @pyqtSlot(float, float)
+    def onSectorAnchorPlaced(self, lat: float, lng: float):
+        self.sector_anchor_placed.emit(lat, lng)
+
+    @pyqtSlot(str)
+    def onSectorGroupRemoved(self, sid: str):
+        self.sector_group_removed.emit(sid)
+
+    @pyqtSlot(str, float, float)
+    def onSectorGroupMoved(self, sid: str, lat: float, lng: float):
+        self.sector_group_moved.emit(sid, lat, lng)
+
+    @pyqtSlot(str, float)
+    def onSectorGroupRotated(self, sid: str, rotation_deg: float):
+        self.sector_group_rotated.emit(sid, rotation_deg)
+
+    @pyqtSlot(str, float)
+    def onSectorGroupResized(self, sid: str, radius_m: float):
+        self.sector_group_resized.emit(sid, radius_m)
 
     @pyqtSlot(int, str, float, float)
     def onPlantPlaced(self, plant_id: int, common_name: str, lat: float, lng: float):
@@ -240,9 +310,10 @@ class MapWidget(QWebEngineView):
         v = 'true' if visible else 'false'
         self.run_js(f"setPlantsVisible({v});")
 
-    def load_boundary(self, coords: list):
+    def load_boundary(self, boundary_data: dict):
+        """Load a boundary from a saved project. boundary_data has id/points/color/showLengths/showArea."""
         import json
-        self.run_js(f"loadBoundary({json.dumps(json.dumps(coords))});")
+        self.run_js(f"loadBoundary({json.dumps(json.dumps(boundary_data))});")
 
     def load_plant_marker(self, plant_id: int, common_name: str, lat: float, lng: float,
                           spacing_m: float = 1.0, plant_type: str = "herb",
@@ -331,21 +402,43 @@ class MapWidget(QWebEngineView):
 
     # ── Analysis overlay helpers (A1-A4) ──────────────────────────────────────
 
-    def draw_sun_path(self, data: dict):
+    def enter_sun_anchor_mode(self):
+        """Enter sun-path anchor placement mode (user clicks map to place)."""
+        self.run_js("setMode('sun_anchor');")
+
+    def enter_sector_anchor_mode(self):
+        """Enter sector anchor placement mode."""
+        self.run_js("setMode('sector_anchor');")
+
+    def draw_sun_path(self, data: dict, lat: float = None, lng: float = None):
         """Draw the sun path arc and shadow arrows on the map."""
         import json
-        self.run_js(f"drawSunPath(JSON.parse({json.dumps(json.dumps(data))}));")
+        if lat is not None and lng is not None:
+            self.run_js(
+                f"drawSunPath(JSON.parse({json.dumps(json.dumps(data))}), {lat}, {lng});"
+            )
+        else:
+            self.run_js(f"drawSunPath(JSON.parse({json.dumps(json.dumps(data))}));")
 
     def clear_sun_path(self):
         self.run_js("clearSunPath();")
 
-    def draw_sectors(self, data: dict):
-        """Draw sector analysis wedges on the map."""
+    def draw_sectors(self, data: dict, lat: float = None, lng: float = None):
+        """Draw sector analysis wedges on the map at the given anchor."""
         import json
-        self.run_js(f"drawSectors(JSON.parse({json.dumps(json.dumps(data))}));")
+        if lat is not None and lng is not None:
+            self.run_js(
+                f"drawSectors(JSON.parse({json.dumps(json.dumps(data))}), {lat}, {lng});"
+            )
+        else:
+            self.run_js(f"drawSectors(JSON.parse({json.dumps(json.dumps(data))}));")
 
     def clear_sectors(self):
         self.run_js("clearSectors();")
+
+    def set_zoom_sensitivity(self, level: str):
+        """Set zoom sensitivity: 'fine'|'normal'|'fast'|'coarse'."""
+        self.run_js(f"setZoomSensitivity({repr(level)});")
 
     def set_contour_mode(self, config: dict):
         """Enter contour drawing mode."""

@@ -2,7 +2,7 @@
 toolbar.py — Top toolbar for drawing tools, layer toggles, and project actions.
 """
 
-from PyQt6.QtWidgets import QToolBar, QLabel
+from PyQt6.QtWidgets import QToolBar, QLabel, QComboBox
 from PyQt6.QtGui import QAction, QActionGroup, QIcon
 from PyQt6.QtCore import pyqtSignal, Qt
 
@@ -33,6 +33,9 @@ class MainToolbar(QToolBar):
 
     # Settings
     settings_requested = pyqtSignal()
+
+    # Zoom sensitivity changed ('fine'|'normal'|'fast'|'coarse')
+    zoom_step_changed = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__("Tools", parent)
@@ -157,6 +160,21 @@ class MainToolbar(QToolBar):
         act_settings.triggered.connect(self.settings_requested)
         self.addAction(act_settings)
 
+        self.addSeparator()
+
+        # ── Zoom sensitivity ───────────────────────────────────────────────
+        self.addWidget(QLabel("  🔍 Zoom: "))
+        self._zoom_combo = QComboBox()
+        self._zoom_combo.addItems(["Fine (1.1×)", "Normal (1.26×)", "Fast (1.5×)", "Coarse (2×)"])
+        self._zoom_combo.setCurrentIndex(0)
+        self._zoom_combo.setToolTip(
+            "Scroll-wheel zoom sensitivity per tick\n"
+            "Fine ≈ 1.1× per scroll tick (smoothest)\n"
+            "Coarse ≈ 2× per tick (original Leaflet default)"
+        )
+        self._zoom_combo.currentIndexChanged.connect(self._on_zoom_combo_changed)
+        self.addWidget(self._zoom_combo)
+
     # ── Internal handlers ─────────────────────────────────────────────────────
 
     def _on_boundary_toggled(self, checked: bool):
@@ -199,6 +217,12 @@ class MainToolbar(QToolBar):
         self._act_measure.setChecked(False)
         self._act_annotate.setChecked(False)
         self.cancel_draw_requested.emit()
+
+    _ZOOM_LEVELS = ['fine', 'normal', 'fast', 'coarse']
+
+    def _on_zoom_combo_changed(self, idx: int):
+        level = self._ZOOM_LEVELS[idx] if 0 <= idx < len(self._ZOOM_LEVELS) else 'fine'
+        self.zoom_step_changed.emit(level)
 
     # ── Public helpers ────────────────────────────────────────────────────────
 
