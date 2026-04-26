@@ -284,7 +284,7 @@ def _build_calendar(doc: Document, plants: list[dict]):
 
 def main():
     project_root = Path(__file__).resolve().parent.parent
-    plants_path = project_root / "data" / "plants.json"
+    plants_path = project_root / "data" / "plants_master.json"
     output_path = project_root / "plant_data.docx"
 
     with open(plants_path, encoding="utf-8") as f:
