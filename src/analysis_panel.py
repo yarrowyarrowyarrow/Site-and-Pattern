@@ -119,7 +119,10 @@ class AnalysisPanel(QWidget):
         self._sun_arc_radius.setRange(20, 500)
         self._sun_arc_radius.setValue(80)
         self._sun_arc_radius.setSuffix(" m")
-        self._sun_arc_radius.setToolTip("Radius of the sun path arc display in metres")
+        self._sun_arc_radius.setToolTip(
+            "Minimum arc radius in metres. The arc auto-sizes to ~22% of the\n"
+            "viewport so it's always legible — this value sets a lower bound."
+        )
         arc_row.addWidget(self._sun_arc_radius)
         arc_row.addStretch()
         form.addRow(arc_row)
@@ -127,7 +130,8 @@ class AnalysisPanel(QWidget):
         layout.addLayout(form)
 
         btn_row = QHBoxLayout()
-        btn_show = QPushButton("Show Sun Path")
+        btn_show = QPushButton("Place Sun Path…")
+        btn_show.setToolTip("Click this then click the map to place the sun path anchor")
         btn_show.setStyleSheet(
             "QPushButton { background: #e65100; color: #fff3e0; border: 1px solid #ff6d00; "
             "border-radius: 4px; padding: 6px; font-weight: bold; }"
@@ -266,8 +270,8 @@ class AnalysisPanel(QWidget):
         layout.addLayout(radius_row)
 
         btn_row = QHBoxLayout()
-        btn_show = QPushButton("Add Sectors")
-        btn_show.setToolTip("Add selected sectors to map (accumulates — use Clear to reset)")
+        btn_show = QPushButton("Place Sectors…")
+        btn_show.setToolTip("Click then click the map to place sector anchor; drag centre to move, orange handle to resize, purple to rotate; right-click centre to remove")
         btn_show.setStyleSheet(
             "QPushButton { background: #1565c0; color: #e3f2fd; border: 1px solid #1976d2; "
             "border-radius: 4px; padding: 6px; font-weight: bold; }"
