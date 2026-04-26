@@ -785,9 +785,8 @@ class MainWindow(QMainWindow):
         }
 
         # Call JS placeGuildOnMap for visual rendering
-        js_data = _json.dumps(guild_js).replace("'", "\\'")
         self.map_widget.run_js(
-            f"placeGuildOnMap(JSON.parse('{js_data}'), {lat}, {lng});"
+            f"placeGuildOnMap(JSON.parse({_json.dumps(_json.dumps(guild_js))}), {lat}, {lng});"
         )
 
         # Track each member in project state
@@ -1070,10 +1069,9 @@ class MainWindow(QMainWindow):
         # We redraw them directly as polylines
         for ctr in data.get("contours", []):
             import json as _json
-            ctr_js = _json.dumps(ctr).replace("'", "\\'")
             self.map_widget.run_js(
                 f"(function() {{"
-                f"  var d = JSON.parse('{ctr_js}');"
+                f"  var d = JSON.parse({_json.dumps(_json.dumps(ctr))});"
                 f"  contourPoints = d.points;"
                 f"  currentContour = d;"
                 f"  finishContour();"

@@ -281,42 +281,36 @@ class MapWidget(QWebEngineView):
     def set_structure_mode(self, struct_def: dict):
         """Enter structure placement mode with a structure definition."""
         import json
-        js_data = json.dumps(struct_def).replace("'", "\\'")
-        self.run_js(f"setMode('structure', JSON.parse('{js_data}'));")
+        self.run_js(f"setMode('structure', JSON.parse({json.dumps(json.dumps(struct_def))}));")
 
     def load_structure(self, struct_def: dict, lat: float, lng: float):
         """Load a structure from a saved project."""
         import json
-        js_data = json.dumps(struct_def).replace("'", "\\'")
-        self.run_js(f"loadStructure(JSON.parse('{js_data}'), {lat}, {lng});")
+        self.run_js(f"loadStructure(JSON.parse({json.dumps(json.dumps(struct_def))}), {lat}, {lng});")
 
     # ── Hedgerow helpers ──────────────────────────────────────────────────────
 
     def set_hedgerow_mode(self, hedge_config: dict):
         """Enter hedgerow drawing mode."""
         import json
-        js_data = json.dumps(hedge_config).replace("'", "\\'")
-        self.run_js(f"setMode('hedgerow', JSON.parse('{js_data}'));")
+        self.run_js(f"setMode('hedgerow', JSON.parse({json.dumps(json.dumps(hedge_config))}));")
 
     def load_hedgerow(self, hedge_def: dict):
         """Load a hedgerow from a saved project."""
         import json
-        js_data = json.dumps(hedge_def).replace("'", "\\'")
-        self.run_js(f"loadHedgerow(JSON.parse('{js_data}'));")
+        self.run_js(f"loadHedgerow(JSON.parse({json.dumps(json.dumps(hedge_def))}));")
 
     # ── Shape helpers ─────────────────────────────────────────────────────────
 
     def set_shape_mode(self, shape_config: dict):
         """Enter custom shape drawing mode."""
         import json
-        js_data = json.dumps(shape_config).replace("'", "\\'")
-        self.run_js(f"setMode('shape', JSON.parse('{js_data}'));")
+        self.run_js(f"setMode('shape', JSON.parse({json.dumps(json.dumps(shape_config))}));")
 
     def load_shape(self, shape_def: dict):
         """Load a custom shape from a saved project."""
         import json
-        js_data = json.dumps(shape_def).replace("'", "\\'")
-        self.run_js(f"loadShape(JSON.parse('{js_data}'));")
+        self.run_js(f"loadShape(JSON.parse({json.dumps(json.dumps(shape_def))}));")
 
     def set_structures_visible(self, visible: bool):
         v = 'true' if visible else 'false'
@@ -337,8 +331,7 @@ class MapWidget(QWebEngineView):
     def draw_sun_path(self, data: dict):
         """Draw the sun path arc and shadow arrows on the map."""
         import json
-        js_data = json.dumps(data).replace("'", "\\'")
-        self.run_js(f"drawSunPath(JSON.parse('{js_data}'));")
+        self.run_js(f"drawSunPath(JSON.parse({json.dumps(json.dumps(data))}));")
 
     def clear_sun_path(self):
         self.run_js("clearSunPath();")
@@ -346,8 +339,7 @@ class MapWidget(QWebEngineView):
     def draw_sectors(self, data: dict):
         """Draw sector analysis wedges on the map."""
         import json
-        js_data = json.dumps(data).replace("'", "\\'")
-        self.run_js(f"drawSectors(JSON.parse('{js_data}'));")
+        self.run_js(f"drawSectors(JSON.parse({json.dumps(json.dumps(data))}));")
 
     def clear_sectors(self):
         self.run_js("clearSectors();")
@@ -355,8 +347,7 @@ class MapWidget(QWebEngineView):
     def set_contour_mode(self, config: dict):
         """Enter contour drawing mode."""
         import json
-        js_data = json.dumps(config).replace("'", "\\'")
-        self.run_js(f"setMode('contour', JSON.parse('{js_data}'));")
+        self.run_js(f"setMode('contour', JSON.parse({json.dumps(json.dumps(config))}));")
 
     def clear_contours(self):
         self.run_js("clearContours();")
@@ -364,8 +355,7 @@ class MapWidget(QWebEngineView):
     def draw_wind_overlay(self, data: dict):
         """Draw wind direction arrows and shelter zones."""
         import json
-        js_data = json.dumps(data).replace("'", "\\'")
-        self.run_js(f"drawWindOverlay(JSON.parse('{js_data}'));")
+        self.run_js(f"drawWindOverlay(JSON.parse({json.dumps(json.dumps(data))}));")
 
     def clear_wind_overlay(self):
         self.run_js("clearWindOverlay();")

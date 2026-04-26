@@ -1,307 +1,173 @@
 # PermaDesign
-Landscape design app
-# Claude Code Prompt: PermaDesign V1 — Permaculture Landscape Design App
 
-## What You’re Building
+**A native plant landscape design tool for permaculture practitioners and gardeners in Alberta and the Canadian prairies.**
 
-A desktop application called **PermaDesign** for permaculture landscape design. This is V1 — a working foundation, not a feature-complete product. The app should launch, display a map, let the user draw a property boundary, look up the climate/hardiness zone, browse and place plants from a local database, and save/load designs.
+PermaDesign is a desktop application for designing landscapes with native plants. It combines site analysis, guild planning, plant companion relationships, structures and hedgerows, and a 433-plant database focused on Alberta and the Canadian prairies.
 
-**Tech stack:** Python 3.11+, PyQt6 with QtWebEngineWidgets (for embedded map), SQLite (plant database), GeoJSON (project files).
+> **This is the final V1 release.** Active development has moved to a successor project, **Site & Pattern**, which is a cross-platform rewrite focused on ecological landscape design with deeper plant data, ecoregion-aware nativity, integrated environmental data layers, and modern web technologies. PermaDesign V1 will remain available here for users who want to continue using it. See [What's Next](#whats-next) for details.
 
-**Target platform:** Windows desktop (the developer runs Windows with an RTX 5070 Ti / i7-14700F / 32GB DDR5). Linux compatibility is a nice-to-have but not required for V1.
+---
 
------
+## Features
 
-## Architecture
+- **Site analysis overlays** — sun, wind, water, and other site condition mapping
+- **Guild planning** — plant communities and companion groupings with documented companion relationships
+- **Structures and hedgerows** — windbreaks, fences, paths, and other design elements
+- **Planning tools** — drag-and-place plant placement, undo/redo for plant placement
+- **Plant database** — 433 native and naturalized species of Alberta and the Canadian prairies
+- **Hardiness zone lookup** — automatic zone matching from location based on Canadian hardiness zone polygons
+- **Permapeople API integration** — optional supplementary plant data from the [Permapeople](https://permapeople.org/) open database (requires free API credentials, see [Permapeople API Setup](#permapeople-api-setup-optional))
+- **PDF export** — export your designs and plant lists as printable PDF documents
+- **Local SQLite storage** — all your data stays on your machine
 
-```
-permadesign/
-├── main.py                  # Entry point, app init
-├── requirements.txt         # Dependencies
-├── README.md                # Setup instructions
-├── src/
-│   ├── __init__.py
-│   ├── app.py               # QApplication setup, main window
-│   ├── map_widget.py         # QtWebEngine + Leaflet map
-│   ├── plant_panel.py        # Side panel: plant browser, search, filters
-│   ├── guild_panel.py        # Guild builder: create, edit, place, import/export guilds
-│   ├── toolbar.py            # Drawing tools, mode switching
-│   ├── project.py            # Save/load project as GeoJSON
-│   ├── climate.py            # Hardiness zone lookup
-│   └── db/
-│       ├── __init__.py
-│       ├── schema.sql        # SQLite schema for plants + guilds
-│       ├── seed_data.py      # Populate initial plants + starter guilds from data/plants.json
-│       ├── plants.py         # Plant database access layer
-│       └── guilds.py         # Guild database access layer (CRUD, import/export)
-├── data/
-│   ├── plants.json           # Canonical plant data (loaded by seed_data.py)
-│   └── hardiness_zones.json  # Simplified zone lookup data (lat/lng → zone)
-├── html/
-│   └── map.html              # Leaflet map HTML loaded by QtWebEngine
-└── tests/
-    └── test_climate.py       # Basic tests for zone lookup
-```
+---
 
------
+## Requirements
 
-## Core Features to Implement
+- Windows 10 or 11 (other platforms not officially supported in V1)
+- Python 3.10 or newer
+- ~200 MB disk space for the app and database
 
-### 1. Main Window (app.py)
+---
 
-- PyQt6 QMainWindow with a horizontal split layout
-- Left: map widget (70% width)
-- Right: plant panel (30% width)
-- Top toolbar for drawing tools and project actions
-- Status bar showing cursor coordinates and current hardiness zone
-- Menu bar: File (New, Open, Save, Save As, Exit)
+## Installation
 
-### 2. Interactive Map (map_widget.py + map.html)
+> **One-click installer**: A standalone Windows installer is available — see [INSTALL.md](INSTALL.md) for details. The instructions below are for installing from source.
 
-- Embed a Leaflet.js map inside QtWebEngineWidgets
-- Use OpenStreetMap tiles (free, no API key needed) as the base layer
-- Satellite imagery toggle using Esri World Imagery tiles (also free)
-- Communication between Python and JS via QWebChannel:
-  - Python → JS: add/remove/update map elements, set view
-  - JS → Python: click coordinates, polygon complete events, element selection
-- Drawing tools:
-  - **Property boundary:** Draw a polygon. Only one per project. Clicking “Draw Boundary” enters polygon drawing mode; double-click or click first point to close.
-  - **Plant placement:** Click to place a plant marker at a location. The marker should show the plant’s common name on hover.
-  - **Zone circles:** Draw permaculture zones 0-5 as concentric circles/rings from a center point (the house/Zone 0). These are for visual reference, not hard boundaries.
-- Layer visibility toggles in the toolbar
+### From source
 
-### 3. Plant Database (db/)
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/yarrowyarrowyarrow/PermaDesign.git
+   cd PermaDesign
+   ```
 
-- SQLite database with a `plants` table:
-  
-  ```sql
-  CREATE TABLE plants (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      common_name TEXT NOT NULL,
-      scientific_name TEXT,
-      plant_type TEXT NOT NULL,  -- tree, shrub, herb, groundcover, vine, root
-      hardiness_zone_min INTEGER,
-      hardiness_zone_max INTEGER,
-      sun_requirement TEXT,      -- full_sun, partial_shade, full_shade
-      water_needs TEXT,          -- low, medium, high
-      native_region TEXT,        -- e.g., "Western Canada", "North America"
-      permaculture_uses TEXT,    -- comma-separated: nitrogen_fixer, dynamic_accumulator, pollinator, windbreak, etc.
-      spacing_meters REAL,
-      mature_height_meters REAL,
-      notes TEXT
-  );
-  ```
+2. Create a virtual environment and install dependencies:
+   ```bash
+   python -m venv venv
+   venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
 
-- **Guilds** — reusable groups of companion plants that work together:
+3. Run the app:
+   ```bash
+   python main.py
+   ```
 
-  ```sql
-  CREATE TABLE guilds (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      description TEXT,
-      center_plant_id INTEGER REFERENCES plants(id),  -- anchor/canopy plant
-      created TEXT DEFAULT (datetime('now')),
-      modified TEXT DEFAULT (datetime('now'))
-  );
+On first run, the database is seeded automatically with the included plant data. The database lives at `~/.local/share/PermaDesign/permadesign.db`.
 
-  CREATE TABLE guild_members (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guild_id INTEGER NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
-      plant_id INTEGER NOT NULL REFERENCES plants(id),
-      role TEXT,  -- canopy, understory, groundcover, nitrogen_fixer, pest_repellent, pollinator, etc.
-      offset_x REAL DEFAULT 0,  -- relative position from center plant (meters)
-      offset_y REAL DEFAULT 0,
-      notes TEXT
-  );
-  ```
+---
 
-  Guild features:
-  - **Create guilds** from the plant panel: select plants, assign roles (canopy, understory, groundcover, nitrogen fixer, pest repellent, pollinator, etc.), and save as a named guild
-  - **Place guilds on map**: click to stamp an entire guild at once — the center plant goes where you click, members are placed at their relative offsets
-  - **Guild library**: guilds are stored in the project database AND can be exported/imported as `.guild.json` files for reuse across designs
-  - **Edit guilds**: add/remove members, adjust spacing offsets, rename
-  - **Built-in starter guilds**: seed 3-5 example guilds (e.g., "Classic Apple Guild": apple tree + comfrey + chives + white clover + yarrow)
+## Plant Database
 
-  Portable guild format (`.guild.json`):
-  ```json
-  {
-    "name": "Classic Apple Guild",
-    "description": "Traditional fruit tree guild for zone 3-4",
-    "members": [
-      {"common_name": "Apple (Goodland)", "role": "canopy", "offset_x": 0, "offset_y": 0},
-      {"common_name": "Comfrey", "role": "dynamic_accumulator", "offset_x": 1.5, "offset_y": 0},
-      {"common_name": "Chives", "role": "pest_repellent", "offset_x": 0, "offset_y": 1.0},
-      {"common_name": "White Clover", "role": "nitrogen_fixer", "offset_x": 0, "offset_y": 0},
-      {"common_name": "Yarrow", "role": "pollinator", "offset_x": -1.5, "offset_y": 0}
-    ]
-  }
-  ```
-  When importing, match members to the local plant database by `common_name` (warn if a plant isn't found).
+PermaDesign V1 ships with a master database of 433 plants suitable for Alberta and the Canadian prairies. The data covers:
 
-- Seed with 40-60 plants relevant to **Canadian prairies / Alberta (Zone 3-4)**. Include a good mix:
-  - Trees: poplar, spruce, birch, apple (hardy varieties like Goodland, Norland), cherry (Evans, Romance series), plum (Brookgold, Pembina), haskap, Siberian larch
-  - Shrubs: saskatoon berry, chokecherry, buffalo berry, sea buckthorn, currant, gooseberry, raspberry, nanking cherry, potentilla, dogwood
-  - Herbs/perennials: comfrey, yarrow, bee balm, echinacea, chives, horseradish, rhubarb, lovage, mint, chamomile
-  - Groundcover: white clover, creeping thyme, kinnikinnick, wild strawberry
-  - Nitrogen fixers: caragana, sea buckthorn, buffalo berry, white clover, alfalfa
-  - Dynamic accumulators: comfrey, yarrow, dandelion, dock
-  - Focus on species that are actually viable in Edmonton-area growing conditions
+- Common and scientific names, plant type
+- Hardiness zone range, sun and water requirements, soil pH range
+- Mature dimensions, spacing, growth rate, years to maturity
+- Bloom and fruit periods, monthly activity calendar (`cal_jan` through `cal_dec`)
+- Permaculture uses, edible parts, native region
+- Native to Alberta flag, deciduous/evergreen, perennial/annual
 
-### 4. Plant Panel (plant_panel.py)
+Plant data loads from `data/plants_master.json` on first run. The hardiness zone database (`data/hardiness_zones.json`) uses bounding-box matching from polygon centroids to look up zones by location.
 
-- Search box (filters by common name or scientific name as you type)
-- Filter dropdowns: plant type, sun requirement, water needs, permaculture use
-- Results list showing: common name, scientific name, type icon, zone range
-- Click a plant → shows detail view with all fields
-- “Place on Map” button → enters plant placement mode on the map
-- Placed plants list at the bottom: shows all plants currently on the design with count
+---
 
-### 5. Guild Panel (guild_panel.py)
+## Permapeople API Setup (optional)
 
-- Displayed as a tab or collapsible section alongside the plant panel
-- **Guild list**: shows all guilds in the current project database
-- **Create guild**:
-  1. Click "New Guild", give it a name and optional description
-  2. Pick a center/canopy plant from the plant database
-  3. Add members — for each, choose plant, assign a role, and set X/Y offset (meters from center)
-  4. Visual preview: simple top-down diagram showing relative plant positions with role-colored dots
-- **Place guild on map**: select a guild, click "Place on Map", then click the map — the center plant marker goes at the click point, members are placed at their offsets. All markers in a placed guild share a visual group indicator (matching border color or label prefix)
-- **Edit guild**: double-click a guild to modify members, offsets, roles, or name
-- **Delete guild**: remove from library (does NOT remove already-placed instances from the map)
-- **Export/Import**:
-  - "Export Guild" → saves selected guild as a `.guild.json` file
-  - "Import Guild" → loads a `.guild.json`, matches plant names to local DB, adds to library
-  - Warn on import if any member plants are missing from the database
-- **Duplicate guild**: copy an existing guild as a starting point for a variation
+The Permapeople integration is optional and disabled by default. If you'd like to enrich plant entries with additional data from the [Permapeople](https://permapeople.org/) open plant database, you'll need free API credentials.
 
-### 6. Climate/Hardiness Zone Lookup (climate.py)
+1. Create a free account at [permapeople.org](https://permapeople.org/)
+2. Request API access from your account settings
+3. Add your credentials to a `.env` file in the project root:
+   ```
+   PERMAPEOPLE_KEY_ID=your_key_id_here
+   PERMAPEOPLE_KEY_SECRET=your_key_secret_here
+   ```
+4. Restart the app
 
-- Given a latitude/longitude, return the approximate USDA/Canadian hardiness zone
-- For V1, use a simplified lookup: bundle a JSON file that maps lat/lng ranges to zones for Western Canada. Doesn’t need to be pixel-perfect — approximate zone assignment is fine.
-- When the user draws a property boundary, auto-detect the zone from the centroid and display it in the status bar
-- Filter the plant panel to highlight plants suitable for the detected zone
+Without these credentials, the rest of PermaDesign works normally — only the Permapeople-specific lookups are unavailable.
 
-### 7. Project Save/Load (project.py)
+---
 
-- Save format: GeoJSON with custom properties
-  
-  ```json
-  {
-    "type": "FeatureCollection",
-    "properties": {
-      "project_name": "My Food Forest",
-      "created": "2026-03-27T12:00:00",
-      "hardiness_zone": 3,
-      "notes": ""
-    },
-    "features": [
-      {
-        "type": "Feature",
-        "geometry": { "type": "Polygon", "coordinates": [...] },
-        "properties": { "element_type": "property_boundary" }
-      },
-      {
-        "type": "Feature",
-        "geometry": { "type": "Point", "coordinates": [-113.5, 53.5] },
-        "properties": {
-          "element_type": "plant",
-          "plant_id": 12,
-          "common_name": "Saskatoon Berry",
-          "quantity": 1
-        }
-      },
-      {
-        "type": "Feature",
-        "geometry": { "type": "Point", "coordinates": [...] },
-        "properties": {
-          "element_type": "zone_center",
-          "zone_radii": [5, 15, 30, 60, 120]
-        }
-      },
-      {
-        "type": "Feature",
-        "geometry": { "type": "Point", "coordinates": [-113.49, 53.54] },
-        "properties": {
-          "element_type": "guild_placement",
-          "guild_id": 1,
-          "guild_name": "Classic Apple Guild",
-          "members": [
-            {"plant_id": 5, "common_name": "Apple (Goodland)", "role": "canopy", "offset_x": 0, "offset_y": 0},
-            {"plant_id": 22, "common_name": "Comfrey", "role": "dynamic_accumulator", "offset_x": 1.5, "offset_y": 0}
-          ]
-        }
-      }
-    ]
-  }
-  ```
-- File dialog for open/save with `.perma.geojson` extension
-- Auto-save to a temp file every 5 minutes
+## Project Status and Known Limitations
 
------
+PermaDesign V1 is feature-complete and stable for its intended scope. Known limitations:
 
-## Important Implementation Notes
+- **Windows-only.** macOS and Linux installers are not officially supported in V1. From-source installation may work on those platforms with Python 3.10+ but is untested for V1 Final.
+- **Plant names with apostrophes** may cause issues in JavaScript-rendered components due to string escaping. Most plant names are unaffected.
+- **Undo/redo** covers plant placement only, not structure placement, shape edits, or guild changes.
+- **PDF export** falls back silently if a map screenshot cannot be captured. Designs export successfully but the embedded site map may be missing.
+- **Guild placement tolerance** uses floating-point lat/lng matching, which is fragile in edge cases but works in normal use.
 
-1. **Leaflet ↔ PyQt communication:** Use QWebChannel. In map.html, include `qwebchannel.js` and set up a channel object. The Python side registers a QObject with slots that JS can call, and uses `page().runJavaScript()` to call JS functions.
-1. **Map default view:** Center on Edmonton, Alberta (53.5461, -113.4938) at zoom level 12.
-1. **Don’t over-engineer:** This is V1. No user accounts, no cloud sync, no AI recommendations, no companion planting validation yet. Just: map + draw + plants + save.
-1. **Dependencies to use:**
-- PyQt6 + PyQt6-WebEngine
-- No external geospatial libraries needed for V1 (Leaflet handles map rendering)
-- sqlite3 (stdlib)
-- json (stdlib)
-1. **Error handling:** Basic but present. Don’t crash on bad data — show a QMessageBox with the error. Handle missing database gracefully (auto-create on first run).
-1. **Make it look reasonable:** Use a clean, muted color scheme. Dark sidebar, light map. Plant type icons can be simple colored circles (green for trees, yellow-green for shrubs, etc.) — no need for custom artwork.
+These limitations are documented and will not be patched in V1. They are addressed in the Site & Pattern rewrite.
 
------
+---
 
-## What NOT to Build Yet (Future Versions)
+## What's Next
 
-- Google Earth Engine / AlphaEarth Foundations integration (requires API auth setup — V2)
-- Automated companion planting validation / conflict detection between guilds
-- Water flow or slope analysis
-- Sun path calculation
-- PDF/image export of designs
-- Plant spacing conflict detection
-- Multi-user collaboration
-- Installer/packaging
+PermaDesign is being rewritten as **Site & Pattern**, a successor project that builds on the same foundation with:
 
------
+- **Cross-platform** — desktop (via Tauri) and browser (PWA) from one codebase
+- **Ecoregion-aware nativity** — moves beyond province-level "native" flags to CEC Level III ecoregion attribution with confidence levels and source attribution
+- **Two-layer environmental data** — direct rainfall, soil, elevation, and hardiness data integrated with site analysis
+- **Source-tracked plant data** — every fact in the database links to a citable source
+- **Open source under AGPL-3.0** — keeping the project genuinely free and copyleft
+- **Geographic expansion** — Alberta first, with infrastructure designed to extend across western Canada and beyond
 
-## Success Criteria
+Site & Pattern is in early planning. The repository will be linked here when public.
 
-The app is done when:
+> **For permaculture practitioners** who prefer the existing tool: PermaDesign V1 will remain available indefinitely. This release is the polished, final version for ongoing use.
 
-1. It launches and shows a map centered on Edmonton
-1. You can draw a property boundary polygon on the map
-1. The hardiness zone updates in the status bar based on the boundary location
-1. You can search/filter plants in the side panel
-1. You can click “Place on Map” and drop a plant marker on the map
-1. You can create a guild from multiple plants, assign roles and offsets, and place the entire guild on the map with one click
-1. You can export a guild as `.guild.json` and import it into another design
-1. You can save the design (including guild placements) to a .perma.geojson file and reload it
-1. The plant database contains real, zone-appropriate species for Alberta (loaded from data/plants.json)
+---
 
------
+## Project History
 
-## Getting Started
+PermaDesign was built as a personal tool by Marci while studying permaculture and ecological design in Alberta, with the goal of bringing native plant communities into landscape design more easily. The V1 codebase has grown beyond its original scope to include guilds, site analysis, structures, planning tools, PDF export, and Permapeople integration.
 
-```bash
-# Create project directory
-mkdir permadesign && cd permadesign
+The pivot to Site & Pattern reflects an evolution in the project's positioning: keeping the design ethos of working with site conditions and natural patterns, while moving away from permaculture's branded vocabulary toward plain-English equivalents that serve a broader audience.
 
-# Set up virtual environment
-python -m venv venv
-venv\Scripts\activate  # Windows
+---
 
-# Install dependencies
-pip install PyQt6 PyQt6-WebEngine
+## Documentation
 
-# Initialize the database
-python -m src.db.seed_data
+- [`INSTALL.md`](INSTALL.md) — Installation instructions, including the one-click installer for friends and testers
+- [`ROADMAP.md`](ROADMAP.md) — Original V1 development roadmap (kept for historical reference)
+- [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) — Developer-facing notes from late-stage V1 development
+- [`V1_FINAL_AUDIT.md`](V1_FINAL_AUDIT.md) — Codebase audit performed before the V1 Final release
+- [`LICENSE`](LICENSE) — PolyForm Noncommercial License 1.0.0
 
-# Run the app
-python main.py
-```
+---
 
-Build this step by step. Start with the main window and embedded map, then add drawing tools, then the plant database and panel, then save/load. Test each piece before moving on.
+## License
 
+PermaDesign V1 is licensed under the **[PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/)**.
+
+In plain English, this means:
+
+- ✅ **Free for personal use** — install it, use it for your own garden, share it with friends
+- ✅ **Free for non-profit use** — community gardens, educational settings, non-profit ecological work
+- ✅ **Free to modify and redistribute** for non-commercial purposes
+- ✅ **Free for research and academic use**
+- ❌ **Not free for commercial use** — you may not sell PermaDesign or services built on PermaDesign, or use it as part of a commercial product or service, without separate permission
+
+If you'd like to use PermaDesign commercially, please open an issue to discuss a separate licensing arrangement.
+
+The successor project Site & Pattern will be released under AGPL-3.0, which permits commercial use under copyleft terms.
+
+---
+
+## Acknowledgments
+
+Plant data draws on:
+- The [Permapeople](https://permapeople.org/) open plant database
+- Native plant references for Alberta and the Canadian prairies
+- Hardiness zone data from Natural Resources Canada
+
+PermaDesign was developed with significant assistance from AI coding tools.
+
+---
+
+## Contact
+
+For questions about PermaDesign V1 or interest in Site & Pattern, open an issue on this repository.

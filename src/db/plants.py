@@ -41,8 +41,11 @@ _DB_PATH  = str(_user_data_dir() / "permadesign.db")
 _PROJECT_ROOT    = os.path.dirname(os.path.dirname(_HERE))
 _LEGACY_DB_PATH  = os.path.join(_PROJECT_ROOT, "data", "permadesign.db")
 
+# Master plant data (shipped with the application)
+_MASTER_JSON_PATH = os.path.join(_PROJECT_ROOT, "data", "plants_master.json")
+
 # Current schema version — bump when adding columns/tables
-_SCHEMA_VERSION = 5
+_SCHEMA_VERSION = 6
 
 
 def _ensure_data_dir():
@@ -133,6 +136,83 @@ def _migrate_to_v5(conn: sqlite3.Connection):
     conn.commit()
 
 
+def _seed_from_master_json(conn: sqlite3.Connection) -> int:
+    """
+    Insert all plants from data/plants_master.json into an empty plants table.
+    Also populates planting_calendar from the cal_jan..cal_dec fields.
+    Returns the number of plants inserted.
+    """
+    import json as _json
+
+    if not os.path.exists(_MASTER_JSON_PATH):
+        return 0
+
+    with open(_MASTER_JSON_PATH, "r", encoding="utf-8") as f:
+        entries = _json.load(f)
+
+    for p in entries:
+        uses = p.get("permaculture_uses", "")
+        if isinstance(uses, list):
+            uses = ", ".join(uses)
+
+        conn.execute(
+            """INSERT INTO plants
+               (common_name, scientific_name, plant_type,
+                hardiness_zone_min, hardiness_zone_max,
+                sun_requirement, water_needs,
+                native_region, permaculture_uses,
+                spacing_meters, mature_height_meters, notes,
+                bloom_period, fruit_period, native_to_alberta,
+                edible_parts, deciduous_evergreen,
+                soil_ph_min, soil_ph_max, perennial_or_annual,
+                growth_rate, years_to_maturity, growth_curve)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                p.get("common_name", ""),
+                p.get("scientific_name", ""),
+                p.get("plant_type", "herb"),
+                p.get("hardiness_zone_min"),
+                p.get("hardiness_zone_max"),
+                p.get("sun_requirement", ""),
+                p.get("water_needs", ""),
+                p.get("native_region", ""),
+                uses,
+                p.get("spacing_m") or p.get("spacing_meters"),
+                p.get("mature_height_m") or p.get("mature_height_meters"),
+                p.get("notes", ""),
+                p.get("bloom_period", ""),
+                p.get("fruit_period", ""),
+                p.get("native_to_alberta", 0),
+                p.get("edible_parts", ""),
+                p.get("deciduous_evergreen", ""),
+                p.get("soil_ph_min"),
+                p.get("soil_ph_max"),
+                p.get("perennial_annual") or p.get("perennial_or_annual", ""),
+                p.get("growth_rate"),
+                p.get("years_to_maturity"),
+                p.get("growth_curve"),
+            ),
+        )
+
+        plant_id = conn.execute(
+            "SELECT id FROM plants WHERE common_name = ?", (p["common_name"],)
+        ).fetchone()[0]
+
+        months = ["cal_jan", "cal_feb", "cal_mar", "cal_apr", "cal_may", "cal_jun",
+                  "cal_jul", "cal_aug", "cal_sep", "cal_oct", "cal_nov", "cal_dec"]
+        for i, key in enumerate(months, 1):
+            status = p.get(key)
+            if status and status != "dormant":
+                conn.execute(
+                    "INSERT OR IGNORE INTO planting_calendar (plant_id, month, status, notes) "
+                    "VALUES (?, ?, ?, NULL)",
+                    (plant_id, i, status),
+                )
+
+    conn.commit()
+    return len(entries)
+
+
 def init_db() -> None:
     """
     Create tables (if absent), run migrations, and seed the plant catalogue
@@ -165,32 +245,22 @@ def init_db() -> None:
         except sqlite3.OperationalError:
             pass  # column already present
 
-        # Reseed if empty, count is low, or schema was just upgraded
         count = conn.execute("SELECT COUNT(*) FROM plants").fetchone()[0]
-        needs_reseed = (count < 52) or (current_version < 2 and count > 0)
 
-        # Update growth data from plants.json for existing plants (v5+)
-        if current_version < 5:
-            _update_growth_data(conn)
+        # Reseed if empty, count is below master dataset size, or upgrading to v6
+        needs_reseed = (count < 100) or (current_version < 6)
 
         if needs_reseed:
             conn.execute("DELETE FROM plants")
             conn.execute("DELETE FROM companion_friends")
             conn.execute("DELETE FROM companion_enemies")
+            conn.execute("DELETE FROM planting_calendar")
             conn.commit()
-            from src.db.seed_data import SEED_PLANTS
-            _insert_plants(conn, SEED_PLANTS)
+            _seed_from_master_json(conn)
             from src.db.seed_data import SEED_COMPANIONS
             _insert_companions(conn, SEED_COMPANIONS)
 
-        # Seed planting calendar if table is empty or schema upgraded to v3
-        if current_version < 3:
-            _seed_calendar(conn)
-
         _set_schema_version(conn, _SCHEMA_VERSION)
-
-        # Import extended plant list from JSON (adds new plants, skips duplicates)
-        _import_plants_json(conn)
     finally:
         conn.close()
 
