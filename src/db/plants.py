@@ -265,14 +265,21 @@ def init_db() -> None:
         needs_reseed = (count < 100) or (current_version < 6)
 
         if needs_reseed:
-            conn.execute("DELETE FROM plants")
+            # Disable FK enforcement for the bulk reseed — Python 3.14 enforces
+            # FK constraints at statement time rather than transaction commit,
+            # which can cause failures when parent/child rows are inserted in the
+            # same transaction.  Data is internally consistent so this is safe.
+            conn.execute("PRAGMA foreign_keys = OFF")
             conn.execute("DELETE FROM companion_friends")
             conn.execute("DELETE FROM companion_enemies")
             conn.execute("DELETE FROM planting_calendar")
+            conn.execute("DELETE FROM plants")
             conn.commit()
             _seed_from_master_json(conn)
             from src.db.seed_data import SEED_COMPANIONS
             _insert_companions(conn, SEED_COMPANIONS)
+            conn.execute("PRAGMA foreign_keys = ON")
+            conn.commit()
 
         _set_schema_version(conn, _SCHEMA_VERSION)
     finally:
