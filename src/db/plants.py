@@ -150,66 +150,80 @@ def _seed_from_master_json(conn: sqlite3.Connection) -> int:
     with open(_MASTER_JSON_PATH, "r", encoding="utf-8") as f:
         entries = _json.load(f)
 
+    # Phase 1: insert all plants and commit so plant IDs are visible to FK checks
+    plant_rows = []
     for p in entries:
         uses = p.get("permaculture_uses", "")
         if isinstance(uses, list):
             uses = ", ".join(uses)
+        plant_rows.append((
+            p.get("common_name", ""),
+            p.get("scientific_name", ""),
+            p.get("plant_type", "herb"),
+            p.get("hardiness_zone_min"),
+            p.get("hardiness_zone_max"),
+            p.get("sun_requirement", ""),
+            p.get("water_needs", ""),
+            p.get("native_region", ""),
+            uses,
+            p.get("spacing_m") or p.get("spacing_meters"),
+            p.get("mature_height_m") or p.get("mature_height_meters"),
+            p.get("notes", ""),
+            p.get("bloom_period", ""),
+            p.get("fruit_period", ""),
+            p.get("native_to_alberta", 0),
+            p.get("edible_parts", ""),
+            p.get("deciduous_evergreen", ""),
+            p.get("soil_ph_min"),
+            p.get("soil_ph_max"),
+            p.get("perennial_annual") or p.get("perennial_or_annual", ""),
+            p.get("growth_rate"),
+            p.get("years_to_maturity"),
+            p.get("growth_curve"),
+        ))
 
-        conn.execute(
-            """INSERT INTO plants
-               (common_name, scientific_name, plant_type,
-                hardiness_zone_min, hardiness_zone_max,
-                sun_requirement, water_needs,
-                native_region, permaculture_uses,
-                spacing_meters, mature_height_meters, notes,
-                bloom_period, fruit_period, native_to_alberta,
-                edible_parts, deciduous_evergreen,
-                soil_ph_min, soil_ph_max, perennial_or_annual,
-                growth_rate, years_to_maturity, growth_curve)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (
-                p.get("common_name", ""),
-                p.get("scientific_name", ""),
-                p.get("plant_type", "herb"),
-                p.get("hardiness_zone_min"),
-                p.get("hardiness_zone_max"),
-                p.get("sun_requirement", ""),
-                p.get("water_needs", ""),
-                p.get("native_region", ""),
-                uses,
-                p.get("spacing_m") or p.get("spacing_meters"),
-                p.get("mature_height_m") or p.get("mature_height_meters"),
-                p.get("notes", ""),
-                p.get("bloom_period", ""),
-                p.get("fruit_period", ""),
-                p.get("native_to_alberta", 0),
-                p.get("edible_parts", ""),
-                p.get("deciduous_evergreen", ""),
-                p.get("soil_ph_min"),
-                p.get("soil_ph_max"),
-                p.get("perennial_annual") or p.get("perennial_or_annual", ""),
-                p.get("growth_rate"),
-                p.get("years_to_maturity"),
-                p.get("growth_curve"),
-            ),
-        )
+    conn.executemany(
+        """INSERT INTO plants
+           (common_name, scientific_name, plant_type,
+            hardiness_zone_min, hardiness_zone_max,
+            sun_requirement, water_needs,
+            native_region, permaculture_uses,
+            spacing_meters, mature_height_meters, notes,
+            bloom_period, fruit_period, native_to_alberta,
+            edible_parts, deciduous_evergreen,
+            soil_ph_min, soil_ph_max, perennial_or_annual,
+            growth_rate, years_to_maturity, growth_curve)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        plant_rows,
+    )
+    conn.commit()
 
-        plant_id = conn.execute(
-            "SELECT id FROM plants WHERE common_name = ?", (p["common_name"],)
-        ).fetchone()[0]
+    # Phase 2: build name→id map then insert calendar entries
+    name_to_id = {
+        row[0]: row[1]
+        for row in conn.execute("SELECT common_name, id FROM plants").fetchall()
+    }
 
-        months = ["cal_jan", "cal_feb", "cal_mar", "cal_apr", "cal_may", "cal_jun",
-                  "cal_jul", "cal_aug", "cal_sep", "cal_oct", "cal_nov", "cal_dec"]
+    months = ["cal_jan", "cal_feb", "cal_mar", "cal_apr", "cal_may", "cal_jun",
+              "cal_jul", "cal_aug", "cal_sep", "cal_oct", "cal_nov", "cal_dec"]
+    cal_rows = []
+    for p in entries:
+        plant_id = name_to_id.get(p.get("common_name", ""))
+        if plant_id is None:
+            continue
         for i, key in enumerate(months, 1):
             status = p.get(key)
             if status and status != "dormant":
-                conn.execute(
-                    "INSERT OR IGNORE INTO planting_calendar (plant_id, month, status, notes) "
-                    "VALUES (?, ?, ?, NULL)",
-                    (plant_id, i, status),
-                )
+                cal_rows.append((plant_id, i, status))
 
-    conn.commit()
+    if cal_rows:
+        conn.executemany(
+            "INSERT OR IGNORE INTO planting_calendar (plant_id, month, status, notes) "
+            "VALUES (?, ?, ?, NULL)",
+            cal_rows,
+        )
+        conn.commit()
+
     return len(entries)
 
 
