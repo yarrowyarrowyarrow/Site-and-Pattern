@@ -44,21 +44,28 @@ class DesignGenerator:
                 if key in site_config:
                     sc[key] = site_config[key]
 
-    def set_boundary(self, coords: list[tuple[float, float]]) -> None:
+    def set_boundary(self, coords: list[tuple[float, float]],
+                     color: str = "green") -> None:
         """Set the property boundary. coords: list of (lat, lng) tuples."""
-        # Remove existing boundary
+        import uuid
+        # Remove any existing boundary with the same id (or old singleton entries)
         self.project["features"] = [
             f for f in self.project["features"]
             if f.get("properties", {}).get("element_type") != "property_boundary"
         ]
-        # GeoJSON uses [lng, lat] ordering
         ring = [[lng, lat] for lat, lng in coords]
         if ring and ring[0] != ring[-1]:
-            ring.append(ring[0])  # close the ring
+            ring.append(ring[0])
         self.project["features"].append({
             "type": "Feature",
             "geometry": {"type": "Polygon", "coordinates": [ring]},
-            "properties": {"element_type": "property_boundary"}
+            "properties": {
+                "element_type": "property_boundary",
+                "boundary_id": "b_api_" + uuid.uuid4().hex[:8],
+                "color": color,
+                "show_lengths": True,
+                "show_area": True,
+            }
         })
 
     def add_plant(self, plant_id: int, lat: float, lng: float,

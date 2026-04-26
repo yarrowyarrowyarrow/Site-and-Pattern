@@ -339,6 +339,14 @@
         }
       });
 
+      // Click on map background while in boundary-edit → exit edit mode
+      // (polygon clicks stop propagation so this only fires on background)
+      map.on('click', function() {
+        if (boundaryEditId !== null && currentMode === 'none') {
+          exitBoundaryEditMode();
+        }
+      });
+
       // Zoom-dependent label visibility
       map.on('zoomend', updateLabelVisibility);
     }
@@ -1004,13 +1012,6 @@
       map.getContainer().style.cursor = '';
     }
 
-    // Click on map background while in boundary-edit → exit edit mode
-    map.on('click', function(e) {
-      if (boundaryEditId !== null && currentMode === 'none') {
-        // Check that click is not on a handle (they stop propagation)
-        exitBoundaryEditMode();
-      }
-    });
 
     // ── HTML escaping (guard against stored-XSS via project files and
     //     Permapeople imports). Every user/file-sourced string that is
