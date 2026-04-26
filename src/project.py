@@ -52,10 +52,11 @@ def load_project(path: str) -> dict:
 def project_to_map_data(project: dict) -> dict:
     """
     Extract map elements from the project for loading into the map widget.
-    Returns dict with boundary, plants, zone_center, structures, hedgerows, shapes.
+    Returns dict with boundaries (list), plants, zone_center, structures, hedgerows, shapes.
     """
     result = {
-        "boundary": None,
+        "boundaries": [],   # list of {id, points, color, showLengths, showArea}
+        "boundary": None,   # kept for backward compat — first boundary's points
         "plants": [],
         "zone_center": None,
         "structures": [],
@@ -70,7 +71,17 @@ def project_to_map_data(project: dict) -> dict:
 
         if etype == "property_boundary" and geom.get("type") == "Polygon":
             ring = geom["coordinates"][0]
-            result["boundary"] = [[pt[1], pt[0]] for pt in ring]
+            pts = [[pt[1], pt[0]] for pt in ring]
+            bd = {
+                "id":          props.get("boundary_id", f"b_loaded_{len(result['boundaries'])}"),
+                "points":      pts,
+                "color":       props.get("color", "green"),
+                "showLengths": props.get("show_lengths", True),
+                "showArea":    props.get("show_area", True),
+            }
+            result["boundaries"].append(bd)
+            if result["boundary"] is None:
+                result["boundary"] = pts   # backward compat
 
         elif etype == "plant" and geom.get("type") == "Point":
             lng, lat = geom["coordinates"]

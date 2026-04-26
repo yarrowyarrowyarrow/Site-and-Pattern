@@ -81,6 +81,11 @@ class MainWindow(QMainWindow):
         self._redo_stack: list[dict] = []
         self._max_undo = 50
 
+        # Pending anchor-mode configs (set when entering anchor mode, cleared after render)
+        self._pending_sun_config:    dict | None = None
+        self._pending_sun_anchor:    tuple | None = None
+        self._pending_sector_config: dict | None = None
+
         self._build_ui()
         self._connect_signals()
         self._start_autosave()
@@ -216,8 +221,7 @@ class MainWindow(QMainWindow):
         # Map → status bar
         b.mouse_moved.connect(self._on_mouse_moved)
 
-        # Map events → project state
-        b.boundary_complete.connect(self._on_boundary_complete)
+        # Map events → project state (boundary_complete re-connected below with new signature)
         b.plant_placed.connect(self._on_plant_placed)
         b.zone_center_placed.connect(self._on_zone_center_placed)
         b.map_ready.connect(self._on_map_ready)
@@ -292,6 +296,25 @@ class MainWindow(QMainWindow):
         # Map → contour complete / removal
         b.contour_complete.connect(self._on_contour_complete)
         b.contour_removed.connect(self._on_contour_removed)
+
+        # Map → multi-boundary events
+        b.boundary_complete.connect(self._on_boundary_complete)
+        b.boundary_geom_changed.connect(self._on_boundary_geom_changed)
+        b.boundary_props_changed.connect(self._on_boundary_props_changed)
+        b.boundary_removed.connect(self._on_boundary_removed)
+
+        # Map → sun path / sector anchor & removal
+        b.sun_anchor_placed.connect(self._on_sun_anchor_placed)
+        b.sun_path_removed.connect(self._on_sun_path_removed)
+        b.anchor_cancelled.connect(self._on_anchor_cancelled)
+        b.sector_anchor_placed.connect(self._on_sector_anchor_placed)
+        b.sector_group_removed.connect(self._on_sector_group_removed)
+        b.sector_group_moved.connect(self._on_sector_group_moved)
+        b.sector_group_rotated.connect(self._on_sector_group_rotated)
+        b.sector_group_resized.connect(self._on_sector_group_resized)
+
+        # Toolbar → zoom sensitivity
+        self.toolbar.zoom_step_changed.connect(self.map_widget.set_zoom_sensitivity)
 
         # Planning panel → timeline / notes
         self.planning_panel.timeline_year_changed.connect(self._on_timeline_year_changed)
@@ -582,20 +605,18 @@ class MainWindow(QMainWindow):
     # ── Analysis overlays (A1-A4) ──────────────────────────────────────────
 
     def _on_sun_path_requested(self, config: dict):
-        """A1: Compute sun positions and send to map for rendering."""
+        """A1: Enter anchor-placement mode; render after user clicks the map."""
+        self._pending_sun_config = config
+        self._pending_sun_anchor = None
+        self.map_widget.enter_sun_anchor_mode()
+        self._set_mode_label("Click map to place sun path anchor — right-click to cancel")
+
+    def _render_sun_path(self, config: dict, lat: float, lng: float):
+        """Compute sun positions and send to JS with the clicked anchor."""
         from datetime import date as _date
-        from src.solar import sun_path_for_date, sunrise_sunset, EDMONTON_LAT, EDMONTON_LNG
+        from src.solar import sun_path_for_date, sunrise_sunset
 
         d = _date.fromisoformat(config["date"])
-        # Use boundary centroid if available, else Edmonton default
-        lat, lng = EDMONTON_LAT, EDMONTON_LNG
-        for f in self._project.get("features", []):
-            if f.get("properties", {}).get("element_type") == "property_boundary":
-                ring = f["geometry"]["coordinates"][0]
-                lat = sum(pt[1] for pt in ring) / len(ring)
-                lng = sum(pt[0] for pt in ring) / len(ring)
-                break
-
         positions = sun_path_for_date(lat, lng, d, steps=72)
         sr, ss = sunrise_sunset(lat, lng, d)
 
@@ -604,16 +625,18 @@ class MainWindow(QMainWindow):
             for p in positions
         ]
 
-        self.map_widget.draw_sun_path({
+        payload = {
             "positions": pos_data,
             "date_label": config.get("date_label", d.isoformat()),
             "show_shadows": config.get("show_shadows", True),
             "show_shadow_length": config.get("show_shadow_length", False),
             "sunrise_hour": sr,
             "sunset_hour": ss,
-        })
+        }
+        if "arc_radius" in config:
+            payload["arc_radius"] = config["arc_radius"]
+        self.map_widget.draw_sun_path(payload, lat, lng)
 
-        # Update info label
         noon_alt = max((p.altitude for p in positions), default=0)
         daylight = ss - sr
         self.analysis_panel.set_sun_info(
@@ -621,12 +644,13 @@ class MainWindow(QMainWindow):
             f"Daylight: {daylight:.1f} hrs | Max altitude: {noon_alt:.1f}°"
         )
         self._set_mode_label(f"Sun path: {config.get('date_label', d.isoformat())}")
+        self._pending_sun_config = None
 
     def _on_sector_requested(self, config: dict):
-        """A2: Draw sector analysis wedges."""
-        self.map_widget.draw_sectors(config)
-        names = [s["name"] for s in config.get("sectors", [])]
-        self._set_mode_label(f"Sectors: {', '.join(names)}")
+        """A2: Enter anchor-placement mode; draw after user clicks the map."""
+        self._pending_sector_config = config
+        self.map_widget.enter_sector_anchor_mode()
+        self._set_mode_label("Click map to place sector anchor — right-click to cancel")
 
     def _on_contour_requested(self, config: dict):
         """A3: Enter contour drawing mode."""
@@ -838,30 +862,94 @@ class MainWindow(QMainWindow):
 
     # ── Map event handlers ────────────────────────────────────────────────────
 
-    def _on_boundary_complete(self, coords: list):
-        """coords is a list of [lat, lng] pairs."""
-        # Persist in project as GeoJSON Polygon (lng, lat order)
+    def _on_boundary_complete(self, bid: str, coords: list, color: str):
+        """Multi-boundary: add a new boundary to the project."""
         ring = [[pt[1], pt[0]] for pt in coords] + [[coords[0][1], coords[0][0]]]
-        self._project["features"] = [
-            f for f in self._project["features"]
-            if f.get("properties", {}).get("element_type") != "property_boundary"
-        ]
         self._project["features"].append({
             "type": "Feature",
             "geometry": {"type": "Polygon", "coordinates": [ring]},
-            "properties": {"element_type": "property_boundary"}
+            "properties": {
+                "element_type": "property_boundary",
+                "boundary_id": bid,
+                "color": color,
+                "show_lengths": True,
+                "show_area": True,
+            }
         })
 
-        # Compute centroid for zone lookup
         lats = [pt[0] for pt in coords]
         lngs = [pt[1] for pt in coords]
-        clat = sum(lats) / len(lats)
-        clng = sum(lngs) / len(lngs)
-        self._set_zone_display(get_zone(clat, clng))
+        self._set_zone_display(get_zone(sum(lats)/len(lats), sum(lngs)/len(lngs)))
 
         self._mark_modified()
         self.toolbar.reset_draw_buttons()
-        self._set_mode_label("Boundary set — " + zone_label(self._current_zone))
+        self._set_mode_label(
+            f"Boundary added ({color}) — " + zone_label(self._current_zone)
+        )
+
+    def _on_boundary_geom_changed(self, bid: str, coords: list):
+        """Update geometry of an existing boundary after vertex/move/scale drag."""
+        ring = [[pt[1], pt[0]] for pt in coords] + [[coords[0][1], coords[0][0]]]
+        for f in self._project.get("features", []):
+            if (f.get("properties", {}).get("element_type") == "property_boundary"
+                    and f["properties"].get("boundary_id") == bid):
+                f["geometry"]["coordinates"] = [ring]
+                break
+        self._mark_modified()
+
+    def _on_boundary_props_changed(self, bid: str, color: str,
+                                    show_lengths: bool, show_area: bool):
+        """Update color/label toggles for an existing boundary."""
+        for f in self._project.get("features", []):
+            if (f.get("properties", {}).get("element_type") == "property_boundary"
+                    and f["properties"].get("boundary_id") == bid):
+                f["properties"]["color"] = color
+                f["properties"]["show_lengths"] = show_lengths
+                f["properties"]["show_area"] = show_area
+                break
+        self._mark_modified()
+
+    def _on_boundary_removed(self, bid: str):
+        """Remove a boundary from the project."""
+        self._project["features"] = [
+            f for f in self._project["features"]
+            if not (f.get("properties", {}).get("element_type") == "property_boundary"
+                    and f["properties"].get("boundary_id") == bid)
+        ]
+        self._mark_modified()
+
+    def _on_sun_anchor_placed(self, lat: float, lng: float):
+        """User placed sun-path anchor; now compute and draw."""
+        self._pending_sun_anchor = (lat, lng)
+        if self._pending_sun_config:
+            self._render_sun_path(self._pending_sun_config, lat, lng)
+
+    def _on_sector_anchor_placed(self, lat: float, lng: float):
+        """User placed sector anchor; now draw."""
+        if self._pending_sector_config:
+            self.map_widget.draw_sectors(self._pending_sector_config, lat, lng)
+            names = [s["name"] for s in self._pending_sector_config.get("sectors", [])]
+            self._set_mode_label(f"Sectors: {', '.join(names)}")
+            self._pending_sector_config = None
+
+    def _on_sun_path_removed(self):
+        self._set_mode_label("Sun path removed")
+
+    def _on_anchor_cancelled(self, mode: str):
+        self.toolbar.reset_draw_buttons()
+        self._set_mode_label("Ready")
+
+    def _on_sector_group_removed(self, sid: str):
+        self._set_mode_label("Sector group removed")
+
+    def _on_sector_group_moved(self, sid: str, lat: float, lng: float):
+        pass  # could persist if sectors were saved to project file
+
+    def _on_sector_group_rotated(self, sid: str, rotation_deg: float):
+        pass
+
+    def _on_sector_group_resized(self, sid: str, radius_m: float):
+        pass
 
     def _on_plant_placed(self, plant_id: int, common_name: str, lat: float, lng: float):
         self._push_undo({
@@ -1038,10 +1126,12 @@ class MainWindow(QMainWindow):
         self.map_widget.clear_all()
         data = project_io.project_to_map_data(proj)
 
-        if data["boundary"]:
-            self.map_widget.load_boundary(data["boundary"])
-            lats = [p[0] for p in data["boundary"]]
-            lngs = [p[1] for p in data["boundary"]]
+        for bd in data.get("boundaries", []):
+            self.map_widget.load_boundary(bd)
+        if data.get("boundaries"):
+            first = data["boundaries"][0]
+            lats = [p[0] for p in first["points"]]
+            lngs = [p[1] for p in first["points"]]
             self._set_zone_display(
                 get_zone(sum(lats)/len(lats), sum(lngs)/len(lngs))
             )
