@@ -29,6 +29,7 @@ class MainToolbar(QToolBar):
     canopy_toggled       = pyqtSignal(bool)
     snap_toggled         = pyqtSignal(bool)
     structures_toggled   = pyqtSignal(bool)
+    measure_cleared      = pyqtSignal()      # "clear measure" action
 
     # Settings
     settings_requested = pyqtSignal()
@@ -142,6 +143,12 @@ class MainToolbar(QToolBar):
         self._act_snap.setToolTip("Enable 1m grid overlay; plant placement snaps to grid intersections")
         self._act_snap.toggled.connect(self.snap_toggled)
         self.addAction(self._act_snap)
+
+        act_clear_measure = QAction("✕ 📏", self)
+        act_clear_measure.setStatusTip("Clear current measurement from map")
+        act_clear_measure.setToolTip("Remove the measure line and distance label from the map")
+        act_clear_measure.triggered.connect(self.measure_cleared)
+        self.addAction(act_clear_measure)
 
         self.addSeparator()
 

@@ -113,6 +113,17 @@ class AnalysisPanel(QWidget):
         self._sun_shadow_length.setChecked(False)
         form.addRow(self._sun_shadow_length)
 
+        arc_row = QHBoxLayout()
+        arc_row.addWidget(QLabel("Arc radius:"))
+        self._sun_arc_radius = QSpinBox()
+        self._sun_arc_radius.setRange(20, 500)
+        self._sun_arc_radius.setValue(80)
+        self._sun_arc_radius.setSuffix(" m")
+        self._sun_arc_radius.setToolTip("Radius of the sun path arc display in metres")
+        arc_row.addWidget(self._sun_arc_radius)
+        arc_row.addStretch()
+        form.addRow(arc_row)
+
         layout.addLayout(form)
 
         btn_row = QHBoxLayout()
@@ -166,6 +177,7 @@ class AnalysisPanel(QWidget):
             "date_label": self._sun_date.currentText(),
             "show_shadows": self._sun_shadows.isChecked(),
             "show_shadow_length": self._sun_shadow_length.isChecked(),
+            "arc_radius": self._sun_arc_radius.value(),
         })
 
     def set_sun_info(self, text: str):
@@ -222,7 +234,7 @@ class AnalysisPanel(QWidget):
             az.setRange(0, 359)
             az.setValue(preset["azimuth"])
             az.setSuffix("°")
-            az.setFixedWidth(65)
+            az.setFixedWidth(82)
             row.addWidget(az)
 
             # Spread spinner
@@ -230,7 +242,7 @@ class AnalysisPanel(QWidget):
             sp.setRange(10, 180)
             sp.setValue(preset["spread"])
             sp.setSuffix("°")
-            sp.setFixedWidth(60)
+            sp.setFixedWidth(75)
             row.addWidget(sp)
 
             sg_layout.addLayout(row)
@@ -254,7 +266,8 @@ class AnalysisPanel(QWidget):
         layout.addLayout(radius_row)
 
         btn_row = QHBoxLayout()
-        btn_show = QPushButton("Show Sectors")
+        btn_show = QPushButton("Add Sectors")
+        btn_show.setToolTip("Add selected sectors to map (accumulates — use Clear to reset)")
         btn_show.setStyleSheet(
             "QPushButton { background: #1565c0; color: #e3f2fd; border: 1px solid #1976d2; "
             "border-radius: 4px; padding: 6px; font-weight: bold; }"
@@ -263,7 +276,7 @@ class AnalysisPanel(QWidget):
         btn_show.clicked.connect(self._on_show_sectors)
         btn_row.addWidget(btn_show)
 
-        btn_clear = QPushButton("Clear")
+        btn_clear = QPushButton("Clear All")
         btn_clear.setStyleSheet(
             "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
             "border-radius: 4px; padding: 6px; }"

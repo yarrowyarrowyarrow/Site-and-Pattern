@@ -272,6 +272,9 @@ class MainWindow(QMainWindow):
         # Toolbar → structures layer toggle
         self.toolbar.structures_toggled.connect(self.map_widget.set_structures_visible)
 
+        # Toolbar → clear measure
+        self.toolbar.measure_cleared.connect(self.map_widget.clear_measure)
+
         # Analysis panel → map (A1-A4)
         self.analysis_panel.sun_path_requested.connect(self._on_sun_path_requested)
         self.analysis_panel.sun_path_cleared.connect(self.map_widget.clear_sun_path)

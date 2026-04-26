@@ -218,6 +218,9 @@ class MapWidget(QWebEngineView):
     def cancel_draw(self):
         self.run_js("cancelDraw();")
 
+    def clear_measure(self):
+        self.run_js("clearMeasure();")
+
     def clear_all(self):
         self.run_js("clearAll();")
 

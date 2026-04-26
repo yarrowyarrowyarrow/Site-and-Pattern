@@ -42,10 +42,11 @@ _PROJECT_ROOT    = os.path.dirname(os.path.dirname(_HERE))
 _LEGACY_DB_PATH  = os.path.join(_PROJECT_ROOT, "data", "permadesign.db")
 
 # Master plant data (shipped with the application)
-_MASTER_JSON_PATH = os.path.join(_PROJECT_ROOT, "data", "plants_master.json")
+_MASTER_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "plants_master.json")
+_GARDEN_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "garden_plants.json")
 
 # Current schema version — bump when adding columns/tables
-_SCHEMA_VERSION = 6
+_SCHEMA_VERSION = 7
 
 
 def _ensure_data_dir():
@@ -136,21 +137,29 @@ def _migrate_to_v5(conn: sqlite3.Connection):
     conn.commit()
 
 
-def _seed_from_master_json(conn: sqlite3.Connection) -> int:
+def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
     """
-    Insert all plants from data/plants_master.json into an empty plants table.
-    Also populates planting_calendar from the cal_jan..cal_dec fields.
+    Insert all plants from a JSON file into the plants table (skipping duplicates
+    by common_name).  Also populates planting_calendar from cal_jan..cal_dec fields.
     Returns the number of plants inserted.
     """
     import json as _json
 
-    if not os.path.exists(_MASTER_JSON_PATH):
+    if not os.path.exists(json_path):
         return 0
 
-    with open(_MASTER_JSON_PATH, "r", encoding="utf-8") as f:
+    with open(json_path, "r", encoding="utf-8") as f:
         entries = _json.load(f)
 
-    # Phase 1: insert all plants and commit so plant IDs are visible to FK checks
+    # Skip plants already in the DB (allows calling this for multiple JSON files)
+    existing_names = {
+        row[0].lower()
+        for row in conn.execute("SELECT common_name FROM plants").fetchall()
+    }
+    entries = [p for p in entries if p.get("common_name", "").lower() not in existing_names]
+    if not entries:
+        return 0
+
     plant_rows = []
     for p in entries:
         uses = p.get("permaculture_uses", "")
@@ -227,6 +236,11 @@ def _seed_from_master_json(conn: sqlite3.Connection) -> int:
     return len(entries)
 
 
+def _seed_from_master_json(conn: sqlite3.Connection) -> int:
+    """Backward-compat wrapper — seeds from the master native plant JSON."""
+    return _seed_from_json_file(conn, _MASTER_JSON_PATH)
+
+
 def init_db() -> None:
     """
     Create tables (if absent), run migrations, and seed the plant catalogue
@@ -261,8 +275,8 @@ def init_db() -> None:
 
         count = conn.execute("SELECT COUNT(*) FROM plants").fetchone()[0]
 
-        # Reseed if empty, count is below master dataset size, or upgrading to v6
-        needs_reseed = (count < 100) or (current_version < 6)
+        # Reseed if empty, below master dataset size, or upgrading schema version
+        needs_reseed = (count < 100) or (current_version < _SCHEMA_VERSION)
 
         if needs_reseed:
             # Disable FK enforcement for the bulk reseed — Python 3.14 enforces
@@ -273,9 +287,12 @@ def init_db() -> None:
             conn.execute("DELETE FROM companion_friends")
             conn.execute("DELETE FROM companion_enemies")
             conn.execute("DELETE FROM planting_calendar")
+            conn.execute("DELETE FROM guild_members")
+            conn.execute("DELETE FROM guilds")
             conn.execute("DELETE FROM plants")
             conn.commit()
-            _seed_from_master_json(conn)
+            _seed_from_json_file(conn, _MASTER_JSON_PATH)    # 433 native plants
+            _seed_from_json_file(conn, _GARDEN_JSON_PATH)    # cultivated garden plants
             from src.db.seed_data import SEED_COMPANIONS
             _insert_companions(conn, SEED_COMPANIONS)
             conn.execute("PRAGMA foreign_keys = ON")

@@ -220,8 +220,12 @@
   <script>
     // ── State ────────────────────────────────────────────────────────────────
     var map, osmLayer, satelliteLayer, drawnItems, drawControl;
-    var boundaryLayer  = null;
-    var boundaryLabels = null;  // L.layerGroup of per-edge length markers
+    var boundaryLayer     = null;
+    var boundaryLabels    = null;  // L.layerGroup of per-edge length markers
+    var boundaryAreaLabel = null;  // L.marker showing area at centroid
+    var boundaryAreaUnit  = 0;     // 0=m² 1=ha 2=acre 3=km²
+    var seasonOverlay     = null;  // NASA GIBS seasonal tile layer
+    var measureVisible    = true;  // whether measure result is shown
     var plantMarkers  = {};   // id -> marker
     var plantLayerGroup = null; // L.layerGroup for batch visibility toggle
     var zoneCircles   = [];
@@ -455,6 +459,61 @@
       }
     }
 
+    function calcPolygonAreaM2(points) {
+      // Shoelace on projected metre coords relative to centroid
+      var n = points.length;
+      if (n < 3) return 0;
+      var R = 6371000;
+      var lat0 = 0, lng0 = 0;
+      for (var k = 0; k < n; k++) { lat0 += points[k][0]; lng0 += points[k][1]; }
+      lat0 /= n; lng0 /= n;
+      var cosLat = Math.cos(lat0 * Math.PI / 180);
+      var proj = points.map(function(p) {
+        return [
+          (p[0] - lat0) * Math.PI / 180 * R,
+          (p[1] - lng0) * Math.PI / 180 * R * cosLat
+        ];
+      });
+      var area = 0;
+      for (var i = 0; i < n; i++) {
+        var j = (i + 1) % n;
+        area += proj[i][1] * proj[j][0];
+        area -= proj[j][1] * proj[i][0];
+      }
+      return Math.abs(area) / 2;
+    }
+
+    var _AREA_UNITS = ['m²', 'ha', 'ac', 'km²'];
+    function _fmtArea(m2, unit) {
+      if (unit === 1) return (m2 / 10000).toFixed(3) + ' ha';
+      if (unit === 2) return (m2 / 4046.86).toFixed(3) + ' ac';
+      if (unit === 3) return (m2 / 1e6).toFixed(4) + ' km²';
+      return (m2 >= 10 ? Math.round(m2) : m2.toFixed(1)) + ' m²';
+    }
+
+    function addBoundaryAreaLabel(points) {
+      if (boundaryAreaLabel) { map.removeLayer(boundaryAreaLabel); boundaryAreaLabel = null; }
+      if (!points || points.length < 3) return;
+      var areaM2 = calcPolygonAreaM2(points);
+      var clat = 0, clng = 0;
+      for (var i = 0; i < points.length; i++) { clat += points[i][0]; clng += points[i][1]; }
+      clat /= points.length; clng /= points.length;
+
+      function makeIcon() {
+        var txt = _fmtArea(areaM2, boundaryAreaUnit);
+        return L.divIcon({
+          className: '',
+          html: '<div style="background:rgba(255,255,255,0.92);border:1.5px solid #388e3c;border-radius:4px;padding:3px 9px;font-size:12px;font-weight:700;color:#1b5e20;white-space:nowrap;cursor:pointer;user-select:none;">⬡ ' + escH(txt) + '</div>',
+          iconSize: null, iconAnchor: null
+        });
+      }
+      boundaryAreaLabel = L.marker([clat, clng], { icon: makeIcon(), interactive: true }).addTo(map);
+      boundaryAreaLabel.on('click', function() {
+        boundaryAreaUnit = (boundaryAreaUnit + 1) % 4;
+        boundaryAreaLabel.setIcon(makeIcon());
+      });
+    }
+
     function finishBoundaryPolygon() {
       if (polygonPoints.length < 3) return;
 
@@ -472,6 +531,7 @@
       }).addTo(map);
 
       addBoundaryLengthLabels(polygonPoints);
+      addBoundaryAreaLabel(polygonPoints);
 
       // Zoom to fit the drawn boundary
       map.fitBounds(boundaryLayer.getBounds(), { padding: [30, 30] });
@@ -824,18 +884,33 @@
     }
 
     // ── Season view ─────────────────────────────────────────────────────────
+    // NASA GIBS MODIS Terra True Color — free, no key, max zoom 9 (blurry at high zoom)
+    var _GIBS_DATES = {
+      'Spring': '2023-05-10',
+      'Summer': null,             // no overlay; normal map IS summer
+      'Fall':   '2023-10-05',
+      'Winter': '2023-01-20'
+    };
+
     function setSeasonView(season, plantVisData) {
-      // plantVisData: {plantId: opacity} — per-plant-type opacity
-      // Apply CSS filter on tile pane for seasonal color tint
-      var filters = {
-        'Spring': 'saturate(1.1) hue-rotate(-10deg)',
-        'Summer': '',
-        'Fall':   'saturate(0.9) hue-rotate(15deg) sepia(0.1)',
-        'Winter': 'saturate(0.5) brightness(1.1)'
-      };
+      // Remove any existing seasonal overlay
+      if (seasonOverlay) { map.removeLayer(seasonOverlay); seasonOverlay = null; }
+      // Reset CSS filter
       var tilePane = document.querySelector('.leaflet-tile-pane');
-      if (tilePane) {
-        tilePane.style.filter = filters[season] || '';
+      if (tilePane) tilePane.style.filter = '';
+
+      var gibsDate = _GIBS_DATES[season];
+      if (gibsDate) {
+        var url = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/' +
+                  'MODIS_Terra_CorrectedReflectance_TrueColor/default/' +
+                  gibsDate + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg';
+        seasonOverlay = L.tileLayer(url, {
+          attribution: 'NASA GIBS',
+          maxNativeZoom: 9,
+          maxZoom: 22,
+          opacity: 0.72,
+          tileSize: 256
+        }).addTo(map);
       }
 
       // Adjust plant marker opacity based on season + plant type
@@ -896,6 +971,13 @@
       measureMarkers.forEach(function(m) { map.removeLayer(m); });
       measureMarkers = [];
       measureStart = null;
+    }
+
+    function setMeasureVisible(visible) {
+      measureVisible = visible;
+      if (!visible) {
+        clearMeasure();
+      }
     }
 
     // ── Annotations ───────────────────────────────────────────────────────────
@@ -1583,6 +1665,9 @@
       if (boundaryLabels) {
         if (visible) boundaryLabels.addTo(map); else map.removeLayer(boundaryLabels);
       }
+      if (boundaryAreaLabel) {
+        if (visible) boundaryAreaLabel.addTo(map); else map.removeLayer(boundaryAreaLabel);
+      }
     }
 
     function setZonesVisible(visible) {
@@ -1601,8 +1686,9 @@
 
     // ── Project load/clear ────────────────────────────────────────────────────
     function clearAll() {
-      if (boundaryLayer)  { map.removeLayer(boundaryLayer);  boundaryLayer  = null; }
-      if (boundaryLabels) { map.removeLayer(boundaryLabels); boundaryLabels = null; }
+      if (boundaryLayer)     { map.removeLayer(boundaryLayer);     boundaryLayer     = null; }
+      if (boundaryLabels)    { map.removeLayer(boundaryLabels);    boundaryLabels    = null; }
+      if (boundaryAreaLabel) { map.removeLayer(boundaryAreaLabel); boundaryAreaLabel = null; }
       zoneCircles.forEach(function(c) { map.removeLayer(c); });
       zoneCircles = [];
       plantLayerGroup.clearLayers();
@@ -1632,6 +1718,7 @@
         fillColor: '#388e3c', fillOpacity: 0.15
       }).addTo(map);
       addBoundaryLengthLabels(coords);
+      addBoundaryAreaLabel(coords);
       map.fitBounds(boundaryLayer.getBounds());
     }
 
@@ -1670,7 +1757,7 @@
       if (positions.length < 2) return;
 
       // Draw sun arc as a single polyline (not individual dots) for performance
-      var arcRadius = 80; // metres from centre for arc display
+      var arcRadius = data.arc_radius || 80; // metres from centre for arc display
       var arcPoints = [];
       var positionMap = {}; // index -> {ptLat, ptLng, pos}
 
@@ -1746,9 +1833,9 @@
           // Shadow goes opposite to sun
           var shadowAz = (closest.azimuth + 180) % 360;
           var shadowRad = shadowAz * Math.PI / 180;
-          var arrowLen = 40; // metres
+          var arrowLen = arcRadius * 0.5; // shadow arrow length proportional to arc
           if (showShadowLength && closest.altitude > 0) {
-            arrowLen = Math.min(80, 20 / Math.tan(closest.altitude * Math.PI / 180));
+            arrowLen = Math.min(arcRadius, (arcRadius * 0.25) / Math.tan(closest.altitude * Math.PI / 180));
           }
           var dLat = arrowLen * Math.cos(shadowRad) / 111320;
           var dLng = arrowLen * Math.sin(shadowRad) / (111320 * Math.cos(lat * Math.PI / 180));
@@ -1805,11 +1892,11 @@
     }
 
     // ── A2: Sector analysis wedges ──────────────────────────────────────────
-    var sectorLayer = null;
+    var sectorLayers = [];  // array — each "Add Sectors" call pushes a new layer group
 
     function drawSectors(data) {
-      clearSectors();
-      sectorLayer = L.layerGroup().addTo(map);
+      var sectorLayer = L.layerGroup().addTo(map);
+      sectorLayers.push(sectorLayer);
       var center = map.getCenter();
       var lat = center.lat;
       var lng = center.lng;
@@ -1867,7 +1954,8 @@
     }
 
     function clearSectors() {
-      if (sectorLayer) { map.removeLayer(sectorLayer); sectorLayer = null; }
+      sectorLayers.forEach(function(l) { map.removeLayer(l); });
+      sectorLayers = [];
     }
 
     // ── A3: Contour lines ───────────────────────────────────────────────────
