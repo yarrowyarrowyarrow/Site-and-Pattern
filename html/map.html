@@ -220,7 +220,8 @@
   <script>
     // ── State ────────────────────────────────────────────────────────────────
     var map, osmLayer, satelliteLayer, drawnItems, drawControl;
-    var boundaryLayer = null;
+    var boundaryLayer  = null;
+    var boundaryLabels = null;  // L.layerGroup of per-edge length markers
     var plantMarkers  = {};   // id -> marker
     var plantLayerGroup = null; // L.layerGroup for batch visibility toggle
     var zoneCircles   = [];
@@ -419,6 +420,41 @@
       }).addTo(map);
     }
 
+    // ── Boundary length labels ────────────────────────────────────────────────
+    function haversineMeters(a, b) {
+      var R = 6371000;
+      var dLat = (b[0] - a[0]) * Math.PI / 180;
+      var dLng = (b[1] - a[1]) * Math.PI / 180;
+      var lat1 = a[0] * Math.PI / 180;
+      var lat2 = b[0] * Math.PI / 180;
+      var x = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng/2) * Math.sin(dLng/2);
+      return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+    }
+
+    function addBoundaryLengthLabels(points) {
+      if (boundaryLabels) { map.removeLayer(boundaryLabels); }
+      boundaryLabels = L.layerGroup().addTo(map);
+      var n = points.length;
+      for (var i = 0; i < n; i++) {
+        var a = points[i];
+        var b = points[(i + 1) % n];
+        var midLat = (a[0] + b[0]) / 2;
+        var midLng = (a[1] + b[1]) / 2;
+        var dist = haversineMeters(a, b);
+        var label = dist >= 10 ? Math.round(dist) + ' m' : dist.toFixed(1) + ' m';
+        L.marker([midLat, midLng], {
+          icon: L.divIcon({
+            className: '',
+            html: '<div style="background:rgba(255,255,255,0.88);border:1px solid #66bb6a;border-radius:3px;padding:1px 6px;font-size:11px;font-weight:600;color:#2e7d32;white-space:nowrap;pointer-events:none;">' + escH(label) + '</div>',
+            iconSize: null,
+            iconAnchor: null
+          }),
+          interactive: false
+        }).addTo(boundaryLabels);
+      }
+    }
+
     function finishBoundaryPolygon() {
       if (polygonPoints.length < 3) return;
 
@@ -427,13 +463,15 @@
       if (polygonPreview)  { map.removeLayer(polygonPreview);  polygonPreview  = null; }
       drawnItems.clearLayers();
 
-      // Remove existing boundary
+      // Remove existing boundary and labels
       if (boundaryLayer) { map.removeLayer(boundaryLayer); }
 
       boundaryLayer = L.polygon(polygonPoints, {
         color: '#66bb6a', weight: 2,
         fillColor: '#388e3c', fillOpacity: 0.15
       }).addTo(map);
+
+      addBoundaryLengthLabels(polygonPoints);
 
       // Zoom to fit the drawn boundary
       map.fitBounds(boundaryLayer.getBounds(), { padding: [30, 30] });
@@ -1542,6 +1580,9 @@
       if (boundaryLayer) {
         if (visible) boundaryLayer.addTo(map); else map.removeLayer(boundaryLayer);
       }
+      if (boundaryLabels) {
+        if (visible) boundaryLabels.addTo(map); else map.removeLayer(boundaryLabels);
+      }
     }
 
     function setZonesVisible(visible) {
@@ -1560,7 +1601,8 @@
 
     // ── Project load/clear ────────────────────────────────────────────────────
     function clearAll() {
-      if (boundaryLayer) { map.removeLayer(boundaryLayer); boundaryLayer = null; }
+      if (boundaryLayer)  { map.removeLayer(boundaryLayer);  boundaryLayer  = null; }
+      if (boundaryLabels) { map.removeLayer(boundaryLabels); boundaryLabels = null; }
       zoneCircles.forEach(function(c) { map.removeLayer(c); });
       zoneCircles = [];
       plantLayerGroup.clearLayers();
@@ -1589,6 +1631,7 @@
         color: '#66bb6a', weight: 2,
         fillColor: '#388e3c', fillOpacity: 0.15
       }).addTo(map);
+      addBoundaryLengthLabels(coords);
       map.fitBounds(boundaryLayer.getBounds());
     }
 
