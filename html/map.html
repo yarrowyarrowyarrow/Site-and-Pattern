@@ -290,6 +290,18 @@
     // the empty map background; cleared on mouseup.
     var _marqueeState = null;   // { startPx, currentPx, rectEl, additive }
 
+    // Pattern placement state. When currentPlant.pattern is set, plant clicks
+    // collect anchors instead of placing immediately:
+    //   row    : 2 clicks (start, end)
+    //   grid   : 2 clicks (corner A, corner B)
+    //   circle : 2 clicks (centre, radius point)
+    //   single : default — place immediately on click
+    // _patternStage tracks how many anchors have been collected. _patternPreview
+    // is the Leaflet layer group used for live feedback as the cursor moves.
+    var _patternStage   = 0;
+    var _patternAnchors = [];
+    var _patternPreview = null;
+
     function _selectionContains(pd) {
       for (var i = 0; i < selectedItems.length; i++) {
         if (_sameSelectable(selectedItems[i], pd)) return true;
@@ -485,6 +497,13 @@
           L.DomEvent.stop(e);
           setMode('none');
           if (bridge) bridge.onAnchorCancelled(currentMode);
+          return;
+        }
+        // Cancel a pattern placement in progress (after first click)
+        if (currentMode === 'plant' && currentPlant && currentPlant.pattern
+            && currentPlant.pattern.kind !== 'single' && _patternStage >= 1) {
+          L.DomEvent.stop(e);
+          _resetPatternState();
         }
       });
 
@@ -530,23 +549,28 @@
       if (currentMode === 'boundary') {
         handleBoundaryClick(lat, lng);
       } else if (currentMode === 'plant' && currentPlant) {
-        var qty = currentPlant.quantity || 1;
-        var cc  = currentPlant.custom_color || null;
-        if (qty > 1) {
-          // Burst: place qty plants at once (hex pattern). All share one
-          // group id so they can be deleted together.
-          var positions = _hexBurstPositions(lat, lng, currentPlant.spacing_m, qty);
-          if (bridge) {
-            bridge.onPatternPlaced(currentPlant.id, currentPlant.common_name,
-                                   currentPlant.spacing_m, currentPlant.plant_type,
-                                   cc || '', JSON.stringify(positions), 'burst');
-          }
+        var pat = currentPlant.pattern || { kind: 'single' };
+        if (pat.kind && pat.kind !== 'single') {
+          _handlePatternClick(lat, lng);
         } else {
-          placePlantMarker(currentPlant.id, currentPlant.common_name, lat, lng,
-                           currentPlant.spacing_m, currentPlant.plant_type, cc);
-          if (bridge) bridge.onPlantPlaced(currentPlant.id, currentPlant.common_name, lat, lng);
+          var qty = currentPlant.quantity || 1;
+          var cc  = currentPlant.custom_color || null;
+          if (qty > 1) {
+            // Single-mode burst: place qty plants at once (hex pattern).
+            // All share one group id so they can be deleted together.
+            var positions = _hexBurstPositions(lat, lng, currentPlant.spacing_m, qty);
+            if (bridge) {
+              bridge.onPatternPlaced(currentPlant.id, currentPlant.common_name,
+                                     currentPlant.spacing_m, currentPlant.plant_type,
+                                     cc || '', JSON.stringify(positions), 'burst');
+            }
+          } else {
+            placePlantMarker(currentPlant.id, currentPlant.common_name, lat, lng,
+                             currentPlant.spacing_m, currentPlant.plant_type, cc);
+            if (bridge) bridge.onPlantPlaced(currentPlant.id, currentPlant.common_name, lat, lng);
+          }
+          // Stay in plant mode so user can place multiple
         }
-        // Stay in plant mode so user can place multiple
       } else if (currentMode === 'zone') {
         placeZoneCircles(lat, lng);
         if (bridge) bridge.onZoneCenterPlaced(lat, lng);
@@ -593,6 +617,10 @@
       }
       if ((currentMode === 'sun_anchor' || currentMode === 'sector_anchor') && _anchorPreviewMarker) {
         _anchorPreviewMarker.setLatLng(e.latlng);
+      }
+      if (currentMode === 'plant' && currentPlant && currentPlant.pattern
+          && currentPlant.pattern.kind !== 'single' && _patternStage >= 1) {
+        _drawPatternPreview(e.latlng);
       }
     }
 
@@ -1343,6 +1371,204 @@
           return;
         }
       }
+    }
+
+    // ── Pattern placement geometry ───────────────────────────────────────────
+    // All position helpers return [[lat,lng], ...] arrays.  They are used both
+    // by the live preview during placement and by the final commit. Keeping
+    // them pure makes them easy to mirror in Python tests.
+
+    // Reset pattern state and remove any preview layers.
+    function _resetPatternState() {
+      _patternStage = 0;
+      _patternAnchors = [];
+      if (_patternPreview) { map.removeLayer(_patternPreview); _patternPreview = null; }
+    }
+
+    // Build (or rebuild) the live preview layer for the pattern, given the
+    // current cursor position. The preview shows where each plant will land
+    // as small dashed circles, plus the framing line/rect/circle.
+    function _drawPatternPreview(cursorLatLng) {
+      if (!currentPlant || !currentPlant.pattern) return;
+      var pat = currentPlant.pattern;
+      var pp = pat.params || {};
+      var s = currentPlant.spacing_m || 1.0;
+      var overlap = (pp.overlap || 0);
+      var positions = [];
+      var framing = null;
+
+      if (_patternPreview) { map.removeLayer(_patternPreview); _patternPreview = null; }
+
+      if (pat.kind === 'row' && _patternAnchors.length === 1 && cursorLatLng) {
+        var a = _patternAnchors[0];
+        positions = _rowPositions(a[0], a[1], cursorLatLng.lat, cursorLatLng.lng,
+                                  s, overlap, pp.count);
+        framing = L.polyline([a, [cursorLatLng.lat, cursorLatLng.lng]],
+                              { color: '#fdd835', weight: 2, dashArray: '4 4', opacity: 0.7 });
+      } else if (pat.kind === 'grid' && _patternAnchors.length === 1 && cursorLatLng) {
+        var a = _patternAnchors[0];
+        positions = _gridPositions(a[0], a[1], cursorLatLng.lat, cursorLatLng.lng,
+                                   s, overlap, pp.rows, pp.cols, pp.stagger);
+        var bnds = L.latLngBounds([a, [cursorLatLng.lat, cursorLatLng.lng]]);
+        framing = L.rectangle(bnds, { color: '#fdd835', weight: 2, dashArray: '4 4',
+                                       fill: false, opacity: 0.7 });
+      } else if (pat.kind === 'circle' && _patternAnchors.length === 1 && cursorLatLng) {
+        var c = _patternAnchors[0];
+        var radiusM = _haversineM(c, [cursorLatLng.lat, cursorLatLng.lng]);
+        positions = _circlePositions(c[0], c[1], radiusM, s, overlap, pp.count, pp.fill);
+        framing = L.circle(c, { radius: radiusM, color: '#fdd835', weight: 2,
+                                 dashArray: '4 4', fill: false, opacity: 0.7 });
+      }
+
+      var preview = L.layerGroup();
+      if (framing) framing.addTo(preview);
+      // Draw a small dashed "ghost" plant circle at each computed position.
+      var radius = Math.max(_effectiveSpacing(s, overlap) / 2, 0.5);
+      positions.forEach(function(p) {
+        L.circle(p, { radius: radius, color: '#fdd835', weight: 1,
+                      dashArray: '2 3', fillColor: '#fdd835', fillOpacity: 0.15,
+                      interactive: false }).addTo(preview);
+      });
+      // Floating count badge near the cursor while previewing.
+      if (cursorLatLng && positions.length > 0) {
+        var label = L.tooltip({ permanent: true, direction: 'right', offset: [10, 0],
+                                 className: 'measure-label', opacity: 0.9 })
+                     .setContent(positions.length + ' plants')
+                     .setLatLng(cursorLatLng);
+        label.addTo(preview);
+      }
+      preview.addTo(map);
+      _patternPreview = preview;
+    }
+
+    // Handle a click in plant mode when a pattern is active. Each pattern
+    // takes 2 clicks; the second click commits and emits onPatternPlaced.
+    function _handlePatternClick(lat, lng) {
+      if (!currentPlant || !currentPlant.pattern) return;
+      var pat = currentPlant.pattern;
+      var pp = pat.params || {};
+      _patternAnchors.push([lat, lng]);
+      _patternStage = _patternAnchors.length;
+
+      if (_patternStage < 2) {
+        // First click captured — preview will follow the cursor.
+        return;
+      }
+
+      // Two anchors collected — compute final positions and commit.
+      var s = currentPlant.spacing_m || 1.0;
+      var overlap = pp.overlap || 0;
+      var a = _patternAnchors[0], b = _patternAnchors[1];
+      var positions = [];
+      if (pat.kind === 'row') {
+        positions = _rowPositions(a[0], a[1], b[0], b[1], s, overlap, pp.count);
+      } else if (pat.kind === 'grid') {
+        positions = _gridPositions(a[0], a[1], b[0], b[1], s, overlap,
+                                   pp.rows, pp.cols, pp.stagger);
+      } else if (pat.kind === 'circle') {
+        var radiusM = _haversineM(a, b);
+        positions = _circlePositions(a[0], a[1], radiusM, s, overlap, pp.count, pp.fill);
+      }
+
+      _resetPatternState();
+
+      if (positions.length > 0 && bridge) {
+        bridge.onPatternPlaced(currentPlant.id, currentPlant.common_name,
+                               currentPlant.spacing_m, currentPlant.plant_type,
+                               currentPlant.custom_color || '',
+                               JSON.stringify(positions), pat.kind);
+      }
+    }
+
+    function _metersToLat(m) { return m / 111320; }
+    function _metersToLng(m, lat) { return m / (111320 * Math.cos(lat * Math.PI / 180)); }
+
+    function _haversineM(a, b) { return haversineMeters(a, b); }
+
+    // Effective centre-to-centre spacing after applying overlap factor.
+    // overlapFactor is in [0..1]; 0 = no overlap (centers exactly spacingM
+    // apart); 1 = centers coincide. Floors at 1cm to avoid div-by-zero.
+    function _effectiveSpacing(spacingM, overlapFactor) {
+      var s = (spacingM || 1.0) * (1.0 - (overlapFactor || 0));
+      return Math.max(s, 0.01);
+    }
+
+    // Linear interpolation along a great-circle approximation between two
+    // (lat,lng) anchors. Suitable for the ≤200m row lengths we care about.
+    function _rowPositions(latA, lngA, latB, lngB, spacingM, overlapFactor, count) {
+      var aLat = latA, aLng = lngA, bLat = latB, bLng = lngB;
+      var len = _haversineM([aLat, aLng], [bLat, bLng]);
+      var s = _effectiveSpacing(spacingM, overlapFactor);
+      var n;
+      if (count && count > 0) {
+        n = Math.max(2, Math.floor(count));
+      } else {
+        n = Math.max(2, Math.floor(len / s) + 1);
+      }
+      var positions = [];
+      if (n === 1) return [[aLat, aLng]];
+      for (var i = 0; i < n; i++) {
+        var t = i / (n - 1);
+        positions.push([aLat + (bLat - aLat) * t, aLng + (bLng - aLng) * t]);
+      }
+      return positions;
+    }
+
+    // Grid filling the rectangle whose corners are (latA,lngA) and (latB,lngB).
+    // If rows or cols are provided they override the spacing-derived count.
+    // stagger=true offsets every other row by half the column step (hex pack).
+    function _gridPositions(latA, lngA, latB, lngB, spacingM, overlapFactor, rows, cols, stagger) {
+      var s = _effectiveSpacing(spacingM, overlapFactor);
+      var minLat = Math.min(latA, latB), maxLat = Math.max(latA, latB);
+      var minLng = Math.min(lngA, lngB), maxLng = Math.max(lngA, lngB);
+      var midLat = (minLat + maxLat) / 2;
+      var widthM  = _haversineM([midLat, minLng], [midLat, maxLng]);
+      var heightM = _haversineM([minLat, minLng], [maxLat, minLng]);
+      var nCols = (cols && cols > 0) ? Math.max(1, Math.floor(cols))
+                                     : Math.max(1, Math.floor(widthM / s) + 1);
+      var nRows = (rows && rows > 0) ? Math.max(1, Math.floor(rows))
+                                     : Math.max(1, Math.floor(heightM / s) + 1);
+      var positions = [];
+      var dLat = nRows > 1 ? (maxLat - minLat) / (nRows - 1) : 0;
+      var dLng = nCols > 1 ? (maxLng - minLng) / (nCols - 1) : 0;
+      for (var r = 0; r < nRows; r++) {
+        var rowLat = minLat + dLat * r;
+        var offset = (stagger && (r % 2 === 1)) ? dLng / 2 : 0;
+        for (var c = 0; c < nCols; c++) {
+          var colLng = minLng + dLng * c + offset;
+          if (colLng > maxLng + 1e-9) continue; // staggered last column may overflow
+          positions.push([rowLat, colLng]);
+        }
+      }
+      return positions;
+    }
+
+    // Plants arranged on a circle of radius `radiusM` around (centerLat,centerLng).
+    // count overrides arc-spacing-derived count when provided. fill=true also
+    // adds concentric inner rings spaced by effective spacing, plus a centre
+    // plant — i.e. it fills the disk rather than only the circumference.
+    function _circlePositions(centerLat, centerLng, radiusM, spacingM, overlapFactor, count, fill) {
+      var s = _effectiveSpacing(spacingM, overlapFactor);
+      var positions = [];
+      var rings = [radiusM];
+      if (fill) {
+        var r = radiusM - s;
+        while (r > s * 0.5) { rings.push(r); r -= s; }
+        positions.push([centerLat, centerLng]); // centre plant
+      }
+      for (var i = 0; i < rings.length; i++) {
+        var rad = rings[i];
+        var circumference = 2 * Math.PI * rad;
+        var n = (count && i === 0 && count > 0) ? Math.max(3, Math.floor(count))
+                                                : Math.max(3, Math.floor(circumference / s));
+        for (var k = 0; k < n; k++) {
+          var theta = (2 * Math.PI * k) / n;
+          var dLat = _metersToLat(rad * Math.cos(theta));
+          var dLng = _metersToLng(rad * Math.sin(theta), centerLat);
+          positions.push([centerLat + dLat, centerLng + dLng]);
+        }
+      }
+      return positions;
     }
 
     // Compute a hex burst pattern of `quantity` positions centred at
@@ -2317,6 +2543,7 @@
         case 'plant':
           currentPlant = data || null;
           map.getContainer().style.cursor = 'cell';
+          _resetPatternState();
           break;
         case 'zone':
           map.getContainer().style.cursor = 'crosshair';
@@ -2368,6 +2595,7 @@
           hedgerowPoints = [];
           shapePoints    = [];
           contourPoints  = [];
+          _resetPatternState();
           drawnItems.clearLayers();
       }
     }

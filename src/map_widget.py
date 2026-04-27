@@ -286,18 +286,30 @@ class MapWidget(QWebEngineView):
 
     def set_mode(self, mode: str, plant_id: int = 0, common_name: str = "",
                  spacing_m: float = 1.0, plant_type: str = "herb",
-                 quantity: int = 1, custom_color: str = ""):
-        """Switch the map interaction mode ('none'|'boundary'|'plant'|'zone')."""
+                 quantity: int = 1, custom_color: str = "",
+                 pattern: dict | None = None):
+        """Switch the map interaction mode.
+
+        For plant mode, `pattern` may be:
+          {"kind": "single"}  (default — current click-to-place behaviour)
+          {"kind": "row",    "params": {"count": int|None, "overlap": 0..1}}
+          {"kind": "grid",   "params": {"rows": N|None, "cols": N|None,
+                                         "overlap": 0..1, "stagger": bool}}
+          {"kind": "circle", "params": {"count": N|None, "overlap": 0..1,
+                                         "fill": bool}}
+        """
         if mode == 'plant' and plant_id:
-            color_js = f", custom_color: '{custom_color}'" if custom_color else ""
-            js = (
-                f"setMode('plant', {{id: {plant_id}, "
-                f"common_name: {repr(common_name)}, "
-                f"spacing_m: {spacing_m}, "
-                f"plant_type: {repr(plant_type)}, "
-                f"quantity: {quantity}"
-                f"{color_js}}});"
-            )
+            import json as _json
+            payload = {
+                "id": plant_id,
+                "common_name": common_name,
+                "spacing_m": spacing_m,
+                "plant_type": plant_type,
+                "quantity": quantity,
+                "custom_color": custom_color or "",
+                "pattern": pattern or {"kind": "single"},
+            }
+            js = f"setMode('plant', JSON.parse({_json.dumps(_json.dumps(payload))}));"
         else:
             js = f"setMode({repr(mode)});"
         self.run_js(js)

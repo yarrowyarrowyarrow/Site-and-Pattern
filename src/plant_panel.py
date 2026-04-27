@@ -12,7 +12,8 @@ from PyQt6.QtWidgets import (
     QComboBox, QListWidget, QListWidgetItem, QFrame,
     QPushButton, QSizePolicy, QScrollArea, QSplitter,
     QFormLayout, QGroupBox, QTabWidget, QGridLayout,
-    QSpinBox, QColorDialog, QMenu,
+    QSpinBox, QDoubleSpinBox, QSlider, QCheckBox,
+    QColorDialog, QMenu, QStackedWidget, QButtonGroup,
 )
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QSize
 from PyQt6.QtGui import QColor, QIcon, QPixmap, QPainter, QFont, QBrush
@@ -153,8 +154,11 @@ def _make_list_item(plant: dict, placed_count: int = 0) -> QListWidgetItem:
 class PlantPanel(QWidget):
     """Right-hand panel for browsing, filtering and placing plants."""
 
-    place_plant_requested = pyqtSignal(int, str, int)   # plant_id, common_name, quantity
-    color_changed = pyqtSignal(int, str)               # plant_id, hex_color
+    # Place a plant (or pattern of plants). The third arg is the legacy
+    # quantity spinner value (used when pattern["kind"]=="single"); the
+    # fourth is the pattern descriptor — see MapWidget.set_mode docstring.
+    place_plant_requested = pyqtSignal(int, str, int, dict)   # plant_id, common_name, quantity, pattern
+    color_changed = pyqtSignal(int, str)                       # plant_id, hex_color
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -490,11 +494,18 @@ class PlantPanel(QWidget):
 
         bot_layout.addWidget(self._calendar_group)
 
+        # ── Pattern mode selector ───────────────────────────────────────
+        # Single = click-to-place (current behaviour). Row/Grid/Circle take
+        # two clicks each and emit a single batch placement with shared
+        # group_id. Per-mode parameter widgets live in a QStackedWidget so
+        # only relevant inputs are visible at a time.
+        self._build_pattern_controls(bot_layout)
+
         # ── Placement controls: quantity + colour + place button ───────
         place_row = QHBoxLayout()
         place_row.setSpacing(4)
 
-        # Quantity spinner
+        # Quantity spinner — only meaningful for Single mode (burst placement).
         qty_label = QLabel("Qty:")
         qty_label.setStyleSheet("color: #90a4ae; font-size: 11px;")
         self._qty_spin = QSpinBox()
@@ -502,7 +513,8 @@ class PlantPanel(QWidget):
         self._qty_spin.setMaximum(50)
         self._qty_spin.setValue(1)
         self._qty_spin.setFixedWidth(65)
-        self._qty_spin.setToolTip("Number of plants to place in a group")
+        self._qty_spin.setToolTip("Single mode: how many plants to burst at the click point\n"
+                                  "Ignored in Row/Grid/Circle modes")
         self._qty_spin.setStyleSheet(_QTY_SPIN_STYLE)
         place_row.addWidget(qty_label)
         place_row.addWidget(self._qty_spin)
@@ -759,12 +771,188 @@ class PlantPanel(QWidget):
 
     # ── Place on map ──────────────────────────────────────────────────────────
 
+    # ── Pattern mode UI ───────────────────────────────────────────────────────
+
+    def _build_pattern_controls(self, parent_layout: QVBoxLayout):
+        """Build the placement-mode segmented buttons + per-mode inputs."""
+        self._pattern_kind = "single"   # 'single' | 'row' | 'grid' | 'circle'
+
+        wrap = QGroupBox("Placement Mode")
+        wrap.setStyleSheet(
+            "QGroupBox { color: #a5d6a7; font-size: 11px; "
+            "border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 8px; }"
+            "QGroupBox::title { subcontrol-origin: margin; left: 8px; "
+            "padding: 0 4px; }"
+        )
+        outer = QVBoxLayout(wrap)
+        outer.setContentsMargins(6, 6, 6, 6)
+        outer.setSpacing(4)
+
+        # ── Mode segmented buttons ────────────────────────────────────
+        seg = QHBoxLayout()
+        seg.setSpacing(2)
+        self._pattern_btn_group = QButtonGroup(self)
+        self._pattern_btn_group.setExclusive(True)
+        for key, label, tip in [
+            ("single", "Single", "Click to place one plant at a time"),
+            ("row",    "Row",    "Click start, then end — fills a line of plants"),
+            ("grid",   "Grid",   "Click two opposite corners — fills a rectangle"),
+            ("circle", "Circle", "Click centre, then radius — places plants on a circle"),
+        ]:
+            btn = QPushButton(label)
+            btn.setCheckable(True)
+            btn.setToolTip(tip)
+            btn.setStyleSheet(_PATTERN_SEG_STYLE)
+            btn.setProperty("pattern_kind", key)
+            self._pattern_btn_group.addButton(btn)
+            seg.addWidget(btn)
+            if key == "single":
+                btn.setChecked(True)
+        self._pattern_btn_group.buttonClicked.connect(self._on_pattern_kind_changed)
+        outer.addLayout(seg)
+
+        # ── Stacked per-mode parameter panels ──────────────────────────
+        self._pattern_stack = QStackedWidget()
+        outer.addWidget(self._pattern_stack)
+
+        # Single — no parameters beyond the legacy Qty spinner below.
+        single_panel = QWidget()
+        sl = QVBoxLayout(single_panel)
+        sl.setContentsMargins(0, 0, 0, 0)
+        sl.addWidget(QLabel("Use the Qty spinner below for burst placement."))
+        sl.itemAt(0).widget().setStyleSheet("color: #78909c; font-size: 11px;")
+        self._pattern_stack.addWidget(single_panel)
+
+        # Row — count input.
+        row_panel = QWidget()
+        rl = QHBoxLayout(row_panel)
+        rl.setContentsMargins(0, 0, 0, 0)
+        rl.setSpacing(4)
+        rl.addWidget(self._small_label("Count:"))
+        self._row_count = QSpinBox()
+        self._row_count.setRange(0, 200)
+        self._row_count.setValue(0)
+        self._row_count.setSpecialValueText("auto")
+        self._row_count.setToolTip("0 = auto from spacing; otherwise force this many plants")
+        self._row_count.setStyleSheet(_QTY_SPIN_STYLE)
+        self._row_count.setFixedWidth(80)
+        rl.addWidget(self._row_count)
+        rl.addStretch()
+        self._pattern_stack.addWidget(row_panel)
+
+        # Grid — rows × cols + stagger.
+        grid_panel = QWidget()
+        gl = QHBoxLayout(grid_panel)
+        gl.setContentsMargins(0, 0, 0, 0)
+        gl.setSpacing(4)
+        gl.addWidget(self._small_label("Rows:"))
+        self._grid_rows = QSpinBox()
+        self._grid_rows.setRange(0, 200)
+        self._grid_rows.setSpecialValueText("auto")
+        self._grid_rows.setStyleSheet(_QTY_SPIN_STYLE)
+        self._grid_rows.setFixedWidth(70)
+        gl.addWidget(self._grid_rows)
+        gl.addWidget(self._small_label("Cols:"))
+        self._grid_cols = QSpinBox()
+        self._grid_cols.setRange(0, 200)
+        self._grid_cols.setSpecialValueText("auto")
+        self._grid_cols.setStyleSheet(_QTY_SPIN_STYLE)
+        self._grid_cols.setFixedWidth(70)
+        gl.addWidget(self._grid_cols)
+        self._grid_stagger = QCheckBox("Stagger")
+        self._grid_stagger.setToolTip("Hex-pack: offset every other row by half a column")
+        gl.addWidget(self._grid_stagger)
+        gl.addStretch()
+        self._pattern_stack.addWidget(grid_panel)
+
+        # Circle — count + fill.
+        circle_panel = QWidget()
+        cl = QHBoxLayout(circle_panel)
+        cl.setContentsMargins(0, 0, 0, 0)
+        cl.setSpacing(4)
+        cl.addWidget(self._small_label("Count:"))
+        self._circle_count = QSpinBox()
+        self._circle_count.setRange(0, 200)
+        self._circle_count.setSpecialValueText("auto")
+        self._circle_count.setToolTip("0 = derive from arc spacing")
+        self._circle_count.setStyleSheet(_QTY_SPIN_STYLE)
+        self._circle_count.setFixedWidth(80)
+        cl.addWidget(self._circle_count)
+        self._circle_fill = QCheckBox("Fill (rings)")
+        self._circle_fill.setToolTip("Add concentric inner rings to fill the disk")
+        cl.addWidget(self._circle_fill)
+        cl.addStretch()
+        self._pattern_stack.addWidget(circle_panel)
+
+        # ── Overlap factor slider (applies to all multi modes) ─────────
+        ov = QHBoxLayout()
+        ov.setSpacing(4)
+        ov.addWidget(self._small_label("Overlap:"))
+        self._overlap_slider = QSlider(Qt.Orientation.Horizontal)
+        self._overlap_slider.setRange(0, 100)
+        self._overlap_slider.setValue(0)
+        self._overlap_slider.setToolTip(
+            "0% = centres exactly mature-width apart (no canopy overlap)\n"
+            "100% = centres coincide. Effective spacing = mature_width × (1 − overlap)"
+        )
+        ov.addWidget(self._overlap_slider, 1)
+        self._overlap_label = QLabel("0%")
+        self._overlap_label.setStyleSheet("color: #a5d6a7; font-size: 11px; min-width: 32px;")
+        ov.addWidget(self._overlap_label)
+        self._overlap_slider.valueChanged.connect(
+            lambda v: self._overlap_label.setText(f"{v}%")
+        )
+        outer.addLayout(ov)
+
+        parent_layout.addWidget(wrap)
+
+    @staticmethod
+    def _small_label(text: str) -> QLabel:
+        lbl = QLabel(text)
+        lbl.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        return lbl
+
+    def _on_pattern_kind_changed(self, btn):
+        kind = btn.property("pattern_kind") or "single"
+        self._pattern_kind = kind
+        idx = {"single": 0, "row": 1, "grid": 2, "circle": 3}.get(kind, 0)
+        self._pattern_stack.setCurrentIndex(idx)
+        # Burst quantity only applies in Single mode.
+        self._qty_spin.setEnabled(kind == "single")
+
+    def _current_pattern(self) -> dict:
+        """Build the pattern dict to pass to the map-placement signal."""
+        kind = self._pattern_kind
+        overlap = self._overlap_slider.value() / 100.0
+        if kind == "row":
+            return {"kind": "row", "params": {
+                "count": self._row_count.value() or None,
+                "overlap": overlap,
+            }}
+        if kind == "grid":
+            return {"kind": "grid", "params": {
+                "rows": self._grid_rows.value() or None,
+                "cols": self._grid_cols.value() or None,
+                "stagger": self._grid_stagger.isChecked(),
+                "overlap": overlap,
+            }}
+        if kind == "circle":
+            return {"kind": "circle", "params": {
+                "count": self._circle_count.value() or None,
+                "fill": self._circle_fill.isChecked(),
+                "overlap": overlap,
+            }}
+        return {"kind": "single"}
+
+    # ── Place on map ──────────────────────────────────────────────────────────
+
     def _on_place_clicked(self, _item=None):
         if self._selected_plant:
             self.place_plant_requested.emit(
                 self._selected_plant["id"],
                 self._selected_plant["common_name"],
                 self._qty_spin.value(),
+                self._current_pattern(),
             )
 
     def _on_plant_context_menu(self, pos):
@@ -796,8 +984,10 @@ class PlantPanel(QWidget):
         menu.exec(self._results_list.viewport().mapToGlobal(pos))
 
     def _quick_place(self, plant, qty=1):
-        """Place a plant directly from context menu."""
-        self.place_plant_requested.emit(plant["id"], plant["common_name"], qty)
+        """Place a plant directly from context menu (always Single mode)."""
+        self.place_plant_requested.emit(
+            plant["id"], plant["common_name"], qty, {"kind": "single"}
+        )
 
     def _show_companions(self, plant):
         """Show companion info in the detail view."""
@@ -1155,6 +1345,27 @@ QSpinBox::down-arrow {
     border-right: 4px solid transparent;
     border-top: 5px solid #a5d6a7;
     width: 0; height: 0;
+}
+"""
+
+_PATTERN_SEG_STYLE = """
+QPushButton {
+    background: #1e2e1e;
+    color: #c8e6c9;
+    border: 1px solid #2e4a2e;
+    border-radius: 3px;
+    padding: 4px 6px;
+    font-size: 11px;
+}
+QPushButton:checked {
+    background: #2e7d32;
+    color: #e8f5e9;
+    border-color: #66bb6a;
+    font-weight: bold;
+}
+QPushButton:hover:!checked {
+    border-color: #4a7a4a;
+    background: #243824;
 }
 """
 

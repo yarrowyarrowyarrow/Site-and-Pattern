@@ -243,7 +243,9 @@ class MainWindow(QMainWindow):
             lambda on: self.map_widget.set_snap_enabled(on)
         )
 
-        # Plant panel → map (plant placement + colour)
+        # Plant panel → map (plant placement + colour). Pattern mode info
+        # arrives in the 4th argument; legacy single-mode placements pass
+        # {"kind": "single"}.
         self.plant_panel.place_plant_requested.connect(self._enter_plant_mode)
         self.plant_panel.color_changed.connect(self._on_plant_color_changed)
 
@@ -402,16 +404,27 @@ class MainWindow(QMainWindow):
         self._set_mode_label("Zone circles — click to place zone centre")
 
     def _enter_plant_mode(self, plant_id: int, common_name: str,
-                          quantity: int = 1):
+                          quantity: int = 1, pattern: dict | None = None):
         self._current_mode = 'plant'
         spacing_m, plant_type, custom_color = self._plant_info(plant_id)
         self.map_widget.set_mode('plant', plant_id, common_name, spacing_m,
-                                 plant_type, quantity, custom_color)
+                                 plant_type, quantity, custom_color,
+                                 pattern=pattern)
         self.toolbar.enter_plant_mode()
-        qty_str = f" ×{quantity}" if quantity > 1 else ""
-        self._set_mode_label(
-            f"Placing: {common_name}{qty_str} — click map, press Esc to cancel"
-        )
+
+        kind = (pattern or {}).get("kind", "single")
+        if kind == "single":
+            qty_str = f" ×{quantity}" if quantity > 1 else ""
+            label = f"Placing: {common_name}{qty_str} — click map, press Esc to cancel"
+        elif kind == "row":
+            label = f"Row of {common_name} — click start point, then end point"
+        elif kind == "grid":
+            label = f"Grid of {common_name} — click two opposite corners"
+        elif kind == "circle":
+            label = f"Circle of {common_name} — click centre, then radius point"
+        else:
+            label = f"Placing: {common_name}"
+        self._set_mode_label(label)
 
     @staticmethod
     def _plant_info(plant_id: int) -> tuple[float, str, str]:
