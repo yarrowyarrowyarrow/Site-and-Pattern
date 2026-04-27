@@ -15,8 +15,17 @@ from PyQt6.QtWidgets import (
     QSpinBox, QDoubleSpinBox, QSlider, QCheckBox,
     QColorDialog, QMenu, QStackedWidget, QButtonGroup,
 )
-from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QSize
-from PyQt6.QtGui import QColor, QIcon, QPixmap, QPainter, QFont, QBrush
+from PyQt6.QtCore import (
+    Qt, QTimer, QThread, pyqtSignal, QSize, QAbstractListModel,
+    QModelIndex, QRect, QEvent,
+)
+from PyQt6.QtGui import (
+    QColor, QIcon, QPixmap, QPainter, QFont, QBrush, QPen, QPalette,
+    QFontMetrics,
+)
+from PyQt6.QtWidgets import (
+    QStyledItemDelegate, QStyle, QStyleOptionViewItem, QListView,
+)
 
 # ── Type colours ──────────────────────────────────────────────────────────────
 _TYPE_COLORS: dict[str, str] = {
@@ -119,34 +128,346 @@ def _type_icon(plant_type: str) -> QIcon:
 
 _PLANT_ID_ROLE  = Qt.ItemDataRole.UserRole
 _PLANT_OBJ_ROLE = Qt.ItemDataRole.UserRole + 1
+_PLANT_PLACED_COUNT_ROLE = Qt.ItemDataRole.UserRole + 2
+_PLANT_EXPANDED_ROLE     = Qt.ItemDataRole.UserRole + 3
 
 
-def _make_list_item(plant: dict, placed_count: int = 0) -> QListWidgetItem:
-    """Build a two-line QListWidgetItem for the results list."""
-    zone_str = ""
+# ── Compact results model + delegate ──────────────────────────────────────────
+#
+# The list is now a virtualized QListView backed by PlantListModel. Each row
+# is one line by default (~22 px) so 10+ plants fit at default panel size and
+# 20+ when the panel is widened. Clicking a row's chevron expands it inline,
+# revealing the full detail block beneath the row without collapsing other
+# expanded rows. Multiple rows can be expanded at once for cross-comparison.
+#
+# Search/filter rebuilds the model from scratch; expansion state is keyed by
+# plant_id so expanded plants stay expanded across filter changes when they
+# remain in the result set.
+
+# Compact row geometry constants — tuned so 10+ rows fit in the default
+# results pane height (~330 px after header + filters).
+_ROW_H_COMPACT  = 26
+_ROW_H_PADDING  = 4
+_ZONE_BADGE_W   = 56
+_NATIVE_BADGE_W = 18    # square AB-leaf badge
+
+
+def _zone_badge_text(plant: dict) -> str:
     zmin = plant.get("hardiness_zone_min")
     zmax = plant.get("hardiness_zone_max")
     if zmin and zmax:
-        zone_str = f"Z{zmin}–{zmax}"
-    elif zmin:
-        zone_str = f"Z{zmin}+"
+        return f"Z{zmin}–{zmax}"
+    if zmin:
+        return f"Z{zmin}+"
+    return ""
 
-    sci  = plant.get("scientific_name") or ""
-    count_badge = f"  [{placed_count}x]" if placed_count > 0 else ""
-    line = f"{sci}  ·  {zone_str}" if sci else zone_str
 
-    item = QListWidgetItem()
-    item.setIcon(_type_icon(plant.get("plant_type", "")))
-    item.setText(f"{plant['common_name']}{count_badge}\n{line}")
-    item.setData(_PLANT_ID_ROLE,  plant["id"])
-    item.setData(_PLANT_OBJ_ROLE, plant)
-    item.setSizeHint(QSize(0, 48))
-    item.setToolTip(
-        f"{plant['common_name']} ({sci})\n"
-        f"Type: {_TYPE_LABELS.get(plant.get('plant_type',''), plant.get('plant_type',''))}\n"
-        f"Zones: {zone_str}"
-    )
-    return item
+class PlantListModel(QAbstractListModel):
+    """List model for compact one-line plant rows with expand-in-place state.
+
+    The model owns the per-plant expansion flag (expanded ⇒ delegate paints
+    a tall row that includes the detail block). Expansion state survives
+    filter changes for any plant whose id is still in the new result set.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._plants: list[dict] = []
+        self._placed_counts: dict[int, int] = {}
+        self._expanded_ids: set[int] = set()
+
+    # Standard model API -------------------------------------------------
+
+    def rowCount(self, parent=QModelIndex()) -> int:
+        return 0 if parent.isValid() else len(self._plants)
+
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
+        if not index.isValid() or index.row() >= len(self._plants):
+            return None
+        plant = self._plants[index.row()]
+        if role == _PLANT_OBJ_ROLE:
+            return plant
+        if role == _PLANT_ID_ROLE:
+            return plant.get("id")
+        if role == _PLANT_PLACED_COUNT_ROLE:
+            return self._placed_counts.get(plant.get("id"), 0)
+        if role == _PLANT_EXPANDED_ROLE:
+            return plant.get("id") in self._expanded_ids
+        if role == Qt.ItemDataRole.DisplayRole:
+            return plant.get("common_name", "")
+        if role == Qt.ItemDataRole.ToolTipRole:
+            return f"{plant.get('common_name','')} ({plant.get('scientific_name','—')})"
+        return None
+
+    # Public API ---------------------------------------------------------
+
+    def set_plants(self, plants: list[dict]):
+        """Swap the result set; preserve expansion for surviving ids."""
+        self.beginResetModel()
+        self._plants = list(plants)
+        valid_ids = {p.get("id") for p in plants}
+        self._expanded_ids = {pid for pid in self._expanded_ids if pid in valid_ids}
+        self.endResetModel()
+
+    def set_placed_counts(self, counts: dict[int, int]):
+        self._placed_counts = dict(counts)
+        if self._plants:
+            top = self.index(0)
+            bot = self.index(len(self._plants) - 1)
+            self.dataChanged.emit(top, bot, [_PLANT_PLACED_COUNT_ROLE])
+
+    def toggle_expanded(self, row: int):
+        if 0 <= row < len(self._plants):
+            pid = self._plants[row].get("id")
+            if pid in self._expanded_ids:
+                self._expanded_ids.discard(pid)
+            else:
+                self._expanded_ids.add(pid)
+            idx = self.index(row)
+            self.dataChanged.emit(idx, idx, [_PLANT_EXPANDED_ROLE])
+
+    def collapse_all(self):
+        if self._expanded_ids:
+            self._expanded_ids.clear()
+            if self._plants:
+                self.dataChanged.emit(self.index(0),
+                                      self.index(len(self._plants) - 1),
+                                      [_PLANT_EXPANDED_ROLE])
+
+
+class PlantRowDelegate(QStyledItemDelegate):
+    """Paints a compact one-line row with optional inline expansion.
+
+    Compact row layout (left → right):
+      · plant-type dot
+      · common name (bold)  · scientific name (italic, dim)
+      · placed-count chip ([N×]) when ≥1 placed
+      · zone badge (Z3–5)
+      · native-AB chip (small green leaf when native, neutral square otherwise)
+      · expand chevron (▶ collapsed / ▼ expanded)
+
+    Expanded rows extend below the compact row with a wrapped detail block
+    showing description, sun/water, spacing/height, bloom/fruit periods,
+    edible parts, and companions.
+    """
+
+    EXPAND_BTN_W = 18
+    DOT_W = 14
+    LEFT_PAD = 6
+
+    # Colours for the native-AB badge.
+    AB_NATIVE_BG  = "#2e7d32"
+    AB_NATIVE_FG  = "#e8f5e9"
+    AB_OTHER_BG   = "#37474f"
+    AB_OTHER_FG   = "#90a4ae"
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._sci_font = QFont()
+        self._sci_font.setItalic(True)
+        self._small_font = QFont()
+        self._small_font.setPointSize(self._small_font.pointSize() - 1)
+        self._bold_font = QFont()
+        self._bold_font.setBold(True)
+
+    # Geometry helpers ---------------------------------------------------
+
+    def _expand_btn_rect(self, opt_rect: QRect) -> QRect:
+        return QRect(opt_rect.right() - self.EXPAND_BTN_W,
+                     opt_rect.top(),
+                     self.EXPAND_BTN_W,
+                     _ROW_H_COMPACT)
+
+    def _native_badge_rect(self, opt_rect: QRect) -> QRect:
+        x = opt_rect.right() - self.EXPAND_BTN_W - _NATIVE_BADGE_W - 4
+        y = opt_rect.top() + (_ROW_H_COMPACT - 14) // 2
+        return QRect(x, y, _NATIVE_BADGE_W, 14)
+
+    def _zone_badge_rect(self, opt_rect: QRect) -> QRect:
+        x = (opt_rect.right() - self.EXPAND_BTN_W - _NATIVE_BADGE_W - 4
+             - _ZONE_BADGE_W - 4)
+        y = opt_rect.top() + (_ROW_H_COMPACT - 16) // 2
+        return QRect(x, y, _ZONE_BADGE_W, 16)
+
+    # Sizing -------------------------------------------------------------
+
+    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
+        plant = index.data(_PLANT_OBJ_ROLE) or {}
+        expanded = bool(index.data(_PLANT_EXPANDED_ROLE))
+        if not expanded:
+            return QSize(0, _ROW_H_COMPACT)
+        # Estimate detail height: base + per-line height for description.
+        view = self.parent()
+        avail_w = max(200, (view.viewport().width() if view else 280) - 12)
+        fm = QFontMetrics(self._small_font)
+        notes = plant.get("notes") or ""
+        notes_h = 0
+        if notes:
+            wrapped_lines = max(1, fm.boundingRect(0, 0, avail_w, 1000,
+                                                    int(Qt.TextFlag.TextWordWrap),
+                                                    notes).height() // fm.lineSpacing())
+            notes_h = min(wrapped_lines, 6) * fm.lineSpacing() + 4
+        detail_h = 6 * fm.lineSpacing() + notes_h + 8
+        return QSize(0, _ROW_H_COMPACT + detail_h)
+
+    # Painting -----------------------------------------------------------
+
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
+        plant = index.data(_PLANT_OBJ_ROLE) or {}
+        placed = index.data(_PLANT_PLACED_COUNT_ROLE) or 0
+        expanded = bool(index.data(_PLANT_EXPANDED_ROLE))
+        rect = option.rect
+
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+
+        selected = bool(option.state & QStyle.StateFlag.State_Selected)
+        bg = QColor("#2e5a2e") if selected else QColor("#1a2a1a")
+        if expanded and not selected:
+            bg = QColor("#1f311f")
+        painter.fillRect(rect, bg)
+
+        # Row separator.
+        painter.setPen(QPen(QColor("#1f341f"), 1))
+        painter.drawLine(rect.left(), rect.bottom(), rect.right(), rect.bottom())
+
+        # ── Compact row ─────────────────────────────────────────────
+        compact = QRect(rect.left(), rect.top(), rect.width(), _ROW_H_COMPACT)
+        x = compact.left() + self.LEFT_PAD
+        y_mid = compact.top() + _ROW_H_COMPACT // 2
+
+        # Plant-type dot.
+        dot_color = QColor(_TYPE_COLORS.get(plant.get("plant_type", ""), "#78909c"))
+        painter.setBrush(dot_color)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(x, y_mid - 5, 10, 10)
+        x += self.DOT_W
+
+        # Right-hand reserved area for badges + chevron.
+        right_pad = self.EXPAND_BTN_W + _NATIVE_BADGE_W + _ZONE_BADGE_W + 16
+        text_max = max(40, compact.right() - x - right_pad)
+
+        # Common + scientific name on a single line.
+        common = plant.get("common_name", "")
+        sci    = plant.get("scientific_name") or ""
+        count_badge = f"  [{placed}×]" if placed > 0 else ""
+        common_text = common + count_badge
+
+        painter.setPen(QColor("#e8f5e9") if selected else QColor("#c8e6c9"))
+        painter.setFont(self._bold_font)
+        fm_b = QFontMetrics(self._bold_font)
+        common_w = min(fm_b.horizontalAdvance(common_text), text_max)
+        painter.drawText(QRect(x, compact.top(), common_w, _ROW_H_COMPACT),
+                         int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
+                         common_text)
+        x_after_common = x + common_w + 6
+
+        if sci and x_after_common < compact.right() - right_pad:
+            painter.setFont(self._sci_font)
+            painter.setPen(QColor("#90a4ae"))
+            sci_w = max(0, compact.right() - right_pad - x_after_common)
+            fm_s = QFontMetrics(self._sci_font)
+            sci_text = fm_s.elidedText(sci, Qt.TextElideMode.ElideRight, sci_w)
+            painter.drawText(QRect(x_after_common, compact.top(), sci_w, _ROW_H_COMPACT),
+                             int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
+                             sci_text)
+
+        # Zone badge.
+        zr = self._zone_badge_rect(compact)
+        zone_text = _zone_badge_text(plant)
+        if zone_text:
+            painter.setBrush(QColor("#37474f"))
+            painter.setPen(QPen(QColor("#546e7a"), 1))
+            painter.drawRoundedRect(zr, 3, 3)
+            painter.setPen(QColor("#cfd8dc"))
+            painter.setFont(self._small_font)
+            painter.drawText(zr, int(Qt.AlignmentFlag.AlignCenter), zone_text)
+
+        # Native-AB badge — green leaf glyph if native, neutral hatched dot otherwise.
+        nb = self._native_badge_rect(compact)
+        is_native = bool(plant.get("native_to_alberta"))
+        bg_col = QColor(self.AB_NATIVE_BG if is_native else self.AB_OTHER_BG)
+        fg_col = QColor(self.AB_NATIVE_FG if is_native else self.AB_OTHER_FG)
+        painter.setBrush(bg_col)
+        painter.setPen(QPen(QColor("#0d160d"), 0.5))
+        painter.drawRoundedRect(nb, 3, 3)
+        painter.setPen(fg_col)
+        painter.setFont(self._small_font)
+        # "AB" for native, en-dash for non-native — accessible without colour.
+        painter.drawText(nb, int(Qt.AlignmentFlag.AlignCenter),
+                         "AB" if is_native else "–")
+
+        # Expand chevron.
+        chev = self._expand_btn_rect(compact)
+        painter.setPen(QColor("#a5d6a7") if expanded else QColor("#78909c"))
+        painter.setFont(self._small_font)
+        painter.drawText(chev, int(Qt.AlignmentFlag.AlignCenter),
+                         "▼" if expanded else "▶")
+
+        # ── Expanded detail block ─────────────────────────────────
+        if expanded:
+            detail = QRect(rect.left() + 8, compact.bottom() + 4,
+                           rect.width() - 16, rect.height() - _ROW_H_COMPACT - 8)
+            painter.setPen(QColor("#90a4ae"))
+            painter.setFont(self._small_font)
+            fm_s = QFontMetrics(self._small_font)
+            line_h = fm_s.lineSpacing()
+
+            def _row(label: str, value: str, dy: int):
+                lbl_w = 80
+                painter.setPen(QColor("#78909c"))
+                painter.drawText(QRect(detail.left(), detail.top() + dy, lbl_w, line_h),
+                                 int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
+                                 label)
+                painter.setPen(QColor("#cfd8dc"))
+                painter.drawText(QRect(detail.left() + lbl_w, detail.top() + dy,
+                                        detail.width() - lbl_w, line_h),
+                                 int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
+                                 value)
+
+            spacing = plant.get("spacing_meters")
+            height  = plant.get("mature_height_meters")
+            sun     = _SUN_LABELS.get(plant.get("sun_requirement", ""), "—")
+            water   = _WATER_LABELS.get(plant.get("water_needs", ""), "—")
+            bloom   = plant.get("bloom_period") or "—"
+            fruit   = plant.get("fruit_period") or "—"
+            edible  = plant.get("edible_parts") or "—"
+            uses_raw = plant.get("permaculture_uses") or ""
+            uses = ", ".join(_USE_LABELS.get(u.strip(), u.strip())
+                             for u in uses_raw.split(",") if u.strip()) or "—"
+
+            _row("Sun · Water:", f"{sun}  ·  {water}", 0)
+            _row("Spacing:",     (f"{spacing} m" if spacing else "—"), line_h)
+            _row("Height:",      (f"{height} m" if height else "—"), 2 * line_h)
+            _row("Bloom · Fruit:", f"{bloom}  ·  {fruit}", 3 * line_h)
+            _row("Edible:",      edible, 4 * line_h)
+            _row("Uses:",        uses, 5 * line_h)
+
+            notes = plant.get("notes") or ""
+            if notes:
+                ntop = detail.top() + 6 * line_h + 4
+                painter.setPen(QColor("#b0bec5"))
+                painter.drawText(
+                    QRect(detail.left(), ntop, detail.width(),
+                          detail.bottom() - ntop),
+                    int(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
+                        | Qt.TextFlag.TextWordWrap),
+                    notes,
+                )
+        painter.restore()
+
+    # Editor / interaction --------------------------------------------------
+
+    def editorEvent(self, event: QEvent, model, option: QStyleOptionViewItem,
+                    index: QModelIndex) -> bool:
+        # Click on the chevron toggles expansion. Anywhere else falls
+        # through to default selection handling.
+        if event.type() == QEvent.Type.MouseButtonRelease:
+            chev = self._expand_btn_rect(option.rect)
+            if chev.contains(event.pos()) and isinstance(model, PlantListModel):
+                model.toggle_expanded(index.row())
+                return True
+        return super().editorEvent(event, model, option, index)
 
 
 # ── Main widget ───────────────────────────────────────────────────────────────
@@ -324,13 +645,29 @@ class PlantPanel(QWidget):
         self._result_count.setStyleSheet("color: #78909c; font-size: 11px;")
         top_layout.addWidget(self._result_count)
 
-        # Results list
-        self._results_list = QListWidget()
-        self._results_list.setSpacing(1)
+        # ── Compact results list (QListView + custom delegate) ─────────
+        # Built on PlantListModel + PlantRowDelegate so each plant lives on
+        # one ~26 px row by default (10+ visible at default panel size). The
+        # chevron at the right edge expands a row inline to reveal the full
+        # detail block; multiple rows can be expanded at once.
+        self._results_model    = PlantListModel(self)
+        self._results_list     = QListView()
+        self._results_delegate = PlantRowDelegate(self._results_list)
+        self._results_list.setModel(self._results_model)
+        self._results_list.setItemDelegate(self._results_delegate)
+        self._results_list.setSelectionMode(
+            self._results_list.SelectionMode.SingleSelection
+        )
         self._results_list.setUniformItemSizes(False)
         self._results_list.setStyleSheet(_RESULTS_LIST_STYLE)
-        self._results_list.currentItemChanged.connect(self._on_selection_changed)
-        self._results_list.itemDoubleClicked.connect(self._on_place_clicked)
+        self._results_list.setVerticalScrollMode(
+            self._results_list.ScrollMode.ScrollPerPixel
+        )
+        self._results_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._results_list.selectionModel().currentChanged.connect(
+            self._on_view_current_changed
+        )
+        self._results_list.doubleClicked.connect(self._on_view_double_clicked)
         self._results_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._results_list.customContextMenuRequested.connect(self._on_plant_context_menu)
         top_layout.addWidget(self._results_list)
@@ -623,28 +960,46 @@ class PlantPanel(QWidget):
             self._result_count.setText(f"Error: {exc}")
             return
 
-        self._results_list.clear()
-        for p in plants:
-            count = self._placed_counts.get(p["id"], 0)
-            self._results_list.addItem(_make_list_item(p, count))
+        self._results_model.set_plants(plants)
+        self._results_model.set_placed_counts(self._placed_counts)
 
         n = len(plants)
         self._result_count.setText(f"Results: {n}")
 
     # ── Selection / detail ────────────────────────────────────────────────────
 
-    def _on_selection_changed(self, current: Optional[QListWidgetItem], _prev):
-        if current is None:
+    def _on_view_current_changed(self, current: QModelIndex, _prev: QModelIndex):
+        """QListView equivalent of the old QListWidget currentItemChanged.
+
+        Selecting a row enables the Place button and updates the colour-
+        picker preview. The compact-list flow doesn't surface the bottom
+        detail group (the inline expand chevron is the discovery path);
+        that group is only used for the Permapeople tab.
+        """
+        if not current.isValid():
             self._selected_plant = None
-            self._detail_group.setVisible(False)
-            self._calendar_group.setVisible(False)
             self._place_btn.setEnabled(False)
             return
-
         plant = current.data(_PLANT_OBJ_ROLE)
+        if not plant:
+            self._selected_plant = None
+            self._place_btn.setEnabled(False)
+            return
         self._selected_plant = plant
-        self._show_detail(plant)
+        # Hide the legacy detail group — local rows expand inline now.
+        self._detail_group.setVisible(False)
+        self._calendar_group.setVisible(False)
+        self._update_color_btn(plant.get("marker_color") or "")
         self._place_btn.setEnabled(True)
+
+    def _on_view_double_clicked(self, index: QModelIndex):
+        """Double-click: place the plant directly (Single mode)."""
+        if not index.isValid():
+            return
+        plant = index.data(_PLANT_OBJ_ROLE)
+        if plant:
+            self._selected_plant = plant
+            self._on_place_clicked()
 
     def _show_detail(self, plant: dict):
         zmin = plant.get("hardiness_zone_min")
@@ -957,10 +1312,10 @@ class PlantPanel(QWidget):
 
     def _on_plant_context_menu(self, pos):
         """Right-click context menu for plant results list."""
-        item = self._results_list.itemAt(pos)
-        if not item:
+        index = self._results_list.indexAt(pos)
+        if not index.isValid():
             return
-        plant = item.data(_PLANT_OBJ_ROLE)
+        plant = index.data(_PLANT_OBJ_ROLE)
         if not plant:
             return
 
@@ -973,12 +1328,18 @@ class PlantPanel(QWidget):
         act_place = menu.addAction(f"Place {plant['common_name']} on Map")
         act_place.triggered.connect(lambda: self._quick_place(plant))
 
-        act_place5 = menu.addAction("Place x5 on Map")
+        act_place5 = menu.addAction("Place ×5 on Map")
         act_place5.triggered.connect(lambda: self._quick_place(plant, 5))
 
         menu.addSeparator()
 
-        act_companions = menu.addAction("View Companions")
+        expanded = bool(index.data(_PLANT_EXPANDED_ROLE))
+        act_expand = menu.addAction("Collapse details" if expanded else "Expand details")
+        act_expand.triggered.connect(
+            lambda: self._results_model.toggle_expanded(index.row())
+        )
+
+        act_companions = menu.addAction("View Companions (open detail)")
         act_companions.triggered.connect(lambda: self._show_companions(plant))
 
         menu.exec(self._results_list.viewport().mapToGlobal(pos))
@@ -1221,16 +1582,19 @@ class PlantPanel(QWidget):
             self._placed_counts[plant_id] -= 1
             if self._placed_counts[plant_id] <= 0:
                 del self._placed_counts[plant_id]
+        self._results_model.set_placed_counts(self._placed_counts)
         self._refresh_placed_list()
 
     def on_plant_placed(self, plant_id: int, common_name: str):
         """Notify the panel that a plant was placed on the map."""
         self._placed_counts[plant_id] = self._placed_counts.get(plant_id, 0) + 1
+        self._results_model.set_placed_counts(self._placed_counts)
         self._refresh_placed_list()
 
     def clear_placed(self):
         """Clear the placed-plants list (e.g. on New project)."""
         self._placed_counts.clear()
+        self._results_model.set_placed_counts(self._placed_counts)
         self._refresh_placed_list()
 
     def load_placed(self, plants: list[dict]):
@@ -1239,6 +1603,7 @@ class PlantPanel(QWidget):
         for p in plants:
             pid = p.get("plant_id", 0)
             self._placed_counts[pid] = self._placed_counts.get(pid, 0) + 1
+        self._results_model.set_placed_counts(self._placed_counts)
         self._refresh_placed_list()
 
     def _refresh_placed_list(self):
