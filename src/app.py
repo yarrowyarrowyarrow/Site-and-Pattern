@@ -250,6 +250,9 @@ class MainWindow(QMainWindow):
         # Map → remove plant marker
         b.plant_removed.connect(self._on_plant_removed)
 
+        # Map → batch placement (Burst, Row, Grid, Circle)
+        b.pattern_placed.connect(self._on_pattern_placed)
+
         # Map → annotations
         b.annotate_requested.connect(self._on_annotate_requested)
         b.annotation_removed.connect(self._on_annotation_removed)
@@ -816,6 +819,9 @@ class MainWindow(QMainWindow):
             f"placeGuildOnMap(JSON.parse({_json.dumps(_json.dumps(guild_js))}), {lat}, {lng});"
         )
 
+        # All members of one guild placement share a single placement group.
+        group_id = project_io.new_placement_group_id()
+
         # Track each member in project state
         for m in enriched_members:
             lat_offset = (m["offset_y"]) / 111320
@@ -828,6 +834,7 @@ class MainWindow(QMainWindow):
                 "lat": mlat, "lng": mlng,
                 "guild_name": guild.get("name", ""),
                 "guild_center_lat": lat, "guild_center_lng": lng,
+                "placement_group_id": group_id,
             })
             self._project["features"].append({
                 "type": "Feature",
@@ -839,6 +846,7 @@ class MainWindow(QMainWindow):
                     "guild_name": guild.get("name", ""),
                     "guild_center_lat": lat,
                     "guild_center_lng": lng,
+                    "placement_group_id": group_id,
                     "quantity": 1
                 }
             })
@@ -952,13 +960,18 @@ class MainWindow(QMainWindow):
         pass
 
     def _on_plant_placed(self, plant_id: int, common_name: str, lat: float, lng: float):
+        # Single-click placement: each plant gets its own singleton group.
+        group_id = project_io.new_placement_group_id()
         self._push_undo({
             "action": "place_plant",
             "plant_id": plant_id, "common_name": common_name,
             "lat": lat, "lng": lng,
+            "placement_group_id": group_id,
         })
         self._placed_plants.append({
-            "plant_id": plant_id, "common_name": common_name, "lat": lat, "lng": lng
+            "plant_id": plant_id, "common_name": common_name,
+            "lat": lat, "lng": lng,
+            "placement_group_id": group_id,
         })
         self._project["features"].append({
             "type": "Feature",
@@ -967,12 +980,69 @@ class MainWindow(QMainWindow):
                 "element_type": "plant",
                 "plant_id": plant_id,
                 "common_name": common_name,
+                "placement_group_id": group_id,
                 "quantity": 1
             }
         })
+        # Tell JS the marker's group id so right-click → "Delete group" works.
+        self.map_widget.run_js(
+            f"setPlantGroupForLatest({plant_id}, {lat}, {lng}, "
+            f"{repr(group_id)});"
+        )
         self.plant_panel.on_plant_placed(plant_id, common_name)
         self._mark_modified()
         self._sync_planning_panel()
+
+    def _on_pattern_placed(self, plant_id: int, common_name: str, spacing_m: float,
+                            plant_type: str, custom_color: str,
+                            positions_json: str, pattern_kind: str):
+        """Place N plants at once (Burst, Row, Grid, Circle).
+
+        All plants share a single placement_group_id so they can be selected
+        and deleted as a unit. The positions list is computed JS-side so the
+        live preview and the committed placement use the same geometry.
+        """
+        import json as _json
+        try:
+            positions = _json.loads(positions_json)
+        except Exception:
+            return
+        if not positions:
+            return
+
+        group_id = project_io.new_placement_group_id()
+        for (lat, lng) in positions:
+            # Render the marker on the map.
+            self.map_widget.run_js(
+                f"placePlantMarker({plant_id}, {repr(common_name)}, "
+                f"{lat}, {lng}, {spacing_m}, {repr(plant_type)}, "
+                f"{repr(custom_color) if custom_color else 'null'}, "
+                f"{repr(group_id)});"
+            )
+            # Mirror in project state.
+            self._placed_plants.append({
+                "plant_id": plant_id, "common_name": common_name,
+                "lat": lat, "lng": lng,
+                "placement_group_id": group_id,
+            })
+            self._project["features"].append({
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [lng, lat]},
+                "properties": {
+                    "element_type": "plant",
+                    "plant_id": plant_id,
+                    "common_name": common_name,
+                    "placement_group_id": group_id,
+                    "pattern_kind": pattern_kind,
+                    "quantity": 1
+                }
+            })
+            self.plant_panel.on_plant_placed(plant_id, common_name)
+        self._mark_modified()
+        self._sync_planning_panel()
+        self.statusBar().showMessage(
+            f"Placed {len(positions)} {common_name} ({pattern_kind})", 2500
+        )
 
     def _on_plant_removed(self, marker_id: str, plant_id: int, lat: float, lng: float):
         # Remove matching entry from placed list (match by plant_id + coords)
@@ -1136,11 +1206,24 @@ class MainWindow(QMainWindow):
                 get_zone(sum(lats)/len(lats), sum(lngs)/len(lngs))
             )
 
+        # Backfill placement_group_id onto legacy project features so that a
+        # subsequent save persists them. project_to_map_data already minted
+        # singleton groups for any feature that lacked one.
+        plant_idx = 0
+        for f in proj.get("features", []):
+            if f.get("properties", {}).get("element_type") == "plant":
+                if not f["properties"].get("placement_group_id") and plant_idx < len(data["plants"]):
+                    f["properties"]["placement_group_id"] = (
+                        data["plants"][plant_idx]["placement_group_id"]
+                    )
+                plant_idx += 1
+
         for p in data["plants"]:
             spacing_m, plant_type, custom_color = self._plant_info(p["plant_id"])
             self.map_widget.load_plant_marker(
                 p["plant_id"], p["common_name"], p["lat"], p["lng"],
-                spacing_m, plant_type, custom_color
+                spacing_m, plant_type, custom_color,
+                p.get("placement_group_id", "")
             )
             self._placed_plants.append(p)
 
@@ -1592,6 +1675,10 @@ class MainWindow(QMainWindow):
         key = event.key()
         if key == Qt.Key.Key_Escape:
             self._cancel_draw()
+            self.map_widget.run_js("clearSelection();")
+        elif key == Qt.Key.Key_Delete or key == Qt.Key.Key_Backspace:
+            # Delete every currently-selected map item (across types).
+            self.map_widget.run_js("deleteSelected();")
         elif key == Qt.Key.Key_B and not event.modifiers():
             self._enter_boundary_mode()
         elif key == Qt.Key.Key_P and not event.modifiers():

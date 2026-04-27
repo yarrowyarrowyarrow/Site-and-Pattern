@@ -278,6 +278,166 @@
     // Anchor placement preview marker (sun path / sector placement modes)
     var _anchorPreviewMarker = null;
 
+    // ── Unified selection model ──────────────────────────────────────────────
+    // Each entry is a `_pd`-style descriptor with at least { kind, ... }
+    // where kind ∈ 'plant' | 'boundary' | 'sector' | 'sunpath' and the rest of
+    // the fields identify the underlying object (markerId, boundaryId, etc.).
+    // Keeping a flat list lets marquee/Delete/right-click operate uniformly
+    // across feature types — the previous code had per-type isolated state.
+    var selectedItems = [];
+
+    // Marquee (rubber-band) drag state — populated on shift+mousedown over
+    // the empty map background; cleared on mouseup.
+    var _marqueeState = null;   // { startPx, currentPx, rectEl, additive }
+
+    function _selectionContains(pd) {
+      for (var i = 0; i < selectedItems.length; i++) {
+        if (_sameSelectable(selectedItems[i], pd)) return true;
+      }
+      return false;
+    }
+
+    function _sameSelectable(a, b) {
+      if (!a || !b || a.kind !== b.kind) return false;
+      if (a.kind === 'plant')    return a.markerId === b.markerId;
+      if (a.kind === 'boundary') return a.boundaryId === b.boundaryId;
+      if (a.kind === 'sector')   return a.sectorId === b.sectorId;
+      if (a.kind === 'sunpath')  return true;   // single sunpath at a time
+      return false;
+    }
+
+    function _clearSelectionEntry(markerId) {
+      // Drop a plant marker from the selection without redrawing other items.
+      for (var i = selectedItems.length - 1; i >= 0; i--) {
+        if (selectedItems[i].kind === 'plant' && selectedItems[i].markerId === markerId) {
+          selectedItems.splice(i, 1);
+        }
+      }
+    }
+
+    // Toggle a single item's membership in the selection (shift+click pattern).
+    function toggleSelection(pd) {
+      if (_selectionContains(pd)) {
+        for (var i = selectedItems.length - 1; i >= 0; i--) {
+          if (_sameSelectable(selectedItems[i], pd)) selectedItems.splice(i, 1);
+        }
+      } else {
+        selectedItems.push(pd);
+      }
+      _refreshSelectionVisuals();
+    }
+
+    function clearSelection() {
+      selectedItems = [];
+      _refreshSelectionVisuals();
+    }
+
+    // Apply / remove the selection highlight on every relevant feature.
+    // Plants get a thicker yellow border + brighter fill while selected;
+    // boundaries get a thicker stroke; sectors flag their group's centre.
+    function _refreshSelectionVisuals() {
+      // Plants
+      Object.keys(plantMarkers).forEach(function(mid) {
+        var c = plantMarkers[mid];
+        if (!c || !c._pd) return;
+        var sel = _selectionContains(c._pd);
+        var baseColor = c._pd.customColor || TYPE_COLORS[c._pd.plantType] || '#66bb6a';
+        c.setStyle({
+          color:       sel ? '#fdd835' : baseColor,
+          weight:      sel ? 3.0 : 1.5,
+          fillOpacity: sel ? 0.55 : 0.35
+        });
+      });
+      // Boundaries
+      boundaries.forEach(function(b) {
+        var sel = _selectionContains({ kind: 'boundary', boundaryId: b.id });
+        if (b.layer && b.layer.setStyle) {
+          var palette = BOUNDARY_COLORS[b.color] || BOUNDARY_COLORS['green'];
+          b.layer.setStyle({
+            color:  sel ? '#fdd835' : palette.stroke,
+            weight: sel ? 4 : 2
+          });
+        }
+      });
+      // Sectors
+      if (typeof sectorGroups !== 'undefined') {
+        sectorGroups.forEach(function(sg) {
+          var sel = _selectionContains({ kind: 'sector', sectorId: sg.id });
+          if (sg.centerMk && sg.centerMk.setStyle) {
+            sg.centerMk.setStyle({
+              color: sel ? '#fdd835' : '#263238',
+              weight: sel ? 3 : 1
+            });
+          }
+        });
+      }
+      _updateSelectionBadge();
+    }
+
+    // Tiny floating badge in the top-right corner showing N selected items
+    // and a "Delete" affordance — keeps the UI obvious for first-time users.
+    function _updateSelectionBadge() {
+      var el = document.getElementById('_pd_sel_badge');
+      if (selectedItems.length === 0) {
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+        return;
+      }
+      if (!el) {
+        el = document.createElement('div');
+        el.id = '_pd_sel_badge';
+        el.style.cssText = [
+          'position:absolute', 'top:8px', 'right:8px', 'z-index:1100',
+          'background:rgba(38,50,56,0.92)', 'border:1px solid #fdd835',
+          'border-radius:4px', 'padding:6px 10px', 'color:#fdd835',
+          'font-size:12px', 'font-family:sans-serif', 'user-select:none',
+          'box-shadow:0 2px 8px rgba(0,0,0,0.5)'
+        ].join(';');
+        document.body.appendChild(el);
+      }
+      el.innerHTML = '<b>' + selectedItems.length + '</b> selected · ' +
+        '<a href="#" id="_pd_sel_del" style="color:#ef9a9a;text-decoration:none">Delete</a> · ' +
+        '<a href="#" id="_pd_sel_clr" style="color:#80cbc4;text-decoration:none">Clear</a>';
+      document.getElementById('_pd_sel_del').onclick = function(ev) {
+        ev.preventDefault(); deleteSelected();
+      };
+      document.getElementById('_pd_sel_clr').onclick = function(ev) {
+        ev.preventDefault(); clearSelection();
+      };
+    }
+
+    // Delete every currently-selected item across types, emitting the
+    // appropriate per-type bridge signal so Python project state stays
+    // synchronised. Uses a snapshot since underlying maps mutate.
+    function deleteSelected() {
+      var snapshot = selectedItems.slice();
+      selectedItems = [];
+      for (var i = 0; i < snapshot.length; i++) {
+        var item = snapshot[i];
+        if (item.kind === 'plant') {
+          _removeSinglePlantMarker(item.markerId);
+        } else if (item.kind === 'boundary') {
+          if (boundaryEditId === item.boundaryId && typeof exitBoundaryEditMode === 'function') {
+            exitBoundaryEditMode();
+          }
+          if (typeof _removeBoundaryEntry === 'function') {
+            _removeBoundaryEntry(item.boundaryId);
+            if (bridge) bridge.onBoundaryRemoved(item.boundaryId);
+          }
+        } else if (item.kind === 'sector') {
+          if (typeof _removeSectorGroup === 'function') {
+            _removeSectorGroup(item.sectorId);
+            if (bridge) bridge.onSectorGroupRemoved(item.sectorId);
+          }
+        } else if (item.kind === 'sunpath') {
+          if (typeof clearSunPath === 'function') {
+            clearSunPath();
+            if (bridge) bridge.onSunPathRemoved();
+          }
+        }
+      }
+      _refreshSelectionVisuals();
+    }
+
     // Polygon drawing state (manual mode)
     var drawingPolygon  = false;
     var polygonPoints   = [];
@@ -373,8 +533,14 @@
         var qty = currentPlant.quantity || 1;
         var cc  = currentPlant.custom_color || null;
         if (qty > 1) {
-          placeGroupMarkers(currentPlant.id, currentPlant.common_name, lat, lng,
-                            currentPlant.spacing_m, currentPlant.plant_type, cc, qty);
+          // Burst: place qty plants at once (hex pattern). All share one
+          // group id so they can be deleted together.
+          var positions = _hexBurstPositions(lat, lng, currentPlant.spacing_m, qty);
+          if (bridge) {
+            bridge.onPatternPlaced(currentPlant.id, currentPlant.common_name,
+                                   currentPlant.spacing_m, currentPlant.plant_type,
+                                   cc || '', JSON.stringify(positions), 'burst');
+          }
         } else {
           placePlantMarker(currentPlant.id, currentPlant.common_name, lat, lng,
                            currentPlant.spacing_m, currentPlant.plant_type, cc);
@@ -1042,7 +1208,8 @@
     // spacingM    : plant spacing in metres (used as circle diameter on the map)
     // plantType   : 'tree' | 'shrub' | 'herb' | 'groundcover' | 'vine' | 'root'
     // customColor : optional hex colour override (e.g. '#ff5722')
-    function placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor) {
+    // groupId     : optional placement group id (plants placed together share one)
+    function placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor, groupId) {
       var markerId = plantId + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
       var radius   = Math.max((spacingM || 1.0) / 2, 1.0);   // half-diameter, min 1 m
       var color    = customColor || TYPE_COLORS[plantType] || '#66bb6a';
@@ -1053,28 +1220,27 @@
         weight:      1.5,
         fillColor:   color,
         fillOpacity: 0.35
-      }).bindTooltip(escH(commonName) + '<br><span style="color:#78909c;font-size:10px">Right-click to remove</span>',
+      }).bindTooltip(escH(commonName) + '<br><span style="color:#78909c;font-size:10px">Right-click for options</span>',
           { permanent: false, className: 'plant-marker-label' })
         .addTo(plantLayerGroup);
 
       // Store metadata on the circle for later use
       circle._pd = { plantId: plantId, commonName: commonName, lat: lat, lng: lng,
-                      spacingM: spacingM, plantType: plantType, customColor: customColor };
+                      spacingM: spacingM, plantType: plantType, customColor: customColor,
+                      groupId: groupId || null, markerId: markerId, kind: 'plant' };
 
-      circle.on('click', function() {
-        if (bridge) bridge.onPlantMarkerClick(markerId, plantId, lat, lng);
+      circle.on('click', function(e) {
+        L.DomEvent.stop(e);
+        if (e.originalEvent && (e.originalEvent.shiftKey || e.originalEvent.ctrlKey || e.originalEvent.metaKey)) {
+          toggleSelection(circle._pd);
+        } else {
+          if (bridge) bridge.onPlantMarkerClick(markerId, plantId, lat, lng);
+        }
       });
 
       circle.on('contextmenu', function(e) {
         L.DomEvent.stop(e);
-        plantLayerGroup.removeLayer(circle);
-        // Remove permanent label if any
-        if (plantLabels[markerId]) {
-          map.removeLayer(plantLabels[markerId]);
-          delete plantLabels[markerId];
-        }
-        delete plantMarkers[markerId];
-        if (bridge) bridge.onPlantRemoved(markerId, plantId, lat, lng);
+        showPlantContextMenu(e, circle);
       });
 
       plantMarkers[markerId] = circle;
@@ -1087,35 +1253,118 @@
       return markerId;
     }
 
-    // Place a group of plants in a hex cluster pattern
-    function placeGroupMarkers(plantId, commonName, lat, lng, spacingM, plantType, customColor, quantity) {
-      if (quantity <= 1) {
-        placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor);
-        if (bridge) bridge.onPlantPlaced(plantId, commonName, lat, lng);
-        return;
+    // Build a right-click menu for a plant marker. Offers single delete,
+    // delete-group (when this marker is part of a multi-plant placement),
+    // and bulk-delete-selection (when ≥1 plant is selected and this is one
+    // of them). Reuses the showContextMenu pattern established by sectors
+    // and sun path.
+    function showPlantContextMenu(e, circle) {
+      var pd = circle._pd;
+      var ev = e.originalEvent;
+      var items = [];
+
+      // If ≥2 things are selected, surface bulk delete first.
+      if (selectedItems.length >= 2 && _selectionContains(pd)) {
+        items.push({
+          label: 'Delete selected (' + selectedItems.length + ' items)',
+          action: function() { deleteSelected(); }
+        });
+        items.push('sep');
       }
-      var spacing = spacingM || 1.0;
-      // Place in concentric hex rings around centre
-      var placed = 0;
-      var ring = 0;
+
+      // Group delete only if this plant belongs to a multi-plant group.
+      if (pd.groupId && _groupSize(pd.groupId) >= 2) {
+        items.push({
+          label: 'Delete group (' + _groupSize(pd.groupId) + ' plants)',
+          action: function() { deletePlantGroup(pd.groupId); }
+        });
+      }
+
+      items.push({
+        label: 'Remove this plant',
+        action: function() { _removeSinglePlantMarker(pd.markerId); }
+      });
+
+      showContextMenu(ev.clientX, ev.clientY, items);
+    }
+
+    function _removeSinglePlantMarker(markerId) {
+      var circle = plantMarkers[markerId];
+      if (!circle) return;
+      var pd = circle._pd;
+      _clearSelectionEntry(markerId);
+      plantLayerGroup.removeLayer(circle);
+      if (plantLabels[markerId]) {
+        map.removeLayer(plantLabels[markerId]);
+        delete plantLabels[markerId];
+      }
+      delete plantMarkers[markerId];
+      if (bridge) bridge.onPlantRemoved(markerId, pd.plantId, pd.lat, pd.lng);
+    }
+
+    // Count how many existing markers share a group id.
+    function _groupSize(groupId) {
+      if (!groupId) return 0;
+      var n = 0;
+      var keys = Object.keys(plantMarkers);
+      for (var i = 0; i < keys.length; i++) {
+        var c = plantMarkers[keys[i]];
+        if (c._pd && c._pd.groupId === groupId) n++;
+      }
+      return n;
+    }
+
+    // Delete every plant sharing the given group id. Emits onPlantRemoved
+    // per marker so Python state stays consistent without a new bulk slot.
+    function deletePlantGroup(groupId) {
+      if (!groupId) return;
+      var keys = Object.keys(plantMarkers);
+      for (var i = 0; i < keys.length; i++) {
+        var mid = keys[i];
+        var c = plantMarkers[mid];
+        if (c._pd && c._pd.groupId === groupId) {
+          _removeSinglePlantMarker(mid);
+        }
+      }
+    }
+
+    // Called by Python after a single-click placement so the freshly created
+    // marker — which doesn't know its group id at construction time — can be
+    // tagged. Picks the most recent marker matching plantId/lat/lng.
+    function setPlantGroupForLatest(plantId, lat, lng, groupId) {
+      var keys = Object.keys(plantMarkers);
+      for (var i = keys.length - 1; i >= 0; i--) {
+        var c = plantMarkers[keys[i]];
+        if (c._pd && c._pd.plantId === plantId
+            && Math.abs(c._pd.lat - lat) < 1e-7
+            && Math.abs(c._pd.lng - lng) < 1e-7
+            && !c._pd.groupId) {
+          c._pd.groupId = groupId;
+          return;
+        }
+      }
+    }
+
+    // Compute a hex burst pattern of `quantity` positions centred at
+    // (lat, lng) with `spacing` metres between adjacent plants. Used by
+    // the legacy Qty>1 single-click placement.
+    function _hexBurstPositions(lat, lng, spacing, quantity) {
+      var s = spacing || 1.0;
       var positions = [[lat, lng]];
+      var ring = 0;
       while (positions.length < quantity) {
         ring++;
         for (var side = 0; side < 6; side++) {
           for (var step = 0; step < ring; step++) {
             if (positions.length >= quantity) break;
             var angle = (side * 60 + step * (60 / ring)) * Math.PI / 180;
-            var dLat = (ring * spacing * Math.cos(angle)) / 111320;
-            var dLng = (ring * spacing * Math.sin(angle)) / (111320 * Math.cos(lat * Math.PI / 180));
+            var dLat = (ring * s * Math.cos(angle)) / 111320;
+            var dLng = (ring * s * Math.sin(angle)) / (111320 * Math.cos(lat * Math.PI / 180));
             positions.push([lat + dLat, lng + dLng]);
           }
         }
       }
-      for (var i = 0; i < quantity && i < positions.length; i++) {
-        var p = positions[i];
-        placePlantMarker(plantId, commonName, p[0], p[1], spacingM, plantType, customColor);
-        if (bridge) bridge.onPlantPlaced(plantId, commonName, p[0], p[1]);
-      }
+      return positions.slice(0, quantity);
     }
 
     // ── Label management ──────────────────────────────────────────────────────
@@ -2211,8 +2460,8 @@
       map.fitBounds(entry.layer.getBounds());
     }
 
-    function loadPlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor) {
-      placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor || null);
+    function loadPlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor, groupId) {
+      placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor || null, groupId || null);
     }
 
     function loadZoneCenter(lat, lng) {

@@ -9,7 +9,17 @@ import json
 import os
 from datetime import datetime
 
-SCHEMA_VERSION = "1.5"
+SCHEMA_VERSION = "1.6"
+
+
+def new_placement_group_id() -> str:
+    """Generate a fresh unique placement group identifier.
+
+    Plants placed by the same gesture (Single click, Row, Grid, Circle, Guild)
+    share a group id so they can be selected/deleted as one unit.
+    """
+    import uuid
+    return "pg_" + uuid.uuid4().hex[:10]
 
 
 def new_project(name: str = "Untitled Design") -> dict:
@@ -85,11 +95,20 @@ def project_to_map_data(project: dict) -> dict:
 
         elif etype == "plant" and geom.get("type") == "Point":
             lng, lat = geom["coordinates"]
+            # Backward compat: legacy projects have no placement_group_id —
+            # assign a fresh unique one so each pre-existing plant becomes a
+            # singleton group. This keeps the group abstraction uniform and
+            # lets group-delete operate consistently.
+            group_id = props.get("placement_group_id") or new_placement_group_id()
             result["plants"].append({
                 "plant_id":    props.get("plant_id", 0),
                 "common_name": props.get("common_name", "Unknown"),
                 "lat": lat,
-                "lng": lng
+                "lng": lng,
+                "placement_group_id": group_id,
+                "guild_name": props.get("guild_name", ""),
+                "guild_center_lat": props.get("guild_center_lat"),
+                "guild_center_lng": props.get("guild_center_lng"),
             })
 
         elif etype == "zone_center" and geom.get("type") == "Point":

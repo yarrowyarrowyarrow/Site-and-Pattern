@@ -88,6 +88,14 @@ class MapBridge(QObject):
     sector_group_rotated   = pyqtSignal(str, float)        # sid, rotationDeg
     sector_group_resized   = pyqtSignal(str, float)        # sid, radiusM
 
+    # Pattern placement (Single-burst, Row, Grid, Circle).
+    # positions_json is a JSON-encoded [[lat,lng], ...] list. pattern_kind
+    # tags the gesture so Python can record provenance ('single' | 'burst' |
+    # 'row' | 'grid' | 'circle').
+    pattern_placed = pyqtSignal(int, str, float, str, str, str, str)
+        # plant_id, common_name, spacing_m, plant_type, custom_color,
+        # positions_json, pattern_kind
+
     # ── Slots (called from JS) ────────────────────────────────────────────────
 
     @pyqtSlot()
@@ -163,6 +171,15 @@ class MapBridge(QObject):
     @pyqtSlot(int, str, float, float)
     def onPlantPlaced(self, plant_id: int, common_name: str, lat: float, lng: float):
         self.plant_placed.emit(plant_id, common_name, lat, lng)
+
+    @pyqtSlot(int, str, float, str, str, str, str)
+    def onPatternPlaced(self, plant_id: int, common_name: str, spacing_m: float,
+                        plant_type: str, custom_color: str,
+                        positions_json: str, pattern_kind: str):
+        self.pattern_placed.emit(
+            plant_id, common_name, spacing_m, plant_type,
+            custom_color, positions_json, pattern_kind,
+        )
 
     @pyqtSlot(float, float)
     def onZoneCenterPlaced(self, lat: float, lng: float):
@@ -317,11 +334,12 @@ class MapWidget(QWebEngineView):
 
     def load_plant_marker(self, plant_id: int, common_name: str, lat: float, lng: float,
                           spacing_m: float = 1.0, plant_type: str = "herb",
-                          custom_color: str = ""):
+                          custom_color: str = "", group_id: str = ""):
         color_arg = f", '{custom_color}'" if custom_color else ", null"
+        group_arg = f", {repr(group_id)}" if group_id else ", null"
         self.run_js(
             f"loadPlantMarker({plant_id}, {repr(common_name)}, {lat}, {lng}, "
-            f"{spacing_m}, {repr(plant_type)}{color_arg});"
+            f"{spacing_m}, {repr(plant_type)}{color_arg}{group_arg});"
         )
 
     def load_zone_center(self, lat: float, lng: float):
