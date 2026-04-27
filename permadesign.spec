@@ -1,8 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
-
-import sys
-import os
-from PyInstaller.utils.hooks import get_module_collection_mode
+# PyInstaller spec for PermaDesign (one-directory bundled mode)
+# Build with: pyinstaller permadesign.spec
 
 block_cipher = None
 
@@ -13,7 +11,6 @@ a = Analysis(
     datas=[
         ('data', 'data'),
         ('html', 'html'),
-        ('src', 'src'),
     ],
     hiddenimports=[
         'PyQt6',
@@ -38,10 +35,8 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
     [],
+    exclude_binaries=True,
     name='PermaDesign',
     debug=False,
     bootloader_ignore_signals=False,
