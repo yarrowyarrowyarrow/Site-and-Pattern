@@ -417,6 +417,142 @@
       };
     }
 
+    // ── Marquee (shift+drag) selection ───────────────────────────────────────
+    // Shift+drag on the map background draws a yellow dashed rectangle and
+    // selects every plant / boundary / sector / sun-path centre that
+    // intersects it. Plain drag continues to pan; ctrl+shift+drag is
+    // additive (extend the existing selection). We intercept at the DOM
+    // level so we don't fight Leaflet's pan handler — when shift is held on
+    // mousedown we simply prevent Leaflet from receiving the event.
+
+    function _initMarqueeHandlers() {
+      // Disable Leaflet's native shift-zoom box so it doesn't collide
+      // with our marquee. We re-implement the same gesture for selection.
+      if (map.boxZoom) map.boxZoom.disable();
+
+      var container = map.getContainer();
+      container.addEventListener('mousedown', _marqueeOnDown, true);
+      // mousemove/up listen on document so we keep tracking when the
+      // cursor leaves the map container during a drag.
+      document.addEventListener('mousemove', _marqueeOnMove, true);
+      document.addEventListener('mouseup',   _marqueeOnUp,   true);
+    }
+
+    function _marqueeOnDown(ev) {
+      if (!ev.shiftKey || ev.button !== 0) return;
+      // Skip if the user is interacting with a feature — Leaflet handles
+      // those events on the marker itself before bubbling here.
+      if (ev.target && ev.target.closest && ev.target.closest('.leaflet-marker-pane > *')) return;
+      // Skip if any drawing/edit mode is active.
+      if (currentMode !== 'none' && currentMode !== 'plant') return;
+      ev.stopPropagation();
+      ev.preventDefault();
+      var rect = container.getBoundingClientRect();
+      var x = ev.clientX - rect.left;
+      var y = ev.clientY - rect.top;
+      var rectEl = document.createElement('div');
+      rectEl.style.cssText = [
+        'position:absolute', 'border:1.5px dashed #fdd835',
+        'background:rgba(253,216,53,0.10)', 'pointer-events:none',
+        'z-index:1050', 'left:' + x + 'px', 'top:' + y + 'px',
+        'width:0px', 'height:0px'
+      ].join(';');
+      container.appendChild(rectEl);
+      _marqueeState = {
+        startPx: { x: x, y: y },
+        currentPx: { x: x, y: y },
+        rectEl: rectEl,
+        additive: ev.ctrlKey || ev.metaKey,
+      };
+    }
+
+    function _marqueeOnMove(ev) {
+      if (!_marqueeState) return;
+      var rect = map.getContainer().getBoundingClientRect();
+      var x = ev.clientX - rect.left;
+      var y = ev.clientY - rect.top;
+      _marqueeState.currentPx = { x: x, y: y };
+      var minX = Math.min(_marqueeState.startPx.x, x);
+      var minY = Math.min(_marqueeState.startPx.y, y);
+      var w = Math.abs(x - _marqueeState.startPx.x);
+      var h = Math.abs(y - _marqueeState.startPx.y);
+      _marqueeState.rectEl.style.left = minX + 'px';
+      _marqueeState.rectEl.style.top  = minY + 'px';
+      _marqueeState.rectEl.style.width  = w + 'px';
+      _marqueeState.rectEl.style.height = h + 'px';
+    }
+
+    function _marqueeOnUp(ev) {
+      if (!_marqueeState) return;
+      var rectEl = _marqueeState.rectEl;
+      var sX = _marqueeState.startPx.x, sY = _marqueeState.startPx.y;
+      var eX = _marqueeState.currentPx.x, eY = _marqueeState.currentPx.y;
+      var additive = _marqueeState.additive;
+      if (rectEl && rectEl.parentNode) rectEl.parentNode.removeChild(rectEl);
+      _marqueeState = null;
+
+      var minX = Math.min(sX, eX), maxX = Math.max(sX, eX);
+      var minY = Math.min(sY, eY), maxY = Math.max(sY, eY);
+      // Reject tiny drags (treat as accidental click).
+      if (maxX - minX < 4 && maxY - minY < 4) return;
+
+      var bounds = L.latLngBounds(
+        map.containerPointToLatLng([minX, minY]),
+        map.containerPointToLatLng([maxX, maxY])
+      );
+      var hits = _marqueeHitTest(bounds);
+      if (!additive) selectedItems = [];
+      hits.forEach(function(h) {
+        if (!_selectionContains(h)) selectedItems.push(h);
+      });
+      _refreshSelectionVisuals();
+    }
+
+    // Find every selectable feature whose anchor point falls inside the
+    // marquee bounds. Returns a list of selection descriptors.
+    function _marqueeHitTest(bounds) {
+      var hits = [];
+      // Plants — point-in-bounds on the marker centre.
+      Object.keys(plantMarkers).forEach(function(mid) {
+        var c = plantMarkers[mid];
+        if (!c || !c._pd) return;
+        if (bounds.contains(L.latLng(c._pd.lat, c._pd.lng))) {
+          hits.push(c._pd);
+        }
+      });
+      // Boundaries — any vertex inside the rect counts.
+      boundaries.forEach(function(b) {
+        var ps = b.points || [];
+        for (var i = 0; i < ps.length; i++) {
+          if (bounds.contains(L.latLng(ps[i][0], ps[i][1]))) {
+            hits.push({ kind: 'boundary', boundaryId: b.id });
+            return;
+          }
+        }
+      });
+      // Sectors — anchor point.
+      if (typeof sectorGroups !== 'undefined') {
+        sectorGroups.forEach(function(sg) {
+          if (bounds.contains(L.latLng(sg.lat, sg.lng))) {
+            hits.push({ kind: 'sector', sectorId: sg.id });
+          }
+        });
+      }
+      // Sun path — represented by its centre tooltip; we check the
+      // existing centre marker via sunPathLayer if present.
+      if (typeof sunPathLayer !== 'undefined' && sunPathLayer && sunPathLayer.getLayers) {
+        var layers = sunPathLayer.getLayers();
+        for (var i = 0; i < layers.length; i++) {
+          var l = layers[i];
+          if (l.getLatLng && bounds.contains(l.getLatLng())) {
+            hits.push({ kind: 'sunpath' });
+            break;
+          }
+        }
+      }
+      return hits;
+    }
+
     // Delete every currently-selected item across types, emitting the
     // appropriate per-type bridge signal so Python project state stays
     // synchronised. Uses a snapshot since underlying maps mutate.
@@ -528,6 +664,9 @@
 
       // Zoom-dependent label visibility
       map.on('zoomend', updateLabelVisibility);
+
+      // Shift+drag marquee selection (replaces Leaflet's box-zoom).
+      _initMarqueeHandlers();
     }
 
     // ── Click / move handlers ────────────────────────────────────────────────
@@ -894,9 +1033,14 @@
       };
       boundaries.push(entry);
 
-      // Click → enter edit mode
+      // Click → enter edit mode (or toggle selection on shift/cmd+click)
       layer.on('click', function(e) {
         L.DomEvent.stop(e);
+        var oe = e.originalEvent;
+        if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) {
+          toggleSelection({ kind: 'boundary', boundaryId: id });
+          return;
+        }
         if (currentMode === 'none') {
           enterBoundaryEditMode(id);
         }
@@ -2873,7 +3017,14 @@
         radius: 6, color: '#ff6f00', fillColor: '#ffb300', fillOpacity: 1,
         weight: 2, interactive: true
       }).addTo(sunPathLayer);
-      centerMk.bindTooltip('Sun path · right-click to remove', { sticky: true, offset: [10, 0] });
+      centerMk.bindTooltip('Sun path · right-click to remove · shift+click to select', { sticky: true, offset: [10, 0] });
+      centerMk.on('click', function(e) {
+        var oe = e.originalEvent;
+        if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) {
+          L.DomEvent.stop(e);
+          toggleSelection({ kind: 'sunpath' });
+        }
+      });
       centerMk.on('contextmenu', function(e) {
         L.DomEvent.stop(e);
         showContextMenu(e.originalEvent.clientX, e.originalEvent.clientY, [
@@ -2994,9 +3145,16 @@
         radius: 7, color: '#fff', fillColor: '#263238', fillOpacity: 0.9,
         weight: 2, interactive: true
       }).addTo(map);
-      centerMk.bindTooltip('Drag to move · right-click to remove', { sticky: true, offset: [10, 0] });
+      centerMk.bindTooltip('Drag to move · right-click to remove · shift+click to select', { sticky: true, offset: [10, 0] });
       group.centerMk = centerMk;
       _makeSectorMoveDraggable(centerMk, group);
+      centerMk.on('click', function(e) {
+        var oe = e.originalEvent;
+        if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) {
+          L.DomEvent.stop(e);
+          toggleSelection({ kind: 'sector', sectorId: sid });
+        }
+      });
       centerMk.on('contextmenu', function(e) {
         L.DomEvent.stop(e);
         showContextMenu(e.originalEvent.clientX, e.originalEvent.clientY, [
