@@ -878,21 +878,19 @@ class PlantPanel(QWidget):
 
         bot_layout.addLayout(place_row)
 
-        # Placed plants section — collapsible
-        self._placed_header_btn = QPushButton("▼ On This Design")
-        self._placed_header_btn.setStyleSheet(
-            "QPushButton { color: #a5d6a7; font-weight: bold; border: none; "
-            "border-top: 1px solid #2e4a2e; padding-top: 6px; text-align: left; "
-            "background: transparent; }"
-            "QPushButton:hover { color: #c8e6c9; }"
+        # ── Placed plants section — collapsible (persisted across sessions) ─
+        from src.collapsible_panel import CollapsiblePanel
+        self._placed_panel = CollapsiblePanel(
+            "On This Design", panel_id="plant_panel_on_design", expanded=True
         )
-        self._placed_header_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._placed_header_btn.clicked.connect(self._toggle_placed_section)
-        bot_layout.addWidget(self._placed_header_btn)
+        placed_body = QWidget()
+        pb_layout = QVBoxLayout(placed_body)
+        pb_layout.setContentsMargins(0, 0, 0, 0)
+        pb_layout.setSpacing(2)
 
         self._placed_count_label = QLabel("None placed yet")
         self._placed_count_label.setStyleSheet("color: #78909c; font-size: 11px;")
-        bot_layout.addWidget(self._placed_count_label)
+        pb_layout.addWidget(self._placed_count_label)
 
         self._placed_list = QListWidget()
         self._placed_list.setMinimumHeight(60)
@@ -901,7 +899,9 @@ class PlantPanel(QWidget):
         self._placed_list.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
-        bot_layout.addWidget(self._placed_list, 1)  # stretch factor
+        pb_layout.addWidget(self._placed_list, 1)
+        self._placed_panel.set_content(placed_body)
+        bot_layout.addWidget(self._placed_panel, 1)
 
         splitter.addWidget(bottom)
         splitter.setSizes([320, 240])
@@ -1567,14 +1567,6 @@ class PlantPanel(QWidget):
             self._zone_label.setText("Zone: —")
         if self._zone_filter_btn.isChecked():
             self._run_search()
-
-    def _toggle_placed_section(self):
-        """Expand or collapse the placed-plants list."""
-        visible = not self._placed_list.isVisible()
-        self._placed_list.setVisible(visible)
-        self._placed_count_label.setVisible(visible)
-        arrow = "▼" if visible else "▶"
-        self._placed_header_btn.setText(f"{arrow} On This Design")
 
     def on_plant_removed(self, plant_id: int):
         """Notify the panel that a plant marker was removed from the map."""

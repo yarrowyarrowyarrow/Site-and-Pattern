@@ -37,6 +37,7 @@ from src.planning_panel   import PlanningPanel
 from src.toolbar          import MainToolbar
 from src.climate          import get_zone, zone_label
 from src.settings         import SettingsDialog, get_api_keys
+from src.collapsible_panel import CollapsibleSidebar
 import src.project as project_io
 
 
@@ -113,23 +114,28 @@ class MainWindow(QMainWindow):
         self._side_tabs.addTab(self.structure_panel, "Structures")
         self._side_tabs.addTab(self.analysis_panel, "Analysis")
         self._side_tabs.addTab(self.planning_panel, "Planning")
+        self._side_tabs.setMinimumWidth(220)
+        self._side_tabs.setMaximumWidth(480)
+        self._side_tabs.setStyleSheet(
+            "QWidget { background-color: #1e2a1e; color: #c8e6c9; }"
+        )
+
+        # Wrap in a CollapsibleSidebar so the entire side panel can be
+        # collapsed to a thin chevron strip — replaces the long-standing
+        # workaround of "minimize the Design panel" via the splitter.
+        self._side_wrapper = CollapsibleSidebar(
+            "Side Panel", panel_id="main_sidebar", expanded=True
+        )
+        self._side_wrapper.set_content(self._side_tabs)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(self.map_widget)
-        splitter.addWidget(self._side_tabs)
+        splitter.addWidget(self._side_wrapper)
 
         # 70 / 30 split
         splitter.setSizes([700, 300])
         splitter.setStretchFactor(0, 7)
         splitter.setStretchFactor(1, 3)
-
-        self._side_tabs.setMinimumWidth(220)
-        self._side_tabs.setMaximumWidth(480)
-
-        # Apply dark sidebar style
-        self._side_tabs.setStyleSheet(
-            "QWidget { background-color: #1e2a1e; color: #c8e6c9; }"
-        )
 
         self.setCentralWidget(splitter)
 
