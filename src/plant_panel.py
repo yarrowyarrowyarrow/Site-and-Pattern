@@ -151,6 +151,16 @@ _ROW_H_PADDING  = 4
 _ZONE_BADGE_W   = 56
 _NATIVE_BADGE_W = 18    # square AB-leaf badge
 
+# Inline calendar strip (expanded rows): month-abbr row + coloured cells
+# + legend, with small vertical gaps. Total fits inside the existing
+# detail block between the data rows and the wrapped notes.
+_CAL_MONTH_ROW_H = 12
+_CAL_STRIP_H     = 18
+_CAL_LEGEND_H    = 14
+_CAL_GAP         = 3
+_CAL_BLOCK_H     = (_CAL_MONTH_ROW_H + _CAL_STRIP_H + _CAL_LEGEND_H
+                    + _CAL_GAP * 3)
+
 
 def _zone_badge_text(plant: dict) -> str:
     zmin = plant.get("hardiness_zone_min")
@@ -175,6 +185,11 @@ class PlantListModel(QAbstractListModel):
         self._plants: list[dict] = []
         self._placed_counts: dict[int, int] = {}
         self._expanded_ids: set[int] = set()
+        # Per-plant 12-month planting calendar, lazily fetched the first
+        # time a row is expanded. None means "not yet attempted"; an empty
+        # list means "no calendar data" (e.g. Permapeople plants without
+        # local rows). Cache lives for the panel's lifetime.
+        self._calendar_cache: dict[int, list[dict]] = {}
 
     # Standard model API -------------------------------------------------
 
@@ -233,6 +248,26 @@ class PlantListModel(QAbstractListModel):
                 self.dataChanged.emit(self.index(0),
                                       self.index(len(self._plants) - 1),
                                       [_PLANT_EXPANDED_ROLE])
+
+    def calendar_for(self, plant_id: Optional[int]) -> list[dict]:
+        """Return a 12-entry list of {month,status,notes} for plant_id.
+
+        Empty list when plant_id is missing or DB lookup fails (e.g. the
+        row is a Permapeople preview without a local id). Results are
+        memoised so paint() can call this on every redraw cheaply.
+        """
+        if not plant_id:
+            return []
+        cached = self._calendar_cache.get(plant_id)
+        if cached is not None:
+            return cached
+        try:
+            from src.db.plants import get_calendar
+            cal = get_calendar(plant_id)
+        except Exception:
+            cal = []
+        self._calendar_cache[plant_id] = cal
+        return cal
 
 
 class PlantRowDelegate(QStyledItemDelegate):
@@ -307,7 +342,17 @@ class PlantRowDelegate(QStyledItemDelegate):
                                                     int(Qt.TextFlag.TextWordWrap),
                                                     notes).height() // fm.lineSpacing())
             notes_h = min(wrapped_lines, 6) * fm.lineSpacing() + 4
-        detail_h = 6 * fm.lineSpacing() + notes_h + 8
+        # Calendar strip: month-abbr row (12) + coloured cells (18) +
+        # legend row (line height) + small gaps. Only reserved when the
+        # plant actually has a calendar in the local DB; Permapeople-only
+        # rows just skip it.
+        cal_h = 0
+        model = index.model()
+        if isinstance(model, PlantListModel):
+            cal = model.calendar_for(plant.get("id"))
+            if cal:
+                cal_h = _CAL_BLOCK_H
+        detail_h = 6 * fm.lineSpacing() + cal_h + notes_h + 8
         return QSize(0, _ROW_H_COMPACT + detail_h)
 
     # Painting -----------------------------------------------------------
@@ -443,10 +488,28 @@ class PlantRowDelegate(QStyledItemDelegate):
             _row("Edible:",      edible, 4 * line_h)
             _row("Uses:",        uses, 5 * line_h)
 
+            # ── Colour-coded planting calendar strip ──────────────
+            # 12 cells across the detail width, one per month, coloured by
+            # life-stage status from the planting_calendar table. Restores
+            # the at-a-glance "what is this plant doing in July?" visual
+            # that lived in the legacy detail panel before the compact
+            # list landed.
+            cal_block_top = detail.top() + 6 * line_h
+            model = index.model()
+            cal: list[dict] = []
+            if isinstance(model, PlantListModel):
+                cal = model.calendar_for(plant.get("id"))
+            if cal:
+                self._paint_calendar(painter, detail, cal_block_top, cal)
+                notes_top_offset = 6 * line_h + _CAL_BLOCK_H
+            else:
+                notes_top_offset = 6 * line_h + 4
+
             notes = plant.get("notes") or ""
             if notes:
-                ntop = detail.top() + 6 * line_h + 4
+                ntop = detail.top() + notes_top_offset
                 painter.setPen(QColor("#b0bec5"))
+                painter.setFont(self._small_font)
                 painter.drawText(
                     QRect(detail.left(), ntop, detail.width(),
                           detail.bottom() - ntop),
@@ -455,6 +518,76 @@ class PlantRowDelegate(QStyledItemDelegate):
                     notes,
                 )
         painter.restore()
+
+    # ── Calendar strip painter ──────────────────────────────────────────
+
+    def _paint_calendar(self, painter: QPainter, detail: QRect, top: int,
+                        cal: list[dict]):
+        """Paint the 12-month coloured stage strip inside `detail`.
+
+        Layout (top → bottom):
+          row 0: 12 month-abbreviation labels (Jan, Feb, …)
+          row 1: 12 coloured cells, one per month, status-coloured;
+                 the current month gets a yellow ring
+          row 2: legend dots for non-dormant statuses
+        """
+        from datetime import datetime
+        current_month = datetime.now().month
+
+        avail_w = detail.width()
+        cell_count = 12
+
+        # Row 0 — month labels.
+        label_top = top
+        painter.setFont(self._small_font)
+        painter.setPen(QColor("#90a4ae"))
+        for i in range(cell_count):
+            x0 = detail.left() + (i * avail_w) // cell_count
+            x1 = detail.left() + ((i + 1) * avail_w) // cell_count
+            painter.drawText(
+                QRect(x0, label_top, x1 - x0, _CAL_MONTH_ROW_H),
+                int(Qt.AlignmentFlag.AlignCenter),
+                _MONTH_ABBR[i],
+            )
+
+        # Row 1 — coloured stage cells.
+        cell_top = label_top + _CAL_MONTH_ROW_H + _CAL_GAP
+        for i in range(cell_count):
+            x0 = detail.left() + (i * avail_w) // cell_count
+            x1 = detail.left() + ((i + 1) * avail_w) // cell_count
+            cell_rect = QRect(x0 + 1, cell_top, max(1, x1 - x0 - 2),
+                              _CAL_STRIP_H)
+            status = (cal[i].get("status") if i < len(cal) else None) or "dormant"
+            color = QColor(_CALENDAR_STATUS_COLORS.get(status, "#37474f"))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(color)
+            painter.drawRoundedRect(cell_rect, 2, 2)
+            if (i + 1) == current_month:
+                painter.setPen(QPen(QColor("#fdd835"), 1.5))
+                painter.setBrush(Qt.BrushStyle.NoBrush)
+                painter.drawRoundedRect(cell_rect, 2, 2)
+
+        # Row 2 — legend.
+        legend_top = cell_top + _CAL_STRIP_H + _CAL_GAP
+        legend_x = detail.left()
+        fm = QFontMetrics(self._small_font)
+        for status, color in _CALENDAR_STATUS_COLORS.items():
+            if status == "dormant":
+                continue   # ubiquitous; skipping it keeps the legend on one line
+            label = _CALENDAR_STATUS_LABELS[status]
+            tw = fm.horizontalAdvance(label)
+            if legend_x + 9 + tw + 8 > detail.right():
+                break   # don't wrap; truncate gracefully on narrow panels
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor(color))
+            painter.drawEllipse(legend_x, legend_top + 4, 6, 6)
+            painter.setPen(QColor("#90a4ae"))
+            painter.drawText(
+                QRect(legend_x + 9, legend_top, tw + 2, _CAL_LEGEND_H),
+                int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
+                label,
+            )
+            legend_x += 9 + tw + 8
 
     # Editor / interaction --------------------------------------------------
 
