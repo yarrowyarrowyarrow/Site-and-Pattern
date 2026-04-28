@@ -4,10 +4,31 @@ setlocal enabledelayedexpansion
 echo === PermaDesign Installer Builder ===
 echo.
 
-REM Clean previous builds
+REM Kill any lingering app processes that hold file locks on the old build.
+REM Without this, rmdir fails silently and PyInstaller produces a corrupt bundle.
+echo Stopping any running PermaDesign processes...
+taskkill /F /IM PermaDesign.exe >nul 2>&1
+taskkill /F /IM QtWebEngineProcess.exe >nul 2>&1
+
+REM Clean previous builds, and FAIL HARD if anything is locked.
 echo Cleaning previous builds...
-if exist build rmdir /s /q build
-if exist dist rmdir /s /q dist
+if exist build (
+    rmdir /s /q build
+    if exist build (
+        echo ERROR: could not delete build\ - a file is locked.
+        echo Close any open PermaDesign windows / Explorer windows in that folder and retry.
+        exit /b 1
+    )
+)
+if exist dist (
+    rmdir /s /q dist
+    if exist dist (
+        echo ERROR: could not delete dist\ - a file is locked.
+        echo Close any open PermaDesign windows / Explorer windows in that folder and retry.
+        exit /b 1
+    )
+)
+if exist PermaDesign-Windows.zip del /q PermaDesign-Windows.zip
 
 REM Activate virtual environment if it exists
 if exist venv (
@@ -19,9 +40,17 @@ REM Install build dependencies
 echo Installing build dependencies...
 pip install -q pyinstaller
 
-REM Build with PyInstaller
+REM Build with PyInstaller — bail if it fails so we don't ship a broken bundle.
 echo Building application bundle with PyInstaller...
 pyinstaller permadesign.spec --clean
+if !ERRORLEVEL! neq 0 (
+    echo ERROR: PyInstaller build failed. Aborting.
+    exit /b 1
+)
+if not exist dist\PermaDesign\PermaDesign.exe (
+    echo ERROR: dist\PermaDesign\PermaDesign.exe was not produced. Aborting.
+    exit /b 1
+)
 
 REM Create Windows installer using NSIS (if available)
 if exist "C:\Program Files (x86)\NSIS\makensis.exe" (
