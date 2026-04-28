@@ -11,6 +11,7 @@ a = Analysis(
     datas=[
         ('data', 'data'),
         ('html', 'html'),
+        ('src/db/schema.sql', 'src/db'),
     ],
     hiddenimports=[
         'PyQt6',
