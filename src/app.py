@@ -413,21 +413,32 @@ class MainWindow(QMainWindow):
                           quantity: int = 1, pattern: dict | None = None):
         self._current_mode = 'plant'
         spacing_m, plant_type, custom_color = self._plant_info(plant_id)
+
+        # Polyculture override: when the panel built a mix recipe, use
+        # the resolved effective spacing (default = max canopy width)
+        # so the JS-side geometry generator lays out cells at a step
+        # that fits the largest species in the mix.
+        poly = ((pattern or {}).get("params") or {}).get("polyculture")
+        if poly and poly.get("effective_spacing_m"):
+            spacing_m = float(poly["effective_spacing_m"])
+
         self.map_widget.set_mode('plant', plant_id, common_name, spacing_m,
                                  plant_type, quantity, custom_color,
                                  pattern=pattern)
         self.toolbar.enter_plant_mode()
 
         kind = (pattern or {}).get("kind", "single")
+        species_n = len(poly["species"]) if poly else 0
+        poly_tag = f" · Polyculture ({species_n} species)" if species_n else ""
         if kind == "single":
             qty_str = f" ×{quantity}" if quantity > 1 else ""
             label = f"Placing: {common_name}{qty_str} — click map, press Esc to cancel"
         elif kind == "row":
-            label = f"Row of {common_name} — click start point, then end point"
+            label = f"Row of {common_name}{poly_tag} — click start point, then end point"
         elif kind == "grid":
-            label = f"Grid of {common_name} — click two opposite corners"
+            label = f"Grid of {common_name}{poly_tag} — click two opposite corners"
         elif kind == "circle":
-            label = f"Circle of {common_name} — click centre, then radius point"
+            label = f"Circle of {common_name}{poly_tag} — click centre, then radius point"
         else:
             label = f"Placing: {common_name}"
         self._set_mode_label(label)
@@ -1020,6 +1031,13 @@ class MainWindow(QMainWindow):
         All plants share a single placement_group_id so they can be selected
         and deleted as a unit. The positions list is computed JS-side so the
         live preview and the committed placement use the same geometry.
+
+        If the plant panel currently has a polyculture mix whose primary
+        is `plant_id`, each generated position is independently assigned
+        a species by `polyculture.assign_species`. Each placed marker
+        carries its own plant_id/common_name/colour, but the whole stand
+        still shares one placement_group_id so it selects and deletes
+        as a single polyculture.
         """
         import json as _json
         try:
@@ -1029,18 +1047,45 @@ class MainWindow(QMainWindow):
         if not positions:
             return
 
+        # Resolve polyculture assignments (one species dict per position)
+        # only when the panel's active mix matches the primary plant_id
+        # we just placed — guards against stale mixes from a different
+        # primary or zero-secondary "mixes" that resolve to None.
+        assignments: list[dict] | None = None
+        try:
+            poly = self.plant_panel.active_polyculture()
+        except Exception:
+            poly = None
+        if poly and poly["species"] and poly["species"][0]["id"] == plant_id:
+            from src.polyculture import assign_species
+            assignments = assign_species(
+                positions, poly["species"], poly.get("strategy", "weighted_random")
+            )
+
         group_id = project_io.new_placement_group_id()
-        for (lat, lng) in positions:
+        for i, (lat, lng) in enumerate(positions):
+            if assignments is not None:
+                sp = assignments[i]
+                pid       = sp["id"]
+                name      = sp["common_name"]
+                sp_space  = sp["spacing_m"]
+                sp_type   = sp["plant_type"]
+                sp_color  = sp["color"]
+            else:
+                pid, name           = plant_id, common_name
+                sp_space, sp_type   = spacing_m, plant_type
+                sp_color            = custom_color
+
             # Render the marker on the map.
             self.map_widget.run_js(
-                f"placePlantMarker({plant_id}, {repr(common_name)}, "
-                f"{lat}, {lng}, {spacing_m}, {repr(plant_type)}, "
-                f"{repr(custom_color) if custom_color else 'null'}, "
+                f"placePlantMarker({pid}, {repr(name)}, "
+                f"{lat}, {lng}, {sp_space}, {repr(sp_type)}, "
+                f"{repr(sp_color) if sp_color else 'null'}, "
                 f"{repr(group_id)});"
             )
             # Mirror in project state.
             self._placed_plants.append({
-                "plant_id": plant_id, "common_name": common_name,
+                "plant_id": pid, "common_name": name,
                 "lat": lat, "lng": lng,
                 "placement_group_id": group_id,
             })
@@ -1049,19 +1094,26 @@ class MainWindow(QMainWindow):
                 "geometry": {"type": "Point", "coordinates": [lng, lat]},
                 "properties": {
                     "element_type": "plant",
-                    "plant_id": plant_id,
-                    "common_name": common_name,
+                    "plant_id": pid,
+                    "common_name": name,
                     "placement_group_id": group_id,
                     "pattern_kind": pattern_kind,
                     "quantity": 1
                 }
             })
-            self.plant_panel.on_plant_placed(plant_id, common_name)
+            self.plant_panel.on_plant_placed(pid, name)
         self._mark_modified()
         self._sync_planning_panel()
-        self.statusBar().showMessage(
-            f"Placed {len(positions)} {common_name} ({pattern_kind})", 2500
-        )
+        if assignments is not None:
+            n_species = len({s["id"] for s in poly["species"]})
+            self.statusBar().showMessage(
+                f"Placed {len(positions)} plants — "
+                f"{n_species}-species polyculture ({pattern_kind})", 3000
+            )
+        else:
+            self.statusBar().showMessage(
+                f"Placed {len(positions)} {common_name} ({pattern_kind})", 2500
+            )
 
     def _on_plant_removed(self, marker_id: str, plant_id: int, lat: float, lng: float):
         # Remove matching entry from placed list (match by plant_id + coords)

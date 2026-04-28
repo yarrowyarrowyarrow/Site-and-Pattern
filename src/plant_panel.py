@@ -620,6 +620,13 @@ class PlantPanel(QWidget):
         self._selected_plant: Optional[dict] = None
         self._placed_counts: dict[int, int] = {}   # plant_id -> count
 
+        # Polyculture mix — list of *secondary* species. The primary is
+        # always whichever plant is currently selected in the results
+        # list at place time, so changing the primary doesn't disturb
+        # the rest of the mix.
+        self._mix_secondaries: list[dict] = []
+        self._MIX_MAX_SECONDARIES = 7   # primary + 7 = 8 species total
+
         # Permapeople API keys (set via set_api_keys)
         self._pp_key_id:     str = ""
         self._pp_key_secret: str = ""
@@ -1124,6 +1131,10 @@ class PlantPanel(QWidget):
         self._calendar_group.setVisible(False)
         self._update_color_btn(plant.get("marker_color") or "")
         self._place_btn.setEnabled(True)
+        # If a mix is active, the new primary changes the status string
+        # (different name, possibly different effective spacing).
+        if self._mix_secondaries:
+            self._refresh_mix_list()
 
     def _on_view_double_clicked(self, index: QModelIndex):
         """Double-click: place the plant directly (Single mode)."""
@@ -1392,7 +1403,61 @@ class PlantPanel(QWidget):
         )
         outer.addLayout(ov)
 
+        # ── Polyculture mix panel ─────────────────────────────────────
+        # When the user adds ≥1 secondary species via right-click → "Add
+        # to Polyculture Mix", Row/Grid/Circle placements distribute
+        # species across positions. Spacing defaults to the largest
+        # mature-width in the mix so canopies don't overlap.
+        self._build_polyculture_controls(outer)
+
         parent_layout.addWidget(wrap)
+
+    def _build_polyculture_controls(self, outer: QVBoxLayout):
+        """Build the inline polyculture-mix UI inside the placement group."""
+        mix_box = QGroupBox("Polyculture Mix")
+        mix_box.setStyleSheet(
+            "QGroupBox { color: #a5d6a7; font-size: 11px; "
+            "border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 8px; }"
+            "QGroupBox::title { subcontrol-origin: margin; left: 8px; "
+            "padding: 0 4px; }"
+        )
+        ml = QVBoxLayout(mix_box)
+        ml.setContentsMargins(6, 6, 6, 6)
+        ml.setSpacing(3)
+
+        self._mix_status = QLabel(
+            "Mix off — right-click a plant in the list to add it.\n"
+            "Row/Grid/Circle will then mix all species across the placement."
+        )
+        self._mix_status.setWordWrap(True)
+        self._mix_status.setStyleSheet("color: #78909c; font-size: 10px;")
+        ml.addWidget(self._mix_status)
+
+        self._mix_list = QListWidget()
+        self._mix_list.setMaximumHeight(80)
+        self._mix_list.setStyleSheet(_RESULTS_LIST_STYLE)
+        self._mix_list.setVisible(False)
+        self._mix_list.setToolTip("Double-click a row to remove it from the mix")
+        self._mix_list.itemDoubleClicked.connect(self._on_mix_item_double_clicked)
+        ml.addWidget(self._mix_list)
+
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(4)
+        self._mix_clear_btn = QPushButton("Clear mix")
+        self._mix_clear_btn.setStyleSheet(
+            "QPushButton { background: #1e2e1e; color: #ef9a9a; "
+            "border: 1px solid #4a2e2e; border-radius: 3px; "
+            "padding: 2px 8px; font-size: 11px; }"
+            "QPushButton:hover { border-color: #8a4a4a; }"
+            "QPushButton:disabled { color: #455a64; border-color: #2e4a2e; }"
+        )
+        self._mix_clear_btn.clicked.connect(self._clear_mix)
+        self._mix_clear_btn.setEnabled(False)
+        btn_row.addWidget(self._mix_clear_btn)
+        btn_row.addStretch()
+        ml.addLayout(btn_row)
+
+        outer.addWidget(mix_box)
 
     @staticmethod
     def _small_label(text: str) -> QLabel:
@@ -1409,28 +1474,174 @@ class PlantPanel(QWidget):
         self._qty_spin.setEnabled(kind == "single")
 
     def _current_pattern(self) -> dict:
-        """Build the pattern dict to pass to the map-placement signal."""
+        """Build the pattern dict to pass to the map-placement signal.
+
+        When a polyculture mix is active and the mode is multi-cell
+        (row/grid/circle), the pattern's params get a `polyculture` key
+        carrying the resolved species list, distribution strategy, and
+        effective spacing — App._enter_plant_mode uses this to override
+        the primary's spacing on the map, and App._on_pattern_placed
+        uses it to assign species across positions.
+        """
         kind = self._pattern_kind
         overlap = self._overlap_slider.value() / 100.0
+        params: dict = {}
         if kind == "row":
-            return {"kind": "row", "params": {
+            params = {
                 "count": self._row_count.value() or None,
                 "overlap": overlap,
-            }}
-        if kind == "grid":
-            return {"kind": "grid", "params": {
+            }
+        elif kind == "grid":
+            params = {
                 "rows": self._grid_rows.value() or None,
                 "cols": self._grid_cols.value() or None,
                 "stagger": self._grid_stagger.isChecked(),
                 "overlap": overlap,
-            }}
-        if kind == "circle":
-            return {"kind": "circle", "params": {
+            }
+        elif kind == "circle":
+            params = {
                 "count": self._circle_count.value() or None,
                 "fill": self._circle_fill.isChecked(),
                 "overlap": overlap,
-            }}
-        return {"kind": "single"}
+            }
+        else:
+            return {"kind": "single"}
+
+        poly = self.active_polyculture()
+        if poly is not None:
+            params["polyculture"] = poly
+        return {"kind": kind, "params": params}
+
+    # ── Polyculture mix ───────────────────────────────────────────────────
+
+    def active_polyculture(self) -> Optional[dict]:
+        """Return the current mix recipe, or None if no mix is active.
+
+        Recipe shape (all fields are JSON-safe so it can travel through
+        Qt signals and into the project file unchanged):
+            {
+              "species": [{"id", "common_name", "spacing_m",
+                           "plant_type", "color", "weight"}, ...],
+              "strategy": "weighted_random",
+              "spacing_strategy": "max",
+              "effective_spacing_m": float,
+            }
+
+        The primary (currently-selected plant) is always first; the
+        secondaries follow in insertion order. Returns None when there
+        are no secondaries, no primary, or every secondary duplicates
+        the primary's id.
+        """
+        if not self._mix_secondaries:
+            return None
+        primary = self._selected_plant
+        if not primary or not primary.get("id"):
+            return None
+
+        seen: set[int] = set()
+        species: list[dict] = []
+        for p in [primary, *self._mix_secondaries]:
+            pid = p.get("id")
+            if not pid or pid in seen:
+                continue
+            seen.add(pid)
+            species.append({
+                "id": pid,
+                "common_name": p.get("common_name") or "",
+                "spacing_m": float(p.get("spacing_meters") or 1.0),
+                "plant_type": p.get("plant_type") or "herb",
+                "color": p.get("marker_color") or "",
+                "weight": 1.0,
+            })
+        if len(species) < 2:
+            return None
+
+        from src.polyculture import resolve_spacing
+        eff = resolve_spacing(species, "max")
+        return {
+            "species": species,
+            "strategy": "weighted_random",
+            "spacing_strategy": "max",
+            "effective_spacing_m": eff,
+        }
+
+    def _add_to_mix(self, plant: dict):
+        """Add a plant to the secondary-species list, ignoring duplicates."""
+        pid = plant.get("id")
+        if not pid:
+            return
+        # Don't bother re-adding the current primary — it's always implicit.
+        if self._selected_plant and self._selected_plant.get("id") == pid:
+            return
+        if any(s.get("id") == pid for s in self._mix_secondaries):
+            return
+        if len(self._mix_secondaries) >= self._MIX_MAX_SECONDARIES:
+            return
+        self._mix_secondaries.append(plant)
+        self._refresh_mix_list()
+
+    def _remove_from_mix(self, plant_id: int):
+        before = len(self._mix_secondaries)
+        self._mix_secondaries = [
+            s for s in self._mix_secondaries if s.get("id") != plant_id
+        ]
+        if len(self._mix_secondaries) != before:
+            self._refresh_mix_list()
+
+    def _clear_mix(self):
+        if not self._mix_secondaries:
+            return
+        self._mix_secondaries = []
+        self._refresh_mix_list()
+
+    def _on_mix_item_double_clicked(self, item: QListWidgetItem):
+        pid = item.data(_PLANT_ID_ROLE)
+        if pid:
+            self._remove_from_mix(int(pid))
+
+    def _refresh_mix_list(self):
+        """Rebuild the mix list widget + status label from `_mix_secondaries`.
+
+        Cheap to call repeatedly — we never have more than 8 species.
+        """
+        self._mix_list.clear()
+        n = len(self._mix_secondaries)
+        if n == 0:
+            self._mix_status.setText(
+                "Mix off — right-click a plant in the list to add it.\n"
+                "Row/Grid/Circle will then mix all species across the placement."
+            )
+            self._mix_list.setVisible(False)
+            self._mix_clear_btn.setEnabled(False)
+            return
+
+        primary = self._selected_plant
+        primary_name = primary.get("common_name") if primary else "(none)"
+        primary_sp = float(primary.get("spacing_meters") or 1.0) if primary else 1.0
+        all_sp = [primary_sp] + [
+            float(s.get("spacing_meters") or 1.0) for s in self._mix_secondaries
+        ]
+        eff = max(all_sp)
+        self._mix_status.setText(
+            f"Polyculture: {primary_name} + {n} other{'s' if n != 1 else ''}\n"
+            f"Spacing {eff:.2f} m (max of mix). Double-click a row to remove."
+        )
+        self._mix_list.setVisible(True)
+        self._mix_clear_btn.setEnabled(True)
+
+        for s in self._mix_secondaries:
+            color = _TYPE_COLORS.get(s.get("plant_type", ""), "#78909c")
+            label = f"   {s.get('common_name', '—')}"
+            item = QListWidgetItem(label)
+            item.setIcon(_type_icon(s.get("plant_type", "")))
+            item.setData(_PLANT_ID_ROLE, s.get("id"))
+            sp = s.get("spacing_meters")
+            tip_lines = [s.get("scientific_name") or ""]
+            if sp:
+                tip_lines.append(f"Spacing: {sp} m")
+            tip_lines.append("Double-click to remove from mix")
+            item.setToolTip("\n".join(t for t in tip_lines if t))
+            self._mix_list.addItem(item)
 
     # ── Place on map ──────────────────────────────────────────────────────────
 
@@ -1474,6 +1685,35 @@ class PlantPanel(QWidget):
 
         act_companions = menu.addAction("View Companions (open detail)")
         act_companions.triggered.connect(lambda: self._show_companions(plant))
+
+        menu.addSeparator()
+
+        # Polyculture mix — only meaningful for plants with a real id.
+        already_in_mix = any(
+            s.get("id") == plant.get("id") for s in self._mix_secondaries
+        )
+        is_primary = (
+            self._selected_plant is not None
+            and self._selected_plant.get("id") == plant.get("id")
+        )
+        if already_in_mix:
+            act_mix = menu.addAction("Remove from Polyculture Mix")
+            act_mix.triggered.connect(
+                lambda: self._remove_from_mix(int(plant["id"]))
+            )
+        else:
+            act_mix = menu.addAction("Add to Polyculture Mix")
+            act_mix.triggered.connect(lambda: self._add_to_mix(plant))
+            if (is_primary
+                    or not plant.get("id")
+                    or len(self._mix_secondaries) >= self._MIX_MAX_SECONDARIES):
+                act_mix.setEnabled(False)
+                if is_primary:
+                    act_mix.setText("Already the primary (mix uses current selection)")
+                elif len(self._mix_secondaries) >= self._MIX_MAX_SECONDARIES:
+                    act_mix.setText(
+                        f"Mix full ({1 + self._MIX_MAX_SECONDARIES} species max)"
+                    )
 
         menu.exec(self._results_list.viewport().mapToGlobal(pos))
 
