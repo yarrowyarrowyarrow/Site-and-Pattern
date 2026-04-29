@@ -392,7 +392,11 @@ class PlantRowDelegate(QStyledItemDelegate):
         right_pad = self.EXPAND_BTN_W + _NATIVE_BADGE_W + _ZONE_BADGE_W + 16
         text_max = max(40, compact.right() - x - right_pad)
 
-        # Common + scientific name on a single line.
+        # Common + scientific name on a single line. The common name
+        # always gets enough room to render in full; the scientific
+        # name shrinks (and ellipsises) to fit whatever's left over,
+        # because the user can always reach the full sci name from
+        # the expanded detail block.
         common = plant.get("common_name", "")
         sci    = plant.get("scientific_name") or ""
         count_badge = f"  [{placed}×]" if placed > 0 else ""
@@ -401,21 +405,39 @@ class PlantRowDelegate(QStyledItemDelegate):
         painter.setPen(QColor("#e8f5e9") if selected else QColor("#c8e6c9"))
         painter.setFont(self._bold_font)
         fm_b = QFontMetrics(self._bold_font)
-        common_w = min(fm_b.horizontalAdvance(common_text), text_max)
-        painter.drawText(QRect(x, compact.top(), common_w, _ROW_H_COMPACT),
-                         int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
-                         common_text)
-        x_after_common = x + common_w + 6
+        common_natural = fm_b.horizontalAdvance(common_text)
 
-        if sci and x_after_common < compact.right() - right_pad:
-            painter.setFont(self._sci_font)
-            painter.setPen(QColor("#90a4ae"))
+        if common_natural <= text_max:
+            common_w = common_natural
+            painter.drawText(
+                QRect(x, compact.top(), common_w, _ROW_H_COMPACT),
+                int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
+                common_text,
+            )
+            x_after_common = x + common_w + 6
             sci_w = max(0, compact.right() - right_pad - x_after_common)
-            fm_s = QFontMetrics(self._sci_font)
-            sci_text = fm_s.elidedText(sci, Qt.TextElideMode.ElideRight, sci_w)
-            painter.drawText(QRect(x_after_common, compact.top(), sci_w, _ROW_H_COMPACT),
-                             int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
-                             sci_text)
+            if sci and sci_w > 12:
+                painter.setFont(self._sci_font)
+                painter.setPen(QColor("#90a4ae"))
+                fm_s = QFontMetrics(self._sci_font)
+                sci_text = fm_s.elidedText(sci, Qt.TextElideMode.ElideRight, sci_w)
+                painter.drawText(
+                    QRect(x_after_common, compact.top(), sci_w, _ROW_H_COMPACT),
+                    int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
+                    sci_text,
+                )
+        else:
+            # Pathologically narrow panel — common name doesn't fit.
+            # Elide it, drop the scientific name; the chevron still
+            # opens the expanded detail block which shows everything.
+            common_w = text_max
+            elided = fm_b.elidedText(common_text, Qt.TextElideMode.ElideRight,
+                                      common_w)
+            painter.drawText(
+                QRect(x, compact.top(), common_w, _ROW_H_COMPACT),
+                int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
+                elided,
+            )
 
         # Zone badge.
         zr = self._zone_badge_rect(compact)
@@ -1084,7 +1106,7 @@ class PlantPanel(QWidget):
         self._grid_rows.setStyleSheet(_QTY_SPIN_STYLE)
         self._grid_rows.setFixedWidth(70)
         gl.addWidget(self._grid_rows)
-        gl.addWidget(self._small_label("Cols:"))
+        gl.addWidget(self._small_label("Columns:"))
         self._grid_cols = QSpinBox()
         self._grid_cols.setRange(0, 200)
         self._grid_cols.setSpecialValueText("auto")
@@ -1097,21 +1119,31 @@ class PlantPanel(QWidget):
         gl.addStretch()
         self._pattern_stack.addWidget(grid_panel)
 
-        # Circle — count + fill.
+        # Circle — total + fill.
         circle_panel = QWidget()
         cl = QHBoxLayout(circle_panel)
         cl.setContentsMargins(0, 0, 0, 0)
         cl.setSpacing(4)
-        cl.addWidget(self._small_label("Count:"))
+        cl.addWidget(self._small_label("Total:"))
         self._circle_count = QSpinBox()
-        self._circle_count.setRange(0, 200)
+        self._circle_count.setRange(0, 2000)
         self._circle_count.setSpecialValueText("auto")
-        self._circle_count.setToolTip("0 = derive from arc spacing")
+        self._circle_count.setToolTip(
+            "Total plants in the placement.\n"
+            "0 (auto) = derive from spacing — perimeter mode uses arc length, "
+            "fill mode packs the whole disc.\n"
+            "Otherwise: that many plants on the perimeter (no fill) or in the "
+            "hex-pack disc (fill), closest-to-centre first."
+        )
         self._circle_count.setStyleSheet(_QTY_SPIN_STYLE)
         self._circle_count.setFixedWidth(80)
         cl.addWidget(self._circle_count)
-        self._circle_fill = QCheckBox("Fill (rings)")
-        self._circle_fill.setToolTip("Add concentric inner rings to fill the disk")
+        self._circle_fill = QCheckBox("Fill (hex)")
+        self._circle_fill.setToolTip(
+            "Honeycomb-pack the whole disc so every plant has six "
+            "equidistant neighbours. Use the Total spinner to cap the "
+            "count for large radii."
+        )
         cl.addWidget(self._circle_fill)
         cl.addStretch()
         self._pattern_stack.addWidget(circle_panel)
@@ -1328,17 +1360,21 @@ class PlantPanel(QWidget):
             "effective_spacing_m": eff,
         }
 
-    def consume_pending_polyculture(self) -> Optional[dict]:
-        """Hand the most-recently-stashed recipe to App and clear it.
+    def peek_pending_polyculture(self) -> Optional[dict]:
+        """Return the recipe stashed at Place-click time *without* clearing it.
 
-        App calls this from `_on_pattern_placed`. The recipe is stashed
-        at Place-click time so a user changing the mix between Place
-        and the second-corner click can't desync the species
-        assignment from what the status label promised.
+        App calls this from `_on_pattern_placed`. We deliberately do not
+        clear the stash here so the user can drop multiple identical
+        polyculture patterns back-to-back without re-clicking Place
+        Mix. The stash is replaced when Place Mix is clicked again
+        (`_on_place_clicked`) and cleared when plant mode exits
+        (`clear_pending_polyculture`).
         """
-        recipe = self._pending_polyculture
+        return self._pending_polyculture
+
+    def clear_pending_polyculture(self):
+        """Drop the in-flight recipe — called when plant mode is cancelled."""
         self._pending_polyculture = None
-        return recipe
 
     def _add_to_mix(self, plant: dict):
         """Add a plant to the mix, ignoring duplicates and DB-less rows.
@@ -1430,7 +1466,14 @@ class PlantPanel(QWidget):
             self._mix_rows_layout.addWidget(row)
 
     def _build_mix_row(self, idx: int, species: dict) -> QFrame:
-        """One species line: icon + name + ratio spinner + × button."""
+        """One species line: clickable colour dot + name + ratio spinner + ×.
+
+        The dot is per-row clickable: it opens a QColorDialog and writes
+        the chosen hex into `self._mix_species[idx]["marker_color"]` only.
+        The canonical plant row (and any single-species placements that
+        use the global picker) are untouched, so each polyculture mix
+        can carry its own colour palette without polluting the DB.
+        """
         row = QFrame()
         row.setStyleSheet(
             "QFrame { background: #1e2e1e; border: 1px solid #2e4a2e; "
@@ -1440,12 +1483,16 @@ class PlantPanel(QWidget):
         rl.setContentsMargins(4, 2, 4, 2)
         rl.setSpacing(4)
 
-        # Type-coloured dot (matches the results-list dot scheme).
-        dot = QLabel()
-        dot.setFixedSize(10, 10)
-        color_hex = _TYPE_COLORS.get(species.get("plant_type", ""), "#78909c")
-        dot.setStyleSheet(
-            f"background:{color_hex}; border-radius:5px; min-width:10px; min-height:10px;"
+        # Clickable colour dot — overrides the type colour for this mix only.
+        dot = QPushButton()
+        dot.setFixedSize(14, 14)
+        dot.setCursor(Qt.CursorShape.PointingHandCursor)
+        dot.setToolTip(
+            "Click to set this species' marker colour for this polyculture mix"
+        )
+        self._style_mix_dot(dot, species)
+        dot.clicked.connect(
+            lambda _checked=False, i=idx, btn=dot: self._on_mix_dot_clicked(i, btn)
         )
         rl.addWidget(dot)
 
@@ -1484,6 +1531,35 @@ class PlantPanel(QWidget):
         rl.addWidget(rm)
 
         return row
+
+    @staticmethod
+    def _style_mix_dot(btn: QPushButton, species: dict):
+        """Repaint a mix-row dot using its per-mix marker_color override
+        (falling back to the type colour). Border is a darker tint so the
+        dot is clearly clickable."""
+        color_hex = (species.get("marker_color")
+                     or _TYPE_COLORS.get(species.get("plant_type", ""), "#78909c"))
+        btn.setStyleSheet(
+            f"QPushButton {{ background: {color_hex}; border: 1px solid #0d160d; "
+            f"border-radius: 7px; min-width: 14px; min-height: 14px; }}"
+            f"QPushButton:hover {{ border-color: #a5d6a7; }}"
+        )
+
+    def _on_mix_dot_clicked(self, idx: int, btn: QPushButton):
+        if not (0 <= idx < len(self._mix_species)):
+            return
+        species = self._mix_species[idx]
+        current = (species.get("marker_color")
+                   or _TYPE_COLORS.get(species.get("plant_type", ""), "#66bb6a"))
+        initial = QColor(current)
+        color = QColorDialog.getColor(
+            initial, self,
+            f"Marker colour for {species.get('common_name', '')} (this mix)"
+        )
+        if not color.isValid():
+            return
+        species["marker_color"] = color.name()
+        self._style_mix_dot(btn, species)
 
     def _on_mix_weight_changed(self, idx: int, value: int):
         if 0 <= idx < len(self._mix_species):

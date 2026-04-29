@@ -430,15 +430,18 @@ class MainWindow(QMainWindow):
         kind = (pattern or {}).get("kind", "single")
         species_n = len(poly["species"]) if poly else 0
         poly_tag = f" · Polyculture ({species_n} species)" if species_n else ""
+        # When a polyculture is armed, the recipe persists until Esc, so
+        # advertise that the user can drop multiple identical patterns.
+        tail = " (Esc to finish)" if poly else " — Esc to cancel"
         if kind == "single":
             qty_str = f" ×{quantity}" if quantity > 1 else ""
             label = f"Placing: {common_name}{qty_str} — click map, press Esc to cancel"
         elif kind == "row":
-            label = f"Row of {common_name}{poly_tag} — click start point, then end point"
+            label = f"Row of {common_name}{poly_tag} — click start point, then end point{tail}"
         elif kind == "grid":
-            label = f"Grid of {common_name}{poly_tag} — click two opposite corners"
+            label = f"Grid of {common_name}{poly_tag} — click two opposite corners{tail}"
         elif kind == "circle":
-            label = f"Circle of {common_name}{poly_tag} — click centre, then radius point"
+            label = f"Circle of {common_name}{poly_tag} — click centre, then radius point{tail}"
         else:
             label = f"Placing: {common_name}"
         self._set_mode_label(label)
@@ -897,6 +900,13 @@ class MainWindow(QMainWindow):
         self.map_widget.cancel_draw()
         self._set_mode_label("Ready")
         self.toolbar.reset_draw_buttons()
+        # Drop any in-flight polyculture recipe — the user explicitly
+        # exited plant mode, so the next Place Mix click should re-stash
+        # a fresh one.
+        try:
+            self.plant_panel.clear_pending_polyculture()
+        except Exception:
+            pass
 
     # ── Map event handlers ────────────────────────────────────────────────────
 
@@ -976,6 +986,10 @@ class MainWindow(QMainWindow):
     def _on_anchor_cancelled(self, mode: str):
         self.toolbar.reset_draw_buttons()
         self._set_mode_label("Ready")
+        try:
+            self.plant_panel.clear_pending_polyculture()
+        except Exception:
+            pass
 
     def _on_sector_group_removed(self, sid: str):
         self._set_mode_label("Sector group removed")
@@ -1047,13 +1061,15 @@ class MainWindow(QMainWindow):
         if not positions:
             return
 
-        # Consume the polyculture recipe stashed at Place-click time. The
-        # panel guarantees this is None unless `len(mix) >= 2`, so the
-        # check here is intentionally trivial — no primary-id matching.
+        # Peek (don't consume) the polyculture recipe stashed at
+        # Place-click time. Keeping it alive lets the user drop multiple
+        # back-to-back patterns without re-clicking Place Mix; it's
+        # only cleared when plant mode is exited (Esc / cancel) or the
+        # user clicks Place Mix again with a different mix.
         assignments: list[dict] | None = None
         poly = None
         try:
-            poly = self.plant_panel.consume_pending_polyculture()
+            poly = self.plant_panel.peek_pending_polyculture()
         except Exception:
             poly = None
         if poly and len(poly.get("species", [])) >= 2:
@@ -1119,6 +1135,12 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(
                 f"Placed {len(positions)} plants — "
                 f"{n_species}-species polyculture ({pattern_kind})", 3000
+            )
+            # Persist the "click again to drop another" hint in the
+            # mode label since the recipe stays armed until Esc.
+            self._set_mode_label(
+                f"Placed polyculture ({pattern_kind}). Click again for another, "
+                f"or press Esc to finish."
             )
         else:
             self.statusBar().showMessage(

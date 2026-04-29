@@ -1383,7 +1383,11 @@
     // groupId     : optional placement group id (plants placed together share one)
     function placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor, groupId) {
       var markerId = plantId + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-      var radius   = Math.max((spacingM || 1.0) / 2, 1.0);   // half-diameter, min 1 m
+      // Marker visual size = mature half-spacing (so two adjacent
+      // markers at exactly `spacingM` apart just touch). The previous
+      // 1m floor visually overlapped any plant with spacing < 2m at
+      // high zoom even though their centres were spaced correctly.
+      var radius   = Math.max((spacingM || 1.0) / 2, 0.05);
       var color    = customColor || TYPE_COLORS[plantType] || '#66bb6a';
 
       var circle = L.circle([lat, lng], {
@@ -1697,7 +1701,27 @@
     function _circlePositions(centerLat, centerLng, radiusM, spacingM, overlapFactor, count, fill) {
       var s = _effectiveSpacing(spacingM, overlapFactor);
       if (fill) {
-        return _hexPackedDisc(centerLat, centerLng, radiusM, s);
+        var disc = _hexPackedDisc(centerLat, centerLng, radiusM, s);
+        // When the user supplies an explicit count, cap the disc to
+        // exactly that many plants — closest-to-centre wins. Without
+        // the cap, large radii at small spacings can produce thousands
+        // of markers and stall the renderer.
+        if (count && count > 0 && disc.length > count) {
+          var n = Math.max(1, Math.floor(count));
+          // disc is already centre-first then row-by-row, but we sort
+          // by squared distance from centre so the truncated set is a
+          // clean shrinking sub-disc rather than a chopped stripe.
+          var cosLat = Math.cos(centerLat * Math.PI / 180);
+          disc.sort(function (a, b) {
+            var ax = (a[1] - centerLng) * 111320 * cosLat;
+            var ay = (a[0] - centerLat) * 111320;
+            var bx = (b[1] - centerLng) * 111320 * cosLat;
+            var by = (b[0] - centerLat) * 111320;
+            return (ax*ax + ay*ay) - (bx*bx + by*by);
+          });
+          return disc.slice(0, n);
+        }
+        return disc;
       }
       // Perimeter-only ring.
       var positions = [];

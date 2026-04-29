@@ -87,7 +87,15 @@ def circle_positions(center_lat, center_lng, radius_m, spacing_m, overlap,
     s = effective_spacing(spacing_m, overlap)
     cos_lat = math.cos(math.radians(center_lat))
     if fill:
-        return _hex_packed_disc(center_lat, center_lng, radius_m, s, cos_lat)
+        disc = _hex_packed_disc(center_lat, center_lng, radius_m, s, cos_lat)
+        if count and count > 0 and len(disc) > count:
+            n = max(1, int(count))
+            disc.sort(key=lambda p: (
+                ((p[1] - center_lng) * 111320 * cos_lat) ** 2
+                + ((p[0] - center_lat) * 111320) ** 2
+            ))
+            return disc[:n]
+        return disc
     # Perimeter only.
     positions = []
     circumference = 2 * math.pi * radius_m
@@ -311,6 +319,39 @@ def test_hex_fill_packs_more_densely_than_square_grid():
             if x * x + y * y <= R * R:
                 square_count += 1
     assert len(hex_pts) > square_count, (len(hex_pts), square_count)
+
+
+def test_hex_fill_count_caps_total_plants():
+    """Explicit count truncates the disc — closest-to-centre wins —
+    so users can ask for `Total: N` without blowing up the renderer
+    on large radii."""
+    pts = circle_positions(LAT0, LNG0, 50.0, 1.0, 0, count=20, fill=True)
+    assert len(pts) == 20
+    # Centre stays in the cap (it's the closest point to itself).
+    assert pts[0] == [LAT0, LNG0]
+    # Every cap entry must be inside the disc and nearer to centre
+    # than any rejected entry — verify by re-running uncapped and
+    # confirming our 20 are all in the closest-20.
+    uncapped = circle_positions(LAT0, LNG0, 50.0, 1.0, 0, fill=True)
+    assert len(uncapped) > len(pts)
+    cos_lat = math.cos(math.radians(LAT0))
+
+    def d2(p):
+        dx = (p[1] - LNG0) * 111320 * cos_lat
+        dy = (p[0] - LAT0) * 111320
+        return dx * dx + dy * dy
+
+    uncapped_sorted = sorted(uncapped, key=d2)
+    expected_set = {(round(p[0], 9), round(p[1], 9)) for p in uncapped_sorted[:20]}
+    actual_set = {(round(p[0], 9), round(p[1], 9)) for p in pts}
+    assert actual_set == expected_set
+
+
+def test_hex_fill_count_zero_means_no_cap():
+    """count=0 (or omitted) should leave the radius-derived count alone."""
+    pts_unset = circle_positions(LAT0, LNG0, 12.0, 2.0, 0, fill=True)
+    pts_zero  = circle_positions(LAT0, LNG0, 12.0, 2.0, 0, count=0, fill=True)
+    assert len(pts_unset) == len(pts_zero)
 
 
 def test_hex_fill_no_plants_outside_disc():
