@@ -1687,29 +1687,56 @@
       return positions;
     }
 
-    // Plants arranged on a circle of radius `radiusM` around (centerLat,centerLng).
-    // count overrides arc-spacing-derived count when provided. fill=true also
-    // adds concentric inner rings spaced by effective spacing, plus a centre
-    // plant — i.e. it fills the disk rather than only the circumference.
+    // Plants arranged on (or inside) a circle of radius `radiusM`.
+    //   fill=false → perimeter only (a single ring of `count` or
+    //                spacing-derived plants).
+    //   fill=true  → honeycomb hex-pack inside the disc: every plant
+    //                has six equidistant neighbours at exactly `s`,
+    //                packing density ~91% (vs ~78% for square grids).
+    //                Centre plant is always first in the result.
     function _circlePositions(centerLat, centerLng, radiusM, spacingM, overlapFactor, count, fill) {
       var s = _effectiveSpacing(spacingM, overlapFactor);
-      var positions = [];
-      var rings = [radiusM];
       if (fill) {
-        var r = radiusM - s;
-        while (r > s * 0.5) { rings.push(r); r -= s; }
-        positions.push([centerLat, centerLng]); // centre plant
+        return _hexPackedDisc(centerLat, centerLng, radiusM, s);
       }
-      for (var i = 0; i < rings.length; i++) {
-        var rad = rings[i];
-        var circumference = 2 * Math.PI * rad;
-        var n = (count && i === 0 && count > 0) ? Math.max(3, Math.floor(count))
-                                                : Math.max(3, Math.floor(circumference / s));
-        for (var k = 0; k < n; k++) {
-          var theta = (2 * Math.PI * k) / n;
-          var dLat = _metersToLat(rad * Math.cos(theta));
-          var dLng = _metersToLng(rad * Math.sin(theta), centerLat);
-          positions.push([centerLat + dLat, centerLng + dLng]);
+      // Perimeter-only ring.
+      var positions = [];
+      var circumference = 2 * Math.PI * radiusM;
+      var n = (count && count > 0) ? Math.max(3, Math.floor(count))
+                                   : Math.max(3, Math.floor(circumference / s));
+      for (var k = 0; k < n; k++) {
+        var theta = (2 * Math.PI * k) / n;
+        var dLat = _metersToLat(radiusM * Math.cos(theta));
+        var dLng = _metersToLng(radiusM * Math.sin(theta), centerLat);
+        positions.push([centerLat + dLat, centerLng + dLng]);
+      }
+      return positions;
+    }
+
+    // Honeycomb-style hex pack inside a disc of radius `radiusM`. Rows
+    // are at y = r * s * sqrt(3)/2; odd rows shift x by s/2 so every
+    // plant has six equidistant neighbours. The centre plant is
+    // emitted first so callers (and tests) can rely on it being there.
+    function _hexPackedDisc(centerLat, centerLng, radiusM, spacingM) {
+      var s = spacingM;
+      var rowSpacing = s * Math.sqrt(3) / 2;
+      var maxRow = Math.ceil(radiusM / rowSpacing) + 1;
+      var maxCol = Math.ceil(radiusM / s) + 1;
+      var r2 = radiusM * radiusM + 1e-3;   // tolerance for boundary
+      var positions = [[centerLat, centerLng]];
+      for (var rIdx = -maxRow; rIdx <= maxRow; rIdx++) {
+        var y = rIdx * rowSpacing;
+        var rowOffset = (rIdx & 1) ? s / 2 : 0;
+        for (var cIdx = -maxCol; cIdx <= maxCol; cIdx++) {
+          var x = cIdx * s + rowOffset;
+          if (x * x + y * y <= r2) {
+            // Skip the (0, 0) cell — already added as the centre.
+            if (Math.abs(x) < 1e-6 && Math.abs(y) < 1e-6) continue;
+            positions.push([
+              centerLat + _metersToLat(y),
+              centerLng + _metersToLng(x, centerLat),
+            ]);
+          }
         }
       }
       return positions;

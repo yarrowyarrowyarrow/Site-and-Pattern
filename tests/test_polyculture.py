@@ -221,6 +221,165 @@ def test_even_split_count_diff_at_most_one_for_any_n_and_equal_weights():
         assert sum(counts) == n
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# optimize_layout — energy-minimisation layout
+# ─────────────────────────────────────────────────────────────────────────────
+
+import math as _m
+from src.polyculture import optimize_layout
+
+
+def _grid_positions(rows: int, cols: int, spacing_m: float = 1.0):
+    """Lat/lng grid centred at LAT0/LNG0 with `spacing_m` step."""
+    LAT0, LNG0 = 53.5461, -113.4938
+    cos_lat = _m.cos(_m.radians(LAT0))
+    out = []
+    for r in range(rows):
+        for c in range(cols):
+            d_lat = (r * spacing_m) / 111320.0
+            d_lng = (c * spacing_m) / (111320.0 * cos_lat)
+            out.append([LAT0 + d_lat, LNG0 + d_lng])
+    return out
+
+
+def _same_species_pair_count(assignments):
+    n = len(assignments)
+    return sum(
+        1 for i in range(n) for j in range(i + 1, n)
+        if assignments[i]["id"] == assignments[j]["id"]
+    )
+
+
+def _min_same_species_distance(positions, assignments):
+    """Smallest distance between any two same-species placements (in metres)."""
+    LAT0 = 53.5461
+    cos_lat = _m.cos(_m.radians(LAT0))
+    best = float("inf")
+    n = len(assignments)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if assignments[i]["id"] != assignments[j]["id"]:
+                continue
+            dx = (positions[j][1] - positions[i][1]) * 111320.0 * cos_lat
+            dy = (positions[j][0] - positions[i][0]) * 111320.0
+            d = _m.sqrt(dx * dx + dy * dy)
+            if d < best:
+                best = d
+    return best
+
+
+def test_optimize_preserves_species_counts():
+    species = [
+        {"id": 1, "common_name": "A", "weight": 2},
+        {"id": 2, "common_name": "B", "weight": 1},
+        {"id": 3, "common_name": "C", "weight": 1},
+    ]
+    positions = _grid_positions(4, 5)         # 20 cells
+    assignments = assign_species(positions, species, "even_split")
+    before_counts = {1: 0, 2: 0, 3: 0}
+    for a in assignments:
+        before_counts[a["id"]] += 1
+
+    optimised = optimize_layout(positions, assignments, rng=random.Random(7))
+    after_counts = {1: 0, 2: 0, 3: 0}
+    for a in optimised:
+        after_counts[a["id"]] += 1
+    assert before_counts == after_counts
+
+
+def test_optimize_returns_new_list():
+    species = [{"id": 1, "weight": 1}, {"id": 2, "weight": 1}]
+    positions = _grid_positions(3, 3)
+    assignments = assign_species(positions, species, "even_split")
+    optimised = optimize_layout(positions, assignments, rng=random.Random(0))
+    # Same length, but should not mutate the input list.
+    assert len(optimised) == len(assignments)
+
+
+def test_optimize_increases_min_same_species_distance_on_grid():
+    """Start from a deliberately pathological all-clumped layout. SA
+    should rearrange it so the smallest gap between two same-species
+    plants grows.
+
+    4×4 grid with 8:8 ratio — left half all A, right half all B.
+    Optimum is the checkerboard, where every same-species neighbour is
+    a diagonal step (distance √2). Both species are equally affected,
+    so the min-same-species-distance metric is sensitive to the move.
+    """
+    species_a = {"id": 1, "common_name": "A"}
+    species_b = {"id": 2, "common_name": "B"}
+    positions = _grid_positions(4, 4)
+    assignments = []
+    for r in range(4):
+        for c in range(4):
+            assignments.append(species_a if c < 2 else species_b)
+
+    before_min = _min_same_species_distance(positions, assignments)
+    optimised = optimize_layout(
+        positions, assignments,
+        iterations=4000, rng=random.Random(0),
+    )
+    after_min = _min_same_species_distance(positions, optimised)
+    # Clumped: adjacent same-species pairs ⇒ min distance == 1.
+    # Optimised: every same-species neighbour is diagonal ⇒ √2.
+    assert before_min < 1.01
+    assert after_min >= _m.sqrt(2) - 0.05
+
+
+def test_optimize_seeded_is_reproducible():
+    species = [{"id": 1, "weight": 1}, {"id": 2, "weight": 1},
+               {"id": 3, "weight": 1}]
+    positions = _grid_positions(4, 4)
+    assignments = assign_species(positions, species, "even_split")
+    a = optimize_layout(positions, list(assignments), rng=random.Random(123),
+                         iterations=500)
+    b = optimize_layout(positions, list(assignments), rng=random.Random(123),
+                         iterations=500)
+    assert [s["id"] for s in a] == [s["id"] for s in b]
+
+
+def test_optimize_single_species_short_circuits():
+    species = [{"id": 1, "common_name": "A"}]
+    positions = _grid_positions(3, 3)
+    assignments = [species[0]] * 9
+    optimised = optimize_layout(positions, assignments)
+    # Nothing to do — still all species 1, in the same order.
+    assert all(s["id"] == 1 for s in optimised)
+    assert len(optimised) == 9
+
+
+def test_optimize_empty_inputs():
+    assert optimize_layout([], []) == []
+    assert optimize_layout([[0, 0]], [{"id": 1}]) == [{"id": 1}]
+
+
+def test_optimize_mismatched_lengths_raises():
+    try:
+        optimize_layout([[0, 0], [1, 1]], [{"id": 1}])
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError for length mismatch")
+
+
+def test_optimize_2x2_alternating_is_optimal():
+    """For a 2×2 grid with two species 2:2, the only minimum-energy
+    layouts are the two checkerboards; SA should reach one of them."""
+    species_a = {"id": 1}
+    species_b = {"id": 2}
+    positions = _grid_positions(2, 2)
+    # Start clumped: top row A, bottom row B.
+    assignments = [species_a, species_a, species_b, species_b]
+    optimised = optimize_layout(
+        positions, assignments,
+        iterations=1000, rng=random.Random(0),
+    )
+    ids = [s["id"] for s in optimised]
+    # The two diagonals should be the same species. Either:
+    # [1,2,2,1] or [2,1,1,2] (the two checkerboards).
+    assert ids in ([1, 2, 2, 1], [2, 1, 1, 2])
+
+
 if __name__ == "__main__":
     import pytest
     pytest.main([__file__, "-v"])

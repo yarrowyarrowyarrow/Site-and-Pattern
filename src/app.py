@@ -1057,10 +1057,20 @@ class MainWindow(QMainWindow):
         except Exception:
             poly = None
         if poly and len(poly.get("species", [])) >= 2:
-            from src.polyculture import assign_species
+            from src.polyculture import assign_species, optimize_layout
             assignments = assign_species(
-                positions, poly["species"], poly.get("strategy", "weighted_random")
+                positions, poly["species"], poly.get("strategy", "even_split")
             )
+            # Now permute that ratio-correct assignment so same-species
+            # plants are spread as far apart as the geometry allows.
+            # The optimiser only swaps pairs, so per-species counts
+            # (the user's ratios) are preserved exactly.
+            try:
+                assignments = optimize_layout(positions, assignments)
+            except Exception:
+                # Fall back to the un-optimised but ratio-correct list
+                # if SA blows up; better to plant clumped than to crash.
+                pass
 
         group_id = project_io.new_placement_group_id()
         for i, (lat, lng) in enumerate(positions):

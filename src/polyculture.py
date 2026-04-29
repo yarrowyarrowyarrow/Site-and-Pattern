@@ -4,21 +4,27 @@ src/polyculture.py — interplanting helpers.
 When the plant panel has a "mix" (≥1 secondary species in addition to the
 selected primary), the geometry generator in html/map.html still produces
 a single uniform list of [[lat, lng], ...] positions using one spacing.
-This module provides the two pure-Python steps that wrap that geometry:
+This module provides the three pure-Python steps that wrap that geometry:
 
   1. resolve_spacing(species, strategy) — pick the centre-to-centre
      spacing for the mix. Default "max" guarantees no canopy overlap.
   2. assign_species(positions, species, strategy) — return a parallel
-     list, one species dict per position, deciding which species lives
-     at each spot.
+     list, one species dict per position, deciding *how many* of each
+     species we need (this enforces the user's ratios).
+  3. optimize_layout(positions, assignments) — permute that list so
+     same-species plants are spread as far apart as the geometry
+     allows, by minimising a 1/d² Coulomb-style repulsion energy via
+     simulated annealing. The ratio counts from step (2) are
+     preserved exactly because we only ever swap pairs.
 
 Kept dependency-free so tests/test_polyculture.py can import without Qt.
 """
 
 from __future__ import annotations
 
+import math
 import random
-from typing import Optional
+from typing import Optional, Callable
 
 
 def resolve_spacing(species: list[dict], strategy: str = "max") -> float:
@@ -127,3 +133,210 @@ def _assign_even_split(positions: list, species: list[dict]) -> list[dict]:
         counts[best_s] += 1.0
         out.append(species[best_s])
     return out
+
+
+# ── Energy-minimisation layout optimiser ─────────────────────────────────────
+
+def optimize_layout(
+    positions: list,
+    assignments: list[dict],
+    *,
+    iterations: Optional[int] = None,
+    initial_temp: Optional[float] = None,
+    rng: Optional[random.Random] = None,
+    repulsion_exponent: float = 2.0,
+) -> list[dict]:
+    """Permute `assignments` to minimise same-species clumping.
+
+    Treats every plant of the same species as an identically-charged
+    particle. The total repulsion energy is
+
+        E = Σ_{i<j, S(i)=S(j)} 1 / d(i, j)^p
+
+    with p=2 by default (Coulomb-like). Different-species pairs don't
+    contribute. Minimising E spreads same-species plants as far apart
+    as the boundary geometry allows, regardless of mix ratio.
+
+    Algorithm: Metropolis-Hastings / simulated annealing. Each step
+    proposes a swap of two different-species positions and accepts it
+    if it lowers E, or with probability exp(−ΔE/T) otherwise. T cools
+    exponentially from `initial_temp` toward zero. Because we only ever
+    swap, the per-species counts produced by `assign_species` are
+    preserved exactly.
+
+    Distance is Euclidean in local metres after a flat-earth projection
+    around the centroid of `positions`. For ≤1km layouts this is
+    monotonic with the per-geometry distance (chord vs arc on a circle,
+    cube-coord vs Euclidean on a hex grid), so SA reaches the same
+    minimum-energy permutation as a per-geometry metric would.
+
+    Args:
+        positions: list of [lat, lng] pairs (one per assignment).
+        assignments: parallel list of species dicts (each must have an
+            'id' so same-species pairs can be detected).
+        iterations: number of swap proposals; default scales with N
+            (max(500, 25·N), capped at 8000) to keep small layouts fast
+            and large layouts well-mixed.
+        initial_temp: starting temperature; default scales with the
+            initial energy.
+        rng: seedable Random for deterministic tests; new Random()
+            otherwise.
+        repulsion_exponent: 2 = Coulomb-like (default). Higher values
+            penalise close pairs more aggressively; 1 gives gentler
+            spreading.
+
+    Returns the optimised list of assignments. The input is not
+    mutated.
+    """
+    n = len(positions)
+    if n != len(assignments):
+        raise ValueError("positions and assignments must have the same length")
+    if n < 2:
+        return list(assignments)
+    unique_ids = {a.get("id") for a in assignments}
+    if len(unique_ids) < 2:
+        return list(assignments)
+
+    rng = rng or random.Random()
+    pts_xy = _to_local_xy(positions)
+    cur = list(assignments)
+
+    # Pre-compute pairwise distances once — O(N²) memory but a single
+    # pattern caps at a few hundred plants in practice.
+    dists = _pairwise_distances(pts_xy)
+    energies = _pair_energies(dists, repulsion_exponent)
+
+    cur_E = _total_energy(cur, energies)
+    if cur_E <= 0.0:
+        return cur
+
+    if iterations is None:
+        # Floor of 3000 stops small grids (16 cells) getting trapped in
+        # stripe-like local minima where the global checkerboard is
+        # only a few coordinated swaps away. 100·N gives larger
+        # patterns enough budget to mix; 30000 is the upper cap so
+        # we don't spend more than a couple seconds on huge layouts.
+        iterations = max(3000, min(30000, 100 * n))
+
+    if initial_temp is None:
+        # Heuristic: about 50% acceptance for moves that change E by
+        # one same-species pair's worth on average.
+        initial_temp = max(cur_E / max(1, n), 1e-9)
+    # Slower cooling (T₀ → T₀/1000 over `iterations`) keeps SA
+    # exploratory enough to escape stripe-like local minima before
+    # freezing into the global pattern.
+    cooling = (1e-3) ** (1.0 / max(1, iterations))
+
+    T = initial_temp
+    same_count = sum(1 for k in range(n) if cur[k].get("id") == cur[0].get("id"))
+    # If the rarest species fills the whole list, nothing to do.
+    if same_count == n:
+        return cur
+
+    for _ in range(iterations):
+        i = rng.randrange(n)
+        j = rng.randrange(n)
+        if i == j:
+            T *= cooling
+            continue
+        si = cur[i].get("id")
+        sj = cur[j].get("id")
+        if si == sj:
+            T *= cooling
+            continue
+        dE = _swap_delta_e(cur, energies, i, j, si, sj)
+        if dE < 0.0:
+            cur[i], cur[j] = cur[j], cur[i]
+            cur_E += dE
+        elif T > 0.0:
+            try:
+                p = math.exp(-dE / T)
+            except OverflowError:
+                p = 0.0
+            if rng.random() < p:
+                cur[i], cur[j] = cur[j], cur[i]
+                cur_E += dE
+        T *= cooling
+    return cur
+
+
+def _to_local_xy(positions: list) -> list[tuple[float, float]]:
+    """Project [lat, lng] into local metres (flat-earth, centroid origin)."""
+    if not positions:
+        return []
+    mean_lat = sum(p[0] for p in positions) / len(positions)
+    cos_lat = math.cos(math.radians(mean_lat))
+    out = []
+    for lat, lng in positions:
+        x = lng * 111320.0 * cos_lat
+        y = lat * 111320.0
+        out.append((x, y))
+    return out
+
+
+def _pairwise_distances(pts_xy: list[tuple[float, float]]) -> list[list[float]]:
+    n = len(pts_xy)
+    d = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        xi, yi = pts_xy[i]
+        for j in range(i + 1, n):
+            dx = pts_xy[j][0] - xi
+            dy = pts_xy[j][1] - yi
+            dij = math.sqrt(dx * dx + dy * dy)
+            d[i][j] = dij
+            d[j][i] = dij
+    return d
+
+
+def _pair_energies(dists: list[list[float]], p: float) -> list[list[float]]:
+    """Lookup of 1/d^p for each pair; coincident points get a huge
+    finite penalty so the optimiser strongly avoids leaving them
+    same-species but never blows up to inf."""
+    n = len(dists)
+    big = 1e12
+    e = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(i + 1, n):
+            d = dists[i][j]
+            v = big if d <= 1e-9 else 1.0 / (d ** p)
+            e[i][j] = v
+            e[j][i] = v
+    return e
+
+
+def _total_energy(assignments: list[dict],
+                  energies: list[list[float]]) -> float:
+    n = len(assignments)
+    E = 0.0
+    for i in range(n):
+        si = assignments[i].get("id")
+        for j in range(i + 1, n):
+            if assignments[j].get("id") == si:
+                E += energies[i][j]
+    return E
+
+
+def _swap_delta_e(assignments: list[dict],
+                   energies: list[list[float]],
+                   i: int, j: int, si, sj) -> float:
+    """ΔE for swapping the species at positions i and j.
+
+    Pre-computed per-pair energies make this O(N). The pair (i, j)
+    itself contributes zero before and after the swap (it changes
+    from si≠sj to sj≠si — still different species).
+    """
+    n = len(assignments)
+    dE = 0.0
+    for k in range(n):
+        if k == i or k == j:
+            continue
+        sk = assignments[k].get("id")
+        if sk == si:
+            # Lose pair (i,k); gain pair (j,k).
+            dE -= energies[i][k]
+            dE += energies[j][k]
+        elif sk == sj:
+            # Lose pair (j,k); gain pair (i,k).
+            dE -= energies[j][k]
+            dE += energies[i][k]
+    return dE

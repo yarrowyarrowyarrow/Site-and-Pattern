@@ -77,26 +77,47 @@ def grid_positions(latA, lngA, latB, lngB, spacing_m, overlap,
 
 def circle_positions(center_lat, center_lng, radius_m, spacing_m, overlap,
                       count=None, fill=False):
+    """Mirror of _circlePositions in html/map.html.
+
+    fill=False → perimeter ring of `count` (or spacing-derived) plants.
+    fill=True  → honeycomb hex pack inside the disc; centre plant is
+                 first, then every plant has six equidistant neighbours
+                 at exactly `s` metres.
+    """
     s = effective_spacing(spacing_m, overlap)
-    rings = [radius_m]
-    positions = []
-    if fill:
-        r = radius_m - s
-        while r > s * 0.5:
-            rings.append(r); r -= s
-        positions.append([center_lat, center_lng])
     cos_lat = math.cos(math.radians(center_lat))
-    for i, rad in enumerate(rings):
-        circumference = 2 * math.pi * rad
-        if count and i == 0 and count > 0:
-            n = max(3, int(count))
-        else:
-            n = max(3, int(circumference // s))
-        for k in range(n):
-            theta = (2 * math.pi * k) / n
-            d_lat = (rad * math.cos(theta)) / 111320
-            d_lng = (rad * math.sin(theta)) / (111320 * cos_lat)
-            positions.append([center_lat + d_lat, center_lng + d_lng])
+    if fill:
+        return _hex_packed_disc(center_lat, center_lng, radius_m, s, cos_lat)
+    # Perimeter only.
+    positions = []
+    circumference = 2 * math.pi * radius_m
+    n = max(3, int(count)) if count and count > 0 else max(3, int(circumference // s))
+    for k in range(n):
+        theta = (2 * math.pi * k) / n
+        d_lat = (radius_m * math.cos(theta)) / 111320
+        d_lng = (radius_m * math.sin(theta)) / (111320 * cos_lat)
+        positions.append([center_lat + d_lat, center_lng + d_lng])
+    return positions
+
+
+def _hex_packed_disc(center_lat, center_lng, radius_m, s, cos_lat):
+    row_spacing = s * math.sqrt(3) / 2
+    max_row = int(math.ceil(radius_m / row_spacing)) + 1
+    max_col = int(math.ceil(radius_m / s)) + 1
+    r2 = radius_m * radius_m + 1e-3
+    positions = [[center_lat, center_lng]]
+    for r_idx in range(-max_row, max_row + 1):
+        y = r_idx * row_spacing
+        row_offset = (s / 2) if (r_idx & 1) else 0.0
+        for c_idx in range(-max_col, max_col + 1):
+            x = c_idx * s + row_offset
+            if x * x + y * y <= r2:
+                if abs(x) < 1e-6 and abs(y) < 1e-6:
+                    continue
+                positions.append([
+                    center_lat + y / 111320,
+                    center_lng + x / (111320 * cos_lat),
+                ])
     return positions
 
 
@@ -236,6 +257,73 @@ def test_circle_no_fill_does_not_place_centre():
     pts = circle_positions(LAT0, LNG0, 30.0, 5.0, 0, count=6, fill=False)
     # No centre point — every plant should be on the circumference
     assert [LAT0, LNG0] not in pts
+
+
+def test_hex_fill_centre_is_first():
+    """The hex-pack disc must emit the centre plant first so callers
+    that rely on positions[0] (e.g. existing tests, the live preview)
+    keep working."""
+    pts = circle_positions(LAT0, LNG0, 25.0, 2.0, 0, fill=True)
+    assert pts[0] == [LAT0, LNG0]
+
+
+def test_hex_fill_each_plant_has_six_equidistant_neighbours():
+    """Sanity check the honeycomb topology: pick the centre plant and
+    confirm exactly six other plants sit at distance ≈ s. The hex
+    invariant — six equidistant neighbours — is what makes this denser
+    than a square grid (~91% packing vs ~78%)."""
+    R = 30.0
+    s = 4.0
+    pts = circle_positions(LAT0, LNG0, R, s, 0, fill=True)
+    cos_lat = math.cos(math.radians(LAT0))
+    centre = pts[0]
+
+    def metres(p, q):
+        dx = (q[1] - p[1]) * 111320 * cos_lat
+        dy = (q[0] - p[0]) * 111320
+        return math.sqrt(dx * dx + dy * dy)
+
+    near = [metres(centre, p) for p in pts[1:]]
+    near.sort()
+    # Tolerate ~0.1m for the lat/lng ↔ metres approximation.
+    six = near[:6]
+    for d in six:
+        assert abs(d - s) < 0.1, six
+    # 7th neighbour should be appreciably further (≥ s·sqrt(3)).
+    assert near[6] > s * (math.sqrt(3) - 0.1)
+
+
+def test_hex_fill_packs_more_densely_than_square_grid():
+    """For the same radius and spacing, hex packing should fit more
+    plants into the disc than a naive square grid (concentric rings
+    layout)."""
+    R = 20.0
+    s = 2.0
+    hex_pts = circle_positions(LAT0, LNG0, R, s, 0, fill=True)
+    # Square-grid count inside the same disc (same R, s).
+    cos_lat = math.cos(math.radians(LAT0))
+    square_count = 0
+    rng = int(R / s) + 1
+    for c in range(-rng, rng + 1):
+        for r in range(-rng, rng + 1):
+            x = c * s
+            y = r * s
+            if x * x + y * y <= R * R:
+                square_count += 1
+    assert len(hex_pts) > square_count, (len(hex_pts), square_count)
+
+
+def test_hex_fill_no_plants_outside_disc():
+    R = 15.0
+    s = 1.5
+    pts = circle_positions(LAT0, LNG0, R, s, 0, fill=True)
+    cos_lat = math.cos(math.radians(LAT0))
+    for p in pts:
+        dx = (p[1] - LNG0) * 111320 * cos_lat
+        dy = (p[0] - LAT0) * 111320
+        d = math.sqrt(dx * dx + dy * dy)
+        # Allow ~1 cm tolerance for the boundary cells.
+        assert d <= R + 0.05, (p, d)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
