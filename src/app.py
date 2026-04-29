@@ -1032,9 +1032,9 @@ class MainWindow(QMainWindow):
         and deleted as a unit. The positions list is computed JS-side so the
         live preview and the committed placement use the same geometry.
 
-        If the plant panel currently has a polyculture mix whose primary
-        is `plant_id`, each generated position is independently assigned
-        a species by `polyculture.assign_species`. Each placed marker
+        When the plant panel's polyculture mix had ≥2 species at the time
+        Place was clicked, the panel stashed a recipe; we consume it here
+        and assign one species per generated position. Each placed marker
         carries its own plant_id/common_name/colour, but the whole stand
         still shares one placement_group_id so it selects and deletes
         as a single polyculture.
@@ -1047,16 +1047,16 @@ class MainWindow(QMainWindow):
         if not positions:
             return
 
-        # Resolve polyculture assignments (one species dict per position)
-        # only when the panel's active mix matches the primary plant_id
-        # we just placed — guards against stale mixes from a different
-        # primary or zero-secondary "mixes" that resolve to None.
+        # Consume the polyculture recipe stashed at Place-click time. The
+        # panel guarantees this is None unless `len(mix) >= 2`, so the
+        # check here is intentionally trivial — no primary-id matching.
         assignments: list[dict] | None = None
+        poly = None
         try:
-            poly = self.plant_panel.active_polyculture()
+            poly = self.plant_panel.consume_pending_polyculture()
         except Exception:
             poly = None
-        if poly and poly["species"] and poly["species"][0]["id"] == plant_id:
+        if poly and len(poly.get("species", [])) >= 2:
             from src.polyculture import assign_species
             assignments = assign_species(
                 positions, poly["species"], poly.get("strategy", "weighted_random")

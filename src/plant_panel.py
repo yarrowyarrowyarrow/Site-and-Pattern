@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QComboBox, QListWidget, QListWidgetItem, QFrame,
     QPushButton, QSizePolicy, QScrollArea, QSplitter,
-    QFormLayout, QGroupBox, QTabWidget, QGridLayout,
+    QFormLayout, QGroupBox,
     QSpinBox, QDoubleSpinBox, QSlider, QCheckBox,
     QColorDialog, QMenu, QStackedWidget, QButtonGroup,
 )
@@ -593,12 +593,25 @@ class PlantRowDelegate(QStyledItemDelegate):
 
     def editorEvent(self, event: QEvent, model, option: QStyleOptionViewItem,
                     index: QModelIndex) -> bool:
-        # Click on the chevron toggles expansion. Anywhere else falls
-        # through to default selection handling.
+        # Click on the chevron toggles expansion. After an expand, also
+        # scroll the row to the top of the viewport so the user can see
+        # the full detail block (data rows + colour-coded month strip
+        # + notes) without having to scroll inside the list manually.
         if event.type() == QEvent.Type.MouseButtonRelease:
             chev = self._expand_btn_rect(option.rect)
             if chev.contains(event.pos()) and isinstance(model, PlantListModel):
+                was_expanded = bool(index.data(_PLANT_EXPANDED_ROLE))
                 model.toggle_expanded(index.row())
+                view = self.parent()
+                if view is not None and not was_expanded:
+                    # Newly expanded — pin to top so the calendar strip
+                    # and notes are visible.
+                    try:
+                        view.scrollTo(
+                            index, view.ScrollHint.PositionAtTop
+                        )
+                    except Exception:
+                        pass
                 return True
         return super().editorEvent(event, model, option, index)
 
@@ -620,19 +633,21 @@ class PlantPanel(QWidget):
         self._selected_plant: Optional[dict] = None
         self._placed_counts: dict[int, int] = {}   # plant_id -> count
 
-        # Polyculture mix — list of *secondary* species. The primary is
-        # always whichever plant is currently selected in the results
-        # list at place time, so changing the primary doesn't disturb
-        # the rest of the mix.
-        self._mix_secondaries: list[dict] = []
-        self._MIX_MAX_SECONDARIES = 7   # primary + 7 = 8 species total
+        # Polyculture mix — explicit list of species the user has added
+        # via right-click → "Add to Polyculture Mix". When ≥2 species
+        # are present, Row/Grid/Circle placements distribute species
+        # across positions; otherwise the placement is single-species
+        # (the currently-selected plant). The mix is intentionally
+        # independent of the current selection — the selection only
+        # exists to drive the Place button and detail expansion.
+        self._mix_species: list[dict] = []
+        self._MIX_MAX = 8   # cap so the list stays readable in the panel
 
-        # Permapeople API keys (set via set_api_keys)
-        self._pp_key_id:     str = ""
-        self._pp_key_secret: str = ""
-        self._pp_thread:     Optional[QThread]  = None
-        self._pp_worker                         = None
-        self._pp_pending_plants: list[dict]     = []   # search results from API
+        # Most recent recipe stashed at Place-click time so App can
+        # consume it when JS fires onPatternPlaced after the user's
+        # 2-click gesture (otherwise changing the mix mid-gesture would
+        # use the wrong recipe). Cleared after consumption.
+        self._pending_polyculture: Optional[dict] = None
 
         # Debounce timer for local search
         self._search_timer = QTimer(self)
@@ -659,17 +674,12 @@ class PlantPanel(QWidget):
         )
         root.addWidget(header)
 
-        # Main split: browser tabs (top) vs detail+placed (bottom)
+        # Main split: browser (top) vs placement controls + placed list (bottom)
         splitter = QSplitter(Qt.Orientation.Vertical)
         splitter.setChildrenCollapsible(False)
         root.addWidget(splitter)
 
-        # ── Tab widget: Local | Permapeople ───────────────────────────────
-        self._tabs = QTabWidget()
-        self._tabs.setStyleSheet(_TAB_STYLE)
-        splitter.addWidget(self._tabs)
-
-        # ── Tab 0: Local database ─────────────────────────────────────────
+        # ── Top pane: search + filters + results list ─────────────────────
         local_tab = QWidget()
         top_layout = QVBoxLayout(local_tab)
         top_layout.setContentsMargins(8, 8, 8, 4)
@@ -712,28 +722,11 @@ class PlantPanel(QWidget):
         row2.addWidget(self._use_combo)
         top_layout.addLayout(row2)
 
-        # Zone + native filter row
-        zone_row = QHBoxLayout()
-        zone_row.setSpacing(4)
-        self._zone_filter_btn = QPushButton("Filter by zone")
-        self._zone_filter_btn.setCheckable(True)
-        self._zone_filter_btn.setToolTip(
-            "When checked, only shows plants suitable for the detected hardiness zone"
-        )
-        self._zone_filter_btn.toggled.connect(self._run_search)
-        self._zone_label = QLabel("Zone: —")
-        self._zone_label.setStyleSheet("color: #78909c; font-size: 11px;")
-        self._native_filter_btn = QPushButton("Native AB")
-        self._native_filter_btn.setCheckable(True)
-        self._native_filter_btn.setToolTip("Only show plants native to Alberta")
-        self._native_filter_btn.toggled.connect(self._run_search)
-        zone_row.addWidget(self._zone_filter_btn)
-        zone_row.addWidget(self._native_filter_btn)
-        zone_row.addWidget(self._zone_label)
-        zone_row.addStretch()
-        top_layout.addLayout(zone_row)
-
-        # Extra filter row: Edible, Medicinal, N-Fixer, Pollinator, Perennial
+        # Toggle filter row: Native AB + Edible + Medicinal + N-Fixer +
+        # Pollinator + Perennial. The legacy "Filter by zone" / Zone label
+        # row was removed (low value, took vertical space). Hardiness-zone
+        # detection still runs in the background and tags placements via
+        # `_current_zone`; users can read it from the status bar.
         _toggle_style = (
             "QPushButton { background: #1e2e1e; color: #78909c; border: 1px solid #2e4a2e; "
             "border-radius: 3px; padding: 2px 6px; font-size: 11px; }"
@@ -742,6 +735,13 @@ class PlantPanel(QWidget):
         )
         extra_row = QHBoxLayout()
         extra_row.setSpacing(3)
+
+        self._native_filter_btn = QPushButton("Native AB")
+        self._native_filter_btn.setCheckable(True)
+        self._native_filter_btn.setToolTip("Only show plants native to Alberta")
+        self._native_filter_btn.setStyleSheet(_toggle_style)
+        self._native_filter_btn.toggled.connect(self._run_search)
+        extra_row.addWidget(self._native_filter_btn)
 
         self._edible_btn = QPushButton("Edible")
         self._edible_btn.setCheckable(True)
@@ -812,164 +812,19 @@ class PlantPanel(QWidget):
         self._results_list.customContextMenuRequested.connect(self._on_plant_context_menu)
         top_layout.addWidget(self._results_list)
 
-        self._tabs.addTab(local_tab, "Local")
+        splitter.addWidget(local_tab)
 
-        # ── Tab 1: Permapeople API ─────────────────────────────────────────
-        pp_tab = QWidget()
-        pp_layout = QVBoxLayout(pp_tab)
-        pp_layout.setContentsMargins(8, 8, 8, 4)
-        pp_layout.setSpacing(6)
-
-        pp_search_row = QHBoxLayout()
-        pp_search_row.setSpacing(4)
-        self._pp_search_box = QLineEdit()
-        self._pp_search_box.setPlaceholderText("Search Permapeople…")
-        self._pp_search_box.setClearButtonEnabled(True)
-        self._pp_search_box.returnPressed.connect(self._pp_search)
-        self._pp_search_btn = QPushButton("Search")
-        self._pp_search_btn.setFixedWidth(60)
-        self._pp_search_btn.clicked.connect(self._pp_search)
-        pp_search_row.addWidget(self._pp_search_box)
-        pp_search_row.addWidget(self._pp_search_btn)
-        pp_layout.addLayout(pp_search_row)
-
-        self._pp_status = QLabel("Enter a search term and press Search.")
-        self._pp_status.setStyleSheet("color: #78909c; font-size: 11px;")
-        self._pp_status.setWordWrap(True)
-        pp_layout.addWidget(self._pp_status)
-
-        self._pp_results_list = QListWidget()
-        self._pp_results_list.setSpacing(1)
-        self._pp_results_list.setUniformItemSizes(False)
-        self._pp_results_list.setStyleSheet(_RESULTS_LIST_STYLE)
-        self._pp_results_list.currentItemChanged.connect(self._pp_on_selection_changed)
-        pp_layout.addWidget(self._pp_results_list)
-
-        self._pp_import_btn = QPushButton("Import to Local Database")
-        self._pp_import_btn.setEnabled(False)
-        self._pp_import_btn.setToolTip(
-            "Save selected Permapeople plant to your local database so you can place it on the map"
-        )
-        self._pp_import_btn.clicked.connect(self._pp_import)
-        self._pp_import_btn.setStyleSheet(_PLACE_BTN_STYLE)
-        pp_layout.addWidget(self._pp_import_btn)
-
-        self._tabs.addTab(pp_tab, "Permapeople")
-
-        # Show a lock icon on the Permapeople tab if no keys configured
-        self._pp_update_tab_label()
-
-        # ── Bottom: detail view + placed plants ───────────────────────────
+        # ── Bottom: placement controls + placed plants ────────────────────
         bottom = QWidget()
         bot_layout = QVBoxLayout(bottom)
         bot_layout.setContentsMargins(8, 4, 8, 8)
         bot_layout.setSpacing(6)
 
-        # Detail group
-        self._detail_group = QGroupBox("Selected Plant")
-        self._detail_group.setVisible(False)
-        detail_layout = QFormLayout(self._detail_group)
-        detail_layout.setSpacing(4)
-        detail_layout.setContentsMargins(8, 8, 8, 8)
-
-        self._d_common  = QLabel()
-        self._d_sci     = QLabel()
-        self._d_type    = QLabel()
-        self._d_zones   = QLabel()
-        self._d_sun     = QLabel()
-        self._d_water   = QLabel()
-        self._d_uses    = QLabel()
-        self._d_uses.setWordWrap(True)
-        self._d_spacing = QLabel()
-        self._d_height  = QLabel()
-        self._d_bloom   = QLabel()
-        self._d_fruit   = QLabel()
-        self._d_edible  = QLabel()
-        self._d_growth  = QLabel()
-        self._d_ph      = QLabel()
-        self._d_native  = QLabel()
-        self._d_notes   = QLabel()
-        self._d_notes.setWordWrap(True)
-        self._d_notes.setStyleSheet("color: #90a4ae; font-size: 11px;")
-        self._d_companions = QLabel()
-        self._d_companions.setWordWrap(True)
-        self._d_companions.setStyleSheet("font-size: 11px;")
-
-        bold_font = QFont()
-        bold_font.setBold(True)
-        self._d_common.setFont(bold_font)
-
-        italic_font = QFont()
-        italic_font.setItalic(True)
-        self._d_sci.setFont(italic_font)
-        self._d_sci.setStyleSheet("color: #90a4ae;")
-
-        detail_layout.addRow("",             self._d_common)
-        detail_layout.addRow("Species:",     self._d_sci)
-        detail_layout.addRow("Type:",        self._d_type)
-        detail_layout.addRow("Zones:",       self._d_zones)
-        detail_layout.addRow("Sun:",         self._d_sun)
-        detail_layout.addRow("Water:",       self._d_water)
-        detail_layout.addRow("Spacing:",     self._d_spacing)
-        detail_layout.addRow("Height:",      self._d_height)
-        detail_layout.addRow("Bloom:",       self._d_bloom)
-        detail_layout.addRow("Fruit:",       self._d_fruit)
-        detail_layout.addRow("Edible:",      self._d_edible)
-        detail_layout.addRow("Growth:",      self._d_growth)
-        detail_layout.addRow("Soil pH:",     self._d_ph)
-        detail_layout.addRow("Native AB:",   self._d_native)
-        detail_layout.addRow("Uses:",        self._d_uses)
-        detail_layout.addRow("Companions:",  self._d_companions)
-        detail_layout.addRow("Notes:",       self._d_notes)
-
-        bot_layout.addWidget(self._detail_group)
-
-        # ── Calendar grid (shown when a plant is selected) ─────────────
-        self._calendar_group = QGroupBox("Planting Calendar — Edmonton Zone 3b")
-        self._calendar_group.setVisible(False)
-        cal_outer = QVBoxLayout(self._calendar_group)
-        cal_outer.setContentsMargins(6, 6, 6, 6)
-        cal_outer.setSpacing(4)
-
-        # 12-month grid: header row + colour cells
-        cal_grid = QGridLayout()
-        cal_grid.setSpacing(2)
-        self._cal_cells: list[QLabel] = []
-        for col, abbr in enumerate(_MONTH_ABBR):
-            hdr = QLabel(abbr)
-            hdr.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            hdr.setStyleSheet("color: #90a4ae; font-size: 10px; font-weight: bold;")
-            cal_grid.addWidget(hdr, 0, col)
-
-            cell = QLabel()
-            cell.setFixedHeight(28)
-            cell.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            cell.setStyleSheet("border-radius: 3px; font-size: 9px; color: #e0e0e0;")
-            cell.setToolTip("")
-            cal_grid.addWidget(cell, 1, col)
-            self._cal_cells.append(cell)
-
-        cal_outer.addLayout(cal_grid)
-
-        # Legend row
-        legend_layout = QHBoxLayout()
-        legend_layout.setSpacing(6)
-        for status, color in _CALENDAR_STATUS_COLORS.items():
-            if status == "dormant":
-                continue  # skip dormant in legend to save space
-            dot = QLabel(f"● {_CALENDAR_STATUS_LABELS[status]}")
-            dot.setStyleSheet(f"color: {color}; font-size: 9px;")
-            legend_layout.addWidget(dot)
-        legend_layout.addStretch()
-        cal_outer.addLayout(legend_layout)
-
-        # Notes label for the current month
-        self._cal_notes = QLabel()
-        self._cal_notes.setWordWrap(True)
-        self._cal_notes.setStyleSheet("color: #b0bec5; font-size: 11px; padding: 2px;")
-        cal_outer.addWidget(self._cal_notes)
-
-        bot_layout.addWidget(self._calendar_group)
+        # The legacy "Selected Plant" detail group + standalone planting
+        # calendar QGroupBox were removed when the Permapeople tab was
+        # dropped — both are now redundant with the inline-expand chevron
+        # in the results list (which shows the full detail block + the
+        # 12-cell colour-coded month strip in one place).
 
         # ── Pattern mode selector ───────────────────────────────────────
         # Single = click-to-place (current behaviour). Row/Grid/Circle take
@@ -1044,7 +899,12 @@ class PlantPanel(QWidget):
         bot_layout.addWidget(self._placed_panel, 1)
 
         splitter.addWidget(bottom)
-        splitter.setSizes([320, 240])
+        # Lean the split toward the browser so an expanded row's full
+        # detail block (~180 px) is visible without scrolling. The user
+        # can still drag the splitter handle to rebalance.
+        splitter.setSizes([520, 280])
+        splitter.setStretchFactor(0, 3)
+        splitter.setStretchFactor(1, 2)
 
     # ── Filter helpers ────────────────────────────────────────────────────────
 
@@ -1079,7 +939,10 @@ class PlantPanel(QWidget):
             self._use_combo.currentIndexChanged.connect(lambda _: self._run_search())
             self._filters_wired = True
 
-        zone = self._current_zone if self._zone_filter_btn.isChecked() else None
+        # The dedicated zone-filter toggle was removed; results are
+        # never zone-restricted now. `_current_zone` is still tracked
+        # for status-bar display elsewhere.
+        zone = None
 
         try:
             plants = search_plants(
@@ -1126,15 +989,8 @@ class PlantPanel(QWidget):
             self._place_btn.setEnabled(False)
             return
         self._selected_plant = plant
-        # Hide the legacy detail group — local rows expand inline now.
-        self._detail_group.setVisible(False)
-        self._calendar_group.setVisible(False)
         self._update_color_btn(plant.get("marker_color") or "")
         self._place_btn.setEnabled(True)
-        # If a mix is active, the new primary changes the status string
-        # (different name, possibly different effective spacing).
-        if self._mix_secondaries:
-            self._refresh_mix_list()
 
     def _on_view_double_clicked(self, index: QModelIndex):
         """Double-click: place the plant directly (Single mode)."""
@@ -1144,129 +1000,6 @@ class PlantPanel(QWidget):
         if plant:
             self._selected_plant = plant
             self._on_place_clicked()
-
-    def _show_detail(self, plant: dict):
-        zmin = plant.get("hardiness_zone_min")
-        zmax = plant.get("hardiness_zone_max")
-        zone_str = f"Z{zmin} – Z{zmax}" if zmin and zmax else "—"
-
-        uses_raw = plant.get("permaculture_uses") or ""
-        uses_nice = ", ".join(
-            _USE_LABELS.get(u.strip(), u.strip())
-            for u in uses_raw.split(",") if u.strip()
-        )
-
-        ph_min = plant.get("soil_ph_min")
-        ph_max = plant.get("soil_ph_max")
-        ph_str = f"{ph_min} – {ph_max}" if ph_min and ph_max else "—"
-
-        edible_raw = plant.get("edible_parts") or ""
-        edible_str = edible_raw.replace(",", ", ") if edible_raw else "—"
-
-        native_ab = plant.get("native_to_alberta")
-        native_str = "Yes" if native_ab else "No"
-        if native_ab:
-            self._d_native.setStyleSheet("color: #81c784; font-weight: bold;")
-        else:
-            self._d_native.setStyleSheet("color: #78909c;")
-
-        self._d_common.setText(plant.get("common_name", ""))
-        self._d_sci.setText(plant.get("scientific_name") or "—")
-        self._d_type.setText(_TYPE_LABELS.get(plant.get("plant_type", ""), "—"))
-        self._d_zones.setText(zone_str)
-        self._d_sun.setText(_SUN_LABELS.get(plant.get("sun_requirement", ""), "—"))
-        self._d_water.setText(_WATER_LABELS.get(plant.get("water_needs", ""), "—"))
-        spacing = plant.get("spacing_meters")
-        height  = plant.get("mature_height_meters")
-        self._d_spacing.setText(f"{spacing} m" if spacing else "—")
-        self._d_height.setText(f"{height} m" if height else "—")
-        self._d_bloom.setText(plant.get("bloom_period") or "—")
-        self._d_fruit.setText(plant.get("fruit_period") or "—")
-        self._d_edible.setText(edible_str)
-        self._d_growth.setText(
-            _DECIDUOUS_LABELS.get(plant.get("deciduous_evergreen", ""), "—")
-            + "  ·  "
-            + _LIFECYCLE_LABELS.get(plant.get("perennial_or_annual", ""), "—")
-        )
-        self._d_ph.setText(ph_str)
-        self._d_native.setText(native_str)
-        self._d_uses.setText(uses_nice or "—")
-        self._d_notes.setText(plant.get("notes") or "")
-
-        # Load companion info
-        self._load_companions(plant.get("id"))
-
-        # Load planting calendar
-        self._show_calendar(plant.get("id"))
-
-        # Update colour picker button
-        self._update_color_btn(plant.get("marker_color") or "")
-
-        self._detail_group.setVisible(True)
-
-    def _load_companions(self, plant_id: Optional[int]):
-        if not plant_id:
-            self._d_companions.setText("—")
-            return
-        try:
-            from src.db.plants import get_companions
-            data = get_companions(plant_id)
-            friends = [p["common_name"] for p in data.get("friends", [])]
-            enemies = [p["common_name"] for p in data.get("enemies", [])]
-            parts = []
-            if friends:
-                parts.append(
-                    f'<span style="color:#81c784">+ {", ".join(friends)}</span>'
-                )
-            if enemies:
-                parts.append(
-                    f'<span style="color:#ef9a9a">– {", ".join(enemies)}</span>'
-                )
-            self._d_companions.setText("<br>".join(parts) if parts else "—")
-            self._d_companions.setTextFormat(Qt.TextFormat.RichText)
-        except Exception:
-            self._d_companions.setText("—")
-
-    def _show_calendar(self, plant_id: Optional[int]):
-        """Populate the 12-month calendar grid for a plant."""
-        if not plant_id:
-            self._calendar_group.setVisible(False)
-            return
-        try:
-            from src.db.plants import get_calendar
-            from datetime import datetime
-            cal = get_calendar(plant_id)
-            current_month = datetime.now().month
-            current_note = None
-
-            for i, entry in enumerate(cal):
-                status = entry["status"]
-                color = _CALENDAR_STATUS_COLORS.get(status, "#37474f")
-                label = _CALENDAR_STATUS_LABELS.get(status, status)
-                cell = self._cal_cells[i]
-                cell.setText(label[:3])  # abbreviate to 3 chars
-
-                # Highlight current month with a border
-                border = "2px solid #fdd835" if (i + 1) == current_month else "none"
-                cell.setStyleSheet(
-                    f"background: {color}; border-radius: 3px; "
-                    f"font-size: 9px; color: #e0e0e0; border: {border};"
-                )
-                tooltip = f"{_MONTH_ABBR[i]}: {label}"
-                if entry["notes"]:
-                    tooltip += f"\n{entry['notes']}"
-                cell.setToolTip(tooltip)
-
-                if (i + 1) == current_month:
-                    note_parts = [f"This month ({_MONTH_ABBR[i]}): {label}"]
-                    if entry["notes"]:
-                        note_parts.append(entry["notes"])
-                    current_note = " — ".join(note_parts)
-
-            self._cal_notes.setText(current_note or "")
-            self._calendar_group.setVisible(True)
-        except Exception:
-            self._calendar_group.setVisible(False)
 
     # ── Place on map ──────────────────────────────────────────────────────────
 
@@ -1515,7 +1248,7 @@ class PlantPanel(QWidget):
     # ── Polyculture mix ───────────────────────────────────────────────────
 
     def active_polyculture(self) -> Optional[dict]:
-        """Return the current mix recipe, or None if no mix is active.
+        """Return the current mix recipe, or None if fewer than 2 species.
 
         Recipe shape (all fields are JSON-safe so it can travel through
         Qt signals and into the project file unchanged):
@@ -1527,35 +1260,26 @@ class PlantPanel(QWidget):
               "effective_spacing_m": float,
             }
 
-        The primary (currently-selected plant) is always first; the
-        secondaries follow in insertion order. Returns None when there
-        are no secondaries, no primary, or every secondary duplicates
-        the primary's id.
+        The mix is the explicit `_mix_species` list — populated only via
+        the right-click "Add to Polyculture Mix" action. The currently-
+        selected plant is *not* implicitly in the mix; this keeps the
+        mental model simple ("the mix is the list, period").
         """
-        if not self._mix_secondaries:
+        if len(self._mix_species) < 2:
             return None
-        primary = self._selected_plant
-        if not primary or not primary.get("id"):
-            return None
-
-        seen: set[int] = set()
-        species: list[dict] = []
-        for p in [primary, *self._mix_secondaries]:
-            pid = p.get("id")
-            if not pid or pid in seen:
-                continue
-            seen.add(pid)
-            species.append({
-                "id": pid,
+        species = [
+            {
+                "id": int(p["id"]),
                 "common_name": p.get("common_name") or "",
                 "spacing_m": float(p.get("spacing_meters") or 1.0),
                 "plant_type": p.get("plant_type") or "herb",
                 "color": p.get("marker_color") or "",
                 "weight": 1.0,
-            })
+            }
+            for p in self._mix_species if p.get("id")
+        ]
         if len(species) < 2:
             return None
-
         from src.polyculture import resolve_spacing
         eff = resolve_spacing(species, "max")
         return {
@@ -1565,33 +1289,42 @@ class PlantPanel(QWidget):
             "effective_spacing_m": eff,
         }
 
+    def consume_pending_polyculture(self) -> Optional[dict]:
+        """Hand the most-recently-stashed recipe to App and clear it.
+
+        App calls this from `_on_pattern_placed`. The recipe is stashed
+        at Place-click time so a user changing the mix between Place
+        and the second-corner click can't desync the species
+        assignment from what the status label promised.
+        """
+        recipe = self._pending_polyculture
+        self._pending_polyculture = None
+        return recipe
+
     def _add_to_mix(self, plant: dict):
-        """Add a plant to the secondary-species list, ignoring duplicates."""
+        """Add a plant to the mix, ignoring duplicates and DB-less rows."""
         pid = plant.get("id")
         if not pid:
             return
-        # Don't bother re-adding the current primary — it's always implicit.
-        if self._selected_plant and self._selected_plant.get("id") == pid:
+        if any(s.get("id") == pid for s in self._mix_species):
             return
-        if any(s.get("id") == pid for s in self._mix_secondaries):
+        if len(self._mix_species) >= self._MIX_MAX:
             return
-        if len(self._mix_secondaries) >= self._MIX_MAX_SECONDARIES:
-            return
-        self._mix_secondaries.append(plant)
+        self._mix_species.append(plant)
         self._refresh_mix_list()
 
     def _remove_from_mix(self, plant_id: int):
-        before = len(self._mix_secondaries)
-        self._mix_secondaries = [
-            s for s in self._mix_secondaries if s.get("id") != plant_id
+        before = len(self._mix_species)
+        self._mix_species = [
+            s for s in self._mix_species if s.get("id") != plant_id
         ]
-        if len(self._mix_secondaries) != before:
+        if len(self._mix_species) != before:
             self._refresh_mix_list()
 
     def _clear_mix(self):
-        if not self._mix_secondaries:
+        if not self._mix_species:
             return
-        self._mix_secondaries = []
+        self._mix_species = []
         self._refresh_mix_list()
 
     def _on_mix_item_double_clicked(self, item: QListWidgetItem):
@@ -1600,37 +1333,49 @@ class PlantPanel(QWidget):
             self._remove_from_mix(int(pid))
 
     def _refresh_mix_list(self):
-        """Rebuild the mix list widget + status label from `_mix_secondaries`.
+        """Rebuild the mix list widget + status label from `_mix_species`.
 
-        Cheap to call repeatedly — we never have more than 8 species.
+        Cheap to call repeatedly — we never have more than `_MIX_MAX`
+        entries. Also updates the Place button's text so users see at a
+        glance that they're about to drop a polyculture.
         """
         self._mix_list.clear()
-        n = len(self._mix_secondaries)
+        n = len(self._mix_species)
+
+        # Place button label tracks the active mix.
+        if hasattr(self, "_place_btn"):
+            self._place_btn.setText(
+                "Place Mix on Map" if n >= 2 else "Place on Map"
+            )
+
         if n == 0:
             self._mix_status.setText(
                 "Mix off — right-click a plant in the list to add it.\n"
-                "Row/Grid/Circle will then mix all species across the placement."
+                "With ≥2 species, Row/Grid/Circle will mix them across the placement."
             )
             self._mix_list.setVisible(False)
             self._mix_clear_btn.setEnabled(False)
             return
 
-        primary = self._selected_plant
-        primary_name = primary.get("common_name") if primary else "(none)"
-        primary_sp = float(primary.get("spacing_meters") or 1.0) if primary else 1.0
-        all_sp = [primary_sp] + [
-            float(s.get("spacing_meters") or 1.0) for s in self._mix_secondaries
-        ]
-        eff = max(all_sp)
-        self._mix_status.setText(
-            f"Polyculture: {primary_name} + {n} other{'s' if n != 1 else ''}\n"
-            f"Spacing {eff:.2f} m (max of mix). Double-click a row to remove."
-        )
+        all_sp = [float(s.get("spacing_meters") or 1.0) for s in self._mix_species]
+        eff = max(all_sp) if all_sp else 1.0
+        if n == 1:
+            self._mix_status.setText(
+                f"Mix: 1 species (need ≥2 to activate). "
+                f"Add at least one more.\n"
+                f"Double-click a row below to remove it."
+            )
+        else:
+            self._mix_status.setText(
+                f"Polyculture: {n} species — spacing {eff:.2f} m "
+                f"(max of mix).\n"
+                f"Choose Row/Grid/Circle and click Place Mix. "
+                f"Double-click a row to remove."
+            )
         self._mix_list.setVisible(True)
         self._mix_clear_btn.setEnabled(True)
 
-        for s in self._mix_secondaries:
-            color = _TYPE_COLORS.get(s.get("plant_type", ""), "#78909c")
+        for s in self._mix_species:
             label = f"   {s.get('common_name', '—')}"
             item = QListWidgetItem(label)
             item.setIcon(_type_icon(s.get("plant_type", "")))
@@ -1646,13 +1391,22 @@ class PlantPanel(QWidget):
     # ── Place on map ──────────────────────────────────────────────────────────
 
     def _on_place_clicked(self, _item=None):
-        if self._selected_plant:
-            self.place_plant_requested.emit(
-                self._selected_plant["id"],
-                self._selected_plant["common_name"],
-                self._qty_spin.value(),
-                self._current_pattern(),
-            )
+        if not self._selected_plant:
+            return
+        pattern = self._current_pattern()
+        # Stash the polyculture recipe in flight so App can read it back
+        # in `_on_pattern_placed` after JS finishes the 2-click gesture.
+        # Cleared on consumption.
+        self._pending_polyculture = (
+            (pattern.get("params") or {}).get("polyculture")
+            if isinstance(pattern, dict) else None
+        )
+        self.place_plant_requested.emit(
+            self._selected_plant["id"],
+            self._selected_plant["common_name"],
+            self._qty_spin.value(),
+            pattern,
+        )
 
     def _on_plant_context_menu(self, pos):
         """Right-click context menu for plant results list."""
@@ -1683,18 +1437,11 @@ class PlantPanel(QWidget):
             lambda: self._results_model.toggle_expanded(index.row())
         )
 
-        act_companions = menu.addAction("View Companions (open detail)")
-        act_companions.triggered.connect(lambda: self._show_companions(plant))
-
         menu.addSeparator()
 
         # Polyculture mix — only meaningful for plants with a real id.
         already_in_mix = any(
-            s.get("id") == plant.get("id") for s in self._mix_secondaries
-        )
-        is_primary = (
-            self._selected_plant is not None
-            and self._selected_plant.get("id") == plant.get("id")
+            s.get("id") == plant.get("id") for s in self._mix_species
         )
         if already_in_mix:
             act_mix = menu.addAction("Remove from Polyculture Mix")
@@ -1704,16 +1451,11 @@ class PlantPanel(QWidget):
         else:
             act_mix = menu.addAction("Add to Polyculture Mix")
             act_mix.triggered.connect(lambda: self._add_to_mix(plant))
-            if (is_primary
-                    or not plant.get("id")
-                    or len(self._mix_secondaries) >= self._MIX_MAX_SECONDARIES):
+            if not plant.get("id"):
                 act_mix.setEnabled(False)
-                if is_primary:
-                    act_mix.setText("Already the primary (mix uses current selection)")
-                elif len(self._mix_secondaries) >= self._MIX_MAX_SECONDARIES:
-                    act_mix.setText(
-                        f"Mix full ({1 + self._MIX_MAX_SECONDARIES} species max)"
-                    )
+            elif len(self._mix_species) >= self._MIX_MAX:
+                act_mix.setEnabled(False)
+                act_mix.setText(f"Mix full ({self._MIX_MAX} species max)")
 
         menu.exec(self._results_list.viewport().mapToGlobal(pos))
 
@@ -1722,12 +1464,6 @@ class PlantPanel(QWidget):
         self.place_plant_requested.emit(
             plant["id"], plant["common_name"], qty, {"kind": "single"}
         )
-
-    def _show_companions(self, plant):
-        """Show companion info in the detail view."""
-        self._selected_plant = plant
-        self._show_detail(plant)
-        self._detail_group.setVisible(True)
 
     def _on_color_pick(self):
         """Open a colour picker to set a custom marker colour for the selected plant."""
@@ -1771,175 +1507,26 @@ class PlantPanel(QWidget):
 
     # ── Permapeople tab ────────────────────────────────────────────────────────
 
-    def _pp_update_tab_label(self):
-        has_keys = bool(self._pp_key_id and self._pp_key_secret)
-        label = "Permapeople" if has_keys else "Permapeople 🔑"
-        self._tabs.setTabText(1, label)
-        if not has_keys:
-            self._pp_status.setText(
-                "No API key configured. Open  Settings → Permapeople API  to add your key."
-            )
-            self._pp_search_btn.setEnabled(False)
-        else:
-            if self._pp_status.text().startswith("No API"):
-                self._pp_status.setText("Enter a search term and press Search.")
-            self._pp_search_btn.setEnabled(True)
-
-    def _pp_search(self):
-        query = self._pp_search_box.text().strip()
-        if not query:
-            return
-        if not (self._pp_key_id and self._pp_key_secret):
-            self._pp_status.setText("API key not set. Go to Settings first.")
-            return
-
-        # Cancel any running thread
-        if self._pp_thread and self._pp_thread.isRunning():
-            self._pp_thread.quit()
-            self._pp_thread.wait()
-
-        self._pp_results_list.clear()
-        self._pp_import_btn.setEnabled(False)
-        self._pp_status.setText(f'Searching for "{query}"...')
-        self._pp_search_btn.setEnabled(False)
-
-        from src.api.permapeople import PermapeopleWorker
-        self._pp_thread = QThread(self)
-        self._pp_worker = PermapeopleWorker(self._pp_key_id, self._pp_key_secret)
-        self._pp_worker.set_query(query)
-        self._pp_worker.moveToThread(self._pp_thread)
-
-        self._pp_thread.started.connect(self._pp_worker.search)
-        self._pp_worker.results_ready.connect(self._pp_on_results)
-        self._pp_worker.error_occurred.connect(self._pp_on_error)
-        self._pp_worker.finished.connect(self._pp_thread.quit)
-        self._pp_worker.finished.connect(
-            lambda: self._pp_search_btn.setEnabled(True)
-        )
-
-        self._pp_thread.start()
-
-    def _pp_on_results(self, plants: list):
-        self._pp_pending_plants = plants
-        self._pp_results_list.clear()
-        if not plants:
-            self._pp_status.setText("No results found.")
-            return
-        for p in plants:
-            item = QListWidgetItem()
-            item.setIcon(_type_icon(p.get("plant_type", "")))
-            sci = p.get("scientific_name") or ""
-            label = f"{p.get('common_name', 'Unknown')}\n{sci}"
-            item.setText(label)
-            item.setData(_PLANT_OBJ_ROLE, p)
-            item.setSizeHint(QSize(0, 48))
-            self._pp_results_list.addItem(item)
-        self._pp_status.setText(f"{len(plants)} result{'s' if len(plants) != 1 else ''} found.")
-
-    def _pp_on_error(self, msg: str):
-        self._pp_status.setText(f"Error: {msg}")
-
-    def _pp_on_selection_changed(self, current: Optional[QListWidgetItem], _prev):
-        if current is None:
-            self._pp_import_btn.setEnabled(False)
-            self._selected_plant = None
-            self._detail_group.setVisible(False)
-            self._calendar_group.setVisible(False)
-            self._place_btn.setEnabled(False)
-            return
-        plant = current.data(_PLANT_OBJ_ROLE)
-        # Show in detail panel (no DB id yet, so place btn stays off)
-        self._selected_plant = None
-        self._show_detail(plant)
-        self._place_btn.setEnabled(False)
-        self._pp_import_btn.setEnabled(True)
-
-    def _pp_import(self):
-        """Import the selected Permapeople plant into the local database."""
-        row = self._pp_results_list.currentRow()
-        if row < 0 or row >= len(self._pp_pending_plants):
-            return
-        plant = self._pp_pending_plants[row]
-        try:
-            from src.db.plants import get_connection
-            conn = get_connection()
-            try:
-                cur = conn.execute(
-                    """INSERT OR IGNORE INTO plants
-                       (common_name, scientific_name, plant_type,
-                        hardiness_zone_min, hardiness_zone_max,
-                        sun_requirement, water_needs,
-                        native_region, permaculture_uses,
-                        spacing_meters, mature_height_meters, notes,
-                        bloom_period, fruit_period, native_to_alberta,
-                        edible_parts, deciduous_evergreen,
-                        soil_ph_min, soil_ph_max, perennial_or_annual)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                    (
-                        plant.get("common_name") or "Unknown",
-                        plant.get("scientific_name"),
-                        plant.get("plant_type") or "herb",
-                        plant.get("hardiness_zone_min"),
-                        plant.get("hardiness_zone_max"),
-                        plant.get("sun_requirement"),
-                        plant.get("water_needs"),
-                        plant.get("native_region"),
-                        plant.get("permaculture_uses"),
-                        plant.get("spacing_meters"),
-                        plant.get("mature_height_meters"),
-                        plant.get("notes"),
-                        plant.get("bloom_period"),
-                        plant.get("fruit_period"),
-                        0,  # not native to alberta
-                        plant.get("edible_parts"),
-                        plant.get("deciduous_evergreen"),
-                        plant.get("soil_ph_min"),
-                        plant.get("soil_ph_max"),
-                        plant.get("perennial_or_annual"),
-                    )
-                )
-                conn.commit()
-                new_id = cur.lastrowid
-            finally:
-                conn.close()
-
-            self._pp_status.setText(
-                f'Imported "{plant.get("common_name")}" to local database.'
-            )
-            # Refresh local search and switch to Local tab
-            self._run_search()
-            self._tabs.setCurrentIndex(0)
-
-            # Select the newly imported plant in the local list
-            for i in range(self._results_list.count()):
-                item = self._results_list.item(i)
-                if item and item.data(_PLANT_ID_ROLE) == new_id:
-                    self._results_list.setCurrentItem(item)
-                    break
-
-        except Exception as exc:
-            self._pp_status.setText(f"Import failed: {exc}")
-
     # ── Public API ────────────────────────────────────────────────────────────
 
-    def set_api_keys(self, key_id: str, key_secret: str):
-        """Called by the main window after the user saves API credentials."""
-        self._pp_key_id     = key_id
-        self._pp_key_secret = key_secret
-        self._pp_update_tab_label()
+    def set_api_keys(self, _key_id: str, _key_secret: str):
+        """Compatibility no-op — Permapeople integration was removed.
+
+        Kept so existing call-sites (app.py loads keys on startup) don't
+        crash; the keys themselves are simply ignored now. The setter
+        and the Settings dialog can be deleted entirely in a follow-up.
+        """
+        return
 
     def set_zone(self, zone: Optional[int]):
-        """Called by the main window when the hardiness zone changes."""
+        """Called by the main window when the hardiness zone changes.
+
+        The dedicated zone filter UI was removed; we still track the
+        current zone for any future zone-aware logic (status bar,
+        suggested-plants), and we no longer touch the deleted
+        `_zone_filter_btn` / `_zone_label` widgets.
+        """
         self._current_zone = zone
-        if zone:
-            self._zone_label.setText(f"Zone {zone}")
-            self._zone_filter_btn.setToolTip(
-                f"Filter to Zone {zone}-compatible plants"
-            )
-        else:
-            self._zone_label.setText("Zone: —")
-        if self._zone_filter_btn.isChecked():
-            self._run_search()
 
     def on_plant_removed(self, plant_id: int):
         """Notify the panel that a plant marker was removed from the map."""
@@ -2099,26 +1686,3 @@ QPushButton:hover:!checked {
 }
 """
 
-_TAB_STYLE = """
-QTabWidget::pane {
-    border: none;
-    background: #1a2a1a;
-}
-QTabBar::tab {
-    background: #1b2b1b;
-    color: #78909c;
-    border: 1px solid #2e4a2e;
-    border-bottom: none;
-    padding: 5px 12px;
-    font-size: 12px;
-}
-QTabBar::tab:selected {
-    background: #1a2a1a;
-    color: #a5d6a7;
-    font-weight: bold;
-}
-QTabBar::tab:hover:!selected {
-    background: #243824;
-    color: #c8e6c9;
-}
-"""
