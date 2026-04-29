@@ -141,6 +141,86 @@ def test_assign_unknown_strategy_raises():
         raise AssertionError("expected ValueError for unknown strategy")
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# assign_species — even_split (the default)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_even_split_is_deterministic_no_rng_needed():
+    species = [{"id": 1, "weight": 1}, {"id": 2, "weight": 1},
+               {"id": 3, "weight": 1}]
+    positions = [[0, 0]] * 9
+    a = assign_species(positions, species)             # default strategy
+    b = assign_species(positions, species, "even_split")
+    c = assign_species(positions, species, "even_split")
+    assert [s["id"] for s in a] == [s["id"] for s in b]
+    assert [s["id"] for s in b] == [s["id"] for s in c]
+
+
+def test_even_split_equal_weights_n_divisible_gives_exact_thirds():
+    species = [{"id": 1, "weight": 1}, {"id": 2, "weight": 1},
+               {"id": 3, "weight": 1}]
+    positions = [[0, 0]] * 12
+    out = assign_species(positions, species, "even_split")
+    counts = {1: 0, 2: 0, 3: 0}
+    for s in out:
+        counts[s["id"]] += 1
+    assert counts == {1: 4, 2: 4, 3: 4}
+
+
+def test_even_split_equal_weights_interleaves():
+    """Adjacent positions should be different species so the spatial
+    pattern looks mixed, not blocky."""
+    species = [{"id": 1, "weight": 1}, {"id": 2, "weight": 1},
+               {"id": 3, "weight": 1}]
+    positions = [[0, 0]] * 9
+    out = assign_species(positions, species, "even_split")
+    ids = [s["id"] for s in out]
+    # First three picks should be one of each species (no repeats).
+    assert set(ids[:3]) == {1, 2, 3}
+
+
+def test_even_split_unequal_ratio_2_1_1_1():
+    species = [{"id": 1, "weight": 2}, {"id": 2, "weight": 1},
+               {"id": 3, "weight": 1}, {"id": 4, "weight": 1}]
+    positions = [[0, 0]] * 10
+    out = assign_species(positions, species, "even_split")
+    counts = {1: 0, 2: 0, 3: 0, 4: 0}
+    for s in out:
+        counts[s["id"]] += 1
+    # 2:1:1:1 ratio over 10 → species 1 gets 4, others get 2 each.
+    assert counts[1] == 4
+    assert counts[2] + counts[3] + counts[4] == 6
+    # No species should be more than 1 off from its ideal (largest-
+    # remainder behaviour: floor(ideal) or ceil(ideal)).
+    for sid, ideal in [(1, 4.0), (2, 2.0), (3, 2.0), (4, 2.0)]:
+        assert abs(counts[sid] - ideal) <= 1
+
+
+def test_even_split_weights_sum_zero_falls_back_to_uniform():
+    species = [{"id": 1, "weight": 0}, {"id": 2, "weight": 0}]
+    positions = [[0, 0]] * 6
+    out = assign_species(positions, species, "even_split")
+    counts = {1: 0, 2: 0}
+    for s in out:
+        counts[s["id"]] += 1
+    # Falls back to equal weights → exact 3:3 split for 6 positions.
+    assert counts == {1: 3, 2: 3}
+
+
+def test_even_split_count_diff_at_most_one_for_any_n_and_equal_weights():
+    """Property test: with equal weights, every species' count should be
+    floor(N/k) or ceil(N/k) — never more than 1 apart."""
+    species = [{"id": i, "weight": 1} for i in range(1, 5)]   # 4 species
+    for n in (1, 3, 7, 13, 50, 99, 100):
+        positions = [[0, 0]] * n
+        out = assign_species(positions, species, "even_split")
+        counts = [0, 0, 0, 0]
+        for s in out:
+            counts[s["id"] - 1] += 1
+        assert max(counts) - min(counts) <= 1, (n, counts)
+        assert sum(counts) == n
+
+
 if __name__ == "__main__":
     import pytest
     pytest.main([__file__, "-v"])

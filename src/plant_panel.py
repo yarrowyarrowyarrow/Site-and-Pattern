@@ -1146,7 +1146,18 @@ class PlantPanel(QWidget):
         parent_layout.addWidget(wrap)
 
     def _build_polyculture_controls(self, outer: QVBoxLayout):
-        """Build the inline polyculture-mix UI inside the placement group."""
+        """Build the inline polyculture-mix UI inside the placement group.
+
+        Layout (top → bottom):
+          · status label (mode + spacing summary)
+          · saved-recipe row: dropdown + Save / Delete
+          · always-visible column of per-species rows:
+              icon · common name · ratio spinner · × remove
+          · Clear mix button
+
+        The species rows are a vertical column (no QListWidget) so all
+        ≤8 species are visible simultaneously without scrolling.
+        """
         mix_box = QGroupBox("Polyculture Mix")
         mix_box.setStyleSheet(
             "QGroupBox { color: #a5d6a7; font-size: 11px; "
@@ -1160,20 +1171,48 @@ class PlantPanel(QWidget):
 
         self._mix_status = QLabel(
             "Mix off — right-click a plant in the list to add it.\n"
-            "Row/Grid/Circle will then mix all species across the placement."
+            "With ≥2 species, Row/Grid/Circle will mix them across the placement."
         )
         self._mix_status.setWordWrap(True)
         self._mix_status.setStyleSheet("color: #78909c; font-size: 10px;")
         ml.addWidget(self._mix_status)
 
-        self._mix_list = QListWidget()
-        self._mix_list.setMaximumHeight(80)
-        self._mix_list.setStyleSheet(_RESULTS_LIST_STYLE)
-        self._mix_list.setVisible(False)
-        self._mix_list.setToolTip("Double-click a row to remove it from the mix")
-        self._mix_list.itemDoubleClicked.connect(self._on_mix_item_double_clicked)
-        ml.addWidget(self._mix_list)
+        # ── Saved-recipe row ──────────────────────────────────────────
+        recipe_row = QHBoxLayout()
+        recipe_row.setSpacing(4)
+        self._recipe_combo = QComboBox()
+        self._recipe_combo.setToolTip("Load a saved polyculture mix")
+        self._recipe_combo.activated.connect(self._on_recipe_selected)
+        recipe_row.addWidget(self._recipe_combo, 1)
+        self._recipe_save_btn = QPushButton("Save")
+        self._recipe_save_btn.setToolTip("Save the current mix under a name you can recall later")
+        self._recipe_save_btn.setStyleSheet(_PATTERN_SEG_STYLE)
+        self._recipe_save_btn.clicked.connect(self._on_recipe_save)
+        recipe_row.addWidget(self._recipe_save_btn)
+        self._recipe_delete_btn = QPushButton("✕")
+        self._recipe_delete_btn.setToolTip("Delete the currently-selected saved mix")
+        self._recipe_delete_btn.setFixedWidth(28)
+        self._recipe_delete_btn.setStyleSheet(
+            "QPushButton { background: #1e2e1e; color: #ef9a9a; "
+            "border: 1px solid #4a2e2e; border-radius: 3px; "
+            "padding: 2px 4px; font-size: 11px; }"
+            "QPushButton:hover { border-color: #8a4a4a; }"
+            "QPushButton:disabled { color: #455a64; border-color: #2e4a2e; }"
+        )
+        self._recipe_delete_btn.clicked.connect(self._on_recipe_delete)
+        recipe_row.addWidget(self._recipe_delete_btn)
+        ml.addLayout(recipe_row)
+        self._refresh_recipe_combo()
 
+        # ── Species rows (one per mix entry, custom widgets) ─────────
+        self._mix_rows_container = QWidget()
+        self._mix_rows_layout = QVBoxLayout(self._mix_rows_container)
+        self._mix_rows_layout.setContentsMargins(0, 2, 0, 2)
+        self._mix_rows_layout.setSpacing(2)
+        self._mix_rows_container.setVisible(False)
+        ml.addWidget(self._mix_rows_container)
+
+        # ── Clear button ─────────────────────────────────────────────
         btn_row = QHBoxLayout()
         btn_row.setSpacing(4)
         self._mix_clear_btn = QPushButton("Clear mix")
@@ -1250,20 +1289,20 @@ class PlantPanel(QWidget):
     def active_polyculture(self) -> Optional[dict]:
         """Return the current mix recipe, or None if fewer than 2 species.
 
-        Recipe shape (all fields are JSON-safe so it can travel through
-        Qt signals and into the project file unchanged):
+        Recipe shape (all fields JSON-safe so it can travel through Qt
+        signals and into the project file unchanged):
             {
               "species": [{"id", "common_name", "spacing_m",
                            "plant_type", "color", "weight"}, ...],
-              "strategy": "weighted_random",
+              "strategy": "even_split",
               "spacing_strategy": "max",
               "effective_spacing_m": float,
             }
 
-        The mix is the explicit `_mix_species` list — populated only via
-        the right-click "Add to Polyculture Mix" action. The currently-
-        selected plant is *not* implicitly in the mix; this keeps the
-        mental model simple ("the mix is the list, period").
+        The mix is the explicit `_mix_species` list, populated only via
+        the right-click "Add to Polyculture Mix" action. Each entry
+        carries `_weight` (an integer ratio set by the row's spinner,
+        defaulting to 1); equal weights ⇒ exactly equal split.
         """
         if len(self._mix_species) < 2:
             return None
@@ -1274,7 +1313,7 @@ class PlantPanel(QWidget):
                 "spacing_m": float(p.get("spacing_meters") or 1.0),
                 "plant_type": p.get("plant_type") or "herb",
                 "color": p.get("marker_color") or "",
-                "weight": 1.0,
+                "weight": float(p.get("_weight", 1) or 1),
             }
             for p in self._mix_species if p.get("id")
         ]
@@ -1284,7 +1323,7 @@ class PlantPanel(QWidget):
         eff = resolve_spacing(species, "max")
         return {
             "species": species,
-            "strategy": "weighted_random",
+            "strategy": "even_split",
             "spacing_strategy": "max",
             "effective_spacing_m": eff,
         }
@@ -1302,7 +1341,12 @@ class PlantPanel(QWidget):
         return recipe
 
     def _add_to_mix(self, plant: dict):
-        """Add a plant to the mix, ignoring duplicates and DB-less rows."""
+        """Add a plant to the mix, ignoring duplicates and DB-less rows.
+
+        Stores a shallow copy so we can attach a per-mix `_weight`
+        without mutating the canonical plant dict in the search
+        results.
+        """
         pid = plant.get("id")
         if not pid:
             return
@@ -1310,7 +1354,9 @@ class PlantPanel(QWidget):
             return
         if len(self._mix_species) >= self._MIX_MAX:
             return
-        self._mix_species.append(plant)
+        entry = dict(plant)
+        entry["_weight"] = 1
+        self._mix_species.append(entry)
         self._refresh_mix_list()
 
     def _remove_from_mix(self, plant_id: int):
@@ -1327,19 +1373,23 @@ class PlantPanel(QWidget):
         self._mix_species = []
         self._refresh_mix_list()
 
-    def _on_mix_item_double_clicked(self, item: QListWidgetItem):
-        pid = item.data(_PLANT_ID_ROLE)
-        if pid:
-            self._remove_from_mix(int(pid))
-
     def _refresh_mix_list(self):
-        """Rebuild the mix list widget + status label from `_mix_species`.
+        """Rebuild the species rows + status label from `_mix_species`.
 
-        Cheap to call repeatedly — we never have more than `_MIX_MAX`
-        entries. Also updates the Place button's text so users see at a
-        glance that they're about to drop a polyculture.
+        Each row is a custom QFrame: type-icon + common name + ratio
+        spinner + × remove button. The whole stack is always visible
+        (no scroll) so all ≤8 species fit at once. Also updates the
+        Place button's text and the recipe combo's "active" tooltip
+        so users see at a glance that a polyculture is queued up.
         """
-        self._mix_list.clear()
+        # Tear down old rows (stop signal connections from leaking).
+        while self._mix_rows_layout.count():
+            item = self._mix_rows_layout.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                w.setParent(None)
+                w.deleteLater()
+
         n = len(self._mix_species)
 
         # Place button label tracks the active mix.
@@ -1351,9 +1401,10 @@ class PlantPanel(QWidget):
         if n == 0:
             self._mix_status.setText(
                 "Mix off — right-click a plant in the list to add it.\n"
-                "With ≥2 species, Row/Grid/Circle will mix them across the placement."
+                "With ≥2 species, Row/Grid/Circle will mix them in equal "
+                "ratios (adjust per-row to skew)."
             )
-            self._mix_list.setVisible(False)
+            self._mix_rows_container.setVisible(False)
             self._mix_clear_btn.setEnabled(False)
             return
 
@@ -1361,32 +1412,231 @@ class PlantPanel(QWidget):
         eff = max(all_sp) if all_sp else 1.0
         if n == 1:
             self._mix_status.setText(
-                f"Mix: 1 species (need ≥2 to activate). "
-                f"Add at least one more.\n"
-                f"Double-click a row below to remove it."
+                f"Mix: 1 species (need ≥2 to activate).\n"
+                f"Add at least one more, then choose Row/Grid/Circle."
             )
         else:
+            ratios = ":".join(str(int(s.get("_weight", 1) or 1))
+                              for s in self._mix_species)
             self._mix_status.setText(
-                f"Polyculture: {n} species — spacing {eff:.2f} m "
-                f"(max of mix).\n"
-                f"Choose Row/Grid/Circle and click Place Mix. "
-                f"Double-click a row to remove."
+                f"Polyculture: {n} species at {ratios} — spacing "
+                f"{eff:.2f} m (max). Click Place Mix on Map."
             )
-        self._mix_list.setVisible(True)
+        self._mix_rows_container.setVisible(True)
         self._mix_clear_btn.setEnabled(True)
 
-        for s in self._mix_species:
-            label = f"   {s.get('common_name', '—')}"
-            item = QListWidgetItem(label)
-            item.setIcon(_type_icon(s.get("plant_type", "")))
-            item.setData(_PLANT_ID_ROLE, s.get("id"))
-            sp = s.get("spacing_meters")
-            tip_lines = [s.get("scientific_name") or ""]
-            if sp:
-                tip_lines.append(f"Spacing: {sp} m")
-            tip_lines.append("Double-click to remove from mix")
-            item.setToolTip("\n".join(t for t in tip_lines if t))
-            self._mix_list.addItem(item)
+        for idx, s in enumerate(self._mix_species):
+            row = self._build_mix_row(idx, s)
+            self._mix_rows_layout.addWidget(row)
+
+    def _build_mix_row(self, idx: int, species: dict) -> QFrame:
+        """One species line: icon + name + ratio spinner + × button."""
+        row = QFrame()
+        row.setStyleSheet(
+            "QFrame { background: #1e2e1e; border: 1px solid #2e4a2e; "
+            "border-radius: 3px; }"
+        )
+        rl = QHBoxLayout(row)
+        rl.setContentsMargins(4, 2, 4, 2)
+        rl.setSpacing(4)
+
+        # Type-coloured dot (matches the results-list dot scheme).
+        dot = QLabel()
+        dot.setFixedSize(10, 10)
+        color_hex = _TYPE_COLORS.get(species.get("plant_type", ""), "#78909c")
+        dot.setStyleSheet(
+            f"background:{color_hex}; border-radius:5px; min-width:10px; min-height:10px;"
+        )
+        rl.addWidget(dot)
+
+        name = QLabel(species.get("common_name") or "—")
+        name.setStyleSheet("color: #c8e6c9; font-size: 11px;")
+        name.setToolTip(species.get("scientific_name") or "")
+        rl.addWidget(name, 1)
+
+        spin = QSpinBox()
+        spin.setRange(1, 9)
+        spin.setValue(int(species.get("_weight", 1) or 1))
+        spin.setFixedWidth(46)
+        spin.setToolTip(
+            "Ratio: how many of this species per cycle.\n"
+            "Equal numbers (default 1:1:1…) ⇒ exact even split.\n"
+            "Set 2 to get twice as many of this species, etc."
+        )
+        spin.setStyleSheet(_QTY_SPIN_STYLE)
+        # Capture idx by default-arg so each row's signal binds to its own row.
+        spin.valueChanged.connect(
+            lambda v, i=idx: self._on_mix_weight_changed(i, v)
+        )
+        rl.addWidget(spin)
+
+        rm = QPushButton("✕")
+        rm.setFixedSize(20, 20)
+        rm.setToolTip("Remove from mix")
+        rm.setStyleSheet(
+            "QPushButton { background: transparent; color: #ef9a9a; "
+            "border: 1px solid transparent; border-radius: 3px; "
+            "font-size: 11px; }"
+            "QPushButton:hover { border-color: #8a4a4a; background: #2e1a1a; }"
+        )
+        pid = species.get("id")
+        rm.clicked.connect(lambda: self._remove_from_mix(int(pid)) if pid else None)
+        rl.addWidget(rm)
+
+        return row
+
+    def _on_mix_weight_changed(self, idx: int, value: int):
+        if 0 <= idx < len(self._mix_species):
+            self._mix_species[idx]["_weight"] = max(1, int(value))
+            # Update only the status line — rebuilding rows would
+            # disturb the spinner the user is interacting with.
+            self._refresh_mix_status_only()
+
+    def _refresh_mix_status_only(self):
+        n = len(self._mix_species)
+        if n < 2:
+            return
+        all_sp = [float(s.get("spacing_meters") or 1.0) for s in self._mix_species]
+        eff = max(all_sp) if all_sp else 1.0
+        ratios = ":".join(str(int(s.get("_weight", 1) or 1))
+                          for s in self._mix_species)
+        self._mix_status.setText(
+            f"Polyculture: {n} species at {ratios} — spacing "
+            f"{eff:.2f} m (max). Click Place Mix on Map."
+        )
+
+    # ── Saved recipes ────────────────────────────────────────────────────
+
+    def _refresh_recipe_combo(self):
+        from src.settings import get_polyculture_recipes
+        try:
+            recipes = get_polyculture_recipes()
+        except Exception:
+            recipes = []
+        self._saved_recipes = recipes
+
+        self._recipe_combo.blockSignals(True)
+        self._recipe_combo.clear()
+        if not recipes:
+            self._recipe_combo.addItem("(no saved mixes)")
+            self._recipe_combo.setEnabled(False)
+            self._recipe_delete_btn.setEnabled(False)
+        else:
+            self._recipe_combo.addItem("— select a saved mix to load —")
+            for r in recipes:
+                self._recipe_combo.addItem(r.get("name") or "(unnamed)")
+            self._recipe_combo.setEnabled(True)
+            self._recipe_delete_btn.setEnabled(True)
+        self._recipe_combo.blockSignals(False)
+
+    def _on_recipe_selected(self, idx: int):
+        # idx 0 is the placeholder when recipes exist; ignore it.
+        if not self._saved_recipes or idx < 1:
+            return
+        if idx - 1 >= len(self._saved_recipes):
+            return
+        recipe = self._saved_recipes[idx - 1]
+        self._load_recipe_into_mix(recipe)
+
+    def _load_recipe_into_mix(self, recipe: dict):
+        """Rehydrate species records from the local DB, then populate mix."""
+        from src.db.plants import get_plant
+        loaded: list[dict] = []
+        for s in recipe.get("species", []):
+            pid = s.get("id")
+            if not pid:
+                continue
+            try:
+                p = get_plant(int(pid))
+            except Exception:
+                p = None
+            if not p:
+                # Plant was deleted from the local DB — fall back to the
+                # cached fields stored with the recipe so the row still
+                # renders (placement will skip if id is invalid).
+                p = {
+                    "id": pid,
+                    "common_name": s.get("common_name") or "(missing plant)",
+                    "spacing_meters": s.get("spacing_m") or 1.0,
+                    "plant_type": s.get("plant_type") or "herb",
+                    "marker_color": s.get("color") or "",
+                }
+            entry = dict(p)
+            entry["_weight"] = int(s.get("weight") or 1)
+            loaded.append(entry)
+        if not loaded:
+            return
+        self._mix_species = loaded[: self._MIX_MAX]
+        self._refresh_mix_list()
+
+    def _on_recipe_save(self):
+        from PyQt6.QtWidgets import QInputDialog
+        if len(self._mix_species) < 1:
+            return
+        existing_names = [r.get("name") for r in self._saved_recipes]
+        # Suggest a default name from the first two species.
+        default_name = ""
+        if len(self._mix_species) >= 2:
+            default_name = (
+                f"{self._mix_species[0].get('common_name','')} + "
+                f"{self._mix_species[1].get('common_name','')}"
+            )
+            if len(self._mix_species) > 2:
+                default_name += f" +{len(self._mix_species) - 2}"
+        name, ok = QInputDialog.getText(
+            self, "Save Polyculture Mix",
+            "Name for this mix (overwrites if name already exists):",
+            text=default_name,
+        )
+        if not ok or not name.strip():
+            return
+        name = name.strip()
+        recipe = {
+            "name": name,
+            "species": [
+                {
+                    "id": int(s["id"]),
+                    "common_name": s.get("common_name") or "",
+                    "spacing_m": float(s.get("spacing_meters") or 1.0),
+                    "plant_type": s.get("plant_type") or "herb",
+                    "color": s.get("marker_color") or "",
+                    "weight": int(s.get("_weight", 1) or 1),
+                }
+                for s in self._mix_species if s.get("id")
+            ],
+        }
+        # Replace by name (case-sensitive) so re-saving updates in place.
+        recipes = [r for r in self._saved_recipes if r.get("name") != name]
+        recipes.append(recipe)
+
+        from src.settings import save_polyculture_recipes
+        try:
+            save_polyculture_recipes(recipes)
+        except Exception as exc:
+            self._mix_status.setText(f"Save failed: {exc}")
+            return
+        self._refresh_recipe_combo()
+        # Select the just-saved entry so the user gets confirmation.
+        for i in range(self._recipe_combo.count()):
+            if self._recipe_combo.itemText(i) == name:
+                self._recipe_combo.setCurrentIndex(i)
+                break
+
+    def _on_recipe_delete(self):
+        idx = self._recipe_combo.currentIndex()
+        if not self._saved_recipes or idx < 1:
+            return
+        if idx - 1 >= len(self._saved_recipes):
+            return
+        target = self._saved_recipes[idx - 1]
+        recipes = [r for r in self._saved_recipes if r is not target]
+        from src.settings import save_polyculture_recipes
+        try:
+            save_polyculture_recipes(recipes)
+        except Exception as exc:
+            self._mix_status.setText(f"Delete failed: {exc}")
+            return
+        self._refresh_recipe_combo()
 
     # ── Place on map ──────────────────────────────────────────────────────────
 

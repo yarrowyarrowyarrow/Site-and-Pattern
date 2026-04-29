@@ -54,6 +54,34 @@ def has_api_keys() -> bool:
     return bool(kid and ksec)
 
 
+# ── Saved polyculture recipes ─────────────────────────────────────────────────
+
+def get_polyculture_recipes() -> list[dict]:
+    """Return the user's saved polyculture mixes, oldest-first.
+
+    Each entry is `{"name": str, "species": [{...minimal plant fields,
+    "weight": int}, ...]}`. The recipes are stored as plant_id +
+    weight + cached display fields; the full plant record is rehydrated
+    from the local DB at load time so changes to plant data flow
+    through.
+    """
+    cfg = load_config()
+    recipes = cfg.get("polyculture_recipes")
+    if not isinstance(recipes, list):
+        return []
+    out = []
+    for r in recipes:
+        if isinstance(r, dict) and r.get("name") and isinstance(r.get("species"), list):
+            out.append(r)
+    return out
+
+
+def save_polyculture_recipes(recipes: list[dict]) -> None:
+    cfg = load_config()
+    cfg["polyculture_recipes"] = list(recipes)
+    save_config(cfg)
+
+
 # ── Settings dialog ───────────────────────────────────────────────────────────
 
 class SettingsDialog(QDialog):
