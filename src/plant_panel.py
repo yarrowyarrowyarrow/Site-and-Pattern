@@ -147,6 +147,7 @@ _PLANT_EXPANDED_ROLE     = Qt.ItemDataRole.UserRole + 3
 # Compact row geometry constants — tuned so 10+ rows fit in the default
 # results pane height (~330 px after header + filters).
 _ROW_H_COMPACT  = 26
+_ROW_H_WRAPPED  = 44    # two-line variant for very long common names
 _ROW_H_PADDING  = 4
 _ZONE_BADGE_W   = 56
 _NATIVE_BADGE_W = 18    # square AB-leaf badge
@@ -306,34 +307,69 @@ class PlantRowDelegate(QStyledItemDelegate):
         self._bold_font.setBold(True)
 
     # Geometry helpers ---------------------------------------------------
+    # All three return a rect anchored to the right edge of `compact`,
+    # vertically centred to the bottom *line* of the compact strip
+    # (where `line_h` defaults to the strip height for single-line
+    # rows and is half of it for the two-line wrap variant).
 
-    def _expand_btn_rect(self, opt_rect: QRect) -> QRect:
-        return QRect(opt_rect.right() - self.EXPAND_BTN_W,
-                     opt_rect.top(),
+    def _expand_btn_rect(self, compact: QRect) -> QRect:
+        # Chevron is centred to the FULL compact strip so it stays
+        # vertically aligned with the dot whether wrapped or not.
+        return QRect(compact.right() - self.EXPAND_BTN_W,
+                     compact.top(),
                      self.EXPAND_BTN_W,
-                     _ROW_H_COMPACT)
+                     compact.height())
 
-    def _native_badge_rect(self, opt_rect: QRect) -> QRect:
-        x = opt_rect.right() - self.EXPAND_BTN_W - _NATIVE_BADGE_W - 4
-        y = opt_rect.top() + (_ROW_H_COMPACT - 14) // 2
+    def _native_badge_rect(self, compact: QRect, line_h: int) -> QRect:
+        x = compact.right() - self.EXPAND_BTN_W - _NATIVE_BADGE_W - 4
+        y = compact.bottom() - line_h + (line_h - 14) // 2
         return QRect(x, y, _NATIVE_BADGE_W, 14)
 
-    def _zone_badge_rect(self, opt_rect: QRect) -> QRect:
-        x = (opt_rect.right() - self.EXPAND_BTN_W - _NATIVE_BADGE_W - 4
+    def _zone_badge_rect(self, compact: QRect, line_h: int) -> QRect:
+        x = (compact.right() - self.EXPAND_BTN_W - _NATIVE_BADGE_W - 4
              - _ZONE_BADGE_W - 4)
-        y = opt_rect.top() + (_ROW_H_COMPACT - 16) // 2
+        y = compact.bottom() - line_h + (line_h - 16) // 2
         return QRect(x, y, _ZONE_BADGE_W, 16)
 
     # Sizing -------------------------------------------------------------
 
+    def _compact_height_for(self, plant: dict, panel_w: int) -> int:
+        """Return how tall the compact strip needs to be: 1 line (26 px)
+        or 2 lines (44 px). Long common names (e.g. "White-grained
+        Mountain Rice Grass") that can't fit beside the chevron + AB
+        badge on one line trigger the wrapped layout, so the user
+        always sees the bold common name in full.
+
+        Slack is intentionally generous (32 px) so wrap kicks in before
+        Qt clips on Windows DPI scaling — Qt's font metrics on Windows
+        often report ~5–15 px less than the rendered ink, and we'd
+        rather err toward an extra-tall row than a clipped name.
+        """
+        common = plant.get("common_name") or ""
+        if not common:
+            return _ROW_H_COMPACT
+        fm_b = QFontMetrics(self._bold_font)
+        common_render = max(
+            fm_b.horizontalAdvance(common),
+            fm_b.boundingRect(common).width(),
+        ) + 32
+        # 1-line "lean" budget: row width minus left dot/pad and the
+        # right-side chevron + AB chip.
+        lean_budget = max(40, panel_w
+                          - self.LEFT_PAD - self.DOT_W
+                          - (self.EXPAND_BTN_W + _NATIVE_BADGE_W + 8))
+        return _ROW_H_COMPACT if common_render <= lean_budget else _ROW_H_WRAPPED
+
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         plant = index.data(_PLANT_OBJ_ROLE) or {}
         expanded = bool(index.data(_PLANT_EXPANDED_ROLE))
-        if not expanded:
-            return QSize(0, _ROW_H_COMPACT)
-        # Estimate detail height: base + per-line height for description.
         view = self.parent()
-        avail_w = max(200, (view.viewport().width() if view else 280) - 12)
+        panel_w = (view.viewport().width() if view else option.rect.width()) or 280
+        compact_h = self._compact_height_for(plant, panel_w)
+        if not expanded:
+            return QSize(0, compact_h)
+        # Estimate detail height: base + per-line height for description.
+        avail_w = max(200, panel_w - 12)
         fm = QFontMetrics(self._small_font)
         notes = plant.get("notes") or ""
         notes_h = 0
@@ -353,7 +389,7 @@ class PlantRowDelegate(QStyledItemDelegate):
             if cal:
                 cal_h = _CAL_BLOCK_H
         detail_h = 7 * fm.lineSpacing() + cal_h + notes_h + 8
-        return QSize(0, _ROW_H_COMPACT + detail_h)
+        return QSize(0, compact_h + detail_h)
 
     # Painting -----------------------------------------------------------
 
@@ -377,28 +413,34 @@ class PlantRowDelegate(QStyledItemDelegate):
         painter.drawLine(rect.left(), rect.bottom(), rect.right(), rect.bottom())
 
         # ── Compact row ─────────────────────────────────────────────
-        compact = QRect(rect.left(), rect.top(), rect.width(), _ROW_H_COMPACT)
-        x = compact.left() + self.LEFT_PAD
-        y_mid = compact.top() + _ROW_H_COMPACT // 2
+        # Decide the strip's own height up front: ~26 px when the common
+        # name fits beside the chevron + AB badge on one line, ~44 px
+        # (two lines) when it doesn't. The wrapped variant gives the
+        # common name the full row width on line 1 and pushes the sci
+        # name + badges down to line 2.
+        compact_h = self._compact_height_for(plant, rect.width())
+        wrapped = compact_h == _ROW_H_WRAPPED
+        compact = QRect(rect.left(), rect.top(), rect.width(), compact_h)
+        line_h = compact_h // 2 if wrapped else compact_h
 
-        # Plant-type dot.
+        # Plant-type dot — vertically centred to line 1 (top half if
+        # wrapped, otherwise the whole strip).
+        dot_x = compact.left() + self.LEFT_PAD
+        dot_centre_y = compact.top() + (line_h // 2 if wrapped
+                                        else compact_h // 2)
         dot_color = QColor(_TYPE_COLORS.get(plant.get("plant_type", ""), "#78909c"))
         painter.setBrush(dot_color)
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawEllipse(x, y_mid - 5, 10, 10)
-        x += self.DOT_W
+        painter.drawEllipse(dot_x, dot_centre_y - 5, 10, 10)
+        x = dot_x + self.DOT_W
 
-        # Right-hand reserved areas. The zone badge (~56 px) is the
-        # heaviest decoration on the row — when the panel is narrow we
-        # collapse it so the common name always has enough room. Zone
-        # info is still discoverable in the expanded detail block.
+        # Right-hand reservations. The zone badge (~56 px) is the
+        # heaviest decoration — when the panel is narrow we collapse
+        # it so the common name keeps its room. Zones are still
+        # listed in the expanded detail block.
         right_pad_full = self.EXPAND_BTN_W + _NATIVE_BADGE_W + _ZONE_BADGE_W + 16
         right_pad_lean = self.EXPAND_BTN_W + _NATIVE_BADGE_W + 8
 
-        # Common + scientific name on a single line. The common name
-        # always wins the budget; the scientific name shrinks (and
-        # ellipsises) to fit whatever's left, because the expanded
-        # detail block always shows the full scientific name anyway.
         common = plant.get("common_name", "")
         sci    = plant.get("scientific_name") or ""
         count_badge = f"  [{placed}×]" if placed > 0 else ""
@@ -406,59 +448,94 @@ class PlantRowDelegate(QStyledItemDelegate):
 
         painter.setFont(self._bold_font)
         fm_b = QFontMetrics(self._bold_font)
-        # Use the *bigger* of horizontalAdvance and boundingRect so we
-        # cover the right side bearing — on Windows DPI scaling, bold
-        # glyphs can ink several px past the cursor advance, and Qt
-        # clips drawText to the rect's right edge. Add 12 px on top
-        # for an extra safety margin (visible ink width is monotone in
-        # font weight / DPI, so this can't shrink things visibly).
+        # Take max(advance, boundingRect) + 24 px slack for the right
+        # side bearing — Windows GDI/DirectWrite bold glyphs frequently
+        # ink several px past the cursor advance and Qt clips at the
+        # rect's right edge. Slack must be ≤ the wrap-decision slack
+        # (32 px in `_compact_height_for`) so non-wrapped rows always
+        # still have enough room.
         common_advance = fm_b.horizontalAdvance(common_text)
         common_bb      = fm_b.boundingRect(common_text).width()
-        common_render  = max(common_advance, common_bb) + 12
+        common_render  = max(common_advance, common_bb) + 24
 
-        text_max_full = max(40, compact.right() - x - right_pad_full)
-        text_max_lean = max(40, compact.right() - x - right_pad_lean)
-        # Choose the layout: full (with zone badge) only if common name
-        # comfortably fits; otherwise lean (no zone) to give common name
-        # the room. Zones are still listed in the expanded detail block.
-        show_zone = common_render <= text_max_full
-        right_pad = right_pad_full if show_zone else right_pad_lean
-        text_max = text_max_full if show_zone else text_max_lean
-
-        if common_render <= text_max:
-            common_w = common_render
-            display_common = common_text
-        else:
-            # Genuinely narrower than the common name even with the
-            # zone badge dropped — last-resort elide.
-            common_w = text_max
-            display_common = fm_b.elidedText(
-                common_text, Qt.TextElideMode.ElideRight, common_w,
-            )
-
-        painter.setPen(QColor("#e8f5e9") if selected else QColor("#c8e6c9"))
-        painter.drawText(
-            QRect(x, compact.top(), common_w, _ROW_H_COMPACT),
-            int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
-            display_common,
-        )
-        x_after_common = x + common_w + 6
-
-        sci_w = max(0, compact.right() - right_pad - x_after_common)
-        if sci and sci_w > 12:
-            painter.setFont(self._sci_font)
-            painter.setPen(QColor("#90a4ae"))
-            fm_s = QFontMetrics(self._sci_font)
-            sci_text = fm_s.elidedText(sci, Qt.TextElideMode.ElideRight, sci_w)
+        # Single-line layout: try full (with zone) first, fall back to
+        # lean (drop zone) so common name keeps fitting.
+        # Wrapped layout: common always gets the whole row on line 1,
+        # sci + all badges live on line 2 with the full reservation.
+        if wrapped:
+            # Line 1 — common name takes everything except the chevron
+            # column on the right.
+            line1_top   = compact.top()
+            common_w_max = max(40, compact.right() - x - self.EXPAND_BTN_W - 6)
+            if common_render <= common_w_max:
+                common_w = common_render
+                display_common = common_text
+            else:
+                # Pathologically long even on a full row → elide.
+                common_w = common_w_max
+                display_common = fm_b.elidedText(
+                    common_text, Qt.TextElideMode.ElideRight, common_w,
+                )
+            painter.setPen(QColor("#e8f5e9") if selected else QColor("#c8e6c9"))
             painter.drawText(
-                QRect(x_after_common, compact.top(), sci_w, _ROW_H_COMPACT),
+                QRect(x, line1_top, common_w, line_h),
                 int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
-                sci_text,
+                display_common,
             )
 
-        # Zone badge — only when there was room for the common name.
+            # Line 2 — sci on the left, all three badges on the right.
+            show_zone = True
+            line2_top = compact.top() + line_h
+            sci_x = x
+            sci_w = max(0, compact.right() - right_pad_full - sci_x)
+            if sci and sci_w > 12:
+                painter.setFont(self._sci_font)
+                painter.setPen(QColor("#90a4ae"))
+                fm_s = QFontMetrics(self._sci_font)
+                sci_text = fm_s.elidedText(sci, Qt.TextElideMode.ElideRight, sci_w)
+                painter.drawText(
+                    QRect(sci_x, line2_top, sci_w, line_h),
+                    int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
+                    sci_text,
+                )
+        else:
+            text_max_full = max(40, compact.right() - x - right_pad_full)
+            text_max_lean = max(40, compact.right() - x - right_pad_lean)
+            show_zone = common_render <= text_max_full
+            text_max  = text_max_full if show_zone else text_max_lean
+            right_pad = right_pad_full if show_zone else right_pad_lean
+
+            if common_render <= text_max:
+                common_w = common_render
+                display_common = common_text
+            else:
+                common_w = text_max
+                display_common = fm_b.elidedText(
+                    common_text, Qt.TextElideMode.ElideRight, common_w,
+                )
+            painter.setPen(QColor("#e8f5e9") if selected else QColor("#c8e6c9"))
+            painter.drawText(
+                QRect(x, compact.top(), common_w, compact_h),
+                int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
+                display_common,
+            )
+            x_after_common = x + common_w + 6
+            sci_w = max(0, compact.right() - right_pad - x_after_common)
+            if sci and sci_w > 12:
+                painter.setFont(self._sci_font)
+                painter.setPen(QColor("#90a4ae"))
+                fm_s = QFontMetrics(self._sci_font)
+                sci_text = fm_s.elidedText(sci, Qt.TextElideMode.ElideRight, sci_w)
+                painter.drawText(
+                    QRect(x_after_common, compact.top(), sci_w, compact_h),
+                    int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
+                    sci_text,
+                )
+
+        # Zone badge — only when there was room for the common name on
+        # the chosen layout.
         if show_zone:
-            zr = self._zone_badge_rect(compact)
+            zr = self._zone_badge_rect(compact, line_h)
             zone_text = _zone_badge_text(plant)
             if zone_text:
                 painter.setBrush(QColor("#37474f"))
@@ -469,7 +546,7 @@ class PlantRowDelegate(QStyledItemDelegate):
                 painter.drawText(zr, int(Qt.AlignmentFlag.AlignCenter), zone_text)
 
         # Native-AB badge — green leaf glyph if native, neutral hatched dot otherwise.
-        nb = self._native_badge_rect(compact)
+        nb = self._native_badge_rect(compact, line_h)
         is_native = bool(plant.get("native_to_alberta"))
         bg_col = QColor(self.AB_NATIVE_BG if is_native else self.AB_OTHER_BG)
         fg_col = QColor(self.AB_NATIVE_FG if is_native else self.AB_OTHER_FG)
@@ -482,7 +559,8 @@ class PlantRowDelegate(QStyledItemDelegate):
         painter.drawText(nb, int(Qt.AlignmentFlag.AlignCenter),
                          "AB" if is_native else "–")
 
-        # Expand chevron.
+        # Expand chevron — centred to the full compact strip so it
+        # stays vertically aligned with the dot.
         chev = self._expand_btn_rect(compact)
         painter.setPen(QColor("#a5d6a7") if expanded else QColor("#78909c"))
         painter.setFont(self._small_font)
@@ -492,7 +570,7 @@ class PlantRowDelegate(QStyledItemDelegate):
         # ── Expanded detail block ─────────────────────────────────
         if expanded:
             detail = QRect(rect.left() + 8, compact.bottom() + 4,
-                           rect.width() - 16, rect.height() - _ROW_H_COMPACT - 8)
+                           rect.width() - 16, rect.height() - compact_h - 8)
             painter.setPen(QColor("#90a4ae"))
             painter.setFont(self._small_font)
             fm_s = QFontMetrics(self._small_font)
@@ -648,7 +726,15 @@ class PlantRowDelegate(QStyledItemDelegate):
         # the full detail block (data rows + colour-coded month strip
         # + notes) without having to scroll inside the list manually.
         if event.type() == QEvent.Type.MouseButtonRelease:
-            chev = self._expand_btn_rect(option.rect)
+            # Constrain the chevron hit area to the compact strip — when
+            # the row is expanded, option.rect spans the full row height
+            # and a naive click test would treat the whole right column
+            # of the detail block as a chevron hit.
+            plant = index.data(_PLANT_OBJ_ROLE) or {}
+            compact_h = self._compact_height_for(plant, option.rect.width())
+            compact = QRect(option.rect.left(), option.rect.top(),
+                             option.rect.width(), compact_h)
+            chev = self._expand_btn_rect(compact)
             if chev.contains(event.pos()) and isinstance(model, PlantListModel):
                 was_expanded = bool(index.data(_PLANT_EXPANDED_ROLE))
                 model.toggle_expanded(index.row())
