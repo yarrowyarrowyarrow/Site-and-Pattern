@@ -406,19 +406,27 @@ class PlantRowDelegate(QStyledItemDelegate):
 
         painter.setFont(self._bold_font)
         fm_b = QFontMetrics(self._bold_font)
-        common_natural = fm_b.horizontalAdvance(common_text)
+        # Use the *bigger* of horizontalAdvance and boundingRect so we
+        # cover the right side bearing — on Windows DPI scaling, bold
+        # glyphs can ink several px past the cursor advance, and Qt
+        # clips drawText to the rect's right edge. Add 12 px on top
+        # for an extra safety margin (visible ink width is monotone in
+        # font weight / DPI, so this can't shrink things visibly).
+        common_advance = fm_b.horizontalAdvance(common_text)
+        common_bb      = fm_b.boundingRect(common_text).width()
+        common_render  = max(common_advance, common_bb) + 12
 
-        # Fit common name with all badges if possible, otherwise drop
-        # the zone badge so common name keeps showing in full. Add
-        # ~4 px slack so sub-pixel rounding never clips a glyph.
         text_max_full = max(40, compact.right() - x - right_pad_full)
         text_max_lean = max(40, compact.right() - x - right_pad_lean)
-        show_zone = (common_natural + 4) <= text_max_full
+        # Choose the layout: full (with zone badge) only if common name
+        # comfortably fits; otherwise lean (no zone) to give common name
+        # the room. Zones are still listed in the expanded detail block.
+        show_zone = common_render <= text_max_full
         right_pad = right_pad_full if show_zone else right_pad_lean
         text_max = text_max_full if show_zone else text_max_lean
 
-        if common_natural <= text_max:
-            common_w = common_natural + 4   # slack for any rounding
+        if common_render <= text_max:
+            common_w = common_render
             display_common = common_text
         else:
             # Genuinely narrower than the common name even with the
