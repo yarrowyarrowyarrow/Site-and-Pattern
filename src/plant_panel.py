@@ -352,7 +352,7 @@ class PlantRowDelegate(QStyledItemDelegate):
             cal = model.calendar_for(plant.get("id"))
             if cal:
                 cal_h = _CAL_BLOCK_H
-        detail_h = 6 * fm.lineSpacing() + cal_h + notes_h + 8
+        detail_h = 7 * fm.lineSpacing() + cal_h + notes_h + 8
         return QSize(0, _ROW_H_COMPACT + detail_h)
 
     # Painting -----------------------------------------------------------
@@ -388,67 +388,77 @@ class PlantRowDelegate(QStyledItemDelegate):
         painter.drawEllipse(x, y_mid - 5, 10, 10)
         x += self.DOT_W
 
-        # Right-hand reserved area for badges + chevron.
-        right_pad = self.EXPAND_BTN_W + _NATIVE_BADGE_W + _ZONE_BADGE_W + 16
-        text_max = max(40, compact.right() - x - right_pad)
+        # Right-hand reserved areas. The zone badge (~56 px) is the
+        # heaviest decoration on the row — when the panel is narrow we
+        # collapse it so the common name always has enough room. Zone
+        # info is still discoverable in the expanded detail block.
+        right_pad_full = self.EXPAND_BTN_W + _NATIVE_BADGE_W + _ZONE_BADGE_W + 16
+        right_pad_lean = self.EXPAND_BTN_W + _NATIVE_BADGE_W + 8
 
         # Common + scientific name on a single line. The common name
-        # always gets enough room to render in full; the scientific
-        # name shrinks (and ellipsises) to fit whatever's left over,
-        # because the user can always reach the full sci name from
-        # the expanded detail block.
+        # always wins the budget; the scientific name shrinks (and
+        # ellipsises) to fit whatever's left, because the expanded
+        # detail block always shows the full scientific name anyway.
         common = plant.get("common_name", "")
         sci    = plant.get("scientific_name") or ""
         count_badge = f"  [{placed}×]" if placed > 0 else ""
         common_text = common + count_badge
 
-        painter.setPen(QColor("#e8f5e9") if selected else QColor("#c8e6c9"))
         painter.setFont(self._bold_font)
         fm_b = QFontMetrics(self._bold_font)
         common_natural = fm_b.horizontalAdvance(common_text)
 
+        # Fit common name with all badges if possible, otherwise drop
+        # the zone badge so common name keeps showing in full. Add
+        # ~4 px slack so sub-pixel rounding never clips a glyph.
+        text_max_full = max(40, compact.right() - x - right_pad_full)
+        text_max_lean = max(40, compact.right() - x - right_pad_lean)
+        show_zone = (common_natural + 4) <= text_max_full
+        right_pad = right_pad_full if show_zone else right_pad_lean
+        text_max = text_max_full if show_zone else text_max_lean
+
         if common_natural <= text_max:
-            common_w = common_natural
-            painter.drawText(
-                QRect(x, compact.top(), common_w, _ROW_H_COMPACT),
-                int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
-                common_text,
-            )
-            x_after_common = x + common_w + 6
-            sci_w = max(0, compact.right() - right_pad - x_after_common)
-            if sci and sci_w > 12:
-                painter.setFont(self._sci_font)
-                painter.setPen(QColor("#90a4ae"))
-                fm_s = QFontMetrics(self._sci_font)
-                sci_text = fm_s.elidedText(sci, Qt.TextElideMode.ElideRight, sci_w)
-                painter.drawText(
-                    QRect(x_after_common, compact.top(), sci_w, _ROW_H_COMPACT),
-                    int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
-                    sci_text,
-                )
+            common_w = common_natural + 4   # slack for any rounding
+            display_common = common_text
         else:
-            # Pathologically narrow panel — common name doesn't fit.
-            # Elide it, drop the scientific name; the chevron still
-            # opens the expanded detail block which shows everything.
+            # Genuinely narrower than the common name even with the
+            # zone badge dropped — last-resort elide.
             common_w = text_max
-            elided = fm_b.elidedText(common_text, Qt.TextElideMode.ElideRight,
-                                      common_w)
-            painter.drawText(
-                QRect(x, compact.top(), common_w, _ROW_H_COMPACT),
-                int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
-                elided,
+            display_common = fm_b.elidedText(
+                common_text, Qt.TextElideMode.ElideRight, common_w,
             )
 
-        # Zone badge.
-        zr = self._zone_badge_rect(compact)
-        zone_text = _zone_badge_text(plant)
-        if zone_text:
-            painter.setBrush(QColor("#37474f"))
-            painter.setPen(QPen(QColor("#546e7a"), 1))
-            painter.drawRoundedRect(zr, 3, 3)
-            painter.setPen(QColor("#cfd8dc"))
-            painter.setFont(self._small_font)
-            painter.drawText(zr, int(Qt.AlignmentFlag.AlignCenter), zone_text)
+        painter.setPen(QColor("#e8f5e9") if selected else QColor("#c8e6c9"))
+        painter.drawText(
+            QRect(x, compact.top(), common_w, _ROW_H_COMPACT),
+            int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
+            display_common,
+        )
+        x_after_common = x + common_w + 6
+
+        sci_w = max(0, compact.right() - right_pad - x_after_common)
+        if sci and sci_w > 12:
+            painter.setFont(self._sci_font)
+            painter.setPen(QColor("#90a4ae"))
+            fm_s = QFontMetrics(self._sci_font)
+            sci_text = fm_s.elidedText(sci, Qt.TextElideMode.ElideRight, sci_w)
+            painter.drawText(
+                QRect(x_after_common, compact.top(), sci_w, _ROW_H_COMPACT),
+                int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
+                sci_text,
+            )
+
+        # Zone badge — only when there was room for the common name.
+        if show_zone:
+            zr = self._zone_badge_rect(compact)
+            zone_text = _zone_badge_text(plant)
+            if zone_text:
+                painter.setBrush(QColor("#37474f"))
+                painter.setPen(QPen(QColor("#546e7a"), 1))
+                painter.drawRoundedRect(zr, 3, 3)
+                painter.setPen(QColor("#cfd8dc"))
+                painter.setFont(self._small_font)
+                painter.drawText(zr, int(Qt.AlignmentFlag.AlignCenter), zone_text)
 
         # Native-AB badge — green leaf glyph if native, neutral hatched dot otherwise.
         nb = self._native_badge_rect(compact)
@@ -503,12 +513,22 @@ class PlantRowDelegate(QStyledItemDelegate):
             uses = ", ".join(_USE_LABELS.get(u.strip(), u.strip())
                              for u in uses_raw.split(",") if u.strip()) or "—"
 
-            _row("Sun · Water:", f"{sun}  ·  {water}", 0)
-            _row("Spacing:",     (f"{spacing} m" if spacing else "—"), line_h)
-            _row("Height:",      (f"{height} m" if height else "—"), 2 * line_h)
-            _row("Bloom · Fruit:", f"{bloom}  ·  {fruit}", 3 * line_h)
-            _row("Edible:",      edible, 4 * line_h)
-            _row("Uses:",        uses, 5 * line_h)
+            zmin = plant.get("hardiness_zone_min")
+            zmax = plant.get("hardiness_zone_max")
+            if zmin and zmax:
+                zones_str = f"Z{zmin}–{zmax}"
+            elif zmin:
+                zones_str = f"Z{zmin}+"
+            else:
+                zones_str = "—"
+
+            _row("Zones:",         zones_str, 0)
+            _row("Sun · Water:",   f"{sun}  ·  {water}", line_h)
+            _row("Spacing:",       (f"{spacing} m" if spacing else "—"), 2 * line_h)
+            _row("Height:",        (f"{height} m" if height else "—"), 3 * line_h)
+            _row("Bloom · Fruit:", f"{bloom}  ·  {fruit}", 4 * line_h)
+            _row("Edible:",        edible, 5 * line_h)
+            _row("Uses:",          uses, 6 * line_h)
 
             # ── Colour-coded planting calendar strip ──────────────
             # 12 cells across the detail width, one per month, coloured by
@@ -516,16 +536,16 @@ class PlantRowDelegate(QStyledItemDelegate):
             # the at-a-glance "what is this plant doing in July?" visual
             # that lived in the legacy detail panel before the compact
             # list landed.
-            cal_block_top = detail.top() + 6 * line_h
+            cal_block_top = detail.top() + 7 * line_h
             model = index.model()
             cal: list[dict] = []
             if isinstance(model, PlantListModel):
                 cal = model.calendar_for(plant.get("id"))
             if cal:
                 self._paint_calendar(painter, detail, cal_block_top, cal)
-                notes_top_offset = 6 * line_h + _CAL_BLOCK_H
+                notes_top_offset = 7 * line_h + _CAL_BLOCK_H
             else:
-                notes_top_offset = 6 * line_h + 4
+                notes_top_offset = 7 * line_h + 4
 
             notes = plant.get("notes") or ""
             if notes:
