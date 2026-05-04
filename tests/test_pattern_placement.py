@@ -500,5 +500,19 @@ def test_marquee_sectors_and_sunpath():
 # ─────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, "-v"])
+    import sys
+    tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
+    passed = failed = 0
+    for fn in tests:
+        try:
+            fn()
+            print(f"  PASS  {fn.__name__}")
+            passed += 1
+        except AssertionError as e:
+            print(f"  FAIL  {fn.__name__}: {e}")
+            failed += 1
+        except Exception as e:
+            print(f"  ERROR {fn.__name__}: {e}")
+            failed += 1
+    print(f"\n{passed} passed, {failed} failed of {passed + failed}.")
+    sys.exit(0 if failed == 0 else 1)

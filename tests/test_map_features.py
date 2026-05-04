@@ -313,5 +313,28 @@ def test_sector_resize_scales_radius():
 # ─────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, "-v"])
+    import inspect
+    import pathlib
+    import tempfile
+
+    tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
+    passed = failed = 0
+    for fn in tests:
+        try:
+            params = inspect.signature(fn).parameters
+            if "tmp_path" in params:
+                # Mimic pytest's tmp_path fixture: a fresh pathlib.Path per test.
+                with tempfile.TemporaryDirectory() as td:
+                    fn(pathlib.Path(td))
+            else:
+                fn()
+            print(f"  PASS  {fn.__name__}")
+            passed += 1
+        except AssertionError as e:
+            print(f"  FAIL  {fn.__name__}: {e}")
+            failed += 1
+        except Exception as e:
+            print(f"  ERROR {fn.__name__}: {e}")
+            failed += 1
+    print(f"\n{passed} passed, {failed} failed of {passed + failed}.")
+    sys.exit(0 if failed == 0 else 1)

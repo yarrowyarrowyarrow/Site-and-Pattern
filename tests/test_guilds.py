@@ -20,6 +20,8 @@ import sys
 import tempfile
 import unittest
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 # ---------------------------------------------------------------------------
 # Redirect the DB to a temp directory so tests never touch the real user DB
 # ---------------------------------------------------------------------------
