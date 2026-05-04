@@ -711,8 +711,20 @@
       map.on('mousemove', onMapMouseMove);
       map.on('dblclick', onMapDblClick);
 
+      // Free-draw rectangle for terrain bbox selection
+      map.on('mousedown', _terrainRectOnMouseDown);
+      map.on('mousemove', _terrainRectOnMouseMove);
+      map.on('mouseup',   _terrainRectOnMouseUp);
+
       // Right-click cancels anchor-placement modes; suppress native browser menu
       map.on('contextmenu', function(e) {
+        if (currentMode === 'terrain_rect') {
+          L.DomEvent.stop(e);
+          setMode('none');
+          map.dragging.enable();
+          if (bridge) bridge.onTerrainBboxCancelled();
+          return;
+        }
         if (currentMode === 'sun_anchor' || currentMode === 'sector_anchor') {
           L.DomEvent.stop(e);
           setMode('none');
@@ -2861,6 +2873,14 @@
             weight: 2, interactive: false, dashArray: '4 3'
           }).addTo(map);
           break;
+        case 'terrain_rect':
+          map.getContainer().style.cursor = 'crosshair';
+          _terrainRectStart = null;
+          if (_terrainRectPreview) {
+            map.removeLayer(_terrainRectPreview);
+            _terrainRectPreview = null;
+          }
+          break;
         default:
           map.getContainer().style.cursor = '';
           if (polygonPolyline) { map.removeLayer(polygonPolyline); polygonPolyline = null; }
@@ -2869,6 +2889,8 @@
           if (shapePreview)    { map.removeLayer(shapePreview);    shapePreview    = null; }
           if (contourPreview)  { map.removeLayer(contourPreview);  contourPreview  = null; }
           if (_anchorPreviewMarker) { map.removeLayer(_anchorPreviewMarker); _anchorPreviewMarker = null; }
+          if (_terrainRectPreview) { map.removeLayer(_terrainRectPreview); _terrainRectPreview = null; }
+          _terrainRectStart = null;
           drawingPolygon = false;
           polygonPoints  = [];
           hedgerowPoints = [];
@@ -2944,6 +2966,7 @@
       clearSunPath();
       clearSectors();
       clearContours();
+      clearAutoTerrain();
       clearWindOverlay();
       clearSitePin(false);
       drawnItems.clearLayers();
@@ -3572,6 +3595,171 @@
     function clearContours() {
       contourLayers.forEach(function(g) { map.removeLayer(g); });
       contourLayers = [];
+    }
+
+    // ── A3b: Auto-generated terrain (slope contours + ramp overlay) ─────────
+    var autoContourLayer = null;
+    var slopeOverlayLayer = null;
+    var _terrainRectStart = null;
+    var _terrainRectPreview = null;
+
+    function emitTerrainBboxFromViewport() {
+      var b = map.getBounds();
+      if (bridge) bridge.onTerrainBboxReady(
+        b.getSouth(), b.getNorth(), b.getWest(), b.getEast()
+      );
+    }
+
+    function emitTerrainBboxFromBoundary() {
+      // Use the first boundary in `boundaries` (matches current single-property
+      // workflow). If multiple boundaries exist, the user can switch to
+      // free-draw or viewport.
+      if (!boundaries || boundaries.length === 0) {
+        if (bridge) bridge.onTerrainBboxCancelled();
+        return;
+      }
+      var b = boundaries[0].layer;
+      if (!b || !b.getBounds) {
+        if (bridge) bridge.onTerrainBboxCancelled();
+        return;
+      }
+      var bnds = b.getBounds();
+      if (bridge) bridge.onTerrainBboxReady(
+        bnds.getSouth(), bnds.getNorth(), bnds.getWest(), bnds.getEast()
+      );
+    }
+
+    function _terrainRectOnMouseDown(e) {
+      if (currentMode !== 'terrain_rect') return;
+      L.DomEvent.stop(e);
+      _terrainRectStart = e.latlng;
+      map.dragging.disable();
+    }
+
+    function _terrainRectOnMouseMove(e) {
+      if (currentMode !== 'terrain_rect' || !_terrainRectStart) return;
+      var bnds = L.latLngBounds(_terrainRectStart, e.latlng);
+      if (_terrainRectPreview) {
+        _terrainRectPreview.setBounds(bnds);
+      } else {
+        _terrainRectPreview = L.rectangle(bnds, {
+          color: '#2e7d32', weight: 2, dashArray: '6 4',
+          fillOpacity: 0.08, interactive: false
+        }).addTo(map);
+      }
+    }
+
+    function _terrainRectOnMouseUp(e) {
+      if (currentMode !== 'terrain_rect' || !_terrainRectStart) return;
+      L.DomEvent.stop(e);
+      var bnds = L.latLngBounds(_terrainRectStart, e.latlng);
+      _terrainRectStart = null;
+      map.dragging.enable();
+      if (_terrainRectPreview) {
+        map.removeLayer(_terrainRectPreview);
+        _terrainRectPreview = null;
+      }
+      setMode('none');
+      // A degenerate (single-pixel) rectangle is treated as cancelled.
+      var w = Math.abs(bnds.getEast()  - bnds.getWest());
+      var h = Math.abs(bnds.getNorth() - bnds.getSouth());
+      if (w < 1e-6 || h < 1e-6) {
+        if (bridge) bridge.onTerrainBboxCancelled();
+        return;
+      }
+      if (bridge) bridge.onTerrainBboxReady(
+        bnds.getSouth(), bnds.getNorth(), bnds.getWest(), bnds.getEast()
+      );
+    }
+
+    function drawAutoContours(payload) {
+      // payload: {contours: [{elevation_m, segments: [[[lat,lng],...], ...]}],
+      //           color: hex, show_labels: bool}
+      if (autoContourLayer) {
+        map.removeLayer(autoContourLayer);
+        autoContourLayer = null;
+      }
+      if (!payload || !payload.contours || payload.contours.length === 0) {
+        return;
+      }
+      autoContourLayer = L.layerGroup().addTo(map);
+
+      var color = payload.color || '#5d4037';
+      var showLabels = payload.show_labels !== false;
+      // Find the elevation range so we can pick "index" contours (every 5th).
+      var elevs = payload.contours.map(function(c) { return c.elevation_m; });
+      var minE = Math.min.apply(null, elevs);
+      var maxE = Math.max.apply(null, elevs);
+
+      payload.contours.forEach(function(c, i) {
+        var elev = c.elevation_m;
+        // Index contours every 5th; emphasised slightly.
+        var isIndex = (Math.round((elev - minE) * 2) % 10 === 0);
+        var weight  = isIndex ? 2.0 : 1.2;
+        var opacity = isIndex ? 0.85 : 0.55;
+
+        c.segments.forEach(function(seg) {
+          var line = L.polyline(seg, {
+            color: color, weight: weight, opacity: opacity,
+            interactive: false
+          }).addTo(autoContourLayer);
+        });
+
+        // Label: pick the longest segment's mid-point for index contours only.
+        if (showLabels && isIndex && c.segments.length > 0) {
+          var longest = c.segments[0];
+          var longestLen = longest.length;
+          c.segments.forEach(function(s) {
+            if (s.length > longestLen) { longest = s; longestLen = s.length; }
+          });
+          var mid = longest[Math.floor(longest.length / 2)];
+          var labelIcon = L.divIcon({
+            className: 'structure-label',
+            html: '<span style="font-size:9px;color:' + color +
+                  ';background:rgba(255,255,255,0.55);padding:0 3px;border-radius:2px">' +
+                  elev.toFixed(1) + 'm</span>',
+            iconSize: [0, 0],
+            iconAnchor: [0, 6]
+          });
+          L.marker(mid, { icon: labelIcon, interactive: false }).addTo(autoContourLayer);
+        }
+      });
+    }
+
+    function drawSlopeOverlay(payload) {
+      // payload: {image: data-url, bbox: {south, north, west, east}, opacity: 0..1}
+      if (slopeOverlayLayer) {
+        map.removeLayer(slopeOverlayLayer);
+        slopeOverlayLayer = null;
+      }
+      if (!payload || !payload.image || !payload.bbox) return;
+      var b = payload.bbox;
+      var bnds = L.latLngBounds(
+        [b.south, b.west],
+        [b.north, b.east]
+      );
+      slopeOverlayLayer = L.imageOverlay(payload.image, bnds, {
+        opacity: typeof payload.opacity === 'number' ? payload.opacity : 0.6,
+        interactive: false
+      }).addTo(map);
+      // Place beneath vector layers but above tiles. Leaflet defaults are fine.
+    }
+
+    function setSlopeOverlayOpacity(opacity) {
+      if (slopeOverlayLayer && slopeOverlayLayer.setOpacity) {
+        slopeOverlayLayer.setOpacity(opacity);
+      }
+    }
+
+    function clearAutoTerrain() {
+      if (autoContourLayer) {
+        map.removeLayer(autoContourLayer);
+        autoContourLayer = null;
+      }
+      if (slopeOverlayLayer) {
+        map.removeLayer(slopeOverlayLayer);
+        slopeOverlayLayer = null;
+      }
     }
 
     // ── A4: Wind overlay ────────────────────────────────────────────────────

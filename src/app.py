@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
     QStatusBar, QLabel, QMessageBox, QFileDialog, QSizePolicy,
     QInputDialog, QTabWidget,
 )
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QThread
 from PyQt6.QtGui import QKeySequence, QShortcut
 
 from src.map_widget       import MapWidget
@@ -300,6 +300,11 @@ class MainWindow(QMainWindow):
         self.analysis_panel.sector_cleared.connect(self.map_widget.clear_sectors)
         self.analysis_panel.contour_requested.connect(self._on_contour_requested)
         self.analysis_panel.contour_cleared.connect(self._on_contour_cleared)
+        self.analysis_panel.auto_terrain_requested.connect(self._on_auto_terrain_requested)
+        self.analysis_panel.auto_terrain_cleared.connect(self._on_auto_terrain_cleared)
+        self.analysis_panel.auto_terrain_opacity.connect(self.map_widget.set_slope_overlay_opacity)
+        b.terrain_bbox_ready.connect(self._on_terrain_bbox_ready)
+        b.terrain_bbox_cancelled.connect(self._on_terrain_bbox_cancelled)
         self.analysis_panel.wind_requested.connect(self._on_wind_requested)
         self.analysis_panel.wind_cleared.connect(self.map_widget.clear_wind_overlay)
         self.analysis_panel.season_changed.connect(self._on_season_changed)
@@ -754,6 +759,173 @@ class MainWindow(QMainWindow):
             if f.get("properties", {}).get("element_type") != "contour_line"
         ]
         self._mark_modified()
+
+    # ── Auto-generated terrain (slope contours + ramp overlay) ────────────────
+
+    def _on_auto_terrain_requested(self, config: dict):
+        """Stash config, then ask the JS map for the bbox to compute over."""
+        self._pending_terrain_config = dict(config)
+        area = config.get("area_source", "viewport")
+        if area == "viewport":
+            self.map_widget.request_terrain_viewport()
+        elif area == "boundary":
+            self.map_widget.request_terrain_boundary_bbox()
+        elif area == "draw":
+            self.map_widget.enter_terrain_draw_mode()
+            self._set_mode_label(
+                "Drag a rectangle on the map to set the slope-analysis area"
+            )
+
+    def _on_terrain_bbox_cancelled(self):
+        self._pending_terrain_config = None
+        self._set_mode_label("Ready")
+        self.analysis_panel.set_auto_terrain_status("Cancelled.")
+
+    def _on_terrain_bbox_ready(self, bbox: dict):
+        """Spin up a TerrainWorker on a QThread for the chosen bbox."""
+        cfg = getattr(self, "_pending_terrain_config", None)
+        if not cfg:
+            return
+        self._pending_terrain_config = None
+        # If a previous job is still running, ignore the new request rather
+        # than fan out concurrent network calls.
+        if getattr(self, "_terrain_thread", None) and self._terrain_thread.isRunning():
+            self.analysis_panel.set_auto_terrain_status(
+                "A terrain job is already running — please wait."
+            )
+            return
+
+        from src.terrain import TerrainWorker
+        options = {
+            "interval_m":         cfg.get("interval_m", 0.5),
+            "resolution_m":       cfg.get("resolution_m", 10.0),
+            "want_contours":      cfg.get("want_contours", True),
+            "want_slope_overlay": cfg.get("want_slope_overlay", True),
+        }
+        # Stash the rendering prefs for use when the worker emits ready.
+        self._terrain_render_prefs = {
+            "color":       cfg.get("color", "#5d4037"),
+            "opacity":     cfg.get("opacity", 0.6),
+            "show_labels": cfg.get("show_labels", True),
+        }
+
+        self._terrain_thread = QThread(self)
+        self._terrain_worker = TerrainWorker(bbox, options)
+        self._terrain_worker.moveToThread(self._terrain_thread)
+        self._terrain_thread.started.connect(self._terrain_worker.run)
+        self._terrain_worker.ready.connect(self._on_terrain_ready)
+        self._terrain_worker.failed.connect(self._on_terrain_failed)
+        self._terrain_worker.finished.connect(self._terrain_thread.quit)
+        self._terrain_worker.finished.connect(self._terrain_worker.deleteLater)
+        self._terrain_thread.finished.connect(self._terrain_thread.deleteLater)
+        self._terrain_thread.start()
+
+        self._set_mode_label("Generating slope contours…")
+        self.analysis_panel.set_auto_terrain_status("Fetching elevation data…")
+
+    def _on_terrain_ready(self, result: dict):
+        """Render the worker's output and persist features in the project."""
+        prefs = getattr(self, "_terrain_render_prefs", {}) or {}
+        contours = result.get("contours") or []
+        png_bytes = result.get("slope_png_bytes")
+        slope_bbox = result.get("slope_bbox")
+
+        # Strip stale auto features before adding new ones.
+        self._project["features"] = [
+            f for f in self._project["features"]
+            if f.get("properties", {}).get("element_type") not in
+                ("auto_contour", "slope_overlay")
+        ]
+        self.map_widget.clear_auto_terrain()
+
+        # Render contour lines.
+        if contours:
+            self.map_widget.draw_auto_contours(
+                contours,
+                color=prefs.get("color", "#5d4037"),
+                show_labels=prefs.get("show_labels", True),
+            )
+            for c in contours:
+                # Each contour may have multiple disjoint segments;
+                # stored as a MultiLineString feature for round-tripping.
+                lines = []
+                for seg in c.get("segments", []):
+                    if len(seg) >= 2:
+                        # GeoJSON wants [lng, lat]
+                        lines.append([[pt[1], pt[0]] for pt in seg])
+                if not lines:
+                    continue
+                self._project["features"].append({
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "MultiLineString",
+                        "coordinates": lines,
+                    },
+                    "properties": {
+                        "element_type": "auto_contour",
+                        "elevation_m":  c["elevation_m"],
+                        "color":        prefs.get("color", "#5d4037"),
+                        "source":       result.get("source", ""),
+                    },
+                })
+
+        # Render slope ramp overlay.
+        if png_bytes and slope_bbox:
+            import base64
+            data_url = "data:image/png;base64," + base64.b64encode(png_bytes).decode("ascii")
+            self.map_widget.draw_slope_overlay(
+                data_url, slope_bbox,
+                opacity=prefs.get("opacity", 0.6),
+            )
+            # Persist a marker feature so projects re-open with overlay
+            # information (the PNG itself is regenerated on demand).
+            ring = [
+                [slope_bbox["west"], slope_bbox["south"]],
+                [slope_bbox["east"], slope_bbox["south"]],
+                [slope_bbox["east"], slope_bbox["north"]],
+                [slope_bbox["west"], slope_bbox["north"]],
+                [slope_bbox["west"], slope_bbox["south"]],
+            ]
+            self._project["features"].append({
+                "type": "Feature",
+                "geometry": {"type": "Polygon", "coordinates": [ring]},
+                "properties": {
+                    "element_type": "slope_overlay",
+                    "bbox":         slope_bbox,
+                    "stats":        result.get("stats", {}),
+                    "interval_m":   result.get("interval_m"),
+                    "resolution_m": result.get("resolution_m"),
+                    "source":       result.get("source", ""),
+                },
+            })
+
+        self._mark_modified()
+        self._set_mode_label("Ready")
+
+        stats = result.get("stats", {})
+        bits = [f"Source: {result.get('source', '')}"]
+        if "max_slope_pct" in stats:
+            bits.append(
+                f"Max slope: {stats['max_slope_pct']:.1f}%, "
+                f"mean: {stats.get('mean_slope_pct', 0):.1f}%"
+            )
+        bits.append(f"{len(contours)} contour level(s)")
+        self.analysis_panel.set_auto_terrain_status(" — ".join(bits))
+
+    def _on_terrain_failed(self, message: str):
+        self._set_mode_label("Ready")
+        self.analysis_panel.set_auto_terrain_status(f"Failed: {message}")
+        QMessageBox.warning(self, "Terrain Generation", message)
+
+    def _on_auto_terrain_cleared(self):
+        self.map_widget.clear_auto_terrain()
+        self._project["features"] = [
+            f for f in self._project["features"]
+            if f.get("properties", {}).get("element_type") not in
+                ("auto_contour", "slope_overlay")
+        ]
+        self._mark_modified()
+        self.analysis_panel.set_auto_terrain_status("")
 
     def _on_wind_requested(self, config: dict):
         """A4: Draw wind overlay with shelter zones."""
@@ -1444,6 +1616,23 @@ class MainWindow(QMainWindow):
                 f"  finishContour();"
                 f"  contourPoints = [];"
                 f"}})()"
+            )
+
+        # Auto-generated contours (MultiLineString features) are restored
+        # directly as a single layer group. Slope ramp PNG isn't persisted —
+        # the user re-runs Generate to recompute it on demand.
+        auto_contours = data.get("auto_contours") or []
+        if auto_contours:
+            color = auto_contours[0].get("color", "#5d4037")
+            self.map_widget.draw_auto_contours(
+                [{"elevation_m": c["elevation_m"], "segments": c["segments"]}
+                 for c in auto_contours],
+                color=color,
+                show_labels=True,
+            )
+        if data.get("slope_overlay"):
+            self.analysis_panel.set_auto_terrain_status(
+                "Slope ramp not loaded from file — click Generate to recompute."
             )
 
         # Restore property pin + cached site data, if any.

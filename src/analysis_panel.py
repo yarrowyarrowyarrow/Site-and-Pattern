@@ -37,6 +37,14 @@ class AnalysisPanel(QWidget):
     contour_requested = pyqtSignal(dict)    # {interval_m, color, show_labels}
     contour_cleared = pyqtSignal()
 
+    # A3b: Auto-generated slope contours / ramp overlay
+    auto_terrain_requested = pyqtSignal(dict)
+    # {area_source: "viewport"|"draw"|"boundary",
+    #  interval_m, resolution_m, want_contours, want_slope_overlay,
+    #  color, opacity, show_labels}
+    auto_terrain_cleared = pyqtSignal()
+    auto_terrain_opacity = pyqtSignal(float)   # 0..1, live slider
+
     # A4: Wind/windbreak
     wind_requested = pyqtSignal(dict)       # {direction, speed_label, show_shelter}
     wind_cleared = pyqtSignal()
@@ -393,8 +401,138 @@ class AnalysisPanel(QWidget):
         btn_row.addWidget(btn_clear)
         layout.addLayout(btn_row)
 
+        # ── Auto-generate from elevation data ──────────────────────────────
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setStyleSheet("color: #2e4a2e;")
+        layout.addWidget(sep)
+
+        auto_group = QGroupBox("Auto-Generate from Elevation Data")
+        auto_group.setStyleSheet(
+            "QGroupBox { border: 1px solid #2e4a2e; border-radius: 4px; "
+            "margin-top: 8px; padding-top: 12px; }"
+            "QGroupBox::title { color: #a5d6a7; }"
+        )
+        ag_layout = QVBoxLayout(auto_group)
+        ag_layout.setSpacing(6)
+
+        ag_info = QLabel(
+            "Pulls elevation from City of Edmonton (0.5 m LiDAR) when in\n"
+            "Edmonton, otherwise Copernicus DEM (~30 m). Renders contour\n"
+            "lines and an optional slope colour-ramp."
+        )
+        ag_info.setWordWrap(True)
+        ag_info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        ag_layout.addWidget(ag_info)
+
+        ag_form = QFormLayout()
+        ag_form.setContentsMargins(0, 0, 0, 0)
+
+        self._auto_area_source = QComboBox()
+        self._auto_area_source.addItems([
+            "Current map view",
+            "Drag rectangle on map…",
+            "Use property boundary",
+        ])
+        self._auto_area_source.setToolTip(
+            "Where to compute slope. 'Drag rectangle' lets you pick a "
+            "smaller area than the current view."
+        )
+        ag_form.addRow("Area:", self._auto_area_source)
+
+        self._auto_interval = QDoubleSpinBox()
+        self._auto_interval.setRange(0.1, 5.0)
+        self._auto_interval.setSingleStep(0.5)
+        self._auto_interval.setValue(0.5)
+        self._auto_interval.setSuffix(" m")
+        self._auto_interval.setToolTip("Vertical spacing between contour lines.")
+        ag_form.addRow("Interval:", self._auto_interval)
+
+        self._auto_resolution = QDoubleSpinBox()
+        self._auto_resolution.setRange(5.0, 50.0)
+        self._auto_resolution.setSingleStep(5.0)
+        self._auto_resolution.setValue(10.0)
+        self._auto_resolution.setSuffix(" m")
+        self._auto_resolution.setToolTip(
+            "Slope-grid sample spacing. Smaller = more detail but more "
+            "API calls. 10 m suits an urban property."
+        )
+        ag_form.addRow("Slope grid:", self._auto_resolution)
+
+        self._auto_want_contours = QCheckBox("Show contour lines")
+        self._auto_want_contours.setChecked(True)
+        ag_form.addRow(self._auto_want_contours)
+
+        self._auto_want_slope = QCheckBox("Show slope colour ramp")
+        self._auto_want_slope.setChecked(True)
+        ag_form.addRow(self._auto_want_slope)
+
+        self._auto_show_labels = QCheckBox("Label every 5th contour")
+        self._auto_show_labels.setChecked(True)
+        ag_form.addRow(self._auto_show_labels)
+
+        ag_layout.addLayout(ag_form)
+
+        opa_row = QHBoxLayout()
+        opa_row.addWidget(QLabel("Ramp opacity:"))
+        self._auto_opacity = QSlider(Qt.Orientation.Horizontal)
+        self._auto_opacity.setRange(0, 100)
+        self._auto_opacity.setValue(60)
+        self._auto_opacity.setToolTip("Transparency of the slope colour ramp.")
+        self._auto_opacity.valueChanged.connect(
+            lambda v: self.auto_terrain_opacity.emit(v / 100.0)
+        )
+        opa_row.addWidget(self._auto_opacity)
+        ag_layout.addLayout(opa_row)
+
+        self._auto_status = QLabel("")
+        self._auto_status.setWordWrap(True)
+        self._auto_status.setStyleSheet("color: #ffcc80; font-size: 11px; padding: 2px;")
+        ag_layout.addWidget(self._auto_status)
+
+        ag_btn_row = QHBoxLayout()
+        btn_auto = QPushButton("Generate")
+        btn_auto.setStyleSheet(
+            "QPushButton { background: #2e7d32; color: #e8f5e9; border: 1px solid #388e3c; "
+            "border-radius: 4px; padding: 6px; font-weight: bold; }"
+            "QPushButton:hover { background: #388e3c; }"
+        )
+        btn_auto.clicked.connect(self._on_auto_terrain_generate)
+        ag_btn_row.addWidget(btn_auto)
+
+        btn_auto_clear = QPushButton("Clear")
+        btn_auto_clear.setStyleSheet(
+            "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
+            "border-radius: 4px; padding: 6px; }"
+            "QPushButton:hover { background: #455a64; }"
+        )
+        btn_auto_clear.clicked.connect(self.auto_terrain_cleared.emit)
+        ag_btn_row.addWidget(btn_auto_clear)
+        ag_layout.addLayout(ag_btn_row)
+
+        layout.addWidget(auto_group)
+
         layout.addStretch()
         self._tabs.addTab(tab, "Contours")
+
+    def set_auto_terrain_status(self, text: str):
+        """Called from MainWindow with progress / result info."""
+        self._auto_status.setText(text)
+
+    def _on_auto_terrain_generate(self):
+        idx = self._auto_area_source.currentIndex()
+        area = ("viewport", "draw", "boundary")[idx]
+        self.auto_terrain_requested.emit({
+            "area_source":         area,
+            "interval_m":          self._auto_interval.value(),
+            "resolution_m":        self._auto_resolution.value(),
+            "want_contours":       self._auto_want_contours.isChecked(),
+            "want_slope_overlay":  self._auto_want_slope.isChecked(),
+            "show_labels":         self._auto_show_labels.isChecked(),
+            "color":               self._contour_color,
+            "opacity":             self._auto_opacity.value() / 100.0,
+        })
+        self._auto_status.setText("Fetching elevation data…")
 
     def _pick_contour_color(self):
         color = QColorDialog.getColor(QColor(self._contour_color), self, "Contour Color")

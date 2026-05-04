@@ -73,6 +73,8 @@ def project_to_map_data(project: dict) -> dict:
         "hedgerows": [],
         "shapes": [],
         "contours": [],
+        "auto_contours": [],   # auto-generated contour features (MultiLineString)
+        "slope_overlay": None, # cached slope-overlay metadata (PNG regenerated on demand)
     }
     for feature in project.get("features", []):
         props = feature.get("properties", {})
@@ -157,5 +159,31 @@ def project_to_map_data(project: dict) -> dict:
                 "elevation_m": props.get("elevation_m", 0),
                 "color": props.get("color", "#795548"),
             })
+
+        elif etype == "auto_contour":
+            segments_lnglat = []
+            if geom.get("type") == "MultiLineString":
+                segments_lnglat = geom.get("coordinates") or []
+            elif geom.get("type") == "LineString":
+                segments_lnglat = [geom.get("coordinates") or []]
+            segments = [
+                [[pt[1], pt[0]] for pt in seg]
+                for seg in segments_lnglat if len(seg) >= 2
+            ]
+            if segments:
+                result["auto_contours"].append({
+                    "elevation_m": props.get("elevation_m", 0),
+                    "color":       props.get("color", "#5d4037"),
+                    "segments":    segments,
+                })
+
+        elif etype == "slope_overlay":
+            result["slope_overlay"] = {
+                "bbox":         props.get("bbox") or {},
+                "stats":        props.get("stats") or {},
+                "interval_m":   props.get("interval_m"),
+                "resolution_m": props.get("resolution_m"),
+                "source":       props.get("source", ""),
+            }
 
     return result

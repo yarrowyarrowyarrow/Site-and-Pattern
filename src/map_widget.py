@@ -76,6 +76,12 @@ class MapBridge(QObject):
     contour_complete = pyqtSignal(str, float, str)                  # pointsJson, elevation, color
     contour_removed = pyqtSignal(str, float, str)                   # pointsJson, elevation, color
 
+    # Auto-terrain (slope contour generation) signals
+    # Emitted when JS reports the bbox to compute over (viewport getter or
+    # free-draw rectangle finished). bbox is {south, north, west, east}.
+    terrain_bbox_ready = pyqtSignal(dict)
+    terrain_bbox_cancelled = pyqtSignal()
+
     # Sun path signals
     sun_anchor_placed = pyqtSignal(float, float)   # lat, lng — user clicked anchor
     sun_path_removed  = pyqtSignal()
@@ -264,6 +270,18 @@ class MapBridge(QObject):
     @pyqtSlot(str, float, str)
     def onContourRemoved(self, points_json: str, elevation: float, color: str):
         self.contour_removed.emit(points_json, elevation, color)
+
+    # ── Terrain bbox slots ────────────────────────────────────────────────────
+
+    @pyqtSlot(float, float, float, float)
+    def onTerrainBboxReady(self, south: float, north: float, west: float, east: float):
+        self.terrain_bbox_ready.emit({
+            "south": south, "north": north, "west": west, "east": east,
+        })
+
+    @pyqtSlot()
+    def onTerrainBboxCancelled(self):
+        self.terrain_bbox_cancelled.emit()
 
 
 class MapWidget(QWebEngineView):
@@ -499,6 +517,51 @@ class MapWidget(QWebEngineView):
 
     def clear_contours(self):
         self.run_js("clearContours();")
+
+    # ── Auto terrain (slope contours / ramp) ──────────────────────────────────
+
+    def request_terrain_viewport(self):
+        """Ask JS for the current viewport bbox; signalled back via terrain_bbox_ready."""
+        self.run_js("emitTerrainBboxFromViewport();")
+
+    def request_terrain_boundary_bbox(self):
+        """Ask JS to compute the bbox of the (single) drawn property boundary."""
+        self.run_js("emitTerrainBboxFromBoundary();")
+
+    def enter_terrain_draw_mode(self):
+        """Enter free-draw rectangle mode for picking a terrain bbox."""
+        self.run_js("setMode('terrain_rect');")
+
+    def draw_auto_contours(self, contours: list[dict], color: str, show_labels: bool):
+        """Render generated contour lines on the map. Replaces existing auto layer."""
+        import json as _json
+        payload = {
+            "contours":    contours,
+            "color":       color,
+            "show_labels": bool(show_labels),
+        }
+        self.run_js(
+            f"drawAutoContours(JSON.parse({_json.dumps(_json.dumps(payload))}));"
+        )
+
+    def draw_slope_overlay(self, png_data_url: str, bbox: dict, opacity: float):
+        """Render the slope ramp PNG as an ImageOverlay. Replaces any existing one."""
+        import json as _json
+        payload = {
+            "image":   png_data_url,
+            "bbox":    bbox,
+            "opacity": float(opacity),
+        }
+        self.run_js(
+            f"drawSlopeOverlay(JSON.parse({_json.dumps(_json.dumps(payload))}));"
+        )
+
+    def set_slope_overlay_opacity(self, opacity: float):
+        self.run_js(f"setSlopeOverlayOpacity({float(opacity)});")
+
+    def clear_auto_terrain(self):
+        """Remove auto-generated contours and slope overlay."""
+        self.run_js("clearAutoTerrain();")
 
     def draw_wind_overlay(self, data: dict):
         """Draw wind direction arrows and shelter zones."""
