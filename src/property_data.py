@@ -1,0 +1,360 @@
+"""
+property_data.py — Auto-fill site data for a property pin.
+
+Pulls four datasets for a (lat, lng):
+
+  * rainfall   — Open-Meteo / ERA5-Land daily precipitation, averaged
+                 into annual + monthly means.
+  * soil       — SoilGrids v2.0 (ISRIC): pH, sand/silt/clay %, depth.
+  * elevation  — Copernicus DEM 30m via Open-Meteo's elevation endpoint;
+                 slope (% and degrees) and aspect computed by sampling
+                 four neighbours at a configurable offset.
+  * hardiness  — Local NRCan-derived dataset (data/hardiness_zones.json)
+                 with a fallback that derives a USDA zone from the average
+                 annual extreme minimum temperature in ERA5-Land.
+
+All network calls use stdlib only and degrade gracefully when offline:
+fetchers return ``None`` on any error so the UI can show "unavailable"
+rather than crashing.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import urllib.parse
+import urllib.request
+from datetime import date, timedelta
+from typing import Optional
+
+from src.climate import get_zone
+
+
+_TIMEOUT = 8.0
+_USER_AGENT = "PermaDesign/1.0 (https://github.com/yarrowyarrowyarrow/permadesign)"
+
+
+def _http_get_json(url: str, timeout: float = _TIMEOUT) -> Optional[dict]:
+    """GET a URL, return parsed JSON, or None on any failure."""
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        return None
+
+
+# ── Rainfall ────────────────────────────────────────────────────────────────
+
+def fetch_rainfall(lat: float, lng: float, years: int = 10) -> Optional[dict]:
+    """
+    Annual + monthly mean precipitation (mm) from ERA5-Land via Open-Meteo.
+
+    Returns ``{"annual_mm", "monthly_mm" (12), "years_used", "source"}``
+    or ``None`` if the request fails.
+    """
+    today = date.today()
+    end_d = date(today.year - 1, 12, 31)
+    start = date(end_d.year - years + 1, 1, 1)
+    url = (
+        "https://archive-api.open-meteo.com/v1/archive?"
+        f"latitude={lat:.4f}&longitude={lng:.4f}"
+        f"&start_date={start.isoformat()}&end_date={end_d.isoformat()}"
+        "&daily=precipitation_sum&timezone=UTC"
+    )
+    data = _http_get_json(url)
+    if not data or "daily" not in data:
+        return None
+    return _parse_rainfall(data)
+
+
+def _parse_rainfall(data: dict) -> Optional[dict]:
+    times = data["daily"].get("time") or []
+    sums  = data["daily"].get("precipitation_sum") or []
+    if not times or len(times) != len(sums):
+        return None
+    monthly = [0.0] * 12
+    annuals: dict[int, float] = {}
+    for t, p in zip(times, sums):
+        if p is None:
+            continue
+        year  = int(t[:4])
+        month = int(t[5:7])
+        annuals[year] = annuals.get(year, 0.0) + p
+        monthly[month - 1] += p
+    n_years = len(annuals) or 1
+    monthly_mean = [round(monthly[i] / n_years, 1) for i in range(12)]
+    annual_mean  = round(sum(annuals.values()) / n_years, 1)
+    return {
+        "annual_mm":   annual_mean,
+        "monthly_mm":  monthly_mean,
+        "years_used":  n_years,
+        "source":      "Open-Meteo / ERA5-Land",
+    }
+
+
+# ── Soil ────────────────────────────────────────────────────────────────────
+
+def fetch_soil(lat: float, lng: float) -> Optional[dict]:
+    """
+    Soil pH, sand/silt/clay %, and reported depth from SoilGrids v2.0.
+
+    Top-layer values are surfaced in ``summary``; per-depth values are kept
+    in ``properties`` for callers that want the full profile.
+    """
+    qs = urllib.parse.urlencode([
+        ("lat", f"{lat:.4f}"),
+        ("lon", f"{lng:.4f}"),
+        ("property", "phh2o"),
+        ("property", "sand"),
+        ("property", "silt"),
+        ("property", "clay"),
+        ("depth", "0-5cm"),
+        ("depth", "5-15cm"),
+        ("depth", "15-30cm"),
+        ("depth", "30-60cm"),
+        ("depth", "60-100cm"),
+        ("value", "mean"),
+    ], doseq=True)
+    url = f"https://rest.isric.org/soilgrids/v2.0/properties/query?{qs}"
+    data = _http_get_json(url)
+    if not data:
+        return None
+    return _parse_soilgrids(data)
+
+
+# SoilGrids stores values as int * d_factor. For phh2o (pH) and sand/silt/clay
+# (g/kg as 0.1 % units), d_factor is 10.
+_SG_FACTORS = {"phh2o": 10.0, "sand": 10.0, "silt": 10.0, "clay": 10.0}
+
+
+def _parse_soilgrids(data: dict) -> Optional[dict]:
+    layers = data.get("properties", {}).get("layers", [])
+    if not layers:
+        return None
+    by_prop: dict[str, list[dict]] = {}
+    for layer in layers:
+        name = layer.get("name")
+        f    = _SG_FACTORS.get(name, 1.0)
+        depths = []
+        for d in layer.get("depths", []):
+            mean = (d.get("values") or {}).get("mean")
+            if mean is None:
+                continue
+            depths.append({"label": d.get("label"), "value": round(mean / f, 2)})
+        if depths:
+            by_prop[name] = depths
+    if not by_prop:
+        return None
+
+    def _top(prop: str) -> Optional[float]:
+        rows = by_prop.get(prop) or []
+        return rows[0]["value"] if rows else None
+
+    sand, silt, clay = _top("sand"), _top("silt"), _top("clay")
+    return {
+        "properties": by_prop,
+        "summary": {
+            "ph_top":               _top("phh2o"),
+            "sand_pct_top":         sand,
+            "silt_pct_top":         silt,
+            "clay_pct_top":         clay,
+            "texture_class":        _texture_class(sand, silt, clay),
+            "max_reported_depth_cm": _max_reported_depth(by_prop),
+        },
+        "source": "SoilGrids v2.0 (ISRIC)",
+    }
+
+
+def _max_reported_depth(by_prop: dict) -> Optional[int]:
+    """Deepest bottom-cm across any reported depth label."""
+    deepest = 0
+    for depths in by_prop.values():
+        for d in depths:
+            label = d.get("label") or ""
+            try:
+                bottom = int(label.split("-")[-1].replace("cm", ""))
+            except (ValueError, AttributeError):
+                continue
+            if bottom > deepest:
+                deepest = bottom
+    return deepest or None
+
+
+def _texture_class(sand, silt, clay) -> Optional[str]:
+    """USDA soil-texture class from sand/silt/clay percentages.
+
+    Implements the standard USDA texture triangle. Values outside 0-100 or
+    not summing close to 100 still produce a best-effort classification.
+    """
+    if None in (sand, silt, clay):
+        return None
+    s, si, c = float(sand), float(silt), float(clay)
+
+    if c >= 40:
+        if si >= 40:               return "Silty clay"
+        if s >= 45:                return "Sandy clay"
+        return "Clay"
+    if c >= 27:
+        if s <= 20:                return "Silty clay loam"
+        if s <= 45:                return "Clay loam"
+        return "Sandy clay loam"
+    if c >= 20 and s > 45 and si < 28:
+        return "Sandy clay loam"
+    if si >= 80 and c < 12:        return "Silt"
+    if si >= 50 and c < 27:        return "Silt loam"
+    if s >= 85 and (si + 1.5 * c) < 15: return "Sand"
+    if s >= 70 and (si + 2.0 * c) < 30: return "Loamy sand"
+    if 43 <= s <= 85 and c < 20:   return "Sandy loam"
+    return "Loam"
+
+
+# ── Elevation / slope / aspect ──────────────────────────────────────────────
+
+def fetch_elevation(lat: float, lng: float, sample_m: float = 60.0) -> Optional[dict]:
+    """
+    Elevation, slope, and aspect from Copernicus DEM 30m via Open-Meteo.
+
+    The DEM is sampled at the centre and at four neighbours offset by
+    ``sample_m`` metres (N/E/S/W). dz/dx and dz/dy are derived by central
+    differences, so slope is the local gradient magnitude over the
+    sampling window — a reasonable parcel-scale estimate.
+    """
+    points = _slope_sample_points(lat, lng, sample_m)
+    lats = ",".join(f"{p[0]:.6f}" for p in points)
+    lngs = ",".join(f"{p[1]:.6f}" for p in points)
+    url  = f"https://api.open-meteo.com/v1/elevation?latitude={lats}&longitude={lngs}"
+    data = _http_get_json(url)
+    if not data or "elevation" not in data:
+        return None
+    return _parse_elevation(data["elevation"], sample_m)
+
+
+def _slope_sample_points(lat: float, lng: float, m: float):
+    """[centre, N, E, S, W] in degrees, offset by ``m`` metres."""
+    dlat = m / 111320.0
+    cos_lat = math.cos(math.radians(lat))
+    if abs(cos_lat) < 1e-9:
+        cos_lat = 1e-9
+    dlng = m / (111320.0 * cos_lat)
+    return [
+        (lat,        lng),
+        (lat + dlat, lng),
+        (lat,        lng + dlng),
+        (lat - dlat, lng),
+        (lat,        lng - dlng),
+    ]
+
+
+def _parse_elevation(elev: list, sample_m: float) -> Optional[dict]:
+    if not elev or len(elev) < 5 or any(v is None for v in elev[:5]):
+        return None
+    centre, n, e, s, w = elev[:5]
+    dz_dx = (e - w) / (2.0 * sample_m)   # +x = east
+    dz_dy = (n - s) / (2.0 * sample_m)   # +y = north
+    grad   = math.hypot(dz_dx, dz_dy)
+    slope_pct = round(grad * 100.0, 2)
+    slope_deg = round(math.degrees(math.atan(grad)), 2)
+
+    if slope_pct < 0.05:
+        aspect_deg, aspect = None, "Flat"
+    else:
+        # Downhill direction: azimuth (deg from N, clockwise) of -gradient.
+        ang = math.degrees(math.atan2(-dz_dx, -dz_dy))
+        ang = (ang + 360.0) % 360.0
+        aspect_deg = round(ang, 1)
+        aspect     = _compass_label(ang)
+
+    return {
+        "elevation_m": round(centre, 1),
+        "slope_pct":   slope_pct,
+        "slope_deg":   slope_deg,
+        "aspect_deg":  aspect_deg,
+        "aspect":      aspect,
+        "sample_m":    sample_m,
+        "source":      "Copernicus DEM 30m (via Open-Meteo)",
+    }
+
+
+def _compass_label(deg: float) -> str:
+    dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+    return dirs[int((deg + 22.5) // 45) % 8]
+
+
+# ── Hardiness zone ──────────────────────────────────────────────────────────
+
+def fetch_hardiness(lat: float, lng: float) -> Optional[dict]:
+    """
+    Hardiness zone for the property.
+
+    First consults the local NRCan-derived dataset
+    (``data/hardiness_zones.json``).  If that returns None — i.e. the
+    point is outside the bundled regions — falls back to deriving a USDA
+    zone from the average annual extreme minimum temperature in ERA5-Land.
+    """
+    z = get_zone(lat, lng)
+    if z is not None:
+        return {
+            "zone":   z,
+            "source": "NRCan plant hardiness zones (local)",
+        }
+
+    today = date.today()
+    end_d = date(today.year - 1, 12, 31)
+    start = date(end_d.year - 9, 1, 1)
+    url = (
+        "https://archive-api.open-meteo.com/v1/archive?"
+        f"latitude={lat:.4f}&longitude={lng:.4f}"
+        f"&start_date={start.isoformat()}&end_date={end_d.isoformat()}"
+        "&daily=temperature_2m_min&timezone=UTC"
+    )
+    data = _http_get_json(url)
+    if not data or "daily" not in data:
+        return None
+    return _parse_hardiness_fallback(data)
+
+
+def _parse_hardiness_fallback(data: dict) -> Optional[dict]:
+    times = data["daily"].get("time") or []
+    mins  = data["daily"].get("temperature_2m_min") or []
+    annual_mins: dict[int, float] = {}
+    for t, m in zip(times, mins):
+        if m is None:
+            continue
+        year = int(t[:4])
+        cur = annual_mins.get(year)
+        if cur is None or m < cur:
+            annual_mins[year] = m
+    if not annual_mins:
+        return None
+    avg_min_c = sum(annual_mins.values()) / len(annual_mins)
+    return {
+        "zone":             usda_zone_from_min_c(avg_min_c),
+        "avg_extreme_min_c": round(avg_min_c, 1),
+        "source":           "Open-Meteo / ERA5-Land (extreme-min fallback)",
+    }
+
+
+def usda_zone_from_min_c(min_c: float) -> int:
+    """USDA hardiness zone (1-13) from average annual extreme-min °C.
+
+    USDA bands are 10 °F wide: zone 1 = [-60, -50) °F, zone 2 = [-50, -40),
+    …, zone 13 = [60, 70). Boundary temperatures fall into the warmer zone.
+    """
+    f = min_c * 9.0 / 5.0 + 32.0
+    z = int((f + 60.0) // 10.0) + 1
+    return max(1, min(13, z))
+
+
+# ── Aggregator ──────────────────────────────────────────────────────────────
+
+def fetch_all(lat: float, lng: float) -> dict:
+    """Fetch all four datasets sequentially. Caller may want a thread."""
+    return {
+        "lat":       lat,
+        "lng":       lng,
+        "rainfall":  fetch_rainfall(lat, lng),
+        "soil":      fetch_soil(lat, lng),
+        "elevation": fetch_elevation(lat, lng),
+        "hardiness": fetch_hardiness(lat, lng),
+    }

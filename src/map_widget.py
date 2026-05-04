@@ -88,6 +88,10 @@ class MapBridge(QObject):
     sector_group_rotated   = pyqtSignal(str, float)        # sid, rotationDeg
     sector_group_resized   = pyqtSignal(str, float)        # sid, radiusM
 
+    # Site pin (search-bar pin drop / drag / right-click remove)
+    site_pin_placed  = pyqtSignal(float, float, str)   # lat, lng, label
+    site_pin_removed = pyqtSignal()
+
     # Pattern placement (Single-burst, Row, Grid, Circle).
     # positions_json is a JSON-encoded [[lat,lng], ...] list. pattern_kind
     # tags the gesture so Python can record provenance ('single' | 'burst' |
@@ -109,6 +113,14 @@ class MapBridge(QObject):
     @pyqtSlot(float, float)
     def onMapClick(self, lat: float, lng: float):
         self.map_clicked.emit(lat, lng)
+
+    @pyqtSlot(float, float, str)
+    def onSitePinPlaced(self, lat: float, lng: float, label: str):
+        self.site_pin_placed.emit(lat, lng, label or "")
+
+    @pyqtSlot()
+    def onSitePinRemoved(self):
+        self.site_pin_removed.emit()
 
     @pyqtSlot(str, str, str)
     def onBoundaryComplete(self, bid: str, coords_json: str, color: str):
@@ -359,6 +371,16 @@ class MapWidget(QWebEngineView):
 
     def set_view(self, lat: float, lng: float, zoom: int = 14):
         self.run_js(f"setView({lat}, {lng}, {zoom});")
+
+    def place_site_pin(self, lat: float, lng: float, label: str = ""):
+        """Place (or move) the property pin without going through the search box."""
+        import json as _json
+        self.run_js(
+            f"placeSitePin({lat}, {lng}, {_json.dumps(label or '')});"
+        )
+
+    def clear_site_pin(self):
+        self.run_js("clearSitePin(false);")
 
     def set_labels_visible(self, visible: bool):
         v = 'true' if visible else 'false'

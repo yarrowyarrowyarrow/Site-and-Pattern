@@ -34,6 +34,7 @@ from src.guild_panel      import GuildPanel
 from src.structure_panel  import StructurePanel
 from src.analysis_panel   import AnalysisPanel
 from src.planning_panel   import PlanningPanel
+from src.site_panel       import SitePanel
 from src.toolbar          import MainToolbar
 from src.climate          import get_zone, zone_label
 from src.settings         import SettingsDialog, get_api_keys
@@ -101,6 +102,7 @@ class MainWindow(QMainWindow):
 
         # Central area
         self.map_widget      = MapWidget(self)
+        self.site_panel      = SitePanel(self)
         self.plant_panel     = PlantPanel(self)
         self.guild_panel     = GuildPanel(self)
         self.structure_panel = StructurePanel(self)
@@ -109,6 +111,7 @@ class MainWindow(QMainWindow):
 
         # Tabbed side panel
         self._side_tabs = QTabWidget()
+        self._side_tabs.addTab(self.site_panel, "Site")
         self._side_tabs.addTab(self.plant_panel, "Plants")
         self._side_tabs.addTab(self.guild_panel, "Guilds")
         self._side_tabs.addTab(self.structure_panel, "Structures")
@@ -330,6 +333,13 @@ class MainWindow(QMainWindow):
         # Planning panel → timeline / notes
         self.planning_panel.timeline_year_changed.connect(self._on_timeline_year_changed)
         self.planning_panel.notes_changed.connect(self._on_notes_changed)
+
+        # Site panel ↔ map
+        b.site_pin_placed.connect(self._on_site_pin_placed)
+        b.site_pin_removed.connect(self._on_site_pin_removed)
+        self.site_panel.pin_drop_requested.connect(self._enter_site_pin_mode)
+        self.site_panel.pin_clear_requested.connect(self._on_site_pin_clear_clicked)
+        self.site_panel.site_data_updated.connect(self._on_site_data_updated)
 
     # ── Map-ready ─────────────────────────────────────────────────────────────
 
@@ -1223,6 +1233,82 @@ class MainWindow(QMainWindow):
         self._mark_modified()
         self._sync_planning_panel()
 
+    # ── Site pin / property data ──────────────────────────────────────────────
+
+    def _on_site_pin_placed(self, lat: float, lng: float, label: str):
+        """User dropped a property pin (via search or manual click)."""
+        self._site_pin_mode = False
+        self.site_panel.set_pin(lat, lng, label)
+        # Switch to the Site tab so results are visible.
+        try:
+            idx = self._side_tabs.indexOf(self.site_panel)
+            if idx >= 0:
+                self._side_tabs.setCurrentIndex(idx)
+        except Exception:
+            pass
+        # Persist coordinates immediately; site data fills in when fetcher returns.
+        sc = self._project["properties"].setdefault("site_config", {})
+        sc["latitude"]  = lat
+        sc["longitude"] = lng
+        if label:
+            sc["pin_label"] = label
+        self._mark_modified()
+        self._set_mode_label("Property pin set — fetching site data")
+
+    def _on_site_pin_removed(self):
+        self.site_panel.clear_pin()
+        sc = self._project["properties"].setdefault("site_config", {})
+        for key in ("latitude", "longitude", "pin_label",
+                    "rainfall", "soil", "elevation", "hardiness",
+                    "data_fetched_at"):
+            sc.pop(key, None)
+        self._mark_modified()
+        self._set_mode_label("Property pin removed")
+
+    def _on_site_pin_clear_clicked(self):
+        self.map_widget.clear_site_pin()
+        self._on_site_pin_removed()
+
+    def _enter_site_pin_mode(self):
+        """Manual pin-drop: next map click places the pin."""
+        self._site_pin_mode = True
+        self._set_mode_label("Click the map to drop the property pin")
+        # One-shot connection to map_clicked
+        try:
+            self.map_widget.bridge.map_clicked.disconnect(self._on_site_pin_click)
+        except Exception:
+            pass
+        self.map_widget.bridge.map_clicked.connect(self._on_site_pin_click)
+
+    def _on_site_pin_click(self, lat: float, lng: float):
+        if not getattr(self, "_site_pin_mode", False):
+            return
+        self._site_pin_mode = False
+        try:
+            self.map_widget.bridge.map_clicked.disconnect(self._on_site_pin_click)
+        except Exception:
+            pass
+        self.map_widget.place_site_pin(lat, lng, "")
+
+    def _on_site_data_updated(self, result: dict):
+        """SitePanel finished fetching; persist results into project state."""
+        from datetime import datetime
+        sc = self._project["properties"].setdefault("site_config", {})
+        for key in ("rainfall", "soil", "elevation", "hardiness"):
+            if result.get(key) is not None:
+                sc[key] = result[key]
+        sc["data_fetched_at"] = datetime.utcnow().isoformat()
+
+        # Mirror the auto-filled hardiness zone into the existing
+        # top-level project field so the rest of the app picks it up.
+        hard = result.get("hardiness") or {}
+        zone = hard.get("zone")
+        if zone is not None:
+            self._set_zone_display(zone)
+
+        self._mark_modified()
+        self._set_mode_label("Site data ready")
+
     def _on_zone_center_placed(self, lat: float, lng: float):
         # Remove previous zone centre from project
         self._project["features"] = [
@@ -1268,6 +1354,8 @@ class MainWindow(QMainWindow):
         self._current_zone = None
         self._sb_zone.setText("Zone: —")
         self.map_widget.clear_all()
+        self.map_widget.clear_site_pin()
+        self.site_panel.clear_pin()
         self.plant_panel.clear_placed()
         self.plant_panel.set_zone(None)
         self.planning_panel.set_notes("")
@@ -1357,6 +1445,25 @@ class MainWindow(QMainWindow):
                 f"  contourPoints = [];"
                 f"}})()"
             )
+
+        # Restore property pin + cached site data, if any.
+        sc = proj.get("properties", {}).get("site_config") or {}
+        plat, plng = sc.get("latitude"), sc.get("longitude")
+        if plat is not None and plng is not None:
+            label = sc.get("pin_label", "")
+            self.map_widget.place_site_pin(plat, plng, label)
+            has_cache = any(sc.get(k) for k in
+                            ("rainfall", "soil", "elevation", "hardiness"))
+            self.site_panel.set_pin(plat, plng, label, fetch=not has_cache)
+            # Replay any cached results without hitting the network again.
+            for key, slot in (
+                ("hardiness", self.site_panel._on_hardiness),
+                ("elevation", self.site_panel._on_elevation),
+                ("rainfall",  self.site_panel._on_rainfall),
+                ("soil",      self.site_panel._on_soil),
+            ):
+                if sc.get(key):
+                    slot(sc[key])
 
         # Load notes
         notes = proj.get("properties", {}).get("notes", "")
