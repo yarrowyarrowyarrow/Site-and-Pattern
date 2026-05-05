@@ -302,7 +302,17 @@ class PlantRowDelegate(QStyledItemDelegate):
         self._sci_font = QFont()
         self._sci_font.setItalic(True)
         self._small_font = QFont()
-        self._small_font.setPointSize(self._small_font.pointSize() - 1)
+        # On some Windows + HiDPI setups the default QFont reports
+        # pointSize() == -1 (size carried in pixels) and pointSize()-1
+        # would feed a negative value into setPointSize, which Qt
+        # rejects with a noisy warning per call. Decrement whichever
+        # unit is actually populated; if neither is, leave the default.
+        _pt = self._small_font.pointSize()
+        _px = self._small_font.pixelSize()
+        if _pt > 1:
+            self._small_font.setPointSize(_pt - 1)
+        elif _px > 1:
+            self._small_font.setPixelSize(_px - 1)
         self._bold_font = QFont()
         self._bold_font.setBold(True)
 

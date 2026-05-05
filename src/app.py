@@ -788,8 +788,11 @@ class MainWindow(QMainWindow):
             return
         self._pending_terrain_config = None
         # If a previous job is still running, ignore the new request rather
-        # than fan out concurrent network calls.
-        if getattr(self, "_terrain_thread", None) and self._terrain_thread.isRunning():
+        # than fan out concurrent network calls. We track lifecycle with a
+        # plain bool because the QThread Python wrapper outlives the C++
+        # object once deleteLater() has fired — touching it would raise
+        # "wrapped C/C++ object has been deleted".
+        if getattr(self, "_terrain_running", False):
             self.analysis_panel.set_auto_terrain_status(
                 "A terrain job is already running — please wait."
             )
@@ -809,6 +812,7 @@ class MainWindow(QMainWindow):
             "show_labels": cfg.get("show_labels", True),
         }
 
+        self._terrain_running = True
         self._terrain_thread = QThread(self)
         self._terrain_worker = TerrainWorker(bbox, options)
         self._terrain_worker.moveToThread(self._terrain_thread)
@@ -817,11 +821,25 @@ class MainWindow(QMainWindow):
         self._terrain_worker.failed.connect(self._on_terrain_failed)
         self._terrain_worker.finished.connect(self._terrain_thread.quit)
         self._terrain_worker.finished.connect(self._terrain_worker.deleteLater)
-        self._terrain_thread.finished.connect(self._terrain_thread.deleteLater)
+        self._terrain_thread.finished.connect(self._on_terrain_thread_done)
         self._terrain_thread.start()
 
         self._set_mode_label("Generating slope contours…")
         self.analysis_panel.set_auto_terrain_status("Fetching elevation data…")
+
+    def _on_terrain_thread_done(self):
+        """Clear stale references after a TerrainWorker run finishes.
+
+        Connected to QThread.finished. Drops the Python references *before*
+        scheduling deleteLater on the thread, so the next Generate click
+        can't observe a half-deleted wrapper.
+        """
+        thread = self._terrain_thread
+        self._terrain_thread = None
+        self._terrain_worker = None
+        self._terrain_running = False
+        if thread is not None:
+            thread.deleteLater()
 
     def _on_terrain_ready(self, result: dict):
         """Render the worker's output and persist features in the project."""
