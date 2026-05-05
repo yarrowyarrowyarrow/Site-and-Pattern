@@ -103,14 +103,19 @@ def _ramp_grid(rows: int, cols: int) -> list[list[float]]:
     return [[float(r + c) for c in range(cols)] for r in range(rows)]
 
 
-def test_marching_squares_diagonal_ramp_segment_count():
+def test_marching_squares_diagonal_ramp_stitches_to_one_polyline():
     grid = _ramp_grid(5, 5)
     out = t.marching_squares(grid, [3.0, 5.0], BBOX)
     assert len(out) == 2
-    # Level 3 crosses the band r+c ∈ {1, 2}; level 5 crosses r+c ∈ {3, 4}.
+    # Each level traces a single continuous diagonal — stitching should
+    # collapse the per-cell segments into one polyline per level.
     by_level = {r["elevation_m"]: r["segments"] for r in out}
-    assert len(by_level[3.0]) == 5
-    assert len(by_level[5.0]) == 7
+    assert len(by_level[3.0]) == 1
+    assert len(by_level[5.0]) == 1
+    # Chaikin (2 iterations) should produce more vertices than the raw
+    # ~5-segment chain for an organic look.
+    assert len(by_level[3.0][0]) > 6
+    assert len(by_level[5.0][0]) > 6
 
 
 def test_marching_squares_skips_uniform_grid():
@@ -385,6 +390,74 @@ def test_generate_terrain_empty_edmonton_falls_back_to_openmeteo_contours():
     assert out["ok"] is True
     assert len(out["contours"]) > 0
     assert "Open-Meteo" in out["source"]
+
+
+# ── Stitching + Chaikin ─────────────────────────────────────────────────────
+
+def test_stitch_segments_chains_a_diagonal():
+    """Five 2-point segments meeting end-to-start collapse to one polyline."""
+    pts = [[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5]]
+    segs = [[pts[i], pts[i + 1]] for i in range(5)]
+    out = t._stitch_segments(segs)
+    assert len(out) == 1
+    assert out[0][0]  == pts[0]
+    assert out[0][-1] == pts[5]
+    assert len(out[0]) == 6
+
+
+def test_stitch_segments_keeps_disjoint_lines_apart():
+    """Two unrelated segments stay as two polylines."""
+    segs = [[[0, 0], [1, 1]], [[10, 10], [11, 11]]]
+    out = t._stitch_segments(segs)
+    assert len(out) == 2
+
+
+def test_stitch_segments_handles_empty():
+    assert t._stitch_segments([]) == []
+
+
+def test_chaikin_preserves_endpoints_for_open_line():
+    line = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]
+    out = t._chaikin(line, iterations=2)
+    assert out[0]  == [0.0, 0.0]
+    assert out[-1] == [1.0, 1.0]
+    assert len(out) > len(line)
+
+
+def test_chaikin_zero_iterations_is_noop():
+    line = [[0.0, 0.0], [1.0, 1.0], [2.0, 2.0]]
+    assert t._chaikin(line, iterations=0) == line
+
+
+def test_chaikin_short_line_unchanged():
+    # < 3 points: nothing to corner-cut.
+    assert t._chaikin([[0.0, 0.0], [1.0, 1.0]], iterations=3) == [[0.0, 0.0], [1.0, 1.0]]
+
+
+# ── Gaussian smoothing ──────────────────────────────────────────────────────
+
+def test_gaussian_smooth_constant_grid_unchanged():
+    grid = [[5.0] * 4 for _ in range(4)]
+    out = t._gaussian_smooth_3x3(grid)
+    for row in out:
+        for v in row:
+            assert math.isclose(v, 5.0, abs_tol=1e-9)
+
+
+def test_gaussian_smooth_dampens_single_cell_spike():
+    grid = [
+        [10.0, 10.0, 10.0, 10.0, 10.0],
+        [10.0, 10.0, 10.0, 10.0, 10.0],
+        [10.0, 10.0, 50.0, 10.0, 10.0],
+        [10.0, 10.0, 10.0, 10.0, 10.0],
+        [10.0, 10.0, 10.0, 10.0, 10.0],
+    ]
+    out = t._gaussian_smooth_3x3(grid)
+    # Centre pixel pulled strongly toward neighbours.
+    assert 10.0 < out[2][2] < 25.0
+    # Far-away cells unchanged.
+    assert out[0][0] == 10.0
+    assert out[4][4] == 10.0
 
 
 # ── Despike filter ──────────────────────────────────────────────────────────

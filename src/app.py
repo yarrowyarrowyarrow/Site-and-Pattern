@@ -858,14 +858,17 @@ class MainWindow(QMainWindow):
         self._terrain_thread.start()
 
         self._set_mode_label("Generating slope contours…")
-        # Big areas can issue 50+ chunked Open-Meteo requests; warn the
+        # Big areas can issue ~100 chunked Open-Meteo requests; warn the
         # user up-front rather than letting them wonder if it's stuck.
         from src.terrain import grid_dims
         cols, rows = grid_dims(bbox, options["resolution_m"])
-        if cols * rows > 1500:
+        n_samples = cols * rows
+        if n_samples > 3000:
+            # ~0.3 s pacing per batch + request time ≈ 0.5 s/batch end-to-end.
+            est_seconds = max(15, int(round(n_samples / 100 * 0.6)))
             self.analysis_panel.set_auto_terrain_status(
                 f"Fetching elevation data for {cols}×{rows} samples — "
-                f"this can take 20–40 s for a large area…"
+                f"~{est_seconds} s for an area this size…"
             )
         else:
             self.analysis_panel.set_auto_terrain_status("Fetching elevation data…")

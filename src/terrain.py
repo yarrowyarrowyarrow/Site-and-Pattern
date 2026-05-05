@@ -56,12 +56,14 @@ _EDM_MAX_FEATURES = 5000
 
 # Open-Meteo accepts up to 100 coords per request.
 _OPEN_METEO_BATCH = 100
-_OPEN_METEO_INTERVAL = 0.15  # seconds between batches, polite pacing
+_OPEN_METEO_INTERVAL = 0.30  # seconds between batches; the API throttles
+                              # bursts under ~3-4 req/s on the free tier
+_OPEN_METEO_RETRY_ATTEMPTS = 4
 
 # Hard caps so a sloppy bbox can't lock the app up.
-_MAX_GRID_CELLS = 5000       # ≤ 50 batched Open-Meteo requests; ~700 m at 10 m grid
+_MAX_GRID_CELLS = 10000      # ≤ 100 batched Open-Meteo requests; ~1 km at 10 m grid
 _MIN_RESOLUTION_M = 5.0
-_MAX_BBOX_M = 3000.0         # 3 km on a side — fits e.g. Mayfair Golf Course
+_MAX_BBOX_M = 4000.0         # 4 km on a side — fits a sub-neighbourhood
 
 # Elevation samples differing from their 3×3 neighbours' median by more
 # than this are treated as DEM sentinel/canopy-bleed artifacts and replaced
@@ -69,6 +71,11 @@ _MAX_BBOX_M = 3000.0         # 3 km on a side — fits e.g. Mayfair Golf Course
 # would already imply 100 % slope, so anything beyond is almost always
 # bogus over urban Alberta terrain.
 _DESPIKE_THRESHOLD_M = 10.0
+
+# Chaikin corner-cutting iterations applied to stitched contour polylines.
+# Two iterations are enough to produce visibly organic curves without
+# noticeably distorting the contour position.
+_CHAIKIN_ITERATIONS = 2
 
 # Edmonton bbox (loose) — used to pick the local data source.
 _EDM_BBOX = (53.39, 53.71, -113.71, -113.27)  # (south, north, west, east)
@@ -96,13 +103,13 @@ def _http_get_json(url: str, timeout: float = _TIMEOUT) -> Optional[dict]:
         return None
 
 
-def _http_get_json_retry(url: str, attempts: int = 3,
+def _http_get_json_retry(url: str, attempts: int = _OPEN_METEO_RETRY_ATTEMPTS,
                          timeout: float = _TIMEOUT) -> Optional[dict]:
     """
     Like ``_http_get_json`` but retries transient failures with exponential
     backoff (0.5 s, 1.0 s, 2.0 s, …). Open-Meteo occasionally drops a
-    request under load; without retry, one 500/timeout in a 25-batch grid
-    sample fails the whole generation.
+    request under load; without retry, one 500/timeout in a 100-batch grid
+    sample fails a meaningful fraction of cells.
     """
     delay = 0.5
     for i in range(attempts):
@@ -353,7 +360,7 @@ def fetch_openmeteo_grid(bbox: dict, resolution_m: float) -> Optional[dict]:
     from the neighbours we did get, then the whole grid is despiked to
     suppress single-cell DEM artifacts.
     """
-    cache_key = _cache_key("om_v2", bbox, resolution_m)
+    cache_key = _cache_key("om_v3", bbox, resolution_m)
     cached = _cache_load_json(cache_key)
     if cached is not None:
         return cached
@@ -399,6 +406,10 @@ def fetch_openmeteo_grid(bbox: dict, resolution_m: float) -> Optional[dict]:
         for r in range(rows)
     ]
     grid = _despike(grid, _DESPIKE_THRESHOLD_M)
+    # Gentle Gaussian blur tames cell-scale noise so marching squares
+    # produces gradual, organic contour lines rather than the staircase
+    # patterns you get from a raw 30 m DEM sampled on a 10 m grid.
+    grid = _gaussian_smooth_3x3(grid)
 
     out = {"grid": grid, "cols": cols, "rows": rows, "bbox": bbox,
            "resolution_m": resolution_m,
@@ -442,6 +453,36 @@ def _despike(grid: list[list[float]],
             local_median = window[len(window) // 2]
             if abs(grid[r][c] - local_median) > threshold_m:
                 out[r][c] = local_median
+    return out
+
+
+_GAUSSIAN_KERNEL_3X3 = ((1, 2, 1), (2, 4, 2), (1, 2, 1))
+
+
+def _gaussian_smooth_3x3(grid: list[list[float]]) -> list[list[float]]:
+    """
+    3×3 Gaussian blur with the canonical [1 2 1; 2 4 2; 1 2 1] / 16 kernel.
+    Edge cells use the available subset (effectively reflect-by-omission)
+    so the bbox boundary doesn't get pulled toward zero.
+    """
+    if not grid or not grid[0]:
+        return grid
+    rows = len(grid)
+    cols = len(grid[0])
+    out = [row[:] for row in grid]
+    for r in range(rows):
+        for c in range(cols):
+            total = 0.0
+            weight_sum = 0
+            for dr in (-1, 0, 1):
+                for dc in (-1, 0, 1):
+                    rr, cc = r + dr, c + dc
+                    if 0 <= rr < rows and 0 <= cc < cols:
+                        w = _GAUSSIAN_KERNEL_3X3[dr + 1][dc + 1]
+                        total += grid[rr][cc] * w
+                        weight_sum += w
+            if weight_sum:
+                out[r][c] = total / weight_sum
     return out
 
 
@@ -529,9 +570,114 @@ def marching_squares(grid: list[list[float]], levels: list[float],
                     segments.append(seg)
 
         if segments:
+            # Stitch cell-aligned 2-point segments into continuous polylines
+            # (so a contour that crosses 30 cells becomes 1 line, not 30
+            # disconnected ones). Then apply Chaikin corner-cutting for the
+            # organic curves the user expects from a real contour map.
+            stitched = _stitch_segments(segments)
+            smoothed = [_chaikin(line, _CHAIKIN_ITERATIONS) for line in stitched]
             out.append({"elevation_m": round(level, 2),
-                        "segments": segments})
+                        "segments": smoothed})
     return out
+
+
+def _stitch_segments(segments: list[list[list[float]]]) -> list[list[list[float]]]:
+    """
+    Join 2-point segments whose endpoints coincide into longer polylines.
+
+    Marching squares emits one or two short segments per grid cell; adjacent
+    cells share edge crossings so neighbouring segments meet exactly at a
+    common point. Walking the start→end / end→start chains turns the bag
+    of segments into the polylines a human would draw.
+    """
+    if not segments:
+        return []
+
+    def key(p):
+        # Endpoints from a single grid agree to floating-point exactness,
+        # but we round defensively in case of identical-up-to-the-last-bit.
+        return (round(p[0], 9), round(p[1], 9))
+
+    by_start: dict = {}
+    by_end:   dict = {}
+    for i, seg in enumerate(segments):
+        by_start.setdefault(key(seg[0]),  []).append(i)
+        by_end.setdefault(  key(seg[-1]), []).append(i)
+
+    used = [False] * len(segments)
+    polylines: list[list[list[float]]] = []
+
+    for i, seg in enumerate(segments):
+        if used[i]:
+            continue
+        used[i] = True
+        line = [list(seg[0]), list(seg[-1])]
+
+        # Extend forward: seg ending at our tail.
+        while True:
+            k = key(line[-1])
+            nxt = next((j for j in by_start.get(k, []) if not used[j]), None)
+            if nxt is None:
+                break
+            used[nxt] = True
+            line.append(list(segments[nxt][-1]))
+
+        # Extend backward: seg starting at our head.
+        while True:
+            k = key(line[0])
+            nxt = next((j for j in by_end.get(k, []) if not used[j]), None)
+            if nxt is None:
+                break
+            used[nxt] = True
+            line.insert(0, list(segments[nxt][0]))
+
+        polylines.append(line)
+    return polylines
+
+
+def _chaikin(line: list[list[float]], iterations: int) -> list[list[float]]:
+    """
+    Chaikin corner-cutting: each iteration replaces every interior point
+    with two points 1/4 and 3/4 of the way along its neighbouring edges,
+    yielding smoother polylines that converge to a B-spline. Endpoints of
+    open lines are preserved; closed loops are detected by start==end and
+    treated as a closed curve so the seam doesn't develop a corner.
+    """
+    if iterations <= 0 or not line or len(line) < 3:
+        return line
+
+    pts = [list(p) for p in line]
+    closed = (
+        len(pts) >= 3
+        and abs(pts[0][0] - pts[-1][0]) < 1e-9
+        and abs(pts[0][1] - pts[-1][1]) < 1e-9
+    )
+
+    for _ in range(iterations):
+        if closed:
+            new = []
+            for i in range(len(pts) - 1):
+                a = pts[i]
+                b = pts[i + 1]
+                q = [a[0] + 0.25 * (b[0] - a[0]), a[1] + 0.25 * (b[1] - a[1])]
+                r = [a[0] + 0.75 * (b[0] - a[0]), a[1] + 0.75 * (b[1] - a[1])]
+                new.append(q)
+                new.append(r)
+            new.append(new[0])   # re-close
+            pts = new
+        else:
+            new = [pts[0]]
+            for i in range(len(pts) - 1):
+                a = pts[i]
+                b = pts[i + 1]
+                q = [a[0] + 0.25 * (b[0] - a[0]), a[1] + 0.25 * (b[1] - a[1])]
+                r = [a[0] + 0.75 * (b[0] - a[0]), a[1] + 0.75 * (b[1] - a[1])]
+                new.append(q)
+                new.append(r)
+            new.append(pts[-1])
+            pts = new
+
+    return pts
 
 
 # Standard marching-squares case table. Bits: TL=8, TR=4, BR=2, BL=1.
