@@ -283,12 +283,12 @@ class GuildPanel(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
 
-        label = QLabel("<b>Guild Library</b>")
+        label = QLabel("<b>Polyculture Library</b>  <span style='color:#90a4ae;font-weight:normal;'>(saved polycultures)</span>")
         layout.addWidget(label)
 
         # Search/filter box
         self._search_box = QLineEdit()
-        self._search_box.setPlaceholderText("Search guilds...")
+        self._search_box.setPlaceholderText("Search polycultures...")
         self._search_box.setClearButtonEnabled(True)
         self._search_box.textChanged.connect(self._refresh_guild_list)
         layout.addWidget(self._search_box)
@@ -304,7 +304,7 @@ class GuildPanel(QWidget):
 
         # Buttons row 1
         btn_row1 = QHBoxLayout()
-        self.new_btn = QPushButton("New Guild")
+        self.new_btn = QPushButton("New Polyculture")
         self.new_btn.clicked.connect(self._on_new_guild)
         btn_row1.addWidget(self.new_btn)
 
@@ -320,7 +320,7 @@ class GuildPanel(QWidget):
 
         self.variation_btn = QPushButton("+ Variation")
         self.variation_btn.setEnabled(False)
-        self.variation_btn.setToolTip("Create a variation of this guild")
+        self.variation_btn.setToolTip("Create a variation of this polyculture")
         self.variation_btn.clicked.connect(self._on_add_variation)
         btn_row1.addWidget(self.variation_btn)
         layout.addLayout(btn_row1)

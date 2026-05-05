@@ -58,7 +58,9 @@ class AnalysisPanel(QWidget):
 
         self._build_sun_tab()
         self._build_sector_tab()
-        self._build_contour_tab()
+        # Manual contour drawing moved to Site → Slope analysis (it's
+        # site-scale terrain analysis and lives next to the auto-contour
+        # generator there).
         self._build_wind_tab()
         self._build_season_tab()
 

@@ -96,9 +96,9 @@ class MainWindow(QMainWindow):
     # ── UI construction ───────────────────────────────────────────────────────
 
     def _build_ui(self):
-        # Toolbar
+        # Toolbar — Draw row on top, Layers row stacked below it.
         self.toolbar = MainToolbar(self)
-        self.addToolBar(self.toolbar)
+        self.toolbar.attach_to(self)
 
         # Central area
         self.map_widget      = MapWidget(self)
@@ -111,15 +111,32 @@ class MainWindow(QMainWindow):
 
         # Tabbed side panel
         self._side_tabs = QTabWidget()
+        self._side_tabs.setDocumentMode(False)
         self._side_tabs.addTab(self.site_panel, "Site")
         self._side_tabs.addTab(self.plant_panel, "Plants")
-        self._side_tabs.addTab(self.guild_panel, "Guilds")
+        self._side_tabs.addTab(self.guild_panel, "Polycultures")
         self._side_tabs.addTab(self.structure_panel, "Structures")
         self._side_tabs.addTab(self.analysis_panel, "Analysis")
         self._side_tabs.addTab(self.planning_panel, "Planning")
         self._side_tabs.setMinimumWidth(220)
         self._side_tabs.setMaximumWidth(480)
+        # Tab styling — make the selected tab unmistakably highlighted
+        # (bright green pill) so it's obvious which panel is open and
+        # that the others are clickable.
         self._side_tabs.setStyleSheet(
+            "QTabWidget::pane { border: 1px solid #2e4a2e; "
+            "background: #1e2a1e; top: -1px; }"
+            "QTabBar { qproperty-drawBase: 0; background: #122012; }"
+            "QTabBar::tab { background: #1a2a1a; color: #90a4ae; "
+            "padding: 7px 12px; margin-right: 2px; "
+            "border: 1px solid #2e4a2e; border-bottom: none; "
+            "border-top-left-radius: 5px; border-top-right-radius: 5px; "
+            "font-size: 12px; min-width: 56px; }"
+            "QTabBar::tab:hover { background: #284028; color: #c8e6c9; }"
+            "QTabBar::tab:selected { background: #2e7d32; color: #ffffff; "
+            "font-weight: bold; border: 1px solid #66bb6a; "
+            "border-bottom: 2px solid #66bb6a; }"
+            "QTabBar::tab:!selected { margin-top: 3px; }"
             "QWidget { background-color: #1e2a1e; color: #c8e6c9; }"
         )
 
@@ -274,6 +291,7 @@ class MainWindow(QMainWindow):
         self.toolbar.measure_requested.connect(self._enter_measure_mode)
         self.toolbar.annotate_requested.connect(self._enter_annotate_mode)
         self.toolbar.cancel_draw_requested.connect(self._cancel_draw)
+        self.toolbar.undo_requested.connect(self._do_undo)
 
         self.toolbar.satellite_toggled.connect(self.map_widget.set_satellite_visible)
         self.toolbar.boundary_toggled.connect(self.map_widget.set_boundary_visible)
@@ -331,8 +349,7 @@ class MainWindow(QMainWindow):
         self.analysis_panel.sun_path_cleared.connect(self.map_widget.clear_sun_path)
         self.analysis_panel.sector_requested.connect(self._on_sector_requested)
         self.analysis_panel.sector_cleared.connect(self.map_widget.clear_sectors)
-        self.analysis_panel.contour_requested.connect(self._on_contour_requested)
-        self.analysis_panel.contour_cleared.connect(self._on_contour_cleared)
+        # (Manual contour drawing moved to Site panel — wired below.)
         # Auto-terrain controls live on the Site panel now (alongside the
         # single-point Elevation/slope readout) — the request / clear /
         # opacity signals come from there.
@@ -381,6 +398,12 @@ class MainWindow(QMainWindow):
         self.site_panel.pin_drop_requested.connect(self._enter_site_pin_mode)
         self.site_panel.pin_clear_requested.connect(self._on_site_pin_clear_clicked)
         self.site_panel.site_data_updated.connect(self._on_site_data_updated)
+        # Address search → drop pin on map (the bridge then notifies us
+        # back via site_pin_placed and the usual fetch flow runs).
+        self.site_panel.address_resolved.connect(self._on_address_resolved)
+        # Manual contour drawing controls live on the Site tab now.
+        self.site_panel.contour_requested.connect(self._on_contour_requested)
+        self.site_panel.contour_cleared.connect(self._on_contour_cleared)
 
     # ── Map-ready ─────────────────────────────────────────────────────────────
 
@@ -1541,6 +1564,17 @@ class MainWindow(QMainWindow):
     def _on_site_pin_clear_clicked(self):
         self.map_widget.clear_site_pin()
         self._on_site_pin_removed()
+
+    def _on_address_resolved(self, lat: float, lng: float, label: str):
+        """SitePanel resolved an address — drop the pin and re-centre the map.
+
+        The bridge will fire `site_pin_placed` back which runs the
+        existing site-data fetch flow; we just have to place the pin
+        and pan/zoom.
+        """
+        self.map_widget.place_site_pin(lat, lng, label or "")
+        # Centre on the new pin at a reasonable property-scale zoom.
+        self.map_widget.set_view(lat, lng, 17)
 
     def _enter_site_pin_mode(self):
         """Manual pin-drop: next map click places the pin."""

@@ -160,75 +160,10 @@
       white-space: nowrap;
     }
 
-    /* ── Site search bar (top-centre) ─────────────────────────── */
-    #site-search {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1000;
-      background: rgba(26, 42, 26, 0.94);
-      border: 1px solid #4a7a4a;
-      border-radius: 6px;
-      padding: 6px;
-      display: flex;
-      gap: 4px;
-      align-items: center;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-    }
-    #site-search input {
-      width: 280px;
-      padding: 5px 8px;
-      background: #0d1f0d;
-      color: #e8f5e9;
-      border: 1px solid #4a7a4a;
-      border-radius: 4px;
-      font-size: 12px;
-      outline: none;
-    }
-    #site-search input:focus { border-color: #66bb6a; }
-    #site-search button {
-      padding: 5px 10px;
-      background: #2e7d32;
-      color: #e8f5e9;
-      border: 1px solid #43a047;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    #site-search button:hover { background: #388e3c; }
-    #site-search button.secondary {
-      background: #37474f;
-      border-color: #546e7a;
-      color: #b0bec5;
-    }
-    #site-search button.secondary:hover { background: #455a64; }
-    #site-search-results {
-      position: absolute;
-      top: 44px;
-      left: 0;
-      right: 0;
-      background: rgba(26, 42, 26, 0.98);
-      border: 1px solid #4a7a4a;
-      border-radius: 6px;
-      max-height: 240px;
-      overflow-y: auto;
-      display: none;
-    }
-    #site-search-results .result {
-      padding: 6px 10px;
-      color: #c8e6c9;
-      cursor: pointer;
-      border-bottom: 1px solid #2e4a2e;
-      font-size: 12px;
-    }
-    #site-search-results .result:last-child { border-bottom: none; }
-    #site-search-results .result:hover { background: #2e4a2e; }
-    #site-search-results .result.muted {
-      color: #90a4ae;
-      cursor: default;
-      font-style: italic;
-    }
+    /* Site search bar moved out of the map — it lives in the Site panel
+       (right sidebar) so it no longer obscures the map visual. The
+       placeSitePin / clearSitePin JS functions below are still called
+       from Python via the QWebChannel after the panel runs geocoding. */
     .site-pin-popup {
       color: #1a1a2e;
       font-size: 12px;
@@ -237,16 +172,6 @@
 </head>
 <body>
   <div id="map"></div>
-
-  <div id="site-search">
-    <input id="site-search-input" type="text"
-           placeholder="Search Alberta address or place name…"
-           autocomplete="off" />
-    <button id="site-search-btn" type="button">Find</button>
-    <button id="site-search-clear" class="secondary" type="button"
-            title="Remove the current site pin">Clear pin</button>
-    <div id="site-search-results"></div>
-  </div>
 
   <button id="legend-toggle" onclick="toggleLegend()">Legend</button>
   <div id="map-legend">
@@ -3954,104 +3879,13 @@
       btn.classList.toggle('active', visible);
     }
 
-    // ── Site search + pin drop ────────────────────────────────────────────
-    // Uses Nominatim (OSM) for geocoding, restricted to Alberta. Typing
-    // populates a typeahead dropdown after a short debounce; pressing
-    // Enter / clicking Find runs the same query. Pin is draggable,
-    // right-click to remove. Notifies Python via
-    // bridge.onSitePinPlaced(lat, lng, label).
+    // ── Site pin ──────────────────────────────────────────────────────────
+    // Geocoding moved to the Python-side Site panel (src/site_panel.py +
+    // src/property_data.geocode_alberta). The panel calls placeSitePin /
+    // clearSitePin via map_widget.run_js after resolving an address.
+    // Pin is draggable; right-click to remove. Drag and remove notify
+    // Python via bridge.onSitePinPlaced / onSitePinRemoved.
     var sitePinMarker = null;
-
-    // Alberta bounding box (lng_min, lat_min, lng_max, lat_max).
-    var _AB_VIEWBOX = '-120.0,48.95,-109.95,60.05';
-    // Debounce timer + last-fetched query for typeahead.
-    var _siteSearchTimer = null;
-    var _siteLastQuery   = '';
-
-    function _siteSearchInput()  { return document.getElementById('site-search-input'); }
-    function _siteSearchResults(){ return document.getElementById('site-search-results'); }
-
-    function _hideSiteResults() {
-      var box = _siteSearchResults();
-      if (box) { box.style.display = 'none'; box.innerHTML = ''; }
-    }
-
-    function _showSiteMessage(msg, muted) {
-      var box = _siteSearchResults();
-      if (!box) return;
-      box.innerHTML = '';
-      var d = document.createElement('div');
-      d.className = 'result' + (muted ? ' muted' : '');
-      d.textContent = msg;
-      box.appendChild(d);
-      box.style.display = 'block';
-    }
-
-    function _doSiteSearch(typeahead) {
-      var q = _siteSearchInput().value.trim();
-      if (!q) { _hideSiteResults(); return; }
-      // Allow direct "lat, lng" entry as a shortcut (manual search only;
-      // typeahead suggestions for coords would be noisy).
-      if (!typeahead) {
-        var m = q.match(/^\s*(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)\s*$/);
-        if (m) {
-          var la = parseFloat(m[1]), lo = parseFloat(m[2]);
-          if (la >= -90 && la <= 90 && lo >= -180 && lo <= 180) {
-            _selectSiteResult(la, lo, la.toFixed(5) + ', ' + lo.toFixed(5));
-            return;
-          }
-        }
-      }
-      _siteLastQuery = q;
-      if (!typeahead) _showSiteMessage('Searching…', true);
-      // Restrict to Alberta: bias by viewbox + bounded=1 + countrycodes=ca.
-      var url = 'https://nominatim.openstreetmap.org/search'
-              + '?format=json&limit=6&addressdetails=1'
-              + '&countrycodes=ca'
-              + '&viewbox=' + encodeURIComponent(_AB_VIEWBOX)
-              + '&bounded=1'
-              + '&q=' + encodeURIComponent(q);
-      fetch(url, { headers: { 'Accept': 'application/json' } })
-        .then(function(r){ return r.json(); })
-        .then(function(items){
-          // Race guard: a slower response from a stale query must not
-          // overwrite results for what the user is currently typing.
-          if (q !== _siteLastQuery) return;
-          // Defence in depth: drop anything Nominatim returned outside AB.
-          items = (items || []).filter(function(it){
-            var addr = it.address || {};
-            return (addr.state === 'Alberta')
-                || (addr['ISO3166-2-lvl4'] === 'CA-AB');
-          });
-          var box = _siteSearchResults();
-          box.innerHTML = '';
-          if (!items.length) {
-            if (typeahead) { _hideSiteResults(); return; }
-            _showSiteMessage('No Alberta results.', true);
-            return;
-          }
-          items.forEach(function(it){
-            var d = document.createElement('div');
-            d.className = 'result';
-            d.textContent = it.display_name;
-            d.onclick = function() {
-              _selectSiteResult(parseFloat(it.lat), parseFloat(it.lon), it.display_name);
-            };
-            box.appendChild(d);
-          });
-          box.style.display = 'block';
-        })
-        .catch(function(err){
-          if (!typeahead) _showSiteMessage('Search failed (offline?)', true);
-        });
-    }
-
-    function _selectSiteResult(lat, lng, label) {
-      _hideSiteResults();
-      _siteSearchInput().value = label;
-      placeSitePin(lat, lng, label);
-      try { map.setView([lat, lng], Math.max(map.getZoom(), 16)); } catch (e) {}
-    }
 
     function placeSitePin(lat, lng, label) {
       if (sitePinMarker) {
@@ -4108,42 +3942,9 @@
     }
 
     function _initSiteSearchHandlers() {
-      var btn   = document.getElementById('site-search-btn');
-      var clear = document.getElementById('site-search-clear');
-      var inp   = _siteSearchInput();
-      if (!btn || !inp) return;
-      btn.addEventListener('click', function(){ _doSiteSearch(false); });
-      if (clear) clear.addEventListener('click', function(){ clearSitePin(true); });
-      // Typeahead: debounce 350 ms (Nominatim asks ≤ 1 req/s; this stays
-      // well under and groups bursts of keystrokes). Min 3 chars to avoid
-      // pulling thousands of "AB" hits.
-      inp.addEventListener('input', function(){
-        if (_siteSearchTimer) {
-          clearTimeout(_siteSearchTimer);
-          _siteSearchTimer = null;
-        }
-        var v = inp.value.trim();
-        if (v.length < 3) { _hideSiteResults(); return; }
-        _siteSearchTimer = setTimeout(function(){
-          _siteSearchTimer = null;
-          _doSiteSearch(true);
-        }, 350);
-      });
-      inp.addEventListener('keydown', function(ev){
-        if (ev.key === 'Enter') {
-          ev.preventDefault();
-          if (_siteSearchTimer) { clearTimeout(_siteSearchTimer); _siteSearchTimer = null; }
-          _doSiteSearch(false);
-        } else if (ev.key === 'Escape') { _hideSiteResults(); }
-      });
-      // Stop map from grabbing keystrokes/clicks while typing in the box
-      L.DomEvent.disableClickPropagation(document.getElementById('site-search'));
-      L.DomEvent.disableScrollPropagation(document.getElementById('site-search'));
-      // Hide results when clicking elsewhere
-      document.addEventListener('click', function(ev){
-        var box = document.getElementById('site-search');
-        if (box && !box.contains(ev.target)) _hideSiteResults();
-      });
+      // Site search bar moved to the Python-side Site panel; no DOM
+      // handlers to wire up here. Kept as a no-op so the bootstrap
+      // call sites below don't need to be conditional.
     }
 
     // ── QWebChannel bootstrap ─────────────────────────────────────────────────

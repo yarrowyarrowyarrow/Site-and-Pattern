@@ -346,6 +346,68 @@ def usda_zone_from_min_c(min_c: float) -> int:
     return max(1, min(13, z))
 
 
+# ── Geocoding (Alberta, OSM Nominatim) ──────────────────────────────────────
+
+_AB_VIEWBOX = "-120.0,48.95,-109.95,60.05"   # lng_min, lat_min, lng_max, lat_max
+
+
+def geocode_alberta(query: str, limit: int = 6) -> list[dict]:
+    """Forward-geocode an address or place name, restricted to Alberta.
+
+    Returns a list of ``{"label", "lat", "lng"}`` dicts, or ``[]`` on
+    failure / no match. Uses OSM Nominatim (the same backend the in-map
+    search bar used to call from JS).
+    """
+    q = (query or "").strip()
+    if not q:
+        return []
+
+    # Direct "lat, lng" entry shortcut.
+    import re
+    m = re.match(r"^\s*(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)\s*$", q)
+    if m:
+        try:
+            lat, lng = float(m.group(1)), float(m.group(2))
+            if -90 <= lat <= 90 and -180 <= lng <= 180:
+                return [{
+                    "label": f"{lat:.5f}, {lng:.5f}",
+                    "lat": lat, "lng": lng,
+                }]
+        except ValueError:
+            pass
+
+    params = urllib.parse.urlencode({
+        "format": "json",
+        "limit":  str(max(1, int(limit))),
+        "addressdetails": "1",
+        "countrycodes": "ca",
+        "viewbox": _AB_VIEWBOX,
+        "bounded": "1",
+        "q": q,
+    })
+    url = "https://nominatim.openstreetmap.org/search?" + params
+    data = _http_get_json(url)
+    if not isinstance(data, list):
+        return []
+    out = []
+    for it in data:
+        addr = it.get("address") or {}
+        # Defence in depth: drop anything outside Alberta.
+        if addr.get("state") != "Alberta" and addr.get("ISO3166-2-lvl4") != "CA-AB":
+            continue
+        try:
+            lat = float(it["lat"])
+            lng = float(it["lon"])
+        except (KeyError, ValueError, TypeError):
+            continue
+        out.append({
+            "label": it.get("display_name") or q,
+            "lat": lat,
+            "lng": lng,
+        })
+    return out
+
+
 # ── Aggregator ──────────────────────────────────────────────────────────────
 
 def fetch_all(lat: float, lng: float) -> dict:

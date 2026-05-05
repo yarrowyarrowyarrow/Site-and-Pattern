@@ -1,16 +1,32 @@
 """
-toolbar.py — Top toolbar for drawing tools, layer toggles, and project actions.
+toolbar.py — Top toolbars for drawing tools, layer toggles, and project actions.
+
+Layout (two stacked rows):
+
+  ┌────────────────────────────────────────────────────────────────┐
+  │ Draw:   ⬡ Boundary  ◎ Zone Circles  📏 Measure  📝 Note  ⤺ Undo  ✕ Cancel │
+  ├────────────────────────────────────────────────────────────────┤
+  │ Layers: 🛰 Satellite ⬡ Boundary ◎ Zones ✿ Plants Aa Labels …   │
+  │         …  ⚙ Settings  🔍 Zoom: [Fine ▼]                        │
+  └────────────────────────────────────────────────────────────────┘
+
+`MainToolbar` is the Draw row (a QToolBar so existing
+`addToolBar(self.toolbar)` calls keep working). The Layers row is held
+as a separate QToolBar attribute and added via `attach_to(window)`.
 """
 
 from PyQt6.QtWidgets import QToolBar, QLabel, QComboBox
-from PyQt6.QtGui import QAction, QActionGroup, QIcon
+from PyQt6.QtGui import QAction, QActionGroup
 from PyQt6.QtCore import pyqtSignal, Qt
 
 
 class MainToolbar(QToolBar):
-    """
-    Signals emitted when user activates a tool or toggles a layer.
-    The main window (app.py) connects these to the map widget.
+    """The Draw toolbar (top row).
+
+    Holds a sibling `layers_bar` QToolBar exposed for the main window to
+    add on a second row. All signals — Draw, Layers, Settings, Zoom —
+    live on this object so app.py wiring stays a single connection
+    surface.
     """
 
     # Drawing mode signals
@@ -19,6 +35,7 @@ class MainToolbar(QToolBar):
     measure_requested         = pyqtSignal()
     annotate_requested        = pyqtSignal()
     cancel_draw_requested     = pyqtSignal()
+    undo_requested            = pyqtSignal()
 
     # Layer visibility signals
     satellite_toggled    = pyqtSignal(bool)
@@ -38,13 +55,21 @@ class MainToolbar(QToolBar):
     zoom_step_changed = pyqtSignal(str)
 
     def __init__(self, parent=None):
-        super().__init__("Tools", parent)
+        super().__init__("Draw", parent)
         self.setMovable(False)
         self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self._build()
 
-    def _build(self):
-        # ── Drawing group ──────────────────────────────────────────────────
+        # Sibling layers toolbar — attached on a second row via attach_to().
+        self.layers_bar = QToolBar("Layers", parent)
+        self.layers_bar.setMovable(False)
+        self.layers_bar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+
+        self._build_draw()
+        self._build_layers()
+
+    # ── Construction ──────────────────────────────────────────────────────────
+
+    def _build_draw(self):
         self.addWidget(QLabel("  Draw: "))
 
         self._act_boundary = QAction("⬡ Boundary", self)
@@ -82,88 +107,108 @@ class MainToolbar(QToolBar):
         self._draw_group.addAction(self._act_measure)
         self._draw_group.addAction(self._act_annotate)
 
+        self.addSeparator()
+
+        # Undo (Ctrl+Z) — reverses the last placement / drawing action.
+        # Distinct from Cancel, which only aborts the *current* in-progress
+        # drawing operation (e.g. mid-boundary).
+        act_undo = QAction("⤺ Undo", self)
+        act_undo.setShortcut("Ctrl+Z")
+        act_undo.setStatusTip("Undo the last action (Ctrl+Z)")
+        act_undo.setToolTip(
+            "Undo the last placement or drawing action.\n"
+            "Note: 'Cancel' only aborts the current drawing operation\n"
+            "(mid-boundary etc.); use 'Undo' to revert a completed action."
+        )
+        act_undo.triggered.connect(self.undo_requested)
+        self.addAction(act_undo)
+
         act_cancel = QAction("✕ Cancel", self)
-        act_cancel.setStatusTip("Cancel current drawing operation")
+        act_cancel.setStatusTip("Cancel the current in-progress drawing")
+        act_cancel.setToolTip(
+            "Abort the drawing operation in progress (e.g. discards an\n"
+            "unfinished boundary, exits plant-placement mode).\n"
+            "Does not affect already-placed items — use Undo for that."
+        )
         act_cancel.triggered.connect(self._on_cancel)
         self.addAction(act_cancel)
 
-        self.addSeparator()
-
-        # ── Layer toggles ──────────────────────────────────────────────────
-        self.addWidget(QLabel("  Layers: "))
+    def _build_layers(self):
+        bar = self.layers_bar
+        bar.addWidget(QLabel("  Layers: "))
 
         self._act_satellite = QAction("🛰 Satellite", self)
         self._act_satellite.setCheckable(True)
         self._act_satellite.setStatusTip("Toggle satellite/OSM base map")
         self._act_satellite.toggled.connect(self.satellite_toggled)
-        self.addAction(self._act_satellite)
+        bar.addAction(self._act_satellite)
 
         self._act_boundary_layer = QAction("⬡ Boundary", self)
         self._act_boundary_layer.setCheckable(True)
         self._act_boundary_layer.setChecked(True)
         self._act_boundary_layer.setStatusTip("Toggle property boundary visibility")
         self._act_boundary_layer.toggled.connect(self.boundary_toggled)
-        self.addAction(self._act_boundary_layer)
+        bar.addAction(self._act_boundary_layer)
 
         self._act_zones_layer = QAction("◎ Zones", self)
         self._act_zones_layer.setCheckable(True)
         self._act_zones_layer.setChecked(True)
         self._act_zones_layer.setStatusTip("Toggle permaculture zone circles visibility")
         self._act_zones_layer.toggled.connect(self.zones_toggled)
-        self.addAction(self._act_zones_layer)
+        bar.addAction(self._act_zones_layer)
 
         self._act_plants_layer = QAction("✿ Plants", self)
         self._act_plants_layer.setCheckable(True)
         self._act_plants_layer.setChecked(True)
         self._act_plants_layer.setStatusTip("Toggle plant markers visibility")
         self._act_plants_layer.toggled.connect(self.plants_toggled)
-        self.addAction(self._act_plants_layer)
+        bar.addAction(self._act_plants_layer)
 
         self._act_labels = QAction("Aa Labels", self)
         self._act_labels.setCheckable(True)
         self._act_labels.setStatusTip("Show/hide plant name labels on map")
         self._act_labels.setToolTip("Toggle permanent plant name labels on the map")
         self._act_labels.toggled.connect(self.labels_toggled)
-        self.addAction(self._act_labels)
+        bar.addAction(self._act_labels)
 
         self._act_canopy = QAction("🌳 Canopy", self)
         self._act_canopy.setCheckable(True)
         self._act_canopy.setStatusTip("Show mature canopy spread preview")
         self._act_canopy.setToolTip("Toggle semi-transparent canopy circles showing mature plant spread")
         self._act_canopy.toggled.connect(self.canopy_toggled)
-        self.addAction(self._act_canopy)
+        bar.addAction(self._act_canopy)
 
         self._act_structures_layer = QAction("🏗 Structures", self)
         self._act_structures_layer.setCheckable(True)
         self._act_structures_layer.setChecked(True)
         self._act_structures_layer.setStatusTip("Toggle structures/hedgerows/shapes visibility")
         self._act_structures_layer.toggled.connect(self.structures_toggled)
-        self.addAction(self._act_structures_layer)
+        bar.addAction(self._act_structures_layer)
 
         self._act_snap = QAction("# Grid", self)
         self._act_snap.setCheckable(True)
         self._act_snap.setStatusTip("Snap plant placement to grid")
         self._act_snap.setToolTip("Enable 1m grid overlay; plant placement snaps to grid intersections")
         self._act_snap.toggled.connect(self.snap_toggled)
-        self.addAction(self._act_snap)
+        bar.addAction(self._act_snap)
 
         act_clear_measure = QAction("✕ 📏", self)
         act_clear_measure.setStatusTip("Clear current measurement from map")
         act_clear_measure.setToolTip("Remove the measure line and distance label from the map")
         act_clear_measure.triggered.connect(self.measure_cleared)
-        self.addAction(act_clear_measure)
+        bar.addAction(act_clear_measure)
 
-        self.addSeparator()
+        bar.addSeparator()
 
         act_settings = QAction("⚙ Settings", self)
         act_settings.setStatusTip("Configure API keys and preferences")
         act_settings.triggered.connect(self.settings_requested)
-        self.addAction(act_settings)
+        bar.addAction(act_settings)
 
-        self.addSeparator()
+        bar.addSeparator()
 
-        # ── Zoom sensitivity ───────────────────────────────────────────────
-        self.addWidget(QLabel("  🔍 Zoom: "))
+        # ── Zoom sensitivity ───────────────────────────────────────
+        bar.addWidget(QLabel("  🔍 Zoom: "))
         self._zoom_combo = QComboBox()
         self._zoom_combo.addItems(["Fine (1.1×)", "Normal (1.26×)", "Fast (1.5×)", "Coarse (2×)"])
         self._zoom_combo.setCurrentIndex(0)
@@ -173,7 +218,15 @@ class MainToolbar(QToolBar):
             "Coarse ≈ 2× per tick (original Leaflet default)"
         )
         self._zoom_combo.currentIndexChanged.connect(self._on_zoom_combo_changed)
-        self.addWidget(self._zoom_combo)
+        bar.addWidget(self._zoom_combo)
+
+    # ── Helpers ───────────────────────────────────────────────────────────────
+
+    def attach_to(self, main_window):
+        """Add Draw on the top row, Layers on a second row below it."""
+        main_window.addToolBar(self)
+        main_window.addToolBarBreak()
+        main_window.addToolBar(self.layers_bar)
 
     # ── Internal handlers ─────────────────────────────────────────────────────
 

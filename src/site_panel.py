@@ -20,12 +20,13 @@ from __future__ import annotations
 
 from typing import Optional
 
-from PyQt6.QtCore import Qt, QObject, QThread, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import Qt, QObject, QThread, QTimer, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
     QFormLayout, QFrame, QGroupBox, QScrollArea, QComboBox,
-    QDoubleSpinBox, QCheckBox, QSlider, QColorDialog,
+    QDoubleSpinBox, QSpinBox, QCheckBox, QSlider, QColorDialog,
+    QListWidget, QListWidgetItem,
 )
 
 
@@ -77,6 +78,28 @@ class _SiteFetchWorker(QObject):
         self._cancelled = True
 
 
+# ── Geocode worker (Nominatim, Alberta-bounded) ─────────────────────────────
+
+class _GeocodeWorker(QObject):
+    """Runs a single forward-geocode request off the UI thread."""
+
+    results = pyqtSignal(list)        # list[{label, lat, lng}]
+    failed  = pyqtSignal(str)         # error message
+
+    def __init__(self, query: str):
+        super().__init__()
+        self._query = query
+
+    @pyqtSlot()
+    def run(self):
+        try:
+            from src.property_data import geocode_alberta
+            hits = geocode_alberta(self._query) or []
+            self.results.emit(hits)
+        except Exception as exc:
+            self.failed.emit(str(exc))
+
+
 # ── Panel widget ─────────────────────────────────────────────────────────────
 
 class SitePanel(QWidget):
@@ -86,12 +109,21 @@ class SitePanel(QWidget):
     pin_clear_requested = pyqtSignal()
     site_data_updated  = pyqtSignal(dict)         # full result dict
 
+    # Address search (geocode + place pin). Emitted when the user has
+    # selected a result; MainWindow places the pin on the map and the
+    # usual site_pin_placed flow then fills in site data.
+    address_resolved = pyqtSignal(float, float, str)   # lat, lng, label
+
     # Auto-generated slope contours / ramp overlay (formerly on Analysis tab).
     # Lives here because it's site-scale terrain analysis, alongside the
     # single-point elevation/slope readout.
     auto_terrain_requested = pyqtSignal(dict)
     auto_terrain_cleared   = pyqtSignal()
     auto_terrain_opacity   = pyqtSignal(float)    # 0..1, live slider
+
+    # Manual contour line drawing (moved from Analysis tab).
+    contour_requested = pyqtSignal(dict)
+    contour_cleared   = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -100,7 +132,11 @@ class SitePanel(QWidget):
         self._label: str = ""
         self._thread: Optional[QThread] = None
         self._worker: Optional[_SiteFetchWorker] = None
+        self._geo_thread: Optional[QThread] = None
+        self._geo_worker: Optional[_GeocodeWorker] = None
+        self._geo_debounce: Optional[QTimer] = None
         self._auto_color = "#5d4037"
+        self._contour_color = "#795548"
         self._build_ui()
         self._set_empty_state()
 
@@ -123,26 +159,64 @@ class SitePanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Type an address in the map's search bar to drop a property\n"
-            "pin. Site data fills in automatically from public sources.\n"
-            "Drag the pin to refine; right-click on the pin to remove."
+            "Search an Alberta address below to drop a property pin and\n"
+            "auto-fill site data from public sources. Drag the pin to\n"
+            "refine; right-click on the pin to remove."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
         layout.addWidget(info)
 
-        # Pin info
+        # ── Property pin (with address search) ───────────────────────
         pin_box = QGroupBox("Property pin")
         pin_box.setStyleSheet(_GROUP_STYLE)
-        pin_layout = QFormLayout(pin_box)
+        pin_layout = QVBoxLayout(pin_box)
+        pin_layout.setSpacing(6)
+
+        # Address search row.
+        search_row = QHBoxLayout()
+        self._addr_input = QLineEdit()
+        self._addr_input.setPlaceholderText("Search Alberta address or place name…")
+        self._addr_input.setClearButtonEnabled(True)
+        self._addr_input.setStyleSheet(
+            "QLineEdit { background: #0d1f0d; color: #e8f5e9; "
+            "border: 1px solid #4a7a4a; border-radius: 4px; padding: 4px 6px; }"
+            "QLineEdit:focus { border-color: #66bb6a; }"
+        )
+        self._addr_input.returnPressed.connect(self._on_address_search)
+        self._addr_input.textChanged.connect(self._on_address_text_changed)
+        search_row.addWidget(self._addr_input, 1)
+
+        self._btn_search = QPushButton("Find")
+        self._btn_search.setStyleSheet(_BTN_PRIMARY)
+        self._btn_search.clicked.connect(self._on_address_search)
+        search_row.addWidget(self._btn_search)
+        pin_layout.addLayout(search_row)
+
+        # Suggestion list — empty/hidden until typeahead returns hits.
+        self._addr_results = QListWidget()
+        self._addr_results.setMaximumHeight(120)
+        self._addr_results.setVisible(False)
+        self._addr_results.setStyleSheet(
+            "QListWidget { background: #0d1f0d; color: #c8e6c9; "
+            "border: 1px solid #4a7a4a; border-radius: 4px; }"
+            "QListWidget::item:hover { background: #2e4a2e; }"
+            "QListWidget::item:selected { background: #2e7d32; color: #ffffff; }"
+        )
+        self._addr_results.itemClicked.connect(self._on_address_pick)
+        pin_layout.addWidget(self._addr_results)
+
+        # Existing pin label / coords readout.
+        pin_form = QFormLayout()
+        pin_form.setContentsMargins(0, 0, 0, 0)
         self._lbl_label = QLabel("—")
         self._lbl_label.setWordWrap(True)
         self._lbl_coords = QLabel("—")
-        pin_layout.addRow("Location:", self._lbl_label)
-        pin_layout.addRow("Coordinates:", self._lbl_coords)
-        layout.addWidget(pin_box)
+        pin_form.addRow("Location:", self._lbl_label)
+        pin_form.addRow("Coordinates:", self._lbl_coords)
+        pin_layout.addLayout(pin_form)
 
-        # Action buttons
+        # Action buttons (manual pin drop / refresh / clear).
         btn_row = QHBoxLayout()
         self._btn_drop = QPushButton("Use Pin Drop…")
         self._btn_drop.setToolTip(
@@ -161,7 +235,9 @@ class SitePanel(QWidget):
         self._btn_clear.setStyleSheet(_BTN_SECONDARY)
         self._btn_clear.clicked.connect(self.pin_clear_requested.emit)
         btn_row.addWidget(self._btn_clear)
-        layout.addLayout(btn_row)
+        pin_layout.addLayout(btn_row)
+
+        layout.addWidget(pin_box)
 
         self._lbl_status = QLabel("")
         self._lbl_status.setWordWrap(True)
@@ -171,6 +247,8 @@ class SitePanel(QWidget):
         layout.addWidget(self._lbl_status)
 
         # ── Hardiness ────────────────────────────────────────────────
+        # Order: zone → rainfall → soil sit directly under the pin so
+        # the most-asked-for site stats are visible without scrolling.
         self._hard_box = QGroupBox("Hardiness zone")
         self._hard_box.setStyleSheet(_GROUP_STYLE)
         hl = QFormLayout(self._hard_box)
@@ -183,8 +261,49 @@ class SitePanel(QWidget):
         hl.addRow("Source:", self._lbl_hard_src)
         layout.addWidget(self._hard_box)
 
-        # ── Elevation / slope ───────────────────────────────────────
-        self._elev_box = QGroupBox("Elevation & slope")
+        # ── Rainfall (moved up under pin/zone) ──────────────────────
+        self._rain_box = QGroupBox("Rainfall (climate normal)")
+        self._rain_box.setStyleSheet(_GROUP_STYLE)
+        rl = QFormLayout(self._rain_box)
+        self._lbl_rain_annual  = QLabel("—")
+        self._lbl_rain_monthly = QLabel("—")
+        self._lbl_rain_monthly.setWordWrap(True)
+        self._lbl_rain_monthly.setStyleSheet(
+            "color: #90caf9; font-family: monospace; font-size: 10px;"
+        )
+        self._lbl_rain_src = QLabel("")
+        self._lbl_rain_src.setStyleSheet("color: #78909c; font-size: 10px;")
+        self._lbl_rain_src.setWordWrap(True)
+        rl.addRow("Annual mean:", self._lbl_rain_annual)
+        rl.addRow("Monthly mm:",  self._lbl_rain_monthly)
+        rl.addRow("Source:",      self._lbl_rain_src)
+        layout.addWidget(self._rain_box)
+
+        # ── Soil (moved up under pin/zone) ──────────────────────────
+        self._soil_box = QGroupBox("Soil (top 0–5 cm)")
+        self._soil_box.setStyleSheet(_GROUP_STYLE)
+        sl = QFormLayout(self._soil_box)
+        self._lbl_soil_ph      = QLabel("—")
+        self._lbl_soil_texture = QLabel("—")
+        self._lbl_soil_mix     = QLabel("—")
+        self._lbl_soil_depth   = QLabel("—")
+        self._lbl_soil_src     = QLabel("")
+        self._lbl_soil_src.setStyleSheet("color: #78909c; font-size: 10px;")
+        self._lbl_soil_src.setWordWrap(True)
+        sl.addRow("pH (H₂O):",     self._lbl_soil_ph)
+        sl.addRow("Texture class:", self._lbl_soil_texture)
+        sl.addRow("Sand/Silt/Clay:", self._lbl_soil_mix)
+        sl.addRow("Reported depth:", self._lbl_soil_depth)
+        sl.addRow("Source:",        self._lbl_soil_src)
+        layout.addWidget(self._soil_box)
+
+        # ── Slope analysis (area) ───────────────────────────────────
+        # Now hosts the single-point Elevation/slope readout (top), the
+        # auto-generated contour/ramp controls (middle), and the manual
+        # Contour-line drawing controls (bottom — formerly on the
+        # Analysis tab).
+        # Single-point Elevation / slope readout (formerly its own box).
+        self._elev_box = QGroupBox("Elevation / slope (at pin)")
         self._elev_box.setStyleSheet(_GROUP_STYLE)
         el = QFormLayout(self._elev_box)
         self._lbl_elev    = QLabel("—")
@@ -197,7 +316,6 @@ class SitePanel(QWidget):
         el.addRow("Slope:",     self._lbl_slope)
         el.addRow("Aspect:",    self._lbl_aspect)
         el.addRow("Source:",    self._lbl_elev_src)
-        layout.addWidget(self._elev_box)
 
         # ── Slope analysis (area) ───────────────────────────────────
         # Auto-generated contour lines + slope colour-ramp for an
@@ -205,10 +323,18 @@ class SitePanel(QWidget):
         # when in Edmonton, otherwise Copernicus DEM (~30 m) via
         # Open-Meteo. Job runs in the background; multiple Generate
         # clicks queue up rather than being rejected.
-        self._slope_box = QGroupBox("Slope analysis (area)")
+        self._slope_box = QGroupBox("Slope analysis")
         self._slope_box.setStyleSheet(_GROUP_STYLE)
         slope_layout = QVBoxLayout(self._slope_box)
         slope_layout.setSpacing(6)
+
+        # Single-point readout sits at the top of the slope box.
+        slope_layout.addWidget(self._elev_box)
+
+        # Auto-generated contour / ramp section.
+        auto_header = QLabel("<b>Auto contours & slope ramp (area)</b>")
+        auto_header.setStyleSheet("color: #a5d6a7;")
+        slope_layout.addWidget(auto_header)
 
         slope_info = QLabel(
             "Choose an area, then Generate. Edmonton uses the City's\n"
@@ -313,43 +439,80 @@ class SitePanel(QWidget):
         slope_btn_row.addWidget(btn_auto_clear)
         slope_layout.addLayout(slope_btn_row)
 
-        layout.addWidget(self._slope_box)
+        # ── Manual contour-line drawing (moved from Analysis tab) ───
+        contour_header = QLabel("<b>Draw contour line (manual)</b>")
+        contour_header.setStyleSheet("color: #a5d6a7; margin-top: 6px;")
+        slope_layout.addWidget(contour_header)
 
-        # ── Rainfall ────────────────────────────────────────────────
-        self._rain_box = QGroupBox("Rainfall (climate normal)")
-        self._rain_box.setStyleSheet(_GROUP_STYLE)
-        rl = QFormLayout(self._rain_box)
-        self._lbl_rain_annual  = QLabel("—")
-        self._lbl_rain_monthly = QLabel("—")
-        self._lbl_rain_monthly.setWordWrap(True)
-        self._lbl_rain_monthly.setStyleSheet(
-            "color: #90caf9; font-family: monospace; font-size: 10px;"
+        contour_info = QLabel(
+            "Draw manual contour lines to indicate terrain slope. Helps\n"
+            "place swales, ponds, and water features. Click points on the\n"
+            "map to draw, double-click to finish."
         )
-        self._lbl_rain_src = QLabel("")
-        self._lbl_rain_src.setStyleSheet("color: #78909c; font-size: 10px;")
-        self._lbl_rain_src.setWordWrap(True)
-        rl.addRow("Annual mean:", self._lbl_rain_annual)
-        rl.addRow("Monthly mm:",  self._lbl_rain_monthly)
-        rl.addRow("Source:",      self._lbl_rain_src)
-        layout.addWidget(self._rain_box)
+        contour_info.setWordWrap(True)
+        contour_info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        slope_layout.addWidget(contour_info)
 
-        # ── Soil ────────────────────────────────────────────────────
-        self._soil_box = QGroupBox("Soil (top 0–5 cm)")
-        self._soil_box.setStyleSheet(_GROUP_STYLE)
-        sl = QFormLayout(self._soil_box)
-        self._lbl_soil_ph      = QLabel("—")
-        self._lbl_soil_texture = QLabel("—")
-        self._lbl_soil_mix     = QLabel("—")
-        self._lbl_soil_depth   = QLabel("—")
-        self._lbl_soil_src     = QLabel("")
-        self._lbl_soil_src.setStyleSheet("color: #78909c; font-size: 10px;")
-        self._lbl_soil_src.setWordWrap(True)
-        sl.addRow("pH (H₂O):",     self._lbl_soil_ph)
-        sl.addRow("Texture class:", self._lbl_soil_texture)
-        sl.addRow("Sand/Silt/Clay:", self._lbl_soil_mix)
-        sl.addRow("Reported depth:", self._lbl_soil_depth)
-        sl.addRow("Source:",        self._lbl_soil_src)
-        layout.addWidget(self._soil_box)
+        contour_form = QFormLayout()
+        contour_form.setContentsMargins(0, 0, 0, 0)
+
+        self._contour_elevation = QDoubleSpinBox()
+        self._contour_elevation.setRange(0, 2000)
+        self._contour_elevation.setSingleStep(0.5)
+        self._contour_elevation.setValue(0)
+        self._contour_elevation.setSuffix(" m")
+        contour_form.addRow("Elevation:", self._contour_elevation)
+
+        self._contour_interval = QDoubleSpinBox()
+        self._contour_interval.setRange(0.1, 10.0)
+        self._contour_interval.setSingleStep(0.5)
+        self._contour_interval.setValue(1.0)
+        self._contour_interval.setSuffix(" m")
+        contour_form.addRow("Interval:", self._contour_interval)
+
+        cc_row = QHBoxLayout()
+        self._contour_color_btn = QPushButton()
+        self._contour_color_btn.setFixedSize(28, 28)
+        self._contour_color_btn.setStyleSheet(
+            f"background: {self._contour_color}; border: 1px solid #4a7a4a; "
+            f"border-radius: 4px;"
+        )
+        self._contour_color_btn.clicked.connect(self._pick_contour_color)
+        cc_row.addWidget(self._contour_color_btn)
+        cc_row.addStretch()
+        contour_form.addRow("Color:", cc_row)
+
+        self._contour_labels = QCheckBox("Show elevation labels")
+        self._contour_labels.setChecked(True)
+        contour_form.addRow(self._contour_labels)
+
+        self._contour_slope_arrows = QCheckBox("Show downhill arrows")
+        self._contour_slope_arrows.setChecked(True)
+        self._contour_slope_arrows.setToolTip(
+            "Show arrows indicating downhill direction between contour lines"
+        )
+        contour_form.addRow(self._contour_slope_arrows)
+
+        slope_layout.addLayout(contour_form)
+
+        contour_btn_row = QHBoxLayout()
+        btn_draw_contour = QPushButton("Draw Contour Line")
+        btn_draw_contour.setStyleSheet(
+            "QPushButton { background: #5d4037; color: #efebe9; "
+            "border: 1px solid #795548; border-radius: 4px; padding: 6px; "
+            "font-weight: bold; }"
+            "QPushButton:hover { background: #6d4c41; }"
+        )
+        btn_draw_contour.clicked.connect(self._on_draw_contour)
+        contour_btn_row.addWidget(btn_draw_contour)
+
+        btn_clear_contour = QPushButton("Clear All")
+        btn_clear_contour.setStyleSheet(_BTN_SECONDARY)
+        btn_clear_contour.clicked.connect(self.contour_cleared.emit)
+        contour_btn_row.addWidget(btn_clear_contour)
+        slope_layout.addLayout(contour_btn_row)
+
+        layout.addWidget(self._slope_box)
 
         layout.addStretch()
 
@@ -557,6 +720,113 @@ class SitePanel(QWidget):
     def set_auto_terrain_status(self, text: str):
         """Called from MainWindow with progress / queue / result info."""
         self._auto_status.setText(text)
+
+    # ── Manual contour drawing ─────────────────────────────────────────────
+
+    def _pick_contour_color(self):
+        color = QColorDialog.getColor(
+            QColor(self._contour_color), self, "Contour color"
+        )
+        if color.isValid():
+            self._contour_color = color.name()
+            self._contour_color_btn.setStyleSheet(
+                f"background: {self._contour_color}; "
+                f"border: 1px solid #4a7a4a; border-radius: 4px;"
+            )
+
+    def _on_draw_contour(self):
+        self.contour_requested.emit({
+            "elevation_m":       self._contour_elevation.value(),
+            "interval_m":        self._contour_interval.value(),
+            "color":             self._contour_color,
+            "show_labels":       self._contour_labels.isChecked(),
+            "show_slope_arrows": self._contour_slope_arrows.isChecked(),
+        })
+        # Auto-increment elevation for next contour line.
+        self._contour_elevation.setValue(
+            self._contour_elevation.value() + self._contour_interval.value()
+        )
+
+    # ── Address search (Nominatim) ─────────────────────────────────────────
+
+    def _on_address_text_changed(self, text: str):
+        """Debounced typeahead — fire a geocode after 350 ms of idle."""
+        # Cancel any pending debounce timer.
+        if self._geo_debounce is None:
+            self._geo_debounce = QTimer(self)
+            self._geo_debounce.setSingleShot(True)
+            self._geo_debounce.timeout.connect(self._on_address_search_typeahead)
+        self._geo_debounce.stop()
+        if len((text or "").strip()) < 3:
+            self._addr_results.clear()
+            self._addr_results.setVisible(False)
+            return
+        self._geo_debounce.start(350)
+
+    def _on_address_search_typeahead(self):
+        self._run_geocode(self._addr_input.text())
+
+    def _on_address_search(self):
+        # Manual submit (Enter / Find) — show "Searching…" feedback.
+        q = self._addr_input.text().strip()
+        if not q:
+            return
+        self._lbl_status.setText("Searching…")
+        self._run_geocode(q)
+
+    def _run_geocode(self, query: str):
+        # Cancel any in-flight geocode before starting a new one.
+        self._cancel_geocode()
+        self._geo_thread = QThread(self)
+        self._geo_worker = _GeocodeWorker(query)
+        self._geo_worker.moveToThread(self._geo_thread)
+        self._geo_thread.started.connect(self._geo_worker.run)
+        self._geo_worker.results.connect(self._on_geocode_results)
+        self._geo_worker.failed.connect(
+            lambda msg: self._lbl_status.setText(f"Search failed: {msg}")
+        )
+        self._geo_worker.results.connect(self._geo_thread.quit)
+        self._geo_worker.failed.connect(self._geo_thread.quit)
+        self._geo_thread.finished.connect(self._cleanup_geocode)
+        self._geo_thread.start()
+
+    def _on_geocode_results(self, hits: list):
+        self._addr_results.clear()
+        if not hits:
+            self._addr_results.setVisible(False)
+            self._lbl_status.setText("No Alberta results.")
+            return
+        for h in hits:
+            item = QListWidgetItem(h["label"])
+            item.setData(Qt.ItemDataRole.UserRole, (h["lat"], h["lng"]))
+            self._addr_results.addItem(item)
+        self._addr_results.setVisible(True)
+        self._lbl_status.setText("")
+
+    def _on_address_pick(self, item):
+        data = item.data(Qt.ItemDataRole.UserRole)
+        if not data:
+            return
+        lat, lng = data
+        label = item.text()
+        self._addr_input.setText(label)
+        self._addr_results.clear()
+        self._addr_results.setVisible(False)
+        self.address_resolved.emit(float(lat), float(lng), label)
+
+    def _cancel_geocode(self):
+        if self._geo_thread is not None and self._geo_thread.isRunning():
+            self._geo_thread.quit()
+            self._geo_thread.wait(200)
+        self._cleanup_geocode()
+
+    def _cleanup_geocode(self):
+        if self._geo_worker is not None:
+            self._geo_worker.deleteLater()
+            self._geo_worker = None
+        if self._geo_thread is not None:
+            self._geo_thread.deleteLater()
+            self._geo_thread = None
 
 
 # ── Styling ──────────────────────────────────────────────────────────────────

@@ -384,10 +384,19 @@ class PlantRowDelegate(QStyledItemDelegate):
         notes = plant.get("notes") or ""
         notes_h = 0
         if notes:
-            wrapped_lines = max(1, fm.boundingRect(0, 0, avail_w, 1000,
-                                                    int(Qt.TextFlag.TextWordWrap),
-                                                    notes).height() // fm.lineSpacing())
-            notes_h = min(wrapped_lines, 6) * fm.lineSpacing() + 4
+            # Reserve space for the FULL wrapped description. The plant
+            # data block is one of the app's key features, so we never
+            # truncate it — the longest entries in plants_master.json
+            # are ~750 chars (~17 lines on a typical 280 px panel); cap
+            # at 40 lines purely as a safety bound for any future
+            # extra-long entries.
+            bound = fm.boundingRect(
+                0, 0, avail_w, 100000,
+                int(Qt.TextFlag.TextWordWrap),
+                notes,
+            )
+            wrapped_lines = max(1, bound.height() // fm.lineSpacing() + 1)
+            notes_h = min(wrapped_lines, 40) * fm.lineSpacing() + 8
         # Calendar strip: month-abbr row (12) + coloured cells (18) +
         # legend row (line height) + small gaps. Only reserved when the
         # plant actually has a calendar in the local DB; Permapeople-only
