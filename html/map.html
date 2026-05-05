@@ -240,7 +240,7 @@
 
   <div id="site-search">
     <input id="site-search-input" type="text"
-           placeholder="Search address or place name…"
+           placeholder="Search Alberta address or place…"
            autocomplete="off" />
     <button id="site-search-btn" type="button">Find</button>
     <button id="site-search-clear" class="secondary" type="button"
@@ -3767,9 +3767,16 @@
     }
 
     // ── Site search + pin drop ────────────────────────────────────────────
-    // Uses Nominatim (OSM) for geocoding; pin is draggable, right-click to
-    // remove. Notifies Python via bridge.onSitePinPlaced(lat, lng, label).
+    // Uses Nominatim (OSM) for geocoding, scoped to Alberta. Suggestions
+    // populate as the user types (debounced); pin is draggable; right-click
+    // to remove. Python is notified via bridge.onSitePinPlaced(lat, lng, label).
     var sitePinMarker = null;
+
+    // Alberta bounding box for Nominatim viewbox=left,top,right,bottom and
+    // a coarse client-side guard so out-of-province hits get filtered.
+    var AB_BBOX = { west: -120.0, east: -110.0, south: 49.0, north: 60.0 };
+    var _siteSearchTimer = null;
+    var _siteSearchSeq   = 0;
 
     function _siteSearchInput()  { return document.getElementById('site-search-input'); }
     function _siteSearchResults(){ return document.getElementById('site-search-results'); }
@@ -3790,44 +3797,92 @@
       box.style.display = 'block';
     }
 
-    function _doSiteSearch() {
-      var q = _siteSearchInput().value.trim();
-      if (!q) return;
-      // Allow direct "lat, lng" entry as a shortcut.
+    function _isInAlberta(lat, lng) {
+      return lat >= AB_BBOX.south && lat <= AB_BBOX.north
+          && lng >= AB_BBOX.west  && lng <= AB_BBOX.east;
+    }
+
+    function _runSiteQuery(q) {
+      // Allow direct "lat, lng" entry as a shortcut, AB-only.
       var m = q.match(/^\s*(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)\s*$/);
       if (m) {
         var la = parseFloat(m[1]), lo = parseFloat(m[2]);
-        if (la >= -90 && la <= 90 && lo >= -180 && lo <= 180) {
+        if (_isInAlberta(la, lo)) {
           _selectSiteResult(la, lo, la.toFixed(5) + ', ' + lo.toFixed(5));
-          return;
+        } else {
+          _showSiteMessage('Coordinates outside Alberta.', true);
         }
+        return;
       }
+
       _showSiteMessage('Searching…', true);
-      var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=5&q=' +
-                encodeURIComponent(q);
+
+      // Restrict to Alberta: country=Canada + viewbox + bounded=1, plus a
+      // belt-and-braces post-filter on the bbox in case Nominatim returns
+      // a near-edge match.
+      var params =
+        'format=json&addressdetails=1&limit=8' +
+        '&countrycodes=ca' +
+        '&viewbox=' + AB_BBOX.west + ',' + AB_BBOX.north +
+                ',' + AB_BBOX.east + ',' + AB_BBOX.south +
+        '&bounded=1' +
+        '&q=' + encodeURIComponent(q);
+      var url = 'https://nominatim.openstreetmap.org/search?' + params;
+
+      var seq = ++_siteSearchSeq;
       fetch(url, { headers: { 'Accept': 'application/json' } })
         .then(function(r){ return r.json(); })
         .then(function(items){
+          // Drop stale responses (user kept typing).
+          if (seq !== _siteSearchSeq) return;
+          items = (items || []).filter(function(it) {
+            var addr = it.address || {};
+            // Must resolve to Alberta and Canada.
+            if (addr.country_code && addr.country_code.toLowerCase() !== 'ca') return false;
+            if (addr.state && addr.state.toLowerCase() !== 'alberta') return false;
+            return _isInAlberta(parseFloat(it.lat), parseFloat(it.lon));
+          });
           var box = _siteSearchResults();
           box.innerHTML = '';
-          if (!items || !items.length) {
-            _showSiteMessage('No results.', true);
+          if (!items.length) {
+            _showSiteMessage('No Alberta results.', true);
             return;
           }
           items.forEach(function(it){
             var d = document.createElement('div');
             d.className = 'result';
             d.textContent = it.display_name;
-            d.onclick = function() {
+            d.addEventListener('mousedown', function(ev){
+              // mousedown (not click) wins the race against the document-level
+              // "click anywhere closes dropdown" handler.
+              ev.preventDefault();
               _selectSiteResult(parseFloat(it.lat), parseFloat(it.lon), it.display_name);
-            };
+            });
             box.appendChild(d);
           });
           box.style.display = 'block';
         })
         .catch(function(err){
+          if (seq !== _siteSearchSeq) return;
           _showSiteMessage('Search failed (offline?)', true);
         });
+    }
+
+    function _doSiteSearch() {
+      var q = _siteSearchInput().value.trim();
+      if (q.length < 2) { _hideSiteResults(); return; }
+      _runSiteQuery(q);
+    }
+
+    function _scheduleSiteSearch() {
+      if (_siteSearchTimer) clearTimeout(_siteSearchTimer);
+      var q = _siteSearchInput().value.trim();
+      if (q.length < 3) {
+        // Don't bother Nominatim with single characters; clear stale list.
+        _hideSiteResults();
+        return;
+      }
+      _siteSearchTimer = setTimeout(function(){ _runSiteQuery(q); }, 300);
     }
 
     function _selectSiteResult(lat, lng, label) {
@@ -3898,17 +3953,23 @@
       if (!btn || !inp) return;
       btn.addEventListener('click', _doSiteSearch);
       if (clear) clear.addEventListener('click', function(){ clearSitePin(true); });
+      // Type-ahead: fire a debounced search after 3+ characters.
+      inp.addEventListener('input', _scheduleSiteSearch);
+      inp.addEventListener('focus', function(){
+        if (inp.value.trim().length >= 3) _scheduleSiteSearch();
+      });
       inp.addEventListener('keydown', function(ev){
         if (ev.key === 'Enter') { ev.preventDefault(); _doSiteSearch(); }
         else if (ev.key === 'Escape') { _hideSiteResults(); }
       });
-      // Stop map from grabbing keystrokes/clicks while typing in the box
-      L.DomEvent.disableClickPropagation(document.getElementById('site-search'));
-      L.DomEvent.disableScrollPropagation(document.getElementById('site-search'));
-      // Hide results when clicking elsewhere
+      // Stop the map from grabbing keystrokes/clicks while interacting
+      // with the search overlay (would otherwise eat the dropdown click).
+      var wrap = document.getElementById('site-search');
+      L.DomEvent.disableClickPropagation(wrap);
+      L.DomEvent.disableScrollPropagation(wrap);
+      // Hide results when clicking elsewhere on the page.
       document.addEventListener('click', function(ev){
-        var box = document.getElementById('site-search');
-        if (box && !box.contains(ev.target)) _hideSiteResults();
+        if (wrap && !wrap.contains(ev.target)) _hideSiteResults();
       });
     }
 

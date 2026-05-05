@@ -117,8 +117,12 @@ class MainWindow(QMainWindow):
         self._side_tabs.addTab(self.structure_panel, "Structures")
         self._side_tabs.addTab(self.analysis_panel, "Analysis")
         self._side_tabs.addTab(self.planning_panel, "Planning")
-        self._side_tabs.setMinimumWidth(220)
-        self._side_tabs.setMaximumWidth(480)
+        # Six tabs need a wider minimum so none get clipped on a narrow window.
+        self._side_tabs.setMinimumWidth(300)
+        self._side_tabs.setMaximumWidth(520)
+        self._side_tabs.setUsesScrollButtons(True)
+        self._side_tabs.tabBar().setElideMode(Qt.TextElideMode.ElideRight)
+        self._side_tabs.tabBar().setExpanding(False)
         self._side_tabs.setStyleSheet(
             "QWidget { background-color: #1e2a1e; color: #c8e6c9; }"
         )
@@ -135,8 +139,8 @@ class MainWindow(QMainWindow):
         splitter.addWidget(self.map_widget)
         splitter.addWidget(self._side_wrapper)
 
-        # 70 / 30 split
-        splitter.setSizes([700, 300])
+        # ~67 / 33 split — give the side panel enough width to fit six tabs.
+        splitter.setSizes([700, 340])
         splitter.setStretchFactor(0, 7)
         splitter.setStretchFactor(1, 3)
 
