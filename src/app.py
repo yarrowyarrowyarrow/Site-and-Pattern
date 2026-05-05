@@ -333,9 +333,12 @@ class MainWindow(QMainWindow):
         self.analysis_panel.sector_cleared.connect(self.map_widget.clear_sectors)
         self.analysis_panel.contour_requested.connect(self._on_contour_requested)
         self.analysis_panel.contour_cleared.connect(self._on_contour_cleared)
-        self.analysis_panel.auto_terrain_requested.connect(self._on_auto_terrain_requested)
-        self.analysis_panel.auto_terrain_cleared.connect(self._on_auto_terrain_cleared)
-        self.analysis_panel.auto_terrain_opacity.connect(self.map_widget.set_slope_overlay_opacity)
+        # Auto-terrain controls live on the Site panel now (alongside the
+        # single-point Elevation/slope readout) — the request / clear /
+        # opacity signals come from there.
+        self.site_panel.auto_terrain_requested.connect(self._on_auto_terrain_requested)
+        self.site_panel.auto_terrain_cleared.connect(self._on_auto_terrain_cleared)
+        self.site_panel.auto_terrain_opacity.connect(self.map_widget.set_slope_overlay_opacity)
         b.terrain_bbox_ready.connect(self._on_terrain_bbox_ready)
         b.terrain_bbox_cancelled.connect(self._on_terrain_bbox_cancelled)
         self.analysis_panel.wind_requested.connect(self._on_wind_requested)
@@ -812,39 +815,50 @@ class MainWindow(QMainWindow):
     def _on_terrain_bbox_cancelled(self):
         self._pending_terrain_config = None
         self._set_mode_label("Ready")
-        self.analysis_panel.set_auto_terrain_status("Cancelled.")
+        self.site_panel.set_auto_terrain_status("Cancelled.")
 
     def _on_terrain_bbox_ready(self, bbox: dict):
-        """Spin up a TerrainWorker on a QThread for the chosen bbox."""
+        """Enqueue a TerrainWorker job for the chosen bbox and start it
+        if no other job is running. Multiple Generate clicks queue up
+        rather than getting rejected.
+        """
         cfg = getattr(self, "_pending_terrain_config", None)
         if not cfg:
             return
         self._pending_terrain_config = None
-        # If a previous job is still running, ignore the new request rather
-        # than fan out concurrent network calls. We track lifecycle with a
-        # plain bool because the QThread Python wrapper outlives the C++
-        # object once deleteLater() has fired — touching it would raise
-        # "wrapped C/C++ object has been deleted".
-        if getattr(self, "_terrain_running", False):
-            self.analysis_panel.set_auto_terrain_status(
-                "A terrain job is already running — please wait."
-            )
-            return
 
-        from src.terrain import TerrainWorker
         options = {
             "interval_m":         cfg.get("interval_m", 0.5),
-            "resolution_m":       cfg.get("resolution_m", 10.0),
+            "resolution_m":       cfg.get("resolution_m", 30.0),
             "want_contours":      cfg.get("want_contours", True),
             "want_slope_overlay": cfg.get("want_slope_overlay", True),
         }
-        # Stash the rendering prefs for use when the worker emits ready.
-        self._terrain_render_prefs = {
+        prefs = {
             "color":       cfg.get("color", "#5d4037"),
             "opacity":     cfg.get("opacity", 0.6),
             "show_labels": cfg.get("show_labels", True),
         }
+        if not hasattr(self, "_terrain_queue"):
+            self._terrain_queue = []
+        self._terrain_queue.append({
+            "bbox": bbox, "options": options, "prefs": prefs,
+        })
+        self._update_terrain_queue_status()
+        self._maybe_start_next_terrain_job()
 
+    def _maybe_start_next_terrain_job(self):
+        """Pop the next queued job and run it, if nothing else is running."""
+        if getattr(self, "_terrain_running", False):
+            return
+        queue = getattr(self, "_terrain_queue", None) or []
+        if not queue:
+            return
+        job = queue.pop(0)
+        bbox    = job["bbox"]
+        options = job["options"]
+        self._terrain_render_prefs = job["prefs"]
+
+        from src.terrain import TerrainWorker, grid_dims
         self._terrain_running = True
         self._terrain_thread = QThread(self)
         self._terrain_worker = TerrainWorker(bbox, options)
@@ -858,23 +872,37 @@ class MainWindow(QMainWindow):
         self._terrain_thread.start()
 
         self._set_mode_label("Generating slope contours…")
-        # Big areas can issue ~100 chunked Open-Meteo requests; warn the
-        # user up-front rather than letting them wonder if it's stuck.
-        from src.terrain import grid_dims
         cols, rows = grid_dims(bbox, options["resolution_m"])
         n_samples = cols * rows
+        prefix = self._terrain_queue_prefix()
         if n_samples > 3000:
             # ~0.3 s pacing per batch + request time ≈ 0.5 s/batch end-to-end.
-            est_seconds = max(15, int(round(n_samples / 100 * 0.6)))
-            self.analysis_panel.set_auto_terrain_status(
-                f"Fetching elevation data for {cols}×{rows} samples — "
-                f"~{est_seconds} s for an area this size…"
+            est_seconds = max(5, int(round(n_samples / 100 * 0.6)))
+            self.site_panel.set_auto_terrain_status(
+                f"{prefix}Fetching elevation data for {cols}×{rows} samples "
+                f"— ~{est_seconds} s for an area this size…"
             )
         else:
-            self.analysis_panel.set_auto_terrain_status("Fetching elevation data…")
+            self.site_panel.set_auto_terrain_status(
+                f"{prefix}Fetching elevation data…"
+            )
+
+    def _terrain_queue_prefix(self) -> str:
+        """Render '[3 queued] ' before status text when other jobs wait."""
+        queued = len(getattr(self, "_terrain_queue", []) or [])
+        return f"[{queued} more queued] " if queued else ""
+
+    def _update_terrain_queue_status(self):
+        """Update the status line when queue changes but no job started yet."""
+        queue = getattr(self, "_terrain_queue", []) or []
+        if not getattr(self, "_terrain_running", False) and queue:
+            self.site_panel.set_auto_terrain_status(
+                f"Queued {len(queue)} job(s); starting next…"
+            )
 
     def _on_terrain_thread_done(self):
-        """Clear stale references after a TerrainWorker run finishes.
+        """Clear stale references after a TerrainWorker run finishes, then
+        start the next queued job (if any).
 
         Connected to QThread.finished. Drops the Python references *before*
         scheduling deleteLater on the thread, so the next Generate click
@@ -886,6 +914,8 @@ class MainWindow(QMainWindow):
         self._terrain_running = False
         if thread is not None:
             thread.deleteLater()
+        # Defer the next start so deleteLater settles cleanly.
+        QTimer.singleShot(0, self._maybe_start_next_terrain_job)
 
     def _on_terrain_ready(self, result: dict):
         """Render the worker's output and persist features in the project."""
@@ -976,12 +1006,17 @@ class MainWindow(QMainWindow):
         bits.append(f"{len(contours)} contour level(s)")
         for w in (result.get("warnings") or []):
             bits.append("⚠ " + w)
-        self.analysis_panel.set_auto_terrain_status(" — ".join(bits))
+        self.site_panel.set_auto_terrain_status(" — ".join(bits))
 
     def _on_terrain_failed(self, message: str):
         self._set_mode_label("Ready")
-        self.analysis_panel.set_auto_terrain_status(f"Failed: {message}")
-        QMessageBox.warning(self, "Terrain Generation", message)
+        self.site_panel.set_auto_terrain_status(f"Failed: {message}")
+        # Avoid stacking modal dialogs when more jobs are queued — show
+        # one only when nothing else is pending. Queued failures still
+        # surface in the status line.
+        queued = len(getattr(self, "_terrain_queue", []) or [])
+        if queued == 0:
+            QMessageBox.warning(self, "Terrain Generation", message)
 
     def _on_auto_terrain_cleared(self):
         self.map_widget.clear_auto_terrain()
@@ -991,7 +1026,7 @@ class MainWindow(QMainWindow):
                 ("auto_contour", "slope_overlay")
         ]
         self._mark_modified()
-        self.analysis_panel.set_auto_terrain_status("")
+        self.site_panel.set_auto_terrain_status("")
 
     def _on_wind_requested(self, config: dict):
         """A4: Draw wind overlay with shelter zones."""
@@ -1697,7 +1732,7 @@ class MainWindow(QMainWindow):
                 show_labels=True,
             )
         if data.get("slope_overlay"):
-            self.analysis_panel.set_auto_terrain_status(
+            self.site_panel.set_auto_terrain_status(
                 "Slope ramp not loaded from file — click Generate to recompute."
             )
 

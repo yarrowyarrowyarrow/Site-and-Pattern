@@ -21,9 +21,11 @@ from __future__ import annotations
 from typing import Optional
 
 from PyQt6.QtCore import Qt, QObject, QThread, pyqtSignal, pyqtSlot
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QFormLayout, QFrame, QGroupBox, QScrollArea,
+    QFormLayout, QFrame, QGroupBox, QScrollArea, QComboBox,
+    QDoubleSpinBox, QCheckBox, QSlider, QColorDialog,
 )
 
 
@@ -84,6 +86,13 @@ class SitePanel(QWidget):
     pin_clear_requested = pyqtSignal()
     site_data_updated  = pyqtSignal(dict)         # full result dict
 
+    # Auto-generated slope contours / ramp overlay (formerly on Analysis tab).
+    # Lives here because it's site-scale terrain analysis, alongside the
+    # single-point elevation/slope readout.
+    auto_terrain_requested = pyqtSignal(dict)
+    auto_terrain_cleared   = pyqtSignal()
+    auto_terrain_opacity   = pyqtSignal(float)    # 0..1, live slider
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._lat: Optional[float] = None
@@ -91,6 +100,7 @@ class SitePanel(QWidget):
         self._label: str = ""
         self._thread: Optional[QThread] = None
         self._worker: Optional[_SiteFetchWorker] = None
+        self._auto_color = "#5d4037"
         self._build_ui()
         self._set_empty_state()
 
@@ -188,6 +198,122 @@ class SitePanel(QWidget):
         el.addRow("Aspect:",    self._lbl_aspect)
         el.addRow("Source:",    self._lbl_elev_src)
         layout.addWidget(self._elev_box)
+
+        # ── Slope analysis (area) ───────────────────────────────────
+        # Auto-generated contour lines + slope colour-ramp for an
+        # area you choose. Pulls from City of Edmonton 0.5 m LiDAR
+        # when in Edmonton, otherwise Copernicus DEM (~30 m) via
+        # Open-Meteo. Job runs in the background; multiple Generate
+        # clicks queue up rather than being rejected.
+        self._slope_box = QGroupBox("Slope analysis (area)")
+        self._slope_box.setStyleSheet(_GROUP_STYLE)
+        slope_layout = QVBoxLayout(self._slope_box)
+        slope_layout.setSpacing(6)
+
+        slope_info = QLabel(
+            "Choose an area, then Generate. Edmonton uses the City's\n"
+            "0.5 m LiDAR contours; elsewhere falls back to Copernicus DEM.\n"
+            "30 m grid matches the DEM's native resolution — finer settings\n"
+            "interpolate but don't add real detail."
+        )
+        slope_info.setWordWrap(True)
+        slope_info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        slope_layout.addWidget(slope_info)
+
+        slope_form = QFormLayout()
+        slope_form.setContentsMargins(0, 0, 0, 0)
+
+        self._auto_area_source = QComboBox()
+        self._auto_area_source.addItems([
+            "Current map view",
+            "Drag rectangle on map…",
+            "Use property boundary",
+        ])
+        self._auto_area_source.setToolTip(
+            "Where to compute slope. 'Drag rectangle' lets you pick a "
+            "smaller area than the current view."
+        )
+        slope_form.addRow("Area:", self._auto_area_source)
+
+        self._auto_interval = QDoubleSpinBox()
+        self._auto_interval.setRange(0.1, 5.0)
+        self._auto_interval.setSingleStep(0.5)
+        self._auto_interval.setValue(0.5)
+        self._auto_interval.setSuffix(" m")
+        self._auto_interval.setToolTip("Vertical spacing between contour lines.")
+        slope_form.addRow("Interval:", self._auto_interval)
+
+        self._auto_resolution = QDoubleSpinBox()
+        self._auto_resolution.setRange(5.0, 60.0)
+        self._auto_resolution.setSingleStep(5.0)
+        self._auto_resolution.setValue(30.0)        # match Copernicus DEM native res
+        self._auto_resolution.setSuffix(" m")
+        self._auto_resolution.setToolTip(
+            "Horizontal sample spacing for the slope grid.\n"
+            "Open-Meteo's underlying DEM is 30 m native; setting this\n"
+            "smaller mostly slows the request without adding real detail."
+        )
+        slope_form.addRow("Slope grid:", self._auto_resolution)
+
+        self._auto_want_contours = QCheckBox("Show contour lines")
+        self._auto_want_contours.setChecked(True)
+        slope_form.addRow(self._auto_want_contours)
+
+        self._auto_want_slope = QCheckBox("Show slope colour ramp")
+        self._auto_want_slope.setChecked(True)
+        slope_form.addRow(self._auto_want_slope)
+
+        self._auto_show_labels = QCheckBox("Label every 5th contour")
+        self._auto_show_labels.setChecked(True)
+        slope_form.addRow(self._auto_show_labels)
+
+        # Contour colour
+        color_row = QHBoxLayout()
+        self._auto_color_btn = QPushButton()
+        self._auto_color_btn.setFixedSize(28, 28)
+        self._auto_color_btn.setStyleSheet(
+            f"background: {self._auto_color}; border: 1px solid #4a7a4a; "
+            f"border-radius: 4px;"
+        )
+        self._auto_color_btn.clicked.connect(self._pick_auto_color)
+        color_row.addWidget(self._auto_color_btn)
+        color_row.addStretch()
+        slope_form.addRow("Color:", color_row)
+
+        slope_layout.addLayout(slope_form)
+
+        opa_row = QHBoxLayout()
+        opa_row.addWidget(QLabel("Ramp opacity:"))
+        self._auto_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self._auto_opacity_slider.setRange(0, 100)
+        self._auto_opacity_slider.setValue(60)
+        self._auto_opacity_slider.setToolTip("Transparency of the slope colour ramp.")
+        self._auto_opacity_slider.valueChanged.connect(
+            lambda v: self.auto_terrain_opacity.emit(v / 100.0)
+        )
+        opa_row.addWidget(self._auto_opacity_slider)
+        slope_layout.addLayout(opa_row)
+
+        self._auto_status = QLabel("")
+        self._auto_status.setWordWrap(True)
+        self._auto_status.setStyleSheet(
+            "color: #ffcc80; font-size: 11px; padding: 2px;"
+        )
+        slope_layout.addWidget(self._auto_status)
+
+        slope_btn_row = QHBoxLayout()
+        btn_auto = QPushButton("Generate")
+        btn_auto.setStyleSheet(_BTN_PRIMARY)
+        btn_auto.clicked.connect(self._on_auto_terrain_generate)
+        slope_btn_row.addWidget(btn_auto)
+
+        btn_auto_clear = QPushButton("Clear")
+        btn_auto_clear.setStyleSheet(_BTN_SECONDARY)
+        btn_auto_clear.clicked.connect(self.auto_terrain_cleared.emit)
+        slope_btn_row.addWidget(btn_auto_clear)
+        slope_layout.addLayout(slope_btn_row)
+
+        layout.addWidget(self._slope_box)
 
         # ── Rainfall ────────────────────────────────────────────────
         self._rain_box = QGroupBox("Rainfall (climate normal)")
@@ -399,6 +525,38 @@ class SitePanel(QWidget):
     def _on_finished(self, result: dict):
         self._lbl_status.setText("Site data ready.")
         self.site_data_updated.emit(result)
+
+    # ── Auto-generated slope analysis ───────────────────────────────────────
+
+    def _pick_auto_color(self):
+        color = QColorDialog.getColor(
+            QColor(self._auto_color), self, "Contour colour"
+        )
+        if color.isValid():
+            self._auto_color = color.name()
+            self._auto_color_btn.setStyleSheet(
+                f"background: {self._auto_color}; "
+                f"border: 1px solid #4a7a4a; border-radius: 4px;"
+            )
+
+    def _on_auto_terrain_generate(self):
+        idx = self._auto_area_source.currentIndex()
+        area = ("viewport", "draw", "boundary")[idx]
+        self.auto_terrain_requested.emit({
+            "area_source":         area,
+            "interval_m":          self._auto_interval.value(),
+            "resolution_m":        self._auto_resolution.value(),
+            "want_contours":       self._auto_want_contours.isChecked(),
+            "want_slope_overlay":  self._auto_want_slope.isChecked(),
+            "show_labels":         self._auto_show_labels.isChecked(),
+            "color":               self._auto_color,
+            "opacity":             self._auto_opacity_slider.value() / 100.0,
+        })
+        self._auto_status.setText("Queued — preparing area selection…")
+
+    def set_auto_terrain_status(self, text: str):
+        """Called from MainWindow with progress / queue / result info."""
+        self._auto_status.setText(text)
 
 
 # ── Styling ──────────────────────────────────────────────────────────────────
