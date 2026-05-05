@@ -327,6 +327,91 @@ def test_generate_terrain_handles_no_network():
         t.fetch_edmonton_contours = real_edm
         t.fetch_openmeteo_grid    = real_om
     assert out["ok"] is False
+    # Warnings list should be populated so the UI can explain what failed.
+    assert any("unreachable" in w.lower() for w in (out.get("warnings") or []))
+
+
+def test_generate_terrain_partial_success_keeps_edmonton_contours():
+    """Edmonton contours succeeded but Open-Meteo grid failed → still ok."""
+    real_edm = t.fetch_edmonton_contours
+    real_om  = t.fetch_openmeteo_grid
+    t.fetch_edmonton_contours = lambda *a, **kw: [
+        {"coords": [[BBOX["south"], BBOX["west"]],
+                    [BBOX["north"], BBOX["east"]]],
+         "elevation_m": 670.0},
+    ]
+    t.fetch_openmeteo_grid = lambda *a, **kw: None
+    try:
+        out = t.generate_terrain(BBOX, {
+            "interval_m": 0.5, "resolution_m": 10.0,
+            "want_contours": True, "want_slope_overlay": True,
+        })
+    finally:
+        t.fetch_edmonton_contours = real_edm
+        t.fetch_openmeteo_grid    = real_om
+    assert out["ok"] is True
+    assert len(out["contours"]) == 1
+    assert out["slope_png_bytes"] is None
+    assert any("slope" in w.lower() for w in (out.get("warnings") or []))
+
+
+def test_generate_terrain_empty_edmonton_falls_back_to_openmeteo_contours():
+    """Edmonton dataset reachable but no features in bbox → fallback marches."""
+    real_edm = t.fetch_edmonton_contours
+    real_om  = t.fetch_openmeteo_grid
+    fake_grid = {
+        "grid": _ramp_grid(5, 5), "cols": 5, "rows": 5,
+        "bbox": BBOX, "resolution_m": 25,
+        "source": "Open-Meteo / Copernicus DEM 30m",
+    }
+    t.fetch_edmonton_contours = lambda *a, **kw: []      # reachable, empty
+    t.fetch_openmeteo_grid    = lambda *a, **kw: fake_grid
+    try:
+        out = t.generate_terrain(BBOX, {
+            "interval_m": 1.0, "resolution_m": 25.0,
+            "want_contours": True, "want_slope_overlay": False,
+        })
+    finally:
+        t.fetch_edmonton_contours = real_edm
+        t.fetch_openmeteo_grid    = real_om
+    assert out["ok"] is True
+    assert len(out["contours"]) > 0
+    assert "Open-Meteo" in out["source"]
+
+
+# ── HTTP retry helper ───────────────────────────────────────────────────────
+
+def test_http_get_json_retry_succeeds_on_third_try():
+    real = t._http_get_json
+    calls = {"n": 0}
+
+    def flaky(url, timeout=10.0):
+        calls["n"] += 1
+        return {"ok": 1} if calls["n"] >= 3 else None
+
+    t._http_get_json = flaky
+    real_sleep = t.time.sleep
+    t.time.sleep = lambda _s: None      # don't actually sleep in tests
+    try:
+        out = t._http_get_json_retry("https://example.invalid/x", attempts=3)
+    finally:
+        t._http_get_json = real
+        t.time.sleep = real_sleep
+    assert out == {"ok": 1}
+    assert calls["n"] == 3
+
+
+def test_http_get_json_retry_gives_up_after_attempts():
+    real = t._http_get_json
+    t._http_get_json = lambda *a, **kw: None
+    real_sleep = t.time.sleep
+    t.time.sleep = lambda _s: None
+    try:
+        out = t._http_get_json_retry("https://example.invalid/y", attempts=2)
+    finally:
+        t._http_get_json = real
+        t.time.sleep = real_sleep
+    assert out is None
 
 
 # ── _http_get_json error path ───────────────────────────────────────────────

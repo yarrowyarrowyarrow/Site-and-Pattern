@@ -961,6 +961,8 @@ class MainWindow(QMainWindow):
                 f"mean: {stats.get('mean_slope_pct', 0):.1f}%"
             )
         bits.append(f"{len(contours)} contour level(s)")
+        for w in (result.get("warnings") or []):
+            bits.append("⚠ " + w)
         self.analysis_panel.set_auto_terrain_status(" — ".join(bits))
 
     def _on_terrain_failed(self, message: str):

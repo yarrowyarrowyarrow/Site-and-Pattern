@@ -89,6 +89,25 @@ def _http_get_json(url: str, timeout: float = _TIMEOUT) -> Optional[dict]:
         return None
 
 
+def _http_get_json_retry(url: str, attempts: int = 3,
+                         timeout: float = _TIMEOUT) -> Optional[dict]:
+    """
+    Like ``_http_get_json`` but retries transient failures with exponential
+    backoff (0.5 s, 1.0 s, 2.0 s, …). Open-Meteo occasionally drops a
+    request under load; without retry, one 500/timeout in a 25-batch grid
+    sample fails the whole generation.
+    """
+    delay = 0.5
+    for i in range(attempts):
+        result = _http_get_json(url, timeout=timeout)
+        if result is not None:
+            return result
+        if i < attempts - 1:
+            time.sleep(delay)
+            delay *= 2.0
+    return None
+
+
 # ── Bbox / projection helpers ───────────────────────────────────────────────
 
 def metres_per_deg(lat: float) -> tuple[float, float]:
@@ -333,7 +352,7 @@ def fetch_openmeteo_grid(bbox: dict, resolution_m: float) -> Optional[dict]:
         lats = ",".join(f"{p[0]:.6f}" for p in batch)
         lngs = ",".join(f"{p[1]:.6f}" for p in batch)
         url = f"https://api.open-meteo.com/v1/elevation?latitude={lats}&longitude={lngs}"
-        data = _http_get_json(url)
+        data = _http_get_json_retry(url)
         if not data or "elevation" not in data:
             return None
         elevations.extend(data["elevation"])
@@ -588,40 +607,48 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
     contours: list[dict] = []
     source = ""
     stats: dict = {}
+    warnings: list[str] = []
 
-    if want_contours:
-        if use_edm:
-            edm = fetch_edmonton_contours(bbox, interval_m=interval_m)
-            if edm is None and force != "edmonton":
-                use_edm = False    # silent fallback
-            elif edm is not None:
-                contours = [
-                    {"elevation_m": f["elevation_m"],
-                     "segments":   [f["coords"]]}
-                    for f in edm
-                ]
-                source = "City of Edmonton — Contour Lines 3TM (0.5 m LiDAR)"
-                if contours:
-                    elevs = [c["elevation_m"] for c in contours]
-                    stats["min_elev"] = min(elevs)
-                    stats["max_elev"] = max(elevs)
+    if want_contours and use_edm:
+        edm = fetch_edmonton_contours(bbox, interval_m=interval_m)
+        if edm is None:
+            # Network/dataset error — fall through to Open-Meteo unless the
+            # user explicitly forced the Edmonton path.
+            if force == "edmonton":
+                warnings.append("Edmonton contour dataset unreachable.")
+        elif not edm:
+            # Reached the dataset but nothing intersects the bbox — areas
+            # outside city limits, river/ravine pockets without LiDAR,
+            # etc. Fall back to Open-Meteo for marching-squares contours.
+            pass
+        else:
+            contours = [
+                {"elevation_m": f["elevation_m"],
+                 "segments":   [f["coords"]]}
+                for f in edm
+            ]
+            source = "City of Edmonton — Contour Lines 3TM (0.5 m LiDAR)"
+            elevs = [c["elevation_m"] for c in contours]
+            stats["min_elev"] = min(elevs)
+            stats["max_elev"] = max(elevs)
 
-    # Slope ramp / fallback contours both need an elevation grid.
+    # The slope ramp always needs a regular elevation grid. Fallback
+    # contours also need it when Edmonton didn't supply any.
     elev = None
-    if want_slope or (want_contours and not contours):
+    need_grid = want_slope or (want_contours and not contours)
+    if need_grid:
         elev = fetch_openmeteo_grid(bbox, resolution_m)
         if elev is None:
-            return {
-                "ok": False,
-                "error": "Could not fetch elevation data. Check your internet connection.",
-                "contours": [], "slope_png_bytes": None,
-            }
-        if not source:
-            source = elev["source"]
+            if want_slope:
+                warnings.append("Slope ramp unavailable (Open-Meteo unreachable).")
+            if want_contours and not contours:
+                warnings.append("Contour fallback unavailable (Open-Meteo unreachable).")
 
     if want_contours and not contours and elev is not None:
         levels = _levels_for_grid(elev["grid"], interval_m)
         contours = marching_squares(elev["grid"], levels, bbox)
+        if not source:
+            source = elev["source"]
 
     slope_png: Optional[bytes] = None
     if want_slope and elev is not None:
@@ -633,6 +660,22 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
             stats["max_slope_pct"] = round(max(flat), 2)
             stats["mean_slope_pct"] = round(sum(flat) / len(flat), 2)
 
+    # Partial success counts: render whatever we have, surface warnings
+    # in the panel. Only return error if every layer the user asked for
+    # came up empty.
+    asked_for_anything = want_contours or want_slope
+    got_anything = bool(contours) or slope_png is not None
+    if asked_for_anything and not got_anything:
+        if warnings:
+            err = " ".join(warnings)
+        else:
+            err = "Could not fetch elevation data. Check your internet connection."
+        return {
+            "ok": False, "error": err,
+            "contours": [], "slope_png_bytes": None,
+            "warnings": warnings,
+        }
+
     return {
         "ok": True,
         "error": None,
@@ -641,6 +684,7 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
         "slope_png_bytes": slope_png,
         "slope_bbox": bbox if slope_png else None,
         "stats": stats,
+        "warnings": warnings,
         "interval_m": interval_m,
         "resolution_m": resolution_m,
     }
