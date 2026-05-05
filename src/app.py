@@ -858,7 +858,17 @@ class MainWindow(QMainWindow):
         self._terrain_thread.start()
 
         self._set_mode_label("Generating slope contours…")
-        self.analysis_panel.set_auto_terrain_status("Fetching elevation data…")
+        # Big areas can issue 50+ chunked Open-Meteo requests; warn the
+        # user up-front rather than letting them wonder if it's stuck.
+        from src.terrain import grid_dims
+        cols, rows = grid_dims(bbox, options["resolution_m"])
+        if cols * rows > 1500:
+            self.analysis_panel.set_auto_terrain_status(
+                f"Fetching elevation data for {cols}×{rows} samples — "
+                f"this can take 20–40 s for a large area…"
+            )
+        else:
+            self.analysis_panel.set_auto_terrain_status("Fetching elevation data…")
 
     def _on_terrain_thread_done(self):
         """Clear stale references after a TerrainWorker run finishes.

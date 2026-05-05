@@ -59,9 +59,16 @@ _OPEN_METEO_BATCH = 100
 _OPEN_METEO_INTERVAL = 0.15  # seconds between batches, polite pacing
 
 # Hard caps so a sloppy bbox can't lock the app up.
-_MAX_GRID_CELLS = 2500       # 50 × 50 — ≤ 25 batched Open-Meteo requests
+_MAX_GRID_CELLS = 5000       # ≤ 50 batched Open-Meteo requests; ~700 m at 10 m grid
 _MIN_RESOLUTION_M = 5.0
-_MAX_BBOX_M = 2000.0         # 2 km on a side, keeps urban use cases comfortable
+_MAX_BBOX_M = 3000.0         # 3 km on a side — fits e.g. Mayfair Golf Course
+
+# Elevation samples differing from their 3×3 neighbours' median by more
+# than this are treated as DEM sentinel/canopy-bleed artifacts and replaced
+# with the local median. 10 m of vertical noise on a 10 m horizontal grid
+# would already imply 100 % slope, so anything beyond is almost always
+# bogus over urban Alberta terrain.
+_DESPIKE_THRESHOLD_M = 10.0
 
 # Edmonton bbox (loose) — used to pick the local data source.
 _EDM_BBOX = (53.39, 53.71, -113.71, -113.27)  # (south, north, west, east)
@@ -157,9 +164,14 @@ def validate_bbox(bbox: dict, resolution_m: float) -> Optional[str]:
         return f"Resolution must be ≥ {_MIN_RESOLUTION_M:.0f} m."
     cols, rows = grid_dims(bbox, resolution_m)
     if cols * rows > _MAX_GRID_CELLS:
+        # Suggest a resolution that just fits, so the user knows what to do.
+        suggested = max(_MIN_RESOLUTION_M,
+                        math.ceil(resolution_m * math.sqrt(
+                            (cols * rows) / _MAX_GRID_CELLS)))
         return (
-            f"Grid too dense ({cols}×{rows} = {cols*rows} samples). "
-            f"Increase resolution or pick a smaller area."
+            f"Grid too dense ({cols}×{rows} = {cols*rows} samples; "
+            f"max {_MAX_GRID_CELLS}). Try Slope grid ≥ {suggested:.0f} m, "
+            f"or pick a smaller rectangle."
         )
     return None
 
@@ -334,11 +346,14 @@ def fetch_openmeteo_grid(bbox: dict, resolution_m: float) -> Optional[dict]:
     """
     Sample the Copernicus DEM 30 m on a regular grid covering ``bbox``.
 
-    Returns ``{grid: [[float, ...], ...], cols, rows, bbox}`` with the grid
-    laid out **north-to-south, west-to-east** (row 0 = north edge), or
-    ``None`` on failure.
+    Returns ``{grid: [[float, ...], ...], cols, rows, bbox, missing_pct}``
+    with the grid laid out **north-to-south, west-to-east** (row 0 = north
+    edge), or ``None`` if too many samples couldn't be obtained. A handful
+    of dropped batches are tolerated — missing cells are median-imputed
+    from the neighbours we did get, then the whole grid is despiked to
+    suppress single-cell DEM artifacts.
     """
-    cache_key = _cache_key("om", bbox, resolution_m)
+    cache_key = _cache_key("om_v2", bbox, resolution_m)
     cached = _cache_load_json(cache_key)
     if cached is not None:
         return cached
@@ -347,30 +362,86 @@ def fetch_openmeteo_grid(bbox: dict, resolution_m: float) -> Optional[dict]:
     points = _grid_points(bbox, cols, rows)
 
     elevations: list[Optional[float]] = []
+    failed_batches = 0
+    n_batches = 0
     for batch_start in range(0, len(points), _OPEN_METEO_BATCH):
+        n_batches += 1
         batch = points[batch_start:batch_start + _OPEN_METEO_BATCH]
         lats = ",".join(f"{p[0]:.6f}" for p in batch)
         lngs = ",".join(f"{p[1]:.6f}" for p in batch)
         url = f"https://api.open-meteo.com/v1/elevation?latitude={lats}&longitude={lngs}"
         data = _http_get_json_retry(url)
         if not data or "elevation" not in data:
-            return None
-        elevations.extend(data["elevation"])
+            # Don't fail the whole grid for one bad batch — fill with None
+            # and median-impute below. Only give up if most batches drop.
+            elevations.extend([None] * len(batch))
+            failed_batches += 1
+        else:
+            elevations.extend(data["elevation"])
         if batch_start + _OPEN_METEO_BATCH < len(points):
             time.sleep(_OPEN_METEO_INTERVAL)
 
     if len(elevations) != cols * rows:
         return None
-    if any(v is None for v in elevations):
+
+    valid = [v for v in elevations if v is not None]
+    # Bail only if effectively no data came back. A single dropped batch
+    # in 25 (= 4 % missing) is still a usable grid.
+    if not valid or len(valid) < 0.5 * len(elevations):
         return None
 
+    median = sorted(valid)[len(valid) // 2]
+    elevations = [float(v) if v is not None else float(median) for v in elevations]
+    missing_pct = round(100.0 * (1.0 - len(valid) / len(elevations)), 1)
+
     grid = [
-        [float(elevations[r * cols + c]) for c in range(cols)]
+        [elevations[r * cols + c] for c in range(cols)]
         for r in range(rows)
     ]
+    grid = _despike(grid, _DESPIKE_THRESHOLD_M)
+
     out = {"grid": grid, "cols": cols, "rows": rows, "bbox": bbox,
-           "resolution_m": resolution_m, "source": "Open-Meteo / Copernicus DEM 30m"}
+           "resolution_m": resolution_m,
+           "missing_pct": missing_pct,
+           "failed_batches": failed_batches,
+           "n_batches": n_batches,
+           "source": "Open-Meteo / Copernicus DEM 30m"}
     _cache_save_json(cache_key, out)
+    return out
+
+
+def _despike(grid: list[list[float]],
+             threshold_m: float) -> list[list[float]]:
+    """
+    Replace cells that differ from their 8-neighbour median by more than
+    ``threshold_m``. Conservative: real terrain features (gradual slopes,
+    natural cliffs up to a few metres per cell) pass through unchanged.
+
+    Catches the DEM sentinel values and building-canopy spikes that
+    otherwise produce visually-implausible 200%+ slopes on flat
+    residential blocks.
+    """
+    if not grid or not grid[0]:
+        return grid
+    rows = len(grid)
+    cols = len(grid[0])
+    out = [row[:] for row in grid]
+    for r in range(rows):
+        for c in range(cols):
+            window = []
+            for dr in (-1, 0, 1):
+                for dc in (-1, 0, 1):
+                    if dr == 0 and dc == 0:
+                        continue
+                    rr, cc = r + dr, c + dc
+                    if 0 <= rr < rows and 0 <= cc < cols:
+                        window.append(grid[rr][cc])
+            if len(window) < 4:
+                continue        # corners/edges with too few neighbours
+            window.sort()
+            local_median = window[len(window) // 2]
+            if abs(grid[r][c] - local_median) > threshold_m:
+                out[r][c] = local_median
     return out
 
 
@@ -639,10 +710,18 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
     if need_grid:
         elev = fetch_openmeteo_grid(bbox, resolution_m)
         if elev is None:
-            if want_slope:
-                warnings.append("Slope ramp unavailable (Open-Meteo unreachable).")
-            if want_contours and not contours:
-                warnings.append("Contour fallback unavailable (Open-Meteo unreachable).")
+            warnings.append(
+                "Open-Meteo elevation unreachable — try again, or pick a "
+                "smaller area."
+            )
+        else:
+            missing = elev.get("missing_pct") or 0.0
+            if missing > 5.0:
+                warnings.append(
+                    f"{missing:.0f}% of elevation samples were dropped "
+                    f"and median-imputed; results in those cells are "
+                    f"approximate."
+                )
 
     if want_contours and not contours and elev is not None:
         levels = _levels_for_grid(elev["grid"], interval_m)

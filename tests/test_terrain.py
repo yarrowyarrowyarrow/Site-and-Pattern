@@ -60,9 +60,17 @@ def test_grid_dims_min_two():
 
 
 def test_validate_bbox_rejects_too_large():
-    big = {"south": 53.0, "north": 53.05, "west": -113.5, "east": -113.45}
+    big = {"south": 53.0, "north": 53.1, "west": -113.5, "east": -113.40}
     err = t.validate_bbox(big, 10.0)
     assert err is not None and "too large" in err.lower()
+
+
+def test_validate_bbox_too_dense_suggests_resolution():
+    # 1 km × 0.6 km at 5 m → 200 × 120 = 24 k cells, well over 5 k cap.
+    big = {"south": 53.45, "north": 53.4555, "west": -113.55, "east": -113.535}
+    err = t.validate_bbox(big, 5.0)
+    assert err is not None
+    assert "Slope grid" in err   # validation should suggest a coarser grid
 
 
 def test_validate_bbox_rejects_too_dense():
@@ -352,7 +360,7 @@ def test_generate_terrain_partial_success_keeps_edmonton_contours():
     assert out["ok"] is True
     assert len(out["contours"]) == 1
     assert out["slope_png_bytes"] is None
-    assert any("slope" in w.lower() for w in (out.get("warnings") or []))
+    assert any("unreachable" in w.lower() for w in (out.get("warnings") or []))
 
 
 def test_generate_terrain_empty_edmonton_falls_back_to_openmeteo_contours():
@@ -377,6 +385,47 @@ def test_generate_terrain_empty_edmonton_falls_back_to_openmeteo_contours():
     assert out["ok"] is True
     assert len(out["contours"]) > 0
     assert "Open-Meteo" in out["source"]
+
+
+# ── Despike filter ──────────────────────────────────────────────────────────
+
+def test_despike_replaces_single_cell_spike():
+    """A 100 m sentinel jutting out of a flat plateau should get clipped."""
+    grid = [
+        [100.0, 100.0, 100.0, 100.0, 100.0],
+        [100.0, 100.0, 100.0, 100.0, 100.0],
+        [100.0, 100.0, 9999.0, 100.0, 100.0],   # the spike
+        [100.0, 100.0, 100.0, 100.0, 100.0],
+        [100.0, 100.0, 100.0, 100.0, 100.0],
+    ]
+    out = t._despike(grid, threshold_m=10.0)
+    assert out[2][2] == 100.0
+    # Untouched cells stay untouched
+    assert out[0][0] == 100.0
+
+
+def test_despike_preserves_real_terrain():
+    """A gradual ramp must pass through unchanged."""
+    grid = [[float(r + c) for c in range(5)] for r in range(5)]
+    out = t._despike(grid, threshold_m=10.0)
+    for r in range(5):
+        for c in range(5):
+            assert out[r][c] == grid[r][c]
+
+
+def test_despike_keeps_real_cliff():
+    """A genuine cliff (5 m drop, below threshold) is kept, not smoothed."""
+    grid = [
+        [100.0, 100.0, 100.0, 100.0, 100.0],
+        [100.0, 100.0, 100.0, 100.0, 100.0],
+        [100.0, 100.0,  95.0,  95.0,  95.0],
+        [100.0, 100.0,  95.0,  95.0,  95.0],
+        [100.0, 100.0,  95.0,  95.0,  95.0],
+    ]
+    out = t._despike(grid, threshold_m=10.0)
+    # The cliff cells should stay close to 95 (could be 95 or 100 since
+    # interior cliff cells have 5 neighbours at 95 and 3 at 100, median = 95).
+    assert abs(out[3][2] - 95.0) < 1e-6
 
 
 # ── HTTP retry helper ───────────────────────────────────────────────────────
