@@ -240,7 +240,7 @@
 
   <div id="site-search">
     <input id="site-search-input" type="text"
-           placeholder="Search address or place name…"
+           placeholder="Search Alberta address or place name…"
            autocomplete="off" />
     <button id="site-search-btn" type="button">Find</button>
     <button id="site-search-clear" class="secondary" type="button"
@@ -3955,9 +3955,18 @@
     }
 
     // ── Site search + pin drop ────────────────────────────────────────────
-    // Uses Nominatim (OSM) for geocoding; pin is draggable, right-click to
-    // remove. Notifies Python via bridge.onSitePinPlaced(lat, lng, label).
+    // Uses Nominatim (OSM) for geocoding, restricted to Alberta. Typing
+    // populates a typeahead dropdown after a short debounce; pressing
+    // Enter / clicking Find runs the same query. Pin is draggable,
+    // right-click to remove. Notifies Python via
+    // bridge.onSitePinPlaced(lat, lng, label).
     var sitePinMarker = null;
+
+    // Alberta bounding box (lng_min, lat_min, lng_max, lat_max).
+    var _AB_VIEWBOX = '-120.0,48.95,-109.95,60.05';
+    // Debounce timer + last-fetched query for typeahead.
+    var _siteSearchTimer = null;
+    var _siteLastQuery   = '';
 
     function _siteSearchInput()  { return document.getElementById('site-search-input'); }
     function _siteSearchResults(){ return document.getElementById('site-search-results'); }
@@ -3978,28 +3987,47 @@
       box.style.display = 'block';
     }
 
-    function _doSiteSearch() {
+    function _doSiteSearch(typeahead) {
       var q = _siteSearchInput().value.trim();
-      if (!q) return;
-      // Allow direct "lat, lng" entry as a shortcut.
-      var m = q.match(/^\s*(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)\s*$/);
-      if (m) {
-        var la = parseFloat(m[1]), lo = parseFloat(m[2]);
-        if (la >= -90 && la <= 90 && lo >= -180 && lo <= 180) {
-          _selectSiteResult(la, lo, la.toFixed(5) + ', ' + lo.toFixed(5));
-          return;
+      if (!q) { _hideSiteResults(); return; }
+      // Allow direct "lat, lng" entry as a shortcut (manual search only;
+      // typeahead suggestions for coords would be noisy).
+      if (!typeahead) {
+        var m = q.match(/^\s*(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)\s*$/);
+        if (m) {
+          var la = parseFloat(m[1]), lo = parseFloat(m[2]);
+          if (la >= -90 && la <= 90 && lo >= -180 && lo <= 180) {
+            _selectSiteResult(la, lo, la.toFixed(5) + ', ' + lo.toFixed(5));
+            return;
+          }
         }
       }
-      _showSiteMessage('Searching…', true);
-      var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=5&q=' +
-                encodeURIComponent(q);
+      _siteLastQuery = q;
+      if (!typeahead) _showSiteMessage('Searching…', true);
+      // Restrict to Alberta: bias by viewbox + bounded=1 + countrycodes=ca.
+      var url = 'https://nominatim.openstreetmap.org/search'
+              + '?format=json&limit=6&addressdetails=1'
+              + '&countrycodes=ca'
+              + '&viewbox=' + encodeURIComponent(_AB_VIEWBOX)
+              + '&bounded=1'
+              + '&q=' + encodeURIComponent(q);
       fetch(url, { headers: { 'Accept': 'application/json' } })
         .then(function(r){ return r.json(); })
         .then(function(items){
+          // Race guard: a slower response from a stale query must not
+          // overwrite results for what the user is currently typing.
+          if (q !== _siteLastQuery) return;
+          // Defence in depth: drop anything Nominatim returned outside AB.
+          items = (items || []).filter(function(it){
+            var addr = it.address || {};
+            return (addr.state === 'Alberta')
+                || (addr['ISO3166-2-lvl4'] === 'CA-AB');
+          });
           var box = _siteSearchResults();
           box.innerHTML = '';
-          if (!items || !items.length) {
-            _showSiteMessage('No results.', true);
+          if (!items.length) {
+            if (typeahead) { _hideSiteResults(); return; }
+            _showSiteMessage('No Alberta results.', true);
             return;
           }
           items.forEach(function(it){
@@ -4014,7 +4042,7 @@
           box.style.display = 'block';
         })
         .catch(function(err){
-          _showSiteMessage('Search failed (offline?)', true);
+          if (!typeahead) _showSiteMessage('Search failed (offline?)', true);
         });
     }
 
@@ -4084,11 +4112,29 @@
       var clear = document.getElementById('site-search-clear');
       var inp   = _siteSearchInput();
       if (!btn || !inp) return;
-      btn.addEventListener('click', _doSiteSearch);
+      btn.addEventListener('click', function(){ _doSiteSearch(false); });
       if (clear) clear.addEventListener('click', function(){ clearSitePin(true); });
+      // Typeahead: debounce 350 ms (Nominatim asks ≤ 1 req/s; this stays
+      // well under and groups bursts of keystrokes). Min 3 chars to avoid
+      // pulling thousands of "AB" hits.
+      inp.addEventListener('input', function(){
+        if (_siteSearchTimer) {
+          clearTimeout(_siteSearchTimer);
+          _siteSearchTimer = null;
+        }
+        var v = inp.value.trim();
+        if (v.length < 3) { _hideSiteResults(); return; }
+        _siteSearchTimer = setTimeout(function(){
+          _siteSearchTimer = null;
+          _doSiteSearch(true);
+        }, 350);
+      });
       inp.addEventListener('keydown', function(ev){
-        if (ev.key === 'Enter') { ev.preventDefault(); _doSiteSearch(); }
-        else if (ev.key === 'Escape') { _hideSiteResults(); }
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          if (_siteSearchTimer) { clearTimeout(_siteSearchTimer); _siteSearchTimer = null; }
+          _doSiteSearch(false);
+        } else if (ev.key === 'Escape') { _hideSiteResults(); }
       });
       // Stop map from grabbing keystrokes/clicks while typing in the box
       L.DomEvent.disableClickPropagation(document.getElementById('site-search'));

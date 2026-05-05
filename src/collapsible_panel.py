@@ -164,7 +164,7 @@ class CollapsibleSidebar(QWidget):
 
     toggled = pyqtSignal(bool)
 
-    COLLAPSED_WIDTH = 22
+    COLLAPSED_WIDTH = 28
 
     def __init__(self, title: str, panel_id: str = "",
                  expanded: bool = True, parent: Optional[QWidget] = None):
@@ -185,14 +185,19 @@ class CollapsibleSidebar(QWidget):
 
         # Vertical chevron strip on the left edge of the sidebar.
         self._chev = QToolButton(self)
+        # Use a brighter, larger glyph when collapsed so users can find the
+        # re-open affordance — the side panel hosts critical UI (Contours,
+        # Plants, etc.) and a faint 22 px strip on the right edge has been
+        # easy to miss.
         self._chev.setText("‹" if expanded else "›")
         self._chev.setToolTip(
-            f"Collapse {title}" if expanded else f"Expand {title}"
+            f"Collapse {title}" if expanded else f"Expand {title} (Ctrl+\\)"
         )
         self._chev.setStyleSheet(
             "QToolButton { color: #a5d6a7; background: #1b3a1b; "
-            "border: none; padding: 6px 2px; font-size: 14px; }"
-            "QToolButton:hover { background: #224a22; }"
+            "border-left: 1px solid #2e4a2e; padding: 6px 2px; "
+            "font-size: 18px; font-weight: bold; }"
+            "QToolButton:hover { background: #2e7d32; color: #ffffff; }"
         )
         self._chev.setSizePolicy(QSizePolicy.Policy.Fixed,
                                   QSizePolicy.Policy.Expanding)

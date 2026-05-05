@@ -131,16 +131,16 @@ class MainWindow(QMainWindow):
         )
         self._side_wrapper.set_content(self._side_tabs)
 
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.addWidget(self.map_widget)
-        splitter.addWidget(self._side_wrapper)
+        self._splitter = QSplitter(Qt.Orientation.Horizontal)
+        self._splitter.addWidget(self.map_widget)
+        self._splitter.addWidget(self._side_wrapper)
 
         # 70 / 30 split
-        splitter.setSizes([700, 300])
-        splitter.setStretchFactor(0, 7)
-        splitter.setStretchFactor(1, 3)
+        self._splitter.setSizes([700, 300])
+        self._splitter.setStretchFactor(0, 7)
+        self._splitter.setStretchFactor(1, 3)
 
-        self.setCentralWidget(splitter)
+        self.setCentralWidget(self._splitter)
 
         # Status bar labels
         self._sb_coords  = QLabel("Lat: — , Lng: —")
@@ -166,8 +166,28 @@ class MainWindow(QMainWindow):
         # Menu bar
         self._build_menu()
 
+        # Recovery hatch: if the saved state restored the sidebar collapsed,
+        # the chevron strip on the right edge can be missed entirely. Force
+        # the panel open on every launch so users always boot with the panel
+        # visible; they can collapse it again from the chevron if they want.
+        self._side_wrapper.set_expanded(True, persist=False)
+        self._act_show_sidebar.setChecked(True)
+        self._side_wrapper.toggled.connect(self._act_show_sidebar.setChecked)
+
         # Window style
         self.setStyleSheet(_APP_STYLE)
+
+    def _on_toggle_sidebar(self, checked: bool):
+        """View → Show Side Panel (Ctrl+\\). Mirrors the chevron click."""
+        self._side_wrapper.set_expanded(checked)
+        if checked:
+            # Make sure the splitter actually allocates room for the panel —
+            # if it was collapsed via drag, re-expanding the wrapper alone
+            # leaves zero width.
+            sizes = self._splitter.sizes()
+            if len(sizes) >= 2 and sizes[1] < 100:
+                total = sum(sizes) or 1000
+                self._splitter.setSizes([int(total * 0.7), int(total * 0.3)])
 
     def _build_menu(self):
         mb = self.menuBar()
@@ -221,6 +241,19 @@ class MainWindow(QMainWindow):
         act_exit = file_menu.addAction("E&xit")
         act_exit.setShortcut("Alt+F4")
         act_exit.triggered.connect(self.close)
+
+        # View menu — recovery hatch for users who accidentally collapse the
+        # sidebar (the chevron strip on the right edge can be easy to miss).
+        view_menu = mb.addMenu("&View")
+
+        self._act_show_sidebar = view_menu.addAction("Show &Side Panel")
+        self._act_show_sidebar.setCheckable(True)
+        self._act_show_sidebar.setChecked(True)
+        self._act_show_sidebar.setShortcut("Ctrl+\\")
+        self._act_show_sidebar.setStatusTip(
+            "Toggle the right-hand panel (Site / Plants / Analysis / …)"
+        )
+        self._act_show_sidebar.triggered.connect(self._on_toggle_sidebar)
 
     # ── Signal wiring ─────────────────────────────────────────────────────────
 
