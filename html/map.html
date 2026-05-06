@@ -1,0 +1,3701 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>PermaDesign Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet Draw CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #1a1a2e; }
+    #map { width: 100%; height: 100%; }
+
+    .plant-marker-label {
+      background: rgba(30, 40, 30, 0.85);
+      border: 1px solid #5a8a5a;
+      border-radius: 4px;
+      color: #c8e6c9;
+      font-size: 11px;
+      padding: 2px 6px;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .zone-circle-label {
+      background: transparent;
+      border: none;
+      color: rgba(255,255,255,0.6);
+      font-size: 12px;
+      font-weight: bold;
+      text-shadow: 0 0 3px #000;
+    }
+
+    .measure-label {
+      background: rgba(253, 216, 53, 0.9);
+      border: 1px solid #f9a825;
+      border-radius: 4px;
+      color: #1a1a2e;
+      font-size: 12px;
+      font-weight: bold;
+      padding: 2px 8px;
+      white-space: nowrap;
+    }
+
+    .annotation-label span {
+      background: rgba(30, 40, 30, 0.85);
+      border: 1px solid #7cb342;
+      border-radius: 4px;
+      color: #e8f5e9;
+      font-size: 12px;
+      padding: 3px 8px;
+      white-space: nowrap;
+      cursor: move;
+    }
+
+    /* ── Map legend ─────────────────────────────────────────────────── */
+    #map-legend {
+      position: absolute;
+      bottom: 30px;
+      left: 10px;
+      z-index: 1000;
+      background: rgba(26, 42, 26, 0.92);
+      border: 1px solid #4a7a4a;
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: #c8e6c9;
+      font-size: 11px;
+      max-width: 200px;
+      display: none;
+    }
+    #map-legend.visible { display: block; }
+    #map-legend h4 {
+      margin: 0 0 6px 0;
+      font-size: 12px;
+      color: #a5d6a7;
+      border-bottom: 1px solid #2e4a2e;
+      padding-bottom: 4px;
+    }
+    #map-legend .legend-section {
+      margin-bottom: 6px;
+    }
+    #map-legend .legend-section-title {
+      font-size: 10px;
+      color: #78909c;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    #map-legend .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 1px 0;
+    }
+    #map-legend .legend-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.2);
+      flex-shrink: 0;
+    }
+    #map-legend .legend-swatch.outline-only {
+      background: transparent !important;
+      border: 2px dashed;
+    }
+    #legend-toggle {
+      position: absolute;
+      bottom: 30px;
+      left: 10px;
+      z-index: 1001;
+      background: rgba(26, 42, 26, 0.9);
+      border: 1px solid #4a7a4a;
+      border-radius: 4px;
+      color: #a5d6a7;
+      font-size: 11px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+    #legend-toggle:hover { background: rgba(46, 74, 46, 0.95); }
+    #legend-toggle.active { display: none; }
+
+    /* ── Structure labels ───────────────────────────────────────── */
+    .structure-label {
+      background: rgba(30, 42, 30, 0.88);
+      border: 1px solid #78909c;
+      border-radius: 4px;
+      color: #e0e0e0;
+      font-size: 11px;
+      padding: 2px 6px;
+      white-space: nowrap;
+      text-align: center;
+    }
+    .structure-label .struct-icon {
+      font-size: 14px;
+    }
+
+    /* ── Hedgerow labels ────────────────────────────────────────── */
+    .hedgerow-label {
+      background: rgba(30, 50, 30, 0.85);
+      border: 1px solid #66bb6a;
+      border-radius: 4px;
+      color: #c8e6c9;
+      font-size: 11px;
+      padding: 2px 6px;
+      white-space: nowrap;
+    }
+
+    /* ── Custom shape labels ────────────────────────────────────── */
+    .shape-label {
+      background: rgba(30, 42, 30, 0.85);
+      border: 1px solid #78909c;
+      border-radius: 4px;
+      color: #e0e0e0;
+      font-size: 12px;
+      font-weight: bold;
+      padding: 3px 8px;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <button id="legend-toggle" onclick="toggleLegend()">Legend</button>
+  <div id="map-legend">
+    <h4>Legend <span style="float:right;cursor:pointer;font-size:14px;" onclick="toggleLegend()">&times;</span></h4>
+    <div class="legend-section">
+      <div class="legend-section-title">Plant Types</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#2e7d32;"></span> Tree</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#558b2f;"></span> Shrub</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#7cb342;"></span> Herb</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#c6a817;"></span> Groundcover</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#00838f;"></span> Vine</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#6d4c41;"></span> Root</div>
+    </div>
+    <div class="legend-section">
+      <div class="legend-section-title">Guild Roles</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#1b5e20;"></span> Canopy</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#388e3c;"></span> Understory</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#66bb6a;"></span> Groundcover</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#43a047;"></span> N-Fixer</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#aed581;"></span> Pollinator</div>
+      <div class="legend-item"><span class="legend-swatch outline-only" style="border-color:#a5d6a7;"></span> Guild outline</div>
+    </div>
+    <div class="legend-section">
+      <div class="legend-section-title">Structures</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#42a5f5;"></span> Water</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#8d6e63;"></span> Growing</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#ffca28;"></span> Animal</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#795548;"></span> Storage</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#90a4ae;"></span> Infrastructure</div>
+    </div>
+    <div class="legend-section">
+      <div class="legend-section-title">Other</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#66bb6a; border-radius:2px;"></span> Boundary</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#4caf50; border-radius:2px;"></span> Hedgerow</div>
+      <div class="legend-item"><span class="legend-swatch outline-only" style="border-color:#78909c;"></span> Custom shape</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#fdd835;"></span> Measurement</div>
+    </div>
+    <div class="legend-section">
+      <div class="legend-section-title">Analysis</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#ffb300;"></span> Sun path</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#455a64;"></span> Shadow</div>
+      <div class="legend-item"><span class="legend-swatch outline-only" style="border-color:#ff9800;"></span> Sector wedge</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#795548;"></span> Contour</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#42a5f5;"></span> Wind</div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet Draw -->
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <!-- Qt WebChannel -->
+  <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+
+  <script>
+    // ── State ────────────────────────────────────────────────────────────────
+    var map, osmLayer, satelliteLayer, drawnItems, drawControl;
+
+    // ── Multi-boundary state ─────────────────────────────────────────────────
+    // Each entry: {id, layer, labelsLayer, areaLabel, points, color, showLengths, showArea}
+    var boundaries      = [];
+    var boundaryAreaUnit = 0;          // 0=m² 1=ha 2=acre 3=km²
+    // Legacy single refs used only by setBoundaryVisible/clearAll redirects
+    var _legacyBoundaryLayer = null;   // unused sentinel
+
+    // Edit-mode state for boundary vertex dragging
+    var boundaryEditId      = null;    // id of boundary currently in edit mode
+    var boundaryEditHandles = [];      // draggable vertex handle markers
+    var boundaryBboxHandles = [];      // corner scale handle markers
+    var _bboxDragState      = null;    // {origPts, origBounds, cornerIdx, centerLat, centerLng}
+    var _polyDragState      = null;    // {startLat, startLng, origPts}
+
+    // Context menu element
+    var _ctxMenu = null;
+
+    // Zoom sensitivity (zoomDelta applied to map.options at runtime)
+    var _zoomSensitivity = 'fine';     // 'fine'|'normal'|'fast'|'coarse'
+
+    var seasonOverlay     = null;  // NASA GIBS seasonal tile layer
+    var measureVisible    = true;  // whether measure result is shown
+    var plantMarkers  = {};   // id -> marker
+    var plantLayerGroup = null; // L.layerGroup for batch visibility toggle
+    var zoneCircles   = [];
+    var bridge        = null; // Python QObject exposed via QWebChannel
+    var currentMode   = 'none'; // 'none' | 'boundary' | 'plant' | 'zone' | 'measure' | 'annotate' | 'structure' | 'hedgerow' | 'shape'
+    var currentPlant  = null;   // {id, common_name} when in plant-placement mode
+
+    // Structure state
+    var structureMarkers = {};  // id -> L.layerGroup
+    var currentStructure = null; // structure def when in structure-placement mode
+
+    // Hedgerow state
+    var hedgerowLayers  = {};   // id -> L.layerGroup
+    var hedgerowPoints  = [];   // points being drawn
+    var hedgerowPreview = null; // preview polyline
+    var currentHedgerow = null; // hedgerow config when drawing
+
+    // Custom shape state
+    var shapeLayers     = {};   // id -> L.layerGroup
+    var shapePoints     = [];   // points being drawn
+    var shapePreview    = null; // preview polyline
+    var currentShape    = null; // shape config when drawing
+
+    // Measurement state
+    var measureStart  = null;   // L.latLng or null
+    var measureLine   = null;   // L.polyline
+    var measureLabel  = null;   // L.tooltip
+    var measureMarkers = [];    // start/end markers
+
+    // Annotation state
+    var annotations   = {};     // id -> {marker, text}
+
+    // Anchor placement preview marker (sun path / sector placement modes)
+    var _anchorPreviewMarker = null;
+
+    // ── Unified selection model ──────────────────────────────────────────────
+    // Each entry is a `_pd`-style descriptor with at least { kind, ... }
+    // where kind ∈ 'plant' | 'boundary' | 'sector' | 'sunpath' and the rest of
+    // the fields identify the underlying object (markerId, boundaryId, etc.).
+    // Keeping a flat list lets marquee/Delete/right-click operate uniformly
+    // across feature types — the previous code had per-type isolated state.
+    var selectedItems = [];
+
+    // Marquee (rubber-band) drag state — populated on shift+mousedown over
+    // the empty map background; cleared on mouseup.
+    var _marqueeState = null;   // { startPx, currentPx, rectEl, additive }
+
+    // Pattern placement state. When currentPlant.pattern is set, plant clicks
+    // collect anchors instead of placing immediately:
+    //   row    : 2 clicks (start, end)
+    //   grid   : 2 clicks (corner A, corner B)
+    //   circle : 2 clicks (centre, radius point)
+    //   single : default — place immediately on click
+    // _patternStage tracks how many anchors have been collected. _patternPreview
+    // is the Leaflet layer group used for live feedback as the cursor moves.
+    var _patternStage   = 0;
+    var _patternAnchors = [];
+    var _patternPreview = null;
+
+    function _selectionContains(pd) {
+      for (var i = 0; i < selectedItems.length; i++) {
+        if (_sameSelectable(selectedItems[i], pd)) return true;
+      }
+      return false;
+    }
+
+    function _sameSelectable(a, b) {
+      if (!a || !b || a.kind !== b.kind) return false;
+      if (a.kind === 'plant')    return a.markerId === b.markerId;
+      if (a.kind === 'boundary') return a.boundaryId === b.boundaryId;
+      if (a.kind === 'sector')   return a.sectorId === b.sectorId;
+      if (a.kind === 'sunpath')  return true;   // single sunpath at a time
+      return false;
+    }
+
+    function _clearSelectionEntry(markerId) {
+      // Drop a plant marker from the selection without redrawing other items.
+      for (var i = selectedItems.length - 1; i >= 0; i--) {
+        if (selectedItems[i].kind === 'plant' && selectedItems[i].markerId === markerId) {
+          selectedItems.splice(i, 1);
+        }
+      }
+    }
+
+    // Toggle a single item's membership in the selection (shift+click pattern).
+    function toggleSelection(pd) {
+      if (_selectionContains(pd)) {
+        for (var i = selectedItems.length - 1; i >= 0; i--) {
+          if (_sameSelectable(selectedItems[i], pd)) selectedItems.splice(i, 1);
+        }
+      } else {
+        selectedItems.push(pd);
+      }
+      _refreshSelectionVisuals();
+    }
+
+    function clearSelection() {
+      selectedItems = [];
+      _refreshSelectionVisuals();
+    }
+
+    // Apply / remove the selection highlight on every relevant feature.
+    // Plants get a thicker yellow border + brighter fill while selected;
+    // boundaries get a thicker stroke; sectors flag their group's centre.
+    function _refreshSelectionVisuals() {
+      // Plants
+      Object.keys(plantMarkers).forEach(function(mid) {
+        var c = plantMarkers[mid];
+        if (!c || !c._pd) return;
+        var sel = _selectionContains(c._pd);
+        var baseColor = c._pd.customColor || TYPE_COLORS[c._pd.plantType] || '#66bb6a';
+        c.setStyle({
+          color:       sel ? '#fdd835' : baseColor,
+          weight:      sel ? 3.0 : 1.5,
+          fillOpacity: sel ? 0.55 : 0.35
+        });
+      });
+      // Boundaries
+      boundaries.forEach(function(b) {
+        var sel = _selectionContains({ kind: 'boundary', boundaryId: b.id });
+        if (b.layer && b.layer.setStyle) {
+          var palette = BOUNDARY_COLORS[b.color] || BOUNDARY_COLORS['green'];
+          b.layer.setStyle({
+            color:  sel ? '#fdd835' : palette.stroke,
+            weight: sel ? 4 : 2
+          });
+        }
+      });
+      // Sectors
+      if (typeof sectorGroups !== 'undefined') {
+        sectorGroups.forEach(function(sg) {
+          var sel = _selectionContains({ kind: 'sector', sectorId: sg.id });
+          if (sg.centerMk && sg.centerMk.setStyle) {
+            sg.centerMk.setStyle({
+              color: sel ? '#fdd835' : '#263238',
+              weight: sel ? 3 : 1
+            });
+          }
+        });
+      }
+      _updateSelectionBadge();
+    }
+
+    // Tiny floating badge in the top-right corner showing N selected items
+    // and a "Delete" affordance — keeps the UI obvious for first-time users.
+    function _updateSelectionBadge() {
+      var el = document.getElementById('_pd_sel_badge');
+      if (selectedItems.length === 0) {
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+        return;
+      }
+      if (!el) {
+        el = document.createElement('div');
+        el.id = '_pd_sel_badge';
+        el.style.cssText = [
+          'position:absolute', 'top:8px', 'right:8px', 'z-index:1100',
+          'background:rgba(38,50,56,0.92)', 'border:1px solid #fdd835',
+          'border-radius:4px', 'padding:6px 10px', 'color:#fdd835',
+          'font-size:12px', 'font-family:sans-serif', 'user-select:none',
+          'box-shadow:0 2px 8px rgba(0,0,0,0.5)'
+        ].join(';');
+        document.body.appendChild(el);
+      }
+      el.innerHTML = '<b>' + selectedItems.length + '</b> selected · ' +
+        '<a href="#" id="_pd_sel_del" style="color:#ef9a9a;text-decoration:none">Delete</a> · ' +
+        '<a href="#" id="_pd_sel_clr" style="color:#80cbc4;text-decoration:none">Clear</a>';
+      document.getElementById('_pd_sel_del').onclick = function(ev) {
+        ev.preventDefault(); deleteSelected();
+      };
+      document.getElementById('_pd_sel_clr').onclick = function(ev) {
+        ev.preventDefault(); clearSelection();
+      };
+    }
+
+    // ── Marquee (shift+drag) selection ───────────────────────────────────────
+    // Shift+drag on the map background draws a yellow dashed rectangle and
+    // selects every plant / boundary / sector / sun-path centre that
+    // intersects it. Plain drag continues to pan; ctrl+shift+drag is
+    // additive (extend the existing selection). We intercept at the DOM
+    // level so we don't fight Leaflet's pan handler — when shift is held on
+    // mousedown we simply prevent Leaflet from receiving the event.
+
+    function _initMarqueeHandlers() {
+      // Disable Leaflet's native shift-zoom box so it doesn't collide
+      // with our marquee. We re-implement the same gesture for selection.
+      if (map.boxZoom) map.boxZoom.disable();
+
+      var container = map.getContainer();
+      container.addEventListener('mousedown', _marqueeOnDown, true);
+      // mousemove/up listen on document so we keep tracking when the
+      // cursor leaves the map container during a drag.
+      document.addEventListener('mousemove', _marqueeOnMove, true);
+      document.addEventListener('mouseup',   _marqueeOnUp,   true);
+    }
+
+    function _marqueeOnDown(ev) {
+      if (!ev.shiftKey || ev.button !== 0) return;
+      // Skip if the user is interacting with a feature — Leaflet handles
+      // those events on the marker itself before bubbling here.
+      if (ev.target && ev.target.closest && ev.target.closest('.leaflet-marker-pane > *')) return;
+      // Skip if any drawing/edit mode is active.
+      if (currentMode !== 'none' && currentMode !== 'plant') return;
+      ev.stopPropagation();
+      ev.preventDefault();
+      var rect = container.getBoundingClientRect();
+      var x = ev.clientX - rect.left;
+      var y = ev.clientY - rect.top;
+      var rectEl = document.createElement('div');
+      rectEl.style.cssText = [
+        'position:absolute', 'border:1.5px dashed #fdd835',
+        'background:rgba(253,216,53,0.10)', 'pointer-events:none',
+        'z-index:1050', 'left:' + x + 'px', 'top:' + y + 'px',
+        'width:0px', 'height:0px'
+      ].join(';');
+      container.appendChild(rectEl);
+      _marqueeState = {
+        startPx: { x: x, y: y },
+        currentPx: { x: x, y: y },
+        rectEl: rectEl,
+        additive: ev.ctrlKey || ev.metaKey,
+      };
+    }
+
+    function _marqueeOnMove(ev) {
+      if (!_marqueeState) return;
+      var rect = map.getContainer().getBoundingClientRect();
+      var x = ev.clientX - rect.left;
+      var y = ev.clientY - rect.top;
+      _marqueeState.currentPx = { x: x, y: y };
+      var minX = Math.min(_marqueeState.startPx.x, x);
+      var minY = Math.min(_marqueeState.startPx.y, y);
+      var w = Math.abs(x - _marqueeState.startPx.x);
+      var h = Math.abs(y - _marqueeState.startPx.y);
+      _marqueeState.rectEl.style.left = minX + 'px';
+      _marqueeState.rectEl.style.top  = minY + 'px';
+      _marqueeState.rectEl.style.width  = w + 'px';
+      _marqueeState.rectEl.style.height = h + 'px';
+    }
+
+    function _marqueeOnUp(ev) {
+      if (!_marqueeState) return;
+      var rectEl = _marqueeState.rectEl;
+      var sX = _marqueeState.startPx.x, sY = _marqueeState.startPx.y;
+      var eX = _marqueeState.currentPx.x, eY = _marqueeState.currentPx.y;
+      var additive = _marqueeState.additive;
+      if (rectEl && rectEl.parentNode) rectEl.parentNode.removeChild(rectEl);
+      _marqueeState = null;
+
+      var minX = Math.min(sX, eX), maxX = Math.max(sX, eX);
+      var minY = Math.min(sY, eY), maxY = Math.max(sY, eY);
+      // Reject tiny drags (treat as accidental click).
+      if (maxX - minX < 4 && maxY - minY < 4) return;
+
+      var bounds = L.latLngBounds(
+        map.containerPointToLatLng([minX, minY]),
+        map.containerPointToLatLng([maxX, maxY])
+      );
+      var hits = _marqueeHitTest(bounds);
+      if (!additive) selectedItems = [];
+      hits.forEach(function(h) {
+        if (!_selectionContains(h)) selectedItems.push(h);
+      });
+      _refreshSelectionVisuals();
+    }
+
+    // Find every selectable feature whose anchor point falls inside the
+    // marquee bounds. Returns a list of selection descriptors.
+    function _marqueeHitTest(bounds) {
+      var hits = [];
+      // Plants — point-in-bounds on the marker centre.
+      Object.keys(plantMarkers).forEach(function(mid) {
+        var c = plantMarkers[mid];
+        if (!c || !c._pd) return;
+        if (bounds.contains(L.latLng(c._pd.lat, c._pd.lng))) {
+          hits.push(c._pd);
+        }
+      });
+      // Boundaries — any vertex inside the rect counts.
+      boundaries.forEach(function(b) {
+        var ps = b.points || [];
+        for (var i = 0; i < ps.length; i++) {
+          if (bounds.contains(L.latLng(ps[i][0], ps[i][1]))) {
+            hits.push({ kind: 'boundary', boundaryId: b.id });
+            return;
+          }
+        }
+      });
+      // Sectors — anchor point.
+      if (typeof sectorGroups !== 'undefined') {
+        sectorGroups.forEach(function(sg) {
+          if (bounds.contains(L.latLng(sg.lat, sg.lng))) {
+            hits.push({ kind: 'sector', sectorId: sg.id });
+          }
+        });
+      }
+      // Sun path — represented by its centre tooltip; we check the
+      // existing centre marker via sunPathLayer if present.
+      if (typeof sunPathLayer !== 'undefined' && sunPathLayer && sunPathLayer.getLayers) {
+        var layers = sunPathLayer.getLayers();
+        for (var i = 0; i < layers.length; i++) {
+          var l = layers[i];
+          if (l.getLatLng && bounds.contains(l.getLatLng())) {
+            hits.push({ kind: 'sunpath' });
+            break;
+          }
+        }
+      }
+      return hits;
+    }
+
+    // Delete every currently-selected item across types, emitting the
+    // appropriate per-type bridge signal so Python project state stays
+    // synchronised. Uses a snapshot since underlying maps mutate.
+    function deleteSelected() {
+      var snapshot = selectedItems.slice();
+      selectedItems = [];
+      for (var i = 0; i < snapshot.length; i++) {
+        var item = snapshot[i];
+        if (item.kind === 'plant') {
+          _removeSinglePlantMarker(item.markerId);
+        } else if (item.kind === 'boundary') {
+          if (boundaryEditId === item.boundaryId && typeof exitBoundaryEditMode === 'function') {
+            exitBoundaryEditMode();
+          }
+          if (typeof _removeBoundaryEntry === 'function') {
+            _removeBoundaryEntry(item.boundaryId);
+            if (bridge) bridge.onBoundaryRemoved(item.boundaryId);
+          }
+        } else if (item.kind === 'sector') {
+          if (typeof _removeSectorGroup === 'function') {
+            _removeSectorGroup(item.sectorId);
+            if (bridge) bridge.onSectorGroupRemoved(item.sectorId);
+          }
+        } else if (item.kind === 'sunpath') {
+          if (typeof clearSunPath === 'function') {
+            clearSunPath();
+            if (bridge) bridge.onSunPathRemoved();
+          }
+        }
+      }
+      _refreshSelectionVisuals();
+    }
+
+    // Polygon drawing state (manual mode)
+    var drawingPolygon  = false;
+    var polygonPoints   = [];
+    var polygonPolyline = null;
+    var polygonPreview  = null;
+
+    // ── Map init ─────────────────────────────────────────────────────────────
+    function initMap() {
+      map = L.map('map', {
+        center: [53.5461, -113.4938],
+        zoom: 12,
+        maxZoom: 22,
+        zoomControl: true,
+        zoomSnap: 0.1,
+        zoomDelta: 0.15,          // ~1.1× per scroll tick ("fine" default)
+        wheelPxPerZoomLevel: 60
+      });
+
+      osmLayer = L.tileLayer(
+        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        {
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: 'abcd',
+          maxZoom: 22,
+          maxNativeZoom: 19
+        }
+      ).addTo(map);
+
+      satelliteLayer = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { attribution: '© Esri', maxZoom: 22, maxNativeZoom: 19 }
+      );
+
+      drawnItems = new L.FeatureGroup().addTo(map);
+      plantLayerGroup = L.layerGroup().addTo(map);
+
+      // Map click handler
+      map.on('click', onMapClick);
+      map.on('mousemove', onMapMouseMove);
+      map.on('dblclick', onMapDblClick);
+
+      // Right-click cancels anchor-placement modes; suppress native browser menu
+      map.on('contextmenu', function(e) {
+        if (currentMode === 'sun_anchor' || currentMode === 'sector_anchor') {
+          L.DomEvent.stop(e);
+          setMode('none');
+          if (bridge) bridge.onAnchorCancelled(currentMode);
+          return;
+        }
+        // Cancel a pattern placement in progress (after first click)
+        if (currentMode === 'plant' && currentPlant && currentPlant.pattern
+            && currentPlant.pattern.kind !== 'single' && _patternStage >= 1) {
+          L.DomEvent.stop(e);
+          _resetPatternState();
+        }
+      });
+
+      // Escape exits edit mode / cancels in-progress polygon
+      document.addEventListener('keydown', function(ev) {
+        if (ev.key === 'Escape') {
+          if (boundaryEditId !== null) {
+            exitBoundaryEditMode();
+          } else if (currentMode !== 'none') {
+            setMode('none');
+          }
+        }
+      });
+
+      // Click on map background while in boundary-edit → exit edit mode
+      // (polygon clicks stop propagation so this only fires on background)
+      map.on('click', function() {
+        if (boundaryEditId !== null && currentMode === 'none') {
+          exitBoundaryEditMode();
+        }
+      });
+
+      // Zoom-dependent label visibility
+      map.on('zoomend', updateLabelVisibility);
+
+      // Shift+drag marquee selection (replaces Leaflet's box-zoom).
+      _initMarqueeHandlers();
+    }
+
+    // ── Click / move handlers ────────────────────────────────────────────────
+    function onMapClick(e) {
+      var lat = e.latlng.lat;
+      var lng = e.latlng.lng;
+
+      // Apply snap if enabled and in a placement mode
+      if (snapEnabled && (currentMode === 'plant' || currentMode === 'zone')) {
+        var snapped = snapLatLng(lat, lng);
+        lat = snapped[0];
+        lng = snapped[1];
+      }
+
+      if (bridge) {
+        bridge.onMapClick(lat, lng);
+      }
+
+      if (currentMode === 'boundary') {
+        handleBoundaryClick(lat, lng);
+      } else if (currentMode === 'plant' && currentPlant) {
+        var pat = currentPlant.pattern || { kind: 'single' };
+        if (pat.kind && pat.kind !== 'single') {
+          _handlePatternClick(lat, lng);
+        } else {
+          var qty = currentPlant.quantity || 1;
+          var cc  = currentPlant.custom_color || null;
+          if (qty > 1) {
+            // Single-mode burst: place qty plants at once (hex pattern).
+            // All share one group id so they can be deleted together.
+            var positions = _hexBurstPositions(lat, lng, currentPlant.spacing_m, qty);
+            if (bridge) {
+              bridge.onPatternPlaced(currentPlant.id, currentPlant.common_name,
+                                     currentPlant.spacing_m, currentPlant.plant_type,
+                                     cc || '', JSON.stringify(positions), 'burst');
+            }
+          } else {
+            placePlantMarker(currentPlant.id, currentPlant.common_name, lat, lng,
+                             currentPlant.spacing_m, currentPlant.plant_type, cc);
+            if (bridge) bridge.onPlantPlaced(currentPlant.id, currentPlant.common_name, lat, lng);
+          }
+          // Stay in plant mode so user can place multiple
+        }
+      } else if (currentMode === 'zone') {
+        placeZoneCircles(lat, lng);
+        if (bridge) bridge.onZoneCenterPlaced(lat, lng);
+        setMode('none');
+      } else if (currentMode === 'contour') {
+        handleContourClick(lat, lng);
+      } else if (currentMode === 'structure' && currentStructure) {
+        placeStructureOnMap(currentStructure, lat, lng);
+        if (bridge) bridge.onStructurePlaced(currentStructure.id, currentStructure.name, lat, lng, currentStructure.size_m);
+        // Stay in structure mode for multiple placements
+      } else if (currentMode === 'hedgerow') {
+        handleHedgerowClick(lat, lng);
+      } else if (currentMode === 'shape') {
+        handleShapeClick(lat, lng);
+      } else if (currentMode === 'measure') {
+        handleMeasureClick(lat, lng);
+      } else if (currentMode === 'annotate') {
+        handleAnnotateClick(lat, lng);
+      } else if (currentMode === 'sun_anchor') {
+        // Place sun-path anchor then render via Python callback
+        setMode('none');
+        if (bridge) bridge.onSunAnchorPlaced(lat, lng);
+      } else if (currentMode === 'sector_anchor') {
+        setMode('none');
+        if (bridge) bridge.onSectorAnchorPlaced(lat, lng);
+      }
+    }
+
+    function onMapMouseMove(e) {
+      if (bridge) {
+        bridge.onMouseMove(e.latlng.lat, e.latlng.lng);
+      }
+      if (currentMode === 'boundary' && drawingPolygon && polygonPoints.length > 0) {
+        updatePolygonPreview(e.latlng);
+      }
+      if (currentMode === 'hedgerow' && hedgerowPoints.length > 0) {
+        updateHedgerowPreview(e.latlng);
+      }
+      if (currentMode === 'shape' && shapePoints.length > 0) {
+        updateShapePreview(e.latlng);
+      }
+      if (currentMode === 'contour' && contourPoints.length > 0) {
+        updateContourPreview(e.latlng);
+      }
+      if ((currentMode === 'sun_anchor' || currentMode === 'sector_anchor') && _anchorPreviewMarker) {
+        _anchorPreviewMarker.setLatLng(e.latlng);
+      }
+      if (currentMode === 'plant' && currentPlant && currentPlant.pattern
+          && currentPlant.pattern.kind !== 'single' && _patternStage >= 1) {
+        _drawPatternPreview(e.latlng);
+      }
+    }
+
+    function onMapDblClick(e) {
+      L.DomEvent.stop(e);
+      if (currentMode === 'boundary' && drawingPolygon) {
+        finishBoundaryPolygon();
+      } else if (currentMode === 'hedgerow' && hedgerowPoints.length >= 2) {
+        finishHedgerow();
+      } else if (currentMode === 'shape' && shapePoints.length >= 3) {
+        finishShape();
+      } else if (currentMode === 'contour' && contourPoints.length >= 2) {
+        finishContour();
+      }
+    }
+
+    // ── Boundary color palette ────────────────────────────────────────────────
+    var BOUNDARY_COLORS = {
+      'green':      { stroke: '#4caf50', fill: '#4caf50' },
+      'red':        { stroke: '#f44336', fill: '#f44336' },
+      'blue':       { stroke: '#2196f3', fill: '#2196f3' },
+      'lightblue':  { stroke: '#03a9f4', fill: '#03a9f4' },
+      'yellow':     { stroke: '#f9a825', fill: '#f9a825' },
+      'orange':     { stroke: '#ff9800', fill: '#ff9800' },
+      'purple':     { stroke: '#9c27b0', fill: '#9c27b0' },
+      'magenta':    { stroke: '#e91e63', fill: '#e91e63' },
+      'brown':      { stroke: '#795548', fill: '#795548' },
+      'black':      { stroke: '#212121', fill: '#212121' },
+      'lightgreen': { stroke: '#8bc34a', fill: '#8bc34a' },
+      'grey':       { stroke: '#9e9e9e', fill: '#9e9e9e' }
+    };
+    var _nextBoundaryColor = (function() {
+      var _colorNames = Object.keys(BOUNDARY_COLORS);
+      var _idx = 0;
+      return function() { return _colorNames[_idx++ % _colorNames.length]; };
+    })();
+
+    // ── Context menu ─────────────────────────────────────────────────────────
+    function showContextMenu(x, y, items) {
+      hideContextMenu();
+      var div = document.createElement('div');
+      div.id = '_pd_ctx_menu';
+      div.style.cssText = [
+        'position:fixed', 'left:' + x + 'px', 'top:' + y + 'px',
+        'background:#263238', 'border:1px solid #546e7a', 'border-radius:4px',
+        'box-shadow:0 2px 10px rgba(0,0,0,0.55)', 'z-index:9999',
+        'min-width:170px', 'padding:4px 0', 'font-size:13px', 'color:#eceff1',
+        'user-select:none'
+      ].join(';');
+
+      items.forEach(function(item) {
+        if (item === 'sep') {
+          var sep = document.createElement('div');
+          sep.style.cssText = 'height:1px;background:#546e7a;margin:3px 0';
+          div.appendChild(sep);
+          return;
+        }
+        var btn = document.createElement('div');
+        btn.style.cssText = 'padding:6px 14px;cursor:pointer;display:flex;align-items:center;gap:8px';
+        if (item.checked !== undefined) {
+          var chk = document.createElement('span');
+          chk.textContent = item.checked ? '✓' : '  ';
+          chk.style.cssText = 'font-size:11px;width:12px;display:inline-block;color:#80cbc4';
+          btn.appendChild(chk);
+        }
+        var lbl = document.createElement('span');
+        lbl.textContent = item.label;
+        btn.appendChild(lbl);
+        btn.addEventListener('mouseover', function() { btn.style.background = '#37474f'; });
+        btn.addEventListener('mouseout',  function() { btn.style.background = ''; });
+        btn.addEventListener('click', function(ev) {
+          ev.stopPropagation();
+          hideContextMenu();
+          item.action();
+        });
+        div.appendChild(btn);
+      });
+
+      // Color swatches row for boundaries
+      if (items._colorTarget !== undefined) {
+        var swatchDiv = document.createElement('div');
+        swatchDiv.style.cssText = 'padding:6px 14px;display:flex;flex-wrap:wrap;gap:5px;';
+        Object.keys(BOUNDARY_COLORS).forEach(function(name) {
+          var sw = document.createElement('div');
+          sw.title = name;
+          sw.style.cssText = 'width:16px;height:16px;border-radius:3px;cursor:pointer;border:2px solid transparent;';
+          sw.style.background = BOUNDARY_COLORS[name].stroke;
+          if (name === items._colorTarget) sw.style.border = '2px solid #fff';
+          sw.addEventListener('click', function(ev) {
+            ev.stopPropagation();
+            hideContextMenu();
+            items._colorAction(name);
+          });
+          swatchDiv.appendChild(sw);
+        });
+        div.appendChild(swatchDiv);
+      }
+
+      document.body.appendChild(div);
+      _ctxMenu = div;
+      setTimeout(function() {
+        document.addEventListener('click', hideContextMenu, { once: true, capture: true });
+      }, 50);
+    }
+
+    function hideContextMenu() {
+      if (_ctxMenu && _ctxMenu.parentNode) {
+        _ctxMenu.parentNode.removeChild(_ctxMenu);
+      }
+      _ctxMenu = null;
+    }
+
+    // Suppress native browser context menu everywhere in the map container
+    document.addEventListener('contextmenu', function(e) {
+      if (e.target.closest && e.target.closest('#map')) {
+        e.preventDefault();
+      }
+    });
+
+    // ── Boundary drawing (manual polygon) ────────────────────────────────────
+    function handleBoundaryClick(lat, lng) {
+      // If clicking near the first point, close the polygon
+      if (polygonPoints.length >= 3) {
+        var first = polygonPoints[0];
+        var firstPx = map.latLngToContainerPoint(L.latLng(first));
+        var clickPx = map.latLngToContainerPoint(L.latLng(lat, lng));
+        var dist = Math.sqrt(Math.pow(firstPx.x - clickPx.x, 2) + Math.pow(firstPx.y - clickPx.y, 2));
+        if (dist < 12) {
+          finishBoundaryPolygon();
+          return;
+        }
+      }
+
+      polygonPoints.push([lat, lng]);
+      drawingPolygon = true;
+      refreshPolygonPolyline();
+    }
+
+    function refreshPolygonPolyline() {
+      if (polygonPolyline) { map.removeLayer(polygonPolyline); }
+      if (polygonPoints.length >= 2) {
+        polygonPolyline = L.polyline(polygonPoints, {
+          color: '#66bb6a', weight: 2, dashArray: '6 4', opacity: 0.9
+        }).addTo(map);
+      }
+      // Draw a circle on first point so user knows they can close it
+      if (polygonPoints.length === 1) {
+        L.circleMarker(polygonPoints[0], {
+          radius: 6, color: '#66bb6a', fillColor: '#66bb6a', fillOpacity: 0.7
+        }).addTo(drawnItems);
+      }
+    }
+
+    function updatePolygonPreview(latlng) {
+      if (polygonPreview) { map.removeLayer(polygonPreview); }
+      var pts = polygonPoints.concat([[latlng.lat, latlng.lng]]);
+      polygonPreview = L.polyline(pts, {
+        color: '#66bb6a', weight: 2, dashArray: '4 4', opacity: 0.5
+      }).addTo(map);
+    }
+
+    // ── Boundary length labels ────────────────────────────────────────────────
+    function haversineMeters(a, b) {
+      var R = 6371000;
+      var dLat = (b[0] - a[0]) * Math.PI / 180;
+      var dLng = (b[1] - a[1]) * Math.PI / 180;
+      var lat1 = a[0] * Math.PI / 180;
+      var lat2 = b[0] * Math.PI / 180;
+      var x = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng/2) * Math.sin(dLng/2);
+      return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+    }
+
+    function addBoundaryLengthLabels(points) {
+      // Legacy stub — used only during loadBoundary; real implementation is _makeBoundaryLengthLabels
+      return _makeBoundaryLengthLabels(points, BOUNDARY_COLORS['green'].stroke);
+    }
+
+    function calcPolygonAreaM2(points) {
+      // Shoelace on projected metre coords relative to centroid
+      var n = points.length;
+      if (n < 3) return 0;
+      var R = 6371000;
+      var lat0 = 0, lng0 = 0;
+      for (var k = 0; k < n; k++) { lat0 += points[k][0]; lng0 += points[k][1]; }
+      lat0 /= n; lng0 /= n;
+      var cosLat = Math.cos(lat0 * Math.PI / 180);
+      var proj = points.map(function(p) {
+        return [
+          (p[0] - lat0) * Math.PI / 180 * R,
+          (p[1] - lng0) * Math.PI / 180 * R * cosLat
+        ];
+      });
+      var area = 0;
+      for (var i = 0; i < n; i++) {
+        var j = (i + 1) % n;
+        area += proj[i][1] * proj[j][0];
+        area -= proj[j][1] * proj[i][0];
+      }
+      return Math.abs(area) / 2;
+    }
+
+    var _AREA_UNITS = ['m²', 'ha', 'ac', 'km²'];
+    function _fmtArea(m2, unit) {
+      if (unit === 1) return (m2 / 10000).toFixed(3) + ' ha';
+      if (unit === 2) return (m2 / 4046.86).toFixed(3) + ' ac';
+      if (unit === 3) return (m2 / 1e6).toFixed(4) + ' km²';
+      return (m2 >= 10 ? Math.round(m2) : m2.toFixed(1)) + ' m²';
+    }
+
+    function addBoundaryAreaLabel(points) {
+      // Legacy stub — used only during loadBoundary
+      return _makeBoundaryAreaLabel(points);
+    }
+
+    function _makeBoundaryId() {
+      return 'b' + Date.now() + Math.random().toString(36).slice(2, 6);
+    }
+
+    function finishBoundaryPolygon() {
+      if (polygonPoints.length < 3) return;
+
+      // Cleanup drawing helpers
+      if (polygonPolyline) { map.removeLayer(polygonPolyline); polygonPolyline = null; }
+      if (polygonPreview)  { map.removeLayer(polygonPreview);  polygonPreview  = null; }
+      drawnItems.clearLayers();
+
+      var bid   = _makeBoundaryId();
+      var color = _nextBoundaryColor();
+      _addBoundaryToMap(bid, polygonPoints, color, true, true);
+
+      // Zoom to fit the drawn boundary
+      var bEntry = _getBoundaryEntry(bid);
+      if (bEntry && bEntry.layer) {
+        map.fitBounds(bEntry.layer.getBounds(), { padding: [30, 30] });
+      }
+
+      // Notify Python
+      if (bridge) {
+        bridge.onBoundaryComplete(bid, JSON.stringify(polygonPoints), color);
+      }
+
+      drawingPolygon = false;
+      polygonPoints  = [];
+      setMode('none');
+    }
+
+    // ── Multi-boundary helpers ────────────────────────────────────────────────
+
+    function _getBoundaryEntry(id) {
+      for (var i = 0; i < boundaries.length; i++) {
+        if (boundaries[i].id === id) return boundaries[i];
+      }
+      return null;
+    }
+
+    function _addBoundaryToMap(id, pts, colorName, showLengths, showArea) {
+      var c = BOUNDARY_COLORS[colorName] || BOUNDARY_COLORS['green'];
+      var layer = L.polygon(pts, {
+        color: c.stroke, weight: 2,
+        fillColor: c.fill, fillOpacity: 0.18,
+        interactive: true
+      }).addTo(map);
+
+      var labelsLayer = showLengths ? _makeBoundaryLengthLabels(pts, c.stroke) : null;
+      var areaLabel   = showArea   ? _makeBoundaryAreaLabel(pts)              : null;
+
+      var entry = {
+        id: id, layer: layer, labelsLayer: labelsLayer, areaLabel: areaLabel,
+        points: pts, color: colorName, showLengths: showLengths, showArea: showArea
+      };
+      boundaries.push(entry);
+
+      // Click → enter edit mode (or toggle selection on shift/cmd+click)
+      layer.on('click', function(e) {
+        L.DomEvent.stop(e);
+        var oe = e.originalEvent;
+        if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) {
+          toggleSelection({ kind: 'boundary', boundaryId: id });
+          return;
+        }
+        if (currentMode === 'none') {
+          enterBoundaryEditMode(id);
+        }
+      });
+
+      // Right-click → context menu
+      layer.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        _showBoundaryContextMenu(e.originalEvent.clientX, e.originalEvent.clientY, id);
+      });
+
+      return entry;
+    }
+
+    function _removeBoundaryEntry(id) {
+      for (var i = 0; i < boundaries.length; i++) {
+        if (boundaries[i].id === id) {
+          var b = boundaries[i];
+          map.removeLayer(b.layer);
+          if (b.labelsLayer) map.removeLayer(b.labelsLayer);
+          if (b.areaLabel)   map.removeLayer(b.areaLabel);
+          boundaries.splice(i, 1);
+          return;
+        }
+      }
+    }
+
+    function _refreshBoundaryLabels(id) {
+      var b = _getBoundaryEntry(id);
+      if (!b) return;
+      var c = BOUNDARY_COLORS[b.color] || BOUNDARY_COLORS['green'];
+      if (b.labelsLayer) { map.removeLayer(b.labelsLayer); b.labelsLayer = null; }
+      if (b.areaLabel)   { map.removeLayer(b.areaLabel);   b.areaLabel   = null; }
+      if (b.showLengths) b.labelsLayer = _makeBoundaryLengthLabels(b.points, c.stroke);
+      if (b.showArea)    b.areaLabel   = _makeBoundaryAreaLabel(b.points);
+    }
+
+    function _showBoundaryContextMenu(x, y, id) {
+      var b = _getBoundaryEntry(id);
+      if (!b) return;
+      var items = [
+        {
+          label: 'Edge Labels',
+          checked: b.showLengths,
+          action: function() {
+            b.showLengths = !b.showLengths;
+            _refreshBoundaryLabels(id);
+            if (bridge) bridge.onBoundaryPropsChanged(id, b.color, b.showLengths, b.showArea);
+          }
+        },
+        {
+          label: 'Area Label',
+          checked: b.showArea,
+          action: function() {
+            b.showArea = !b.showArea;
+            _refreshBoundaryLabels(id);
+            if (bridge) bridge.onBoundaryPropsChanged(id, b.color, b.showLengths, b.showArea);
+          }
+        },
+        'sep',
+        { label: 'Color:', action: function() {} }
+      ];
+      items._colorTarget = b.color;
+      items._colorAction = function(newColor) {
+        _setBoundaryColor(id, newColor);
+      };
+      items.push('sep');
+      items.push({
+        label: 'Remove Boundary',
+        action: function() {
+          if (boundaryEditId === id) exitBoundaryEditMode();
+          _removeBoundaryEntry(id);
+          if (bridge) bridge.onBoundaryRemoved(id);
+        }
+      });
+      showContextMenu(x, y, items);
+    }
+
+    function _setBoundaryColor(id, newColor) {
+      var b = _getBoundaryEntry(id);
+      if (!b) return;
+      b.color = newColor;
+      var c = BOUNDARY_COLORS[newColor] || BOUNDARY_COLORS['green'];
+      b.layer.setStyle({ color: c.stroke, fillColor: c.fill });
+      _refreshBoundaryLabels(id);
+      if (bridge) bridge.onBoundaryPropsChanged(id, newColor, b.showLengths, b.showArea);
+    }
+
+    // ── Boundary label factories (use fresh layer groups each time) ───────────
+    function _makeBoundaryLengthLabels(points, strokeColor) {
+      var lg = L.layerGroup().addTo(map);
+      var n = points.length;
+      for (var i = 0; i < n; i++) {
+        var a = points[i];
+        var b = points[(i + 1) % n];
+        var midLat = (a[0] + b[0]) / 2;
+        var midLng = (a[1] + b[1]) / 2;
+        var dist = haversineMeters(a, b);
+        var label = dist >= 10 ? Math.round(dist) + ' m' : dist.toFixed(1) + ' m';
+        L.marker([midLat, midLng], {
+          icon: L.divIcon({
+            className: '',
+            html: '<div style="background:rgba(255,255,255,0.88);border:1px solid ' + escH(strokeColor) + ';border-radius:3px;padding:1px 6px;font-size:11px;font-weight:600;color:#1b5e20;white-space:nowrap;pointer-events:none;">' + escH(label) + '</div>',
+            iconSize: null, iconAnchor: null
+          }),
+          interactive: false
+        }).addTo(lg);
+      }
+      return lg;
+    }
+
+    function _makeBoundaryAreaLabel(points) {
+      if (!points || points.length < 3) return null;
+      var areaM2 = calcPolygonAreaM2(points);
+      var clat = 0, clng = 0;
+      for (var i = 0; i < points.length; i++) { clat += points[i][0]; clng += points[i][1]; }
+      clat /= points.length; clng /= points.length;
+
+      var txt = _fmtArea(areaM2, boundaryAreaUnit);
+      var icon = L.divIcon({
+        className: '',
+        html: '<div style="background:rgba(255,255,255,0.92);border:1.5px solid #388e3c;border-radius:4px;padding:3px 9px;font-size:12px;font-weight:700;color:#1b5e20;white-space:nowrap;cursor:pointer;user-select:none;">⬡ ' + escH(txt) + '</div>',
+        iconSize: null, iconAnchor: null
+      });
+      var marker = L.marker([clat, clng], { icon: icon, interactive: true }).addTo(map);
+      marker.on('click', function() {
+        boundaryAreaUnit = (boundaryAreaUnit + 1) % 4;
+        // Refresh all area labels
+        boundaries.forEach(function(b) {
+          if (b.showArea && b.areaLabel) {
+            map.removeLayer(b.areaLabel);
+            b.areaLabel = _makeBoundaryAreaLabel(b.points);
+          }
+        });
+      });
+      return marker;
+    }
+
+    // ── Boundary edit mode ────────────────────────────────────────────────────
+
+    function enterBoundaryEditMode(id) {
+      if (boundaryEditId !== null) exitBoundaryEditMode();
+      var b = _getBoundaryEntry(id);
+      if (!b) return;
+      boundaryEditId = id;
+      map.getContainer().style.cursor = 'move';
+
+      // Vertex handles
+      b.points.forEach(function(pt, idx) {
+        var h = L.circleMarker([pt[0], pt[1]], {
+          radius: 7, color: '#fff', fillColor: '#1565c0', fillOpacity: 1,
+          weight: 2, interactive: true, draggable: false
+        }).addTo(map);
+        _makeVertexDraggable(h, id, idx);
+        boundaryEditHandles.push(h);
+      });
+
+      // Bounding-box corner handles for uniform scale
+      _refreshBboxHandles(id);
+
+      // Drag on polygon interior → translate whole polygon
+      b.layer.on('mousedown', _onBoundaryPolyMousedown);
+    }
+
+    function _makeVertexDraggable(marker, bid, idx) {
+      var isDragging = false, startX, startY, startLatLng;
+
+      marker.on('mousedown', function(e) {
+        L.DomEvent.stop(e);
+        isDragging = true;
+        startLatLng = marker.getLatLng();
+        map.dragging.disable();
+
+        function onMove(ev) {
+          if (!isDragging) return;
+          var ll = map.containerPointToLatLng([ev.clientX, ev.clientY]);
+          marker.setLatLng(ll);
+          var b = _getBoundaryEntry(bid);
+          if (!b) return;
+          b.points[idx] = [ll.lat, ll.lng];
+          b.layer.setLatLngs(b.points);
+          _refreshBoundaryLabels(bid);
+          _refreshBboxHandles(bid);
+        }
+        function onUp() {
+          isDragging = false;
+          map.dragging.enable();
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          var b = _getBoundaryEntry(bid);
+          if (b && bridge) bridge.onBoundaryGeomChanged(bid, JSON.stringify(b.points));
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+    }
+
+    function _refreshBboxHandles(id) {
+      boundaryBboxHandles.forEach(function(h) { map.removeLayer(h); });
+      boundaryBboxHandles = [];
+      var b = _getBoundaryEntry(id);
+      if (!b) return;
+
+      var lats = b.points.map(function(p) { return p[0]; });
+      var lngs = b.points.map(function(p) { return p[1]; });
+      var minLat = Math.min.apply(null, lats), maxLat = Math.max.apply(null, lats);
+      var minLng = Math.min.apply(null, lngs), maxLng = Math.max.apply(null, lngs);
+      var corners = [
+        [minLat, minLng], [minLat, maxLng],
+        [maxLat, maxLng], [maxLat, minLng]
+      ];
+      var cLat = (minLat + maxLat) / 2, cLng = (minLng + maxLng) / 2;
+
+      corners.forEach(function(corner, ci) {
+        var h = L.circleMarker(corner, {
+          radius: 6, color: '#fff', fillColor: '#f57c00', fillOpacity: 1,
+          weight: 2, interactive: true
+        }).addTo(map);
+        _makeScaleDraggable(h, id, ci, cLat, cLng, minLat, maxLat, minLng, maxLng);
+        boundaryBboxHandles.push(h);
+      });
+    }
+
+    function _makeScaleDraggable(handle, bid, cornerIdx, cLat, cLng, minLat, maxLat, minLng, maxLng) {
+      handle.on('mousedown', function(e) {
+        L.DomEvent.stop(e);
+        var b = _getBoundaryEntry(bid);
+        if (!b) return;
+        var origPts = b.points.map(function(p) { return [p[0], p[1]]; });
+        var origDiag = Math.sqrt(Math.pow(maxLat - minLat, 2) + Math.pow(maxLng - minLng, 2));
+        map.dragging.disable();
+
+        function onMove(ev) {
+          var ll = map.containerPointToLatLng([ev.clientX, ev.clientY]);
+          var dx = ll.lat - cLat, dy = ll.lng - cLng;
+          var newDiag = Math.sqrt(dx * dx + dy * dy) * 2;
+          var scale = origDiag > 0 ? newDiag / origDiag : 1;
+          var b2 = _getBoundaryEntry(bid);
+          if (!b2) return;
+          b2.points = origPts.map(function(p) {
+            return [cLat + (p[0] - cLat) * scale, cLng + (p[1] - cLng) * scale];
+          });
+          b2.layer.setLatLngs(b2.points);
+          _refreshBoundaryLabels(bid);
+          _refreshBboxHandles(bid);
+          // Reposition vertex handles
+          boundaryEditHandles.forEach(function(vh, vi) {
+            if (b2.points[vi]) vh.setLatLng(b2.points[vi]);
+          });
+        }
+        function onUp() {
+          map.dragging.enable();
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          var b3 = _getBoundaryEntry(bid);
+          if (b3 && bridge) bridge.onBoundaryGeomChanged(bid, JSON.stringify(b3.points));
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+    }
+
+    function _onBoundaryPolyMousedown(e) {
+      if (e.originalEvent.button !== 0) return;
+      L.DomEvent.stop(e);
+      var bid = boundaryEditId;
+      var startLL = e.latlng;
+      var b = _getBoundaryEntry(bid);
+      if (!b) return;
+      var origPts = b.points.map(function(p) { return [p[0], p[1]]; });
+      map.dragging.disable();
+
+      function onMove(ev) {
+        var ll = map.containerPointToLatLng(map.mouseEventToContainerPoint(ev));
+        var dLat = ll.lat - startLL.lat;
+        var dLng = ll.lng - startLL.lng;
+        var b2 = _getBoundaryEntry(bid);
+        if (!b2) return;
+        b2.points = origPts.map(function(p) { return [p[0] + dLat, p[1] + dLng]; });
+        b2.layer.setLatLngs(b2.points);
+        _refreshBoundaryLabels(bid);
+        boundaryEditHandles.forEach(function(vh, vi) {
+          if (b2.points[vi]) vh.setLatLng(b2.points[vi]);
+        });
+        _refreshBboxHandles(bid);
+      }
+      function onUp() {
+        map.dragging.enable();
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        var b3 = _getBoundaryEntry(bid);
+        if (b3 && bridge) bridge.onBoundaryGeomChanged(bid, JSON.stringify(b3.points));
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    }
+
+    function exitBoundaryEditMode() {
+      if (boundaryEditId === null) return;
+      var b = _getBoundaryEntry(boundaryEditId);
+      if (b) b.layer.off('mousedown', _onBoundaryPolyMousedown);
+      boundaryEditHandles.forEach(function(h) { map.removeLayer(h); });
+      boundaryEditHandles = [];
+      boundaryBboxHandles.forEach(function(h) { map.removeLayer(h); });
+      boundaryBboxHandles = [];
+      boundaryEditId = null;
+      map.getContainer().style.cursor = '';
+    }
+
+
+    // ── HTML escaping (guard against stored-XSS via project files and
+    //     Permapeople imports). Every user/file-sourced string that is
+    //     concatenated into Leaflet `html:` / `bindTooltip` / `setContent`
+    //     MUST flow through escH() first. ────────────────────────────────────
+    function escH(s) {
+      if (s === null || s === undefined) return '';
+      var d = document.createElement('div');
+      d.textContent = String(s);
+      return d.innerHTML;
+    }
+
+    // ── Plant type colours ───────────────────────────────────────────────────
+    var TYPE_COLORS = {
+      'tree':        '#2e7d32',
+      'shrub':       '#558b2f',
+      'herb':        '#7cb342',
+      'groundcover': '#c6a817',
+      'vine':        '#00838f',
+      'root':        '#6d4c41'
+    };
+
+    // ── Plant labels state ───────────────────────────────────────────────────
+    var labelsVisible = false;
+    var plantLabels   = {};   // markerId -> L.tooltip (permanent)
+
+    // ── Plant markers ────────────────────────────────────────────────────────
+    // spacingM    : plant spacing in metres (used as circle diameter on the map)
+    // plantType   : 'tree' | 'shrub' | 'herb' | 'groundcover' | 'vine' | 'root'
+    // customColor : optional hex colour override (e.g. '#ff5722')
+    // groupId     : optional placement group id (plants placed together share one)
+    function placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor, groupId) {
+      var markerId = plantId + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      // Marker visual size = mature half-spacing (so two adjacent
+      // markers at exactly `spacingM` apart just touch). The previous
+      // 1m floor visually overlapped any plant with spacing < 2m at
+      // high zoom even though their centres were spaced correctly.
+      var radius   = Math.max((spacingM || 1.0) / 2, 0.05);
+      var color    = customColor || TYPE_COLORS[plantType] || '#66bb6a';
+
+      var circle = L.circle([lat, lng], {
+        radius:      radius,
+        color:       color,
+        weight:      1.5,
+        fillColor:   color,
+        fillOpacity: 0.35
+      }).bindTooltip(escH(commonName) + '<br><span style="color:#78909c;font-size:10px">Right-click for options</span>',
+          { permanent: false, className: 'plant-marker-label' })
+        .addTo(plantLayerGroup);
+
+      // Store metadata on the circle for later use
+      circle._pd = { plantId: plantId, commonName: commonName, lat: lat, lng: lng,
+                      spacingM: spacingM, plantType: plantType, customColor: customColor,
+                      groupId: groupId || null, markerId: markerId, kind: 'plant' };
+
+      circle.on('click', function(e) {
+        L.DomEvent.stop(e);
+        if (e.originalEvent && (e.originalEvent.shiftKey || e.originalEvent.ctrlKey || e.originalEvent.metaKey)) {
+          toggleSelection(circle._pd);
+        } else {
+          if (bridge) bridge.onPlantMarkerClick(markerId, plantId, lat, lng);
+        }
+      });
+
+      circle.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        showPlantContextMenu(e, circle);
+      });
+
+      plantMarkers[markerId] = circle;
+
+      // Add permanent label if labels are turned on
+      if (labelsVisible) {
+        _addPermanentLabel(markerId, circle, commonName);
+      }
+
+      return markerId;
+    }
+
+    // Build a right-click menu for a plant marker. Offers single delete,
+    // delete-group (when this marker is part of a multi-plant placement),
+    // and bulk-delete-selection (when ≥1 plant is selected and this is one
+    // of them). Reuses the showContextMenu pattern established by sectors
+    // and sun path.
+    function showPlantContextMenu(e, circle) {
+      var pd = circle._pd;
+      var ev = e.originalEvent;
+      var items = [];
+
+      // If ≥2 things are selected, surface bulk delete first.
+      if (selectedItems.length >= 2 && _selectionContains(pd)) {
+        items.push({
+          label: 'Delete selected (' + selectedItems.length + ' items)',
+          action: function() { deleteSelected(); }
+        });
+        items.push('sep');
+      }
+
+      // Group delete only if this plant belongs to a multi-plant group.
+      if (pd.groupId && _groupSize(pd.groupId) >= 2) {
+        items.push({
+          label: 'Delete group (' + _groupSize(pd.groupId) + ' plants)',
+          action: function() { deletePlantGroup(pd.groupId); }
+        });
+      }
+
+      items.push({
+        label: 'Remove this plant',
+        action: function() { _removeSinglePlantMarker(pd.markerId); }
+      });
+
+      showContextMenu(ev.clientX, ev.clientY, items);
+    }
+
+    function _removeSinglePlantMarker(markerId) {
+      var circle = plantMarkers[markerId];
+      if (!circle) return;
+      var pd = circle._pd;
+      _clearSelectionEntry(markerId);
+      plantLayerGroup.removeLayer(circle);
+      if (plantLabels[markerId]) {
+        map.removeLayer(plantLabels[markerId]);
+        delete plantLabels[markerId];
+      }
+      delete plantMarkers[markerId];
+      if (bridge) bridge.onPlantRemoved(markerId, pd.plantId, pd.lat, pd.lng);
+    }
+
+    // Count how many existing markers share a group id.
+    function _groupSize(groupId) {
+      if (!groupId) return 0;
+      var n = 0;
+      var keys = Object.keys(plantMarkers);
+      for (var i = 0; i < keys.length; i++) {
+        var c = plantMarkers[keys[i]];
+        if (c._pd && c._pd.groupId === groupId) n++;
+      }
+      return n;
+    }
+
+    // Delete every plant sharing the given group id. Emits onPlantRemoved
+    // per marker so Python state stays consistent without a new bulk slot.
+    function deletePlantGroup(groupId) {
+      if (!groupId) return;
+      var keys = Object.keys(plantMarkers);
+      for (var i = 0; i < keys.length; i++) {
+        var mid = keys[i];
+        var c = plantMarkers[mid];
+        if (c._pd && c._pd.groupId === groupId) {
+          _removeSinglePlantMarker(mid);
+        }
+      }
+    }
+
+    // Called by Python after a single-click placement so the freshly created
+    // marker — which doesn't know its group id at construction time — can be
+    // tagged. Picks the most recent marker matching plantId/lat/lng.
+    function setPlantGroupForLatest(plantId, lat, lng, groupId) {
+      var keys = Object.keys(plantMarkers);
+      for (var i = keys.length - 1; i >= 0; i--) {
+        var c = plantMarkers[keys[i]];
+        if (c._pd && c._pd.plantId === plantId
+            && Math.abs(c._pd.lat - lat) < 1e-7
+            && Math.abs(c._pd.lng - lng) < 1e-7
+            && !c._pd.groupId) {
+          c._pd.groupId = groupId;
+          return;
+        }
+      }
+    }
+
+    // ── Pattern placement geometry ───────────────────────────────────────────
+    // All position helpers return [[lat,lng], ...] arrays.  They are used both
+    // by the live preview during placement and by the final commit. Keeping
+    // them pure makes them easy to mirror in Python tests.
+
+    // Reset pattern state and remove any preview layers.
+    function _resetPatternState() {
+      _patternStage = 0;
+      _patternAnchors = [];
+      if (_patternPreview) { map.removeLayer(_patternPreview); _patternPreview = null; }
+    }
+
+    // Build (or rebuild) the live preview layer for the pattern, given the
+    // current cursor position. The preview shows where each plant will land
+    // as small dashed circles, plus the framing line/rect/circle.
+    function _drawPatternPreview(cursorLatLng) {
+      if (!currentPlant || !currentPlant.pattern) return;
+      var pat = currentPlant.pattern;
+      var pp = pat.params || {};
+      var s = currentPlant.spacing_m || 1.0;
+      var overlap = (pp.overlap || 0);
+      var positions = [];
+      var framing = null;
+
+      if (_patternPreview) { map.removeLayer(_patternPreview); _patternPreview = null; }
+
+      if (pat.kind === 'row' && _patternAnchors.length === 1 && cursorLatLng) {
+        var a = _patternAnchors[0];
+        positions = _rowPositions(a[0], a[1], cursorLatLng.lat, cursorLatLng.lng,
+                                  s, overlap, pp.count);
+        framing = L.polyline([a, [cursorLatLng.lat, cursorLatLng.lng]],
+                              { color: '#fdd835', weight: 2, dashArray: '4 4', opacity: 0.7 });
+      } else if (pat.kind === 'grid' && _patternAnchors.length === 1 && cursorLatLng) {
+        var a = _patternAnchors[0];
+        positions = _gridPositions(a[0], a[1], cursorLatLng.lat, cursorLatLng.lng,
+                                   s, overlap, pp.rows, pp.cols, pp.stagger);
+        var bnds = L.latLngBounds([a, [cursorLatLng.lat, cursorLatLng.lng]]);
+        framing = L.rectangle(bnds, { color: '#fdd835', weight: 2, dashArray: '4 4',
+                                       fill: false, opacity: 0.7 });
+      } else if (pat.kind === 'circle' && _patternAnchors.length === 1 && cursorLatLng) {
+        var c = _patternAnchors[0];
+        var radiusM = _haversineM(c, [cursorLatLng.lat, cursorLatLng.lng]);
+        positions = _circlePositions(c[0], c[1], radiusM, s, overlap, pp.count, pp.fill);
+        framing = L.circle(c, { radius: radiusM, color: '#fdd835', weight: 2,
+                                 dashArray: '4 4', fill: false, opacity: 0.7 });
+      }
+
+      var preview = L.layerGroup();
+      if (framing) framing.addTo(preview);
+      // Draw a small dashed "ghost" plant circle at each computed position.
+      var radius = Math.max(_effectiveSpacing(s, overlap) / 2, 0.5);
+      positions.forEach(function(p) {
+        L.circle(p, { radius: radius, color: '#fdd835', weight: 1,
+                      dashArray: '2 3', fillColor: '#fdd835', fillOpacity: 0.15,
+                      interactive: false }).addTo(preview);
+      });
+      // Floating count badge near the cursor while previewing.
+      if (cursorLatLng && positions.length > 0) {
+        var label = L.tooltip({ permanent: true, direction: 'right', offset: [10, 0],
+                                 className: 'measure-label', opacity: 0.9 })
+                     .setContent(positions.length + ' plants')
+                     .setLatLng(cursorLatLng);
+        label.addTo(preview);
+      }
+      preview.addTo(map);
+      _patternPreview = preview;
+    }
+
+    // Handle a click in plant mode when a pattern is active. Each pattern
+    // takes 2 clicks; the second click commits and emits onPatternPlaced.
+    function _handlePatternClick(lat, lng) {
+      if (!currentPlant || !currentPlant.pattern) return;
+      var pat = currentPlant.pattern;
+      var pp = pat.params || {};
+      _patternAnchors.push([lat, lng]);
+      _patternStage = _patternAnchors.length;
+
+      if (_patternStage < 2) {
+        // First click captured — preview will follow the cursor.
+        return;
+      }
+
+      // Two anchors collected — compute final positions and commit.
+      var s = currentPlant.spacing_m || 1.0;
+      var overlap = pp.overlap || 0;
+      var a = _patternAnchors[0], b = _patternAnchors[1];
+      var positions = [];
+      if (pat.kind === 'row') {
+        positions = _rowPositions(a[0], a[1], b[0], b[1], s, overlap, pp.count);
+      } else if (pat.kind === 'grid') {
+        positions = _gridPositions(a[0], a[1], b[0], b[1], s, overlap,
+                                   pp.rows, pp.cols, pp.stagger);
+      } else if (pat.kind === 'circle') {
+        var radiusM = _haversineM(a, b);
+        positions = _circlePositions(a[0], a[1], radiusM, s, overlap, pp.count, pp.fill);
+      }
+
+      _resetPatternState();
+
+      if (positions.length > 0 && bridge) {
+        bridge.onPatternPlaced(currentPlant.id, currentPlant.common_name,
+                               currentPlant.spacing_m, currentPlant.plant_type,
+                               currentPlant.custom_color || '',
+                               JSON.stringify(positions), pat.kind);
+      }
+    }
+
+    function _metersToLat(m) { return m / 111320; }
+    function _metersToLng(m, lat) { return m / (111320 * Math.cos(lat * Math.PI / 180)); }
+
+    function _haversineM(a, b) { return haversineMeters(a, b); }
+
+    // Effective centre-to-centre spacing after applying overlap factor.
+    // overlapFactor is in [0..1]; 0 = no overlap (centers exactly spacingM
+    // apart); 1 = centers coincide. Floors at 1cm to avoid div-by-zero.
+    function _effectiveSpacing(spacingM, overlapFactor) {
+      var s = (spacingM || 1.0) * (1.0 - (overlapFactor || 0));
+      return Math.max(s, 0.01);
+    }
+
+    // Linear interpolation along a great-circle approximation between two
+    // (lat,lng) anchors. Suitable for the ≤200m row lengths we care about.
+    function _rowPositions(latA, lngA, latB, lngB, spacingM, overlapFactor, count) {
+      var aLat = latA, aLng = lngA, bLat = latB, bLng = lngB;
+      var len = _haversineM([aLat, aLng], [bLat, bLng]);
+      var s = _effectiveSpacing(spacingM, overlapFactor);
+      var n;
+      if (count && count > 0) {
+        n = Math.max(2, Math.floor(count));
+      } else {
+        n = Math.max(2, Math.floor(len / s) + 1);
+      }
+      var positions = [];
+      if (n === 1) return [[aLat, aLng]];
+      for (var i = 0; i < n; i++) {
+        var t = i / (n - 1);
+        positions.push([aLat + (bLat - aLat) * t, aLng + (bLng - aLng) * t]);
+      }
+      return positions;
+    }
+
+    // Grid filling the rectangle whose corners are (latA,lngA) and (latB,lngB).
+    // If rows or cols are provided they override the spacing-derived count.
+    // stagger=true offsets every other row by half the column step (hex pack).
+    function _gridPositions(latA, lngA, latB, lngB, spacingM, overlapFactor, rows, cols, stagger) {
+      var s = _effectiveSpacing(spacingM, overlapFactor);
+      var minLat = Math.min(latA, latB), maxLat = Math.max(latA, latB);
+      var minLng = Math.min(lngA, lngB), maxLng = Math.max(lngA, lngB);
+      var midLat = (minLat + maxLat) / 2;
+      var widthM  = _haversineM([midLat, minLng], [midLat, maxLng]);
+      var heightM = _haversineM([minLat, minLng], [maxLat, minLng]);
+      var nCols = (cols && cols > 0) ? Math.max(1, Math.floor(cols))
+                                     : Math.max(1, Math.floor(widthM / s) + 1);
+      var nRows = (rows && rows > 0) ? Math.max(1, Math.floor(rows))
+                                     : Math.max(1, Math.floor(heightM / s) + 1);
+      var positions = [];
+      var dLat = nRows > 1 ? (maxLat - minLat) / (nRows - 1) : 0;
+      var dLng = nCols > 1 ? (maxLng - minLng) / (nCols - 1) : 0;
+      for (var r = 0; r < nRows; r++) {
+        var rowLat = minLat + dLat * r;
+        var offset = (stagger && (r % 2 === 1)) ? dLng / 2 : 0;
+        for (var c = 0; c < nCols; c++) {
+          var colLng = minLng + dLng * c + offset;
+          if (colLng > maxLng + 1e-9) continue; // staggered last column may overflow
+          positions.push([rowLat, colLng]);
+        }
+      }
+      return positions;
+    }
+
+    // Plants arranged on (or inside) a circle of radius `radiusM`.
+    //   fill=false → perimeter only (a single ring of `count` or
+    //                spacing-derived plants).
+    //   fill=true  → honeycomb hex-pack inside the disc: every plant
+    //                has six equidistant neighbours at exactly `s`,
+    //                packing density ~91% (vs ~78% for square grids).
+    //                Centre plant is always first in the result.
+    function _circlePositions(centerLat, centerLng, radiusM, spacingM, overlapFactor, count, fill) {
+      var s = _effectiveSpacing(spacingM, overlapFactor);
+      if (fill) {
+        var disc = _hexPackedDisc(centerLat, centerLng, radiusM, s);
+        // When the user supplies an explicit count, cap the disc to
+        // exactly that many plants — closest-to-centre wins. Without
+        // the cap, large radii at small spacings can produce thousands
+        // of markers and stall the renderer.
+        if (count && count > 0 && disc.length > count) {
+          var n = Math.max(1, Math.floor(count));
+          // disc is already centre-first then row-by-row, but we sort
+          // by squared distance from centre so the truncated set is a
+          // clean shrinking sub-disc rather than a chopped stripe.
+          var cosLat = Math.cos(centerLat * Math.PI / 180);
+          disc.sort(function (a, b) {
+            var ax = (a[1] - centerLng) * 111320 * cosLat;
+            var ay = (a[0] - centerLat) * 111320;
+            var bx = (b[1] - centerLng) * 111320 * cosLat;
+            var by = (b[0] - centerLat) * 111320;
+            return (ax*ax + ay*ay) - (bx*bx + by*by);
+          });
+          return disc.slice(0, n);
+        }
+        return disc;
+      }
+      // Perimeter-only ring.
+      var positions = [];
+      var circumference = 2 * Math.PI * radiusM;
+      var n = (count && count > 0) ? Math.max(3, Math.floor(count))
+                                   : Math.max(3, Math.floor(circumference / s));
+      for (var k = 0; k < n; k++) {
+        var theta = (2 * Math.PI * k) / n;
+        var dLat = _metersToLat(radiusM * Math.cos(theta));
+        var dLng = _metersToLng(radiusM * Math.sin(theta), centerLat);
+        positions.push([centerLat + dLat, centerLng + dLng]);
+      }
+      return positions;
+    }
+
+    // Honeycomb-style hex pack inside a disc of radius `radiusM`. Rows
+    // are at y = r * s * sqrt(3)/2; odd rows shift x by s/2 so every
+    // plant has six equidistant neighbours. The centre plant is
+    // emitted first so callers (and tests) can rely on it being there.
+    function _hexPackedDisc(centerLat, centerLng, radiusM, spacingM) {
+      var s = spacingM;
+      var rowSpacing = s * Math.sqrt(3) / 2;
+      var maxRow = Math.ceil(radiusM / rowSpacing) + 1;
+      var maxCol = Math.ceil(radiusM / s) + 1;
+      var r2 = radiusM * radiusM + 1e-3;   // tolerance for boundary
+      var positions = [[centerLat, centerLng]];
+      for (var rIdx = -maxRow; rIdx <= maxRow; rIdx++) {
+        var y = rIdx * rowSpacing;
+        var rowOffset = (rIdx & 1) ? s / 2 : 0;
+        for (var cIdx = -maxCol; cIdx <= maxCol; cIdx++) {
+          var x = cIdx * s + rowOffset;
+          if (x * x + y * y <= r2) {
+            // Skip the (0, 0) cell — already added as the centre.
+            if (Math.abs(x) < 1e-6 && Math.abs(y) < 1e-6) continue;
+            positions.push([
+              centerLat + _metersToLat(y),
+              centerLng + _metersToLng(x, centerLat),
+            ]);
+          }
+        }
+      }
+      return positions;
+    }
+
+    // Compute a hex burst pattern of `quantity` positions centred at
+    // (lat, lng) with `spacing` metres between adjacent plants. Used by
+    // the legacy Qty>1 single-click placement.
+    function _hexBurstPositions(lat, lng, spacing, quantity) {
+      var s = spacing || 1.0;
+      var positions = [[lat, lng]];
+      var ring = 0;
+      while (positions.length < quantity) {
+        ring++;
+        for (var side = 0; side < 6; side++) {
+          for (var step = 0; step < ring; step++) {
+            if (positions.length >= quantity) break;
+            var angle = (side * 60 + step * (60 / ring)) * Math.PI / 180;
+            var dLat = (ring * s * Math.cos(angle)) / 111320;
+            var dLng = (ring * s * Math.sin(angle)) / (111320 * Math.cos(lat * Math.PI / 180));
+            positions.push([lat + dLat, lng + dLng]);
+          }
+        }
+      }
+      return positions.slice(0, quantity);
+    }
+
+    // ── Label management ──────────────────────────────────────────────────────
+    function _addPermanentLabel(markerId, circle, name) {
+      var label = L.tooltip({
+        permanent: true,
+        direction: 'top',
+        offset: [0, -8],
+        className: 'plant-marker-label',
+        opacity: 0.9
+      }).setContent(escH(name)).setLatLng(circle.getLatLng());
+      label.addTo(map);
+      plantLabels[markerId] = label;
+    }
+
+    function setLabelsVisible(visible) {
+      labelsVisible = visible;
+      updateLabelVisibility();
+    }
+
+    function updateLabelVisibility() {
+      var zoom = map.getZoom();
+      var shouldShow = labelsVisible && zoom >= 18;
+      if (shouldShow) {
+        // Add permanent labels to all existing markers
+        Object.keys(plantMarkers).forEach(function(mid) {
+          if (!plantLabels[mid]) {
+            var c = plantMarkers[mid];
+            _addPermanentLabel(mid, c, c._pd ? c._pd.commonName : '');
+          }
+        });
+      } else {
+        // Remove all permanent labels from map (keep refs if labels still toggled on)
+        Object.keys(plantLabels).forEach(function(mid) {
+          map.removeLayer(plantLabels[mid]);
+        });
+        if (!labelsVisible) plantLabels = {};
+      }
+    }
+
+    // ── Update marker colour (called from Python) ─────────────────────────────
+    function updateMarkerColor(plantId, newColor) {
+      Object.keys(plantMarkers).forEach(function(mid) {
+        var c = plantMarkers[mid];
+        if (c._pd && c._pd.plantId === plantId) {
+          c.setStyle({ color: newColor, fillColor: newColor });
+          c._pd.customColor = newColor;
+        }
+      });
+    }
+
+    // ── Zone circles ─────────────────────────────────────────────────────────
+    function placeZoneCircles(lat, lng) {
+      // Clear existing zone circles
+      zoneCircles.forEach(function(c) { map.removeLayer(c); });
+      zoneCircles = [];
+
+      var radii  = [10, 30, 60, 120, 240];  // metres (visual reference)
+      var colors = ['#ef5350','#ff9800','#ffee58','#66bb6a','#42a5f5'];
+      var labels = ['Z0','Z1','Z2','Z3','Z4'];
+
+      radii.forEach(function(r, i) {
+        var circle = L.circle([lat, lng], {
+          radius: r,
+          color: colors[i], weight: 1.5,
+          fillColor: colors[i], fillOpacity: 0.04,
+          interactive: false
+        }).addTo(map);
+
+        var labelIcon = L.divIcon({
+          className: 'zone-circle-label',
+          html: labels[i],
+          iconSize: [20, 12]
+        });
+        var lm = L.marker([lat, lng + metresToLng(r, lat)], { icon: labelIcon, interactive: false }).addTo(map);
+
+        zoneCircles.push(circle);
+        zoneCircles.push(lm);  // track labels so they toggle/clear with the circles
+      });
+    }
+
+    function metresToLng(metres, lat) {
+      return (metres / 111320) / Math.cos(lat * Math.PI / 180);
+    }
+
+    // ── Canvas renderer for non-interactive overlays (better perf than SVG) ──
+    var canvasRenderer = L.canvas({ padding: 0.5 });
+
+    // ── Utilities ─────────────────────────────────────────────────────────────
+    function debounce(fn, delay) {
+      var timer = null;
+      return function() {
+        var args = arguments, ctx = this;
+        clearTimeout(timer);
+        timer = setTimeout(function() { fn.apply(ctx, args); }, delay);
+      };
+    }
+
+    // ── Snap to grid ──────────────────────────────────────────────────────────
+    var snapEnabled  = false;
+    var snapGridSize = 1.0;  // metres
+    var gridOverlay  = null;
+    var debouncedGridRedraw = debounce(drawGridOverlay, 150);
+
+    function setSnapEnabled(enabled, gridSize) {
+      snapEnabled  = enabled;
+      snapGridSize = gridSize || 1.0;
+      if (enabled) {
+        drawGridOverlay();
+        map.on('moveend', debouncedGridRedraw);
+        map.on('zoomend', debouncedGridRedraw);
+      } else {
+        if (gridOverlay) { map.removeLayer(gridOverlay); gridOverlay = null; }
+        map.off('moveend', debouncedGridRedraw);
+        map.off('zoomend', debouncedGridRedraw);
+      }
+    }
+
+    function snapLatLng(lat, lng) {
+      if (!snapEnabled) return [lat, lng];
+      var gridLat = snapGridSize / 111320;
+      var gridLng = snapGridSize / (111320 * Math.cos(lat * Math.PI / 180));
+      return [
+        Math.round(lat / gridLat) * gridLat,
+        Math.round(lng / gridLng) * gridLng
+      ];
+    }
+
+    function drawGridOverlay() {
+      if (gridOverlay) { map.removeLayer(gridOverlay); gridOverlay = null; }
+      if (!snapEnabled || map.getZoom() < 17) return; // only show grid when zoomed in
+
+      var bounds = map.getBounds();
+      var gridLat = snapGridSize / 111320;
+      var centerLat = bounds.getCenter().lat;
+      var gridLng = snapGridSize / (111320 * Math.cos(centerLat * Math.PI / 180));
+      var lines = [];
+
+      var startLat = Math.floor(bounds.getSouth() / gridLat) * gridLat;
+      var startLng = Math.floor(bounds.getWest() / gridLng) * gridLng;
+
+      for (var lt = startLat; lt <= bounds.getNorth(); lt += gridLat) {
+        lines.push([[lt, bounds.getWest()], [lt, bounds.getEast()]]);
+      }
+      for (var ln = startLng; ln <= bounds.getEast(); ln += gridLng) {
+        lines.push([[bounds.getSouth(), ln], [bounds.getNorth(), ln]]);
+      }
+
+      gridOverlay = L.layerGroup(lines.map(function(pts) {
+        return L.polyline(pts, { color: '#4a7a4a', weight: 0.5, opacity: 0.4, interactive: false, renderer: canvasRenderer });
+      })).addTo(map);
+    }
+
+    // ── Canopy preview ───────────────────────────────────────────────────────
+    var canopyVisible = false;
+    var canopyGroup = L.layerGroup();  // single group for all canopy circles
+
+    function setCanopyVisible(visible) {
+      canopyVisible = visible;
+      if (visible) {
+        rebuildCanopyGroup();
+        canopyGroup.addTo(map);
+      } else {
+        map.removeLayer(canopyGroup);
+      }
+    }
+
+    function rebuildCanopyGroup() {
+      canopyGroup.clearLayers();
+      if (!canopyVisible) return;
+
+      Object.keys(plantMarkers).forEach(function(mid) {
+        var m = plantMarkers[mid];
+        if (!m._pd) return;
+        if (m._isGuildMember) return;  // guild members already have canopy circles
+        var radius = Math.max((m._pd.spacingM || 1.0) / 2, 0.5);
+        L.circle(m.getLatLng(), {
+          radius: radius,
+          color: '#a5d6a7', weight: 1, dashArray: '4 3',
+          fillColor: '#a5d6a7', fillOpacity: 0.08,
+          interactive: false
+        }).addTo(canopyGroup);
+      });
+    }
+
+    function drawCanopies() { rebuildCanopyGroup(); }
+
+    // ── Timeline / succession visualization ─────────────────────────────────
+    var timelineActive = false;
+    var originalRadii = {};  // markerId -> original radius (for reset)
+
+    function setTimelineYearByPlantId(year, pidFactors) {
+      // pidFactors: {plantId: scaleFactor} where scaleFactor is 0.1 to 1.0
+      if (year === 0) {
+        // Reset all markers to original size
+        timelineActive = false;
+        Object.keys(originalRadii).forEach(function(mid) {
+          var m = plantMarkers[mid];
+          if (m && m.setRadius) {
+            m.setRadius(originalRadii[mid]);
+            m.setStyle({fillOpacity: 0.35, opacity: 1.0});
+          }
+        });
+        originalRadii = {};
+        if (canopyVisible) rebuildCanopyGroup();
+        return;
+      }
+
+      timelineActive = true;
+
+      Object.keys(plantMarkers).forEach(function(mid) {
+        var m = plantMarkers[mid];
+        if (!m || !m._pd || !m.setRadius) return;
+        var factor = pidFactors[m._pd.plantId];
+        if (factor === undefined) return;
+
+        // Save original radius on first timeline activation
+        if (!originalRadii[mid]) {
+          originalRadii[mid] = m.getRadius();
+        }
+
+        var matureRadius = originalRadii[mid];
+        var currentRadius = matureRadius * factor;
+        m.setRadius(Math.max(currentRadius, 0.3));
+
+        // Young plants more transparent
+        var opacity = 0.15 + 0.20 * factor;
+        m.setStyle({fillOpacity: opacity, opacity: 0.4 + 0.6 * factor});
+      });
+
+      // Rebuild canopy if visible (canopy scales with markers)
+      if (canopyVisible) rebuildCanopyGroup();
+    }
+
+    // ── Season view ─────────────────────────────────────────────────────────
+    // NASA GIBS MODIS Terra True Color — free, no key, max zoom 9 (blurry at high zoom)
+    var _GIBS_DATES = {
+      'Spring': '2023-05-10',
+      'Summer': null,             // no overlay; normal map IS summer
+      'Fall':   '2023-10-05',
+      'Winter': '2023-01-20'
+    };
+
+    function setSeasonView(season, plantVisData) {
+      // Remove any existing seasonal overlay
+      if (seasonOverlay) { map.removeLayer(seasonOverlay); seasonOverlay = null; }
+      // Reset CSS filter
+      var tilePane = document.querySelector('.leaflet-tile-pane');
+      if (tilePane) tilePane.style.filter = '';
+
+      var gibsDate = _GIBS_DATES[season];
+      if (gibsDate) {
+        var url = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/' +
+                  'MODIS_Terra_CorrectedReflectance_TrueColor/default/' +
+                  gibsDate + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg';
+        seasonOverlay = L.tileLayer(url, {
+          attribution: 'NASA GIBS',
+          maxNativeZoom: 9,
+          maxZoom: 22,
+          opacity: 0.72,
+          tileSize: 256
+        }).addTo(map);
+      }
+
+      // Adjust plant marker opacity based on season + plant type
+      Object.keys(plantMarkers).forEach(function(mid) {
+        var m = plantMarkers[mid];
+        if (!m || !m._pd) return;
+        var vis = plantVisData[m._pd.plantId];
+        if (vis !== undefined) {
+          m.setStyle({fillOpacity: vis * 0.35, opacity: vis});
+        }
+      });
+    }
+
+    // ── Measurement tool ───────────────────────────────────────────────────────
+    function handleMeasureClick(lat, lng) {
+      if (!measureStart) {
+        // First click — set start point
+        clearMeasure();
+        measureStart = L.latLng(lat, lng);
+        var mk = L.circleMarker([lat, lng], {
+          radius: 5, color: '#fdd835', fillColor: '#fdd835', fillOpacity: 1
+        }).addTo(map);
+        measureMarkers.push(mk);
+      } else {
+        // Second click — draw line + show distance
+        var end = L.latLng(lat, lng);
+        var dist = measureStart.distanceTo(end);
+        var label = dist < 1000
+          ? dist.toFixed(1) + ' m'
+          : (dist / 1000).toFixed(2) + ' km';
+
+        measureLine = L.polyline([measureStart, end], {
+          color: '#fdd835', weight: 2, dashArray: '8 4', opacity: 0.9
+        }).addTo(map);
+
+        var mk = L.circleMarker([lat, lng], {
+          radius: 5, color: '#fdd835', fillColor: '#fdd835', fillOpacity: 1
+        }).addTo(map);
+        measureMarkers.push(mk);
+
+        // Midpoint label
+        var mid = L.latLng(
+          (measureStart.lat + end.lat) / 2,
+          (measureStart.lng + end.lng) / 2
+        );
+        measureLabel = L.tooltip({
+          permanent: true, direction: 'top', offset: [0, -10],
+          className: 'measure-label', opacity: 0.95
+        }).setContent(label).setLatLng(mid).addTo(map);
+
+        measureStart = null; // ready for next measurement
+      }
+    }
+
+    function clearMeasure() {
+      if (measureLine)  { map.removeLayer(measureLine);  measureLine  = null; }
+      if (measureLabel) { map.removeLayer(measureLabel); measureLabel = null; }
+      measureMarkers.forEach(function(m) { map.removeLayer(m); });
+      measureMarkers = [];
+      measureStart = null;
+    }
+
+    function setMeasureVisible(visible) {
+      measureVisible = visible;
+      if (!visible) {
+        clearMeasure();
+      }
+    }
+
+    // ── Annotations ───────────────────────────────────────────────────────────
+    function handleAnnotateClick(lat, lng) {
+      if (bridge) bridge.onAnnotateRequested(lat, lng);
+    }
+
+    function placeAnnotation(id, lat, lng, text) {
+      var icon = L.divIcon({
+        className: 'annotation-label',
+        html: '<span>' + escH(text) + '</span>',
+        iconSize: [0, 0],
+        iconAnchor: [0, 0]
+      });
+      var marker = L.marker([lat, lng], { icon: icon, draggable: true }).addTo(map);
+      marker.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        map.removeLayer(marker);
+        delete annotations[id];
+        if (bridge) bridge.onAnnotationRemoved(id);
+      });
+      marker.on('dragend', function() {
+        var pos = marker.getLatLng();
+        annotations[id].lat = pos.lat;
+        annotations[id].lng = pos.lng;
+      });
+      annotations[id] = { marker: marker, text: text, lat: lat, lng: lng };
+    }
+
+    function clearAnnotations() {
+      Object.keys(annotations).forEach(function(id) {
+        map.removeLayer(annotations[id].marker);
+      });
+      annotations = {};
+    }
+
+    // ── Structure placement (S1) ───────────────────────────────────────────
+    function placeStructureOnMap(structDef, lat, lng) {
+      var id = 'struct_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      var group = L.layerGroup().addTo(map);
+      var sizeM = structDef.size_m || 3.0;
+      var widthM = structDef.width_m || sizeM;
+      var color = structDef.color || '#78909c';
+      var fillColor = structDef.fill_color || color;
+      var fillOpacity = structDef.fill_opacity || 0.35;
+      var shape = structDef.shape || 'rectangle';
+      var name = structDef.name || 'Structure';
+      var icon = structDef.icon || '';
+
+      var mainLayer;
+
+      if (shape === 'circle' || shape === 'ellipse' || shape === 'spiral' || shape === 'keyhole') {
+        // Render as circle
+        mainLayer = L.circle([lat, lng], {
+          radius: sizeM / 2,
+          color: color,
+          weight: 2,
+          fillColor: fillColor,
+          fillOpacity: fillOpacity
+        }).addTo(group);
+
+        // Spiral: add decorative inner arcs
+        if (shape === 'spiral') {
+          var innerR = sizeM / 4;
+          L.circle([lat, lng], {
+            radius: innerR,
+            color: color,
+            weight: 1.5,
+            fillOpacity: 0,
+            dashArray: '4 3'
+          }).addTo(group);
+        }
+
+        // Keyhole: add a small notch indicator
+        if (shape === 'keyhole') {
+          var notchLat = lat - (sizeM * 0.3) / 111320;
+          L.circle([notchLat, lng], {
+            radius: sizeM / 6,
+            color: '#5d4037',
+            weight: 1.5,
+            fillColor: '#8d6e63',
+            fillOpacity: 0.5
+          }).addTo(group);
+        }
+
+      } else {
+        // Rectangle: use L.rectangle
+        var halfLen = sizeM / 2;
+        var halfWid = widthM / 2;
+        var dLat = halfLen / 111320;
+        var dLng = halfWid / (111320 * Math.cos(lat * Math.PI / 180));
+        var bounds = [[lat - dLat, lng - dLng], [lat + dLat, lng + dLng]];
+        mainLayer = L.rectangle(bounds, {
+          color: color,
+          weight: 2,
+          fillColor: fillColor,
+          fillOpacity: fillOpacity
+        }).addTo(group);
+      }
+
+      // Label with icon
+      var labelIcon = L.divIcon({
+        className: 'structure-label',
+        html: '<span class="struct-icon">' + escH(icon) + '</span> ' + escH(name),
+        iconSize: [0, 0],
+        iconAnchor: [0, 12]
+      });
+      L.marker([lat, lng], { icon: labelIcon, interactive: false }).addTo(group);
+
+      // Tooltip on hover
+      mainLayer.bindTooltip(
+        '<b>' + escH(icon) + ' ' + escH(name) + '</b><br>' +
+        '<span style="color:#78909c;font-size:10px">' + Number(sizeM) + 'm' +
+        (structDef.maintenance_hours_year ? ' · ~' + Number(structDef.maintenance_hours_year) + ' hrs/yr' : '') +
+        '<br>Right-click to remove</span>',
+        { className: 'plant-marker-label' }
+      );
+
+      // Store metadata
+      mainLayer._struct = {
+        id: id,
+        structId: structDef.id,
+        name: name,
+        icon: icon,
+        lat: lat,
+        lng: lng,
+        sizeM: sizeM,
+        widthM: widthM,
+        maintenance: structDef.maintenance_hours_year || 0
+      };
+
+      // Right-click to remove
+      mainLayer.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        map.removeLayer(group);
+        delete structureMarkers[id];
+        if (bridge) bridge.onStructureRemoved(id, structDef.id, lat, lng);
+      });
+
+      structureMarkers[id] = group;
+      return id;
+    }
+
+    // Load a structure from saved project
+    function loadStructure(structDef, lat, lng) {
+      placeStructureOnMap(structDef, lat, lng);
+    }
+
+    // ── Hedgerow drawing (S2) ────────────────────────────────────────────────
+    function handleHedgerowClick(lat, lng) {
+      hedgerowPoints.push([lat, lng]);
+
+      // Draw vertex marker
+      L.circleMarker([lat, lng], {
+        radius: 4,
+        color: currentHedgerow ? currentHedgerow.color : '#4caf50',
+        fillColor: currentHedgerow ? currentHedgerow.color : '#4caf50',
+        fillOpacity: 1
+      }).addTo(drawnItems);
+
+      refreshHedgerowPolyline();
+    }
+
+    function refreshHedgerowPolyline() {
+      if (hedgerowPreview) { map.removeLayer(hedgerowPreview); hedgerowPreview = null; }
+      if (hedgerowPoints.length >= 2) {
+        var color = currentHedgerow ? currentHedgerow.color : '#4caf50';
+        hedgerowPreview = L.polyline(hedgerowPoints, {
+          color: color, weight: 3, opacity: 0.7, dashArray: '6 4'
+        }).addTo(map);
+      }
+    }
+
+    function updateHedgerowPreview(latlng) {
+      if (hedgerowPreview) { map.removeLayer(hedgerowPreview); }
+      var color = currentHedgerow ? currentHedgerow.color : '#4caf50';
+      var pts = hedgerowPoints.concat([[latlng.lat, latlng.lng]]);
+      hedgerowPreview = L.polyline(pts, {
+        color: color, weight: 3, opacity: 0.5, dashArray: '4 4'
+      }).addTo(map);
+    }
+
+    function finishHedgerow() {
+      if (hedgerowPoints.length < 2) return;
+      if (hedgerowPreview) { map.removeLayer(hedgerowPreview); hedgerowPreview = null; }
+      drawnItems.clearLayers();
+
+      var id = 'hedge_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      var cfg = currentHedgerow || {};
+      var color   = cfg.color    || '#4caf50';
+      var widthM  = cfg.width_m  || 1.5;
+      var spacing = cfg.spacing_m || 1.0;
+      var style   = cfg.style    || 'hedge';
+      var species = cfg.species  || '';
+      var group   = L.layerGroup().addTo(map);
+
+      // Style definitions
+      var styleMap = {
+        'hedge':       { weight: 6, opacity: 0.6, dashArray: null,    fillDots: true },
+        'fence':       { weight: 3, opacity: 0.8, dashArray: '8 6',  fillDots: false },
+        'living_fence':{ weight: 5, opacity: 0.6, dashArray: '12 4', fillDots: true },
+        'windbreak':   { weight: 8, opacity: 0.5, dashArray: null,    fillDots: true }
+      };
+      var s = styleMap[style] || styleMap['hedge'];
+
+      // Main polyline
+      var mainLine = L.polyline(hedgerowPoints, {
+        color: color,
+        weight: s.weight,
+        opacity: s.opacity,
+        dashArray: s.dashArray,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(group);
+
+      // Plant markers along the line
+      if (s.fillDots) {
+        var totalLen = 0;
+        var segments = [];
+        for (var i = 1; i < hedgerowPoints.length; i++) {
+          var from = L.latLng(hedgerowPoints[i-1]);
+          var to   = L.latLng(hedgerowPoints[i]);
+          var segLen = from.distanceTo(to);
+          segments.push({ from: from, to: to, len: segLen });
+          totalLen += segLen;
+        }
+        var numPlants = Math.floor(totalLen / spacing) + 1;
+        var distAlong = 0;
+        var segIdx = 0;
+        var segDist = 0;
+        for (var p = 0; p < numPlants; p++) {
+          var target = p * spacing;
+          while (segIdx < segments.length - 1 && segDist + segments[segIdx].len < target) {
+            segDist += segments[segIdx].len;
+            segIdx++;
+          }
+          var seg = segments[segIdx];
+          var frac = seg.len > 0 ? (target - segDist) / seg.len : 0;
+          frac = Math.max(0, Math.min(1, frac));
+          var ptLat = seg.from.lat + (seg.to.lat - seg.from.lat) * frac;
+          var ptLng = seg.from.lng + (seg.to.lng - seg.from.lng) * frac;
+
+          var dotColor = style === 'living_fence' ?
+            (p % 2 === 0 ? color : shiftColor(color, 30)) : color;
+          L.circleMarker([ptLat, ptLng], {
+            radius: 3.5,
+            color: dotColor,
+            fillColor: dotColor,
+            fillOpacity: 0.8,
+            weight: 1
+          }).addTo(group);
+        }
+      }
+
+      // Label at midpoint
+      var midIdx = Math.floor(hedgerowPoints.length / 2);
+      var labelText = species || (style.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); }));
+      var labelIcon = L.divIcon({
+        className: 'hedgerow-label',
+        html: escH(labelText),
+        iconSize: [0, 0],
+        iconAnchor: [0, 12]
+      });
+      L.marker(hedgerowPoints[midIdx], { icon: labelIcon, interactive: false }).addTo(group);
+
+      // Tooltip
+      var tooltipText = '<b>Hedgerow</b>';
+      if (species) tooltipText += '<br>' + escH(species);
+      tooltipText += '<br><span style="color:#78909c;font-size:10px">~' + Number(numPlants) + ' plants · ' +
+        totalLen.toFixed(1) + 'm<br>Right-click to remove</span>';
+      mainLine.bindTooltip(tooltipText, { className: 'plant-marker-label' });
+
+      // Store metadata
+      mainLine._hedge = {
+        id: id,
+        points: hedgerowPoints.slice(),
+        style: style,
+        color: color,
+        widthM: widthM,
+        spacingM: spacing,
+        species: species,
+        lengthM: totalLen,
+        numPlants: numPlants
+      };
+
+      // Right-click to remove
+      mainLine.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        map.removeLayer(group);
+        delete hedgerowLayers[id];
+        if (bridge) bridge.onHedgerowRemoved(id, JSON.stringify(hedgerowPoints));
+      });
+
+      hedgerowLayers[id] = group;
+
+      // Notify Python
+      if (bridge) bridge.onHedgerowComplete(id, JSON.stringify(hedgerowPoints.slice()), species, style, totalLen, numPlants);
+
+      hedgerowPoints = [];
+      setMode('none');
+    }
+
+    // Load a hedgerow from saved project
+    function loadHedgerow(hedgeDef) {
+      hedgerowPoints = hedgeDef.points || [];
+      currentHedgerow = hedgeDef;
+      if (hedgerowPoints.length >= 2) {
+        finishHedgerow();
+      }
+      hedgerowPoints = [];
+    }
+
+    // ── Custom shape drawing (S3) ────────────────────────────────────────────
+    function handleShapeClick(lat, lng) {
+      // Close polygon if clicking near first point
+      if (shapePoints.length >= 3) {
+        var first = shapePoints[0];
+        var firstPx = map.latLngToContainerPoint(L.latLng(first));
+        var clickPx = map.latLngToContainerPoint(L.latLng(lat, lng));
+        var dist = Math.sqrt(Math.pow(firstPx.x - clickPx.x, 2) + Math.pow(firstPx.y - clickPx.y, 2));
+        if (dist < 12) {
+          finishShape();
+          return;
+        }
+      }
+
+      shapePoints.push([lat, lng]);
+
+      // Draw vertex marker
+      var strokeColor = currentShape ? currentShape.stroke_color : '#2e7d32';
+      L.circleMarker([lat, lng], {
+        radius: 4, color: strokeColor,
+        fillColor: strokeColor, fillOpacity: 1
+      }).addTo(drawnItems);
+
+      // Show close indicator on first point
+      if (shapePoints.length === 1) {
+        L.circleMarker([lat, lng], {
+          radius: 6, color: strokeColor,
+          fillColor: strokeColor, fillOpacity: 0.5
+        }).addTo(drawnItems);
+      }
+
+      refreshShapePolyline();
+    }
+
+    function refreshShapePolyline() {
+      if (shapePreview) { map.removeLayer(shapePreview); shapePreview = null; }
+      if (shapePoints.length >= 2) {
+        var color = currentShape ? currentShape.stroke_color : '#2e7d32';
+        shapePreview = L.polyline(shapePoints, {
+          color: color, weight: 2, opacity: 0.7, dashArray: '6 4'
+        }).addTo(map);
+      }
+    }
+
+    function updateShapePreview(latlng) {
+      if (shapePreview) { map.removeLayer(shapePreview); }
+      var color = currentShape ? currentShape.stroke_color : '#2e7d32';
+      var pts = shapePoints.concat([[latlng.lat, latlng.lng]]);
+      // Close preview polygon
+      if (pts.length >= 3) {
+        pts.push(pts[0]);
+      }
+      shapePreview = L.polyline(pts, {
+        color: color, weight: 2, opacity: 0.5, dashArray: '4 4'
+      }).addTo(map);
+    }
+
+    function finishShape() {
+      if (shapePoints.length < 3) return;
+      if (shapePreview) { map.removeLayer(shapePreview); shapePreview = null; }
+      drawnItems.clearLayers();
+
+      var id = 'shape_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      var cfg = currentShape || {};
+      var fillColor   = cfg.fill_color   || '#4caf50';
+      var strokeColor = cfg.stroke_color || '#2e7d32';
+      var fillOpacity = cfg.fill_opacity !== undefined ? cfg.fill_opacity : 0.25;
+      var dashArray   = cfg.dash_array   || '';
+      var label       = cfg.label        || '';
+      var shapeType   = cfg.shape_type   || 'Custom';
+
+      var group = L.layerGroup().addTo(map);
+
+      // Main polygon
+      var polygon = L.polygon(shapePoints, {
+        color: strokeColor,
+        weight: 2,
+        fillColor: fillColor,
+        fillOpacity: fillOpacity,
+        dashArray: dashArray || null
+      }).addTo(group);
+
+      // Calculate area
+      var areaM2 = _polygonArea(shapePoints);
+      var areaStr = areaM2 < 10000 ?
+        areaM2.toFixed(1) + ' m²' :
+        (areaM2 / 10000).toFixed(2) + ' ha';
+
+      // Centre label
+      var center = polygon.getBounds().getCenter();
+      if (label || shapeType !== 'Custom') {
+        var displayLabel = label || shapeType;
+        var labelIcon = L.divIcon({
+          className: 'shape-label',
+          html: escH(displayLabel),
+          iconSize: [0, 0],
+          iconAnchor: [0, 8]
+        });
+        L.marker(center, { icon: labelIcon, interactive: false }).addTo(group);
+      }
+
+      // Tooltip
+      polygon.bindTooltip(
+        '<b>' + escH(label || shapeType) + '</b><br>' +
+        '<span style="color:#78909c;font-size:10px">Area: ' + escH(areaStr) + '<br>Right-click to remove</span>',
+        { className: 'plant-marker-label' }
+      );
+
+      // Metadata
+      polygon._shape = {
+        id: id,
+        points: shapePoints.slice(),
+        shapeType: shapeType,
+        label: label,
+        fillColor: fillColor,
+        strokeColor: strokeColor,
+        fillOpacity: fillOpacity,
+        dashArray: dashArray,
+        areaM2: areaM2
+      };
+
+      // Right-click to remove
+      polygon.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        map.removeLayer(group);
+        delete shapeLayers[id];
+        if (bridge) bridge.onShapeRemoved(id);
+      });
+
+      shapeLayers[id] = group;
+
+      // Notify Python
+      if (bridge) bridge.onShapeComplete(id, JSON.stringify(shapePoints.slice()), label, shapeType, fillColor, strokeColor, fillOpacity, dashArray, areaM2);
+
+      shapePoints = [];
+      setMode('none');
+    }
+
+    // Load a shape from saved project
+    function loadShape(shapeDef) {
+      var pts = shapeDef.points || [];
+      if (pts.length < 3) return;
+      shapePoints = pts;
+      currentShape = shapeDef;
+      finishShape();
+      shapePoints = [];
+    }
+
+    // Approximate polygon area in m² using the Shoelace formula
+    function _polygonArea(pts) {
+      if (pts.length < 3) return 0;
+      // Convert to metres relative to first point
+      var refLat = pts[0][0];
+      var refLng = pts[0][1];
+      var mPts = pts.map(function(p) {
+        return [
+          (p[1] - refLng) * 111320 * Math.cos(refLat * Math.PI / 180),
+          (p[0] - refLat) * 111320
+        ];
+      });
+      var area = 0;
+      for (var i = 0; i < mPts.length; i++) {
+        var j = (i + 1) % mPts.length;
+        area += mPts[i][0] * mPts[j][1];
+        area -= mPts[j][0] * mPts[i][1];
+      }
+      return Math.abs(area / 2);
+    }
+
+    // Utility: shift a hex colour's hue slightly
+    function shiftColor(hex, amount) {
+      var r = parseInt(hex.slice(1,3), 16);
+      var g = parseInt(hex.slice(3,5), 16);
+      var b = parseInt(hex.slice(5,7), 16);
+      r = Math.min(255, r + amount);
+      g = Math.max(0, g - amount / 2);
+      return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    }
+
+    // ── Guild visualisation ─────────────────────────────────────────────────
+    // Guilds are drawn as overlapping canopy circles (like the oak guild diagram).
+    // The canopy tree is the largest circle; understory/groundcover nest inside.
+    var guildGroups = [];  // array of L.layerGroup
+
+    var ROLE_COLORS = {
+      'canopy':              '#1b5e20',
+      'understory':          '#388e3c',
+      'groundcover':         '#66bb6a',
+      'nitrogen_fixer':      '#43a047',
+      'dynamic_accumulator': '#2e7d32',
+      'pest_repellent':      '#7cb342',
+      'pollinator':          '#aed581',
+      'windbreak':           '#558b2f',
+      'other':               '#81c784'
+    };
+
+    function placeGuildOnMap(guildData, centerLat, centerLng) {
+      var members = guildData.members || [];
+      var group = L.layerGroup().addTo(map);
+
+      // Sort members: canopy first (largest), then by descending height
+      var sorted = members.slice().sort(function(a, b) {
+        if (a.role === 'canopy' && b.role !== 'canopy') return -1;
+        if (b.role === 'canopy' && a.role !== 'canopy') return 1;
+        return (b.mature_height_meters || 1) - (a.mature_height_meters || 1);
+      });
+
+      // Find the biggest canopy radius (based on spacing of the canopy tree)
+      var maxRadius = 2;
+      sorted.forEach(function(m) {
+        var r = Math.max((m.spacing_meters || 1) / 2, 0.5);
+        if (r > maxRadius) maxRadius = r;
+      });
+
+      sorted.forEach(function(m) {
+        var latOff = (m.offset_y || 0) / 111320;
+        var lngOff = (m.offset_x || 0) / (111320 * Math.cos(centerLat * Math.PI / 180));
+        var mlat = centerLat + latOff;
+        var mlng = centerLng + lngOff;
+
+        var role = m.role || 'other';
+        var color = ROLE_COLORS[role] || '#81c784';
+        var radius = Math.max((m.spacing_meters || 1) / 2, 0.5);
+
+        // Draw filled canopy circle
+        var canopy = L.circle([mlat, mlng], {
+          radius: radius,
+          color: color,
+          weight: 1.5,
+          fillColor: color,
+          fillOpacity: 0.30,
+          className: 'guild-canopy'
+        }).addTo(group);
+
+        canopy.bindTooltip(
+          '<b>' + escH(guildData.name || 'Guild') + '</b><br>' +
+          escH(m.common_name) + ' <span style="color:#aaa">(' + escH(role.replace(/_/g, ' ')) + ')</span>',
+          { className: 'plant-marker-label' }
+        );
+
+        // Store metadata for undo/project tracking
+        canopy._pd = {
+          plantId: m.plant_id, commonName: m.common_name,
+          lat: mlat, lng: mlng,
+          spacingM: m.spacing_meters, plantType: m.plant_type,
+          guildName: guildData.name
+        };
+
+        // Also register in plantMarkers so labels/canopy-toggle works
+        var mid = m.plant_id + '_g_' + Date.now() + '_' + Math.random().toString(36).substr(2,5);
+        plantMarkers[mid] = canopy;
+        plantMarkers[mid]._isGuildMember = true;
+
+        canopy.on('contextmenu', function(e) {
+          L.DomEvent.stop(e);
+          // Remove entire guild group on right-click
+          map.removeLayer(group);
+          // Clean up plantMarkers references
+          group.eachLayer(function(layer) {
+            Object.keys(plantMarkers).forEach(function(k) {
+              if (plantMarkers[k] === layer) delete plantMarkers[k];
+            });
+          });
+          var idx = guildGroups.indexOf(group);
+          if (idx >= 0) guildGroups.splice(idx, 1);
+          // Notify Python so project state is cleaned up
+          if (bridge) bridge.onGuildRemoved(guildData.name || '', centerLat, centerLng);
+        });
+      });
+
+      // Draw a dashed outline around the whole guild footprint
+      var outline = L.circle([centerLat, centerLng], {
+        radius: maxRadius * 1.1,
+        color: '#a5d6a7',
+        weight: 1.5,
+        dashArray: '6 4',
+        fillOpacity: 0,
+        interactive: false
+      }).addTo(group);
+
+      // Add guild name label at center
+      var labelIcon = L.divIcon({
+        className: 'plant-marker-label',
+        html: '<b>' + escH(guildData.name || 'Guild') + '</b>',
+        iconSize: [0, 0],
+        iconAnchor: [0, -8]
+      });
+      L.marker([centerLat, centerLng], { icon: labelIcon, interactive: false }).addTo(group);
+
+      guildGroups.push(group);
+      return group;
+    }
+
+    // ── Mode control (called from Python) ────────────────────────────────────
+    function setMode(mode, data) {
+      currentMode  = mode;
+      currentPlant = null;
+      currentStructure = null;
+      currentHedgerow  = null;
+      currentShape     = null;
+
+      switch (mode) {
+        case 'boundary':
+          map.getContainer().style.cursor = 'crosshair';
+          drawingPolygon = false;
+          polygonPoints  = [];
+          drawnItems.clearLayers();
+          break;
+        case 'plant':
+          currentPlant = data || null;
+          map.getContainer().style.cursor = 'cell';
+          _resetPatternState();
+          break;
+        case 'zone':
+          map.getContainer().style.cursor = 'crosshair';
+          break;
+        case 'measure':
+          map.getContainer().style.cursor = 'crosshair';
+          clearMeasure();
+          break;
+        case 'annotate':
+          map.getContainer().style.cursor = 'text';
+          break;
+        case 'structure':
+          currentStructure = data || null;
+          map.getContainer().style.cursor = 'crosshair';
+          break;
+        case 'hedgerow':
+          currentHedgerow = data || null;
+          hedgerowPoints = [];
+          map.getContainer().style.cursor = 'crosshair';
+          break;
+        case 'shape':
+          currentShape = data || null;
+          shapePoints = [];
+          map.getContainer().style.cursor = 'crosshair';
+          break;
+        case 'contour':
+          currentContour = data || null;
+          contourPoints = [];
+          map.getContainer().style.cursor = 'crosshair';
+          break;
+        case 'sun_anchor':
+        case 'sector_anchor':
+          map.getContainer().style.cursor = 'crosshair';
+          _anchorPreviewMarker = L.circleMarker(map.getCenter(), {
+            radius: 7, color: '#ffb300', fillColor: '#fff', fillOpacity: 0.8,
+            weight: 2, interactive: false, dashArray: '4 3'
+          }).addTo(map);
+          break;
+        default:
+          map.getContainer().style.cursor = '';
+          if (polygonPolyline) { map.removeLayer(polygonPolyline); polygonPolyline = null; }
+          if (polygonPreview)  { map.removeLayer(polygonPreview);  polygonPreview  = null; }
+          if (hedgerowPreview) { map.removeLayer(hedgerowPreview); hedgerowPreview = null; }
+          if (shapePreview)    { map.removeLayer(shapePreview);    shapePreview    = null; }
+          if (contourPreview)  { map.removeLayer(contourPreview);  contourPreview  = null; }
+          if (_anchorPreviewMarker) { map.removeLayer(_anchorPreviewMarker); _anchorPreviewMarker = null; }
+          drawingPolygon = false;
+          polygonPoints  = [];
+          hedgerowPoints = [];
+          shapePoints    = [];
+          contourPoints  = [];
+          _resetPatternState();
+          drawnItems.clearLayers();
+      }
+    }
+
+    // ── Layer visibility ──────────────────────────────────────────────────────
+    function setSatelliteVisible(visible) {
+      if (visible) {
+        satelliteLayer.addTo(map);
+        osmLayer.remove();
+      } else {
+        osmLayer.addTo(map);
+        satelliteLayer.remove();
+      }
+    }
+
+    function setBoundaryVisible(visible) {
+      boundaries.forEach(function(b) {
+        if (visible) {
+          b.layer.addTo(map);
+          if (b.labelsLayer) b.labelsLayer.addTo(map);
+          if (b.areaLabel)   b.areaLabel.addTo(map);
+        } else {
+          map.removeLayer(b.layer);
+          if (b.labelsLayer) map.removeLayer(b.labelsLayer);
+          if (b.areaLabel)   map.removeLayer(b.areaLabel);
+        }
+      });
+    }
+
+    function setZonesVisible(visible) {
+      zoneCircles.forEach(function(c) {
+        if (visible) c.addTo(map); else map.removeLayer(c);
+      });
+    }
+
+    function setPlantsVisible(visible) {
+      if (visible) {
+        plantLayerGroup.addTo(map);
+      } else {
+        map.removeLayer(plantLayerGroup);
+      }
+    }
+
+    // ── Project load/clear ────────────────────────────────────────────────────
+    function clearAll() {
+      if (boundaryEditId !== null) exitBoundaryEditMode();
+      boundaries.forEach(function(b) {
+        map.removeLayer(b.layer);
+        if (b.labelsLayer) map.removeLayer(b.labelsLayer);
+        if (b.areaLabel)   map.removeLayer(b.areaLabel);
+      });
+      boundaries = [];
+      zoneCircles.forEach(function(c) { map.removeLayer(c); });
+      zoneCircles = [];
+      plantLayerGroup.clearLayers();
+      plantMarkers = {};
+      Object.values(plantLabels).forEach(function(l) { map.removeLayer(l); });
+      plantLabels = {};
+      guildGroups.forEach(function(g) { map.removeLayer(g); });
+      guildGroups = [];
+      Object.values(structureMarkers).forEach(function(g) { map.removeLayer(g); });
+      structureMarkers = {};
+      Object.values(hedgerowLayers).forEach(function(g) { map.removeLayer(g); });
+      hedgerowLayers = {};
+      Object.values(shapeLayers).forEach(function(g) { map.removeLayer(g); });
+      shapeLayers = {};
+      clearSunPath();
+      clearSectors();
+      clearContours();
+      clearWindOverlay();
+      drawnItems.clearLayers();
+    }
+
+    function loadBoundary(dataJson) {
+      // dataJson: JSON string of {id, points, color, showLengths, showArea}
+      // or legacy: JSON string of [[lat,lng],...] (old single-boundary format)
+      var data = JSON.parse(dataJson);
+      var pts, bid, color, showLengths, showArea;
+      if (Array.isArray(data)) {
+        // Legacy format
+        pts = data; bid = _makeBoundaryId(); color = 'green';
+        showLengths = true; showArea = true;
+      } else {
+        pts = data.points; bid = data.id || _makeBoundaryId();
+        color = data.color || 'green';
+        showLengths = data.showLengths !== false;
+        showArea    = data.showArea !== false;
+      }
+      var entry = _addBoundaryToMap(bid, pts, color, showLengths, showArea);
+      map.fitBounds(entry.layer.getBounds());
+    }
+
+    function loadPlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor, groupId) {
+      placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor || null, groupId || null);
+    }
+
+    function loadZoneCenter(lat, lng) {
+      placeZoneCircles(lat, lng);
+    }
+
+    function setView(lat, lng, zoom) {
+      map.setView([lat, lng], zoom || 14);
+    }
+
+    function cancelDraw() {
+      setMode('none');
+    }
+
+    // ── Zoom sensitivity ──────────────────────────────────────────────────────
+    var _ZOOM_DELTAS = { fine: 0.15, normal: 0.33, fast: 0.58, coarse: 1.0 };
+    function setZoomSensitivity(level) {
+      _zoomSensitivity = level;
+      var delta = _ZOOM_DELTAS[level] || 0.15;
+      map.options.zoomDelta = delta;
+      map.options.zoomSnap  = Math.min(delta, 0.5);
+    }
+
+    // ── A1: Sun path / shadow overlay ──────────────────────────────────────
+    var sunPathLayer   = null;   // L.layerGroup
+    var _sunPathData   = null;   // last drawSunPath payload (for redraw on zoom)
+    var _sunPathAnchor = null;   // {lat, lng}
+
+    function _viewportRadiusMetres(lat) {
+      // Returns a radius that is ~22% of the shorter viewport dimension, in metres.
+      // This keeps the arc legible at any zoom level.
+      var size = map.getSize();
+      var pxRadius = Math.min(size.x, size.y) * 0.22;
+      // Metres per pixel at current zoom and latitude
+      var metersPerPx = 40075016.686 * Math.cos(lat * Math.PI / 180) / Math.pow(2, map.getZoom() + 8);
+      return pxRadius * metersPerPx;
+    }
+
+    function drawSunPath(data, anchorLat, anchorLng) {
+      clearSunPath();
+      _sunPathData = data;
+      sunPathLayer = L.layerGroup().addTo(map);
+
+      var lat = (anchorLat !== undefined) ? anchorLat
+              : (_sunPathAnchor ? _sunPathAnchor.lat : map.getCenter().lat);
+      var lng = (anchorLng !== undefined) ? anchorLng
+              : (_sunPathAnchor ? _sunPathAnchor.lng : map.getCenter().lng);
+      if (anchorLat !== undefined) _sunPathAnchor = { lat: lat, lng: lng };
+
+      var positions = data.positions || [];  // [{altitude, azimuth, hour}, ...]
+      var dateLabel = data.date_label || '';
+      var showShadows = data.show_shadows !== false;
+      var showShadowLength = data.show_shadow_length || false;
+      var sunriseHour = data.sunrise_hour || 6;
+      var sunsetHour = data.sunset_hour || 18;
+
+      if (positions.length < 2) return;
+
+      // Arc radius: viewport-relative so arc is always legible regardless of zoom.
+      // The user-supplied arc_radius (metres) is still honoured if explicitly provided
+      // and larger than the auto value, giving them override capability.
+      var autoRadius = _viewportRadiusMetres(lat);
+      var arcRadius  = data.arc_radius ? Math.max(data.arc_radius, autoRadius * 0.5)
+                                       : autoRadius;
+
+      var arcPoints = [];
+      var positionMap = {}; // index -> {ptLat, ptLng, pos}
+
+      positions.forEach(function(pos, i) {
+        if (pos.altitude < 0) return;
+        var azRad = (pos.azimuth) * Math.PI / 180;
+        var dist = arcRadius * (1 - pos.altitude / 90 * 0.3);
+        var dLat = dist * Math.cos(azRad) / 111320;
+        var dLng = dist * Math.sin(azRad) / (111320 * Math.cos(lat * Math.PI / 180));
+        var ptLat = lat + dLat;
+        var ptLng = lng + dLng;
+        arcPoints.push([ptLat, ptLng]);
+        positionMap[arcPoints.length - 1] = { ptLat: ptLat, ptLng: ptLng, pos: pos };
+      });
+
+      // Single polyline for the arc (replaces ~48 individual circleMarkers)
+      if (arcPoints.length >= 2) {
+        L.polyline(arcPoints, {
+          color: '#ffb300',
+          weight: 3,
+          opacity: 0.8,
+          interactive: false
+        }).addTo(sunPathLayer);
+      }
+
+      // Only place markers at key times: sunrise, solar noon, sunset (~3 markers)
+      positions.forEach(function(pos, i) {
+        if (pos.altitude < 0) return;
+        var isKey = Math.abs(pos.hour - sunriseHour) < 0.5 ||
+                    Math.abs(pos.hour - 12) < 0.3 ||
+                    Math.abs(pos.hour - sunsetHour) < 0.5;
+        if (!isKey) return;
+
+        var azRad = (pos.azimuth) * Math.PI / 180;
+        var dist = arcRadius * (1 - pos.altitude / 90 * 0.3);
+        var dLat = dist * Math.cos(azRad) / 111320;
+        var dLng = dist * Math.sin(azRad) / (111320 * Math.cos(lat * Math.PI / 180));
+        var ptLat = lat + dLat;
+        var ptLng = lng + dLng;
+
+        L.circleMarker([ptLat, ptLng], {
+          radius: 5, color: '#ffb300', fillColor: '#ffb300',
+          fillOpacity: 0.9, weight: 1.5, interactive: false
+        }).addTo(sunPathLayer);
+
+        var timeStr = Math.floor(pos.hour) + ':' + ('0' + Math.round((pos.hour % 1) * 60)).slice(-2);
+        var altStr = pos.altitude.toFixed(0) + '°';
+        var labelIcon = L.divIcon({
+          className: 'measure-label',
+          html: '<span style="font-size:10px">' + timeStr + ' ☀ ' + altStr + '</span>',
+          iconSize: [0, 0],
+          iconAnchor: [0, 14]
+        });
+        L.marker([ptLat, ptLng], { icon: labelIcon, interactive: false }).addTo(sunPathLayer);
+      });
+
+      // Shadow direction arrows at key times
+      if (showShadows) {
+        var shadowTimes = [
+          { hour: sunriseHour + 1, label: 'Morning' },
+          { hour: 12, label: 'Noon' },
+          { hour: sunsetHour - 1, label: 'Evening' }
+        ];
+        shadowTimes.forEach(function(st) {
+          var closest = null;
+          var minDiff = 999;
+          positions.forEach(function(p) {
+            var diff = Math.abs(p.hour - st.hour);
+            if (diff < minDiff && p.altitude > 0) { minDiff = diff; closest = p; }
+          });
+          if (!closest) return;
+
+          // Shadow goes opposite to sun
+          var shadowAz = (closest.azimuth + 180) % 360;
+          var shadowRad = shadowAz * Math.PI / 180;
+          var arrowLen = arcRadius * 0.5; // shadow arrow length proportional to arc
+          if (showShadowLength && closest.altitude > 0) {
+            arrowLen = Math.min(arcRadius, (arcRadius * 0.25) / Math.tan(closest.altitude * Math.PI / 180));
+          }
+          var dLat = arrowLen * Math.cos(shadowRad) / 111320;
+          var dLng = arrowLen * Math.sin(shadowRad) / (111320 * Math.cos(lat * Math.PI / 180));
+
+          // Draw shadow arrow
+          var arrowLine = L.polyline(
+            [[lat, lng], [lat + dLat, lng + dLng]],
+            { color: '#455a64', weight: 3, opacity: 0.6, interactive: false }
+          ).addTo(sunPathLayer);
+
+          // Arrowhead
+          var headLen = 8 / 111320;
+          var headAngle = Math.PI / 6;
+          var endLat = lat + dLat;
+          var endLng = lng + dLng;
+          var angle = Math.atan2(dLng, dLat);
+          L.polyline([
+            [endLat - headLen * Math.cos(angle - headAngle),
+             endLng - headLen * Math.sin(angle - headAngle)],
+            [endLat, endLng],
+            [endLat - headLen * Math.cos(angle + headAngle),
+             endLng - headLen * Math.sin(angle + headAngle)]
+          ], { color: '#455a64', weight: 2.5, opacity: 0.6, interactive: false }).addTo(sunPathLayer);
+
+          // Label
+          var labelIcon = L.divIcon({
+            className: 'structure-label',
+            html: '<span style="font-size:10px">' + st.label + ' shadow</span>',
+            iconSize: [0, 0],
+            iconAnchor: [0, -4]
+          });
+          L.marker([lat + dLat, lng + dLng], { icon: labelIcon, interactive: false }).addTo(sunPathLayer);
+        });
+      }
+
+      // Centre marker — interactive for right-click remove
+      var centerMk = L.circleMarker([lat, lng], {
+        radius: 6, color: '#ff6f00', fillColor: '#ffb300', fillOpacity: 1,
+        weight: 2, interactive: true
+      }).addTo(sunPathLayer);
+      centerMk.bindTooltip('Sun path · right-click to remove · shift+click to select', { sticky: true, offset: [10, 0] });
+      centerMk.on('click', function(e) {
+        var oe = e.originalEvent;
+        if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) {
+          L.DomEvent.stop(e);
+          toggleSelection({ kind: 'sunpath' });
+        }
+      });
+      centerMk.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        showContextMenu(e.originalEvent.clientX, e.originalEvent.clientY, [
+          { label: 'Remove Sun Path', action: function() {
+            clearSunPath();
+            if (bridge) bridge.onSunPathRemoved();
+          }}
+        ]);
+      });
+
+      // Title label
+      var titleIcon = L.divIcon({
+        className: 'measure-label',
+        html: '☀ ' + escH(dateLabel),
+        iconSize: [0, 0],
+        iconAnchor: [0, 24]
+      });
+      L.marker([lat, lng], { icon: titleIcon, interactive: false }).addTo(sunPathLayer);
+    }
+
+    function clearSunPath() {
+      if (sunPathLayer) { map.removeLayer(sunPathLayer); sunPathLayer = null; }
+      _sunPathData   = null;
+      _sunPathAnchor = null;
+    }
+
+    // ── A2: Sector analysis wedges ──────────────────────────────────────────
+    // Each group: {id, layer, centerMk, rotateMk, resizeMk, lat, lng, radiusM,
+    //              rotationDeg, sectorsData, selected}
+    var sectorGroups = [];
+
+    function _makeSectorId() {
+      return 's' + Date.now() + Math.random().toString(36).slice(2, 6);
+    }
+
+    function _buildSectorWedges(group) {
+      // Remove old content but keep the group layer
+      group.layer.clearLayers();
+      var lat = group.lat, lng = group.lng;
+      var radiusM = group.radiusM;
+      var rotDeg  = group.rotationDeg || 0;
+
+      group.sectorsData.forEach(function(sec) {
+        var azimuth = (sec.azimuth || 0) + rotDeg;
+        var spread  = sec.spread || 45;
+        var color   = sec.color || '#ff9800';
+        var name    = sec.name || 'Sector';
+
+        var startAngle = azimuth - spread / 2;
+        var endAngle   = azimuth + spread / 2;
+        var steps = Math.max(12, Math.round(spread / 3));
+
+        var pts = [[lat, lng]];
+        for (var i = 0; i <= steps; i++) {
+          var angle = (startAngle + (endAngle - startAngle) * i / steps) * Math.PI / 180;
+          var dLat = radiusM * Math.cos(angle) / 111320;
+          var dLng = radiusM * Math.sin(angle) / (111320 * Math.cos(lat * Math.PI / 180));
+          pts.push([lat + dLat, lng + dLng]);
+        }
+        pts.push([lat, lng]);
+
+        L.polygon(pts, {
+          color: color, weight: 1.5, fillColor: color,
+          fillOpacity: 0.15, interactive: false
+        }).addTo(group.layer);
+
+        var midAngle = azimuth * Math.PI / 180;
+        var labelDist = radiusM * 0.65;
+        var labelLat = lat + labelDist * Math.cos(midAngle) / 111320;
+        var labelLng = lng + labelDist * Math.sin(midAngle) / (111320 * Math.cos(lat * Math.PI / 180));
+        L.marker([labelLat, labelLng], {
+          icon: L.divIcon({
+            className: 'structure-label',
+            html: '<span style="color:' + escH(color) + ';font-size:11px;font-weight:bold">' + escH(name) + '</span>',
+            iconSize: [0, 0], iconAnchor: [0, 8]
+          }),
+          interactive: false
+        }).addTo(group.layer);
+      });
+    }
+
+    function _positionSectorHandles(group) {
+      if (!group.centerMk) return;
+      group.centerMk.setLatLng([group.lat, group.lng]);
+      if (group.rotateMk) {
+        // Rotation handle: north of center at 110% of radius
+        var rLat = group.lat + group.radiusM * 1.1 / 111320;
+        group.rotateMk.setLatLng([rLat, group.lng]);
+      }
+      if (group.resizeMk) {
+        // Resize handle: east of center at the outer radius
+        var angle90 = 90 * Math.PI / 180;
+        var rsLat = group.lat + group.radiusM * Math.cos(angle90) / 111320;
+        var rsLng = group.lng + group.radiusM * Math.sin(angle90) / (111320 * Math.cos(group.lat * Math.PI / 180));
+        group.resizeMk.setLatLng([rsLat, rsLng]);
+      }
+    }
+
+    function drawSectors(data, anchorLat, anchorLng) {
+      var lat = (anchorLat !== undefined) ? anchorLat : map.getCenter().lat;
+      var lng = (anchorLng !== undefined) ? anchorLng : map.getCenter().lng;
+      var sectors = data.sectors || [];
+      var radiusM = data.radius_m || 80;
+      var sid = _makeSectorId();
+
+      var group = {
+        id: sid, lat: lat, lng: lng, radiusM: radiusM,
+        rotationDeg: 0, sectorsData: sectors,
+        layer: L.layerGroup().addTo(map),
+        centerMk: null, rotateMk: null, resizeMk: null, selected: false
+      };
+      sectorGroups.push(group);
+
+      _buildSectorWedges(group);
+
+      // Centre drag marker
+      var centerMk = L.circleMarker([lat, lng], {
+        radius: 7, color: '#fff', fillColor: '#263238', fillOpacity: 0.9,
+        weight: 2, interactive: true
+      }).addTo(map);
+      centerMk.bindTooltip('Drag to move · right-click to remove · shift+click to select', { sticky: true, offset: [10, 0] });
+      group.centerMk = centerMk;
+      _makeSectorMoveDraggable(centerMk, group);
+      centerMk.on('click', function(e) {
+        var oe = e.originalEvent;
+        if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) {
+          L.DomEvent.stop(e);
+          toggleSelection({ kind: 'sector', sectorId: sid });
+        }
+      });
+      centerMk.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        showContextMenu(e.originalEvent.clientX, e.originalEvent.clientY, [
+          { label: 'Remove Sector Group', action: function() {
+            _removeSectorGroup(sid);
+            if (bridge) bridge.onSectorGroupRemoved(sid);
+          }}
+        ]);
+      });
+
+      // Rotate handle (small circle connected by thin line, placed north of center)
+      var rLat = lat + radiusM * 1.1 / 111320;
+      var rotateMk = L.circleMarker([rLat, lng], {
+        radius: 5, color: '#fff', fillColor: '#9c27b0', fillOpacity: 1,
+        weight: 2, interactive: true
+      }).addTo(map);
+      rotateMk.bindTooltip('Drag to rotate', { sticky: true });
+      group.rotateMk = rotateMk;
+      _makeSectorRotateDraggable(rotateMk, group);
+
+      // Resize handle (east at outer radius)
+      var angle90 = 90 * Math.PI / 180;
+      var rsLat = lat + radiusM * Math.cos(angle90) / 111320;
+      var rsLng = lng + radiusM * Math.sin(angle90) / (111320 * Math.cos(lat * Math.PI / 180));
+      var resizeMk = L.circleMarker([rsLat, rsLng], {
+        radius: 5, color: '#fff', fillColor: '#f57c00', fillOpacity: 1,
+        weight: 2, interactive: true
+      }).addTo(map);
+      resizeMk.bindTooltip('Drag to resize', { sticky: true });
+      group.resizeMk = resizeMk;
+      _makeSectorResizeDraggable(resizeMk, group);
+
+      return sid;
+    }
+
+    function _makeSectorMoveDraggable(marker, group) {
+      marker.on('mousedown', function(e) {
+        if (e.originalEvent.button !== 0) return;
+        L.DomEvent.stop(e);
+        var startLL = e.latlng;
+        var origLat = group.lat, origLng = group.lng;
+        map.dragging.disable();
+        function onMove(ev) {
+          var ll = map.containerPointToLatLng(map.mouseEventToContainerPoint(ev));
+          group.lat = origLat + (ll.lat - startLL.lat);
+          group.lng = origLng + (ll.lng - startLL.lng);
+          _buildSectorWedges(group);
+          _positionSectorHandles(group);
+        }
+        function onUp() {
+          map.dragging.enable();
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          if (bridge) bridge.onSectorGroupMoved(group.id, group.lat, group.lng);
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+    }
+
+    function _makeSectorRotateDraggable(marker, group) {
+      marker.on('mousedown', function(e) {
+        if (e.originalEvent.button !== 0) return;
+        L.DomEvent.stop(e);
+        var origRot = group.rotationDeg;
+        var startAngle = Math.atan2(e.latlng.lng - group.lng, e.latlng.lat - group.lat) * 180 / Math.PI;
+        map.dragging.disable();
+        function onMove(ev) {
+          var ll = map.containerPointToLatLng(map.mouseEventToContainerPoint(ev));
+          var curAngle = Math.atan2(ll.lng - group.lng, ll.lat - group.lat) * 180 / Math.PI;
+          group.rotationDeg = origRot + (curAngle - startAngle);
+          _buildSectorWedges(group);
+          _positionSectorHandles(group);
+        }
+        function onUp() {
+          map.dragging.enable();
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          if (bridge) bridge.onSectorGroupRotated(group.id, group.rotationDeg);
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+    }
+
+    function _makeSectorResizeDraggable(marker, group) {
+      marker.on('mousedown', function(e) {
+        if (e.originalEvent.button !== 0) return;
+        L.DomEvent.stop(e);
+        var origRadius = group.radiusM;
+        map.dragging.disable();
+        function onMove(ev) {
+          var ll = map.containerPointToLatLng(map.mouseEventToContainerPoint(ev));
+          var dLat = (ll.lat - group.lat) * 111320;
+          var dLng = (ll.lng - group.lng) * 111320 * Math.cos(group.lat * Math.PI / 180);
+          group.radiusM = Math.max(10, Math.sqrt(dLat * dLat + dLng * dLng));
+          _buildSectorWedges(group);
+          _positionSectorHandles(group);
+        }
+        function onUp() {
+          map.dragging.enable();
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          if (bridge) bridge.onSectorGroupResized(group.id, group.radiusM);
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+    }
+
+    function _removeSectorGroup(sid) {
+      for (var i = 0; i < sectorGroups.length; i++) {
+        var g = sectorGroups[i];
+        if (g.id === sid) {
+          map.removeLayer(g.layer);
+          if (g.centerMk) map.removeLayer(g.centerMk);
+          if (g.rotateMk) map.removeLayer(g.rotateMk);
+          if (g.resizeMk) map.removeLayer(g.resizeMk);
+          sectorGroups.splice(i, 1);
+          return;
+        }
+      }
+    }
+
+    function clearSectors() {
+      sectorGroups.forEach(function(g) {
+        map.removeLayer(g.layer);
+        if (g.centerMk) map.removeLayer(g.centerMk);
+        if (g.rotateMk) map.removeLayer(g.rotateMk);
+        if (g.resizeMk) map.removeLayer(g.resizeMk);
+      });
+      sectorGroups = [];
+    }
+
+    // ── A3: Contour lines ───────────────────────────────────────────────────
+    var contourLayers = [];  // array of L.layerGroup (one per contour line)
+
+    // Contour drawing state
+    var contourPoints  = [];
+    var contourPreview = null;
+    var currentContour = null;
+
+    function handleContourClick(lat, lng) {
+      contourPoints.push([lat, lng]);
+      var color = currentContour ? currentContour.color : '#795548';
+      L.circleMarker([lat, lng], {
+        radius: 3, color: color, fillColor: color, fillOpacity: 1
+      }).addTo(drawnItems);
+      refreshContourPreview();
+    }
+
+    function refreshContourPreview() {
+      if (contourPreview) { map.removeLayer(contourPreview); contourPreview = null; }
+      if (contourPoints.length >= 2) {
+        var color = currentContour ? currentContour.color : '#795548';
+        contourPreview = L.polyline(contourPoints, {
+          color: color, weight: 2, opacity: 0.6, dashArray: '6 4'
+        }).addTo(map);
+      }
+    }
+
+    function updateContourPreview(latlng) {
+      if (contourPreview) { map.removeLayer(contourPreview); }
+      var color = currentContour ? currentContour.color : '#795548';
+      var pts = contourPoints.concat([[latlng.lat, latlng.lng]]);
+      contourPreview = L.polyline(pts, {
+        color: color, weight: 2, opacity: 0.5, dashArray: '4 4'
+      }).addTo(map);
+    }
+
+    function finishContour() {
+      if (contourPoints.length < 2) return;
+      if (contourPreview) { map.removeLayer(contourPreview); contourPreview = null; }
+      drawnItems.clearLayers();
+
+      var cfg = currentContour || {};
+      var color = cfg.color || '#795548';
+      var elevation = cfg.elevation_m || 0;
+      var showLabels = cfg.show_labels !== false;
+      var showSlope = cfg.show_slope_arrows || false;
+
+      var group = L.layerGroup().addTo(map);
+
+      // Main contour line (interactive for right-click delete)
+      var line = L.polyline(contourPoints, {
+        color: color,
+        weight: 2.5,
+        opacity: 0.7,
+        interactive: true
+      }).addTo(group);
+
+      // Elevation labels along the line
+      if (showLabels && contourPoints.length >= 2) {
+        var labelPositions = [0, Math.floor(contourPoints.length / 2), contourPoints.length - 1];
+        labelPositions.forEach(function(idx) {
+          if (idx >= contourPoints.length) return;
+          var pt = contourPoints[idx];
+          var labelIcon = L.divIcon({
+            className: 'structure-label',
+            html: '<span style="font-size:9px;color:' + color + '">' + elevation.toFixed(1) + 'm</span>',
+            iconSize: [0, 0],
+            iconAnchor: [0, 8]
+          });
+          L.marker(pt, { icon: labelIcon, interactive: false }).addTo(group);
+        });
+      }
+
+      // Slope arrows (perpendicular to contour, pointing downhill)
+      if (showSlope && contourPoints.length >= 2) {
+        var midIdx = Math.floor(contourPoints.length / 2);
+        var p1 = contourPoints[Math.max(0, midIdx - 1)];
+        var p2 = contourPoints[Math.min(contourPoints.length - 1, midIdx + 1)];
+        // Perpendicular direction (right-hand rule → downhill assumed to the right)
+        var dx = p2[1] - p1[1];
+        var dy = p2[0] - p1[0];
+        var perpAngle = Math.atan2(dx, dy) - Math.PI / 2;
+        var arrowLen = 15; // metres
+        var mid = contourPoints[midIdx];
+        var dLat = arrowLen * Math.cos(perpAngle) / 111320;
+        var dLng = arrowLen * Math.sin(perpAngle) / (111320 * Math.cos(mid[0] * Math.PI / 180));
+
+        L.polyline(
+          [mid, [mid[0] + dLat, mid[1] + dLng]],
+          { color: color, weight: 2, opacity: 0.5, dashArray: '4 2', interactive: false }
+        ).addTo(group);
+        // Small arrowhead
+        var endLat = mid[0] + dLat;
+        var endLng = mid[1] + dLng;
+        var headLen = 5 / 111320;
+        var headAngle = Math.PI / 5;
+        L.polyline([
+          [endLat - headLen * Math.cos(perpAngle - headAngle),
+           endLng - headLen * Math.sin(perpAngle - headAngle)],
+          [endLat, endLng],
+          [endLat - headLen * Math.cos(perpAngle + headAngle),
+           endLng - headLen * Math.sin(perpAngle + headAngle)]
+        ], { color: color, weight: 2, opacity: 0.5, interactive: false }).addTo(group);
+
+        var arrowLabel = L.divIcon({
+          className: 'structure-label',
+          html: '<span style="font-size:9px;color:' + color + '">▼ downhill</span>',
+          iconSize: [0, 0],
+          iconAnchor: [0, -2]
+        });
+        L.marker([endLat, endLng], { icon: arrowLabel, interactive: false }).addTo(group);
+      }
+
+      // Save a copy of points for the removal signal
+      var savedPoints = contourPoints.slice();
+
+      // Right-click to delete individual contour
+      line.bindTooltip(
+        '<b>Contour: ' + elevation.toFixed(1) + 'm</b>' +
+        '<br><span style="color:#78909c;font-size:10px">Right-click to remove</span>',
+        { className: 'plant-marker-label' }
+      );
+      line.on('contextmenu', function(e) {
+        L.DomEvent.stop(e);
+        map.removeLayer(group);
+        var idx = contourLayers.indexOf(group);
+        if (idx >= 0) contourLayers.splice(idx, 1);
+        if (bridge) bridge.onContourRemoved(
+          JSON.stringify(savedPoints), elevation, color
+        );
+      });
+
+      contourLayers.push(group);
+
+      // Notify Python
+      if (bridge) bridge.onContourComplete(
+        JSON.stringify(contourPoints.slice()),
+        elevation, color
+      );
+
+      contourPoints = [];
+      setMode('none');
+    }
+
+    function clearContours() {
+      contourLayers.forEach(function(g) { map.removeLayer(g); });
+      contourLayers = [];
+    }
+
+    // ── A4: Wind overlay ────────────────────────────────────────────────────
+    var windLayer = null;
+
+    function drawWindOverlay(data) {
+      clearWindOverlay();
+      windLayer = L.layerGroup().addTo(map);
+      var center = map.getCenter();
+      var lat = center.lat;
+      var lng = center.lng;
+      var dirFrom  = data.direction_from || 315; // degrees (where wind comes FROM)
+      var speedLabel = data.speed_label || 'Moderate';
+      var showShelter = data.show_shelter !== false;
+      var showArrows  = data.show_arrows !== false;
+
+      // Wind blows FROM dirFrom TOWARDS dirFrom+180
+      var windToward = (dirFrom + 180) % 360;
+      var windRad = windToward * Math.PI / 180;
+
+      // Speed-based visual parameters
+      var speedMap = { 'Light': 1, 'Moderate': 2, 'Strong': 3, 'Very Strong': 4 };
+      var speedLevel = speedMap[speedLabel] || 2;
+
+      if (showArrows) {
+        // Draw a 3x3 grid of wind flow arrows (reduced from 5x5 for performance)
+        var bounds = map.getBounds();
+        var stepLat = (bounds.getNorth() - bounds.getSouth()) / 4;
+        var stepLng = (bounds.getEast() - bounds.getWest()) / 4;
+        var arrowLen = stepLat * 111320 * 0.3; // metres
+
+        for (var r = 1; r < 4; r++) {
+          for (var c = 1; c < 4; c++) {
+            var aLat = bounds.getSouth() + r * stepLat;
+            var aLng = bounds.getWest() + c * stepLng;
+            var dLat = arrowLen * Math.cos(windRad) / 111320;
+            var dLng = arrowLen * Math.sin(windRad) / (111320 * Math.cos(aLat * Math.PI / 180));
+
+            var opacity = 0.15 + speedLevel * 0.08;
+            var weight = 1 + speedLevel * 0.5;
+
+            L.polyline(
+              [[aLat, aLng], [aLat + dLat, aLng + dLng]],
+              { color: '#42a5f5', weight: weight, opacity: opacity, interactive: false }
+            ).addTo(windLayer);
+
+            // Arrowhead
+            var endLat = aLat + dLat;
+            var endLng = aLng + dLng;
+            var headLen = arrowLen * 0.25 / 111320;
+            var headAngle = Math.PI / 5;
+            L.polyline([
+              [endLat - headLen * Math.cos(windRad - headAngle),
+               endLng - headLen * Math.sin(windRad - headAngle)],
+              [endLat, endLng],
+              [endLat - headLen * Math.cos(windRad + headAngle),
+               endLng - headLen * Math.sin(windRad + headAngle)]
+            ], { color: '#42a5f5', weight: weight, opacity: opacity, interactive: false }).addTo(windLayer);
+          }
+        }
+      }
+
+      // Direction indicator at centre
+      var indicatorLen = 60;
+      var fromRad = dirFrom * Math.PI / 180;
+      var fromLat = lat + indicatorLen * Math.cos(fromRad) / 111320;
+      var fromLng = lng + indicatorLen * Math.sin(fromRad) / (111320 * Math.cos(lat * Math.PI / 180));
+
+      L.polyline(
+        [[fromLat, fromLng], [lat, lng]],
+        { color: '#1565c0', weight: 3, opacity: 0.8, interactive: false }
+      ).addTo(windLayer);
+
+      var dirLabel = L.divIcon({
+        className: 'measure-label',
+        html: '<span style="font-size:10px">Wind from ' + dirFrom + '° (' + speedLabel + ')</span>',
+        iconSize: [0, 0],
+        iconAnchor: [0, 14]
+      });
+      L.marker([fromLat, fromLng], { icon: dirLabel, interactive: false }).addTo(windLayer);
+
+      // Show shelter zones behind windbreak hedgerows/structures
+      if (showShelter) {
+        drawWindShelterZones(windRad, speedLevel);
+      }
+    }
+
+    function drawWindShelterZones(windRad, speedLevel) {
+      // Check hedgerows
+      Object.keys(hedgerowLayers).forEach(function(hid) {
+        var group = hedgerowLayers[hid];
+        group.eachLayer(function(layer) {
+          if (layer._hedge) {
+            var pts = layer._hedge.points;
+            if (!pts || pts.length < 2) return;
+            // Average height estimate for hedgerow: 2-4m
+            var height = (layer._hedge.style === 'windbreak') ? 6 : 3;
+            var shelterLen = height * 10; // 10× height
+            _drawShelterBehindLine(pts, windRad, shelterLen);
+          }
+        });
+      });
+
+      // Check structures that are windbreaks
+      Object.keys(structureMarkers).forEach(function(sid) {
+        var group = structureMarkers[sid];
+        group.eachLayer(function(layer) {
+          if (layer._struct && (layer._struct.name === 'Fence / Wall' || layer._struct.name === 'Tool Shed')) {
+            var height = 2.0;
+            var lat = layer._struct.lat;
+            var lng = layer._struct.lng;
+            var shelterLen = height * 10;
+            // Simple shelter rectangle behind the structure
+            var dLat = shelterLen * Math.cos(windRad) / 111320;
+            var dLng = shelterLen * Math.sin(windRad) / (111320 * Math.cos(lat * Math.PI / 180));
+            var halfW = (layer._struct.sizeM || 3) / 2;
+            var perpRad = windRad + Math.PI / 2;
+            var pLat = halfW * Math.cos(perpRad) / 111320;
+            var pLng = halfW * Math.sin(perpRad) / (111320 * Math.cos(lat * Math.PI / 180));
+
+            var shelterPoly = L.polygon([
+              [lat - pLat, lng - pLng],
+              [lat + pLat, lng + pLng],
+              [lat + pLat + dLat, lng + pLng + dLng],
+              [lat - pLat + dLat, lng - pLng + dLng]
+            ], {
+              color: '#81d4fa',
+              weight: 1,
+              fillColor: '#81d4fa',
+              fillOpacity: 0.12,
+              dashArray: '4 3',
+              interactive: false
+            }).addTo(windLayer);
+          }
+        });
+      });
+    }
+
+    function _drawShelterBehindLine(pts, windRad, shelterLen) {
+      // Create a shelter polygon behind the hedgerow line
+      if (pts.length < 2) return;
+      var shelterPts = [];
+      // Forward side (the hedgerow itself)
+      pts.forEach(function(p) { shelterPts.push(p); });
+      // Back side (offset in wind direction)
+      for (var i = pts.length - 1; i >= 0; i--) {
+        var p = pts[i];
+        var dLat = shelterLen * Math.cos(windRad) / 111320;
+        var dLng = shelterLen * Math.sin(windRad) / (111320 * Math.cos(p[0] * Math.PI / 180));
+        shelterPts.push([p[0] + dLat, p[1] + dLng]);
+      }
+
+      L.polygon(shelterPts, {
+        color: '#81d4fa',
+        weight: 1,
+        fillColor: '#b3e5fc',
+        fillOpacity: 0.10,
+        dashArray: '4 3',
+        interactive: false
+      }).addTo(windLayer);
+
+      // Label
+      var mid = pts[Math.floor(pts.length / 2)];
+      var dLat = shelterLen * 0.5 * Math.cos(windRad) / 111320;
+      var dLng = shelterLen * 0.5 * Math.sin(windRad) / (111320 * Math.cos(mid[0] * Math.PI / 180));
+      var labelIcon = L.divIcon({
+        className: 'structure-label',
+        html: '<span style="font-size:9px;color:#81d4fa">Shelter zone (' + shelterLen.toFixed(0) + 'm)</span>',
+        iconSize: [0, 0],
+        iconAnchor: [0, 8]
+      });
+      L.marker([mid[0] + dLat, mid[1] + dLng], { icon: labelIcon, interactive: false }).addTo(windLayer);
+    }
+
+    function clearWindOverlay() {
+      if (windLayer) { map.removeLayer(windLayer); windLayer = null; }
+    }
+
+    // ── Legend toggle ──────────────────────────────────────────────────────
+    function toggleLegend() {
+      var legend = document.getElementById('map-legend');
+      var btn    = document.getElementById('legend-toggle');
+      var show   = !legend.classList.contains('visible');
+      legend.classList.toggle('visible', show);
+      btn.classList.toggle('active', show);
+    }
+
+    function setLegendVisible(visible) {
+      var legend = document.getElementById('map-legend');
+      var btn    = document.getElementById('legend-toggle');
+      legend.classList.toggle('visible', visible);
+      btn.classList.toggle('active', visible);
+    }
+
+    // ── QWebChannel bootstrap ─────────────────────────────────────────────────
+    function initChannel() {
+      if (typeof QWebChannel === 'undefined') {
+        // Running outside Qt (browser dev) — skip channel
+        initMap();
+        return;
+      }
+      new QWebChannel(qt.webChannelTransport, function(channel) {
+        bridge = channel.objects.bridge;
+        initMap();
+        if (bridge && bridge.onMapReady) bridge.onMapReady();
+      });
+    }
+
+    window.addEventListener('load', initChannel);
+  </script>
+</body>
+</html>
