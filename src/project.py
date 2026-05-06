@@ -153,9 +153,10 @@ def project_to_map_data(project: dict) -> dict:
         elif etype == "contour_line" and geom.get("type") == "LineString":
             points = [[pt[1], pt[0]] for pt in geom["coordinates"]]
             result["contours"].append({
-                "points": points,
+                "points":     points,
                 "elevation_m": props.get("elevation_m", 0),
-                "color": props.get("color", "#795548"),
+                "color":      props.get("color", "#795548"),
+                "source":     props.get("source", "manual"),
             })
 
     return result

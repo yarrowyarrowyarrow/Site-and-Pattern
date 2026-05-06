@@ -214,6 +214,8 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <!-- Leaflet Draw -->
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <!-- d3-contour: terrain contour generation from elevation grid (SRTM fallback path) -->
+  <script src="https://cdn.jsdelivr.net/npm/d3-contour@4/dist/d3-contour.min.js"></script>
   <!-- Qt WebChannel -->
   <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
 
@@ -3474,10 +3476,11 @@
 
       contourLayers.push(group);
 
-      // Notify Python
+      // Notify Python — include data source so it is saved in the project GeoJSON
+      var _source = (cfg && cfg.source) ? cfg.source : 'manual';
       if (bridge) bridge.onContourComplete(
         JSON.stringify(contourPoints.slice()),
-        elevation, color
+        elevation, color, _source
       );
 
       contourPoints = [];
@@ -3487,6 +3490,102 @@
     function clearContours() {
       contourLayers.forEach(function(g) { map.removeLayer(g); });
       contourLayers = [];
+    }
+
+    // ── Terrain auto-generate helpers ────────────────────────────────────────
+
+    // addContourFeatures: inject pre-computed GeoJSON LineStrings (Edmonton LiDAR)
+    function addContourFeatures(features) {
+      var _prev = currentContour;
+      for (var i = 0; i < features.length; i++) {
+        var f = features[i];
+        if (!f.geometry || f.geometry.type !== 'LineString') continue;
+        // GeoJSON coordinates are [lng, lat]; Leaflet expects [lat, lng]
+        contourPoints = f.geometry.coordinates.map(function(c) {
+          return [c[1], c[0]];
+        });
+        if (contourPoints.length < 2) continue;
+        var elev = (f.properties && f.properties.ELEVATION != null)
+          ? f.properties.ELEVATION : 0;
+        currentContour = {
+          elevation_m:       elev,
+          color:             '#795548',
+          show_labels:       true,
+          show_slope_arrows: false,
+          source:            'edmonton_opendata'
+        };
+        finishContour();
+      }
+      currentContour = _prev;
+      contourPoints  = [];
+    }
+
+    // generateContoursFromGrid: produce contour lines from an SRTM elevation grid
+    // using d3-contour, then inject via finishContour().
+    function generateContoursFromGrid(gridData, intervalM) {
+      if (typeof d3 === 'undefined') {
+        // d3-contour CDN failed to load (offline with no cache of the script)
+        if (bridge) bridge.onContourComplete('[]', 0, '#795548', '_error_no_d3');
+        return;
+      }
+
+      var cols = gridData.cols;
+      var rows = gridData.rows;
+
+      // Flatten to 1-D row-major array; null → NaN so d3 skips voids
+      var flat = [];
+      for (var r = 0; r < rows; r++) {
+        for (var c = 0; c < cols; c++) {
+          var v = gridData.grid[r][c];
+          flat.push((v === null || v === undefined) ? NaN : v);
+        }
+      }
+
+      // Build elevation thresholds at intervalM spacing
+      var finite = flat.filter(function(v) { return isFinite(v); });
+      if (finite.length === 0) return;
+      var elevMin = Math.min.apply(null, finite);
+      var elevMax = Math.max.apply(null, finite);
+      var thresholds = [];
+      for (var t = Math.ceil(elevMin / intervalM) * intervalM; t <= elevMax; t += intervalM) {
+        thresholds.push(t);
+      }
+      if (thresholds.length === 0) return;
+
+      var contourGen = d3.contours().size([cols, rows]).thresholds(thresholds);
+      var features   = contourGen(flat);
+
+      var _prev = currentContour;
+      for (var fi = 0; fi < features.length; fi++) {
+        var feat  = features[fi];
+        var elev  = feat.value;
+        // Each feature.coordinates is an array of polygons; each polygon is
+        // an array of rings; each ring is an array of [col, row] points.
+        for (var pi = 0; pi < feat.coordinates.length; pi++) {
+          for (var ri = 0; ri < feat.coordinates[pi].length; ri++) {
+            var ring = feat.coordinates[pi][ri];
+            contourPoints = ring.map(function(pt) {
+              // Transform grid [col, row] → geographic [lat, lng]
+              var lat = gridData.lat_max
+                - (pt[1] / (rows - 1)) * (gridData.lat_max - gridData.lat_min);
+              var lng = gridData.lng_min
+                + (pt[0] / (cols - 1)) * (gridData.lng_max - gridData.lng_min);
+              return [lat, lng];
+            });
+            if (contourPoints.length < 2) continue;
+            currentContour = {
+              elevation_m:       elev,
+              color:             '#795548',
+              show_labels:       true,
+              show_slope_arrows: false,
+              source:            'srtm30m'
+            };
+            finishContour();
+          }
+        }
+      }
+      currentContour = _prev;
+      contourPoints  = [];
     }
 
     // ── A4: Wind overlay ────────────────────────────────────────────────────

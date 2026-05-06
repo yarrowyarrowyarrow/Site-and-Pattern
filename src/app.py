@@ -297,6 +297,7 @@ class MainWindow(QMainWindow):
         self.analysis_panel.sector_cleared.connect(self.map_widget.clear_sectors)
         self.analysis_panel.contour_requested.connect(self._on_contour_requested)
         self.analysis_panel.contour_cleared.connect(self._on_contour_cleared)
+        self.analysis_panel.terrain_requested.connect(self._on_terrain_requested)
         self.analysis_panel.wind_requested.connect(self._on_wind_requested)
         self.analysis_panel.wind_cleared.connect(self.map_widget.clear_wind_overlay)
         self.analysis_panel.season_changed.connect(self._on_season_changed)
@@ -698,7 +699,8 @@ class MainWindow(QMainWindow):
             f"Drawing contour at {elev:.1f}m — click points, double-click to finish"
         )
 
-    def _on_contour_complete(self, points_json: str, elevation: float, color: str):
+    def _on_contour_complete(self, points_json: str, elevation: float,
+                             color: str, source: str = "manual"):
         """Save contour line to project."""
         import json as _json
         points = _json.loads(points_json)
@@ -708,15 +710,17 @@ class MainWindow(QMainWindow):
             "geometry": {"type": "LineString", "coordinates": coords},
             "properties": {
                 "element_type": "contour_line",
-                "elevation_m": elevation,
-                "color": color,
+                "elevation_m":  elevation,
+                "color":        color,
+                "source":       source,
             }
         })
         self._mark_modified()
-        self._set_mode_label("Ready")
-        self.statusBar().showMessage(
-            f"Contour line at {elevation:.1f}m placed", 2000
-        )
+        if source == "manual":
+            self._set_mode_label("Ready")
+            self.statusBar().showMessage(
+                f"Contour line at {elevation:.1f}m placed", 2000
+            )
 
     def _on_contour_removed(self, points_json: str, elevation: float, color: str):
         """Remove a single contour line from project state."""
@@ -744,6 +748,81 @@ class MainWindow(QMainWindow):
             if f.get("properties", {}).get("element_type") != "contour_line"
         ]
         self._mark_modified()
+
+    # ── Terrain auto-generate ─────────────────────────────────────────────────
+
+    def _project_bbox(self) -> tuple | None:
+        """Return (lat_min, lat_max, lng_min, lng_max) with 10% padding, or None."""
+        lats, lngs = [], []
+        for f in self._project.get("features", []):
+            if f.get("properties", {}).get("element_type") == "property_boundary":
+                for coord in f.get("geometry", {}).get("coordinates", [[]])[0]:
+                    lngs.append(coord[0])
+                    lats.append(coord[1])
+        if not lats:
+            return None
+        lat_min, lat_max = min(lats), max(lats)
+        lng_min, lng_max = min(lngs), max(lngs)
+        # Add ~10% buffer so contours extend slightly beyond the drawn boundary
+        lat_pad = (lat_max - lat_min) * 0.10 or 0.001
+        lng_pad = (lng_max - lng_min) * 0.10 or 0.001
+        return (lat_min - lat_pad, lat_max + lat_pad,
+                lng_min - lng_pad, lng_max + lng_pad)
+
+    def _on_terrain_requested(self, interval_m: float, grid_pts: int):
+        """Auto-generate contours from real elevation data."""
+        from PyQt6.QtCore import QThread
+        from PyQt6.QtWidgets import QMessageBox
+        from src.elevation import ElevationFetchWorker
+
+        bbox = self._project_bbox()
+        if bbox is None:
+            QMessageBox.warning(
+                self, "No Boundary",
+                "Draw a property boundary first so the terrain extent is known."
+            )
+            self.analysis_panel.set_terrain_status("")
+            return
+
+        self._pending_interval_m = interval_m
+
+        self._elev_worker = ElevationFetchWorker(bbox, grid_pts, grid_pts)
+        self._elev_thread = QThread()
+        self._elev_worker.moveToThread(self._elev_thread)
+        self._elev_worker.finished.connect(self._on_elevation_ready)
+        self._elev_worker.error.connect(self._on_elevation_error)
+        self._elev_thread.started.connect(self._elev_worker.run)
+        self._elev_worker.finished.connect(self._elev_thread.quit)
+        self._elev_worker.error.connect(self._elev_thread.quit)
+        self._elev_thread.start()
+
+    def _on_elevation_ready(self, data: dict):
+        source   = data.get("source", "unknown")
+        from_cache = data.get("_from_cache", False)
+
+        if source == "edmonton_opendata":
+            self.map_widget.add_contour_features(data.get("features", []))
+            status = "Edmonton LiDAR — cached ✓" if from_cache else "Edmonton LiDAR — fetched ✓"
+        else:
+            self.map_widget.generate_contours_from_grid(
+                data, self._pending_interval_m
+            )
+            label = "cached ✓" if from_cache else "fetched ✓"
+            if data.get("_fallback_reason"):
+                status = f"SRTM fallback — {label}"
+            else:
+                status = f"SRTM 30m — {label}"
+
+        self.analysis_panel.set_terrain_status(status)
+
+    def _on_elevation_error(self, message: str):
+        from PyQt6.QtWidgets import QMessageBox
+        self.analysis_panel.set_terrain_status(f"Error — see message")
+        QMessageBox.information(
+            self, "Terrain Data Unavailable",
+            f"Could not fetch elevation data:\n\n{message}\n\n"
+            "You can still draw contour lines manually."
+        )
 
     def _on_wind_requested(self, config: dict):
         """A4: Draw wind overlay with shelter zones."""

@@ -36,6 +36,7 @@ class AnalysisPanel(QWidget):
     # A3: Contour
     contour_requested = pyqtSignal(dict)    # {interval_m, color, show_labels}
     contour_cleared = pyqtSignal()
+    terrain_requested = pyqtSignal(float, int)   # (interval_m, grid_pts)
 
     # A4: Wind/windbreak
     wind_requested = pyqtSignal(dict)       # {direction, speed_label, show_shelter}
@@ -393,8 +394,79 @@ class AnalysisPanel(QWidget):
         btn_row.addWidget(btn_clear)
         layout.addLayout(btn_row)
 
+        # ── Auto-generate from terrain data ──────────────────────────────────
+        terrain_box = QGroupBox("Auto-generate from Terrain")
+        terrain_box.setStyleSheet(
+            "QGroupBox { color: #a5d6a7; font-size: 11px; border: 1px solid #37474f; "
+            "border-radius: 4px; margin-top: 6px; padding-top: 4px; }"
+            "QGroupBox::title { subcontrol-origin: margin; left: 6px; }"
+        )
+        tb_layout = QVBoxLayout(terrain_box)
+        tb_layout.setContentsMargins(6, 8, 6, 6)
+        tb_layout.setSpacing(6)
+
+        tb_info = QLabel(
+            "Fetch real elevation data for the design area\n"
+            "and auto-draw contour lines. Edmonton area\n"
+            "uses City LiDAR (2 m); elsewhere uses SRTM."
+        )
+        tb_info.setWordWrap(True)
+        tb_info.setStyleSheet("color: #78909c; font-size: 10px;")
+        tb_layout.addWidget(tb_info)
+
+        tb_form = QFormLayout()
+        tb_form.setContentsMargins(0, 0, 0, 0)
+
+        self._terrain_interval = QDoubleSpinBox()
+        self._terrain_interval.setRange(0.5, 10.0)
+        self._terrain_interval.setSingleStep(0.5)
+        self._terrain_interval.setValue(1.0)
+        self._terrain_interval.setSuffix(" m")
+        self._terrain_interval.setToolTip(
+            "Contour interval for SRTM fallback. Edmonton LiDAR uses 2 m fixed."
+        )
+        tb_form.addRow("Interval:", self._terrain_interval)
+
+        self._terrain_resolution = QComboBox()
+        self._terrain_resolution.addItem("Coarse (10×10)", 10)
+        self._terrain_resolution.addItem("Normal (20×20)", 20)
+        self._terrain_resolution.addItem("Fine (30×30)",   30)
+        self._terrain_resolution.setCurrentIndex(1)
+        self._terrain_resolution.setToolTip(
+            "Grid resolution for SRTM fallback only."
+        )
+        tb_form.addRow("SRTM grid:", self._terrain_resolution)
+        tb_layout.addLayout(tb_form)
+
+        self._terrain_status = QLabel("")
+        self._terrain_status.setWordWrap(True)
+        self._terrain_status.setStyleSheet("color: #80cbc4; font-size: 10px;")
+        tb_layout.addWidget(self._terrain_status)
+
+        self._terrain_btn = QPushButton("Generate Terrain Contours")
+        self._terrain_btn.setStyleSheet(
+            "QPushButton { background: #4e342e; color: #efebe9; border: 1px solid #795548; "
+            "border-radius: 4px; padding: 6px; font-weight: bold; }"
+            "QPushButton:hover { background: #5d4037; }"
+            "QPushButton:disabled { background: #263238; color: #546e7a; }"
+        )
+        self._terrain_btn.clicked.connect(self._on_generate_terrain)
+        tb_layout.addWidget(self._terrain_btn)
+
+        layout.addWidget(terrain_box)
         layout.addStretch()
         self._tabs.addTab(tab, "Contours")
+
+    def _on_generate_terrain(self):
+        interval = self._terrain_interval.value()
+        grid_pts = self._terrain_resolution.currentData()
+        self._terrain_btn.setEnabled(False)
+        self._terrain_status.setText("Requesting…")
+        self.terrain_requested.emit(interval, grid_pts)
+
+    def set_terrain_status(self, text: str) -> None:
+        self._terrain_status.setText(text)
+        self._terrain_btn.setEnabled(True)
 
     def _pick_contour_color(self):
         color = QColorDialog.getColor(QColor(self._contour_color), self, "Contour Color")

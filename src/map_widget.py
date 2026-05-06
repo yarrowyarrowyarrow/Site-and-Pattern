@@ -73,7 +73,7 @@ class MapBridge(QObject):
     guild_removed = pyqtSignal(str, float, float)                   # guildName, centerLat, centerLng
 
     # Contour signals
-    contour_complete = pyqtSignal(str, float, str)                  # pointsJson, elevation, color
+    contour_complete = pyqtSignal(str, float, str, str)             # pointsJson, elevation, color, source
     contour_removed = pyqtSignal(str, float, str)                   # pointsJson, elevation, color
 
     # Sun path signals
@@ -237,9 +237,10 @@ class MapBridge(QObject):
 
     # ── Contour slots ─────────────────────────────────────────────────────────
 
-    @pyqtSlot(str, float, str)
-    def onContourComplete(self, points_json: str, elevation: float, color: str):
-        self.contour_complete.emit(points_json, elevation, color)
+    @pyqtSlot(str, float, str, str)
+    def onContourComplete(self, points_json: str, elevation: float,
+                          color: str, source: str):
+        self.contour_complete.emit(points_json, elevation, color, source)
 
     # ── Guild slots ───────────────────────────────────────────────────────────
 
@@ -477,6 +478,19 @@ class MapWidget(QWebEngineView):
 
     def clear_contours(self):
         self.run_js("clearContours();")
+
+    def generate_contours_from_grid(self, grid_data: dict, interval_m: float):
+        """Trigger d3-based terrain contour generation from an SRTM elevation grid."""
+        import json
+        self.run_js(
+            f"generateContoursFromGrid("
+            f"JSON.parse({json.dumps(json.dumps(grid_data))}), {interval_m});"
+        )
+
+    def add_contour_features(self, features: list):
+        """Inject pre-computed GeoJSON contour features (e.g. Edmonton LiDAR)."""
+        import json
+        self.run_js(f"addContourFeatures({json.dumps(features)});")
 
     def draw_wind_overlay(self, data: dict):
         """Draw wind direction arrows and shelter zones."""
