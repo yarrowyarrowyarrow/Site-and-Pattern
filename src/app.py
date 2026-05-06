@@ -88,6 +88,10 @@ class MainWindow(QMainWindow):
         self._pending_sun_anchor:    tuple | None = None
         self._pending_sector_config: dict | None = None
 
+        # Edmonton offline download thread/worker (None when idle)
+        self._dl_thread: Optional[QThread] = None
+        self._dl_worker = None
+
         self._build_ui()
         self._connect_signals()
         self._start_autosave()
@@ -358,6 +362,9 @@ class MainWindow(QMainWindow):
         self.site_panel.auto_terrain_opacity.connect(self.map_widget.set_slope_overlay_opacity)
         b.terrain_bbox_ready.connect(self._on_terrain_bbox_ready)
         b.terrain_bbox_cancelled.connect(self._on_terrain_bbox_cancelled)
+        self.site_panel.download_edmonton_requested.connect(
+            self._on_download_edmonton_requested
+        )
         self.analysis_panel.wind_requested.connect(self._on_wind_requested)
         self.analysis_panel.wind_cleared.connect(self.map_widget.clear_wind_overlay)
         self.analysis_panel.season_changed.connect(self._on_season_changed)
@@ -939,6 +946,50 @@ class MainWindow(QMainWindow):
             thread.deleteLater()
         # Defer the next start so deleteLater settles cleanly.
         QTimer.singleShot(0, self._maybe_start_next_terrain_job)
+
+    # ── Edmonton offline dataset download ─────────────────────────────────────
+
+    def _on_download_edmonton_requested(self):
+        from src.terrain_downloader import EdmontonDownloadWorker
+        self._dl_thread = QThread(self)
+        self._dl_worker = EdmontonDownloadWorker()
+        self._dl_worker.moveToThread(self._dl_thread)
+        self._dl_thread.started.connect(self._dl_worker.run)
+        self._dl_worker.progress.connect(self._on_edmonton_dl_progress)
+        self._dl_worker.finished.connect(self._on_edmonton_dl_finished)
+        self._dl_worker.error.connect(self._on_edmonton_dl_error)
+        self._dl_worker.finished.connect(self._dl_thread.quit)
+        self._dl_worker.error.connect(self._dl_thread.quit)
+        self._dl_thread.finished.connect(self._on_dl_thread_done)
+        # Wire the Cancel button to the worker's cancel() slot
+        self.site_panel._terrain_cancel_btn.clicked.connect(self._dl_worker.cancel)
+        self._dl_thread.start()
+
+    def _on_edmonton_dl_progress(self, features_stored: int, page_num: int, text: str):
+        self.site_panel.set_download_progress(features_stored, page_num, text)
+
+    def _on_edmonton_dl_finished(self, total: int):
+        self.site_panel.set_terrain_status()
+        self.statusBar().showMessage(
+            f"Edmonton terrain download complete — {total:,} features stored offline.",
+            8000,
+        )
+
+    def _on_edmonton_dl_error(self, message: str):
+        self.site_panel.set_terrain_status()
+        self.statusBar().showMessage(f"Edmonton download failed: {message}", 10000)
+
+    def _on_dl_thread_done(self):
+        try:
+            self.site_panel._terrain_cancel_btn.clicked.disconnect(self._dl_worker.cancel)
+        except Exception:
+            pass
+        if hasattr(self, "_dl_worker") and self._dl_worker is not None:
+            self._dl_worker.deleteLater()
+            self._dl_worker = None
+        if hasattr(self, "_dl_thread") and self._dl_thread is not None:
+            self._dl_thread.deleteLater()
+            self._dl_thread = None
 
     def _on_terrain_ready(self, result: dict):
         """Render the worker's output and persist features in the project."""

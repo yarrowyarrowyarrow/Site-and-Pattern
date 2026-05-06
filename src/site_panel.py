@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
     QFormLayout, QFrame, QGroupBox, QScrollArea, QComboBox,
     QDoubleSpinBox, QSpinBox, QCheckBox, QSlider, QColorDialog,
-    QListWidget, QListWidgetItem,
+    QListWidget, QListWidgetItem, QProgressBar,
 )
 
 
@@ -124,6 +124,9 @@ class SitePanel(QWidget):
     # Manual contour line drawing (moved from Analysis tab).
     contour_requested = pyqtSignal(dict)
     contour_cleared   = pyqtSignal()
+
+    # Offline Edmonton terrain dataset download.
+    download_edmonton_requested = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -514,6 +517,8 @@ class SitePanel(QWidget):
 
         layout.addWidget(self._slope_box)
 
+        self._build_terrain_data_section(layout)
+
         layout.addStretch()
 
     # ── Public API (called from MainWindow) ─────────────────────────────────
@@ -746,6 +751,99 @@ class SitePanel(QWidget):
         self._contour_elevation.setValue(
             self._contour_elevation.value() + self._contour_interval.value()
         )
+
+    # ── Terrain Data section ───────────────────────────────────────────────
+
+    def _build_terrain_data_section(self, layout):
+        box = QGroupBox("Terrain Data (offline)")
+        box.setStyleSheet(_GROUP_STYLE)
+        vl = QVBoxLayout(box)
+        vl.setSpacing(6)
+
+        note = QLabel(
+            "Download the full City of Edmonton 0.5 m LiDAR contour\n"
+            "dataset for instant offline access. One-time download\n"
+            "(~50–300 MB). SRTM data outside Edmonton is cached\n"
+            "automatically as you use it."
+        )
+        note.setWordWrap(True)
+        note.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        vl.addWidget(note)
+
+        self._terrain_status_lbl = QLabel("Checking…")
+        self._terrain_status_lbl.setWordWrap(True)
+        self._terrain_status_lbl.setStyleSheet("color: #c8e6c9; font-size: 11px;")
+        vl.addWidget(self._terrain_status_lbl)
+
+        self._terrain_storage_lbl = QLabel("")
+        self._terrain_storage_lbl.setStyleSheet("color: #78909c; font-size: 10px;")
+        vl.addWidget(self._terrain_storage_lbl)
+
+        self._terrain_progress = QProgressBar()
+        self._terrain_progress.setRange(0, 0)   # indeterminate
+        self._terrain_progress.setVisible(False)
+        self._terrain_progress.setStyleSheet(
+            "QProgressBar { border: 1px solid #2e4a2e; border-radius: 3px;"
+            " background: #0d1f0d; height: 10px; }"
+            "QProgressBar::chunk { background: #43a047; border-radius: 2px; }"
+        )
+        vl.addWidget(self._terrain_progress)
+
+        btn_row = QHBoxLayout()
+        self._terrain_dl_btn = QPushButton("Download Edmonton Data")
+        self._terrain_dl_btn.setStyleSheet(_BTN_PRIMARY)
+        self._terrain_dl_btn.clicked.connect(self._on_download_clicked)
+        btn_row.addWidget(self._terrain_dl_btn)
+
+        self._terrain_cancel_btn = QPushButton("Cancel")
+        self._terrain_cancel_btn.setStyleSheet(_BTN_SECONDARY)
+        self._terrain_cancel_btn.setVisible(False)
+        btn_row.addWidget(self._terrain_cancel_btn)
+        vl.addLayout(btn_row)
+
+        layout.addWidget(box)
+        self._refresh_terrain_status()
+
+    def _on_download_clicked(self):
+        self._terrain_dl_btn.setEnabled(False)
+        self._terrain_cancel_btn.setVisible(True)
+        self._terrain_progress.setVisible(True)
+        self._terrain_status_lbl.setText("Starting download…")
+        self.download_edmonton_requested.emit()
+
+    def set_download_progress(self, features_stored: int, page_num: int, text: str):
+        self._terrain_status_lbl.setText(text)
+        self._terrain_storage_lbl.setText(self._storage_text())
+
+    def set_terrain_status(self):
+        self._terrain_dl_btn.setEnabled(True)
+        self._terrain_cancel_btn.setVisible(False)
+        self._terrain_progress.setVisible(False)
+        self._refresh_terrain_status()
+
+    def _refresh_terrain_status(self):
+        try:
+            from src.terrain_store import TerrainStore
+            store = TerrainStore()
+            if store.has_edmonton_data():
+                count = store.get_edmonton_feature_count()
+                self._terrain_status_lbl.setText(
+                    f"Edmonton: {count:,} features — offline ready"
+                )
+            else:
+                self._terrain_status_lbl.setText("No offline Edmonton data.")
+            self._terrain_storage_lbl.setText(self._storage_text())
+        except Exception:
+            self._terrain_status_lbl.setText("No offline Edmonton data.")
+            self._terrain_storage_lbl.setText("")
+
+    def _storage_text(self) -> str:
+        try:
+            from src.terrain_store import TerrainStore
+            mb = TerrainStore().db_size_mb()
+            return f"Storage used: {mb:.1f} MB" if mb > 0 else ""
+        except Exception:
+            return ""
 
     # ── Address search (Nominatim) ─────────────────────────────────────────
 

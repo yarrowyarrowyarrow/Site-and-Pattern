@@ -236,6 +236,15 @@ def fetch_edmonton_contours(bbox: dict, interval_m: float = 0.5) -> Optional[lis
     elevation column name is detected by introspecting one feature, so the
     code keeps working if the City renames a field.
     """
+    # Fast path: full offline dataset downloaded by user
+    try:
+        from src.terrain_store import TerrainStore as _TerrainStore
+        _ts = _TerrainStore()
+        if _ts.has_edmonton_data():
+            return _ts.get_edmonton_contours(bbox, interval_m)
+    except Exception:
+        pass
+
     cache_key = _cache_key("edm", bbox, interval_m)
     cached = _cache_load_json(cache_key)
     if cached is not None:
@@ -361,6 +370,18 @@ def fetch_openmeteo_grid(bbox: dict, resolution_m: float) -> Optional[dict]:
     suppress single-cell DEM artifacts.
     """
     cache_key = _cache_key("om_v3", bbox, resolution_m)
+
+    # Fast path: SQLite store (survives cache-dir wipes)
+    _srtm_store = None
+    try:
+        from src.terrain_store import TerrainStore as _TerrainStore
+        _srtm_store = _TerrainStore()
+        hit = _srtm_store.get_srtm_grid(cache_key)
+        if hit is not None:
+            return hit
+    except Exception:
+        _srtm_store = None
+
     cached = _cache_load_json(cache_key)
     if cached is not None:
         return cached
@@ -418,6 +439,11 @@ def fetch_openmeteo_grid(bbox: dict, resolution_m: float) -> Optional[dict]:
            "n_batches": n_batches,
            "source": "Open-Meteo / Copernicus DEM 30m"}
     _cache_save_json(cache_key, out)
+    try:
+        if _srtm_store is not None:
+            _srtm_store.store_srtm_grid(cache_key, out)
+    except Exception:
+        pass
     return out
 
 
