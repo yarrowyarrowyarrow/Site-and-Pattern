@@ -296,43 +296,103 @@ def fetch_edmonton_contours(bbox: dict, interval_m: float = 0.5) -> Optional[lis
     return out
 
 
+_EDM_ELEV_HINTS = (
+    "elev", "elevation_m", "elev_m", "contour", "height", "value",
+    "z_value", "_z", "altitude", "dem",
+)
+_EDM_GEOM_TYPES = ("multiline", "line", "geometry", "point", "polygon")
+
+
 def _edm_detect_fields() -> tuple[Optional[str], Optional[str]]:
-    """Return (elevation_field, geometry_field) for the dataset, by sniffing."""
-    cache_key = _cache_key("edm_fields_v2")
+    """Return (elevation_field, geometry_field) for the dataset.
+
+    Detection runs in three layers, fastest-first:
+
+      1. Cache hit → use it.
+      2. Socrata "view metadata" (`/api/views/<id>.json`) — authoritative
+         column list with explicit data types. We pick the first column
+         whose type is a known geometry type, plus a numeric column whose
+         field name matches an elevation hint (or any numeric column as
+         a last resort). This is the robust path: it doesn't depend on
+         the .geojson endpoint returning a non-empty sample, which is
+         what was throwing the "Could not detect field names" error in
+         practice when the API briefly returned an empty page.
+      3. Row-sniffing on `?$limit=1` (the legacy heuristic) — kept as a
+         final fallback for the case where the metadata endpoint is
+         blocked / proxied / behind auth.
+    """
+    cache_key = _cache_key("edm_fields_v3")
     cached = _cache_load_json(cache_key)
-    if cached:
+    if cached and cached.get("elev") and cached.get("geom"):
         return cached.get("elev"), cached.get("geom")
 
-    sample = _http_get_json(f"{_EDM_RESOURCE}?$limit=1")
+    elev_field, geom_field = _edm_detect_via_metadata()
+    if not elev_field or not geom_field:
+        elev_field2, geom_field2 = _edm_detect_via_sample()
+        elev_field = elev_field or elev_field2
+        geom_field = geom_field or geom_field2
+
+    if elev_field and geom_field:
+        _cache_save_json(cache_key, {"elev": elev_field, "geom": geom_field})
+    return elev_field, geom_field
+
+
+def _edm_detect_via_metadata() -> tuple[Optional[str], Optional[str]]:
+    """Use the Socrata views API to pick fields by declared data type."""
+    meta_url = f"https://data.edmonton.ca/api/views/{_EDM_DATASET_ID}.json"
+    meta = _http_get_json(meta_url, timeout=_TIMEOUT)
+    if not isinstance(meta, dict):
+        return None, None
+    cols = meta.get("columns") or []
+    if not isinstance(cols, list):
+        return None, None
+
+    geom_field: Optional[str] = None
+    elev_candidates: list[tuple[int, str]] = []  # (priority, field)
+
+    for col in cols:
+        fname = (col.get("fieldName") or "").strip()
+        dtype = (col.get("dataTypeName") or "").strip().lower()
+        if not fname:
+            continue
+        if geom_field is None and dtype in _EDM_GEOM_TYPES:
+            geom_field = fname
+            continue
+        if dtype == "number":
+            fl = fname.lower()
+            for prio, hint in enumerate(_EDM_ELEV_HINTS):
+                if hint in fl:
+                    elev_candidates.append((prio, fname))
+                    break
+            else:
+                # Generic numeric column → very low priority fallback.
+                elev_candidates.append((len(_EDM_ELEV_HINTS) + 1, fname))
+
+    elev_candidates.sort(key=lambda t: t[0])
+    elev_field = elev_candidates[0][1] if elev_candidates else None
+    return elev_field, geom_field
+
+
+def _edm_detect_via_sample() -> tuple[Optional[str], Optional[str]]:
+    """Legacy fallback: sniff a single feature off the .geojson endpoint."""
+    sample = _http_get_json(f"{_EDM_RESOURCE}?$limit=1", timeout=_TIMEOUT)
     if not sample or "features" not in sample or not sample["features"]:
         return None, None
-    feat = sample["features"][0]
-    props = feat.get("properties") or {}
-
-    # GeoJSON spec — geometry sits at "geometry"; the *underlying* Socrata
-    # geometry column is whatever they named it. The .geojson endpoint
-    # always serialises geometry under "geometry" but $select needs the
-    # source column. Their default for spatial datasets is "the_geom"; if
-    # missing we fall back to "*" for $select (won't include geom but lets
-    # us still get properties) — though intersects() always needs the
-    # column name. In practice the column has been "the_geom" for years.
+    props = (sample["features"][0].get("properties") or {})
+    # Socrata's spatial column has been "the_geom" for years on this
+    # dataset; the metadata path above is what we trust to disagree.
     geom_field = "the_geom"
-
-    elev_field = None
+    elev_field: Optional[str] = None
     for k, v in props.items():
-        kl = k.lower()
-        if any(t in kl for t in ("elev", "contour", "height", "z_value", "_z", "elevation_m")):
+        if any(h in k.lower() for h in _EDM_ELEV_HINTS):
             if _coerce_float(v) is not None:
                 elev_field = k
                 break
     if elev_field is None:
-        # Last-ditch: any numeric property.
         for k, v in props.items():
             if _coerce_float(v) is not None:
                 elev_field = k
                 break
-
-    _cache_save_json(cache_key, {"elev": elev_field, "geom": geom_field})
     return elev_field, geom_field
 
 

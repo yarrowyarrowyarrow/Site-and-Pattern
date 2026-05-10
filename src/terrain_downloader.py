@@ -1,8 +1,18 @@
 """
 terrain_downloader.py — QThread worker that bulk-downloads the full
 City of Edmonton LiDAR contour dataset into the local SQLite store.
+
+If the live Socrata API can't be reached or its schema can't be
+sniffed (the historical "Could not detect field names" error), the
+worker falls back to importing a locally-bundled seed file at
+``data/edmonton_contours.geojson`` (gzipped variants ``.geojson.gz``
+and ``.json.gz`` also accepted). That seed is optional — when absent,
+the worker reports the network error with an actionable hint.
 """
 
+import gzip
+import json
+import os
 import urllib.parse
 
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -15,6 +25,35 @@ from src.terrain import (
     _http_get_json,
 )
 from src.terrain_store import TerrainStore
+
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.dirname(_HERE)
+_SEED_CANDIDATES = (
+    os.path.join(_PROJECT_ROOT, "data", "edmonton_contours.geojson"),
+    os.path.join(_PROJECT_ROOT, "data", "edmonton_contours.geojson.gz"),
+    os.path.join(_PROJECT_ROOT, "data", "edmonton_contours.json"),
+    os.path.join(_PROJECT_ROOT, "data", "edmonton_contours.json.gz"),
+)
+
+
+def _find_local_seed() -> "str | None":
+    for path in _SEED_CANDIDATES:
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def _load_seed(path: str) -> "dict | None":
+    """Load a GeoJSON FeatureCollection from a (gzipped) local file."""
+    try:
+        if path.endswith(".gz"):
+            with gzip.open(path, "rb") as f:
+                return json.loads(f.read().decode("utf-8"))
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
 
 
 class EdmontonDownloadWorker(QObject):
@@ -45,9 +84,29 @@ class EdmontonDownloadWorker(QObject):
 
         elev_field, geom_field = _edm_detect_fields()
         if not elev_field or not geom_field:
+            # Live API unavailable — fall back to a bundled seed file
+            # if the project ships one. This is the offline-first path
+            # the README points to when the user can't hit Socrata.
+            seed_path = _find_local_seed()
+            if seed_path is not None:
+                self.progress.emit(
+                    0, 0,
+                    f"Importing bundled seed: {os.path.basename(seed_path)}…"
+                )
+                if self._import_local_seed(store, seed_path):
+                    return
+                # Fall through to the error if the seed didn't parse.
             self.error.emit(
                 "Could not detect field names from the Edmonton dataset.\n"
-                "Please ensure you have an internet connection and try again."
+                "\n"
+                "Tried:\n"
+                "  • Socrata views metadata\n"
+                "  • Sample-row sniffing on the GeoJSON endpoint\n"
+                "  • Local seed at data/edmonton_contours.geojson(.gz)\n"
+                "\n"
+                "Check your internet connection, or drop a downloaded\n"
+                "GeoJSON of the Edmonton contour dataset at\n"
+                "data/edmonton_contours.geojson and retry."
             )
             return
 
@@ -113,6 +172,77 @@ class EdmontonDownloadWorker(QObject):
             return
 
         self.finished.emit(total_stored)
+
+    def _import_local_seed(self, store: TerrainStore, path: str) -> bool:
+        """Import a locally-bundled GeoJSON contour file in chunks.
+
+        Returns True if anything was stored (and emits ``finished``);
+        False if the file couldn't be parsed (caller falls back to the
+        regular network error). The seed is expected to be a GeoJSON
+        FeatureCollection with the same shape as the live Socrata API
+        response — properties carrying an elevation, geometry as
+        (Multi)LineString in [lng, lat] order.
+        """
+        data = _load_seed(path)
+        if not isinstance(data, dict):
+            return False
+        feats = data.get("features") or []
+        if not isinstance(feats, list) or not feats:
+            return False
+
+        # Sniff the elevation field from the first feature with a numeric
+        # property — same hint list as the API path.
+        from src.terrain import _EDM_ELEV_HINTS  # local import to avoid cycle
+        elev_field: "str | None" = None
+        for f in feats[:50]:
+            props = (f.get("properties") or {})
+            for k, v in props.items():
+                if any(h in k.lower() for h in _EDM_ELEV_HINTS):
+                    if _coerce_float(v) is not None:
+                        elev_field = k
+                        break
+            if elev_field:
+                break
+        if elev_field is None:
+            for f in feats[:50]:
+                for k, v in (f.get("properties") or {}).items():
+                    if _coerce_float(v) is not None:
+                        elev_field = k
+                        break
+                if elev_field:
+                    break
+        if elev_field is None:
+            return False
+
+        total_stored = 0
+        page_num = 0
+        page_size = 1000
+        for i in range(0, len(feats), page_size):
+            if self._cancel:
+                return False
+            chunk = feats[i:i + page_size]
+            converted = _convert_page(chunk, elev_field)
+            stored = store.store_edmonton_page(converted)
+            total_stored += stored
+            page_num += 1
+            self.progress.emit(
+                total_stored,
+                page_num,
+                f"Local seed: page {page_num} — {total_stored:,} features stored…",
+            )
+
+        if total_stored == 0:
+            return False
+        try:
+            self.progress.emit(
+                total_stored, page_num, "Merging tiles, please wait…"
+            )
+            store.mark_edmonton_complete(total_stored)
+        except Exception as exc:
+            self.error.emit(f"Failed to finalise local-seed import: {exc}")
+            return True   # we did emit error; tell caller not to re-error
+        self.finished.emit(total_stored)
+        return True
 
 
 # ── Internal helpers ─────────────────────────────────────────────────────────

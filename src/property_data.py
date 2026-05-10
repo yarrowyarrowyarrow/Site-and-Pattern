@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import urllib.parse
 import urllib.request
 from datetime import date, timedelta
@@ -97,10 +98,17 @@ def _parse_rainfall(data: dict) -> Optional[dict]:
 
 def fetch_soil(lat: float, lng: float) -> Optional[dict]:
     """
-    Soil pH, sand/silt/clay %, and reported depth from SoilGrids v2.0.
+    Soil pH, sand/silt/clay %, and reported depth.
 
-    Top-layer values are surfaced in ``summary``; per-depth values are kept
-    in ``properties`` for callers that want the full profile.
+    Tries SoilGrids v2.0 (ISRIC) first; if the live API is unavailable
+    or returns no usable data, falls back to a curated Alberta regional
+    approximation bundled with the app (see
+    ``data/soil_fallback_alberta.json``). The returned dict's
+    ``source`` field always reflects which path was used so the UI can
+    label the data appropriately.
+
+    Top-layer values are surfaced in ``summary``; per-depth values are
+    kept in ``properties`` for callers that want the full profile.
     """
     qs = urllib.parse.urlencode([
         ("lat", f"{lat:.4f}"),
@@ -118,9 +126,73 @@ def fetch_soil(lat: float, lng: float) -> Optional[dict]:
     ], doseq=True)
     url = f"https://rest.isric.org/soilgrids/v2.0/properties/query?{qs}"
     data = _http_get_json(url)
-    if not data:
+    parsed = _parse_soilgrids(data) if data else None
+    if parsed is not None:
+        return parsed
+    # Fallback: nearest Alberta regional profile.
+    return _alberta_soil_fallback(lat, lng)
+
+
+def _alberta_soil_fallback(lat: float, lng: float) -> Optional[dict]:
+    """Return the closest bundled Alberta regional soil profile, or None.
+
+    The result is shaped like ``_parse_soilgrids`` output (same
+    ``summary`` keys, plus a single synthetic ``properties`` block) so
+    the UI can render it without a special case. ``source`` makes the
+    approximation explicit so users don't mistake it for a measured
+    point estimate.
+    """
+    import json as _json
+    import math as _math
+
+    here = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(here)
+    path = os.path.join(project_root, "data", "soil_fallback_alberta.json")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            entries = _json.load(f)
+    except (OSError, ValueError):
         return None
-    return _parse_soilgrids(data)
+    if not isinstance(entries, list) or not entries:
+        return None
+
+    def _dist2(p, q):
+        # Squared great-circle approximation in degrees — fine for
+        # picking the nearest centroid out of a half-dozen candidates.
+        dlat = p[0] - q[0]
+        dlng = (p[1] - q[1]) * _math.cos(_math.radians((p[0] + q[0]) / 2))
+        return dlat * dlat + dlng * dlng
+
+    best = min(entries, key=lambda e: _dist2((lat, lng), tuple(e.get("centroid") or (0, 0))))
+    ph    = best.get("ph_top")
+    sand  = best.get("sand_pct_top")
+    silt  = best.get("silt_pct_top")
+    clay  = best.get("clay_pct_top")
+    depth = best.get("max_reported_depth_cm")
+
+    by_prop = {}
+    if ph   is not None: by_prop["phh2o"] = [{"label": "0-30cm (regional)", "value": ph}]
+    if sand is not None: by_prop["sand"]  = [{"label": "0-30cm (regional)", "value": sand}]
+    if silt is not None: by_prop["silt"]  = [{"label": "0-30cm (regional)", "value": silt}]
+    if clay is not None: by_prop["clay"]  = [{"label": "0-30cm (regional)", "value": clay}]
+
+    return {
+        "properties": by_prop,
+        "summary": {
+            "ph_top":               ph,
+            "sand_pct_top":         sand,
+            "silt_pct_top":         silt,
+            "clay_pct_top":         clay,
+            "texture_class":        best.get("texture_class") or _texture_class(sand, silt, clay),
+            "max_reported_depth_cm": depth,
+        },
+        "source": (
+            f"Regional approximation — {best.get('region', 'Alberta')} "
+            f"(SoilGrids v2.0 unavailable; bundled AB soil atlas)"
+        ),
+        "fallback": True,
+        "fallback_notes": best.get("notes", ""),
+    }
 
 
 # SoilGrids stores values as int * d_factor. For phh2o (pH) and sand/silt/clay
