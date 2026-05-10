@@ -3,6 +3,7 @@ import json
 from PyQt6.QtCore import Qt, pyqtSignal, QPointF, QRectF
 from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -271,6 +272,376 @@ class AddMemberDialog(QDialog):
         }
 
 
+class PolycultureGridCanvas(QWidget):
+    """Visual grid for placing polyculture members at offsets from the centre.
+
+    The canvas is a square widget showing a circle of radius ``radius_m``
+    metres with a 1m grid overlay; each member dot is drawn at its
+    (offset_x, offset_y) position. The user interacts via three signals:
+
+      * ``memberAdded(x, y)``      — left-click on empty space
+      * ``memberRemoved(idx)``     — right-click on an existing dot
+      * ``memberMoved(idx, x, y)`` — drag an existing dot (live updates)
+
+    The canvas does not own the member data; the parent dialog calls
+    ``set_members`` whenever the underlying list changes (after add /
+    remove / move) so the canvas only paints what it's told to paint.
+    """
+
+    memberAdded   = pyqtSignal(float, float)
+    memberRemoved = pyqtSignal(int)
+    memberMoved   = pyqtSignal(int, float, float)
+
+    def __init__(self, parent=None, radius_m: float = 12.0):
+        super().__init__(parent)
+        self._radius_m = radius_m
+        self._members: list[dict] = []
+        self._dragging_idx: int | None = None
+        self.setFixedSize(360, 360)
+        self.setMouseTracking(True)
+
+    def set_members(self, members):
+        self._members = [dict(m) for m in members]
+        self.update()
+
+    def add_member(self, member: dict):
+        self._members.append(dict(member))
+        self.update()
+
+    def remove_member(self, idx: int):
+        if 0 <= idx < len(self._members):
+            self._members.pop(idx)
+            self.update()
+
+    def get_members(self) -> list[dict]:
+        return [dict(m) for m in self._members]
+
+    # ── Coordinate helpers ──────────────────────────────────────────────────
+    def _scale(self) -> float:
+        return min(self.width(), self.height()) / 2 / self._radius_m
+
+    def _world_to_pixel(self, x_m: float, y_m: float) -> tuple[float, float]:
+        cx = self.width() / 2
+        cy = self.height() / 2
+        s = self._scale()
+        return cx + x_m * s, cy - y_m * s   # north = up
+
+    def _pixel_to_world(self, px: float, py: float) -> tuple[float, float]:
+        cx = self.width() / 2
+        cy = self.height() / 2
+        s = self._scale()
+        return (px - cx) / s, (cy - py) / s
+
+    def _hit_test(self, px: float, py: float) -> int | None:
+        for idx in range(len(self._members) - 1, -1, -1):
+            m = self._members[idx]
+            mx, my = self._world_to_pixel(m["offset_x"], m["offset_y"])
+            if (px - mx) ** 2 + (py - my) ** 2 <= 12 ** 2:
+                return idx
+        return None
+
+    # ── Painting ────────────────────────────────────────────────────────────
+    def paintEvent(self, _):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+
+        p.fillRect(self.rect(), QColor("#0d1f0d"))
+
+        cx = self.width() / 2
+        cy = self.height() / 2
+        s = self._scale()
+
+        # 1m grid lines
+        p.setPen(QPen(QColor(74, 122, 74, 80), 1))
+        steps = int(self._radius_m)
+        for k in range(-steps, steps + 1):
+            x = cx + k * s
+            p.drawLine(int(x), 0, int(x), self.height())
+            y = cy + k * s
+            p.drawLine(0, int(y), self.width(), int(y))
+
+        # Boundary circle
+        p.setPen(QPen(QColor("#4a7a4a"), 1.5))
+        p.setBrush(QBrush(Qt.BrushStyle.NoBrush))
+        p.drawEllipse(QPointF(cx, cy), self._radius_m * s, self._radius_m * s)
+
+        # Centre cross
+        p.setPen(QPen(QColor("#a5d6a7"), 2))
+        p.drawLine(int(cx) - 5, int(cy), int(cx) + 5, int(cy))
+        p.drawLine(int(cx), int(cy) - 5, int(cx), int(cy) + 5)
+
+        # Members
+        font = QFont()
+        font.setPointSize(8)
+        p.setFont(font)
+        for m in self._members:
+            mx, my = self._world_to_pixel(m["offset_x"], m["offset_y"])
+            color = QColor(m.get("color") or "#66bb6a")
+            p.setBrush(QBrush(color))
+            p.setPen(QPen(QColor("#0d1f0d"), 1))
+            p.drawEllipse(QPointF(mx, my), 8, 8)
+            p.setPen(QColor("#e8f5e9"))
+            label = (m.get("common_name", "") or "")[:20]
+            p.drawText(int(mx) + 11, int(my) + 4, label)
+        p.end()
+
+    # ── Mouse handling ──────────────────────────────────────────────────────
+    def mousePressEvent(self, ev):
+        px, py = ev.position().x(), ev.position().y()
+        hit = self._hit_test(px, py)
+        if ev.button() == Qt.MouseButton.LeftButton:
+            if hit is not None:
+                self._dragging_idx = hit
+            else:
+                x_m, y_m = self._pixel_to_world(px, py)
+                if (x_m * x_m + y_m * y_m) ** 0.5 > self._radius_m:
+                    return
+                self.memberAdded.emit(x_m, y_m)
+        elif ev.button() == Qt.MouseButton.RightButton and hit is not None:
+            self.memberRemoved.emit(hit)
+
+    def mouseMoveEvent(self, ev):
+        if self._dragging_idx is None:
+            return
+        px, py = ev.position().x(), ev.position().y()
+        x_m, y_m = self._pixel_to_world(px, py)
+        if (x_m * x_m + y_m * y_m) ** 0.5 > self._radius_m:
+            return
+        self.memberMoved.emit(self._dragging_idx, x_m, y_m)
+
+    def mouseReleaseEvent(self, _ev):
+        self._dragging_idx = None
+
+
+def _plant_color_for_member(plant: dict) -> str:
+    """Pick a representative dot colour for a polyculture member."""
+    if plant and plant.get("marker_color"):
+        return plant["marker_color"]
+    t = (plant or {}).get("plant_type", "")
+    return {
+        "tree":        "#388e3c",
+        "shrub":       "#66bb6a",
+        "herb":        "#9ccc65",
+        "vine":        "#7cb342",
+        "groundcover": "#aed581",
+    }.get(t, "#66bb6a")
+
+
+class PolycultureBuilderDialog(QDialog):
+    """One-screen visual editor for a polyculture (create or modify).
+
+    Replaces the older one-plant-at-a-time AddMemberDialog flow. The
+    user fills in name + description, picks plants from an Alberta-
+    native-first list on the left, picks a role, then clicks the grid
+    in the middle to drop them at metre offsets. Right-click removes,
+    drag repositions. Save commits the whole polyculture in one go.
+    """
+
+    def __init__(self, parent=None, polyculture_id: int | None = None):
+        super().__init__(parent)
+        self._polyculture_id = polyculture_id
+        self.setWindowTitle("Polyculture Builder" if polyculture_id is None
+                            else "Edit Polyculture")
+        self.setMinimumSize(820, 560)
+        self._all_plants = plants_db.get_all_plants()
+        self._build_ui()
+        if polyculture_id is not None:
+            self._load_existing(polyculture_id)
+        self._refresh_member_list()
+
+    def _build_ui(self):
+        outer = QVBoxLayout(self)
+
+        meta = QFormLayout()
+        self.name_input = QLineEdit()
+        self.name_input.setPlaceholderText("e.g. Saskatoon Berry Polyculture")
+        meta.addRow("Name:", self.name_input)
+        self.desc_input = QLineEdit()
+        self.desc_input.setPlaceholderText("Optional notes about this polyculture")
+        meta.addRow("Description:", self.desc_input)
+        outer.addLayout(meta)
+
+        tip = QLabel(
+            "<span style='color:#90a4ae;font-size:11px;'>"
+            "Pick a plant + role on the left, then click the grid to place it. "
+            "Right-click a placed plant to remove. Drag to reposition. "
+            "Alberta polycultures typically have 5–8 plants.</span>"
+        )
+        tip.setWordWrap(True)
+        outer.addWidget(tip)
+
+        body = QHBoxLayout()
+
+        # Left — plant picker
+        picker_col = QVBoxLayout()
+        picker_col.addWidget(QLabel("<b>Plants</b>"))
+        self.ab_only = QCheckBox("Alberta natives only")
+        self.ab_only.setChecked(True)
+        self.ab_only.toggled.connect(self._refresh_plant_list)
+        picker_col.addWidget(self.ab_only)
+        self.plant_search = QLineEdit()
+        self.plant_search.setPlaceholderText("Search plants…")
+        self.plant_search.setClearButtonEnabled(True)
+        self.plant_search.textChanged.connect(self._refresh_plant_list)
+        picker_col.addWidget(self.plant_search)
+        self.plant_list = QListWidget()
+        self.plant_list.setMinimumWidth(220)
+        picker_col.addWidget(self.plant_list, 1)
+
+        picker_col.addWidget(QLabel("<b>Role</b>"))
+        self.role_combo = QComboBox()
+        for r in ROLES:
+            self.role_combo.addItem(r.replace("_", " ").title(), r)
+        picker_col.addWidget(self.role_combo)
+
+        body.addLayout(picker_col, 1)
+
+        # Centre — visual canvas
+        centre_col = QVBoxLayout()
+        centre_col.addWidget(QLabel("<b>Polyculture layout (~12 m radius)</b>"))
+        self.canvas = PolycultureGridCanvas(self)
+        self.canvas.memberAdded.connect(self._on_canvas_add)
+        self.canvas.memberRemoved.connect(self._on_canvas_remove)
+        self.canvas.memberMoved.connect(self._on_canvas_move)
+        centre_col.addWidget(self.canvas, 0, Qt.AlignmentFlag.AlignHCenter)
+        self.count_label = QLabel("0 plants placed")
+        self.count_label.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        centre_col.addWidget(self.count_label, 0, Qt.AlignmentFlag.AlignHCenter)
+        body.addLayout(centre_col, 0)
+
+        # Right — current members
+        right_col = QVBoxLayout()
+        right_col.addWidget(QLabel("<b>Members</b>"))
+        self.member_list = QListWidget()
+        self.member_list.setMinimumWidth(220)
+        right_col.addWidget(self.member_list, 1)
+        clear_btn = QPushButton("Clear all")
+        clear_btn.clicked.connect(self._on_clear_all)
+        right_col.addWidget(clear_btn)
+        body.addLayout(right_col, 1)
+
+        outer.addLayout(body, 1)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Save
+            | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.button(QDialogButtonBox.StandardButton.Save).setText("Save Polyculture")
+        buttons.accepted.connect(self._on_accept)
+        buttons.rejected.connect(self.reject)
+        outer.addWidget(buttons)
+
+        self._refresh_plant_list()
+
+    def _refresh_plant_list(self, *_):
+        text = (self.plant_search.text() or "").strip().lower()
+        ab_only = self.ab_only.isChecked()
+        self.plant_list.clear()
+        for p in self._all_plants:
+            if ab_only and not int(p.get("native_to_alberta") or 0):
+                continue
+            name = p.get("common_name", "") or ""
+            sci = p.get("scientific_name", "") or ""
+            if text and text not in name.lower() and text not in sci.lower():
+                continue
+            ptype = p.get("plant_type", "")
+            item = QListWidgetItem(f"{name}  ({ptype})" if ptype else name)
+            item.setData(Qt.ItemDataRole.UserRole, p)
+            self.plant_list.addItem(item)
+
+    def _selected_plant(self) -> dict | None:
+        item = self.plant_list.currentItem()
+        return item.data(Qt.ItemDataRole.UserRole) if item else None
+
+    def _on_canvas_add(self, x_m: float, y_m: float):
+        plant = self._selected_plant()
+        if plant is None:
+            QMessageBox.information(
+                self, "Pick a plant",
+                "Select a plant from the list on the left, then click the grid to place it."
+            )
+            return
+        self.canvas.add_member({
+            "plant_id":    plant["id"],
+            "common_name": plant.get("common_name", ""),
+            "role":        self.role_combo.currentData(),
+            "color":       _plant_color_for_member(plant),
+            "offset_x":    round(x_m, 2),
+            "offset_y":    round(y_m, 2),
+        })
+        self._refresh_member_list()
+
+    def _on_canvas_remove(self, idx: int):
+        self.canvas.remove_member(idx)
+        self._refresh_member_list()
+
+    def _on_canvas_move(self, idx: int, x_m: float, y_m: float):
+        members = self.canvas.get_members()
+        if 0 <= idx < len(members):
+            members[idx]["offset_x"] = round(x_m, 2)
+            members[idx]["offset_y"] = round(y_m, 2)
+            self.canvas.set_members(members)
+            self._refresh_member_list()
+
+    def _refresh_member_list(self):
+        members = self.canvas.get_members()
+        self.member_list.clear()
+        for m in members:
+            self.member_list.addItem(QListWidgetItem(
+                f"{m.get('common_name','?')} — {m.get('role','')} "
+                f"({m.get('offset_x',0):+.1f}, {m.get('offset_y',0):+.1f}) m"
+            ))
+        n = len(members)
+        if n < 5:
+            note = "  (aim for 5–8)"
+        elif n > 8:
+            note = "  (large polyculture; consider trimming)"
+        else:
+            note = "  ✓ in the 5–8 sweet spot for Alberta polycultures"
+        self.count_label.setText(f"{n} plant{'s' if n != 1 else ''} placed{note}")
+
+    def _on_clear_all(self):
+        self.canvas.set_members([])
+        self._refresh_member_list()
+
+    def _load_existing(self, polyculture_id: int):
+        rec = polycultures.get_polyculture_by_id(polyculture_id)
+        if not rec:
+            return
+        self.name_input.setText(rec.get("name", "") or "")
+        self.desc_input.setText(rec.get("description", "") or "")
+        plants_by_id = {p["id"]: p for p in self._all_plants}
+        members = []
+        for m in rec.get("members", []):
+            plant = plants_by_id.get(m.get("plant_id"))
+            members.append({
+                "plant_id":    m.get("plant_id"),
+                "common_name": (plant or {}).get(
+                    "common_name", m.get("common_name", "")
+                ),
+                "role":        m.get("role", "other"),
+                "color":       _plant_color_for_member(plant or {}),
+                "offset_x":    float(m.get("offset_x") or 0.0),
+                "offset_y":    float(m.get("offset_y") or 0.0),
+            })
+        self.canvas.set_members(members)
+
+    def _on_accept(self):
+        name = self.name_input.text().strip()
+        if not name:
+            QMessageBox.warning(self, "Name required",
+                                "Please give the polyculture a name.")
+            return
+        self.accept()
+
+    def get_data(self) -> dict:
+        return {
+            "name":        self.name_input.text().strip(),
+            "description": self.desc_input.text().strip(),
+            "members":     self.canvas.get_members(),
+        }
+
+
 class PolyculturePanel(QWidget):
     placePolycultureRequested = pyqtSignal(dict)  # polyculture data with members
 
@@ -339,23 +710,19 @@ class PolyculturePanel(QWidget):
         self.members_list.setMaximumHeight(120)
         layout.addWidget(self.members_list)
 
-        # Member buttons
+        # Single "Edit" button — opens the visual builder pre-loaded
+        # with the selected polyculture so add / move / remove all
+        # happen in one screen instead of one plant at a time.
         member_btns = QHBoxLayout()
-        self.add_member_btn = QPushButton("Add Member")
-        self.add_member_btn.setEnabled(False)
-        self.add_member_btn.clicked.connect(self._on_add_member)
-        member_btns.addWidget(self.add_member_btn)
-
-        self.remove_member_btn = QPushButton("Remove")
-        self.remove_member_btn.setEnabled(False)
-        self.remove_member_btn.clicked.connect(self._on_remove_member)
-        member_btns.addWidget(self.remove_member_btn)
-        layout.addLayout(member_btns)
-
-        # Wire once here — NOT inside _on_polyculture_selected to avoid accumulation
-        self.members_list.currentItemChanged.connect(
-            lambda c, p: self.remove_member_btn.setEnabled(c is not None)
+        self.edit_btn = QPushButton("Edit in Builder…")
+        self.edit_btn.setEnabled(False)
+        self.edit_btn.setToolTip(
+            "Open the visual polyculture builder for this polyculture"
         )
+        self.edit_btn.clicked.connect(self._on_edit_polyculture)
+        member_btns.addWidget(self.edit_btn)
+        member_btns.addStretch(1)
+        layout.addLayout(member_btns)
 
         # Action buttons
         btn_row2 = QHBoxLayout()
@@ -447,7 +814,7 @@ class PolyculturePanel(QWidget):
         self.dup_btn.setEnabled(has_selection)
         self.place_btn.setEnabled(has_selection)
         self.export_btn.setEnabled(has_selection)
-        self.add_member_btn.setEnabled(has_selection)
+        self.edit_btn.setEnabled(has_selection)
         # Only allow adding variations to top-level polycultures
         is_top_level = has_selection and (current.parent() is None)
         self.variation_btn.setEnabled(is_top_level)
@@ -483,27 +850,61 @@ class PolyculturePanel(QWidget):
             item.setData(Qt.ItemDataRole.UserRole, m["id"])
             self.members_list.addItem(item)
 
-        self.remove_member_btn.setEnabled(False)
-
     def _get_selected_polyculture_id(self):
         item = self.polyculture_tree.currentItem()
         return item.data(0, Qt.ItemDataRole.UserRole) if item else None
 
     def _on_new_polyculture(self):
-        name, ok = QInputDialog.getText(self, "New Polyculture", "Polyculture name:")
-        if not ok or not name.strip():
+        """Open the visual builder for a brand-new polyculture.
+
+        Both the polyculture row and its full member set are committed
+        in one go when the user hits Save in the dialog.
+        """
+        dialog = PolycultureBuilderDialog(self, polyculture_id=None)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return
-
-        desc, ok = QInputDialog.getText(self, "New Polyculture", "Description (optional):")
-        if not ok:
-            desc = ""
-
+        data = dialog.get_data()
         try:
-            polycultures.create_polyculture(name.strip(), desc.strip(), None)
+            new_id = polycultures.create_polyculture(
+                data["name"], data["description"], None
+            )
+            polycultures.replace_polyculture_members(new_id, data["members"])
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Could not create polyculture:\n{e}")
             return
         self._refresh_polyculture_list()
+
+    def _on_edit_polyculture(self):
+        """Open the visual builder pre-loaded with the selected polyculture.
+
+        Save commits name + description + the full new member set,
+        replacing the previous members atomically.
+        """
+        polyculture_id = self._get_selected_polyculture_id()
+        if polyculture_id is None:
+            return
+        dialog = PolycultureBuilderDialog(self, polyculture_id=polyculture_id)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        data = dialog.get_data()
+        try:
+            polycultures.update_polyculture(
+                polyculture_id, data["name"], data["description"]
+            )
+            polycultures.replace_polyculture_members(
+                polyculture_id, data["members"]
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Could not save polyculture:\n{e}")
+            return
+        self._refresh_polyculture_list()
+        # Re-select the same polyculture so the right-pane detail
+        # refreshes against the new member set.
+        for i in range(self.polyculture_tree.topLevelItemCount()):
+            top = self.polyculture_tree.topLevelItem(i)
+            if top.data(0, Qt.ItemDataRole.UserRole) == polyculture_id:
+                self.polyculture_tree.setCurrentItem(top)
+                break
 
     def _on_delete_polyculture(self):
         polyculture_id = self._get_selected_polyculture_id()
@@ -544,40 +945,10 @@ class PolyculturePanel(QWidget):
         if new_id:
             self._refresh_polyculture_list()
 
-    def _on_add_member(self):
-        polyculture_id = self._get_selected_polyculture_id()
-        if polyculture_id is None:
-            return
-
-        dialog = AddMemberDialog(self)
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            data = dialog.get_data()
-            if data["plant_id"] is None:
-                QMessageBox.warning(self, "No Plant Selected",
-                                    "Please select a plant before adding a member.")
-                return
-            try:
-                polycultures.add_polyculture_member(
-                    polyculture_id, data["plant_id"], data["role"],
-                    data["offset_x"], data["offset_y"]
-                )
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Could not add member:\n{e}")
-                return
-            # Re-select to refresh members
-            self._on_polyculture_selected(self.polyculture_tree.currentItem(), None)
-
-    def _on_remove_member(self):
-        item = self.members_list.currentItem()
-        if item is None:
-            return
-        member_id = item.data(Qt.ItemDataRole.UserRole)
-        try:
-            polycultures.remove_polyculture_member(member_id)
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Could not remove member:\n{e}")
-            return
-        self._on_polyculture_selected(self.polyculture_tree.currentItem(), None)
+    # NOTE: the per-member Add / Remove buttons were retired in favour
+    # of the visual builder dialog (`PolycultureBuilderDialog`) opened
+    # via the "Edit in Builder…" button. AddMemberDialog is kept above
+    # in case external code or tests still import it.
 
     def _on_place(self):
         polyculture_id = self._get_selected_polyculture_id()

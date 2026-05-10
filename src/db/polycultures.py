@@ -106,6 +106,49 @@ def add_polyculture_member(polyculture_id, plant_id, role, offset_x, offset_y, n
         conn.close()
 
 
+def replace_polyculture_members(polyculture_id, members):
+    """Atomically swap the member set of a polyculture.
+
+    ``members`` is a list of dicts with keys ``plant_id``, ``role``,
+    ``offset_x``, ``offset_y`` and an optional ``notes`` field. Used by
+    the visual polyculture builder to commit a freshly-edited layout in
+    one round-trip instead of one INSERT/DELETE per change.
+    """
+    conn = get_connection()
+    try:
+        conn.execute(
+            "DELETE FROM polyculture_members WHERE polyculture_id = ?",
+            (polyculture_id,),
+        )
+        for m in members or []:
+            plant_id = m.get("plant_id")
+            if plant_id is None:
+                continue
+            conn.execute(
+                "INSERT INTO polyculture_members "
+                "(polyculture_id, plant_id, role, offset_x, offset_y, notes) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    polyculture_id,
+                    plant_id,
+                    m.get("role", "other"),
+                    float(m.get("offset_x") or 0.0),
+                    float(m.get("offset_y") or 0.0),
+                    m.get("notes", "") or "",
+                ),
+            )
+        conn.execute(
+            "UPDATE polycultures SET modified = datetime('now') WHERE id = ?",
+            (polyculture_id,),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def remove_polyculture_member(member_id):
     conn = get_connection()
     try:

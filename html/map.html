@@ -633,6 +633,13 @@
       map.on('mousemove', _terrainRectOnMouseMove);
       map.on('mouseup',   _terrainRectOnMouseUp);
 
+      // Drag-to-reposition for placed plants (singletons + polyculture
+      // groups). The drag itself is armed from the plant marker's own
+      // mousedown via _onPlantMouseDown; the map-level handlers below
+      // just deliver the subsequent movement and release events.
+      map.on('mousemove', _onPlantDragMove);
+      map.on('mouseup',   _onPlantDragEnd);
+
       // Right-click cancels anchor-placement modes; suppress native browser menu
       map.on('contextmenu', function(e) {
         if (currentMode === 'terrain_rect') {
@@ -1428,6 +1435,11 @@
         showPlantContextMenu(e, circle);
       });
 
+      // Drag-to-reposition: a singleton plant moves alone; a plant
+      // belonging to a multi-plant placement group (polyculture, burst,
+      // grid, row, circle) drags the entire group as a cohesive unit.
+      circle.on('mousedown', function(e) { _onPlantMouseDown(circle, e); });
+
       plantMarkers[markerId] = circle;
 
       // Add permanent label if labels are turned on
@@ -1497,6 +1509,130 @@
         if (c._pd && c._pd.groupId === groupId) n++;
       }
       return n;
+    }
+
+    // ── Drag-to-reposition placed plants ─────────────────────────────────
+    // Lazy-arms: a circle's mousedown sets up state but does NOT disable
+    // map dragging until the cursor moves past a small pixel threshold.
+    // That keeps a plain click → select / context menu working as before
+    // and only "becomes a drag" once the user's intent is unambiguous.
+    var _plantDragState = null;
+
+    function _onPlantMouseDown(circle, e) {
+      if (currentMode !== 'none') return;
+      var ev = e.originalEvent;
+      if (ev && (ev.shiftKey || ev.ctrlKey || ev.metaKey)) return;
+      // Stop propagation so the map's panning handler doesn't also see
+      // this mousedown. Don't call preventDefault — we still want the
+      // click to fire if the user doesn't drag.
+      L.DomEvent.stopPropagation(e);
+      _plantDragState = {
+        circle:   circle,
+        startPx:  e.containerPoint || map.latLngToContainerPoint(e.latlng),
+        armed:    false,
+        mode:     null,
+        groupId:  null,
+      };
+    }
+
+    function _onPlantDragMove(e) {
+      if (!_plantDragState) return;
+      var st = _plantDragState;
+      var px = e.containerPoint || map.latLngToContainerPoint(e.latlng);
+      if (!st.armed) {
+        var dx = px.x - st.startPx.x;
+        var dy = px.y - st.startPx.y;
+        if (dx * dx + dy * dy < 25) return;   // ≤5 px = still a click
+        st.armed = true;
+        map.dragging.disable();
+        var pd = st.circle._pd;
+        st.groupId = pd.groupId;
+        st.mode = (pd.groupId && _groupSize(pd.groupId) >= 2)
+                    ? 'group' : 'single';
+        // Snapshot the original positions so undo can restore them.
+        st.originals = [];
+        if (st.mode === 'group') {
+          Object.keys(plantMarkers).forEach(function(mid) {
+            var m = plantMarkers[mid];
+            if (!m._pd || m._pd.groupId !== st.groupId) return;
+            st.originals.push({
+              markerId: mid, plantId: m._pd.plantId,
+              lat: m._pd.lat, lng: m._pd.lng,
+            });
+          });
+        } else {
+          st.originals.push({
+            markerId: pd.markerId, plantId: pd.plantId,
+            lat: pd.lat, lng: pd.lng,
+          });
+        }
+      }
+      if (st.mode === 'group') {
+        var prev = st.circle.getLatLng();
+        var dlat = e.latlng.lat - prev.lat;
+        var dlng = e.latlng.lng - prev.lng;
+        Object.keys(plantMarkers).forEach(function(mid) {
+          var m = plantMarkers[mid];
+          if (!m._pd || m._pd.groupId !== st.groupId) return;
+          var ll = m.getLatLng();
+          var newLL = L.latLng(ll.lat + dlat, ll.lng + dlng);
+          m.setLatLng(newLL);
+          m._pd.lat = newLL.lat;
+          m._pd.lng = newLL.lng;
+          var lbl = plantLabels[m._pd.markerId];
+          if (lbl) lbl.setLatLng(newLL);
+        });
+      } else {
+        st.circle.setLatLng(e.latlng);
+        st.circle._pd.lat = e.latlng.lat;
+        st.circle._pd.lng = e.latlng.lng;
+        var lbl = plantLabels[st.circle._pd.markerId];
+        if (lbl) lbl.setLatLng(e.latlng);
+      }
+    }
+
+    function _onPlantDragEnd(_e) {
+      if (!_plantDragState) return;
+      var st = _plantDragState;
+      _plantDragState = null;
+      if (!st.armed) return;     // just a click, nothing to commit
+      try { map.dragging.enable(); } catch (_) {}
+      // Build the per-marker payload Python needs to update its
+      // own state. Mirror the originals list so the receiver can pair
+      // old/new positions and push a single undo entry for the whole
+      // move.
+      var moved = [];
+      if (st.mode === 'group') {
+        Object.keys(plantMarkers).forEach(function(mid) {
+          var m = plantMarkers[mid];
+          if (!m._pd || m._pd.groupId !== st.groupId) return;
+          moved.push({
+            markerId: mid, plantId: m._pd.plantId,
+            lat: m._pd.lat, lng: m._pd.lng,
+          });
+        });
+        if (bridge && bridge.onPlantGroupMoved) {
+          bridge.onPlantGroupMoved(
+            st.groupId,
+            JSON.stringify(st.originals),
+            JSON.stringify(moved)
+          );
+        }
+      } else {
+        var pd = st.circle._pd;
+        moved.push({
+          markerId: pd.markerId, plantId: pd.plantId,
+          lat: pd.lat, lng: pd.lng,
+        });
+        if (bridge && bridge.onPlantMoved) {
+          var orig = st.originals[0] || {};
+          bridge.onPlantMoved(
+            pd.markerId, pd.plantId,
+            orig.lat || pd.lat, orig.lng || pd.lng,
+            pd.lat, pd.lng
+          );
+        }
+      }
     }
 
     // Delete every plant sharing the given group id. Emits onPlantRemoved
@@ -1643,8 +1779,11 @@
     function _haversineM(a, b) { return haversineMeters(a, b); }
 
     // Effective centre-to-centre spacing after applying overlap factor.
-    // overlapFactor is in [0..1]; 0 = no overlap (centers exactly spacingM
-    // apart); 1 = centers coincide. Floors at 1cm to avoid div-by-zero.
+    // overlapFactor is in [-0.5..0.5]:
+    //   negative = extra gap (sparser)
+    //   zero     = centres exactly spacingM apart (canopies touch)
+    //   positive = canopies overlap (denser)
+    // Floors at 1cm to avoid div-by-zero / negative spacings.
     function _effectiveSpacing(spacingM, overlapFactor) {
       var s = (spacingM || 1.0) * (1.0 - (overlapFactor || 0));
       return Math.max(s, 0.01);

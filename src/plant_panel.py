@@ -1006,17 +1006,28 @@ class PlantPanel(QWidget):
         place_row.addWidget(qty_label)
         place_row.addWidget(self._qty_spin)
 
-        # Colour picker button
-        self._color_btn = QPushButton("●")
+        # Colour picker — small caption "Colour" sits directly above a
+        # rainbow-tinted circular button so the affordance is obvious
+        # both by label and by icon.
+        color_col = QVBoxLayout()
+        color_col.setContentsMargins(0, 0, 0, 0)
+        color_col.setSpacing(2)
+        color_caption = QLabel("Colour")
+        color_caption.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        color_caption.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        color_col.addWidget(color_caption)
+
+        self._color_btn = QPushButton()
         self._color_btn.setFixedSize(28, 28)
-        self._color_btn.setToolTip("Set custom marker colour for this plant")
-        self._color_btn.clicked.connect(self._on_color_pick)
-        self._color_btn.setStyleSheet(
-            "QPushButton { background: #2e4a2e; border: 1px solid #4a7a4a; "
-            "border-radius: 14px; font-size: 16px; color: #78909c; }"
-            "QPushButton:hover { background: #3a5a3a; }"
+        self._color_btn.setToolTip(
+            "Set a custom marker colour for this plant.\n"
+            "Click to open the colour picker."
         )
-        place_row.addWidget(self._color_btn)
+        self._color_btn.clicked.connect(self._on_color_pick)
+        color_col.addWidget(self._color_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
+        place_row.addLayout(color_col)
+        # Show the rainbow default until a plant is selected with a custom colour.
+        self._update_color_btn("")
 
         # Place on Map button
         self._place_btn = QPushButton("Place on Map")
@@ -1281,23 +1292,34 @@ class PlantPanel(QWidget):
         cl.addStretch()
         self._pattern_stack.addWidget(circle_panel)
 
-        # ── Overlap factor slider (applies to all multi modes) ─────────
+        # ── Overlap / gap slider (applies to all multi modes) ─────────
+        # Range −50%..+50% with 0 as the natural baseline:
+        #   negative ⇒ extra gap (sparser planting)
+        #   zero     ⇒ centres exactly mature-width apart (canopies touch)
+        #   positive ⇒ canopies overlap (denser planting)
         ov = QHBoxLayout()
         ov.setSpacing(4)
         ov.addWidget(self._small_label("Overlap:"))
         self._overlap_slider = QSlider(Qt.Orientation.Horizontal)
-        self._overlap_slider.setRange(0, 100)
+        self._overlap_slider.setRange(-50, 50)
         self._overlap_slider.setValue(0)
+        self._overlap_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self._overlap_slider.setTickInterval(25)
         self._overlap_slider.setToolTip(
-            "0% = centres exactly mature-width apart (no canopy overlap)\n"
-            "100% = centres coincide. Effective spacing = mature_width × (1 − overlap)"
+            "Spacing relative to mature canopy width.\n"
+            "  −50% = extra gap (centres 1.5× canopy width apart)\n"
+            "    0% = centres exactly canopy width apart (canopies touch)\n"
+            "  +50% = canopies overlap by half their width\n"
+            "Effective spacing = mature_width × (1 − overlap)."
         )
         ov.addWidget(self._overlap_slider, 1)
         self._overlap_label = QLabel("0%")
-        self._overlap_label.setStyleSheet("color: #a5d6a7; font-size: 11px; min-width: 32px;")
+        self._overlap_label.setStyleSheet(
+            "color: #a5d6a7; font-size: 11px; min-width: 40px;"
+        )
         ov.addWidget(self._overlap_label)
         self._overlap_slider.valueChanged.connect(
-            lambda v: self._overlap_label.setText(f"{v}%")
+            lambda v: self._overlap_label.setText(f"{v:+d}%" if v else "0%")
         )
         outer.addLayout(ov)
 
@@ -1950,18 +1972,28 @@ class PlantPanel(QWidget):
         self.color_changed.emit(plant["id"], hex_color)
 
     def _update_color_btn(self, hex_color: str):
-        """Update the colour picker button to show the current plant's colour."""
+        """Update the colour picker button to show the current plant's colour.
+
+        With no custom colour set, paint a rainbow conic gradient so the
+        button reads obviously as a colour picker without needing the
+        caption label.
+        """
         if hex_color:
             self._color_btn.setStyleSheet(
                 f"QPushButton {{ background: {hex_color}; border: 1px solid #4a7a4a; "
-                f"border-radius: 14px; font-size: 16px; color: {hex_color}; }}"
+                f"border-radius: 14px; }}"
                 f"QPushButton:hover {{ border-color: #8aca8a; }}"
             )
         else:
             self._color_btn.setStyleSheet(
-                "QPushButton { background: #2e4a2e; border: 1px solid #4a7a4a; "
-                "border-radius: 14px; font-size: 16px; color: #78909c; }"
-                "QPushButton:hover { background: #3a5a3a; }"
+                "QPushButton {"
+                " background: qconicalgradient(cx:0.5, cy:0.5, angle:0,"
+                " stop:0 #ff5252, stop:0.17 #ffb74d, stop:0.33 #fdd835,"
+                " stop:0.5 #66bb6a, stop:0.67 #29b6f6, stop:0.83 #7e57c2,"
+                " stop:1 #ff5252);"
+                " border: 1px solid #4a7a4a; border-radius: 14px;"
+                "}"
+                "QPushButton:hover { border-color: #8aca8a; }"
             )
 
     # ── Permapeople tab ────────────────────────────────────────────────────────

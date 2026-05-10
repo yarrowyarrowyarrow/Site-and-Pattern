@@ -286,6 +286,8 @@ class MainWindow(QMainWindow):
 
         # Map events → project state (boundary_complete re-connected below with new signature)
         b.plant_placed.connect(self._on_plant_placed)
+        b.plant_moved.connect(self._on_plant_moved)
+        b.plant_group_moved.connect(self._on_plant_group_moved)
         b.map_ready.connect(self._on_map_ready)
 
         # Toolbar → map
@@ -1376,6 +1378,102 @@ class MainWindow(QMainWindow):
         ]
         self._mark_modified()
 
+    def _on_plant_moved(self, marker_id: str, plant_id: int,
+                        old_lat: float, old_lng: float,
+                        new_lat: float, new_lng: float):
+        """User dragged a singleton plant marker. Update project state
+        and push a single-move undo entry so Ctrl+Z restores the
+        previous position."""
+        if abs(new_lat - old_lat) < 1e-9 and abs(new_lng - old_lng) < 1e-9:
+            return
+        # _placed_plants list
+        for p in self._placed_plants:
+            if (p["plant_id"] == plant_id
+                    and abs(p["lat"] - old_lat) < 1e-7
+                    and abs(p["lng"] - old_lng) < 1e-7):
+                p["lat"] = new_lat
+                p["lng"] = new_lng
+                break
+        # Project features
+        for f in self._project["features"]:
+            props = f.get("properties", {})
+            coords = f.get("geometry", {}).get("coordinates", [])
+            if (props.get("element_type") == "plant"
+                    and props.get("plant_id") == plant_id
+                    and coords
+                    and abs(coords[1] - old_lat) < 1e-7
+                    and abs(coords[0] - old_lng) < 1e-7):
+                f["geometry"]["coordinates"] = [new_lng, new_lat]
+                break
+        self._push_undo({
+            "action":   "move_plant",
+            "plant_id": plant_id,
+            "old_lat":  old_lat, "old_lng": old_lng,
+            "new_lat":  new_lat, "new_lng": new_lng,
+        })
+        self._mark_modified()
+
+    def _on_plant_group_moved(self, group_id: str,
+                              originals_json: str, moved_json: str):
+        """User dragged a polyculture (or other multi-plant) group as
+        a cohesive unit. Apply the per-marker delta to project state
+        and push a single group-move undo entry."""
+        import json as _json
+        try:
+            originals = _json.loads(originals_json or "[]")
+            moved     = _json.loads(moved_json or "[]")
+        except Exception:
+            return
+        if not originals or len(originals) != len(moved):
+            return
+        # Pair by markerId so updates land on the right feature even if
+        # the JSON arrays come back in a different order.
+        moved_by_id = {m.get("markerId"): m for m in moved}
+        any_change = False
+        for orig in originals:
+            mid = orig.get("markerId")
+            new = moved_by_id.get(mid)
+            if not new:
+                continue
+            old_lat = float(orig.get("lat") or 0.0)
+            old_lng = float(orig.get("lng") or 0.0)
+            new_lat = float(new.get("lat") or 0.0)
+            new_lng = float(new.get("lng") or 0.0)
+            if abs(new_lat - old_lat) < 1e-9 and abs(new_lng - old_lng) < 1e-9:
+                continue
+            any_change = True
+            plant_id = orig.get("plantId")
+            for p in self._placed_plants:
+                if (p["plant_id"] == plant_id
+                        and abs(p["lat"] - old_lat) < 1e-7
+                        and abs(p["lng"] - old_lng) < 1e-7):
+                    p["lat"] = new_lat
+                    p["lng"] = new_lng
+                    break
+            for f in self._project["features"]:
+                props = f.get("properties", {})
+                coords = f.get("geometry", {}).get("coordinates", [])
+                if (props.get("element_type") == "plant"
+                        and props.get("plant_id") == plant_id
+                        and props.get("placement_group_id") == group_id
+                        and coords
+                        and abs(coords[1] - old_lat) < 1e-7
+                        and abs(coords[0] - old_lng) < 1e-7):
+                    f["geometry"]["coordinates"] = [new_lng, new_lat]
+                    break
+        if not any_change:
+            return
+        self._push_undo({
+            "action":    "move_plant_group",
+            "group_id":  group_id,
+            "originals": list(originals),
+            "moved":     list(moved),
+        })
+        self._mark_modified()
+        self.statusBar().showMessage(
+            f"Moved polyculture group ({len(originals)} plants)", 2000
+        )
+
     def _on_sun_anchor_placed(self, lat: float, lng: float):
         """User placed sun-path anchor; now compute and draw."""
         self._pending_sun_anchor = (lat, lng)
@@ -2400,6 +2498,107 @@ class MainWindow(QMainWindow):
             self._redo_stack.append(entry)
             label = entry.get("label") or entry.get("shape_type") or "shape"
             self.statusBar().showMessage(f"Undo: removed {label}", 2000)
+
+        elif action == "move_plant":
+            # Reverse a singleton drag: snap the marker (and project
+            # state) back to its old lat/lng.
+            pid     = entry["plant_id"]
+            old_lat = float(entry["old_lat"])
+            old_lng = float(entry["old_lng"])
+            new_lat = float(entry["new_lat"])
+            new_lng = float(entry["new_lng"])
+            self.map_widget.run_js(
+                f"(function() {{"
+                f"  var keys = Object.keys(plantMarkers);"
+                f"  for (var i = keys.length - 1; i >= 0; i--) {{"
+                f"    var m = plantMarkers[keys[i]];"
+                f"    if (m._pd && m._pd.plantId === {pid}"
+                f"        && Math.abs(m._pd.lat - {new_lat}) < 1e-7"
+                f"        && Math.abs(m._pd.lng - {new_lng}) < 1e-7) {{"
+                f"      m.setLatLng([{old_lat}, {old_lng}]);"
+                f"      m._pd.lat = {old_lat}; m._pd.lng = {old_lng};"
+                f"      var lbl = plantLabels[keys[i]];"
+                f"      if (lbl) lbl.setLatLng([{old_lat}, {old_lng}]);"
+                f"      break;"
+                f"    }}"
+                f"  }}"
+                f"}})()"
+            )
+            for p in self._placed_plants:
+                if (p["plant_id"] == pid
+                        and abs(p["lat"] - new_lat) < 1e-7
+                        and abs(p["lng"] - new_lng) < 1e-7):
+                    p["lat"] = old_lat
+                    p["lng"] = old_lng
+                    break
+            for f in self._project["features"]:
+                props = f.get("properties", {})
+                coords = f.get("geometry", {}).get("coordinates", [])
+                if (props.get("element_type") == "plant"
+                        and props.get("plant_id") == pid
+                        and coords
+                        and abs(coords[1] - new_lat) < 1e-7
+                        and abs(coords[0] - new_lng) < 1e-7):
+                    f["geometry"]["coordinates"] = [old_lng, old_lat]
+                    break
+            self._redo_stack.append(entry)
+            self.statusBar().showMessage("Undo: plant move", 2000)
+
+        elif action == "move_plant_group":
+            import json as _json
+            originals = entry.get("originals") or []
+            moved     = entry.get("moved") or []
+            moved_by_id = {m.get("markerId"): m for m in moved}
+            # Reverse direction in JS: snap each marker back from its
+            # moved position to its original.
+            for orig in originals:
+                mid = orig.get("markerId")
+                new = moved_by_id.get(mid)
+                if not new:
+                    continue
+                pid = int(orig.get("plantId") or 0)
+                ol  = float(orig.get("lat") or 0.0)
+                og  = float(orig.get("lng") or 0.0)
+                nl  = float(new.get("lat") or 0.0)
+                ng  = float(new.get("lng") or 0.0)
+                self.map_widget.run_js(
+                    f"(function() {{"
+                    f"  var keys = Object.keys(plantMarkers);"
+                    f"  for (var i = keys.length - 1; i >= 0; i--) {{"
+                    f"    var m = plantMarkers[keys[i]];"
+                    f"    if (m._pd && m._pd.plantId === {pid}"
+                    f"        && Math.abs(m._pd.lat - {nl}) < 1e-7"
+                    f"        && Math.abs(m._pd.lng - {ng}) < 1e-7) {{"
+                    f"      m.setLatLng([{ol}, {og}]);"
+                    f"      m._pd.lat = {ol}; m._pd.lng = {og};"
+                    f"      var lbl = plantLabels[keys[i]];"
+                    f"      if (lbl) lbl.setLatLng([{ol}, {og}]);"
+                    f"      break;"
+                    f"    }}"
+                    f"  }}"
+                    f"}})()"
+                )
+                for p in self._placed_plants:
+                    if (p["plant_id"] == pid
+                            and abs(p["lat"] - nl) < 1e-7
+                            and abs(p["lng"] - ng) < 1e-7):
+                        p["lat"] = ol
+                        p["lng"] = og
+                        break
+                for f in self._project["features"]:
+                    props = f.get("properties", {})
+                    coords = f.get("geometry", {}).get("coordinates", [])
+                    if (props.get("element_type") == "plant"
+                            and props.get("plant_id") == pid
+                            and coords
+                            and abs(coords[1] - nl) < 1e-7
+                            and abs(coords[0] - ng) < 1e-7):
+                        f["geometry"]["coordinates"] = [og, ol]
+                        break
+            self._redo_stack.append(entry)
+            self.statusBar().showMessage(
+                f"Undo: polyculture move ({len(originals)} plants)", 2000
+            )
 
         self._act_undo.setEnabled(bool(self._undo_stack))
         self._act_redo.setEnabled(bool(self._redo_stack))

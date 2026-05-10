@@ -49,6 +49,15 @@ class MapBridge(QObject):
     # A plant marker was right-click removed
     plant_removed = pyqtSignal(str, int, float, float)         # markerId, plantId, lat, lng
 
+    # A single placed plant was dragged to a new location
+    plant_moved = pyqtSignal(str, int, float, float, float, float)
+    # ^ markerId, plantId, oldLat, oldLng, newLat, newLng
+
+    # An entire placement group (polyculture etc.) was dragged
+    plant_group_moved = pyqtSignal(str, str, str)
+    # ^ groupId, originals_json, moved_json
+    # both JSON strings are arrays of {markerId, plantId, lat, lng}.
+
     # Annotation requests
     annotate_requested = pyqtSignal(float, float)              # lat, lng
     annotation_removed = pyqtSignal(str)                       # annotation id
@@ -203,6 +212,19 @@ class MapBridge(QObject):
     @pyqtSlot(str, int, float, float)
     def onPlantRemoved(self, marker_id: str, plant_id: int, lat: float, lng: float):
         self.plant_removed.emit(marker_id, plant_id, lat, lng)
+
+    @pyqtSlot(str, int, float, float, float, float)
+    def onPlantMoved(self, marker_id: str, plant_id: int,
+                     old_lat: float, old_lng: float,
+                     new_lat: float, new_lng: float):
+        self.plant_moved.emit(
+            marker_id, plant_id, old_lat, old_lng, new_lat, new_lng
+        )
+
+    @pyqtSlot(str, str, str)
+    def onPlantGroupMoved(self, group_id: str,
+                          originals_json: str, moved_json: str):
+        self.plant_group_moved.emit(group_id, originals_json, moved_json)
 
     @pyqtSlot(float, float)
     def onAnnotateRequested(self, lat: float, lng: float):
