@@ -400,6 +400,11 @@ class MapWidget(QWebEngineView):
     def clear_site_pin(self):
         self.run_js("clearSitePin(false);")
 
+    def set_site_pin_drop_mode(self, active: bool):
+        """Toggle the crosshair cursor while the user is arming a pin drop."""
+        flag = "true" if active else "false"
+        self.run_js(f"setSitePinDropMode({flag});")
+
     def set_labels_visible(self, visible: bool):
         v = 'true' if visible else 'false'
         self.run_js(f"setLabelsVisible({v});")

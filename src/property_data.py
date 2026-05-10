@@ -355,15 +355,21 @@ def geocode_alberta(query: str, limit: int = 6) -> list[dict]:
     """Forward-geocode an address or place name, restricted to Alberta.
 
     Returns a list of ``{"label", "lat", "lng"}`` dicts, or ``[]`` on
-    failure / no match. Uses OSM Nominatim (the same backend the in-map
-    search bar used to call from JS).
+    failure / no match. Uses OSM Nominatim.
+
+    Results are re-ranked client-side so that hits whose street-number
+    starts with a numeric token in the query (e.g. typing "4916" should
+    surface 4916-something as the first result) sort ahead of generic
+    matches that just happen to mention the digits anywhere in the
+    display name.
     """
+    import re
+
     q = (query or "").strip()
     if not q:
         return []
 
     # Direct "lat, lng" entry shortcut.
-    import re
     m = re.match(r"^\s*(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)\s*$", q)
     if m:
         try:
@@ -376,21 +382,31 @@ def geocode_alberta(query: str, limit: int = 6) -> list[dict]:
         except ValueError:
             pass
 
+    # Ask Nominatim for a few extra candidates so the client-side
+    # re-ranking has something to work with even when the top raw match
+    # is a generic placename.
+    fetch_limit = max(int(limit), 10)
     params = urllib.parse.urlencode({
         "format": "json",
-        "limit":  str(max(1, int(limit))),
+        "limit":  str(fetch_limit),
         "addressdetails": "1",
         "countrycodes": "ca",
         "viewbox": _AB_VIEWBOX,
         "bounded": "1",
+        "dedupe": "1",
         "q": q,
     })
     url = "https://nominatim.openstreetmap.org/search?" + params
     data = _http_get_json(url)
     if not isinstance(data, list):
         return []
-    out = []
-    for it in data:
+
+    numeric_tokens = re.findall(r"\d+", q)
+    word_tokens = [w.lower() for w in re.findall(r"[A-Za-z]{2,}", q)]
+    q_lower = q.lower()
+
+    out: list[tuple[int, int, dict]] = []  # (-score, original_idx, hit)
+    for idx, it in enumerate(data):
         addr = it.get("address") or {}
         # Defence in depth: drop anything outside Alberta.
         if addr.get("state") != "Alberta" and addr.get("ISO3166-2-lvl4") != "CA-AB":
@@ -400,12 +416,73 @@ def geocode_alberta(query: str, limit: int = 6) -> list[dict]:
             lng = float(it["lon"])
         except (KeyError, ValueError, TypeError):
             continue
-        out.append({
-            "label": it.get("display_name") or q,
+
+        display_name = it.get("display_name") or q
+        house_number = (addr.get("house_number") or "").strip()
+        display_lower = display_name.lower()
+
+        score = 0
+        # Strongest signal: house number begins with a numeric token from
+        # the query. Equality outranks startswith.
+        for tok in numeric_tokens:
+            if house_number == tok:
+                score += 200
+            elif house_number.startswith(tok):
+                score += 120
+            elif tok in house_number:
+                score += 40
+            if tok in display_lower:
+                score += 15
+        # Word-token coverage in the display name (street name etc.).
+        for w in word_tokens:
+            if w in display_lower:
+                score += 10
+        # Whole-query substring hit on display name is also informative.
+        if q_lower and q_lower in display_lower:
+            score += 25
+        # Mild boost for exact match on Nominatim's own importance ranking.
+        try:
+            score += int(float(it.get("importance") or 0) * 5)
+        except (TypeError, ValueError):
+            pass
+
+        out.append((-score, idx, {
+            "label": display_name,
             "lat": lat,
             "lng": lng,
+            "house_number": house_number,
+        }))
+
+    out.sort()
+    ranked = [hit for _, _, hit in out]
+    return ranked[:max(1, int(limit))]
+
+
+def reverse_geocode(lat: float, lng: float) -> Optional[str]:
+    """Reverse-geocode a coordinate to a human-readable address.
+
+    Returns Nominatim's ``display_name`` string, or ``None`` if the
+    lookup fails. Used by the Site panel to fill in the actual address
+    when the user drops a pin manually.
+    """
+    try:
+        params = urllib.parse.urlencode({
+            "format": "json",
+            "lat": f"{float(lat):.6f}",
+            "lon": f"{float(lng):.6f}",
+            "zoom": "18",
+            "addressdetails": "1",
         })
-    return out
+    except (TypeError, ValueError):
+        return None
+    url = "https://nominatim.openstreetmap.org/reverse?" + params
+    data = _http_get_json(url)
+    if not isinstance(data, dict):
+        return None
+    label = data.get("display_name")
+    if isinstance(label, str) and label.strip():
+        return label.strip()
+    return None
 
 
 # ── Aggregator ──────────────────────────────────────────────────────────────

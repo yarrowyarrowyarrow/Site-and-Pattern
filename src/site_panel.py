@@ -594,37 +594,67 @@ class SitePanel(QWidget):
             return
         self._lbl_status.setText("Fetching site data…")
 
-        self._thread = QThread(self)
-        self._worker = _SiteFetchWorker(self._lat, self._lng)
-        self._worker.moveToThread(self._thread)
+        thread = QThread(self)
+        worker = _SiteFetchWorker(self._lat, self._lng)
+        worker.moveToThread(thread)
 
-        self._thread.started.connect(self._worker.run)
-        self._worker.progress.connect(self._lbl_status.setText)
-        self._worker.hardiness.connect(self._on_hardiness)
-        self._worker.elevation.connect(self._on_elevation)
-        self._worker.rainfall.connect(self._on_rainfall)
-        self._worker.soil.connect(self._on_soil)
-        self._worker.finished.connect(self._on_finished)
-        self._worker.finished.connect(self._thread.quit)
-        self._thread.finished.connect(self._cleanup_thread)
+        thread.started.connect(worker.run)
+        worker.progress.connect(self._lbl_status.setText)
+        worker.hardiness.connect(self._on_hardiness)
+        worker.elevation.connect(self._on_elevation)
+        worker.rainfall.connect(self._on_rainfall)
+        worker.soil.connect(self._on_soil)
+        worker.finished.connect(self._on_finished)
 
-        self._thread.start()
+        # Auto-teardown chain: when the worker emits finished, quit the
+        # thread's event loop, then both objects schedule themselves for
+        # deletion once the thread has actually stopped running. We never
+        # delete a thread synchronously while it could still be executing
+        # — that race is what crashed the app on Clear pin.
+        worker.finished.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+
+        self._thread = thread
+        self._worker = worker
+        thread.start()
 
     def _cancel_thread(self):
-        if self._worker is not None:
-            self._worker.cancel()
-        if self._thread is not None and self._thread.isRunning():
-            self._thread.quit()
-            self._thread.wait(500)
-        self._cleanup_thread()
+        """Detach the in-flight site-data worker without blocking.
+
+        Sets the worker's cancelled flag, asks the thread's event loop to
+        quit, and drops our references. The auto-teardown chain wired in
+        ``_start_fetch`` finishes the cleanup once the worker actually
+        returns. Disconnecting the worker's signals beforehand stops the
+        cancelled run from clobbering the UI with stale results.
+        """
+        worker = self._worker
+        thread = self._thread
+        self._worker = None
+        self._thread = None
+
+        if worker is not None:
+            try:
+                worker.cancel()
+            except Exception:
+                pass
+            for sig_name in ("progress", "hardiness", "elevation",
+                             "rainfall", "soil", "finished"):
+                try:
+                    getattr(worker, sig_name).disconnect()
+                except (TypeError, RuntimeError):
+                    pass
+        if thread is not None and thread.isRunning():
+            try:
+                thread.quit()
+            except RuntimeError:
+                pass
 
     def _cleanup_thread(self):
-        if self._worker is not None:
-            self._worker.deleteLater()
-            self._worker = None
-        if self._thread is not None:
-            self._thread.deleteLater()
-            self._thread = None
+        # Retained for backward-compat with any external callers; the
+        # auto-teardown chain in _start_fetch now handles deletion.
+        self._worker = None
+        self._thread = None
 
     # ── Slot handlers (UI thread) ───────────────────────────────────────────
 
@@ -875,18 +905,24 @@ class SitePanel(QWidget):
     def _run_geocode(self, query: str):
         # Cancel any in-flight geocode before starting a new one.
         self._cancel_geocode()
-        self._geo_thread = QThread(self)
-        self._geo_worker = _GeocodeWorker(query)
-        self._geo_worker.moveToThread(self._geo_thread)
-        self._geo_thread.started.connect(self._geo_worker.run)
-        self._geo_worker.results.connect(self._on_geocode_results)
-        self._geo_worker.failed.connect(
+        thread = QThread(self)
+        worker = _GeocodeWorker(query)
+        worker.moveToThread(thread)
+        thread.started.connect(worker.run)
+        worker.results.connect(self._on_geocode_results)
+        worker.failed.connect(
             lambda msg: self._lbl_status.setText(f"Search failed: {msg}")
         )
-        self._geo_worker.results.connect(self._geo_thread.quit)
-        self._geo_worker.failed.connect(self._geo_thread.quit)
-        self._geo_thread.finished.connect(self._cleanup_geocode)
-        self._geo_thread.start()
+        # Auto-teardown chain — see _start_fetch for why we don't delete
+        # threads synchronously.
+        worker.results.connect(thread.quit)
+        worker.failed.connect(thread.quit)
+        worker.results.connect(worker.deleteLater)
+        worker.failed.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        self._geo_thread = thread
+        self._geo_worker = worker
+        thread.start()
 
     def _on_geocode_results(self, hits: list):
         self._addr_results.clear()
@@ -913,18 +949,29 @@ class SitePanel(QWidget):
         self.address_resolved.emit(float(lat), float(lng), label)
 
     def _cancel_geocode(self):
-        if self._geo_thread is not None and self._geo_thread.isRunning():
-            self._geo_thread.quit()
-            self._geo_thread.wait(200)
-        self._cleanup_geocode()
+        """Detach the in-flight geocode worker without blocking — see
+        ``_cancel_thread`` for the rationale."""
+        worker = self._geo_worker
+        thread = self._geo_thread
+        self._geo_worker = None
+        self._geo_thread = None
+        if worker is not None:
+            for sig_name in ("results", "failed"):
+                try:
+                    getattr(worker, sig_name).disconnect()
+                except (TypeError, RuntimeError):
+                    pass
+        if thread is not None and thread.isRunning():
+            try:
+                thread.quit()
+            except RuntimeError:
+                pass
 
     def _cleanup_geocode(self):
-        if self._geo_worker is not None:
-            self._geo_worker.deleteLater()
-            self._geo_worker = None
-        if self._geo_thread is not None:
-            self._geo_thread.deleteLater()
-            self._geo_thread = None
+        # Retained for backward-compat; teardown is now driven by the
+        # signal chain wired up in _run_geocode.
+        self._geo_worker = None
+        self._geo_thread = None
 
 
 # ── Styling ──────────────────────────────────────────────────────────────────

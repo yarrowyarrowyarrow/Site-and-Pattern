@@ -610,6 +610,15 @@ class MainWindow(QMainWindow):
                 "struct_def": struct_def,
             }
         })
+        self._push_undo({
+            "action": "place_structure",
+            "struct_id": struct_id,
+            "name": name,
+            "lat": lat,
+            "lng": lng,
+            "size_m": size_m,
+            "struct_def": struct_def,
+        })
         self._mark_modified()
         self.statusBar().showMessage(f"Placed {name}", 2000)
         self._sync_planning_panel()
@@ -792,6 +801,12 @@ class MainWindow(QMainWindow):
                 "elevation_m": elevation,
                 "color": color,
             }
+        })
+        self._push_undo({
+            "action": "place_contour",
+            "points": list(points),
+            "elevation_m": elevation,
+            "color": color,
         })
         self._mark_modified()
         self._set_mode_label("Ready")
@@ -1255,6 +1270,17 @@ class MainWindow(QMainWindow):
     def _cancel_draw(self):
         self._current_mode = 'none'
         self.map_widget.cancel_draw()
+        # Also bail out of an armed manual pin-drop, since Esc / Cancel
+        # is the user's universal "back out" gesture.
+        if getattr(self, "_site_pin_mode", False):
+            self._site_pin_mode = False
+            self.map_widget.set_site_pin_drop_mode(False)
+            try:
+                self.map_widget.bridge.map_clicked.disconnect(
+                    self._on_site_pin_click
+                )
+            except (TypeError, RuntimeError):
+                pass
         self._set_mode_label("Ready")
         self.toolbar.reset_draw_buttons()
         # Drop any in-flight polyculture recipe — the user explicitly
@@ -1285,6 +1311,13 @@ class MainWindow(QMainWindow):
         lats = [pt[0] for pt in coords]
         lngs = [pt[1] for pt in coords]
         self._set_zone_display(get_zone(sum(lats)/len(lats), sum(lngs)/len(lngs)))
+
+        self._push_undo({
+            "action": "place_boundary",
+            "boundary_id": bid,
+            "coords": list(coords),
+            "color": color,
+        })
 
         self._mark_modified()
         self.toolbar.reset_draw_buttons()
@@ -1585,6 +1618,7 @@ class MainWindow(QMainWindow):
     def _on_site_pin_placed(self, lat: float, lng: float, label: str):
         """User dropped a property pin (via search or manual click)."""
         self._site_pin_mode = False
+        self.map_widget.set_site_pin_drop_mode(False)
         self.site_panel.set_pin(lat, lng, label)
         # Switch to the Site tab so results are visible.
         try:
@@ -1631,6 +1665,9 @@ class MainWindow(QMainWindow):
         """Manual pin-drop: next map click places the pin."""
         self._site_pin_mode = True
         self._set_mode_label("Click the map to drop the property pin")
+        # Visual affordance — switch the map cursor to a crosshair so the
+        # user can see that the next click is going to drop a point.
+        self.map_widget.set_site_pin_drop_mode(True)
         # One-shot connection to map_clicked
         try:
             self.map_widget.bridge.map_clicked.disconnect(self._on_site_pin_click)
@@ -1642,11 +1679,80 @@ class MainWindow(QMainWindow):
         if not getattr(self, "_site_pin_mode", False):
             return
         self._site_pin_mode = False
+        self.map_widget.set_site_pin_drop_mode(False)
         try:
             self.map_widget.bridge.map_clicked.disconnect(self._on_site_pin_click)
         except Exception:
             pass
+        # Drop the pin immediately with just coordinates so the user gets
+        # instant feedback, then resolve the actual address in the
+        # background and refresh the pin label once we have it.
         self.map_widget.place_site_pin(lat, lng, "")
+        self._start_pin_reverse_geocode(lat, lng)
+
+    def _start_pin_reverse_geocode(self, lat: float, lng: float):
+        """Look up the actual address for a manually-dropped pin.
+
+        Runs Nominatim's reverse geocode off the UI thread; if it
+        succeeds we re-place the pin with the resolved label so the Site
+        panel shows a real address instead of just lat/lng.
+        """
+        # Cancel any prior reverse-geocode worker first.
+        prev_worker = getattr(self, "_revgeo_worker", None)
+        prev_thread = getattr(self, "_revgeo_thread", None)
+        self._revgeo_worker = None
+        self._revgeo_thread = None
+        if prev_worker is not None:
+            try:
+                prev_worker.results.disconnect()
+            except (TypeError, RuntimeError):
+                pass
+        if prev_thread is not None and prev_thread.isRunning():
+            try:
+                prev_thread.quit()
+            except RuntimeError:
+                pass
+
+        from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
+
+        class _RevGeoWorker(QObject):
+            results = pyqtSignal(float, float, str)  # lat, lng, label ("" on fail)
+
+            def __init__(self, lat: float, lng: float):
+                super().__init__()
+                self._lat = lat
+                self._lng = lng
+
+            @pyqtSlot()
+            def run(self):
+                try:
+                    from src.property_data import reverse_geocode
+                    label = reverse_geocode(self._lat, self._lng) or ""
+                except Exception:
+                    label = ""
+                self.results.emit(self._lat, self._lng, label)
+
+        thread = QThread(self)
+        worker = _RevGeoWorker(lat, lng)
+        worker.moveToThread(thread)
+        thread.started.connect(worker.run)
+        worker.results.connect(self._on_pin_reverse_geocode_done)
+        # Auto-teardown chain (same pattern as site_panel._start_fetch).
+        worker.results.connect(thread.quit)
+        worker.results.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        self._revgeo_worker = worker
+        self._revgeo_thread = thread
+        thread.start()
+
+    def _on_pin_reverse_geocode_done(self, lat: float, lng: float, label: str):
+        self._revgeo_worker = None
+        self._revgeo_thread = None
+        if not label:
+            return
+        # Re-place the pin with the resolved label so the marker tooltip
+        # and the Site panel both show the actual address.
+        self.map_widget.place_site_pin(lat, lng, label)
 
     def _on_site_data_updated(self, result: dict):
         """SitePanel finished fetching; persist results into project state."""
@@ -2200,6 +2306,74 @@ class MainWindow(QMainWindow):
             self.plant_panel.on_plant_removed(pid)
             self._redo_stack.append(entry)
             self.statusBar().showMessage("Undo: removed plant", 2000)
+
+        elif action == "place_structure":
+            import json as _json
+            sid = entry["struct_id"]
+            lat = entry["lat"]
+            lng = entry["lng"]
+            self.map_widget.run_js(
+                f"undoStructureAt({_json.dumps(sid)}, {lat}, {lng});"
+            )
+            kept = []
+            removed = False
+            for f in reversed(self._project["features"]):
+                props = f.get("properties", {})
+                coords = f.get("geometry", {}).get("coordinates", [])
+                if (not removed
+                        and props.get("element_type") == "structure"
+                        and props.get("struct_id") == sid
+                        and coords
+                        and abs(coords[1] - lat) < 1e-7
+                        and abs(coords[0] - lng) < 1e-7):
+                    removed = True
+                else:
+                    kept.append(f)
+            self._project["features"] = list(reversed(kept))
+            self._redo_stack.append(entry)
+            self.statusBar().showMessage(
+                f"Undo: removed {entry.get('name', 'structure')}", 2000
+            )
+            self._sync_planning_panel()
+
+        elif action == "place_boundary":
+            import json as _json
+            bid = entry["boundary_id"]
+            self.map_widget.run_js(
+                f"(function() {{"
+                f"  if (typeof _removeBoundaryEntry === 'function') {{"
+                f"    _removeBoundaryEntry({_json.dumps(bid)});"
+                f"  }}"
+                f"}})()"
+            )
+            self._project["features"] = [
+                f for f in self._project["features"]
+                if not (f.get("properties", {}).get("element_type")
+                        == "property_boundary"
+                        and f["properties"].get("boundary_id") == bid)
+            ]
+            self._redo_stack.append(entry)
+            self.statusBar().showMessage("Undo: removed boundary", 2000)
+
+        elif action == "place_contour":
+            elev = float(entry.get("elevation_m") or 0.0)
+            self.map_widget.run_js(f"undoLastContour({elev});")
+            kept = []
+            removed = False
+            for f in reversed(self._project["features"]):
+                props = f.get("properties", {})
+                if (not removed
+                        and props.get("element_type") == "contour_line"
+                        and abs(float(props.get("elevation_m") or 0.0)
+                                - elev) < 1e-3):
+                    removed = True
+                else:
+                    kept.append(f)
+            self._project["features"] = list(reversed(kept))
+            self._redo_stack.append(entry)
+            self.statusBar().showMessage(
+                f"Undo: removed contour at {elev:.1f}m", 2000
+            )
 
         self._act_undo.setEnabled(bool(self._undo_stack))
         self._act_redo.setEnabled(bool(self._redo_stack))

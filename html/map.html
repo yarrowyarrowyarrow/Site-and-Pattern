@@ -2275,6 +2275,9 @@
         if (bridge) bridge.onStructureRemoved(id, structDef.id, lat, lng);
       });
 
+      // Stash identifying metadata on the group so undoStructureAt can
+      // find this exact marker by (structId, lat, lng) later.
+      group._pdStruct = { structId: structDef.id, lat: lat, lng: lng };
       structureMarkers[id] = group;
       return id;
     }
@@ -2282,6 +2285,27 @@
     // Load a structure from saved project
     function loadStructure(structDef, lat, lng) {
       placeStructureOnMap(structDef, lat, lng);
+    }
+
+    // Undo helper — remove the most recently placed structure marker
+    // matching (structId, lat, lng). Walks structureMarkers in reverse
+    // insertion order so undo always pops the latest. No-op if nothing
+    // matches.
+    function undoStructureAt(structId, lat, lng) {
+      var keys = Object.keys(structureMarkers);
+      for (var i = keys.length - 1; i >= 0; i--) {
+        var key = keys[i];
+        var group = structureMarkers[key];
+        var meta  = group && group._pdStruct;
+        if (!meta) continue;
+        if (meta.structId !== structId) continue;
+        if (Math.abs(meta.lat - lat) > 1e-6) continue;
+        if (Math.abs(meta.lng - lng) > 1e-6) continue;
+        try { map.removeLayer(group); } catch (e) {}
+        delete structureMarkers[key];
+        return true;
+      }
+      return false;
     }
 
     // ── Hedgerow drawing (S2) ────────────────────────────────────────────────
@@ -3505,6 +3529,9 @@
         );
       });
 
+      // Stash elevation on the group so undoLastContour can pop the
+      // matching layer.
+      group._pdContour = { elevation: elevation };
       contourLayers.push(group);
 
       // Notify Python
@@ -3515,6 +3542,27 @@
 
       contourPoints = [];
       setMode('none');
+    }
+
+    // Undo helper — remove the most recently placed contour layer
+    // matching the given elevation. Returns true if a layer was removed.
+    function undoLastContour(elevation) {
+      for (var i = contourLayers.length - 1; i >= 0; i--) {
+        var g = contourLayers[i];
+        var meta = g && g._pdContour;
+        if (!meta) continue;
+        if (Math.abs((meta.elevation || 0) - elevation) > 1e-3) continue;
+        try { map.removeLayer(g); } catch (e) {}
+        contourLayers.splice(i, 1);
+        return true;
+      }
+      // Fallback: just pop the most recent layer.
+      if (contourLayers.length > 0) {
+        var last = contourLayers.pop();
+        try { map.removeLayer(last); } catch (e) {}
+        return true;
+      }
+      return false;
     }
 
     function clearContours() {
@@ -3939,6 +3987,14 @@
       if (!sitePinMarker) return;
       if (visible) sitePinMarker.addTo(map);
       else map.removeLayer(sitePinMarker);
+    }
+
+    // While pin-drop mode is armed, give the map a crosshair cursor so
+    // the user has a visual "you are placing a point" affordance.
+    function setSitePinDropMode(active) {
+      try {
+        map.getContainer().style.cursor = active ? 'crosshair' : '';
+      } catch (e) {}
     }
 
     function _initSiteSearchHandlers() {
