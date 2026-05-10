@@ -18,6 +18,19 @@ from PyQt6.QtGui import (
 from PyQt6.QtPrintSupport import QPrinter
 
 
+def _safe_size(n) -> int:
+    """Clamp a computed font size to a minimum of 1.
+
+    Qt prints ``QFont::setPointSize: Point size <= 0 (-1), must be
+    greater than 0`` (and ignores the call) whenever a non-positive
+    size lands in QFont. With a low ``dpi_scale`` the ``int(N * scale)``
+    expressions below can collapse to 0; clamping to 1 keeps Qt quiet
+    without hiding genuine bugs (there are no callers that *want* a
+    sub-1 pt font).
+    """
+    return max(1, int(n))
+
+
 def export_pdf(
     path: str,
     project: dict,
@@ -81,7 +94,7 @@ def export_pdf(
         else:
             # Placeholder
             painter.setPen(QPen(QColor("#546e7a")))
-            painter.setFont(QFont("Arial", int(10 * dpi_scale)))
+            painter.setFont(QFont("Arial", _safe_size(10 * dpi_scale)))
             painter.drawText(
                 QRectF(0, y, w, 30 * dpi_scale),
                 Qt.AlignmentFlag.AlignCenter,
@@ -113,12 +126,12 @@ def _draw_title_block(painter: QPainter, w: float, name: str,
 
     # Title
     painter.setPen(QColor("#a5d6a7"))
-    painter.setFont(QFont("Arial", int(18 * s), QFont.Weight.Bold))
+    painter.setFont(QFont("Arial", _safe_size(18 * s), QFont.Weight.Bold))
     painter.drawText(QRectF(15 * s, 8 * s, w - 30 * s, 30 * s),
                      Qt.AlignmentFlag.AlignLeft, f"PermaDesign — {name}")
 
     # Subtitle
-    painter.setFont(QFont("Arial", int(9 * s)))
+    painter.setFont(QFont("Arial", _safe_size(9 * s)))
     painter.setPen(QColor("#78909c"))
     zone_str = f"Zone {zone}" if zone else "Zone: —"
     date_str = datetime.now().strftime("%Y-%m-%d")
@@ -135,12 +148,12 @@ def _draw_summary(painter: QPainter, w: float, y: float,
                   plants: list[dict], structures: list[dict], s: float) -> float:
     """Draw a quick design summary."""
     painter.setPen(QColor("#a5d6a7"))
-    painter.setFont(QFont("Arial", int(12 * s), QFont.Weight.Bold))
+    painter.setFont(QFont("Arial", _safe_size(12 * s), QFont.Weight.Bold))
     painter.drawText(QRectF(15 * s, y, w, 20 * s),
                      Qt.AlignmentFlag.AlignLeft, "Design Summary")
     y += 22 * s
 
-    painter.setFont(QFont("Arial", int(9 * s)))
+    painter.setFont(QFont("Arial", _safe_size(9 * s)))
     painter.setPen(QColor("#c8e6c9"))
 
     # Count by type
@@ -176,7 +189,7 @@ def _draw_plant_list(painter: QPainter, w: float, h: float,
     # Title
     painter.fillRect(QRectF(0, 0, w, 35 * s), QColor("#1b3a1b"))
     painter.setPen(QColor("#a5d6a7"))
-    painter.setFont(QFont("Arial", int(14 * s), QFont.Weight.Bold))
+    painter.setFont(QFont("Arial", _safe_size(14 * s), QFont.Weight.Bold))
     painter.drawText(QRectF(15 * s, 8 * s, w, 25 * s),
                      Qt.AlignmentFlag.AlignLeft, "Plant List")
 
@@ -199,7 +212,7 @@ def _draw_plant_list(painter: QPainter, w: float, h: float,
         get_plant = lambda pid: None
 
     # Table header
-    painter.setFont(QFont("Arial", int(8 * s), QFont.Weight.Bold))
+    painter.setFont(QFont("Arial", _safe_size(8 * s), QFont.Weight.Bold))
     painter.setPen(QColor("#a5d6a7"))
     col_x = [15 * s, 200 * s, 350 * s, 430 * s, 510 * s]
     headers = ["Plant", "Scientific Name", "Type", "Qty", "Water"]
@@ -215,7 +228,7 @@ def _draw_plant_list(painter: QPainter, w: float, h: float,
     y += 4 * s
 
     # Rows
-    painter.setFont(QFont("Arial", int(8 * s)))
+    painter.setFont(QFont("Arial", _safe_size(8 * s)))
     painter.setPen(QColor("#c8e6c9"))
 
     sorted_pids = sorted(counts.keys(), key=lambda pid: names.get(pid, ""))
@@ -245,12 +258,12 @@ def _draw_notes_page(painter: QPainter, w: float, h: float,
     """Draw the design notes page."""
     painter.fillRect(QRectF(0, 0, w, 35 * s), QColor("#1b3a1b"))
     painter.setPen(QColor("#a5d6a7"))
-    painter.setFont(QFont("Arial", int(14 * s), QFont.Weight.Bold))
+    painter.setFont(QFont("Arial", _safe_size(14 * s), QFont.Weight.Bold))
     painter.drawText(QRectF(15 * s, 8 * s, w, 25 * s),
                      Qt.AlignmentFlag.AlignLeft, "Design Notes")
 
     y = 45 * s
-    painter.setFont(QFont("Consolas", int(8 * s)))
+    painter.setFont(QFont("Consolas", _safe_size(8 * s)))
     painter.setPen(QColor("#c8e6c9"))
 
     for line in notes.split("\n"):

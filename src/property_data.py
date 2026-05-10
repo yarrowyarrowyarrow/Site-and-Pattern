@@ -423,7 +423,9 @@ def usda_zone_from_min_c(min_c: float) -> int:
 _AB_VIEWBOX = "-120.0,48.95,-109.95,60.05"   # lng_min, lat_min, lng_max, lat_max
 
 
-def geocode_alberta(query: str, limit: int = 6) -> list[dict]:
+def geocode_alberta(query: str, limit: int = 6,
+                    *, near: "tuple[float, float] | None" = None,
+                    radius_km: float = 50.0) -> list[dict]:
     """Forward-geocode an address or place name, restricted to Alberta.
 
     Returns a list of ``{"label", "lat", "lng"}`` dicts, or ``[]`` on
@@ -434,6 +436,14 @@ def geocode_alberta(query: str, limit: int = 6) -> list[dict]:
     surface 4916-something as the first result) sort ahead of generic
     matches that just happen to mention the digits anywhere in the
     display name.
+
+    When ``near=(lat, lng)`` is supplied, the search is biased toward
+    that point: the Nominatim viewbox shrinks to a ~``radius_km``-wide
+    box around it instead of all of Alberta, and ``lat``/``lon`` query
+    params are forwarded so Nominatim's own ranking weights local
+    matches more heavily. This is what lets a short numeric query like
+    "4916" surface real houses near where the user is looking instead
+    of random province-wide hits.
     """
     import re
 
@@ -458,15 +468,35 @@ def geocode_alberta(query: str, limit: int = 6) -> list[dict]:
     # re-ranking has something to work with even when the top raw match
     # is a generic placename.
     fetch_limit = max(int(limit), 10)
+    extra_params: dict[str, str] = {}
+    if near is not None:
+        try:
+            blat = float(near[0])
+            blng = float(near[1])
+            # ~111 km per latitude degree; AB longitude shrinks by ~cos(lat).
+            dlat = max(0.05, float(radius_km) / 111.0)
+            dlng = dlat / max(0.2, math.cos(math.radians(blat)))
+            viewbox = (
+                f"{blng - dlng:.5f},{blat - dlat:.5f},"
+                f"{blng + dlng:.5f},{blat + dlat:.5f}"
+            )
+            extra_params["lat"] = f"{blat:.5f}"
+            extra_params["lon"] = f"{blng:.5f}"
+        except (TypeError, ValueError):
+            viewbox = _AB_VIEWBOX
+    else:
+        viewbox = _AB_VIEWBOX
+
     params = urllib.parse.urlencode({
         "format": "json",
         "limit":  str(fetch_limit),
         "addressdetails": "1",
         "countrycodes": "ca",
-        "viewbox": _AB_VIEWBOX,
+        "viewbox": viewbox,
         "bounded": "1",
         "dedupe": "1",
         "q": q,
+        **extra_params,
     })
     url = "https://nominatim.openstreetmap.org/search?" + params
     data = _http_get_json(url)

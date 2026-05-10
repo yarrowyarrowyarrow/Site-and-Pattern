@@ -107,6 +107,9 @@ class MainWindow(QMainWindow):
         # Central area
         self.map_widget      = MapWidget(self)
         self.site_panel      = SitePanel(self)
+        # Wire so the address finder can bias its Nominatim query
+        # against the map's current view centre.
+        self.site_panel.attach_map_widget(self.map_widget)
         self.plant_panel     = PlantPanel(self)
         self.polyculture_panel     = PolyculturePanel(self)
         self.structure_panel = StructurePanel(self)

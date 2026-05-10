@@ -13,18 +13,59 @@ the worker reports the network error with an actionable hint.
 import gzip
 import json
 import os
+import sys
+import time
+import urllib.error
 import urllib.parse
+import urllib.request
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
 from src.terrain import (
     _EDM_RESOURCE,
+    _USER_AGENT,
     _edm_detect_fields,
     _coerce_float,
     _flatten_geojson_lines,
     _http_get_json,
 )
 from src.terrain_store import TerrainStore
+
+
+def _diag_fetch(url: str, timeout: float = 30.0) -> "tuple[bool, int | None, dict | list | None, str]":
+    """Diagnostic HTTP GET that surfaces the *real* failure reason.
+
+    ``_http_get_json`` swallows every exception and returns None, which
+    is great for the silent-fallback case but useless when we need to
+    figure out *why* the Edmonton download stalled. This helper does
+    the same urllib call but returns a (ok, http_status, payload,
+    error_text) tuple — caller can log the error_text to stderr and
+    surface a short summary via the worker's ``progress`` signal.
+    """
+    t0 = time.monotonic()
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            status = getattr(resp, "status", None)
+            body = resp.read().decode("utf-8")
+            try:
+                payload = json.loads(body)
+            except ValueError as exc:
+                dt = time.monotonic() - t0
+                return False, status, None, (
+                    f"JSON decode failed after {dt:.1f}s ({len(body)} bytes): {exc}"
+                )
+            dt = time.monotonic() - t0
+            return True, status, payload, ""
+    except urllib.error.HTTPError as exc:
+        dt = time.monotonic() - t0
+        return False, exc.code, None, f"HTTPError {exc.code} after {dt:.1f}s: {exc.reason}"
+    except urllib.error.URLError as exc:
+        dt = time.monotonic() - t0
+        return False, None, None, f"URLError after {dt:.1f}s: {exc.reason}"
+    except Exception as exc:
+        dt = time.monotonic() - t0
+        return False, None, None, f"{type(exc).__name__} after {dt:.1f}s: {exc}"
 
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -78,15 +119,52 @@ class EdmontonDownloadWorker(QObject):
     def cancel(self) -> None:
         self._cancel = True
 
+    def _diag_log(self, msg: str) -> None:
+        """Print to stderr and surface via the progress signal so the
+        user sees diagnostic output both in the terminal and in the UI."""
+        try:
+            print(f"[edmonton-dl] {msg}", file=sys.stderr, flush=True)
+        except Exception:
+            pass
+        try:
+            self.progress.emit(0, 0, msg)
+        except Exception:
+            pass
+
     def run(self) -> None:
         store = TerrainStore()
         store.clear_edmonton()
 
+        # Phase 5 / Phase 2 diagnostic instrumentation — capture the
+        # actual network behaviour before guessing at a fix.
+        self._diag_log("Detecting Edmonton dataset fields…")
+        t_detect = time.monotonic()
         elev_field, geom_field = _edm_detect_fields()
+        self._diag_log(
+            f"Field detection took {time.monotonic() - t_detect:.1f}s "
+            f"→ elev={elev_field!r} geom={geom_field!r}"
+        )
         if not elev_field or not geom_field:
+            # Run the diagnostic fetch against the views-metadata URL so
+            # we can show the user *why* detection failed.
+            meta_url = (
+                f"https://data.edmonton.ca/api/views/"
+                f"{_EDM_RESOURCE.rsplit('/', 1)[-1].split('.')[0]}.json"
+            )
+            ok, status, _, err = _diag_fetch(meta_url, timeout=15)
+            self._diag_log(
+                f"Probe metadata: ok={ok} status={status} err={err or '-'}"
+            )
+            sample_url = f"{_EDM_RESOURCE}?$limit=1"
+            ok2, status2, payload2, err2 = _diag_fetch(sample_url, timeout=15)
+            self._diag_log(
+                f"Probe sample row: ok={ok2} status={status2} "
+                f"err={err2 or '-'} "
+                f"features={len((payload2 or {}).get('features', []) if isinstance(payload2, dict) else [])}"
+            )
+
             # Live API unavailable — fall back to a bundled seed file
-            # if the project ships one. This is the offline-first path
-            # the README points to when the user can't hit Socrata.
+            # if the project ships one.
             seed_path = _find_local_seed()
             if seed_path is not None:
                 self.progress.emit(
@@ -100,8 +178,8 @@ class EdmontonDownloadWorker(QObject):
                 "Could not detect field names from the Edmonton dataset.\n"
                 "\n"
                 "Tried:\n"
-                "  • Socrata views metadata\n"
-                "  • Sample-row sniffing on the GeoJSON endpoint\n"
+                f"  • Socrata views metadata: {err or 'ok'}\n"
+                f"  • Sample-row sniffing: {err2 or 'ok'}\n"
                 "  • Local seed at data/edmonton_contours.geojson(.gz)\n"
                 "\n"
                 "Check your internet connection, or drop a downloaded\n"
@@ -122,6 +200,7 @@ class EdmontonDownloadWorker(QObject):
                 "$order":  ":id",
             })
             url = f"{_EDM_RESOURCE}?{qs}"
+            t_page = time.monotonic()
             page_data = _http_get_json(url, timeout=30)
 
             if page_data is None:
@@ -135,8 +214,19 @@ class EdmontonDownloadWorker(QObject):
 
             if not page_data or "features" not in page_data:
                 if page_num == 0:
+                    # Probe the same URL with the diagnostic helper so
+                    # the user (and us) can see the real failure mode
+                    # instead of just "no data".
+                    ok, status, payload, err = _diag_fetch(url, timeout=30)
+                    self._diag_log(
+                        f"Page-0 fetch: ok={ok} status={status} "
+                        f"err={err or '-'} "
+                        f"elapsed={time.monotonic() - t_page:.1f}s "
+                        f"url={url}"
+                    )
                     self.error.emit(
                         "No data received from the Edmonton Open Data API.\n"
+                        f"\nDiagnostic: status={status}, error={err or 'none'}.\n"
                         "Check your internet connection and try again."
                     )
                     return

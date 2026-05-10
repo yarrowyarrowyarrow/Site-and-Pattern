@@ -108,15 +108,17 @@ class _GeocodeWorker(QObject):
     results = pyqtSignal(list)        # list[{label, lat, lng}]
     failed  = pyqtSignal(str)         # error message
 
-    def __init__(self, query: str):
+    def __init__(self, query: str,
+                 near: "tuple[float, float] | None" = None):
         super().__init__()
         self._query = query
+        self._near  = near
 
     @pyqtSlot()
     def run(self):
         try:
             from src.property_data import geocode_alberta
-            hits = geocode_alberta(self._query) or []
+            hits = geocode_alberta(self._query, near=self._near) or []
             self.results.emit(hits)
         except Exception as exc:
             self.failed.emit(str(exc))
@@ -162,8 +164,17 @@ class SitePanel(QWidget):
         self._geo_debounce: Optional[QTimer] = None
         self._auto_color = "#5d4037"
         self._contour_color = "#795548"
+        # Map widget reference, set by MainWindow via attach_map_widget().
+        # Used to bias the address-finder search against the current
+        # view centre — without it we fall back to all-of-Alberta.
+        self._map_widget = None
         self._build_ui()
         self._set_empty_state()
+
+    def attach_map_widget(self, map_widget):
+        """Wire the panel to the map widget so the address finder can
+        bias its query against the map's current view centre."""
+        self._map_widget = map_widget
 
     # ── Construction ────────────────────────────────────────────────────────
 
@@ -927,8 +938,15 @@ class SitePanel(QWidget):
     def _run_geocode(self, query: str):
         # Cancel any in-flight geocode before starting a new one.
         self._cancel_geocode()
+        # Bias the search against the map's current view centre when
+        # available. Falls through to the all-of-Alberta query when the
+        # panel hasn't been wired to a map widget yet (e.g. headless
+        # tests).
+        near = None
+        if self._map_widget is not None:
+            near = getattr(self._map_widget, "last_center", None)
         thread = QThread(self)
-        worker = _GeocodeWorker(query)
+        worker = _GeocodeWorker(query, near=near)
         worker.moveToThread(thread)
         thread.started.connect(worker.run)
         worker.results.connect(self._on_geocode_results)

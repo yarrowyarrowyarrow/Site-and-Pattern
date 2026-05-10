@@ -28,6 +28,11 @@ class MapBridge(QObject):
     # User clicked on the map (generic)
     map_clicked = pyqtSignal(float, float)         # lat, lng
 
+    # Map view changed (pan / zoom / programmatic setView). Carries the
+    # current view centre + zoom so consumers — most notably the address
+    # finder — can bias their queries against where the user is looking.
+    map_moved = pyqtSignal(float, float, int)      # lat, lng, zoom
+
     # A property boundary polygon was completed (id, points list, color name)
     boundary_complete = pyqtSignal(str, list, str)
 
@@ -125,6 +130,10 @@ class MapBridge(QObject):
     @pyqtSlot(float, float)
     def onMapClick(self, lat: float, lng: float):
         self.map_clicked.emit(lat, lng)
+
+    @pyqtSlot(float, float, int)
+    def onMapMoved(self, lat: float, lng: float, zoom: int):
+        self.map_moved.emit(lat, lng, zoom)
 
     @pyqtSlot(float, float, str)
     def onSitePinPlaced(self, lat: float, lng: float, label: str):
@@ -312,6 +321,23 @@ class MapWidget(QWebEngineView):
         self._channel = QWebChannel(self.page())
         self._channel.registerObject("bridge", self.bridge)
         self.page().setWebChannel(self._channel)
+        # Cache the most recent map view centre + zoom (updated on every
+        # JS moveend). Consumers that need to bias work against "where
+        # the user is looking" — currently the address finder — can read
+        # last_center directly without going through an async readback.
+        self._last_center: tuple[float, float] | None = None
+        self._last_zoom: int | None = None
+        self.bridge.map_moved.connect(self._on_map_moved)
+
+    def _on_map_moved(self, lat: float, lng: float, zoom: int):
+        self._last_center = (lat, lng)
+        self._last_zoom = zoom
+
+    @property
+    def last_center(self) -> "tuple[float, float] | None":
+        """Latest known (lat, lng) centre of the map view, or None
+        if the map hasn't reported a moveend yet."""
+        return self._last_center
 
         # Allow the local HTML file to load remote tile/CDN URLs (needed on Windows)
         s = self.page().settings()

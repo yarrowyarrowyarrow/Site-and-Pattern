@@ -628,6 +628,13 @@
       map.on('mousemove', onMapMouseMove);
       map.on('dblclick', onMapDblClick);
 
+      // Push the current view centre to Python on every pan/zoom so
+      // the address finder can bias its query against where the user
+      // is currently looking. Fire once on init too — moveend won't
+      // fire until the user actually moves.
+      map.on('moveend', _emitMapMoved);
+      _emitMapMoved();
+
       // Free-draw rectangle for terrain bbox selection
       map.on('mousedown', _terrainRectOnMouseDown);
       map.on('mousemove', _terrainRectOnMouseMove);
@@ -687,6 +694,17 @@
 
       // Shift+drag marquee selection (replaces Leaflet's box-zoom).
       _initMarqueeHandlers();
+    }
+
+    // Emit the current view centre to Python — wired to map.moveend
+    // and called once on init. Lets the address finder bias its
+    // Nominatim query against where the user is looking.
+    function _emitMapMoved() {
+      if (!bridge || !bridge.onMapMoved) return;
+      try {
+        var c = map.getCenter();
+        bridge.onMapMoved(c.lat, c.lng, map.getZoom());
+      } catch (e) {}
     }
 
     // ── Click / move handlers ────────────────────────────────────────────────
