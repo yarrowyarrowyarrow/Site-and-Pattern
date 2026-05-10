@@ -69,8 +69,8 @@ class MapBridge(QObject):
         # id, pointsJson, label, shapeType, fillColor, strokeColor, fillOpacity, dashArray, areaM2
     shape_removed = pyqtSignal(str)                                 # id
 
-    # Guild removal signal
-    guild_removed = pyqtSignal(str, float, float)                   # guildName, centerLat, centerLng
+    # Polyculture removal signal
+    polyculture_removed = pyqtSignal(str, float, float)                   # polycultureName, centerLat, centerLng
 
     # Contour signals
     contour_complete = pyqtSignal(str, float, str)                  # pointsJson, elevation, color
@@ -259,11 +259,11 @@ class MapBridge(QObject):
     def onContourComplete(self, points_json: str, elevation: float, color: str):
         self.contour_complete.emit(points_json, elevation, color)
 
-    # ── Guild slots ───────────────────────────────────────────────────────────
+    # ── Polyculture slots ───────────────────────────────────────────────────────────
 
     @pyqtSlot(str, float, float)
-    def onGuildRemoved(self, guild_name: str, center_lat: float, center_lng: float):
-        self.guild_removed.emit(guild_name, center_lat, center_lng)
+    def onPolycultureRemoved(self, polyculture_name: str, center_lat: float, center_lng: float):
+        self.polyculture_removed.emit(polyculture_name, center_lat, center_lng)
 
     # ── Contour removal slot ──────────────────────────────────────────────────
 

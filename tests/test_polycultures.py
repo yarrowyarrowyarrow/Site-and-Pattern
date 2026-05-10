@@ -1,13 +1,13 @@
 """
-tests/test_guilds.py
+tests/test_polycultures.py
 
-Unit tests for src/db/guilds.py covering the crash scenarios:
-  1. create_guild writes to DB and returns an int ID
-  2. add_guild_member rejects plant_id=None with ValueError
-  3. add_guild_member works with a real plant_id
-  4. delete_guild removes guild and its members
-  5. duplicate_guild copies all members
-  6. remove_guild_member removes one row and leaves others
+Unit tests for src/db/polycultures.py covering the crash scenarios:
+  1. create_polyculture writes to DB and returns an int ID
+  2. add_polyculture_member rejects plant_id=None with ValueError
+  3. add_polyculture_member works with a real plant_id
+  4. delete_polyculture removes polyculture and its members
+  5. duplicate_polyculture copies all members
+  6. remove_polyculture_member removes one row and leaves others
   7. Readonly DB raises an informative exception (not a silent hang)
   8. DB is stored in the user-data dir, not next to the source tree
 """
@@ -33,8 +33,8 @@ import src.db.plants as _plants_mod
 _plants_mod._DATA_DIR = _TMP_DIR
 _plants_mod._DB_PATH  = os.path.join(_TMP_DIR, "permadesign_test.db")
 
-# Now safe to import guilds (it calls get_connection which uses the patched paths)
-from src.db import guilds
+# Now safe to import polycultures (it calls get_connection which uses the patched paths)
+from src.db import polycultures
 from src.db.plants import init_db, get_connection
 
 
@@ -52,66 +52,66 @@ def _add_dummy_plant(conn, name="Test Plant", ptype="herb"):
     return cur.lastrowid
 
 
-class TestGuildCRUD(unittest.TestCase):
+class TestPolycultureCRUD(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
         _setup_db()
 
     def setUp(self):
-        # Clean guild tables before each test so tests are independent
+        # Clean polyculture tables before each test so tests are independent
         conn = get_connection()
-        conn.execute("DELETE FROM guild_members")
-        conn.execute("DELETE FROM guilds")
+        conn.execute("DELETE FROM polyculture_members")
+        conn.execute("DELETE FROM polycultures")
         conn.commit()
         conn.close()
 
-    # ── create_guild ──────────────────────────────────────────────────────────
+    # ── create_polyculture ──────────────────────────────────────────────────────────
 
-    def test_create_guild_returns_int(self):
-        gid = guilds.create_guild("Test Guild", "A description", None)
+    def test_create_polyculture_returns_int(self):
+        gid = polycultures.create_polyculture("Test Polyculture", "A description", None)
         self.assertIsInstance(gid, int)
         self.assertGreater(gid, 0)
 
-    def test_create_guild_persists(self):
-        guilds.create_guild("Persisted", "", None)
-        rows = guilds.get_all_guilds()
+    def test_create_polyculture_persists(self):
+        polycultures.create_polyculture("Persisted", "", None)
+        rows = polycultures.get_all_polycultures()
         names = [r["name"] for r in rows]
         self.assertIn("Persisted", names)
 
-    def test_create_guild_with_parent(self):
-        parent_id = guilds.create_guild("Parent", "", None)
-        child_id  = guilds.create_guild("Child", "", None, parent_id=parent_id)
-        children = guilds.get_guild_children(parent_id)
+    def test_create_polyculture_with_parent(self):
+        parent_id = polycultures.create_polyculture("Parent", "", None)
+        child_id  = polycultures.create_polyculture("Child", "", None, parent_id=parent_id)
+        children = polycultures.get_polyculture_children(parent_id)
         self.assertEqual(len(children), 1)
         self.assertEqual(children[0]["id"], child_id)
 
-    # ── add_guild_member ─────────────────────────────────────────────────────
+    # ── add_polyculture_member ─────────────────────────────────────────────────────
 
     def test_add_member_none_plant_id_raises(self):
-        gid = guilds.create_guild("G", "", None)
+        gid = polycultures.create_polyculture("G", "", None)
         with self.assertRaises(ValueError):
-            guilds.add_guild_member(gid, None, "canopy", 0, 0)
+            polycultures.add_polyculture_member(gid, None, "canopy", 0, 0)
 
     def test_add_member_invalid_plant_id_raises(self):
         """Foreign-key violation (plant doesn't exist) must raise, not silently pass."""
-        gid = guilds.create_guild("G2", "", None)
+        gid = polycultures.create_polyculture("G2", "", None)
         with self.assertRaises(Exception):
-            guilds.add_guild_member(gid, 999999, "canopy", 0.5, -0.5)
+            polycultures.add_polyculture_member(gid, 999999, "canopy", 0.5, -0.5)
 
     def test_add_member_valid(self):
         conn = get_connection()
         plant_id = _add_dummy_plant(conn, "Comfrey")
         conn.close()
 
-        gid = guilds.create_guild("Apple Guild", "", None)
-        guilds.add_guild_member(gid, plant_id, "dynamic_accumulator", 1.5, 0.8)
+        gid = polycultures.create_polyculture("Apple Polyculture", "", None)
+        polycultures.add_polyculture_member(gid, plant_id, "dynamic_accumulator", 1.5, 0.8)
 
-        detail = guilds.get_guild_by_id(gid)
+        detail = polycultures.get_polyculture_by_id(gid)
         self.assertEqual(len(detail["members"]), 1)
         self.assertEqual(detail["members"][0]["common_name"], "Comfrey")
 
-    # ── remove_guild_member ──────────────────────────────────────────────────
+    # ── remove_polyculture_member ──────────────────────────────────────────────────
 
     def test_remove_member(self):
         conn = get_connection()
@@ -119,56 +119,56 @@ class TestGuildCRUD(unittest.TestCase):
         pid2 = _add_dummy_plant(conn, "PlantB")
         conn.close()
 
-        gid = guilds.create_guild("G3", "", None)
-        guilds.add_guild_member(gid, pid1, "canopy", 0, 0)
-        guilds.add_guild_member(gid, pid2, "understory", 1, 0)
+        gid = polycultures.create_polyculture("G3", "", None)
+        polycultures.add_polyculture_member(gid, pid1, "canopy", 0, 0)
+        polycultures.add_polyculture_member(gid, pid2, "understory", 1, 0)
 
-        detail = guilds.get_guild_by_id(gid)
+        detail = polycultures.get_polyculture_by_id(gid)
         member_id = detail["members"][0]["id"]
-        guilds.remove_guild_member(member_id)
+        polycultures.remove_polyculture_member(member_id)
 
-        detail2 = guilds.get_guild_by_id(gid)
+        detail2 = polycultures.get_polyculture_by_id(gid)
         self.assertEqual(len(detail2["members"]), 1)
 
-    # ── delete_guild ─────────────────────────────────────────────────────────
+    # ── delete_polyculture ─────────────────────────────────────────────────────────
 
-    def test_delete_guild_removes_members(self):
+    def test_delete_polyculture_removes_members(self):
         conn = get_connection()
         pid = _add_dummy_plant(conn, "PlantC")
         conn.close()
 
-        gid = guilds.create_guild("ToDelete", "", None)
-        guilds.add_guild_member(gid, pid, "canopy", 0, 0)
-        guilds.delete_guild(gid)
+        gid = polycultures.create_polyculture("ToDelete", "", None)
+        polycultures.add_polyculture_member(gid, pid, "canopy", 0, 0)
+        polycultures.delete_polyculture(gid)
 
-        self.assertIsNone(guilds.get_guild_by_id(gid))
+        self.assertIsNone(polycultures.get_polyculture_by_id(gid))
         # Confirm no orphan members
         conn = get_connection()
         count = conn.execute(
-            "SELECT COUNT(*) FROM guild_members WHERE guild_id = ?", (gid,)
+            "SELECT COUNT(*) FROM polyculture_members WHERE polyculture_id = ?", (gid,)
         ).fetchone()[0]
         conn.close()
         self.assertEqual(count, 0)
 
-    # ── duplicate_guild ──────────────────────────────────────────────────────
+    # ── duplicate_polyculture ──────────────────────────────────────────────────────
 
-    def test_duplicate_guild_copies_members(self):
+    def test_duplicate_polyculture_copies_members(self):
         conn = get_connection()
         pid = _add_dummy_plant(conn, "PlantD")
         conn.close()
 
-        orig = guilds.create_guild("Original", "desc", None)
-        guilds.add_guild_member(orig, pid, "pollinator", 0.5, 0.5)
+        orig = polycultures.create_polyculture("Original", "desc", None)
+        polycultures.add_polyculture_member(orig, pid, "pollinator", 0.5, 0.5)
 
-        copy_id = guilds.duplicate_guild(orig)
-        copy = guilds.get_guild_by_id(copy_id)
+        copy_id = polycultures.duplicate_polyculture(orig)
+        copy = polycultures.get_polyculture_by_id(copy_id)
         self.assertEqual(len(copy["members"]), 1)
         self.assertIn("copy", copy["name"])
 
     def test_duplicate_as_variation(self):
-        gid = guilds.create_guild("Base", "", None)
-        var_id = guilds.duplicate_guild(gid, as_variation=True)
-        children = guilds.get_guild_children(gid)
+        gid = polycultures.create_polyculture("Base", "", None)
+        var_id = polycultures.duplicate_polyculture(gid, as_variation=True)
+        children = polycultures.get_polyculture_children(gid)
         self.assertEqual(len(children), 1)
         self.assertEqual(children[0]["id"], var_id)
 
@@ -189,13 +189,13 @@ class TestGuildCRUD(unittest.TestCase):
     @unittest.skipIf(sys.platform == "win32", "chmod read-only unreliable on Windows CI")
     @unittest.skipIf(os.getuid() == 0, "root ignores file permissions")
     def test_readonly_db_raises_not_silently_fails(self):
-        """If the DB is read-only, create_guild must raise (not hang or return None)."""
+        """If the DB is read-only, create_polyculture must raise (not hang or return None)."""
         db_path = _plants_mod._DB_PATH
         original_mode = os.stat(db_path).st_mode
         try:
             os.chmod(db_path, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
             with self.assertRaises(Exception):
-                guilds.create_guild("ShouldFail", "", None)
+                polycultures.create_polyculture("ShouldFail", "", None)
         finally:
             os.chmod(db_path, original_mode)
 

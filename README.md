@@ -1,17 +1,17 @@
 # PermaDesign
 
-**A native plant landscape design tool for permaculture practitioners and gardeners in Alberta and the Canadian prairies.**
+**A native plant landscape design tool for ecological designers and gardeners in Alberta and the Canadian prairies.**
 
-PermaDesign is a desktop application for designing landscapes with native plants. It combines site analysis, guild planning, plant companion relationships, structures and hedgerows, and a 433-plant database focused on Alberta and the Canadian prairies.
+PermaDesign is a desktop application for designing landscapes with native plants. It combines site analysis, polyculture planning, plant companion relationships, structures and hedgerows, and a 433-plant database focused on Alberta and the Canadian prairies.
 
-> **This is the final V1 release.** Active development has moved to a successor project, **Site & Pattern**, which is a cross-platform rewrite focused on ecological landscape design with deeper plant data, ecoregion-aware nativity, integrated environmental data layers, and modern web technologies. PermaDesign V1 will remain available here for users who want to continue using it. See [What's Next](#whats-next) for details.
+> **Status:** PermaDesign is in active development. The current focus is on UI polish, the in-app polyculture builder, map interaction (drag-to-reposition, global undo), terrain/soil data integration, and packaging as a one-click Windows installer. See [Going Forward](#going-forward) for the live development plan.
 
 ---
 
 ## Features
 
 - **Site analysis overlays** — sun, wind, water, and other site condition mapping
-- **Guild planning** — plant communities and companion groupings with documented companion relationships
+- **Polyculture planning** — plant communities and companion groupings with documented companion relationships
 - **Structures and hedgerows** — windbreaks, fences, paths, and other design elements
 - **Planning tools** — drag-and-place plant placement, undo/redo for plant placement
 - **Plant database** — 433 native and naturalized species of Alberta and the Canadian prairies
@@ -24,9 +24,9 @@ PermaDesign is a desktop application for designing landscapes with native plants
 
 ## Requirements
 
-- Windows 10 or 11 (other platforms not officially supported in V1)
-- Python 3.10 or newer
-- ~200 MB disk space for the app and database
+- Windows 10 or 11 (primary target; macOS/Linux from-source may work but is untested)
+- Python 3.10 or newer (only required for from-source installs — the one-click `.exe` bundles its own runtime)
+- ~200 MB disk space for the app and shipped data; up to ~16 GB if running with the full optional terrain/soil datasets
 
 ---
 
@@ -92,68 +92,62 @@ Without these credentials, the rest of PermaDesign works normally — only the P
 
 ## Project Status and Known Limitations
 
-PermaDesign V1 is feature-complete and stable for its intended scope. Known limitations:
+PermaDesign is in active development. Known limitations being worked on in the current sprint:
 
-- **Windows-only.** macOS and Linux installers are not officially supported in V1. From-source installation may work on those platforms with Python 3.10+ but is untested for V1 Final.
 - **Plant names with apostrophes** may cause issues in JavaScript-rendered components due to string escaping. Most plant names are unaffected.
-- **Undo/redo** covers plant placement only, not structure placement, shape edits, or guild changes.
+- **Undo/redo** is being expanded from plant-only to a global undo across plants, structures, boundaries, and contours.
 - **PDF export** falls back silently if a map screenshot cannot be captured. Designs export successfully but the embedded site map may be missing.
-- **Guild placement tolerance** uses floating-point lat/lng matching, which is fragile in edge cases but works in normal use.
-
-These limitations are documented and will not be patched in V1. They are addressed in the Site & Pattern rewrite.
+- **Polyculture placement tolerance** uses floating-point lat/lng matching, which is fragile in edge cases but works in normal use.
+- **Soil data** outside of SoilGrids v2.0 (ISRIC) is incomplete; a fallback source is being integrated.
+- **Edmonton open-data download** currently fails on field-name detection; under repair.
 
 ---
 
-## What's Next
+## Going Forward
 
-PermaDesign is being rewritten as **Site & Pattern**, a successor project that builds on the same foundation with:
+The current development plan focuses on tightening the existing Alberta-focused tool rather than a full rewrite:
 
-- **Cross-platform** — desktop (via Tauri) and browser (PWA) from one codebase
-- **Ecoregion-aware nativity** — moves beyond province-level "native" flags to CEC Level III ecoregion attribution with confidence levels and source attribution
-- **Two-layer environmental data** — direct rainfall, soil, elevation, and hardiness data integrated with site analysis
-- **Source-tracked plant data** — every fact in the database links to a citable source
-- **Open source under AGPL-3.0** — keeping the project genuinely free and copyleft
-- **Geographic expansion** — Alberta first, with infrastructure designed to extend across western Canada and beyond
+- **Polyculture builder** — a visual grid for assembling 5–8-plant Alberta polycultures in one screen and saving them locally
+- **Map interaction** — drag-and-drop repositioning of placed plants and entire polyculture groupings, plus global Ctrl+Z across all placements
+- **View bar overhaul** — fixed ordering (Satellite, Boundary, Measurement, Grid, Plants, Canopy, Structures), measurement hide-vs-delete distinction, configurable grid base size and opacity
+- **Address finder** — partial-match-first search and crash fix on the Clear button
+- **Terrain & soil** — repair the Edmonton dataset parser (or bundle the dataset locally) and add a soil-data fallback when SoilGrids is unavailable
+- **Distribution** — one-click `.exe` installer for non-technical users (see [INSTALL.md](INSTALL.md))
 
-Site & Pattern is in early planning. The repository will be linked here when public.
-
-> **For permaculture practitioners** who prefer the existing tool: PermaDesign V1 will remain available indefinitely. This release is the polished, final version for ongoing use.
+The longer-term direction (cross-platform rewrite, ecoregion-aware nativity, expanded coverage beyond AB) remains on the table but is gated on the items above.
 
 ---
 
 ## Project History
 
-PermaDesign was built as a personal tool by Marci while studying permaculture and ecological design in Alberta, with the goal of bringing native plant communities into landscape design more easily. The V1 codebase has grown beyond its original scope to include guilds, site analysis, structures, planning tools, PDF export, and Permapeople integration.
-
-The pivot to Site & Pattern reflects an evolution in the project's positioning: keeping the design ethos of working with site conditions and natural patterns, while moving away from permaculture's branded vocabulary toward plain-English equivalents that serve a broader audience.
+PermaDesign was built as a personal tool by Marci while studying ecological design in Alberta, with the goal of bringing native plant communities into landscape design more easily. The codebase has grown to include polycultures, site analysis, structures, planning tools, PDF export, and Permapeople integration, and now centres on Alberta ecosystems.
 
 ---
 
 ## Documentation
 
-- [`INSTALL.md`](INSTALL.md) — Installation instructions, including the one-click installer for friends and testers
-- [`ROADMAP.md`](ROADMAP.md) — Original V1 development roadmap (kept for historical reference)
-- [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) — Developer-facing notes from late-stage V1 development
-- [`V1_FINAL_AUDIT.md`](V1_FINAL_AUDIT.md) — Codebase audit performed before the V1 Final release
+- [`INSTALL.md`](INSTALL.md) — Installation instructions, including the one-click `.exe` installer for friends and testers
+- [`FRIEND_SETUP_GUIDE.md`](FRIEND_SETUP_GUIDE.md) — Plain-English setup guide for non-technical users
+- [`ROADMAP.md`](ROADMAP.md) — Feature roadmap with shipped vs. planned items
+- [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) — Developer-facing notes for active development sessions
+- [`USER_GUIDE.md`](USER_GUIDE.md) — In-app feature reference
 - [`LICENSE`](LICENSE) — PolyForm Noncommercial License 1.0.0
 
 ---
 
 ## License
 
-PermaDesign V1 is licensed under the **[PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/)**.
+PermaDesign is licensed under the **[PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/)**.
 
 In plain English, this means:
 
-- ✅ **Free for personal use** — install it, use it for your own garden, share it with friends
-- ✅ **Free for non-profit use** — community gardens, educational settings, non-profit ecological work
-- ✅ **Free to modify and redistribute** for non-commercial purposes
-- ✅ **Free for research and academic use**
-- ❌ **Not free for commercial use** — you may not sell PermaDesign or services built on PermaDesign, or use it as part of a commercial product or service, without separate permission
+- **Free for personal use** — install it, use it for your own garden, share it with friends
+- **Free for non-profit use** — community gardens, educational settings, non-profit ecological work
+- **Free to modify and redistribute** for non-commercial purposes
+- **Free for research and academic use**
+- **Not free for commercial use** — you may not sell PermaDesign or services built on PermaDesign, or use it as part of a commercial product or service, without separate permission
 
 If you'd like to use PermaDesign commercially, please open an issue to discuss a separate licensing arrangement.
-
-The successor project Site & Pattern will be released under AGPL-3.0, which permits commercial use under copyleft terms.
 
 ---
 
@@ -170,4 +164,4 @@ PermaDesign was developed with significant assistance from AI coding tools.
 
 ## Contact
 
-For questions about PermaDesign V1 or interest in Site & Pattern, open an issue on this repository.
+For questions, bug reports, or feature suggestions, open an issue on this repository.

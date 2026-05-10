@@ -15,11 +15,11 @@ def _get_plant_by_name(common_name):
         conn.close()
 
 
-def get_all_guilds(top_level_only=True):
+def get_all_polycultures(top_level_only=True):
     conn = get_connection()
     try:
         sql = ("SELECT g.*, p.common_name AS center_plant_name "
-               "FROM guilds g LEFT JOIN plants p ON g.center_plant_id = p.id ")
+               "FROM polycultures g LEFT JOIN plants p ON g.center_plant_id = p.id ")
         if top_level_only:
             sql += "WHERE g.parent_id IS NULL "
         sql += "ORDER BY g.name"
@@ -29,40 +29,40 @@ def get_all_guilds(top_level_only=True):
         conn.close()
 
 
-def get_guild_by_id(guild_id):
+def get_polyculture_by_id(polyculture_id):
     conn = get_connection()
     try:
         row = conn.execute(
             "SELECT g.*, p.common_name AS center_plant_name "
-            "FROM guilds g LEFT JOIN plants p ON g.center_plant_id = p.id "
+            "FROM polycultures g LEFT JOIN plants p ON g.center_plant_id = p.id "
             "WHERE g.id = ?",
-            (guild_id,),
+            (polyculture_id,),
         ).fetchone()
         if not row:
             return None
-        guild = dict(row)
+        polyculture = dict(row)
         members = conn.execute(
             "SELECT gm.*, p.common_name, p.plant_type "
-            "FROM guild_members gm JOIN plants p ON gm.plant_id = p.id "
-            "WHERE gm.guild_id = ? ORDER BY gm.id",
-            (guild_id,),
+            "FROM polyculture_members gm JOIN plants p ON gm.plant_id = p.id "
+            "WHERE gm.polyculture_id = ? ORDER BY gm.id",
+            (polyculture_id,),
         ).fetchall()
-        guild["members"] = [dict(m) for m in members]
-        return guild
+        polyculture["members"] = [dict(m) for m in members]
+        return polyculture
     finally:
         conn.close()
 
 
-def create_guild(name, description, center_plant_id, parent_id=None):
+def create_polyculture(name, description, center_plant_id, parent_id=None):
     conn = get_connection()
     try:
         cur = conn.execute(
-            "INSERT INTO guilds (name, description, center_plant_id, parent_id) VALUES (?, ?, ?, ?)",
+            "INSERT INTO polycultures (name, description, center_plant_id, parent_id) VALUES (?, ?, ?, ?)",
             (name, description, center_plant_id, parent_id),
         )
-        guild_id = cur.lastrowid
+        polyculture_id = cur.lastrowid
         conn.commit()
-        return guild_id
+        return polyculture_id
     except Exception:
         conn.rollback()
         raise
@@ -70,13 +70,13 @@ def create_guild(name, description, center_plant_id, parent_id=None):
         conn.close()
 
 
-def get_guild_children(parent_id):
-    """Get all variation guilds under a parent guild."""
+def get_polyculture_children(parent_id):
+    """Get all variation polycultures under a parent polyculture."""
     conn = get_connection()
     try:
         rows = conn.execute(
             "SELECT g.*, p.common_name AS center_plant_name "
-            "FROM guilds g LEFT JOIN plants p ON g.center_plant_id = p.id "
+            "FROM polycultures g LEFT JOIN plants p ON g.center_plant_id = p.id "
             "WHERE g.parent_id = ? ORDER BY g.name",
             (parent_id,),
         ).fetchall()
@@ -85,18 +85,18 @@ def get_guild_children(parent_id):
         conn.close()
 
 
-def add_guild_member(guild_id, plant_id, role, offset_x, offset_y, notes=""):
+def add_polyculture_member(polyculture_id, plant_id, role, offset_x, offset_y, notes=""):
     if plant_id is None:
         raise ValueError("plant_id must not be None")
     conn = get_connection()
     try:
         conn.execute(
-            "INSERT INTO guild_members (guild_id, plant_id, role, offset_x, offset_y, notes) "
+            "INSERT INTO polyculture_members (polyculture_id, plant_id, role, offset_x, offset_y, notes) "
             "VALUES (?, ?, ?, ?, ?, ?)",
-            (guild_id, plant_id, role, offset_x, offset_y, notes),
+            (polyculture_id, plant_id, role, offset_x, offset_y, notes),
         )
         conn.execute(
-            "UPDATE guilds SET modified = datetime('now') WHERE id = ?", (guild_id,)
+            "UPDATE polycultures SET modified = datetime('now') WHERE id = ?", (polyculture_id,)
         )
         conn.commit()
     except Exception:
@@ -106,17 +106,17 @@ def add_guild_member(guild_id, plant_id, role, offset_x, offset_y, notes=""):
         conn.close()
 
 
-def remove_guild_member(member_id):
+def remove_polyculture_member(member_id):
     conn = get_connection()
     try:
         row = conn.execute(
-            "SELECT guild_id FROM guild_members WHERE id = ?", (member_id,)
+            "SELECT polyculture_id FROM polyculture_members WHERE id = ?", (member_id,)
         ).fetchone()
-        conn.execute("DELETE FROM guild_members WHERE id = ?", (member_id,))
+        conn.execute("DELETE FROM polyculture_members WHERE id = ?", (member_id,))
         if row:
             conn.execute(
-                "UPDATE guilds SET modified = datetime('now') WHERE id = ?",
-                (row["guild_id"],),
+                "UPDATE polycultures SET modified = datetime('now') WHERE id = ?",
+                (row["polyculture_id"],),
             )
         conn.commit()
     except Exception:
@@ -126,11 +126,11 @@ def remove_guild_member(member_id):
         conn.close()
 
 
-def delete_guild(guild_id):
+def delete_polyculture(polyculture_id):
     conn = get_connection()
     try:
-        conn.execute("DELETE FROM guild_members WHERE guild_id = ?", (guild_id,))
-        conn.execute("DELETE FROM guilds WHERE id = ?", (guild_id,))
+        conn.execute("DELETE FROM polyculture_members WHERE polyculture_id = ?", (polyculture_id,))
+        conn.execute("DELETE FROM polycultures WHERE id = ?", (polyculture_id,))
         conn.commit()
     except Exception:
         conn.rollback()
@@ -139,17 +139,17 @@ def delete_guild(guild_id):
         conn.close()
 
 
-def update_guild(guild_id, name=None, description=None):
+def update_polyculture(polyculture_id, name=None, description=None):
     conn = get_connection()
     try:
         if name is not None:
-            conn.execute("UPDATE guilds SET name = ? WHERE id = ?", (name, guild_id))
+            conn.execute("UPDATE polycultures SET name = ? WHERE id = ?", (name, polyculture_id))
         if description is not None:
             conn.execute(
-                "UPDATE guilds SET description = ? WHERE id = ?", (description, guild_id)
+                "UPDATE polycultures SET description = ? WHERE id = ?", (description, polyculture_id)
             )
         conn.execute(
-            "UPDATE guilds SET modified = datetime('now') WHERE id = ?", (guild_id,)
+            "UPDATE polycultures SET modified = datetime('now') WHERE id = ?", (polyculture_id,)
         )
         conn.commit()
     except Exception:
@@ -159,38 +159,38 @@ def update_guild(guild_id, name=None, description=None):
         conn.close()
 
 
-def duplicate_guild(guild_id, as_variation=False):
-    """Duplicate a guild. If as_variation=True, create it as a child variation.
+def duplicate_polyculture(polyculture_id, as_variation=False):
+    """Duplicate a polyculture. If as_variation=True, create it as a child variation.
 
-    The guild row and all member rows are written in a single transaction so
-    a mid-operation failure cannot leave behind a half-populated guild.
+    The polyculture row and all member rows are written in a single transaction so
+    a mid-operation failure cannot leave behind a half-populated polyculture.
     """
-    guild = get_guild_by_id(guild_id)
-    if not guild:
+    polyculture = get_polyculture_by_id(polyculture_id)
+    if not polyculture:
         return None
 
     if as_variation:
-        children = get_guild_children(guild_id)
+        children = get_polyculture_children(polyculture_id)
         var_num = len(children) + 1
         new_name = f"Variation {var_num}"
-        parent_id = guild_id
+        parent_id = polyculture_id
     else:
-        new_name = f"{guild['name']} (copy)"
-        parent_id = guild.get("parent_id")
+        new_name = f"{polyculture['name']} (copy)"
+        parent_id = polyculture.get("parent_id")
 
-    members = guild.get("members", [])
+    members = polyculture.get("members", [])
     conn = get_connection()
     try:
         cur = conn.execute(
-            "INSERT INTO guilds (name, description, center_plant_id, parent_id) "
+            "INSERT INTO polycultures (name, description, center_plant_id, parent_id) "
             "VALUES (?, ?, ?, ?)",
-            (new_name, guild["description"], guild["center_plant_id"], parent_id),
+            (new_name, polyculture["description"], polyculture["center_plant_id"], parent_id),
         )
         new_id = cur.lastrowid
         for m in members:
             conn.execute(
-                "INSERT INTO guild_members "
-                "(guild_id, plant_id, role, offset_x, offset_y, notes) "
+                "INSERT INTO polyculture_members "
+                "(polyculture_id, plant_id, role, offset_x, offset_y, notes) "
                 "VALUES (?, ?, ?, ?, ?, ?)",
                 (new_id, m["plant_id"], m["role"],
                  m["offset_x"], m["offset_y"], m.get("notes", "")),
@@ -204,16 +204,16 @@ def duplicate_guild(guild_id, as_variation=False):
         conn.close()
 
 
-def export_guild(guild_id):
-    guild = get_guild_by_id(guild_id)
-    if not guild:
+def export_polyculture(polyculture_id):
+    polyculture = get_polyculture_by_id(polyculture_id)
+    if not polyculture:
         return None
     data = {
-        "name": guild["name"],
-        "description": guild["description"] or "",
+        "name": polyculture["name"],
+        "description": polyculture["description"] or "",
         "members": [],
     }
-    for m in guild.get("members", []):
+    for m in polyculture.get("members", []):
         data["members"].append(
             {
                 "common_name": m["common_name"],
@@ -225,7 +225,7 @@ def export_guild(guild_id):
     return data
 
 
-def import_guild(data):
+def import_polyculture(data):
     warnings = []
     center_plant_id = None
 
@@ -237,8 +237,8 @@ def import_guild(data):
                 center_plant_id = plant["id"]
             break
 
-    guild_id = create_guild(
-        data.get("name", "Imported Guild"),
+    polyculture_id = create_polyculture(
+        data.get("name", "Imported Polyculture"),
         data.get("description", ""),
         center_plant_id,
     )
@@ -246,8 +246,8 @@ def import_guild(data):
     for m in data.get("members", []):
         plant = _get_plant_by_name(m["common_name"])
         if plant:
-            add_guild_member(
-                guild_id,
+            add_polyculture_member(
+                polyculture_id,
                 plant["id"],
                 m.get("role", ""),
                 m.get("offset_x", 0),
@@ -256,15 +256,15 @@ def import_guild(data):
         else:
             warnings.append(f"Plant not found: {m['common_name']}")
 
-    return guild_id, warnings
+    return polyculture_id, warnings
 
 
-# ── Example guild presets ────────────────────────────────────────────────────
+# ── Example polyculture presets ────────────────────────────────────────────────────
 
-EXAMPLE_GUILDS = [
+EXAMPLE_POLYCULTURES = [
     {
-        "name": "Apple Tree Guild",
-        "description": "Classic permaculture fruit tree guild for Zone 3-4. "
+        "name": "Apple Tree Polyculture",
+        "description": "Classic permaculture fruit tree polyculture for Zone 3-4. "
                        "Apple at centre with support plants filling understory and ground layer.",
         "members": [
             # (common_name, role, offset_x, offset_y)
@@ -278,7 +278,7 @@ EXAMPLE_GUILDS = [
         "variations": [
             {
                 "name": "Shade-Tolerant",
-                "description": "Apple guild variant using shade-tolerant understory plants. "
+                "description": "Apple polyculture variant using shade-tolerant understory plants. "
                                "Better for north-facing or partially shaded sites.",
                 "members": [
                     ("Goodland Apple",  "canopy",              0,    0),
@@ -292,8 +292,8 @@ EXAMPLE_GUILDS = [
         ],
     },
     {
-        "name": "Saskatoon Berry Guild",
-        "description": "Prairie-adapted shrub guild built around Saskatoon berry. "
+        "name": "Saskatoon Berry Polyculture",
+        "description": "Prairie-adapted shrub polyculture built around Saskatoon berry. "
                        "Great for Zone 2-4 food forests with native plants.",
         "members": [
             ("Saskatoon Berry",   "canopy",              0,    0),
@@ -306,7 +306,7 @@ EXAMPLE_GUILDS = [
         "variations": [
             {
                 "name": "Berry Focus",
-                "description": "Saskatoon guild variant emphasizing fruit production. "
+                "description": "Saskatoon polyculture variant emphasizing fruit production. "
                                "Adds more berry-producing understory shrubs.",
                 "members": [
                     ("Saskatoon Berry",  "canopy",             0,    0),
@@ -319,10 +319,10 @@ EXAMPLE_GUILDS = [
             },
         ],
     },
-    # ── Edmonton-specific guilds designed for Zone 3-4 ──────────────────────
+    # ── Edmonton-specific polycultures designed for Zone 3-4 ──────────────────────
     {
-        "name": "Evans Cherry Guild",
-        "description": "Fruit tree guild centred on Evans Cherry, a hardy sour cherry bred for "
+        "name": "Evans Cherry Polyculture",
+        "description": "Fruit tree polyculture centred on Evans Cherry, a hardy sour cherry bred for "
                        "prairie climates. Comfrey mines deep nutrients and provides chop-and-drop "
                        "mulch. Chives and garlic repel aphids and borers common on cherries. "
                        "White clover fixes nitrogen as a living mulch, while bee balm attracts "
@@ -340,7 +340,7 @@ EXAMPLE_GUILDS = [
         "variations": [
             {
                 "name": "Native Understory",
-                "description": "Evans Cherry guild variant using exclusively native prairie plants. "
+                "description": "Evans Cherry polyculture variant using exclusively native prairie plants. "
                                "Replaces comfrey and garlic with native dynamic accumulators and "
                                "pest repellents. Yarrow is a native nutrient accumulator and "
                                "pollinator attractor; nodding onion replaces chives as a native "
@@ -358,8 +358,8 @@ EXAMPLE_GUILDS = [
         ],
     },
     {
-        "name": "Bur Oak Guild",
-        "description": "Large shade-tree guild modelled on natural oak savanna ecosystems of the "
+        "name": "Bur Oak Polyculture",
+        "description": "Large shade-tree polyculture modelled on natural oak savanna ecosystems of the "
                        "aspen parkland. Bur oak provides a long-lived canopy with edible acorns. "
                        "Beaked hazelnut is a native understory shrub that naturally co-occurs with "
                        "oak and produces edible nuts. Wild lupine and white prairie clover fix "
@@ -379,7 +379,7 @@ EXAMPLE_GUILDS = [
         "variations": [
             {
                 "name": "Edible Savanna",
-                "description": "Bur oak guild variant emphasizing food production. Saskatoon berry "
+                "description": "Bur oak polyculture variant emphasizing food production. Saskatoon berry "
                                "and gooseberry replace hazelnut for more fruit. Canada goldenrod "
                                "provides late-season pollinator support.",
                 "members": [
@@ -434,8 +434,8 @@ EXAMPLE_GUILDS = [
         ],
     },
     {
-        "name": "Boreal Shade Guild",
-        "description": "Understory guild for shaded or north-facing areas beneath existing "
+        "name": "Boreal Shade Polyculture",
+        "description": "Understory polyculture for shaded or north-facing areas beneath existing "
                        "spruce, poplar, or birch canopy. Modelled on natural boreal forest floor "
                        "communities. Wild sarsaparilla, bunchberry, and twinflower are classic "
                        "boreal companions found growing together in Alberta woodlands. Highbush "
@@ -454,7 +454,7 @@ EXAMPLE_GUILDS = [
         "variations": [
             {
                 "name": "Edible Boreal Understory",
-                "description": "Boreal shade guild variant emphasizing edible plants. Low-bush "
+                "description": "Boreal shade polyculture variant emphasizing edible plants. Low-bush "
                                "cranberry and Labrador tea replace ornamental groundcovers. Wild "
                                "mint fills the ground layer with a useful aromatic herb that "
                                "thrives in moist shade. Red osier dogwood provides winter colour "
@@ -473,7 +473,7 @@ EXAMPLE_GUILDS = [
     },
     {
         "name": "Medicinal Herb Circle",
-        "description": "Traditional medicinal plant guild arranged in a circle garden. Centred on "
+        "description": "Traditional medicinal plant polyculture arranged in a circle garden. Centred on "
                        "purple coneflower (Echinacea), North America's most popular herbal immune "
                        "support. Yarrow is used by First Nations for wound care and fever. Wild "
                        "mint and giant hyssop provide digestive and respiratory remedies. "
@@ -512,7 +512,7 @@ EXAMPLE_GUILDS = [
     },
     {
         "name": "Native Berry Hedge",
-        "description": "Linear guild for property edges and windbreaks, arranged as a layered "
+        "description": "Linear polyculture for property edges and windbreaks, arranged as a layered "
                        "hedgerow. Combines native berry-producing shrubs with nitrogen fixers and "
                        "pollinator plants to create a productive living fence. Saskatoon berry and "
                        "chokecherry form the tall backbone spaced 2-3m apart. Haskap fills the "
@@ -551,43 +551,43 @@ EXAMPLE_GUILDS = [
 ]
 
 
-def seed_example_guilds():
-    """Create example guilds if none exist yet. Safe to call multiple times."""
+def seed_example_polycultures():
+    """Create example polycultures if none exist yet. Safe to call multiple times."""
     conn = get_connection()
     try:
-        count = conn.execute("SELECT COUNT(*) FROM guilds").fetchone()[0]
+        count = conn.execute("SELECT COUNT(*) FROM polycultures").fetchone()[0]
         if count > 0:
-            return  # Already have guilds, don't re-seed
+            return  # Already have polycultures, don't re-seed
     finally:
         conn.close()
 
-    for guild_def in EXAMPLE_GUILDS:
+    for polyculture_def in EXAMPLE_POLYCULTURES:
         # Find center plant
-        center_name = guild_def["members"][0][0]
+        center_name = polyculture_def["members"][0][0]
         center_plant = _get_plant_by_name(center_name)
         center_id = center_plant["id"] if center_plant else None
 
-        guild_id = create_guild(
-            guild_def["name"], guild_def["description"], center_id
+        polyculture_id = create_polyculture(
+            polyculture_def["name"], polyculture_def["description"], center_id
         )
 
-        for common_name, role, ox, oy in guild_def["members"]:
+        for common_name, role, ox, oy in polyculture_def["members"]:
             plant = _get_plant_by_name(common_name)
             if plant:
-                add_guild_member(guild_id, plant["id"], role, ox, oy)
+                add_polyculture_member(polyculture_id, plant["id"], role, ox, oy)
 
-        # Create variations as child guilds
-        for var_def in guild_def.get("variations", []):
+        # Create variations as child polycultures
+        for var_def in polyculture_def.get("variations", []):
             var_center_name = var_def["members"][0][0]
             var_center = _get_plant_by_name(var_center_name)
             var_center_id = var_center["id"] if var_center else None
 
-            var_id = create_guild(
+            var_id = create_polyculture(
                 var_def["name"], var_def["description"],
-                var_center_id, parent_id=guild_id
+                var_center_id, parent_id=polyculture_id
             )
 
             for common_name, role, ox, oy in var_def["members"]:
                 plant = _get_plant_by_name(common_name)
                 if plant:
-                    add_guild_member(var_id, plant["id"], role, ox, oy)
+                    add_polyculture_member(var_id, plant["id"], role, ox, oy)

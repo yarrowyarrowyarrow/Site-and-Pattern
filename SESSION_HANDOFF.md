@@ -119,10 +119,10 @@ PermaDesign/
 
 ## Next Steps (Ideas for Future Development)
 
-### Step E — Layer Management & Plant Guilds
-- Group plants into permaculture guilds (e.g. apple guild, nitrogen-fixer ring)
-- Visual guild overlay on the map with toggle
-- Guild template library for common food forest patterns
+### Step E — Layer Management & Plant Polycultures
+- Group plants into permaculture polycultures (e.g. apple polyculture, nitrogen-fixer ring)
+- Visual polyculture overlay on the map with toggle
+- Polyculture template library for common food forest patterns
 
 ### Step F — Seasonal Timeline View
 - Timeline showing all plants' activities across the year in one view

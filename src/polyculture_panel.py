@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.db import guilds
+from src.db import polycultures
 from src.db import plants as plants_db
 
 
@@ -57,7 +57,7 @@ ROLE_TYPE_HINTS = {
 
 
 class OffsetCanvas(QWidget):
-    """Mini canvas for visually positioning a guild member by clicking."""
+    """Mini canvas for visually positioning a polyculture member by clicking."""
 
     offsetChanged = pyqtSignal(float, float)  # offset_x, offset_y in metres
 
@@ -67,7 +67,7 @@ class OffsetCanvas(QWidget):
         self._offset_x = 0.0
         self._offset_y = 0.0
         self.setFixedSize(180, 180)
-        self.setToolTip("Click to set member offset from guild centre")
+        self.setToolTip("Click to set member offset from polyculture centre")
         self.setCursor(Qt.CursorShape.CrossCursor)
 
     def set_offset(self, x: float, y: float):
@@ -146,7 +146,7 @@ class OffsetCanvas(QWidget):
 class AddMemberDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Add Guild Member")
+        self.setWindowTitle("Add Polyculture Member")
         self.setMinimumWidth(420)
 
         self._all_plants = plants_db.get_all_plants()
@@ -271,13 +271,13 @@ class AddMemberDialog(QDialog):
         }
 
 
-class GuildPanel(QWidget):
-    placeGuildRequested = pyqtSignal(dict)  # guild data with members
+class PolyculturePanel(QWidget):
+    placePolycultureRequested = pyqtSignal(dict)  # polyculture data with members
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._build_ui()
-        self._refresh_guild_list()
+        self._refresh_polyculture_list()
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
@@ -290,32 +290,32 @@ class GuildPanel(QWidget):
         self._search_box = QLineEdit()
         self._search_box.setPlaceholderText("Search polycultures...")
         self._search_box.setClearButtonEnabled(True)
-        self._search_box.textChanged.connect(self._refresh_guild_list)
+        self._search_box.textChanged.connect(self._refresh_polyculture_list)
         layout.addWidget(self._search_box)
 
-        # Guild tree (parent guilds + variations as children)
-        self.guild_tree = QTreeWidget()
-        self.guild_tree.setHeaderHidden(True)
-        self.guild_tree.setIndentation(16)
-        self.guild_tree.setMouseTracking(True)
-        self.guild_tree.currentItemChanged.connect(self._on_guild_selected)
-        self.guild_tree.itemDoubleClicked.connect(self._on_double_click_place)
-        layout.addWidget(self.guild_tree)
+        # Polyculture tree (parent polycultures + variations as children)
+        self.polyculture_tree = QTreeWidget()
+        self.polyculture_tree.setHeaderHidden(True)
+        self.polyculture_tree.setIndentation(16)
+        self.polyculture_tree.setMouseTracking(True)
+        self.polyculture_tree.currentItemChanged.connect(self._on_polyculture_selected)
+        self.polyculture_tree.itemDoubleClicked.connect(self._on_double_click_place)
+        layout.addWidget(self.polyculture_tree)
 
         # Buttons row 1
         btn_row1 = QHBoxLayout()
         self.new_btn = QPushButton("New Polyculture")
-        self.new_btn.clicked.connect(self._on_new_guild)
+        self.new_btn.clicked.connect(self._on_new_polyculture)
         btn_row1.addWidget(self.new_btn)
 
         self.delete_btn = QPushButton("Delete")
         self.delete_btn.setEnabled(False)
-        self.delete_btn.clicked.connect(self._on_delete_guild)
+        self.delete_btn.clicked.connect(self._on_delete_polyculture)
         btn_row1.addWidget(self.delete_btn)
 
         self.dup_btn = QPushButton("Duplicate")
         self.dup_btn.setEnabled(False)
-        self.dup_btn.clicked.connect(self._on_duplicate_guild)
+        self.dup_btn.clicked.connect(self._on_duplicate_polyculture)
         btn_row1.addWidget(self.dup_btn)
 
         self.variation_btn = QPushButton("+ Variation")
@@ -352,7 +352,7 @@ class GuildPanel(QWidget):
         member_btns.addWidget(self.remove_member_btn)
         layout.addLayout(member_btns)
 
-        # Wire once here — NOT inside _on_guild_selected to avoid accumulation
+        # Wire once here — NOT inside _on_polyculture_selected to avoid accumulation
         self.members_list.currentItemChanged.connect(
             lambda c, p: self.remove_member_btn.setEnabled(c is not None)
         )
@@ -374,32 +374,32 @@ class GuildPanel(QWidget):
         btn_row2.addWidget(self.import_btn)
         layout.addLayout(btn_row2)
 
-    def _refresh_guild_list(self, _filter_text=None):
-        self.guild_tree.clear()
+    def _refresh_polyculture_list(self, _filter_text=None):
+        self.polyculture_tree.clear()
         search = (self._search_box.text().strip().lower()
                   if hasattr(self, '_search_box') else "")
 
-        for g in guilds.get_all_guilds(top_level_only=True):
-            guild_detail = guilds.get_guild_by_id(g["id"])
-            members = guild_detail.get("members", []) if guild_detail else []
+        for g in polycultures.get_all_polycultures(top_level_only=True):
+            polyculture_detail = polycultures.get_polyculture_by_id(g["id"])
+            members = polyculture_detail.get("members", []) if polyculture_detail else []
             member_names = [m["common_name"] for m in members]
 
-            # Search filter: match guild name, description, or member names
-            children = guilds.get_guild_children(g["id"])
+            # Search filter: match polyculture name, description, or member names
+            children = polycultures.get_polyculture_children(g["id"])
             child_match = False
             if search:
-                guild_match = (
+                polyculture_match = (
                     search in g["name"].lower()
                     or search in (g.get("description") or "").lower()
                     or any(search in n.lower() for n in member_names)
                 )
                 for child in children:
-                    cd = guilds.get_guild_by_id(child["id"])
+                    cd = polycultures.get_polyculture_by_id(child["id"])
                     cm = [m["common_name"] for m in (cd.get("members", []) if cd else [])]
                     if (search in child["name"].lower()
                             or any(search in n.lower() for n in cm)):
                         child_match = True
-                if not guild_match and not child_match:
+                if not polyculture_match and not child_match:
                     continue
 
             # Build tooltip: member summary
@@ -414,10 +414,10 @@ class GuildPanel(QWidget):
             item = QTreeWidgetItem([g["name"]])
             item.setData(0, Qt.ItemDataRole.UserRole, g["id"])
             item.setToolTip(0, tooltip)
-            self.guild_tree.addTopLevelItem(item)
+            self.polyculture_tree.addTopLevelItem(item)
 
             for child in children:
-                cd = guilds.get_guild_by_id(child["id"])
+                cd = polycultures.get_polyculture_by_id(child["id"])
                 cm = cd.get("members", []) if cd else []
                 child_roles = ", ".join(
                     f"{m['common_name']} ({(m.get('role') or '').replace('_',' ')})"
@@ -433,22 +433,22 @@ class GuildPanel(QWidget):
                 item.setExpanded(True)
 
     def _on_double_click_place(self, item, column):
-        """Double-click a guild to immediately enter placement mode."""
-        guild_id = item.data(0, Qt.ItemDataRole.UserRole)
-        if guild_id is None:
+        """Double-click a polyculture to immediately enter placement mode."""
+        polyculture_id = item.data(0, Qt.ItemDataRole.UserRole)
+        if polyculture_id is None:
             return
-        guild = guilds.get_guild_by_id(guild_id)
-        if guild:
-            self.placeGuildRequested.emit(guild)
+        polyculture = polycultures.get_polyculture_by_id(polyculture_id)
+        if polyculture:
+            self.placePolycultureRequested.emit(polyculture)
 
-    def _on_guild_selected(self, current, previous):
+    def _on_polyculture_selected(self, current, previous):
         has_selection = current is not None
         self.delete_btn.setEnabled(has_selection)
         self.dup_btn.setEnabled(has_selection)
         self.place_btn.setEnabled(has_selection)
         self.export_btn.setEnabled(has_selection)
         self.add_member_btn.setEnabled(has_selection)
-        # Only allow adding variations to top-level guilds
+        # Only allow adding variations to top-level polycultures
         is_top_level = has_selection and (current.parent() is None)
         self.variation_btn.setEnabled(is_top_level)
 
@@ -457,26 +457,26 @@ class GuildPanel(QWidget):
             self.members_list.clear()
             return
 
-        guild_id = current.data(0, Qt.ItemDataRole.UserRole)
-        guild = guilds.get_guild_by_id(guild_id)
-        if not guild:
+        polyculture_id = current.data(0, Qt.ItemDataRole.UserRole)
+        polyculture = polycultures.get_polyculture_by_id(polyculture_id)
+        if not polyculture:
             return
 
         lines = [
-            f"<b>{guild['name']}</b>",
-            f"Center: {guild.get('center_plant_name', 'None')}",
+            f"<b>{polyculture['name']}</b>",
+            f"Center: {polyculture.get('center_plant_name', 'None')}",
         ]
-        if guild.get("description"):
-            lines.append(guild["description"])
-        lines.append(f"Members: {len(guild.get('members', []))}")
+        if polyculture.get("description"):
+            lines.append(polyculture["description"])
+        lines.append(f"Members: {len(polyculture.get('members', []))}")
         # Show variation count for top-level
-        children = guilds.get_guild_children(guild_id)
+        children = polycultures.get_polyculture_children(polyculture_id)
         if children:
             lines.append(f"Variations: {len(children)}")
         self.detail_text.setHtml("<br>".join(lines))
 
         self.members_list.clear()
-        for m in guild.get("members", []):
+        for m in polyculture.get("members", []):
             role = (m.get("role") or "").replace("_", " ")
             text = f"{m['common_name']} — {role} ({m['offset_x']}m, {m['offset_y']}m)"
             item = QListWidgetItem(text)
@@ -485,68 +485,68 @@ class GuildPanel(QWidget):
 
         self.remove_member_btn.setEnabled(False)
 
-    def _get_selected_guild_id(self):
-        item = self.guild_tree.currentItem()
+    def _get_selected_polyculture_id(self):
+        item = self.polyculture_tree.currentItem()
         return item.data(0, Qt.ItemDataRole.UserRole) if item else None
 
-    def _on_new_guild(self):
-        name, ok = QInputDialog.getText(self, "New Guild", "Guild name:")
+    def _on_new_polyculture(self):
+        name, ok = QInputDialog.getText(self, "New Polyculture", "Polyculture name:")
         if not ok or not name.strip():
             return
 
-        desc, ok = QInputDialog.getText(self, "New Guild", "Description (optional):")
+        desc, ok = QInputDialog.getText(self, "New Polyculture", "Description (optional):")
         if not ok:
             desc = ""
 
         try:
-            guilds.create_guild(name.strip(), desc.strip(), None)
+            polycultures.create_polyculture(name.strip(), desc.strip(), None)
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Could not create guild:\n{e}")
+            QMessageBox.critical(self, "Error", f"Could not create polyculture:\n{e}")
             return
-        self._refresh_guild_list()
+        self._refresh_polyculture_list()
 
-    def _on_delete_guild(self):
-        guild_id = self._get_selected_guild_id()
-        if guild_id is None:
+    def _on_delete_polyculture(self):
+        polyculture_id = self._get_selected_polyculture_id()
+        if polyculture_id is None:
             return
         reply = QMessageBox.question(
-            self, "Delete Guild", "Delete this guild from the library?"
+            self, "Delete Polyculture", "Delete this polyculture from the library?"
         )
         if reply == QMessageBox.StandardButton.Yes:
             try:
-                guilds.delete_guild(guild_id)
+                polycultures.delete_polyculture(polyculture_id)
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Could not delete guild:\n{e}")
+                QMessageBox.critical(self, "Error", f"Could not delete polyculture:\n{e}")
                 return
-            self._refresh_guild_list()
+            self._refresh_polyculture_list()
 
-    def _on_duplicate_guild(self):
-        guild_id = self._get_selected_guild_id()
-        if not guild_id:
+    def _on_duplicate_polyculture(self):
+        polyculture_id = self._get_selected_polyculture_id()
+        if not polyculture_id:
             return
         try:
-            guilds.duplicate_guild(guild_id)
+            polycultures.duplicate_polyculture(polyculture_id)
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Could not duplicate guild:\n{e}")
+            QMessageBox.critical(self, "Error", f"Could not duplicate polyculture:\n{e}")
             return
-        self._refresh_guild_list()
+        self._refresh_polyculture_list()
 
     def _on_add_variation(self):
-        """Create a variation of the selected top-level guild."""
-        guild_id = self._get_selected_guild_id()
-        if guild_id is None:
+        """Create a variation of the selected top-level polyculture."""
+        polyculture_id = self._get_selected_polyculture_id()
+        if polyculture_id is None:
             return
         try:
-            new_id = guilds.duplicate_guild(guild_id, as_variation=True)
+            new_id = polycultures.duplicate_polyculture(polyculture_id, as_variation=True)
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Could not create variation:\n{e}")
             return
         if new_id:
-            self._refresh_guild_list()
+            self._refresh_polyculture_list()
 
     def _on_add_member(self):
-        guild_id = self._get_selected_guild_id()
-        if guild_id is None:
+        polyculture_id = self._get_selected_polyculture_id()
+        if polyculture_id is None:
             return
 
         dialog = AddMemberDialog(self)
@@ -557,15 +557,15 @@ class GuildPanel(QWidget):
                                     "Please select a plant before adding a member.")
                 return
             try:
-                guilds.add_guild_member(
-                    guild_id, data["plant_id"], data["role"],
+                polycultures.add_polyculture_member(
+                    polyculture_id, data["plant_id"], data["role"],
                     data["offset_x"], data["offset_y"]
                 )
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Could not add member:\n{e}")
                 return
             # Re-select to refresh members
-            self._on_guild_selected(self.guild_tree.currentItem(), None)
+            self._on_polyculture_selected(self.polyculture_tree.currentItem(), None)
 
     def _on_remove_member(self):
         item = self.members_list.currentItem()
@@ -573,40 +573,40 @@ class GuildPanel(QWidget):
             return
         member_id = item.data(Qt.ItemDataRole.UserRole)
         try:
-            guilds.remove_guild_member(member_id)
+            polycultures.remove_polyculture_member(member_id)
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Could not remove member:\n{e}")
             return
-        self._on_guild_selected(self.guild_tree.currentItem(), None)
+        self._on_polyculture_selected(self.polyculture_tree.currentItem(), None)
 
     def _on_place(self):
-        guild_id = self._get_selected_guild_id()
-        if guild_id is None:
+        polyculture_id = self._get_selected_polyculture_id()
+        if polyculture_id is None:
             return
-        guild = guilds.get_guild_by_id(guild_id)
-        if guild:
-            self.placeGuildRequested.emit(guild)
+        polyculture = polycultures.get_polyculture_by_id(polyculture_id)
+        if polyculture:
+            self.placePolycultureRequested.emit(polyculture)
 
     def _on_export(self):
-        guild_id = self._get_selected_guild_id()
-        if guild_id is None:
+        polyculture_id = self._get_selected_polyculture_id()
+        if polyculture_id is None:
             return
-        data = guilds.export_guild(guild_id)
+        data = polycultures.export_polyculture(polyculture_id)
         if not data:
             return
 
         path, _ = QFileDialog.getSaveFileName(
-            self, "Export Guild", f"{data['name']}.guild.json",
-            "Guild Files (*.guild.json)"
+            self, "Export Polyculture", f"{data['name']}.polyculture.json",
+            "Polyculture Files (*.polyculture.json)"
         )
         if path:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
-            QMessageBox.information(self, "Export", f"Guild exported to {path}")
+            QMessageBox.information(self, "Export", f"Polyculture exported to {path}")
 
     def _on_import(self):
         path, _ = QFileDialog.getOpenFileName(
-            self, "Import Guild", "", "Guild Files (*.guild.json);;JSON Files (*.json)"
+            self, "Import Polyculture", "", "Polyculture Files (*.polyculture.json);;JSON Files (*.json)"
         )
         if not path:
             return
@@ -618,13 +618,13 @@ class GuildPanel(QWidget):
             QMessageBox.critical(self, "Import Error", str(e))
             return
 
-        guild_id, warnings = guilds.import_guild(data)
-        self._refresh_guild_list()
+        polyculture_id, warnings = polycultures.import_polyculture(data)
+        self._refresh_polyculture_list()
 
         if warnings:
             QMessageBox.warning(
                 self, "Import Warnings",
-                "Guild imported with warnings:\n" + "\n".join(warnings)
+                "Polyculture imported with warnings:\n" + "\n".join(warnings)
             )
         else:
-            QMessageBox.information(self, "Import", "Guild imported successfully!")
+            QMessageBox.information(self, "Import", "Polyculture imported successfully!")

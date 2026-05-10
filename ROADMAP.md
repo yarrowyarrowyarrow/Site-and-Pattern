@@ -1,6 +1,32 @@
 # PermaDesign — Feature Roadmap
 
-A prioritized list of features requested by permaculture practitioners, drawn from community forums (Permies.com, Reddit r/Permaculture), existing tool reviews, and user feedback. Organized by effort/impact tiers.
+A prioritized list of features for the Alberta-focused PermaDesign tool. Organized by effort/impact tiers, with the active sprint at the top.
+
+---
+
+## Current Sprint (in progress)
+
+| Area | Item | Status |
+|------|------|--------|
+| Cleanup | Drop deprecated "guilds" terminology in favour of "polycultures"; remove legacy/duplicate files | Done |
+| Cleanup | Trim README/ROADMAP to current state and current-sprint plan | Done |
+| Cleanup | Update Friend Setup Guide for the `.exe` one-click installer | Done |
+| UI | Address finder: partial-match-first; fix "Clear" button crash | Planned |
+| UI | Global Ctrl+Z / cancel across plants, structures, boundaries, contours | Planned |
+| UI | Site panel: pin-drop cursor + reverse-geocode to actual address | Planned |
+| Map | Remove zone circles entirely | Planned |
+| Map | Reorder View tab to Satellite, Boundary, Measurement, Grid, Plants, Canopy, Structures | Planned |
+| Map | Measurements: hide via toggle (don't delete); right-click to delete | Planned |
+| Map | Grid menu: 1×1 / 5×5 / 10×10 / 100×100 m, opacity + colour | Planned |
+| Plants | Plant panel: label or rainbow icon for the colour picker | Planned |
+| Plants | Overlap slider range −50% to +50% (0 = no gap, no overlap) | Planned |
+| Polycultures | Visual-grid polyculture builder (5–8 plants), saved locally, AB-focused | Planned |
+| Polycultures | Drag-to-reposition placed items: individual plants and whole polycultures | Planned |
+| Data | Edmonton open-data parser fix or local bundling | Planned |
+| Data | Soil fallback when SoilGrids v2.0 (ISRIC) is unavailable | Planned |
+| Distribution | One-click `.exe` Windows installer | In progress |
+
+> **Out of scope for this sprint:** SQLite schema expansion and dataset growth. These are being handled separately on a local AI workflow.
 
 ---
 
@@ -74,12 +100,11 @@ Features for long-term planning and tracking.
 |---------|--------|
 | Interactive Leaflet map (street + satellite) | Done |
 | Property boundary drawing | Done |
-| Zone circles (Zone 0–4) | Done |
-| 118-plant Edmonton Zone 3-4 database | Done |
+| 433-plant Alberta master database (Zone 2–7) | Done |
 | Plant canopy circle visualization | Done |
-| Guild system (8 guilds + variations) | Done |
-| Guild canopy circle visualization | Done |
-| Visual offset editor for guild members | Done |
+| Polyculture system (8 polycultures + variations) | Done |
+| Polyculture canopy circle visualization | Done |
+| Visual offset editor for polyculture members | Done |
 | Planting calendar | Done |
 | Snap-to-grid | Done |
 | Measurement tool | Done |
@@ -88,7 +113,7 @@ Features for long-term planning and tracking.
 | Canopy preview overlay | Done |
 | Plant filters (Native AB, Edible, Medicinal, N-Fixer, Pollinator, Perennial) | Done |
 | Plant count badges and right-click context menu | Done |
-| Guild search, tooltips, double-click to place | Done |
+| Polyculture search, tooltips, double-click to place | Done |
 | Map legend (toggleable) | Done |
 | Keyboard shortcuts (P/G/B/M/Z/N/L/Esc) | Done |
 | Status bar seasonal tasks | Done |

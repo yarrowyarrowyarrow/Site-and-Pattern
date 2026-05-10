@@ -186,13 +186,13 @@
       <div class="legend-item"><span class="legend-swatch" style="background:#6d4c41;"></span> Root</div>
     </div>
     <div class="legend-section">
-      <div class="legend-section-title">Guild Roles</div>
+      <div class="legend-section-title">Polyculture Roles</div>
       <div class="legend-item"><span class="legend-swatch" style="background:#1b5e20;"></span> Canopy</div>
       <div class="legend-item"><span class="legend-swatch" style="background:#388e3c;"></span> Understory</div>
       <div class="legend-item"><span class="legend-swatch" style="background:#66bb6a;"></span> Groundcover</div>
       <div class="legend-item"><span class="legend-swatch" style="background:#43a047;"></span> N-Fixer</div>
       <div class="legend-item"><span class="legend-swatch" style="background:#aed581;"></span> Pollinator</div>
-      <div class="legend-item"><span class="legend-swatch outline-only" style="border-color:#a5d6a7;"></span> Guild outline</div>
+      <div class="legend-item"><span class="legend-swatch outline-only" style="border-color:#a5d6a7;"></span> Polyculture outline</div>
     </div>
     <div class="legend-section">
       <div class="legend-section-title">Structures</div>
@@ -1981,7 +1981,7 @@
       Object.keys(plantMarkers).forEach(function(mid) {
         var m = plantMarkers[mid];
         if (!m._pd) return;
-        if (m._isGuildMember) return;  // guild members already have canopy circles
+        if (m._isPolycultureMember) return;  // polyculture members already have canopy circles
         var radius = Math.max((m._pd.spacingM || 1.0) / 2, 0.5);
         L.circle(m.getLatLng(), {
           radius: radius,
@@ -2627,10 +2627,10 @@
       return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
     }
 
-    // ── Guild visualisation ─────────────────────────────────────────────────
-    // Guilds are drawn as overlapping canopy circles (like the oak guild diagram).
+    // ── Polyculture visualisation ─────────────────────────────────────────────────
+    // Polycultures are drawn as overlapping canopy circles (like the oak polyculture diagram).
     // The canopy tree is the largest circle; understory/groundcover nest inside.
-    var guildGroups = [];  // array of L.layerGroup
+    var polycultureGroups = [];  // array of L.layerGroup
 
     var ROLE_COLORS = {
       'canopy':              '#1b5e20',
@@ -2644,8 +2644,8 @@
       'other':               '#81c784'
     };
 
-    function placeGuildOnMap(guildData, centerLat, centerLng) {
-      var members = guildData.members || [];
+    function placePolycultureOnMap(polycultureData, centerLat, centerLng) {
+      var members = polycultureData.members || [];
       var group = L.layerGroup().addTo(map);
 
       // Sort members: canopy first (largest), then by descending height
@@ -2679,11 +2679,11 @@
           weight: 1.5,
           fillColor: color,
           fillOpacity: 0.30,
-          className: 'guild-canopy'
+          className: 'polyculture-canopy'
         }).addTo(group);
 
         canopy.bindTooltip(
-          '<b>' + escH(guildData.name || 'Guild') + '</b><br>' +
+          '<b>' + escH(polycultureData.name || 'Polyculture') + '</b><br>' +
           escH(m.common_name) + ' <span style="color:#aaa">(' + escH(role.replace(/_/g, ' ')) + ')</span>',
           { className: 'plant-marker-label' }
         );
@@ -2693,17 +2693,17 @@
           plantId: m.plant_id, commonName: m.common_name,
           lat: mlat, lng: mlng,
           spacingM: m.spacing_meters, plantType: m.plant_type,
-          guildName: guildData.name
+          polycultureName: polycultureData.name
         };
 
         // Also register in plantMarkers so labels/canopy-toggle works
         var mid = m.plant_id + '_g_' + Date.now() + '_' + Math.random().toString(36).substr(2,5);
         plantMarkers[mid] = canopy;
-        plantMarkers[mid]._isGuildMember = true;
+        plantMarkers[mid]._isPolycultureMember = true;
 
         canopy.on('contextmenu', function(e) {
           L.DomEvent.stop(e);
-          // Remove entire guild group on right-click
+          // Remove entire polyculture group on right-click
           map.removeLayer(group);
           // Clean up plantMarkers references
           group.eachLayer(function(layer) {
@@ -2711,14 +2711,14 @@
               if (plantMarkers[k] === layer) delete plantMarkers[k];
             });
           });
-          var idx = guildGroups.indexOf(group);
-          if (idx >= 0) guildGroups.splice(idx, 1);
+          var idx = polycultureGroups.indexOf(group);
+          if (idx >= 0) polycultureGroups.splice(idx, 1);
           // Notify Python so project state is cleaned up
-          if (bridge) bridge.onGuildRemoved(guildData.name || '', centerLat, centerLng);
+          if (bridge) bridge.onPolycultureRemoved(polycultureData.name || '', centerLat, centerLng);
         });
       });
 
-      // Draw a dashed outline around the whole guild footprint
+      // Draw a dashed outline around the whole polyculture footprint
       var outline = L.circle([centerLat, centerLng], {
         radius: maxRadius * 1.1,
         color: '#a5d6a7',
@@ -2728,16 +2728,16 @@
         interactive: false
       }).addTo(group);
 
-      // Add guild name label at center
+      // Add polyculture name label at center
       var labelIcon = L.divIcon({
         className: 'plant-marker-label',
-        html: '<b>' + escH(guildData.name || 'Guild') + '</b>',
+        html: '<b>' + escH(polycultureData.name || 'Polyculture') + '</b>',
         iconSize: [0, 0],
         iconAnchor: [0, -8]
       });
       L.marker([centerLat, centerLng], { icon: labelIcon, interactive: false }).addTo(group);
 
-      guildGroups.push(group);
+      polycultureGroups.push(group);
       return group;
     }
 
@@ -2880,8 +2880,8 @@
       plantMarkers = {};
       Object.values(plantLabels).forEach(function(l) { map.removeLayer(l); });
       plantLabels = {};
-      guildGroups.forEach(function(g) { map.removeLayer(g); });
-      guildGroups = [];
+      polycultureGroups.forEach(function(g) { map.removeLayer(g); });
+      polycultureGroups = [];
       Object.values(structureMarkers).forEach(function(g) { map.removeLayer(g); });
       structureMarkers = {};
       Object.values(hedgerowLayers).forEach(function(g) { map.removeLayer(g); });

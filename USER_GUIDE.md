@@ -10,7 +10,7 @@ When the app opens you'll see four areas:
 
 - **Map** (centre) — Edmonton by default; pan with click-and-drag, zoom with the mouse wheel.
 - **Toolbar** (top) — drawing tools, layer toggles, zoom-sensitivity combo.
-- **Side panel** (right) — five tabs: **Plants**, **Guilds**, **Structures**, **Analysis**, **Planning**.
+- **Side panel** (right) — five tabs: **Plants**, **Polycultures**, **Structures**, **Analysis**, **Planning**.
 - **Status bar** (bottom) — coordinates, hardiness zone, current mode (e.g. "Placing: Yarrow — click map").
 
 ---

@@ -15,7 +15,7 @@ SCHEMA_VERSION = "1.6"
 def new_placement_group_id() -> str:
     """Generate a fresh unique placement group identifier.
 
-    Plants placed by the same gesture (Single click, Row, Grid, Circle, Guild)
+    Plants placed by the same gesture (Single click, Row, Grid, Circle, Polyculture)
     share a group id so they can be selected/deleted as one unit.
     """
     import uuid
@@ -108,9 +108,9 @@ def project_to_map_data(project: dict) -> dict:
                 "lat": lat,
                 "lng": lng,
                 "placement_group_id": group_id,
-                "guild_name": props.get("guild_name", ""),
-                "guild_center_lat": props.get("guild_center_lat"),
-                "guild_center_lng": props.get("guild_center_lng"),
+                "polyculture_name": props.get("polyculture_name", ""),
+                "polyculture_center_lat": props.get("polyculture_center_lat"),
+                "polyculture_center_lng": props.get("polyculture_center_lng"),
             })
 
         elif etype == "zone_center" and geom.get("type") == "Point":

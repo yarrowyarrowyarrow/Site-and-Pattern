@@ -51,19 +51,19 @@ CREATE TABLE IF NOT EXISTS planting_calendar (
     PRIMARY KEY (plant_id, month)
 );
 
-CREATE TABLE IF NOT EXISTS guilds (
+CREATE TABLE IF NOT EXISTS polycultures (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     description TEXT,
     center_plant_id INTEGER REFERENCES plants(id),
-    parent_id INTEGER REFERENCES guilds(id) ON DELETE SET NULL,
+    parent_id INTEGER REFERENCES polycultures(id) ON DELETE SET NULL,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS guild_members (
+CREATE TABLE IF NOT EXISTS polyculture_members (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    guild_id INTEGER NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
+    polyculture_id INTEGER NOT NULL REFERENCES polycultures(id) ON DELETE CASCADE,
     plant_id INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
     role TEXT,
     offset_x REAL DEFAULT 0,
@@ -75,4 +75,4 @@ CREATE INDEX IF NOT EXISTS idx_plants_type    ON plants(plant_type);
 CREATE INDEX IF NOT EXISTS idx_plants_zone    ON plants(hardiness_zone_min, hardiness_zone_max);
 CREATE INDEX IF NOT EXISTS idx_plants_native  ON plants(native_to_alberta);
 CREATE INDEX IF NOT EXISTS idx_calendar_plant ON planting_calendar(plant_id);
-CREATE INDEX IF NOT EXISTS idx_guild_members  ON guild_members(guild_id);
+CREATE INDEX IF NOT EXISTS idx_polyculture_members  ON polyculture_members(polyculture_id);

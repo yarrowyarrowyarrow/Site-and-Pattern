@@ -30,7 +30,7 @@ from PyQt6.QtGui import QKeySequence, QShortcut
 
 from src.map_widget       import MapWidget
 from src.plant_panel      import PlantPanel
-from src.guild_panel      import GuildPanel
+from src.polyculture_panel      import PolyculturePanel
 from src.structure_panel  import StructurePanel
 from src.analysis_panel   import AnalysisPanel
 from src.planning_panel   import PlanningPanel
@@ -108,7 +108,7 @@ class MainWindow(QMainWindow):
         self.map_widget      = MapWidget(self)
         self.site_panel      = SitePanel(self)
         self.plant_panel     = PlantPanel(self)
-        self.guild_panel     = GuildPanel(self)
+        self.polyculture_panel     = PolyculturePanel(self)
         self.structure_panel = StructurePanel(self)
         self.analysis_panel  = AnalysisPanel(self)
         self.planning_panel  = PlanningPanel(self)
@@ -118,7 +118,7 @@ class MainWindow(QMainWindow):
         self._side_tabs.setDocumentMode(False)
         self._side_tabs.addTab(self.site_panel, "Site")
         self._side_tabs.addTab(self.plant_panel, "Plants")
-        self._side_tabs.addTab(self.guild_panel, "Polycultures")
+        self._side_tabs.addTab(self.polyculture_panel, "Polycultures")
         self._side_tabs.addTab(self.structure_panel, "Structures")
         self._side_tabs.addTab(self.analysis_panel, "Analysis")
         self._side_tabs.addTab(self.planning_panel, "Planning")
@@ -326,8 +326,8 @@ class MainWindow(QMainWindow):
         # Toolbar → settings
         self.toolbar.settings_requested.connect(self._on_settings)
 
-        # Guild panel → map (guild placement)
-        self.guild_panel.placeGuildRequested.connect(self._enter_guild_mode)
+        # Polyculture panel → map (polyculture placement)
+        self.polyculture_panel.placePolycultureRequested.connect(self._enter_polyculture_mode)
 
         # Structure panel → map
         self.structure_panel.place_structure_requested.connect(self._enter_structure_mode)
@@ -369,8 +369,8 @@ class MainWindow(QMainWindow):
         self.analysis_panel.wind_cleared.connect(self.map_widget.clear_wind_overlay)
         self.analysis_panel.season_changed.connect(self._on_season_changed)
 
-        # Map → guild removal
-        b.guild_removed.connect(self._on_guild_removed)
+        # Map → polyculture removal
+        b.polyculture_removed.connect(self._on_polyculture_removed)
 
         # Map → contour complete / removal
         b.contour_complete.connect(self._on_contour_complete)
@@ -1154,29 +1154,29 @@ class MainWindow(QMainWindow):
         self.map_widget.run_js(f"setSeasonView('{season}', {js_data});")
         self._set_mode_label(f"Season: {season}")
 
-    def _enter_guild_mode(self, guild_data: dict):
-        """Place a guild on the map — click to place centre."""
-        self._current_mode = 'guild'
-        self._pending_guild = guild_data
+    def _enter_polyculture_mode(self, polyculture_data: dict):
+        """Place a polyculture on the map — click to place centre."""
+        self._current_mode = 'polyculture'
+        self._pending_polyculture = polyculture_data
         self.map_widget.run_js("map.getContainer().style.cursor = 'crosshair';")
         self._set_mode_label(
-            f"Placing guild: {guild_data.get('name', '?')} — click map to place centre"
+            f"Placing polyculture: {polyculture_data.get('name', '?')} — click map to place centre"
         )
         try:
-            self.map_widget.bridge.map_clicked.disconnect(self._on_guild_click)
+            self.map_widget.bridge.map_clicked.disconnect(self._on_polyculture_click)
         except TypeError:
             pass
-        self.map_widget.bridge.map_clicked.connect(self._on_guild_click)
+        self.map_widget.bridge.map_clicked.connect(self._on_polyculture_click)
 
-    def _on_guild_click(self, lat: float, lng: float):
-        """Handle map click while in guild placement mode."""
-        if self._current_mode != 'guild' or not hasattr(self, '_pending_guild'):
+    def _on_polyculture_click(self, lat: float, lng: float):
+        """Handle map click while in polyculture placement mode."""
+        if self._current_mode != 'polyculture' or not hasattr(self, '_pending_polyculture'):
             return
         import json as _json
         import math
 
-        guild = self._pending_guild
-        members = guild.get("members", [])
+        polyculture = self._pending_polyculture
+        members = polyculture.get("members", [])
 
         # Enrich member data with spacing/height for the JS visualisation
         enriched_members = []
@@ -1199,17 +1199,17 @@ class MainWindow(QMainWindow):
                 "mature_height_meters": height,
             })
 
-        guild_js = {
-            "name": guild.get("name", "Guild"),
+        polyculture_js = {
+            "name": polyculture.get("name", "Polyculture"),
             "members": enriched_members,
         }
 
-        # Call JS placeGuildOnMap for visual rendering
+        # Call JS placePolycultureOnMap for visual rendering
         self.map_widget.run_js(
-            f"placeGuildOnMap(JSON.parse({_json.dumps(_json.dumps(guild_js))}), {lat}, {lng});"
+            f"placePolycultureOnMap(JSON.parse({_json.dumps(_json.dumps(polyculture_js))}), {lat}, {lng});"
         )
 
-        # All members of one guild placement share a single placement group.
+        # All members of one polyculture placement share a single placement group.
         group_id = project_io.new_placement_group_id()
 
         # Track each member in project state
@@ -1222,8 +1222,8 @@ class MainWindow(QMainWindow):
             self._placed_plants.append({
                 "plant_id": m["plant_id"], "common_name": m["common_name"],
                 "lat": mlat, "lng": mlng,
-                "guild_name": guild.get("name", ""),
-                "guild_center_lat": lat, "guild_center_lng": lng,
+                "polyculture_name": polyculture.get("name", ""),
+                "polyculture_center_lat": lat, "polyculture_center_lng": lng,
                 "placement_group_id": group_id,
             })
             self._project["features"].append({
@@ -1233,9 +1233,9 @@ class MainWindow(QMainWindow):
                     "element_type": "plant",
                     "plant_id": m["plant_id"],
                     "common_name": m["common_name"],
-                    "guild_name": guild.get("name", ""),
-                    "guild_center_lat": lat,
-                    "guild_center_lng": lng,
+                    "polyculture_name": polyculture.get("name", ""),
+                    "polyculture_center_lat": lat,
+                    "polyculture_center_lng": lng,
                     "placement_group_id": group_id,
                     "quantity": 1
                 }
@@ -1245,11 +1245,11 @@ class MainWindow(QMainWindow):
         self._mark_modified()
         self._cancel_draw()
         try:
-            self.map_widget.bridge.map_clicked.disconnect(self._on_guild_click)
+            self.map_widget.bridge.map_clicked.disconnect(self._on_polyculture_click)
         except TypeError:
             pass
         self.statusBar().showMessage(
-            f"Placed guild '{guild.get('name', '')}' with {len(enriched_members)} members", 3000
+            f"Placed polyculture '{polyculture.get('name', '')}' with {len(enriched_members)} members", 3000
         )
 
     def _cancel_draw(self):
@@ -1534,14 +1534,14 @@ class MainWindow(QMainWindow):
         self._mark_modified()
         self._sync_planning_panel()
 
-    def _on_guild_removed(self, guild_name: str, center_lat: float, center_lng: float):
-        """Remove all guild member plant features from project state.
+    def _on_polyculture_removed(self, polyculture_name: str, center_lat: float, center_lng: float):
+        """Remove all polyculture member plant features from project state.
 
-        Members are identified by the guild_center_{lat,lng} anchor they were
+        Members are identified by the polyculture_center_{lat,lng} anchor they were
         tagged with at placement time — the previous approach of matching
         each plant's own coordinate against the center with a 0.001-degree
         (~111 m) tolerance both missed members farther than 100 m from the
-        center and could match plants from adjacent guilds with identical
+        center and could match plants from adjacent polycultures with identical
         names.
         """
         # 1e-7 deg ≈ 1 cm — plenty tight while absorbing float round-trip noise.
@@ -1555,10 +1555,10 @@ class MainWindow(QMainWindow):
 
         kept_plants = []
         for p in self._placed_plants:
-            if (p.get("guild_name") == guild_name
-                    and _anchors_match(p.get("guild_center_lat"),
-                                       p.get("guild_center_lng"))):
-                continue  # drop this guild member
+            if (p.get("polyculture_name") == polyculture_name
+                    and _anchors_match(p.get("polyculture_center_lat"),
+                                       p.get("polyculture_center_lng"))):
+                continue  # drop this polyculture member
             kept_plants.append(p)
         removed_count = len(self._placed_plants) - len(kept_plants)
         self._placed_plants = kept_plants
@@ -1567,10 +1567,10 @@ class MainWindow(QMainWindow):
         for f in self._project["features"]:
             props = f.get("properties", {})
             if (props.get("element_type") == "plant"
-                    and props.get("guild_name") == guild_name
-                    and _anchors_match(props.get("guild_center_lat"),
-                                       props.get("guild_center_lng"))):
-                continue  # drop this guild member
+                    and props.get("polyculture_name") == polyculture_name
+                    and _anchors_match(props.get("polyculture_center_lat"),
+                                       props.get("polyculture_center_lng"))):
+                continue  # drop this polyculture member
             kept_features.append(f)
         self._project["features"] = kept_features
 
@@ -2270,8 +2270,8 @@ class MainWindow(QMainWindow):
             # Switch to Plants tab
             self._side_tabs.setCurrentWidget(self.plant_panel)
         elif key == Qt.Key.Key_G and not event.modifiers():
-            # Switch to Guilds tab
-            self._side_tabs.setCurrentWidget(self.guild_panel)
+            # Switch to Polycultures tab
+            self._side_tabs.setCurrentWidget(self.polyculture_panel)
         elif key == Qt.Key.Key_S and not event.modifiers():
             # Switch to Structures tab
             self._side_tabs.setCurrentWidget(self.structure_panel)
