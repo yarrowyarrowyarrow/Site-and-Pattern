@@ -286,12 +286,10 @@ class MainWindow(QMainWindow):
 
         # Map events → project state (boundary_complete re-connected below with new signature)
         b.plant_placed.connect(self._on_plant_placed)
-        b.zone_center_placed.connect(self._on_zone_center_placed)
         b.map_ready.connect(self._on_map_ready)
 
         # Toolbar → map
         self.toolbar.draw_boundary_requested.connect(self._enter_boundary_mode)
-        self.toolbar.draw_zone_requested.connect(self._enter_zone_mode)
         self.toolbar.measure_requested.connect(self._enter_measure_mode)
         self.toolbar.annotate_requested.connect(self._enter_annotate_mode)
         self.toolbar.cancel_draw_requested.connect(self._cancel_draw)
@@ -299,13 +297,12 @@ class MainWindow(QMainWindow):
 
         self.toolbar.satellite_toggled.connect(self.map_widget.set_satellite_visible)
         self.toolbar.boundary_toggled.connect(self.map_widget.set_boundary_visible)
-        self.toolbar.zones_toggled.connect(self.map_widget.set_zones_visible)
-        self.toolbar.plants_toggled.connect(self.map_widget.set_plants_visible)
-        self.toolbar.labels_toggled.connect(self.map_widget.set_labels_visible)
-        self.toolbar.canopy_toggled.connect(self.map_widget.set_canopy_visible)
-        self.toolbar.snap_toggled.connect(
-            lambda on: self.map_widget.set_snap_enabled(on)
+        self.toolbar.measurements_toggled.connect(
+            self.map_widget.set_measurements_visible
         )
+        self.toolbar.plants_toggled.connect(self.map_widget.set_plants_visible)
+        self.toolbar.canopy_toggled.connect(self.map_widget.set_canopy_visible)
+        self.toolbar.grid_settings_changed.connect(self._on_grid_settings_changed)
 
         # Plant panel → map (plant placement + colour). Pattern mode info
         # arrives in the 4th argument; legacy single-mode placements pass
@@ -344,9 +341,6 @@ class MainWindow(QMainWindow):
 
         # Toolbar → structures layer toggle
         self.toolbar.structures_toggled.connect(self.map_widget.set_structures_visible)
-
-        # Toolbar → clear measure
-        self.toolbar.measure_cleared.connect(self.map_widget.clear_measure)
 
         # Analysis panel → map (A1-A4)
         self.analysis_panel.sun_path_requested.connect(self._on_sun_path_requested)
@@ -441,6 +435,26 @@ class MainWindow(QMainWindow):
     def _set_zone_display(self, zone):
         self._current_zone = zone
         self._sb_zone.setText(zone_label(zone))
+
+    def _on_grid_settings_changed(self, settings: dict):
+        """Apply changes from the View bar's Grid menu — enabled/size/style."""
+        try:
+            self.map_widget.set_snap_enabled(
+                bool(settings.get("enabled")),
+                float(settings.get("size_m") or 1.0),
+            )
+        except Exception:
+            pass
+        color = settings.get("color")
+        opacity = settings.get("opacity")
+        if color is not None or opacity is not None:
+            try:
+                self.map_widget.set_grid_style(
+                    str(color or "#4a7a4a"),
+                    float(opacity if opacity is not None else 0.4),
+                )
+            except Exception:
+                pass
         self._project["properties"]["hardiness_zone"] = zone
         self.plant_panel.set_zone(zone)
 
@@ -484,11 +498,6 @@ class MainWindow(QMainWindow):
         self._current_mode = 'boundary'
         self.map_widget.set_mode('boundary')
         self._set_mode_label("Drawing boundary — click to add points, double-click or click first point to close")
-
-    def _enter_zone_mode(self):
-        self._current_mode = 'zone'
-        self.map_widget.set_mode('zone')
-        self._set_mode_label("Zone circles — click to place zone centre")
 
     def _enter_plant_mode(self, plant_id: int, common_name: str,
                           quantity: int = 1, pattern: dict | None = None):
@@ -670,6 +679,11 @@ class MainWindow(QMainWindow):
                 "spacing_m": 1.0,
             }
         })
+        self._push_undo({
+            "action": "place_hedgerow",
+            "hedge_id": hedge_id,
+            "length_m": length_m,
+        })
         self._mark_modified()
         self._set_mode_label("Ready")
         self.statusBar().showMessage(
@@ -713,6 +727,12 @@ class MainWindow(QMainWindow):
                 "dash_array": dash_array,
                 "area_m2": area_m2,
             }
+        })
+        self._push_undo({
+            "action": "place_custom_shape",
+            "shape_id": shape_id,
+            "label": label,
+            "shape_type": shape_type,
         })
         self._mark_modified()
         self._set_mode_label("Ready")
@@ -1773,24 +1793,6 @@ class MainWindow(QMainWindow):
         self._mark_modified()
         self._set_mode_label("Site data ready")
 
-    def _on_zone_center_placed(self, lat: float, lng: float):
-        # Remove previous zone centre from project
-        self._project["features"] = [
-            f for f in self._project["features"]
-            if f.get("properties", {}).get("element_type") != "zone_center"
-        ]
-        self._project["features"].append({
-            "type": "Feature",
-            "geometry": {"type": "Point", "coordinates": [lng, lat]},
-            "properties": {
-                "element_type": "zone_center",
-                "zone_radii": [10, 30, 60, 120, 240]
-            }
-        })
-        self._mark_modified()
-        self.toolbar.reset_draw_buttons()
-        self._set_mode_label("Zone circles placed")
-
     # ── File operations ───────────────────────────────────────────────────────
 
     def _on_new(self):
@@ -1883,9 +1885,6 @@ class MainWindow(QMainWindow):
             self._placed_plants.append(p)
 
         self.plant_panel.load_placed(data["plants"])
-
-        if data["zone_center"]:
-            self.map_widget.load_zone_center(*data["zone_center"])
 
         for s in data.get("structures", []):
             self.map_widget.load_structure(s["struct_def"], s["lat"], s["lng"])
@@ -2375,6 +2374,33 @@ class MainWindow(QMainWindow):
                 f"Undo: removed contour at {elev:.1f}m", 2000
             )
 
+        elif action == "place_hedgerow":
+            import json as _json
+            hid = entry["hedge_id"]
+            self.map_widget.run_js(
+                f"undoHedgerowById({_json.dumps(hid)});"
+            )
+            self._project["features"] = [
+                f for f in self._project["features"]
+                if f.get("properties", {}).get("hedge_id") != hid
+            ]
+            self._redo_stack.append(entry)
+            self.statusBar().showMessage("Undo: removed hedgerow", 2000)
+
+        elif action == "place_custom_shape":
+            import json as _json
+            sid = entry["shape_id"]
+            self.map_widget.run_js(
+                f"undoCustomShapeById({_json.dumps(sid)});"
+            )
+            self._project["features"] = [
+                f for f in self._project["features"]
+                if f.get("properties", {}).get("shape_id") != sid
+            ]
+            self._redo_stack.append(entry)
+            label = entry.get("label") or entry.get("shape_type") or "shape"
+            self.statusBar().showMessage(f"Undo: removed {label}", 2000)
+
         self._act_undo.setEnabled(bool(self._undo_stack))
         self._act_redo.setEnabled(bool(self._redo_stack))
         self._mark_modified()
@@ -2457,8 +2483,6 @@ class MainWindow(QMainWindow):
             self._side_tabs.setCurrentWidget(self.planning_panel)
         elif key == Qt.Key.Key_M and not event.modifiers():
             self._enter_measure_mode()
-        elif key == Qt.Key.Key_Z and not event.modifiers():
-            self._enter_zone_mode()
         elif key == Qt.Key.Key_N and not event.modifiers():
             self._enter_annotate_mode()
         elif key == Qt.Key.Key_L and not event.modifiers():

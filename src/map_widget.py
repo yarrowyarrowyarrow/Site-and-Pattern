@@ -43,9 +43,6 @@ class MapBridge(QObject):
     # A plant was placed on the map
     plant_placed = pyqtSignal(int, str, float, float)  # id, name, lat, lng
 
-    # The zone-centre point was placed
-    zone_center_placed = pyqtSignal(float, float)  # lat, lng
-
     # A plant marker was clicked
     plant_marker_clicked = pyqtSignal(str, int, float, float)  # markerId, plantId, lat, lng
 
@@ -198,10 +195,6 @@ class MapBridge(QObject):
             plant_id, common_name, spacing_m, plant_type,
             custom_color, positions_json, pattern_kind,
         )
-
-    @pyqtSlot(float, float)
-    def onZoneCenterPlaced(self, lat: float, lng: float):
-        self.zone_center_placed.emit(lat, lng)
 
     @pyqtSlot(str, int, float, float)
     def onPlantMarkerClick(self, marker_id: str, plant_id: int, lat: float, lng: float):
@@ -361,9 +354,9 @@ class MapWidget(QWebEngineView):
         v = 'true' if visible else 'false'
         self.run_js(f"setBoundaryVisible({v});")
 
-    def set_zones_visible(self, visible: bool):
+    def set_measurements_visible(self, visible: bool):
         v = 'true' if visible else 'false'
-        self.run_js(f"setZonesVisible({v});")
+        self.run_js(f"setMeasureVisible({v});")
 
     def set_plants_visible(self, visible: bool):
         v = 'true' if visible else 'false'
@@ -383,9 +376,6 @@ class MapWidget(QWebEngineView):
             f"loadPlantMarker({plant_id}, {repr(common_name)}, {lat}, {lng}, "
             f"{spacing_m}, {repr(plant_type)}{color_arg}{group_arg});"
         )
-
-    def load_zone_center(self, lat: float, lng: float):
-        self.run_js(f"loadZoneCenter({lat}, {lng});")
 
     def set_view(self, lat: float, lng: float, zoom: int = 14):
         self.run_js(f"setView({lat}, {lng}, {zoom});")
@@ -424,6 +414,13 @@ class MapWidget(QWebEngineView):
     def set_snap_enabled(self, enabled: bool, grid_size: float = 1.0):
         e = 'true' if enabled else 'false'
         self.run_js(f"setSnapEnabled({e}, {grid_size});")
+
+    def set_grid_style(self, color: str, opacity: float):
+        """Update the on-map grid colour and opacity (0..1)."""
+        import json as _json
+        self.run_js(
+            f"setGridStyle({_json.dumps(color)}, {float(opacity)});"
+        )
 
     # ── Structure helpers ─────────────────────────────────────────────────────
 

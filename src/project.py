@@ -62,13 +62,12 @@ def load_project(path: str) -> dict:
 def project_to_map_data(project: dict) -> dict:
     """
     Extract map elements from the project for loading into the map widget.
-    Returns dict with boundaries (list), plants, zone_center, structures, hedgerows, shapes.
+    Returns dict with boundaries (list), plants, structures, hedgerows, shapes.
     """
     result = {
         "boundaries": [],   # list of {id, points, color, showLengths, showArea}
         "boundary": None,   # kept for backward compat — first boundary's points
         "plants": [],
-        "zone_center": None,
         "structures": [],
         "hedgerows": [],
         "shapes": [],
@@ -112,10 +111,6 @@ def project_to_map_data(project: dict) -> dict:
                 "polyculture_center_lat": props.get("polyculture_center_lat"),
                 "polyculture_center_lng": props.get("polyculture_center_lng"),
             })
-
-        elif etype == "zone_center" and geom.get("type") == "Point":
-            lng, lat = geom["coordinates"]
-            result["zone_center"] = (lat, lng)
 
         elif etype == "structure" and geom.get("type") == "Point":
             lng, lat = geom["coordinates"]

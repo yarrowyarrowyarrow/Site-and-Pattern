@@ -26,15 +26,6 @@
       pointer-events: none;
     }
 
-    .zone-circle-label {
-      background: transparent;
-      border: none;
-      color: rgba(255,255,255,0.6);
-      font-size: 12px;
-      font-weight: bold;
-      text-shadow: 0 0 3px #000;
-    }
-
     .measure-label {
       background: rgba(253, 216, 53, 0.9);
       border: 1px solid #f9a825;
@@ -254,9 +245,8 @@
     var measureVisible    = true;  // whether measure result is shown
     var plantMarkers  = {};   // id -> marker
     var plantLayerGroup = null; // L.layerGroup for batch visibility toggle
-    var zoneCircles   = [];
     var bridge        = null; // Python QObject exposed via QWebChannel
-    var currentMode   = 'none'; // 'none' | 'boundary' | 'plant' | 'zone' | 'measure' | 'annotate' | 'structure' | 'hedgerow' | 'shape'
+    var currentMode   = 'none'; // 'none' | 'boundary' | 'plant' | 'measure' | 'annotate' | 'structure' | 'hedgerow' | 'shape'
     var currentPlant  = null;   // {id, common_name} when in plant-placement mode
 
     // Structure state
@@ -276,10 +266,12 @@
     var currentShape    = null; // shape config when drawing
 
     // Measurement state
-    var measureStart  = null;   // L.latLng or null
-    var measureLine   = null;   // L.polyline
-    var measureLabel  = null;   // L.tooltip
-    var measureMarkers = [];    // start/end markers
+    // Measurement state — each completed measurement is its own
+    // L.layerGroup so visibility can be toggled without losing them, and
+    // each one can be right-clicked to delete just that measurement.
+    var measureStart      = null;   // L.latLng or null while waiting for 2nd click
+    var measureLayers     = [];     // array of L.layerGroup, one per measurement
+    var _measureWipMarker = null;   // start-marker between clicks
 
     // Annotation state
     var annotations   = {};     // id -> {marker, text}
@@ -696,7 +688,7 @@
       var lng = e.latlng.lng;
 
       // Apply snap if enabled and in a placement mode
-      if (snapEnabled && (currentMode === 'plant' || currentMode === 'zone')) {
+      if (snapEnabled && currentMode === 'plant') {
         var snapped = snapLatLng(lat, lng);
         lat = snapped[0];
         lng = snapped[1];
@@ -731,10 +723,6 @@
           }
           // Stay in plant mode so user can place multiple
         }
-      } else if (currentMode === 'zone') {
-        placeZoneCircles(lat, lng);
-        if (bridge) bridge.onZoneCenterPlaced(lat, lng);
-        setMode('none');
       } else if (currentMode === 'contour') {
         handleContourClick(lat, lng);
       } else if (currentMode === 'structure' && currentStructure) {
@@ -1858,36 +1846,6 @@
       });
     }
 
-    // ── Zone circles ─────────────────────────────────────────────────────────
-    function placeZoneCircles(lat, lng) {
-      // Clear existing zone circles
-      zoneCircles.forEach(function(c) { map.removeLayer(c); });
-      zoneCircles = [];
-
-      var radii  = [10, 30, 60, 120, 240];  // metres (visual reference)
-      var colors = ['#ef5350','#ff9800','#ffee58','#66bb6a','#42a5f5'];
-      var labels = ['Z0','Z1','Z2','Z3','Z4'];
-
-      radii.forEach(function(r, i) {
-        var circle = L.circle([lat, lng], {
-          radius: r,
-          color: colors[i], weight: 1.5,
-          fillColor: colors[i], fillOpacity: 0.04,
-          interactive: false
-        }).addTo(map);
-
-        var labelIcon = L.divIcon({
-          className: 'zone-circle-label',
-          html: labels[i],
-          iconSize: [20, 12]
-        });
-        var lm = L.marker([lat, lng + metresToLng(r, lat)], { icon: labelIcon, interactive: false }).addTo(map);
-
-        zoneCircles.push(circle);
-        zoneCircles.push(lm);  // track labels so they toggle/clear with the circles
-      });
-    }
-
     function metresToLng(metres, lat) {
       return (metres / 111320) / Math.cos(lat * Math.PI / 180);
     }
@@ -1907,13 +1865,15 @@
 
     // ── Snap to grid ──────────────────────────────────────────────────────────
     var snapEnabled  = false;
-    var snapGridSize = 1.0;  // metres
+    var snapGridSize = 1.0;       // metres — chosen via the Grid menu
+    var gridColor    = '#4a7a4a';
+    var gridOpacity  = 0.4;       // 0..1
     var gridOverlay  = null;
     var debouncedGridRedraw = debounce(drawGridOverlay, 150);
 
     function setSnapEnabled(enabled, gridSize) {
       snapEnabled  = enabled;
-      snapGridSize = gridSize || 1.0;
+      if (gridSize && gridSize > 0) snapGridSize = gridSize;
       if (enabled) {
         drawGridOverlay();
         map.on('moveend', debouncedGridRedraw);
@@ -1923,6 +1883,16 @@
         map.off('moveend', debouncedGridRedraw);
         map.off('zoomend', debouncedGridRedraw);
       }
+    }
+
+    // Update grid colour and opacity. Re-renders the overlay so changes
+    // are visible immediately; safe to call when the grid is off.
+    function setGridStyle(color, opacity) {
+      if (typeof color === 'string' && color) gridColor = color;
+      if (typeof opacity === 'number' && opacity >= 0 && opacity <= 1) {
+        gridOpacity = opacity;
+      }
+      if (snapEnabled) drawGridOverlay();
     }
 
     function snapLatLng(lat, lng) {
@@ -1937,7 +1907,15 @@
 
     function drawGridOverlay() {
       if (gridOverlay) { map.removeLayer(gridOverlay); gridOverlay = null; }
-      if (!snapEnabled || map.getZoom() < 17) return; // only show grid when zoomed in
+      if (!snapEnabled) return;
+      // Only draw when the grid spacing would be at least a few pixels
+      // wide; otherwise the overlay looks like solid noise.
+      var z = map.getZoom();
+      var minZoom = (snapGridSize <= 1) ? 17
+                  : (snapGridSize <= 5) ? 15
+                  : (snapGridSize <= 10) ? 13
+                  : 9;
+      if (z < minZoom) return;
 
       var bounds = map.getBounds();
       var gridLat = snapGridSize / 111320;
@@ -1956,7 +1934,10 @@
       }
 
       gridOverlay = L.layerGroup(lines.map(function(pts) {
-        return L.polyline(pts, { color: '#4a7a4a', weight: 0.5, opacity: 0.4, interactive: false, renderer: canvasRenderer });
+        return L.polyline(pts, {
+          color: gridColor, weight: 0.5, opacity: gridOpacity,
+          interactive: false, renderer: canvasRenderer
+        });
       })).addTo(map);
     }
 
@@ -2085,57 +2066,98 @@
     // ── Measurement tool ───────────────────────────────────────────────────────
     function handleMeasureClick(lat, lng) {
       if (!measureStart) {
-        // First click — set start point
-        clearMeasure();
+        // First click — drop a temporary start marker and remember the
+        // anchor. We don't commit a layerGroup yet because the user
+        // hasn't picked the second endpoint.
+        if (_measureWipMarker) {
+          try { map.removeLayer(_measureWipMarker); } catch (e) {}
+        }
         measureStart = L.latLng(lat, lng);
-        var mk = L.circleMarker([lat, lng], {
+        _measureWipMarker = L.circleMarker([lat, lng], {
           radius: 5, color: '#fdd835', fillColor: '#fdd835', fillOpacity: 1
         }).addTo(map);
-        measureMarkers.push(mk);
       } else {
-        // Second click — draw line + show distance
+        // Second click — commit a measurement layer group with the
+        // line, both endpoint markers, and a midpoint distance label.
         var end = L.latLng(lat, lng);
         var dist = measureStart.distanceTo(end);
-        var label = dist < 1000
+        var labelText = dist < 1000
           ? dist.toFixed(1) + ' m'
           : (dist / 1000).toFixed(2) + ' km';
 
-        measureLine = L.polyline([measureStart, end], {
-          color: '#fdd835', weight: 2, dashArray: '8 4', opacity: 0.9
-        }).addTo(map);
+        var group = L.layerGroup();
+        var line = L.polyline([measureStart, end], {
+          color: '#fdd835', weight: 2, dashArray: '8 4', opacity: 0.9,
+          interactive: true
+        }).addTo(group);
 
-        var mk = L.circleMarker([lat, lng], {
+        var startMk = L.circleMarker([measureStart.lat, measureStart.lng], {
           radius: 5, color: '#fdd835', fillColor: '#fdd835', fillOpacity: 1
-        }).addTo(map);
-        measureMarkers.push(mk);
+        }).addTo(group);
+        var endMk = L.circleMarker([end.lat, end.lng], {
+          radius: 5, color: '#fdd835', fillColor: '#fdd835', fillOpacity: 1
+        }).addTo(group);
 
-        // Midpoint label
         var mid = L.latLng(
           (measureStart.lat + end.lat) / 2,
           (measureStart.lng + end.lng) / 2
         );
-        measureLabel = L.tooltip({
+        var labelTip = L.tooltip({
           permanent: true, direction: 'top', offset: [0, -10],
           className: 'measure-label', opacity: 0.95
-        }).setContent(label).setLatLng(mid).addTo(map);
+        }).setContent(labelText).setLatLng(mid);
+        labelTip.addTo(group);
 
+        if (measureVisible) group.addTo(map);
+        measureLayers.push(group);
+
+        // Right-click any part of this measurement to delete just it.
+        var deleteHandler = function(ev) {
+          L.DomEvent.stop(ev);
+          _removeMeasureGroup(group);
+        };
+        line.on('contextmenu', deleteHandler);
+        startMk.on('contextmenu', deleteHandler);
+        endMk.on('contextmenu', deleteHandler);
+
+        if (_measureWipMarker) {
+          try { map.removeLayer(_measureWipMarker); } catch (e) {}
+          _measureWipMarker = null;
+        }
         measureStart = null; // ready for next measurement
       }
     }
 
+    function _removeMeasureGroup(group) {
+      try { map.removeLayer(group); } catch (e) {}
+      var idx = measureLayers.indexOf(group);
+      if (idx >= 0) measureLayers.splice(idx, 1);
+    }
+
     function clearMeasure() {
-      if (measureLine)  { map.removeLayer(measureLine);  measureLine  = null; }
-      if (measureLabel) { map.removeLayer(measureLabel); measureLabel = null; }
-      measureMarkers.forEach(function(m) { map.removeLayer(m); });
-      measureMarkers = [];
+      // Remove every committed measurement and any in-progress anchor.
+      measureLayers.forEach(function(g) {
+        try { map.removeLayer(g); } catch (e) {}
+      });
+      measureLayers = [];
+      if (_measureWipMarker) {
+        try { map.removeLayer(_measureWipMarker); } catch (e) {}
+        _measureWipMarker = null;
+      }
       measureStart = null;
     }
 
     function setMeasureVisible(visible) {
-      measureVisible = visible;
-      if (!visible) {
-        clearMeasure();
-      }
+      // View-bar toggle: hide existing measurements without deleting
+      // them, so toggling back on restores the same lines & labels.
+      measureVisible = !!visible;
+      measureLayers.forEach(function(g) {
+        if (measureVisible) {
+          try { g.addTo(map); } catch (e) {}
+        } else {
+          try { map.removeLayer(g); } catch (e) {}
+        }
+      });
     }
 
     // ── Annotations ───────────────────────────────────────────────────────────
@@ -2462,6 +2484,15 @@
       setMode('none');
     }
 
+    // Undo helper — remove a hedgerow group by its id. Returns true on hit.
+    function undoHedgerowById(hedgeId) {
+      var group = hedgerowLayers[hedgeId];
+      if (!group) return false;
+      try { map.removeLayer(group); } catch (e) {}
+      delete hedgerowLayers[hedgeId];
+      return true;
+    }
+
     // Load a hedgerow from saved project
     function loadHedgerow(hedgeDef) {
       hedgerowPoints = hedgeDef.points || [];
@@ -2608,6 +2639,15 @@
 
       shapePoints = [];
       setMode('none');
+    }
+
+    // Undo helper — remove a custom-shape layer group by its id.
+    function undoCustomShapeById(shapeId) {
+      var group = shapeLayers[shapeId];
+      if (!group) return false;
+      try { map.removeLayer(group); } catch (e) {}
+      delete shapeLayers[shapeId];
+      return true;
     }
 
     // Load a shape from saved project
@@ -2785,12 +2825,8 @@
           map.getContainer().style.cursor = 'cell';
           _resetPatternState();
           break;
-        case 'zone':
-          map.getContainer().style.cursor = 'crosshair';
-          break;
         case 'measure':
           map.getContainer().style.cursor = 'crosshair';
-          clearMeasure();
           break;
         case 'annotate':
           map.getContainer().style.cursor = 'text';
@@ -2875,12 +2911,6 @@
       });
     }
 
-    function setZonesVisible(visible) {
-      zoneCircles.forEach(function(c) {
-        if (visible) c.addTo(map); else map.removeLayer(c);
-      });
-    }
-
     function setPlantsVisible(visible) {
       if (visible) {
         plantLayerGroup.addTo(map);
@@ -2898,8 +2928,6 @@
         if (b.areaLabel)   map.removeLayer(b.areaLabel);
       });
       boundaries = [];
-      zoneCircles.forEach(function(c) { map.removeLayer(c); });
-      zoneCircles = [];
       plantLayerGroup.clearLayers();
       plantMarkers = {};
       Object.values(plantLabels).forEach(function(l) { map.removeLayer(l); });
@@ -2942,10 +2970,6 @@
 
     function loadPlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor, groupId) {
       placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor || null, groupId || null);
-    }
-
-    function loadZoneCenter(lat, lng) {
-      placeZoneCircles(lat, lng);
     }
 
     function setView(lat, lng, zoom) {

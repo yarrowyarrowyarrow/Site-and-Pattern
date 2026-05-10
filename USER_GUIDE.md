@@ -93,12 +93,11 @@ Distribution is deterministic and spread-optimised: same-species plants are auto
 
 ## 8. Other drawing tools
 
-- **◎ Zone Circles** — click once on the map to drop concentric permaculture zones (Zones 0–4).
-- **📏 Measure** — click two points to read the distance in metres.
+- **📏 Measure** — click two points to add a measurement; right-click any existing measurement to delete just that one. Use the View bar's Measurement toggle to hide them all without deleting.
 - **📝 Note** — click to drop a draggable text note. Right-click the note to remove it.
 - **Structures tab** — search a structure library, drag hedgerows (4 styles: Hedge / Fence / Living Fence / Windbreak), or draw shapes (Garden Bed, Pathway, Patio, Lawn, Mulch, Water Feature, Custom).
 
-Layer toggles in the toolbar (🛰 Satellite, ⬡ Boundary, ◎ Zones, ✿ Plants, **Aa** Labels, 🌳 Canopy, 🏗 Structures, **#** Grid) show/hide each layer without deleting anything.
+The View bar (🛰 Satellite, ⬡ Boundary, 📏 Measurement, **#** Grid, ✿ Plants, 🌳 Canopy, 🏗 Structures) toggles each layer's visibility without deleting anything. The Grid action's ▾ menu picks the base size (1×1, 5×5, 10×10, 100×100 m) plus opacity and colour.
 
 ---
 

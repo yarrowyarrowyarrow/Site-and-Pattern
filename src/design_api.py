@@ -113,18 +113,6 @@ class DesignGenerator:
             }
         })
 
-    def add_zone_center(self, lat: float, lng: float) -> None:
-        """Set the permaculture zone center point."""
-        self.project["features"] = [
-            f for f in self.project["features"]
-            if f.get("properties", {}).get("element_type") != "zone_center"
-        ]
-        self.project["features"].append({
-            "type": "Feature",
-            "geometry": {"type": "Point", "coordinates": [lng, lat]},
-            "properties": {"element_type": "zone_center"}
-        })
-
     def get_project(self) -> dict:
         """Return the complete project dict, ready for save_project()."""
         return self.project

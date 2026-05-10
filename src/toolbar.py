@@ -1,52 +1,166 @@
 """
-toolbar.py — Top toolbars for drawing tools, layer toggles, and project actions.
+toolbar.py — Top toolbars for drawing tools, view layout, and project actions.
 
 Layout (two stacked rows):
 
   ┌────────────────────────────────────────────────────────────────┐
-  │ Draw:   ⬡ Boundary  ◎ Zone Circles  📏 Measure  📝 Note  ⤺ Undo  ✕ Cancel │
+  │ Draw: ⬡ Boundary  📏 Measure  📝 Note  ⤺ Undo  ✕ Cancel        │
   ├────────────────────────────────────────────────────────────────┤
-  │ Layers: 🛰 Satellite ⬡ Boundary ◎ Zones ✿ Plants Aa Labels …   │
-  │         …  ⚙ Settings  🔍 Zoom: [Fine ▼]                        │
+  │ View: 🛰 Satellite ⬡ Boundary 📏 Measurement # Grid▼            │
+  │       ✿ Plants 🌳 Canopy 🏗 Structures … ⚙ Settings 🔍 Zoom: …  │
   └────────────────────────────────────────────────────────────────┘
 
-`MainToolbar` is the Draw row (a QToolBar so existing
-`addToolBar(self.toolbar)` calls keep working). The Layers row is held
-as a separate QToolBar attribute and added via `attach_to(window)`.
+The View row order is fixed: Satellite, Boundary, Measurement, Grid,
+Plants, Canopy, Structures (per the UI spec). The Grid action exposes a
+popup menu for base size (1×1 / 5×5 / 10×10 / 100×100 m), opacity, and
+colour. The main click on Grid still toggles the snap on/off.
 """
 
-from PyQt6.QtWidgets import QToolBar, QLabel, QComboBox
-from PyQt6.QtGui import QAction, QActionGroup
+from PyQt6.QtWidgets import (
+    QToolBar, QLabel, QComboBox, QToolButton, QMenu, QWidget,
+    QVBoxLayout, QHBoxLayout, QSlider, QPushButton, QColorDialog,
+    QWidgetAction,
+)
+from PyQt6.QtGui import QAction, QActionGroup, QColor
 from PyQt6.QtCore import pyqtSignal, Qt
+
+
+class _GridSettingsMenu(QMenu):
+    """Popup menu for Grid base size, opacity, and colour.
+
+    Emits ``settings_changed`` with the full settings dict whenever the
+    user changes anything. The toolbar then re-emits the values upward
+    along with the current on/off state.
+    """
+
+    settings_changed = pyqtSignal(dict)
+
+    SIZES_M = [1.0, 5.0, 10.0, 100.0]
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._size_m  = 1.0
+        self._opacity = 0.4
+        self._color   = "#4a7a4a"
+        self._build()
+
+    def _build(self):
+        # Size — radio actions for the four base sizes.
+        size_label = QAction("Base size", self)
+        size_label.setEnabled(False)
+        self.addAction(size_label)
+
+        self._size_group = QActionGroup(self)
+        self._size_group.setExclusive(True)
+        for s in self.SIZES_M:
+            label = f"{int(s) if s.is_integer() else s} × {int(s) if s.is_integer() else s} m"
+            act = QAction(label, self)
+            act.setCheckable(True)
+            if s == self._size_m:
+                act.setChecked(True)
+            act.setData(s)
+            act.triggered.connect(self._on_size_chosen)
+            self._size_group.addAction(act)
+            self.addAction(act)
+
+        self.addSeparator()
+
+        # Opacity slider — embedded as a QWidgetAction so the menu can host it.
+        op_widget = QWidget()
+        op_layout = QVBoxLayout(op_widget)
+        op_layout.setContentsMargins(8, 4, 8, 4)
+        op_layout.setSpacing(2)
+        op_layout.addWidget(QLabel("Opacity"))
+        self._opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self._opacity_slider.setMinimum(0)
+        self._opacity_slider.setMaximum(100)
+        self._opacity_slider.setValue(int(self._opacity * 100))
+        self._opacity_slider.setMinimumWidth(180)
+        self._opacity_slider.valueChanged.connect(self._on_opacity_changed)
+        op_layout.addWidget(self._opacity_slider)
+        op_act = QWidgetAction(self)
+        op_act.setDefaultWidget(op_widget)
+        self.addAction(op_act)
+
+        # Colour picker.
+        col_widget = QWidget()
+        col_layout = QHBoxLayout(col_widget)
+        col_layout.setContentsMargins(8, 4, 8, 6)
+        col_layout.addWidget(QLabel("Colour"))
+        self._color_btn = QPushButton()
+        self._color_btn.setFixedSize(24, 18)
+        self._color_btn.setStyleSheet(self._color_btn_style())
+        self._color_btn.clicked.connect(self._on_pick_color)
+        col_layout.addWidget(self._color_btn)
+        col_layout.addStretch(1)
+        col_act = QWidgetAction(self)
+        col_act.setDefaultWidget(col_widget)
+        self.addAction(col_act)
+
+    def _color_btn_style(self) -> str:
+        return (
+            f"background: {self._color}; border: 1px solid #6c6c6c; "
+            f"border-radius: 3px;"
+        )
+
+    def _on_size_chosen(self):
+        act = self.sender()
+        if act is None:
+            return
+        try:
+            self._size_m = float(act.data())
+        except (TypeError, ValueError):
+            return
+        self._emit()
+
+    def _on_opacity_changed(self, value: int):
+        self._opacity = max(0.0, min(1.0, value / 100.0))
+        self._emit()
+
+    def _on_pick_color(self):
+        color = QColorDialog.getColor(QColor(self._color), self, "Grid colour")
+        if not color.isValid():
+            return
+        self._color = color.name()
+        self._color_btn.setStyleSheet(self._color_btn_style())
+        self._emit()
+
+    def current_settings(self) -> dict:
+        return {
+            "size_m":  self._size_m,
+            "opacity": self._opacity,
+            "color":   self._color,
+        }
+
+    def _emit(self):
+        self.settings_changed.emit(self.current_settings())
 
 
 class MainToolbar(QToolBar):
     """The Draw toolbar (top row).
 
     Holds a sibling `layers_bar` QToolBar exposed for the main window to
-    add on a second row. All signals — Draw, Layers, Settings, Zoom —
+    add on a second row. All signals — Draw, View, Settings, Zoom —
     live on this object so app.py wiring stays a single connection
     surface.
     """
 
     # Drawing mode signals
     draw_boundary_requested   = pyqtSignal()
-    draw_zone_requested       = pyqtSignal()
     measure_requested         = pyqtSignal()
     annotate_requested        = pyqtSignal()
     cancel_draw_requested     = pyqtSignal()
     undo_requested            = pyqtSignal()
 
-    # Layer visibility signals
+    # View visibility signals
     satellite_toggled    = pyqtSignal(bool)
     boundary_toggled     = pyqtSignal(bool)
-    zones_toggled        = pyqtSignal(bool)
+    measurements_toggled = pyqtSignal(bool)
     plants_toggled       = pyqtSignal(bool)
-    labels_toggled       = pyqtSignal(bool)
     canopy_toggled       = pyqtSignal(bool)
-    snap_toggled         = pyqtSignal(bool)
     structures_toggled   = pyqtSignal(bool)
-    measure_cleared      = pyqtSignal()      # "clear measure" action
+    grid_settings_changed = pyqtSignal(dict)
+    # ^ payload: {"enabled": bool, "size_m": float, "opacity": float, "color": str}
 
     # Settings
     settings_requested = pyqtSignal()
@@ -59,13 +173,13 @@ class MainToolbar(QToolBar):
         self.setMovable(False)
         self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
-        # Sibling layers toolbar — attached on a second row via attach_to().
-        self.layers_bar = QToolBar("Layers", parent)
+        # Sibling View bar — attached on a second row via attach_to().
+        self.layers_bar = QToolBar("View", parent)
         self.layers_bar.setMovable(False)
         self.layers_bar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
         self._build_draw()
-        self._build_layers()
+        self._build_view()
 
     # ── Construction ──────────────────────────────────────────────────────────
 
@@ -79,16 +193,14 @@ class MainToolbar(QToolBar):
         self._act_boundary.triggered.connect(self._on_boundary_toggled)
         self.addAction(self._act_boundary)
 
-        self._act_zone = QAction("◎ Zone Circles", self)
-        self._act_zone.setCheckable(True)
-        self._act_zone.setStatusTip("Click to place permaculture zone rings")
-        self._act_zone.triggered.connect(self._on_zone_toggled)
-        self.addAction(self._act_zone)
-
         self._act_measure = QAction("📏 Measure", self)
         self._act_measure.setCheckable(True)
         self._act_measure.setStatusTip("Click two points to measure distance")
-        self._act_measure.setToolTip("Click two points on the map to measure distance in metres")
+        self._act_measure.setToolTip(
+            "Click two points to add a measurement.\n"
+            "Right-click an existing measurement to delete it.\n"
+            "Use the View bar 'Measurement' toggle to hide/show all of them."
+        )
         self._act_measure.triggered.connect(self._on_measure_toggled)
         self.addAction(self._act_measure)
 
@@ -103,7 +215,6 @@ class MainToolbar(QToolBar):
         self._draw_group = QActionGroup(self)
         self._draw_group.setExclusive(False)
         self._draw_group.addAction(self._act_boundary)
-        self._draw_group.addAction(self._act_zone)
         self._draw_group.addAction(self._act_measure)
         self._draw_group.addAction(self._act_annotate)
 
@@ -116,9 +227,8 @@ class MainToolbar(QToolBar):
         act_undo.setShortcut("Ctrl+Z")
         act_undo.setStatusTip("Undo the last action (Ctrl+Z)")
         act_undo.setToolTip(
-            "Undo the last placement or drawing action.\n"
-            "Note: 'Cancel' only aborts the current drawing operation\n"
-            "(mid-boundary etc.); use 'Undo' to revert a completed action."
+            "Undo the last placement or drawing action across plants,\n"
+            "structures, boundaries, contours, hedgerows and shapes."
         )
         act_undo.triggered.connect(self.undo_requested)
         self.addAction(act_undo)
@@ -133,9 +243,11 @@ class MainToolbar(QToolBar):
         act_cancel.triggered.connect(self._on_cancel)
         self.addAction(act_cancel)
 
-    def _build_layers(self):
+    def _build_view(self):
+        # NOTE: ordering is fixed by spec — Satellite, Boundary,
+        # Measurement, Grid, Plants, Canopy, Structures.
         bar = self.layers_bar
-        bar.addWidget(QLabel("  Layers: "))
+        bar.addWidget(QLabel("  View: "))
 
         self._act_satellite = QAction("🛰 Satellite", self)
         self._act_satellite.setCheckable(True)
@@ -150,12 +262,49 @@ class MainToolbar(QToolBar):
         self._act_boundary_layer.toggled.connect(self.boundary_toggled)
         bar.addAction(self._act_boundary_layer)
 
-        self._act_zones_layer = QAction("◎ Zones", self)
-        self._act_zones_layer.setCheckable(True)
-        self._act_zones_layer.setChecked(True)
-        self._act_zones_layer.setStatusTip("Toggle permaculture zone circles visibility")
-        self._act_zones_layer.toggled.connect(self.zones_toggled)
-        bar.addAction(self._act_zones_layer)
+        # Measurement visibility — toggles whether existing measurements
+        # are shown. Does NOT delete them; right-click an individual line
+        # to remove just it.
+        self._act_measurements_layer = QAction("📏 Measurement", self)
+        self._act_measurements_layer.setCheckable(True)
+        self._act_measurements_layer.setChecked(True)
+        self._act_measurements_layer.setStatusTip(
+            "Show/hide existing measurements (does not delete them)"
+        )
+        self._act_measurements_layer.setToolTip(
+            "Hide every placed measurement without deleting it.\n"
+            "Right-click any individual measurement to delete just that one."
+        )
+        self._act_measurements_layer.toggled.connect(self.measurements_toggled)
+        bar.addAction(self._act_measurements_layer)
+
+        # Grid — checkable QToolButton with a popup menu for size /
+        # opacity / colour. Click toggles enabled; the menu chevron
+        # opens the settings.
+        self._grid_menu = _GridSettingsMenu(self)
+        self._grid_menu.settings_changed.connect(self._emit_grid_settings)
+
+        self._grid_btn = QToolButton(bar)
+        self._grid_btn.setText("# Grid")
+        self._grid_btn.setCheckable(True)
+        self._grid_btn.setChecked(False)
+        self._grid_btn.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+        )
+        self._grid_btn.setPopupMode(
+            QToolButton.ToolButtonPopupMode.MenuButtonPopup
+        )
+        self._grid_btn.setMenu(self._grid_menu)
+        self._grid_btn.setStatusTip(
+            "Toggle grid overlay; click ▾ for size / opacity / colour"
+        )
+        self._grid_btn.setToolTip(
+            "Snap-to-grid overlay.\n"
+            "Click to toggle on/off; the ▾ chevron opens base size,\n"
+            "opacity and colour controls."
+        )
+        self._grid_btn.toggled.connect(self._emit_grid_settings)
+        bar.addWidget(self._grid_btn)
 
         self._act_plants_layer = QAction("✿ Plants", self)
         self._act_plants_layer.setCheckable(True)
@@ -163,13 +312,6 @@ class MainToolbar(QToolBar):
         self._act_plants_layer.setStatusTip("Toggle plant markers visibility")
         self._act_plants_layer.toggled.connect(self.plants_toggled)
         bar.addAction(self._act_plants_layer)
-
-        self._act_labels = QAction("Aa Labels", self)
-        self._act_labels.setCheckable(True)
-        self._act_labels.setStatusTip("Show/hide plant name labels on map")
-        self._act_labels.setToolTip("Toggle permanent plant name labels on the map")
-        self._act_labels.toggled.connect(self.labels_toggled)
-        bar.addAction(self._act_labels)
 
         self._act_canopy = QAction("🌳 Canopy", self)
         self._act_canopy.setCheckable(True)
@@ -184,19 +326,6 @@ class MainToolbar(QToolBar):
         self._act_structures_layer.setStatusTip("Toggle structures/hedgerows/shapes visibility")
         self._act_structures_layer.toggled.connect(self.structures_toggled)
         bar.addAction(self._act_structures_layer)
-
-        self._act_snap = QAction("# Grid", self)
-        self._act_snap.setCheckable(True)
-        self._act_snap.setStatusTip("Snap plant placement to grid")
-        self._act_snap.setToolTip("Enable 1m grid overlay; plant placement snaps to grid intersections")
-        self._act_snap.toggled.connect(self.snap_toggled)
-        bar.addAction(self._act_snap)
-
-        act_clear_measure = QAction("✕ 📏", self)
-        act_clear_measure.setStatusTip("Clear current measurement from map")
-        act_clear_measure.setToolTip("Remove the measure line and distance label from the map")
-        act_clear_measure.triggered.connect(self.measure_cleared)
-        bar.addAction(act_clear_measure)
 
         bar.addSeparator()
 
@@ -223,7 +352,7 @@ class MainToolbar(QToolBar):
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     def attach_to(self, main_window):
-        """Add Draw on the top row, Layers on a second row below it."""
+        """Add Draw on the top row, View on a second row below it."""
         main_window.addToolBar(self)
         main_window.addToolBarBreak()
         main_window.addToolBar(self.layers_bar)
@@ -234,13 +363,6 @@ class MainToolbar(QToolBar):
         if checked:
             self._uncheck_except(self._act_boundary)
             self.draw_boundary_requested.emit()
-        else:
-            self.cancel_draw_requested.emit()
-
-    def _on_zone_toggled(self, checked: bool):
-        if checked:
-            self._uncheck_except(self._act_zone)
-            self.draw_zone_requested.emit()
         else:
             self.cancel_draw_requested.emit()
 
@@ -259,17 +381,21 @@ class MainToolbar(QToolBar):
             self.cancel_draw_requested.emit()
 
     def _uncheck_except(self, keep: QAction):
-        for act in [self._act_boundary, self._act_zone,
-                    self._act_measure, self._act_annotate]:
+        for act in [self._act_boundary, self._act_measure, self._act_annotate]:
             if act is not keep:
                 act.setChecked(False)
 
     def _on_cancel(self):
         self._act_boundary.setChecked(False)
-        self._act_zone.setChecked(False)
         self._act_measure.setChecked(False)
         self._act_annotate.setChecked(False)
         self.cancel_draw_requested.emit()
+
+    def _emit_grid_settings(self, *_):
+        """Re-emit the combined grid state whenever enabled/menu changes."""
+        payload = dict(self._grid_menu.current_settings())
+        payload["enabled"] = bool(self._grid_btn.isChecked())
+        self.grid_settings_changed.emit(payload)
 
     _ZOOM_LEVELS = ['fine', 'normal', 'fast', 'coarse']
 
@@ -282,13 +408,11 @@ class MainToolbar(QToolBar):
     def reset_draw_buttons(self):
         """Uncheck all drawing buttons (called when a draw operation completes)."""
         self._act_boundary.setChecked(False)
-        self._act_zone.setChecked(False)
         self._act_measure.setChecked(False)
         self._act_annotate.setChecked(False)
 
     def enter_plant_mode(self):
         """Called by plant panel 'Place on Map' — visually deactivate draw buttons."""
         self._act_boundary.setChecked(False)
-        self._act_zone.setChecked(False)
         self._act_measure.setChecked(False)
         self._act_annotate.setChecked(False)
