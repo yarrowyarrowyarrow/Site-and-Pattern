@@ -437,6 +437,8 @@ class MainWindow(QMainWindow):
     def _set_zone_display(self, zone):
         self._current_zone = zone
         self._sb_zone.setText(zone_label(zone))
+        self._project["properties"]["hardiness_zone"] = zone
+        self.plant_panel.set_zone(zone)
 
     def _on_grid_settings_changed(self, settings: dict):
         """Apply changes from the View bar's Grid menu — enabled/size/style."""
@@ -457,8 +459,6 @@ class MainWindow(QMainWindow):
                 )
             except Exception:
                 pass
-        self._project["properties"]["hardiness_zone"] = zone
-        self.plant_panel.set_zone(zone)
 
     def _set_mode_label(self, text: str):
         self._sb_mode.setText(f"Mode: {text}")
@@ -1825,7 +1825,12 @@ class MainWindow(QMainWindow):
                 prev_worker.results.disconnect()
             except (TypeError, RuntimeError):
                 pass
-        if prev_thread is not None and prev_thread.isRunning():
+        # Use the same safe-isRunning pattern as site_panel — calling
+        # isRunning() on a QThread whose C++ side has been deleteLater'd
+        # raises RuntimeError, which used to crash the app on rapid
+        # consecutive pin actions.
+        from src.site_panel import _safe_is_running as _safe_is_running_thread
+        if _safe_is_running_thread(prev_thread):
             try:
                 prev_thread.quit()
             except RuntimeError:

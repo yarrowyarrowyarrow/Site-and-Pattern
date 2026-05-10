@@ -1,4 +1,5 @@
 import json
+import re
 
 from PyQt6.QtCore import Qt, pyqtSignal, QPointF, QRectF
 from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont
@@ -427,6 +428,32 @@ def _plant_color_for_member(plant: dict) -> str:
     }.get(t, "#66bb6a")
 
 
+def _truthy_int(v) -> int:
+    """Coerce dirty plant-DB values to a safe 0/1 int.
+
+    The seeding JSON has historically contained malformed strings like
+    ``'1?'`` for ``native_to_alberta``; SQLite's flexible typing lets
+    those land in a column declared INTEGER, so consumers that call
+    ``int(...)`` on them blow up with ``ValueError``. This helper
+    handles every shape we've seen — bool, int, float, ``'1'``,
+    ``'1?'``, ``'  1.0  '``, ``''``, ``None`` — and falls through to 0.
+    """
+    if v is None or v is False:
+        return 0
+    if v is True:
+        return 1
+    if isinstance(v, (int, float)):
+        return 1 if v else 0
+    s = str(v).strip()
+    if not s:
+        return 0
+    m = re.match(r"-?\d+", s)
+    try:
+        return 1 if (m and int(m.group(0)) != 0) else 0
+    except ValueError:
+        return 0
+
+
 class PolycultureBuilderDialog(QDialog):
     """One-screen visual editor for a polyculture (create or modify).
 
@@ -538,7 +565,7 @@ class PolycultureBuilderDialog(QDialog):
         ab_only = self.ab_only.isChecked()
         self.plant_list.clear()
         for p in self._all_plants:
-            if ab_only and not int(p.get("native_to_alberta") or 0):
+            if ab_only and not _truthy_int(p.get("native_to_alberta")):
                 continue
             name = p.get("common_name", "") or ""
             sci = p.get("scientific_name", "") or ""

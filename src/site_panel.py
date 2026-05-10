@@ -30,6 +30,28 @@ from PyQt6.QtWidgets import (
 )
 
 
+# ── QThread-lifecycle helper ─────────────────────────────────────────────────
+
+def _safe_is_running(thread) -> bool:
+    """Return True only if ``thread`` is a still-live QThread that's running.
+
+    The auto-teardown chain wired up in ``_start_fetch`` / ``_run_geocode``
+    deletes the underlying C++ QThread once it stops. Our Python proxy
+    can outlive that — calling any method on it (including
+    ``isRunning()``) then raises
+    ``RuntimeError: wrapped C/C++ object of type QThread has been deleted``,
+    which is what crashed the app on Clear pin. Treating that as
+    "not running" is the right semantics: if the C++ side is gone the
+    thread definitely isn't running anymore.
+    """
+    if thread is None:
+        return False
+    try:
+        return thread.isRunning()
+    except RuntimeError:
+        return False
+
+
 # ── Background fetcher ───────────────────────────────────────────────────────
 
 class _SiteFetchWorker(QObject):
@@ -644,7 +666,7 @@ class SitePanel(QWidget):
                     getattr(worker, sig_name).disconnect()
                 except (TypeError, RuntimeError):
                     pass
-        if thread is not None and thread.isRunning():
+        if _safe_is_running(thread):
             try:
                 thread.quit()
             except RuntimeError:
@@ -961,7 +983,7 @@ class SitePanel(QWidget):
                     getattr(worker, sig_name).disconnect()
                 except (TypeError, RuntimeError):
                     pass
-        if thread is not None and thread.isRunning():
+        if _safe_is_running(thread):
             try:
                 thread.quit()
             except RuntimeError:
