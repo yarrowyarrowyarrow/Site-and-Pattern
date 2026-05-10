@@ -1424,12 +1424,20 @@
       var radius   = Math.max((spacingM || 1.0) / 2, 0.05);
       var color    = customColor || TYPE_COLORS[plantType] || '#66bb6a';
 
+      // canvasRenderer instead of the default SVG: with dozens of
+      // plants on the map, SVG layout against the satellite-tile
+      // background was eating enough paint time that the browser
+      // dropped tile fetches — visible to the user as the satellite
+      // layer "breaking" until the plants were removed. Canvas
+      // rendering keeps tooltips, click, contextmenu and the drag
+      // handlers all working in Leaflet 1.9.x.
       var circle = L.circle([lat, lng], {
         radius:      radius,
         color:       color,
         weight:      1.5,
         fillColor:   color,
-        fillOpacity: 0.35
+        fillOpacity: 0.35,
+        renderer:    canvasRenderer,
       }).bindTooltip(escH(commonName) + '<br><span style="color:#78909c;font-size:10px">Right-click for options</span>',
           { permanent: false, className: 'plant-marker-label' })
         .addTo(plantLayerGroup);
@@ -2125,7 +2133,8 @@
           radius: radius,
           color: '#a5d6a7', weight: 1, dashArray: '4 3',
           fillColor: '#a5d6a7', fillOpacity: 0.08,
-          interactive: false
+          interactive: false,
+          renderer: canvasRenderer,    // see placePlantMarker for the rationale
         }).addTo(canopyGroup);
       });
     }
@@ -2893,14 +2902,16 @@
         var color = ROLE_COLORS[role] || '#81c784';
         var radius = Math.max((m.spacing_meters || 1) / 2, 0.5);
 
-        // Draw filled canopy circle
+        // Draw filled canopy circle (canvas-rendered — see
+        // placePlantMarker for the satellite-tile-paint rationale).
         var canopy = L.circle([mlat, mlng], {
           radius: radius,
           color: color,
           weight: 1.5,
           fillColor: color,
           fillOpacity: 0.30,
-          className: 'polyculture-canopy'
+          className: 'polyculture-canopy',
+          renderer: canvasRenderer,
         }).addTo(group);
 
         canopy.bindTooltip(
@@ -2946,7 +2957,8 @@
         weight: 1.5,
         dashArray: '6 4',
         fillOpacity: 0,
-        interactive: false
+        interactive: false,
+        renderer: canvasRenderer,
       }).addTo(group);
 
       // Add polyculture name label at center
