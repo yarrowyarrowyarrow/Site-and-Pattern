@@ -326,18 +326,8 @@ class MapWidget(QWebEngineView):
         # the user is looking" — currently the address finder — can read
         # last_center directly without going through an async readback.
         self._last_center: tuple[float, float] | None = None
-        self._last_zoom: int | None = None
+        self._last_zoom:   int | None = None
         self.bridge.map_moved.connect(self._on_map_moved)
-
-    def _on_map_moved(self, lat: float, lng: float, zoom: int):
-        self._last_center = (lat, lng)
-        self._last_zoom = zoom
-
-    @property
-    def last_center(self) -> "tuple[float, float] | None":
-        """Latest known (lat, lng) centre of the map view, or None
-        if the map hasn't reported a moveend yet."""
-        return self._last_center
 
         # Allow the local HTML file to load remote tile/CDN URLs (needed on Windows)
         s = self.page().settings()
@@ -349,6 +339,16 @@ class MapWidget(QWebEngineView):
             "html", "map.html"
         )
         self.load(QUrl.fromLocalFile(html_path))
+
+    def _on_map_moved(self, lat: float, lng: float, zoom: int):
+        self._last_center = (lat, lng)
+        self._last_zoom = zoom
+
+    @property
+    def last_center(self) -> "tuple[float, float] | None":
+        """Latest known (lat, lng) centre of the map view, or None
+        if the map hasn't reported a moveend yet."""
+        return self._last_center
 
     # ── JS helpers ────────────────────────────────────────────────────────────
 

@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QtMsgType, qInstallMessageHandler
 
 # QtWebEngine must be initialised before QApplication on some platforms
 from PyQt6.QtWebEngineWidgets import QWebEngineView  # noqa: F401
@@ -21,7 +21,25 @@ from PyQt6.QtWebEngineWidgets import QWebEngineView  # noqa: F401
 from src.app import MainWindow
 
 
+def _qt_message_filter(msg_type, context, message):
+    # Qt 6 + Windows HiDPI + per-widget `font-size: NNpx` stylesheets
+    # cause the engine to internally call QFont::setPointSize(-1) when
+    # switching the font's size unit from points to pixels. The
+    # warning is harmless but extremely noisy (one per styled widget
+    # × many widgets in the side panels). Drop just this specific
+    # line; pass everything else through to stderr unchanged.
+    if msg_type == QtMsgType.QtWarningMsg and \
+            "QFont::setPointSize: Point size <= 0" in (message or ""):
+        return
+    sys.stderr.write(f"{message}\n")
+    sys.stderr.flush()
+
+
 def main():
+    # Filter the Qt-internal QFont stylesheet warning before the
+    # QApplication starts wiring up panels and emitting it.
+    qInstallMessageHandler(_qt_message_filter)
+
     # High-DPI support
     QApplication.setHighDpiScaleFactorRoundingPolicy(
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
