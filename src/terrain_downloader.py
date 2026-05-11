@@ -196,6 +196,40 @@ class EdmontonDownloadWorker(QObject):
                 )
                 self._diag_log(f"  raw (first 600 chars): {body_s[:600]!r}")
 
+            # Round 4 confirmed both 4hu9-9vq3 and 2aq6-x42w are
+            # Socrata MAP VIEWS (assetType=map, displayType=
+            # visualization_canvas_map), not data tables — that's
+            # why every row comes back empty. Probe the catalog API
+            # to find any actual dataset (assetType=dataset) whose
+            # name mentions "contour"; that should reveal the real
+            # underlying ID(s) we can swap in.
+            catalog_url = (
+                "https://api.us.socrata.com/api/catalog/v1"
+                "?domains=data.edmonton.ca&q=contour"
+                "&only=dataset&limit=20"
+            )
+            ok_c, status_c, payload_c, err_c, body_c = _diag_fetch(
+                catalog_url, timeout=15
+            )
+            self._diag_log(
+                f"Probe catalog (datasets matching 'contour'): "
+                f"ok={ok_c} status={status_c} err={err_c or '-'} "
+                f"bytes={len(body_c)}"
+            )
+            results = (
+                (payload_c or {}).get("results", [])
+                if isinstance(payload_c, dict) else []
+            )
+            self._diag_log(f"Catalog results ({len(results)}):")
+            for r in results:
+                if not isinstance(r, dict):
+                    continue
+                resource = r.get("resource") or {}
+                cls = resource.get("type") or "?"
+                rid = resource.get("id") or "?"
+                rname = resource.get("name") or "?"
+                self._diag_log(f"  • {rid}  [{cls}]  {rname}")
+
             # Live API unavailable — fall back to a bundled seed file
             # if the project ships one.
             seed_path = _find_local_seed()
@@ -210,10 +244,11 @@ class EdmontonDownloadWorker(QObject):
             self.error.emit(
                 "Could not detect field names from the Edmonton dataset.\n"
                 "\n"
-                "Tried:\n"
-                f"  • Socrata views metadata: {err or 'ok'}\n"
-                f"  • Sample-row sniffing: {err2 or 'ok'}\n"
-                "  • Local seed at data/edmonton_contours.geojson(.gz)\n"
+                f"Metadata fetch: {err or 'ok'}\n"
+                "Sample-row sniffing: see [edmonton-dl] log lines above.\n"
+                "\n"
+                "Local seed at data/edmonton_contours.geojson(.gz)\n"
+                "is also accepted as a fallback.\n"
                 "\n"
                 "Check your internet connection, or drop a downloaded\n"
                 "GeoJSON of the Edmonton contour dataset at\n"
