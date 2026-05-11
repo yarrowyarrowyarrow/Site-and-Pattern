@@ -197,6 +197,39 @@ class EdmontonDownloadWorker(QObject):
                     self._diag_log(
                         f"  • {k!r} = {v!r}  ({type(v).__name__})"
                     )
+                # Also dump the geometry shape and the *length* of the
+                # first coordinate tuple. For Edmonton's "3D contour
+                # lines" datasets the elevation may be embedded as the
+                # Z component of every vertex (`[lng, lat, z]`) rather
+                # than living in a separate column — which is a perfect
+                # fit for an empty-properties response. Knowing whether
+                # we're looking at a 2D or 3D coord settles it in one
+                # screenshot.
+                geom = (feat0.get("geometry") or {}) if isinstance(feat0, dict) else {}
+                gtype = geom.get("type") if isinstance(geom, dict) else None
+                coords = geom.get("coordinates") if isinstance(geom, dict) else None
+                first_pt = None
+                # Walk into the nested coordinate arrays to grab a
+                # representative point: Point→[lng,lat], LineString→
+                # [[lng,lat], …], MultiLineString→[[[lng,lat], …], …].
+                cur = coords
+                for _ in range(4):
+                    if isinstance(cur, list) and cur and isinstance(cur[0], list) \
+                            and cur[0] and not isinstance(cur[0][0], list):
+                        first_pt = cur[0]
+                        break
+                    if isinstance(cur, list) and cur:
+                        cur = cur[0]
+                    else:
+                        break
+                if first_pt is None and isinstance(coords, list) \
+                        and coords and not isinstance(coords[0], list):
+                    first_pt = coords  # bare Point
+                self._diag_log(
+                    f"Sample feature geometry: type={gtype!r} "
+                    f"first_point={first_pt!r} "
+                    f"(len={len(first_pt) if isinstance(first_pt, list) else 'n/a'})"
+                )
 
             # Live API unavailable — fall back to a bundled seed file
             # if the project ships one.
