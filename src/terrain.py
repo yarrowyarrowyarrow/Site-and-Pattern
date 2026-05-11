@@ -4,13 +4,17 @@ terrain.py — Auto-generate slope contour lines and slope-ramp overlays.
 Two data paths, picked per location:
 
     Edmonton (urban LiDAR)
-        Contour Lines LL - WGS84 dataset (Socrata 2aq6-x42w, 0.5 m
-        interval). Pre-baked vector contours in lat/lng; we just clip
-        + filter by interval. The sibling 3TM dataset (4hu9-9vq3) is
-        in a planar Alberta projection and Socrata can't sensibly
-        serialise it through the .geojson endpoint — it returns
-        features with empty properties, which broke field detection.
-        https://data.edmonton.ca/dataset/Contour-Lines-LL-WGS84/2aq6-x42w
+        Contour Lines LL - WGS84 — the underlying *tabular dataset*,
+        Socrata id n6cj-24tp, 0.5 m interval. Pre-baked vector
+        contours in lat/lng so they map cleanly to Leaflet; we just
+        clip + filter by interval. The IDs that show up in the
+        Edmonton portal's URL bar (4hu9-9vq3, 2aq6-x42w) are *map
+        views* — visualisations whose .geojson endpoint always
+        returns one stub feature with `geometry:null` and
+        `properties:{}`. Use the catalog API
+        (`/api/catalog/v1?only=dataset&q=contour`) to discover the
+        actual data-bearing assets if Edmonton ever republishes.
+        https://data.edmonton.ca/dataset/Contour-Lines-LL-WGS84/n6cj-24tp
 
     Anywhere else
         Open-Meteo elevation API (Copernicus DEM 30 m), sampled on a regular
@@ -53,7 +57,8 @@ _TIMEOUT = 10.0
 _USER_AGENT = "PermaDesign/1.0 (https://github.com/yarrowyarrowyarrow/permadesign)"
 
 # Edmonton "Contour Lines 3TM" (0.5 m interval)
-_EDM_DATASET_ID = "2aq6-x42w"   # "Contour Lines LL - WGS84" (lat/lng, 0.5 m)
+_EDM_DATASET_ID = "n6cj-24tp"   # "Contour Lines LL - WGS84" — the underlying dataset
+                                # (sibling map view at 2aq6-x42w returns empty rows)
 _EDM_RESOURCE = f"https://data.edmonton.ca/resource/{_EDM_DATASET_ID}.geojson"
 _EDM_PAGE_SIZE = 1000
 _EDM_MAX_FEATURES = 5000
@@ -325,7 +330,7 @@ def _edm_detect_fields() -> tuple[Optional[str], Optional[str]]:
          final fallback for the case where the metadata endpoint is
          blocked / proxied / behind auth.
     """
-    cache_key = _cache_key("edm_fields_v4")  # bumped: switched dataset ID 4hu9-9vq3 → 2aq6-x42w
+    cache_key = _cache_key("edm_fields_v5")  # bumped: dataset ID 2aq6-x42w (map view) → n6cj-24tp (dataset)
     cached = _cache_load_json(cache_key)
     if cached and cached.get("elev") and cached.get("geom"):
         return cached.get("elev"), cached.get("geom")
