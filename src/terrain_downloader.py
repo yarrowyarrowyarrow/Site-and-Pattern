@@ -151,17 +151,52 @@ class EdmontonDownloadWorker(QObject):
                 f"https://data.edmonton.ca/api/views/"
                 f"{_EDM_RESOURCE.rsplit('/', 1)[-1].split('.')[0]}.json"
             )
-            ok, status, _, err = _diag_fetch(meta_url, timeout=15)
+            ok, status, payload, err = _diag_fetch(meta_url, timeout=15)
             self._diag_log(
                 f"Probe metadata: ok={ok} status={status} err={err or '-'}"
             )
+            # Dump the parsed column list so we can see what
+            # _edm_detect_via_metadata had to work with. The previous
+            # probe round confirmed the network is fine; this round
+            # tells us *why* no number column was matched.
+            if ok and isinstance(payload, dict):
+                cols = payload.get("columns")
+                if isinstance(cols, list):
+                    self._diag_log(f"Metadata columns ({len(cols)}):")
+                    for col in cols:
+                        if isinstance(col, dict):
+                            fname = col.get("fieldName") or col.get("name") or "?"
+                            dtype = col.get("dataTypeName") or "?"
+                            self._diag_log(f"  • {fname!r}  type={dtype!r}")
+                else:
+                    self._diag_log(
+                        f"Metadata payload has no 'columns' key "
+                        f"(top-level keys={sorted((payload or {}).keys())[:8]})"
+                    )
+
             sample_url = f"{_EDM_RESOURCE}?$limit=1"
             ok2, status2, payload2, err2 = _diag_fetch(sample_url, timeout=15)
+            feat_count = len(
+                (payload2 or {}).get("features", [])
+                if isinstance(payload2, dict) else []
+            )
             self._diag_log(
                 f"Probe sample row: ok={ok2} status={status2} "
-                f"err={err2 or '-'} "
-                f"features={len((payload2 or {}).get('features', []) if isinstance(payload2, dict) else [])}"
+                f"err={err2 or '-'} features={feat_count}"
             )
+            # Dump the first feature's properties so we can see what
+            # _edm_detect_via_sample saw. Show the value's Python type
+            # too — Socrata sometimes returns numbers as strings, which
+            # would still coerce; if every value is None / non-numeric
+            # that explains why the second-pass fallback also failed.
+            if ok2 and feat_count > 0:
+                feat0 = payload2["features"][0]
+                props = (feat0.get("properties") or {}) if isinstance(feat0, dict) else {}
+                self._diag_log(f"Sample feature properties ({len(props)}):")
+                for k, v in props.items():
+                    self._diag_log(
+                        f"  • {k!r} = {v!r}  ({type(v).__name__})"
+                    )
 
             # Live API unavailable — fall back to a bundled seed file
             # if the project ships one.
