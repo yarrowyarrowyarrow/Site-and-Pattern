@@ -32,40 +32,38 @@ from src.terrain import (
 from src.terrain_store import TerrainStore
 
 
-def _diag_fetch(url: str, timeout: float = 30.0) -> "tuple[bool, int | None, dict | list | None, str]":
+def _diag_fetch(url: str, timeout: float = 30.0) -> "tuple[bool, int | None, dict | list | None, str, str]":
     """Diagnostic HTTP GET that surfaces the *real* failure reason.
 
-    ``_http_get_json`` swallows every exception and returns None, which
-    is great for the silent-fallback case but useless when we need to
-    figure out *why* the Edmonton download stalled. This helper does
-    the same urllib call but returns a (ok, http_status, payload,
-    error_text) tuple — caller can log the error_text to stderr and
-    surface a short summary via the worker's ``progress`` signal.
+    Returns ``(ok, http_status, parsed_payload, error_text, raw_body)``
+    — the raw body is included so callers can dump the first few
+    hundred chars when the parsed view is suspect (e.g. when payload
+    parses but every interesting key is empty).
     """
     t0 = time.monotonic()
     try:
         req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             status = getattr(resp, "status", None)
-            body = resp.read().decode("utf-8")
+            body = resp.read().decode("utf-8", errors="replace")
             try:
                 payload = json.loads(body)
             except ValueError as exc:
                 dt = time.monotonic() - t0
                 return False, status, None, (
                     f"JSON decode failed after {dt:.1f}s ({len(body)} bytes): {exc}"
-                )
+                ), body
             dt = time.monotonic() - t0
-            return True, status, payload, ""
+            return True, status, payload, "", body
     except urllib.error.HTTPError as exc:
         dt = time.monotonic() - t0
-        return False, exc.code, None, f"HTTPError {exc.code} after {dt:.1f}s: {exc.reason}"
+        return False, exc.code, None, f"HTTPError {exc.code} after {dt:.1f}s: {exc.reason}", ""
     except urllib.error.URLError as exc:
         dt = time.monotonic() - t0
-        return False, None, None, f"URLError after {dt:.1f}s: {exc.reason}"
+        return False, None, None, f"URLError after {dt:.1f}s: {exc.reason}", ""
     except Exception as exc:
         dt = time.monotonic() - t0
-        return False, None, None, f"{type(exc).__name__} after {dt:.1f}s: {exc}"
+        return False, None, None, f"{type(exc).__name__} after {dt:.1f}s: {exc}", ""
 
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -151,15 +149,19 @@ class EdmontonDownloadWorker(QObject):
                 f"https://data.edmonton.ca/api/views/"
                 f"{_EDM_RESOURCE.rsplit('/', 1)[-1].split('.')[0]}.json"
             )
-            ok, status, payload, err = _diag_fetch(meta_url, timeout=15)
+            ok, status, payload, err, body = _diag_fetch(meta_url, timeout=15)
             self._diag_log(
-                f"Probe metadata: ok={ok} status={status} err={err or '-'}"
+                f"Probe metadata: ok={ok} status={status} err={err or '-'} "
+                f"bytes={len(body)}"
             )
-            # Dump the parsed column list so we can see what
-            # _edm_detect_via_metadata had to work with. The previous
-            # probe round confirmed the network is fine; this round
-            # tells us *why* no number column was matched.
+            # Dump top-level keys so we can see what shape Socrata is
+            # serving (the `columns` key may have been moved or renamed
+            # in newer API versions).
             if ok and isinstance(payload, dict):
+                self._diag_log(
+                    f"Metadata top-level keys: "
+                    f"{sorted(payload.keys())[:20]}"
+                )
                 cols = payload.get("columns")
                 if isinstance(cols, list):
                     self._diag_log(f"Metadata columns ({len(cols)}):")
@@ -168,68 +170,31 @@ class EdmontonDownloadWorker(QObject):
                             fname = col.get("fieldName") or col.get("name") or "?"
                             dtype = col.get("dataTypeName") or "?"
                             self._diag_log(f"  • {fname!r}  type={dtype!r}")
-                else:
-                    self._diag_log(
-                        f"Metadata payload has no 'columns' key "
-                        f"(top-level keys={sorted((payload or {}).keys())[:8]})"
-                    )
+            # Raw body — the parsed view above can hide things like
+            # the response actually being an error envelope, an HTML
+            # redirect page, or a SODA v3 wrapper we're not unpacking.
+            self._diag_log(f"Metadata raw (first 600 chars): {body[:600]!r}")
 
-            sample_url = f"{_EDM_RESOURCE}?$limit=1"
-            ok2, status2, payload2, err2 = _diag_fetch(sample_url, timeout=15)
-            feat_count = len(
-                (payload2 or {}).get("features", [])
-                if isinstance(payload2, dict) else []
-            )
-            self._diag_log(
-                f"Probe sample row: ok={ok2} status={status2} "
-                f"err={err2 or '-'} features={feat_count}"
-            )
-            # Dump the first feature's properties so we can see what
-            # _edm_detect_via_sample saw. Show the value's Python type
-            # too — Socrata sometimes returns numbers as strings, which
-            # would still coerce; if every value is None / non-numeric
-            # that explains why the second-pass fallback also failed.
-            if ok2 and feat_count > 0:
-                feat0 = payload2["features"][0]
-                props = (feat0.get("properties") or {}) if isinstance(feat0, dict) else {}
-                self._diag_log(f"Sample feature properties ({len(props)}):")
-                for k, v in props.items():
-                    self._diag_log(
-                        f"  • {k!r} = {v!r}  ({type(v).__name__})"
-                    )
-                # Also dump the geometry shape and the *length* of the
-                # first coordinate tuple. For Edmonton's "3D contour
-                # lines" datasets the elevation may be embedded as the
-                # Z component of every vertex (`[lng, lat, z]`) rather
-                # than living in a separate column — which is a perfect
-                # fit for an empty-properties response. Knowing whether
-                # we're looking at a 2D or 3D coord settles it in one
-                # screenshot.
-                geom = (feat0.get("geometry") or {}) if isinstance(feat0, dict) else {}
-                gtype = geom.get("type") if isinstance(geom, dict) else None
-                coords = geom.get("coordinates") if isinstance(geom, dict) else None
-                first_pt = None
-                # Walk into the nested coordinate arrays to grab a
-                # representative point: Point→[lng,lat], LineString→
-                # [[lng,lat], …], MultiLineString→[[[lng,lat], …], …].
-                cur = coords
-                for _ in range(4):
-                    if isinstance(cur, list) and cur and isinstance(cur[0], list) \
-                            and cur[0] and not isinstance(cur[0][0], list):
-                        first_pt = cur[0]
-                        break
-                    if isinstance(cur, list) and cur:
-                        cur = cur[0]
-                    else:
-                        break
-                if first_pt is None and isinstance(coords, list) \
-                        and coords and not isinstance(coords[0], list):
-                    first_pt = coords  # bare Point
+            # Run *three* sample probes in parallel-ish to cover the
+            # most likely root causes in a single round-trip:
+            #   1. .geojson (current path)         — what we use today
+            #   2. .geojson?$select=*              — Socrata sometimes
+            #      returns geometry-only by default; $select=* forces
+            #      it to include every property.
+            #   3. .json (the row-based endpoint)  — completely
+            #      different code path; if .geojson is broken but .json
+            #      works, we have a workable alternative downloader.
+            for label, url in [
+                ("sample .geojson",            f"{_EDM_RESOURCE}?$limit=1"),
+                ("sample .geojson $select=*",  f"{_EDM_RESOURCE}?$limit=1&$select=*"),
+                ("sample .json",               f"{_EDM_RESOURCE.replace('.geojson', '.json')}?$limit=1"),
+            ]:
+                ok_s, status_s, payload_s, err_s, body_s = _diag_fetch(url, timeout=15)
                 self._diag_log(
-                    f"Sample feature geometry: type={gtype!r} "
-                    f"first_point={first_pt!r} "
-                    f"(len={len(first_pt) if isinstance(first_pt, list) else 'n/a'})"
+                    f"Probe {label}: ok={ok_s} status={status_s} "
+                    f"err={err_s or '-'} bytes={len(body_s)}"
                 )
+                self._diag_log(f"  raw (first 600 chars): {body_s[:600]!r}")
 
             # Live API unavailable — fall back to a bundled seed file
             # if the project ships one.
