@@ -2065,6 +2065,23 @@ class PlantPanel(QWidget):
         self._results_model.set_placed_counts(self._placed_counts)
         self._refresh_placed_list()
 
+    def on_plants_placed_batch(self, placements: list[tuple[int, str]]):
+        """Notify the panel that several plants were placed at once.
+
+        Counts are updated for every (plant_id, common_name) pair, but the
+        results model and the placed-list QListWidget are only rebuilt once
+        at the end. This is the difference between O(N) DB lookups + list
+        clears (which blocks the Qt event loop long enough that the embedded
+        Leaflet view paints a stale 0x0 frame) and one rebuild — important
+        when a polyculture drops 8+ markers in one click.
+        """
+        if not placements:
+            return
+        for pid, _name in placements:
+            self._placed_counts[pid] = self._placed_counts.get(pid, 0) + 1
+        self._results_model.set_placed_counts(self._placed_counts)
+        self._refresh_placed_list()
+
     def clear_placed(self):
         """Clear the placed-plants list (e.g. on New project)."""
         self._placed_counts.clear()

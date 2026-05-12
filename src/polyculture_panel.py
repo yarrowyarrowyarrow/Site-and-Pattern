@@ -784,20 +784,24 @@ class PolyculturePanel(QWidget):
         # Buttons row 1
         btn_row1 = QHBoxLayout()
         self.new_btn = QPushButton("New Polyculture")
+        self.new_btn.setStyleSheet(_POLY_BTN_STYLE)
         self.new_btn.clicked.connect(self._on_new_polyculture)
         btn_row1.addWidget(self.new_btn)
 
         self.delete_btn = QPushButton("Delete")
+        self.delete_btn.setStyleSheet(_POLY_BTN_STYLE)
         self.delete_btn.setEnabled(False)
         self.delete_btn.clicked.connect(self._on_delete_polyculture)
         btn_row1.addWidget(self.delete_btn)
 
         self.dup_btn = QPushButton("Duplicate")
+        self.dup_btn.setStyleSheet(_POLY_BTN_STYLE)
         self.dup_btn.setEnabled(False)
         self.dup_btn.clicked.connect(self._on_duplicate_polyculture)
         btn_row1.addWidget(self.dup_btn)
 
         self.variation_btn = QPushButton("+ Variation")
+        self.variation_btn.setStyleSheet(_POLY_BTN_STYLE)
         self.variation_btn.setEnabled(False)
         self.variation_btn.setToolTip("Create a variation of this polyculture")
         self.variation_btn.clicked.connect(self._on_add_variation)
@@ -823,6 +827,7 @@ class PolyculturePanel(QWidget):
         # happen in one screen instead of one plant at a time.
         member_btns = QHBoxLayout()
         self.edit_btn = QPushButton("Edit in Builder…")
+        self.edit_btn.setStyleSheet(_POLY_BTN_STYLE)
         self.edit_btn.setEnabled(False)
         self.edit_btn.setToolTip(
             "Open the visual polyculture builder for this polyculture"
@@ -835,16 +840,19 @@ class PolyculturePanel(QWidget):
         # Action buttons
         btn_row2 = QHBoxLayout()
         self.place_btn = QPushButton("Place on Map")
+        self.place_btn.setStyleSheet(_POLY_BTN_STYLE)
         self.place_btn.setEnabled(False)
         self.place_btn.clicked.connect(self._on_place)
         btn_row2.addWidget(self.place_btn)
 
         self.export_btn = QPushButton("Export")
+        self.export_btn.setStyleSheet(_POLY_BTN_STYLE)
         self.export_btn.setEnabled(False)
         self.export_btn.clicked.connect(self._on_export)
         btn_row2.addWidget(self.export_btn)
 
         self.import_btn = QPushButton("Import")
+        self.import_btn.setStyleSheet(_POLY_BTN_STYLE)
         self.import_btn.clicked.connect(self._on_import)
         btn_row2.addWidget(self.import_btn)
         layout.addLayout(btn_row2)
@@ -1107,3 +1115,23 @@ class PolyculturePanel(QWidget):
             )
         else:
             QMessageBox.information(self, "Import", "Polyculture imported successfully!")
+
+
+# Mirror plant_panel._PLACE_BTN_STYLE so every action button in the
+# Polyculture tab looks pressable, gives hover/pressed feedback, and
+# stays visually consistent with the "Place Mix on Map" button users
+# see one tab over.
+_POLY_BTN_STYLE = """
+QPushButton {
+    background: #2e7d32;
+    color: #e8f5e9;
+    border: none;
+    border-radius: 4px;
+    padding: 7px 12px;
+    font-weight: bold;
+    font-size: 13px;
+}
+QPushButton:hover    { background: #388e3c; }
+QPushButton:pressed  { background: #1b5e20; }
+QPushButton:disabled { background: #2a3a2a; color: #4a6a4a; }
+"""

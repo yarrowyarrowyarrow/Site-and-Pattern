@@ -2875,7 +2875,20 @@
     };
 
     function placePolycultureOnMap(polycultureData, centerLat, centerLng) {
-      var members = polycultureData.members || [];
+      // Guard against an empty/malformed payload — placing nothing is
+      // preferable to throwing partway through and leaving Leaflet's
+      // canvas renderer in a half-painted state (which is what was
+      // causing the map to vanish and zoom to break).
+      if (!polycultureData || !isFinite(centerLat) || !isFinite(centerLng)) {
+        return null;
+      }
+      var members = (polycultureData.members || []).filter(function(m) {
+        return m && m.plant_id != null;
+      });
+      if (members.length === 0) {
+        return null;
+      }
+
       var group = L.layerGroup().addTo(map);
 
       // Sort members: canopy first (largest), then by descending height
@@ -2971,6 +2984,20 @@
       L.marker([centerLat, centerLng], { icon: labelIcon, interactive: false }).addTo(group);
 
       polycultureGroups.push(group);
+
+      // Recover from any container-size hiccup. The Python side rebuilds
+      // the placed-plants QListWidget right after this call returns, which
+      // can briefly steal the Qt event loop and cause QWebEngineView to
+      // reflow. If Leaflet's canvas renderer paints during that reflow it
+      // caches a stale 0x0 size and the map appears blank with zoom/
+      // satellite-toggle dead until the next user interaction. Forcing an
+      // invalidateSize on the next animation frame guarantees the map
+      // picks up its true dimensions after the side panel finishes
+      // rebuilding.
+      requestAnimationFrame(function() {
+        try { map.invalidateSize(false); } catch (e) { /* map gone */ }
+      });
+
       return group;
     }
 

@@ -120,39 +120,44 @@ class MainWindow(QMainWindow):
         self.analysis_panel  = AnalysisPanel(self)
         self.planning_panel  = PlanningPanel(self)
 
-        # Tabbed side panel — the "Plants" and "Polycultures" tabs were
-        # merged into a single "Plants && Polycultures" tab (Phase 2) so
-        # all five tabs fit across the panel's width without scroll
-        # buttons.
+        # Tabbed side panel — five top-level tabs (Site, Plants, Structures,
+        # Analysis, Planning). The Polyculture library lives under an inner
+        # tab inside "Plants".
         self._plant_poly_tab = self._build_plants_polycultures_tab()
 
         self._side_tabs = QTabWidget()
         self._side_tabs.setDocumentMode(False)
         self._side_tabs.addTab(self.site_panel, "Site")
-        self._side_tabs.addTab(self._plant_poly_tab, "Plants && Polycultures")
+        self._side_tabs.addTab(self._plant_poly_tab, "Plants")
         self._side_tabs.addTab(self.structure_panel, "Structures")
         self._side_tabs.addTab(self.analysis_panel, "Analysis")
         self._side_tabs.addTab(self.planning_panel, "Planning")
-        self._side_tabs.setMinimumWidth(220)
+        # Side panel needs to be wide enough that all five tab labels can
+        # render in full ("Structures" is the widest at ~11px font). 260px
+        # is the empirical minimum; below that the tab bar truncates to
+        # "S..." even with elide off, because tabs share width equally
+        # when setExpanding(True).
+        self._side_tabs.setMinimumWidth(260)
         self._side_tabs.setMaximumWidth(480)
-        # Pack the tab bar tight so all five tabs fit at the panel's
-        # default width without scroll buttons. Elide long labels rather
-        # than hiding tabs behind a chevron.
+        # Show every label in full: turn off scroll-button fallback, turn
+        # off ellipsis truncation, and let tabs grow to fit their content
+        # instead of squeezing into an equal share.
         self._side_tabs.tabBar().setUsesScrollButtons(False)
-        self._side_tabs.tabBar().setElideMode(Qt.TextElideMode.ElideRight)
-        self._side_tabs.tabBar().setExpanding(True)
-        # Tab styling — make the selected tab unmistakably highlighted
-        # (bright green pill) so it's obvious which panel is open and
-        # that the others are clickable.
+        self._side_tabs.tabBar().setElideMode(Qt.TextElideMode.ElideNone)
+        self._side_tabs.tabBar().setExpanding(False)
+        # Tab styling — selected tab is a bright-green pill so the active
+        # panel is unmistakable; padding/min-width are sized so all five
+        # labels render fully without ellipsis at the panel's minimum
+        # width.
         self._side_tabs.setStyleSheet(
             "QTabWidget::pane { border: 1px solid #2e4a2e; "
             "background: #1e2a1e; top: -1px; }"
             "QTabBar { qproperty-drawBase: 0; background: #122012; }"
             "QTabBar::tab { background: #1a2a1a; color: #90a4ae; "
-            "padding: 5px 6px; margin-right: 1px; "
+            "padding: 5px 8px; margin-right: 1px; "
             "border: 1px solid #2e4a2e; border-bottom: none; "
             "border-top-left-radius: 4px; border-top-right-radius: 4px; "
-            "font-size: 11px; min-width: 0; }"
+            "font-size: 11px; min-width: 44px; }"
             "QTabBar::tab:hover { background: #284028; color: #c8e6c9; }"
             "QTabBar::tab:selected { background: #2e7d32; color: #ffffff; "
             "font-weight: bold; border: 1px solid #66bb6a; "
@@ -229,11 +234,11 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(_APP_STYLE)
 
     def _build_plants_polycultures_tab(self) -> QWidget:
-        """Build the merged 'Plants && Polycultures' tab (Phase 2).
+        """Build the 'Plants' tab.
 
-        Houses the two panels under a compact inner tab strip so users
-        can move between browsing/placing individual plants and managing
-        the saved-polyculture library without leaving this outer tab.
+        Houses the plant browser/placer and the saved-polyculture library
+        under a compact inner tab strip so users can move between the two
+        without leaving this outer tab.
 
         The PlantPanel already owns the inline polyculture-mix builder
         used to place mixes on the map; the PolyculturePanel is for
@@ -1305,7 +1310,12 @@ class MainWindow(QMainWindow):
             "members": enriched_members,
         }
 
-        # Call JS placePolycultureOnMap for visual rendering
+        # Call JS placePolycultureOnMap for visual rendering. The JS side is
+        # responsible for calling map.invalidateSize() once it's drawn so a
+        # mid-paint reflow (triggered by the placed-list rebuild below) can't
+        # leave Leaflet's canvas renderer cached at a stale 0x0 size — the
+        # symptom users saw was a vanishing map / broken zoom after placing a
+        # multi-member polyculture.
         self.map_widget.run_js(
             f"placePolycultureOnMap(JSON.parse({_json.dumps(_json.dumps(polyculture_js))}), {lat}, {lng});"
         )
@@ -1313,7 +1323,11 @@ class MainWindow(QMainWindow):
         # All members of one polyculture placement share a single placement group.
         group_id = project_io.new_placement_group_id()
 
-        # Track each member in project state
+        # Build the state delta in one pass — appending to lists is cheap; the
+        # expensive piece is the placed-list refresh, which we batch below so
+        # we do one QListWidget rebuild instead of one per member.
+        poly_name = polyculture.get("name", "")
+        batch_placements: list[tuple[int, str]] = []
         for m in enriched_members:
             lat_offset = (m["offset_y"]) / 111320
             lng_offset = (m["offset_x"]) / (111320 * math.cos(lat * math.pi / 180))
@@ -1323,7 +1337,7 @@ class MainWindow(QMainWindow):
             self._placed_plants.append({
                 "plant_id": m["plant_id"], "common_name": m["common_name"],
                 "lat": mlat, "lng": mlng,
-                "polyculture_name": polyculture.get("name", ""),
+                "polyculture_name": poly_name,
                 "polyculture_center_lat": lat, "polyculture_center_lng": lng,
                 "placement_group_id": group_id,
             })
@@ -1334,14 +1348,20 @@ class MainWindow(QMainWindow):
                     "element_type": "plant",
                     "plant_id": m["plant_id"],
                     "common_name": m["common_name"],
-                    "polyculture_name": polyculture.get("name", ""),
+                    "polyculture_name": poly_name,
                     "polyculture_center_lat": lat,
                     "polyculture_center_lng": lng,
                     "placement_group_id": group_id,
                     "quantity": 1
                 }
             })
-            self.plant_panel.on_plant_placed(m["plant_id"], m["common_name"])
+            batch_placements.append((m["plant_id"], m["common_name"]))
+
+        # Single placed-list rebuild for the whole polyculture (was N rebuilds
+        # — each doing a DB lookup + clear/repopulate — which blocked the Qt
+        # event loop long enough for the QWebEngineView to skip frames and
+        # for Leaflet to paint a blank map).
+        self.plant_panel.on_plants_placed_batch(batch_placements)
 
         self._mark_modified()
         self._cancel_draw()
