@@ -1363,6 +1363,14 @@ class MainWindow(QMainWindow):
         # for Leaflet to paint a blank map).
         self.plant_panel.on_plants_placed_batch(batch_placements)
 
+        # Belt-and-braces: even though placePolycultureOnMap already schedules
+        # an invalidateSize via requestAnimationFrame JS-side, force a second
+        # one from Python after the placed-list rebuild has drained the Qt
+        # event loop. This is what makes the placement truly "batch-safe" —
+        # no matter how long the side panel took to refresh, the map ends
+        # the tick at its correct measured size.
+        QTimer.singleShot(0, self.map_widget.invalidate_size)
+
         self._mark_modified()
         self._cancel_draw()
         try:

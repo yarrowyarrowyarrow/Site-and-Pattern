@@ -7,7 +7,7 @@ functions defined in map.html.
 """
 
 import os
-from PyQt6.QtCore import QObject, pyqtSlot, pyqtSignal, QUrl
+from PyQt6.QtCore import QObject, pyqtSlot, pyqtSignal, QUrl, QTimer
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineSettings
 from PyQt6.QtWebChannel import QWebChannel
@@ -427,6 +427,35 @@ class MapWidget(QWebEngineView):
 
     def set_view(self, lat: float, lng: float, zoom: int = 14):
         self.run_js(f"setView({lat}, {lng}, {zoom});")
+
+    def invalidate_size(self):
+        """Force Leaflet to recompute the map container size.
+
+        Safe to call before the map is ready; the JS side feature-checks
+        `map` before invoking `invalidateSize`. Useful any time the host
+        QWidget reflows (sidebar collapse, splitter drag, window resize)
+        or after a synchronous burst of Python work that may have starved
+        the WebEngine paint queue — both scenarios can leave Leaflet's
+        canvas renderer cached at a stale size, which manifests as a blank
+        map with dead zoom/satellite controls.
+        """
+        self.run_js(
+            "if (typeof map !== 'undefined' && map && map.invalidateSize) "
+            "{ map.invalidateSize(false); }"
+        )
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        # Coalesce resize bursts (splitter drag, window restore, sidebar
+        # collapse) into one invalidateSize per event-loop tick so we don't
+        # spam runJavaScript dozens of times during a drag.
+        if not getattr(self, "_pending_invalidate", False):
+            self._pending_invalidate = True
+            QTimer.singleShot(0, self._do_invalidate)
+
+    def _do_invalidate(self):
+        self._pending_invalidate = False
+        self.invalidate_size()
 
     def place_site_pin(self, lat: float, lng: float, label: str = ""):
         """Place (or move) the property pin without going through the search box."""
