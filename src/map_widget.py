@@ -342,6 +342,13 @@ class MapWidget(QWebEngineView):
         # JS error / warning that fires during page load surfaces on
         # stderr instead of disappearing into the sandbox.
         self.setPage(_LoggingPage(self))
+        # Catch render-subprocess crashes. When QtWebEngine's renderer
+        # process dies (often during a canvas/GPU paint with bad input),
+        # JS halts mid-tick — no errors, no heartbeat, map goes blank.
+        # That's exactly the polyculture-placement symptom. Logging this
+        # signal turns an invisible crash into a single stderr line we
+        # can grep for.
+        self.page().renderProcessTerminated.connect(self._on_render_terminated)
         self.bridge = MapBridge()
         self._channel = QWebChannel(self.page())
         self._channel.registerObject("bridge", self.bridge)
@@ -368,6 +375,16 @@ class MapWidget(QWebEngineView):
     def _on_map_moved(self, lat: float, lng: float, zoom: int):
         self._last_center = (lat, lng)
         self._last_zoom = zoom
+
+    def _on_render_terminated(self, status, exit_code):
+        # status is QWebEnginePage.RenderProcessTerminationStatus; print
+        # both raw and name so we can read it without consulting the docs.
+        name = getattr(status, "name", str(status))
+        sys.stderr.write(
+            f"[webengine] *** RENDER PROCESS TERMINATED *** status={name} "
+            f"exit_code={exit_code}\n"
+        )
+        sys.stderr.flush()
 
     @property
     def last_center(self) -> "tuple[float, float] | None":

@@ -2890,6 +2890,39 @@
         zoom: (map && map.getZoom) ? map.getZoom() : null
       };
       console.log('[poly] placePolycultureOnMap start ' + JSON.stringify(startInfo));
+
+      // Start the heartbeat probe *before* the rendering work. If the
+      // canvas paint crashes the render subprocess, we want to have
+      // already seen at least one tick — so the gap between "T0" and
+      // silence pinpoints which member kills it.
+      (function() {
+        var ticks = 0;
+        // Log a synchronous T0 first so we know setInterval was reached.
+        try {
+          var c0 = (map && map.getContainer) ? map.getContainer() : null;
+          console.log('[poly:hb] T0 ' + JSON.stringify({
+            containerSize: c0 ? [c0.clientWidth, c0.clientHeight] : null,
+            containerInDOM: !!(c0 && document.body.contains(c0))
+          }));
+        } catch (e) { console.error('[poly:hb] T0 failed: ' + e.message); }
+        var t = setInterval(function() {
+          ticks++;
+          try {
+            var c = (map && map.getContainer) ? map.getContainer() : null;
+            console.log('[poly:hb] T' + ticks + ' ' + JSON.stringify({
+              mapExists: !!map,
+              containerInDOM: !!(c && document.body.contains(c)),
+              containerSize: c ? [c.clientWidth, c.clientHeight] : null,
+              zoom: (map && map.getZoom) ? map.getZoom() : null,
+              layers: !!(map && map._layers) ? Object.keys(map._layers).length : null,
+            }));
+          } catch (e) {
+            console.error('[poly:hb] probe failed: ' + (e && e.message));
+          }
+          if (ticks >= 20) clearInterval(t);
+        }, 500);
+      })();
+
       // Guard against an empty/malformed payload — placing nothing is
       // preferable to throwing partway through and leaving Leaflet's
       // canvas renderer in a half-painted state (which is what was
@@ -2921,7 +2954,7 @@
         if (r > maxRadius) maxRadius = r;
       });
 
-      sorted.forEach(function(m) {
+      sorted.forEach(function(m, idx) {
         var latOff = (m.offset_y || 0) / 111320;
         var lngOff = (m.offset_x || 0) / (111320 * Math.cos(centerLat * Math.PI / 180));
         var mlat = centerLat + latOff;
@@ -2930,6 +2963,20 @@
         var role = m.role || 'other';
         var color = ROLE_COLORS[role] || '#81c784';
         var radius = Math.max((m.spacing_meters || 1) / 2, 0.5);
+
+        // Log every member's raw + computed values before handing them
+        // to L.circle. Canvas-renderer + bad numeric inputs (NaN/Inf/
+        // negative) is a known way to crash QtWebEngine's GPU process
+        // on Windows — exactly the silent freeze the user is seeing.
+        console.log('[poly:m] ' + idx + ' ' + JSON.stringify({
+          plant_id: m.plant_id, name: m.common_name, role: role,
+          raw_spacing: m.spacing_meters, raw_off_x: m.offset_x, raw_off_y: m.offset_y,
+          mlat: mlat, mlng: mlng, radius: radius
+        }));
+        if (!isFinite(mlat) || !isFinite(mlng) || !isFinite(radius) || radius <= 0) {
+          console.error('[poly:m] member ' + idx + ' has invalid numeric input; SKIPPING to avoid render-process crash');
+          return; // skip this member
+        }
 
         // Draw filled canopy circle (canvas-rendered — see
         // placePlantMarker for the satellite-tile-paint rationale).
@@ -3022,37 +3069,6 @@
 
       console.log('[poly] placePolycultureOnMap end (group added, members='
         + sorted.length + ')');
-
-      // Heartbeat probe: log map state every 500ms for 10s. setInterval
-      // keeps firing even when requestAnimationFrame is throttled (which
-      // is exactly what happens to a backgrounded / 0-sized DOM element),
-      // so if rAF is dead but setInterval still fires, we'll see the map
-      // dimensions / DOM-attachment / panes count at the moment it broke.
-      (function() {
-        var ticks = 0;
-        var t = setInterval(function() {
-          ticks++;
-          try {
-            var c = (map && map.getContainer) ? map.getContainer() : null;
-            var state = {
-              tick: ticks,
-              mapExists: !!map,
-              containerInDOM: !!(c && document.body.contains(c)),
-              containerSize: c ? [c.clientWidth, c.clientHeight] : null,
-              containerDisplay: c ? getComputedStyle(c).display : null,
-              containerVisibility: c ? getComputedStyle(c).visibility : null,
-              zoom: (map && map.getZoom) ? map.getZoom() : null,
-              hasLayers: !!(map && map._layers) ? Object.keys(map._layers).length : null,
-              panesAttached: !!(map && map.getPanes && map.getPanes().mapPane && c && c.contains(map.getPanes().mapPane))
-            };
-            console.log('[poly:hb] ' + JSON.stringify(state));
-          } catch (e) {
-            console.error('[poly:hb] probe failed: ' + (e && e.message));
-          }
-          if (ticks >= 20) clearInterval(t);
-        }, 500);
-      })();
-
       return group;
       } catch (err) {
         // If anything throws inside the body, log a full stack so we can
