@@ -2875,11 +2875,20 @@
     };
 
     function placePolycultureOnMap(polycultureData, centerLat, centerLng) {
+      try {
+      console.log('[poly] placePolycultureOnMap start', {
+        name: polycultureData && polycultureData.name,
+        memberCount: polycultureData && polycultureData.members && polycultureData.members.length,
+        center: [centerLat, centerLng],
+        mapHasContainer: !!(map && map.getContainer && map.getContainer()),
+        containerSize: (map && map.getContainer) ? [map.getContainer().clientWidth, map.getContainer().clientHeight] : null
+      });
       // Guard against an empty/malformed payload — placing nothing is
       // preferable to throwing partway through and leaving Leaflet's
       // canvas renderer in a half-painted state (which is what was
       // causing the map to vanish and zoom to break).
       if (!polycultureData || !isFinite(centerLat) || !isFinite(centerLng)) {
+        console.warn('[poly] bad payload — bailing');
         return null;
       }
       var members = (polycultureData.members || []).filter(function(m) {
@@ -2995,10 +3004,26 @@
       // picks up its true dimensions after the side panel finishes
       // rebuilding.
       requestAnimationFrame(function() {
-        try { map.invalidateSize(false); } catch (e) { /* map gone */ }
+        try {
+          map.invalidateSize(false);
+          console.log('[poly] invalidateSize ran; container size now',
+            [map.getContainer().clientWidth, map.getContainer().clientHeight]);
+        } catch (e) {
+          console.error('[poly] invalidateSize failed:', e && e.message, e && e.stack);
+        }
       });
 
+      console.log('[poly] placePolycultureOnMap end (group added, members='
+        + sorted.length + ')');
       return group;
+      } catch (err) {
+        // If anything throws inside the body, log a full stack so we can
+        // see what's actually breaking (without this it goes silent inside
+        // the WebEngine sandbox).
+        console.error('[poly] FATAL in placePolycultureOnMap:',
+          err && err.message, '\n', err && err.stack);
+        return null;
+      }
     }
 
     // ── Mode control (called from Python) ────────────────────────────────────

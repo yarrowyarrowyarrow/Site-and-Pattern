@@ -1280,6 +1280,10 @@ class MainWindow(QMainWindow):
             return
         import json as _json
         import math
+        import sys as _sys, time as _time
+        _t0 = _time.perf_counter()
+        _sys.stderr.write(f"[py:poly] click @ ({lat:.5f}, {lng:.5f}) — handler start\n")
+        _sys.stderr.flush()
 
         polyculture = self._pending_polyculture
         members = polyculture.get("members", [])
@@ -1310,6 +1314,8 @@ class MainWindow(QMainWindow):
             "members": enriched_members,
         }
 
+        _sys.stderr.write(f"[py:poly] enriched {len(enriched_members)} members @ +{(_time.perf_counter()-_t0)*1000:.1f}ms — issuing runJavaScript\n")
+        _sys.stderr.flush()
         # Call JS placePolycultureOnMap for visual rendering. The JS side is
         # responsible for calling map.invalidateSize() once it's drawn so a
         # mid-paint reflow (triggered by the placed-list rebuild below) can't
@@ -1362,6 +1368,8 @@ class MainWindow(QMainWindow):
         # event loop long enough for the QWebEngineView to skip frames and
         # for Leaflet to paint a blank map).
         self.plant_panel.on_plants_placed_batch(batch_placements)
+        _sys.stderr.write(f"[py:poly] placed-list rebuilt @ +{(_time.perf_counter()-_t0)*1000:.1f}ms\n")
+        _sys.stderr.flush()
 
         # Belt-and-braces: even though placePolycultureOnMap already schedules
         # an invalidateSize via requestAnimationFrame JS-side, force a second
@@ -1380,6 +1388,8 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(
             f"Placed polyculture '{polyculture.get('name', '')}' with {len(enriched_members)} members", 3000
         )
+        _sys.stderr.write(f"[py:poly] handler end @ +{(_time.perf_counter()-_t0)*1000:.1f}ms\n")
+        _sys.stderr.flush()
 
     def _cancel_draw(self):
         self._current_mode = 'none'

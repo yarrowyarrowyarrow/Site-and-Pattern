@@ -7,9 +7,10 @@ functions defined in map.html.
 """
 
 import os
+import sys
 from PyQt6.QtCore import QObject, pyqtSlot, pyqtSignal, QUrl, QTimer
 from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWebEngineCore import QWebEngineSettings
+from PyQt6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
 from PyQt6.QtWebChannel import QWebChannel
 
 
@@ -308,6 +309,26 @@ class MapBridge(QObject):
         self.terrain_bbox_cancelled.emit()
 
 
+class _LoggingPage(QWebEnginePage):
+    """QWebEnginePage that forwards every JS console.* + uncaught error to
+    Python stderr. Without this, anything Leaflet/our JS prints or throws
+    is silently swallowed inside the WebEngine sandbox — exactly the
+    "no terminal errors are reported" symptom users hit when the map
+    misbehaves."""
+
+    _LEVEL = {
+        QWebEnginePage.JavaScriptConsoleMessageLevel.InfoMessageLevel:    "info",
+        QWebEnginePage.JavaScriptConsoleMessageLevel.WarningMessageLevel: "warn",
+        QWebEnginePage.JavaScriptConsoleMessageLevel.ErrorMessageLevel:   "ERROR",
+    }
+
+    def javaScriptConsoleMessage(self, level, message, line, source_id):
+        tag = self._LEVEL.get(level, str(level))
+        src = (source_id or "").rsplit("/", 1)[-1] or "?"
+        sys.stderr.write(f"[js:{tag}] {src}:{line}  {message}\n")
+        sys.stderr.flush()
+
+
 class MapWidget(QWebEngineView):
     """
     QWebEngineView subclass that hosts the Leaflet map defined in
@@ -317,6 +338,10 @@ class MapWidget(QWebEngineView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        # Install the logging page BEFORE wiring the QWebChannel so any
+        # JS error / warning that fires during page load surfaces on
+        # stderr instead of disappearing into the sandbox.
+        self.setPage(_LoggingPage(self))
         self.bridge = MapBridge()
         self._channel = QWebChannel(self.page())
         self._channel.registerObject("bridge", self.bridge)
