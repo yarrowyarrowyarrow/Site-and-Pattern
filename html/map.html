@@ -2964,7 +2964,6 @@
           fillColor: color,
           fillOpacity: 0.30,
           className: 'polyculture-canopy',
-          renderer: canvasRenderer,
         }).addTo(group);
 
         if (!POLY_MIN_FEATURES) {
@@ -3033,12 +3032,23 @@
       polycultureGroups.push(group);
       _jT('js:before_group_attach');
 
-      // Single batch-attach: all 9 layers go onto the map in one go.
-      // Note: removed the previous requestAnimationFrame(invalidateSize)
-      // shim from this path — it was redundant with Python's
-      // QTimer.singleShot(0, invalidate_size) and was both *measuring*
-      // the paint-pipeline backlog and contributing to it.
+      // Hide-then-show the SVG overlay pane around the batch attach.
+      // Round-4 timings proved (a) JS finishes in ~1ms and (b) ~9 s
+      // of main-thread browser work then runs before the next
+      // animation frame, growing quadratically across placements. The
+      // most likely cause on QtWebEngine/Windows is the overlay pane
+      // being re-rasterised on every path append (overlay pane lives
+      // on its own GPU compositor layer via translate3d). Setting
+      // display:none takes the pane out of the render tree, so
+      // Leaflet's per-path DOM appends inside group.addTo(map)
+      // accumulate without triggering any rasterisation. Restoring
+      // display triggers exactly one rasterisation for the whole
+      // batch instead of one per path.
+      var _overlayPane = null;
+      try { _overlayPane = map.getPanes().overlayPane; } catch (e) {}
+      if (_overlayPane) _overlayPane.style.display = 'none';
       group.addTo(map);
+      if (_overlayPane) _overlayPane.style.display = '';
       _jT('js:group_attached');
 
       // Paint-pipeline probe: how long until the browser grants us
