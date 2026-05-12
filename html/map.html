@@ -2978,8 +2978,14 @@
           return; // skip this member
         }
 
-        // Draw filled canopy circle (canvas-rendered — see
-        // placePlantMarker for the satellite-tile-paint rationale).
+        // Draw filled canopy circle. NOTE: explicitly *not* using
+        // canvasRenderer here. On Windows, painting multiple canvas
+        // circles in one feature group reliably crashes QtWebEngine's
+        // renderer subprocess with STATUS_BREAKPOINT (0x80000003) —
+        // confirmed via QWebEnginePage.renderProcessTerminated. Numbers
+        // are all valid; the crash is in Skia/D3D11 itself. Letting
+        // Leaflet pick its default (SVG) renderer avoids the crash and
+        // is plenty fast at polyculture scale (7-15 circles, not 700).
         var canopy = L.circle([mlat, mlng], {
           radius: radius,
           color: color,
@@ -2987,7 +2993,6 @@
           fillColor: color,
           fillOpacity: 0.30,
           className: 'polyculture-canopy',
-          renderer: canvasRenderer,
         }).addTo(group);
 
         canopy.bindTooltip(
@@ -3026,7 +3031,9 @@
         });
       });
 
-      // Draw a dashed outline around the whole polyculture footprint
+      // Draw a dashed outline around the whole polyculture footprint.
+      // SVG renderer (Leaflet default) — see canopy note above for why
+      // canvasRenderer is intentionally avoided here.
       var outline = L.circle([centerLat, centerLng], {
         radius: maxRadius * 1.1,
         color: '#a5d6a7',
@@ -3034,7 +3041,6 @@
         dashArray: '6 4',
         fillOpacity: 0,
         interactive: false,
-        renderer: canvasRenderer,
       }).addTo(group);
 
       // Add polyculture name label at center
