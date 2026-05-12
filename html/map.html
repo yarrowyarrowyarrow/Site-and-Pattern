@@ -2876,13 +2876,20 @@
 
     function placePolycultureOnMap(polycultureData, centerLat, centerLng) {
       try {
-      console.log('[poly] placePolycultureOnMap start', {
+      // Pre-stringify so PyQt's console-forwarder (which sees the
+      // already-formatted message string) doesn't render this as
+      // "[object Object]".
+      var startInfo = {
         name: polycultureData && polycultureData.name,
         memberCount: polycultureData && polycultureData.members && polycultureData.members.length,
         center: [centerLat, centerLng],
+        mapExists: !!map,
         mapHasContainer: !!(map && map.getContainer && map.getContainer()),
-        containerSize: (map && map.getContainer) ? [map.getContainer().clientWidth, map.getContainer().clientHeight] : null
-      });
+        containerSize: (map && map.getContainer) ? [map.getContainer().clientWidth, map.getContainer().clientHeight] : null,
+        containerInDOM: !!(map && map.getContainer && document.body.contains(map.getContainer())),
+        zoom: (map && map.getZoom) ? map.getZoom() : null
+      };
+      console.log('[poly] placePolycultureOnMap start ' + JSON.stringify(startInfo));
       // Guard against an empty/malformed payload — placing nothing is
       // preferable to throwing partway through and leaving Leaflet's
       // canvas renderer in a half-painted state (which is what was
@@ -3015,6 +3022,37 @@
 
       console.log('[poly] placePolycultureOnMap end (group added, members='
         + sorted.length + ')');
+
+      // Heartbeat probe: log map state every 500ms for 10s. setInterval
+      // keeps firing even when requestAnimationFrame is throttled (which
+      // is exactly what happens to a backgrounded / 0-sized DOM element),
+      // so if rAF is dead but setInterval still fires, we'll see the map
+      // dimensions / DOM-attachment / panes count at the moment it broke.
+      (function() {
+        var ticks = 0;
+        var t = setInterval(function() {
+          ticks++;
+          try {
+            var c = (map && map.getContainer) ? map.getContainer() : null;
+            var state = {
+              tick: ticks,
+              mapExists: !!map,
+              containerInDOM: !!(c && document.body.contains(c)),
+              containerSize: c ? [c.clientWidth, c.clientHeight] : null,
+              containerDisplay: c ? getComputedStyle(c).display : null,
+              containerVisibility: c ? getComputedStyle(c).visibility : null,
+              zoom: (map && map.getZoom) ? map.getZoom() : null,
+              hasLayers: !!(map && map._layers) ? Object.keys(map._layers).length : null,
+              panesAttached: !!(map && map.getPanes && map.getPanes().mapPane && c && c.contains(map.getPanes().mapPane))
+            };
+            console.log('[poly:hb] ' + JSON.stringify(state));
+          } catch (e) {
+            console.error('[poly:hb] probe failed: ' + (e && e.message));
+          }
+          if (ticks >= 20) clearInterval(t);
+        }, 500);
+      })();
+
       return group;
       } catch (err) {
         // If anything throws inside the body, log a full stack so we can
