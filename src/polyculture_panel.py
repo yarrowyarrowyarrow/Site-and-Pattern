@@ -371,19 +371,37 @@ class PolycultureGridCanvas(QWidget):
         p.drawLine(int(cx) - 5, int(cy), int(cx) + 5, int(cy))
         p.drawLine(int(cx), int(cy) - 5, int(cx), int(cy) + 5)
 
-        # Members
+        # Members — each plant is drawn at its mature canopy diameter
+        # (sourced from spacing_meters) so the grid is visually
+        # accurate to scale instead of using a uniform dot. A small
+        # centre pip in the dot colour keeps very large canopies
+        # legible when they overlap.
         font = QFont()
         font.setPointSize(8)
         p.setFont(font)
         for m in self._members:
             mx, my = self._world_to_pixel(m["offset_x"], m["offset_y"])
             color = QColor(m.get("color") or "#66bb6a")
+            # Canopy radius in metres → pixels. Fall back to a 0.5 m
+            # radius for legacy members that never recorded a spacing.
+            spacing_m = float(m.get("spacing_m") or 1.0)
+            r_px = max(4.0, (spacing_m / 2.0) * s)
+
+            # Semi-transparent canopy disc so overlaps stay visible.
+            canopy_fill = QColor(color)
+            canopy_fill.setAlpha(110)
+            p.setBrush(QBrush(canopy_fill))
+            p.setPen(QPen(color.darker(140), 1.2))
+            p.drawEllipse(QPointF(mx, my), r_px, r_px)
+
+            # Solid centre pip so the planting point is unambiguous.
             p.setBrush(QBrush(color))
             p.setPen(QPen(QColor("#0d1f0d"), 1))
-            p.drawEllipse(QPointF(mx, my), 8, 8)
+            p.drawEllipse(QPointF(mx, my), 4, 4)
+
             p.setPen(QColor("#e8f5e9"))
             label = (m.get("common_name", "") or "")[:20]
-            p.drawText(int(mx) + 11, int(my) + 4, label)
+            p.drawText(int(mx) + int(r_px) + 4, int(my) + 4, label)
         p.end()
 
     # ── Mouse handling ──────────────────────────────────────────────────────
@@ -499,18 +517,58 @@ class PolycultureBuilderDialog(QDialog):
 
         body = QHBoxLayout()
 
-        # Left — plant picker
+        # Left — plant picker. Filters mirror the main Plants tab so
+        # users can drill into the catalogue while building a mix
+        # without leaving the dialog (Phase 4 — search parity).
+        from src.plant_panel import (
+            _TYPE_LABELS, _SUN_LABELS, _WATER_LABELS, _USE_LABELS,
+        )
         picker_col = QVBoxLayout()
         picker_col.addWidget(QLabel("<b>Plants</b>"))
         self.ab_only = QCheckBox("Alberta natives only")
         self.ab_only.setChecked(True)
         self.ab_only.toggled.connect(self._refresh_plant_list)
         picker_col.addWidget(self.ab_only)
+
         self.plant_search = QLineEdit()
         self.plant_search.setPlaceholderText("Search plants…")
         self.plant_search.setClearButtonEnabled(True)
         self.plant_search.textChanged.connect(self._refresh_plant_list)
         picker_col.addWidget(self.plant_search)
+
+        def _build_combo(items):
+            cb = QComboBox()
+            for label, data in items:
+                cb.addItem(label, userData=data)
+            cb.currentIndexChanged.connect(self._refresh_plant_list)
+            return cb
+
+        filt_row1 = QHBoxLayout()
+        self.type_combo = _build_combo(
+            [("All types", "")]
+            + [(lbl, key) for key, lbl in _TYPE_LABELS.items()]
+        )
+        self.sun_combo = _build_combo(
+            [("Any sun", "")]
+            + [(lbl, key) for key, lbl in _SUN_LABELS.items()]
+        )
+        filt_row1.addWidget(self.type_combo)
+        filt_row1.addWidget(self.sun_combo)
+        picker_col.addLayout(filt_row1)
+
+        filt_row2 = QHBoxLayout()
+        self.water_combo = _build_combo(
+            [("Any water", "")]
+            + [(lbl, key) for key, lbl in _WATER_LABELS.items()]
+        )
+        self.use_combo = _build_combo(
+            [("Any use", "")]
+            + [(lbl, key) for key, lbl in _USE_LABELS.items()]
+        )
+        filt_row2.addWidget(self.water_combo)
+        filt_row2.addWidget(self.use_combo)
+        picker_col.addLayout(filt_row2)
+
         self.plant_list = QListWidget()
         self.plant_list.setMinimumWidth(220)
         picker_col.addWidget(self.plant_list, 1)
@@ -563,10 +621,31 @@ class PolycultureBuilderDialog(QDialog):
     def _refresh_plant_list(self, *_):
         text = (self.plant_search.text() or "").strip().lower()
         ab_only = self.ab_only.isChecked()
+        type_f  = (self.type_combo.currentData()  if hasattr(self, "type_combo")  else "") or ""
+        sun_f   = (self.sun_combo.currentData()   if hasattr(self, "sun_combo")   else "") or ""
+        water_f = (self.water_combo.currentData() if hasattr(self, "water_combo") else "") or ""
+        use_f   = (self.use_combo.currentData()   if hasattr(self, "use_combo")   else "") or ""
         self.plant_list.clear()
         for p in self._all_plants:
             if ab_only and not _truthy_int(p.get("native_to_alberta")):
                 continue
+            if type_f and (p.get("plant_type") or "") != type_f:
+                continue
+            if sun_f and (p.get("sun_requirement") or "") != sun_f:
+                continue
+            if water_f and (p.get("water_needs") or "") != water_f:
+                continue
+            if use_f:
+                # permaculture_uses is a comma-or-pipe-separated string
+                # in the catalogue; match exact token (case-insensitive).
+                uses_raw = (p.get("permaculture_uses") or "").lower()
+                tokens = {
+                    t.strip()
+                    for chunk in uses_raw.split(",")
+                    for t in chunk.split("|")
+                }
+                if use_f.lower() not in tokens:
+                    continue
             name = p.get("common_name", "") or ""
             sci = p.get("scientific_name", "") or ""
             if text and text not in name.lower() and text not in sci.lower():
@@ -593,6 +672,7 @@ class PolycultureBuilderDialog(QDialog):
             "common_name": plant.get("common_name", ""),
             "role":        self.role_combo.currentData(),
             "color":       _plant_color_for_member(plant),
+            "spacing_m":   float(plant.get("spacing_meters") or 1.0),
             "offset_x":    round(x_m, 2),
             "offset_y":    round(y_m, 2),
         })
@@ -648,6 +728,7 @@ class PolycultureBuilderDialog(QDialog):
                 ),
                 "role":        m.get("role", "other"),
                 "color":       _plant_color_for_member(plant or {}),
+                "spacing_m":   float((plant or {}).get("spacing_meters") or 1.0),
                 "offset_x":    float(m.get("offset_x") or 0.0),
                 "offset_y":    float(m.get("offset_y") or 0.0),
             })

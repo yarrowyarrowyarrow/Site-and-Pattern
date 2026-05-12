@@ -829,10 +829,23 @@ class PlantPanel(QWidget):
         )
         root.addWidget(header)
 
-        # Main split: browser (top) vs placement controls + placed list (bottom)
+        # Main split: browser (top) vs placement controls + placed list
+        # (bottom). The browser pane is prioritised — when a row in the
+        # plant list is expanded the splitter gives extra space to the
+        # top while the placement controls become scrollable below
+        # (Phase 3).
         splitter = QSplitter(Qt.Orientation.Vertical)
         splitter.setChildrenCollapsible(False)
-        root.addWidget(splitter)
+        # Make the splitter handle obvious so the user notices it can
+        # be dragged to claim more room for the placement controls.
+        splitter.setHandleWidth(6)
+        splitter.setStyleSheet(
+            "QSplitter::handle:vertical { background: #2e4a2e; "
+            "height: 6px; margin: 1px 0; border-radius: 2px; }"
+            "QSplitter::handle:vertical:hover { background: #4a7a4a; }"
+        )
+        root.addWidget(splitter, 1)
+        self._main_splitter = splitter
 
         # ── Top pane: search + filters + results list ─────────────────────
         local_tab = QWidget()
@@ -1064,13 +1077,31 @@ class PlantPanel(QWidget):
         self._placed_panel.set_content(placed_body)
         bot_layout.addWidget(self._placed_panel, 1)
 
-        splitter.addWidget(bottom)
-        # Lean the split toward the browser so an expanded row's full
-        # detail block (~180 px) is visible without scrolling. The user
-        # can still drag the splitter handle to rebalance.
-        splitter.setSizes([520, 280])
-        splitter.setStretchFactor(0, 3)
-        splitter.setStretchFactor(1, 2)
+        # Wrap the bottom block in a scroll area so the splitter can
+        # shrink it without crushing controls — when the user expands a
+        # plant row the top pane claims more vertical space and the
+        # placement controls dynamically compress with their own
+        # scrollbar instead of fighting for room.
+        bottom.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+        )
+        bottom_scroll = QScrollArea()
+        bottom_scroll.setWidget(bottom)
+        bottom_scroll.setWidgetResizable(True)
+        bottom_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        bottom_scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        # Keep a small minimum so the Place button is always reachable.
+        bottom_scroll.setMinimumHeight(80)
+
+        splitter.addWidget(bottom_scroll)
+        # Bias the split heavily toward the browser so expanded rows
+        # don't crush the list. The user can still drag the handle if
+        # they want more room for placement controls.
+        splitter.setSizes([700, 200])
+        splitter.setStretchFactor(0, 5)
+        splitter.setStretchFactor(1, 0)
 
     # ── Filter helpers ────────────────────────────────────────────────────────
 

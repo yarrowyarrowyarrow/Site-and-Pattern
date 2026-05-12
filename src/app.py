@@ -21,7 +21,7 @@ from datetime import datetime
 from typing import Optional
 
 from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QHBoxLayout, QSplitter,
+    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QSplitter,
     QStatusBar, QLabel, QMessageBox, QFileDialog, QSizePolicy,
     QInputDialog, QTabWidget,
 )
@@ -101,8 +101,12 @@ class MainWindow(QMainWindow):
 
     def _build_ui(self):
         # Toolbar — Draw row on top, Layers row stacked below it.
+        # NOTE: the toolbars used to be attached to QMainWindow's toolbar
+        # area (above the central widget). They now live inside the left
+        # column of the central splitter so the right-hand side panel can
+        # extend full-height from just below the menu bar to the status
+        # bar — see _build_central_layout below.
         self.toolbar = MainToolbar(self)
-        self.toolbar.attach_to(self)
 
         # Central area
         self.map_widget      = MapWidget(self)
@@ -116,17 +120,27 @@ class MainWindow(QMainWindow):
         self.analysis_panel  = AnalysisPanel(self)
         self.planning_panel  = PlanningPanel(self)
 
-        # Tabbed side panel
+        # Tabbed side panel — the "Plants" and "Polycultures" tabs were
+        # merged into a single "Plants && Polycultures" tab (Phase 2) so
+        # all five tabs fit across the panel's width without scroll
+        # buttons.
+        self._plant_poly_tab = self._build_plants_polycultures_tab()
+
         self._side_tabs = QTabWidget()
         self._side_tabs.setDocumentMode(False)
         self._side_tabs.addTab(self.site_panel, "Site")
-        self._side_tabs.addTab(self.plant_panel, "Plants")
-        self._side_tabs.addTab(self.polyculture_panel, "Polycultures")
+        self._side_tabs.addTab(self._plant_poly_tab, "Plants && Polycultures")
         self._side_tabs.addTab(self.structure_panel, "Structures")
         self._side_tabs.addTab(self.analysis_panel, "Analysis")
         self._side_tabs.addTab(self.planning_panel, "Planning")
         self._side_tabs.setMinimumWidth(220)
         self._side_tabs.setMaximumWidth(480)
+        # Pack the tab bar tight so all five tabs fit at the panel's
+        # default width without scroll buttons. Elide long labels rather
+        # than hiding tabs behind a chevron.
+        self._side_tabs.tabBar().setUsesScrollButtons(False)
+        self._side_tabs.tabBar().setElideMode(Qt.TextElideMode.ElideRight)
+        self._side_tabs.tabBar().setExpanding(True)
         # Tab styling — make the selected tab unmistakably highlighted
         # (bright green pill) so it's obvious which panel is open and
         # that the others are clickable.
@@ -135,15 +149,15 @@ class MainWindow(QMainWindow):
             "background: #1e2a1e; top: -1px; }"
             "QTabBar { qproperty-drawBase: 0; background: #122012; }"
             "QTabBar::tab { background: #1a2a1a; color: #90a4ae; "
-            "padding: 7px 12px; margin-right: 2px; "
+            "padding: 5px 6px; margin-right: 1px; "
             "border: 1px solid #2e4a2e; border-bottom: none; "
-            "border-top-left-radius: 5px; border-top-right-radius: 5px; "
-            "font-size: 12px; min-width: 56px; }"
+            "border-top-left-radius: 4px; border-top-right-radius: 4px; "
+            "font-size: 11px; min-width: 0; }"
             "QTabBar::tab:hover { background: #284028; color: #c8e6c9; }"
             "QTabBar::tab:selected { background: #2e7d32; color: #ffffff; "
             "font-weight: bold; border: 1px solid #66bb6a; "
             "border-bottom: 2px solid #66bb6a; }"
-            "QTabBar::tab:!selected { margin-top: 3px; }"
+            "QTabBar::tab:!selected { margin-top: 2px; }"
             "QWidget { background-color: #1e2a1e; color: #c8e6c9; }"
         )
 
@@ -155,8 +169,21 @@ class MainWindow(QMainWindow):
         )
         self._side_wrapper.set_content(self._side_tabs)
 
+        # Build the left column: Draw toolbar + View toolbar + map.
+        # The toolbars used to live in QMainWindow's toolbar area above
+        # the central widget; placing them inside the splitter's left
+        # column instead lets the right-hand side panel span the full
+        # vertical extent (just below the menu bar to just above the
+        # status bar) — see Phase 1 of the panel refactor.
+        left_col = QWidget(self)
+        left_layout = QVBoxLayout(left_col)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(0)
+        self.toolbar.attach_to_layout(left_layout)
+        left_layout.addWidget(self.map_widget, 1)
+
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
-        self._splitter.addWidget(self.map_widget)
+        self._splitter.addWidget(left_col)
         self._splitter.addWidget(self._side_wrapper)
 
         # 70 / 30 split
@@ -200,6 +227,40 @@ class MainWindow(QMainWindow):
 
         # Window style
         self.setStyleSheet(_APP_STYLE)
+
+    def _build_plants_polycultures_tab(self) -> QWidget:
+        """Build the merged 'Plants && Polycultures' tab (Phase 2).
+
+        Houses the two panels under a compact inner tab strip so users
+        can move between browsing/placing individual plants and managing
+        the saved-polyculture library without leaving this outer tab.
+
+        The PlantPanel already owns the inline polyculture-mix builder
+        used to place mixes on the map; the PolyculturePanel is for
+        editing the saved library of multi-plant templates.
+        """
+        wrap = QWidget()
+        v = QVBoxLayout(wrap)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(0)
+
+        inner = QTabWidget(wrap)
+        inner.setDocumentMode(True)
+        inner.tabBar().setUsesScrollButtons(False)
+        inner.tabBar().setExpanding(True)
+        inner.setStyleSheet(
+            "QTabWidget::pane { border: none; background: #1e2a1e; }"
+            "QTabBar::tab { background: #15251a; color: #90a4ae; "
+            "padding: 4px 10px; font-size: 11px; "
+            "border-bottom: 2px solid transparent; }"
+            "QTabBar::tab:selected { color: #a5d6a7; "
+            "border-bottom: 2px solid #66bb6a; }"
+            "QTabBar::tab:hover { color: #c8e6c9; }"
+        )
+        inner.addTab(self.plant_panel, "Plants")
+        inner.addTab(self.polyculture_panel, "Polyculture Library")
+        v.addWidget(inner)
+        return wrap
 
     def _on_toggle_sidebar(self, checked: bool):
         """View → Show Side Panel (Ctrl+\\). Mirrors the chevron click."""

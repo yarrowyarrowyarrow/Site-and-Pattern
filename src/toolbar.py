@@ -357,6 +357,20 @@ class MainToolbar(QToolBar):
         main_window.addToolBarBreak()
         main_window.addToolBar(self.layers_bar)
 
+    def attach_to_layout(self, layout):
+        """Add Draw + View as stacked widgets inside a vertical layout.
+
+        Lets the side panel float free of the QMainWindow toolbar area so
+        it can extend from just below the menu bar to the status bar,
+        while the toolbars only span the map column on the left.
+        """
+        # The QToolBar is reparented when added to a layout; clear the
+        # QMainWindow-side state in case attach_to() was called earlier.
+        self.setParent(None)
+        self.layers_bar.setParent(None)
+        layout.addWidget(self)
+        layout.addWidget(self.layers_bar)
+
     # ── Internal handlers ─────────────────────────────────────────────────────
 
     def _on_boundary_toggled(self, checked: bool):
