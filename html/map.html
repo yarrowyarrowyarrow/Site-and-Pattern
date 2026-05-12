@@ -3028,6 +3028,27 @@
       group.addTo(map);
       _jT('js:group_attached');
 
+      // Paint-pipeline probe: how long until the browser grants us
+      // (a) an animation frame, (b) the *next* animation frame after
+      // that, and (c) a setTimeout tick. If rAF is delayed but
+      // setTimeout fires fast, the bottleneck is paint/compositing.
+      // If setTimeout is *also* delayed, the main thread itself is
+      // blocked.
+      var _paint_t0 = performance.now();
+      requestAnimationFrame(function() {
+        var t1 = performance.now() - _paint_t0;
+        console.log('[perf:poly:paint] rAF#1 +' + t1.toFixed(1) + 'ms');
+        requestAnimationFrame(function() {
+          var t2 = performance.now() - _paint_t0;
+          console.log('[perf:poly:paint] rAF#2 +' + t2.toFixed(1) + 'ms (delta '
+            + (t2 - t1).toFixed(1) + 'ms)');
+        });
+      });
+      setTimeout(function() {
+        console.log('[perf:poly:paint] setTimeout(0) +'
+          + (performance.now() - _paint_t0).toFixed(1) + 'ms');
+      }, 0);
+
       return group;
       } catch (err) {
         console.error('[poly] FATAL in placePolycultureOnMap:',
