@@ -2876,6 +2876,15 @@
 
     function placePolycultureOnMap(polycultureData, centerLat, centerLng) {
       try {
+      var _pjt0 = performance.now();
+      function _jT(label) {
+        var n = (map && map._layers) ? Object.keys(map._layers).length : -1;
+        console.log('[perf:poly:js] ' + label + ' +'
+          + (performance.now() - _pjt0).toFixed(1) + 'ms  (layers=' + n
+          + ', polyGroups=' + polycultureGroups.length
+          + ', plantMarkers=' + Object.keys(plantMarkers).length + ')');
+      }
+      _jT('js:start');
       // Guard against an empty/malformed payload — placing nothing is
       // preferable to throwing partway through and leaving Leaflet's
       // canvas renderer in a half-painted state (which is what was
@@ -2977,6 +2986,7 @@
           if (bridge) bridge.onPolycultureRemoved(polycultureData.name || '', centerLat, centerLng);
         });
       });
+      _jT('js:members_added');
 
       // Draw a dashed outline around the whole polyculture footprint.
       // SVG renderer (Leaflet default) — see canopy note above for why
@@ -3000,6 +3010,7 @@
       L.marker([centerLat, centerLng], { icon: labelIcon, interactive: false }).addTo(group);
 
       polycultureGroups.push(group);
+      _jT('js:outline_label_added');
 
       // Recover from any container-size hiccup. The Python side rebuilds
       // the placed-plants QListWidget right after this call returns, which
@@ -3010,7 +3021,13 @@
       // invalidateSize on the next animation frame guarantees the map
       // picks up its true dimensions after the side panel finishes
       // rebuilding.
-      requestAnimationFrame(function() { map.invalidateSize(false); });
+      requestAnimationFrame(function() {
+        var _ist = performance.now();
+        map.invalidateSize(false);
+        console.log('[perf:poly:js] js:rAF_invalidate_done +'
+          + (performance.now() - _pjt0).toFixed(1) + 'ms  (invalidateSize itself: '
+          + (performance.now() - _ist).toFixed(1) + 'ms)');
+      });
 
       return group;
       } catch (err) {

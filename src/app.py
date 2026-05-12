@@ -1280,6 +1280,12 @@ class MainWindow(QMainWindow):
             return
         import json as _json
         import math
+        import sys as _sys, time as _time
+        _pt0 = _time.perf_counter()
+        def _pT(label):
+            _sys.stderr.write(f"[perf:poly] {label} +{(_time.perf_counter()-_pt0)*1000:.1f}ms  (placed_total={len(self._placed_plants)})\n")
+            _sys.stderr.flush()
+        _pT("handler:start")
 
         polyculture = self._pending_polyculture
         members = polyculture.get("members", [])
@@ -1309,6 +1315,7 @@ class MainWindow(QMainWindow):
             "name": polyculture.get("name", "Polyculture"),
             "members": enriched_members,
         }
+        _pT("enriched")
 
         # Call JS placePolycultureOnMap for visual rendering. The JS side
         # uses the SVG renderer (not canvas) — see placePolycultureOnMap
@@ -1317,6 +1324,7 @@ class MainWindow(QMainWindow):
         self.map_widget.run_js(
             f"placePolycultureOnMap(JSON.parse({_json.dumps(_json.dumps(polyculture_js))}), {lat}, {lng});"
         )
+        _pT("run_js:returned")
 
         # All members of one polyculture placement share a single placement group.
         group_id = project_io.new_placement_group_id()
@@ -1354,12 +1362,14 @@ class MainWindow(QMainWindow):
                 }
             })
             batch_placements.append((m["plant_id"], m["common_name"]))
+        _pT("state_appended")
 
         # Single placed-list rebuild for the whole polyculture (was N rebuilds
         # — each doing a DB lookup + clear/repopulate — which blocked the Qt
         # event loop long enough for the QWebEngineView to skip frames and
         # for Leaflet to paint a blank map).
         self.plant_panel.on_plants_placed_batch(batch_placements)
+        _pT("placed_list_rebuilt")
 
         # Belt-and-braces: even though placePolycultureOnMap already schedules
         # an invalidateSize via requestAnimationFrame JS-side, force a second
@@ -1378,6 +1388,7 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(
             f"Placed polyculture '{polyculture.get('name', '')}' with {len(enriched_members)} members", 3000
         )
+        _pT("handler:end")
 
     def _cancel_draw(self):
         self._current_mode = 'none'
