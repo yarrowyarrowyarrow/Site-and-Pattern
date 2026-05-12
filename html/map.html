@@ -2903,19 +2903,19 @@
       // Build the group OFF the map and attach it once at the end.
       var group = L.layerGroup();
 
-      // Per-polyculture SVG renderer. With Leaflet's default (shared)
-      // SVG renderer, every L.circle in every polyculture lives inside
-      // ONE <svg> element in the overlay pane. Appending a path to a
-      // live SVG with N existing paths forces a synchronous layout /
-      // bbox-recalc over the whole element — and the timing probe
-      // proved this:  main-thread blocked 705 / 2490 / 6261 / 11324 /
-      // 20561 ms across 5 placements, with frame time degrading too.
-      // Giving each polyculture its own L.svg() instance puts its 9
-      // paths in their own <svg>, so appending a path costs O(9), not
-      // O(N_total). We store the renderer on the group so the
-      // contextmenu remove handler can tear it down with the layers.
-      var polyRenderer = L.svg();
-      group._polyRenderer = polyRenderer;
+      // Suspect-elimination flag. Round-3 data proved the main thread
+      // (not paint/compositor) is what's blocked during placement, and
+      // the cost grows non-linearly with the number of placed
+      // polycultures. Round-3 attempt (per-poly L.svg renderer) made
+      // it strictly worse (~2x baseline, ~6x at N=5 vs the shared
+      // renderer), so it's NOT solved by isolating the SVG element.
+      // The remaining suspects scale per-placement: bindTooltip on
+      // every canopy circle (creates DOM/listeners), stroke-dasharray
+      // on the outline (notoriously slow rasterisation), and the
+      // divIcon L.marker label (HTML element in markerPane). Flip
+      // this flag to skip all three at once to confirm whether the
+      // bare canopy circles alone are fast.
+      var POLY_MIN_FEATURES = true;
 
       // Sort members: canopy first (largest), then by descending height
       var sorted = members.slice().sort(function(a, b) {
@@ -2964,14 +2964,15 @@
           fillColor: color,
           fillOpacity: 0.30,
           className: 'polyculture-canopy',
-          renderer: polyRenderer,
         }).addTo(group);
 
-        canopy.bindTooltip(
-          '<b>' + escH(polycultureData.name || 'Polyculture') + '</b><br>' +
-          escH(m.common_name) + ' <span style="color:#aaa">(' + escH(role.replace(/_/g, ' ')) + ')</span>',
-          { className: 'plant-marker-label' }
-        );
+        if (!POLY_MIN_FEATURES) {
+          canopy.bindTooltip(
+            '<b>' + escH(polycultureData.name || 'Polyculture') + '</b><br>' +
+            escH(m.common_name) + ' <span style="color:#aaa">(' + escH(role.replace(/_/g, ' ')) + ')</span>',
+            { className: 'plant-marker-label' }
+          );
+        }
 
         // Store metadata for undo/project tracking
         canopy._pd = {
@@ -2996,9 +2997,6 @@
               if (plantMarkers[k] === layer) delete plantMarkers[k];
             });
           });
-          // Tear down this polyculture's private SVG renderer so its
-          // <svg> element doesn't linger in the overlay pane.
-          if (group._polyRenderer) map.removeLayer(group._polyRenderer);
           var idx = polycultureGroups.indexOf(group);
           if (idx >= 0) polycultureGroups.splice(idx, 1);
           // Notify Python so project state is cleaned up
@@ -3007,27 +3005,29 @@
       });
       _jT('js:members_added');
 
-      // Draw a dashed outline around the whole polyculture footprint.
-      // Uses the per-polyculture SVG renderer so it lives in the same
-      // private <svg> as this polyculture's canopy circles.
-      var outline = L.circle([centerLat, centerLng], {
-        radius: maxRadius * 1.1,
-        color: '#a5d6a7',
-        weight: 1.5,
-        dashArray: '6 4',
-        fillOpacity: 0,
-        interactive: false,
-        renderer: polyRenderer,
-      }).addTo(group);
+      if (!POLY_MIN_FEATURES) {
+        // Dashed outline (stroke-dasharray is a known slow path in SVG
+        // rasterisation). Skipped in minimal mode for measurement.
+        L.circle([centerLat, centerLng], {
+          radius: maxRadius * 1.1,
+          color: '#a5d6a7',
+          weight: 1.5,
+          dashArray: '6 4',
+          fillOpacity: 0,
+          interactive: false,
+        }).addTo(group);
 
-      // Add polyculture name label at center
-      var labelIcon = L.divIcon({
-        className: 'plant-marker-label',
-        html: '<b>' + escH(polycultureData.name || 'Polyculture') + '</b>',
-        iconSize: [0, 0],
-        iconAnchor: [0, -8]
-      });
-      L.marker([centerLat, centerLng], { icon: labelIcon, interactive: false }).addTo(group);
+        // Center name label as an HTML divIcon marker. Skipped in
+        // minimal mode (HTML markers in markerPane could trigger
+        // markerPane reflow on every placement).
+        var labelIcon = L.divIcon({
+          className: 'plant-marker-label',
+          html: '<b>' + escH(polycultureData.name || 'Polyculture') + '</b>',
+          iconSize: [0, 0],
+          iconAnchor: [0, -8]
+        });
+        L.marker([centerLat, centerLng], { icon: labelIcon, interactive: false }).addTo(group);
+      }
 
       polycultureGroups.push(group);
       _jT('js:before_group_attach');
