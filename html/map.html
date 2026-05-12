@@ -2900,7 +2900,15 @@
         return null;
       }
 
-      var group = L.layerGroup().addTo(map);
+      // Build the group OFF the map and attach it once at the end.
+      // Calling .addTo(group) when the group is already on the map fires
+      // map.addLayer per child, and each addLayer triggers a synchronous
+      // SVG paint that scans the whole overlay pane — for 9 circles
+      // across N existing polycultures that's O(N) per click, which
+      // compounds into the O(N^2) slowdown the user was seeing
+      // (729ms / 2.6s / 6.3s / 11s / 20s across 5 placements).
+      // One attach at the end => one paint per placement.
+      var group = L.layerGroup();
 
       // Sort members: canopy first (largest), then by descending height
       var sorted = members.slice().sort(function(a, b) {
@@ -3010,24 +3018,15 @@
       L.marker([centerLat, centerLng], { icon: labelIcon, interactive: false }).addTo(group);
 
       polycultureGroups.push(group);
-      _jT('js:outline_label_added');
+      _jT('js:before_group_attach');
 
-      // Recover from any container-size hiccup. The Python side rebuilds
-      // the placed-plants QListWidget right after this call returns, which
-      // can briefly steal the Qt event loop and cause QWebEngineView to
-      // reflow. If Leaflet's canvas renderer paints during that reflow it
-      // caches a stale 0x0 size and the map appears blank with zoom/
-      // satellite-toggle dead until the next user interaction. Forcing an
-      // invalidateSize on the next animation frame guarantees the map
-      // picks up its true dimensions after the side panel finishes
-      // rebuilding.
-      requestAnimationFrame(function() {
-        var _ist = performance.now();
-        map.invalidateSize(false);
-        console.log('[perf:poly:js] js:rAF_invalidate_done +'
-          + (performance.now() - _pjt0).toFixed(1) + 'ms  (invalidateSize itself: '
-          + (performance.now() - _ist).toFixed(1) + 'ms)');
-      });
+      // Single batch-attach: all 9 layers go onto the map in one go.
+      // Note: removed the previous requestAnimationFrame(invalidateSize)
+      // shim from this path — it was redundant with Python's
+      // QTimer.singleShot(0, invalidate_size) and was both *measuring*
+      // the paint-pipeline backlog and contributing to it.
+      group.addTo(map);
+      _jT('js:group_attached');
 
       return group;
       } catch (err) {
