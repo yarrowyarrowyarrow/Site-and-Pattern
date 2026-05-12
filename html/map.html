@@ -2901,14 +2901,21 @@
       }
 
       // Build the group OFF the map and attach it once at the end.
-      // Calling .addTo(group) when the group is already on the map fires
-      // map.addLayer per child, and each addLayer triggers a synchronous
-      // SVG paint that scans the whole overlay pane — for 9 circles
-      // across N existing polycultures that's O(N) per click, which
-      // compounds into the O(N^2) slowdown the user was seeing
-      // (729ms / 2.6s / 6.3s / 11s / 20s across 5 placements).
-      // One attach at the end => one paint per placement.
       var group = L.layerGroup();
+
+      // Per-polyculture SVG renderer. With Leaflet's default (shared)
+      // SVG renderer, every L.circle in every polyculture lives inside
+      // ONE <svg> element in the overlay pane. Appending a path to a
+      // live SVG with N existing paths forces a synchronous layout /
+      // bbox-recalc over the whole element — and the timing probe
+      // proved this:  main-thread blocked 705 / 2490 / 6261 / 11324 /
+      // 20561 ms across 5 placements, with frame time degrading too.
+      // Giving each polyculture its own L.svg() instance puts its 9
+      // paths in their own <svg>, so appending a path costs O(9), not
+      // O(N_total). We store the renderer on the group so the
+      // contextmenu remove handler can tear it down with the layers.
+      var polyRenderer = L.svg();
+      group._polyRenderer = polyRenderer;
 
       // Sort members: canopy first (largest), then by descending height
       var sorted = members.slice().sort(function(a, b) {
@@ -2957,6 +2964,7 @@
           fillColor: color,
           fillOpacity: 0.30,
           className: 'polyculture-canopy',
+          renderer: polyRenderer,
         }).addTo(group);
 
         canopy.bindTooltip(
@@ -2988,6 +2996,9 @@
               if (plantMarkers[k] === layer) delete plantMarkers[k];
             });
           });
+          // Tear down this polyculture's private SVG renderer so its
+          // <svg> element doesn't linger in the overlay pane.
+          if (group._polyRenderer) map.removeLayer(group._polyRenderer);
           var idx = polycultureGroups.indexOf(group);
           if (idx >= 0) polycultureGroups.splice(idx, 1);
           // Notify Python so project state is cleaned up
@@ -2997,8 +3008,8 @@
       _jT('js:members_added');
 
       // Draw a dashed outline around the whole polyculture footprint.
-      // SVG renderer (Leaflet default) — see canopy note above for why
-      // canvasRenderer is intentionally avoided here.
+      // Uses the per-polyculture SVG renderer so it lives in the same
+      // private <svg> as this polyculture's canopy circles.
       var outline = L.circle([centerLat, centerLng], {
         radius: maxRadius * 1.1,
         color: '#a5d6a7',
@@ -3006,6 +3017,7 @@
         dashArray: '6 4',
         fillOpacity: 0,
         interactive: false,
+        renderer: polyRenderer,
       }).addTo(group);
 
       // Add polyculture name label at center
