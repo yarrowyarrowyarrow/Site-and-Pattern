@@ -42,6 +42,22 @@ from src.collapsible_panel import CollapsibleSidebar
 import src.project as project_io
 
 
+# Mirror of the JS ROLE_COLORS table in html/map.html. Kept here so polyculture
+# member markers can be coloured by role from Python and rendered through the
+# same fast placePlantMarker path used by single/row/burst/grid placement.
+_ROLE_COLORS = {
+    'canopy':              '#1b5e20',
+    'understory':          '#388e3c',
+    'groundcover':         '#66bb6a',
+    'nitrogen_fixer':      '#43a047',
+    'dynamic_accumulator': '#2e7d32',
+    'pest_repellent':      '#7cb342',
+    'pollinator':          '#aed581',
+    'windbreak':           '#558b2f',
+    'other':               '#81c784',
+}
+
+
 def _init_database():
     """Bootstrap the plant database; show a warning on failure (don't crash)."""
     try:
@@ -1275,73 +1291,47 @@ class MainWindow(QMainWindow):
         self.map_widget.bridge.map_clicked.connect(self._on_polyculture_click)
 
     def _on_polyculture_click(self, lat: float, lng: float):
-        """Handle map click while in polyculture placement mode."""
+        """Drop a polyculture by issuing one placePlantMarker per member.
+
+        Mirrors the grid/row/burst loop in _on_pattern_placed: each member is
+        rendered through the fast canvas-renderer path with a shared groupId,
+        so the placement avoids the per-poly SVG renderer + temp L.layerGroup
+        attach that caused O(N^2) browser paint cost. Mode stays armed after
+        each placement (Esc / mode-switch cancels), matching row/burst/grid
+        UX so a single "Place on Map" press lets the user drop many
+        polycultures back to back.
+        """
         if self._current_mode != 'polyculture' or not hasattr(self, '_pending_polyculture'):
             return
-        import json as _json
         import math
-        import sys as _sys, time as _time
-        _pt0 = _time.perf_counter()
-        def _pT(label):
-            _sys.stderr.write(f"[perf:poly] {label} +{(_time.perf_counter()-_pt0)*1000:.1f}ms  (placed_total={len(self._placed_plants)})\n")
-            _sys.stderr.flush()
-        _pT("handler:start")
 
         polyculture = self._pending_polyculture
         members = polyculture.get("members", [])
+        if not members:
+            return
 
-        # Enrich member data with spacing/height for the JS visualisation
-        enriched_members = []
-        for m in members:
-            spacing_m, plant_type, _ = self._plant_info(m["plant_id"])
-            try:
-                from src.db.plants import get_plant
-                p = get_plant(m["plant_id"])
-                height = float(p.get("mature_height_meters") or 1.0) if p else 1.0
-            except Exception:
-                height = 1.0
-            enriched_members.append({
-                "plant_id": m["plant_id"],
-                "common_name": m["common_name"],
-                "plant_type": plant_type,
-                "role": m.get("role", "other"),
-                "offset_x": m.get("offset_x", 0),
-                "offset_y": m.get("offset_y", 0),
-                "spacing_meters": spacing_m,
-                "mature_height_meters": height,
-            })
-
-        polyculture_js = {
-            "name": polyculture.get("name", "Polyculture"),
-            "members": enriched_members,
-        }
-        _pT("enriched")
-
-        # Call JS placePolycultureOnMap for visual rendering. The JS side
-        # uses the SVG renderer (not canvas) — see placePolycultureOnMap
-        # for the QtWebEngine-GPU-crash rationale — and schedules its own
-        # invalidateSize on the next animation frame.
-        self.map_widget.run_js(
-            f"placePolycultureOnMap(JSON.parse({_json.dumps(_json.dumps(polyculture_js))}), {lat}, {lng});"
-        )
-        _pT("run_js:returned")
-
-        # All members of one polyculture placement share a single placement group.
-        group_id = project_io.new_placement_group_id()
-
-        # Build the state delta in one pass — appending to lists is cheap; the
-        # expensive piece is the placed-list refresh, which we batch below so
-        # we do one QListWidget rebuild instead of one per member.
         poly_name = polyculture.get("name", "")
-        batch_placements: list[tuple[int, str]] = []
-        for m in enriched_members:
-            lat_offset = (m["offset_y"]) / 111320
-            lng_offset = (m["offset_x"]) / (111320 * math.cos(lat * math.pi / 180))
-            mlat = lat + lat_offset
-            mlng = lng + lng_offset
+        group_id = project_io.new_placement_group_id()
+        cos_lat = math.cos(lat * math.pi / 180) or 1e-9
 
+        batch_placements: list[tuple[int, str]] = []
+        for m in members:
+            pid = m["plant_id"]
+            name = m["common_name"]
+            spacing_m, plant_type, _ = self._plant_info(pid)
+            role = (m.get("role") or "other").lower()
+            color = _ROLE_COLORS.get(role, _ROLE_COLORS["other"])
+
+            mlat = lat + (m.get("offset_y", 0)) / 111320
+            mlng = lng + (m.get("offset_x", 0)) / (111320 * cos_lat)
+
+            self.map_widget.run_js(
+                f"placePlantMarker({pid}, {repr(name)}, "
+                f"{mlat}, {mlng}, {spacing_m}, {repr(plant_type)}, "
+                f"{repr(color)}, {repr(group_id)});"
+            )
             self._placed_plants.append({
-                "plant_id": m["plant_id"], "common_name": m["common_name"],
+                "plant_id": pid, "common_name": name,
                 "lat": mlat, "lng": mlng,
                 "polyculture_name": poly_name,
                 "polyculture_center_lat": lat, "polyculture_center_lng": lng,
@@ -1352,8 +1342,8 @@ class MainWindow(QMainWindow):
                 "geometry": {"type": "Point", "coordinates": [mlng, mlat]},
                 "properties": {
                     "element_type": "plant",
-                    "plant_id": m["plant_id"],
-                    "common_name": m["common_name"],
+                    "plant_id": pid,
+                    "common_name": name,
                     "polyculture_name": poly_name,
                     "polyculture_center_lat": lat,
                     "polyculture_center_lng": lng,
@@ -1361,34 +1351,19 @@ class MainWindow(QMainWindow):
                     "quantity": 1
                 }
             })
-            batch_placements.append((m["plant_id"], m["common_name"]))
-        _pT("state_appended")
+            batch_placements.append((pid, name))
 
-        # Single placed-list rebuild for the whole polyculture (was N rebuilds
-        # — each doing a DB lookup + clear/repopulate — which blocked the Qt
-        # event loop long enough for the QWebEngineView to skip frames and
-        # for Leaflet to paint a blank map).
+        # One placed-list rebuild per polyculture click instead of N — see
+        # PlantPanel.on_plants_placed_batch for the rationale.
         self.plant_panel.on_plants_placed_batch(batch_placements)
-        _pT("placed_list_rebuilt")
-
-        # Belt-and-braces: even though placePolycultureOnMap already schedules
-        # an invalidateSize via requestAnimationFrame JS-side, force a second
-        # one from Python after the placed-list rebuild has drained the Qt
-        # event loop. This is what makes the placement truly "batch-safe" —
-        # no matter how long the side panel took to refresh, the map ends
-        # the tick at its correct measured size.
-        QTimer.singleShot(0, self.map_widget.invalidate_size)
-
         self._mark_modified()
-        self._cancel_draw()
-        try:
-            self.map_widget.bridge.map_clicked.disconnect(self._on_polyculture_click)
-        except TypeError:
-            pass
-        self.statusBar().showMessage(
-            f"Placed polyculture '{polyculture.get('name', '')}' with {len(enriched_members)} members", 3000
+        self._set_mode_label(
+            f"Placed polyculture '{poly_name}'. Click again for another, "
+            f"or press Esc to finish."
         )
-        _pT("handler:end")
+        self.statusBar().showMessage(
+            f"Placed polyculture '{poly_name}' with {len(members)} members", 2500
+        )
 
     def _cancel_draw(self):
         self._current_mode = 'none'
