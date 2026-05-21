@@ -820,15 +820,6 @@ class PlantPanel(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # Header
-        header = QLabel("  Plant Browser")
-        header.setFixedHeight(32)
-        header.setStyleSheet(
-            "background:#1b3a1b; color:#a5d6a7; font-weight:bold; "
-            "font-size:13px; border-bottom:1px solid #2e4a2e;"
-        )
-        root.addWidget(header)
-
         # Main split: browser (top) vs placement controls + placed list
         # (bottom). The browser pane is prioritised — when a row in the
         # plant list is expanded the splitter gives extra space to the
@@ -980,7 +971,12 @@ class PlantPanel(QWidget):
         self._results_list.customContextMenuRequested.connect(self._on_plant_context_menu)
         top_layout.addWidget(self._results_list)
 
-        splitter.addWidget(local_tab)
+        from src.collapsible_panel import CollapsiblePanel
+        self._browser_panel = CollapsiblePanel(
+            "Plant Browser", panel_id="plant_panel_browser", expanded=True
+        )
+        self._browser_panel.set_content(local_tab)
+        splitter.addWidget(self._browser_panel)
 
         # ── Bottom: placement controls + placed plants ────────────────────
         bottom = QWidget()
@@ -1116,11 +1112,14 @@ class PlantPanel(QWidget):
         # whatever ratio the user had.
         self._main_splitter_saved_sizes: list[int] | None = None
         self._placed_panel.toggled.connect(self._on_placed_panel_toggled)
-        # If the panel was persisted collapsed, apply the splitter
-        # rebalance once on next tick (splitter sizes aren't valid yet
-        # before the first show).
+        self._browser_panel.toggled.connect(self._on_browser_panel_toggled)
+        # If a panel was persisted collapsed, apply the splitter rebalance
+        # once on next tick (splitter sizes aren't valid yet before the
+        # first show).
         if not self._placed_panel.expanded():
             QTimer.singleShot(0, lambda: self._on_placed_panel_toggled(False))
+        if not self._browser_panel.expanded():
+            QTimer.singleShot(0, lambda: self._on_browser_panel_toggled(False))
 
     # ── Filter helpers ────────────────────────────────────────────────────────
 
@@ -2125,8 +2124,6 @@ class PlantPanel(QWidget):
         if len(sizes) != 2:
             return
         if not expanded:
-            # Collapsing — give the bottom pane just enough room for
-            # placement controls + the collapsed-panel header.
             self._main_splitter_saved_sizes = sizes
             header_h = self._placed_panel.sizeHint().height() or 32
             controls_min = 140  # matches bottom_scroll.setMinimumHeight
@@ -2134,6 +2131,24 @@ class PlantPanel(QWidget):
             total = sum(sizes)
             new_top = max(total - new_bottom, controls_min)
             self._main_splitter.setSizes([new_top, new_bottom])
+        else:
+            if self._main_splitter_saved_sizes:
+                self._main_splitter.setSizes(self._main_splitter_saved_sizes)
+                self._main_splitter_saved_sizes = None
+
+    def _on_browser_panel_toggled(self, expanded: bool):
+        """Symmetric partner to _on_placed_panel_toggled: collapsing the
+        Plant Browser hands its height to the placement + placed pane.
+        """
+        sizes = self._main_splitter.sizes()
+        if len(sizes) != 2:
+            return
+        if not expanded:
+            self._main_splitter_saved_sizes = sizes
+            header_h = self._browser_panel.sizeHint().height() or 32
+            total = sum(sizes)
+            new_bottom = max(total - header_h, 140)
+            self._main_splitter.setSizes([header_h, new_bottom])
         else:
             if self._main_splitter_saved_sizes:
                 self._main_splitter.setSizes(self._main_splitter_saved_sizes)
