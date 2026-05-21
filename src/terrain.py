@@ -797,6 +797,107 @@ _MS_CASES = {
 
 # ── Slope grid (central differences) ────────────────────────────────────────
 
+def _grid_from_contours(contours: list[dict], bbox: dict,
+                         resolution_m: float) -> Optional[dict]:
+    """Interpolate Edmonton LiDAR contour vertices onto a regular elevation
+    grid for the existing compute_slope_grid pipeline.
+
+    Avoids the Open-Meteo round-trip + 30 m grid downsample when the user
+    already has the much finer LiDAR data cached locally. Inverse-distance
+    weighted blend over vertices in the cell's 3x3 bucket neighbourhood —
+    contours at 0.5 m sampling are dense enough that this gives a smooth
+    field at typical 5-15 m output resolution. Returns None when contours
+    are too sparse to interpolate (caller falls back to Open-Meteo).
+    """
+    verts: list[tuple[float, float, float]] = []
+    for c in contours:
+        e = c.get("elevation_m")
+        if e is None:
+            continue
+        # generate_terrain reshapes raw {coords} into {segments: [coords]} —
+        # accept either shape so callers can pass either form.
+        if "segments" in c:
+            for seg in c["segments"]:
+                for ll in seg:
+                    if len(ll) >= 2:
+                        verts.append((ll[0], ll[1], e))
+        else:
+            for ll in c.get("coords", []):
+                if len(ll) >= 2:
+                    verts.append((ll[0], ll[1], e))
+    if len(verts) < 100:
+        return None
+
+    # Cap output dimensions so a city-scale bbox can't explode the work.
+    MAX_DIM = 512
+    cols, rows = grid_dims(bbox, resolution_m)
+    if cols > MAX_DIM or rows > MAX_DIM:
+        width_m, height_m = bbox_size_m(bbox)
+        new_res = max(width_m / (MAX_DIM - 1), height_m / (MAX_DIM - 1))
+        cols, rows = grid_dims(bbox, new_res)
+
+    width_m, height_m = bbox_size_m(bbox)
+    dx_m = width_m  / max(1, cols - 1)
+    dy_m = height_m / max(1, rows - 1)
+    bucket_m = max(dx_m, dy_m) * 4.0  # vertices ~within a 4-cell radius
+
+    mid_lat = 0.5 * (bbox["south"] + bbox["north"])
+    m_per_deg_lat, m_per_deg_lng = metres_per_deg(mid_lat)
+    deg_per_m_lat = 1.0 / m_per_deg_lat
+    deg_per_m_lng = 1.0 / m_per_deg_lng
+    buck_lat = bucket_m * deg_per_m_lat
+    buck_lng = bucket_m * deg_per_m_lng
+
+    south, north = bbox["south"], bbox["north"]
+    west,  east  = bbox["west"],  bbox["east"]
+
+    buckets: dict[tuple[int, int], list[tuple[float, float, float]]] = {}
+    for vlat, vlng, ve in verts:
+        bi = int((vlat - south) / buck_lat)
+        bj = int((vlng - west)  / buck_lng)
+        buckets.setdefault((bi, bj), []).append((vlat, vlng, ve))
+
+    fallback_mean = sum(v[2] for v in verts) / len(verts)
+    grid = [[fallback_mean] * cols for _ in range(rows)]
+
+    for r in range(rows):
+        lat = north - (north - south) * r / max(1, rows - 1)
+        bi = int((lat - south) / buck_lat)
+        for c in range(cols):
+            lng = west + (east - west) * c / max(1, cols - 1)
+            bj = int((lng - west) / buck_lng)
+
+            sum_w = 0.0
+            sum_we = 0.0
+            for dbi in (-1, 0, 1):
+                for dbj in (-1, 0, 1):
+                    bv = buckets.get((bi + dbi, bj + dbj))
+                    if not bv:
+                        continue
+                    for vlat, vlng, ve in bv:
+                        dlat_m = (vlat - lat) * m_per_deg_lat
+                        dlng_m = (vlng - lng) * m_per_deg_lng
+                        # Floor d² so a cell landing on a vertex doesn't
+                        # blow up the weight — half the contour-vertex
+                        # spacing (~0.25 m²) is small enough to dominate
+                        # but finite.
+                        d2 = max(dlat_m * dlat_m + dlng_m * dlng_m, 0.25)
+                        w = 1.0 / d2
+                        sum_w += w
+                        sum_we += w * ve
+            if sum_w > 0:
+                grid[r][c] = sum_we / sum_w
+
+    return {
+        "grid": grid,
+        "rows": rows,
+        "cols": cols,
+        "bbox": bbox,
+        "source": "City of Edmonton LiDAR contours",
+        "missing_pct": 0.0,
+    }
+
+
 def compute_slope_grid(elev: dict) -> list[list[float]]:
     """
     Slope (%) at each cell of an elevation grid (forward/back diffs at
@@ -949,20 +1050,38 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
     elev = None
     need_grid = want_slope or (want_contours and not contours)
     if need_grid:
-        elev = fetch_openmeteo_grid(bbox, resolution_m)
+        # Prefer the local LiDAR contours when available — much faster
+        # than the Open-Meteo round-trip and finer than its 30 m grid.
+        slope_contours = contours
+        if use_edm and not slope_contours:
+            # Slope was requested but contour output wasn't — still try the
+            # local Edmonton fetch so the IDW path can run.
+            edm = fetch_edmonton_contours(bbox, interval_m=interval_m)
+            if edm:
+                slope_contours = [
+                    {"elevation_m": f["elevation_m"],
+                     "segments":   [f["coords"]]}
+                    for f in edm
+                ]
+        if slope_contours and use_edm:
+            elev = _grid_from_contours(slope_contours, bbox, resolution_m)
+            if elev is not None and not source:
+                source = "City of Edmonton — LiDAR contours (IDW grid)"
         if elev is None:
-            warnings.append(
-                "Open-Meteo elevation unreachable — try again, or pick a "
-                "smaller area."
-            )
-        else:
-            missing = elev.get("missing_pct") or 0.0
-            if missing > 5.0:
+            elev = fetch_openmeteo_grid(bbox, resolution_m)
+            if elev is None:
                 warnings.append(
-                    f"{missing:.0f}% of elevation samples were dropped "
-                    f"and median-imputed; results in those cells are "
-                    f"approximate."
+                    "Open-Meteo elevation unreachable — try again, or pick a "
+                    "smaller area."
                 )
+            else:
+                missing = elev.get("missing_pct") or 0.0
+                if missing > 5.0:
+                    warnings.append(
+                        f"{missing:.0f}% of elevation samples were dropped "
+                        f"and median-imputed; results in those cells are "
+                        f"approximate."
+                    )
 
     if want_contours and not contours and elev is not None:
         levels = _levels_for_grid(elev["grid"], interval_m)
