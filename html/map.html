@@ -692,11 +692,6 @@
       // Zoom-dependent label visibility
       map.on('zoomend', updateLabelVisibility);
 
-      map.on('resize', function(e) {
-        console.log('[dbg] map resize event, newSize=' +
-                    e.newSize.x + 'x' + e.newSize.y);
-      });
-
       // Shift+drag marquee selection (replaces Leaflet's box-zoom).
       _initMarqueeHandlers();
     }
@@ -3749,13 +3744,6 @@
       if (!payload || !payload.contours || payload.contours.length === 0) {
         return;
       }
-      var _segCount = 0, _vertCount = 0;
-      payload.contours.forEach(function(c) {
-        c.segments.forEach(function(s) { _segCount++; _vertCount += s.length; });
-      });
-      console.log('[dbg] drawAutoContours: ' + payload.contours.length +
-                  ' contours, ' + _segCount + ' segments, ' +
-                  _vertCount + ' vertices');
       autoContourLayer = L.layerGroup().addTo(map);
 
       var color = payload.color || '#5d4037';
