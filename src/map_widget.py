@@ -14,6 +14,23 @@ from PyQt6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
 from PyQt6.QtWebChannel import QWebChannel
 
 
+def _dbg(msg: str) -> None:
+    # File-side diagnostic log; stderr is unreliable on Windows when the
+    # GUI is launched without a console. Appends to ~/permadesign-debug.log.
+    try:
+        import time
+        path = os.path.join(os.path.expanduser("~"), "permadesign-debug.log")
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(f"{time.strftime('%H:%M:%S')} {msg}\n")
+    except Exception:
+        pass
+    try:
+        sys.stderr.write(msg + "\n")
+        sys.stderr.flush()
+    except Exception:
+        pass
+
+
 class MapBridge(QObject):
     """
     Python ↔ JS bridge. Slots are callable from JS; signals notify Python
@@ -325,8 +342,7 @@ class _LoggingPage(QWebEnginePage):
     def javaScriptConsoleMessage(self, level, message, line, source_id):
         tag = self._LEVEL.get(level, str(level))
         src = (source_id or "").rsplit("/", 1)[-1] or "?"
-        sys.stderr.write(f"[js:{tag}] {src}:{line}  {message}\n")
-        sys.stderr.flush()
+        _dbg(f"[js:{tag}] {src}:{line}  {message}")
 
 
 class MapWidget(QWebEngineView):
@@ -380,11 +396,10 @@ class MapWidget(QWebEngineView):
         # status is QWebEnginePage.RenderProcessTerminationStatus; print
         # both raw and name so we can read it without consulting the docs.
         name = getattr(status, "name", str(status))
-        sys.stderr.write(
+        _dbg(
             f"[webengine] *** RENDER PROCESS TERMINATED *** status={name} "
-            f"exit_code={exit_code}\n"
+            f"exit_code={exit_code}"
         )
-        sys.stderr.flush()
 
     @property
     def last_center(self) -> "tuple[float, float] | None":
@@ -492,26 +507,46 @@ class MapWidget(QWebEngineView):
             # reads container dimensions. Reading clientWidth/Height
             # synchronously triggers a reflow as a documented browser side
             # effect; without it, the embedded viewport's new size after a
-            # Qt-driven resize hasn't been committed yet, so invalidateSize
-            # caches the stale pre-resize dimensions and the map stays
-            # painted at the old size.
+            # Qt-driven resize hasn't been committed yet.
             "  var _c = map.getContainer();"
-            "  void(_c.clientWidth + _c.clientHeight);"
+            "  var _w = _c.clientWidth, _h = _c.clientHeight;"
+            "  console.log('[dbg] invalidateSize: container=' + _w + 'x' + _h);"
             "  map.invalidateSize(false);"
             "}"
         )
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        sz = event.size()
+        _dbg(f"[mapwidget] resizeEvent w={sz.width()} h={sz.height()}")
         # Coalesce resize bursts (splitter drag, window restore, sidebar
         # collapse) into one invalidateSize per event-loop tick so we don't
         # spam runJavaScript dozens of times during a drag.
         if not getattr(self, "_pending_invalidate", False):
             self._pending_invalidate = True
             QTimer.singleShot(0, self._do_invalidate)
+        # The 0ms invalidate above keeps splitter-drags feeling live, but
+        # on maximise / restore the OS WM resizes the window without Qt
+        # ever firing a WindowStateChange (on Windows in particular), and
+        # Chromium needs more than a single event-loop tick to commit the
+        # new viewport to the embedded page. The 0ms invalidate then reads
+        # stale dimensions and Leaflet stays cached at the old size.
+        # Restart a settle timer on every resize; it fires the *last*
+        # invalidate ~200ms after the resize burst ends, by which point
+        # Chromium has caught up.
+        if getattr(self, "_settle_timer", None) is None:
+            self._settle_timer = QTimer(self)
+            self._settle_timer.setSingleShot(True)
+            self._settle_timer.timeout.connect(self._on_settle_invalidate)
+        self._settle_timer.start(200)
+
+    def _on_settle_invalidate(self):
+        _dbg(f"[mapwidget] settle invalidate (size={self.width()}x{self.height()})")
+        self.invalidate_size()
 
     def _do_invalidate(self):
         self._pending_invalidate = False
+        _dbg(f"[mapwidget] _do_invalidate (size={self.width()}x{self.height()})")
         self.invalidate_size()
 
     def place_site_pin(self, lat: float, lng: float, label: str = ""):
