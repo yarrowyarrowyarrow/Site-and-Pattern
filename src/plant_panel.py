@@ -2107,7 +2107,7 @@ class PlantPanel(QWidget):
         try:
             from src.db.plants import get_plant
             total = 0
-            for pid, count in sorted(self._placed_counts.items()):
+            for pid, count in sorted(self._placed_counts.items(), key=lambda kv: (-kv[1], kv[0])):
                 p = get_plant(pid)
                 name = p["common_name"] if p else f"Plant #{pid}"
                 item = QListWidgetItem(f"{name}  ×{count}")
