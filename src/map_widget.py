@@ -14,6 +14,24 @@ from PyQt6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
 from PyQt6.QtWebChannel import QWebChannel
 
 
+def _dbg(msg: str) -> None:
+    # Debug fileside log: stderr is unreliable on Windows when the app is
+    # launched without a console, so write a parallel copy to a known path
+    # in the user's home dir. Read this file when diagnosing freezes.
+    try:
+        import time
+        path = os.path.join(os.path.expanduser("~"), "permadesign-debug.log")
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(f"{time.strftime('%H:%M:%S')} {msg}\n")
+    except Exception:
+        pass
+    try:
+        sys.stderr.write(msg + "\n")
+        sys.stderr.flush()
+    except Exception:
+        pass
+
+
 class MapBridge(QObject):
     """
     Python ↔ JS bridge. Slots are callable from JS; signals notify Python
@@ -325,8 +343,7 @@ class _LoggingPage(QWebEnginePage):
     def javaScriptConsoleMessage(self, level, message, line, source_id):
         tag = self._LEVEL.get(level, str(level))
         src = (source_id or "").rsplit("/", 1)[-1] or "?"
-        sys.stderr.write(f"[js:{tag}] {src}:{line}  {message}\n")
-        sys.stderr.flush()
+        _dbg(f"[js:{tag}] {src}:{line}  {message}")
 
 
 class MapWidget(QWebEngineView):
@@ -380,11 +397,10 @@ class MapWidget(QWebEngineView):
         # status is QWebEnginePage.RenderProcessTerminationStatus; print
         # both raw and name so we can read it without consulting the docs.
         name = getattr(status, "name", str(status))
-        sys.stderr.write(
+        _dbg(
             f"[webengine] *** RENDER PROCESS TERMINATED *** status={name} "
-            f"exit_code={exit_code}\n"
+            f"exit_code={exit_code}"
         )
-        sys.stderr.flush()
 
     @property
     def last_center(self) -> "tuple[float, float] | None":
@@ -493,6 +509,8 @@ class MapWidget(QWebEngineView):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        sz = event.size()
+        _dbg(f"[mapwidget] resizeEvent w={sz.width()} h={sz.height()}")
         # Coalesce resize bursts (splitter drag, window restore, sidebar
         # collapse) into one invalidateSize per event-loop tick so we don't
         # spam runJavaScript dozens of times during a drag.
@@ -502,6 +520,7 @@ class MapWidget(QWebEngineView):
 
     def _do_invalidate(self):
         self._pending_invalidate = False
+        _dbg(f"[mapwidget] _do_invalidate -> invalidate_size (size={self.width()}x{self.height()})")
         self.invalidate_size()
 
     def place_site_pin(self, lat: float, lng: float, label: str = ""):
