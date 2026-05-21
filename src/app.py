@@ -599,9 +599,17 @@ class MainWindow(QMainWindow):
         if poly and poly.get("effective_spacing_m"):
             spacing_m = float(poly["effective_spacing_m"])
 
+        try:
+            from src.db.plants import get_plant
+            _p = get_plant(plant_id)
+            mature_canopy_m = (_p or {}).get("mature_canopy_m")
+        except Exception:
+            mature_canopy_m = None
+
         self.map_widget.set_mode('plant', plant_id, common_name, spacing_m,
                                  plant_type, quantity, custom_color,
-                                 pattern=pattern)
+                                 pattern=pattern,
+                                 mature_canopy_m=mature_canopy_m)
         self.toolbar.enter_plant_mode()
 
         kind = (pattern or {}).get("kind", "single")

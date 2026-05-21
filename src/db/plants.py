@@ -46,7 +46,7 @@ _MASTER_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "plants_master.json")
 _GARDEN_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "garden_plants.json")
 
 # Current schema version — bump when adding columns/tables
-_SCHEMA_VERSION = 7
+_SCHEMA_VERSION = 8
 
 
 def _ensure_data_dir():
@@ -134,6 +134,15 @@ def _migrate_to_v5(conn: sqlite3.Connection):
             conn.execute(f"ALTER TABLE plants ADD COLUMN {col_name} {col_def}")
         except sqlite3.OperationalError:
             pass  # column already present
+    conn.commit()
+
+
+def _migrate_to_v8(conn: sqlite3.Connection):
+    """Add mature_canopy_m (horizontal canopy spread at maturity)."""
+    try:
+        conn.execute("ALTER TABLE plants ADD COLUMN mature_canopy_m REAL")
+    except sqlite3.OperationalError:
+        pass  # column already present
     conn.commit()
 
 
@@ -266,6 +275,9 @@ def init_db() -> None:
         if current_version < 5:
             _migrate_to_v5(conn)
 
+        if current_version < 8:
+            _migrate_to_v8(conn)
+
         # Add parent_id to polycultures if missing
         try:
             conn.execute("ALTER TABLE polycultures ADD COLUMN parent_id INTEGER REFERENCES polycultures(id) ON DELETE SET NULL")
@@ -365,7 +377,15 @@ def _insert_companions(conn: sqlite3.Connection,
 # ── Queries ───────────────────────────────────────────────────────────────────
 
 def _row_to_dict(row: sqlite3.Row) -> dict:
-    return dict(row)
+    d = dict(row)
+    # mature_canopy_m defaults to 1.5× the planting spacing when no per-species
+    # value has been entered, so the preview canopy ring always has something
+    # to draw. Accurate species data can override this later.
+    if "mature_canopy_m" in d and not d.get("mature_canopy_m"):
+        sp = d.get("spacing_meters")
+        if sp:
+            d["mature_canopy_m"] = float(sp) * 1.5
+    return d
 
 
 def get_all_plants() -> list[dict]:

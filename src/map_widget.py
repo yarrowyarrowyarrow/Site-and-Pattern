@@ -400,7 +400,8 @@ class MapWidget(QWebEngineView):
     def set_mode(self, mode: str, plant_id: int = 0, common_name: str = "",
                  spacing_m: float = 1.0, plant_type: str = "herb",
                  quantity: int = 1, custom_color: str = "",
-                 pattern: dict | None = None):
+                 pattern: dict | None = None,
+                 mature_canopy_m: float | None = None):
         """Switch the map interaction mode.
 
         For plant mode, `pattern` may be:
@@ -421,6 +422,10 @@ class MapWidget(QWebEngineView):
                 "quantity": quantity,
                 "custom_color": custom_color or "",
                 "pattern": pattern or {"kind": "single"},
+                # Mature canopy width — drawn as the outer ghost ring during
+                # row/burst/grid preview. Falls back to spacing × 1.5 JS-side
+                # when missing, mirroring the get_plant fallback.
+                "mature_canopy_m": mature_canopy_m or (spacing_m * 1.5),
             }
             js = f"setMode('plant', JSON.parse({_json.dumps(_json.dumps(payload))}));"
         else:

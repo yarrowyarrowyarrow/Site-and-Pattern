@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS plants (
     permaculture_uses TEXT,         -- comma-separated tags
     spacing_meters REAL,
     mature_height_meters REAL,
+    mature_canopy_m REAL,           -- horizontal spread at maturity (NULL ⇒ heuristic in get_plant)
     notes TEXT,
     -- Extended fields (schema v2)
     bloom_period TEXT,              -- e.g. "May–June"

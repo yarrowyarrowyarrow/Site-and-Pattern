@@ -1741,10 +1741,18 @@
 
       var preview = L.layerGroup();
       if (framing) framing.addTo(preview);
-      // Draw a small dashed "ghost" plant circle at each computed position.
-      var radius = Math.max(_effectiveSpacing(s, overlap) / 2, 0.5);
+      // Two concentric ghost rings per position: inner = planting spacing
+      // (yellow, dashed), outer = mature canopy width (green, sparser dash).
+      // The outer ring shows how big each plant will be at maturity so the
+      // user can see in advance whether neighbours will compete.
+      var spacingRadius = Math.max(_effectiveSpacing(s, overlap) / 2, 0.5);
+      var canopyM = currentPlant.mature_canopy_m || (s * 1.5);
+      var canopyRadius = Math.max(canopyM / 2, spacingRadius);
       positions.forEach(function(p) {
-        L.circle(p, { radius: radius, color: '#fdd835', weight: 1,
+        L.circle(p, { radius: canopyRadius, color: '#a5d6a7', weight: 1,
+                      dashArray: '4 5', fill: false, opacity: 0.7,
+                      interactive: false }).addTo(preview);
+        L.circle(p, { radius: spacingRadius, color: '#fdd835', weight: 1,
                       dashArray: '2 3', fillColor: '#fdd835', fillOpacity: 0.15,
                       interactive: false }).addTo(preview);
       });
