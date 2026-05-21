@@ -499,6 +499,17 @@ class MapWidget(QWebEngineView):
         if not getattr(self, "_pending_invalidate", False):
             self._pending_invalidate = True
             QTimer.singleShot(0, self._do_invalidate)
+        # The 0ms invalidate above keeps splitter-drags feeling live, but on
+        # fullscreen toggle Qt finishes the resize before Chromium has
+        # propagated the new viewport to the embedded page, so Leaflet reads
+        # stale container dimensions and the canvas stays cached at the
+        # pre-fullscreen size. Fire a second invalidate ~250ms after the
+        # last resize in the burst — by then Chromium has caught up.
+        if getattr(self, "_settle_timer", None) is None:
+            self._settle_timer = QTimer(self)
+            self._settle_timer.setSingleShot(True)
+            self._settle_timer.timeout.connect(self.invalidate_size)
+        self._settle_timer.start(250)
 
     def _do_invalidate(self):
         self._pending_invalidate = False
