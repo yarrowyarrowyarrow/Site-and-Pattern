@@ -1342,24 +1342,26 @@ class PlantPanel(QWidget):
         self._pattern_stack.addWidget(circle_panel)
 
         # ── Overlap / gap slider (applies to all multi modes) ─────────
-        # Range −50%..+50% with 0 as the natural baseline:
-        #   negative ⇒ extra gap (sparser planting)
-        #   zero     ⇒ centres exactly mature-width apart (canopies touch)
-        #   positive ⇒ canopies overlap (denser planting)
+        # Range −100%..+50% with 0 as the natural baseline:
+        #   −100% ⇒ centres 2× the reference width apart (very sparse)
+        #      0% ⇒ centres exactly one reference width apart
+        #   +50% ⇒ centres half the reference width apart (dense)
+        # The reference width is the planting spacing by default; tick the
+        # "Base on mature canopy" box below to use the canopy ring instead.
         ov = QHBoxLayout()
         ov.setSpacing(4)
         ov.addWidget(self._small_label("Overlap:"))
         self._overlap_slider = QSlider(Qt.Orientation.Horizontal)
-        self._overlap_slider.setRange(-50, 50)
+        self._overlap_slider.setRange(-100, 50)
         self._overlap_slider.setValue(0)
         self._overlap_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self._overlap_slider.setTickInterval(25)
         self._overlap_slider.setToolTip(
-            "Spacing relative to mature canopy width.\n"
-            "  −50% = extra gap (centres 1.5× canopy width apart)\n"
-            "    0% = centres exactly canopy width apart (canopies touch)\n"
-            "  +50% = canopies overlap by half their width\n"
-            "Effective spacing = mature_width × (1 − overlap)."
+            "Spacing relative to the reference width (see toggle below).\n"
+            "  −100% = double spacing (centres 2× reference apart)\n"
+            "     0% = at nominal spacing\n"
+            "   +50% = half spacing (dense overlap)\n"
+            "Effective spacing = reference × (1 − overlap)."
         )
         ov.addWidget(self._overlap_slider, 1)
         self._overlap_label = QLabel("0%")
@@ -1371,6 +1373,19 @@ class PlantPanel(QWidget):
             lambda v: self._overlap_label.setText(f"{v:+d}%" if v else "0%")
         )
         outer.addLayout(ov)
+
+        # Reference-width toggle: planting spacing (default) vs mature canopy.
+        self._canopy_base_checkbox = QCheckBox("Base on mature canopy")
+        self._canopy_base_checkbox.setToolTip(
+            "When off, overlap is measured against planting spacing.\n"
+            "When on, overlap is measured against the mature canopy width — "
+            "useful when you care about leaf-area competition more than "
+            "nursery spacing recommendations."
+        )
+        self._canopy_base_checkbox.setStyleSheet(
+            "color: #a5d6a7; font-size: 11px;"
+        )
+        outer.addWidget(self._canopy_base_checkbox)
 
         # ── Polyculture mix panel ─────────────────────────────────────
         # When the user adds ≥1 secondary species via right-click → "Add
@@ -1493,11 +1508,13 @@ class PlantPanel(QWidget):
         """
         kind = self._pattern_kind
         overlap = self._overlap_slider.value() / 100.0
+        use_canopy = self._canopy_base_checkbox.isChecked()
         params: dict = {}
         if kind == "row":
             params = {
                 "count": self._row_count.value() or None,
                 "overlap": overlap,
+                "use_canopy": use_canopy,
             }
         elif kind == "grid":
             params = {
@@ -1505,12 +1522,14 @@ class PlantPanel(QWidget):
                 "cols": self._grid_cols.value() or None,
                 "stagger": self._grid_stagger.isChecked(),
                 "overlap": overlap,
+                "use_canopy": use_canopy,
             }
         elif kind == "circle":
             params = {
                 "count": self._circle_count.value() or None,
                 "fill": self._circle_fill.isChecked(),
                 "overlap": overlap,
+                "use_canopy": use_canopy,
             }
         else:
             return {"kind": "single"}

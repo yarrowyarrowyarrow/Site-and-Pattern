@@ -1712,7 +1712,12 @@
       var pat = currentPlant.pattern;
       var pp = pat.params || {};
       var s = currentPlant.spacing_m || 1.0;
+      var canopyM = currentPlant.mature_canopy_m || (s * 1.5);
       var overlap = (pp.overlap || 0);
+      // Reference width that the overlap slider acts against — defaults to
+      // planting spacing; flips to mature canopy when the user ticks the
+      // "Base on mature canopy" box.
+      var ref = pp.use_canopy ? canopyM : s;
       var positions = [];
       var framing = null;
 
@@ -1721,20 +1726,20 @@
       if (pat.kind === 'row' && _patternAnchors.length === 1 && cursorLatLng) {
         var a = _patternAnchors[0];
         positions = _rowPositions(a[0], a[1], cursorLatLng.lat, cursorLatLng.lng,
-                                  s, overlap, pp.count);
+                                  ref, overlap, pp.count);
         framing = L.polyline([a, [cursorLatLng.lat, cursorLatLng.lng]],
                               { color: '#fdd835', weight: 2, dashArray: '4 4', opacity: 0.7 });
       } else if (pat.kind === 'grid' && _patternAnchors.length === 1 && cursorLatLng) {
         var a = _patternAnchors[0];
         positions = _gridPositions(a[0], a[1], cursorLatLng.lat, cursorLatLng.lng,
-                                   s, overlap, pp.rows, pp.cols, pp.stagger);
+                                   ref, overlap, pp.rows, pp.cols, pp.stagger);
         var bnds = L.latLngBounds([a, [cursorLatLng.lat, cursorLatLng.lng]]);
         framing = L.rectangle(bnds, { color: '#fdd835', weight: 2, dashArray: '4 4',
                                        fill: false, opacity: 0.7 });
       } else if (pat.kind === 'circle' && _patternAnchors.length === 1 && cursorLatLng) {
         var c = _patternAnchors[0];
         var radiusM = _haversineM(c, [cursorLatLng.lat, cursorLatLng.lng]);
-        positions = _circlePositions(c[0], c[1], radiusM, s, overlap, pp.count, pp.fill);
+        positions = _circlePositions(c[0], c[1], radiusM, ref, overlap, pp.count, pp.fill);
         framing = L.circle(c, { radius: radiusM, color: '#fdd835', weight: 2,
                                  dashArray: '4 4', fill: false, opacity: 0.7 });
       }
@@ -1745,8 +1750,7 @@
       // (yellow, dashed), outer = mature canopy width (green, sparser dash).
       // The outer ring shows how big each plant will be at maturity so the
       // user can see in advance whether neighbours will compete.
-      var spacingRadius = Math.max(_effectiveSpacing(s, overlap) / 2, 0.5);
-      var canopyM = currentPlant.mature_canopy_m || (s * 1.5);
+      var spacingRadius = Math.max(s / 2, 0.5);
       var canopyRadius = Math.max(canopyM / 2, spacingRadius);
       positions.forEach(function(p) {
         L.circle(p, { radius: canopyRadius, color: '#a5d6a7', weight: 1,
@@ -1784,17 +1788,19 @@
 
       // Two anchors collected — compute final positions and commit.
       var s = currentPlant.spacing_m || 1.0;
+      var canopyM = currentPlant.mature_canopy_m || (s * 1.5);
       var overlap = pp.overlap || 0;
+      var ref = pp.use_canopy ? canopyM : s;
       var a = _patternAnchors[0], b = _patternAnchors[1];
       var positions = [];
       if (pat.kind === 'row') {
-        positions = _rowPositions(a[0], a[1], b[0], b[1], s, overlap, pp.count);
+        positions = _rowPositions(a[0], a[1], b[0], b[1], ref, overlap, pp.count);
       } else if (pat.kind === 'grid') {
-        positions = _gridPositions(a[0], a[1], b[0], b[1], s, overlap,
+        positions = _gridPositions(a[0], a[1], b[0], b[1], ref, overlap,
                                    pp.rows, pp.cols, pp.stagger);
       } else if (pat.kind === 'circle') {
         var radiusM = _haversineM(a, b);
-        positions = _circlePositions(a[0], a[1], radiusM, s, overlap, pp.count, pp.fill);
+        positions = _circlePositions(a[0], a[1], radiusM, ref, overlap, pp.count, pp.fill);
       }
 
       _resetPatternState();
