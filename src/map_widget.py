@@ -15,9 +15,14 @@ from PyQt6.QtWebChannel import QWebChannel
 
 
 def _dbg(msg: str) -> None:
-    # Debug fileside log: stderr is unreliable on Windows when the app is
-    # launched without a console, so write a parallel copy to a known path
-    # in the user's home dir. Read this file when diagnosing freezes.
+    """Append a diagnostic line to ~/permadesign-debug.log.
+
+    Used both for informational tracing AND as part of the load-bearing
+    resize machinery (see the block comment above MapWidget.invalidate_size):
+    the file write yields to the OS scheduler at exactly the moment we
+    need Chromium's renderer IPC to land. Stays file-only so it doesn't
+    spam the terminal; for messages users should actually see, use _err.
+    """
     try:
         import time
         path = os.path.join(os.path.expanduser("~"), "permadesign-debug.log")
@@ -25,6 +30,13 @@ def _dbg(msg: str) -> None:
             f.write(f"{time.strftime('%H:%M:%S')} {msg}\n")
     except Exception:
         pass
+
+
+def _err(msg: str) -> None:
+    """Like _dbg but also writes to stderr -- for genuine errors (JS
+    exceptions, renderer crashes) that should surface to anyone running
+    the app from a terminal."""
+    _dbg(msg)
     try:
         sys.stderr.write(msg + "\n")
         sys.stderr.flush()
@@ -343,7 +355,10 @@ class _LoggingPage(QWebEnginePage):
     def javaScriptConsoleMessage(self, level, message, line, source_id):
         tag = self._LEVEL.get(level, str(level))
         src = (source_id or "").rsplit("/", 1)[-1] or "?"
-        _dbg(f"[js:{tag}] {src}:{line}  {message}")
+        # Errors go to stderr too; info/warn (and our load-bearing
+        # invalidate-reflow console.logs) stay file-only.
+        sink = _err if level == QWebEnginePage.JavaScriptConsoleMessageLevel.ErrorMessageLevel else _dbg
+        sink(f"[js:{tag}] {src}:{line}  {message}")
 
 
 class MapWidget(QWebEngineView):
@@ -397,7 +412,7 @@ class MapWidget(QWebEngineView):
         # status is QWebEnginePage.RenderProcessTerminationStatus; print
         # both raw and name so we can read it without consulting the docs.
         name = getattr(status, "name", str(status))
-        _dbg(
+        _err(
             f"[webengine] *** RENDER PROCESS TERMINATED *** status={name} "
             f"exit_code={exit_code}"
         )
