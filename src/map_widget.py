@@ -498,24 +498,31 @@ class MapWidget(QWebEngineView):
 
         1. The internal RenderWidgetHostViewQtDelegateWidget (the
            rendering surface Chromium actually paints into) doesn't
-           always grow with its parent. The widget's `focusProxy()` IS
-           that surface; resizing it explicitly forces Chromium to
-           update its viewport and start painting at the new size.
+           always grow with its parent. Walk every child QWidget and
+           resize anything that's mismatched so the viewport catches up.
 
         2. Even after the viewport catches up, Leaflet's invalidateSize
            reads container.clientWidth and caches its internal _size.
            Pin the documentElement / body / map-container dimensions to
            Qt's widget size so getSize() reads the right number.
         """
+        from PyQt6.QtWidgets import QWidget
         w, h = self.width(), self.height()
-        # 1. Resize the internal Chromium rendering surface to match.
-        # Without this the viewport stays at the pre-resize width on
-        # Windows and the right edge of the widget paints nothing.
-        proxy = self.focusProxy()
-        if proxy is not None and proxy.size() != self.size():
-            _dbg(f"[mapwidget] focusProxy resize {proxy.size().width()}x{proxy.size().height()}"
-                 f" -> {w}x{h}")
-            proxy.resize(self.size())
+        target = self.size()
+        # 1. Brute-force every child widget to match. focusProxy() alone
+        # isn't enough on Windows -- the rendering surface is nested a
+        # couple of layers deep and resizing only the proxy leaves the
+        # actual Chromium viewport at the old size.
+        try:
+            for child in self.findChildren(QWidget):
+                if child is self:
+                    continue
+                if child.size() != target:
+                    _dbg(f"[mapwidget] resize child {type(child).__name__} "
+                         f"{child.size().width()}x{child.size().height()} -> {w}x{h}")
+                    child.resize(target)
+        except Exception as e:
+            _dbg(f"[mapwidget] child-resize loop failed: {e}")
         # 2. Push the new dimensions through to Leaflet.
         self.run_js(
             f"if (typeof map !== 'undefined' && map && map.invalidateSize) {{"
