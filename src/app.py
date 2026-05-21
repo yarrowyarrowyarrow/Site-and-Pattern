@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
     QStatusBar, QLabel, QMessageBox, QFileDialog, QSizePolicy,
     QInputDialog, QTabWidget,
 )
-from PyQt6.QtCore import Qt, QTimer, QThread
+from PyQt6.QtCore import Qt, QTimer, QThread, QEvent
 from PyQt6.QtGui import QKeySequence, QShortcut
 
 from src.map_widget       import MapWidget
@@ -2721,6 +2721,16 @@ class MainWindow(QMainWindow):
         self._mark_modified()
 
     # ── Window close ─────────────────────────────────────────────────────────
+
+    def changeEvent(self, event):
+        # Qt fires WindowStateChange on F11/maximise/restore. The embedded
+        # QWebEngineView doesn't always get its own resizeEvent in the same
+        # frame, so Leaflet's canvas renderer can cache a stale 0x0 size and
+        # paint into nothing. Posting invalidate_size on the next event-loop
+        # tick lets Qt finish the state transition first.
+        if event.type() == QEvent.Type.WindowStateChange:
+            QTimer.singleShot(0, self.map_widget.invalidate_size)
+        super().changeEvent(event)
 
     def closeEvent(self, event):
         if self._modified:
