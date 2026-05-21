@@ -2731,13 +2731,16 @@ class MainWindow(QMainWindow):
     # ── Window close ─────────────────────────────────────────────────────────
 
     def changeEvent(self, event):
-        # Qt fires WindowStateChange on F11/maximise/restore. The embedded
-        # QWebEngineView doesn't always get its own resizeEvent in the same
-        # frame, so Leaflet's canvas renderer can cache a stale 0x0 size and
-        # paint into nothing. Posting invalidate_size on the next event-loop
-        # tick lets Qt finish the state transition first.
+        # On maximise / restore / fullscreen, MapWidget.resizeEvent fires
+        # before Chromium has propagated the new viewport to the embedded
+        # page, so Leaflet's invalidateSize reads stale container
+        # dimensions and the map stays cached at the pre-transition size.
+        # Fire a second invalidate at multiple settling points after Qt
+        # finishes the state transition; the redundant calls are cheap
+        # no-ops once Chromium has caught up.
         if event.type() == QEvent.Type.WindowStateChange:
-            QTimer.singleShot(0, self.map_widget.invalidate_size)
+            for delay_ms in (0, 100, 300, 800):
+                QTimer.singleShot(delay_ms, self.map_widget.invalidate_size)
         super().changeEvent(event)
 
     def closeEvent(self, event):
