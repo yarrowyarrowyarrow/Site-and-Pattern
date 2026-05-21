@@ -496,28 +496,27 @@ class MapWidget(QWebEngineView):
 
         Safe to call before the map is ready; the JS side feature-checks
         `map` before invoking `invalidateSize`. Useful any time the host
-        QWidget reflows (sidebar collapse, splitter drag, window resize).
-
-        The console.log on clientWidth/Height is load-bearing, not
-        diagnostic. On Windows, Qt resizes the QWebEngineView before
-        Chromium has committed the new viewport, so Leaflet measures
-        the stale container size and the map ends up painted into the
-        pre-resize corner of the widget. Reading clientWidth forces
-        Chromium to flush its pending layout as a documented side
-        effect, but V8 will elide a read whose value isn't observed
-        (`void(_c.clientWidth)` is not enough). Passing the value to
-        console.log keeps the read live. Do not remove.
+        QWidget reflows (sidebar collapse, splitter drag, window resize)
+        or after a synchronous burst of Python work that may have starved
+        the WebEngine paint queue — both scenarios can leave Leaflet's
+        canvas renderer cached at a stale size, which manifests as a blank
+        map with dead zoom/satellite controls.
         """
         self.run_js(
             "if (typeof map !== 'undefined' && map && map.invalidateSize) {"
-            "  var _c = map.getContainer();"
-            "  console.log('[map] reflow', _c.clientWidth, 'x', _c.clientHeight);"
+            "  console.log('[dbg] invalidateSize start, container=' + "
+            "    map.getContainer().clientWidth + 'x' + map.getContainer().clientHeight);"
+            "  var _t0 = performance.now();"
             "  map.invalidateSize(false);"
+            "  console.log('[dbg] invalidateSize end, elapsed=' + "
+            "    (performance.now() - _t0).toFixed(1) + 'ms');"
             "}"
         )
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        sz = event.size()
+        _dbg(f"[mapwidget] resizeEvent w={sz.width()} h={sz.height()}")
         # Coalesce resize bursts (splitter drag, window restore, sidebar
         # collapse) into one invalidateSize per event-loop tick so we don't
         # spam runJavaScript dozens of times during a drag.
@@ -527,6 +526,7 @@ class MapWidget(QWebEngineView):
 
     def _do_invalidate(self):
         self._pending_invalidate = False
+        _dbg(f"[mapwidget] _do_invalidate -> invalidate_size (size={self.width()}x{self.height()})")
         self.invalidate_size()
 
     def place_site_pin(self, lat: float, lng: float, label: str = ""):
