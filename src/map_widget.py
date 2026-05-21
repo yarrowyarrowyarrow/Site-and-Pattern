@@ -503,8 +503,14 @@ class MapWidget(QWebEngineView):
         map with dead zoom/satellite controls.
         """
         self.run_js(
-            "if (typeof map !== 'undefined' && map && map.invalidateSize) "
-            "{ map.invalidateSize(false); }"
+            "if (typeof map !== 'undefined' && map && map.invalidateSize) {"
+            "  console.log('[dbg] invalidateSize start, container=' + "
+            "    map.getContainer().clientWidth + 'x' + map.getContainer().clientHeight);"
+            "  var _t0 = performance.now();"
+            "  map.invalidateSize(false);"
+            "  console.log('[dbg] invalidateSize end, elapsed=' + "
+            "    (performance.now() - _t0).toFixed(1) + 'ms');"
+            "}"
         )
 
     def resizeEvent(self, event):
