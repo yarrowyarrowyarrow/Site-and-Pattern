@@ -15,8 +15,9 @@ from PyQt6.QtWebChannel import QWebChannel
 
 
 def _dbg(msg: str) -> None:
-    # File-side diagnostic log; stderr is unreliable on Windows when the
-    # GUI is launched without a console. Appends to ~/permadesign-debug.log.
+    # Debug fileside log: stderr is unreliable on Windows when the app is
+    # launched without a console, so write a parallel copy to a known path
+    # in the user's home dir. Read this file when diagnosing freezes.
     try:
         import time
         path = os.path.join(os.path.expanduser("~"), "permadesign-debug.log")
@@ -493,51 +494,23 @@ class MapWidget(QWebEngineView):
     def invalidate_size(self):
         """Force Leaflet to recompute the map container size.
 
-        Two things go wrong on Windows when Qt maximise-resizes a
-        QWebEngineView:
-
-        1. The internal RenderWidgetHostViewQtDelegateWidget (the
-           rendering surface Chromium actually paints into) doesn't
-           always grow with its parent. Walk every child QWidget and
-           resize anything that's mismatched so the viewport catches up.
-
-        2. Even after the viewport catches up, Leaflet's invalidateSize
-           reads container.clientWidth and caches its internal _size.
-           Pin the documentElement / body / map-container dimensions to
-           Qt's widget size so getSize() reads the right number.
+        Safe to call before the map is ready; the JS side feature-checks
+        `map` before invoking `invalidateSize`. Useful any time the host
+        QWidget reflows (sidebar collapse, splitter drag, window resize)
+        or after a synchronous burst of Python work that may have starved
+        the WebEngine paint queue — both scenarios can leave Leaflet's
+        canvas renderer cached at a stale size, which manifests as a blank
+        map with dead zoom/satellite controls.
         """
-        from PyQt6.QtWidgets import QWidget
-        w, h = self.width(), self.height()
-        target = self.size()
-        # 1. Brute-force every child widget to match. focusProxy() alone
-        # isn't enough on Windows -- the rendering surface is nested a
-        # couple of layers deep and resizing only the proxy leaves the
-        # actual Chromium viewport at the old size.
-        try:
-            for child in self.findChildren(QWidget):
-                if child is self:
-                    continue
-                if child.size() != target:
-                    _dbg(f"[mapwidget] resize child {type(child).__name__} "
-                         f"{child.size().width()}x{child.size().height()} -> {w}x{h}")
-                    child.resize(target)
-        except Exception as e:
-            _dbg(f"[mapwidget] child-resize loop failed: {e}")
-        # 2. Push the new dimensions through to Leaflet.
         self.run_js(
-            f"if (typeof map !== 'undefined' && map && map.invalidateSize) {{"
-            f"  document.documentElement.style.width = '{w}px';"
-            f"  document.documentElement.style.height = '{h}px';"
-            f"  document.body.style.width = '{w}px';"
-            f"  document.body.style.height = '{h}px';"
-            f"  var _c = map.getContainer();"
-            f"  _c.style.width = '{w}px';"
-            f"  _c.style.height = '{h}px';"
-            f"  console.log('[dbg] invalidateSize: forced ' + {w} + 'x' + {h} +"
-            f"              ', win=' + window.innerWidth + 'x' + window.innerHeight +"
-            f"              ', container=' + _c.clientWidth + 'x' + _c.clientHeight);"
-            f"  map.invalidateSize(false);"
-            f"}}"
+            "if (typeof map !== 'undefined' && map && map.invalidateSize) {"
+            "  console.log('[dbg] invalidateSize start, container=' + "
+            "    map.getContainer().clientWidth + 'x' + map.getContainer().clientHeight);"
+            "  var _t0 = performance.now();"
+            "  map.invalidateSize(false);"
+            "  console.log('[dbg] invalidateSize end, elapsed=' + "
+            "    (performance.now() - _t0).toFixed(1) + 'ms');"
+            "}"
         )
 
     def resizeEvent(self, event):
@@ -550,32 +523,10 @@ class MapWidget(QWebEngineView):
         if not getattr(self, "_pending_invalidate", False):
             self._pending_invalidate = True
             QTimer.singleShot(0, self._do_invalidate)
-        # On OS-driven maximise/restore (Windows in particular), Chromium
-        # doesn't commit the embedded page's new viewport to JavaScript
-        # for several hundred ms after Qt has resized our widget -- even
-        # though the Qt widget itself reports the new size synchronously.
-        # Fire invalidate_size repeatedly across that window so at least
-        # one call lands AFTER Chromium has caught up. Each subsequent
-        # resize event cancels any pending stale timers via the version
-        # counter.
-        self._settle_token = getattr(self, "_settle_token", 0) + 1
-        token = self._settle_token
-        for delay_ms in (150, 400, 900, 1800):
-            QTimer.singleShot(
-                delay_ms,
-                lambda t=token: self._settle_fire(t),
-            )
-
-    def _settle_fire(self, token: int) -> None:
-        # Only fire if no newer resize burst has invalidated this token.
-        if token != getattr(self, "_settle_token", 0):
-            return
-        _dbg(f"[mapwidget] settle@{token} invalidate (size={self.width()}x{self.height()})")
-        self.invalidate_size()
 
     def _do_invalidate(self):
         self._pending_invalidate = False
-        _dbg(f"[mapwidget] _do_invalidate (size={self.width()}x{self.height()})")
+        _dbg(f"[mapwidget] _do_invalidate -> invalidate_size (size={self.width()}x{self.height()})")
         self.invalidate_size()
 
     def place_site_pin(self, lat: float, lng: float, label: str = ""):
