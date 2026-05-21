@@ -487,8 +487,18 @@ class MapWidget(QWebEngineView):
         map with dead zoom/satellite controls.
         """
         self.run_js(
-            "if (typeof map !== 'undefined' && map && map.invalidateSize) "
-            "{ map.invalidateSize(false); }"
+            "if (typeof map !== 'undefined' && map && map.invalidateSize) {"
+            # Force Chromium to flush any pending layout BEFORE Leaflet
+            # reads container dimensions. Reading clientWidth/Height
+            # synchronously triggers a reflow as a documented browser side
+            # effect; without it, the embedded viewport's new size after a
+            # Qt-driven resize hasn't been committed yet, so invalidateSize
+            # caches the stale pre-resize dimensions and the map stays
+            # painted at the old size.
+            "  var _c = map.getContainer();"
+            "  void(_c.clientWidth + _c.clientHeight);"
+            "  map.invalidateSize(false);"
+            "}"
         )
 
     def resizeEvent(self, event):
