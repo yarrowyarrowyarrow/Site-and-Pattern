@@ -1075,13 +1075,10 @@ class PlantPanel(QWidget):
         )
         pb_layout.addWidget(self._placed_list, 1)
         self._placed_panel.set_content(placed_body)
-        bot_layout.addWidget(self._placed_panel, 1)
 
-        # Wrap the bottom block in a scroll area so the splitter can
-        # shrink it without crushing controls — when the user expands a
-        # plant row the top pane claims more vertical space and the
-        # placement controls dynamically compress with their own
-        # scrollbar instead of fighting for room.
+        # Bottom pane is its own vertical splitter so the user gets a
+        # dedicated drag handle for the placed-list height without
+        # having to move the main browser/bottom split.
         bottom.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
         )
@@ -1092,16 +1089,38 @@ class PlantPanel(QWidget):
         bottom_scroll.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
-        # Keep a small minimum so the Place button is always reachable.
-        bottom_scroll.setMinimumHeight(80)
+        # Place button stays reachable even at the smallest split.
+        bottom_scroll.setMinimumHeight(140)
 
-        splitter.addWidget(bottom_scroll)
-        # Bias the split heavily toward the browser so expanded rows
-        # don't crush the list. The user can still drag the handle if
-        # they want more room for placement controls.
+        self._bottom_splitter = QSplitter(Qt.Orientation.Vertical)
+        self._bottom_splitter.setChildrenCollapsible(False)
+        self._bottom_splitter.setHandleWidth(6)
+        self._bottom_splitter.setStyleSheet(
+            "QSplitter::handle:vertical { background: #2e4a2e; "
+            "height: 6px; margin: 1px 0; border-radius: 2px; }"
+        )
+        self._bottom_splitter.addWidget(bottom_scroll)
+        self._bottom_splitter.addWidget(self._placed_panel)
+        self._bottom_splitter.setStretchFactor(0, 0)
+        self._bottom_splitter.setStretchFactor(1, 1)
+        self._bottom_splitter.setSizes([160, 140])
+
+        splitter.addWidget(self._bottom_splitter)
         splitter.setSizes([700, 200])
         splitter.setStretchFactor(0, 5)
         splitter.setStretchFactor(1, 0)
+
+        # Saved main-splitter sizes from the last expanded state, so
+        # collapsing "On This Design" temporarily gives the freed
+        # height to the Plant Browser and re-expanding restores
+        # whatever ratio the user had.
+        self._main_splitter_saved_sizes: list[int] | None = None
+        self._placed_panel.toggled.connect(self._on_placed_panel_toggled)
+        # If the panel was persisted collapsed, apply the splitter
+        # rebalance once on next tick (splitter sizes aren't valid yet
+        # before the first show).
+        if not self._placed_panel.expanded():
+            QTimer.singleShot(0, lambda: self._on_placed_panel_toggled(False))
 
     # ── Filter helpers ────────────────────────────────────────────────────────
 
@@ -2096,6 +2115,29 @@ class PlantPanel(QWidget):
             self._placed_counts[pid] = self._placed_counts.get(pid, 0) + 1
         self._results_model.set_placed_counts(self._placed_counts)
         self._refresh_placed_list()
+
+    def _on_placed_panel_toggled(self, expanded: bool):
+        """Rebalance the main browser/bottom split when 'On This Design'
+        collapses or expands. Collapse hands the freed height to the
+        browser; expand restores the saved ratio.
+        """
+        sizes = self._main_splitter.sizes()
+        if len(sizes) != 2:
+            return
+        if not expanded:
+            # Collapsing — give the bottom pane just enough room for
+            # placement controls + the collapsed-panel header.
+            self._main_splitter_saved_sizes = sizes
+            header_h = self._placed_panel.sizeHint().height() or 32
+            controls_min = 140  # matches bottom_scroll.setMinimumHeight
+            new_bottom = controls_min + header_h
+            total = sum(sizes)
+            new_top = max(total - new_bottom, controls_min)
+            self._main_splitter.setSizes([new_top, new_bottom])
+        else:
+            if self._main_splitter_saved_sizes:
+                self._main_splitter.setSizes(self._main_splitter_saved_sizes)
+                self._main_splitter_saved_sizes = None
 
     def _refresh_placed_list(self):
         self._placed_list.clear()
