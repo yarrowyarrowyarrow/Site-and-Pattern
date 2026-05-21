@@ -2737,24 +2737,8 @@ class MainWindow(QMainWindow):
         # paint into nothing. Posting invalidate_size on the next event-loop
         # tick lets Qt finish the state transition first.
         if event.type() == QEvent.Type.WindowStateChange:
-            try:
-                from src.map_widget import _dbg
-                _dbg(f"[mainwindow] WindowStateChange state={int(self.windowState())} "
-                     f"size={self.width()}x{self.height()}")
-            except Exception:
-                pass
             QTimer.singleShot(0, self.map_widget.invalidate_size)
         super().changeEvent(event)
-
-    def resizeEvent(self, event):
-        try:
-            from src.map_widget import _dbg
-            sz = event.size()
-            _dbg(f"[mainwindow] resizeEvent w={sz.width()} h={sz.height()} "
-                 f"state={int(self.windowState())}")
-        except Exception:
-            pass
-        super().resizeEvent(event)
 
     def closeEvent(self, event):
         if self._modified:
