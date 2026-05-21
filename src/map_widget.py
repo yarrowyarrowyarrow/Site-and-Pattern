@@ -493,19 +493,30 @@ class MapWidget(QWebEngineView):
     def invalidate_size(self):
         """Force Leaflet to recompute the map container size.
 
-        On Windows, QWebEngineView can resize without propagating the new
-        viewport to the embedded Chromium page (a known Qt issue where
-        Qt's widget reports the new size but window.innerWidth in the
-        embedded page stays at the old value). Leaflet's invalidateSize
-        reads container dimensions from CSS, which inherit from body /
-        html / viewport, so when the viewport is stale it caches the old
-        size and the map content paints only into a corner of the widget.
+        Two things go wrong on Windows when Qt maximise-resizes a
+        QWebEngineView:
 
-        Pass Qt's widget size explicitly and pin body + map-container
-        dimensions in pixels, then call invalidateSize. This bypasses
-        Chromium's stale viewport entirely.
+        1. The internal RenderWidgetHostViewQtDelegateWidget (the
+           rendering surface Chromium actually paints into) doesn't
+           always grow with its parent. The widget's `focusProxy()` IS
+           that surface; resizing it explicitly forces Chromium to
+           update its viewport and start painting at the new size.
+
+        2. Even after the viewport catches up, Leaflet's invalidateSize
+           reads container.clientWidth and caches its internal _size.
+           Pin the documentElement / body / map-container dimensions to
+           Qt's widget size so getSize() reads the right number.
         """
         w, h = self.width(), self.height()
+        # 1. Resize the internal Chromium rendering surface to match.
+        # Without this the viewport stays at the pre-resize width on
+        # Windows and the right edge of the widget paints nothing.
+        proxy = self.focusProxy()
+        if proxy is not None and proxy.size() != self.size():
+            _dbg(f"[mapwidget] focusProxy resize {proxy.size().width()}x{proxy.size().height()}"
+                 f" -> {w}x{h}")
+            proxy.resize(self.size())
+        # 2. Push the new dimensions through to Leaflet.
         self.run_js(
             f"if (typeof map !== 'undefined' && map && map.invalidateSize) {{"
             f"  document.documentElement.style.width = '{w}px';"
@@ -516,7 +527,8 @@ class MapWidget(QWebEngineView):
             f"  _c.style.width = '{w}px';"
             f"  _c.style.height = '{h}px';"
             f"  console.log('[dbg] invalidateSize: forced ' + {w} + 'x' + {h} +"
-            f"              ', actual container=' + _c.clientWidth + 'x' + _c.clientHeight);"
+            f"              ', win=' + window.innerWidth + 'x' + window.innerHeight +"
+            f"              ', container=' + _c.clientWidth + 'x' + _c.clientHeight);"
             f"  map.invalidateSize(false);"
             f"}}"
         )
