@@ -2730,6 +2730,16 @@ class MainWindow(QMainWindow):
 
     # ── Window close ─────────────────────────────────────────────────────────
 
+    # ── LOAD-BEARING RESIZE HANDLERS ─────────────────────────────────────
+    # Both event handlers below are critical infrastructure for the map
+    # resize / maximise behaviour on Windows. See the matching block
+    # comment in src/map_widget.py above MapWidget.invalidate_size for
+    # the full story. Short version: the _dbg() file I/O inside these
+    # handlers and the singleShot(0) invalidate in changeEvent together
+    # give Chromium's renderer enough scheduling slack to commit its new
+    # viewport before Leaflet measures the container. Don't trim them.
+    # ─────────────────────────────────────────────────────────────────────
+
     def changeEvent(self, event):
         # Qt fires WindowStateChange on F11/maximise/restore. The embedded
         # QWebEngineView doesn't always get its own resizeEvent in the same
@@ -2738,6 +2748,9 @@ class MainWindow(QMainWindow):
         # tick lets Qt finish the state transition first.
         if event.type() == QEvent.Type.WindowStateChange:
             try:
+                # _dbg() is load-bearing here, not diagnostic: the file
+                # write yields to the OS scheduler and lets Chromium
+                # propagate the new viewport before invalidate_size runs.
                 from src.map_widget import _dbg
                 _dbg(f"[mainwindow] WindowStateChange state={int(self.windowState())} "
                      f"size={self.width()}x{self.height()}")
@@ -2747,6 +2760,13 @@ class MainWindow(QMainWindow):
         super().changeEvent(event)
 
     def resizeEvent(self, event):
+        # The override exists for the same load-bearing reason as the
+        # _dbg() call inside: the Python frame + file syscall together
+        # introduce just enough scheduling delay for Chromium's IPC to
+        # land between Qt's resize and super().resizeEvent propagating
+        # the new size down to MapWidget. Removing the override (or just
+        # the _dbg call) reintroduces the half-painted-map symptom on
+        # Windows after a maximise with LiDAR contours visible.
         try:
             from src.map_widget import _dbg
             sz = event.size()

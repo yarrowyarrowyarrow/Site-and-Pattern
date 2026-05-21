@@ -692,6 +692,14 @@
       // Zoom-dependent label visibility
       map.on('zoomend', updateLabelVisibility);
 
+      // Load-bearing: don't remove. This listener is what makes
+      // Leaflet's own _onResize handler fire reliably after a Qt
+      // maximise on Windows. Registering it triggers Leaflet to add
+      // its window-resize bookkeeping, and the console.log inside
+      // forces a layout reflow when Leaflet's resize event arrives.
+      // Together with the clientWidth reads in invalidate_size (see
+      // src/map_widget.py), this is what keeps the embedded viewport
+      // in sync with the Qt widget size.
       map.on('resize', function(e) {
         console.log('[dbg] map resize event, newSize=' +
                     e.newSize.x + 'x' + e.newSize.y);
@@ -3749,6 +3757,12 @@
       if (!payload || !payload.contours || payload.contours.length === 0) {
         return;
       }
+      // The contour-count log below is the safest of the diagnostics
+      // to remove (no observed effect on the maximise-resize fix), but
+      // it's handy when sizing complaints land -- 246k vertices on
+      // canvas is the difference between "snappy" and "freeze". If you
+      // do trim it, keep the canvas renderer on the L.polyline call
+      // below; that's the load-bearing piece for the freeze fix.
       var _segCount = 0, _vertCount = 0;
       payload.contours.forEach(function(c) {
         c.segments.forEach(function(s) { _segCount++; _vertCount += s.length; });

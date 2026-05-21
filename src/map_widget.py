@@ -491,6 +491,34 @@ class MapWidget(QWebEngineView):
     def set_view(self, lat: float, lng: float, zoom: int = 14):
         self.run_js(f"setView({lat}, {lng}, {zoom});")
 
+    # ── LOAD-BEARING RESIZE / INVALIDATE MACHINERY ───────────────────────
+    # The block below (invalidate_size + resizeEvent + _do_invalidate) is
+    # the result of a long debugging session against the Windows + LiDAR
+    # contours + maximise freeze. Several lines that LOOK like debug
+    # instrumentation are actually doing real work:
+    #
+    #   - The `console.log(... map.getContainer().clientWidth ...)` inside
+    #     invalidate_size forces Chromium to commit its pending viewport
+    #     update before Leaflet measures the container. `void(...)` and
+    #     other "I'm just reading clientWidth for the side effect"
+    #     idioms get elided by V8; passing the value to console.log keeps
+    #     the read live.
+    #
+    #   - The two console.log calls (one before, one after invalidateSize)
+    #     each force a layout reflow, which catches the viewport on either
+    #     side of Leaflet's own size update.
+    #
+    #   - The `_dbg(...)` calls inside resizeEvent / _do_invalidate write
+    #     to a file -- the resulting syscall yields to the OS scheduler,
+    #     which gives Chromium's separate renderer process time to deliver
+    #     pending IPC events between Qt's resize and our invalidate.
+    #
+    # All three together are what makes "maximise window with LiDAR
+    # contours visible" work on Windows. Removing any one of them tends
+    # to reintroduce the freeze or the half-painted map. Confirmed in
+    # commits 3dcc74b (cleanup) -> cea0c7f (revert).
+    # ─────────────────────────────────────────────────────────────────────
+
     def invalidate_size(self):
         """Force Leaflet to recompute the map container size.
 
@@ -501,6 +529,14 @@ class MapWidget(QWebEngineView):
         the WebEngine paint queue — both scenarios can leave Leaflet's
         canvas renderer cached at a stale size, which manifests as a blank
         map with dead zoom/satellite controls.
+
+        *** Do not "clean up" the console.log calls below. *** They look
+        like debug noise but each one reads clientWidth/clientHeight,
+        which forces a Chromium layout reflow as a documented browser
+        side effect. Without those reads, on Windows the embedded
+        viewport stays at the pre-resize size after a maximise and the
+        map paints only into the corner of the widget. See the block
+        comment above this method for the full context.
         """
         self.run_js(
             "if (typeof map !== 'undefined' && map && map.invalidateSize) {"
@@ -516,6 +552,8 @@ class MapWidget(QWebEngineView):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         sz = event.size()
+        # _dbg() is load-bearing here: see the block comment above
+        # invalidate_size. The file I/O yields to the OS scheduler.
         _dbg(f"[mapwidget] resizeEvent w={sz.width()} h={sz.height()}")
         # Coalesce resize bursts (splitter drag, window restore, sidebar
         # collapse) into one invalidateSize per event-loop tick so we don't
@@ -526,6 +564,7 @@ class MapWidget(QWebEngineView):
 
     def _do_invalidate(self):
         self._pending_invalidate = False
+        # _dbg() is load-bearing -- see the block comment above invalidate_size.
         _dbg(f"[mapwidget] _do_invalidate -> invalidate_size (size={self.width()}x{self.height()})")
         self.invalidate_size()
 
