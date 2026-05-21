@@ -3762,6 +3762,7 @@
 
         c.segments.forEach(function(seg) {
           var line = L.polyline(seg, {
+            renderer: canvasRenderer,
             color: color, weight: weight, opacity: opacity,
             interactive: false
           }).addTo(autoContourLayer);
