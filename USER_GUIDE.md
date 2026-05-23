@@ -10,7 +10,7 @@ When the app opens you'll see four areas:
 
 - **Map** (centre) — Edmonton by default; pan with click-and-drag, zoom with the mouse wheel.
 - **Toolbar** (top) — drawing tools, layer toggles, zoom-sensitivity combo.
-- **Side panel** (right) — five tabs: **Plants**, **Polycultures**, **Structures**, **Analysis**, **Planning**.
+- **Side panel** (right) — five tabs: **Plants** (with Plant Communities), **Site**, **Structures**, **Analysis**, **Planning**.
 - **Status bar** (bottom) — coordinates, hardiness zone, current mode (e.g. "Placing: Yarrow — click map").
 
 ---
@@ -28,7 +28,7 @@ You can edit a boundary later by clicking it: drag white vertices to reshape, dr
 Open the **Plants** tab.
 
 - Type a name in **Search plants…**.
-- Narrow with the filter rows: **Type / Sun / Water / Use** combos, plus toggles for **Native AB**, **Edible**, **Medicinal**, **N-Fixer**, **Pollinator**, **Perennial**.
+- Narrow with the filter rows: **Type / Sun / Water / Use** combos, plus toggles for **Native AB**, **Edible**, **Medicinal**, **N-Fixer**, **Pollinator**, **Perennial**, and the habitat-focused trio **Keystone**, **Host Plant**, **Bird Food**.
 - Click the **▶ chevron** on any row to expand it inline. You'll see the full data block — sun, water, spacing, height, bloom, fruit, edible parts, uses — plus a **colour-coded 12-month planting calendar** and notes.
 
 Long names automatically wrap to two lines so nothing is hidden.
@@ -65,12 +65,12 @@ Tweakable parameters:
 
 ---
 
-## 6. Polyculture mix (multiple species in one bed)
+## 6. Plant community mix (multiple species in one bed)
 
 To plant multiple species mixed together in one Row / Grid / Circle:
 
-1. Right-click any plant in the results list → **Add to Polyculture Mix**. Add 2–8 species.
-2. The **Polyculture Mix** panel shows each species with three controls:
+1. Right-click any plant in the results list → **Add to Mix**. Add 2–8 species.
+2. The **Mix** panel shows each species with three controls:
    - A **clickable colour dot** — gives that species a unique marker colour just for this mix.
    - A **ratio spinner** (1–9) — `1:1:1` is even split; `3:1:1` gives that species 60%, others 20% each.
    - A **✕** button to remove the species.
@@ -150,9 +150,9 @@ The View bar (🛰 Satellite, ⬡ Boundary, 📏 Measurement, **#** Grid, ✿ Pl
 
 - **Click a boundary's area label** to cycle units (m² → ha → acres → km²).
 - The expanded plant calendar's colours map to life stages: **purple** = start indoors, **teal** = direct sow, **blue** = transplant, **green** = growing, **orange** = harvest, **brown** = pruning, **grey** = dormant. The current month gets a yellow ring.
-- **Polyculture stays armed** across pattern clicks until **Esc** — you can drop ten mixed beds in a row with one click each.
+- **Mix stays armed** across pattern clicks until **Esc** — you can drop ten mixed beds in a row with one click each.
 - **Fill (hex) circles** need a **Total** cap or they'll generate thousands of markers on big radii.
-- **Right-click a plant in the results list** for fast actions — *Place on Map*, *Place ×5*, *Add / Remove from Polyculture Mix*.
+- **Right-click a plant in the results list** for fast actions — *Place on Map*, *Place ×5*, *Add / Remove from Mix*.
 - The **▶ chevron** doubles as a quick way to compare plants — multiple rows can stay expanded at once.
 
 ---

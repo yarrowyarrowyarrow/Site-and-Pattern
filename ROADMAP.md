@@ -1,6 +1,6 @@
 # PermaDesign — Feature Roadmap
 
-A prioritized list of features for the Alberta-focused PermaDesign tool. Organized by effort/impact tiers, with the active sprint at the top.
+A prioritized list of features for the Alberta-focused **Native Habitat Designer** — turning lawns into native plant habitat. Organized by effort/impact tiers, with the active sprint at the top.
 
 ---
 
@@ -8,7 +8,8 @@ A prioritized list of features for the Alberta-focused PermaDesign tool. Organiz
 
 | Area | Item | Status |
 |------|------|--------|
-| Cleanup | Drop deprecated "guilds" terminology in favour of "polycultures"; remove legacy/duplicate files | Done |
+| Pivot | Reframe app from "Permaculture Landscape Designer" to "Native Habitat Designer"; add habitat-focused plant tags (keystone species, host plant, bird food, nesting material); swap permaculture-coded structures for native bee logs, brush piles, snags, rock xeriscape, native lawn patch, bee hotel | Done |
+| Cleanup | Drop deprecated "guilds" terminology in favour of "plant communities"; remove legacy/duplicate files | Done |
 | Cleanup | Trim README/ROADMAP to current state and current-sprint plan | Done |
 | Cleanup | Update Friend Setup Guide for the `.exe` one-click installer | Done |
 | UI | Address finder: partial-match-first; fix "Clear" button crash | Planned |
@@ -20,8 +21,8 @@ A prioritized list of features for the Alberta-focused PermaDesign tool. Organiz
 | Map | Grid menu: 1×1 / 5×5 / 10×10 / 100×100 m, opacity + colour | Planned |
 | Plants | Plant panel: label or rainbow icon for the colour picker | Planned |
 | Plants | Overlap slider range −50% to +50% (0 = no gap, no overlap) | Planned |
-| Polycultures | Visual-grid polyculture builder (5–8 plants), saved locally, AB-focused | Planned |
-| Polycultures | Drag-to-reposition placed items: individual plants and whole polycultures | Planned |
+| Communities | Visual-grid plant community builder (5–8 plants), saved locally, AB-focused | Planned |
+| Communities | Drag-to-reposition placed items: individual plants and whole plant communities | Planned |
 | Data | Edmonton open-data parser fix or local bundling | Planned |
 | Data | Soil fallback when SoilGrids v2.0 (ISRIC) is unavailable | Planned |
 | Distribution | One-click `.exe` Windows installer | In progress |
@@ -36,7 +37,7 @@ Placeable landscape elements beyond plants.
 
 | ID | Feature | Description | Status |
 |----|---------|-------------|--------|
-| S1 | **Structures library** | Placeable icons/shapes for: pond, herb spiral, hugelkultur bed, swale, rain garden, compost bin, greenhouse, cold frame, chicken coop/tractor, shed, raised bed, keyhole bed, fire pit, beehive, rain barrel, fence/wall | Done |
+| S1 | **Structures library** | Placeable icons/shapes for: pond, bioswale, rain garden, rain barrel, compost bin, raised bed, shed, fire pit, fence/wall, plus native habitat elements — native bee habitat log, bee hotel, brush pile, snag, rock xeriscape, native lawn patch | Done |
 | S2 | **Hedgerow / fence line tool** | Draw a polyline that renders as a hedge or fence with selectable plant species along it | Done |
 | S3 | **Custom shape drawing** | Free-form polygon drawing for garden beds, pathways, patios — with fill color/pattern and labels | Done |
 
@@ -49,7 +50,7 @@ Tools that help designers understand their site.
 | ID | Feature | Description | Status |
 |----|---------|-------------|--------|
 | A1 | **Sun path / shadow overlay** | Given lat/lng + date, draw the sun arc and show shadow direction arrows for morning/noon/evening — helps place shade-sensitive crops | Done |
-| A2 | **Sector analysis layer** | Draw directional wedges on the map for sun, prevailing wind, frost flow, noise, views — standard permaculture sector map | Done |
+| A2 | **Sector analysis layer** | Draw directional wedges on the map for sun, prevailing wind, frost flow, noise, views — directional site analysis | Done |
 | A3 | **Slope / contour indicator** | Manual or imported contour lines to show terrain; helps place swales and ponds correctly | Done |
 | A4 | **Wind sector & windbreak effect** | Mark prevailing wind direction; windbreak structures/hedges show a "shelter zone" behind them (10x their height) | Done |
 
@@ -74,7 +75,7 @@ Features for long-term planning and tracking.
 
 | ID | Feature | Description | Status |
 |----|---------|-------------|--------|
-| V1 | **Food forest layer indicators** | Visual markers for the 7 food forest layers (canopy, understory, shrub, herbaceous, groundcover, vine, root) with layer toggle | Planned |
+| V1 | **Vegetation layer indicators** | Visual markers for vegetation layers (overstory, understory, shrub layer, herbaceous, groundcover, vine, root) with layer toggle | Planned |
 | V2 | **Season view toggle** | Switch map appearance between spring/summer/fall/winter to see deciduous vs. evergreen coverage | Planned |
 | V3 | **Print / PDF export** | Export the current map view as a presentation-quality PDF with legend, title block, and plant list | Done |
 | V4 | **Design notes / journal** | Per-project text area for recording observations, soil test results, and design rationale | Done |
@@ -102,18 +103,18 @@ Features for long-term planning and tracking.
 | Property boundary drawing | Done |
 | 433-plant Alberta master database (Zone 2–7) | Done |
 | Plant canopy circle visualization | Done |
-| Polyculture system (8 polycultures + variations) | Done |
-| Polyculture canopy circle visualization | Done |
-| Visual offset editor for polyculture members | Done |
+| Plant community system (8 communities + variations) | Done |
+| Community canopy circle visualization | Done |
+| Visual offset editor for plant community members | Done |
 | Planting calendar | Done |
 | Snap-to-grid | Done |
 | Measurement tool | Done |
 | Annotations / notes | Done |
 | Labels toggle | Done |
 | Canopy preview overlay | Done |
-| Plant filters (Native AB, Edible, Medicinal, N-Fixer, Pollinator, Perennial) | Done |
+| Plant filters (Native AB, Edible, Medicinal, N-Fixer, Pollinator, Perennial, Keystone, Host Plant, Bird Food) | Done |
 | Plant count badges and right-click context menu | Done |
-| Polyculture search, tooltips, double-click to place | Done |
+| Plant community search, tooltips, double-click to place | Done |
 | Map legend (toggleable) | Done |
 | Keyboard shortcuts (P/G/B/M/Z/N/L/Esc) | Done |
 | Status bar seasonal tasks | Done |
@@ -121,7 +122,7 @@ Features for long-term planning and tracking.
 | Shopping list export | Done |
 | Undo/redo | Done |
 | Permapeople API integration | Done |
-| Structures library (16 placeable structures across 5 categories) | Done |
+| Structures library (placeable structures across 5 categories: Water, Habitat, Growing, Storage, Infrastructure) | Done |
 | Hedgerow / fence line tool (4 styles, plant spacing, species) | Done |
 | Custom shape drawing (7 presets, fill/stroke, labels, area calc) | Done |
 | Sun path / shadow overlay (6 key dates, shadow arrows) | Done |
@@ -138,16 +139,14 @@ Features for long-term planning and tracking.
 
 ## Sources & Inspiration
 
-- [Permies: All-in-One Permaculture Design App](https://permies.com/w/240148/Permaculture-Design-App)
-- [Permies: Permaculture Design Software](https://permies.com/t/7924/permaculture/Permaculture-Design-Software)
-- [Permies: Digital Permaculture Design Tools](https://permies.com/t/157765/permaculture/digital-permaculutre-design-tools)
-- [EcoDesignHive: Landscape Design Apps for Permaculture](https://www.ecodesignhive.com/landscape-design-apps/)
-- [Permaculture Apprentice: 7 Smartphone Apps](https://permacultureapprentice.com/permaculture-apps/)
-- [Permaculture Practice: Sector Planning](https://permaculturepractice.com/permaculture-sector-planning/)
-- [Permalogica: Sector Analysis and Mapping](https://www.permalogica.com/post/permaculture-design-by-sectors-permaculture-sector-analysis-and-mapping)
-- [NC State: Appendix G Permaculture Design](https://content.ces.ncsu.edu/extension-gardener-handbook/appendix-g-permaculture-design)
-- [Tenth Acre Farm: 6 Maps for Permaculture Site Design](https://www.tenthacrefarm.com/6-maps-permaculture-farm-design/)
-- [Verge Permaculture: How to Design a Food Forest](https://vergepermaculture.ca/how-to-design-a-permaculture-food-forest/)
+### Native habitat & ecological restoration
+- [Doug Tallamy — Homegrown National Park](https://homegrownnationalpark.org/) — Lawn-to-habitat movement; keystone-species & host-plant concepts
+- [Xerces Society](https://xerces.org/) — Pollinator conservation and habitat design
+- [Audubon Native Plants Database](https://www.audubon.org/native-plants) — Plants that support local birds and ecosystems
+- [ALCLA Native Plants](https://alclanativeplants.com/) — Alberta-focused native nursery and resources
+- [Bow Valley Habitat Development](https://bowvalleyhabitat.com/) — Alberta riparian and grassland restoration
+- [Pollinator Partnership Canada](https://pollinator.ca/) — Regional pollinator planting guides
+
+### Site analysis & sun mapping
 - [Shadowmap.org](https://shadowmap.org/) — Sun path visualization
 - [ShadeMap.app](https://shademap.app/) — Shadow simulation
-- [Software Tools for Professional Permaculture Design](https://tiag.substack.com/p/software-tools-for-professional-permaculture)

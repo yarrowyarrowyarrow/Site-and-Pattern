@@ -1,8 +1,8 @@
-# PermaDesign
+# PermaDesign — Native Habitat Designer
 
-**A native plant landscape design tool for ecological designers and gardeners in Alberta and the Canadian prairies.**
+**Turn your lawn into native habitat.** A landscape design tool for native plants, ecological restoration, and pollinator/wildlife habitat in Alberta and the Canadian prairies.
 
-PermaDesign is a desktop application for designing landscapes with native plants. It combines site analysis, polyculture planning, plant companion relationships, structures and hedgerows, and a 433-plant database focused on Alberta and the Canadian prairies.
+PermaDesign is a desktop application for designing landscapes with native plants — focused on lawn-to-habitat conversion, pollinator gardens, and ecological restoration projects. It combines site analysis, plant community planning, plant companion relationships, native habitat structures, and a 433-plant database focused on Alberta and the Canadian prairies. Search and filter by habitat value (keystone species, larval host plants, bird food) to prioritize the natives that do the most for local food webs.
 
 > **Status:** PermaDesign is in active development. The current focus is on UI polish, the in-app polyculture builder, map interaction (drag-to-reposition, global undo), terrain/soil data integration, and packaging as a one-click Windows installer. See [Going Forward](#going-forward) for the live development plan.
 
@@ -11,8 +11,10 @@ PermaDesign is a desktop application for designing landscapes with native plants
 ## Features
 
 - **Site analysis overlays** — sun, wind, water, and other site condition mapping
-- **Polyculture planning** — plant communities and companion groupings with documented companion relationships
-- **Structures and hedgerows** — windbreaks, fences, paths, and other design elements
+- **Plant community planning** — assemble layered native plant communities (overstory, understory, shrub, groundcover, herbaceous) with documented companion relationships
+- **Native habitat structures** — bee hotels, native bee logs, rock xeriscape, brush piles, snags, native lawn patches, rain gardens, bioswales, and ponds
+- **Habitat-focused plant filters** — surface keystone species, larval host plants, bird-food producers, and nesting-material plants
+- **Hedgerows** — draw layered native hedgerows for property edges and wildlife corridors
 - **Planning tools** — drag-and-place plant placement, undo/redo for plant placement
 - **Plant database** — 433 native and naturalized species of Alberta and the Canadian prairies
 - **Hardiness zone lookup** — automatic zone matching from location based on Canadian hardiness zone polygons
@@ -66,7 +68,7 @@ PermaDesign V1 ships with a master database of 433 plants suitable for Alberta a
 - Hardiness zone range, sun and water requirements, soil pH range
 - Mature dimensions, spacing, growth rate, years to maturity
 - Bloom and fruit periods, monthly activity calendar (`cal_jan` through `cal_dec`)
-- Permaculture uses, edible parts, native region
+- Ecological functions (keystone species, host plant, bird food, nesting material, pollinator, soil builder, nitrogen fixer, …), edible parts, native region
 - Native to Alberta flag, deciduous/evergreen, perennial/annual
 
 Plant data loads from `data/plants_master.json` on first run. The hardiness zone database (`data/hardiness_zones.json`) uses bounding-box matching from polygon centroids to look up zones by location.
@@ -107,8 +109,8 @@ PermaDesign is in active development. Known limitations being worked on in the c
 
 The current development plan focuses on tightening the existing Alberta-focused tool rather than a full rewrite:
 
-- **Polyculture builder** — a visual grid for assembling 5–8-plant Alberta polycultures in one screen and saving them locally
-- **Map interaction** — drag-and-drop repositioning of placed plants and entire polyculture groupings, plus global Ctrl+Z across all placements
+- **Plant community builder** — a visual grid for assembling 5–8-plant native plant communities in one screen and saving them locally
+- **Map interaction** — drag-and-drop repositioning of placed plants and entire community groupings, plus global Ctrl+Z across all placements
 - **View bar overhaul** — fixed ordering (Satellite, Boundary, Measurement, Grid, Plants, Canopy, Structures), measurement hide-vs-delete distinction, configurable grid base size and opacity
 - **Address finder** — partial-match-first search and crash fix on the Clear button
 - **Terrain & soil** — repair the Edmonton dataset parser (or bundle the dataset locally) and add a soil-data fallback when SoilGrids is unavailable
@@ -120,7 +122,7 @@ The longer-term direction (cross-platform rewrite, ecoregion-aware nativity, exp
 
 ## Project History
 
-PermaDesign was built as a personal tool by Marci while studying ecological design in Alberta, with the goal of bringing native plant communities into landscape design more easily. The codebase has grown to include polycultures, site analysis, structures, planning tools, PDF export, and Permapeople integration, and now centres on Alberta ecosystems.
+PermaDesign was built as a personal tool by Marci while studying ecological design in Alberta, with the goal of bringing native plant communities into landscape design more easily. The codebase has grown to include plant communities, site analysis, native habitat structures, planning tools, PDF export, and Permapeople integration, and now centres on lawn-to-habitat conversion for Alberta and prairie ecosystems.
 
 ---
 
