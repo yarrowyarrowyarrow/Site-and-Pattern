@@ -101,7 +101,7 @@ class TestPolycultureCRUD(unittest.TestCase):
 
     def test_add_member_valid(self):
         conn = get_connection()
-        plant_id = _add_dummy_plant(conn, "Comfrey")
+        plant_id = _add_dummy_plant(conn, "Stinging Nettle")
         conn.close()
 
         gid = polycultures.create_polyculture("Apple Polyculture", "", None)
@@ -109,7 +109,7 @@ class TestPolycultureCRUD(unittest.TestCase):
 
         detail = polycultures.get_polyculture_by_id(gid)
         self.assertEqual(len(detail["members"]), 1)
-        self.assertEqual(detail["members"][0]["common_name"], "Comfrey")
+        self.assertEqual(detail["members"][0]["common_name"], "Stinging Nettle")
 
     # ── remove_polyculture_member ──────────────────────────────────────────────────
 

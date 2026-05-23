@@ -397,19 +397,19 @@ SEED_CALENDAR: list[tuple] = [
     # HERBS & PERENNIALS
     # ═══════════════════════════════════════════════════════════════════════
 
-    # Comfrey
-    ("Comfrey", 1,  "dormant",       None),
-    ("Comfrey", 2,  "dormant",       None),
-    ("Comfrey", 3,  "start_indoors", "Start root cuttings indoors in pots"),
-    ("Comfrey", 4,  "start_indoors", "Continue indoor growth"),
-    ("Comfrey", 5,  "transplant",    "Transplant root divisions after last frost"),
-    ("Comfrey", 6,  "growing",       "Rapid growth; first chop-and-drop mulch"),
-    ("Comfrey", 7,  "harvest",       "Cut leaves 2–3 times for mulch/compost tea"),
-    ("Comfrey", 8,  "harvest",       "Continue cutting; leaves regrow quickly"),
-    ("Comfrey", 9,  "growing",       "Final cut before dormancy"),
-    ("Comfrey", 10, "dormant",       "Dies back to ground"),
-    ("Comfrey", 11, "dormant",       None),
-    ("Comfrey", 12, "dormant",       None),
+    # Bur Oak
+    ("Bur Oak", 1,  "dormant",    None),
+    ("Bur Oak", 2,  "dormant",    None),
+    ("Bur Oak", 3,  "pruning",    "Prune in late winter while dormant"),
+    ("Bur Oak", 4,  "dormant",    "Buds swell; transplant young saplings"),
+    ("Bur Oak", 5,  "growing",    "Leaf-out and catkin bloom"),
+    ("Bur Oak", 6,  "growing",    "Rapid spring growth"),
+    ("Bur Oak", 7,  "growing",    "Acorns developing"),
+    ("Bur Oak", 8,  "growing",    "Acorns sizing up"),
+    ("Bur Oak", 9,  "harvest",    "Acorns ripen and drop; collect for leaching"),
+    ("Bur Oak", 10, "harvest",    "Continue acorn harvest; sow fresh for new trees"),
+    ("Bur Oak", 11, "dormant",    "Leaves drop"),
+    ("Bur Oak", 12, "dormant",    None),
 
     # Yarrow
     ("Yarrow", 1,  "dormant",       None),
@@ -439,7 +439,7 @@ SEED_CALENDAR: list[tuple] = [
     ("Bee Balm (Wild Bergamot)", 11, "dormant",       None),
     ("Bee Balm (Wild Bergamot)", 12, "dormant",       None),
 
-    # Purple Coneflower
+    # Purple Coneflower (native Echinacea angustifolia)
     ("Purple Coneflower", 1,  "dormant",       None),
     ("Purple Coneflower", 2,  "dormant",       None),
     ("Purple Coneflower", 3,  "start_indoors", "Start seeds indoors; needs cold stratification"),
@@ -452,34 +452,6 @@ SEED_CALENDAR: list[tuple] = [
     ("Purple Coneflower", 10, "dormant",       None),
     ("Purple Coneflower", 11, "dormant",       None),
     ("Purple Coneflower", 12, "dormant",       None),
-
-    # Chives
-    ("Chives", 1,  "dormant",       None),
-    ("Chives", 2,  "start_indoors", "Start seeds indoors 8–10 weeks before last frost"),
-    ("Chives", 3,  "start_indoors", "Grow on under lights"),
-    ("Chives", 4,  "start_indoors", "Harden off late April"),
-    ("Chives", 5,  "transplant",    "Transplant or direct-sow; divide existing clumps"),
-    ("Chives", 6,  "harvest",       "Harvest leaves and purple flowers"),
-    ("Chives", 7,  "harvest",       "Cut regularly — regrows quickly"),
-    ("Chives", 8,  "harvest",       "Continue harvesting"),
-    ("Chives", 9,  "harvest",       "Final harvest before frost"),
-    ("Chives", 10, "dormant",       None),
-    ("Chives", 11, "dormant",       None),
-    ("Chives", 12, "dormant",       None),
-
-    # Horseradish
-    ("Horseradish", 1,  "dormant",    None),
-    ("Horseradish", 2,  "dormant",    None),
-    ("Horseradish", 3,  "dormant",    None),
-    ("Horseradish", 4,  "dormant",    "Prepare root cuttings"),
-    ("Horseradish", 5,  "transplant", "Plant root cuttings 2–3 weeks before last frost"),
-    ("Horseradish", 6,  "growing",    "Vigorous leaf growth"),
-    ("Horseradish", 7,  "growing",    None),
-    ("Horseradish", 8,  "growing",    None),
-    ("Horseradish", 9,  "growing",    None),
-    ("Horseradish", 10, "harvest",    "Dig roots after first hard frost for best flavour"),
-    ("Horseradish", 11, "harvest",    "Continue harvest; roots store well in ground"),
-    ("Horseradish", 12, "dormant",    None),
 
     # Rhubarb
     ("Rhubarb", 1,  "dormant",       None),
@@ -625,20 +597,6 @@ SEED_CALENDAR: list[tuple] = [
     # GROUNDCOVER
     # ═══════════════════════════════════════════════════════════════════════
 
-    # White Clover
-    ("White Clover", 1,  "dormant",     None),
-    ("White Clover", 2,  "dormant",     None),
-    ("White Clover", 3,  "dormant",     None),
-    ("White Clover", 4,  "dormant",     None),
-    ("White Clover", 5,  "direct_sow",  "Broadcast seed after last frost; tamp in"),
-    ("White Clover", 6,  "growing",     "Spreading; blooms begin"),
-    ("White Clover", 7,  "growing",     "Continuous bloom — excellent bee forage"),
-    ("White Clover", 8,  "growing",     "Mow if desired; regrows quickly"),
-    ("White Clover", 9,  "growing",     "Still active until hard frost"),
-    ("White Clover", 10, "dormant",     None),
-    ("White Clover", 11, "dormant",     None),
-    ("White Clover", 12, "dormant",     None),
-
     # Creeping Thyme
     ("Creeping Thyme", 1,  "dormant",       None),
     ("Creeping Thyme", 2,  "start_indoors", "Start tiny seeds indoors 8–10 weeks early"),
@@ -681,20 +639,6 @@ SEED_CALENDAR: list[tuple] = [
     ("Wild Strawberry", 11, "dormant",       None),
     ("Wild Strawberry", 12, "dormant",       None),
 
-    # Alfalfa
-    ("Alfalfa", 1,  "dormant",    None),
-    ("Alfalfa", 2,  "dormant",    None),
-    ("Alfalfa", 3,  "dormant",    None),
-    ("Alfalfa", 4,  "dormant",    None),
-    ("Alfalfa", 5,  "direct_sow", "Broadcast seed after last frost; inoculate with rhizobia"),
-    ("Alfalfa", 6,  "growing",    "Rapid growth; nitrogen fixation active"),
-    ("Alfalfa", 7,  "harvest",    "First cut for green mulch/chop-and-drop"),
-    ("Alfalfa", 8,  "harvest",    "Second cut; purple flowers if left"),
-    ("Alfalfa", 9,  "growing",    "Don't cut after Sep 1 — let roots store energy"),
-    ("Alfalfa", 10, "dormant",    None),
-    ("Alfalfa", 11, "dormant",    None),
-    ("Alfalfa", 12, "dormant",    None),
-
     # ═══════════════════════════════════════════════════════════════════════
     # VINES
     # ═══════════════════════════════════════════════════════════════════════
@@ -730,20 +674,6 @@ SEED_CALENDAR: list[tuple] = [
     # ═══════════════════════════════════════════════════════════════════════
     # ROOT / BULB
     # ═══════════════════════════════════════════════════════════════════════
-
-    # Garlic
-    ("Garlic", 1,  "dormant",       "Overwintering underground"),
-    ("Garlic", 2,  "dormant",       None),
-    ("Garlic", 3,  "dormant",       "Order seed garlic for fall planting"),
-    ("Garlic", 4,  "growing",       "Shoots emerge through soil/mulch"),
-    ("Garlic", 5,  "growing",       "Rapid leaf growth; keep weeded"),
-    ("Garlic", 6,  "harvest",       "Harvest scapes (curly tops) for pesto"),
-    ("Garlic", 7,  "harvest",       "Main harvest when lower leaves yellow"),
-    ("Garlic", 8,  "growing",       "Cure harvested bulbs 2–3 weeks in dry shade"),
-    ("Garlic", 9,  "growing",       "Prepare beds for fall planting"),
-    ("Garlic", 10, "direct_sow",    "Plant cloves 4–6 weeks before ground freezes"),
-    ("Garlic", 11, "dormant",       "Mulch heavily after ground freezes"),
-    ("Garlic", 12, "dormant",       None),
 
     # Jerusalem Artichoke
     ("Jerusalem Artichoke", 1,  "dormant",     None),
