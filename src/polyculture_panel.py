@@ -32,26 +32,45 @@ from src.db import polycultures
 from src.db import plants as plants_db
 
 
+# Vegetation-layer + ecological-function roles for plant-community members.
+# The first five describe physical layers (height/spread), which the user
+# explicitly wanted to preserve from the original "food forest" framing
+# without the food-forest label. The remaining roles tag ecological
+# function. Legacy role names from the permaculture era (canopy,
+# dynamic_accumulator, pest_repellent) survive in saved data and are
+# normalized at read-time so old projects still render.
 ROLES = [
-    "canopy",
+    "overstory",
     "understory",
+    "shrub_layer",
     "groundcover",
+    "herbaceous",
     "nitrogen_fixer",
-    "dynamic_accumulator",
-    "pest_repellent",
+    "soil_builder",
+    "pest_deterrent",
     "pollinator",
     "windbreak",
     "other",
 ]
 
+# Legacy role names → new role names. Used when reading saved polycultures
+# so old projects still render with the new vegetation-layer language.
+_LEGACY_ROLE_ALIASES = {
+    "canopy":              "overstory",
+    "dynamic_accumulator": "soil_builder",
+    "pest_repellent":      "pest_deterrent",
+}
+
 # Role → preferred plant_type filters (used to sort/filter the plant combo)
 ROLE_TYPE_HINTS = {
-    "canopy":              ["tree"],
-    "understory":          ["shrub", "vine"],
+    "overstory":           ["tree"],
+    "understory":          ["tree", "shrub"],
+    "shrub_layer":         ["shrub"],
     "groundcover":         ["groundcover", "herb"],
+    "herbaceous":          ["herb"],
     "nitrogen_fixer":      None,  # filter by permaculture_uses instead
-    "dynamic_accumulator": None,
-    "pest_repellent":      ["herb", "shrub"],
+    "soil_builder":        None,
+    "pest_deterrent":      ["herb", "shrub"],
     "pollinator":          ["herb", "shrub"],
     "windbreak":           ["tree", "shrub"],
     "other":               None,  # show all
@@ -69,7 +88,7 @@ class OffsetCanvas(QWidget):
         self._offset_x = 0.0
         self._offset_y = 0.0
         self.setFixedSize(180, 180)
-        self.setToolTip("Click to set member offset from polyculture centre")
+        self.setToolTip("Click to set member offset from the community centre")
         self.setCursor(Qt.CursorShape.CrossCursor)
 
     def set_offset(self, x: float, y: float):
@@ -148,7 +167,7 @@ class OffsetCanvas(QWidget):
 class AddMemberDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Add Polyculture Member")
+        self.setWindowTitle("Add Plant Community Member")
         self.setMinimumWidth(420)
 
         self._all_plants = plants_db.get_all_plants()
@@ -236,8 +255,8 @@ class AddMemberDialog(QDialog):
         perm_keyword = None
         if role == "nitrogen_fixer":
             perm_keyword = "nitrogen"
-        elif role == "dynamic_accumulator":
-            perm_keyword = "accumulator"
+        elif role == "soil_builder":
+            perm_keyword = "soil_builder"
 
         preferred = []
         others = []
@@ -485,8 +504,8 @@ class PolycultureBuilderDialog(QDialog):
     def __init__(self, parent=None, polyculture_id: int | None = None):
         super().__init__(parent)
         self._polyculture_id = polyculture_id
-        self.setWindowTitle("Polyculture Builder" if polyculture_id is None
-                            else "Edit Polyculture")
+        self.setWindowTitle("Plant Community Builder" if polyculture_id is None
+                            else "Edit Plant Community")
         self.setMinimumSize(820, 560)
         self._all_plants = plants_db.get_all_plants()
         self._build_ui()
@@ -499,10 +518,10 @@ class PolycultureBuilderDialog(QDialog):
 
         meta = QFormLayout()
         self.name_input = QLineEdit()
-        self.name_input.setPlaceholderText("e.g. Saskatoon Berry Polyculture")
+        self.name_input.setPlaceholderText("e.g. Saskatoon Berry Community")
         meta.addRow("Name:", self.name_input)
         self.desc_input = QLineEdit()
-        self.desc_input.setPlaceholderText("Optional notes about this polyculture")
+        self.desc_input.setPlaceholderText("Optional notes about this plant community")
         meta.addRow("Description:", self.desc_input)
         outer.addLayout(meta)
 
@@ -510,7 +529,7 @@ class PolycultureBuilderDialog(QDialog):
             "<span style='color:#90a4ae;font-size:11px;'>"
             "Pick a plant + role on the left, then click the grid to place it. "
             "Right-click a placed plant to remove. Drag to reposition. "
-            "Alberta polycultures typically have 5–8 plants.</span>"
+            "Native habitat plant communities typically have 5–8 species.</span>"
         )
         tip.setWordWrap(True)
         outer.addWidget(tip)
@@ -583,7 +602,7 @@ class PolycultureBuilderDialog(QDialog):
 
         # Centre — visual canvas
         centre_col = QVBoxLayout()
-        centre_col.addWidget(QLabel("<b>Polyculture layout (~12 m radius)</b>"))
+        centre_col.addWidget(QLabel("<b>Community layout (~12 m radius)</b>"))
         self.canvas = PolycultureGridCanvas(self)
         self.canvas.memberAdded.connect(self._on_canvas_add)
         self.canvas.memberRemoved.connect(self._on_canvas_remove)
@@ -611,7 +630,7 @@ class PolycultureBuilderDialog(QDialog):
             QDialogButtonBox.StandardButton.Save
             | QDialogButtonBox.StandardButton.Cancel
         )
-        buttons.button(QDialogButtonBox.StandardButton.Save).setText("Save Polyculture")
+        buttons.button(QDialogButtonBox.StandardButton.Save).setText("Save Community")
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         outer.addWidget(buttons)
@@ -702,9 +721,9 @@ class PolycultureBuilderDialog(QDialog):
         if n < 5:
             note = "  (aim for 5–8)"
         elif n > 8:
-            note = "  (large polyculture; consider trimming)"
+            note = "  (large community; consider trimming)"
         else:
-            note = "  ✓ in the 5–8 sweet spot for Alberta polycultures"
+            note = "  ✓ in the 5–8 sweet spot for native plant communities"
         self.count_label.setText(f"{n} plant{'s' if n != 1 else ''} placed{note}")
 
     def _on_clear_all(self):
@@ -738,7 +757,7 @@ class PolycultureBuilderDialog(QDialog):
         name = self.name_input.text().strip()
         if not name:
             QMessageBox.warning(self, "Name required",
-                                "Please give the polyculture a name.")
+                                "Please give the plant community a name.")
             return
         self.accept()
 
@@ -762,12 +781,12 @@ class PolyculturePanel(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
 
-        label = QLabel("<b>Polyculture Library</b>  <span style='color:#90a4ae;font-weight:normal;'>(saved polycultures)</span>")
+        label = QLabel("<b>Plant Community Library</b>  <span style='color:#90a4ae;font-weight:normal;'>(saved communities)</span>")
         layout.addWidget(label)
 
         # Search/filter box
         self._search_box = QLineEdit()
-        self._search_box.setPlaceholderText("Search polycultures...")
+        self._search_box.setPlaceholderText("Search communities...")
         self._search_box.setClearButtonEnabled(True)
         self._search_box.textChanged.connect(self._refresh_polyculture_list)
         layout.addWidget(self._search_box)
@@ -783,7 +802,7 @@ class PolyculturePanel(QWidget):
 
         # Buttons row 1
         btn_row1 = QHBoxLayout()
-        self.new_btn = QPushButton("New Polyculture")
+        self.new_btn = QPushButton("New Community")
         self.new_btn.setStyleSheet(_POLY_BTN_STYLE)
         self.new_btn.clicked.connect(self._on_new_polyculture)
         btn_row1.addWidget(self.new_btn)
@@ -803,7 +822,7 @@ class PolyculturePanel(QWidget):
         self.variation_btn = QPushButton("+ Variation")
         self.variation_btn.setStyleSheet(_POLY_BTN_STYLE)
         self.variation_btn.setEnabled(False)
-        self.variation_btn.setToolTip("Create a variation of this polyculture")
+        self.variation_btn.setToolTip("Create a variation of this plant community")
         self.variation_btn.clicked.connect(self._on_add_variation)
         btn_row1.addWidget(self.variation_btn)
         layout.addLayout(btn_row1)
@@ -830,7 +849,7 @@ class PolyculturePanel(QWidget):
         self.edit_btn.setStyleSheet(_POLY_BTN_STYLE)
         self.edit_btn.setEnabled(False)
         self.edit_btn.setToolTip(
-            "Open the visual polyculture builder for this polyculture"
+            "Open the visual builder for this plant community"
         )
         self.edit_btn.clicked.connect(self._on_edit_polyculture)
         member_btns.addWidget(self.edit_btn)
@@ -986,7 +1005,7 @@ class PolyculturePanel(QWidget):
             )
             polycultures.replace_polyculture_members(new_id, data["members"])
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Could not create polyculture:\n{e}")
+            QMessageBox.critical(self, "Error", f"Could not create plant community:\n{e}")
             return
         self._refresh_polyculture_list()
 
@@ -1011,7 +1030,7 @@ class PolyculturePanel(QWidget):
                 polyculture_id, data["members"]
             )
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Could not save polyculture:\n{e}")
+            QMessageBox.critical(self, "Error", f"Could not save plant community:\n{e}")
             return
         self._refresh_polyculture_list()
         # Re-select the same polyculture so the right-pane detail
@@ -1027,13 +1046,14 @@ class PolyculturePanel(QWidget):
         if polyculture_id is None:
             return
         reply = QMessageBox.question(
-            self, "Delete Polyculture", "Delete this polyculture from the library?"
+            self, "Delete Plant Community",
+            "Delete this plant community from the library?"
         )
         if reply == QMessageBox.StandardButton.Yes:
             try:
                 polycultures.delete_polyculture(polyculture_id)
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Could not delete polyculture:\n{e}")
+                QMessageBox.critical(self, "Error", f"Could not delete plant community:\n{e}")
                 return
             self._refresh_polyculture_list()
 
@@ -1044,7 +1064,7 @@ class PolyculturePanel(QWidget):
         try:
             polycultures.duplicate_polyculture(polyculture_id)
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Could not duplicate polyculture:\n{e}")
+            QMessageBox.critical(self, "Error", f"Could not duplicate plant community:\n{e}")
             return
         self._refresh_polyculture_list()
 
@@ -1083,17 +1103,18 @@ class PolyculturePanel(QWidget):
             return
 
         path, _ = QFileDialog.getSaveFileName(
-            self, "Export Polyculture", f"{data['name']}.polyculture.json",
-            "Polyculture Files (*.polyculture.json)"
+            self, "Export Plant Community", f"{data['name']}.polyculture.json",
+            "Plant Community Files (*.polyculture.json)"
         )
         if path:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
-            QMessageBox.information(self, "Export", f"Polyculture exported to {path}")
+            QMessageBox.information(self, "Export", f"Plant community exported to {path}")
 
     def _on_import(self):
         path, _ = QFileDialog.getOpenFileName(
-            self, "Import Polyculture", "", "Polyculture Files (*.polyculture.json);;JSON Files (*.json)"
+            self, "Import Plant Community", "",
+            "Plant Community Files (*.polyculture.json);;JSON Files (*.json)"
         )
         if not path:
             return
@@ -1111,10 +1132,10 @@ class PolyculturePanel(QWidget):
         if warnings:
             QMessageBox.warning(
                 self, "Import Warnings",
-                "Polyculture imported with warnings:\n" + "\n".join(warnings)
+                "Plant community imported with warnings:\n" + "\n".join(warnings)
             )
         else:
-            QMessageBox.information(self, "Import", "Polyculture imported successfully!")
+            QMessageBox.information(self, "Import", "Plant community imported successfully!")
 
 
 # Mirror plant_panel._PLACE_BTN_STYLE so every action button in the

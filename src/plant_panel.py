@@ -71,17 +71,25 @@ _LIFECYCLE_LABELS: dict[str, str] = {
 }
 
 _USE_LABELS: dict[str, str] = {
-    "nitrogen_fixer":    "Nitrogen Fixer",
-    "dynamic_accumulator": "Dynamic Accumulator",
-    "pollinator":        "Pollinator Plant",
-    "windbreak":         "Windbreak",
-    "food_forest":       "Food Forest",
-    "medicine":          "Medicinal",
-    "wildlife_habitat":  "Wildlife Habitat",
-    "pioneer":           "Pioneer",
-    "biomass":           "Biomass / Chop-Drop",
-    "groundcover":       "Groundcover",
-    "pest_repellent":    "Pest Repellent",
+    "nitrogen_fixer":     "Nitrogen Fixer",
+    "soil_builder":       "Soil Builder",
+    "pollinator":         "Pollinator Plant",
+    "windbreak":          "Windbreak",
+    "medicinal":          "Medicinal",
+    "wildlife_habitat":   "Wildlife Habitat",
+    "host_plant":         "Host Plant",
+    "keystone_species":   "Keystone Species",
+    "bird_food":          "Bird Food",
+    "nesting_material":   "Nesting Material",
+    "early_successional": "Early Successional",
+    "biomass":            "Biomass / Chop-Drop",
+    "groundcover":        "Groundcover",
+    "erosion_control":    "Erosion Control",
+    "pest_deterrent":     "Pest Deterrent",
+    "hedge":              "Hedge",
+    "ornamental":         "Ornamental",
+    "water_purification": "Water Purification",
+    "aquatic":            "Aquatic",
 }
 
 
@@ -939,6 +947,45 @@ class PlantPanel(QWidget):
 
         top_layout.addLayout(extra_row)
 
+        # Habitat-focused filter row: keystone species, larval host plants,
+        # and bird-food producers. These three drive most of the value of
+        # the "lawn-to-habitat" reframe — they let users surface the high-
+        # impact natives (à la Doug Tallamy) rather than ornamental fluff.
+        habitat_row = QHBoxLayout()
+        habitat_row.setSpacing(3)
+
+        self._keystone_btn = QPushButton("Keystone")
+        self._keystone_btn.setCheckable(True)
+        self._keystone_btn.setToolTip(
+            "Keystone species — natives that support the most "
+            "specialist insects and food webs"
+        )
+        self._keystone_btn.setStyleSheet(_toggle_style)
+        self._keystone_btn.toggled.connect(self._run_search)
+        habitat_row.addWidget(self._keystone_btn)
+
+        self._host_btn = QPushButton("Host Plant")
+        self._host_btn.setCheckable(True)
+        self._host_btn.setToolTip(
+            "Larval host plant for native butterflies / moths "
+            "(e.g. milkweed for monarchs)"
+        )
+        self._host_btn.setStyleSheet(_toggle_style)
+        self._host_btn.toggled.connect(self._run_search)
+        habitat_row.addWidget(self._host_btn)
+
+        self._birdfood_btn = QPushButton("Bird Food")
+        self._birdfood_btn.setCheckable(True)
+        self._birdfood_btn.setToolTip(
+            "Produces seeds or berries eaten by native birds"
+        )
+        self._birdfood_btn.setStyleSheet(_toggle_style)
+        self._birdfood_btn.toggled.connect(self._run_search)
+        habitat_row.addWidget(self._birdfood_btn)
+
+        habitat_row.addStretch(1)
+        top_layout.addLayout(habitat_row)
+
         # Result count label
         self._result_count = QLabel("Results: —")
         self._result_count.setStyleSheet("color: #78909c; font-size: 11px;")
@@ -1173,6 +1220,9 @@ class PlantPanel(QWidget):
                 nfixer_only = self._nfixer_btn.isChecked(),
                 pollinator_only = self._pollinator_btn.isChecked(),
                 perennial_only = self._perennial_btn.isChecked(),
+                host_plant_only = self._host_btn.isChecked(),
+                keystone_only   = self._keystone_btn.isChecked(),
+                bird_food_only  = self._birdfood_btn.isChecked(),
             )
         except Exception as exc:
             self._result_count.setText(f"Error: {exc}")

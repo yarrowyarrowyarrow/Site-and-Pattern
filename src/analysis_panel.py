@@ -200,9 +200,9 @@ class AnalysisPanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Draw directional sector wedges on the map for\n"
-            "sun, wind, frost, noise, views — standard\n"
-            "permaculture sector analysis."
+            "Draw directional wedges on the map for\n"
+            "sun, wind, frost flow, noise, views — site\n"
+            "analysis of environmental influences."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")

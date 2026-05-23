@@ -42,16 +42,23 @@ from src.collapsible_panel import CollapsibleSidebar
 import src.project as project_io
 
 
-# Mirror of the JS ROLE_COLORS table in html/map.html. Kept here so polyculture
-# member markers can be coloured by role from Python and rendered through the
-# same fast placePlantMarker path used by single/row/burst/grid placement.
+# Mirror of the JS ROLE_COLORS table in html/map.html. Kept here so plant
+# community member markers can be coloured by role from Python and rendered
+# through the same fast placePlantMarker path used by single/row/burst/grid
+# placement. Legacy keys (canopy, dynamic_accumulator, pest_repellent) are
+# kept as aliases so projects saved before the role rename still render.
 _ROLE_COLORS = {
-    'canopy':              '#1b5e20',
+    'overstory':           '#1b5e20',
+    'canopy':              '#1b5e20',   # legacy alias
     'understory':          '#388e3c',
+    'shrub_layer':         '#4a8b3a',
     'groundcover':         '#66bb6a',
+    'herbaceous':          '#9ccc65',
     'nitrogen_fixer':      '#43a047',
-    'dynamic_accumulator': '#2e7d32',
-    'pest_repellent':      '#7cb342',
+    'soil_builder':        '#2e7d32',
+    'dynamic_accumulator': '#2e7d32',   # legacy alias
+    'pest_deterrent':      '#7cb342',
+    'pest_repellent':      '#7cb342',   # legacy alias
     'pollinator':          '#aed581',
     'windbreak':           '#558b2f',
     'other':               '#81c784',
@@ -80,7 +87,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         _init_database()
-        self.setWindowTitle("PermaDesign — Permaculture Landscape Designer")
+        self.setWindowTitle("PermaDesign — Native Habitat Designer")
         self.resize(1400, 860)
         self.setMinimumSize(900, 600)
 
@@ -279,7 +286,7 @@ class MainWindow(QMainWindow):
             "QTabBar::tab:hover { color: #c8e6c9; }"
         )
         inner.addTab(self.plant_panel, "Plants")
-        inner.addTab(self.polyculture_panel, "Polyculture Library")
+        inner.addTab(self.polyculture_panel, "Plant Communities")
         v.addWidget(inner)
         return wrap
 
@@ -614,7 +621,7 @@ class MainWindow(QMainWindow):
 
         kind = (pattern or {}).get("kind", "single")
         species_n = len(poly["species"]) if poly else 0
-        poly_tag = f" · Polyculture ({species_n} species)" if species_n else ""
+        poly_tag = f" · Mix ({species_n} species)" if species_n else ""
         # When a polyculture is armed, the recipe persists until Esc, so
         # advertise that the user can drop multiple identical patterns.
         tail = " (Esc to finish)" if poly else " — Esc to cancel"

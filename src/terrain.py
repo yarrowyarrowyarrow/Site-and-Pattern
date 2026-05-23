@@ -89,7 +89,7 @@ _CHAIKIN_ITERATIONS = 2
 # Edmonton bbox (loose) — used to pick the local data source.
 _EDM_BBOX = (53.39, 53.71, -113.71, -113.27)  # (south, north, west, east)
 
-# Slope ramp bins (% slope) → RGBA. Permaculture-friendly: green flat,
+# Slope ramp bins (% slope) → RGBA. Habitat-design friendly: green flat,
 # yellow/orange gentle, red steep, magenta hazardous.
 _SLOPE_RAMP = (
     (2.0,   (102, 187, 106, 140)),   # < 2%   flat → mid green

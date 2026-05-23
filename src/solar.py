@@ -3,7 +3,7 @@ solar.py — Solar position calculations for sun path overlay.
 
 Uses simplified astronomical formulas (no external deps) to compute
 sun altitude and azimuth for any lat/lng/datetime. Accurate to ~1°
-which is sufficient for permaculture design visualization.
+which is sufficient for native habitat design visualization.
 
 Reference: NOAA Solar Calculator methodology (simplified).
 """
@@ -138,7 +138,7 @@ def shadow_length_factor(sun_alt: float) -> float:
 EDMONTON_LAT = 53.5461
 EDMONTON_LNG = -113.4938
 
-# Key dates for permaculture design
+# Key dates for native habitat design — solstices, equinoxes, frost-free window
 KEY_DATES = {
     "Summer Solstice": date(2025, 6, 21),
     "Winter Solstice": date(2025, 12, 21),
