@@ -308,9 +308,10 @@ class MainWindow(QMainWindow):
     #
     #   * Source install (git checkout, `python main.py`) — runs
     #     `git fetch` + `git status` to detect upstream commits, then
-    #     offers a fast-forward `git pull`. Refuses to pull if the
-    #     working tree is dirty or the branch has diverged, so we never
-    #     trigger a merge from inside the app.
+    #     offers a fast-forward `git pull`. If the working tree is dirty,
+    #     gives the user three options: stash & update (safe, recoverable
+    #     via `git stash pop`), discard & update (destructive, with a
+    #     second confirm), or cancel. Refuses to auto-merge on divergence.
     #
     #   * Frozen install (PyInstaller .exe used by friends) — git isn't
     #     available, so we open the GitHub releases page in the default
@@ -344,8 +345,6 @@ class MainWindow(QMainWindow):
                 capture_output=True, text=True, timeout=timeout, check=False,
             )
 
-        # Refuse to update if working tree is dirty — pulling could clobber
-        # the user's in-progress edits.
         status = _git("status", "--porcelain")
         if status.returncode != 0:
             QMessageBox.warning(
@@ -354,19 +353,94 @@ class MainWindow(QMainWindow):
                 f"{status.stderr.strip() or status.stdout.strip()}"
             )
             return
+
         if status.stdout.strip():
-            QMessageBox.warning(
-                self, "Check for Updates",
-                "You have uncommitted local changes — refusing to pull to "
-                "avoid clobbering them.\n\n"
-                "Commit, stash, or discard your changes, then check again."
+            # Dirty working tree — give the user three explicit choices
+            # instead of just refusing.
+            dirty_files = [
+                line[3:] for line in status.stdout.strip().splitlines()[:6]
+            ]
+            preview = "\n".join(f"  · {f}" for f in dirty_files)
+            if len(status.stdout.strip().splitlines()) > 6:
+                preview += f"\n  · …and more"
+
+            box = QMessageBox(self)
+            box.setIcon(QMessageBox.Icon.Warning)
+            box.setWindowTitle("Local changes detected")
+            box.setText(
+                "You have uncommitted local changes — pulling now could "
+                "clobber them. How would you like to proceed?"
             )
+            box.setInformativeText(
+                f"Changed files:\n{preview}\n\n"
+                "• Stash & update — safest. Sets your changes aside in a "
+                "git stash, pulls, then restores them. If the restore "
+                "conflicts, the stash stays put so you can recover manually.\n\n"
+                "• Discard & update — destructive. Throws away all "
+                "uncommitted changes, then pulls. Requires a second confirm."
+            )
+            btn_stash   = box.addButton("Stash && update",
+                                        QMessageBox.ButtonRole.AcceptRole)
+            btn_discard = box.addButton("Discard && update",
+                                        QMessageBox.ButtonRole.DestructiveRole)
+            btn_cancel  = box.addButton(QMessageBox.StandardButton.Cancel)
+            box.setDefaultButton(btn_stash)
+            box.exec()
+
+            choice = box.clickedButton()
+            if choice is btn_cancel or choice is None:
+                return
+            if choice is btn_discard:
+                confirm = QMessageBox.question(
+                    self, "Discard all local changes?",
+                    "This will permanently delete every uncommitted change "
+                    "in your working tree (tracked-file edits will be "
+                    "reset to the last commit). Untracked files are left "
+                    "alone. Continue?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if confirm != QMessageBox.StandardButton.Yes:
+                    return
+                reset = _git("reset", "--hard", "HEAD")
+                if reset.returncode != 0:
+                    QMessageBox.warning(
+                        self, "Discard failed",
+                        "git reset --hard HEAD failed:\n\n"
+                        + (reset.stderr.strip() or reset.stdout.strip())
+                    )
+                    return
+                self._run_update_flow(_git, stash_to_restore=None)
+                return
+
+            # Stash & update
+            import time
+            stash_label = f"permadesign-auto-{int(time.time())}"
+            stash = _git("stash", "push", "--include-untracked",
+                         "-m", stash_label)
+            if stash.returncode != 0:
+                QMessageBox.warning(
+                    self, "Stash failed",
+                    "git stash failed:\n\n"
+                    + (stash.stderr.strip() or stash.stdout.strip())
+                )
+                return
+            self._run_update_flow(_git, stash_to_restore=stash_label)
             return
 
-        # Fetch the latest from the upstream branch.
+        # Clean working tree — proceed straight to the update flow.
+        self._run_update_flow(_git, stash_to_restore=None)
+
+    def _run_update_flow(self, git_runner, *, stash_to_restore):
+        """Shared update flow: fetch → ahead/behind check → pull → optional
+        stash-pop → restart prompt. `git_runner` is the closure `_git` from
+        the caller (already bound to the repo path). `stash_to_restore` is
+        a stash message label (or None) — when set, we `git stash pop`
+        after a successful pull and warn if the pop conflicts."""
         self.statusBar().showMessage("Checking for updates…", 2000)
-        fetch = _git("fetch", "--quiet")
+        fetch = git_runner("fetch", "--quiet")
         if fetch.returncode != 0:
+            self._maybe_restore_stash(git_runner, stash_to_restore)
             QMessageBox.warning(
                 self, "Check for Updates",
                 "Couldn't reach the git remote (check your network).\n\n"
@@ -374,10 +448,10 @@ class MainWindow(QMainWindow):
             )
             return
 
-        # Count commits we're behind / ahead of upstream.
-        behind = _git("rev-list", "--count", "HEAD..@{u}")
-        ahead  = _git("rev-list", "--count", "@{u}..HEAD")
+        behind = git_runner("rev-list", "--count", "HEAD..@{u}")
+        ahead  = git_runner("rev-list", "--count", "@{u}..HEAD")
         if behind.returncode != 0 or ahead.returncode != 0:
+            self._maybe_restore_stash(git_runner, stash_to_restore)
             QMessageBox.information(
                 self, "Check for Updates",
                 "This branch has no configured upstream. Set one with "
@@ -387,15 +461,17 @@ class MainWindow(QMainWindow):
 
         n_behind = int((behind.stdout or "0").strip() or 0)
         n_ahead  = int((ahead.stdout  or "0").strip() or 0)
-        branch   = _git("rev-parse", "--abbrev-ref", "HEAD").stdout.strip() or "?"
+        branch   = git_runner("rev-parse", "--abbrev-ref", "HEAD").stdout.strip() or "?"
 
         if n_behind == 0 and n_ahead == 0:
+            self._maybe_restore_stash(git_runner, stash_to_restore)
             QMessageBox.information(
                 self, "Check for Updates",
                 f"You're up to date on branch '{branch}'."
             )
             return
         if n_behind == 0 and n_ahead > 0:
+            self._maybe_restore_stash(git_runner, stash_to_restore)
             QMessageBox.information(
                 self, "Check for Updates",
                 f"You're {n_ahead} commit(s) ahead of the remote on '{branch}'. "
@@ -403,6 +479,7 @@ class MainWindow(QMainWindow):
             )
             return
         if n_ahead > 0 and n_behind > 0:
+            self._maybe_restore_stash(git_runner, stash_to_restore)
             QMessageBox.warning(
                 self, "Check for Updates",
                 f"Branch '{branch}' has diverged from the remote "
@@ -412,7 +489,7 @@ class MainWindow(QMainWindow):
             return
 
         # Behind only — show recent incoming commits and offer the pull.
-        log = _git("log", "--oneline", f"-{min(n_behind, 8)}", "HEAD..@{u}")
+        log = git_runner("log", "--oneline", f"-{min(n_behind, 8)}", "HEAD..@{u}")
         recent = log.stdout.strip() or "(commit log unavailable)"
         prompt = QMessageBox.question(
             self, "Update available",
@@ -423,21 +500,48 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if prompt != QMessageBox.StandardButton.Yes:
+            self._maybe_restore_stash(git_runner, stash_to_restore)
             return
 
-        pull = _git("pull", "--ff-only")
-        if pull.returncode == 0:
-            QMessageBox.information(
-                self, "Updated",
-                f"Pulled {n_behind} commit(s) from origin/{branch}.\n\n"
-                "Close and relaunch the app to load the new code."
-            )
-        else:
+        pull = git_runner("pull", "--ff-only")
+        if pull.returncode != 0:
+            self._maybe_restore_stash(git_runner, stash_to_restore)
             QMessageBox.warning(
                 self, "Pull failed",
                 "git pull --ff-only failed:\n\n"
                 + (pull.stderr.strip() or pull.stdout.strip())
             )
+            return
+
+        # Pull succeeded. If we stashed, try to restore.
+        stash_note = ""
+        if stash_to_restore:
+            pop = git_runner("stash", "pop")
+            if pop.returncode == 0:
+                stash_note = ("\n\nYour stashed local changes were restored "
+                              "cleanly.")
+            else:
+                stash_note = (
+                    "\n\nYour stash could NOT be auto-restored (likely a "
+                    "merge conflict with the incoming changes). It's still "
+                    f"saved as `{stash_to_restore}` — recover it with:\n"
+                    "    git stash list\n"
+                    "    git stash apply stash@{0}"
+                )
+        QMessageBox.information(
+            self, "Updated",
+            f"Pulled {n_behind} commit(s) from origin/{branch}.\n\n"
+            "Close and relaunch the app to load the new code."
+            + stash_note
+        )
+
+    def _maybe_restore_stash(self, git_runner, stash_label):
+        """Best-effort stash pop on the abort/error paths so a user who hit
+        Cancel mid-flow gets their working tree back. Silent on failure —
+        the stash entry remains and we don't pile on additional dialogs."""
+        if not stash_label:
+            return
+        git_runner("stash", "pop")
 
     def _open_releases_page(self):
         from PyQt6.QtCore import QUrl
