@@ -27,11 +27,11 @@ These reuse infrastructure that already exists; mostly UI copy + small data join
 - Change: group by **Alberta nursery source** (ALCLA, Bow Valley Habitat Development, Wild About Flowers, Bedrock Seed Bank); add a "seed vs. plug vs. container" column inferred from plant type; surface a footer link to each nursery.
 - Why: removes the biggest friction step between *design* and *actually planting it*.
 
-### R4. Maintenance estimator → Establishment Effort
+### R4. Maintenance estimator → Establishment Effort — **SHIPPED**
 - Existing: `src/planning_panel.py` P2 tab.
 - Change: split the labour number into **Year 1 establishment hours** (watering-in, weeding bare zones, smother prep) vs. **Year 3+ stewardship hours** (much lower for established native communities). Communicates the "front-load now, hands-off later" reality of native plantings.
 
-### R5. Water Budget → Establishment Water Budget
+### R5. Water Budget → Establishment Water Budget — **SHIPPED**
 - Existing: `src/planning_panel.py` P6 tab.
 - Change: same calculation, but two columns — Year 1 (full demand, irrigation often needed) and Year 3+ (most natives at 0–25% of base demand). Caveat for newly-seeded zones.
 
@@ -41,7 +41,7 @@ These reuse infrastructure that already exists; mostly UI copy + small data join
 
 These need a small amount of new schema or new UI but reuse the placement / map / DB infra.
 
-### N1. Reference ecosystem picker
+### N1. Reference ecosystem picker — **SHIPPED**
 - New tag on plant records: `ab_ecoregion` (one or more of: Aspen Parkland, Mixedgrass Prairie, Fescue Grassland, Foothills, Boreal Mixedwood, Riparian, Wet Meadow, Subalpine).
 - New top-of-app selector: "Restoring toward: \[Aspen Parkland Edge ▼\]". Filters the plant panel and tints out-of-region species.
 - Tagging the 433-plant DB is the bulk of the work; could be done with a Permapeople / iNaturalist cross-reference pass.

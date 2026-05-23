@@ -47,7 +47,7 @@ _GARDEN_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "garden_plants.json")
 
 # Current schema version — bump when adding columns/tables, or when the
 # bundled seed data changes meaningfully (forces a reseed on next start).
-_SCHEMA_VERSION = 10
+_SCHEMA_VERSION = 11
 
 
 def _ensure_data_dir():
@@ -147,6 +147,15 @@ def _migrate_to_v8(conn: sqlite3.Connection):
     conn.commit()
 
 
+def _migrate_to_v11(conn: sqlite3.Connection):
+    """Add ab_ecoregion column (Reference Ecosystem picker, N1)."""
+    try:
+        conn.execute("ALTER TABLE plants ADD COLUMN ab_ecoregion TEXT")
+    except sqlite3.OperationalError:
+        pass  # column already present
+    conn.commit()
+
+
 def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
     """
     Insert all plants from a JSON file into the plants table (skipping duplicates
@@ -175,6 +184,9 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
         uses = p.get("permaculture_uses", "")
         if isinstance(uses, list):
             uses = ", ".join(uses)
+        ecoregion = p.get("ab_ecoregion", "")
+        if isinstance(ecoregion, list):
+            ecoregion = ",".join(ecoregion)
         plant_rows.append((
             p.get("common_name", ""),
             p.get("scientific_name", ""),
@@ -199,6 +211,7 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("growth_rate"),
             p.get("years_to_maturity"),
             p.get("growth_curve"),
+            ecoregion,
         ))
 
     conn.executemany(
@@ -211,8 +224,9 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             bloom_period, fruit_period, native_to_alberta,
             edible_parts, deciduous_evergreen,
             soil_ph_min, soil_ph_max, perennial_or_annual,
-            growth_rate, years_to_maturity, growth_curve)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            growth_rate, years_to_maturity, growth_curve,
+            ab_ecoregion)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -278,6 +292,9 @@ def init_db() -> None:
 
         if current_version < 8:
             _migrate_to_v8(conn)
+
+        if current_version < 11:
+            _migrate_to_v11(conn)
 
         # Add parent_id to polycultures if missing
         try:
@@ -427,6 +444,7 @@ def search_plants(
     host_plant_only: bool = False,
     keystone_only: bool = False,
     bird_food_only: bool = False,
+    ab_ecoregion: str = "",
 ) -> list[dict]:
     """
     Return plants matching all supplied filters.
@@ -486,6 +504,12 @@ def search_plants(
 
     if bird_food_only:
         sql += " AND LOWER(permaculture_uses) LIKE '%bird_food%'"
+
+    if ab_ecoregion:
+        # ab_ecoregion column is a comma-separated list of region ids;
+        # match against any one of them with a substring-safe pattern.
+        sql += " AND (',' || ab_ecoregion || ',') LIKE ?"
+        params.append(f"%,{ab_ecoregion},%")
 
     sql += " ORDER BY plant_type, common_name"
 

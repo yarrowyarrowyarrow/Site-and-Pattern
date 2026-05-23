@@ -117,6 +117,9 @@ Features for long-term planning and tracking.
 | Plant community search, tooltips, double-click to place | Done |
 | Built-in plant communities (18 — original 8 + 10 habitat-focused: Keystone Pollinator Mound, Caterpillar Host Garden, Songbird Berry Patch, Continuous Bloom, Native Edible, Aspen Parkland Edge, Mixedgrass Prairie, Boreal Woodland Floor, Late-Season Pollinator Refuge, Riparian Willow Thicket) | Done |
 | Help → Check for Updates (git-pull fast-forward for source installs; releases-page link for .exe installs) | Done |
+| Establishment Effort estimator (Year 1 vs Year 3+ split, native plants drop ~70% post-establishment) | Done |
+| Establishment Water Budget (Year 1 vs Year 3+ split, native plants drop to ~20% baseline demand) | Done |
+| Reference Ecosystem picker (filter plants by AB ecoregion: aspen parkland, mixedgrass prairie, fescue foothills, boreal mixedwood, riparian, wet meadow, subalpine/montane) | Done |
 | Map legend (toggleable) | Done |
 | Keyboard shortcuts (P/G/B/M/Z/N/L/Esc) | Done |
 | Status bar seasonal tasks | Done |

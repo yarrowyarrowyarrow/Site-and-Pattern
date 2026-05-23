@@ -107,8 +107,10 @@ class PlanningPanel(QWidget):
         layout.setSpacing(6)
 
         info = QLabel(
-            "Estimated annual maintenance hours for\n"
-            "all placed plants and structures."
+            "Establishment vs. stewardship effort. Year 1\n"
+            "front-loads watering-in, weeding, and mulching;\n"
+            "established native plantings settle into a much\n"
+            "lower maintenance floor by Year 3+."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
@@ -124,7 +126,7 @@ class PlanningPanel(QWidget):
         hours_row.addWidget(self._avail_hours)
         layout.addLayout(hours_row)
 
-        btn = QPushButton("Calculate Maintenance")
+        btn = QPushButton("Calculate Establishment Effort")
         btn.setStyleSheet(
             "QPushButton { background: #2e7d32; color: #e8f5e9; border: 1px solid #43a047; "
             "border-radius: 4px; padding: 6px; font-weight: bold; }"
@@ -138,75 +140,135 @@ class PlanningPanel(QWidget):
         self._maint_results.setWordWrap(True)
         self._maint_results.setStyleSheet(
             "color: #c8e6c9; font-size: 12px; padding: 8px; "
-            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px;"
+            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px; "
+            "font-family: 'Consolas', 'Courier New', monospace;"
         )
-        self._maint_results.setMinimumHeight(120)
+        self._maint_results.setMinimumHeight(180)
         self._maint_results.setAlignment(Qt.AlignmentFlag.AlignTop)
         layout.addWidget(self._maint_results, 1)
 
         layout.addStretch()
-        self._tabs.addTab(tab, "Maintenance")
+        self._tabs.addTab(tab, "Effort")
+
+    # Year-1 establishment + Year-3+ stewardship multipliers, applied to the
+    # per-plant-type base hours. Native plantings ramp down dramatically once
+    # established (deep roots, locally-adapted, weather-resilient); cultivated
+    # / non-native plants stay closer to a steady annual cost.
+    _Y1_MULT_NATIVE      = 2.0
+    _Y1_MULT_CULTIVATED  = 1.5
+    _Y3_MULT_NATIVE      = 0.3
+    _Y3_MULT_CULTIVATED  = 1.0
 
     def _calc_maintenance(self):
-        from collections import Counter
         if not self._placed_plants and not self._structures:
             self._maint_results.setText("No plants or structures placed yet.")
             return
 
-        # Plant maintenance by type
-        type_counts: Counter = Counter()
-        type_hours: dict[str, float] = {}
+        # Per-type per-establishment-phase totals
+        type_totals: dict[str, dict[str, float]] = {}
         for p in self._placed_plants:
-            ptype = p.get("plant_type", "herb")
-            type_counts[ptype] += 1
+            ptype  = p.get("plant_type", "herb")
+            native = bool(p.get("native_to_alberta"))
+            base   = _PLANT_MAINTENANCE_HOURS.get(ptype, 1.5)
+            y1_mult = self._Y1_MULT_NATIVE if native else self._Y1_MULT_CULTIVATED
+            y3_mult = self._Y3_MULT_NATIVE if native else self._Y3_MULT_CULTIVATED
+            slot = type_totals.setdefault(
+                ptype, {"count": 0, "native": 0, "y1": 0.0, "y3": 0.0}
+            )
+            slot["count"]   += 1
+            slot["native"]  += 1 if native else 0
+            slot["y1"]      += base * y1_mult
+            slot["y3"]      += base * y3_mult
 
-        total_plant_hours = 0.0
-        plant_lines = []
-        for ptype in ["tree", "shrub", "herb", "groundcover", "vine", "root"]:
-            count = type_counts.get(ptype, 0)
-            if count == 0:
-                continue
-            hrs = _PLANT_MAINTENANCE_HOURS.get(ptype, 1.5) * count
-            total_plant_hours += hrs
-            plant_lines.append(f"  {ptype.title()}s: {count} × {_PLANT_MAINTENANCE_HOURS.get(ptype, 1.5):.1f} = {hrs:.0f} hrs")
+        plant_y1 = sum(s["y1"] for s in type_totals.values())
+        plant_y3 = sum(s["y3"] for s in type_totals.values())
 
-        # Structure maintenance
-        total_struct_hours = 0.0
+        # Structures: existing maintenance_hours_year is steady-state, applies to
+        # both Y1 and Y3+. (Initial install cost varies wildly and is one-time —
+        # explicitly excluded from the recurring estimate.)
+        total_struct = 0.0
         struct_lines = []
         for s in self._structures:
             hrs = s.get("maintenance_hours_year", 0)
             if hrs:
-                total_struct_hours += hrs
+                total_struct += hrs
                 struct_lines.append(f"  {s.get('name', '?')}: {hrs} hrs")
 
-        total = total_plant_hours + total_struct_hours
-        avail = self._avail_hours.value() * 52  # yearly
+        total_y1 = plant_y1 + total_struct
+        total_y3 = plant_y3 + total_struct
+        avail    = self._avail_hours.value() * 52
 
         # Build result text
-        lines = ["ANNUAL MAINTENANCE ESTIMATE", "=" * 36, ""]
-        if plant_lines:
-            lines.append("Plants:")
-            lines.extend(plant_lines)
-            lines.append(f"  Subtotal: {total_plant_hours:.0f} hrs/year")
-            lines.append("")
-        if struct_lines:
-            lines.append("Structures:")
-            lines.extend(struct_lines)
-            lines.append(f"  Subtotal: {total_struct_hours:.0f} hrs/year")
+        lines = [
+            "ESTABLISHMENT EFFORT  vs.  STEWARDSHIP",
+            "=" * 42,
+            f"                       Year 1     Year 3+",
+            "",
+        ]
+        if type_totals:
+            lines.append("Plants (by type):")
+            for ptype in ["tree", "shrub", "herb", "groundcover", "vine", "root"]:
+                if ptype not in type_totals:
+                    continue
+                slot = type_totals[ptype]
+                nat = slot["native"]
+                cnt = slot["count"]
+                lines.append(
+                    f"  {ptype.title()+'s':12s} {cnt:2d}  ({nat}/native)  "
+                    f"{slot['y1']:6.0f}   {slot['y3']:6.0f}"
+                )
+            lines.append(
+                f"  {'Subtotal':12s}                "
+                f"{plant_y1:6.0f}   {plant_y3:6.0f}"
+            )
             lines.append("")
 
-        lines.append("=" * 36)
-        lines.append(f"TOTAL: {total:.0f} hrs/year ({total/52:.1f} hrs/week)")
-        lines.append(f"Your capacity: {avail:.0f} hrs/year ({self._avail_hours.value():.0f} hrs/week)")
+        if struct_lines:
+            lines.append(f"Structures (steady-state, applies to both years):")
+            lines.extend(struct_lines)
+            lines.append(
+                f"  {'Subtotal':12s}                "
+                f"{total_struct:6.0f}   {total_struct:6.0f}"
+            )
+            lines.append(
+                "  (Installation labour is one-time and not included)"
+            )
+            lines.append("")
+
+        lines.append("=" * 42)
+        lines.append(
+            f"  {'TOTAL':12s}                "
+            f"{total_y1:6.0f}   {total_y3:6.0f}  hrs/year"
+        )
+        lines.append(
+            f"  {'per week':12s}                "
+            f"{total_y1/52:6.1f}   {total_y3/52:6.1f}  hrs/week"
+        )
+        lines.append(
+            f"  Your capacity: {avail:.0f} hrs/year "
+            f"({self._avail_hours.value():.0f} hrs/week)"
+        )
         lines.append("")
 
-        if total <= avail:
-            pct = (total / avail * 100) if avail > 0 else 0
-            lines.append(f"✓ Within capacity ({pct:.0f}% utilized)")
+        # Capacity feedback: compare Year 1 (the hard year) to capacity
+        if total_y1 <= avail:
+            pct = (total_y1 / avail * 100) if avail > 0 else 0
+            lines.append(f"✓ Year 1 within capacity ({pct:.0f}% utilized).")
         else:
-            over = total - avail
-            lines.append(f"⚠ Over capacity by {over:.0f} hrs/year!")
-            lines.append(f"  Consider reducing by {over/52:.1f} hrs/week")
+            over = total_y1 - avail
+            lines.append(f"⚠ Year 1 over capacity by {over:.0f} hrs.")
+            lines.append(
+                f"  Stagger planting across seasons or reduce by "
+                f"{over/52:.1f} hrs/week."
+            )
+
+        # Highlight the establishment payoff
+        if plant_y1 > 0 and plant_y3 < plant_y1:
+            drop = (1 - plant_y3 / plant_y1) * 100
+            lines.append(
+                f"✓ Stewardship effort drops {drop:.0f}% from Y1 → Y3+ "
+                "as natives establish."
+            )
 
         self._maint_results.setText("\n".join(lines))
 
@@ -588,8 +650,10 @@ class PlanningPanel(QWidget):
         layout.setSpacing(6)
 
         info = QLabel(
-            "Estimate total water needs of placed plants\n"
-            "vs. rainfall and catchment capacity."
+            "Establishment water (Year 1, heavy hand-watering)\n"
+            "vs. stewardship water (Year 3+, mostly natives at\n"
+            "0.2× base demand). Compared against growing-season\n"
+            "rainfall and catchment capacity."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
@@ -629,7 +693,7 @@ class PlanningPanel(QWidget):
 
         layout.addLayout(form)
 
-        btn = QPushButton("Calculate Water Budget")
+        btn = QPushButton("Calculate Establishment Water Budget")
         btn.setStyleSheet(
             "QPushButton { background: #0277bd; color: #e1f5fe; border: 1px solid #0288d1; "
             "border-radius: 4px; padding: 6px; font-weight: bold; }"
@@ -642,14 +706,23 @@ class PlanningPanel(QWidget):
         self._water_results.setWordWrap(True)
         self._water_results.setStyleSheet(
             "color: #c8e6c9; font-size: 12px; padding: 8px; "
-            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px;"
+            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px; "
+            "font-family: 'Consolas', 'Courier New', monospace;"
         )
-        self._water_results.setMinimumHeight(120)
+        self._water_results.setMinimumHeight(180)
         self._water_results.setAlignment(Qt.AlignmentFlag.AlignTop)
         layout.addWidget(self._water_results, 1)
 
         layout.addStretch()
         self._tabs.addTab(tab, "Water")
+
+    # Year-1 establishment / Year-3+ stewardship water multipliers, applied
+    # to the per-plant base × needs-level demand. Native plantings drop hard
+    # once established (deep roots, locally-adapted); cultivars stay near
+    # their full demand.
+    _WATER_Y1_MULT             = 1.5   # establishment irrigation for everything
+    _WATER_Y3_MULT_NATIVE      = 0.2   # established natives are nearly rain-fed
+    _WATER_Y3_MULT_CULTIVATED  = 1.0   # cultivars need ongoing water
 
     def _calc_water(self):
         if not self._placed_plants:
@@ -659,85 +732,119 @@ class PlanningPanel(QWidget):
         # Growing season = May-Sep (5 months, ~22 weeks)
         growing_weeks = 22
 
-        # Calculate plant water demand
-        total_demand_L = 0.0
-        type_demands: dict[str, tuple[int, float]] = {}  # type -> (count, litres)
-
-        try:
-            from src.db.plants import get_plant
-        except Exception:
-            get_plant = lambda pid: None
-
+        # Per-type Y1 / Y3+ demand (seasonal litres). All needed fields
+        # (plant_type, water_needs, native_to_alberta) are pre-populated by
+        # _sync_planning_panel in app.py, so we don't need DB lookups here.
+        type_demands: dict[str, dict[str, float]] = {}
+        total_y1_L = 0.0
+        total_y3_L = 0.0
         for p in self._placed_plants:
-            ptype = p.get("plant_type", "herb")
-            plant_data = get_plant(p["plant_id"]) if "plant_id" in p else None
-            water_needs = (plant_data or {}).get("water_needs", "medium")
+            ptype       = p.get("plant_type", "herb")
+            native      = bool(p.get("native_to_alberta"))
+            water_needs = p.get("water_needs") or "medium"
             base = _PLANT_WATER_NEEDS_L_WEEK.get(ptype, 8.0)
             mult = _WATER_MULTIPLIER.get(water_needs, 1.0)
             weekly = base * mult
-            seasonal = weekly * growing_weeks
+            seasonal_baseline = weekly * growing_weeks
 
-            if ptype not in type_demands:
-                type_demands[ptype] = (0, 0.0)
-            cnt, tot = type_demands[ptype]
-            type_demands[ptype] = (cnt + 1, tot + seasonal)
-            total_demand_L += seasonal
+            y1 = seasonal_baseline * self._WATER_Y1_MULT
+            y3 = seasonal_baseline * (
+                self._WATER_Y3_MULT_NATIVE if native
+                else self._WATER_Y3_MULT_CULTIVATED
+            )
 
-        # Rainfall on garden area
+            slot = type_demands.setdefault(
+                ptype, {"count": 0, "native": 0, "y1": 0.0, "y3": 0.0}
+            )
+            slot["count"]  += 1
+            slot["native"] += 1 if native else 0
+            slot["y1"]     += y1
+            slot["y3"]     += y3
+            total_y1_L     += y1
+            total_y3_L     += y3
+
+        # Rainfall on garden area (growing season May–Sep)
         garden_m2 = self._garden_area.value()
-        # Growing season rainfall (May-Sep)
-        growing_rain_mm = sum(_EDMONTON_MONTHLY_RAINFALL_MM[4:9])  # May=4, Sep=8
-        rainfall_L = growing_rain_mm * garden_m2  # 1mm on 1m² = 1L
+        growing_rain_mm = sum(_EDMONTON_MONTHLY_RAINFALL_MM[4:9])
+        rainfall_L = growing_rain_mm * garden_m2
 
-        # Catchment: roof → barrels
+        # Catchment
         roof_m2 = self._roof_area.value()
-        # Assume 80% efficiency
         roof_catchment_L = growing_rain_mm * roof_m2 * 0.8
         barrel_capacity_L = self._rain_barrels.value() * 200
-
-        # Swale infiltration bonus (rough: each swale retains ~2000L/season)
+        captured_L = min(roof_catchment_L, barrel_capacity_L)
         swale_L = self._has_swale.value() * 2000
-
-        # Pond storage (rough: each pond ~5000L usable)
-        pond_L = self._has_pond.value() * 5000
-
-        total_supply = rainfall_L + min(roof_catchment_L, barrel_capacity_L) + swale_L + pond_L
+        pond_L  = self._has_pond.value()  * 5000
+        total_supply = rainfall_L + captured_L + swale_L + pond_L
 
         # Build result
-        lines = ["WATER BUDGET (Growing Season: May–Sep)", "=" * 40, ""]
-
-        lines.append("DEMAND:")
+        lines = [
+            "WATER BUDGET — Growing Season May–Sep",
+            "=" * 42,
+            f"                          Year 1      Year 3+",
+            "",
+            "DEMAND (plants):",
+        ]
         for ptype in ["tree", "shrub", "herb", "groundcover", "vine", "root"]:
-            if ptype in type_demands:
-                cnt, tot = type_demands[ptype]
-                lines.append(f"  {ptype.title()}s ({cnt}): {tot:.0f} L")
-        lines.append(f"  Total demand: {total_demand_L:.0f} L ({total_demand_L/1000:.1f} m³)")
+            if ptype not in type_demands:
+                continue
+            slot = type_demands[ptype]
+            lines.append(
+                f"  {ptype.title()+'s':12s} {slot['count']:2d}  ({slot['native']}/native)  "
+                f"{slot['y1']:7.0f} L  {slot['y3']:7.0f} L"
+            )
+        lines.append(
+            f"  {'Total':12s}                "
+            f"{total_y1_L:7.0f} L  {total_y3_L:7.0f} L"
+        )
+        lines.append(
+            f"  {'(m³)':12s}                "
+            f"{total_y1_L/1000:7.1f}    {total_y3_L/1000:7.1f}"
+        )
         lines.append("")
 
-        lines.append("SUPPLY:")
-        lines.append(f"  Rainfall on garden ({garden_m2:.0f} m²): {rainfall_L:.0f} L")
-        if barrel_capacity_L > 0:
-            lines.append(f"  Rain barrels ({self._rain_barrels.value()} × 200L): {min(roof_catchment_L, barrel_capacity_L):.0f} L")
+        lines.append("SUPPLY (seasonal):")
+        lines.append(f"  Rainfall on garden ({garden_m2:.0f} m²): {rainfall_L:7.0f} L")
+        if captured_L > 0:
+            lines.append(
+                f"  Rain barrels ({self._rain_barrels.value()} × 200L, "
+                f"roof-fed): {captured_L:7.0f} L"
+            )
         if swale_L > 0:
-            lines.append(f"  Swales ({self._has_swale.value()}): ~{swale_L:.0f} L")
+            lines.append(f"  Swales ({self._has_swale.value()}): {swale_L:7.0f} L")
         if pond_L > 0:
-            lines.append(f"  Ponds ({self._has_pond.value()}): ~{pond_L:.0f} L")
-        lines.append(f"  Total supply: {total_supply:.0f} L ({total_supply/1000:.1f} m³)")
+            lines.append(f"  Ponds ({self._has_pond.value()}): {pond_L:7.0f} L")
+        lines.append(f"  Total supply:                          {total_supply:7.0f} L")
         lines.append("")
 
-        lines.append("=" * 40)
-        balance = total_supply - total_demand_L
-        if balance >= 0:
-            lines.append(f"✓ Surplus: {balance:.0f} L ({balance/1000:.1f} m³)")
-            lines.append("  Water-smart design!")
-        else:
-            deficit = -balance
-            lines.append(f"⚠ Deficit: {deficit:.0f} L ({deficit/1000:.1f} m³)")
-            # How many extra barrels needed?
-            if deficit > 0:
-                extra_barrels = int(deficit / 200) + 1
-                lines.append(f"  ≈ {extra_barrels} more rain barrels needed")
-                lines.append(f"  or reduce demand by {deficit/growing_weeks:.0f} L/week")
+        lines.append("=" * 42)
+        bal_y1 = total_supply - total_y1_L
+        bal_y3 = total_supply - total_y3_L
+
+        def _balance_line(label: str, bal: float) -> str:
+            mark = "✓" if bal >= 0 else "⚠"
+            tag  = "Surplus" if bal >= 0 else "Deficit"
+            v    = abs(bal)
+            return f"  {mark} {label}: {tag} {v:.0f} L ({v/1000:.1f} m³)"
+
+        lines.append(_balance_line("Year 1   ", bal_y1))
+        lines.append(_balance_line("Year 3+  ", bal_y3))
+        lines.append("")
+
+        # Suggestions for the Year-1 deficit (the hard year)
+        if bal_y1 < 0:
+            deficit = -bal_y1
+            extra_barrels = int(deficit / 200) + 1
+            lines.append(f"Year 1 needs ≈ {extra_barrels} more rain barrels,")
+            lines.append(f"or {deficit/growing_weeks:.0f} L/week of supplemental")
+            lines.append("hand-watering during establishment.")
+
+        # Highlight the native-rooted payoff
+        if total_y1_L > 0 and total_y3_L < total_y1_L:
+            drop = (1 - total_y3_L / total_y1_L) * 100
+            lines.append(
+                f"✓ Demand drops {drop:.0f}% from Y1 → Y3+ as natives root in."
+            )
 
         self._water_results.setText("\n".join(lines))
 

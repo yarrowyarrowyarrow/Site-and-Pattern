@@ -2740,6 +2740,7 @@ class MainWindow(QMainWindow):
                 if plant_data:
                     entry["plant_type"] = plant_data.get("plant_type", "herb")
                     entry["water_needs"] = plant_data.get("water_needs", "medium")
+                    entry["native_to_alberta"] = bool(plant_data.get("native_to_alberta"))
             except Exception:
                 pass
             enriched.append(entry)

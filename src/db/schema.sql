@@ -26,7 +26,12 @@ CREATE TABLE IF NOT EXISTS plants (
     -- Growth data (schema v5) for succession/timeline planning
     growth_rate TEXT,               -- slow | moderate | fast
     years_to_maturity INTEGER,      -- estimated years to reach mature size
-    growth_curve TEXT               -- fast_early | steady | slow_start
+    growth_curve TEXT,              -- fast_early | steady | slow_start
+    -- Schema v11
+    ab_ecoregion TEXT               -- comma-separated AB ecoregion tags
+                                    -- (aspen_parkland, mixedgrass_prairie,
+                                    --  fescue_foothills, boreal_mixedwood,
+                                    --  riparian, wet_meadow, subalpine_montane)
 );
 
 CREATE TABLE IF NOT EXISTS companion_friends (

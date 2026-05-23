@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import (
     Qt, QTimer, QThread, pyqtSignal, QSize, QAbstractListModel,
-    QModelIndex, QRect, QEvent,
+    QModelIndex, QRect, QEvent, QSettings,
 )
 from PyQt6.QtGui import (
     QColor, QIcon, QPixmap, QPainter, QFont, QBrush, QPen, QPalette,
@@ -91,6 +91,23 @@ _USE_LABELS: dict[str, str] = {
     "water_purification": "Water Purification",
     "aquatic":            "Aquatic",
 }
+
+
+# ── Alberta ecoregion choices (Reference Ecosystem picker, N1) ────────────────
+# Order matches the dropdown; the empty-string id is "any ecoregion" (no
+# filter).  Keep the ids in sync with the comma-separated tags stored in
+# plants.ab_ecoregion (see data/plants_master.json + src/db/plants.py
+# heuristic tagging pass).
+_AB_ECOREGION_CHOICES: list[tuple[str, str]] = [
+    ("Any ecoregion",          ""),
+    ("Aspen Parkland (central AB)", "aspen_parkland"),
+    ("Mixedgrass Prairie (south AB)", "mixedgrass_prairie"),
+    ("Fescue / Foothills (SW AB)",    "fescue_foothills"),
+    ("Boreal Mixedwood (north AB)",   "boreal_mixedwood"),
+    ("Riparian (streamside)",         "riparian"),
+    ("Wet Meadow / Marsh",            "wet_meadow"),
+    ("Subalpine / Montane (mountains)", "subalpine_montane"),
+]
 
 
 # ── Calendar status colours & labels ─────────────────────────────────────────
@@ -819,7 +836,35 @@ class PlantPanel(QWidget):
         self._search_timer.timeout.connect(self._run_search)
 
         self._build_ui()
+
+        # Restore the user's last "Restoring toward X" ecoregion choice so
+        # it survives a restart. _on_ecoregion_changed is wired in
+        # _build_ui, so guard against an infinite save-during-load loop by
+        # setting via index without triggering an extra save.
+        self._restore_ecoregion_preference()
+
         self._run_search()   # populate on startup
+
+    _SETTINGS_ECOREGION_KEY = "plant_panel/ab_ecoregion"
+
+    def _restore_ecoregion_preference(self):
+        settings = QSettings()
+        saved = settings.value(self._SETTINGS_ECOREGION_KEY, "", type=str)
+        if not saved:
+            return
+        for i in range(self._ecoregion_combo.count()):
+            if self._ecoregion_combo.itemData(i) == saved:
+                self._ecoregion_combo.blockSignals(True)
+                self._ecoregion_combo.setCurrentIndex(i)
+                self._ecoregion_combo.blockSignals(False)
+                return
+
+    def _on_ecoregion_changed(self, _idx: int):
+        QSettings().setValue(
+            self._SETTINGS_ECOREGION_KEY,
+            self._combo_value(self._ecoregion_combo),
+        )
+        self._run_search()
 
     # ── Build ─────────────────────────────────────────────────────────────────
 
@@ -985,6 +1030,24 @@ class PlantPanel(QWidget):
 
         habitat_row.addStretch(1)
         top_layout.addLayout(habitat_row)
+
+        # ── Reference ecosystem picker (N1) ──────────────────────────────
+        # Drives a server-side filter on plants.ab_ecoregion.  Each label is
+        # an Alberta ecoregion; selecting one narrows the result list to
+        # plants documented from that ecoregion.  Persisted across sessions
+        # via QSettings so the user's "I'm restoring toward X" choice
+        # survives a restart.
+        ecoregion_row = QHBoxLayout()
+        ecoregion_row.setSpacing(4)
+        ecoregion_row.addWidget(QLabel("Restoring toward:"))
+        self._ecoregion_combo = self._make_combo(_AB_ECOREGION_CHOICES)
+        self._ecoregion_combo.setToolTip(
+            "Filter the plant list to species documented from a specific\n"
+            "Alberta ecoregion. Use 'Any ecoregion' to see everything."
+        )
+        self._ecoregion_combo.currentIndexChanged.connect(self._on_ecoregion_changed)
+        ecoregion_row.addWidget(self._ecoregion_combo, 1)
+        top_layout.addLayout(ecoregion_row)
 
         # Result count label
         self._result_count = QLabel("Results: —")
@@ -1223,6 +1286,7 @@ class PlantPanel(QWidget):
                 host_plant_only = self._host_btn.isChecked(),
                 keystone_only   = self._keystone_btn.isChecked(),
                 bird_food_only  = self._birdfood_btn.isChecked(),
+                ab_ecoregion    = self._combo_value(self._ecoregion_combo),
             )
         except Exception as exc:
             self._result_count.setText(f"Error: {exc}")

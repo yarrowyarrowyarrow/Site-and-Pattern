@@ -29,6 +29,7 @@ Open the **Plants** tab.
 
 - Type a name in **Search plants…**.
 - Narrow with the filter rows: **Type / Sun / Water / Use** combos, plus toggles for **Native AB**, **Edible**, **Medicinal**, **N-Fixer**, **Pollinator**, **Perennial**, and the habitat-focused trio **Keystone**, **Host Plant**, **Bird Food**.
+- Pick a target Alberta ecoregion in **Restoring toward:** to filter the plant list to species documented from that region — Aspen Parkland, Mixedgrass Prairie, Fescue/Foothills, Boreal Mixedwood, Riparian, Wet Meadow, or Subalpine/Montane. The choice persists across sessions.
 - Click the **▶ chevron** on any row to expand it inline. You'll see the full data block — sun, water, spacing, height, bloom, fruit, edible parts, uses — plus a **colour-coded 12-month planting calendar** and notes.
 
 Long names automatically wrap to two lines so nothing is hidden.
@@ -126,11 +127,11 @@ The View bar (🛰 Satellite, ⬡ Boundary, 📏 Measurement, **#** Grid, ✿ Pl
 
 ## 10. Planning helpers (Planning tab)
 
-- **Maintenance estimator** — enter your available hrs/week, click *Calculate Maintenance* to compare the design against your time budget.
+- **Establishment Effort estimator** — splits maintenance hours into **Year 1** (heavy: watering-in, weeding bare zones, mulching, smother prep) and **Year 3+** (stewardship floor — established natives drop to ~30% of Y1 effort while cultivated plants stay closer to 100%). Enter your available hrs/week; the tool checks Year 1 against your capacity and reports the post-establishment drop-off.
 - **Wildlife Forage** — month-by-month expandable tree of pollinator blooms and bird food (berries / seeds) from your placed plants. Expand a month to see the individual plants. Apr–Oct months with no bloom source are flagged red as **nectar gaps**.
 - **Human Forage** — companion calendar for edible plants in your design. Shows what you can harvest each month with the edible part annotated (berries, leaves, roots, etc.).
 - **Habitat Value Score** (Analysis panel) — composite 0–100 score derived from native ratio, keystone species, host plants, bird-food species, vegetation-layer diversity, habitat structures, and bloom continuity. The panel also generates **Tips for raising your score**: concrete Alberta-native plant and habitat-structure suggestions targeted at your lowest-scoring categories (e.g., "Add host plants: …", "Fill nectar gaps in June: …"). Based on Doug Tallamy's keystone-species framework.
-- **Water budget** — enter garden area, rain barrels, roof catchment, swales, ponds → *Calculate Water Budget* shows demand vs. supply and any deficit.
+- **Establishment Water Budget** — same garden / catchment inputs, but the demand splits into **Year 1** (1.5× baseline for establishment irrigation) and **Year 3+** (natives drop to ~0.2× baseline once rooted; cultivars stay at 1.0×). Shows both surpluses / deficits side-by-side, plus a suggested extra-barrel count for the Year-1 deficit.
 - **Succession timeline** — drag the year slider 0–20 to see how the design matures.
 - **Notes / journal** — free-form text editor with **Add Timestamp** and **+ Section** buttons.
 
