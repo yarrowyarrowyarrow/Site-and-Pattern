@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QComboBox, QDoubleSpinBox, QSpinBox,
     QFormLayout, QTabWidget, QSlider, QCheckBox, QColorDialog,
-    QGroupBox, QFrame,
+    QGroupBox, QFrame, QTextEdit,
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor
@@ -617,8 +617,23 @@ class AnalysisPanel(QWidget):
             "font-family: 'Consolas', 'Courier New', monospace;"
         )
         self._habitat_breakdown.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self._habitat_breakdown.setMinimumHeight(280)
+        self._habitat_breakdown.setMinimumHeight(220)
         layout.addWidget(self._habitat_breakdown, 1)
+
+        # Tips for raising your score
+        tips_label = QLabel("Tips for raising your score")
+        tips_label.setStyleSheet("color: #a5d6a7; font-size: 12px; font-weight: bold; padding: 4px 0 2px 0;")
+        layout.addWidget(tips_label)
+
+        self._habitat_tips = QTextEdit()
+        self._habitat_tips.setReadOnly(True)
+        self._habitat_tips.setStyleSheet(
+            "QTextEdit { background: #1a2a1a; color: #c8e6c9; "
+            "border: 1px solid #2e4a2e; border-radius: 4px; padding: 6px; "
+            "font-size: 11px; }"
+        )
+        self._habitat_tips.setMinimumHeight(160)
+        layout.addWidget(self._habitat_tips, 1)
 
         # Reference link
         ref = QLabel(
@@ -630,7 +645,6 @@ class AnalysisPanel(QWidget):
         ref.setStyleSheet("color: #607d8b; font-size: 10px; font-style: italic;")
         layout.addWidget(ref)
 
-        layout.addStretch()
         self._tabs.addTab(tab, "Habitat Value")
 
     # Mapping from plant_type to vegetation layer used for layer-diversity scoring.
@@ -802,6 +816,229 @@ class AnalysisPanel(QWidget):
         lines.append(f"Total {n_total_plants} plants, {n_species} species")
 
         self._habitat_breakdown.setText("\n".join(lines))
+
+        # ── Tips: targeted suggestions for the lowest-scoring categories ──
+        placed_ids = set(plant_rows.keys())
+        tips_html = self._build_habitat_tips(
+            native_ratio=native_ratio,
+            n_keystone=len(keystone_species),
+            n_host=len(host_species),
+            n_bird=len(bird_species),
+            layers_present=(layers_present & canonical),
+            habitat_struct_types=habitat_struct_types,
+            gap_months=sorted(growing - bloom_months),
+            placed_ids=placed_ids,
+        )
+        self._habitat_tips.setHtml(tips_html)
+
+    # Canonical layer names paired with the plant_types that fulfil them.
+    _LAYER_TO_PLANT_TYPES = {
+        "overstory":   ["tree"],
+        "shrub":       ["shrub"],
+        "herbaceous":  ["herb", "root"],
+        "groundcover": ["groundcover"],
+        "vine":        ["vine"],
+    }
+
+    _STRUCTURE_NAMES = {
+        "pond":             "Pond",
+        "swale":            "Bioswale",
+        "rain_garden":      "Rain Garden",
+        "rain_barrel":      "Rain Barrel",
+        "native_bee_log":   "Native Bee Habitat Log",
+        "bee_hotel":        "Bee Hotel",
+        "brush_pile":       "Brush Pile",
+        "snag":             "Snag (standing deadwood)",
+        "rock_xeriscape":   "Rock Xeriscape",
+        "native_lawn_patch":"Native Lawn Patch",
+    }
+
+    def _build_habitat_tips(
+        self, *,
+        native_ratio: float,
+        n_keystone: int,
+        n_host: int,
+        n_bird: int,
+        layers_present: set[str],
+        habitat_struct_types: set[str],
+        gap_months: list[int],
+        placed_ids: set[int],
+    ) -> str:
+        """Return an HTML string of targeted tips for raising the habitat
+        score. Each suggestion lists concrete Alberta-native examples
+        pulled from the plant DB, excluding species already in the design."""
+        try:
+            from src.db.plants import get_connection
+            conn = get_connection()
+        except Exception:
+            return "<p style='color:#90a4ae;'>Tips unavailable — plant DB not loaded.</p>"
+
+        def examples_for_tag(tag: str, limit: int = 5) -> list[str]:
+            """Native AB plants tagged `tag`, not yet placed, alphabetical."""
+            sql = (
+                "SELECT common_name FROM plants "
+                "WHERE native_to_alberta = 1 "
+                "  AND LOWER(permaculture_uses) LIKE ?"
+            )
+            params: list = [f"%{tag}%"]
+            if placed_ids:
+                sql += " AND id NOT IN (" + ",".join("?" * len(placed_ids)) + ")"
+                params += list(placed_ids)
+            sql += " ORDER BY common_name"
+            try:
+                rows = conn.execute(sql, params).fetchall()
+            except Exception:
+                return []
+            return [r["common_name"] for r in rows][:limit]
+
+        def examples_for_layer(layer: str, limit: int = 5) -> list[str]:
+            ptypes = self._LAYER_TO_PLANT_TYPES.get(layer, [])
+            if not ptypes:
+                return []
+            placeholders = ",".join("?" * len(ptypes))
+            sql = (
+                "SELECT common_name FROM plants "
+                f"WHERE native_to_alberta = 1 AND plant_type IN ({placeholders})"
+            )
+            params: list = list(ptypes)
+            if placed_ids:
+                sql += " AND id NOT IN (" + ",".join("?" * len(placed_ids)) + ")"
+                params += list(placed_ids)
+            sql += " ORDER BY common_name"
+            try:
+                rows = conn.execute(sql, params).fetchall()
+            except Exception:
+                return []
+            return [r["common_name"] for r in rows][:limit]
+
+        def examples_for_bloom_month(month_num: int, limit: int = 4) -> list[str]:
+            """Native AB plants whose bloom_period covers `month_num`."""
+            try:
+                rows = conn.execute(
+                    "SELECT common_name, bloom_period FROM plants "
+                    "WHERE native_to_alberta = 1 AND bloom_period IS NOT NULL "
+                    "  AND bloom_period <> ''"
+                ).fetchall()
+            except Exception:
+                return []
+            matches = []
+            for r in rows:
+                if month_num in self._parse_month_range(r["bloom_period"] or ""):
+                    if r["common_name"] not in matches:
+                        matches.append(r["common_name"])
+            # Cheap filter against placed names (best-effort: we don't have
+            # ids here, so we compare by name)
+            placed_names: set[str] = set()
+            if placed_ids:
+                try:
+                    qmarks = ",".join("?" * len(placed_ids))
+                    placed_rows = conn.execute(
+                        f"SELECT common_name FROM plants WHERE id IN ({qmarks})",
+                        list(placed_ids)
+                    ).fetchall()
+                    placed_names = {r["common_name"] for r in placed_rows}
+                except Exception:
+                    pass
+            matches = [m for m in matches if m not in placed_names]
+            matches.sort()
+            return matches[:limit]
+
+        try:
+            tips: list[str] = []
+            month_names = ["Jan","Feb","Mar","Apr","May","Jun",
+                           "Jul","Aug","Sep","Oct","Nov","Dec"]
+
+            if native_ratio < 0.70:
+                pct = int(round(native_ratio * 100))
+                tips.append(
+                    f"<b style='color:#a5d6a7;'>Lift the native ratio ({pct}%).</b> "
+                    f"Every cultivar you swap for an Alberta native raises this score "
+                    f"directly. Aim for 70%+ native — that's the Tallamy threshold for "
+                    f"functional habitat."
+                )
+
+            if n_keystone < 5:
+                examples = examples_for_tag("keystone_species")
+                if examples:
+                    tips.append(
+                        f"<b style='color:#a5d6a7;'>Add keystone species "
+                        f"({n_keystone} of 5).</b> Keystones support the bulk of local "
+                        f"insect biodiversity. Try: {', '.join(examples)}."
+                    )
+
+            if n_host < 10:
+                examples = examples_for_tag("host_plant")
+                if examples:
+                    tips.append(
+                        f"<b style='color:#a5d6a7;'>Add host plants "
+                        f"({n_host} of 10).</b> Specialist caterpillars need specific "
+                        f"native hosts. Try: {', '.join(examples)}."
+                    )
+
+            if n_bird < 10:
+                examples = examples_for_tag("bird_food")
+                if examples:
+                    tips.append(
+                        f"<b style='color:#a5d6a7;'>Add bird-food species "
+                        f"({n_bird} of 10).</b> Berries, seed heads, and cones feed "
+                        f"resident and migratory birds. Try: {', '.join(examples)}."
+                    )
+
+            missing_layers = {"overstory","shrub","herbaceous","groundcover","vine"} - layers_present
+            # Vine is often optional; surface it last
+            order = ["overstory","shrub","herbaceous","groundcover","vine"]
+            for layer in order:
+                if layer not in missing_layers:
+                    continue
+                examples = examples_for_layer(layer)
+                if not examples:
+                    continue
+                tips.append(
+                    f"<b style='color:#a5d6a7;'>Add a {layer} layer.</b> "
+                    f"Try: {', '.join(examples)}."
+                )
+
+            missing_structs = [
+                sid for sid in self._HABITAT_STRUCTURE_IDS
+                if sid not in habitat_struct_types
+            ]
+            if len(habitat_struct_types) < 5 and missing_structs:
+                names = [self._STRUCTURE_NAMES.get(s, s) for s in missing_structs[:5]]
+                tips.append(
+                    f"<b style='color:#a5d6a7;'>Add habitat structures "
+                    f"({len(habitat_struct_types)} of 5).</b> Structural diversity "
+                    f"shelters wildlife year-round. Try: {', '.join(names)}."
+                )
+
+            if gap_months:
+                gap_lines = []
+                for m in gap_months[:3]:  # cap at 3 most-urgent gaps
+                    examples = examples_for_bloom_month(m)
+                    if examples:
+                        gap_lines.append(
+                            f"<i>{month_names[m-1]}:</i> {', '.join(examples)}"
+                        )
+                if gap_lines:
+                    tips.append(
+                        "<b style='color:#a5d6a7;'>Fill nectar gaps.</b> "
+                        "Plants blooming in the gap months — "
+                        + "; ".join(gap_lines)
+                    )
+
+            if not tips:
+                return (
+                    "<p style='color:#a5d6a7;'>You're hitting every category. "
+                    "Keep adding species diversity and small structural elements "
+                    "(snags, brush piles, water features) as your habitat matures.</p>"
+                )
+
+            body = "<ul style='margin:0;padding-left:18px;'>"
+            for t in tips:
+                body += f"<li style='margin-bottom:6px;'>{t}</li>"
+            body += "</ul>"
+            return body
+        finally:
+            conn.close()
 
     @staticmethod
     def _parse_month_range(text: str) -> list[int]:

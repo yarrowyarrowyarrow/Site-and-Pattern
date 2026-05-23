@@ -64,7 +64,7 @@ Features for long-term planning and tracking.
 |----|---------|-------------|--------|
 | P1 | **Succession / timeline planner** | A time slider showing how the design evolves: Year 1 (annuals), Year 3 (young shrubs), Year 10 (full canopy). Plants grow/appear based on their mature size over time | Planned |
 | P2 | **Maintenance / labor estimator** | Each element gets estimated hours/year. The app totals it up so you know if you're over-designing for your available time | Done |
-| P3 | **Bloom & berry calendar** | Monthly view of pollinator nectar (blooms) and bird food (berries/seeds), with nectar-gap flagging across the growing season | Done |
+| P3 | **Wildlife & Human Forage calendars** | Two expandable tree views — Wildlife Forage (pollinator nectar + bird food, nectar-gap flagging) and Human Forage (edible plants by harvest window). Each month expands to the individual plants providing forage. | Done |
 | P4 | **Crop rotation tracker** | For annual beds, track what was planted where each season to avoid repeating families | Planned |
 | P5 | **Input/output mapping** | Tag elements with inputs (water, fertilizer) and outputs (manure, mulch, food). Highlight "energy leaks" where outputs aren't connected to nearby inputs | Planned |
 | P6 | **Water budget calculator** | Estimate total water needs of placed plants vs. rainfall + any catchment (rain barrels, swales, pond) | Done |
@@ -130,8 +130,10 @@ Features for long-term planning and tracking.
 | Slope / contour indicator (manual contour lines, elevation labels, slope arrows) | Done |
 | Wind sector & windbreak effect (16 directions, shelter zones 10× height) | Done |
 | Maintenance / labour estimator (plants + structures, capacity check) | Done |
-| Bloom & berry calendar (bloom_period + fruit_period; nectar-gap detection) | Done |
-| Habitat Value Score (composite 0–100: natives, keystone, host, bird food, layers, structures, bloom continuity) | Done |
+| Wildlife Forage calendar (bloom_period + fruit_period; expandable monthly tree; nectar-gap detection) | Done |
+| Human Forage calendar (edible_parts gated; planting-calendar harvest months + fruit_period fallback) | Done |
+| Habitat Value Score (composite 0–100; tips suggest concrete plants/structures for low-scoring categories) | Done |
+| Alberta rainfall climate-normal fallback (Open-Meteo live → bundled AB station normals when offline) | Done |
 | Water budget calculator (demand vs rainfall + catchment) | Done |
 | Print / PDF export (map screenshot, plant list, notes, title block) | Done |
 | Design notes / journal (per-project, timestamps, saved in GeoJSON) | Done |

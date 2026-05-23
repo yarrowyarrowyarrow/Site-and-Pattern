@@ -114,8 +114,9 @@ The View bar (🛰 Satellite, ⬡ Boundary, 📏 Measurement, **#** Grid, ✿ Pl
 ## 10. Planning helpers (Planning tab)
 
 - **Maintenance estimator** — enter your available hrs/week, click *Calculate Maintenance* to compare the design against your time budget.
-- **Bloom & berry calendar** — month-by-month view of pollinator blooms and bird food (berries / seeds) from your placed plants. Months with no bloom source during the Apr–Oct growing season are flagged red as **nectar gaps** to fill.
-- **Habitat Value Score** (Analysis panel) — composite 0–100 score derived from native ratio, keystone species, host plants, bird-food species, vegetation-layer diversity, habitat structures, and bloom continuity. Based on Doug Tallamy's keystone-species framework.
+- **Wildlife Forage** — month-by-month expandable tree of pollinator blooms and bird food (berries / seeds) from your placed plants. Expand a month to see the individual plants. Apr–Oct months with no bloom source are flagged red as **nectar gaps**.
+- **Human Forage** — companion calendar for edible plants in your design. Shows what you can harvest each month with the edible part annotated (berries, leaves, roots, etc.).
+- **Habitat Value Score** (Analysis panel) — composite 0–100 score derived from native ratio, keystone species, host plants, bird-food species, vegetation-layer diversity, habitat structures, and bloom continuity. The panel also generates **Tips for raising your score**: concrete Alberta-native plant and habitat-structure suggestions targeted at your lowest-scoring categories (e.g., "Add host plants: …", "Fill nectar gaps in June: …"). Based on Doug Tallamy's keystone-species framework.
 - **Water budget** — enter garden area, rain barrels, roof catchment, swales, ponds → *Calculate Water Budget* shows demand vs. supply and any deficit.
 - **Succession timeline** — drag the year slider 0–20 to see how the design matures.
 - **Notes / journal** — free-form text editor with **Add Timestamp** and **+ Section** buttons.

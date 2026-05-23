@@ -2,10 +2,11 @@
 planning_panel.py — Side-panel tab for planning and analysis features.
 
 Contains inner tabs:
-  P2: Maintenance / labour estimator
-  P3: Bloom & Berry calendar (pollinator nectar + bird food by month)
-  P6: Water budget calculator
-  V4: Design notes / journal
+  P2:  Maintenance / labour estimator
+  P3a: Wildlife forage calendar (pollinator nectar + bird food by month)
+  P3b: Human forage calendar (edible plants by harvest window)
+  P6:  Water budget calculator
+  V4:  Design notes / journal
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from PyQt6.QtWidgets import (
     QTabWidget, QTextEdit, QFrame, QScrollArea, QFormLayout,
     QDoubleSpinBox, QSpinBox, QGroupBox, QGridLayout,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
+    QTreeWidget, QTreeWidgetItem,
     QSlider,
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
@@ -62,7 +64,7 @@ _WATER_MULTIPLIER: dict[str, float] = {
 
 
 class PlanningPanel(QWidget):
-    """Panel housing maintenance estimator, bloom & berry calendar, water budget, and notes."""
+    """Panel housing maintenance estimator, wildlife/human forage calendars, water budget, and notes."""
 
     # V4 signal: notes changed
     notes_changed = pyqtSignal(str)
@@ -86,7 +88,8 @@ class PlanningPanel(QWidget):
         self._tabs.setStyleSheet("QTabBar::tab { padding: 4px 8px; }")
 
         self._build_maintenance_tab()
-        self._build_bloom_berry_tab()
+        self._build_wildlife_forage_tab()
+        self._build_human_forage_tab()
         self._build_water_tab()
         self._build_timeline_tab()
         self._build_notes_tab()
@@ -208,10 +211,19 @@ class PlanningPanel(QWidget):
         self._maint_results.setText("\n".join(lines))
 
     # ═════════════════════════════════════════════════════════════════════════
-    #  P3 — Bloom & Berry Calendar (pollinator nectar + bird food)
+    #  P3a — Wildlife Forage Calendar (pollinator nectar + bird food)
     # ═════════════════════════════════════════════════════════════════════════
 
-    def _build_bloom_berry_tab(self):
+    _TREE_STYLE = (
+        "QTreeWidget { background: #1a2a1a; border: 1px solid #2e4a2e; "
+        "color: #c8e6c9; }"
+        "QTreeWidget::item { padding: 2px 4px; }"
+        "QTreeWidget::item:has-children { color: #a5d6a7; }"
+        "QHeaderView::section { background: #1e2e1e; color: #a5d6a7; "
+        "border: 1px solid #2e4a2e; padding: 4px; }"
+    )
+
+    def _build_wildlife_forage_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(6, 6, 6, 6)
@@ -219,66 +231,251 @@ class PlanningPanel(QWidget):
 
         info = QLabel(
             "When pollinators feed (blooms) and when birds\n"
-            "feed (berries/seeds) from your placed plants.\n"
-            "Months with no bloom source are flagged red —\n"
-            "those are nectar gaps to fill."
+            "feed (berries/seeds). Expand a month to see the\n"
+            "individual plants providing forage. Apr–Oct months\n"
+            "with no bloom source are flagged as nectar gaps."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
         layout.addWidget(info)
 
-        btn = QPushButton("Show Bloom & Berry Calendar")
+        btn_row = QHBoxLayout()
+        btn = QPushButton("Show Wildlife Forage")
         btn.setStyleSheet(
             "QPushButton { background: #6a1b9a; color: #f3e5f5; border: 1px solid #8e24aa; "
             "border-radius: 4px; padding: 6px; font-weight: bold; }"
             "QPushButton:hover { background: #8e24aa; }"
         )
-        btn.clicked.connect(self._calc_bloom_berry)
-        layout.addWidget(btn)
+        btn.clicked.connect(self._calc_wildlife_forage)
+        btn_row.addWidget(btn, 1)
 
-        # Gap summary
-        self._bloom_gap_label = QLabel("")
-        self._bloom_gap_label.setWordWrap(True)
-        self._bloom_gap_label.setStyleSheet("color: #ef9a9a; font-size: 11px; padding: 2px;")
-        layout.addWidget(self._bloom_gap_label)
-
-        # Table: Month | Pollinator Blooms | Bird Food
-        self._bloom_table = QTableWidget()
-        self._bloom_table.setColumnCount(3)
-        self._bloom_table.setHorizontalHeaderLabels(
-            ["Month", "Pollinator Blooms", "Bird Food"]
+        btn_expand = QPushButton("Expand all")
+        btn_expand.setStyleSheet(
+            "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
+            "border-radius: 4px; padding: 6px; }"
+            "QPushButton:hover { background: #455a64; }"
         )
-        self._bloom_table.horizontalHeader().setSectionResizeMode(
+        btn_expand.clicked.connect(lambda: self._wildlife_tree.expandAll())
+        btn_row.addWidget(btn_expand)
+
+        btn_collapse = QPushButton("Collapse all")
+        btn_collapse.setStyleSheet(
+            "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
+            "border-radius: 4px; padding: 6px; }"
+            "QPushButton:hover { background: #455a64; }"
+        )
+        btn_collapse.clicked.connect(lambda: self._wildlife_tree.collapseAll())
+        btn_row.addWidget(btn_collapse)
+        layout.addLayout(btn_row)
+
+        self._wildlife_gap_label = QLabel("")
+        self._wildlife_gap_label.setWordWrap(True)
+        self._wildlife_gap_label.setStyleSheet("color: #ef9a9a; font-size: 11px; padding: 2px;")
+        layout.addWidget(self._wildlife_gap_label)
+
+        self._wildlife_tree = QTreeWidget()
+        self._wildlife_tree.setColumnCount(2)
+        self._wildlife_tree.setHeaderLabels(["When", "Forage"])
+        self._wildlife_tree.setStyleSheet(self._TREE_STYLE)
+        self._wildlife_tree.header().setSectionResizeMode(
             0, QHeaderView.ResizeMode.ResizeToContents
         )
-        self._bloom_table.horizontalHeader().setSectionResizeMode(
+        self._wildlife_tree.header().setSectionResizeMode(
             1, QHeaderView.ResizeMode.Stretch
         )
-        self._bloom_table.horizontalHeader().setSectionResizeMode(
-            2, QHeaderView.ResizeMode.Stretch
-        )
-        self._bloom_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self._bloom_table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
-        self._bloom_table.setStyleSheet(
-            "QTableWidget { background: #1a2a1a; border: 1px solid #2e4a2e; color: #c8e6c9; gridline-color: #2e4a2e; }"
-            "QHeaderView::section { background: #1e2e1e; color: #a5d6a7; border: 1px solid #2e4a2e; padding: 4px; }"
-        )
-        self._bloom_table.setRowCount(12)
-        for i, m in enumerate(_MONTHS):
-            self._bloom_table.setItem(i, 0, QTableWidgetItem(m))
-            self._bloom_table.setItem(i, 1, QTableWidgetItem(""))
-            self._bloom_table.setItem(i, 2, QTableWidgetItem(""))
-        layout.addWidget(self._bloom_table, 1)
+        self._wildlife_tree.setRootIsDecorated(True)
+        layout.addWidget(self._wildlife_tree, 1)
 
-        layout.addStretch()
-        self._tabs.addTab(tab, "Bloom & Berry")
+        self._tabs.addTab(tab, "Wildlife Forage")
 
-    def _calc_bloom_berry(self):
+    def _calc_wildlife_forage(self):
+        self._wildlife_tree.clear()
+
         if not self._placed_plants:
-            self._bloom_gap_label.setText("")
-            for i in range(12):
-                self._bloom_table.setItem(i, 1, QTableWidgetItem("No plants placed"))
-                self._bloom_table.setItem(i, 2, QTableWidgetItem(""))
+            self._wildlife_gap_label.setText("")
+            placeholder = QTreeWidgetItem(["—", "No plants placed yet"])
+            self._wildlife_tree.addTopLevelItem(placeholder)
+            return
+
+        try:
+            from src.db.plants import get_connection
+        except Exception:
+            return
+
+        plant_ids = list({p["plant_id"] for p in self._placed_plants})
+        bloom_by_month: dict[int, list[str]] = {m: [] for m in range(1, 13)}
+        berry_by_month: dict[int, list[str]] = {m: [] for m in range(1, 13)}
+
+        conn = get_connection()
+        try:
+            for pid in plant_ids:
+                row = conn.execute(
+                    "SELECT common_name, bloom_period, fruit_period "
+                    "FROM plants WHERE id = ?",
+                    (pid,)
+                ).fetchone()
+                if not row:
+                    continue
+                name = row["common_name"]
+                if row["bloom_period"]:
+                    for m in self._parse_month_range(row["bloom_period"]):
+                        if name not in bloom_by_month[m]:
+                            bloom_by_month[m].append(name)
+                if row["fruit_period"]:
+                    for m in self._parse_month_range(row["fruit_period"]):
+                        if name not in berry_by_month[m]:
+                            berry_by_month[m].append(name)
+        finally:
+            conn.close()
+
+        # Build tree: Month → [Pollinator Blooms, Bird Food] → plant names
+        growing = set(range(4, 11))
+        gap_months = sorted(
+            m for m in growing if not bloom_by_month.get(m)
+        )
+        bloom_color  = QColor("#ce93d8")
+        berry_color  = QColor("#ffcc80")
+        muted_color  = QColor("#546e7a")
+        gap_color    = QColor("#ef5350")
+
+        for i in range(12):
+            month_num = i + 1
+            blooms  = sorted(bloom_by_month.get(month_num, []))
+            berries = sorted(berry_by_month.get(month_num, []))
+            summary_bits = []
+            if blooms:
+                summary_bits.append(f"{len(blooms)} blooms")
+            if berries:
+                summary_bits.append(f"{len(berries)} fruits")
+            if not summary_bits:
+                if month_num in growing:
+                    summary = "— nectar gap"
+                else:
+                    summary = "—"
+            else:
+                summary = " · ".join(summary_bits)
+
+            month_item = QTreeWidgetItem([_MONTHS[i], summary])
+            if not summary_bits and month_num in growing:
+                month_item.setForeground(0, gap_color)
+                month_item.setForeground(1, gap_color)
+            elif not summary_bits:
+                month_item.setForeground(0, muted_color)
+                month_item.setForeground(1, muted_color)
+
+            # Pollinator blooms sub-tree
+            bloom_node = QTreeWidgetItem(
+                [f"Pollinator blooms", f"({len(blooms)})"]
+            )
+            bloom_node.setForeground(0, bloom_color)
+            if blooms:
+                for n in blooms:
+                    bloom_node.addChild(QTreeWidgetItem(["", n]))
+            else:
+                bloom_node.addChild(QTreeWidgetItem(["", "—"]))
+            month_item.addChild(bloom_node)
+
+            # Bird food sub-tree
+            berry_node = QTreeWidgetItem(
+                [f"Bird food", f"({len(berries)})"]
+            )
+            berry_node.setForeground(0, berry_color)
+            if berries:
+                for n in berries:
+                    berry_node.addChild(QTreeWidgetItem(["", n]))
+            else:
+                berry_node.addChild(QTreeWidgetItem(["", "—"]))
+            month_item.addChild(berry_node)
+
+            self._wildlife_tree.addTopLevelItem(month_item)
+
+        # Gap label
+        if gap_months:
+            names = ", ".join(_MONTHS[m - 1] for m in gap_months)
+            self._wildlife_gap_label.setText(
+                f"⚠ Nectar gaps in growing season: {names}. "
+                f"Add a species blooming in these months to support pollinators."
+            )
+            self._wildlife_gap_label.setStyleSheet(
+                "color: #ef9a9a; font-size: 11px; padding: 2px;"
+            )
+        else:
+            self._wildlife_gap_label.setText(
+                "✓ Continuous bloom across the growing season (Apr–Oct)."
+            )
+            self._wildlife_gap_label.setStyleSheet(
+                "color: #a5d6a7; font-size: 11px; padding: 2px;"
+            )
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  P3b — Human Forage Calendar (edible plants by harvest window)
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def _build_human_forage_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(6)
+
+        info = QLabel(
+            "What you can harvest from your design, by month.\n"
+            "Includes only plants with an edible part recorded\n"
+            "in the database — berries, fruits, edible leaves /\n"
+            "roots / shoots."
+        )
+        info.setWordWrap(True)
+        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        layout.addWidget(info)
+
+        btn_row = QHBoxLayout()
+        btn = QPushButton("Show Human Forage")
+        btn.setStyleSheet(
+            "QPushButton { background: #e65100; color: #fff3e0; border: 1px solid #ff6d00; "
+            "border-radius: 4px; padding: 6px; font-weight: bold; }"
+            "QPushButton:hover { background: #ff6d00; }"
+        )
+        btn.clicked.connect(self._calc_human_forage)
+        btn_row.addWidget(btn, 1)
+
+        btn_expand = QPushButton("Expand all")
+        btn_expand.setStyleSheet(
+            "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
+            "border-radius: 4px; padding: 6px; }"
+            "QPushButton:hover { background: #455a64; }"
+        )
+        btn_expand.clicked.connect(lambda: self._human_tree.expandAll())
+        btn_row.addWidget(btn_expand)
+
+        btn_collapse = QPushButton("Collapse all")
+        btn_collapse.setStyleSheet(
+            "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
+            "border-radius: 4px; padding: 6px; }"
+            "QPushButton:hover { background: #455a64; }"
+        )
+        btn_collapse.clicked.connect(lambda: self._human_tree.collapseAll())
+        btn_row.addWidget(btn_collapse)
+        layout.addLayout(btn_row)
+
+        self._human_tree = QTreeWidget()
+        self._human_tree.setColumnCount(2)
+        self._human_tree.setHeaderLabels(["When", "Edible plant — part"])
+        self._human_tree.setStyleSheet(self._TREE_STYLE)
+        self._human_tree.header().setSectionResizeMode(
+            0, QHeaderView.ResizeMode.ResizeToContents
+        )
+        self._human_tree.header().setSectionResizeMode(
+            1, QHeaderView.ResizeMode.Stretch
+        )
+        layout.addWidget(self._human_tree, 1)
+
+        self._tabs.addTab(tab, "Human Forage")
+
+    def _calc_human_forage(self):
+        self._human_tree.clear()
+
+        if not self._placed_plants:
+            placeholder = QTreeWidgetItem(["—", "No plants placed yet"])
+            self._human_tree.addTopLevelItem(placeholder)
             return
 
         try:
@@ -288,82 +485,70 @@ class PlanningPanel(QWidget):
 
         plant_ids = list({p["plant_id"] for p in self._placed_plants})
 
-        bloom_by_month: dict[int, list[str]] = {m: [] for m in range(1, 13)}
-        berry_by_month: dict[int, list[str]] = {m: [] for m in range(1, 13)}
+        # entry per plant: (name, edible_parts) by month
+        edible_by_month: dict[int, list[tuple[str, str]]] = {m: [] for m in range(1, 13)}
 
         conn = get_connection()
         try:
             for pid in plant_ids:
                 row = conn.execute(
-                    "SELECT common_name, bloom_period, fruit_period FROM plants WHERE id = ?",
+                    "SELECT common_name, edible_parts, fruit_period "
+                    "FROM plants WHERE id = ?",
                     (pid,)
                 ).fetchone()
                 if not row:
                     continue
+                edible = (row["edible_parts"] or "").strip()
+                if not edible:
+                    continue
                 name = row["common_name"]
 
-                if row["bloom_period"]:
-                    for m in self._parse_month_range(row["bloom_period"]):
-                        if name not in bloom_by_month[m]:
-                            bloom_by_month[m].append(name)
+                # Prefer planting_calendar harvest months when present (curated),
+                # else parse fruit_period (covers berries, nuts, fruit).
+                cal_rows = conn.execute(
+                    "SELECT month FROM planting_calendar "
+                    "WHERE plant_id = ? AND status = 'harvest'",
+                    (pid,)
+                ).fetchall()
+                months: list[int] = []
+                if cal_rows:
+                    months = sorted({cr["month"] for cr in cal_rows})
+                elif row["fruit_period"]:
+                    months = self._parse_month_range(row["fruit_period"])
 
-                if row["fruit_period"]:
-                    for m in self._parse_month_range(row["fruit_period"]):
-                        if name not in berry_by_month[m]:
-                            berry_by_month[m].append(name)
+                for m in months:
+                    pair = (name, edible)
+                    if pair not in edible_by_month[m]:
+                        edible_by_month[m].append(pair)
         finally:
             conn.close()
 
-        # Nectar-gap detection across growing season (Apr–Oct)
-        growing = list(range(4, 11))
-        gap_months = [m for m in growing if not bloom_by_month.get(m)]
-        if gap_months:
-            names = ", ".join(_MONTHS[m - 1] for m in gap_months)
-            self._bloom_gap_label.setText(
-                f"⚠ Nectar gaps in growing season: {names}. "
-                f"Add a species blooming in these months to support pollinators."
-            )
-        else:
-            self._bloom_gap_label.setText(
-                "✓ Continuous bloom across the growing season (Apr–Oct)."
-            )
-            self._bloom_gap_label.setStyleSheet(
-                "color: #a5d6a7; font-size: 11px; padding: 2px;"
-            )
-
-        # Populate table
+        muted_color = QColor("#546e7a")
+        warm_color  = QColor("#ffcc80")
+        total_count = 0
         for i in range(12):
             month_num = i + 1
-            blooms = bloom_by_month.get(month_num, [])
-            berries = berry_by_month.get(month_num, [])
-
-            bloom_item = QTableWidgetItem(
-                ", ".join(sorted(blooms)) if blooms else "—"
-            )
-            in_growing = month_num in growing
-            if blooms:
-                bloom_item.setForeground(QColor("#ce93d8"))
-            elif in_growing:
-                bloom_item.setForeground(QColor("#ef5350"))
-                bloom_item.setText("— (nectar gap)")
+            items = sorted(edible_by_month.get(month_num, []), key=lambda x: x[0].lower())
+            summary = f"{len(items)} plants" if items else "—"
+            month_item = QTreeWidgetItem([_MONTHS[i], summary])
+            if not items:
+                month_item.setForeground(0, muted_color)
+                month_item.setForeground(1, muted_color)
             else:
-                bloom_item.setForeground(QColor("#546e7a"))
-            self._bloom_table.setItem(i, 1, bloom_item)
+                month_item.setForeground(1, warm_color)
+                for name, parts in items:
+                    child = QTreeWidgetItem(["", f"{name} — {parts}"])
+                    month_item.addChild(child)
+                total_count += len(items)
+            self._human_tree.addTopLevelItem(month_item)
 
-            berry_item = QTableWidgetItem(
-                ", ".join(sorted(berries)) if berries else "—"
+        if total_count == 0:
+            note = QTreeWidgetItem(
+                ["", "None of your placed plants have edible parts recorded. "
+                     "Try Saskatoon, raspberry, chokecherry, or wild strawberry."]
             )
-            berry_item.setForeground(
-                QColor("#ffcc80") if berries else QColor("#546e7a")
-            )
-            self._bloom_table.setItem(i, 2, berry_item)
-
-        # Re-apply the gap-label style each time so a gap-free design
-        # can flip back to a warning if the user later removes plants.
-        if gap_months:
-            self._bloom_gap_label.setStyleSheet(
-                "color: #ef9a9a; font-size: 11px; padding: 2px;"
-            )
+            note.setForeground(1, muted_color)
+            self._human_tree.addTopLevelItem(note)
 
     @staticmethod
     def _parse_month_range(text: str) -> list[int]:

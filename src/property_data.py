@@ -50,9 +50,13 @@ def _http_get_json(url: str, timeout: float = _TIMEOUT) -> Optional[dict]:
 def fetch_rainfall(lat: float, lng: float, years: int = 10) -> Optional[dict]:
     """
     Annual + monthly mean precipitation (mm) from ERA5-Land via Open-Meteo.
+    Falls back to a bundled Alberta climate-normal dataset
+    (``data/rainfall_fallback_alberta.json``) when the live API is
+    unreachable or returns no usable data, so the UI never has to show
+    a bare "unavailable" in an offline / firewalled / API-down session.
 
     Returns ``{"annual_mm", "monthly_mm" (12), "years_used", "source"}``
-    or ``None`` if the request fails.
+    or ``None`` if both the live fetch and the fallback fail.
     """
     today = date.today()
     end_d = date(today.year - 1, 12, 31)
@@ -63,10 +67,54 @@ def fetch_rainfall(lat: float, lng: float, years: int = 10) -> Optional[dict]:
         f"&start_date={start.isoformat()}&end_date={end_d.isoformat()}"
         "&daily=precipitation_sum&timezone=UTC"
     )
-    data = _http_get_json(url)
-    if not data or "daily" not in data:
+    # The archive API ships ~10 years of daily data per call; the
+    # default 8 s timeout is borderline on slower connections, so give
+    # this endpoint more breathing room before declaring failure.
+    data = _http_get_json(url, timeout=20.0)
+    parsed = _parse_rainfall(data) if data and "daily" in data else None
+    if parsed is not None:
+        return parsed
+    return _alberta_rainfall_fallback(lat, lng)
+
+
+def _alberta_rainfall_fallback(lat: float, lng: float) -> Optional[dict]:
+    """Return the closest bundled Alberta climate-normal rainfall, or None.
+
+    Mirrors the soil-fallback pattern so the UI can render it without a
+    special case. ``source`` makes the approximation explicit.
+    """
+    import json as _json
+    import math as _math
+
+    here = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(here)
+    path = os.path.join(project_root, "data", "rainfall_fallback_alberta.json")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            entries = _json.load(f)
+    except (OSError, ValueError):
         return None
-    return _parse_rainfall(data)
+    if not isinstance(entries, list) or not entries:
+        return None
+
+    def _dist2(p, q):
+        dlat = p[0] - q[0]
+        dlng = (p[1] - q[1]) * _math.cos(_math.radians((p[0] + q[0]) / 2))
+        return dlat * dlat + dlng * dlng
+
+    best = min(
+        entries,
+        key=lambda e: _dist2((lat, lng), tuple(e.get("centroid") or (0, 0))),
+    )
+    monthly = best.get("monthly_mm") or []
+    if len(monthly) != 12:
+        return None
+    return {
+        "annual_mm":   round(float(best.get("annual_mm") or sum(monthly)), 1),
+        "monthly_mm":  [round(float(m), 1) for m in monthly],
+        "years_used":  30,
+        "source":      f"AB climate normal — {best.get('region', 'nearest station')} (live API unavailable)",
+    }
 
 
 def _parse_rainfall(data: dict) -> Optional[dict]:
