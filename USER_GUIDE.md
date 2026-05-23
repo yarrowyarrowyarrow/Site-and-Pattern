@@ -80,6 +80,19 @@ Distribution is deterministic and spread-optimised: same-species plants are auto
 
 **Save / load mixes** with the **Save** button (above the species list) and the dropdown. **✕** deletes the saved mix.
 
+The **Plant Communities** library on the same tab ships with 18 pre-built communities. The original 8 are food-forest-flavoured (Apple, Saskatoon, Evans Cherry, Bur Oak, Prairie Pollinator Garden, Boreal Shade, Medicinal Herb Circle, Native Berry Hedge). The **10 newer communities** are tuned around Habitat Value Score and forage categories — drop them when the score / forage tabs flag a deficiency:
+
+- **Keystone Pollinator Mound** — lifts the keystone-species score
+- **Caterpillar Host Garden** — lifts the host-plant score
+- **Songbird Berry Patch** — lifts the bird-food score, staggered berries Jun–Sep
+- **Continuous Bloom Pollinator Strip** — closes nectar gaps across Apr–Oct in one drop
+- **Native Edible Garden** — Human Forage powerhouse, staggered native edibles Jun–Oct
+- **Aspen Parkland Edge** — hits all 5 vegetation layers at once
+- **Mixedgrass Prairie Patch** — grasses (nesting material) + native forbs
+- **Boreal Woodland Floor** — shade-tolerant bird food and edible berries
+- **Late-Season Pollinator Refuge** — fills the common Aug–Oct nectar gap
+- **Riparian Willow Thicket** — keystone + host + bird food in a single community (willows)
+
 ---
 
 ## 7. Selection & multi-delete
@@ -130,6 +143,7 @@ The View bar (🛰 Satellite, ⬡ Boundary, 📏 Measurement, **#** Grid, ✿ Pl
 - **File → Export PDF…** produces a printable booklet with the map screenshot, plant list, and notes.
 - **File → Export Plant Order List…** produces a text list grouped by Alberta nursery source (ALCLA, Bow Valley Habitat, Wild About Flowers, Bedrock Seed Bank), with native woody / native herbaceous / cultivated sections.
 - The app auto-saves every 5 minutes in the background.
+- **Help → Check for Updates…** — on source installs (git checkout), runs `git pull --ff-only` after a fetch + dirty-tree check; on `.exe` installs, opens the GitHub releases page in your browser. Restart the app after a successful pull for the new code to take effect.
 
 ---
 

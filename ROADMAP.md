@@ -115,6 +115,8 @@ Features for long-term planning and tracking.
 | Plant filters (Native AB, Edible, Medicinal, N-Fixer, Pollinator, Perennial, Keystone, Host Plant, Bird Food) | Done |
 | Plant count badges and right-click context menu | Done |
 | Plant community search, tooltips, double-click to place | Done |
+| Built-in plant communities (18 — original 8 + 10 habitat-focused: Keystone Pollinator Mound, Caterpillar Host Garden, Songbird Berry Patch, Continuous Bloom, Native Edible, Aspen Parkland Edge, Mixedgrass Prairie, Boreal Woodland Floor, Late-Season Pollinator Refuge, Riparian Willow Thicket) | Done |
+| Help → Check for Updates (git-pull fast-forward for source installs; releases-page link for .exe installs) | Done |
 | Map legend (toggleable) | Done |
 | Keyboard shortcuts (P/G/B/M/Z/N/L/Esc) | Done |
 | Status bar seasonal tasks | Done |

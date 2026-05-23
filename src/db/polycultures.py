@@ -611,6 +611,181 @@ EXAMPLE_POLYCULTURES = [
             },
         ],
     },
+    # ── Habitat-focused communities (designed around Habitat Value Score + forage) ───
+    {
+        "name": "Keystone Pollinator Mound",
+        "description": "Maximises the Habitat Value 'keystone species' score. Built almost entirely "
+                       "from Tallamy-style Alberta keystone species — willows and aspens that host "
+                       "the most caterpillar diversity, and goldenrods / asters that anchor "
+                       "late-season pollinator and bird-food webs. Expect significant lifts to the "
+                       "keystone, host-plant, and bird-food categories from a single placement.",
+        "members": [
+            ("Trembling Aspen",            "overstory",       0,     0),
+            ("Pussy Willow",               "shrub_layer",     2.5,   1.2),
+            ("Sandbar Willow",             "shrub_layer",    -2.2,   1.5),
+            ("Pin Cherry",                 "understory",      2.0,  -2.0),
+            ("Canada Goldenrod",           "herbaceous",     -1.5,  -1.8),
+            ("Smooth Aster",               "herbaceous",      1.0,  -1.0),
+            ("Maximilian Sunflower",       "pollinator",      0.0,  -2.5),
+        ],
+    },
+    {
+        "name": "Caterpillar Host Garden",
+        "description": "Built for the Habitat Value 'host plants' category. Each member is a "
+                       "documented host for specialist Alberta butterfly or moth caterpillars — "
+                       "willows host mourning cloak and swallowtails; milkweeds host monarch; "
+                       "violets host fritillaries; columbine hosts columbine duskywing. This is the "
+                       "single highest-impact community for caterpillar biodiversity, which feeds "
+                       "almost all songbird nestlings.",
+        "members": [
+            ("Pussy Willow",               "shrub_layer",     0,     0),
+            ("Sandbar Willow",             "shrub_layer",     2.5,   1.5),
+            ("Showy Milkweed",             "herbaceous",     -2.0,   1.0),
+            ("Green Milkweed",             "herbaceous",      1.5,  -1.5),
+            ("Smooth Aster",               "herbaceous",     -1.5,  -1.0),
+            ("Eastern Red Columbine",      "herbaceous",      1.0,   1.8),
+            ("Early Blue Violet",          "groundcover",    -1.0,  -2.0),
+        ],
+    },
+    {
+        "name": "Songbird Berry Patch",
+        "description": "Designed for the Habitat Value 'bird food' category and to stagger fruit "
+                       "across the Wildlife Forage calendar from early summer into winter. "
+                       "Strawberry (June) → saskatoon (July) → raspberry (July-Aug) → chokecherry "
+                       "(Aug-Sep) → highbush cranberry & snowberry & wild rose hips (winter persistent). "
+                       "Plants also appear on Human Forage tab.",
+        "members": [
+            ("Saskatoon Berry",            "shrub_layer",     0,     0),
+            ("Chokecherry",                "understory",      2.5,   1.5),
+            ("Wild Raspberry",             "shrub_layer",    -2.0,   1.5),
+            ("Highbush Cranberry",         "shrub_layer",     2.0,  -2.0),
+            ("Common Snowberry",           "shrub_layer",    -2.0,  -1.5),
+            ("Prickly Wild Rose",          "shrub_layer",     1.0,  -2.5),
+            ("Silver Buffaloberry",        "nitrogen_fixer", -1.5,   2.0),
+            ("Wild Strawberry",            "groundcover",     0.5,  -1.0),
+        ],
+    },
+    {
+        "name": "Continuous Bloom Pollinator Strip",
+        "description": "Closes nectar gaps across the entire Apr–Oct growing season — pussy willow "
+                       "and prairie crocus carry early spring, golden bean and wild strawberry "
+                       "cover May–June, wild bergamot anchors July, blazingstar carries late summer, "
+                       "and goldenrod + smooth aster extend into the first frost. Drop this anywhere "
+                       "the Wildlife Forage tab shows nectar gaps and the gap warning typically "
+                       "clears in one placement.",
+        "members": [
+            ("Pussy Willow",               "shrub_layer",     0,     0),
+            ("Prairie Crocus",             "herbaceous",      1.5,   1.0),
+            ("Wild Strawberry",            "groundcover",    -1.0,   1.2),
+            ("Golden Bean",                "nitrogen_fixer",  1.8,  -1.0),
+            ("Bee Balm (Wild Bergamot)",   "pollinator",     -1.5,  -0.5),
+            ("Dotted Blazingstar",         "pollinator",      0.5,  -1.8),
+            ("Canada Goldenrod",           "pollinator",     -2.0,   0.5),
+            ("Smooth Aster",               "pollinator",      2.0,   1.8),
+        ],
+    },
+    {
+        "name": "Native Edible Garden",
+        "description": "Tuned for the Human Forage calendar. Every member has documented edible parts "
+                       "and the harvest windows are staggered: wild strawberry (Jun-Jul), saskatoon "
+                       "(Jul), wild raspberry (Jul-Aug), pin cherry (Aug), chokecherry (Aug-Sep), "
+                       "highbush cranberry (Sep-Oct), beaked hazelnut (Sep-Oct). Most members are "
+                       "also tagged as bird food, so they boost wildlife forage and habitat value too.",
+        "members": [
+            ("Saskatoon Berry",            "shrub_layer",     0,     0),
+            ("Chokecherry",                "understory",      2.5,   1.2),
+            ("Pin Cherry",                 "understory",     -2.0,   1.5),
+            ("Wild Raspberry",             "shrub_layer",     1.5,  -1.5),
+            ("Highbush Cranberry",         "shrub_layer",    -1.8,  -1.5),
+            ("Beaked Hazelnut",            "shrub_layer",     2.5,  -0.5),
+            ("Wild Strawberry",            "groundcover",     0.0,  -2.2),
+        ],
+    },
+    {
+        "name": "Aspen Parkland Edge",
+        "description": "Maximises the Habitat Value 'vegetation layers' score — every canonical "
+                       "layer is represented (overstory aspen, understory chokecherry, shrub layer "
+                       "saskatoon, herbaceous goldenrod, groundcover strawberry). Mirrors the natural "
+                       "edge structure of central Alberta's aspen parkland, the most species-rich "
+                       "ecoregion in the province. Strong all-round lift to habitat value.",
+        "members": [
+            ("Trembling Aspen",            "overstory",       0,     0),
+            ("Chokecherry",                "understory",      3.0,   1.5),
+            ("Saskatoon Berry",            "shrub_layer",    -2.5,   1.5),
+            ("Beaked Hazelnut",            "shrub_layer",     2.0,  -2.0),
+            ("Canada Goldenrod",           "herbaceous",     -2.0,  -1.5),
+            ("Smooth Aster",               "herbaceous",      1.0,  -2.5),
+            ("Wild Strawberry",            "groundcover",     0.0,   2.5),
+        ],
+    },
+    {
+        "name": "Mixedgrass Prairie Patch",
+        "description": "Pairs native bunchgrasses (nesting material for ground-nesting bees and "
+                       "songbirds) with prairie forbs that bloom in succession from spring crocus "
+                       "to late-summer blazingstar. Designed for dry, open sites in southern and "
+                       "central Alberta. Boosts the Habitat Value layers score (grasses → "
+                       "herbaceous), bloom continuity, and the nesting-material structural metric.",
+        "members": [
+            ("Rough Fescue",               "herbaceous",      0,     0),
+            ("June Grass",                 "herbaceous",      1.5,   1.0),
+            ("Little Bluestem",            "herbaceous",     -1.5,   1.2),
+            ("Prairie Crocus",             "herbaceous",      0.8,  -1.0),
+            ("Dotted Blazingstar",         "pollinator",     -1.0,  -1.2),
+            ("Purple Prairie Clover",      "nitrogen_fixer",  1.2,  -1.8),
+            ("Yarrow",                     "soil_builder",   -1.5,  -0.5),
+        ],
+    },
+    {
+        "name": "Boreal Woodland Floor",
+        "description": "Shade-tolerant community for north-facing sites or established conifer / "
+                       "aspen understory. Bunchberry, twinflower, and wild lily-of-the-valley form "
+                       "a classic boreal-floor mosaic; beaked hazelnut, bog cranberry, and wild "
+                       "strawberry add bird food and edible berries. Most members are bird_food-tagged, "
+                       "boosting that Habitat Value category in the hardest-to-plant niche.",
+        "members": [
+            ("White Spruce",               "overstory",       0,     0),
+            ("Beaked Hazelnut",            "shrub_layer",     2.5,   1.5),
+            ("Bunchberry",                 "groundcover",    -1.5,   1.2),
+            ("Twinflower",                 "groundcover",     1.5,  -1.0),
+            ("Bog Cranberry",              "groundcover",    -1.0,  -1.5),
+            ("Wild Strawberry",            "groundcover",     0.5,   2.0),
+            ("Wild Lily-of-the-valley",    "groundcover",    -2.0,  -0.5),
+        ],
+    },
+    {
+        "name": "Late-Season Pollinator Refuge",
+        "description": "Targets the Aug–Oct nectar-gap months that the Wildlife Forage calendar "
+                       "most often flags as red. All members bloom late-summer through first frost "
+                       "and most are keystone species (goldenrods, asters, sunflowers), so this "
+                       "community lifts both bloom-continuity and keystone-species scores at once. "
+                       "Critical fuel for migrating monarchs and hibernating queen bumble bees.",
+        "members": [
+            ("Canada Goldenrod",           "pollinator",      0,     0),
+            ("Smooth Aster",               "pollinator",      1.5,   1.0),
+            ("Dotted Blazingstar",         "pollinator",     -1.5,   1.2),
+            ("Meadow Blazingstar",         "pollinator",      1.2,  -1.5),
+            ("Maximilian Sunflower",       "pollinator",     -1.0,  -1.8),
+            ("Fireweed",                   "pollinator",      2.0,  -0.5),
+            ("Showy Milkweed",             "herbaceous",     -2.0,  -0.5),
+        ],
+    },
+    {
+        "name": "Riparian Willow Thicket",
+        "description": "Streamside / wet-edge community built around the willow guild — pussy willow "
+                       "and sandbar willow are both Tallamy keystones AND host plants AND bird food, "
+                       "so this single community lifts all three categories at once. Red osier dogwood "
+                       "adds winter colour and bird food. Showy milkweed and fireweed bring "
+                       "summer-long bloom and additional caterpillar hosting.",
+        "members": [
+            ("Pussy Willow",               "overstory",       0,     0),
+            ("Sandbar Willow",             "shrub_layer",     2.5,   1.5),
+            ("Red Osier Dogwood",          "shrub_layer",    -2.0,   1.5),
+            ("Highbush Cranberry",         "shrub_layer",     2.0,  -2.0),
+            ("Showy Milkweed",             "herbaceous",     -1.5,  -1.5),
+            ("Fireweed",                   "herbaceous",      1.0,  -1.0),
+            ("Wild Strawberry",            "groundcover",     0.0,   2.5),
+        ],
+    },
 ]
 
 

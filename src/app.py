@@ -302,6 +302,148 @@ class MainWindow(QMainWindow):
                 total = sum(sizes) or 1000
                 self._splitter.setSizes([int(total * 0.7), int(total * 0.3)])
 
+    # ── Help → Check for Updates ──────────────────────────────────────────────
+    #
+    # Behaves differently depending on how the user is running the app:
+    #
+    #   * Source install (git checkout, `python main.py`) — runs
+    #     `git fetch` + `git status` to detect upstream commits, then
+    #     offers a fast-forward `git pull`. Refuses to pull if the
+    #     working tree is dirty or the branch has diverged, so we never
+    #     trigger a merge from inside the app.
+    #
+    #   * Frozen install (PyInstaller .exe used by friends) — git isn't
+    #     available, so we open the GitHub releases page in the default
+    #     browser and let the user download the next installer.
+
+    _REPO_RELEASES_URL = "https://github.com/yarrowyarrowyarrow/PermaDesign/releases"
+
+    def _on_check_for_updates(self):
+        import os, subprocess, sys
+
+        # Frozen build: no git, just open releases page.
+        if getattr(sys, "frozen", False):
+            self._open_releases_page()
+            return
+
+        # Detect git root by walking up from this file
+        here = os.path.dirname(os.path.abspath(__file__))
+        repo_root = os.path.dirname(here)
+        if not os.path.isdir(os.path.join(repo_root, ".git")):
+            QMessageBox.information(
+                self, "Check for Updates",
+                "Not a git checkout — opening the releases page in your browser "
+                "so you can download the latest installer manually."
+            )
+            self._open_releases_page()
+            return
+
+        def _git(*args, timeout=30):
+            return subprocess.run(
+                ["git", "-C", repo_root, *args],
+                capture_output=True, text=True, timeout=timeout, check=False,
+            )
+
+        # Refuse to update if working tree is dirty — pulling could clobber
+        # the user's in-progress edits.
+        status = _git("status", "--porcelain")
+        if status.returncode != 0:
+            QMessageBox.warning(
+                self, "Check for Updates",
+                "Couldn't run git. Make sure git is installed and on your PATH.\n\n"
+                f"{status.stderr.strip() or status.stdout.strip()}"
+            )
+            return
+        if status.stdout.strip():
+            QMessageBox.warning(
+                self, "Check for Updates",
+                "You have uncommitted local changes — refusing to pull to "
+                "avoid clobbering them.\n\n"
+                "Commit, stash, or discard your changes, then check again."
+            )
+            return
+
+        # Fetch the latest from the upstream branch.
+        self.statusBar().showMessage("Checking for updates…", 2000)
+        fetch = _git("fetch", "--quiet")
+        if fetch.returncode != 0:
+            QMessageBox.warning(
+                self, "Check for Updates",
+                "Couldn't reach the git remote (check your network).\n\n"
+                f"{fetch.stderr.strip()}"
+            )
+            return
+
+        # Count commits we're behind / ahead of upstream.
+        behind = _git("rev-list", "--count", "HEAD..@{u}")
+        ahead  = _git("rev-list", "--count", "@{u}..HEAD")
+        if behind.returncode != 0 or ahead.returncode != 0:
+            QMessageBox.information(
+                self, "Check for Updates",
+                "This branch has no configured upstream. Set one with "
+                "`git branch --set-upstream-to=origin/<branch>` and try again."
+            )
+            return
+
+        n_behind = int((behind.stdout or "0").strip() or 0)
+        n_ahead  = int((ahead.stdout  or "0").strip() or 0)
+        branch   = _git("rev-parse", "--abbrev-ref", "HEAD").stdout.strip() or "?"
+
+        if n_behind == 0 and n_ahead == 0:
+            QMessageBox.information(
+                self, "Check for Updates",
+                f"You're up to date on branch '{branch}'."
+            )
+            return
+        if n_behind == 0 and n_ahead > 0:
+            QMessageBox.information(
+                self, "Check for Updates",
+                f"You're {n_ahead} commit(s) ahead of the remote on '{branch}'. "
+                "Nothing to pull."
+            )
+            return
+        if n_ahead > 0 and n_behind > 0:
+            QMessageBox.warning(
+                self, "Check for Updates",
+                f"Branch '{branch}' has diverged from the remote "
+                f"({n_ahead} ahead, {n_behind} behind). Resolve manually in a "
+                "terminal — the app won't auto-merge."
+            )
+            return
+
+        # Behind only — show recent incoming commits and offer the pull.
+        log = _git("log", "--oneline", f"-{min(n_behind, 8)}", "HEAD..@{u}")
+        recent = log.stdout.strip() or "(commit log unavailable)"
+        prompt = QMessageBox.question(
+            self, "Update available",
+            f"Branch '{branch}' is {n_behind} commit(s) behind the remote.\n\n"
+            f"Recent incoming changes:\n{recent}\n\n"
+            "Pull and fast-forward now? You'll need to restart the app for "
+            "code changes to take effect.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if prompt != QMessageBox.StandardButton.Yes:
+            return
+
+        pull = _git("pull", "--ff-only")
+        if pull.returncode == 0:
+            QMessageBox.information(
+                self, "Updated",
+                f"Pulled {n_behind} commit(s) from origin/{branch}.\n\n"
+                "Close and relaunch the app to load the new code."
+            )
+        else:
+            QMessageBox.warning(
+                self, "Pull failed",
+                "git pull --ff-only failed:\n\n"
+                + (pull.stderr.strip() or pull.stdout.strip())
+            )
+
+    def _open_releases_page(self):
+        from PyQt6.QtCore import QUrl
+        from PyQt6.QtGui import QDesktopServices
+        QDesktopServices.openUrl(QUrl(self._REPO_RELEASES_URL))
+
     def _build_menu(self):
         mb = self.menuBar()
 
@@ -367,6 +509,14 @@ class MainWindow(QMainWindow):
             "Toggle the right-hand panel (Site / Plants / Analysis / …)"
         )
         self._act_show_sidebar.triggered.connect(self._on_toggle_sidebar)
+
+        # Help menu
+        help_menu = mb.addMenu("&Help")
+
+        act_update = help_menu.addAction("Check for &Updates…")
+        act_update.setStatusTip("Pull the latest version from GitHub (source installs) "
+                                "or open the releases page (.exe installs)")
+        act_update.triggered.connect(self._on_check_for_updates)
 
     # ── Signal wiring ─────────────────────────────────────────────────────────
 
