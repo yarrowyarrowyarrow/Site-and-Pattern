@@ -1372,6 +1372,7 @@ class MainWindow(QMainWindow):
         # PlantPanel.on_plants_placed_batch for the rationale.
         self.plant_panel.on_plants_placed_batch(batch_placements)
         self._mark_modified()
+        self._sync_planning_panel()
         self._set_mode_label(
             f"Placed polyculture '{poly_name}'. Click again for another, "
             f"or press Esc to finish."
