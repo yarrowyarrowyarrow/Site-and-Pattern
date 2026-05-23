@@ -1,11 +1,12 @@
 """
 analysis_panel.py — Side-panel tab for site analysis overlays.
 
-Contains four inner tabs:
+Contains inner tabs:
   A1: Sun Path / Shadow overlay
   A2: Sector Analysis layer
   A3: Slope / Contour indicator
   A4: Wind / Windbreak effect
+  H1: Habitat Value Score (Tallamy-style composite scoring of native habitat quality)
 """
 
 from __future__ import annotations
@@ -46,6 +47,8 @@ class AnalysisPanel(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._placed_plants: list[dict] = []
+        self._structures: list[dict] = []
         self._build_ui()
 
     def _build_ui(self):
@@ -63,6 +66,7 @@ class AnalysisPanel(QWidget):
         # generator there).
         self._build_wind_tab()
         self._build_season_tab()
+        self._build_habitat_tab()
 
         layout.addWidget(self._tabs)
 
@@ -564,3 +568,264 @@ class AnalysisPanel(QWidget):
 
     def _on_season_apply(self):
         self.season_changed.emit(self._season_combo.currentText())
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  H1 — Habitat Value Score
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def _build_habitat_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(8)
+
+        info = QLabel(
+            "How much native habitat your design actually\n"
+            "provides — scored 0–100 from native ratio,\n"
+            "keystone species, host plants, bird food,\n"
+            "vegetation-layer diversity, habitat structures,\n"
+            "and bloom continuity."
+        )
+        info.setWordWrap(True)
+        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        layout.addWidget(info)
+
+        btn = QPushButton("Calculate Habitat Value")
+        btn.setStyleSheet(
+            "QPushButton { background: #2e7d32; color: #e8f5e9; border: 1px solid #43a047; "
+            "border-radius: 4px; padding: 6px; font-weight: bold; }"
+            "QPushButton:hover { background: #388e3c; }"
+        )
+        btn.clicked.connect(self._calc_habitat_score)
+        layout.addWidget(btn)
+
+        # Big score readout
+        self._habitat_score_label = QLabel("—")
+        self._habitat_score_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._habitat_score_label.setStyleSheet(
+            "color: #c8e6c9; font-size: 32px; font-weight: bold; "
+            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px; padding: 12px;"
+        )
+        layout.addWidget(self._habitat_score_label)
+
+        # Breakdown
+        self._habitat_breakdown = QLabel("")
+        self._habitat_breakdown.setWordWrap(True)
+        self._habitat_breakdown.setStyleSheet(
+            "color: #c8e6c9; font-size: 11px; padding: 8px; "
+            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px; "
+            "font-family: 'Consolas', 'Courier New', monospace;"
+        )
+        self._habitat_breakdown.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._habitat_breakdown.setMinimumHeight(280)
+        layout.addWidget(self._habitat_breakdown, 1)
+
+        # Reference link
+        ref = QLabel(
+            "Based on Doug Tallamy's keystone-species framework\n"
+            "(homegrownnationalpark.org) — high-value native species\n"
+            "support 90% of insect biodiversity."
+        )
+        ref.setWordWrap(True)
+        ref.setStyleSheet("color: #607d8b; font-size: 10px; font-style: italic;")
+        layout.addWidget(ref)
+
+        layout.addStretch()
+        self._tabs.addTab(tab, "Habitat Value")
+
+    # Mapping from plant_type to vegetation layer used for layer-diversity scoring.
+    _PLANT_TYPE_TO_LAYER = {
+        "tree":        "overstory",
+        "shrub":       "shrub",
+        "herb":        "herbaceous",
+        "groundcover": "groundcover",
+        "vine":        "vine",
+        "root":        "herbaceous",
+    }
+
+    # Structure ids that contribute to habitat value (Water + Habitat categories
+    # from src/db/structures.py).
+    _HABITAT_STRUCTURE_IDS = {
+        "pond", "swale", "rain_garden", "rain_barrel",
+        "native_bee_log", "bee_hotel", "brush_pile", "snag",
+        "rock_xeriscape", "native_lawn_patch",
+    }
+
+    def set_placed_plants(self, plants: list[dict]):
+        """Update the list of placed plants (from app.py)."""
+        self._placed_plants = plants
+
+    def set_structures(self, structures: list[dict]):
+        """Update the list of placed structures (from app.py)."""
+        self._structures = structures
+
+    def _calc_habitat_score(self):
+        if not self._placed_plants and not self._structures:
+            self._habitat_score_label.setText("—")
+            self._habitat_breakdown.setText("Place some plants and structures first.")
+            return
+
+        # Pull DB rows for distinct placed species.
+        plant_rows: dict[int, dict] = {}
+        try:
+            from src.db.plants import get_connection
+            conn = get_connection()
+            try:
+                plant_ids = list({p["plant_id"] for p in self._placed_plants})
+                for pid in plant_ids:
+                    row = conn.execute(
+                        "SELECT id, common_name, plant_type, permaculture_uses, "
+                        "       native_to_alberta, bloom_period "
+                        "FROM plants WHERE id = ?",
+                        (pid,)
+                    ).fetchone()
+                    if row:
+                        plant_rows[pid] = dict(row)
+            finally:
+                conn.close()
+        except Exception:
+            self._habitat_score_label.setText("?")
+            self._habitat_breakdown.setText("Plant database unavailable.")
+            return
+
+        n_species = len(plant_rows)
+        n_total_plants = len(self._placed_plants)
+
+        # ── 1. % natives (20 pts) ─────────────────────────────────────────
+        native_species = sum(
+            1 for r in plant_rows.values() if r.get("native_to_alberta")
+        )
+        native_ratio = native_species / n_species if n_species else 0.0
+        score_native = native_ratio * 20
+
+        # ── 2. Keystone species (15 pts, full at 5 distinct species) ──────
+        keystone_species = [
+            r["common_name"] for r in plant_rows.values()
+            if "keystone_species" in (r.get("permaculture_uses") or "")
+        ]
+        score_keystone = min(len(keystone_species) / 5.0, 1.0) * 15
+
+        # ── 3. Host plant species (10 pts, full at 10) ────────────────────
+        host_species = [
+            r["common_name"] for r in plant_rows.values()
+            if "host_plant" in (r.get("permaculture_uses") or "")
+        ]
+        score_host = min(len(host_species) / 10.0, 1.0) * 10
+
+        # ── 4. Bird food species (10 pts, full at 10) ─────────────────────
+        bird_species = [
+            r["common_name"] for r in plant_rows.values()
+            if "bird_food" in (r.get("permaculture_uses") or "")
+        ]
+        score_bird = min(len(bird_species) / 10.0, 1.0) * 10
+
+        # ── 5. Vegetation layer diversity (15 pts, 3 pts per layer) ───────
+        layers_present = set()
+        for r in plant_rows.values():
+            layer = self._PLANT_TYPE_TO_LAYER.get(r.get("plant_type", ""))
+            if layer:
+                layers_present.add(layer)
+        # Count up to 5 canonical layers
+        canonical = {"overstory", "shrub", "herbaceous", "groundcover", "vine"}
+        score_layers = min(len(layers_present & canonical), 5) * 3
+
+        # ── 6. Structural diversity (10 pts, 2 pts per distinct type) ─────
+        habitat_struct_types = set()
+        for s in self._structures:
+            sid = s.get("id") or s.get("type") or s.get("name", "").lower().replace(" ", "_")
+            if sid in self._HABITAT_STRUCTURE_IDS:
+                habitat_struct_types.add(sid)
+        score_structs = min(len(habitat_struct_types), 5) * 2
+
+        # ── 7. Bloom continuity across growing season Apr–Oct (20 pts) ────
+        growing = set(range(4, 11))  # Apr=4..Oct=10
+        bloom_months: set[int] = set()
+        for r in plant_rows.values():
+            if r.get("bloom_period"):
+                for m in self._parse_month_range(r["bloom_period"]):
+                    if m in growing:
+                        bloom_months.add(m)
+        # 20 pts spread across 7 growing-season months
+        score_bloom = (len(bloom_months) / len(growing)) * 20
+
+        total = (score_native + score_keystone + score_host + score_bird
+                 + score_layers + score_structs + score_bloom)
+        total_int = int(round(total))
+
+        # Score colour
+        if total_int >= 75:
+            color = "#a5d6a7"
+            grade = "Excellent habitat"
+        elif total_int >= 50:
+            color = "#dcedc8"
+            grade = "Solid habitat"
+        elif total_int >= 25:
+            color = "#fff59d"
+            grade = "Foundation laid"
+        else:
+            color = "#ffab91"
+            grade = "Just getting started"
+
+        self._habitat_score_label.setText(f"{total_int} / 100")
+        self._habitat_score_label.setStyleSheet(
+            f"color: {color}; font-size: 32px; font-weight: bold; "
+            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px; padding: 12px;"
+        )
+
+        # Breakdown text
+        lines = [
+            f"{grade}",
+            "",
+            f"Native ratio        {native_ratio*100:5.0f}%    {score_native:4.1f} / 20",
+            f"  ({native_species} of {n_species} species native to AB)",
+            "",
+            f"Keystone species   {len(keystone_species):4d}     {score_keystone:4.1f} / 15",
+            f"Host plants        {len(host_species):4d}     {score_host:4.1f} / 10",
+            f"Bird-food species  {len(bird_species):4d}     {score_bird:4.1f} / 10",
+            "",
+            f"Vegetation layers  {len(layers_present & canonical):4d}/5   {score_layers:4.1f} / 15",
+            f"  ({', '.join(sorted(layers_present & canonical)) or '—'})",
+            "",
+            f"Habitat structures {len(habitat_struct_types):4d}     {score_structs:4.1f} / 10",
+            f"  ({', '.join(sorted(habitat_struct_types)) or '—'})",
+            "",
+            f"Bloom continuity   {len(bloom_months)}/7 mo   {score_bloom:4.1f} / 20",
+        ]
+        gap = sorted(growing - bloom_months)
+        if gap:
+            month_names = ["Jan","Feb","Mar","Apr","May","Jun",
+                           "Jul","Aug","Sep","Oct","Nov","Dec"]
+            lines.append(
+                "  Gap months: " + ", ".join(month_names[m-1] for m in gap)
+            )
+        lines.append("")
+        lines.append(f"Total {n_total_plants} plants, {n_species} species")
+
+        self._habitat_breakdown.setText("\n".join(lines))
+
+    @staticmethod
+    def _parse_month_range(text: str) -> list[int]:
+        """Parse 'June-August' / 'May' style strings to month numbers (1-12)."""
+        month_map = {
+            "jan": 1, "january": 1, "feb": 2, "february": 2,
+            "mar": 3, "march": 3, "apr": 4, "april": 4,
+            "may": 5, "jun": 6, "june": 6,
+            "jul": 7, "july": 7, "aug": 8, "august": 8,
+            "sep": 9, "september": 9, "oct": 10, "october": 10,
+            "nov": 11, "november": 11, "dec": 12, "december": 12,
+        }
+        text = (text or "").lower().strip()
+        parts = text.replace("–", "-").replace("—", "-").split("-")
+        months = []
+        for part in parts:
+            part = part.strip()
+            for key, num in month_map.items():
+                if part.startswith(key):
+                    months.append(num)
+                    break
+        if len(months) == 2:
+            start, end = months
+            if start <= end:
+                return list(range(start, end + 1))
+            return list(range(start, 13)) + list(range(1, end + 1))
+        return months

@@ -64,7 +64,7 @@ Features for long-term planning and tracking.
 |----|---------|-------------|--------|
 | P1 | **Succession / timeline planner** | A time slider showing how the design evolves: Year 1 (annuals), Year 3 (young shrubs), Year 10 (full canopy). Plants grow/appear based on their mature size over time | Planned |
 | P2 | **Maintenance / labor estimator** | Each element gets estimated hours/year. The app totals it up so you know if you're over-designing for your available time | Done |
-| P3 | **Harvest calendar** | Monthly view of what you'll be harvesting from placed plants — "August: Saskatoon berries, raspberries, chokecherries" | Done |
+| P3 | **Bloom & berry calendar** | Monthly view of pollinator nectar (blooms) and bird food (berries/seeds), with nectar-gap flagging across the growing season | Done |
 | P4 | **Crop rotation tracker** | For annual beds, track what was planted where each season to avoid repeating families | Planned |
 | P5 | **Input/output mapping** | Tag elements with inputs (water, fertilizer) and outputs (manure, mulch, food). Highlight "energy leaks" where outputs aren't connected to nearby inputs | Planned |
 | P6 | **Water budget calculator** | Estimate total water needs of placed plants vs. rainfall + any catchment (rain barrels, swales, pond) | Done |
@@ -119,7 +119,7 @@ Features for long-term planning and tracking.
 | Keyboard shortcuts (P/G/B/M/Z/N/L/Esc) | Done |
 | Status bar seasonal tasks | Done |
 | Project save/load (GeoJSON) | Done |
-| Shopping list export | Done |
+| Native plant order list export (grouped by AB nursery source) | Done |
 | Undo/redo | Done |
 | Permapeople API integration | Done |
 | Structures library (placeable structures across 5 categories: Water, Habitat, Growing, Storage, Infrastructure) | Done |
@@ -130,7 +130,8 @@ Features for long-term planning and tracking.
 | Slope / contour indicator (manual contour lines, elevation labels, slope arrows) | Done |
 | Wind sector & windbreak effect (16 directions, shelter zones 10× height) | Done |
 | Maintenance / labour estimator (plants + structures, capacity check) | Done |
-| Harvest calendar (monthly table from DB + fruit_period parsing) | Done |
+| Bloom & berry calendar (bloom_period + fruit_period; nectar-gap detection) | Done |
+| Habitat Value Score (composite 0–100: natives, keystone, host, bird food, layers, structures, bloom continuity) | Done |
 | Water budget calculator (demand vs rainfall + catchment) | Done |
 | Print / PDF export (map screenshot, plant list, notes, title block) | Done |
 | Design notes / journal (per-project, timestamps, saved in GeoJSON) | Done |

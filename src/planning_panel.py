@@ -3,7 +3,7 @@ planning_panel.py — Side-panel tab for planning and analysis features.
 
 Contains inner tabs:
   P2: Maintenance / labour estimator
-  P3: Harvest calendar
+  P3: Bloom & Berry calendar (pollinator nectar + bird food by month)
   P6: Water budget calculator
   V4: Design notes / journal
 """
@@ -62,7 +62,7 @@ _WATER_MULTIPLIER: dict[str, float] = {
 
 
 class PlanningPanel(QWidget):
-    """Panel housing maintenance estimator, harvest calendar, water budget, and notes."""
+    """Panel housing maintenance estimator, bloom & berry calendar, water budget, and notes."""
 
     # V4 signal: notes changed
     notes_changed = pyqtSignal(str)
@@ -86,7 +86,7 @@ class PlanningPanel(QWidget):
         self._tabs.setStyleSheet("QTabBar::tab { padding: 4px 8px; }")
 
         self._build_maintenance_tab()
-        self._build_harvest_tab()
+        self._build_bloom_berry_tab()
         self._build_water_tab()
         self._build_timeline_tab()
         self._build_notes_tab()
@@ -208,61 +208,77 @@ class PlanningPanel(QWidget):
         self._maint_results.setText("\n".join(lines))
 
     # ═════════════════════════════════════════════════════════════════════════
-    #  P3 — Harvest Calendar
+    #  P3 — Bloom & Berry Calendar (pollinator nectar + bird food)
     # ═════════════════════════════════════════════════════════════════════════
 
-    def _build_harvest_tab(self):
+    def _build_bloom_berry_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(6)
 
         info = QLabel(
-            "Monthly harvest calendar based on\n"
-            "placed plants with known harvest periods."
+            "When pollinators feed (blooms) and when birds\n"
+            "feed (berries/seeds) from your placed plants.\n"
+            "Months with no bloom source are flagged red —\n"
+            "those are nectar gaps to fill."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
         layout.addWidget(info)
 
-        btn = QPushButton("Show Harvest Calendar")
+        btn = QPushButton("Show Bloom & Berry Calendar")
         btn.setStyleSheet(
-            "QPushButton { background: #e65100; color: #fff3e0; border: 1px solid #ff6d00; "
+            "QPushButton { background: #6a1b9a; color: #f3e5f5; border: 1px solid #8e24aa; "
             "border-radius: 4px; padding: 6px; font-weight: bold; }"
-            "QPushButton:hover { background: #ff6d00; }"
+            "QPushButton:hover { background: #8e24aa; }"
         )
-        btn.clicked.connect(self._calc_harvest)
+        btn.clicked.connect(self._calc_bloom_berry)
         layout.addWidget(btn)
 
-        # Table
-        self._harvest_table = QTableWidget()
-        self._harvest_table.setColumnCount(2)
-        self._harvest_table.setHorizontalHeaderLabels(["Month", "Harvest"])
-        self._harvest_table.horizontalHeader().setSectionResizeMode(
+        # Gap summary
+        self._bloom_gap_label = QLabel("")
+        self._bloom_gap_label.setWordWrap(True)
+        self._bloom_gap_label.setStyleSheet("color: #ef9a9a; font-size: 11px; padding: 2px;")
+        layout.addWidget(self._bloom_gap_label)
+
+        # Table: Month | Pollinator Blooms | Bird Food
+        self._bloom_table = QTableWidget()
+        self._bloom_table.setColumnCount(3)
+        self._bloom_table.setHorizontalHeaderLabels(
+            ["Month", "Pollinator Blooms", "Bird Food"]
+        )
+        self._bloom_table.horizontalHeader().setSectionResizeMode(
             0, QHeaderView.ResizeMode.ResizeToContents
         )
-        self._harvest_table.horizontalHeader().setSectionResizeMode(
+        self._bloom_table.horizontalHeader().setSectionResizeMode(
             1, QHeaderView.ResizeMode.Stretch
         )
-        self._harvest_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self._harvest_table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
-        self._harvest_table.setStyleSheet(
+        self._bloom_table.horizontalHeader().setSectionResizeMode(
+            2, QHeaderView.ResizeMode.Stretch
+        )
+        self._bloom_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self._bloom_table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        self._bloom_table.setStyleSheet(
             "QTableWidget { background: #1a2a1a; border: 1px solid #2e4a2e; color: #c8e6c9; gridline-color: #2e4a2e; }"
             "QHeaderView::section { background: #1e2e1e; color: #a5d6a7; border: 1px solid #2e4a2e; padding: 4px; }"
         )
-        self._harvest_table.setRowCount(12)
+        self._bloom_table.setRowCount(12)
         for i, m in enumerate(_MONTHS):
-            self._harvest_table.setItem(i, 0, QTableWidgetItem(m))
-            self._harvest_table.setItem(i, 1, QTableWidgetItem(""))
-        layout.addWidget(self._harvest_table, 1)
+            self._bloom_table.setItem(i, 0, QTableWidgetItem(m))
+            self._bloom_table.setItem(i, 1, QTableWidgetItem(""))
+            self._bloom_table.setItem(i, 2, QTableWidgetItem(""))
+        layout.addWidget(self._bloom_table, 1)
 
         layout.addStretch()
-        self._tabs.addTab(tab, "Harvest")
+        self._tabs.addTab(tab, "Bloom & Berry")
 
-    def _calc_harvest(self):
+    def _calc_bloom_berry(self):
         if not self._placed_plants:
+            self._bloom_gap_label.setText("")
             for i in range(12):
-                self._harvest_table.setItem(i, 1, QTableWidgetItem("No plants placed"))
+                self._bloom_table.setItem(i, 1, QTableWidgetItem("No plants placed"))
+                self._bloom_table.setItem(i, 2, QTableWidgetItem(""))
             return
 
         try:
@@ -270,56 +286,88 @@ class PlanningPanel(QWidget):
         except Exception:
             return
 
-        # Gather unique plant IDs
         plant_ids = list({p["plant_id"] for p in self._placed_plants})
+
+        bloom_by_month: dict[int, list[str]] = {m: [] for m in range(1, 13)}
+        berry_by_month: dict[int, list[str]] = {m: [] for m in range(1, 13)}
 
         conn = get_connection()
         try:
-            # Get harvest months from calendar
-            harvest_by_month: dict[int, list[str]] = {m: [] for m in range(1, 13)}
-
             for pid in plant_ids:
                 row = conn.execute(
-                    "SELECT common_name, fruit_period FROM plants WHERE id = ?",
+                    "SELECT common_name, bloom_period, fruit_period FROM plants WHERE id = ?",
                     (pid,)
                 ).fetchone()
                 if not row:
                     continue
                 name = row["common_name"]
 
-                # Check planting calendar for harvest status
-                cal_rows = conn.execute(
-                    "SELECT month FROM planting_calendar WHERE plant_id = ? AND status = 'harvest'",
-                    (pid,)
-                ).fetchall()
-                for cr in cal_rows:
-                    harvest_by_month[cr["month"]].append(name)
+                if row["bloom_period"]:
+                    for m in self._parse_month_range(row["bloom_period"]):
+                        if name not in bloom_by_month[m]:
+                            bloom_by_month[m].append(name)
 
-                # Also check fruit_period field (e.g. "August-September")
-                if not cal_rows and row["fruit_period"]:
-                    months_in_period = self._parse_fruit_period(row["fruit_period"])
-                    for m in months_in_period:
-                        if name not in harvest_by_month[m]:
-                            harvest_by_month[m].append(name)
+                if row["fruit_period"]:
+                    for m in self._parse_month_range(row["fruit_period"]):
+                        if name not in berry_by_month[m]:
+                            berry_by_month[m].append(name)
         finally:
             conn.close()
+
+        # Nectar-gap detection across growing season (Apr–Oct)
+        growing = list(range(4, 11))
+        gap_months = [m for m in growing if not bloom_by_month.get(m)]
+        if gap_months:
+            names = ", ".join(_MONTHS[m - 1] for m in gap_months)
+            self._bloom_gap_label.setText(
+                f"⚠ Nectar gaps in growing season: {names}. "
+                f"Add a species blooming in these months to support pollinators."
+            )
+        else:
+            self._bloom_gap_label.setText(
+                "✓ Continuous bloom across the growing season (Apr–Oct)."
+            )
+            self._bloom_gap_label.setStyleSheet(
+                "color: #a5d6a7; font-size: 11px; padding: 2px;"
+            )
 
         # Populate table
         for i in range(12):
             month_num = i + 1
-            plants = harvest_by_month.get(month_num, [])
-            if plants:
-                text = ", ".join(sorted(plants))
-                item = QTableWidgetItem(text)
-                item.setForeground(QColor("#ffcc80"))
+            blooms = bloom_by_month.get(month_num, [])
+            berries = berry_by_month.get(month_num, [])
+
+            bloom_item = QTableWidgetItem(
+                ", ".join(sorted(blooms)) if blooms else "—"
+            )
+            in_growing = month_num in growing
+            if blooms:
+                bloom_item.setForeground(QColor("#ce93d8"))
+            elif in_growing:
+                bloom_item.setForeground(QColor("#ef5350"))
+                bloom_item.setText("— (nectar gap)")
             else:
-                item = QTableWidgetItem("—")
-                item.setForeground(QColor("#546e7a"))
-            self._harvest_table.setItem(i, 1, item)
+                bloom_item.setForeground(QColor("#546e7a"))
+            self._bloom_table.setItem(i, 1, bloom_item)
+
+            berry_item = QTableWidgetItem(
+                ", ".join(sorted(berries)) if berries else "—"
+            )
+            berry_item.setForeground(
+                QColor("#ffcc80") if berries else QColor("#546e7a")
+            )
+            self._bloom_table.setItem(i, 2, berry_item)
+
+        # Re-apply the gap-label style each time so a gap-free design
+        # can flip back to a warning if the user later removes plants.
+        if gap_months:
+            self._bloom_gap_label.setStyleSheet(
+                "color: #ef9a9a; font-size: 11px; padding: 2px;"
+            )
 
     @staticmethod
-    def _parse_fruit_period(text: str) -> list[int]:
-        """Parse a fruit period string like 'August-September' into month numbers."""
+    def _parse_month_range(text: str) -> list[int]:
+        """Parse a period string like 'August-September' or 'May' into month numbers."""
         month_map = {
             "jan": 1, "january": 1, "feb": 2, "february": 2,
             "mar": 3, "march": 3, "apr": 4, "april": 4,
@@ -329,7 +377,6 @@ class PlanningPanel(QWidget):
             "nov": 11, "november": 11, "dec": 12, "december": 12,
         }
         text = text.lower().strip()
-        # Handle ranges like "August-September" or "August–September"
         parts = text.replace("–", "-").replace("—", "-").split("-")
         months = []
         for part in parts:
@@ -339,12 +386,10 @@ class PlanningPanel(QWidget):
                     months.append(num)
                     break
         if len(months) == 2:
-            # Range: expand
             start, end = months
             if start <= end:
                 return list(range(start, end + 1))
-            else:
-                return list(range(start, 13)) + list(range(1, end + 1))
+            return list(range(start, 13)) + list(range(1, end + 1))
         return months
 
     # ═════════════════════════════════════════════════════════════════════════

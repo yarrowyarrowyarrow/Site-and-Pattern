@@ -341,8 +341,8 @@ class MainWindow(QMainWindow):
 
         file_menu.addSeparator()
 
-        act_shopping = file_menu.addAction("Export &Shopping List…")
-        act_shopping.setStatusTip("Export a list of all placed plants with quantities")
+        act_shopping = file_menu.addAction("Export &Plant Order List…")
+        act_shopping.setStatusTip("Export a plant order list grouped by Alberta nursery source")
         act_shopping.triggered.connect(self._on_export_shopping_list)
 
         act_pdf = file_menu.addAction("Export &PDF…")
@@ -2021,6 +2021,8 @@ class MainWindow(QMainWindow):
         self.planning_panel.set_notes("")
         self.planning_panel.set_placed_plants([])
         self.planning_panel.set_structures([])
+        self.analysis_panel.set_placed_plants([])
+        self.analysis_panel.set_structures([])
         self.setWindowTitle(f"PermaDesign — {name}")
         self._set_mode_label("Ready")
 
@@ -2193,14 +2195,25 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
-    # ── Shopping list export ─────────────────────────────────────────────────
+    # ── Plant order list export ──────────────────────────────────────────────
+
+    # Form (seed / plug / container) inferred from plant_type. Native nurseries
+    # commonly stock trees/shrubs as containers, herbaceous as plugs, and grasses
+    # / forbs as seed for broadcast applications.
+    _PLANT_FORM_BY_TYPE = {
+        "tree":        "container",
+        "shrub":       "container",
+        "vine":        "container",
+        "herb":        "plug or seed",
+        "groundcover": "plug or seed",
+        "root":        "bulb / tuber",
+    }
 
     def _on_export_shopping_list(self):
         if not self._placed_plants:
-            QMessageBox.information(self, "Shopping List", "No plants placed yet.")
+            QMessageBox.information(self, "Plant Order List", "No plants placed yet.")
             return
 
-        # Count by plant_id
         from collections import Counter
         counts: Counter = Counter()
         names: dict[int, str] = {}
@@ -2209,39 +2222,85 @@ class MainWindow(QMainWindow):
             counts[pid] += 1
             names[pid] = p["common_name"]
 
-        # Build list with type info
         try:
             from src.db.plants import get_plant
-            lines = ["PermaDesign — Shopping List", "=" * 40, ""]
-            type_groups: dict[str, list[str]] = {}
-            total = 0
-            for pid, qty in sorted(counts.items(), key=lambda x: names.get(x[0], "")):
-                plant = get_plant(pid)
-                ptype = plant.get("plant_type", "other") if plant else "other"
-                sci = plant.get("scientific_name", "") if plant else ""
-                line = f"  {names[pid]}"
+        except Exception:
+            get_plant = lambda pid: None
+
+        # Bucket by sourcing channel:
+        #   native_trees_shrubs → ALCLA / Bow Valley Habitat Development
+        #   native_herbaceous   → ALCLA / Wild About Flowers / Bedrock Seed Bank
+        #   cultivated          → local garden centres
+        native_woody: list[tuple[str, str, str, int]] = []
+        native_herb:  list[tuple[str, str, str, int]] = []
+        cultivated:   list[tuple[str, str, str, int]] = []
+
+        total = 0
+        for pid, qty in counts.items():
+            plant = get_plant(pid) or {}
+            ptype = plant.get("plant_type", "other")
+            sci   = plant.get("scientific_name", "")
+            native = bool(plant.get("native_to_alberta"))
+            form  = self._PLANT_FORM_BY_TYPE.get(ptype, "—")
+            entry = (names[pid], sci, form, qty)
+            if native and ptype in ("tree", "shrub", "vine"):
+                native_woody.append(entry)
+            elif native:
+                native_herb.append(entry)
+            else:
+                cultivated.append(entry)
+            total += qty
+
+        def fmt_section(title: str, items: list[tuple[str, str, str, int]]) -> list[str]:
+            if not items:
+                return []
+            out = [title, "-" * len(title)]
+            for name, sci, form, qty in sorted(items, key=lambda x: x[0].lower()):
+                line = f"  {name}"
                 if sci:
                     line += f"  ({sci})"
-                line += f"  ×{qty}"
-                type_groups.setdefault(ptype, []).append(line)
-                total += qty
+                line += f"  ×{qty}  [{form}]"
+                out.append(line)
+            out.append("")
+            return out
 
-            type_order = ["tree", "shrub", "herb", "groundcover", "vine", "root"]
-            for t in type_order:
-                if t in type_groups:
-                    lines.append(f"{t.upper()}S")
-                    lines.extend(sorted(type_groups[t]))
-                    lines.append("")
+        lines = [
+            "PermaDesign — Native Plant Order List",
+            "=" * 44,
+            "",
+        ]
+        lines += fmt_section(
+            "NATIVE TREES & SHRUBS  (sources: ALCLA, Bow Valley Habitat)",
+            native_woody,
+        )
+        lines += fmt_section(
+            "NATIVE HERBACEOUS & GROUNDCOVER  "
+            "(sources: ALCLA, Wild About Flowers, Bedrock Seed Bank)",
+            native_herb,
+        )
+        lines += fmt_section(
+            "CULTIVATED / NON-NATIVE  (sources: local garden centres)",
+            cultivated,
+        )
 
-            lines.append(f"{'=' * 40}")
-            lines.append(f"Total: {total} plants ({len(counts)} species)")
-        except Exception:
-            lines = [f"{names.get(pid, '?')}  ×{qty}" for pid, qty in counts.items()]
+        lines.append("=" * 44)
+        n_native = sum(qty for _, _, _, qty in native_woody + native_herb)
+        n_cult   = sum(qty for _, _, _, qty in cultivated)
+        lines.append(
+            f"Total: {total} plants ({len(counts)} species)  "
+            f"— {n_native} native, {n_cult} cultivated"
+        )
+        lines.append("")
+        lines.append("Alberta native plant nurseries / seed sources:")
+        lines.append("  • ALCLA Native Plants            https://alclanativeplants.com/")
+        lines.append("  • Bow Valley Habitat Development https://bowvalleyhabitat.com/")
+        lines.append("  • Wild About Flowers             https://wildaboutflowers.ca/")
+        lines.append("  • Bedrock Seed Bank              https://bedrockseedbank.ca/")
 
         text = "\n".join(lines)
 
         path, _ = QFileDialog.getSaveFileName(
-            self, "Export Shopping List", "shopping_list.txt",
+            self, "Export Plant Order List", "plant_order_list.txt",
             "Text Files (*.txt);;CSV (*.csv);;All Files (*)"
         )
         if not path:
@@ -2249,7 +2308,7 @@ class MainWindow(QMainWindow):
         try:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(text)
-            self.statusBar().showMessage(f"Shopping list saved: {path}", 3000)
+            self.statusBar().showMessage(f"Plant order list saved: {path}", 3000)
         except Exception as exc:
             QMessageBox.critical(self, "Export failed", str(exc))
 
@@ -2416,7 +2475,7 @@ class MainWindow(QMainWindow):
     # ── Planning panel sync ──────────────────────────────────────────────
 
     def _sync_planning_panel(self):
-        """Push current placed plants and structures to the planning panel."""
+        """Push current placed plants and structures to planning + analysis panels."""
         enriched = []
         for p in self._placed_plants:
             entry = dict(p)
@@ -2438,6 +2497,10 @@ class MainWindow(QMainWindow):
                 sd = props.get("struct_def", {})
                 structs.append(sd)
         self.planning_panel.set_structures(structs)
+
+        # Habitat Value Score tab in the analysis panel uses the same data.
+        self.analysis_panel.set_placed_plants(enriched)
+        self.analysis_panel.set_structures(structs)
 
     def _push_undo(self, entry: dict):
         self._undo_stack.append(entry)

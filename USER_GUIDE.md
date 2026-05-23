@@ -114,7 +114,8 @@ The View bar (🛰 Satellite, ⬡ Boundary, 📏 Measurement, **#** Grid, ✿ Pl
 ## 10. Planning helpers (Planning tab)
 
 - **Maintenance estimator** — enter your available hrs/week, click *Calculate Maintenance* to compare the design against your time budget.
-- **Harvest calendar** — month-by-month table of what's ripening, derived from each plant's calendar.
+- **Bloom & berry calendar** — month-by-month view of pollinator blooms and bird food (berries / seeds) from your placed plants. Months with no bloom source during the Apr–Oct growing season are flagged red as **nectar gaps** to fill.
+- **Habitat Value Score** (Analysis panel) — composite 0–100 score derived from native ratio, keystone species, host plants, bird-food species, vegetation-layer diversity, habitat structures, and bloom continuity. Based on Doug Tallamy's keystone-species framework.
 - **Water budget** — enter garden area, rain barrels, roof catchment, swales, ponds → *Calculate Water Budget* shows demand vs. supply and any deficit.
 - **Succession timeline** — drag the year slider 0–20 to see how the design matures.
 - **Notes / journal** — free-form text editor with **Add Timestamp** and **+ Section** buttons.
@@ -126,7 +127,7 @@ The View bar (🛰 Satellite, ⬡ Boundary, 📏 Measurement, **#** Grid, ✿ Pl
 - **File → Save** (Ctrl+S) writes a `.perma.geojson` file — the whole design.
 - **File → Open** (Ctrl+O) loads one.
 - **File → Export PDF…** produces a printable booklet with the map screenshot, plant list, and notes.
-- **File → Export Shopping List…** dumps a CSV / text plant-quantity list you can take to the nursery.
+- **File → Export Plant Order List…** produces a text list grouped by Alberta nursery source (ALCLA, Bow Valley Habitat, Wild About Flowers, Bedrock Seed Bank), with native woody / native herbaceous / cultivated sections.
 - The app auto-saves every 5 minutes in the background.
 
 ---
