@@ -331,12 +331,12 @@ EXAMPLE_POLYCULTURES = [
                        "Apple at centre with support plants filling understory and ground layer.",
         "members": [
             # (common_name, role, offset_x, offset_y)
-            ("Goodland Apple",    "overstory",              0,    0),
-            ("Comfrey",           "soil_builder", 1.5,  0.8),
-            ("Chives",            "pest_deterrent",     -1.2,  1.0),
-            ("White Clover",      "nitrogen_fixer",      0,    1.5),
-            ("Yarrow",            "pollinator",          1.0, -1.2),
-            ("Wild Strawberry",   "groundcover",        -0.8, -1.0),
+            ("Goodland Apple",        "overstory",       0,    0),
+            ("Stinging Nettle",       "soil_builder",    1.5,  0.8),
+            ("Wild Chives",           "pest_deterrent", -1.2,  1.0),
+            ("Purple Prairie Clover", "nitrogen_fixer",  0,    1.5),
+            ("Yarrow",                "pollinator",      1.0, -1.2),
+            ("Wild Strawberry",       "groundcover",    -0.8, -1.0),
         ],
         "variations": [
             {
@@ -344,12 +344,12 @@ EXAMPLE_POLYCULTURES = [
                 "description": "Apple community variant using shade-tolerant understory plants. "
                                "Better for north-facing or partially shaded sites.",
                 "members": [
-                    ("Goodland Apple",  "overstory",              0,    0),
-                    ("Comfrey",         "soil_builder", 1.5,  0.8),
-                    ("Wild Mint",       "pest_deterrent",     -1.2,  1.0),
-                    ("White Clover",    "nitrogen_fixer",      0,    1.5),
-                    ("Gooseberry",      "understory",          1.0, -1.2),
-                    ("Kinnikinnick (Bearberry)", "groundcover",-0.8, -1.0),
+                    ("Goodland Apple",           "overstory",       0,    0),
+                    ("Stinging Nettle",          "soil_builder",    1.5,  0.8),
+                    ("Wild Mint",                "pest_deterrent", -1.2,  1.0),
+                    ("Canada Milk Vetch",        "nitrogen_fixer",  0,    1.5),
+                    ("Wild Gooseberry",          "understory",      1.0, -1.2),
+                    ("Kinnikinnick (Bearberry)", "groundcover",    -0.8, -1.0),
                 ],
             },
         ],
@@ -359,12 +359,12 @@ EXAMPLE_POLYCULTURES = [
         "description": "Prairie-adapted shrub polyculture built around Saskatoon berry. "
                        "Great for Zone 2-4 native habitat plantings.",
         "members": [
-            ("Saskatoon Berry",   "overstory",              0,    0),
-            ("Wild Lupine",       "nitrogen_fixer",      1.0,  0.5),
-            ("Yarrow",            "soil_builder",-0.8,  0.8),
-            ("Wild Strawberry",   "groundcover",         0.5, -0.8),
-            ("Chives",            "pest_deterrent",     -0.5, -0.6),
-            ("Bee Balm (Wild Bergamot)", "pollinator",   0.8, -0.5),
+            ("Saskatoon Berry",          "overstory",       0,    0),
+            ("Silvery Lupine",           "nitrogen_fixer",  1.0,  0.5),
+            ("Yarrow",                   "soil_builder",   -0.8,  0.8),
+            ("Wild Strawberry",          "groundcover",     0.5, -0.8),
+            ("Wild Chives",              "pest_deterrent", -0.5, -0.6),
+            ("Bee Balm (Wild Bergamot)", "pollinator",      0.8, -0.5),
         ],
         "variations": [
             {
@@ -372,12 +372,12 @@ EXAMPLE_POLYCULTURES = [
                 "description": "Saskatoon community variant emphasizing fruit production. "
                                "Adds more berry-producing understory shrubs.",
                 "members": [
-                    ("Saskatoon Berry",  "overstory",             0,    0),
-                    ("Wild Lupine",      "nitrogen_fixer",     1.0,  0.5),
-                    ("Gooseberry",       "understory",        -0.8,  0.8),
-                    ("Wild Strawberry",  "groundcover",        0.5, -0.8),
-                    ("Red Currant",      "understory",        -0.5, -0.6),
-                    ("Yarrow",           "pollinator",         0.8, -0.5),
+                    ("Saskatoon Berry",   "overstory",       0,    0),
+                    ("Silvery Lupine",    "nitrogen_fixer",  1.0,  0.5),
+                    ("Wild Gooseberry",   "understory",     -0.8,  0.8),
+                    ("Wild Strawberry",   "groundcover",     0.5, -0.8),
+                    ("Wild Red Currant",  "understory",     -0.5, -0.6),
+                    ("Yarrow",            "pollinator",      0.8, -0.5),
                 ],
             },
         ],
@@ -386,36 +386,35 @@ EXAMPLE_POLYCULTURES = [
     {
         "name": "Evans Cherry Community",
         "description": "Fruit tree polyculture centred on Evans Cherry, a hardy sour cherry bred for "
-                       "prairie climates. Comfrey mines deep nutrients and provides chop-and-drop "
-                       "mulch. Chives and garlic repel aphids and borers common on cherries. "
-                       "White clover fixes nitrogen as a living mulch, while bee balm attracts "
-                       "native pollinators for improved fruit set. Wild strawberry suppresses "
-                       "weeds and yields an additional ground-level harvest.",
+                       "prairie climates. Stinging nettle accumulates deep nutrients and provides "
+                       "chop-and-drop mulch. Wild chives and prairie sage repel aphids and borers "
+                       "common on cherries. Purple prairie clover fixes nitrogen as a native ground "
+                       "layer, while bee balm attracts native pollinators for improved fruit set. "
+                       "Wild strawberry suppresses weeds and yields an additional ground-level harvest.",
         "members": [
-            ("Evans Cherry",              "overstory",              0,    0),
-            ("Comfrey",                   "soil_builder", 1.8,  0),
-            ("Chives",                    "pest_deterrent",     -1.0,  1.2),
-            ("White Clover",              "nitrogen_fixer",      0,    2.0),
-            ("Bee Balm (Wild Bergamot)",  "pollinator",         -1.5, -1.0),
-            ("Wild Strawberry",           "groundcover",         1.0, -1.5),
-            ("Garlic",                    "pest_deterrent",      0,   -1.3),
+            ("Evans Cherry",              "overstory",       0,    0),
+            ("Stinging Nettle",           "soil_builder",    1.8,  0),
+            ("Wild Chives",               "pest_deterrent", -1.0,  1.2),
+            ("Purple Prairie Clover",     "nitrogen_fixer",  0,    2.0),
+            ("Bee Balm (Wild Bergamot)",  "pollinator",     -1.5, -1.0),
+            ("Wild Strawberry",           "groundcover",     1.0, -1.5),
+            ("Prairie Sage",              "pest_deterrent",  0,   -1.3),
         ],
         "variations": [
             {
                 "name": "Native Understory",
                 "description": "Evans Cherry community variant using exclusively native prairie plants. "
-                               "Replaces comfrey and garlic with native soil-building plants and "
-                               "pest repellents. Yarrow is a native nutrient accumulator and "
-                               "pollinator attractor; nodding onion replaces chives as a native "
-                               "allium pest deterrent.",
+                               "Yarrow is a native nutrient accumulator and pollinator attractor; "
+                               "nodding onion provides allium-family pest deterrence; silvery lupine "
+                               "fixes nitrogen in dappled light; wild bergamot draws native bumble bees.",
                 "members": [
-                    ("Evans Cherry",              "overstory",              0,    0),
-                    ("Yarrow",                    "soil_builder", 1.8,  0),
-                    ("Nodding Onion",             "pest_deterrent",     -1.0,  1.2),
-                    ("Alfalfa",                   "nitrogen_fixer",      0,    2.0),
-                    ("Bee Balm (Wild Bergamot)",  "pollinator",         -1.5, -1.0),
-                    ("Wild Strawberry",           "groundcover",         1.0, -1.5),
-                    ("Purple Coneflower",         "pollinator",          0,   -1.3),
+                    ("Evans Cherry",              "overstory",       0,    0),
+                    ("Yarrow",                    "soil_builder",    1.8,  0),
+                    ("Nodding Onion",             "pest_deterrent", -1.0,  1.2),
+                    ("Silvery Lupine",            "nitrogen_fixer",  0,    2.0),
+                    ("Bee Balm (Wild Bergamot)",  "pollinator",     -1.5, -1.0),
+                    ("Wild Strawberry",           "groundcover",     1.0, -1.5),
+                    ("Wild Bergamot",             "pollinator",      0,   -1.3),
                 ],
             },
         ],
@@ -425,34 +424,34 @@ EXAMPLE_POLYCULTURES = [
         "description": "Large shade-tree polyculture modelled on natural oak savanna ecosystems of the "
                        "aspen parkland. Bur oak provides a long-lived canopy with edible acorns. "
                        "Beaked hazelnut is a native understory shrub that naturally co-occurs with "
-                       "oak and produces edible nuts. Wild lupine and white prairie clover fix "
-                       "nitrogen in the dappled light. Comfrey accumulates nutrients from deep "
-                       "soil layers. Dotted blazingstar is a premier pollinator magnet for native "
-                       "bumble bees. Kinnikinnick forms an evergreen groundcover that suppresses "
-                       "weeds under the spreading canopy.",
+                       "oak and produces edible nuts. Silvery lupine and white prairie clover fix "
+                       "nitrogen in the dappled light. Stinging nettle accumulates nutrients from "
+                       "deep soil layers. Dotted blazingstar is a premier pollinator magnet for "
+                       "native bumble bees. Kinnikinnick forms an evergreen groundcover that "
+                       "suppresses weeds under the spreading canopy.",
         "members": [
-            ("Bur Oak",                   "overstory",              0,    0),
-            ("Beaked Hazelnut",           "understory",          3.0,  1.5),
-            ("Wild Lupine",               "nitrogen_fixer",     -2.0,  2.5),
-            ("Comfrey",                   "soil_builder", 2.5, -1.5),
-            ("Dotted Blazingstar",        "pollinator",         -2.5, -2.0),
-            ("Kinnikinnick (Bearberry)",  "groundcover",         1.5, -2.5),
-            ("White Prairie Clover",      "nitrogen_fixer",     -1.0,  3.0),
+            ("Bur Oak",                   "overstory",       0,    0),
+            ("Beaked Hazelnut",           "understory",      3.0,  1.5),
+            ("Silvery Lupine",            "nitrogen_fixer", -2.0,  2.5),
+            ("Stinging Nettle",           "soil_builder",    2.5, -1.5),
+            ("Dotted Blazingstar",        "pollinator",     -2.5, -2.0),
+            ("Kinnikinnick (Bearberry)",  "groundcover",     1.5, -2.5),
+            ("White Prairie Clover",      "nitrogen_fixer", -1.0,  3.0),
         ],
         "variations": [
             {
                 "name": "Edible Savanna",
                 "description": "Bur oak community variant emphasizing food production. Saskatoon berry "
-                               "and gooseberry replace hazelnut for more fruit. Canada goldenrod "
+                               "and wild gooseberry replace hazelnut for more fruit. Canada goldenrod "
                                "provides late-season pollinator support.",
                 "members": [
-                    ("Bur Oak",                   "overstory",              0,    0),
-                    ("Saskatoon Berry",           "understory",          3.0,  1.5),
-                    ("Gooseberry",                "understory",         -2.5,  1.0),
-                    ("Alfalfa",                   "nitrogen_fixer",     -2.0,  2.5),
-                    ("Yarrow",                    "soil_builder", 2.5, -1.5),
-                    ("Canada Goldenrod",          "pollinator",         -2.5, -2.0),
-                    ("Wild Strawberry",           "groundcover",         1.5, -2.5),
+                    ("Bur Oak",                   "overstory",       0,    0),
+                    ("Saskatoon Berry",           "understory",      3.0,  1.5),
+                    ("Wild Gooseberry",           "understory",     -2.5,  1.0),
+                    ("Silvery Lupine",            "nitrogen_fixer", -2.0,  2.5),
+                    ("Yarrow",                    "soil_builder",    2.5, -1.5),
+                    ("Canada Goldenrod",          "pollinator",     -2.5, -2.0),
+                    ("Wild Strawberry",           "groundcover",     1.5, -2.5),
                 ],
             },
         ],
@@ -536,21 +535,21 @@ EXAMPLE_POLYCULTURES = [
     },
     {
         "name": "Medicinal Herb Circle",
-        "description": "Traditional medicinal plant polyculture arranged in a circle garden. Centred on "
-                       "purple coneflower (Echinacea), North America's most popular herbal immune "
-                       "support. Yarrow is used by First Nations for wound care and fever. Wild "
-                       "mint and giant hyssop provide digestive and respiratory remedies. "
-                       "Valerian is a traditional sleep aid. Self-heal (Prunella vulgaris) is "
-                       "a widely used wound herb. All species are hardy perennials proven in "
-                       "Zone 3 Alberta gardens.",
+        "description": "Traditional native medicinal plant polyculture arranged in a circle garden. "
+                       "Centred on wild bergamot, an aromatic native mint used by First Nations for "
+                       "respiratory and digestive remedies and a favourite of native bumble bees. "
+                       "Yarrow is used by First Nations for wound care and fever. Wild mint and "
+                       "giant hyssop provide digestive and respiratory remedies. Valerian is a "
+                       "traditional sleep aid. Self-heal (Prunella vulgaris) is a widely used wound "
+                       "herb. All species are hardy native perennials proven in Zone 3 Alberta gardens.",
         "members": [
-            ("Purple Coneflower",         "pollinator",          0,    0),
-            ("Yarrow",                    "soil_builder", 0.8,  0.5),
-            ("Wild Mint",                 "pest_deterrent",     -0.7,  0.7),
-            ("Giant Hyssop",              "pollinator",          0.5, -0.8),
-            ("Valerian",                  "other",              -0.8, -0.3),
-            ("Self-heal",                 "other",               0.3,  0.9),
-            ("Bee Balm (Wild Bergamot)",  "pollinator",         -0.4, -0.8),
+            ("Wild Bergamot",             "pollinator",      0,    0),
+            ("Yarrow",                    "soil_builder",    0.8,  0.5),
+            ("Wild Mint",                 "pest_deterrent", -0.7,  0.7),
+            ("Giant Hyssop",              "pollinator",      0.5, -0.8),
+            ("Valerian",                  "other",          -0.8, -0.3),
+            ("Self-heal",                 "other",           0.3,  0.9),
+            ("Bee Balm (Wild Bergamot)",  "pollinator",     -0.4, -0.8),
         ],
         "variations": [
             {
@@ -560,15 +559,16 @@ EXAMPLE_POLYCULTURES = [
                                "root (Acorus calamus) is used for throat and stomach ailments. "
                                "Seneca snakeroot is a traditional respiratory remedy. Prairie sage "
                                "provides smudging material. Wild licorice root was used as a "
-                               "general tonic.",
+                               "general tonic. Wild bergamot anchors the circle as a native "
+                               "pollinator and traditional medicinal mint.",
                 "members": [
-                    ("Purple Coneflower",         "pollinator",          0,    0),
-                    ("Sweetgrass",                "other",               0.8,  0.5),
-                    ("Prairie Sage",              "pest_deterrent",     -0.7,  0.7),
-                    ("Rat Root",                  "other",               0.5, -0.8),
-                    ("Wild Licorice",             "other",              -0.8, -0.3),
-                    ("Seneca Snakeroot",          "other",               0.3,  0.9),
-                    ("Yarrow",                    "soil_builder",-0.4, -0.8),
+                    ("Wild Bergamot",             "pollinator",      0,    0),
+                    ("Sweetgrass",                "other",           0.8,  0.5),
+                    ("Prairie Sage",              "pest_deterrent", -0.7,  0.7),
+                    ("Rat Root",                  "other",           0.5, -0.8),
+                    ("Wild Licorice",             "other",          -0.8, -0.3),
+                    ("Seneca Snakeroot",          "other",           0.3,  0.9),
+                    ("Yarrow",                    "soil_builder",   -0.4, -0.8),
                 ],
             },
         ],
@@ -579,17 +579,17 @@ EXAMPLE_POLYCULTURES = [
                        "hedgerow. Combines native berry-producing shrubs with nitrogen fixers and "
                        "pollinator plants to create a productive living fence. Saskatoon berry and "
                        "chokecherry form the tall backbone spaced 2-3m apart. Haskap fills the "
-                       "mid layer at 1m spacing. Wild rose and raspberry provide thorny security "
-                       "at the base. Alfalfa fixes nitrogen between shrubs. Use offset_y as "
-                       "distance along the hedge line.",
+                       "mid layer at 1m spacing. Prickly wild rose and wild raspberry provide thorny "
+                       "security at the base. Silvery lupine fixes nitrogen between shrubs. Use "
+                       "offset_y as distance along the hedge line.",
         "members": [
-            ("Saskatoon Berry",           "overstory",              0,    0),
-            ("Chokecherry",               "understory",          0,    3.0),
-            ("Haskap (Blue Honeysuckle)", "understory",          0,    1.5),
-            ("Raspberry",                 "understory",          0.8,  0.8),
-            ("Prickly Rose",              "other",               0.8,  2.2),
-            ("Alfalfa",                   "nitrogen_fixer",      0.5,  3.8),
-            ("Canada Goldenrod",          "pollinator",         -0.5,  1.0),
+            ("Saskatoon Berry",           "overstory",       0,    0),
+            ("Chokecherry",               "understory",      0,    3.0),
+            ("Haskap (Blue Honeysuckle)", "understory",      0,    1.5),
+            ("Wild Raspberry",            "understory",      0.8,  0.8),
+            ("Prickly Wild Rose",         "other",           0.8,  2.2),
+            ("Silvery Lupine",            "nitrogen_fixer",  0.5,  3.8),
+            ("Canada Goldenrod",          "pollinator",     -0.5,  1.0),
         ],
         "variations": [
             {
