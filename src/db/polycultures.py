@@ -1,6 +1,21 @@
 import json
 from .plants import get_connection
 
+# Legacy role names → current ones. Keeps plant communities saved before the
+# Native Habitat Designer rename rendering with the new vegetation-layer
+# language without forcing a DB migration.
+_LEGACY_ROLE_ALIASES = {
+    "canopy":              "overstory",
+    "dynamic_accumulator": "soil_builder",
+    "pest_repellent":      "pest_deterrent",
+}
+
+
+def _normalize_role(role):
+    if role and role in _LEGACY_ROLE_ALIASES:
+        return _LEGACY_ROLE_ALIASES[role]
+    return role
+
 
 def _get_plant_by_name(common_name):
     """Look up a plant by common_name (case-insensitive)."""
@@ -47,7 +62,12 @@ def get_polyculture_by_id(polyculture_id):
             "WHERE gm.polyculture_id = ? ORDER BY gm.id",
             (polyculture_id,),
         ).fetchall()
-        polyculture["members"] = [dict(m) for m in members]
+        member_dicts = []
+        for m in members:
+            md = dict(m)
+            md["role"] = _normalize_role(md.get("role"))
+            member_dicts.append(md)
+        polyculture["members"] = member_dicts
         return polyculture
     finally:
         conn.close()
@@ -306,14 +326,14 @@ def import_polyculture(data):
 
 EXAMPLE_POLYCULTURES = [
     {
-        "name": "Apple Tree Polyculture",
-        "description": "Classic permaculture fruit tree polyculture for Zone 3-4. "
+        "name": "Apple Tree Community",
+        "description": "Classic native habitat fruit tree community for Zone 3-4. "
                        "Apple at centre with support plants filling understory and ground layer.",
         "members": [
             # (common_name, role, offset_x, offset_y)
-            ("Goodland Apple",    "canopy",              0,    0),
-            ("Comfrey",           "dynamic_accumulator", 1.5,  0.8),
-            ("Chives",            "pest_repellent",     -1.2,  1.0),
+            ("Goodland Apple",    "overstory",              0,    0),
+            ("Comfrey",           "soil_builder", 1.5,  0.8),
+            ("Chives",            "pest_deterrent",     -1.2,  1.0),
             ("White Clover",      "nitrogen_fixer",      0,    1.5),
             ("Yarrow",            "pollinator",          1.0, -1.2),
             ("Wild Strawberry",   "groundcover",        -0.8, -1.0),
@@ -321,12 +341,12 @@ EXAMPLE_POLYCULTURES = [
         "variations": [
             {
                 "name": "Shade-Tolerant",
-                "description": "Apple polyculture variant using shade-tolerant understory plants. "
+                "description": "Apple community variant using shade-tolerant understory plants. "
                                "Better for north-facing or partially shaded sites.",
                 "members": [
-                    ("Goodland Apple",  "canopy",              0,    0),
-                    ("Comfrey",         "dynamic_accumulator", 1.5,  0.8),
-                    ("Wild Mint",       "pest_repellent",     -1.2,  1.0),
+                    ("Goodland Apple",  "overstory",              0,    0),
+                    ("Comfrey",         "soil_builder", 1.5,  0.8),
+                    ("Wild Mint",       "pest_deterrent",     -1.2,  1.0),
                     ("White Clover",    "nitrogen_fixer",      0,    1.5),
                     ("Gooseberry",      "understory",          1.0, -1.2),
                     ("Kinnikinnick (Bearberry)", "groundcover",-0.8, -1.0),
@@ -335,24 +355,24 @@ EXAMPLE_POLYCULTURES = [
         ],
     },
     {
-        "name": "Saskatoon Berry Polyculture",
+        "name": "Saskatoon Berry Community",
         "description": "Prairie-adapted shrub polyculture built around Saskatoon berry. "
-                       "Great for Zone 2-4 food forests with native plants.",
+                       "Great for Zone 2-4 native habitat plantings.",
         "members": [
-            ("Saskatoon Berry",   "canopy",              0,    0),
+            ("Saskatoon Berry",   "overstory",              0,    0),
             ("Wild Lupine",       "nitrogen_fixer",      1.0,  0.5),
-            ("Yarrow",            "dynamic_accumulator",-0.8,  0.8),
+            ("Yarrow",            "soil_builder",-0.8,  0.8),
             ("Wild Strawberry",   "groundcover",         0.5, -0.8),
-            ("Chives",            "pest_repellent",     -0.5, -0.6),
+            ("Chives",            "pest_deterrent",     -0.5, -0.6),
             ("Bee Balm (Wild Bergamot)", "pollinator",   0.8, -0.5),
         ],
         "variations": [
             {
                 "name": "Berry Focus",
-                "description": "Saskatoon polyculture variant emphasizing fruit production. "
+                "description": "Saskatoon community variant emphasizing fruit production. "
                                "Adds more berry-producing understory shrubs.",
                 "members": [
-                    ("Saskatoon Berry",  "canopy",             0,    0),
+                    ("Saskatoon Berry",  "overstory",             0,    0),
                     ("Wild Lupine",      "nitrogen_fixer",     1.0,  0.5),
                     ("Gooseberry",       "understory",        -0.8,  0.8),
                     ("Wild Strawberry",  "groundcover",        0.5, -0.8),
@@ -364,7 +384,7 @@ EXAMPLE_POLYCULTURES = [
     },
     # ── Edmonton-specific polycultures designed for Zone 3-4 ──────────────────────
     {
-        "name": "Evans Cherry Polyculture",
+        "name": "Evans Cherry Community",
         "description": "Fruit tree polyculture centred on Evans Cherry, a hardy sour cherry bred for "
                        "prairie climates. Comfrey mines deep nutrients and provides chop-and-drop "
                        "mulch. Chives and garlic repel aphids and borers common on cherries. "
@@ -372,26 +392,26 @@ EXAMPLE_POLYCULTURES = [
                        "native pollinators for improved fruit set. Wild strawberry suppresses "
                        "weeds and yields an additional ground-level harvest.",
         "members": [
-            ("Evans Cherry",              "canopy",              0,    0),
-            ("Comfrey",                   "dynamic_accumulator", 1.8,  0),
-            ("Chives",                    "pest_repellent",     -1.0,  1.2),
+            ("Evans Cherry",              "overstory",              0,    0),
+            ("Comfrey",                   "soil_builder", 1.8,  0),
+            ("Chives",                    "pest_deterrent",     -1.0,  1.2),
             ("White Clover",              "nitrogen_fixer",      0,    2.0),
             ("Bee Balm (Wild Bergamot)",  "pollinator",         -1.5, -1.0),
             ("Wild Strawberry",           "groundcover",         1.0, -1.5),
-            ("Garlic",                    "pest_repellent",      0,   -1.3),
+            ("Garlic",                    "pest_deterrent",      0,   -1.3),
         ],
         "variations": [
             {
                 "name": "Native Understory",
-                "description": "Evans Cherry polyculture variant using exclusively native prairie plants. "
-                               "Replaces comfrey and garlic with native dynamic accumulators and "
+                "description": "Evans Cherry community variant using exclusively native prairie plants. "
+                               "Replaces comfrey and garlic with native soil-building plants and "
                                "pest repellents. Yarrow is a native nutrient accumulator and "
                                "pollinator attractor; nodding onion replaces chives as a native "
                                "allium pest deterrent.",
                 "members": [
-                    ("Evans Cherry",              "canopy",              0,    0),
-                    ("Yarrow",                    "dynamic_accumulator", 1.8,  0),
-                    ("Nodding Onion",             "pest_repellent",     -1.0,  1.2),
+                    ("Evans Cherry",              "overstory",              0,    0),
+                    ("Yarrow",                    "soil_builder", 1.8,  0),
+                    ("Nodding Onion",             "pest_deterrent",     -1.0,  1.2),
                     ("Alfalfa",                   "nitrogen_fixer",      0,    2.0),
                     ("Bee Balm (Wild Bergamot)",  "pollinator",         -1.5, -1.0),
                     ("Wild Strawberry",           "groundcover",         1.0, -1.5),
@@ -401,7 +421,7 @@ EXAMPLE_POLYCULTURES = [
         ],
     },
     {
-        "name": "Bur Oak Polyculture",
+        "name": "Bur Oak Community",
         "description": "Large shade-tree polyculture modelled on natural oak savanna ecosystems of the "
                        "aspen parkland. Bur oak provides a long-lived canopy with edible acorns. "
                        "Beaked hazelnut is a native understory shrub that naturally co-occurs with "
@@ -411,10 +431,10 @@ EXAMPLE_POLYCULTURES = [
                        "bumble bees. Kinnikinnick forms an evergreen groundcover that suppresses "
                        "weeds under the spreading canopy.",
         "members": [
-            ("Bur Oak",                   "canopy",              0,    0),
+            ("Bur Oak",                   "overstory",              0,    0),
             ("Beaked Hazelnut",           "understory",          3.0,  1.5),
             ("Wild Lupine",               "nitrogen_fixer",     -2.0,  2.5),
-            ("Comfrey",                   "dynamic_accumulator", 2.5, -1.5),
+            ("Comfrey",                   "soil_builder", 2.5, -1.5),
             ("Dotted Blazingstar",        "pollinator",         -2.5, -2.0),
             ("Kinnikinnick (Bearberry)",  "groundcover",         1.5, -2.5),
             ("White Prairie Clover",      "nitrogen_fixer",     -1.0,  3.0),
@@ -422,15 +442,15 @@ EXAMPLE_POLYCULTURES = [
         "variations": [
             {
                 "name": "Edible Savanna",
-                "description": "Bur oak polyculture variant emphasizing food production. Saskatoon berry "
+                "description": "Bur oak community variant emphasizing food production. Saskatoon berry "
                                "and gooseberry replace hazelnut for more fruit. Canada goldenrod "
                                "provides late-season pollinator support.",
                 "members": [
-                    ("Bur Oak",                   "canopy",              0,    0),
+                    ("Bur Oak",                   "overstory",              0,    0),
                     ("Saskatoon Berry",           "understory",          3.0,  1.5),
                     ("Gooseberry",                "understory",         -2.5,  1.0),
                     ("Alfalfa",                   "nitrogen_fixer",     -2.0,  2.5),
-                    ("Yarrow",                    "dynamic_accumulator", 2.5, -1.5),
+                    ("Yarrow",                    "soil_builder", 2.5, -1.5),
                     ("Canada Goldenrod",          "pollinator",         -2.5, -2.0),
                     ("Wild Strawberry",           "groundcover",         1.5, -2.5),
                 ],
@@ -477,7 +497,7 @@ EXAMPLE_POLYCULTURES = [
         ],
     },
     {
-        "name": "Boreal Shade Polyculture",
+        "name": "Boreal Shade Community",
         "description": "Understory polyculture for shaded or north-facing areas beneath existing "
                        "spruce, poplar, or birch canopy. Modelled on natural boreal forest floor "
                        "communities. Wild sarsaparilla, bunchberry, and twinflower are classic "
@@ -486,7 +506,7 @@ EXAMPLE_POLYCULTURES = [
                        "Star-flowered Solomon's seal thrives in dappled woodland light. All "
                        "species tolerate the acidic soils typical under conifer canopy.",
         "members": [
-            ("White Spruce",                    "canopy",              0,    0),
+            ("White Spruce",                    "overstory",              0,    0),
             ("Highbush Cranberry",              "understory",          2.5,  1.0),
             ("Wild Sarsaparilla",               "other",              -1.5,  1.5),
             ("Bunchberry",                      "groundcover",         1.0, -1.5),
@@ -497,13 +517,13 @@ EXAMPLE_POLYCULTURES = [
         "variations": [
             {
                 "name": "Edible Boreal Understory",
-                "description": "Boreal shade polyculture variant emphasizing edible plants. Low-bush "
+                "description": "Boreal shade community variant emphasizing edible plants. Low-bush "
                                "cranberry and Labrador tea replace ornamental groundcovers. Wild "
                                "mint fills the ground layer with a useful aromatic herb that "
                                "thrives in moist shade. Red osier dogwood provides winter colour "
                                "and bird habitat.",
                 "members": [
-                    ("White Spruce",              "canopy",              0,    0),
+                    ("White Spruce",              "overstory",              0,    0),
                     ("Low-bush Cranberry",        "understory",          2.5,  1.0),
                     ("Red Osier Dogwood",         "understory",         -2.0,  1.5),
                     ("Labrador Tea",              "other",               1.0, -1.5),
@@ -525,8 +545,8 @@ EXAMPLE_POLYCULTURES = [
                        "Zone 3 Alberta gardens.",
         "members": [
             ("Purple Coneflower",         "pollinator",          0,    0),
-            ("Yarrow",                    "dynamic_accumulator", 0.8,  0.5),
-            ("Wild Mint",                 "pest_repellent",     -0.7,  0.7),
+            ("Yarrow",                    "soil_builder", 0.8,  0.5),
+            ("Wild Mint",                 "pest_deterrent",     -0.7,  0.7),
             ("Giant Hyssop",              "pollinator",          0.5, -0.8),
             ("Valerian",                  "other",              -0.8, -0.3),
             ("Self-heal",                 "other",               0.3,  0.9),
@@ -544,11 +564,11 @@ EXAMPLE_POLYCULTURES = [
                 "members": [
                     ("Purple Coneflower",         "pollinator",          0,    0),
                     ("Sweetgrass",                "other",               0.8,  0.5),
-                    ("Prairie Sage",              "pest_repellent",     -0.7,  0.7),
+                    ("Prairie Sage",              "pest_deterrent",     -0.7,  0.7),
                     ("Rat Root",                  "other",               0.5, -0.8),
                     ("Wild Licorice",             "other",              -0.8, -0.3),
                     ("Seneca Snakeroot",          "other",               0.3,  0.9),
-                    ("Yarrow",                    "dynamic_accumulator",-0.4, -0.8),
+                    ("Yarrow",                    "soil_builder",-0.4, -0.8),
                 ],
             },
         ],
@@ -563,7 +583,7 @@ EXAMPLE_POLYCULTURES = [
                        "at the base. Alfalfa fixes nitrogen between shrubs. Use offset_y as "
                        "distance along the hedge line.",
         "members": [
-            ("Saskatoon Berry",           "canopy",              0,    0),
+            ("Saskatoon Berry",           "overstory",              0,    0),
             ("Chokecherry",               "understory",          0,    3.0),
             ("Haskap (Blue Honeysuckle)", "understory",          0,    1.5),
             ("Raspberry",                 "understory",          0.8,  0.8),
@@ -580,7 +600,7 @@ EXAMPLE_POLYCULTURES = [
                                "Buffalo berry fixes nitrogen while producing tart edible fruit. "
                                "Wolf willow provides silver-leaved windbreak at the base.",
                 "members": [
-                    ("Highbush Cranberry",        "canopy",              0,    0),
+                    ("Highbush Cranberry",        "overstory",              0,    0),
                     ("Elderberry",                "understory",          0,    3.0),
                     ("Buffalo Berry",             "nitrogen_fixer",      0,    1.5),
                     ("Snowberry",                 "understory",          0.8,  0.8),

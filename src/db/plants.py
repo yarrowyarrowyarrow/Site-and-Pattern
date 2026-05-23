@@ -45,8 +45,9 @@ _LEGACY_DB_PATH  = os.path.join(_PROJECT_ROOT, "data", "permadesign.db")
 _MASTER_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "plants_master.json")
 _GARDEN_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "garden_plants.json")
 
-# Current schema version — bump when adding columns/tables
-_SCHEMA_VERSION = 8
+# Current schema version — bump when adding columns/tables, or when the
+# bundled seed data changes meaningfully (forces a reseed on next start).
+_SCHEMA_VERSION = 9
 
 
 def _ensure_data_dir():
@@ -423,6 +424,9 @@ def search_plants(
     nfixer_only: bool = False,
     pollinator_only: bool = False,
     perennial_only: bool = False,
+    host_plant_only: bool = False,
+    keystone_only: bool = False,
+    bird_food_only: bool = False,
 ) -> list[dict]:
     """
     Return plants matching all supplied filters.
@@ -473,6 +477,15 @@ def search_plants(
 
     if perennial_only:
         sql += " AND LOWER(perennial_or_annual) = 'perennial'"
+
+    if host_plant_only:
+        sql += " AND LOWER(permaculture_uses) LIKE '%host_plant%'"
+
+    if keystone_only:
+        sql += " AND LOWER(permaculture_uses) LIKE '%keystone_species%'"
+
+    if bird_food_only:
+        sql += " AND LOWER(permaculture_uses) LIKE '%bird_food%'"
 
     sql += " ORDER BY plant_type, common_name"
 

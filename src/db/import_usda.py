@@ -115,7 +115,7 @@ def _download_usda_alberta_csv() -> Optional[str]:
     tmp_path = os.path.join(_PROJECT_ROOT, "data", "usda_plants_raw.txt")
     try:
         req = urllib.request.Request(url, headers={
-            "User-Agent": "PermaDesign/1.0 (permaculture design tool)"
+            "User-Agent": "PermaDesign/1.0 (native habitat design tool)"
         })
         with urllib.request.urlopen(req, timeout=30) as resp:
             data = resp.read()
