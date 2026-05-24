@@ -116,6 +116,95 @@ Every time you want to use PermaDesign:
 
 ---
 
+## Updating to the newest version
+
+PermaDesign updates often. There are three ways to pull the latest code,
+in order of "easiest" to "most-control."
+
+### Easiest — use the in-app button
+
+Open PermaDesign and click **Help → Check for Updates…** in the menu bar.
+
+- **If you installed from source (Option 2)**, the app runs `git pull` for
+  you behind the scenes. It will:
+  - Refuse to pull if you have unsaved local edits — pick **Stash &
+    update** (preserves your changes) or **Discard & update** (throws
+    them away) if so.
+  - Show you the recent incoming commits and ask for confirmation.
+  - Tell you to **close and relaunch the app** once the pull succeeds —
+    the new code only loads on the next start.
+- **If you installed via the `.exe` (Option 1)**, the button opens the
+  GitHub Releases page in your browser so you can download the next
+  installer manually (see the next section).
+
+### From source — terminal commands
+
+If you'd rather run the update from the command line (or the in-app
+button isn't behaving), open Command Prompt:
+
+```
+cd %USERPROFILE%\Desktop\PermaDesign
+git pull
+pip install -r requirements.txt
+python main.py
+```
+
+That's it. `git pull` grabs the newest code; the `pip install` line
+makes sure any new Python dependencies are installed (usually a no-op);
+`python main.py` relaunches the app.
+
+If `git pull` complains about **"local changes that would be overwritten"**,
+you have unsaved edits in the source folder. Two options:
+
+- **Keep your edits**: `git stash`, then `git pull`, then
+  `git stash pop` to restore them.
+- **Throw them away**: `git checkout -- .` then `git pull`.
+
+If you're not sure, run `git status` first to see what's changed.
+
+On the first launch after an update, the plant database may take a few
+extra seconds to apply any schema migrations and reseed new plant
+communities. That's normal.
+
+### From the `.exe` installer
+
+There's no auto-updater for the installer build. To update:
+
+1. Go to the project's **Releases** page on GitHub.
+2. Download the newest **`PermaDesign-Installer.exe`**.
+3. Run it. The installer detects the existing install and updates it in
+   place — your designs and database are kept.
+
+Or use the in-app **Help → Check for Updates…** button, which opens the
+releases page for you.
+
+### What's new since the last "Native Habitat Designer" version
+
+The most recent update bundles the following — you'll see them
+automatically after the update + first restart:
+
+- **Wildlife Forage** and **Human Forage** tabs (expandable monthly trees
+  showing pollinator blooms, bird food, and human-edible harvests).
+- **Habitat Value Score** tab on the Analysis panel (0–100 composite
+  score with concrete tips for raising it).
+- **Establishment Effort** and **Establishment Water Budget** splits
+  (Year 1 vs. Year 3+ for both labour hours and water demand).
+- **Reference Ecosystem picker** ("Restoring toward:" combo on the
+  Plants tab — filters to Aspen Parkland, Mixedgrass Prairie, Foothills,
+  Boreal Mixedwood, Riparian, Wet Meadow, or Subalpine).
+- **10 new plant communities** built around habitat-value categories
+  (Keystone Pollinator Mound, Caterpillar Host Garden, Songbird Berry
+  Patch, Late-Season Pollinator Refuge, Riparian Willow Thicket, etc.).
+- **12 non-native plants pruned** from the database, **Bur Oak added** as
+  the keystone of the parkland-oak-savanna community.
+- **Alberta rainfall fallback** — if the live weather API is
+  unreachable, the Site panel uses bundled Environment Canada climate
+  normals from the nearest of 8 Alberta stations.
+- **Native Plant Order List** export grouped by Alberta nursery source
+  (ALCLA, Bow Valley Habitat, Wild About Flowers, Bedrock Seed Bank).
+
+---
+
 ## Basic App Functionality
 
 The same workflow applies whether you installed via the `.exe` or from source.
