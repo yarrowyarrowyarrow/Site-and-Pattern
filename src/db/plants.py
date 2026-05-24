@@ -47,7 +47,7 @@ _GARDEN_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "garden_plants.json")
 
 # Current schema version — bump when adding columns/tables, or when the
 # bundled seed data changes meaningfully (forces a reseed on next start).
-_SCHEMA_VERSION = 11
+_SCHEMA_VERSION = 12
 
 
 def _ensure_data_dir():
