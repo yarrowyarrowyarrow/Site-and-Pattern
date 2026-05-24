@@ -42,26 +42,82 @@ from src.collapsible_panel import CollapsibleSidebar
 import src.project as project_io
 
 
-# Mirror of the JS ROLE_COLORS table in html/map.html. Kept here so plant
-# community member markers can be coloured by role from Python and rendered
-# through the same fast placePlantMarker path used by single/row/burst/grid
-# placement. Legacy keys (canopy, dynamic_accumulator, pest_repellent) are
-# kept as aliases so projects saved before the role rename still render.
-_ROLE_COLORS = {
+# Marker colour tables for plant-community members.
+#
+# Vegetation layer is the primary signal — when a member has a layer set
+# we colour by that so the canopy structure reads at a glance on the
+# map. Function colours are used only when a member has no layer (i.e.
+# functional-only roles like "windbreak" or "nitrogen_fixer"). Legacy
+# single-value `role` data falls through to either table.
+_LAYER_COLORS = {
     'overstory':           '#1b5e20',
-    'canopy':              '#1b5e20',   # legacy alias
     'understory':          '#388e3c',
     'shrub_layer':         '#4a8b3a',
     'groundcover':         '#66bb6a',
     'herbaceous':          '#9ccc65',
+    'vine':                '#7cb342',
+    'root':                '#8d6e63',
+}
+
+_FUNCTION_COLORS = {
     'nitrogen_fixer':      '#43a047',
     'soil_builder':        '#2e7d32',
-    'dynamic_accumulator': '#2e7d32',   # legacy alias
     'pest_deterrent':      '#7cb342',
-    'pest_repellent':      '#7cb342',   # legacy alias
     'pollinator':          '#aed581',
     'windbreak':           '#558b2f',
-    'other':               '#81c784',
+}
+
+# Legacy aliases mapped through to the new tables so projects saved
+# before the role rename still render.
+_LEGACY_ROLE_ALIASES = {
+    'canopy':              ('overstory',      'layer'),
+    'dynamic_accumulator': ('soil_builder',   'function'),
+    'pest_repellent':      ('pest_deterrent', 'function'),
+}
+
+_OTHER_COLOR = '#81c784'
+
+
+def _member_color(member: dict) -> str:
+    """Pick a marker colour for a polyculture member.
+
+    Resolution order:
+      1. Explicit `layer` → _LAYER_COLORS.
+      2. First entry in `functions` → _FUNCTION_COLORS.
+      3. Legacy single `role` (with alias mapping) → either table.
+      4. Fallback to _OTHER_COLOR.
+    """
+    layer = (member.get('layer') or '').strip().lower()
+    if layer in _LAYER_COLORS:
+        return _LAYER_COLORS[layer]
+    funcs = member.get('functions') or []
+    if isinstance(funcs, list) and funcs:
+        f0 = str(funcs[0]).strip().lower()
+        if f0 in _FUNCTION_COLORS:
+            return _FUNCTION_COLORS[f0]
+    role = (member.get('role') or '').strip().lower()
+    if role in _LEGACY_ROLE_ALIASES:
+        canonical, kind = _LEGACY_ROLE_ALIASES[role]
+        if kind == 'layer':
+            return _LAYER_COLORS.get(canonical, _OTHER_COLOR)
+        return _FUNCTION_COLORS.get(canonical, _OTHER_COLOR)
+    if role in _LAYER_COLORS:
+        return _LAYER_COLORS[role]
+    if role in _FUNCTION_COLORS:
+        return _FUNCTION_COLORS[role]
+    return _OTHER_COLOR
+
+
+# Back-compat shim — older code paths still reference _ROLE_COLORS by
+# name. Kept as a flat lookup that covers the union of layer + function
+# colours plus the legacy aliases.
+_ROLE_COLORS = {
+    **_LAYER_COLORS,
+    **_FUNCTION_COLORS,
+    'canopy':              _LAYER_COLORS['overstory'],
+    'dynamic_accumulator': _FUNCTION_COLORS['soil_builder'],
+    'pest_repellent':      _FUNCTION_COLORS['pest_deterrent'],
+    'other':               _OTHER_COLOR,
 }
 
 
@@ -110,6 +166,11 @@ class MainWindow(QMainWindow):
         self._pending_sun_config:    dict | None = None
         self._pending_sun_anchor:    tuple | None = None
         self._pending_sector_config: dict | None = None
+        # Community-pattern stash: when set, _on_pattern_placed expands
+        # each anchor position into one full community (instead of one
+        # plant). Set by _enter_polyculture_pattern_mode, cleared on
+        # mode exit.
+        self._pending_community_pattern: dict | None = None
 
         # Edmonton offline download thread/worker (None when idle)
         self._dl_thread: Optional[QThread] = None
@@ -850,6 +911,11 @@ class MainWindow(QMainWindow):
     def _enter_plant_mode(self, plant_id: int, common_name: str,
                           quantity: int = 1, pattern: dict | None = None):
         self._current_mode = 'plant'
+        # Clear any stale community-pattern stash from a previous
+        # community placement; _enter_polyculture_pattern_mode will
+        # re-set it after this call returns if a community is being
+        # placed, otherwise plant-only patterns get the plant branch.
+        self._pending_community_pattern = None
         spacing_m, plant_type, custom_color = self._plant_info(plant_id)
 
         # Polyculture override: when the panel built a mix recipe, use
@@ -1546,7 +1612,24 @@ class MainWindow(QMainWindow):
         self._set_mode_label(f"Season: {season}")
 
     def _enter_polyculture_mode(self, polyculture_data: dict):
-        """Place a polyculture on the map — click to place centre."""
+        """Place a polyculture on the map.
+
+        Two modes:
+          - "single" (no pattern, or pattern.kind == "single"): click once
+            to drop the community at the clicked point. Each member is
+            placed at its offset_x/offset_y from that centre.
+          - "row" / "grid" / "circle": enter plant-pattern mode with a
+            synthetic representative plant (so JS's preview ghost works),
+            stash the full community, and let JS handle the 2-click
+            gesture. The stashed community is expanded across the
+            resulting anchor positions in _on_pattern_placed.
+        """
+        pattern = polyculture_data.get("pattern")
+        kind = (pattern or {}).get("kind") or "single"
+        if kind != "single" and polyculture_data.get("members"):
+            self._enter_polyculture_pattern_mode(polyculture_data, pattern)
+            return
+
         self._current_mode = 'polyculture'
         self._pending_polyculture = polyculture_data
         self.map_widget.run_js("map.getContainer().style.cursor = 'crosshair';")
@@ -1558,6 +1641,72 @@ class MainWindow(QMainWindow):
         except TypeError:
             pass
         self.map_widget.bridge.map_clicked.connect(self._on_polyculture_click)
+
+    def _enter_polyculture_pattern_mode(self, polyculture_data: dict, pattern: dict):
+        """Set up row/grid/circle placement of a community as a unit.
+
+        Reuses plant-pattern mode by picking the member closest to (0,0)
+        as the synthetic preview plant. The full community is stashed
+        in self._pending_community_pattern so _on_pattern_placed can
+        expand each anchor position into one full community.
+        """
+        members = polyculture_data.get("members") or []
+        # Pick the member nearest the community centre as the preview anchor.
+        members_sorted = sorted(
+            members,
+            key=lambda m: (float(m.get("offset_x") or 0.0) ** 2
+                           + float(m.get("offset_y") or 0.0) ** 2),
+        )
+        primary = members_sorted[0]
+        primary_pid = int(primary["plant_id"])
+        primary_name = primary.get("common_name") or polyculture_data.get("name", "")
+
+        spacing_m = float(pattern.get("spacing_m") or 4.0)
+        kind = pattern.get("kind") or "row"
+
+        # Build the same pattern dict shape that the Plants tab uses.
+        params: dict = {"overlap": 0.0, "use_canopy": False}
+        count = pattern.get("count")
+        if kind == "row":
+            params["count"] = count
+        elif kind == "circle":
+            params["count"] = count
+            params["fill"] = False
+        elif kind == "grid":
+            params["rows"] = None
+            params["cols"] = None
+            params["stagger"] = False
+        # Carry the full community payload so _on_pattern_placed can
+        # expand each anchor into the community's members.
+        params["community"] = {
+            "name": polyculture_data.get("name", ""),
+            "spacing_m": spacing_m,
+            "members": [dict(m) for m in members],
+        }
+        pattern_dict = {"kind": kind, "params": params}
+
+        # Drop any stale plant-mix recipe so it doesn't get applied.
+        try:
+            self.plant_panel.clear_pending_polyculture()
+        except Exception:
+            pass
+        self._enter_plant_mode(primary_pid, primary_name,
+                               quantity=1, pattern=pattern_dict)
+        # Stash AFTER _enter_plant_mode (which clears the previous stash
+        # at its top) so this fresh community is the one expanded by
+        # _on_pattern_placed.
+        self._pending_community_pattern = pattern_dict["params"]["community"]
+        # Override the mode label so the user sees the community context.
+        community_name = polyculture_data.get("name", "?")
+        gesture = {
+            "row":    "click start, then end",
+            "grid":   "click two opposite corners",
+            "circle": "click centre, then radius point",
+        }.get(kind, "click")
+        self._set_mode_label(
+            f"Placing community '{community_name}' as {kind} — {gesture}. "
+            "Esc to cancel."
+        )
 
     def _on_polyculture_click(self, lat: float, lng: float):
         """Drop a polyculture by issuing one placePlantMarker per member.
@@ -1588,8 +1737,7 @@ class MainWindow(QMainWindow):
             pid = m["plant_id"]
             name = m["common_name"]
             spacing_m, plant_type, _ = self._plant_info(pid)
-            role = (m.get("role") or "other").lower()
-            color = _ROLE_COLORS.get(role, _ROLE_COLORS["other"])
+            color = _member_color(m)
 
             mlat = lat + (m.get("offset_y", 0)) / 111320
             mlng = lng + (m.get("offset_x", 0)) / (111320 * cos_lat)
@@ -1658,6 +1806,9 @@ class MainWindow(QMainWindow):
             self.plant_panel.clear_pending_polyculture()
         except Exception:
             pass
+        # Same idea for any community-pattern stash: dropping it on
+        # cancel ensures the user starts fresh next time they hit Place.
+        self._pending_community_pattern = None
 
     # ── Map event handlers ────────────────────────────────────────────────────
 
@@ -1891,6 +2042,84 @@ class MainWindow(QMainWindow):
         self._mark_modified()
         self._sync_planning_panel()
 
+    def _expand_communities_at_positions(self, positions, community: dict,
+                                          pattern_kind: str):
+        """Expand a Community across N anchor positions.
+
+        ``community`` is the dict stashed in self._pending_community_pattern
+        by _enter_polyculture_pattern_mode (or a single-community block).
+        Currently always uses the same community at every anchor — the
+        community-mix (ratio) variant can plug in here later by replacing
+        the single dict with per-anchor assignments.
+
+        Every placed marker across every anchor shares a single
+        placement_group_id, so deleting any marker via "Delete group"
+        removes the whole pattern. The per-anchor polyculture_name +
+        polyculture_center_{lat,lng} are also written so
+        _on_polyculture_removed can target one community at a time.
+        """
+        import math
+        members = community.get("members") or []
+        if not members or not positions:
+            return
+
+        poly_name = community.get("name") or ""
+        group_id = project_io.new_placement_group_id()
+
+        batch_placements: list[tuple[int, str]] = []
+        for (lat, lng) in positions:
+            cos_lat = math.cos(lat * math.pi / 180) or 1e-9
+            for m in members:
+                pid = m["plant_id"]
+                name = m.get("common_name", "")
+                spacing_m, plant_type, _ = self._plant_info(pid)
+                color = _member_color(m)
+                mlat = lat + float(m.get("offset_y", 0) or 0) / 111320
+                mlng = lng + float(m.get("offset_x", 0) or 0) / (111320 * cos_lat)
+
+                self.map_widget.run_js(
+                    f"placePlantMarker({pid}, {repr(name)}, "
+                    f"{mlat}, {mlng}, {spacing_m}, {repr(plant_type)}, "
+                    f"{repr(color)}, {repr(group_id)});"
+                )
+                self._placed_plants.append({
+                    "plant_id": pid, "common_name": name,
+                    "lat": mlat, "lng": mlng,
+                    "polyculture_name": poly_name,
+                    "polyculture_center_lat": lat,
+                    "polyculture_center_lng": lng,
+                    "placement_group_id": group_id,
+                })
+                self._project["features"].append({
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [mlng, mlat]},
+                    "properties": {
+                        "element_type": "plant",
+                        "plant_id": pid,
+                        "common_name": name,
+                        "polyculture_name": poly_name,
+                        "polyculture_center_lat": lat,
+                        "polyculture_center_lng": lng,
+                        "placement_group_id": group_id,
+                        "pattern_kind": pattern_kind,
+                        "quantity": 1,
+                    }
+                })
+                batch_placements.append((pid, name))
+
+        self.plant_panel.on_plants_placed_batch(batch_placements)
+        self._mark_modified()
+        self._sync_planning_panel()
+        self._set_mode_label(
+            f"Placed {len(positions)} × '{poly_name}' ({pattern_kind}). "
+            "Click again for another, or press Esc to finish."
+        )
+        self.statusBar().showMessage(
+            f"Placed {len(positions)} communities of '{poly_name}' "
+            f"({len(members)} members each)",
+            3000,
+        )
+
     def _on_pattern_placed(self, plant_id: int, common_name: str, spacing_m: float,
                             plant_type: str, custom_color: str,
                             positions_json: str, pattern_kind: str):
@@ -1913,6 +2142,19 @@ class MainWindow(QMainWindow):
         except Exception:
             return
         if not positions:
+            return
+
+        # ── Community-as-pattern branch ────────────────────────────────
+        # If a Community was stashed at Place-click time, every anchor
+        # position expands into one full community (all its members,
+        # offset around the anchor). This sits above the plant-mix
+        # branch because the two are mutually exclusive — selecting a
+        # community for pattern placement clears any plant mix.
+        community = getattr(self, "_pending_community_pattern", None)
+        if community:
+            self._expand_communities_at_positions(
+                positions, community, pattern_kind
+            )
             return
 
         # Peek (don't consume) the polyculture recipe stashed at

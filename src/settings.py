@@ -54,32 +54,74 @@ def has_api_keys() -> bool:
     return bool(kid and ksec)
 
 
-# ── Saved polyculture recipes ─────────────────────────────────────────────────
+# ── Saved polyculture recipes (DEPRECATED shims) ──────────────────────────────
+#
+# Recipes now live in the SQLite database. These two functions are kept
+# as thin shims so any code path that still calls them keeps working —
+# they delegate to src.db.recipes. New code should import directly from
+# src.db.recipes.
 
 def get_polyculture_recipes() -> list[dict]:
-    """Return the user's saved polyculture mixes, oldest-first.
+    """DEPRECATED — use src.db.recipes.get_all_recipes().
 
-    Each entry is `{"name": str, "species": [{...minimal plant fields,
-    "weight": int}, ...]}`. The recipes are stored as plant_id +
-    weight + cached display fields; the full plant record is rehydrated
-    from the local DB at load time so changes to plant data flow
-    through.
+    Returns the recipe list in the legacy QSettings shape
+    (``[{"name": ..., "species": [...]}]``) so callers that haven't
+    migrated keep working.
     """
-    cfg = load_config()
-    recipes = cfg.get("polyculture_recipes")
-    if not isinstance(recipes, list):
+    try:
+        from src.db.recipes import get_all_recipes, get_recipe_by_id, recipe_to_species_list
+    except Exception:
         return []
-    out = []
-    for r in recipes:
-        if isinstance(r, dict) and r.get("name") and isinstance(r.get("species"), list):
-            out.append(r)
+    out: list[dict] = []
+    for r in get_all_recipes():
+        try:
+            full = get_recipe_by_id(r["id"]) or {}
+            rec = recipe_to_species_list(full)
+            out.append({
+                "name": full.get("name") or "",
+                "species": rec.get("species") or [],
+            })
+        except Exception:
+            continue
     return out
 
 
 def save_polyculture_recipes(recipes: list[dict]) -> None:
-    cfg = load_config()
-    cfg["polyculture_recipes"] = list(recipes)
-    save_config(cfg)
+    """DEPRECATED — write recipes via src.db.recipes.create_recipe /
+    replace_recipe_members instead. This shim treats the call as
+    "replace all recipes" so the legacy plant_panel save flow still
+    works in the transition window.
+    """
+    try:
+        from src.db import recipes as recipes_db
+    except Exception:
+        return
+    existing = {r["name"]: r["id"] for r in recipes_db.get_all_recipes()}
+    seen: set[str] = set()
+    for r in recipes or []:
+        if not isinstance(r, dict):
+            continue
+        name = (r.get("name") or "").strip()
+        if not name:
+            continue
+        seen.add(name)
+        species = r.get("species") or []
+        members = [
+            {
+                "plant_id": int(s["id"]),
+                "weight": int(s.get("weight") or 1),
+                "marker_color": s.get("color") or None,
+            }
+            for s in species if s.get("id")
+        ]
+        recipe_id = existing.get(name)
+        if recipe_id is None:
+            recipe_id = recipes_db.create_recipe(name)
+        recipes_db.replace_recipe_members(recipe_id, members)
+    # Drop recipes that disappeared from the legacy list.
+    for name, rid in existing.items():
+        if name not in seen:
+            recipes_db.delete_recipe(rid)
 
 
 # ── Settings dialog ───────────────────────────────────────────────────────────

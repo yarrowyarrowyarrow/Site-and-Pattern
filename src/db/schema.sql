@@ -71,10 +71,35 @@ CREATE TABLE IF NOT EXISTS polyculture_members (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     polyculture_id INTEGER NOT NULL REFERENCES polycultures(id) ON DELETE CASCADE,
     plant_id INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
-    role TEXT,
+    role TEXT,                      -- legacy single-value role (kept for back-compat)
+    layer TEXT,                     -- vegetation layer (overstory/understory/...)
+    functions TEXT,                 -- JSON array of ecological functions (pollinator, etc.)
     offset_x REAL DEFAULT 0,
     offset_y REAL DEFAULT 0,
     notes TEXT
+);
+
+-- Polyculture Recipes — persistent ratio-only mixes (no spatial layout).
+-- Unlike polycultures, recipes carry per-member weights instead of x/y offsets;
+-- they drive ratio assignment for row/grid/circle placements and can be
+-- "populated" into a polyculture's circle via the builder.
+CREATE TABLE IF NOT EXISTS polyculture_recipes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    strategy TEXT DEFAULT 'even_split',
+    spacing_strategy TEXT DEFAULT 'max',
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS polyculture_recipe_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    recipe_id INTEGER NOT NULL REFERENCES polyculture_recipes(id) ON DELETE CASCADE,
+    plant_id INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+    weight INTEGER NOT NULL DEFAULT 1,
+    marker_color TEXT,
+    sort_order INTEGER DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_plants_type    ON plants(plant_type);
@@ -82,3 +107,4 @@ CREATE INDEX IF NOT EXISTS idx_plants_zone    ON plants(hardiness_zone_min, hard
 CREATE INDEX IF NOT EXISTS idx_plants_native  ON plants(native_to_alberta);
 CREATE INDEX IF NOT EXISTS idx_calendar_plant ON planting_calendar(plant_id);
 CREATE INDEX IF NOT EXISTS idx_polyculture_members  ON polyculture_members(polyculture_id);
+CREATE INDEX IF NOT EXISTS idx_recipe_members ON polyculture_recipe_members(recipe_id);

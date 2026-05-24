@@ -1542,32 +1542,19 @@ class PlantPanel(QWidget):
         self._mix_status.setStyleSheet("color: #78909c; font-size: 10px;")
         ml.addWidget(self._mix_status)
 
-        # ── Saved-recipe row ──────────────────────────────────────────
-        recipe_row = QHBoxLayout()
-        recipe_row.setSpacing(4)
-        self._recipe_combo = QComboBox()
-        self._recipe_combo.setToolTip("Load a saved polyculture mix")
-        self._recipe_combo.activated.connect(self._on_recipe_selected)
-        recipe_row.addWidget(self._recipe_combo, 1)
-        self._recipe_save_btn = QPushButton("Save")
-        self._recipe_save_btn.setToolTip("Save the current mix under a name you can recall later")
-        self._recipe_save_btn.setStyleSheet(_PATTERN_SEG_STYLE)
-        self._recipe_save_btn.clicked.connect(self._on_recipe_save)
-        recipe_row.addWidget(self._recipe_save_btn)
-        self._recipe_delete_btn = QPushButton("✕")
-        self._recipe_delete_btn.setToolTip("Delete the currently-selected saved mix")
-        self._recipe_delete_btn.setFixedWidth(28)
-        self._recipe_delete_btn.setStyleSheet(
-            "QPushButton { background: #1e2e1e; color: #ef9a9a; "
-            "border: 1px solid #4a2e2e; border-radius: 3px; "
-            "padding: 2px 4px; font-size: 11px; }"
-            "QPushButton:hover { border-color: #8a4a4a; }"
-            "QPushButton:disabled { color: #455a64; border-color: #2e4a2e; }"
+        # Inline saved-recipe combo was removed — recipes now live in
+        # the Plant Community tab → Recipes. The hint label below keeps
+        # the user oriented; the right-click "Add to Recipe…" submenu
+        # is the cross-tab bridge for appending plants to a saved recipe
+        # without leaving the Plants tab.
+        hint = QLabel(
+            "Saved mixes are now in <b>Plant Community → Recipes</b>. "
+            "Right-click a plant to add it to a saved recipe."
         )
-        self._recipe_delete_btn.clicked.connect(self._on_recipe_delete)
-        recipe_row.addWidget(self._recipe_delete_btn)
-        ml.addLayout(recipe_row)
-        self._refresh_recipe_combo()
+        hint.setStyleSheet("color: #78909c; font-size: 10px;")
+        hint.setWordWrap(True)
+        hint.setTextFormat(Qt.TextFormat.RichText)
+        ml.addWidget(hint)
 
         # ── Species rows (one per mix entry, custom widgets) ─────────
         self._mix_rows_container = QWidget()
@@ -1918,138 +1905,52 @@ class PlantPanel(QWidget):
             f"{eff:.2f} m (max). Click Place Mix on Map."
         )
 
-    # ── Saved recipes ────────────────────────────────────────────────────
+    # ── Saved recipes (migrated to Plant Community tab) ──────────────────
+    # The inline save/load UI was removed when recipes moved to a DB-backed
+    # Recipes tab. The right-click "Add to Recipe…" submenu in
+    # `_on_plant_context_menu` is the bridge for appending a plant to a
+    # saved recipe without leaving the Plants tab. The helper below
+    # supports that submenu.
 
-    def _refresh_recipe_combo(self):
-        from src.settings import get_polyculture_recipes
+    def _add_plant_to_recipe(self, plant: dict, recipe_id: int):
+        """Append a plant to the given saved recipe (creates if -1)."""
+        from src.db import recipes as recipes_db
+        pid = plant.get("id")
+        if not pid:
+            return
         try:
-            recipes = get_polyculture_recipes()
-        except Exception:
-            recipes = []
-        self._saved_recipes = recipes
-
-        self._recipe_combo.blockSignals(True)
-        self._recipe_combo.clear()
-        if not recipes:
-            self._recipe_combo.addItem("(no saved mixes)")
-            self._recipe_combo.setEnabled(False)
-            self._recipe_delete_btn.setEnabled(False)
-        else:
-            self._recipe_combo.addItem("— select a saved mix to load —")
-            for r in recipes:
-                self._recipe_combo.addItem(r.get("name") or "(unnamed)")
-            self._recipe_combo.setEnabled(True)
-            self._recipe_delete_btn.setEnabled(True)
-        self._recipe_combo.blockSignals(False)
-
-    def _on_recipe_selected(self, idx: int):
-        # idx 0 is the placeholder when recipes exist; ignore it.
-        if not self._saved_recipes or idx < 1:
-            return
-        if idx - 1 >= len(self._saved_recipes):
-            return
-        recipe = self._saved_recipes[idx - 1]
-        self._load_recipe_into_mix(recipe)
-
-    def _load_recipe_into_mix(self, recipe: dict):
-        """Rehydrate species records from the local DB, then populate mix."""
-        from src.db.plants import get_plant
-        loaded: list[dict] = []
-        for s in recipe.get("species", []):
-            pid = s.get("id")
-            if not pid:
-                continue
-            try:
-                p = get_plant(int(pid))
-            except Exception:
-                p = None
-            if not p:
-                # Plant was deleted from the local DB — fall back to the
-                # cached fields stored with the recipe so the row still
-                # renders (placement will skip if id is invalid).
-                p = {
-                    "id": pid,
-                    "common_name": s.get("common_name") or "(missing plant)",
-                    "spacing_meters": s.get("spacing_m") or 1.0,
-                    "plant_type": s.get("plant_type") or "herb",
-                    "marker_color": s.get("color") or "",
-                }
-            entry = dict(p)
-            entry["_weight"] = int(s.get("weight") or 1)
-            loaded.append(entry)
-        if not loaded:
-            return
-        self._mix_species = loaded[: self._MIX_MAX]
-        self._refresh_mix_list()
-
-    def _on_recipe_save(self):
-        from PyQt6.QtWidgets import QInputDialog
-        if len(self._mix_species) < 1:
-            return
-        existing_names = [r.get("name") for r in self._saved_recipes]
-        # Suggest a default name from the first two species.
-        default_name = ""
-        if len(self._mix_species) >= 2:
-            default_name = (
-                f"{self._mix_species[0].get('common_name','')} + "
-                f"{self._mix_species[1].get('common_name','')}"
-            )
-            if len(self._mix_species) > 2:
-                default_name += f" +{len(self._mix_species) - 2}"
-        name, ok = QInputDialog.getText(
-            self, "Save Polyculture Mix",
-            "Name for this mix (overwrites if name already exists):",
-            text=default_name,
-        )
-        if not ok or not name.strip():
-            return
-        name = name.strip()
-        recipe = {
-            "name": name,
-            "species": [
+            if recipe_id == -1:
+                from PyQt6.QtWidgets import QInputDialog
+                name, ok = QInputDialog.getText(
+                    self, "New Recipe", "Name for the new recipe:"
+                )
+                if not ok or not name.strip():
+                    return
+                if recipes_db.get_recipe_by_name(name.strip()) is not None:
+                    return
+                recipe_id = recipes_db.create_recipe(name.strip())
+            recipe = recipes_db.get_recipe_by_id(int(recipe_id))
+            if not recipe:
+                return
+            members = [
                 {
-                    "id": int(s["id"]),
-                    "common_name": s.get("common_name") or "",
-                    "spacing_m": float(s.get("spacing_meters") or 1.0),
-                    "plant_type": s.get("plant_type") or "herb",
-                    "color": s.get("marker_color") or "",
-                    "weight": int(s.get("_weight", 1) or 1),
+                    "plant_id": m["plant_id"],
+                    "weight": int(m.get("weight") or 1),
+                    "marker_color": m.get("marker_color"),
                 }
-                for s in self._mix_species if s.get("id")
-            ],
-        }
-        # Replace by name (case-sensitive) so re-saving updates in place.
-        recipes = [r for r in self._saved_recipes if r.get("name") != name]
-        recipes.append(recipe)
-
-        from src.settings import save_polyculture_recipes
-        try:
-            save_polyculture_recipes(recipes)
-        except Exception as exc:
-            self._mix_status.setText(f"Save failed: {exc}")
+                for m in (recipe.get("members") or [])
+            ]
+            # Skip if already present.
+            if any(m["plant_id"] == pid for m in members):
+                return
+            members.append({"plant_id": pid, "weight": 1})
+            recipes_db.replace_recipe_members(int(recipe_id), members)
+        except Exception:
+            # Surface in the status line if anything goes wrong; recipes
+            # are auxiliary so a failure here shouldn't crash the panel.
+            if hasattr(self, "_mix_status"):
+                self._mix_status.setText("Could not update recipe.")
             return
-        self._refresh_recipe_combo()
-        # Select the just-saved entry so the user gets confirmation.
-        for i in range(self._recipe_combo.count()):
-            if self._recipe_combo.itemText(i) == name:
-                self._recipe_combo.setCurrentIndex(i)
-                break
-
-    def _on_recipe_delete(self):
-        idx = self._recipe_combo.currentIndex()
-        if not self._saved_recipes or idx < 1:
-            return
-        if idx - 1 >= len(self._saved_recipes):
-            return
-        target = self._saved_recipes[idx - 1]
-        recipes = [r for r in self._saved_recipes if r is not target]
-        from src.settings import save_polyculture_recipes
-        try:
-            save_polyculture_recipes(recipes)
-        except Exception as exc:
-            self._mix_status.setText(f"Delete failed: {exc}")
-            return
-        self._refresh_recipe_combo()
 
     # ── Place on map ──────────────────────────────────────────────────────────
 
@@ -2107,18 +2008,43 @@ class PlantPanel(QWidget):
             s.get("id") == plant.get("id") for s in self._mix_species
         )
         if already_in_mix:
-            act_mix = menu.addAction("Remove from Polyculture Mix")
+            act_mix = menu.addAction("Remove from current mix")
             act_mix.triggered.connect(
                 lambda: self._remove_from_mix(int(plant["id"]))
             )
         else:
-            act_mix = menu.addAction("Add to Polyculture Mix")
+            act_mix = menu.addAction("Add to current mix")
             act_mix.triggered.connect(lambda: self._add_to_mix(plant))
             if not plant.get("id"):
                 act_mix.setEnabled(False)
             elif len(self._mix_species) >= self._MIX_MAX:
                 act_mix.setEnabled(False)
                 act_mix.setText(f"Mix full ({self._MIX_MAX} species max)")
+
+        # "Add to Recipe…" submenu — cross-tab bridge into the saved
+        # Recipes that now live in the Plant Community tab. Lists all
+        # saved recipes plus a "+ New Recipe…" option.
+        if plant.get("id"):
+            try:
+                from src.db import recipes as recipes_db
+                saved = recipes_db.get_all_recipes()
+            except Exception:
+                saved = []
+            recipe_menu = menu.addMenu("Add to Recipe…")
+            if saved:
+                for r in saved:
+                    rid = r.get("id")
+                    rname = r.get("name") or "(unnamed)"
+                    act_r = recipe_menu.addAction(rname)
+                    act_r.triggered.connect(
+                        lambda _checked=False, p=plant, i=rid:
+                            self._add_plant_to_recipe(p, int(i))
+                    )
+                recipe_menu.addSeparator()
+            act_new = recipe_menu.addAction("+ New Recipe…")
+            act_new.triggered.connect(
+                lambda _checked=False, p=plant: self._add_plant_to_recipe(p, -1)
+            )
 
         menu.exec(self._results_list.viewport().mapToGlobal(pos))
 

@@ -260,6 +260,51 @@ def optimize_layout(
     return cur
 
 
+def hex_pack_disc_local(radius_m: float, spacing_m: float) -> list[tuple[float, float]]:
+    """Return hex-packed (x, y) positions in metres that fit inside a disc
+    of the given radius. Mirrors the JS `_hexPackedDisc` in html/map.html
+    so the polyculture builder can preview the same packing the map uses.
+
+    Always starts with (0, 0) (the centre) and walks rows outward; honey-
+    comb spacing keeps each plant equidistant from its six nearest
+    neighbours. Returns an empty list if spacing is wider than the disc.
+    """
+    if radius_m <= 0 or spacing_m <= 0:
+        return []
+    row_spacing = spacing_m * math.sqrt(3.0) / 2.0
+    if row_spacing > radius_m:
+        # Even a single ring won't fit — just return the centre point.
+        return [(0.0, 0.0)] if spacing_m <= radius_m * 2 else []
+    positions: list[tuple[float, float]] = [(0.0, 0.0)]
+    n_rows = int(math.floor(radius_m / row_spacing))
+    for r in range(1, n_rows + 1):
+        y = r * row_spacing
+        x_shift = (spacing_m / 2.0) if (r % 2 == 1) else 0.0
+        # Walk x outward from the shifted start, stopping when outside
+        # the disc.
+        k = 0
+        while True:
+            x = x_shift + k * spacing_m
+            if math.sqrt(x * x + y * y) > radius_m:
+                break
+            positions.append((x, y))
+            positions.append((-x if x > 0 else x, y))
+            positions.append((x, -y))
+            positions.append((-x if x > 0 else x, -y))
+            k += 1
+        # The k=0, x_shift=0 case duplicates (0, y), (0, -y) — dedupe.
+    # Dedupe while preserving order.
+    seen = set()
+    unique: list[tuple[float, float]] = []
+    for p in positions:
+        key = (round(p[0], 6), round(p[1], 6))
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(p)
+    return unique
+
+
 def _to_local_xy(positions: list) -> list[tuple[float, float]]:
     """Project [lat, lng] into local metres (flat-earth, centroid origin)."""
     if not positions:

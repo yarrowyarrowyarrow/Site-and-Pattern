@@ -156,6 +156,71 @@ def _migrate_to_v11(conn: sqlite3.Connection):
     conn.commit()
 
 
+# Vegetation layers and ecological functions used to split the legacy
+# single `role` field on polyculture_members. Mirrored in
+# src/polyculture_panel.py so the UI and the migration use one source of
+# truth; if these lists change, update both places.
+_LAYER_VALUES = {"overstory", "understory", "shrub_layer", "groundcover",
+                 "herbaceous", "vine", "root"}
+_FUNCTION_VALUES = {"nitrogen_fixer", "soil_builder", "pest_deterrent",
+                    "pollinator", "windbreak"}
+_LEGACY_ROLE_TO_LAYER_FUNC = {
+    "canopy":              ("overstory", None),
+    "dynamic_accumulator": (None, "soil_builder"),
+    "pest_repellent":      (None, "pest_deterrent"),
+}
+
+
+def _role_to_layer_functions(role):
+    """Map a legacy single-value role to (layer, functions_list)."""
+    role = (role or "").strip()
+    if role in _LAYER_VALUES:
+        return role, []
+    if role in _FUNCTION_VALUES:
+        return None, [role]
+    if role in _LEGACY_ROLE_TO_LAYER_FUNC:
+        layer, fn = _LEGACY_ROLE_TO_LAYER_FUNC[role]
+        return layer, ([fn] if fn else [])
+    return None, []
+
+
+def _migrate_polyculture_member_layer_functions(conn: sqlite3.Connection):
+    """Add `layer` and `functions` columns to polyculture_members and
+    backfill them from the existing `role`. Idempotent: re-running is a
+    no-op once every row has either a layer or a non-empty functions
+    list."""
+    import json as _json
+
+    for col_def in ("layer TEXT", "functions TEXT"):
+        try:
+            conn.execute(f"ALTER TABLE polyculture_members ADD COLUMN {col_def}")
+        except sqlite3.OperationalError:
+            pass  # column already present
+
+    # Backfill only rows that haven't been migrated yet — i.e. layer is
+    # NULL AND functions is NULL/empty. Already-migrated rows are left
+    # alone so user edits aren't clobbered.
+    rows = conn.execute(
+        "SELECT id, role FROM polyculture_members "
+        "WHERE layer IS NULL AND (functions IS NULL OR functions = '' OR functions = '[]')"
+    ).fetchall()
+    for r in rows:
+        layer, functions = _role_to_layer_functions(r["role"])
+        if layer is None and not functions:
+            # Nothing useful to backfill; still write '[]' so the row is
+            # marked as "considered" and we don't keep iterating it.
+            conn.execute(
+                "UPDATE polyculture_members SET functions = '[]' WHERE id = ?",
+                (r["id"],)
+            )
+        else:
+            conn.execute(
+                "UPDATE polyculture_members SET layer = ?, functions = ? WHERE id = ?",
+                (layer, _json.dumps(functions), r["id"])
+            )
+    conn.commit()
+
+
 def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
     """
     Insert all plants from a JSON file into the plants table (skipping duplicates
@@ -303,6 +368,12 @@ def init_db() -> None:
         except sqlite3.OperationalError:
             pass  # column already present
 
+        # Idempotent additive migration — adds layer/functions columns to
+        # polyculture_members and backfills them from the existing role.
+        # Kept outside the version-bump reseed path so user-created
+        # plant communities are preserved.
+        _migrate_polyculture_member_layer_functions(conn)
+
         count = conn.execute("SELECT COUNT(*) FROM plants").fetchone()[0]
 
         # Reseed if empty, below master dataset size, or upgrading schema version
@@ -338,6 +409,15 @@ def init_db() -> None:
         seed_example_polycultures()
     except Exception:
         pass  # Non-critical; polycultures can be created manually
+
+    # One-time import of any pre-existing recipes that lived in
+    # ~/.permadesign_config.json. Subsequent runs are no-ops thanks to
+    # the `polyculture_recipes_migrated` flag.
+    try:
+        from src.db.recipes import migrate_qsettings_recipes
+        migrate_qsettings_recipes()
+    except Exception:
+        pass  # Non-critical; user can recreate recipes from the new tab
 
 
 def _insert_plants(conn: sqlite3.Connection, plants: list[tuple]) -> None:

@@ -1,5 +1,6 @@
 import json
-from .plants import get_connection
+import math
+from .plants import get_connection, _role_to_layer_functions
 
 # Legacy role names → current ones. Keeps plant communities saved before the
 # Native Habitat Designer rename rendering with the new vegetation-layer
@@ -15,6 +16,70 @@ def _normalize_role(role):
     if role and role in _LEGACY_ROLE_ALIASES:
         return _LEGACY_ROLE_ALIASES[role]
     return role
+
+
+def _parse_functions(raw):
+    """Decode the JSON-text `functions` column into a list of strings."""
+    if not raw:
+        return []
+    if isinstance(raw, list):
+        return [str(x) for x in raw if x]
+    try:
+        v = json.loads(raw)
+    except (TypeError, ValueError):
+        return []
+    if isinstance(v, list):
+        return [str(x) for x in v if x]
+    return []
+
+
+def _resolve_layer_functions(member_dict):
+    """Return (layer, functions_list) for a member dict from any source.
+
+    Accepts a row dict that may have:
+      - explicit `layer` and `functions` (preferred),
+      - only legacy `role` (derived via _role_to_layer_functions),
+      - or no role info at all (returns (None, [])).
+    """
+    layer = (member_dict.get("layer") or "").strip() or None
+    functions = _parse_functions(member_dict.get("functions"))
+    if layer is None and not functions:
+        # Fall back to the legacy single role.
+        role = _normalize_role(member_dict.get("role"))
+        layer, functions = _role_to_layer_functions(role)
+    return layer, functions
+
+
+def _derive_role(layer, functions):
+    """Pick the legacy single `role` value to persist for back-compat.
+
+    Layer wins over function (overstory > pollinator); falls back to the
+    first function, then to "other".
+    """
+    if layer:
+        return layer
+    if functions:
+        return functions[0]
+    return "other"
+
+
+def community_natural_radius(polyculture) -> float:
+    """Return the natural radius of a community in metres.
+
+    Defined as max(sqrt(ox² + oy²)) across members, with a 1 m floor so
+    single-member or co-located communities still have a non-zero
+    footprint for spacing-as-unit calculations. Used by the row/grid/
+    circle "place as unit" path to pre-fill cell spacing.
+    """
+    members = (polyculture or {}).get("members") or []
+    best = 0.0
+    for m in members:
+        ox = float(m.get("offset_x") or 0.0)
+        oy = float(m.get("offset_y") or 0.0)
+        r = math.sqrt(ox * ox + oy * oy)
+        if r > best:
+            best = r
+    return max(1.0, best)
 
 
 def _get_plant_by_name(common_name):
@@ -66,6 +131,9 @@ def get_polyculture_by_id(polyculture_id):
         for m in members:
             md = dict(m)
             md["role"] = _normalize_role(md.get("role"))
+            layer, functions = _resolve_layer_functions(md)
+            md["layer"] = layer
+            md["functions"] = functions
             member_dicts.append(md)
         polyculture["members"] = member_dicts
         return polyculture
@@ -105,15 +173,25 @@ def get_polyculture_children(parent_id):
         conn.close()
 
 
-def add_polyculture_member(polyculture_id, plant_id, role, offset_x, offset_y, notes=""):
+def add_polyculture_member(polyculture_id, plant_id, role, offset_x, offset_y,
+                            notes="", layer=None, functions=None):
     if plant_id is None:
         raise ValueError("plant_id must not be None")
+    # If caller supplied only `role`, derive layer/functions from it so the
+    # new columns aren't left blank for newly-seeded data.
+    if layer is None and functions is None:
+        layer, functions = _role_to_layer_functions(_normalize_role(role))
+    functions = functions or []
+    # Keep `role` populated for back-compat readers.
+    role = role or _derive_role(layer, functions)
     conn = get_connection()
     try:
         conn.execute(
-            "INSERT INTO polyculture_members (polyculture_id, plant_id, role, offset_x, offset_y, notes) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (polyculture_id, plant_id, role, offset_x, offset_y, notes),
+            "INSERT INTO polyculture_members "
+            "(polyculture_id, plant_id, role, layer, functions, offset_x, offset_y, notes) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (polyculture_id, plant_id, role, layer,
+             json.dumps(list(functions)), offset_x, offset_y, notes),
         )
         conn.execute(
             "UPDATE polycultures SET modified = datetime('now') WHERE id = ?", (polyculture_id,)
@@ -129,10 +207,11 @@ def add_polyculture_member(polyculture_id, plant_id, role, offset_x, offset_y, n
 def replace_polyculture_members(polyculture_id, members):
     """Atomically swap the member set of a polyculture.
 
-    ``members`` is a list of dicts with keys ``plant_id``, ``role``,
-    ``offset_x``, ``offset_y`` and an optional ``notes`` field. Used by
-    the visual polyculture builder to commit a freshly-edited layout in
-    one round-trip instead of one INSERT/DELETE per change.
+    ``members`` is a list of dicts with keys ``plant_id``, ``offset_x``,
+    ``offset_y``, optional ``layer`` (single vegetation layer) and
+    optional ``functions`` (list of ecological-function tags). Legacy
+    callers that pass only ``role`` are still supported — the layer and
+    functions are derived from the role on the fly.
     """
     conn = get_connection()
     try:
@@ -144,14 +223,25 @@ def replace_polyculture_members(polyculture_id, members):
             plant_id = m.get("plant_id")
             if plant_id is None:
                 continue
+            layer = m.get("layer")
+            functions = m.get("functions")
+            if layer is None and functions is None:
+                layer, functions = _role_to_layer_functions(
+                    _normalize_role(m.get("role"))
+                )
+            functions = list(functions or [])
+            role = m.get("role") or _derive_role(layer, functions)
             conn.execute(
                 "INSERT INTO polyculture_members "
-                "(polyculture_id, plant_id, role, offset_x, offset_y, notes) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
+                "(polyculture_id, plant_id, role, layer, functions, "
+                " offset_x, offset_y, notes) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     polyculture_id,
                     plant_id,
-                    m.get("role", "other"),
+                    role,
+                    layer,
+                    json.dumps(functions),
                     float(m.get("offset_x") or 0.0),
                     float(m.get("offset_y") or 0.0),
                     m.get("notes", "") or "",
@@ -251,11 +341,21 @@ def duplicate_polyculture(polyculture_id, as_variation=False):
         )
         new_id = cur.lastrowid
         for m in members:
+            layer = m.get("layer")
+            functions = m.get("functions")
+            if layer is None and functions is None:
+                layer, functions = _role_to_layer_functions(
+                    _normalize_role(m.get("role"))
+                )
+            functions = list(functions or [])
+            role = m.get("role") or _derive_role(layer, functions)
             conn.execute(
                 "INSERT INTO polyculture_members "
-                "(polyculture_id, plant_id, role, offset_x, offset_y, notes) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (new_id, m["plant_id"], m["role"],
+                "(polyculture_id, plant_id, role, layer, functions, "
+                " offset_x, offset_y, notes) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (new_id, m["plant_id"], role, layer,
+                 json.dumps(functions),
                  m["offset_x"], m["offset_y"], m.get("notes", "")),
             )
         conn.commit()
@@ -281,6 +381,8 @@ def export_polyculture(polyculture_id):
             {
                 "common_name": m["common_name"],
                 "role": m["role"] or "",
+                "layer": m.get("layer") or "",
+                "functions": list(m.get("functions") or []),
                 "offset_x": m["offset_x"],
                 "offset_y": m["offset_y"],
             }
@@ -309,12 +411,18 @@ def import_polyculture(data):
     for m in data.get("members", []):
         plant = _get_plant_by_name(m["common_name"])
         if plant:
+            layer = m.get("layer") or None
+            functions = m.get("functions")
+            if isinstance(functions, str):
+                functions = _parse_functions(functions)
             add_polyculture_member(
                 polyculture_id,
                 plant["id"],
                 m.get("role", ""),
                 m.get("offset_x", 0),
                 m.get("offset_y", 0),
+                layer=layer,
+                functions=functions,
             )
         else:
             warnings.append(f"Plant not found: {m['common_name']}")
