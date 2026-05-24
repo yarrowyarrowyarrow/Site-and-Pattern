@@ -138,12 +138,12 @@ class PlanningPanel(QWidget):
         # Results
         self._maint_results = QLabel("")
         self._maint_results.setWordWrap(True)
+        self._maint_results.setTextFormat(Qt.TextFormat.RichText)
         self._maint_results.setStyleSheet(
             "color: #c8e6c9; font-size: 12px; padding: 8px; "
-            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px; "
-            "font-family: 'Consolas', 'Courier New', monospace;"
+            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px;"
         )
-        self._maint_results.setMinimumHeight(180)
+        self._maint_results.setMinimumHeight(220)
         self._maint_results.setAlignment(Qt.AlignmentFlag.AlignTop)
         layout.addWidget(self._maint_results, 1)
 
@@ -198,79 +198,158 @@ class PlanningPanel(QWidget):
         total_y3 = plant_y3 + total_struct
         avail    = self._avail_hours.value() * 52
 
-        # Build result text
-        lines = [
-            "ESTABLISHMENT EFFORT  vs.  STEWARDSHIP",
-            "=" * 42,
-            f"                       Year 1     Year 3+",
-            "",
-        ]
-        if type_totals:
-            lines.append("Plants (by type):")
-            for ptype in ["tree", "shrub", "herb", "groundcover", "vine", "root"]:
-                if ptype not in type_totals:
-                    continue
-                slot = type_totals[ptype]
-                nat = slot["native"]
-                cnt = slot["count"]
-                lines.append(
-                    f"  {ptype.title()+'s':12s} {cnt:2d}  ({nat}/native)  "
-                    f"{slot['y1']:6.0f}   {slot['y3']:6.0f}"
-                )
-            lines.append(
-                f"  {'Subtotal':12s}                "
-                f"{plant_y1:6.0f}   {plant_y3:6.0f}"
+        # ── Build the HTML output ───────────────────────────────────────
+        rows: list[str] = []
+        # Plant rows
+        for ptype in ["tree", "shrub", "herb", "groundcover", "vine", "root"]:
+            if ptype not in type_totals:
+                continue
+            slot = type_totals[ptype]
+            label = ptype.title() + ("s" if not ptype.endswith("s") else "")
+            native_tag = (
+                f"<span style='color:#78909c;'> ({slot['native']} native)</span>"
+                if slot["native"] else ""
             )
-            lines.append("")
+            rows.append(self._row(
+                f"{label}",
+                f"{slot['count']}{native_tag}",
+                f"{slot['y1']:.0f} h",
+                f"{slot['y3']:.0f} h",
+            ))
+        if type_totals:
+            rows.append(self._row(
+                "Plants subtotal", "",
+                f"{plant_y1:.0f} h", f"{plant_y3:.0f} h",
+                subtotal=True,
+            ))
 
         if struct_lines:
-            lines.append(f"Structures (steady-state, applies to both years):")
-            lines.extend(struct_lines)
-            lines.append(
-                f"  {'Subtotal':12s}                "
-                f"{total_struct:6.0f}   {total_struct:6.0f}"
-            )
-            lines.append(
-                "  (Installation labour is one-time and not included)"
-            )
-            lines.append("")
+            for s in self._structures:
+                hrs = s.get("maintenance_hours_year", 0)
+                if hrs:
+                    rows.append(self._row(
+                        s.get("name", "?"), "",
+                        f"{hrs} h", f"{hrs} h",
+                    ))
+            rows.append(self._row(
+                "Structures subtotal", "",
+                f"{total_struct:.0f} h", f"{total_struct:.0f} h",
+                subtotal=True,
+            ))
 
-        lines.append("=" * 42)
-        lines.append(
-            f"  {'TOTAL':12s}                "
-            f"{total_y1:6.0f}   {total_y3:6.0f}  hrs/year"
-        )
-        lines.append(
-            f"  {'per week':12s}                "
-            f"{total_y1/52:6.1f}   {total_y3/52:6.1f}  hrs/week"
-        )
-        lines.append(
-            f"  Your capacity: {avail:.0f} hrs/year "
-            f"({self._avail_hours.value():.0f} hrs/week)"
-        )
-        lines.append("")
+        # Final TOTAL row
+        rows.append(self._row(
+            "TOTAL", "",
+            f"{total_y1:.0f} h", f"{total_y3:.0f} h",
+            total=True,
+        ))
+        rows.append(self._row(
+            "per week", "",
+            f"{total_y1/52:.1f} h", f"{total_y3/52:.1f} h",
+            footnote=True,
+        ))
 
-        # Capacity feedback: compare Year 1 (the hard year) to capacity
+        table_html = (
+            "<table cellpadding='4' cellspacing='0' "
+            "style='border-collapse:collapse; width:100%;'>"
+            "<tr style='background:#1e3a1e; color:#a5d6a7;'>"
+            "<th align='left'>Type</th>"
+            "<th align='right'>Plants</th>"
+            "<th align='right'>Year&nbsp;1</th>"
+            "<th align='right'>Year&nbsp;3+</th>"
+            "</tr>"
+            + "".join(rows) + "</table>"
+        )
+
+        # Footer note
+        cap_text = (
+            f"<p style='color:#90a4ae; font-size:11px; margin:6px 0 4px 0;'>"
+            f"Your capacity: <b>{self._avail_hours.value():.0f}&nbsp;h/week</b> "
+            f"({avail:.0f}&nbsp;h/year). Structures show steady-state recurring "
+            f"hours; one-time install labour is not included."
+            f"</p>"
+        )
+
+        # Callouts
+        callouts: list[str] = []
         if total_y1 <= avail:
             pct = (total_y1 / avail * 100) if avail > 0 else 0
-            lines.append(f"✓ Year 1 within capacity ({pct:.0f}% utilized).")
+            callouts.append(self._callout(
+                "good",
+                f"Year&nbsp;1 within capacity "
+                f"(<b>{pct:.0f}%</b> utilized).",
+            ))
         else:
             over = total_y1 - avail
-            lines.append(f"⚠ Year 1 over capacity by {over:.0f} hrs.")
-            lines.append(
-                f"  Stagger planting across seasons or reduce by "
-                f"{over/52:.1f} hrs/week."
-            )
-
-        # Highlight the establishment payoff
+            callouts.append(self._callout(
+                "warn",
+                f"Year&nbsp;1 over capacity by <b>{over:.0f}&nbsp;h</b>. "
+                f"Stagger planting across seasons or reduce by "
+                f"{over/52:.1f}&nbsp;h/week.",
+            ))
         if plant_y1 > 0 and plant_y3 < plant_y1:
             drop = (1 - plant_y3 / plant_y1) * 100
-            lines.append(
-                f"✓ Stewardship effort drops {drop:.0f}% from Y1 → Y3+ "
-                "as natives establish."
-            )
+            callouts.append(self._callout(
+                "good",
+                f"Stewardship effort drops <b>{drop:.0f}%</b> "
+                f"from Y1 → Y3+ as natives establish.",
+            ))
 
-        self._maint_results.setText("\n".join(lines))
+        html = (
+            "<div style='font-size:12px;'>"
+            + table_html
+            + cap_text
+            + "".join(callouts)
+            + "</div>"
+        )
+        self._maint_results.setText(html)
+
+    # ── HTML helpers shared by Effort + Water result tables ──────────────────
+    @staticmethod
+    def _row(
+        label: str, count: str, y1: str, y3: str,
+        *, subtotal: bool = False, total: bool = False,
+        footnote: bool = False,
+    ) -> str:
+        """One row of the Effort / Water tables. Style flags control the
+        visual emphasis: subtotal = muted highlight, total = strong highlight,
+        footnote = small muted text for the per-week row."""
+        if total:
+            bg = "background:#1e3a1e;"
+            text_style = "color:#e8f5e9; font-weight:bold;"
+        elif subtotal:
+            bg = "background:#172817;"
+            text_style = "color:#a5d6a7; font-weight:bold;"
+        elif footnote:
+            bg = ""
+            text_style = "color:#78909c; font-size:11px; font-style:italic;"
+        else:
+            bg = ""
+            text_style = "color:#c8e6c9;"
+        return (
+            f"<tr style='{bg}'>"
+            f"<td style='{text_style} padding:3px 6px;'>{label}</td>"
+            f"<td align='right' style='{text_style} padding:3px 6px;'>{count}</td>"
+            f"<td align='right' style='{text_style} padding:3px 6px;'>{y1}</td>"
+            f"<td align='right' style='{text_style} padding:3px 6px;'>{y3}</td>"
+            f"</tr>"
+        )
+
+    @staticmethod
+    def _callout(kind: str, html_body: str) -> str:
+        """Coloured 'aside' badge — green for good news, amber/red for warnings."""
+        styles = {
+            "good": ("#1e3a1e", "#66bb6a", "#c8e6c9", "✓"),
+            "warn": ("#3a2a1e", "#ffb74d", "#ffe0b2", "⚠"),
+            "bad":  ("#3a1e1e", "#e57373", "#ffcdd2", "⚠"),
+        }
+        bg, border, fg, icon = styles.get(kind, styles["good"])
+        return (
+            f"<div style='background:{bg}; border-left:3px solid {border}; "
+            f"color:{fg}; padding:6px 10px; margin:6px 0; font-size:12px;'>"
+            f"<b>{icon}</b>&nbsp; {html_body}"
+            f"</div>"
+        )
 
     # ═════════════════════════════════════════════════════════════════════════
     #  P3a — Wildlife Forage Calendar (pollinator nectar + bird food)
@@ -704,12 +783,12 @@ class PlanningPanel(QWidget):
 
         self._water_results = QLabel("")
         self._water_results.setWordWrap(True)
+        self._water_results.setTextFormat(Qt.TextFormat.RichText)
         self._water_results.setStyleSheet(
             "color: #c8e6c9; font-size: 12px; padding: 8px; "
-            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px; "
-            "font-family: 'Consolas', 'Courier New', monospace;"
+            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px;"
         )
-        self._water_results.setMinimumHeight(180)
+        self._water_results.setMinimumHeight(240)
         self._water_results.setAlignment(Qt.AlignmentFlag.AlignTop)
         layout.addWidget(self._water_results, 1)
 
@@ -777,76 +856,142 @@ class PlanningPanel(QWidget):
         pond_L  = self._has_pond.value()  * 5000
         total_supply = rainfall_L + captured_L + swale_L + pond_L
 
-        # Build result
-        lines = [
-            "WATER BUDGET — Growing Season May–Sep",
-            "=" * 42,
-            f"                          Year 1      Year 3+",
-            "",
-            "DEMAND (plants):",
-        ]
+        bal_y1 = total_supply - total_y1_L
+        bal_y3 = total_supply - total_y3_L
+
+        # ── Build the HTML output ───────────────────────────────────────
+        # Demand rows (plants by type, then total)
+        rows: list[str] = []
         for ptype in ["tree", "shrub", "herb", "groundcover", "vine", "root"]:
             if ptype not in type_demands:
                 continue
             slot = type_demands[ptype]
-            lines.append(
-                f"  {ptype.title()+'s':12s} {slot['count']:2d}  ({slot['native']}/native)  "
-                f"{slot['y1']:7.0f} L  {slot['y3']:7.0f} L"
+            label = ptype.title() + ("s" if not ptype.endswith("s") else "")
+            native_tag = (
+                f"<span style='color:#78909c;'> ({slot['native']} native)</span>"
+                if slot["native"] else ""
             )
-        lines.append(
-            f"  {'Total':12s}                "
-            f"{total_y1_L:7.0f} L  {total_y3_L:7.0f} L"
-        )
-        lines.append(
-            f"  {'(m³)':12s}                "
-            f"{total_y1_L/1000:7.1f}    {total_y3_L/1000:7.1f}"
-        )
-        lines.append("")
+            rows.append(self._row(
+                f"{label}",
+                f"{slot['count']}{native_tag}",
+                f"{slot['y1']:.0f} L",
+                f"{slot['y3']:.0f} L",
+            ))
+        rows.append(self._row(
+            "Demand total", "",
+            f"{total_y1_L:.0f} L", f"{total_y3_L:.0f} L",
+            total=True,
+        ))
+        rows.append(self._row(
+            "(m³)", "",
+            f"{total_y1_L/1000:.1f}", f"{total_y3_L/1000:.1f}",
+            footnote=True,
+        ))
 
-        lines.append("SUPPLY (seasonal):")
-        lines.append(f"  Rainfall on garden ({garden_m2:.0f} m²): {rainfall_L:7.0f} L")
+        demand_html = (
+            "<table cellpadding='4' cellspacing='0' "
+            "style='border-collapse:collapse; width:100%; margin-bottom:8px;'>"
+            "<tr style='background:#1e3a1e; color:#a5d6a7;'>"
+            "<th align='left'>Type</th>"
+            "<th align='right'>Plants</th>"
+            "<th align='right'>Year&nbsp;1</th>"
+            "<th align='right'>Year&nbsp;3+</th>"
+            "</tr>"
+            + "".join(rows) + "</table>"
+        )
+
+        # Supply rows
+        supply_rows: list[str] = []
+
+        def _supply_row(label: str, val_L: float) -> str:
+            return (
+                "<tr>"
+                f"<td style='color:#c8e6c9; padding:3px 6px;'>{label}</td>"
+                f"<td align='right' style='color:#c8e6c9; padding:3px 6px;'>"
+                f"{val_L:.0f} L</td>"
+                "</tr>"
+            )
+
+        supply_rows.append(_supply_row(
+            f"Rainfall on garden ({garden_m2:.0f} m²)", rainfall_L
+        ))
         if captured_L > 0:
-            lines.append(
-                f"  Rain barrels ({self._rain_barrels.value()} × 200L, "
-                f"roof-fed): {captured_L:7.0f} L"
-            )
+            supply_rows.append(_supply_row(
+                f"Rain barrels ({self._rain_barrels.value()} × 200 L, roof-fed)",
+                captured_L,
+            ))
         if swale_L > 0:
-            lines.append(f"  Swales ({self._has_swale.value()}): {swale_L:7.0f} L")
+            supply_rows.append(_supply_row(
+                f"Bioswales ({self._has_swale.value()})", swale_L,
+            ))
         if pond_L > 0:
-            lines.append(f"  Ponds ({self._has_pond.value()}): {pond_L:7.0f} L")
-        lines.append(f"  Total supply:                          {total_supply:7.0f} L")
-        lines.append("")
+            supply_rows.append(_supply_row(
+                f"Ponds ({self._has_pond.value()})", pond_L,
+            ))
+        supply_rows.append(
+            "<tr style='background:#1e3a1e; color:#e8f5e9;'>"
+            "<td style='padding:3px 6px; font-weight:bold;'>Total supply</td>"
+            f"<td align='right' style='padding:3px 6px; font-weight:bold;'>"
+            f"{total_supply:.0f} L</td>"
+            "</tr>"
+        )
 
-        lines.append("=" * 42)
-        bal_y1 = total_supply - total_y1_L
-        bal_y3 = total_supply - total_y3_L
+        supply_html = (
+            "<table cellpadding='4' cellspacing='0' "
+            "style='border-collapse:collapse; width:100%; margin-bottom:8px;'>"
+            "<tr style='background:#1e3a1e; color:#a5d6a7;'>"
+            "<th align='left' colspan='2'>Supply (seasonal)</th>"
+            "</tr>"
+            + "".join(supply_rows) + "</table>"
+        )
 
-        def _balance_line(label: str, bal: float) -> str:
-            mark = "✓" if bal >= 0 else "⚠"
-            tag  = "Surplus" if bal >= 0 else "Deficit"
-            v    = abs(bal)
-            return f"  {mark} {label}: {tag} {v:.0f} L ({v/1000:.1f} m³)"
+        # Balance callouts (one per phase)
+        def _balance_callout(label: str, bal: float) -> str:
+            if bal >= 0:
+                return self._callout(
+                    "good",
+                    f"<b>{label}</b>: surplus <b>{bal:.0f} L</b> "
+                    f"({bal/1000:.1f} m³).",
+                )
+            v = -bal
+            return self._callout(
+                "bad",
+                f"<b>{label}</b>: deficit <b>{v:.0f} L</b> "
+                f"({v/1000:.1f} m³).",
+            )
 
-        lines.append(_balance_line("Year 1   ", bal_y1))
-        lines.append(_balance_line("Year 3+  ", bal_y3))
-        lines.append("")
+        callouts: list[str] = []
+        callouts.append(_balance_callout("Year 1",   bal_y1))
+        callouts.append(_balance_callout("Year 3+",  bal_y3))
 
-        # Suggestions for the Year-1 deficit (the hard year)
+        # Year-1 deficit hint (the hard year)
         if bal_y1 < 0:
             deficit = -bal_y1
             extra_barrels = int(deficit / 200) + 1
-            lines.append(f"Year 1 needs ≈ {extra_barrels} more rain barrels,")
-            lines.append(f"or {deficit/growing_weeks:.0f} L/week of supplemental")
-            lines.append("hand-watering during establishment.")
+            callouts.append(self._callout(
+                "warn",
+                f"Year&nbsp;1 needs ≈ <b>{extra_barrels} more rain "
+                f"barrels</b>, or <b>{deficit/growing_weeks:.0f} L/week</b> "
+                f"of supplemental hand-watering during establishment.",
+            ))
 
         # Highlight the native-rooted payoff
         if total_y1_L > 0 and total_y3_L < total_y1_L:
             drop = (1 - total_y3_L / total_y1_L) * 100
-            lines.append(
-                f"✓ Demand drops {drop:.0f}% from Y1 → Y3+ as natives root in."
-            )
+            callouts.append(self._callout(
+                "good",
+                f"Demand drops <b>{drop:.0f}%</b> from Y1 → Y3+ as "
+                f"natives root in.",
+            ))
 
-        self._water_results.setText("\n".join(lines))
+        html = (
+            "<div style='font-size:12px;'>"
+            + demand_html
+            + supply_html
+            + "".join(callouts)
+            + "</div>"
+        )
+        self._water_results.setText(html)
 
     # ═════════════════════════════════════════════════════════════════════════
     #  V4 — Design Notes / Journal
