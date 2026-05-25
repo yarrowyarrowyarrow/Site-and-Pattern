@@ -29,7 +29,7 @@ from PyQt6.QtCore import Qt, QTimer, QThread, QEvent
 from PyQt6.QtGui import QKeySequence, QShortcut
 
 from src.map_widget       import MapWidget
-from src.plant_panel      import PlantPanel
+from src.plant_panel      import PlantPanel, OnThisDesignPanel
 from src.polyculture_panel      import PolyculturePanel
 from src.structure_panel  import StructurePanel
 from src.analysis_panel   import AnalysisPanel
@@ -203,6 +203,10 @@ class MainWindow(QMainWindow):
         self.site_panel.attach_map_widget(self.map_widget)
         self.plant_panel     = PlantPanel(self)
         self.polyculture_panel     = PolyculturePanel(self)
+        # Third sibling inner tab — displays Plants / Communities / Stats
+        # for the current design. Driven by _sync_planning_panel + a
+        # placed_counts_changed signal from PlantPanel.
+        self.on_this_design = OnThisDesignPanel()
         self.structure_panel = StructurePanel(self)
         self.analysis_panel  = AnalysisPanel(self)
         self.planning_panel  = PlanningPanel(self)
@@ -351,6 +355,7 @@ class MainWindow(QMainWindow):
         )
         inner.addTab(self.plant_panel, "Plants")
         inner.addTab(self.polyculture_panel, "Plant Communities")
+        inner.addTab(self.on_this_design, "On This Design")
         v.addWidget(inner)
         return wrap
 
@@ -744,6 +749,13 @@ class MainWindow(QMainWindow):
         )
         self.polyculture_panel.communityCreated.connect(
             self.polyculture_panel._refresh_polyculture_list
+        )
+        # Mirror plant_panel's per-species counts into the sibling
+        # On-This-Design tab's Plants sub-tab.
+        self.plant_panel.placed_counts_changed.connect(
+            lambda: self.on_this_design.set_plants_counts(
+                self.plant_panel._placed_counts
+            )
         )
 
         # Structure panel → map
@@ -3057,13 +3069,13 @@ class MainWindow(QMainWindow):
         self.analysis_panel.set_placed_plants(enriched)
         self.analysis_panel.set_structures(structs)
 
-        # "On this Design" sub-tab in the Plants tab — Communities and Stats
-        # sub-tabs read from the same enriched list. (The Plants sub-tab is
-        # driven by `_placed_counts` and refreshed by the existing
-        # on_plants_placed_batch / on_plant_removed handlers, so no
-        # double-push is needed.)
+        # "On This Design" sibling inner tab. Push both: Communities + Stats
+        # sub-tabs read from the enriched list; the Plants sub-tab reads
+        # from `_placed_counts` (this catches load-project / new-project
+        # paths where placed_counts_changed didn't fire one-for-one).
         try:
-            self.plant_panel.set_design_data(enriched)
+            self.on_this_design.set_plants_counts(self.plant_panel._placed_counts)
+            self.on_this_design.set_design_data(enriched)
         except Exception:
             pass
 

@@ -799,18 +799,18 @@ class PlantRowDelegate(QStyledItemDelegate):
 # ── On-this-design summary panel ──────────────────────────────────────────────
 
 class OnThisDesignPanel(QWidget):
-    """Three sub-tabs reviewing the current design's contents:
+    """Third inner tab (sibling of Plants and Plant Communities) reviewing
+    what's currently placed. Three sub-tabs:
 
-    - **Plants**: species → count (driven by the legacy `_placed_counts`
-      so the per-species totals match what the Plants browser shows).
+    - **Plants**: species → count.
     - **Communities**: community name → number of instances on the map.
-    - **Stats**: aggregate species count, native %, layer breakdown, and
-      ecological-function tags.
+    - **Stats**: species count, native %, layer breakdown, ecological-
+      function tags.
 
-    Plants tab pushes ``_placed_counts`` via ``set_plants_counts`` after
-    every placement event. ``set_design_data(enriched)`` is the app-side
-    push of the full feature list used to drive Communities + Stats.
-    """
+    App.py owns the instance and drives both inputs:
+    ``set_plants_counts(plant_panel._placed_counts)`` whenever the Plants
+    tab signals ``placed_counts_changed``; ``set_design_data(enriched)``
+    inside ``_sync_planning_panel`` for Communities + Stats."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1046,6 +1046,9 @@ class PlantPanel(QWidget):
     # Emitted when "Save as Plant Community" creates a new community from
     # the stack, so the Communities tab can refresh its library list.
     communityCreated = pyqtSignal()
+    # Emitted whenever _placed_counts mutates (place / clear / load / remove)
+    # so the sibling On-This-Design inner tab can refresh its Plants sub-tab.
+    placed_counts_changed = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1402,20 +1405,9 @@ class PlantPanel(QWidget):
 
         bot_layout.addLayout(place_row)
 
-        # ── Placed plants section — collapsible (persisted across sessions) ─
-        from src.collapsible_panel import CollapsiblePanel
-        self._placed_panel = CollapsiblePanel(
-            "On This Design", panel_id="plant_panel_on_design", expanded=True
-        )
-        self.on_this_design = OnThisDesignPanel()
-        self._placed_panel.set_content(self.on_this_design)
-        # Back-compat aliases for the few sites that still read these names.
-        self._placed_count_label = self.on_this_design._plants_count_label
-        self._placed_list = self.on_this_design._plants_list
-
-        # Bottom pane is its own vertical splitter so the user gets a
-        # dedicated drag handle for the placed-list height without
-        # having to move the main browser/bottom split.
+        # Bottom pane: just placement controls now. (On This Design lives
+        # in a sibling inner tab at the same level as Plants and Plant
+        # Communities — see app.py's inner QTabWidget.)
         bottom.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
         )
@@ -1426,41 +1418,12 @@ class PlantPanel(QWidget):
         bottom_scroll.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
-        # Place button stays reachable even at the smallest split.
         bottom_scroll.setMinimumHeight(140)
 
-        self._bottom_splitter = QSplitter(Qt.Orientation.Vertical)
-        self._bottom_splitter.setChildrenCollapsible(False)
-        self._bottom_splitter.setHandleWidth(6)
-        self._bottom_splitter.setStyleSheet(
-            "QSplitter::handle:vertical { background: #2e4a2e; "
-            "height: 6px; margin: 1px 0; border-radius: 2px; }"
-        )
-        self._bottom_splitter.addWidget(bottom_scroll)
-        self._bottom_splitter.addWidget(self._placed_panel)
-        self._bottom_splitter.setStretchFactor(0, 0)
-        self._bottom_splitter.setStretchFactor(1, 1)
-        self._bottom_splitter.setSizes([160, 140])
-
-        splitter.addWidget(self._bottom_splitter)
+        splitter.addWidget(bottom_scroll)
         splitter.setSizes([700, 200])
         splitter.setStretchFactor(0, 5)
         splitter.setStretchFactor(1, 0)
-
-        # Saved main-splitter sizes from the last expanded state, so
-        # collapsing "On This Design" temporarily gives the freed
-        # height to the Plant Browser and re-expanding restores
-        # whatever ratio the user had.
-        self._main_splitter_saved_sizes: list[int] | None = None
-        self._placed_panel.toggled.connect(self._on_placed_panel_toggled)
-        self._browser_panel.toggled.connect(self._on_browser_panel_toggled)
-        # If a panel was persisted collapsed, apply the splitter rebalance
-        # once on next tick (splitter sizes aren't valid yet before the
-        # first show).
-        if not self._placed_panel.expanded():
-            QTimer.singleShot(0, lambda: self._on_placed_panel_toggled(False))
-        if not self._browser_panel.expanded():
-            QTimer.singleShot(0, lambda: self._on_browser_panel_toggled(False))
 
     # ── Filter helpers ────────────────────────────────────────────────────────
 
@@ -2205,13 +2168,13 @@ class PlantPanel(QWidget):
             if self._placed_counts[plant_id] <= 0:
                 del self._placed_counts[plant_id]
         self._results_model.set_placed_counts(self._placed_counts)
-        self._refresh_placed_list()
+        self.placed_counts_changed.emit()
 
     def on_plant_placed(self, plant_id: int, common_name: str):
         """Notify the panel that a plant was placed on the map."""
         self._placed_counts[plant_id] = self._placed_counts.get(plant_id, 0) + 1
         self._results_model.set_placed_counts(self._placed_counts)
-        self._refresh_placed_list()
+        self.placed_counts_changed.emit()
 
     def on_plants_placed_batch(self, placements: list[tuple[int, str]]):
         """Notify the panel that several plants were placed at once.
@@ -2228,13 +2191,13 @@ class PlantPanel(QWidget):
         for pid, _name in placements:
             self._placed_counts[pid] = self._placed_counts.get(pid, 0) + 1
         self._results_model.set_placed_counts(self._placed_counts)
-        self._refresh_placed_list()
+        self.placed_counts_changed.emit()
 
     def clear_placed(self):
         """Clear the placed-plants list (e.g. on New project)."""
         self._placed_counts.clear()
         self._results_model.set_placed_counts(self._placed_counts)
-        self._refresh_placed_list()
+        self.placed_counts_changed.emit()
 
     def load_placed(self, plants: list[dict]):
         """Reload placed-plants list from a loaded project."""
@@ -2243,56 +2206,7 @@ class PlantPanel(QWidget):
             pid = p.get("plant_id", 0)
             self._placed_counts[pid] = self._placed_counts.get(pid, 0) + 1
         self._results_model.set_placed_counts(self._placed_counts)
-        self._refresh_placed_list()
-
-    def _on_placed_panel_toggled(self, expanded: bool):
-        """Rebalance the main browser/bottom split when 'On This Design'
-        collapses or expands. Collapse hands the freed height to the
-        browser; expand restores the saved ratio.
-        """
-        sizes = self._main_splitter.sizes()
-        if len(sizes) != 2:
-            return
-        if not expanded:
-            self._main_splitter_saved_sizes = sizes
-            header_h = self._placed_panel.sizeHint().height() or 32
-            controls_min = 140  # matches bottom_scroll.setMinimumHeight
-            new_bottom = controls_min + header_h
-            total = sum(sizes)
-            new_top = max(total - new_bottom, controls_min)
-            self._main_splitter.setSizes([new_top, new_bottom])
-        else:
-            if self._main_splitter_saved_sizes:
-                self._main_splitter.setSizes(self._main_splitter_saved_sizes)
-                self._main_splitter_saved_sizes = None
-
-    def _on_browser_panel_toggled(self, expanded: bool):
-        """Symmetric partner to _on_placed_panel_toggled: collapsing the
-        Plant Browser hands its height to the placement + placed pane.
-        """
-        sizes = self._main_splitter.sizes()
-        if len(sizes) != 2:
-            return
-        if not expanded:
-            self._main_splitter_saved_sizes = sizes
-            header_h = self._browser_panel.sizeHint().height() or 32
-            total = sum(sizes)
-            new_bottom = max(total - header_h, 140)
-            self._main_splitter.setSizes([header_h, new_bottom])
-        else:
-            if self._main_splitter_saved_sizes:
-                self._main_splitter.setSizes(self._main_splitter_saved_sizes)
-                self._main_splitter_saved_sizes = None
-
-    def _refresh_placed_list(self):
-        self.on_this_design.set_plants_counts(self._placed_counts)
-
-    def set_design_data(self, enriched: list[dict]):
-        """Push the full enriched placed-features list (app.py canonical
-        source) into the Communities + Stats sub-tabs of the on-design
-        panel. Plants sub-tab continues to be driven by ``_placed_counts``
-        (which the browser's per-row "×N placed" overlay also reads)."""
-        self.on_this_design.set_design_data(enriched or [])
+        self.placed_counts_changed.emit()
 
 
 # ── Stylesheets ───────────────────────────────────────────────────────────────
