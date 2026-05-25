@@ -1087,6 +1087,20 @@ class PlantPanel(QWidget):
         self._restore_ecoregion_preference()
 
         self._run_search()   # populate on startup
+        # Snap the splitter to its auto-fit baseline on launch so the
+        # bottom pane (incl. the Place Mix on Map button) is fully
+        # visible even before the user touches the Plant Community Mix.
+        QTimer.singleShot(0, self._refit_bottom_pane)
+
+    def showEvent(self, event):
+        # Belt-and-suspenders: the first show may happen after __init__
+        # but before the splitter has real sizes (e.g. when the Plants
+        # inner tab isn't the initial selection). Retry on first show so
+        # the user lands on the auto-fit layout regardless of tab order.
+        super().showEvent(event)
+        if not getattr(self, "_did_initial_refit", False):
+            self._did_initial_refit = True
+            QTimer.singleShot(0, self._refit_bottom_pane)
 
     _SETTINGS_ECOREGION_KEY = "plant_panel/ab_ecoregion"
 
