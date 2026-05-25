@@ -12,8 +12,8 @@ from PyQt6.QtWidgets import (
     QComboBox, QListWidget, QListWidgetItem, QFrame,
     QPushButton, QSizePolicy, QScrollArea, QSplitter,
     QFormLayout, QGroupBox,
-    QSpinBox, QDoubleSpinBox, QSlider, QCheckBox,
-    QColorDialog, QMenu, QStackedWidget, QButtonGroup,
+    QSpinBox, QDoubleSpinBox,
+    QColorDialog, QMenu,
 )
 from PyQt6.QtCore import (
     Qt, QTimer, QThread, pyqtSignal, QSize, QAbstractListModel,
@@ -796,6 +796,243 @@ class PlantRowDelegate(QStyledItemDelegate):
         return super().editorEvent(event, model, option, index)
 
 
+# ── On-this-design summary panel ──────────────────────────────────────────────
+
+class OnThisDesignPanel(QWidget):
+    """Three sub-tabs reviewing the current design's contents:
+
+    - **Plants**: species → count (driven by the legacy `_placed_counts`
+      so the per-species totals match what the Plants browser shows).
+    - **Communities**: community name → number of instances on the map.
+    - **Stats**: aggregate species count, native %, layer breakdown, and
+      ecological-function tags.
+
+    Plants tab pushes ``_placed_counts`` via ``set_plants_counts`` after
+    every placement event. ``set_design_data(enriched)`` is the app-side
+    push of the full feature list used to drive Communities + Stats.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        from PyQt6.QtWidgets import QTabWidget, QTextBrowser
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(2)
+        self._tabs = QTabWidget()
+        self._tabs.setStyleSheet(
+            "QTabWidget::pane { border: 1px solid #2e4a2e; background: #1a2a1a; }"
+            "QTabBar::tab { background: #1e2e1e; color: #a5d6a7; "
+            "padding: 3px 10px; border: 1px solid #2e4a2e; "
+            "border-bottom: none; font-size: 11px; }"
+            "QTabBar::tab:selected { background: #2e4a2e; color: #e8f5e9; }"
+        )
+        root.addWidget(self._tabs)
+
+        # Plants sub-tab
+        plants_widget = QWidget()
+        pl = QVBoxLayout(plants_widget)
+        pl.setContentsMargins(2, 2, 2, 2)
+        pl.setSpacing(2)
+        self._plants_count_label = QLabel("None placed yet")
+        self._plants_count_label.setStyleSheet("color: #78909c; font-size: 11px;")
+        pl.addWidget(self._plants_count_label)
+        self._plants_list = QListWidget()
+        self._plants_list.setMinimumHeight(60)
+        self._plants_list.setStyleSheet(_RESULTS_LIST_STYLE)
+        self._plants_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._plants_list.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
+        pl.addWidget(self._plants_list, 1)
+        self._tabs.addTab(plants_widget, "Plants")
+
+        # Communities sub-tab
+        communities_widget = QWidget()
+        cl = QVBoxLayout(communities_widget)
+        cl.setContentsMargins(2, 2, 2, 2)
+        cl.setSpacing(2)
+        self._communities_count_label = QLabel("No communities placed yet")
+        self._communities_count_label.setStyleSheet(
+            "color: #78909c; font-size: 11px;"
+        )
+        cl.addWidget(self._communities_count_label)
+        self._communities_list = QListWidget()
+        self._communities_list.setMinimumHeight(60)
+        self._communities_list.setStyleSheet(_RESULTS_LIST_STYLE)
+        self._communities_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._communities_list.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
+        cl.addWidget(self._communities_list, 1)
+        self._tabs.addTab(communities_widget, "Communities")
+
+        # Stats sub-tab
+        stats_widget = QWidget()
+        sl = QVBoxLayout(stats_widget)
+        sl.setContentsMargins(2, 2, 2, 2)
+        sl.setSpacing(2)
+        self._stats_text = QTextBrowser()
+        self._stats_text.setStyleSheet(
+            "QTextBrowser { background: #1a2a1a; color: #c8e6c9; "
+            "border: 1px solid #2e4a2e; border-radius: 4px; font-size: 12px; }"
+        )
+        sl.addWidget(self._stats_text, 1)
+        self._tabs.addTab(stats_widget, "Stats")
+
+        # Latest enriched snapshot — stashed so Stats can refresh without
+        # the caller re-pushing it.
+        self._latest_enriched: list[dict] = []
+
+    # ── Plants sub-tab ────────────────────────────────────────────────
+
+    def set_plants_counts(self, counts: dict):
+        self._plants_list.clear()
+        if not counts:
+            self._plants_count_label.setText("None placed yet")
+            return
+        try:
+            from src.db.plants import get_plant
+            total = 0
+            for pid, count in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])):
+                p = get_plant(pid)
+                name = p["common_name"] if p else f"Plant #{pid}"
+                item = QListWidgetItem(f"{name}  ×{count}")
+                item.setIcon(_type_icon(p["plant_type"] if p else ""))
+                self._plants_list.addItem(item)
+                total += count
+            self._plants_count_label.setText(
+                f"{total} plant{'s' if total != 1 else ''} placed"
+                f" ({len(counts)} species)"
+            )
+        except Exception:
+            self._plants_count_label.setText(
+                f"{sum(counts.values())} plants placed"
+            )
+
+    # ── Communities + Stats sub-tabs ──────────────────────────────────
+
+    def set_design_data(self, enriched: list[dict]):
+        """Refresh Communities + Stats sub-tabs from the full enriched
+        list of placed-plant features. Each entry should carry at least
+        ``plant_id`` and (for community grouping) ``polyculture_name`` +
+        ``polyculture_center_lat`` / ``polyculture_center_lng``."""
+        self._latest_enriched = list(enriched or [])
+        self._refresh_communities(enriched or [])
+        self._refresh_stats(enriched or [])
+
+    def _refresh_communities(self, enriched: list[dict]):
+        self._communities_list.clear()
+        # Group by community name; count distinct (centre lat, centre lng)
+        # pairs per name to get instance count, plus total member count.
+        from collections import defaultdict
+        instances: dict[str, set] = defaultdict(set)
+        member_counts: dict[str, int] = defaultdict(int)
+        for p in enriched:
+            name = (p.get("polyculture_name") or "").strip()
+            if not name:
+                continue
+            clat = p.get("polyculture_center_lat")
+            clng = p.get("polyculture_center_lng")
+            key = (round(float(clat), 6), round(float(clng), 6)) if (
+                clat is not None and clng is not None
+            ) else p.get("placement_group_id")
+            instances[name].add(key)
+            member_counts[name] += 1
+        if not instances:
+            self._communities_count_label.setText("No communities placed yet")
+            return
+        for name in sorted(instances.keys(), key=str.lower):
+            n_inst = len(instances[name])
+            n_mem = member_counts[name]
+            item = QListWidgetItem(
+                f"{name}  — {n_inst} instance{'s' if n_inst != 1 else ''}"
+                f", {n_mem} member{'s' if n_mem != 1 else ''}"
+            )
+            self._communities_list.addItem(item)
+        total_inst = sum(len(v) for v in instances.values())
+        self._communities_count_label.setText(
+            f"{total_inst} community instance{'s' if total_inst != 1 else ''} "
+            f"across {len(instances)} community name"
+            f"{'s' if len(instances) != 1 else ''}"
+        )
+
+    def _refresh_stats(self, enriched: list[dict]):
+        if not enriched:
+            self._stats_text.setHtml(
+                "<i style='color:#78909c;'>Nothing placed yet.</i>"
+            )
+            return
+        from src.db.plants import get_plant
+        total = len(enriched)
+        species: set = set()
+        native = 0
+        layer_counts: dict[str, int] = {}
+        function_counts: dict[str, int] = {}
+        type_counts: dict[str, int] = {}
+        plant_cache: dict[int, dict] = {}
+        for p in enriched:
+            pid = p.get("plant_id")
+            if not pid:
+                continue
+            species.add(int(pid))
+            plant = plant_cache.get(pid)
+            if plant is None:
+                try:
+                    plant = get_plant(pid) or {}
+                except Exception:
+                    plant = {}
+                plant_cache[pid] = plant
+            if plant.get("native_to_alberta") or p.get("native_to_alberta"):
+                native += 1
+            ptype = (plant.get("plant_type") or p.get("plant_type") or "").lower()
+            if ptype:
+                type_counts[ptype] = type_counts.get(ptype, 0) + 1
+            # Layer + function tags only stamp on community members, but
+            # try to surface them when present (the bare-plant case
+            # simply contributes nothing to layer/function tallies).
+            layer = (p.get("layer") or "").lower()
+            if layer:
+                layer_counts[layer] = layer_counts.get(layer, 0) + 1
+            for fn in (p.get("functions") or []):
+                key = str(fn).lower()
+                function_counts[key] = function_counts.get(key, 0) + 1
+        native_pct = (100.0 * native / total) if total else 0.0
+        rows: list[str] = []
+        rows.append(
+            f"<p><b>{total}</b> plants placed · "
+            f"<b>{len(species)}</b> species · "
+            f"<b>{native_pct:.0f}%</b> Alberta-native</p>"
+        )
+        if type_counts:
+            rows.append("<p><b>Plant types</b><br>")
+            rows.append(
+                ", ".join(
+                    f"{t.replace('_', ' ')}: {n}"
+                    for t, n in sorted(type_counts.items(), key=lambda kv: -kv[1])
+                )
+            )
+            rows.append("</p>")
+        if layer_counts:
+            rows.append("<p><b>Vegetation layers</b><br>")
+            rows.append(
+                ", ".join(
+                    f"{l.replace('_', ' ')}: {n}"
+                    for l, n in sorted(layer_counts.items(), key=lambda kv: -kv[1])
+                )
+            )
+            rows.append("</p>")
+        if function_counts:
+            rows.append("<p><b>Ecological functions</b><br>")
+            rows.append(
+                ", ".join(
+                    f"{f.replace('_', ' ')}: {n}"
+                    for f, n in sorted(function_counts.items(), key=lambda kv: -kv[1])
+                )
+            )
+            rows.append("</p>")
+        self._stats_text.setHtml("".join(rows))
+
+
 # ── Main widget ───────────────────────────────────────────────────────────────
 
 class PlantPanel(QWidget):
@@ -806,6 +1043,9 @@ class PlantPanel(QWidget):
     # fourth is the pattern descriptor — see MapWidget.set_mode docstring.
     place_plant_requested = pyqtSignal(int, str, int, dict)   # plant_id, common_name, quantity, pattern
     color_changed = pyqtSignal(int, str)                       # plant_id, hex_color
+    # Emitted when "Save as Plant Community" creates a new community from
+    # the stack, so the Communities tab can refresh its library list.
+    communityCreated = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1103,9 +1343,13 @@ class PlantPanel(QWidget):
         # ── Pattern mode selector ───────────────────────────────────────
         # Single = click-to-place (current behaviour). Row/Grid/Circle take
         # two clicks each and emit a single batch placement with shared
-        # group_id. Per-mode parameter widgets live in a QStackedWidget so
-        # only relevant inputs are visible at a time.
-        self._build_pattern_controls(bot_layout)
+        # group_id. The placement-controls widget is shared with the Plant
+        # Communities tab so both tabs expose identical placement options.
+        from src.placement_controls import PlacementControlsWidget
+        self._placement = PlacementControlsWidget(show_canopy_base=True)
+        self._placement.patternKindChanged.connect(self._on_pattern_kind_changed)
+        bot_layout.addWidget(self._placement)
+        self._build_polyculture_controls(bot_layout)
 
         # ── Placement controls: quantity + colour + place button ───────
         place_row = QHBoxLayout()
@@ -1163,24 +1407,11 @@ class PlantPanel(QWidget):
         self._placed_panel = CollapsiblePanel(
             "On This Design", panel_id="plant_panel_on_design", expanded=True
         )
-        placed_body = QWidget()
-        pb_layout = QVBoxLayout(placed_body)
-        pb_layout.setContentsMargins(0, 0, 0, 0)
-        pb_layout.setSpacing(2)
-
-        self._placed_count_label = QLabel("None placed yet")
-        self._placed_count_label.setStyleSheet("color: #78909c; font-size: 11px;")
-        pb_layout.addWidget(self._placed_count_label)
-
-        self._placed_list = QListWidget()
-        self._placed_list.setMinimumHeight(60)
-        self._placed_list.setStyleSheet(_RESULTS_LIST_STYLE)
-        self._placed_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self._placed_list.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
-        )
-        pb_layout.addWidget(self._placed_list, 1)
-        self._placed_panel.set_content(placed_body)
+        self.on_this_design = OnThisDesignPanel()
+        self._placed_panel.set_content(self.on_this_design)
+        # Back-compat aliases for the few sites that still read these names.
+        self._placed_count_label = self.on_this_design._plants_count_label
+        self._placed_list = self.on_this_design._plants_list
 
         # Bottom pane is its own vertical splitter so the user gets a
         # dedicated drag handle for the placed-list height without
@@ -1334,196 +1565,9 @@ class PlantPanel(QWidget):
 
     # ── Pattern mode UI ───────────────────────────────────────────────────────
 
-    def _build_pattern_controls(self, parent_layout: QVBoxLayout):
-        """Build the placement-mode segmented buttons + per-mode inputs."""
-        self._pattern_kind = "single"   # 'single' | 'row' | 'grid' | 'circle'
-
-        wrap = QGroupBox("Placement Mode")
-        wrap.setStyleSheet(
-            "QGroupBox { color: #a5d6a7; font-size: 11px; "
-            "border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 8px; }"
-            "QGroupBox::title { subcontrol-origin: margin; left: 8px; "
-            "padding: 0 4px; }"
-        )
-        outer = QVBoxLayout(wrap)
-        outer.setContentsMargins(6, 6, 6, 6)
-        outer.setSpacing(4)
-
-        # ── Mode segmented buttons ────────────────────────────────────
-        seg = QHBoxLayout()
-        seg.setSpacing(2)
-        self._pattern_btn_group = QButtonGroup(self)
-        self._pattern_btn_group.setExclusive(True)
-        for key, label, tip in [
-            ("single", "Single", "Click to place one plant at a time"),
-            ("row",    "Row",    "Click start, then end — fills a line of plants"),
-            ("grid",   "Grid",   "Click two opposite corners — fills a rectangle"),
-            ("circle", "Circle", "Click centre, then radius — places plants on a circle"),
-        ]:
-            btn = QPushButton(label)
-            btn.setCheckable(True)
-            btn.setToolTip(tip)
-            btn.setStyleSheet(_PATTERN_SEG_STYLE)
-            btn.setProperty("pattern_kind", key)
-            self._pattern_btn_group.addButton(btn)
-            seg.addWidget(btn)
-            if key == "single":
-                btn.setChecked(True)
-        self._pattern_btn_group.buttonClicked.connect(self._on_pattern_kind_changed)
-        outer.addLayout(seg)
-
-        # ── Stacked per-mode parameter panels ──────────────────────────
-        self._pattern_stack = QStackedWidget()
-        outer.addWidget(self._pattern_stack)
-
-        # Single — no parameters beyond the legacy Qty spinner below.
-        single_panel = QWidget()
-        sl = QVBoxLayout(single_panel)
-        sl.setContentsMargins(0, 0, 0, 0)
-        sl.addWidget(QLabel("Use the Qty spinner below for burst placement."))
-        sl.itemAt(0).widget().setStyleSheet("color: #78909c; font-size: 11px;")
-        self._pattern_stack.addWidget(single_panel)
-
-        # Row — count input.
-        row_panel = QWidget()
-        rl = QHBoxLayout(row_panel)
-        rl.setContentsMargins(0, 0, 0, 0)
-        rl.setSpacing(4)
-        rl.addWidget(self._small_label("Count:"))
-        self._row_count = QSpinBox()
-        self._row_count.setRange(0, 200)
-        self._row_count.setValue(0)
-        self._row_count.setSpecialValueText("auto")
-        self._row_count.setToolTip("0 = auto from spacing; otherwise force this many plants")
-        self._row_count.setStyleSheet(_QTY_SPIN_STYLE)
-        self._row_count.setFixedWidth(80)
-        rl.addWidget(self._row_count)
-        rl.addStretch()
-        self._pattern_stack.addWidget(row_panel)
-
-        # Grid — rows × cols + stagger.
-        grid_panel = QWidget()
-        gl = QHBoxLayout(grid_panel)
-        gl.setContentsMargins(0, 0, 0, 0)
-        gl.setSpacing(4)
-        gl.addWidget(self._small_label("Rows:"))
-        self._grid_rows = QSpinBox()
-        self._grid_rows.setRange(0, 200)
-        self._grid_rows.setSpecialValueText("auto")
-        self._grid_rows.setStyleSheet(_QTY_SPIN_STYLE)
-        self._grid_rows.setFixedWidth(70)
-        gl.addWidget(self._grid_rows)
-        gl.addWidget(self._small_label("Columns:"))
-        self._grid_cols = QSpinBox()
-        self._grid_cols.setRange(0, 200)
-        self._grid_cols.setSpecialValueText("auto")
-        self._grid_cols.setStyleSheet(_QTY_SPIN_STYLE)
-        self._grid_cols.setFixedWidth(70)
-        gl.addWidget(self._grid_cols)
-        self._grid_stagger = QCheckBox("Stagger")
-        self._grid_stagger.setToolTip("Hex-pack: offset every other row by half a column")
-        gl.addWidget(self._grid_stagger)
-        gl.addStretch()
-        self._pattern_stack.addWidget(grid_panel)
-
-        # Circle — total + fill.
-        circle_panel = QWidget()
-        cl = QHBoxLayout(circle_panel)
-        cl.setContentsMargins(0, 0, 0, 0)
-        cl.setSpacing(4)
-        cl.addWidget(self._small_label("Total:"))
-        self._circle_count = QSpinBox()
-        self._circle_count.setRange(0, 2000)
-        self._circle_count.setSpecialValueText("auto")
-        self._circle_count.setToolTip(
-            "Total plants in the placement.\n"
-            "0 (auto) = derive from spacing — perimeter mode uses arc length, "
-            "fill mode packs the whole disc.\n"
-            "Otherwise: that many plants on the perimeter (no fill) or in the "
-            "hex-pack disc (fill), closest-to-centre first."
-        )
-        self._circle_count.setStyleSheet(_QTY_SPIN_STYLE)
-        self._circle_count.setFixedWidth(80)
-        cl.addWidget(self._circle_count)
-        self._circle_fill = QCheckBox("Fill (hex)")
-        self._circle_fill.setToolTip(
-            "Honeycomb-pack the whole disc so every plant has six "
-            "equidistant neighbours. Use the Total spinner to cap the "
-            "count for large radii."
-        )
-        cl.addWidget(self._circle_fill)
-        cl.addStretch()
-        self._pattern_stack.addWidget(circle_panel)
-
-        # ── Overlap / gap slider (applies to all multi modes) ─────────
-        # Range −100%..+50% with 0 as the natural baseline:
-        #   −100% ⇒ centres 2× the reference width apart (very sparse)
-        #      0% ⇒ centres exactly one reference width apart
-        #   +50% ⇒ centres half the reference width apart (dense)
-        # The reference width is the planting spacing by default; tick the
-        # "Base on mature canopy" box below to use the canopy ring instead.
-        ov = QHBoxLayout()
-        ov.setSpacing(4)
-        ov.addWidget(self._small_label("Overlap:"))
-        self._overlap_slider = QSlider(Qt.Orientation.Horizontal)
-        self._overlap_slider.setRange(-100, 50)
-        self._overlap_slider.setValue(0)
-        self._overlap_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-        self._overlap_slider.setTickInterval(25)
-        self._overlap_slider.setToolTip(
-            "Spacing relative to the reference width (see toggle below).\n"
-            "  −100% = double spacing (centres 2× reference apart)\n"
-            "     0% = at nominal spacing\n"
-            "   +50% = half spacing (dense overlap)\n"
-            "Effective spacing = reference × (1 − overlap)."
-        )
-        ov.addWidget(self._overlap_slider, 1)
-        self._overlap_label = QLabel("0%")
-        self._overlap_label.setStyleSheet(
-            "color: #a5d6a7; font-size: 11px; min-width: 40px;"
-        )
-        ov.addWidget(self._overlap_label)
-        self._overlap_slider.valueChanged.connect(
-            lambda v: self._overlap_label.setText(f"{v:+d}%" if v else "0%")
-        )
-        outer.addLayout(ov)
-
-        # Reference-width toggle: planting spacing (default) vs mature canopy.
-        self._canopy_base_checkbox = QCheckBox("Base on mature canopy")
-        self._canopy_base_checkbox.setToolTip(
-            "When off, overlap is measured against planting spacing.\n"
-            "When on, overlap is measured against the mature canopy width — "
-            "useful when you care about leaf-area competition more than "
-            "nursery spacing recommendations."
-        )
-        self._canopy_base_checkbox.setStyleSheet(
-            "color: #a5d6a7; font-size: 11px;"
-        )
-        outer.addWidget(self._canopy_base_checkbox)
-
-        # ── Polyculture mix panel ─────────────────────────────────────
-        # When the user adds ≥1 secondary species via right-click → "Add
-        # to Polyculture Mix", Row/Grid/Circle placements distribute
-        # species across positions. Spacing defaults to the largest
-        # mature-width in the mix so canopies don't overlap.
-        self._build_polyculture_controls(outer)
-
-        parent_layout.addWidget(wrap)
-
     def _build_polyculture_controls(self, outer: QVBoxLayout):
-        """Build the inline polyculture-mix UI inside the placement group.
-
-        Layout (top → bottom):
-          · status label (mode + spacing summary)
-          · saved-recipe row: dropdown + Save / Delete
-          · always-visible column of per-species rows:
-              icon · common name · ratio spinner · × remove
-          · Clear mix button
-
-        The species rows are a vertical column (no QListWidget) so all
-        ≤8 species are visible simultaneously without scrolling.
-        """
-        mix_box = QGroupBox("Polyculture Mix")
+        """Build the inline stack-mix UI inside the placement group."""
+        mix_box = QGroupBox("Plant Community Mix")
         mix_box.setStyleSheet(
             "QGroupBox { color: #a5d6a7; font-size: 11px; "
             "border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 8px; }"
@@ -1542,20 +1586,6 @@ class PlantPanel(QWidget):
         self._mix_status.setStyleSheet("color: #78909c; font-size: 10px;")
         ml.addWidget(self._mix_status)
 
-        # Inline saved-recipe combo was removed — recipes now live in
-        # the Plant Community tab → Recipes. The hint label below keeps
-        # the user oriented; the right-click "Add to Recipe…" submenu
-        # is the cross-tab bridge for appending plants to a saved recipe
-        # without leaving the Plants tab.
-        hint = QLabel(
-            "Saved mixes are now in <b>Plant Community → Recipes</b>. "
-            "Right-click a plant to add it to a saved recipe."
-        )
-        hint.setStyleSheet("color: #78909c; font-size: 10px;")
-        hint.setWordWrap(True)
-        hint.setTextFormat(Qt.TextFormat.RichText)
-        ml.addWidget(hint)
-
         # ── Species rows (one per mix entry, custom widgets) ─────────
         self._mix_rows_container = QWidget()
         self._mix_rows_layout = QVBoxLayout(self._mix_rows_container)
@@ -1564,7 +1594,7 @@ class PlantPanel(QWidget):
         self._mix_rows_container.setVisible(False)
         ml.addWidget(self._mix_rows_container)
 
-        # ── Clear button ─────────────────────────────────────────────
+        # ── Action buttons (clear, save as community) ────────────────
         btn_row = QHBoxLayout()
         btn_row.setSpacing(4)
         self._mix_clear_btn = QPushButton("Clear mix")
@@ -1578,67 +1608,64 @@ class PlantPanel(QWidget):
         self._mix_clear_btn.clicked.connect(self._clear_mix)
         self._mix_clear_btn.setEnabled(False)
         btn_row.addWidget(self._mix_clear_btn)
+
+        self._mix_save_btn = QPushButton("Save as Community")
+        self._mix_save_btn.setStyleSheet(
+            "QPushButton { background: #1e2e1e; color: #a5d6a7; "
+            "border: 1px solid #2e4a2e; border-radius: 3px; "
+            "padding: 2px 8px; font-size: 11px; }"
+            "QPushButton:hover { border-color: #4a7a4a; }"
+            "QPushButton:disabled { color: #455a64; border-color: #2e4a2e; }"
+        )
+        self._mix_save_btn.setToolTip(
+            "Hex-pack the current stack into a disc and save it as a "
+            "named Plant Community (appears in the Plant Community tab)."
+        )
+        self._mix_save_btn.clicked.connect(self._on_save_stack_as_community)
+        self._mix_save_btn.setEnabled(False)
+        btn_row.addWidget(self._mix_save_btn)
+
+        self._mix_open_builder_btn = QPushButton("Open in Builder…")
+        self._mix_open_builder_btn.setStyleSheet(
+            "QPushButton { background: #1e2e1e; color: #a5d6a7; "
+            "border: 1px solid #2e4a2e; border-radius: 3px; "
+            "padding: 2px 8px; font-size: 11px; }"
+            "QPushButton:hover { border-color: #4a7a4a; }"
+            "QPushButton:disabled { color: #455a64; border-color: #2e4a2e; }"
+        )
+        self._mix_open_builder_btn.setToolTip(
+            "Pre-populate the visual builder with this stack so you can "
+            "tweak positions before saving it as a Plant Community."
+        )
+        self._mix_open_builder_btn.clicked.connect(self._on_open_stack_in_builder)
+        self._mix_open_builder_btn.setEnabled(False)
+        btn_row.addWidget(self._mix_open_builder_btn)
         btn_row.addStretch()
         ml.addLayout(btn_row)
 
         outer.addWidget(mix_box)
 
-    @staticmethod
-    def _small_label(text: str) -> QLabel:
-        lbl = QLabel(text)
-        lbl.setStyleSheet("color: #90a4ae; font-size: 11px;")
-        return lbl
-
-    def _on_pattern_kind_changed(self, btn):
-        kind = btn.property("pattern_kind") or "single"
-        self._pattern_kind = kind
-        idx = {"single": 0, "row": 1, "grid": 2, "circle": 3}.get(kind, 0)
-        self._pattern_stack.setCurrentIndex(idx)
+    def _on_pattern_kind_changed(self, kind: str):
         # Burst quantity only applies in Single mode.
         self._qty_spin.setEnabled(kind == "single")
 
     def _current_pattern(self) -> dict:
         """Build the pattern dict to pass to the map-placement signal.
 
-        When a polyculture mix is active and the mode is multi-cell
+        When a stack mix is active and the mode is multi-cell
         (row/grid/circle), the pattern's params get a `polyculture` key
         carrying the resolved species list, distribution strategy, and
         effective spacing — App._enter_plant_mode uses this to override
         the primary's spacing on the map, and App._on_pattern_placed
         uses it to assign species across positions.
         """
-        kind = self._pattern_kind
-        overlap = self._overlap_slider.value() / 100.0
-        use_canopy = self._canopy_base_checkbox.isChecked()
-        params: dict = {}
-        if kind == "row":
-            params = {
-                "count": self._row_count.value() or None,
-                "overlap": overlap,
-                "use_canopy": use_canopy,
-            }
-        elif kind == "grid":
-            params = {
-                "rows": self._grid_rows.value() or None,
-                "cols": self._grid_cols.value() or None,
-                "stagger": self._grid_stagger.isChecked(),
-                "overlap": overlap,
-                "use_canopy": use_canopy,
-            }
-        elif kind == "circle":
-            params = {
-                "count": self._circle_count.value() or None,
-                "fill": self._circle_fill.isChecked(),
-                "overlap": overlap,
-                "use_canopy": use_canopy,
-            }
-        else:
+        pattern = self._placement.current_pattern()
+        if pattern["kind"] == "single":
             return {"kind": "single"}
-
         poly = self.active_polyculture()
         if poly is not None:
-            params["polyculture"] = poly
-        return {"kind": kind, "params": params}
+            pattern["params"]["polyculture"] = poly
+        return pattern
 
     # ── Polyculture mix ───────────────────────────────────────────────────
 
@@ -1766,6 +1793,8 @@ class PlantPanel(QWidget):
             )
             self._mix_rows_container.setVisible(False)
             self._mix_clear_btn.setEnabled(False)
+            self._mix_save_btn.setEnabled(False)
+            self._mix_open_builder_btn.setEnabled(False)
             return
 
         all_sp = [float(s.get("spacing_meters") or 1.0) for s in self._mix_species]
@@ -1779,11 +1808,16 @@ class PlantPanel(QWidget):
             ratios = ":".join(str(int(s.get("_weight", 1) or 1))
                               for s in self._mix_species)
             self._mix_status.setText(
-                f"Polyculture: {n} species at {ratios} — spacing "
+                f"Plant community: {n} species at {ratios} — spacing "
                 f"{eff:.2f} m (max). Click Place Mix on Map."
             )
         self._mix_rows_container.setVisible(True)
         self._mix_clear_btn.setEnabled(True)
+        # Save/Open-Builder are only meaningful with ≥2 species — single
+        # species "communities" are just plants.
+        can_save = n >= 2
+        self._mix_save_btn.setEnabled(can_save)
+        self._mix_open_builder_btn.setEnabled(can_save)
 
         for idx, s in enumerate(self._mix_species):
             row = self._build_mix_row(idx, s)
@@ -1812,7 +1846,7 @@ class PlantPanel(QWidget):
         dot.setFixedSize(14, 14)
         dot.setCursor(Qt.CursorShape.PointingHandCursor)
         dot.setToolTip(
-            "Click to set this species' marker colour for this polyculture mix"
+            "Click to set this species' marker colour for this plant community mix"
         )
         self._style_mix_dot(dot, species)
         dot.clicked.connect(
@@ -1901,56 +1935,118 @@ class PlantPanel(QWidget):
         ratios = ":".join(str(int(s.get("_weight", 1) or 1))
                           for s in self._mix_species)
         self._mix_status.setText(
-            f"Polyculture: {n} species at {ratios} — spacing "
+            f"Plant community: {n} species at {ratios} — spacing "
             f"{eff:.2f} m (max). Click Place Mix on Map."
         )
 
-    # ── Saved recipes (migrated to Plant Community tab) ──────────────────
-    # The inline save/load UI was removed when recipes moved to a DB-backed
-    # Recipes tab. The right-click "Add to Recipe…" submenu in
-    # `_on_plant_context_menu` is the bridge for appending a plant to a
-    # saved recipe without leaving the Plants tab. The helper below
-    # supports that submenu.
+    # ── Save stack as Plant Community ──────────────────────────────────────
 
-    def _add_plant_to_recipe(self, plant: dict, recipe_id: int):
-        """Append a plant to the given saved recipe (creates if -1)."""
-        from src.db import recipes as recipes_db
-        pid = plant.get("id")
-        if not pid:
+    def _stack_for_export(self) -> list[dict]:
+        """Return the current mix in the shape stack_to_community_members
+        expects (id, common_name, spacing_m, plant_type, color, _weight)."""
+        out: list[dict] = []
+        for s in self._mix_species:
+            pid = s.get("id")
+            if not pid:
+                continue
+            out.append({
+                "id": int(pid),
+                "common_name": s.get("common_name") or "",
+                "spacing_m": float(s.get("spacing_meters") or 1.0),
+                "plant_type": s.get("plant_type") or "herb",
+                "color": s.get("marker_color") or "",
+                "_weight": int(s.get("_weight") or 1),
+            })
+        return out
+
+    def _prompt_unique_community_name(self, default: str) -> Optional[str]:
+        from PyQt6.QtWidgets import QInputDialog, QMessageBox
+        from src.db import polycultures
+        name, ok = QInputDialog.getText(
+            self, "Save Plant Community",
+            "Name for the new plant community:", text=default,
+        )
+        if not ok:
+            return None
+        name = name.strip()
+        if not name:
+            return None
+        if polycultures.get_polyculture_by_name(name) is not None:
+            base = name
+            suffix = 2
+            while polycultures.get_polyculture_by_name(f"{base} {suffix}") is not None:
+                suffix += 1
+            name = f"{base} {suffix}"
+            QMessageBox.information(
+                self, "Renamed",
+                f"A community with that name already exists. "
+                f"Saved as '{name}' instead."
+            )
+        return name
+
+    def _on_save_stack_as_community(self):
+        from PyQt6.QtWidgets import QMessageBox
+        from src.db import polycultures
+        from src.polyculture import stack_to_community_members
+        stack = self._stack_for_export()
+        if len(stack) < 2:
+            return
+        default = " + ".join(s["common_name"] for s in stack[:3])
+        if len(stack) > 3:
+            default += f" +{len(stack)-3}"
+        default += " mix"
+        name = self._prompt_unique_community_name(default)
+        if not name:
+            return
+        members = stack_to_community_members(stack)
+        try:
+            new_id = polycultures.create_polyculture(name, "", None)
+            polycultures.replace_polyculture_members(new_id, members)
+        except Exception as exc:
+            QMessageBox.critical(self, "Error",
+                                 f"Could not save plant community:\n{exc}")
+            return
+        self.communityCreated.emit()
+        QMessageBox.information(
+            self, "Saved",
+            f"Plant community '{name}' saved with {len(members)} "
+            f"members. Find it under the Plant Community tab."
+        )
+
+    def _on_open_stack_in_builder(self):
+        from PyQt6.QtWidgets import QDialog, QMessageBox
+        from src.db import polycultures
+        from src.polyculture import stack_to_community_members
+        from src.polyculture_panel import PolycultureBuilderDialog
+        stack = self._stack_for_export()
+        if len(stack) < 2:
+            return
+        members = stack_to_community_members(stack)
+        dialog = PolycultureBuilderDialog(self, polyculture_id=None)
+        try:
+            dialog.canvas.set_members(members)
+            dialog._refresh_member_list()
+        except Exception:
+            pass
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        data = dialog.get_data()
+        if not data.get("name"):
             return
         try:
-            if recipe_id == -1:
-                from PyQt6.QtWidgets import QInputDialog
-                name, ok = QInputDialog.getText(
-                    self, "New Recipe", "Name for the new recipe:"
-                )
-                if not ok or not name.strip():
-                    return
-                if recipes_db.get_recipe_by_name(name.strip()) is not None:
-                    return
-                recipe_id = recipes_db.create_recipe(name.strip())
-            recipe = recipes_db.get_recipe_by_id(int(recipe_id))
-            if not recipe:
-                return
-            members = [
-                {
-                    "plant_id": m["plant_id"],
-                    "weight": int(m.get("weight") or 1),
-                    "marker_color": m.get("marker_color"),
-                }
-                for m in (recipe.get("members") or [])
-            ]
-            # Skip if already present.
-            if any(m["plant_id"] == pid for m in members):
-                return
-            members.append({"plant_id": pid, "weight": 1})
-            recipes_db.replace_recipe_members(int(recipe_id), members)
-        except Exception:
-            # Surface in the status line if anything goes wrong; recipes
-            # are auxiliary so a failure here shouldn't crash the panel.
-            if hasattr(self, "_mix_status"):
-                self._mix_status.setText("Could not update recipe.")
+            new_id = polycultures.create_polyculture(
+                data["name"], data.get("description", ""), None
+            )
+            polycultures.replace_polyculture_members(new_id, data.get("members") or [])
+        except Exception as exc:
+            QMessageBox.critical(self, "Error",
+                                 f"Could not save plant community:\n{exc}")
             return
+        self.communityCreated.emit()
+        QMessageBox.information(
+            self, "Saved",
+            f"Plant community '{data['name']}' saved."
+        )
 
     # ── Place on map ──────────────────────────────────────────────────────────
 
@@ -2020,31 +2116,6 @@ class PlantPanel(QWidget):
             elif len(self._mix_species) >= self._MIX_MAX:
                 act_mix.setEnabled(False)
                 act_mix.setText(f"Mix full ({self._MIX_MAX} species max)")
-
-        # "Add to Recipe…" submenu — cross-tab bridge into the saved
-        # Recipes that now live in the Plant Community tab. Lists all
-        # saved recipes plus a "+ New Recipe…" option.
-        if plant.get("id"):
-            try:
-                from src.db import recipes as recipes_db
-                saved = recipes_db.get_all_recipes()
-            except Exception:
-                saved = []
-            recipe_menu = menu.addMenu("Add to Recipe…")
-            if saved:
-                for r in saved:
-                    rid = r.get("id")
-                    rname = r.get("name") or "(unnamed)"
-                    act_r = recipe_menu.addAction(rname)
-                    act_r.triggered.connect(
-                        lambda _checked=False, p=plant, i=rid:
-                            self._add_plant_to_recipe(p, int(i))
-                    )
-                recipe_menu.addSeparator()
-            act_new = recipe_menu.addAction("+ New Recipe…")
-            act_new.triggered.connect(
-                lambda _checked=False, p=plant: self._add_plant_to_recipe(p, -1)
-            )
 
         menu.exec(self._results_list.viewport().mapToGlobal(pos))
 
@@ -2214,30 +2285,14 @@ class PlantPanel(QWidget):
                 self._main_splitter_saved_sizes = None
 
     def _refresh_placed_list(self):
-        self._placed_list.clear()
-        if not self._placed_counts:
-            self._placed_count_label.setText("None placed yet")
-            return
+        self.on_this_design.set_plants_counts(self._placed_counts)
 
-        # Look up names
-        try:
-            from src.db.plants import get_plant
-            total = 0
-            for pid, count in sorted(self._placed_counts.items(), key=lambda kv: (-kv[1], kv[0])):
-                p = get_plant(pid)
-                name = p["common_name"] if p else f"Plant #{pid}"
-                item = QListWidgetItem(f"{name}  ×{count}")
-                item.setIcon(_type_icon(p["plant_type"] if p else ""))
-                self._placed_list.addItem(item)
-                total += count
-            self._placed_count_label.setText(
-                f"{total} plant{'s' if total != 1 else ''} placed"
-                f" ({len(self._placed_counts)} species)"
-            )
-        except Exception:
-            self._placed_count_label.setText(
-                f"{sum(self._placed_counts.values())} plants placed"
-            )
+    def set_design_data(self, enriched: list[dict]):
+        """Push the full enriched placed-features list (app.py canonical
+        source) into the Communities + Stats sub-tabs of the on-design
+        panel. Plants sub-tab continues to be driven by ``_placed_counts``
+        (which the browser's per-row "×N placed" overlay also reads)."""
+        self.on_this_design.set_design_data(enriched or [])
 
 
 # ── Stylesheets ───────────────────────────────────────────────────────────────
@@ -2317,27 +2372,6 @@ QSpinBox::down-arrow {
     border-right: 4px solid transparent;
     border-top: 5px solid #a5d6a7;
     width: 0; height: 0;
-}
-"""
-
-_PATTERN_SEG_STYLE = """
-QPushButton {
-    background: #1e2e1e;
-    color: #c8e6c9;
-    border: 1px solid #2e4a2e;
-    border-radius: 3px;
-    padding: 4px 6px;
-    font-size: 11px;
-}
-QPushButton:checked {
-    background: #2e7d32;
-    color: #e8f5e9;
-    border-color: #66bb6a;
-    font-weight: bold;
-}
-QPushButton:hover:!checked {
-    border-color: #4a7a4a;
-    background: #243824;
 }
 """
 

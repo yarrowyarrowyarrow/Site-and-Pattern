@@ -33,7 +33,6 @@ from PyQt6.QtWidgets import (
 
 from src.db import polycultures
 from src.db import plants as plants_db
-from src.db import recipes as recipes_db
 
 
 # Vegetation layer (single-select) — the physical position of a plant in
@@ -700,22 +699,6 @@ class PolycultureBuilderDialog(QDialog):
         self.canvas.memberMoved.connect(self._on_canvas_move)
         centre_col.addWidget(self.canvas, 0, Qt.AlignmentFlag.AlignHCenter)
 
-        # "Populate from Recipe" — autofills the canvas with hex-packed
-        # members in the ratios from a saved recipe.
-        populate_row = QHBoxLayout()
-        populate_row.addWidget(QLabel("Populate from recipe:"))
-        self._recipe_combo = QComboBox()
-        self._recipe_combo.setToolTip(
-            "Pick a saved Recipe and click Populate to fill the canvas "
-            "with hex-packed members in the recipe's ratios."
-        )
-        self._refresh_recipe_combo()
-        populate_row.addWidget(self._recipe_combo, 1)
-        populate_btn = QPushButton("Populate")
-        populate_btn.clicked.connect(self._on_populate_from_recipe)
-        populate_row.addWidget(populate_btn)
-        centre_col.addLayout(populate_row)
-
         self.count_label = QLabel("0 plants placed")
         self.count_label.setStyleSheet("color: #90a4ae; font-size: 11px;")
         centre_col.addWidget(self.count_label, 0, Qt.AlignmentFlag.AlignHCenter)
@@ -897,92 +880,6 @@ class PolycultureBuilderDialog(QDialog):
         self.canvas.setRadius(float(value))
         self._zoom_label.setText(self._zoom_label_text(float(value)))
 
-    # ── Populate from recipe ────────────────────────────────────────────────
-
-    def _refresh_recipe_combo(self):
-        self._recipe_combo.blockSignals(True)
-        self._recipe_combo.clear()
-        try:
-            recipes = recipes_db.get_all_recipes()
-        except Exception:
-            recipes = []
-        if not recipes:
-            self._recipe_combo.addItem("(no saved recipes)", None)
-            self._recipe_combo.setEnabled(False)
-        else:
-            self._recipe_combo.addItem("— select a recipe —", None)
-            for r in recipes:
-                self._recipe_combo.addItem(r.get("name") or "(unnamed)", r.get("id"))
-            self._recipe_combo.setEnabled(True)
-        self._recipe_combo.blockSignals(False)
-
-    def _on_populate_from_recipe(self):
-        recipe_id = self._recipe_combo.currentData()
-        if not recipe_id:
-            QMessageBox.information(
-                self, "Pick a recipe",
-                "Select a saved Recipe from the dropdown first.\n"
-                "Create one in the Plant Community tab → Recipes section."
-            )
-            return
-        try:
-            recipe = recipes_db.get_recipe_by_id(int(recipe_id))
-        except Exception as exc:
-            QMessageBox.critical(self, "Error", f"Could not load recipe:\n{exc}")
-            return
-        if not recipe or not recipe.get("members"):
-            QMessageBox.information(self, "Empty recipe",
-                                    "That recipe has no members.")
-            return
-
-        from src.polyculture import (
-            hex_pack_disc_local, resolve_spacing, assign_species,
-            optimize_layout,
-        )
-        species = recipes_db.recipe_to_species_list(recipe)
-        spacing_m = species.get("effective_spacing_m") or resolve_spacing(
-            species["species"], "max"
-        )
-        radius_m = self.canvas.radius_m()
-        positions = hex_pack_disc_local(radius_m, spacing_m)
-        if not positions:
-            QMessageBox.information(
-                self, "No room",
-                f"The recipe's effective spacing ({spacing_m:.1f} m) is "
-                f"too wide for the current visible radius ({radius_m:.0f} m).\n"
-                "Zoom out and try again."
-            )
-            return
-
-        # Assign species to positions in the recipe's ratios, then permute
-        # to spread same-species members apart. assign_species/optimize_layout
-        # expect [lat, lng] but treat them generically as 2D — passing local
-        # (x, y) tuples works because the distance metric is symmetric.
-        pseudo_latlng = [[y, x] for (x, y) in positions]
-        assignments = assign_species(pseudo_latlng, species["species"])
-        try:
-            assignments = optimize_layout(pseudo_latlng, assignments)
-        except Exception:
-            pass
-
-        plants_by_id = {p["id"]: p for p in self._all_plants}
-        members = []
-        for (x_m, y_m), sp in zip(positions, assignments):
-            plant = plants_by_id.get(int(sp["id"])) or {}
-            members.append({
-                "plant_id":    sp["id"],
-                "common_name": sp.get("common_name") or plant.get("common_name", ""),
-                "role":        "other",
-                "layer":       None,
-                "functions":   [],
-                "color":       (sp.get("color") or _plant_color_for_member(plant)),
-                "spacing_m":   float(sp.get("spacing_m") or 1.0),
-                "offset_x":    round(x_m, 2),
-                "offset_y":    round(y_m, 2),
-            })
-        self.canvas.set_members(members)
-        self._refresh_member_list()
-
     def _load_existing(self, polyculture_id: int):
         rec = polycultures.get_polyculture_by_id(polyculture_id)
         if not rec:
@@ -1024,459 +921,12 @@ class PolycultureBuilderDialog(QDialog):
         }
 
 
-class _RecipePlantPicker(QDialog):
-    """Tiny modal to pick a plant to add to a recipe."""
-
-    def __init__(self, parent=None, exclude_ids: set | None = None):
-        super().__init__(parent)
-        self.setWindowTitle("Add plant to recipe")
-        self.setMinimumSize(380, 460)
-        self._chosen: dict | None = None
-
-        all_plants = plants_db.get_all_plants()
-        excluded = exclude_ids or set()
-        all_plants = [p for p in all_plants if p.get("id") not in excluded]
-
-        layout = QVBoxLayout(self)
-
-        self._search = QLineEdit()
-        self._search.setPlaceholderText("Search plants…")
-        self._search.setClearButtonEnabled(True)
-        self._search.textChanged.connect(self._refresh)
-        layout.addWidget(self._search)
-
-        self._ab_only = QCheckBox("Alberta natives only")
-        self._ab_only.setChecked(True)
-        self._ab_only.toggled.connect(self._refresh)
-        layout.addWidget(self._ab_only)
-
-        self._list = QListWidget()
-        self._list.itemDoubleClicked.connect(self._on_accept_item)
-        layout.addWidget(self._list, 1)
-
-        btns = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok |
-            QDialogButtonBox.StandardButton.Cancel
-        )
-        btns.accepted.connect(self._on_accept)
-        btns.rejected.connect(self.reject)
-        layout.addWidget(btns)
-
-        self._all_plants = all_plants
-        self._refresh()
-
-    def _refresh(self, *_):
-        text = (self._search.text() or "").strip().lower()
-        ab_only = self._ab_only.isChecked()
-        self._list.clear()
-        for p in self._all_plants:
-            if ab_only and not _truthy_int(p.get("native_to_alberta")):
-                continue
-            name = p.get("common_name", "") or ""
-            sci = p.get("scientific_name", "") or ""
-            if text and text not in name.lower() and text not in sci.lower():
-                continue
-            ptype = p.get("plant_type", "")
-            it = QListWidgetItem(f"{name}  ({ptype})" if ptype else name)
-            it.setData(Qt.ItemDataRole.UserRole, p)
-            self._list.addItem(it)
-
-    def _on_accept(self):
-        it = self._list.currentItem()
-        if it is None:
-            self.reject()
-            return
-        self._chosen = it.data(Qt.ItemDataRole.UserRole)
-        self.accept()
-
-    def _on_accept_item(self, item):
-        self._chosen = item.data(Qt.ItemDataRole.UserRole)
-        self.accept()
-
-    def chosen(self) -> dict | None:
-        return self._chosen
-
-
-class RecipePanel(QWidget):
-    """Persistent Recipe (ratio-only polyculture mix) editor.
-
-    Recipes live in the polyculture_recipes/polyculture_recipe_members
-    tables and can be:
-      - placed on the map via the Plants tab (Place Mix flow), or
-      - used to auto-populate a Community circle in the builder
-        (Populate from Recipe), or
-      - derived from an existing Community via the "→ Recipe" button.
-    """
-
-    recipesChanged = pyqtSignal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._current_recipe_id: int | None = None
-        self._draft_members: list[dict] = []  # working copy until Save
-        self._build_ui()
-        self._refresh_recipe_list()
-
-    def _build_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(6)
-
-        layout.addWidget(QLabel(
-            "<b>Polyculture Recipes</b> "
-            "<span style='color:#90a4ae;font-weight:normal;'>"
-            "(ratio mixes — no spatial layout)</span>"
-        ))
-
-        # Top row: recipe list
-        self._recipe_list = QListWidget()
-        self._recipe_list.setMaximumHeight(160)
-        self._recipe_list.currentItemChanged.connect(self._on_recipe_selected)
-        layout.addWidget(self._recipe_list)
-
-        # Action buttons row
-        btn_row = QHBoxLayout()
-        for label, slot in [
-            ("New", self._on_new),
-            ("Duplicate", self._on_duplicate),
-            ("Delete", self._on_delete),
-        ]:
-            b = QPushButton(label)
-            b.setStyleSheet(_POLY_BTN_STYLE)
-            b.clicked.connect(slot)
-            btn_row.addWidget(b)
-        layout.addLayout(btn_row)
-
-        # Detail editor
-        form = QFormLayout()
-        self._name_input = QLineEdit()
-        self._name_input.setPlaceholderText("e.g. Goldenrod + Aster mix")
-        form.addRow("Name:", self._name_input)
-        self._desc_input = QLineEdit()
-        self._desc_input.setPlaceholderText("Optional description")
-        form.addRow("Description:", self._desc_input)
-        layout.addLayout(form)
-
-        layout.addWidget(QLabel("<b>Members</b>"))
-        # Member rows live in a container; each row carries its own
-        # ratio spinner and × button.
-        self._members_container = QWidget()
-        self._members_layout = QVBoxLayout(self._members_container)
-        self._members_layout.setContentsMargins(0, 0, 0, 0)
-        self._members_layout.setSpacing(2)
-        layout.addWidget(self._members_container)
-
-        self._empty_label = QLabel(
-            "<span style='color:#78909c;'>No members yet — click "
-            "Add Plant… to build the mix.</span>"
-        )
-        layout.addWidget(self._empty_label)
-
-        bottom_btn_row = QHBoxLayout()
-        self._add_plant_btn = QPushButton("Add Plant…")
-        self._add_plant_btn.setStyleSheet(_POLY_BTN_STYLE)
-        self._add_plant_btn.clicked.connect(self._on_add_plant)
-        bottom_btn_row.addWidget(self._add_plant_btn)
-
-        self._save_btn = QPushButton("Save Changes")
-        self._save_btn.setStyleSheet(_POLY_BTN_STYLE)
-        self._save_btn.clicked.connect(self._on_save)
-        bottom_btn_row.addWidget(self._save_btn)
-
-        self._populate_btn = QPushButton("→ New Community")
-        self._populate_btn.setStyleSheet(_POLY_BTN_STYLE)
-        self._populate_btn.setToolTip(
-            "Create a new Plant Community by hex-packing this recipe "
-            "into a circle (using the current ratios)."
-        )
-        self._populate_btn.clicked.connect(self._on_populate_community)
-        bottom_btn_row.addWidget(self._populate_btn)
-
-        bottom_btn_row.addStretch(1)
-        layout.addLayout(bottom_btn_row)
-
-        layout.addStretch(1)
-        self._enable_detail(False)
-
-    def refresh(self):
-        """Re-pull recipes from the DB (called when other panes mutate them)."""
-        self._refresh_recipe_list()
-
-    # ── Recipe list ─────────────────────────────────────────────────────
-
-    def _refresh_recipe_list(self):
-        current_id = self._current_recipe_id
-        self._recipe_list.blockSignals(True)
-        self._recipe_list.clear()
-        try:
-            recipes = recipes_db.get_all_recipes()
-        except Exception:
-            recipes = []
-        for r in recipes:
-            it = QListWidgetItem(r.get("name") or "(unnamed)")
-            it.setData(Qt.ItemDataRole.UserRole, r.get("id"))
-            self._recipe_list.addItem(it)
-            if current_id is not None and r.get("id") == current_id:
-                self._recipe_list.setCurrentItem(it)
-        self._recipe_list.blockSignals(False)
-        if self._recipe_list.currentItem() is None:
-            self._load_recipe(None)
-
-    def _on_recipe_selected(self, current, _previous):
-        if current is None:
-            self._load_recipe(None)
-            return
-        recipe_id = current.data(Qt.ItemDataRole.UserRole)
-        self._load_recipe(recipe_id)
-
-    def _load_recipe(self, recipe_id):
-        self._current_recipe_id = recipe_id
-        if recipe_id is None:
-            self._name_input.clear()
-            self._desc_input.clear()
-            self._draft_members = []
-            self._render_members()
-            self._enable_detail(False)
-            return
-        try:
-            recipe = recipes_db.get_recipe_by_id(int(recipe_id))
-        except Exception:
-            recipe = None
-        if not recipe:
-            self._load_recipe(None)
-            return
-        self._name_input.setText(recipe.get("name") or "")
-        self._desc_input.setText(recipe.get("description") or "")
-        self._draft_members = [
-            {
-                "plant_id": m["plant_id"],
-                "common_name": m.get("common_name", ""),
-                "plant_type": m.get("plant_type", ""),
-                "spacing_meters": m.get("spacing_meters") or 1.0,
-                "weight": int(m.get("weight") or 1),
-                "marker_color": m.get("marker_color")
-                                or m.get("plant_marker_color") or None,
-            }
-            for m in (recipe.get("members") or [])
-        ]
-        self._render_members()
-        self._enable_detail(True)
-
-    def _enable_detail(self, enabled: bool):
-        self._name_input.setEnabled(enabled)
-        self._desc_input.setEnabled(enabled)
-        self._add_plant_btn.setEnabled(enabled)
-        self._save_btn.setEnabled(enabled)
-        self._populate_btn.setEnabled(enabled)
-
-    # ── Members editor ──────────────────────────────────────────────────
-
-    def _render_members(self):
-        # Clear container
-        while self._members_layout.count():
-            it = self._members_layout.takeAt(0)
-            w = it.widget()
-            if w is not None:
-                w.setParent(None)
-                w.deleteLater()
-        if not self._draft_members:
-            self._empty_label.setVisible(True)
-            return
-        self._empty_label.setVisible(False)
-        for idx, member in enumerate(self._draft_members):
-            row = self._build_member_row(idx, member)
-            self._members_layout.addWidget(row)
-
-    def _build_member_row(self, idx: int, member: dict) -> QFrame:
-        row = QFrame()
-        row.setStyleSheet(
-            "QFrame { background: #1e2e1e; border: 1px solid #2e4a2e; "
-            "border-radius: 3px; }"
-        )
-        rl = QHBoxLayout(row)
-        rl.setContentsMargins(4, 2, 4, 2)
-        rl.setSpacing(4)
-
-        name = QLabel(member.get("common_name") or "—")
-        name.setStyleSheet("color: #c8e6c9; font-size: 11px;")
-        rl.addWidget(name, 1)
-
-        spin = QSpinBox()
-        spin.setRange(1, 99)
-        spin.setValue(int(member.get("weight") or 1))
-        spin.setFixedWidth(48)
-        spin.setToolTip("Ratio weight for this species in the mix.")
-        spin.valueChanged.connect(lambda v, i=idx: self._on_weight_changed(i, v))
-        rl.addWidget(spin)
-
-        rm = QPushButton("✕")
-        rm.setFixedSize(20, 20)
-        rm.setStyleSheet(
-            "QPushButton { background: transparent; color: #ef9a9a; "
-            "border: 1px solid transparent; border-radius: 3px; }"
-            "QPushButton:hover { border-color: #8a4a4a; background: #2e1a1a; }"
-        )
-        rm.clicked.connect(lambda _checked=False, i=idx: self._on_remove_member(i))
-        rl.addWidget(rm)
-        return row
-
-    def _on_weight_changed(self, idx: int, value: int):
-        if 0 <= idx < len(self._draft_members):
-            self._draft_members[idx]["weight"] = max(1, int(value))
-
-    def _on_remove_member(self, idx: int):
-        if 0 <= idx < len(self._draft_members):
-            self._draft_members.pop(idx)
-            self._render_members()
-
-    # ── Actions ─────────────────────────────────────────────────────────
-
-    def _on_new(self):
-        name, ok = QInputDialog.getText(
-            self, "New Recipe", "Name for the new recipe:"
-        )
-        if not ok or not name.strip():
-            return
-        name = name.strip()
-        if recipes_db.get_recipe_by_name(name) is not None:
-            QMessageBox.warning(self, "Name in use",
-                                "A recipe with that name already exists.")
-            return
-        try:
-            new_id = recipes_db.create_recipe(name)
-        except Exception as exc:
-            QMessageBox.critical(self, "Error",
-                                 f"Could not create recipe:\n{exc}")
-            return
-        self._current_recipe_id = new_id
-        self._refresh_recipe_list()
-        self.recipesChanged.emit()
-
-    def _on_duplicate(self):
-        if self._current_recipe_id is None:
-            return
-        try:
-            new_id = recipes_db.duplicate_recipe(int(self._current_recipe_id))
-        except Exception as exc:
-            QMessageBox.critical(self, "Error",
-                                 f"Could not duplicate recipe:\n{exc}")
-            return
-        if new_id:
-            self._current_recipe_id = new_id
-            self._refresh_recipe_list()
-            self.recipesChanged.emit()
-
-    def _on_delete(self):
-        if self._current_recipe_id is None:
-            return
-        reply = QMessageBox.question(
-            self, "Delete Recipe",
-            f"Delete recipe '{self._name_input.text()}'?"
-        )
-        if reply != QMessageBox.StandardButton.Yes:
-            return
-        try:
-            recipes_db.delete_recipe(int(self._current_recipe_id))
-        except Exception as exc:
-            QMessageBox.critical(self, "Error",
-                                 f"Could not delete recipe:\n{exc}")
-            return
-        self._current_recipe_id = None
-        self._refresh_recipe_list()
-        self.recipesChanged.emit()
-
-    def _on_add_plant(self):
-        excluded = {m["plant_id"] for m in self._draft_members}
-        picker = _RecipePlantPicker(self, exclude_ids=excluded)
-        if picker.exec() != QDialog.DialogCode.Accepted:
-            return
-        plant = picker.chosen()
-        if not plant or not plant.get("id"):
-            return
-        self._draft_members.append({
-            "plant_id": plant["id"],
-            "common_name": plant.get("common_name", ""),
-            "plant_type": plant.get("plant_type", ""),
-            "spacing_meters": plant.get("spacing_meters") or 1.0,
-            "weight": 1,
-            "marker_color": plant.get("marker_color") or None,
-        })
-        self._render_members()
-
-    def _on_save(self):
-        if self._current_recipe_id is None:
-            return
-        name = self._name_input.text().strip()
-        if not name:
-            QMessageBox.warning(self, "Name required",
-                                "Please give the recipe a name.")
-            return
-        # Detect a name collision with a different recipe.
-        existing = recipes_db.get_recipe_by_name(name)
-        if existing and existing.get("id") != self._current_recipe_id:
-            QMessageBox.warning(self, "Name in use",
-                                "Another recipe already uses that name.")
-            return
-        try:
-            recipes_db.update_recipe(
-                int(self._current_recipe_id),
-                name=name,
-                description=self._desc_input.text().strip(),
-            )
-            recipes_db.replace_recipe_members(
-                int(self._current_recipe_id), self._draft_members
-            )
-        except Exception as exc:
-            QMessageBox.critical(self, "Error",
-                                 f"Could not save recipe:\n{exc}")
-            return
-        self._refresh_recipe_list()
-        self.recipesChanged.emit()
-
-    def _on_populate_community(self):
-        """Create a new Plant Community pre-populated from this recipe."""
-        if self._current_recipe_id is None or not self._draft_members:
-            return
-        name, ok = QInputDialog.getText(
-            self, "New Community from Recipe",
-            "Name for the new plant community:",
-            text=(self._name_input.text() or "New Community"),
-        )
-        if not ok or not name.strip():
-            return
-        dialog = PolycultureBuilderDialog(self, polyculture_id=None)
-        # Pre-fill the name, then trigger the populate flow via the
-        # builder's recipe combo.
-        dialog.name_input.setText(name.strip())
-        # Find the current recipe entry in the combo and run populate.
-        for i in range(dialog._recipe_combo.count()):
-            if dialog._recipe_combo.itemData(i) == self._current_recipe_id:
-                dialog._recipe_combo.setCurrentIndex(i)
-                break
-        dialog._on_populate_from_recipe()
-        if dialog.exec() != QDialog.DialogCode.Accepted:
-            return
-        data = dialog.get_data()
-        try:
-            new_id = polycultures.create_polyculture(
-                data["name"], data["description"], None
-            )
-            polycultures.replace_polyculture_members(new_id, data["members"])
-        except Exception as exc:
-            QMessageBox.critical(self, "Error",
-                                 f"Could not create community:\n{exc}")
-            return
-        QMessageBox.information(
-            self, "Community created",
-            f"Plant community '{data['name']}' created from recipe."
-        )
-
-
 class PolyculturePanel(QWidget):
     placePolycultureRequested = pyqtSignal(dict)  # polyculture data with members
-    # Emitted when a recipe is created, updated, or deleted so the
-    # builder dialog (and any other view) can refresh.
-    recipesChanged = pyqtSignal()
+    # Emitted when the panel creates a brand-new community (e.g. via
+    # "Save stack as Community" from the Plants tab), so external views
+    # can refresh their library lists.
+    communityCreated = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1484,18 +934,7 @@ class PolyculturePanel(QWidget):
         self._refresh_polyculture_list()
 
     def _build_ui(self):
-        from PyQt6.QtWidgets import QTabWidget
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.setSpacing(0)
-
-        # Two sub-tabs: Communities (spatial library) and Recipes (ratio-only mixes).
-        tabs = QTabWidget()
-        outer.addWidget(tabs)
-
-        # ── Communities sub-tab ─────────────────────────────────────────
-        communities_widget = QWidget()
-        layout = QVBoxLayout(communities_widget)
+        layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
 
         label = QLabel("<b>Plant Community Library</b>  <span style='color:#90a4ae;font-weight:normal;'>(saved communities)</span>")
@@ -1515,7 +954,19 @@ class PolyculturePanel(QWidget):
         self.polyculture_tree.setMouseTracking(True)
         self.polyculture_tree.currentItemChanged.connect(self._on_polyculture_selected)
         self.polyculture_tree.itemDoubleClicked.connect(self._on_double_click_place)
+        self.polyculture_tree.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.polyculture_tree.customContextMenuRequested.connect(
+            self._on_tree_context_menu
+        )
         layout.addWidget(self.polyculture_tree)
+
+        # Community-mix stack — populated by right-click → "Add to Mix".
+        # When ≥2 communities are in the mix, Row/Grid/Circle placement
+        # distributes communities across positions in their ratios.
+        self._mix_communities: list[dict] = []
+        self._MIX_COMMUNITY_MAX = 8
 
         # Buttons row 1
         btn_row1 = QHBoxLayout()
@@ -1592,56 +1043,291 @@ class PolyculturePanel(QWidget):
         self.import_btn.clicked.connect(self._on_import)
         btn_row2.addWidget(self.import_btn)
 
-        self.derive_recipe_btn = QPushButton("→ Recipe")
-        self.derive_recipe_btn.setStyleSheet(_POLY_BTN_STYLE)
-        self.derive_recipe_btn.setEnabled(False)
-        self.derive_recipe_btn.setToolTip(
-            "Derive a Recipe (ratio mix) from this community's member counts"
-        )
-        self.derive_recipe_btn.clicked.connect(self._on_derive_recipe)
-        btn_row2.addWidget(self.derive_recipe_btn)
         layout.addLayout(btn_row2)
 
         # ── Pattern controls for community placement ─────────────────────
         self._build_community_pattern_controls(layout)
 
-        tabs.addTab(communities_widget, "Communities")
+        # ── Community Mix inline panel ──────────────────────────────────
+        self._build_community_mix_controls(layout)
 
-        # ── Recipes sub-tab ──────────────────────────────────────────────
-        self.recipe_panel = RecipePanel(self)
-        # Bi-directional refresh: any change inside the Recipes pane bubbles
-        # up; changes elsewhere (e.g. Derive Recipe button) push back down.
-        self.recipe_panel.recipesChanged.connect(self.recipesChanged.emit)
-        self.recipesChanged.connect(self.recipe_panel.refresh)
-        tabs.addTab(self.recipe_panel, "Recipes")
+    def _build_community_mix_controls(self, parent_layout):
+        """Inline ratio-mix builder for placing several plant communities
+        in a row/grid/circle at user-set ratios. Right-click a community
+        in the tree → 'Add to Community Mix'."""
+        mix_box = QGroupBox("Plant Community Mix")
+        mix_box.setStyleSheet(
+            "QGroupBox { color: #a5d6a7; font-size: 11px; "
+            "border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 8px; }"
+            "QGroupBox::title { subcontrol-origin: margin; left: 8px; "
+            "padding: 0 4px; }"
+        )
+        ml = QVBoxLayout(mix_box)
+        ml.setContentsMargins(6, 6, 6, 6)
+        ml.setSpacing(3)
+
+        self._mix_community_status = QLabel(
+            "Mix off — right-click a community in the list to add it.\n"
+            "With ≥2 communities, Row/Grid/Circle will distribute them in "
+            "the chosen ratios."
+        )
+        self._mix_community_status.setWordWrap(True)
+        self._mix_community_status.setStyleSheet(
+            "color: #78909c; font-size: 10px;"
+        )
+        ml.addWidget(self._mix_community_status)
+
+        self._mix_community_rows = QWidget()
+        self._mix_community_layout = QVBoxLayout(self._mix_community_rows)
+        self._mix_community_layout.setContentsMargins(0, 2, 0, 2)
+        self._mix_community_layout.setSpacing(2)
+        self._mix_community_rows.setVisible(False)
+        ml.addWidget(self._mix_community_rows)
+
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(4)
+        self._mix_community_place_btn = QPushButton("Place Mix on Map")
+        self._mix_community_place_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self._mix_community_place_btn.setEnabled(False)
+        self._mix_community_place_btn.setToolTip(
+            "Place the community mix using the current pattern "
+            "(Row / Grid / Circle)."
+        )
+        self._mix_community_place_btn.clicked.connect(
+            self._on_place_community_mix
+        )
+        btn_row.addWidget(self._mix_community_place_btn)
+
+        self._mix_community_clear_btn = QPushButton("Clear mix")
+        self._mix_community_clear_btn.setStyleSheet(
+            "QPushButton { background: #1e2e1e; color: #ef9a9a; "
+            "border: 1px solid #4a2e2e; border-radius: 3px; "
+            "padding: 2px 8px; font-size: 11px; }"
+            "QPushButton:hover { border-color: #8a4a4a; }"
+            "QPushButton:disabled { color: #455a64; border-color: #2e4a2e; }"
+        )
+        self._mix_community_clear_btn.setEnabled(False)
+        self._mix_community_clear_btn.clicked.connect(self._clear_community_mix)
+        btn_row.addWidget(self._mix_community_clear_btn)
+        btn_row.addStretch()
+        ml.addLayout(btn_row)
+
+        parent_layout.addWidget(mix_box)
+
+    # ── Tree right-click menu ───────────────────────────────────────────
+
+    def _on_tree_context_menu(self, pos):
+        from PyQt6.QtWidgets import QMenu
+        item = self.polyculture_tree.itemAt(pos)
+        if item is None:
+            return
+        polyculture_id = item.data(0, Qt.ItemDataRole.UserRole)
+        if not polyculture_id:
+            return
+        menu = QMenu(self)
+        menu.setStyleSheet(
+            "QMenu { background: #1e2e1e; color: #c8e6c9; "
+            "border: 1px solid #2e4a2e; }"
+            "QMenu::item:selected { background: #2e4a2e; }"
+        )
+        in_mix = any(c["id"] == polyculture_id for c in self._mix_communities)
+        if in_mix:
+            act = menu.addAction("Remove from Community Mix")
+            act.triggered.connect(
+                lambda: self._remove_from_community_mix(int(polyculture_id))
+            )
+        else:
+            act = menu.addAction("Add to Community Mix")
+            act.triggered.connect(
+                lambda: self._add_to_community_mix(int(polyculture_id))
+            )
+            if len(self._mix_communities) >= self._MIX_COMMUNITY_MAX:
+                act.setEnabled(False)
+                act.setText(f"Mix full ({self._MIX_COMMUNITY_MAX} max)")
+        menu.exec(self.polyculture_tree.viewport().mapToGlobal(pos))
+
+    # ── Community-mix state ─────────────────────────────────────────────
+
+    def _add_to_community_mix(self, polyculture_id: int):
+        if any(c["id"] == polyculture_id for c in self._mix_communities):
+            return
+        if len(self._mix_communities) >= self._MIX_COMMUNITY_MAX:
+            return
+        polyculture = polycultures.get_polyculture_by_id(polyculture_id)
+        if not polyculture:
+            return
+        self._mix_communities.append({
+            "id": int(polyculture_id),
+            "name": polyculture.get("name") or "(unnamed)",
+            "weight": 1,
+            "polyculture": polyculture,
+        })
+        self._refresh_community_mix()
+
+    def _remove_from_community_mix(self, polyculture_id: int):
+        before = len(self._mix_communities)
+        self._mix_communities = [
+            c for c in self._mix_communities if c["id"] != polyculture_id
+        ]
+        if len(self._mix_communities) != before:
+            self._refresh_community_mix()
+
+    def _clear_community_mix(self):
+        if not self._mix_communities:
+            return
+        self._mix_communities = []
+        self._refresh_community_mix()
+
+    def _refresh_community_mix(self):
+        # Clear existing rows.
+        while self._mix_community_layout.count():
+            it = self._mix_community_layout.takeAt(0)
+            w = it.widget()
+            if w is not None:
+                w.setParent(None)
+                w.deleteLater()
+        n = len(self._mix_communities)
+        if n == 0:
+            self._mix_community_status.setText(
+                "Mix off — right-click a community in the list to add it.\n"
+                "With ≥2 communities, Row/Grid/Circle will distribute them "
+                "in the chosen ratios."
+            )
+            self._mix_community_rows.setVisible(False)
+            self._mix_community_place_btn.setEnabled(False)
+            self._mix_community_clear_btn.setEnabled(False)
+            return
+        if n == 1:
+            self._mix_community_status.setText(
+                "Mix: 1 community (need ≥2 to activate).\n"
+                "Add at least one more, then choose Row/Grid/Circle."
+            )
+        else:
+            ratios = ":".join(str(int(c["weight"])) for c in self._mix_communities)
+            self._mix_community_status.setText(
+                f"Plant community mix: {n} communities at {ratios}. "
+                f"Pick Row/Grid/Circle and click Place Mix on Map."
+            )
+        self._mix_community_rows.setVisible(True)
+        self._mix_community_clear_btn.setEnabled(True)
+        self._mix_community_place_btn.setEnabled(n >= 2)
+
+        for idx, c in enumerate(self._mix_communities):
+            row = self._build_community_mix_row(idx, c)
+            self._mix_community_layout.addWidget(row)
+
+    def _build_community_mix_row(self, idx: int, community: dict) -> QFrame:
+        row = QFrame()
+        row.setStyleSheet(
+            "QFrame { background: #1e2e1e; border: 1px solid #2e4a2e; "
+            "border-radius: 3px; }"
+        )
+        rl = QHBoxLayout(row)
+        rl.setContentsMargins(4, 2, 4, 2)
+        rl.setSpacing(4)
+        name = QLabel(community.get("name") or "—")
+        name.setStyleSheet("color: #c8e6c9; font-size: 11px;")
+        rl.addWidget(name, 1)
+        spin = QSpinBox()
+        spin.setRange(1, 99)
+        spin.setValue(int(community.get("weight") or 1))
+        spin.setFixedWidth(48)
+        spin.setToolTip("Ratio weight for this community in the mix.")
+        spin.valueChanged.connect(
+            lambda v, i=idx: self._on_community_mix_weight_changed(i, v)
+        )
+        rl.addWidget(spin)
+        rm = QPushButton("✕")
+        rm.setFixedSize(20, 20)
+        rm.setStyleSheet(
+            "QPushButton { background: transparent; color: #ef9a9a; "
+            "border: 1px solid transparent; border-radius: 3px; }"
+            "QPushButton:hover { border-color: #8a4a4a; background: #2e1a1a; }"
+        )
+        cid = community["id"]
+        rm.clicked.connect(
+            lambda _checked=False, pid=cid: self._remove_from_community_mix(pid)
+        )
+        rl.addWidget(rm)
+        return row
+
+    def _on_community_mix_weight_changed(self, idx: int, value: int):
+        if 0 <= idx < len(self._mix_communities):
+            self._mix_communities[idx]["weight"] = max(1, int(value))
+            n = len(self._mix_communities)
+            if n >= 2:
+                ratios = ":".join(
+                    str(int(c["weight"])) for c in self._mix_communities
+                )
+                self._mix_community_status.setText(
+                    f"Plant community mix: {n} communities at {ratios}. "
+                    f"Pick Row/Grid/Circle and click Place Mix on Map."
+                )
+
+    def _on_place_community_mix(self):
+        """Emit a placement request for the community mix.
+
+        We embed the mix in the same ``pattern`` dict the single-community
+        flow uses; app.py recognises ``params['community_mix']`` and
+        dispatches to per-anchor community expansion."""
+        if len(self._mix_communities) < 2:
+            return
+        pattern = self.placement_widget.current_pattern()
+        kind = pattern["kind"]
+        if kind == "single":
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.information(
+                self, "Pick a pattern",
+                "Community mixes need Row, Grid, or Circle pattern. "
+                "Switch the pattern above and try again."
+            )
+            return
+        spacing = float(self.pattern_spacing.value() or 4.0)
+        # Use the first member of the first community as a representative
+        # plant so the JS preview ghost has something to size.
+        first = self._mix_communities[0]["polyculture"]
+        representative = dict(first)
+        params = dict(pattern.get("params") or {})
+        params["community_mix"] = [
+            {
+                "id": c["id"],
+                "weight": int(c["weight"]),
+                "name": c["name"],
+                "polyculture": c["polyculture"],
+            }
+            for c in self._mix_communities
+        ]
+        representative["pattern"] = {
+            "kind": kind,
+            "spacing_m": spacing,
+            "params": params,
+        }
+        self.placePolycultureRequested.emit(representative)
 
     def _build_community_pattern_controls(self, parent_layout):
-        """Add a small pattern selector (Single/Row/Grid/Circle) under the
-        Communities action buttons. When the selected pattern is non-Single,
-        clicking Place on Map enters a multi-anchor placement: each click
-        drops a row/grid/circle of the selected community."""
-        box = QGroupBox("Place as pattern")
-        box.setStyleSheet(
+        """Shared placement controls (Single/Row/Grid/Circle + overlap +
+        stagger + fill) plus a per-community Cell-spacing spinner.
+
+        When the pattern is non-Single, clicking Place on Map enters a
+        multi-anchor placement: each click drops a row/grid/circle of
+        the selected community."""
+        from src.placement_controls import PlacementControlsWidget
+        self.placement_widget = PlacementControlsWidget(
+            show_canopy_base=False,
+            title="Placement Mode",
+        )
+        parent_layout.addWidget(self.placement_widget)
+
+        spacing_box = QGroupBox("Community spacing")
+        spacing_box.setStyleSheet(
             "QGroupBox { color: #a5d6a7; font-size: 11px; "
             "border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 6px; }"
             "QGroupBox::title { subcontrol-origin: margin; left: 8px; "
             "padding: 0 4px; }"
         )
-        bl = QVBoxLayout(box)
-        bl.setContentsMargins(6, 4, 6, 4)
-        bl.setSpacing(3)
-
-        kind_row = QHBoxLayout()
-        kind_row.addWidget(QLabel("Pattern:"))
-        self.pattern_combo = QComboBox()
-        for label, kind in [("Single", "single"), ("Row", "row"),
-                            ("Grid", "grid"), ("Circle", "circle")]:
-            self.pattern_combo.addItem(label, kind)
-        kind_row.addWidget(self.pattern_combo, 1)
-        bl.addLayout(kind_row)
-
-        spacing_row = QHBoxLayout()
-        spacing_row.addWidget(QLabel("Cell spacing:"))
+        sl = QHBoxLayout(spacing_box)
+        sl.setContentsMargins(6, 4, 6, 4)
+        sl.addWidget(QLabel("Cell spacing:"))
         self.pattern_spacing = QDoubleSpinBox()
         self.pattern_spacing.setRange(0.5, 100.0)
         self.pattern_spacing.setDecimals(1)
@@ -1652,23 +1338,9 @@ class PolyculturePanel(QWidget):
             "Defaults to 2× the selected community's natural radius "
             "(its widest member offset)."
         )
-        spacing_row.addWidget(self.pattern_spacing)
-        bl.addLayout(spacing_row)
-
-        count_row = QHBoxLayout()
-        count_row.addWidget(QLabel("Count (row/circle):"))
-        self.pattern_count = QSpinBox()
-        self.pattern_count.setRange(0, 200)
-        self.pattern_count.setValue(0)
-        self.pattern_count.setSpecialValueText("auto")
-        self.pattern_count.setToolTip(
-            "Number of communities for row/circle patterns "
-            "(auto = derived from spacing). Ignored for grid."
-        )
-        count_row.addWidget(self.pattern_count)
-        bl.addLayout(count_row)
-
-        parent_layout.addWidget(box)
+        sl.addWidget(self.pattern_spacing)
+        sl.addStretch(1)
+        parent_layout.addWidget(spacing_box)
 
     def _refresh_polyculture_list(self, _filter_text=None):
         self.polyculture_tree.clear()
@@ -1744,7 +1416,6 @@ class PolyculturePanel(QWidget):
         self.place_btn.setEnabled(has_selection)
         self.export_btn.setEnabled(has_selection)
         self.edit_btn.setEnabled(has_selection)
-        self.derive_recipe_btn.setEnabled(has_selection)
         # Only allow adding variations to top-level polycultures
         is_top_level = has_selection and (current.parent() is None)
         self.variation_btn.setEnabled(is_top_level)
@@ -1905,80 +1576,17 @@ class PolyculturePanel(QWidget):
 
         # Attach the pattern config so app.py knows whether to single-place
         # the community or to fan it across a row/grid/circle.
-        kind = self.pattern_combo.currentData() or "single"
+        pattern = self.placement_widget.current_pattern()
+        kind = pattern["kind"]
         if kind != "single":
             spacing = float(self.pattern_spacing.value() or 4.0)
-            count_val = self.pattern_count.value()
             polyculture = dict(polyculture)
             polyculture["pattern"] = {
                 "kind": kind,
                 "spacing_m": spacing,
-                "count": (None if count_val == 0 else int(count_val)),
+                "params": pattern.get("params") or {},
             }
         self.placePolycultureRequested.emit(polyculture)
-
-    def _on_derive_recipe(self):
-        """Derive a Recipe (ratio mix) from the selected community.
-
-        Member counts per plant_id become weights, GCD-reduced so a
-        4:2:2 community becomes 2:1:1. Prompts for a recipe name and
-        emits recipesChanged so the Recipes tab refreshes.
-        """
-        polyculture_id = self._get_selected_polyculture_id()
-        if polyculture_id is None:
-            return
-        polyculture = polycultures.get_polyculture_by_id(polyculture_id)
-        if not polyculture or not polyculture.get("members"):
-            return
-
-        from math import gcd
-        from functools import reduce
-        counts: dict[int, int] = {}
-        for m in polyculture.get("members") or []:
-            pid = m.get("plant_id")
-            if not pid:
-                continue
-            counts[pid] = counts.get(pid, 0) + 1
-        if not counts:
-            return
-        g = reduce(gcd, counts.values())
-        if g > 1:
-            counts = {pid: c // g for pid, c in counts.items()}
-
-        default_name = f"{polyculture.get('name', 'Community')} recipe"
-        name, ok = QInputDialog.getText(
-            self, "Derive Recipe from Community",
-            "Name for the new recipe:", text=default_name,
-        )
-        if not ok or not name.strip():
-            return
-        name = name.strip()
-
-        # Avoid UNIQUE-constraint collision by suffixing.
-        target_name = name
-        suffix = 2
-        while recipes_db.get_recipe_by_name(target_name) is not None:
-            target_name = f"{name} {suffix}"
-            suffix += 1
-
-        try:
-            recipe_id = recipes_db.create_recipe(target_name)
-            recipes_db.replace_recipe_members(recipe_id, [
-                {"plant_id": pid, "weight": w} for pid, w in counts.items()
-            ])
-        except Exception as exc:
-            QMessageBox.critical(self, "Error",
-                                 f"Could not create recipe:\n{exc}")
-            return
-
-        self.recipesChanged.emit()
-        QMessageBox.information(
-            self, "Recipe created",
-            f"Recipe '{target_name}' created with "
-            f"{len(counts)} species in ratio "
-            f"{':'.join(str(c) for c in counts.values())}.\n\n"
-            "Find it under the Recipes tab."
-        )
 
     def _on_export(self):
         polyculture_id = self._get_selected_polyculture_id()
@@ -1989,8 +1597,9 @@ class PolyculturePanel(QWidget):
             return
 
         path, _ = QFileDialog.getSaveFileName(
-            self, "Export Plant Community", f"{data['name']}.polyculture.json",
-            "Plant Community Files (*.polyculture.json)"
+            self, "Export Plant Community",
+            f"{data['name']}.plant-community.json",
+            "Plant Community Files (*.plant-community.json *.polyculture.json)"
         )
         if path:
             with open(path, "w", encoding="utf-8") as f:
@@ -2000,7 +1609,8 @@ class PolyculturePanel(QWidget):
     def _on_import(self):
         path, _ = QFileDialog.getOpenFileName(
             self, "Import Plant Community", "",
-            "Plant Community Files (*.polyculture.json);;JSON Files (*.json)"
+            "Plant Community Files (*.plant-community.json *.polyculture.json);;"
+            "JSON Files (*.json)"
         )
         if not path:
             return

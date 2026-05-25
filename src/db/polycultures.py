@@ -109,6 +109,24 @@ def get_all_polycultures(top_level_only=True):
         conn.close()
 
 
+def get_polyculture_by_name(name: str):
+    """Look up a top-level or variation polyculture by exact name. Returns
+    the raw row dict (no members) or ``None`` if no match. Used by the
+    Plants-tab Save-as-Community flow to detect name collisions before
+    creating a new community."""
+    if not name:
+        return None
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT * FROM polycultures WHERE name = ? LIMIT 1",
+            (name,),
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
 def get_polyculture_by_id(polyculture_id):
     conn = get_connection()
     try:

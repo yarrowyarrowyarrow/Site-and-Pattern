@@ -305,6 +305,81 @@ def hex_pack_disc_local(radius_m: float, spacing_m: float) -> list[tuple[float, 
     return unique
 
 
+def stack_to_community_members(stack: list[dict]) -> list[dict]:
+    """Hex-pack a ratio-weighted stack of species into a disc at the
+    widest member's planting spacing. Returns member dicts ready to feed
+    into ``polycultures.replace_polyculture_members``.
+
+    Each input species dict carries at least ``id``, ``common_name``,
+    ``spacing_m`` (or ``spacing_meters``), and an optional ``_weight``
+    ratio integer. The total disc capacity is sized to fit
+    ``sum(weights)`` positions at the max member spacing; species are
+    distributed across positions in their ratios, then permuted to
+    spread same-species members apart.
+    """
+    if not stack:
+        return []
+    species = []
+    total_weight = 0
+    for s in stack:
+        pid = s.get("id") or s.get("plant_id")
+        if not pid:
+            continue
+        weight = max(1, int(s.get("_weight") or s.get("weight") or 1))
+        spacing = float(s.get("spacing_m") or s.get("spacing_meters") or 1.0)
+        species.append({
+            "id": int(pid),
+            "common_name": s.get("common_name") or "",
+            "spacing_m": spacing,
+            "plant_type": s.get("plant_type") or "herb",
+            "color": s.get("color") or s.get("marker_color") or "",
+            "weight": weight,
+        })
+        total_weight += weight
+    if not species:
+        return []
+
+    spacing_m = resolve_spacing(species, "max")
+    # Pick a radius big enough to fit at least `total_weight` positions
+    # plus a little slack so optimize_layout has somewhere to swap.
+    n_target = max(total_weight, 1)
+    # Hex disc capacity ≈ (π r² · 2) / (s²·√3). Solve for r:
+    radius_m = math.sqrt(n_target * spacing_m * spacing_m * math.sqrt(3.0) / (2.0 * math.pi))
+    radius_m = max(spacing_m, radius_m)
+    positions = hex_pack_disc_local(radius_m, spacing_m)
+    # Grow until we have enough positions (rare — only when packing wastes
+    # the budget at small radii).
+    grow_guard = 0
+    while len(positions) < n_target and grow_guard < 10:
+        radius_m *= 1.25
+        positions = hex_pack_disc_local(radius_m, spacing_m)
+        grow_guard += 1
+    if len(positions) > n_target:
+        positions = positions[:n_target]
+
+    pseudo_latlng = [[y, x] for (x, y) in positions]
+    assignments = assign_species(pseudo_latlng, species)
+    try:
+        assignments = optimize_layout(pseudo_latlng, assignments)
+    except Exception:
+        pass
+
+    members: list[dict] = []
+    for (x_m, y_m), sp in zip(positions, assignments):
+        members.append({
+            "plant_id":    int(sp["id"]),
+            "common_name": sp.get("common_name") or "",
+            "role":        "other",
+            "layer":       None,
+            "functions":   [],
+            "color":       sp.get("color") or "",
+            "spacing_m":   float(sp.get("spacing_m") or 1.0),
+            "offset_x":    round(float(x_m), 2),
+            "offset_y":    round(float(y_m), 2),
+        })
+    return members
+
+
 def _to_local_xy(positions: list) -> list[tuple[float, float]]:
     """Project [lat, lng] into local metres (flat-earth, centroid origin)."""
     if not positions:

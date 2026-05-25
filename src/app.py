@@ -171,6 +171,9 @@ class MainWindow(QMainWindow):
         # plant). Set by _enter_polyculture_pattern_mode, cleared on
         # mode exit.
         self._pending_community_pattern: dict | None = None
+        # Same idea for the community-mix case (Communities tab's ratio
+        # mix of multiple plant communities).
+        self._pending_community_pattern_mix: list[dict] | None = None
 
         # Edmonton offline download thread/worker (None when idle)
         self._dl_thread: Optional[QThread] = None
@@ -734,6 +737,14 @@ class MainWindow(QMainWindow):
 
         # Polyculture panel → map (polyculture placement)
         self.polyculture_panel.placePolycultureRequested.connect(self._enter_polyculture_mode)
+        # Stack → community: refresh the Communities tree when the Plants
+        # tab (or anywhere else) creates a brand-new plant community.
+        self.plant_panel.communityCreated.connect(
+            self.polyculture_panel._refresh_polyculture_list
+        )
+        self.polyculture_panel.communityCreated.connect(
+            self.polyculture_panel._refresh_polyculture_list
+        )
 
         # Structure panel → map
         self.structure_panel.place_structure_requested.connect(self._enter_structure_mode)
@@ -916,6 +927,7 @@ class MainWindow(QMainWindow):
         # re-set it after this call returns if a community is being
         # placed, otherwise plant-only patterns get the plant branch.
         self._pending_community_pattern = None
+        self._pending_community_pattern_mix = None
         spacing_m, plant_type, custom_color = self._plant_info(plant_id)
 
         # Polyculture override: when the panel built a mix recipe, use
@@ -1634,7 +1646,7 @@ class MainWindow(QMainWindow):
         self._pending_polyculture = polyculture_data
         self.map_widget.run_js("map.getContainer().style.cursor = 'crosshair';")
         self._set_mode_label(
-            f"Placing polyculture: {polyculture_data.get('name', '?')} — click map to place centre"
+            f"Placing plant community: {polyculture_data.get('name', '?')} — click map to place centre"
         )
         try:
             self.map_widget.bridge.map_clicked.disconnect(self._on_polyculture_click)
@@ -1664,18 +1676,15 @@ class MainWindow(QMainWindow):
         spacing_m = float(pattern.get("spacing_m") or 4.0)
         kind = pattern.get("kind") or "row"
 
-        # Build the same pattern dict shape that the Plants tab uses.
-        params: dict = {"overlap": 0.0, "use_canopy": False}
-        count = pattern.get("count")
-        if kind == "row":
-            params["count"] = count
-        elif kind == "circle":
-            params["count"] = count
-            params["fill"] = False
-        elif kind == "grid":
-            params["rows"] = None
-            params["cols"] = None
-            params["stagger"] = False
+        # Use the params dict the placement widget produced. Defaults
+        # cover legacy callers that supplied only kind + spacing_m.
+        params = dict(pattern.get("params") or {})
+        params.setdefault("overlap", 0.0)
+        params.setdefault("use_canopy", False)
+        # Detect the community-mix case (Plants tab analogue: one stack
+        # of multiple communities at ratios). Each anchor will become one
+        # full community, picked according to the ratios.
+        community_mix = params.pop("community_mix", None)
         # Carry the full community payload so _on_pattern_placed can
         # expand each anchor into the community's members.
         params["community"] = {
@@ -1694,10 +1703,18 @@ class MainWindow(QMainWindow):
                                quantity=1, pattern=pattern_dict)
         # Stash AFTER _enter_plant_mode (which clears the previous stash
         # at its top) so this fresh community is the one expanded by
-        # _on_pattern_placed.
+        # _on_pattern_placed. The mix stash takes precedence over the
+        # single-community stash when present.
         self._pending_community_pattern = pattern_dict["params"]["community"]
+        self._pending_community_pattern_mix = community_mix
         # Override the mode label so the user sees the community context.
-        community_name = polyculture_data.get("name", "?")
+        if community_mix:
+            community_name = (
+                f"{len(community_mix)}-community mix "
+                f"({':'.join(str(c['weight']) for c in community_mix)})"
+            )
+        else:
+            community_name = polyculture_data.get("name", "?")
         gesture = {
             "row":    "click start, then end",
             "grid":   "click two opposite corners",
@@ -1776,11 +1793,11 @@ class MainWindow(QMainWindow):
         self._mark_modified()
         self._sync_planning_panel()
         self._set_mode_label(
-            f"Placed polyculture '{poly_name}'. Click again for another, "
+            f"Placed plant community '{poly_name}'. Click again for another, "
             f"or press Esc to finish."
         )
         self.statusBar().showMessage(
-            f"Placed polyculture '{poly_name}' with {len(members)} members", 2500
+            f"Placed plant community '{poly_name}' with {len(members)} members", 2500
         )
 
     def _cancel_draw(self):
@@ -1809,6 +1826,7 @@ class MainWindow(QMainWindow):
         # Same idea for any community-pattern stash: dropping it on
         # cancel ensures the user starts fresh next time they hit Place.
         self._pending_community_pattern = None
+        self._pending_community_pattern_mix = None
 
     # ── Map event handlers ────────────────────────────────────────────────────
 
@@ -2144,6 +2162,47 @@ class MainWindow(QMainWindow):
         if not positions:
             return
 
+        # ── Community-mix-as-pattern branch ────────────────────────────
+        # When the Communities tab armed a Community Mix (≥2 communities
+        # at ratios), each anchor becomes one full community picked by
+        # ratio. assign_species takes generic {id, weight} items so the
+        # communities pose as "species" here at zero algorithmic cost.
+        community_mix = getattr(self, "_pending_community_pattern_mix", None)
+        if community_mix:
+            from src.polyculture import assign_species
+            mix_items = [
+                {
+                    "id": int(c["id"]),
+                    "common_name": c.get("name") or "",
+                    "spacing_m": 1.0,
+                    "plant_type": "community",
+                    "color": "",
+                    "weight": int(c.get("weight") or 1),
+                }
+                for c in community_mix
+            ]
+            try:
+                assignments = assign_species(positions, mix_items, "even_split")
+            except Exception:
+                assignments = [mix_items[0]] * len(positions)
+            poly_by_id = {int(c["id"]): c["polyculture"] for c in community_mix}
+            # Per-anchor calls so each instance gets its own
+            # placement_group_id — deleting one community doesn't take
+            # out the rest of the row.
+            for (lat, lng), assignment in zip(positions, assignments):
+                community = poly_by_id.get(int(assignment["id"]))
+                if not community:
+                    continue
+                community_payload = {
+                    "name": community.get("name", ""),
+                    "spacing_m": 1.0,
+                    "members": [dict(m) for m in (community.get("members") or [])],
+                }
+                self._expand_communities_at_positions(
+                    [(lat, lng)], community_payload, pattern_kind
+                )
+            return
+
         # ── Community-as-pattern branch ────────────────────────────────
         # If a Community was stashed at Place-click time, every anchor
         # position expands into one full community (all its members,
@@ -2230,12 +2289,10 @@ class MainWindow(QMainWindow):
             n_species = len({s["id"] for s in poly["species"]})
             self.statusBar().showMessage(
                 f"Placed {len(positions)} plants — "
-                f"{n_species}-species polyculture ({pattern_kind})", 3000
+                f"{n_species}-species plant community ({pattern_kind})", 3000
             )
-            # Persist the "click again to drop another" hint in the
-            # mode label since the recipe stays armed until Esc.
             self._set_mode_label(
-                f"Placed polyculture ({pattern_kind}). Click again for another, "
+                f"Placed plant community ({pattern_kind}). Click again for another, "
                 f"or press Esc to finish."
             )
         else:
@@ -2999,6 +3056,16 @@ class MainWindow(QMainWindow):
         # Habitat Value Score tab in the analysis panel uses the same data.
         self.analysis_panel.set_placed_plants(enriched)
         self.analysis_panel.set_structures(structs)
+
+        # "On this Design" sub-tab in the Plants tab — Communities and Stats
+        # sub-tabs read from the same enriched list. (The Plants sub-tab is
+        # driven by `_placed_counts` and refreshed by the existing
+        # on_plants_placed_batch / on_plant_removed handlers, so no
+        # double-push is needed.)
+        try:
+            self.plant_panel.set_design_data(enriched)
+        except Exception:
+            pass
 
     def _push_undo(self, entry: dict):
         self._undo_stack.append(entry)
