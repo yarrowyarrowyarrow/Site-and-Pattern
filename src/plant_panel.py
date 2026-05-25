@@ -1547,7 +1547,7 @@ class PlantPanel(QWidget):
 
     def _build_polyculture_controls(self, outer: QVBoxLayout):
         """Build the inline stack-mix UI inside the placement group."""
-        mix_box = QGroupBox("Plant Community Mix")
+        mix_box = QGroupBox("Plant current mix")
         mix_box.setStyleSheet(
             "QGroupBox { color: #a5d6a7; font-size: 11px; "
             "border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 8px; }"

@@ -1055,7 +1055,7 @@ class PolyculturePanel(QWidget):
         """Inline ratio-mix builder for placing several plant communities
         in a row/grid/circle at user-set ratios. Right-click a community
         in the tree → 'Add to Community Mix'."""
-        mix_box = QGroupBox("Plant Community Mix")
+        mix_box = QGroupBox("Plant Communities Mix")
         mix_box.setStyleSheet(
             "QGroupBox { color: #a5d6a7; font-size: 11px; "
             "border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 8px; }"
