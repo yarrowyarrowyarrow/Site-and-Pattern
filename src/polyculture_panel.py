@@ -940,8 +940,35 @@ class PolyculturePanel(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
 
-        label = QLabel("<b>Plant Community Library</b>  <span style='color:#90a4ae;font-weight:normal;'>(saved communities)</span>")
-        layout.addWidget(label)
+        # Library title with an inline "show / hide variations" toggle on
+        # the right. State persisted in QSettings; default hidden.
+        settings = QSettings()
+        self._show_variations = settings.value(
+            "plant_communities/show_variations", False, type=bool
+        )
+
+        title_row = QHBoxLayout()
+        title_row.setSpacing(6)
+        title_label = QLabel(
+            "<b>Plant Community Library</b>  "
+            "<span style='color:#90a4ae;font-weight:normal;'>(saved communities)</span>"
+        )
+        title_row.addWidget(title_label, 1)
+        self.variations_toggle_btn = QPushButton(
+            "▾ Hide variations" if self._show_variations else "▸ Show variations"
+        )
+        self.variations_toggle_btn.setStyleSheet(
+            "QPushButton { background: transparent; color: #90a4ae; "
+            "border: 1px solid #2e4a2e; border-radius: 3px; "
+            "padding: 1px 8px; font-size: 10px; }"
+            "QPushButton:hover { color: #c8e6c9; border-color: #4a7a4a; }"
+        )
+        self.variations_toggle_btn.setToolTip(
+            "Show or hide variations (children) of each plant community."
+        )
+        self.variations_toggle_btn.clicked.connect(self._on_toggle_variations)
+        title_row.addWidget(self.variations_toggle_btn)
+        layout.addLayout(title_row)
 
         # Search/filter box
         self._search_box = QLineEdit()
@@ -998,35 +1025,37 @@ class PolyculturePanel(QWidget):
         btn_row1.addWidget(self.variation_btn)
         layout.addLayout(btn_row1)
 
-        # Toggle to reveal/hide all sub-variations under top-level
-        # communities. State is persisted in QSettings so the user's
-        # preference survives a restart. Default: hidden.
-        settings = QSettings()
-        self._show_variations = settings.value(
-            "plant_communities/show_variations", False, type=bool
+        # Toggle to reveal/hide the description block. Hiding it frees
+        # vertical space so more members are visible at once. Persisted
+        # in QSettings; default shown (matches the prior behaviour).
+        self._show_description = QSettings().value(
+            "plant_communities/show_description", True, type=bool
         )
-        self.variations_toggle_btn = QPushButton(
-            "▾ Hide variations" if self._show_variations else "▸ Show variations"
+        self.description_toggle_btn = QPushButton(
+            "▾ Hide description" if self._show_description
+            else "▸ Show description"
         )
-        self.variations_toggle_btn.setStyleSheet(
+        self.description_toggle_btn.setStyleSheet(
             "QPushButton { background: transparent; color: #90a4ae; "
             "border: 1px solid #2e4a2e; border-radius: 3px; "
             "padding: 1px 8px; font-size: 10px; }"
             "QPushButton:hover { color: #c8e6c9; border-color: #4a7a4a; }"
         )
-        self.variations_toggle_btn.setToolTip(
-            "Show or hide variations (children) of each plant community."
+        self.description_toggle_btn.setToolTip(
+            "Show or hide the community description to make room for "
+            "more members in the list below."
         )
-        self.variations_toggle_btn.clicked.connect(self._on_toggle_variations)
+        self.description_toggle_btn.clicked.connect(self._on_toggle_description)
         toggle_row = QHBoxLayout()
         toggle_row.addStretch(1)
-        toggle_row.addWidget(self.variations_toggle_btn)
+        toggle_row.addWidget(self.description_toggle_btn)
         layout.addLayout(toggle_row)
 
         # Detail area
         self.detail_text = QTextEdit()
         self.detail_text.setReadOnly(True)
         self.detail_text.setMaximumHeight(150)
+        self.detail_text.setVisible(self._show_description)
         layout.addWidget(self.detail_text)
 
         # Members list — compact rows with inline triangle expand. Each
@@ -1465,6 +1494,19 @@ class PolyculturePanel(QWidget):
         )
         self._refresh_polyculture_list()
 
+    def _on_toggle_description(self):
+        """Flip the show-description preference. Hiding frees ~150 px
+        for the members list below."""
+        self._show_description = not self._show_description
+        QSettings().setValue(
+            "plant_communities/show_description", self._show_description
+        )
+        self.description_toggle_btn.setText(
+            "▾ Hide description" if self._show_description
+            else "▸ Show description"
+        )
+        self.detail_text.setVisible(self._show_description)
+
     def _on_double_click_place(self, item, column):
         """Double-click a polyculture to immediately enter placement mode."""
         polyculture_id = item.data(0, Qt.ItemDataRole.UserRole)
@@ -1551,7 +1593,7 @@ class PolyculturePanel(QWidget):
         head.setContentsMargins(0, 0, 0, 0)
         head.setSpacing(4)
         triangle = QToolButton()
-        triangle.setText("▸")  # ▸
+        triangle.setText("▸")
         triangle.setStyleSheet(
             "QToolButton { background: transparent; color: #90a4ae; "
             "border: none; padding: 0px 2px; font-size: 11px; }"
@@ -1564,30 +1606,104 @@ class PolyculturePanel(QWidget):
         head.addWidget(name, 1)
         outer.addLayout(head)
 
-        # Detail line: tags + offset, hidden by default.
-        tags = []
-        if member.get("layer"):
-            tags.append(str(member["layer"]).replace("_", " "))
-        for fn in (member.get("functions") or []):
-            tags.append(str(fn).replace("_", " "))
-        if not tags and member.get("role"):
-            tags.append(str(member.get("role") or "").replace("_", " "))
-        tag_str = ", ".join(tags) or "—"
-        ox = member.get("offset_x", 0)
-        oy = member.get("offset_y", 0)
-        detail = QLabel(f"{tag_str} · ({ox} m, {oy} m)")
-        detail.setStyleSheet("color: #90a4ae; font-size: 10px; padding-left: 18px;")
+        # Detail block — lazy-loaded HTML label matching the Plants
+        # browser's expanded row (zones, sun/water, spacing, height,
+        # bloom/fruit, edible, uses) plus this member's community-
+        # specific tags (layer/functions + offset). Built on first
+        # expand so closed rows don't hit the DB.
+        detail = QLabel()
+        detail.setStyleSheet(
+            "QLabel { color: #cfd8dc; font-size: 11px; "
+            "padding: 2px 4px 4px 18px; }"
+        )
+        detail.setTextFormat(Qt.TextFormat.RichText)
+        detail.setWordWrap(True)
         detail.setVisible(False)
         outer.addWidget(detail)
 
+        def _build_detail_html():
+            try:
+                from src.db.plants import get_plant
+                plant = get_plant(member.get("plant_id")) or {}
+            except Exception:
+                plant = {}
+            from src.plant_panel import (
+                _SUN_LABELS, _WATER_LABELS, _USE_LABELS,
+            )
+            zmin = plant.get("hardiness_zone_min")
+            zmax = plant.get("hardiness_zone_max")
+            if zmin and zmax:
+                zones = f"Z{zmin}–{zmax}"
+            elif zmin:
+                zones = f"Z{zmin}+"
+            else:
+                zones = "—"
+            sun = _SUN_LABELS.get(plant.get("sun_requirement", ""), "—")
+            water = _WATER_LABELS.get(plant.get("water_needs", ""), "—")
+            spacing = plant.get("spacing_meters")
+            height = plant.get("mature_height_meters")
+            bloom = plant.get("bloom_period") or "—"
+            fruit = plant.get("fruit_period") or "—"
+            edible = plant.get("edible_parts") or "—"
+            uses_raw = plant.get("permaculture_uses") or ""
+            uses = ", ".join(
+                _USE_LABELS.get(u.strip(), u.strip())
+                for u in uses_raw.split(",") if u.strip()
+            ) or "—"
+            notes = (plant.get("notes") or "").strip()
+            sci = plant.get("scientific_name") or ""
+
+            tags = []
+            if member.get("layer"):
+                tags.append(str(member["layer"]).replace("_", " "))
+            for fn in (member.get("functions") or []):
+                tags.append(str(fn).replace("_", " "))
+            if not tags and member.get("role"):
+                tags.append(str(member.get("role") or "").replace("_", " "))
+            tag_str = ", ".join(tags) or "—"
+            ox = member.get("offset_x", 0)
+            oy = member.get("offset_y", 0)
+
+            rows: list[str] = []
+            if sci:
+                rows.append(f"<i style='color:#90a4ae;'>{sci}</i>")
+            rows.append(
+                f"<b style='color:#78909c;'>Position:</b> {tag_str} · "
+                f"({ox} m, {oy} m)"
+            )
+            rows.append(f"<b style='color:#78909c;'>Zones:</b> {zones}")
+            rows.append(
+                f"<b style='color:#78909c;'>Sun · Water:</b> {sun} · {water}"
+            )
+            rows.append(
+                f"<b style='color:#78909c;'>Spacing:</b> "
+                f"{f'{spacing} m' if spacing else '—'}"
+            )
+            rows.append(
+                f"<b style='color:#78909c;'>Height:</b> "
+                f"{f'{height} m' if height else '—'}"
+            )
+            rows.append(
+                f"<b style='color:#78909c;'>Bloom · Fruit:</b> {bloom} · {fruit}"
+            )
+            rows.append(f"<b style='color:#78909c;'>Edible:</b> {edible}")
+            rows.append(f"<b style='color:#78909c;'>Uses:</b> {uses}")
+            if notes:
+                rows.append(
+                    f"<div style='color:#b0bec5; margin-top: 4px;'>{notes}</div>"
+                )
+            return "<br>".join(rows)
+
         def _toggle(_checked=False):
             expanded = not detail.isVisible()
+            if expanded and not detail.text():
+                detail.setText(_build_detail_html())
             detail.setVisible(expanded)
-            triangle.setText("▾" if expanded else "▸")  # ▾ / ▸
+            triangle.setText("▾" if expanded else "▸")
 
         triangle.clicked.connect(_toggle)
-        # Make the name label clickable too — easier to hit than the
-        # 8 px triangle.
+        # Make the name label clickable too — bigger hit target than
+        # the small triangle glyph.
         name.setCursor(Qt.CursorShape.PointingHandCursor)
         name.mousePressEvent = lambda _ev: _toggle()
         return row
