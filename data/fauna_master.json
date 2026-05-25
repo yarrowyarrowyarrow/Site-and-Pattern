@@ -1,0 +1,317 @@
+[
+  {
+    "scientific_name": "Danaus plexippus",
+    "common_name": "Monarch",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Migrates through southern Alberta; breeds where milkweeds occur.",
+    "icon": "🦋",
+    "description": "Iconic migratory butterfly. Caterpillars feed only on milkweeds (Asclepias). Listed as Endangered under SARA in Canada."
+  },
+  {
+    "scientific_name": "Papilio canadensis",
+    "common_name": "Canadian Tiger Swallowtail",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Widespread across boreal and aspen parkland Alberta.",
+    "icon": "🦋",
+    "description": "Large yellow-and-black swallowtail. Caterpillars feed on aspen, birch, willow, and chokecherry."
+  },
+  {
+    "scientific_name": "Papilio rutulus",
+    "common_name": "Western Tiger Swallowtail",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Southwestern Alberta foothills and river valleys.",
+    "icon": "🦋",
+    "description": "Closely related to the Canadian Tiger Swallowtail. Caterpillars feed on willow, cottonwood, and chokecherry."
+  },
+  {
+    "scientific_name": "Papilio machaon",
+    "common_name": "Old World Swallowtail",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Prairie populations across southern Alberta.",
+    "icon": "🦋",
+    "description": "Yellow-and-black swallowtail of open prairie. Prairie subspecies caterpillars feed on Artemisia (wild sages)."
+  },
+  {
+    "scientific_name": "Nymphalis antiopa",
+    "common_name": "Mourning Cloak",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Common throughout Alberta wherever willows occur.",
+    "icon": "🦋",
+    "description": "Dark butterfly with yellow wing borders; one of the first to emerge in spring. Caterpillars feed on willow, poplar, birch, and elm."
+  },
+  {
+    "scientific_name": "Aglais milberti",
+    "common_name": "Milbert's Tortoiseshell",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Common in moist meadows and disturbed ground.",
+    "icon": "🦋",
+    "description": "Orange-banded tortoiseshell butterfly. Caterpillars feed exclusively on stinging nettle (Urtica)."
+  },
+  {
+    "scientific_name": "Nymphalis l-album",
+    "common_name": "Compton Tortoiseshell",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Boreal forest and parkland.",
+    "icon": "🦋",
+    "description": "Mottled brown-and-orange tortoiseshell. Caterpillars feed on birch, aspen, and willow."
+  },
+  {
+    "scientific_name": "Vanessa cardui",
+    "common_name": "Painted Lady",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Periodic immigrant; major irruptions every several years.",
+    "icon": "🦋",
+    "description": "Cosmopolitan migrant butterfly. Caterpillars are generalists on Asteraceae, especially thistles."
+  },
+  {
+    "scientific_name": "Vanessa atalanta",
+    "common_name": "Red Admiral",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Widespread immigrant across the province.",
+    "icon": "🦋",
+    "description": "Dark butterfly with red wing-bands. Caterpillars feed on stinging nettle."
+  },
+  {
+    "scientific_name": "Limenitis arthemis",
+    "common_name": "White Admiral",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Boreal and aspen parkland Alberta.",
+    "icon": "🦋",
+    "description": "Black butterfly with broad white wing-bands. Caterpillars feed on aspen, willow, and birch."
+  },
+  {
+    "scientific_name": "Speyeria aphrodite",
+    "common_name": "Aphrodite Fritillary",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Meadows and openings across central and southern Alberta.",
+    "icon": "🦋",
+    "description": "Orange fritillary butterfly. Caterpillars feed only on native violets (Viola)."
+  },
+  {
+    "scientific_name": "Speyeria mormonia",
+    "common_name": "Mormon Fritillary",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Mountain meadows and foothills.",
+    "icon": "🦋",
+    "description": "Smaller orange fritillary of higher elevations. Caterpillars feed only on violets."
+  },
+  {
+    "scientific_name": "Cercyonis pegala",
+    "common_name": "Common Wood-Nymph",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Tall-grass meadows and aspen openings.",
+    "icon": "🦋",
+    "description": "Brown butterfly with eye-spots. Caterpillars feed on native grasses."
+  },
+  {
+    "scientific_name": "Celastrina ladon",
+    "common_name": "Spring Azure",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Early-spring flyer along forest edges.",
+    "icon": "🦋",
+    "description": "Tiny pale-blue butterfly. Caterpillars feed on flower buds of dogwoods, viburnums, and cherries."
+  },
+  {
+    "scientific_name": "Glaucopsyche lygdamus",
+    "common_name": "Silvery Blue",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Meadows and clearings throughout Alberta.",
+    "icon": "🦋",
+    "description": "Small blue butterfly with silvery underside. Caterpillars feed on lupines, vetches, and milkvetches."
+  },
+  {
+    "scientific_name": "Cupido amyntula",
+    "common_name": "Western Tailed-Blue",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Meadows and roadsides.",
+    "icon": "🦋",
+    "description": "Small tailed-blue butterfly. Caterpillars feed on legume seedpods (milkvetch, vetch)."
+  },
+  {
+    "scientific_name": "Hesperia comma",
+    "common_name": "Common Branded Skipper",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Native-grass prairie and meadow openings.",
+    "icon": "🦋",
+    "description": "Orange-and-brown skipper. Caterpillars feed on native bunchgrasses."
+  },
+  {
+    "scientific_name": "Antheraea polyphemus",
+    "common_name": "Polyphemus Moth",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Boreal and parkland Alberta.",
+    "icon": "🦋",
+    "description": "Large silk moth with eye-spots on hind wings. Caterpillars feed on birch, aspen, willow, and cherry."
+  },
+  {
+    "scientific_name": "Hyalophora cecropia",
+    "common_name": "Cecropia Moth",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Boreal Alberta; uncommon.",
+    "icon": "🦋",
+    "description": "Largest North American silk moth. Caterpillars feed on willow, cherry, birch, and maple."
+  },
+  {
+    "scientific_name": "Hemaris thysbe",
+    "common_name": "Hummingbird Clearwing Moth",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Day-flying moth of forest openings.",
+    "icon": "🦋",
+    "description": "Hovers like a hummingbird at flowers. Caterpillars feed on honeysuckle and snowberry."
+  },
+  {
+    "scientific_name": "Hemaris diffinis",
+    "common_name": "Snowberry Clearwing",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Open habitats with snowberry thickets.",
+    "icon": "🦋",
+    "description": "Black-and-yellow day-flying moth. Caterpillars feed on snowberry and honeysuckle."
+  },
+  {
+    "scientific_name": "Bombycilla cedrorum",
+    "common_name": "Cedar Waxwing",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Widespread breeder; nomadic in winter following fruit.",
+    "icon": "🐦",
+    "description": "Sleek crested songbird that feeds primarily on fruit. Strongly associated with serviceberry, mountain ash, and viburnum."
+  },
+  {
+    "scientific_name": "Spinus tristis",
+    "common_name": "American Goldfinch",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Summer breeder across Alberta.",
+    "icon": "🐦",
+    "description": "Bright yellow seed-eating finch. Heavily dependent on Asteraceae seed (sunflower, thistle, goldenrod, aster)."
+  },
+  {
+    "scientific_name": "Spinus pinus",
+    "common_name": "Pine Siskin",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Year-round in boreal regions; irruptive elsewhere.",
+    "icon": "🐦",
+    "description": "Streaked finch that feeds on birch, alder, and conifer seeds."
+  },
+  {
+    "scientific_name": "Acanthis flammea",
+    "common_name": "Common Redpoll",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Winter visitor; breeds in the far north.",
+    "icon": "🐦",
+    "description": "Small streaky finch with red cap. Winter diet is dominated by birch and alder seeds."
+  },
+  {
+    "scientific_name": "Archilochus colubris",
+    "common_name": "Ruby-throated Hummingbird",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Summer breeder in central and northern Alberta.",
+    "icon": "🐦",
+    "description": "Tiny migratory hummingbird. Feeds at red tubular flowers; bee balm and columbine are major nectar sources."
+  },
+  {
+    "scientific_name": "Selasphorus rufus",
+    "common_name": "Rufous Hummingbird",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Summer breeder in western Alberta.",
+    "icon": "🐦",
+    "description": "Aggressive coppery hummingbird of the mountain west. Feeds at red tubular flowers."
+  },
+  {
+    "scientific_name": "Poecile atricapillus",
+    "common_name": "Black-capped Chickadee",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Year-round resident throughout Alberta.",
+    "icon": "🐦",
+    "description": "Insectivorous songbird; nestlings depend almost entirely on caterpillars. Native trees rich in lepidoptera (aspen, willow, birch, cherry) anchor its food supply."
+  },
+  {
+    "scientific_name": "Setophaga petechia",
+    "common_name": "Yellow Warbler",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Summer breeder; strongly tied to riparian willow and dogwood thickets.",
+    "icon": "🐦",
+    "description": "Bright yellow warbler that nests almost exclusively in willow and dogwood shrubs along streams and wetland edges."
+  },
+  {
+    "scientific_name": "Turdus migratorius",
+    "common_name": "American Robin",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Widespread breeder across Alberta.",
+    "icon": "🐦",
+    "description": "Familiar thrush. Eats earthworms in spring/summer; switches to fruit (serviceberry, mountain ash, chokecherry, hawthorn) in fall and winter."
+  },
+  {
+    "scientific_name": "Bombus spp.",
+    "common_name": "Bumblebees",
+    "taxon": "bee",
+    "ab_native": 1,
+    "range_notes": "Multiple native species throughout Alberta.",
+    "icon": "🐝",
+    "description": "Large social bees critical for cold-climate pollination. Generalist foragers; particularly important on lupines, bergamot, asters, and goldenrods."
+  },
+  {
+    "scientific_name": "Andrena spp.",
+    "common_name": "Mining Bees",
+    "taxon": "bee",
+    "ab_native": 1,
+    "range_notes": "Diverse genus with many Alberta species.",
+    "icon": "🐝",
+    "description": "Solitary ground-nesting bees; many are spring specialists tied to willow catkins, early native shrubs, and asters."
+  },
+  {
+    "scientific_name": "Osmia spp.",
+    "common_name": "Mason Bees",
+    "taxon": "bee",
+    "ab_native": 1,
+    "range_notes": "Native cavity-nesting solitary bees.",
+    "icon": "🐝",
+    "description": "Solitary bees that nest in cavities (bee hotels). Important pollinators of fruit trees and shrubs."
+  },
+  {
+    "scientific_name": "Megachile spp.",
+    "common_name": "Leafcutter Bees",
+    "taxon": "bee",
+    "ab_native": 1,
+    "range_notes": "Numerous native species across Alberta.",
+    "icon": "🐝",
+    "description": "Solitary bees that cut leaf disks to line nests. Strong foragers on legumes and composites."
+  },
+  {
+    "scientific_name": "Halictus spp.",
+    "common_name": "Sweat Bees",
+    "taxon": "bee",
+    "ab_native": 1,
+    "range_notes": "Common throughout open Alberta habitats.",
+    "icon": "🐝",
+    "description": "Small to medium ground-nesting bees, often metallic green. Highly generalist on composites and other prairie flowers."
+  }
+]

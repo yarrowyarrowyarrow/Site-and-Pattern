@@ -681,8 +681,11 @@ class AnalysisPanel(QWidget):
 
         # Pull DB rows for distinct placed species.
         plant_rows: dict[int, dict] = {}
+        plant_uses_map: dict[int, set[str]] = {}
+        n_lepidoptera_supported = 0
         try:
-            from src.db.plants import get_connection
+            from src.db.plants import get_connection, plant_uses_for_ids
+            from src.db.fauna import lepidoptera_supported_by_plants
             conn = get_connection()
             try:
                 plant_ids = list({p["plant_id"] for p in self._placed_plants})
@@ -697,6 +700,14 @@ class AnalysisPanel(QWidget):
                         plant_rows[pid] = dict(row)
             finally:
                 conn.close()
+            # Schema v13: read tag membership from the plant_uses junction
+            # instead of substring-matching against the legacy comma blob.
+            plant_uses_map = plant_uses_for_ids(list(plant_rows.keys()))
+            # Schema v13: count distinct lepidoptera species larval-hosted
+            # by any placed plant. This drives the new wildlife component.
+            n_lepidoptera_supported = len(
+                lepidoptera_supported_by_plants(list(plant_rows.keys()))
+            )
         except Exception:
             self._habitat_score_label.setText("?")
             self._habitat_breakdown.setText("Plant database unavailable.")
@@ -704,6 +715,9 @@ class AnalysisPanel(QWidget):
 
         n_species = len(plant_rows)
         n_total_plants = len(self._placed_plants)
+
+        def _has_use(pid: int, key: str) -> bool:
+            return key in plant_uses_map.get(pid, set())
 
         # ── 1. % natives (20 pts) ─────────────────────────────────────────
         native_species = sum(
@@ -714,22 +728,22 @@ class AnalysisPanel(QWidget):
 
         # ── 2. Keystone species (15 pts, full at 5 distinct species) ──────
         keystone_species = [
-            r["common_name"] for r in plant_rows.values()
-            if "keystone_species" in (r.get("permaculture_uses") or "")
+            r["common_name"] for pid, r in plant_rows.items()
+            if _has_use(pid, "keystone_species")
         ]
         score_keystone = min(len(keystone_species) / 5.0, 1.0) * 15
 
         # ── 3. Host plant species (10 pts, full at 10) ────────────────────
         host_species = [
-            r["common_name"] for r in plant_rows.values()
-            if "host_plant" in (r.get("permaculture_uses") or "")
+            r["common_name"] for pid, r in plant_rows.items()
+            if _has_use(pid, "host_plant")
         ]
         score_host = min(len(host_species) / 10.0, 1.0) * 10
 
         # ── 4. Bird food species (10 pts, full at 10) ─────────────────────
         bird_species = [
-            r["common_name"] for r in plant_rows.values()
-            if "bird_food" in (r.get("permaculture_uses") or "")
+            r["common_name"] for pid, r in plant_rows.items()
+            if _has_use(pid, "bird_food")
         ]
         score_bird = min(len(bird_species) / 10.0, 1.0) * 10
 
@@ -804,6 +818,13 @@ class AnalysisPanel(QWidget):
             f"  ({', '.join(sorted(habitat_struct_types)) or '—'})",
             "",
             f"Bloom continuity   {len(bloom_months)}/7 mo   {score_bloom:4.1f} / 20",
+            "",
+            # Schema v13: informational counter — distinct lepidoptera species
+            # whose caterpillars are larval-hosted by placed plants. Surfaced
+            # alongside the score components rather than summed into the
+            # headline so existing user scores don't shift when fauna data
+            # grows over time.
+            f"Lepidoptera supported  {n_lepidoptera_supported:4d}    (larval-host species)",
         ]
         gap = sorted(growing - bloom_months)
         if gap:
@@ -874,17 +895,22 @@ class AnalysisPanel(QWidget):
             return "<p style='color:#90a4ae;'>Tips unavailable — plant DB not loaded.</p>"
 
         def examples_for_tag(tag: str, limit: int = 5) -> list[str]:
-            """Native AB plants tagged `tag`, not yet placed, alphabetical."""
+            """Native AB plants tagged `tag`, not yet placed, alphabetical.
+
+            Schema v13: resolved via the plant_uses junction so the query
+            is index-driven instead of a full-table LIKE scan.
+            """
             sql = (
-                "SELECT common_name FROM plants "
-                "WHERE native_to_alberta = 1 "
-                "  AND LOWER(permaculture_uses) LIKE ?"
+                "SELECT p.common_name FROM plants p "
+                "JOIN plant_uses pu ON pu.plant_id = p.id "
+                "JOIN uses u ON u.id = pu.use_id "
+                "WHERE p.native_to_alberta = 1 AND u.key = ?"
             )
-            params: list = [f"%{tag}%"]
+            params: list = [tag]
             if placed_ids:
-                sql += " AND id NOT IN (" + ",".join("?" * len(placed_ids)) + ")"
+                sql += " AND p.id NOT IN (" + ",".join("?" * len(placed_ids)) + ")"
                 params += list(placed_ids)
-            sql += " ORDER BY common_name"
+            sql += " ORDER BY p.common_name"
             try:
                 rows = conn.execute(sql, params).fetchall()
             except Exception:

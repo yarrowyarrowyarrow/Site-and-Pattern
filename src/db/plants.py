@@ -42,12 +42,48 @@ _PROJECT_ROOT    = os.path.dirname(os.path.dirname(_HERE))
 _LEGACY_DB_PATH  = os.path.join(_PROJECT_ROOT, "data", "permadesign.db")
 
 # Master plant data (shipped with the application)
-_MASTER_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "plants_master.json")
-_GARDEN_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "garden_plants.json")
+_MASTER_JSON_PATH       = os.path.join(_PROJECT_ROOT, "data", "plants_master.json")
+_GARDEN_JSON_PATH       = os.path.join(_PROJECT_ROOT, "data", "garden_plants.json")
+_FAUNA_JSON_PATH        = os.path.join(_PROJECT_ROOT, "data", "fauna_master.json")
+_PLANT_FAUNA_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "plant_fauna_master.json")
 
 # Current schema version — bump when adding columns/tables, or when the
 # bundled seed data changes meaningfully (forces a reseed on next start).
-_SCHEMA_VERSION = 12
+#
+# v13 (V1.31): normalized `permaculture_uses` blob into a `plant_uses`
+# junction table backed by a `uses` lookup, and added a `fauna` registry
+# plus `plant_fauna` relationship table for larval-host / nectar /
+# fruit-food / nesting links. See Step 1 and Step 2 in the V1.31 plan.
+_SCHEMA_VERSION = 13
+
+
+# ── Canonical permaculture uses (schema v13) ──────────────────────────────────
+# Source of truth for the `uses` lookup table. Each row becomes a row in
+# `uses` at seed time; the comma-delimited tokens in plants.permaculture_uses
+# are then split out into `plant_uses` rows. Keys here must match the tokens
+# that live in data/plants_master.json (and the keys in plant_panel._USE_LABELS).
+_USE_DEFINITIONS: list[tuple[str, str, str, int]] = [
+    # (key, label, category, sort_order)
+    ("keystone_species",   "Keystone Species",     "wildlife", 10),
+    ("host_plant",         "Host Plant",           "wildlife", 20),
+    ("bird_food",          "Bird Food",            "wildlife", 30),
+    ("nesting_material",   "Nesting Material",     "wildlife", 40),
+    ("pollinator",         "Pollinator Plant",     "wildlife", 50),
+    ("wildlife_habitat",   "Wildlife Habitat",     "wildlife", 60),
+    ("nitrogen_fixer",     "Nitrogen Fixer",       "function", 110),
+    ("soil_builder",       "Soil Builder",         "function", 120),
+    ("pest_deterrent",     "Pest Deterrent",       "function", 130),
+    ("windbreak",          "Windbreak",            "function", 140),
+    ("erosion_control",    "Erosion Control",      "function", 150),
+    ("water_purification", "Water Purification",   "function", 160),
+    ("early_successional", "Early Successional",   "function", 170),
+    ("biomass",            "Biomass / Chop-Drop",  "function", 180),
+    ("groundcover",        "Groundcover",          "utility",  210),
+    ("hedge",              "Hedge",                "utility",  220),
+    ("medicinal",          "Medicinal",            "utility",  230),
+    ("ornamental",         "Ornamental",           "utility",  240),
+    ("aquatic",            "Aquatic",              "utility",  250),
+]
 
 
 def _ensure_data_dir():
@@ -221,6 +257,145 @@ def _migrate_polyculture_member_layer_functions(conn: sqlite3.Connection):
     conn.commit()
 
 
+def _seed_uses_lookup(conn: sqlite3.Connection) -> None:
+    """
+    Populate the ``uses`` lookup table from ``_USE_DEFINITIONS``. Idempotent:
+    rows whose ``key`` already exists are left alone (so other code that
+    references their id is stable across runs).
+    """
+    conn.executemany(
+        "INSERT OR IGNORE INTO uses (key, label, category, sort_order) "
+        "VALUES (?, ?, ?, ?)",
+        _USE_DEFINITIONS,
+    )
+    conn.commit()
+
+
+def _populate_plant_uses(conn: sqlite3.Connection, entries: list[dict]) -> int:
+    """
+    For each plant entry just inserted, split its ``permaculture_uses``
+    comma-delimited string into rows in ``plant_uses``. Unknown tokens
+    (tags not present in ``uses``) are silently skipped. Returns the number
+    of (plant_id, use_id) rows inserted.
+    """
+    # Build canonical key → use_id map and common_name → plant_id map.
+    use_key_to_id = {
+        row["key"]: row["id"]
+        for row in conn.execute("SELECT id, key FROM uses").fetchall()
+    }
+    name_to_id = {
+        row["common_name"]: row["id"]
+        for row in conn.execute("SELECT id, common_name FROM plants").fetchall()
+    }
+
+    rows: list[tuple[int, int]] = []
+    for p in entries:
+        plant_id = name_to_id.get(p.get("common_name", ""))
+        if plant_id is None:
+            continue
+        uses_raw = p.get("permaculture_uses", "")
+        if isinstance(uses_raw, list):
+            tokens = [str(t).strip() for t in uses_raw]
+        else:
+            tokens = [t.strip() for t in str(uses_raw).split(",")]
+        for tok in tokens:
+            if not tok:
+                continue
+            use_id = use_key_to_id.get(tok)
+            if use_id is None:
+                continue
+            rows.append((plant_id, use_id))
+
+    if rows:
+        conn.executemany(
+            "INSERT OR IGNORE INTO plant_uses (plant_id, use_id) VALUES (?, ?)",
+            rows,
+        )
+        conn.commit()
+    return len(rows)
+
+
+def _seed_fauna(conn: sqlite3.Connection) -> int:
+    """
+    Load ``data/fauna_master.json`` into the ``fauna`` table, then load
+    ``data/plant_fauna_master.json`` into ``plant_fauna``. Returns the
+    number of plant↔fauna links inserted. Idempotent on the fauna table
+    via ``INSERT OR IGNORE`` keyed on ``scientific_name``.
+    """
+    import json as _json
+
+    # Phase 1: fauna registry
+    if os.path.exists(_FAUNA_JSON_PATH):
+        with open(_FAUNA_JSON_PATH, "r", encoding="utf-8") as f:
+            fauna_entries = _json.load(f)
+        fauna_rows = [
+            (
+                e["scientific_name"],
+                e["common_name"],
+                e["taxon"],
+                int(e.get("ab_native", 1)),
+                e.get("range_notes"),
+                e.get("icon"),
+                e.get("description"),
+            )
+            for e in fauna_entries
+            if "scientific_name" in e and "common_name" in e and "taxon" in e
+        ]
+        if fauna_rows:
+            conn.executemany(
+                "INSERT OR IGNORE INTO fauna "
+                "(scientific_name, common_name, taxon, ab_native, "
+                " range_notes, icon, description) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                fauna_rows,
+            )
+            conn.commit()
+
+    # Phase 2: plant ↔ fauna links
+    if not os.path.exists(_PLANT_FAUNA_JSON_PATH):
+        return 0
+
+    with open(_PLANT_FAUNA_JSON_PATH, "r", encoding="utf-8") as f:
+        link_entries = _json.load(f)
+
+    name_to_pid = {
+        row["common_name"]: row["id"]
+        for row in conn.execute("SELECT id, common_name FROM plants").fetchall()
+    }
+    sci_to_fid = {
+        row["scientific_name"]: row["id"]
+        for row in conn.execute("SELECT id, scientific_name FROM fauna").fetchall()
+    }
+
+    link_rows: list[tuple] = []
+    for entry in link_entries:
+        # Skip metadata records (those without a 'plant' / 'fauna' key).
+        if "plant" not in entry or "fauna" not in entry:
+            continue
+        pid = name_to_pid.get(entry["plant"])
+        fid = sci_to_fid.get(entry["fauna"])
+        if pid is None or fid is None:
+            continue
+        link_rows.append((
+            pid,
+            fid,
+            entry.get("relationship", "larval_host"),
+            entry.get("specificity"),
+            entry.get("source"),
+            entry.get("notes"),
+        ))
+
+    if link_rows:
+        conn.executemany(
+            "INSERT OR IGNORE INTO plant_fauna "
+            "(plant_id, fauna_id, relationship, specificity, source, notes) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            link_rows,
+        )
+        conn.commit()
+    return len(link_rows)
+
+
 def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
     """
     Insert all plants from a JSON file into the plants table (skipping duplicates
@@ -322,6 +497,14 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
         )
         conn.commit()
 
+    # Phase 3 (schema v13): populate the plant_uses junction table for
+    # the newly-inserted entries. Skips quietly if the `uses` lookup is
+    # empty (e.g. very early in the bootstrap sequence).
+    try:
+        _populate_plant_uses(conn, entries)
+    except sqlite3.OperationalError:
+        pass
+
     return len(entries)
 
 
@@ -385,6 +568,12 @@ def init_db() -> None:
             # which can cause failures when parent/child rows are inserted in the
             # same transaction.  Data is internally consistent so this is safe.
             conn.execute("PRAGMA foreign_keys = OFF")
+            # Wipe child tables before parents so FK chains (even with FK off
+            # they still inform the order we'd want when FK is back on).
+            conn.execute("DELETE FROM plant_fauna")
+            conn.execute("DELETE FROM plant_uses")
+            conn.execute("DELETE FROM fauna")
+            conn.execute("DELETE FROM uses")
             conn.execute("DELETE FROM companion_friends")
             conn.execute("DELETE FROM companion_enemies")
             conn.execute("DELETE FROM planting_calendar")
@@ -392,10 +581,16 @@ def init_db() -> None:
             conn.execute("DELETE FROM polycultures")
             conn.execute("DELETE FROM plants")
             conn.commit()
+            # Seed the uses lookup first so _seed_from_json_file can populate
+            # plant_uses for each freshly inserted plant in the same pass.
+            _seed_uses_lookup(conn)
             _seed_from_json_file(conn, _MASTER_JSON_PATH)    # 433 native plants
             _seed_from_json_file(conn, _GARDEN_JSON_PATH)    # cultivated garden plants
             from src.db.seed_data import SEED_COMPANIONS
             _insert_companions(conn, SEED_COMPANIONS)
+            # Fauna registry + plant↔fauna links — depends on plants being
+            # seeded first so we can resolve common_name → plant_id.
+            _seed_fauna(conn)
             conn.execute("PRAGMA foreign_keys = ON")
             conn.commit()
 
@@ -550,9 +745,19 @@ def search_plants(
         sql += " AND water_needs = ?"
         params.append(water_needs)
 
+    # Schema v13: tag filters now run through the plant_uses junction table
+    # via a single EXISTS sub-select per tag. ``_use_filter`` keeps the SQL
+    # readable and lets the caller build up an arbitrary set of tag filters.
+    def _use_filter(use_key: str) -> str:
+        return (
+            " AND EXISTS (SELECT 1 FROM plant_uses pu "
+            "             JOIN uses u ON u.id = pu.use_id "
+            "             WHERE pu.plant_id = plants.id AND u.key = ?)"
+        )
+
     if perm_use:
-        sql += " AND (',' || permaculture_uses || ',') LIKE ?"
-        params.append(f"%,{perm_use},%")
+        sql += _use_filter(perm_use)
+        params.append(perm_use)
 
     if zone is not None:
         sql += " AND hardiness_zone_min <= ? AND hardiness_zone_max >= ?"
@@ -565,25 +770,31 @@ def search_plants(
         sql += " AND edible_parts IS NOT NULL AND edible_parts != ''"
 
     if medicinal_only:
-        sql += " AND LOWER(permaculture_uses) LIKE '%medicinal%'"
+        sql += _use_filter("medicinal")
+        params.append("medicinal")
 
     if nfixer_only:
-        sql += " AND LOWER(permaculture_uses) LIKE '%nitrogen%'"
+        sql += _use_filter("nitrogen_fixer")
+        params.append("nitrogen_fixer")
 
     if pollinator_only:
-        sql += " AND LOWER(permaculture_uses) LIKE '%pollinator%'"
+        sql += _use_filter("pollinator")
+        params.append("pollinator")
 
     if perennial_only:
         sql += " AND LOWER(perennial_or_annual) = 'perennial'"
 
     if host_plant_only:
-        sql += " AND LOWER(permaculture_uses) LIKE '%host_plant%'"
+        sql += _use_filter("host_plant")
+        params.append("host_plant")
 
     if keystone_only:
-        sql += " AND LOWER(permaculture_uses) LIKE '%keystone_species%'"
+        sql += _use_filter("keystone_species")
+        params.append("keystone_species")
 
     if bird_food_only:
-        sql += " AND LOWER(permaculture_uses) LIKE '%bird_food%'"
+        sql += _use_filter("bird_food")
+        params.append("bird_food")
 
     if ab_ecoregion:
         # ab_ecoregion column is a comma-separated list of region ids;
@@ -656,6 +867,63 @@ def get_distinct_permaculture_uses() -> list[str]:
             if tag:
                 uses.add(tag)
     return sorted(uses)
+
+
+# ── plant_uses junction helpers (schema v13) ──────────────────────────────────
+
+def get_plant_uses(plant_id: int) -> list[str]:
+    """Return the set of canonical use keys attached to ``plant_id``."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT u.key FROM plant_uses pu "
+            "JOIN uses u ON u.id = pu.use_id "
+            "WHERE pu.plant_id = ? ORDER BY u.sort_order",
+            (plant_id,),
+        ).fetchall()
+        return [r[0] for r in rows]
+    finally:
+        conn.close()
+
+
+def plants_with_use(use_key: str) -> set[int]:
+    """Return the set of plant ids tagged with ``use_key``."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT pu.plant_id FROM plant_uses pu "
+            "JOIN uses u ON u.id = pu.use_id "
+            "WHERE u.key = ?",
+            (use_key,),
+        ).fetchall()
+        return {r[0] for r in rows}
+    finally:
+        conn.close()
+
+
+def plant_uses_for_ids(plant_ids: list[int]) -> dict[int, set[str]]:
+    """
+    Bulk variant: returns ``{plant_id: {use_key, ...}, ...}`` for the
+    plants in ``plant_ids``. Empty input → empty dict. Designed for the
+    analysis panel, which needs per-plant tag sets for the whole design.
+    """
+    if not plant_ids:
+        return {}
+    conn = get_connection()
+    try:
+        qmarks = ",".join("?" * len(plant_ids))
+        rows = conn.execute(
+            f"SELECT pu.plant_id, u.key FROM plant_uses pu "
+            f"JOIN uses u ON u.id = pu.use_id "
+            f"WHERE pu.plant_id IN ({qmarks})",
+            list(plant_ids),
+        ).fetchall()
+        out: dict[int, set[str]] = {}
+        for r in rows:
+            out.setdefault(r[0], set()).add(r[1])
+        return out
+    finally:
+        conn.close()
 
 
 # ── Planting calendar ─────────────────────────────────────────────────────────

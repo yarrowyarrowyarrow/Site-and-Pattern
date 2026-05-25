@@ -102,9 +102,59 @@ CREATE TABLE IF NOT EXISTS polyculture_recipe_members (
     sort_order INTEGER DEFAULT 0
 );
 
+-- Permaculture-uses lookup + plant ↔ use junction (schema v13).
+-- Replaces the comma-delimited plants.permaculture_uses blob for filter
+-- queries; the legacy column is still populated during seed for one
+-- release cycle as a safety net.
+CREATE TABLE IF NOT EXISTS uses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT NOT NULL UNIQUE,           -- e.g. 'keystone_species', 'host_plant'
+    label TEXT NOT NULL,                -- display label, e.g. 'Keystone Species'
+    category TEXT NOT NULL,             -- 'wildlife' | 'function' | 'utility'
+    sort_order INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS plant_uses (
+    plant_id INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+    use_id   INTEGER NOT NULL REFERENCES uses(id) ON DELETE CASCADE,
+    PRIMARY KEY (plant_id, use_id)
+);
+
+-- Fauna registry + plant ↔ fauna relationship junction (schema v13).
+-- Records which native lepidoptera, birds, and bees each plant supports,
+-- and via which biological relationship (larval host, nectar, fruit, etc.).
+CREATE TABLE IF NOT EXISTS fauna (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    scientific_name TEXT NOT NULL UNIQUE,
+    common_name TEXT NOT NULL,
+    taxon TEXT NOT NULL CHECK (taxon IN
+        ('lepidoptera', 'bird', 'bee', 'other_insect', 'mammal')),
+    ab_native INTEGER NOT NULL DEFAULT 1,
+    range_notes TEXT,
+    icon TEXT,
+    description TEXT
+);
+
+CREATE TABLE IF NOT EXISTS plant_fauna (
+    plant_id INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+    fauna_id INTEGER NOT NULL REFERENCES fauna(id) ON DELETE CASCADE,
+    relationship TEXT NOT NULL CHECK (relationship IN (
+        'larval_host', 'nectar', 'pollen', 'seed_food',
+        'fruit_food', 'nesting', 'cover'
+    )),
+    specificity TEXT CHECK (specificity IN ('specialist', 'generalist')),
+    source TEXT,
+    notes TEXT,
+    PRIMARY KEY (plant_id, fauna_id, relationship)
+);
+
 CREATE INDEX IF NOT EXISTS idx_plants_type    ON plants(plant_type);
 CREATE INDEX IF NOT EXISTS idx_plants_zone    ON plants(hardiness_zone_min, hardiness_zone_max);
 CREATE INDEX IF NOT EXISTS idx_plants_native  ON plants(native_to_alberta);
 CREATE INDEX IF NOT EXISTS idx_calendar_plant ON planting_calendar(plant_id);
 CREATE INDEX IF NOT EXISTS idx_polyculture_members  ON polyculture_members(polyculture_id);
 CREATE INDEX IF NOT EXISTS idx_recipe_members ON polyculture_recipe_members(recipe_id);
+CREATE INDEX IF NOT EXISTS idx_plant_uses_use       ON plant_uses(use_id);
+CREATE INDEX IF NOT EXISTS idx_plant_fauna_plant    ON plant_fauna(plant_id);
+CREATE INDEX IF NOT EXISTS idx_plant_fauna_fauna    ON plant_fauna(fauna_id);
+CREATE INDEX IF NOT EXISTS idx_plant_fauna_rel      ON plant_fauna(relationship);

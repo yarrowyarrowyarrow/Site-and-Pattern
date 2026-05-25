@@ -341,6 +341,54 @@ class PlantRowDelegate(QStyledItemDelegate):
         self._bold_font = QFont()
         self._bold_font.setBold(True)
 
+        # Cache of "Hosts: Monarch, Mourning Cloak +N" strings keyed by
+        # plant_id. Paint() is called on every scroll, so we avoid hitting
+        # the DB more than once per plant. The cache is invalidated by
+        # rebuilding the delegate (cheap; only on schema reload).
+        self._wildlife_cache: dict[int, str] = {}
+
+    def _wildlife_text_for_plant(self, plant_id) -> str:
+        """Return a short comma-separated list of fauna supported by this
+        plant, suitable for inline display in the detail block. Empty
+        plants render '—'. Cached per plant_id."""
+        if not plant_id:
+            return "—"
+        cached = self._wildlife_cache.get(plant_id)
+        if cached is not None:
+            return cached
+        try:
+            from src.db.fauna import fauna_for_plant
+            rows = fauna_for_plant(int(plant_id))
+        except Exception:
+            self._wildlife_cache[plant_id] = "—"
+            return "—"
+        if not rows:
+            text = "—"
+        else:
+            # Prefer larval hosts first (most ecologically meaningful), then
+            # nectar/fruit/seed. De-duplicate by fauna common_name so a
+            # single species appearing under multiple relationships doesn't
+            # pad the list.
+            seen: set[str] = set()
+            ordered: list[str] = []
+            for relation_priority in ("larval_host", "fruit_food", "seed_food",
+                                       "nectar", "nesting", "pollen", "cover"):
+                for r in rows:
+                    if r.get("relationship") != relation_priority:
+                        continue
+                    name = r.get("common_name") or ""
+                    if name in seen or not name:
+                        continue
+                    seen.add(name)
+                    ordered.append(name)
+            head = ordered[:3]
+            extra = len(ordered) - len(head)
+            text = ", ".join(head)
+            if extra > 0:
+                text += f" +{extra}"
+        self._wildlife_cache[plant_id] = text
+        return text
+
     # Geometry helpers ---------------------------------------------------
     # All three return a rect anchored to the right edge of `compact`,
     # vertically centred to the bottom *line* of the compact strip
@@ -432,7 +480,9 @@ class PlantRowDelegate(QStyledItemDelegate):
             cal = model.calendar_for(plant.get("id"))
             if cal:
                 cal_h = _CAL_BLOCK_H
-        detail_h = 7 * fm.lineSpacing() + cal_h + notes_h + 8
+        # Detail rows: Zones, Sun·Water, Spacing, Height, Bloom·Fruit,
+        # Edible, Uses, Hosts (schema v13 — wildlife supported). 8 rows total.
+        detail_h = 8 * fm.lineSpacing() + cal_h + notes_h + 8
         return QSize(0, compact_h + detail_h)
 
     # Painting -----------------------------------------------------------
@@ -652,6 +702,12 @@ class PlantRowDelegate(QStyledItemDelegate):
             else:
                 zones_str = "—"
 
+            # Schema v13: surface wildlife supported (lepidoptera larval
+            # hosts + bird/bee links) inline in the detail block. Fetched
+            # lazily so the delegate stays cheap when the database is not
+            # available (e.g. Permapeople-only rows).
+            hosts_text = self._wildlife_text_for_plant(plant.get("id"))
+
             _row("Zones:",         zones_str, 0)
             _row("Sun · Water:",   f"{sun}  ·  {water}", line_h)
             _row("Spacing:",       (f"{spacing} m" if spacing else "—"), 2 * line_h)
@@ -659,6 +715,7 @@ class PlantRowDelegate(QStyledItemDelegate):
             _row("Bloom · Fruit:", f"{bloom}  ·  {fruit}", 4 * line_h)
             _row("Edible:",        edible, 5 * line_h)
             _row("Uses:",          uses, 6 * line_h)
+            _row("Wildlife:",      hosts_text, 7 * line_h)
 
             # ── Colour-coded planting calendar strip ──────────────
             # 12 cells across the detail width, one per month, coloured by
@@ -666,16 +723,16 @@ class PlantRowDelegate(QStyledItemDelegate):
             # the at-a-glance "what is this plant doing in July?" visual
             # that lived in the legacy detail panel before the compact
             # list landed.
-            cal_block_top = detail.top() + 7 * line_h
+            cal_block_top = detail.top() + 8 * line_h
             model = index.model()
             cal: list[dict] = []
             if isinstance(model, PlantListModel):
                 cal = model.calendar_for(plant.get("id"))
             if cal:
                 self._paint_calendar(painter, detail, cal_block_top, cal)
-                notes_top_offset = 7 * line_h + _CAL_BLOCK_H
+                notes_top_offset = 8 * line_h + _CAL_BLOCK_H
             else:
-                notes_top_offset = 7 * line_h + 4
+                notes_top_offset = 8 * line_h + 4
 
             notes = plant.get("notes") or ""
             if notes:
