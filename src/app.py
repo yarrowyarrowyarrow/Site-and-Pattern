@@ -505,15 +505,41 @@ class MainWindow(QMainWindow):
         stash-pop → restart prompt. `git_runner` is the closure `_git` from
         the caller (already bound to the repo path). `stash_to_restore` is
         a stash message label (or None) — when set, we `git stash pop`
-        after a successful pull and warn if the pop conflicts."""
+        after a successful pull and warn if the pop conflicts.
+
+        Schema v1.32: after the fetch, also check whether origin carries a
+        newer ``V<major>.<minor>`` branch than the one we're on. If so,
+        prompt the user to switch to that branch instead of (or in addition
+        to) updating the current one. Branch naming convention is the same
+        one documented in CLAUDE.md."""
         self.statusBar().showMessage("Checking for updates…", 2000)
-        fetch = git_runner("fetch", "--quiet")
+        # --prune drops references to branches the remote has deleted, so
+        # _newest_remote_version_branch doesn't surface stale entries.
+        fetch = git_runner("fetch", "--prune", "--quiet")
         if fetch.returncode != 0:
             self._maybe_restore_stash(git_runner, stash_to_restore)
             QMessageBox.warning(
                 self, "Check for Updates",
                 "Couldn't reach the git remote (check your network).\n\n"
                 f"{fetch.stderr.strip()}"
+            )
+            return
+
+        current_branch = (
+            git_runner("rev-parse", "--abbrev-ref", "HEAD").stdout.strip() or "?"
+        )
+
+        # ── V<major>.<minor> auto-switch (V1.32) ──────────────────────────
+        # If a newer release branch exists on origin than the one we're on,
+        # offer the switch. Falls through to the standard fast-forward flow
+        # when we're already on the highest V-branch or no V-branches exist.
+        newest = self._newest_remote_version_branch(git_runner)
+        if newest and self._is_newer_version(newest, current_branch):
+            self._offer_branch_switch(
+                git_runner,
+                target=newest,
+                current=current_branch,
+                stash_to_restore=stash_to_restore,
             )
             return
 
@@ -530,7 +556,7 @@ class MainWindow(QMainWindow):
 
         n_behind = int((behind.stdout or "0").strip() or 0)
         n_ahead  = int((ahead.stdout  or "0").strip() or 0)
-        branch   = git_runner("rev-parse", "--abbrev-ref", "HEAD").stdout.strip() or "?"
+        branch   = current_branch
 
         if n_behind == 0 and n_ahead == 0:
             self._maybe_restore_stash(git_runner, stash_to_restore)
@@ -611,6 +637,106 @@ class MainWindow(QMainWindow):
         if not stash_label:
             return
         git_runner("stash", "pop")
+
+    # ── V<major>.<minor> branch auto-switch (V1.32) ───────────────────────────
+    #
+    # Convention (also documented in CLAUDE.md): release branches are named
+    # ``V<major>.<minor>`` (e.g. V1.31, V1.32). Each branch contains a single
+    # release's worth of work; "the latest version" is the numerically
+    # highest such branch on origin. The updater treats these as the
+    # authoritative release line.
+    #
+    # The parsing/comparison/listing helpers live in
+    # ``src/version_branch.py`` (Qt-free, unit-testable). MainWindow's
+    # responsibility here is only the user-facing switch dialog.
+
+    def _newest_remote_version_branch(self, git_runner):
+        from src.version_branch import newest_remote_version_branch
+        return newest_remote_version_branch(git_runner)
+
+    def _is_newer_version(self, target, current):
+        from src.version_branch import is_newer_version
+        return is_newer_version(target, current)
+
+    def _offer_branch_switch(self, git_runner, *, target, current, stash_to_restore):
+        """Prompt the user to switch from ``current`` to ``target`` (a remote
+        V-branch). Reuses the stash carried in from
+        ``_on_check_for_updates`` so a dirty-tree pre-stash still survives
+        the switch."""
+        # Show the recent commit log of the target branch as a preview.
+        log = git_runner(
+            "log", "--oneline", "-8",
+            f"origin/{target}",
+            "--not", "HEAD",
+        )
+        recent = (log.stdout or "").strip() or "(commit log unavailable)"
+
+        prompt = QMessageBox.question(
+            self, "New version available",
+            f"A newer version of PermaDesign is on the server.\n\n"
+            f"You're on:   {current}\n"
+            f"Latest:      {target}\n\n"
+            f"Recent changes in {target}:\n{recent}\n\n"
+            f"Switch to {target} now? You'll need to restart the app "
+            "afterward to load the new code.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if prompt != QMessageBox.StandardButton.Yes:
+            self._maybe_restore_stash(git_runner, stash_to_restore)
+            return
+
+        # If a local branch with this name already exists, plain ``checkout``
+        # it; otherwise create it tracking origin/<target>.
+        rev_check = git_runner("rev-parse", "--verify", "--quiet", target)
+        if rev_check.returncode == 0:
+            checkout = git_runner("checkout", target)
+        else:
+            checkout = git_runner("checkout", "-b", target, f"origin/{target}")
+
+        if checkout.returncode != 0:
+            self._maybe_restore_stash(git_runner, stash_to_restore)
+            QMessageBox.warning(
+                self, "Switch failed",
+                f"Couldn't switch to {target}.\n\n"
+                + (checkout.stderr.strip() or checkout.stdout.strip())
+            )
+            return
+
+        # Fast-forward in case the local branch already existed and was
+        # behind origin/<target>. Non-fatal if it fails — we've already
+        # switched, the user can re-run "Check for Updates" on the new
+        # branch.
+        pull = git_runner("pull", "--ff-only")
+        pull_warning = ""
+        if pull.returncode != 0:
+            pull_warning = (
+                "\n\nNote: couldn't fast-forward after the switch:\n"
+                + (pull.stderr.strip() or pull.stdout.strip())
+            )
+
+        # Restore any stash we set aside on the source branch.
+        stash_note = ""
+        if stash_to_restore:
+            pop = git_runner("stash", "pop")
+            if pop.returncode == 0:
+                stash_note = (
+                    "\n\nYour stashed local changes were restored on "
+                    f"{target}."
+                )
+            else:
+                stash_note = (
+                    "\n\nYour stashed local changes did NOT auto-restore "
+                    "(likely conflicts on the new branch). It's still "
+                    f"saved as `{stash_to_restore}` — recover it with:\n"
+                    "    git stash list\n"
+                    "    git stash apply stash@{0}"
+                )
+
+        QMessageBox.information(
+            self, f"Switched to {target}",
+            f"You're now on {target}.{pull_warning}{stash_note}\n\n"
+            "Close and relaunch the app to load the new version."
+        )
 
     def _open_releases_page(self):
         from PyQt6.QtCore import QUrl
