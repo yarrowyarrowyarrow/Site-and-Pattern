@@ -1,7 +1,7 @@
 import json
 import re
 
-from PyQt6.QtCore import Qt, pyqtSignal, QPointF, QRectF
+from PyQt6.QtCore import Qt, pyqtSignal, QPointF, QRectF, QSettings
 from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -21,10 +21,12 @@ from PyQt6.QtWidgets import (
     QListWidgetItem,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QSlider,
     QSpinBox,
     QSplitter,
     QTextEdit,
+    QToolButton,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
@@ -33,6 +35,7 @@ from PyQt6.QtWidgets import (
 
 from src.db import polycultures
 from src.db import plants as plants_db
+from src.placement_controls import _QTY_SPIN_STYLE
 
 
 # Vegetation layer (single-select) — the physical position of a plant in
@@ -995,55 +998,97 @@ class PolyculturePanel(QWidget):
         btn_row1.addWidget(self.variation_btn)
         layout.addLayout(btn_row1)
 
+        # Toggle to reveal/hide all sub-variations under top-level
+        # communities. State is persisted in QSettings so the user's
+        # preference survives a restart. Default: hidden.
+        settings = QSettings()
+        self._show_variations = settings.value(
+            "plant_communities/show_variations", False, type=bool
+        )
+        self.variations_toggle_btn = QPushButton(
+            "▾ Hide variations" if self._show_variations else "▸ Show variations"
+        )
+        self.variations_toggle_btn.setStyleSheet(
+            "QPushButton { background: transparent; color: #90a4ae; "
+            "border: 1px solid #2e4a2e; border-radius: 3px; "
+            "padding: 1px 8px; font-size: 10px; }"
+            "QPushButton:hover { color: #c8e6c9; border-color: #4a7a4a; }"
+        )
+        self.variations_toggle_btn.setToolTip(
+            "Show or hide variations (children) of each plant community."
+        )
+        self.variations_toggle_btn.clicked.connect(self._on_toggle_variations)
+        toggle_row = QHBoxLayout()
+        toggle_row.addStretch(1)
+        toggle_row.addWidget(self.variations_toggle_btn)
+        layout.addLayout(toggle_row)
+
         # Detail area
         self.detail_text = QTextEdit()
         self.detail_text.setReadOnly(True)
         self.detail_text.setMaximumHeight(150)
         layout.addWidget(self.detail_text)
 
-        # Members list
+        # Members list — compact rows with inline triangle expand. Each
+        # row is a custom QFrame (see _build_member_row); detail content
+        # (layer/functions + offset) is hidden by default to keep density
+        # tight, matching the Plants browser's expand-on-click pattern.
         members_label = QLabel("<b>Members</b>")
         layout.addWidget(members_label)
 
-        self.members_list = QListWidget()
-        self.members_list.setMaximumHeight(120)
-        layout.addWidget(self.members_list)
+        self._members_scroll = QScrollArea()
+        self._members_scroll.setWidgetResizable(True)
+        self._members_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._members_scroll.setMaximumHeight(180)
+        self._members_scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.members_container = QWidget()
+        self._members_layout = QVBoxLayout(self.members_container)
+        self._members_layout.setContentsMargins(0, 0, 0, 0)
+        self._members_layout.setSpacing(1)
+        self._members_layout.addStretch(1)
+        self._members_scroll.setWidget(self.members_container)
+        layout.addWidget(self._members_scroll)
 
-        # Single "Edit" button — opens the visual builder pre-loaded
-        # with the selected polyculture so add / move / remove all
-        # happen in one screen instead of one plant at a time.
-        member_btns = QHBoxLayout()
-        self.edit_btn = QPushButton("Edit in Builder…")
+        # Single action row: Place on Map gets visual priority (stretch=2),
+        # Edit shares the row at a smaller weight, Export/Import are
+        # compact fixed-width buttons so they don't crowd the primary.
+        action_row = QHBoxLayout()
+        action_row.setSpacing(4)
+
+        self.place_btn = QPushButton("Place on Map")
+        self.place_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self.place_btn.setEnabled(False)
+        self.place_btn.setMinimumWidth(110)
+        self.place_btn.clicked.connect(self._on_place)
+        action_row.addWidget(self.place_btn, 2)
+
+        self.edit_btn = QPushButton("Edit")
         self.edit_btn.setStyleSheet(_POLY_BTN_STYLE)
         self.edit_btn.setEnabled(False)
         self.edit_btn.setToolTip(
             "Open the visual builder for this plant community"
         )
         self.edit_btn.clicked.connect(self._on_edit_polyculture)
-        member_btns.addWidget(self.edit_btn)
-        member_btns.addStretch(1)
-        layout.addLayout(member_btns)
-
-        # Action buttons
-        btn_row2 = QHBoxLayout()
-        self.place_btn = QPushButton("Place on Map")
-        self.place_btn.setStyleSheet(_POLY_BTN_STYLE)
-        self.place_btn.setEnabled(False)
-        self.place_btn.clicked.connect(self._on_place)
-        btn_row2.addWidget(self.place_btn)
+        action_row.addWidget(self.edit_btn, 1)
 
         self.export_btn = QPushButton("Export")
         self.export_btn.setStyleSheet(_POLY_BTN_STYLE)
         self.export_btn.setEnabled(False)
+        self.export_btn.setFixedWidth(64)
+        self.export_btn.setToolTip("Export this community to a .plant-community.json file")
         self.export_btn.clicked.connect(self._on_export)
-        btn_row2.addWidget(self.export_btn)
+        action_row.addWidget(self.export_btn)
 
         self.import_btn = QPushButton("Import")
         self.import_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self.import_btn.setFixedWidth(64)
+        self.import_btn.setToolTip("Import a community from a .plant-community.json or .polyculture.json file")
         self.import_btn.clicked.connect(self._on_import)
-        btn_row2.addWidget(self.import_btn)
+        action_row.addWidget(self.import_btn)
 
-        layout.addLayout(btn_row2)
+        layout.addLayout(action_row)
 
         # ── Pattern controls for community placement ─────────────────────
         self._build_community_pattern_controls(layout)
@@ -1231,7 +1276,8 @@ class PolyculturePanel(QWidget):
         spin = QSpinBox()
         spin.setRange(1, 99)
         spin.setValue(int(community.get("weight") or 1))
-        spin.setFixedWidth(48)
+        spin.setFixedWidth(56)
+        spin.setStyleSheet(_QTY_SPIN_STYLE)
         spin.setToolTip("Ratio weight for this community in the mix.")
         spin.valueChanged.connect(
             lambda v, i=idx: self._on_community_mix_weight_changed(i, v)
@@ -1321,12 +1367,12 @@ class PolyculturePanel(QWidget):
         spacing_box = QGroupBox("Community spacing")
         spacing_box.setStyleSheet(
             "QGroupBox { color: #a5d6a7; font-size: 11px; "
-            "border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 6px; }"
+            "border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 12px; }"
             "QGroupBox::title { subcontrol-origin: margin; left: 8px; "
             "padding: 0 4px; }"
         )
         sl = QHBoxLayout(spacing_box)
-        sl.setContentsMargins(6, 4, 6, 4)
+        sl.setContentsMargins(8, 12, 8, 6)
         sl.addWidget(QLabel("Cell spacing:"))
         self.pattern_spacing = QDoubleSpinBox()
         self.pattern_spacing.setRange(0.5, 100.0)
@@ -1398,7 +1444,26 @@ class PolyculturePanel(QWidget):
                 child_item.setToolTip(0, child_tooltip)
                 item.addChild(child_item)
             if children:
-                item.setExpanded(True)
+                # Expand when (a) the user has globally enabled variation
+                # display, or (b) the active search hit a variation under
+                # this parent — in the search case, show only the matching
+                # parents expanded.
+                if self._show_variations or (search and child_match):
+                    item.setExpanded(True)
+                else:
+                    item.setExpanded(False)
+
+    def _on_toggle_variations(self):
+        """Flip the show-variations preference and re-render the tree."""
+        self._show_variations = not self._show_variations
+        QSettings().setValue(
+            "plant_communities/show_variations", self._show_variations
+        )
+        self.variations_toggle_btn.setText(
+            "▾ Hide variations" if self._show_variations
+            else "▸ Show variations"
+        )
+        self._refresh_polyculture_list()
 
     def _on_double_click_place(self, item, column):
         """Double-click a polyculture to immediately enter placement mode."""
@@ -1422,7 +1487,7 @@ class PolyculturePanel(QWidget):
 
         if not has_selection:
             self.detail_text.clear()
-            self.members_list.clear()
+            self._render_member_rows([])
             return
 
         polyculture_id = current.data(0, Qt.ItemDataRole.UserRole)
@@ -1443,20 +1508,7 @@ class PolyculturePanel(QWidget):
             lines.append(f"Variations: {len(children)}")
         self.detail_text.setHtml("<br>".join(lines))
 
-        self.members_list.clear()
-        for m in polyculture.get("members", []):
-            tags = []
-            if m.get("layer"):
-                tags.append(m["layer"].replace("_", " "))
-            for fn in (m.get("functions") or []):
-                tags.append(fn.replace("_", " "))
-            if not tags and m.get("role"):
-                tags.append((m.get("role") or "").replace("_", " "))
-            tag_str = ", ".join(tags) or "—"
-            text = f"{m['common_name']} — {tag_str} ({m['offset_x']}m, {m['offset_y']}m)"
-            item = QListWidgetItem(text)
-            item.setData(Qt.ItemDataRole.UserRole, m["id"])
-            self.members_list.addItem(item)
+        self._render_member_rows(polyculture.get("members", []))
 
         # Pre-fill the cell-spacing field with the community's natural diameter.
         try:
@@ -1464,6 +1516,81 @@ class PolyculturePanel(QWidget):
             self.pattern_spacing.setValue(round(max(0.5, natural_r * 2.0), 1))
         except Exception:
             pass
+
+    # ── Members list (compact rows with inline expand) ─────────────────
+
+    def _render_member_rows(self, members: list):
+        """Clear and rebuild the member rows. Each row is a tiny QFrame
+        with a triangle toggle for the detail line (layer/functions +
+        offset). Matches the visual density target in the design plan
+        (~22 px per row vs the legacy QListWidget's ~40 px)."""
+        # Remove existing rows but keep the trailing stretch item.
+        layout = self._members_layout
+        while layout.count() > 1:
+            it = layout.takeAt(0)
+            w = it.widget()
+            if w is not None:
+                w.setParent(None)
+                w.deleteLater()
+        for m in members:
+            row = self._build_member_row(m)
+            layout.insertWidget(layout.count() - 1, row)
+
+    def _build_member_row(self, member: dict) -> QFrame:
+        row = QFrame()
+        row.setStyleSheet(
+            "QFrame { background: #1a2a1a; border: 1px solid #2e4a2e; "
+            "border-radius: 3px; }"
+        )
+        outer = QVBoxLayout(row)
+        outer.setContentsMargins(2, 1, 2, 1)
+        outer.setSpacing(0)
+
+        # Top line: triangle + common name
+        head = QHBoxLayout()
+        head.setContentsMargins(0, 0, 0, 0)
+        head.setSpacing(4)
+        triangle = QToolButton()
+        triangle.setText("▸")  # ▸
+        triangle.setStyleSheet(
+            "QToolButton { background: transparent; color: #90a4ae; "
+            "border: none; padding: 0px 2px; font-size: 11px; }"
+            "QToolButton:hover { color: #c8e6c9; }"
+        )
+        triangle.setCursor(Qt.CursorShape.PointingHandCursor)
+        head.addWidget(triangle)
+        name = QLabel(member.get("common_name") or "—")
+        name.setStyleSheet("color: #c8e6c9; font-size: 11px;")
+        head.addWidget(name, 1)
+        outer.addLayout(head)
+
+        # Detail line: tags + offset, hidden by default.
+        tags = []
+        if member.get("layer"):
+            tags.append(str(member["layer"]).replace("_", " "))
+        for fn in (member.get("functions") or []):
+            tags.append(str(fn).replace("_", " "))
+        if not tags and member.get("role"):
+            tags.append(str(member.get("role") or "").replace("_", " "))
+        tag_str = ", ".join(tags) or "—"
+        ox = member.get("offset_x", 0)
+        oy = member.get("offset_y", 0)
+        detail = QLabel(f"{tag_str} · ({ox} m, {oy} m)")
+        detail.setStyleSheet("color: #90a4ae; font-size: 10px; padding-left: 18px;")
+        detail.setVisible(False)
+        outer.addWidget(detail)
+
+        def _toggle(_checked=False):
+            expanded = not detail.isVisible()
+            detail.setVisible(expanded)
+            triangle.setText("▾" if expanded else "▸")  # ▾ / ▸
+
+        triangle.clicked.connect(_toggle)
+        # Make the name label clickable too — easier to hit than the
+        # 8 px triangle.
+        name.setCursor(Qt.CursorShape.PointingHandCursor)
+        name.mousePressEvent = lambda _ev: _toggle()
+        return row
 
     def _get_selected_polyculture_id(self):
         item = self.polyculture_tree.currentItem()
