@@ -1407,20 +1407,23 @@ class PlantPanel(QWidget):
 
         # Bottom pane: just placement controls now. (On This Design lives
         # in a sibling inner tab at the same level as Plants and Plant
-        # Communities — see app.py's inner QTabWidget.)
+        # Communities — see app.py's inner QTabWidget.) The widget+scroll
+        # area pair is kept as instance attrs so `_refit_bottom_pane` can
+        # auto-size the splitter when the mix grows/shrinks.
+        self._bottom_widget = bottom
         bottom.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
         )
-        bottom_scroll = QScrollArea()
-        bottom_scroll.setWidget(bottom)
-        bottom_scroll.setWidgetResizable(True)
-        bottom_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        bottom_scroll.setHorizontalScrollBarPolicy(
+        self._bottom_scroll = QScrollArea()
+        self._bottom_scroll.setWidget(bottom)
+        self._bottom_scroll.setWidgetResizable(True)
+        self._bottom_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._bottom_scroll.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
-        bottom_scroll.setMinimumHeight(140)
+        self._bottom_scroll.setMinimumHeight(140)
 
-        splitter.addWidget(bottom_scroll)
+        splitter.addWidget(self._bottom_scroll)
         splitter.setSizes([700, 200])
         splitter.setStretchFactor(0, 5)
         splitter.setStretchFactor(1, 0)
@@ -1758,6 +1761,7 @@ class PlantPanel(QWidget):
             self._mix_clear_btn.setEnabled(False)
             self._mix_save_btn.setEnabled(False)
             self._mix_open_builder_btn.setEnabled(False)
+            QTimer.singleShot(0, self._refit_bottom_pane)
             return
 
         all_sp = [float(s.get("spacing_meters") or 1.0) for s in self._mix_species]
@@ -1785,6 +1789,38 @@ class PlantPanel(QWidget):
         for idx, s in enumerate(self._mix_species):
             row = self._build_mix_row(idx, s)
             self._mix_rows_layout.addWidget(row)
+        # Auto-fit the bottom pane: grow it (eating into the plant browser)
+        # so all the freshly added mix rows are visible without scrolling.
+        # Deferred to the next event-loop tick so the new rows have been
+        # laid out and contribute to sizeHint().
+        QTimer.singleShot(0, self._refit_bottom_pane)
+
+    def _refit_bottom_pane(self):
+        """Resize `_main_splitter` so the bottom pane fits the placement
+        controls + Plant Community Mix + Place Mix button without scrolling.
+        Eats into the plant browser, but keeps `_MIN_BROWSER_PX` visible
+        so the user always has a few result rows. Manual splitter drags
+        are overridden on the next mix mutation — that's intentional.
+        """
+        splitter = getattr(self, "_main_splitter", None)
+        scroll = getattr(self, "_bottom_scroll", None)
+        bottom = getattr(self, "_bottom_widget", None)
+        if splitter is None or scroll is None or bottom is None:
+            return
+        sizes = splitter.sizes()
+        if len(sizes) != 2:
+            return
+        total = sum(sizes)
+        if total <= 0:
+            # Splitter hasn't been laid out yet — retry on the next tick.
+            QTimer.singleShot(0, self._refit_bottom_pane)
+            return
+        # `+ 6` is a small fudge so the bottom scroll-area never shows a
+        # vertical scrollbar at the snug fit (frame + spacing rounding).
+        desired = max(scroll.minimumHeight(), bottom.sizeHint().height() + 6)
+        max_bottom = max(total - _MIN_BROWSER_PX, scroll.minimumHeight())
+        new_bottom = min(desired, max_bottom)
+        splitter.setSizes([total - new_bottom, new_bottom])
 
     def _build_mix_row(self, idx: int, species: dict) -> QFrame:
         """One species line: clickable colour dot + name + ratio spinner + ×.
@@ -2207,6 +2243,12 @@ class PlantPanel(QWidget):
             self._placed_counts[pid] = self._placed_counts.get(pid, 0) + 1
         self._results_model.set_placed_counts(self._placed_counts)
         self.placed_counts_changed.emit()
+
+
+# Minimum plant-browser height the auto-fit will leave when the Plant
+# Community Mix has grown enough to want the whole splitter. Roughly the
+# filter dropdowns + ~3 result rows.
+_MIN_BROWSER_PX = 180
 
 
 # ── Stylesheets ───────────────────────────────────────────────────────────────
