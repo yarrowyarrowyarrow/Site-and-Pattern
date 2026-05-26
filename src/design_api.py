@@ -17,8 +17,8 @@ from datetime import datetime
 from typing import Optional
 
 from src.project import new_project, SCHEMA_VERSION
-from src.db.plants import get_plant, search_plants
-from src.db.guilds import get_guild_by_id
+from src.db.plants import get_plant, search_plants, get_companions
+from src.db.guilds import get_guild_by_id, get_all_guilds
 
 
 class DesignGenerator:
@@ -113,6 +113,37 @@ class DesignGenerator:
             }
         })
 
+    # ── Query / discovery helpers ─────────────────────────────────────────────
+
+    def search_plants(self, **kwargs) -> list[dict]:
+        """Search the plant catalogue. Accepts all search_plants() kwargs."""
+        return search_plants(**kwargs)
+
+    def get_plant_details(self, plant_id: int) -> Optional[dict]:
+        """Return full plant record with companion relationships."""
+        plant = get_plant(plant_id)
+        if plant is None:
+            return None
+        return {"plant": plant, "companions": get_companions(plant_id)}
+
+    def list_guilds(self) -> list[dict]:
+        """Return all seeded polyculture guilds (top-level only)."""
+        return get_all_guilds(top_level_only=True)
+
+    def get_guild_details(self, guild_id: int) -> Optional[dict]:
+        """Return a guild with its full member list."""
+        return get_guild_by_id(guild_id)
+
+    def list_saved_recipes(self) -> list[dict]:
+        """Return user-saved polyculture mixes from settings (empty if Qt unavailable)."""
+        try:
+            from src.settings import get_polyculture_recipes
+            return get_polyculture_recipes()
+        except ImportError:
+            return []
+
+    # ── Project output ────────────────────────────────────────────────────────
+
     def add_zone_center(self, lat: float, lng: float) -> None:
         """Set the permaculture zone center point."""
         self.project["features"] = [
@@ -129,27 +160,31 @@ class DesignGenerator:
         """Return the complete project dict, ready for save_project()."""
         return self.project
 
-    def validate(self) -> list[str]:
-        """Return a list of warnings/errors about the generated design."""
-        warnings = []
+    def validate(self) -> list[dict]:
+        """Return structured issues about the generated design.
+
+        Each entry: {"type": str, "message": str, "severity": "warning"|"error"}
+        """
+        issues = []
+
         has_boundary = any(
             f.get("properties", {}).get("element_type") == "property_boundary"
             for f in self.project["features"]
         )
         if not has_boundary:
-            warnings.append("No property boundary defined")
+            issues.append({"type": "no_boundary", "message": "No property boundary defined", "severity": "warning"})
 
         plant_count = sum(
             1 for f in self.project["features"]
             if f.get("properties", {}).get("element_type") == "plant"
         )
         if plant_count == 0:
-            warnings.append("No plants placed")
+            issues.append({"type": "no_plants", "message": "No plants placed", "severity": "warning"})
 
         sc = self.project["properties"].get("site_config", {})
         if not sc.get("latitude") or not sc.get("longitude"):
-            warnings.append("Site coordinates not set in site_config")
+            issues.append({"type": "no_coordinates", "message": "Site coordinates not set in site_config", "severity": "error"})
         if not sc.get("hardiness_zone"):
-            warnings.append("Hardiness zone not set")
+            issues.append({"type": "no_zone", "message": "Hardiness zone not set", "severity": "warning"})
 
-        return warnings
+        return issues

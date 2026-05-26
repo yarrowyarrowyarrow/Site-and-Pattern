@@ -45,8 +45,8 @@ import src.project as project_io
 def _init_database():
     """Bootstrap the plant database; show a warning on failure (don't crash)."""
     try:
-        from src.db.plants import init_db
-        init_db()
+        from src.bootstrap import bootstrap_db
+        bootstrap_db()
     except Exception as exc:
         from PyQt6.QtWidgets import QMessageBox
         QMessageBox.warning(
