@@ -1,0 +1,412 @@
+{
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\build_installer.sh": {
+    "mtime": 1778115580.8307383,
+    "ast_hash": "49fcf7ee2c2dea42424c9ed16d867c71",
+    "semantic_hash": "49fcf7ee2c2dea42424c9ed16d867c71"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\main.py": {
+    "mtime": 1779823979.2710233,
+    "ast_hash": "d119ae7294c4df16a8d03f0c92be3f91",
+    "semantic_hash": "d119ae7294c4df16a8d03f0c92be3f91"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\.claude\\settings.json": {
+    "mtime": 1779824041.9008017,
+    "ast_hash": "5d6ecd96cf065b16e8bb9fbf5d7d8f0d",
+    "semantic_hash": "5d6ecd96cf065b16e8bb9fbf5d7d8f0d"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\data\\fauna_master.json": {
+    "mtime": 1779823979.2669747,
+    "ast_hash": "07c739c0ce8be7ce05f1e17d843b4bc3",
+    "semantic_hash": "07c739c0ce8be7ce05f1e17d843b4bc3"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\data\\garden_plants.json": {
+    "mtime": 1779823979.2669747,
+    "ast_hash": "c9efe8031c9d429c18bd84e18509d2b3",
+    "semantic_hash": "c9efe8031c9d429c18bd84e18509d2b3"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\data\\hardiness_zones.json": {
+    "mtime": 1778115580.8307383,
+    "ast_hash": "4d293bc52d93d751d7fd9bd51ca9680f",
+    "semantic_hash": "4d293bc52d93d751d7fd9bd51ca9680f"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\data\\plants_master.json": {
+    "mtime": 1779823979.2679188,
+    "ast_hash": "7b7bbc2ac70685cf8c427379beaaf1eb",
+    "semantic_hash": "7b7bbc2ac70685cf8c427379beaaf1eb"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\data\\plant_fauna_master.json": {
+    "mtime": 1779823979.2669747,
+    "ast_hash": "a5b23d4e189f218e79c116f40fd72bac",
+    "semantic_hash": "a5b23d4e189f218e79c116f40fd72bac"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\data\\rainfall_fallback_alberta.json": {
+    "mtime": 1779823979.2679188,
+    "ast_hash": "aa1aec48ccd6e3932da5498eb5556a3a",
+    "semantic_hash": "aa1aec48ccd6e3932da5498eb5556a3a"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\data\\soil_fallback_alberta.json": {
+    "mtime": 1779823979.2679188,
+    "ast_hash": "bf347f6e282dcb9b153b7f393179b083",
+    "semantic_hash": "bf347f6e282dcb9b153b7f393179b083"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\scripts\\check_plant_data.py": {
+    "mtime": 1779823979.2710233,
+    "ast_hash": "2f16da289ba71fc7f837e46ca57826a8",
+    "semantic_hash": "2f16da289ba71fc7f837e46ca57826a8"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\scripts\\export_plant_docx.py": {
+    "mtime": 1778115580.8366342,
+    "ast_hash": "c7e7163a87493278e1a95e5f19e7174f",
+    "semantic_hash": "c7e7163a87493278e1a95e5f19e7174f"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\scripts\\prepare_ecoregions.py": {
+    "mtime": 1779823979.2710233,
+    "ast_hash": "629111e8dc418dbc6f32e0237997722a",
+    "semantic_hash": "629111e8dc418dbc6f32e0237997722a"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\analysis_panel.py": {
+    "mtime": 1779823979.2710233,
+    "ast_hash": "4ae88f197b92b1c315b1105c0b113f70",
+    "semantic_hash": "4ae88f197b92b1c315b1105c0b113f70"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\app.py": {
+    "mtime": 1779823979.2710233,
+    "ast_hash": "6669dc0238d3d03367063f62298c9218",
+    "semantic_hash": "6669dc0238d3d03367063f62298c9218"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\climate.py": {
+    "mtime": 1779823979.274526,
+    "ast_hash": "ee17f5c061b9211d3a00862a2ea817b0",
+    "semantic_hash": "ee17f5c061b9211d3a00862a2ea817b0"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\collapsible_panel.py": {
+    "mtime": 1778115580.83973,
+    "ast_hash": "36cf4cd7668a8df80a534bd420bdc8fc",
+    "semantic_hash": "36cf4cd7668a8df80a534bd420bdc8fc"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\data_quality.py": {
+    "mtime": 1779823979.274526,
+    "ast_hash": "aefbefd8208b33ce65b041550c16b641",
+    "semantic_hash": "aefbefd8208b33ce65b041550c16b641"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\design_api.py": {
+    "mtime": 1779823979.2765296,
+    "ast_hash": "0cc9675b911327d5521152e33dd7df8a",
+    "semantic_hash": "0cc9675b911327d5521152e33dd7df8a"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\ecoregion.py": {
+    "mtime": 1779823979.2765296,
+    "ast_hash": "7ac85af6009e338dc7d31459b33b7002",
+    "semantic_hash": "7ac85af6009e338dc7d31459b33b7002"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\map_widget.py": {
+    "mtime": 1779823979.2765296,
+    "ast_hash": "c1d03105dc379cb59dd6a189e40ff787",
+    "semantic_hash": "c1d03105dc379cb59dd6a189e40ff787"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\pdf_export.py": {
+    "mtime": 1779823979.2765296,
+    "ast_hash": "f85ff4e70416e02bd23423049e640c56",
+    "semantic_hash": "f85ff4e70416e02bd23423049e640c56"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\placement_controls.py": {
+    "mtime": 1779823979.2765296,
+    "ast_hash": "d5547fc4bb6e0b6c34ab1059a0d49fa2",
+    "semantic_hash": "d5547fc4bb6e0b6c34ab1059a0d49fa2"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\planning_panel.py": {
+    "mtime": 1779823979.2765296,
+    "ast_hash": "a631c1fd9aab943cd5cda7808f41ad9b",
+    "semantic_hash": "a631c1fd9aab943cd5cda7808f41ad9b"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\plant_panel.py": {
+    "mtime": 1779823979.2765296,
+    "ast_hash": "68d5b4adca7b0a2d1e78fc277d013a38",
+    "semantic_hash": "68d5b4adca7b0a2d1e78fc277d013a38"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\polyculture.py": {
+    "mtime": 1779823979.2765296,
+    "ast_hash": "a3d85780895e64a3a60fa4be3454e277",
+    "semantic_hash": "a3d85780895e64a3a60fa4be3454e277"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\polyculture_panel.py": {
+    "mtime": 1779823979.2765296,
+    "ast_hash": "676ff887eefcada9e51f6ce68a4c40e2",
+    "semantic_hash": "676ff887eefcada9e51f6ce68a4c40e2"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\project.py": {
+    "mtime": 1779823979.2765296,
+    "ast_hash": "2baab0cd0e1f436ff63ef103b0b19cff",
+    "semantic_hash": "2baab0cd0e1f436ff63ef103b0b19cff"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\property_data.py": {
+    "mtime": 1779823979.2765296,
+    "ast_hash": "de9334dbe01f3307b6f98bc8730ea7ba",
+    "semantic_hash": "de9334dbe01f3307b6f98bc8730ea7ba"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\settings.py": {
+    "mtime": 1779823979.2765296,
+    "ast_hash": "e7f9ee2776a74900537691e64f57ccec",
+    "semantic_hash": "e7f9ee2776a74900537691e64f57ccec"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\site_panel.py": {
+    "mtime": 1779823979.2765296,
+    "ast_hash": "3436ff3e391562ac5d1cb43165d16f24",
+    "semantic_hash": "3436ff3e391562ac5d1cb43165d16f24"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\solar.py": {
+    "mtime": 1779823979.282859,
+    "ast_hash": "ed06812c67500737b3dc14bcb61dc59a",
+    "semantic_hash": "ed06812c67500737b3dc14bcb61dc59a"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\structure_panel.py": {
+    "mtime": 1778115580.8456953,
+    "ast_hash": "f1f795d7d240bea84fa8b4b797e7c2ba",
+    "semantic_hash": "f1f795d7d240bea84fa8b4b797e7c2ba"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\terrain.py": {
+    "mtime": 1779823979.282859,
+    "ast_hash": "62e0c068086b57568ded8820f3208fa3",
+    "semantic_hash": "62e0c068086b57568ded8820f3208fa3"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\terrain_downloader.py": {
+    "mtime": 1779823979.2838628,
+    "ast_hash": "a0d219832a5bc43de3afa1460f765bab",
+    "semantic_hash": "a0d219832a5bc43de3afa1460f765bab"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\terrain_store.py": {
+    "mtime": 1778115580.8473978,
+    "ast_hash": "4229bc030d4a70c0c41a172b0f56e435",
+    "semantic_hash": "4229bc030d4a70c0c41a172b0f56e435"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\toolbar.py": {
+    "mtime": 1779823979.2838628,
+    "ast_hash": "15cd90fc1ed03eca3328f0a35726d696",
+    "semantic_hash": "15cd90fc1ed03eca3328f0a35726d696"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\version_branch.py": {
+    "mtime": 1779823979.2845652,
+    "ast_hash": "7f76b7db0aba0112fd382676c30c89d9",
+    "semantic_hash": "7f76b7db0aba0112fd382676c30c89d9"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\__init__.py": {
+    "mtime": 1778115580.8366342,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\api\\permapeople.py": {
+    "mtime": 1778115580.8366342,
+    "ast_hash": "efb5ec7604219bd012ff228cec6a7893",
+    "semantic_hash": "efb5ec7604219bd012ff228cec6a7893"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\api\\__init__.py": {
+    "mtime": 1778115580.8366342,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\db\\calendar_data.py": {
+    "mtime": 1779823979.274526,
+    "ast_hash": "52f87167f4240456d245ea7acc44eb73",
+    "semantic_hash": "52f87167f4240456d245ea7acc44eb73"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\db\\fauna.py": {
+    "mtime": 1779823979.274526,
+    "ast_hash": "ae6a272c26869ef7bc4d966fc6d257df",
+    "semantic_hash": "ae6a272c26869ef7bc4d966fc6d257df"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\db\\import_usda.py": {
+    "mtime": 1779823979.274526,
+    "ast_hash": "299202dd76341e699a5c923fee3a6746",
+    "semantic_hash": "299202dd76341e699a5c923fee3a6746"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\db\\plants.py": {
+    "mtime": 1779823979.274526,
+    "ast_hash": "107fb54620f7f80824c9c9a1b8dfe4ec",
+    "semantic_hash": "107fb54620f7f80824c9c9a1b8dfe4ec"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\db\\polycultures.py": {
+    "mtime": 1779823979.2765296,
+    "ast_hash": "e39f3386ccd3e5671b82688614eb2a8e",
+    "semantic_hash": "e39f3386ccd3e5671b82688614eb2a8e"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\db\\recipes.py": {
+    "mtime": 1779823979.2765296,
+    "ast_hash": "11394cb62f8af7180dbdaee3b50af465",
+    "semantic_hash": "11394cb62f8af7180dbdaee3b50af465"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\db\\schema.sql": {
+    "mtime": 1779823979.2765296,
+    "ast_hash": "622c0c0190a1be268e65d1d6121e0bd9",
+    "semantic_hash": "622c0c0190a1be268e65d1d6121e0bd9"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\db\\seed_data.py": {
+    "mtime": 1779823979.2765296,
+    "ast_hash": "b8159214a29fcdd9f2c3179c8797a9af",
+    "semantic_hash": "b8159214a29fcdd9f2c3179c8797a9af"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\db\\structures.py": {
+    "mtime": 1779823979.2765296,
+    "ast_hash": "97723374f6dce0e29b49ed0abd6b029f",
+    "semantic_hash": "97723374f6dce0e29b49ed0abd6b029f"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\src\\db\\__init__.py": {
+    "mtime": 1778115580.83973,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\tests\\test_climate.py": {
+    "mtime": 1779823979.2845652,
+    "ast_hash": "9db6e22d97cc9e0a3a5b8671f331f631",
+    "semantic_hash": "9db6e22d97cc9e0a3a5b8671f331f631"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\tests\\test_climate_cache.py": {
+    "mtime": 1779823979.2845652,
+    "ast_hash": "886c17f0c0afa66dda689aeeda0b3d27",
+    "semantic_hash": "886c17f0c0afa66dda689aeeda0b3d27"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\tests\\test_companions.py": {
+    "mtime": 1779823979.2845652,
+    "ast_hash": "ed493dcf7c0c77efec7d066faa380309",
+    "semantic_hash": "ed493dcf7c0c77efec7d066faa380309"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\tests\\test_data_quality.py": {
+    "mtime": 1779823979.2845652,
+    "ast_hash": "f93c90255b41e7872048a6629caa3bf6",
+    "semantic_hash": "f93c90255b41e7872048a6629caa3bf6"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\tests\\test_ecoregion.py": {
+    "mtime": 1779823979.2845652,
+    "ast_hash": "246118ce50f7720b2ba3fd5c565e3705",
+    "semantic_hash": "246118ce50f7720b2ba3fd5c565e3705"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\tests\\test_fauna.py": {
+    "mtime": 1779823979.2845652,
+    "ast_hash": "54825e8ff34e23a4dffce06d67b24891",
+    "semantic_hash": "54825e8ff34e23a4dffce06d67b24891"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\tests\\test_map_features.py": {
+    "mtime": 1778115580.8473978,
+    "ast_hash": "397cc6d478f702737bfce1dceba3b581",
+    "semantic_hash": "397cc6d478f702737bfce1dceba3b581"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\tests\\test_pattern_placement.py": {
+    "mtime": 1778115580.8473978,
+    "ast_hash": "c7ca236bc56f6d35a39334f7ae1be2fd",
+    "semantic_hash": "c7ca236bc56f6d35a39334f7ae1be2fd"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\tests\\test_polyculture.py": {
+    "mtime": 1778115580.8473978,
+    "ast_hash": "524e3f4864bc7968dbb3cb305cc5876b",
+    "semantic_hash": "524e3f4864bc7968dbb3cb305cc5876b"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\tests\\test_polycultures.py": {
+    "mtime": 1779823979.2845652,
+    "ast_hash": "12acb370eb9dee3330b55dedfce73e39",
+    "semantic_hash": "12acb370eb9dee3330b55dedfce73e39"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\tests\\test_property_data.py": {
+    "mtime": 1779823979.2845652,
+    "ast_hash": "fd1d25bcaf99526006a6b7ab1a1d2cc9",
+    "semantic_hash": "fd1d25bcaf99526006a6b7ab1a1d2cc9"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\tests\\test_terrain.py": {
+    "mtime": 1779823979.2845652,
+    "ast_hash": "ce602ea66b06fe670b19078ae460e497",
+    "semantic_hash": "ce602ea66b06fe670b19078ae460e497"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\tests\\test_uses_junction.py": {
+    "mtime": 1779823979.2845652,
+    "ast_hash": "16cccc7a758d1e05f2a961ad3ea02e90",
+    "semantic_hash": "16cccc7a758d1e05f2a961ad3ea02e90"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\tests\\test_version_branch.py": {
+    "mtime": 1779823979.2845652,
+    "ast_hash": "a66a68bdd3a395bd6b3e18c0a598b325",
+    "semantic_hash": "a66a68bdd3a395bd6b3e18c0a598b325"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\tests\\__init__.py": {
+    "mtime": 1778115580.8473978,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\BUILD.md": {
+    "mtime": 1778115580.8252983,
+    "ast_hash": "7d7612e1b24e23a0890361bc4853bc8b",
+    "semantic_hash": "7d7612e1b24e23a0890361bc4853bc8b"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\CLAUDE.md": {
+    "mtime": 1779824041.8998015,
+    "ast_hash": "92d9152cba986c509fe86a3265393480",
+    "semantic_hash": "92d9152cba986c509fe86a3265393480"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\FEATURE_BRAINSTORM.md": {
+    "mtime": 1779823979.2628033,
+    "ast_hash": "0c3007bd80031c0fedfc6c1d8422f6ec",
+    "semantic_hash": "0c3007bd80031c0fedfc6c1d8422f6ec"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\FRIEND_SETUP_GUIDE.md": {
+    "mtime": 1779823979.2628033,
+    "ast_hash": "600cd78a296eaf9fd501a35e831c53af",
+    "semantic_hash": "600cd78a296eaf9fd501a35e831c53af"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\INSTALL.md": {
+    "mtime": 1778115580.8252983,
+    "ast_hash": "c4d4f86872625889cab2475630973eea",
+    "semantic_hash": "c4d4f86872625889cab2475630973eea"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\graphify-out\\converted\\plant_data_87aaa373.md": {
+    "mtime": 1779826211.0482152,
+    "ast_hash": "9df2be4604c82f99b2c1f42e35b17632",
+    "semantic_hash": "9df2be4604c82f99b2c1f42e35b17632"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\QUICK_START.md": {
+    "mtime": 1778115580.8299422,
+    "ast_hash": "60cbc105101b074a859bc39a59b5c03b",
+    "semantic_hash": "60cbc105101b074a859bc39a59b5c03b"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\README.md": {
+    "mtime": 1779823979.2628033,
+    "ast_hash": "4feb65cc53087ac04550b35f455fb4ec",
+    "semantic_hash": "4feb65cc53087ac04550b35f455fb4ec"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\requirements.txt": {
+    "mtime": 1778115580.8366342,
+    "ast_hash": "5ddcbb43372489c1a6da9a84cb482939",
+    "semantic_hash": "5ddcbb43372489c1a6da9a84cb482939"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\review.md": {
+    "mtime": 1779823979.2710233,
+    "ast_hash": "ff8008a206134d80e908fae84fe9b911",
+    "semantic_hash": "ff8008a206134d80e908fae84fe9b911"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\ROADMAP.md": {
+    "mtime": 1779823979.2628033,
+    "ast_hash": "3b1bfb64aab618a19827689e2b007331",
+    "semantic_hash": "3b1bfb64aab618a19827689e2b007331"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\SESSION_HANDOFF.md": {
+    "mtime": 1779823979.2659707,
+    "ast_hash": "a1cceb6e4d3beae7773bc5eb1a298e66",
+    "semantic_hash": "a1cceb6e4d3beae7773bc5eb1a298e66"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\USER_GUIDE.md": {
+    "mtime": 1779823979.2659707,
+    "ast_hash": "67bcee1c4cac395a91eee3c41a15ded3",
+    "semantic_hash": "67bcee1c4cac395a91eee3c41a15ded3"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\.claude\\CLAUDE.md": {
+    "mtime": 1779824041.8978024,
+    "ast_hash": "817fe671013b35ae0bc9301dfe449a87",
+    "semantic_hash": "817fe671013b35ae0bc9301dfe449a87"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\.claude\\skills\\graphify\\SKILL.md": {
+    "mtime": 1779824041.8948007,
+    "ast_hash": "5ae00786ea53e4d944ab70abe11eedd1",
+    "semantic_hash": "5ae00786ea53e4d944ab70abe11eedd1"
+  },
+  "C:\\Users\\Marci\\Documents\\GitHub\\PermaDesign\\html\\map.html": {
+    "mtime": 1779823979.2710233,
+    "ast_hash": "037bddc349c4b1aa589cdc2caeb3111f",
+    "semantic_hash": "037bddc349c4b1aa589cdc2caeb3111f"
+  }
+}

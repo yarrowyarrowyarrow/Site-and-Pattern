@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls graphify-out/.graphify_chunk_*.json)",
+      "Bash(graphify export:*)",
+      "Bash(graphify benchmark:*)"
+    ]
+  }
+}
