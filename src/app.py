@@ -1684,6 +1684,11 @@ class MainWindow(QMainWindow):
                 f"Max slope: {stats['max_slope_pct']:.1f}%, "
                 f"mean: {stats.get('mean_slope_pct', 0):.1f}%"
             )
+        if "dominant_aspect" in stats:
+            share_pct = int(round(stats.get("dominant_aspect_share", 0) * 100))
+            bits.append(
+                f"Aspect: {stats['dominant_aspect']} ({share_pct}% of slope ≥2%)"
+            )
         bits.append(f"{len(contours)} contour level(s)")
         for w in (result.get("warnings") or []):
             bits.append("⚠ " + w)

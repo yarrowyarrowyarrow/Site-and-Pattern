@@ -167,6 +167,113 @@ def test_slope_grid_pure_ns_drop():
     assert math.isclose(s[2][2], expected, rel_tol=0.02)
 
 
+# ── aspect (V1.33) ──────────────────────────────────────────────────────────
+#
+# Aspect = compass bearing the downhill face points toward. Convention
+# matches QGIS / property_data._parse_elevation:
+#   0/360 = N, 90 = E, 180 = S, 270 = W. Flat cells = -1 sentinel.
+# Grid convention here: grid[0] is the NORTHERN row, grid[-1] is SOUTHERN
+# (matches the existing slope code's rN = r-1, rS = r+1).
+
+def test_aspect_grid_flat_is_sentinel():
+    elev = {
+        "grid": [[100.0] * 4 for _ in range(4)],
+        "cols": 4, "rows": 4, "bbox": BBOX, "resolution_m": 25,
+    }
+    a = t.compute_aspect_grid(elev)
+    for row in a:
+        for v in row:
+            assert v == -1.0
+
+
+def test_aspect_grid_south_high_means_north_facing():
+    # grid[r][c] = r, so elevation rises south → downhill faces NORTH (0°).
+    rows, cols = 5, 5
+    grid = [[float(r) for _ in range(cols)] for r in range(rows)]
+    elev = {"grid": grid, "cols": cols, "rows": rows,
+            "bbox": BBOX, "resolution_m": 25}
+    a = t.compute_aspect_grid(elev)
+    # Centre cell — interior, central diffs are exact.
+    assert math.isclose(a[2][2], 0.0, abs_tol=0.5)
+    assert t.classify_aspect_8way(a[2][2]) == "N"
+
+
+def test_aspect_grid_north_high_means_south_facing():
+    # grid[r][c] = -r, so elevation falls south → downhill faces SOUTH (180°).
+    rows, cols = 5, 5
+    grid = [[-float(r) for _ in range(cols)] for r in range(rows)]
+    elev = {"grid": grid, "cols": cols, "rows": rows,
+            "bbox": BBOX, "resolution_m": 25}
+    a = t.compute_aspect_grid(elev)
+    assert math.isclose(a[2][2], 180.0, abs_tol=0.5)
+    assert t.classify_aspect_8way(a[2][2]) == "S"
+
+
+def test_aspect_grid_west_high_means_east_facing():
+    # grid[r][c] = -c, so elevation falls east → downhill faces EAST (90°).
+    rows, cols = 5, 5
+    grid = [[-float(c) for c in range(cols)] for _ in range(rows)]
+    elev = {"grid": grid, "cols": cols, "rows": rows,
+            "bbox": BBOX, "resolution_m": 25}
+    a = t.compute_aspect_grid(elev)
+    assert math.isclose(a[2][2], 90.0, abs_tol=0.5)
+    assert t.classify_aspect_8way(a[2][2]) == "E"
+
+
+def test_aspect_grid_east_high_means_west_facing():
+    rows, cols = 5, 5
+    grid = [[float(c) for c in range(cols)] for _ in range(rows)]
+    elev = {"grid": grid, "cols": cols, "rows": rows,
+            "bbox": BBOX, "resolution_m": 25}
+    a = t.compute_aspect_grid(elev)
+    assert math.isclose(a[2][2], 270.0, abs_tol=0.5)
+    assert t.classify_aspect_8way(a[2][2]) == "W"
+
+
+def test_classify_aspect_8way_buckets():
+    # Cardinal centres land cleanly in their bucket.
+    assert t.classify_aspect_8way(0.0)   == "N"
+    assert t.classify_aspect_8way(45.0)  == "NE"
+    assert t.classify_aspect_8way(90.0)  == "E"
+    assert t.classify_aspect_8way(135.0) == "SE"
+    assert t.classify_aspect_8way(180.0) == "S"
+    assert t.classify_aspect_8way(225.0) == "SW"
+    assert t.classify_aspect_8way(270.0) == "W"
+    assert t.classify_aspect_8way(315.0) == "NW"
+    # 359° wraps back into the N bucket.
+    assert t.classify_aspect_8way(359.0) == "N"
+    # Sentinel.
+    assert t.classify_aspect_8way(-1.0) == "Flat"
+
+
+def test_dominant_aspect_for_grid_picks_majority():
+    # South-facing diagonal ramp (grid[r][c] = -r): every non-edge cell
+    # should be S.
+    rows, cols = 8, 8
+    grid = [[-float(r) for _ in range(cols)] for r in range(rows)]
+    elev = {"grid": grid, "cols": cols, "rows": rows,
+            "bbox": BBOX, "resolution_m": 25}
+    aspect = t.compute_aspect_grid(elev)
+    slope  = t.compute_slope_grid(elev)
+    res = t.dominant_aspect_for_grid(aspect, slope, slope_threshold_pct=0.5)
+    assert res["dominant"] == "S"
+    assert res["share"] > 0.9            # nearly all sampled cells are S
+    assert res["sampled_cells"] >= 4
+
+
+def test_dominant_aspect_for_grid_returns_none_when_all_flat():
+    elev = {
+        "grid": [[100.0] * 6 for _ in range(6)],
+        "cols": 6, "rows": 6, "bbox": BBOX, "resolution_m": 25,
+    }
+    aspect = t.compute_aspect_grid(elev)
+    slope  = t.compute_slope_grid(elev)
+    res = t.dominant_aspect_for_grid(aspect, slope)
+    assert res["dominant"] is None
+    assert res["sampled_cells"] == 0
+    assert res["flat_cells"] == 36
+
+
 # ── slope ramp / PNG ────────────────────────────────────────────────────────
 
 def test_slope_to_rgba_bin_boundaries():

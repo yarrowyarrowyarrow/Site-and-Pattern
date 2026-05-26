@@ -346,6 +346,7 @@ class PlantRowDelegate(QStyledItemDelegate):
         # the DB more than once per plant. The cache is invalidated by
         # rebuilding the delegate (cheap; only on schema reload).
         self._wildlife_cache: dict[int, str] = {}
+        self._companions_cache: dict[int, str] = {}
 
     def _wildlife_text_for_plant(self, plant_id) -> str:
         """Return a short comma-separated list of fauna supported by this
@@ -387,6 +388,48 @@ class PlantRowDelegate(QStyledItemDelegate):
             if extra > 0:
                 text += f" +{extra}"
         self._wildlife_cache[plant_id] = text
+        return text
+
+    def _companions_text_for_plant(self, plant_id) -> str:
+        """Return a short "friends · avoid: enemies" string for the plant
+        detail block. The companion tables (`companion_friends`,
+        `companion_enemies`) are seeded at install but were never
+        surfaced in the UI before V1.33 — this turns a long-standing
+        README claim into an actual visible feature. Cached per
+        plant_id; same invalidation pattern as the wildlife cache.
+        """
+        if not plant_id:
+            return "—"
+        cached = self._companions_cache.get(plant_id)
+        if cached is not None:
+            return cached
+        try:
+            from src.db.plants import get_companions
+            data = get_companions(int(plant_id))
+        except Exception:
+            self._companions_cache[plant_id] = "—"
+            return "—"
+        friends = [p.get("common_name") or "" for p in data.get("friends") or []]
+        enemies = [p.get("common_name") or "" for p in data.get("enemies") or []]
+        friends = [n for n in friends if n]
+        enemies = [n for n in enemies if n]
+        if not friends and not enemies:
+            text = "—"
+        else:
+            parts: list[str] = []
+            if friends:
+                head = friends[:3]
+                extra = len(friends) - len(head)
+                friends_text = ", ".join(head) + (f" +{extra}" if extra > 0 else "")
+                parts.append(friends_text)
+            if enemies:
+                head = enemies[:2]
+                extra = len(enemies) - len(head)
+                enemies_text = "avoid " + ", ".join(head) + (
+                    f" +{extra}" if extra > 0 else "")
+                parts.append(enemies_text)
+            text = " · ".join(parts)
+        self._companions_cache[plant_id] = text
         return text
 
     # Geometry helpers ---------------------------------------------------
@@ -481,8 +524,8 @@ class PlantRowDelegate(QStyledItemDelegate):
             if cal:
                 cal_h = _CAL_BLOCK_H
         # Detail rows: Zones, Sun·Water, Spacing, Height, Bloom·Fruit,
-        # Edible, Uses, Hosts (schema v13 — wildlife supported). 8 rows total.
-        detail_h = 8 * fm.lineSpacing() + cal_h + notes_h + 8
+        # Edible, Uses, Wildlife (schema v13), Companions (V1.33). 9 rows.
+        detail_h = 9 * fm.lineSpacing() + cal_h + notes_h + 8
         return QSize(0, compact_h + detail_h)
 
     # Painting -----------------------------------------------------------
@@ -707,6 +750,7 @@ class PlantRowDelegate(QStyledItemDelegate):
             # lazily so the delegate stays cheap when the database is not
             # available (e.g. Permapeople-only rows).
             hosts_text = self._wildlife_text_for_plant(plant.get("id"))
+            companions_text = self._companions_text_for_plant(plant.get("id"))
 
             _row("Zones:",         zones_str, 0)
             _row("Sun · Water:",   f"{sun}  ·  {water}", line_h)
@@ -716,6 +760,7 @@ class PlantRowDelegate(QStyledItemDelegate):
             _row("Edible:",        edible, 5 * line_h)
             _row("Uses:",          uses, 6 * line_h)
             _row("Wildlife:",      hosts_text, 7 * line_h)
+            _row("Companions:",    companions_text, 8 * line_h)
 
             # ── Colour-coded planting calendar strip ──────────────
             # 12 cells across the detail width, one per month, coloured by
@@ -723,16 +768,16 @@ class PlantRowDelegate(QStyledItemDelegate):
             # the at-a-glance "what is this plant doing in July?" visual
             # that lived in the legacy detail panel before the compact
             # list landed.
-            cal_block_top = detail.top() + 8 * line_h
+            cal_block_top = detail.top() + 9 * line_h
             model = index.model()
             cal: list[dict] = []
             if isinstance(model, PlantListModel):
                 cal = model.calendar_for(plant.get("id"))
             if cal:
                 self._paint_calendar(painter, detail, cal_block_top, cal)
-                notes_top_offset = 8 * line_h + _CAL_BLOCK_H
+                notes_top_offset = 9 * line_h + _CAL_BLOCK_H
             else:
-                notes_top_offset = 8 * line_h + 4
+                notes_top_offset = 9 * line_h + 4
 
             notes = plant.get("notes") or ""
             if notes:

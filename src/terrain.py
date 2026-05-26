@@ -931,6 +931,126 @@ def compute_slope_grid(elev: dict) -> list[list[float]]:
     return out
 
 
+# ── Aspect (compass direction the slope faces) ──────────────────────────────
+#
+# Aspect is the second microclimate driver after slope. A south-facing
+# slope in Alberta gets 30–40% more growing-season solar energy than a
+# north-facing one at the same address — functionally a hardiness zone
+# warmer. The single-point aspect at the property pin is already
+# computed in property_data.py:_parse_elevation; these helpers extend
+# the same formula to the full grid so the slope-analysis job can
+# report a dominant aspect for the chosen area.
+#
+# Convention: aspect is reported as a compass bearing in [0, 360) where
+# 0/360 = N, 90 = E, 180 = S, 270 = W. A flat cell (slope < threshold)
+# has no meaningful aspect and is excluded from the dominant-aspect
+# tally rather than being assigned an arbitrary direction.
+
+_ASPECT_COMPASS_8 = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+
+
+def compute_aspect_grid(elev: dict) -> list[list[float]]:
+    """
+    Aspect (compass degrees from north, clockwise) at each cell of an
+    elevation grid. Uses the same gradient sampling as
+    ``compute_slope_grid`` so the two grids align cell-for-cell. Flat
+    cells (zero gradient) return ``-1.0`` as a sentinel; callers should
+    filter on the matching slope grid rather than reading this value.
+    """
+    grid = elev["grid"]
+    rows = elev["rows"]
+    cols = elev["cols"]
+    bbox = elev["bbox"]
+    width_m, height_m = bbox_size_m(bbox)
+    dx = width_m  / max(1, cols - 1)
+    dy = height_m / max(1, rows - 1)
+
+    out = [[0.0] * cols for _ in range(rows)]
+    for r in range(rows):
+        rN = max(0, r - 1)
+        rS = min(rows - 1, r + 1)
+        span_y = (rS - rN) * dy
+        if span_y == 0:
+            span_y = dy
+        for c in range(cols):
+            cW = max(0, c - 1)
+            cE = min(cols - 1, c + 1)
+            span_x = (cE - cW) * dx
+            if span_x == 0:
+                span_x = dx
+            dz_dx = (grid[r][cE] - grid[r][cW]) / span_x
+            dz_dy = (grid[rN][c] - grid[rS][c]) / span_y
+            if dz_dx == 0 and dz_dy == 0:
+                out[r][c] = -1.0
+                continue
+            # Downhill direction as compass bearing from north, clockwise.
+            # Matches property_data._parse_elevation so the area readout
+            # is consistent with the single-point readout.
+            deg = math.degrees(math.atan2(-dz_dx, -dz_dy)) % 360.0
+            out[r][c] = round(deg, 2)
+    return out
+
+
+def classify_aspect_8way(degrees: float) -> str:
+    """
+    Bucket a compass bearing into one of N/NE/E/SE/S/SW/W/NW. Returns
+    ``"Flat"`` for the ``-1.0`` sentinel produced by
+    ``compute_aspect_grid`` on zero-gradient cells.
+
+    Buckets are 45° wide and centred on each cardinal/inter-cardinal
+    direction (N spans 337.5–22.5, NE spans 22.5–67.5, etc.) — the
+    standard convention used in QGIS, ArcGIS, and most ecology tooling.
+    """
+    if degrees < 0:
+        return "Flat"
+    # Shift so bucket 0 (N) is centred on 0°, then divide by 45°.
+    idx = int(((degrees + 22.5) % 360.0) // 45.0)
+    return _ASPECT_COMPASS_8[idx]
+
+
+def dominant_aspect_for_grid(
+    aspect_grid: list[list[float]],
+    slope_grid: list[list[float]],
+    slope_threshold_pct: float = 2.0,
+) -> dict:
+    """
+    Compute the dominant compass aspect across an aspect grid, weighted
+    by the matching slope grid so flat terrain doesn't dilute the answer.
+
+    Returns ``{"dominant": "S", "share": 0.42, "counts": {...},
+    "sampled_cells": N, "flat_cells": M}`` — ``share`` is the dominant
+    bucket's fraction of sampled (non-flat) cells. Returns
+    ``{"dominant": None, ...}`` when fewer than 4 cells meet the
+    threshold (too small to be meaningful).
+    """
+    counts: dict[str, int] = {b: 0 for b in _ASPECT_COMPASS_8}
+    sampled = 0
+    flat = 0
+    for r, row in enumerate(aspect_grid):
+        for c, deg in enumerate(row):
+            if deg < 0 or slope_grid[r][c] < slope_threshold_pct:
+                flat += 1
+                continue
+            counts[classify_aspect_8way(deg)] += 1
+            sampled += 1
+    if sampled < 4:
+        return {
+            "dominant": None,
+            "share": 0.0,
+            "counts": counts,
+            "sampled_cells": sampled,
+            "flat_cells": flat,
+        }
+    dominant = max(counts, key=lambda k: counts[k])
+    return {
+        "dominant": dominant,
+        "share": round(counts[dominant] / sampled, 3),
+        "counts": counts,
+        "sampled_cells": sampled,
+        "flat_cells": flat,
+    }
+
+
 # ── Slope ramp PNG ──────────────────────────────────────────────────────────
 
 def slope_ramp_rgba(slope_grid: list[list[float]]) -> tuple[bytes, int, int]:
@@ -1097,6 +1217,14 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
         flat = [s for row in slope_grid for s in row]
         if flat:
             stats["max_slope_pct"] = round(max(flat), 2)
+        # Aspect rides along on the same DEM — same gradient sample as
+        # the slope grid, so it's effectively free. Surfaced via
+        # `stats["dominant_aspect"]` in the area status readout.
+        aspect_grid = compute_aspect_grid(elev)
+        asp = dominant_aspect_for_grid(aspect_grid, slope_grid)
+        if asp["dominant"]:
+            stats["dominant_aspect"] = asp["dominant"]
+            stats["dominant_aspect_share"] = asp["share"]
             stats["mean_slope_pct"] = round(sum(flat) / len(flat), 2)
 
     # Partial success counts: render whatever we have, surface warnings
