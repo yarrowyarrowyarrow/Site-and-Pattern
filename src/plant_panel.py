@@ -382,11 +382,10 @@ class PlantRowDelegate(QStyledItemDelegate):
                         continue
                     seen.add(name)
                     ordered.append(name)
-            head = ordered[:3]
-            extra = len(ordered) - len(head)
-            text = ", ".join(head)
-            if extra > 0:
-                text += f" +{extra}"
+            # V1.37: list every supported species — the row wraps to a
+            # second line now, so the old top-3 "+N" cap that left
+            # users wondering what was hidden is no longer needed.
+            text = ", ".join(ordered)
         self._wildlife_cache[plant_id] = text
         return text
 
@@ -416,18 +415,15 @@ class PlantRowDelegate(QStyledItemDelegate):
         if not friends and not enemies:
             text = "—"
         else:
+            # V1.37: show all friends — Bur Oak has 4+ companions, the
+            # old top-3 cap left users wondering what the "+N" hid.
+            # Uses + companions rows now wrap to a second line if the
+            # text doesn't fit on one, so listing everything is fine.
             parts: list[str] = []
             if friends:
-                head = friends[:3]
-                extra = len(friends) - len(head)
-                friends_text = ", ".join(head) + (f" +{extra}" if extra > 0 else "")
-                parts.append(friends_text)
+                parts.append(", ".join(friends))
             if enemies:
-                head = enemies[:2]
-                extra = len(enemies) - len(head)
-                enemies_text = "avoid " + ", ".join(head) + (
-                    f" +{extra}" if extra > 0 else "")
-                parts.append(enemies_text)
+                parts.append("avoid " + ", ".join(enemies))
             text = " · ".join(parts)
         self._companions_cache[plant_id] = text
         return text
@@ -523,9 +519,11 @@ class PlantRowDelegate(QStyledItemDelegate):
             cal = model.calendar_for(plant.get("id"))
             if cal:
                 cal_h = _CAL_BLOCK_H
-        # Detail rows: Zones, Sun·Water, Spacing, Height, Bloom·Fruit,
-        # Edible, Uses, Wildlife (schema v13), Companions (V1.33). 9 rows.
-        detail_h = 9 * fm.lineSpacing() + cal_h + notes_h + 8
+        # Detail rows: 5 single-line + 3 double-line (Uses, Wildlife,
+        # Companions) = 11 lineSpacing units; round up to 12 for the
+        # gap before the calendar block. V1.37 made the three list
+        # rows wrap so Bur Oak's full companion + uses lists fit.
+        detail_h = 12 * fm.lineSpacing() + cal_h + notes_h + 8
         return QSize(0, compact_h + detail_h)
 
     # Painting -----------------------------------------------------------
@@ -713,17 +711,27 @@ class PlantRowDelegate(QStyledItemDelegate):
             fm_s = QFontMetrics(self._small_font)
             line_h = fm_s.lineSpacing()
 
-            def _row(label: str, value: str, dy: int):
+            def _row(label: str, value: str, dy: int, *, max_lines: int = 1):
+                """Paint one detail row. ``max_lines`` controls how much
+                vertical space the value text gets — 1 (default) clips
+                at the right edge, 2 wraps onto a second line for the
+                long lists (Uses, Companions) introduced in V1.33.
+                Bumps the value rect's height by ``max_lines * line_h``
+                so Qt's TextWordWrap has room to break."""
                 lbl_w = 80
                 painter.setPen(QColor("#78909c"))
                 painter.drawText(QRect(detail.left(), detail.top() + dy, lbl_w, line_h),
                                  int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
                                  label)
                 painter.setPen(QColor("#cfd8dc"))
-                painter.drawText(QRect(detail.left() + lbl_w, detail.top() + dy,
-                                        detail.width() - lbl_w, line_h),
-                                 int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
-                                 value)
+                flags = int(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+                if max_lines > 1:
+                    flags |= int(Qt.TextFlag.TextWordWrap)
+                painter.drawText(
+                    QRect(detail.left() + lbl_w, detail.top() + dy,
+                          detail.width() - lbl_w, line_h * max_lines),
+                    flags, value,
+                )
 
             spacing = plant.get("spacing_meters")
             height  = plant.get("mature_height_meters")
@@ -752,15 +760,20 @@ class PlantRowDelegate(QStyledItemDelegate):
             hosts_text = self._wildlife_text_for_plant(plant.get("id"))
             companions_text = self._companions_text_for_plant(plant.get("id"))
 
+            # Layout: short single-line rows stack at 1 * line_h each,
+            # then Uses + Wildlife + Companions get 2 * line_h each so
+            # their long comma-separated lists wrap instead of clipping
+            # at the right edge. Total detail rows below: 5 single +
+            # 3 double = 5 + 6 = 11 line_h.
             _row("Zones:",         zones_str, 0)
             _row("Sun · Water:",   f"{sun}  ·  {water}", line_h)
             _row("Spacing:",       (f"{spacing} m" if spacing else "—"), 2 * line_h)
             _row("Height:",        (f"{height} m" if height else "—"), 3 * line_h)
             _row("Bloom · Fruit:", f"{bloom}  ·  {fruit}", 4 * line_h)
             _row("Edible:",        edible, 5 * line_h)
-            _row("Uses:",          uses, 6 * line_h)
-            _row("Wildlife:",      hosts_text, 7 * line_h)
-            _row("Companions:",    companions_text, 8 * line_h)
+            _row("Uses:",          uses, 6 * line_h, max_lines=2)
+            _row("Wildlife:",      hosts_text, 8 * line_h, max_lines=2)
+            _row("Companions:",    companions_text, 10 * line_h, max_lines=2)
 
             # ── Colour-coded planting calendar strip ──────────────
             # 12 cells across the detail width, one per month, coloured by
@@ -768,16 +781,16 @@ class PlantRowDelegate(QStyledItemDelegate):
             # the at-a-glance "what is this plant doing in July?" visual
             # that lived in the legacy detail panel before the compact
             # list landed.
-            cal_block_top = detail.top() + 9 * line_h
+            cal_block_top = detail.top() + 12 * line_h
             model = index.model()
             cal: list[dict] = []
             if isinstance(model, PlantListModel):
                 cal = model.calendar_for(plant.get("id"))
             if cal:
                 self._paint_calendar(painter, detail, cal_block_top, cal)
-                notes_top_offset = 9 * line_h + _CAL_BLOCK_H
+                notes_top_offset = 12 * line_h + _CAL_BLOCK_H
             else:
-                notes_top_offset = 9 * line_h + 4
+                notes_top_offset = 12 * line_h + 4
 
             notes = plant.get("notes") or ""
             if notes:
@@ -841,17 +854,23 @@ class PlantRowDelegate(QStyledItemDelegate):
                 painter.setBrush(Qt.BrushStyle.NoBrush)
                 painter.drawRoundedRect(cell_rect, 2, 2)
 
-        # Row 2 — legend.
+        # Row 2 — legend. V1.37: legend wraps to a second line when it
+        # doesn't fit horizontally, so a Pruning cell (brown) is never
+        # shown without its matching legend entry. The old behaviour
+        # `break`-ed on overflow, which silently dropped Pruning on
+        # narrow panels and left users wondering what the brown cell
+        # in March meant.
         legend_top = cell_top + _CAL_STRIP_H + _CAL_GAP
         legend_x = detail.left()
         fm = QFontMetrics(self._small_font)
         for status, color in _CALENDAR_STATUS_COLORS.items():
             if status == "dormant":
-                continue   # ubiquitous; skipping it keeps the legend on one line
+                continue   # ubiquitous; skipping it keeps the legend compact
             label = _CALENDAR_STATUS_LABELS[status]
             tw = fm.horizontalAdvance(label)
             if legend_x + 9 + tw + 8 > detail.right():
-                break   # don't wrap; truncate gracefully on narrow panels
+                legend_x = detail.left()
+                legend_top += _CAL_LEGEND_H + 2
             painter.setPen(Qt.PenStyle.NoPen)
             painter.setBrush(QColor(color))
             painter.drawEllipse(legend_x, legend_top + 4, 6, 6)

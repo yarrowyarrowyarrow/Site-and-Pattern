@@ -246,6 +246,63 @@ def test_fetch_hardiness_uses_local_zone(monkeypatch=None):
     assert "NRCan" in out["source"]
 
 
+# ── _parse_elevation: water-adjacent degradation (V1.37) ────────────────────
+#
+# Pins on the North Saskatchewan River used to break the at-pin
+# elevation/slope/aspect row because the Copernicus DEM returns null
+# over water and the original code required all 5 samples to be
+# non-null. V1.37 changes the contract: as long as the centre sample
+# is present, return what we can.
+
+import src.property_data as pd
+
+
+def test_parse_elevation_all_samples_present():
+    """Original happy path — flat ground, no slope."""
+    out = pd._parse_elevation([100.0, 100.0, 100.0, 100.0, 100.0], sample_m=30.0)
+    assert out is not None
+    assert out["elevation_m"] == 100.0
+    assert out["slope_pct"] == 0.0
+
+
+def test_parse_elevation_north_facing_slope():
+    # Higher in the south, lower in the north → downhill faces N.
+    out = pd._parse_elevation([100.0, 99.0, 100.0, 101.0, 100.0], sample_m=30.0)
+    assert out is not None
+    assert out["aspect"] == "N"
+
+
+def test_parse_elevation_centre_only():
+    """Pin on a river — only the centre cell has a value, the four
+    cardinal neighbours are over water and come back null. We should
+    return elevation but no slope/aspect, with a source note."""
+    out = pd._parse_elevation([663.5, None, None, None, None], sample_m=30.0)
+    assert out is not None
+    assert out["elevation_m"] == 663.5
+    assert out["slope_pct"] is None
+    assert out["aspect"] == "—"
+    assert "over water" in out["source"]
+
+
+def test_parse_elevation_one_axis_available():
+    """N+S present, E+W null — we use the N+S gradient only."""
+    out = pd._parse_elevation([100.0, 99.0, None, 101.0, None], sample_m=30.0)
+    assert out is not None
+    assert out["slope_pct"] is not None
+    assert out["aspect"] == "N"
+    assert "partial" in out["source"]
+
+
+def test_parse_elevation_centre_null_returns_none():
+    """No useful info → None, as before."""
+    out = pd._parse_elevation([None, 100.0, 100.0, 100.0, 100.0], sample_m=30.0)
+    assert out is None
+
+
+def test_parse_elevation_empty_returns_none():
+    assert pd._parse_elevation([], sample_m=30.0) is None
+
+
 # ── Entry point ─────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

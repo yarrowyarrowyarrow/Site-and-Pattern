@@ -238,12 +238,18 @@ def _http_get_json(url: str, timeout: float = 20.0) -> Optional[dict]:
 
 
 def fetch_historical_temps(
-    lat: float, lng: float, years: int = 5,
+    lat: float, lng: float, years: int = 3,
 ) -> Optional[list[dict]]:
     """Fetch the last ``years`` complete calendar years of daily min/max
     temperature for (lat, lng) from Open-Meteo Historical Weather
     (ERA5-Land). Returns a list of ``{date, tmin, tmax}`` dicts in
     chronological order, or ``None`` on any failure.
+
+    Default ``years=3`` since V1.37 — the GDD + frost-window stats
+    are stable across 3+ year windows in continental climates, and
+    the smaller payload halves the on-pin-drop fetch time vs. the
+    original 5-year window. Caller can pass a larger ``years`` for
+    higher-resolution averaging when latency doesn't matter.
 
     Same vendor / endpoint / timeout policy as
     ``property_data.fetch_rainfall`` — keeping the network surface

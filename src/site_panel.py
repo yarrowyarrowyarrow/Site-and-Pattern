@@ -57,14 +57,15 @@ def _safe_is_running(thread) -> bool:
 class _SiteFetchWorker(QObject):
     """Runs in its own QThread; emits a signal per dataset as it completes."""
 
-    progress  = pyqtSignal(str)               # status message
-    rainfall  = pyqtSignal(object)            # dict | None
-    soil      = pyqtSignal(object)
-    elevation = pyqtSignal(object)
-    hardiness = pyqtSignal(object)
-    climate   = pyqtSignal(object)            # GDD / frost-window summary
-    ecoregion = pyqtSignal(object)            # auto-detected AB ecoregion
-    finished  = pyqtSignal(dict)              # combined result dict
+    progress      = pyqtSignal(str)           # status message
+    rainfall      = pyqtSignal(object)        # dict | None
+    soil          = pyqtSignal(object)
+    elevation     = pyqtSignal(object)
+    hardiness     = pyqtSignal(object)
+    climate       = pyqtSignal(object)        # GDD / frost-window summary
+    ecoregion     = pyqtSignal(object)        # auto-detected AB ecoregion
+    fast_ready    = pyqtSignal()              # fast batch done — climate may still be loading
+    finished      = pyqtSignal(dict)          # combined result dict
 
     def __init__(self, lat: float, lng: float):
         super().__init__()
@@ -80,15 +81,22 @@ class _SiteFetchWorker(QObject):
         )
         out = {"lat": self.lat, "lng": self.lng}
 
-        steps = [
+        # V1.37: climate (Open-Meteo Historical Weather) is the only
+        # slow fetch here — 2-4 s vs <500 ms for everything else.
+        # Run the fast steps first so the site panel paints zone /
+        # elevation / rainfall / soil / ecoregion within a second,
+        # then declare "site data ready" before the climate call so
+        # the perceived pin-drop latency drops back to where it was
+        # pre-V1.35. The climate signal still fires later when the
+        # GDD / frost values arrive.
+        fast_steps = [
             ("ecoregion", "Detecting ecoregion…",             fetch_ecoregion, self.ecoregion),
             ("hardiness", "Looking up hardiness zone…",       fetch_hardiness, self.hardiness),
             ("elevation", "Sampling Copernicus DEM…",         fetch_elevation, self.elevation),
             ("rainfall",  "Computing ERA5-Land rainfall…",    fetch_rainfall,  self.rainfall),
             ("soil",      "Querying SoilGrids…",              fetch_soil,      self.soil),
-            ("climate",   "Computing growing-degree days…",   fetch_climate,   self.climate),
         ]
-        for key, msg, fn, sig in steps:
+        for key, msg, fn, sig in fast_steps:
             if self._cancelled:
                 break
             self.progress.emit(msg)
@@ -98,6 +106,23 @@ class _SiteFetchWorker(QObject):
                 value = None
             out[key] = value
             sig.emit(value)
+
+        # Tell the panel "fast batch is in" so the green ready status
+        # flips immediately. The climate fetch then runs as a tail
+        # step — its result arrives separately via the `climate`
+        # signal. We only emit `finished` (which tears down the
+        # thread via `thread.quit`) after the tail step completes,
+        # so the thread can keep running.
+        self.fast_ready.emit()
+
+        if not self._cancelled:
+            self.progress.emit("Computing growing-degree days…")
+            try:
+                value = fetch_climate(self.lat, self.lng)
+            except Exception:
+                value = None
+            out["climate"] = value
+            self.climate.emit(value)
 
         self.finished.emit(out)
 
@@ -324,11 +349,11 @@ class SitePanel(QWidget):
             "species native to your area. You can still override the "
             "filter manually."
         )
-        hl.addRow("Zone:",      self._lbl_zone)
-        hl.addRow("Source:",    self._lbl_hard_src)
-        hl.addRow("GDD₅:",      self._lbl_gdd)
-        hl.addRow("Frost:",     self._lbl_frost)
-        hl.addRow("Ecoregion:", self._lbl_ecoregion)
+        hl.addRow("Zone:",                self._lbl_zone)
+        hl.addRow("Source:",              self._lbl_hard_src)
+        hl.addRow("Growing-degree days:", self._lbl_gdd)
+        hl.addRow("Frost window:",        self._lbl_frost)
+        hl.addRow("Ecoregion:",           self._lbl_ecoregion)
         layout.addWidget(self._hard_box)
 
         # ── Rainfall (moved up under pin/zone) ──────────────────────
@@ -676,6 +701,7 @@ class SitePanel(QWidget):
         worker.soil.connect(self._on_soil)
         worker.climate.connect(self._on_climate)
         worker.ecoregion.connect(self._on_ecoregion)
+        worker.fast_ready.connect(self._on_fast_ready)
         worker.finished.connect(self._on_finished)
 
         # Auto-teardown chain: when the worker emits finished, quit the
@@ -712,7 +738,7 @@ class SitePanel(QWidget):
                 pass
             for sig_name in ("progress", "hardiness", "elevation",
                              "rainfall", "soil", "climate", "ecoregion",
-                             "finished"):
+                             "fast_ready", "finished"):
                 try:
                     getattr(worker, sig_name).disconnect()
                 except (TypeError, RuntimeError):
@@ -796,9 +822,15 @@ class SitePanel(QWidget):
             self._lbl_elev.setText("Unavailable")
             return
         self._lbl_elev.setText(f"{data['elevation_m']:.1f} m")
-        self._lbl_slope.setText(
-            f"{data['slope_pct']:.2f} %  ({data['slope_deg']:.2f}°)"
-        )
+        # V1.37: slope_pct may be None when the pin sits on water — the
+        # DEM omits the neighbours we'd need for the gradient. Show "—"
+        # rather than throwing on the format call.
+        slope_pct = data.get("slope_pct")
+        slope_deg = data.get("slope_deg")
+        if slope_pct is not None and slope_deg is not None:
+            self._lbl_slope.setText(f"{slope_pct:.2f} %  ({slope_deg:.2f}°)")
+        else:
+            self._lbl_slope.setText("—")
         if data.get("aspect_deg") is not None:
             self._lbl_aspect.setText(
                 f"{data['aspect']}  ({data['aspect_deg']:.0f}°)"
@@ -842,8 +874,18 @@ class SitePanel(QWidget):
             self._lbl_soil_depth.setText(f"{depth} cm reported")
         self._lbl_soil_src.setText(data.get("source", ""))
 
-    def _on_finished(self, result: dict):
+    def _on_fast_ready(self):
+        """The non-climate fetches are in — flip the user-visible status
+        to ready immediately, even though the slower climate call is
+        still running in the worker. The climate row will update from
+        '—' when its signal arrives."""
         self._lbl_status.setText("Site data ready.")
+
+    def _on_finished(self, result: dict):
+        """The worker has finished every step including the slower
+        climate fetch. The status text is already 'ready' from
+        ``_on_fast_ready``; this signal just propagates the full
+        result dict to the rest of the app."""
         self.site_data_updated.emit(result)
 
     # ── Auto-generated slope analysis ───────────────────────────────────────
@@ -915,7 +957,7 @@ class SitePanel(QWidget):
         note = QLabel(
             "Download the full City of Edmonton 0.5 m LiDAR contour\n"
             "dataset for instant offline access. One-time download\n"
-            "(~50–300 MB). SRTM data outside Edmonton is cached\n"
+            "(~1 GB unpacked). SRTM data outside Edmonton is cached\n"
             "automatically as you use it."
         )
         note.setWordWrap(True)

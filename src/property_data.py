@@ -367,24 +367,60 @@ def _slope_sample_points(lat: float, lng: float, m: float):
 
 
 def _parse_elevation(elev: list, sample_m: float) -> Optional[dict]:
-    if not elev or len(elev) < 5 or any(v is None for v in elev[:5]):
+    """V1.37: degrades gracefully when some of the 5 sample points are
+    null. Pins on water (where the DEM has no value) used to fail the
+    whole readout — now we return whatever we can:
+
+      * Centre null → return None (no useful info).
+      * Centre present, all 4 neighbours null → return elevation only;
+        slope/aspect show as "—" instead of breaking the row.
+      * Centre present, some neighbours null → use only the axes
+        where both neighbours are present (e.g. N+S but not E+W).
+
+    The "at-pin" elevation source is Copernicus DEM 30 m, which omits
+    water surfaces; the river-pin case the user hit in V1.36 testing
+    was the canonical failure mode."""
+    if not elev or len(elev) < 1 or elev[0] is None:
         return None
-    centre, n, e, s, w = elev[:5]
-    dz_dx = (e - w) / (2.0 * sample_m)   # +x = east
-    dz_dy = (n - s) / (2.0 * sample_m)   # +y = north
-    grad   = math.hypot(dz_dx, dz_dy)
+    centre = elev[0]
+    # Pad to 5 samples so the unpacking below is safe regardless of
+    # how many neighbours the DEM returned.
+    padded = list(elev[:5]) + [None] * max(0, 5 - len(elev[:5]))
+    _, n, e, s, w = padded
+
+    have_ns = n is not None and s is not None
+    have_ew = e is not None and w is not None
+    dz_dy = (n - s) / (2.0 * sample_m) if have_ns else 0.0   # +y = north
+    dz_dx = (e - w) / (2.0 * sample_m) if have_ew else 0.0   # +x = east
+
+    if not have_ns and not have_ew:
+        # Centre only — no gradient available.
+        return {
+            "elevation_m": round(centre, 1),
+            "slope_pct":   None,
+            "slope_deg":   None,
+            "aspect_deg":  None,
+            "aspect":      "—",
+            "sample_m":    sample_m,
+            "source":      "Copernicus DEM 30m (via Open-Meteo, "
+                           "neighbours over water — slope unavailable)",
+        }
+
+    grad      = math.hypot(dz_dx, dz_dy)
     slope_pct = round(grad * 100.0, 2)
     slope_deg = round(math.degrees(math.atan(grad)), 2)
 
     if slope_pct < 0.05:
         aspect_deg, aspect = None, "Flat"
     else:
-        # Downhill direction: azimuth (deg from N, clockwise) of -gradient.
         ang = math.degrees(math.atan2(-dz_dx, -dz_dy))
         ang = (ang + 360.0) % 360.0
         aspect_deg = round(ang, 1)
         aspect     = _compass_label(ang)
 
+    src_note = ""
+    if not (have_ns and have_ew):
+        src_note = " (partial — only one axis sampled, neighbours over water)"
     return {
         "elevation_m": round(centre, 1),
         "slope_pct":   slope_pct,
@@ -392,7 +428,7 @@ def _parse_elevation(elev: list, sample_m: float) -> Optional[dict]:
         "aspect_deg":  aspect_deg,
         "aspect":      aspect,
         "sample_m":    sample_m,
-        "source":      "Copernicus DEM 30m (via Open-Meteo)",
+        "source":      "Copernicus DEM 30m (via Open-Meteo)" + src_note,
     }
 
 
