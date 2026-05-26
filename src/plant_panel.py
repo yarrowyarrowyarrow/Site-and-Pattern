@@ -1204,15 +1204,32 @@ class PlantPanel(QWidget):
             self._did_initial_refit = True
             QTimer.singleShot(0, self._refit_bottom_pane)
 
-    _SETTINGS_ECOREGION_KEY = "plant_panel/ab_ecoregion"
+    _SETTINGS_ECOREGION_KEY      = "plant_panel/ab_ecoregion"
+    _SETTINGS_ECOREGION_AUTO_KEY = "plant_panel/ab_ecoregion_auto"
 
     def _restore_ecoregion_preference(self):
+        """Pre-select the ecoregion combo. Priority:
+
+          1. The user's explicit saved choice (set every time they
+             touch the combo via ``_on_ecoregion_changed``).
+          2. The most recent auto-detected ecoregion (V1.36 — written
+             by ``site_panel._on_ecoregion`` after a property pin
+             auto-detection).
+
+        Auto-detect never overrides an explicit choice. Users who
+        manually picked a region keep their preference forever; users
+        who never touched the combo get the right default once they
+        drop a property pin."""
         settings = QSettings()
-        saved = settings.value(self._SETTINGS_ECOREGION_KEY, "", type=str)
-        if not saved:
+        explicit = settings.value(self._SETTINGS_ECOREGION_KEY, "", type=str)
+        autodetect = settings.value(
+            self._SETTINGS_ECOREGION_AUTO_KEY, "", type=str
+        )
+        preferred = explicit or autodetect
+        if not preferred:
             return
         for i in range(self._ecoregion_combo.count()):
-            if self._ecoregion_combo.itemData(i) == saved:
+            if self._ecoregion_combo.itemData(i) == preferred:
                 self._ecoregion_combo.blockSignals(True)
                 self._ecoregion_combo.setCurrentIndex(i)
                 self._ecoregion_combo.blockSignals(False)

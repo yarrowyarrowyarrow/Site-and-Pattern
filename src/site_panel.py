@@ -63,6 +63,7 @@ class _SiteFetchWorker(QObject):
     elevation = pyqtSignal(object)
     hardiness = pyqtSignal(object)
     climate   = pyqtSignal(object)            # GDD / frost-window summary
+    ecoregion = pyqtSignal(object)            # auto-detected AB ecoregion
     finished  = pyqtSignal(dict)              # combined result dict
 
     def __init__(self, lat: float, lng: float):
@@ -75,11 +76,12 @@ class _SiteFetchWorker(QObject):
         # Imported lazily so unit tests don't pull urllib at import time.
         from src.property_data import (
             fetch_rainfall, fetch_soil, fetch_elevation, fetch_hardiness,
-            fetch_climate,
+            fetch_climate, fetch_ecoregion,
         )
         out = {"lat": self.lat, "lng": self.lng}
 
         steps = [
+            ("ecoregion", "Detecting ecoregion…",             fetch_ecoregion, self.ecoregion),
             ("hardiness", "Looking up hardiness zone…",       fetch_hardiness, self.hardiness),
             ("elevation", "Sampling Copernicus DEM…",         fetch_elevation, self.elevation),
             ("rainfall",  "Computing ERA5-Land rainfall…",    fetch_rainfall,  self.rainfall),
@@ -313,10 +315,20 @@ class SitePanel(QWidget):
             "Average last spring frost → first fall frost, computed "
             "from the last 5 years of daily temperatures."
         )
-        hl.addRow("Zone:",   self._lbl_zone)
-        hl.addRow("Source:", self._lbl_hard_src)
-        hl.addRow("GDD₅:",   self._lbl_gdd)
-        hl.addRow("Frost:",  self._lbl_frost)
+        self._lbl_ecoregion = QLabel("—")
+        self._lbl_ecoregion.setStyleSheet("color: #c8e6c9;")
+        self._lbl_ecoregion.setToolTip(
+            "Auto-detected from the property's latitude and longitude. "
+            "The plant filter's ecoregion dropdown pre-populates from "
+            "this value, so the suggestions you see are filtered to "
+            "species native to your area. You can still override the "
+            "filter manually."
+        )
+        hl.addRow("Zone:",      self._lbl_zone)
+        hl.addRow("Source:",    self._lbl_hard_src)
+        hl.addRow("GDD₅:",      self._lbl_gdd)
+        hl.addRow("Frost:",     self._lbl_frost)
+        hl.addRow("Ecoregion:", self._lbl_ecoregion)
         layout.addWidget(self._hard_box)
 
         # ── Rainfall (moved up under pin/zone) ──────────────────────
@@ -632,6 +644,7 @@ class SitePanel(QWidget):
         self._lbl_hard_src.setText("")
         self._lbl_gdd.setText("—")
         self._lbl_frost.setText("—")
+        self._lbl_ecoregion.setText("—")
         self._lbl_elev.setText("—")
         self._lbl_slope.setText("—")
         self._lbl_aspect.setText("—")
@@ -662,6 +675,7 @@ class SitePanel(QWidget):
         worker.rainfall.connect(self._on_rainfall)
         worker.soil.connect(self._on_soil)
         worker.climate.connect(self._on_climate)
+        worker.ecoregion.connect(self._on_ecoregion)
         worker.finished.connect(self._on_finished)
 
         # Auto-teardown chain: when the worker emits finished, quit the
@@ -697,7 +711,8 @@ class SitePanel(QWidget):
             except Exception:
                 pass
             for sig_name in ("progress", "hardiness", "elevation",
-                             "rainfall", "soil", "climate", "finished"):
+                             "rainfall", "soil", "climate", "ecoregion",
+                             "finished"):
                 try:
                     getattr(worker, sig_name).disconnect()
                 except (TypeError, RuntimeError):
@@ -726,6 +741,26 @@ class SitePanel(QWidget):
             zone_text += f"  ({data['avg_extreme_min_c']:.1f} °C avg min)"
         self._lbl_zone.setText(zone_text)
         self._lbl_hard_src.setText(data.get("source", ""))
+
+    def _on_ecoregion(self, data):
+        """Surface the auto-detected ecoregion in the readout and write
+        it to the QSettings key the plant panel checks so its filter
+        dropdown pre-populates. Only writes the auto key — the user's
+        explicit choice (``plant_panel/ab_ecoregion``) is untouched."""
+        if not data:
+            self._lbl_ecoregion.setText("Outside known regions")
+            return
+        label = data.get("label") or data.get("key") or "—"
+        self._lbl_ecoregion.setText(f"{label}  (auto)")
+        # Stash the auto-detected key for the plant panel to pick up
+        # on its next refresh. Separate key from the user's explicit
+        # choice so a manual override survives a pin move.
+        try:
+            from PyQt6.QtCore import QSettings
+            QSettings().setValue("plant_panel/ab_ecoregion_auto",
+                                 data.get("key") or "")
+        except Exception:
+            pass
 
     def _on_climate(self, data):
         """Update the GDD₅ + frost-window rows. ``data`` is the dict

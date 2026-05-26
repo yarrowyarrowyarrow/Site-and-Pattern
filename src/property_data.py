@@ -646,10 +646,32 @@ def fetch_climate(lat: float, lng: float) -> Optional[dict]:
     return get_climate_summary(lat, lng)
 
 
+# ── Ecoregion (V1.36) ───────────────────────────────────────────────────────
+
+def fetch_ecoregion(lat: float, lng: float) -> Optional[dict]:
+    """Look up the AB ecoregion for (lat, lng) via point-in-polygon.
+    Returns ``{"key": "aspen_parkland", "label": "Aspen Parkland (central AB)",
+    "source": "..."}`` or ``None`` if the point falls outside every
+    shipped polygon.
+
+    Synchronous and local (no network) — runs instantly. Plugged into
+    the site panel's existing worker-step list for shape-uniformity
+    with the other fetchers, not because it needs the background thread."""
+    from src.ecoregion import lookup_ecoregion, label_for_key
+    key = lookup_ecoregion(lat, lng)
+    if not key:
+        return None
+    return {
+        "key":    key,
+        "label":  label_for_key(key),
+        "source": "ecoregions_canada.geojson (auto)",
+    }
+
+
 # ── Aggregator ──────────────────────────────────────────────────────────────
 
 def fetch_all(lat: float, lng: float) -> dict:
-    """Fetch all five datasets sequentially. Caller may want a thread."""
+    """Fetch all six datasets sequentially. Caller may want a thread."""
     return {
         "lat":       lat,
         "lng":       lng,
@@ -658,4 +680,5 @@ def fetch_all(lat: float, lng: float) -> dict:
         "elevation": fetch_elevation(lat, lng),
         "hardiness": fetch_hardiness(lat, lng),
         "climate":   fetch_climate(lat, lng),
+        "ecoregion": fetch_ecoregion(lat, lng),
     }
