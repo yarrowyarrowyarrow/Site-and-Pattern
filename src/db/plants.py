@@ -59,7 +59,16 @@ _PLANT_FAUNA_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "plant_fauna_maste
 # cache is wiped on reseed like the other dependent tables, so users
 # upgrading from v13 get an empty cache on next launch and fetch
 # fresh on their next property pin set.
-_SCHEMA_VERSION = 14
+# v15 (V1.37): plant-uses vocabulary refresh. Dropped permaculture-
+# flavored tags from `_USE_DEFINITIONS` (biomass, pest_deterrent,
+# food_forest, edible_landscape); renamed labels for clarity
+# (host_plant → "Larval Host", pollinator → "Pollinator Support",
+# early_successional → "Pioneer Species", water_purification →
+# "Riparian Filter"); promoted "overstory" → "canopy_layer" so it's
+# a canonical tag rather than an informal one. Bump triggers a
+# reseed which repopulates the `uses` lookup + `plant_uses` junction
+# from the updated JSON.
+_SCHEMA_VERSION = 15
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -69,25 +78,29 @@ _SCHEMA_VERSION = 14
 # that live in data/plants_master.json (and the keys in plant_panel._USE_LABELS).
 _USE_DEFINITIONS: list[tuple[str, str, str, int]] = [
     # (key, label, category, sort_order)
+    # V1.37 refresh: vocabulary refocused on native habitat + functional
+    # landscape design. Dropped permaculture-flavored tags
+    # (biomass/chop-drop, pest_deterrent, food_forest, edible_landscape).
+    # Renamed labels for audience clarity. Promoted "overstory" (informal
+    # data tag) to canonical "canopy_layer".
     ("keystone_species",   "Keystone Species",     "wildlife", 10),
-    ("host_plant",         "Host Plant",           "wildlife", 20),
+    ("host_plant",         "Larval Host",          "wildlife", 20),
     ("bird_food",          "Bird Food",            "wildlife", 30),
     ("nesting_material",   "Nesting Material",     "wildlife", 40),
-    ("pollinator",         "Pollinator Plant",     "wildlife", 50),
+    ("pollinator",         "Pollinator Support",   "wildlife", 50),
     ("wildlife_habitat",   "Wildlife Habitat",     "wildlife", 60),
     ("nitrogen_fixer",     "Nitrogen Fixer",       "function", 110),
     ("soil_builder",       "Soil Builder",         "function", 120),
-    ("pest_deterrent",     "Pest Deterrent",       "function", 130),
-    ("windbreak",          "Windbreak",            "function", 140),
-    ("erosion_control",    "Erosion Control",      "function", 150),
-    ("water_purification", "Water Purification",   "function", 160),
-    ("early_successional", "Early Successional",   "function", 170),
-    ("biomass",            "Biomass / Chop-Drop",  "function", 180),
-    ("groundcover",        "Groundcover",          "utility",  210),
-    ("hedge",              "Hedge",                "utility",  220),
-    ("medicinal",          "Medicinal",            "utility",  230),
-    ("ornamental",         "Ornamental",           "utility",  240),
-    ("aquatic",            "Aquatic",              "utility",  250),
+    ("pioneer_species",    "Pioneer Species",      "function", 130),
+    ("canopy_layer",       "Canopy Layer",         "landscape", 205),
+    ("windbreak",          "Windbreak",            "landscape", 210),
+    ("hedge",              "Hedge",                "landscape", 220),
+    ("groundcover",        "Groundcover",          "landscape", 230),
+    ("erosion_control",    "Erosion Control",      "landscape", 240),
+    ("riparian_filter",    "Riparian Filter",      "landscape", 250),
+    ("ornamental",         "Ornamental",           "landscape", 260),
+    ("aquatic",            "Aquatic",              "landscape", 270),
+    ("medicinal",          "Medicinal",            "utility",  310),
 ]
 
 

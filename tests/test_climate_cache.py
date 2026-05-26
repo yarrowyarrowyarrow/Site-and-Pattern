@@ -36,9 +36,12 @@ class TestClimateCache(unittest.TestCase):
     def setUpClass(cls):
         init_db()
 
-    def test_schema_version_is_v14(self):
-        """V1.35 must ship schema v14."""
-        self.assertEqual(_SCHEMA_VERSION, 14)
+    def test_schema_version_at_least_v14(self):
+        """V1.35 introduced schema v14. Subsequent releases may bump
+        further (V1.37 → v15 for the uses vocabulary refresh); the
+        invariant we care about is that climate_cache exists, which
+        is true from v14 onward."""
+        self.assertGreaterEqual(_SCHEMA_VERSION, 14)
 
     def test_quantize_latlng(self):
         """0.01° granularity → multiplying by 100 and rounding."""

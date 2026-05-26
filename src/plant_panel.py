@@ -70,26 +70,38 @@ _LIFECYCLE_LABELS: dict[str, str] = {
     "biennial":  "Biennial",
 }
 
+# V1.37: vocabulary refined toward "native habitat" + "functional
+# landscape design" framing. Dropped permaculture-flavored tags
+# (biomass = chop-and-drop, pest_deterrent = companion-planting,
+# food_forest, edible_landscape). Renamed a few labels for clarity:
+# host_plant → "Larval Host" (clearer for the audience),
+# pollinator → "Pollinator Support",
+# early_successional → "Pioneer Species",
+# water_purification → "Riparian Filter".
+# Promoted "overstory" (informal tag in data) to canonical
+# "canopy_layer" so users can describe vertical structure.
 _USE_LABELS: dict[str, str] = {
-    "nitrogen_fixer":     "Nitrogen Fixer",
-    "soil_builder":       "Soil Builder",
-    "pollinator":         "Pollinator Plant",
-    "windbreak":          "Windbreak",
-    "medicinal":          "Medicinal",
-    "wildlife_habitat":   "Wildlife Habitat",
-    "host_plant":         "Host Plant",
+    # Wildlife / native habitat
     "keystone_species":   "Keystone Species",
+    "host_plant":         "Larval Host",
+    "pollinator":         "Pollinator Support",
     "bird_food":          "Bird Food",
     "nesting_material":   "Nesting Material",
-    "early_successional": "Early Successional",
-    "biomass":            "Biomass / Chop-Drop",
+    "wildlife_habitat":   "Wildlife Habitat",
+    # Ecological function
+    "nitrogen_fixer":     "Nitrogen Fixer",
+    "soil_builder":       "Soil Builder",
+    "pioneer_species":    "Pioneer Species",
+    # Functional landscape design
+    "canopy_layer":       "Canopy Layer",
+    "windbreak":          "Windbreak",
+    "hedge":              "Hedge",
     "groundcover":        "Groundcover",
     "erosion_control":    "Erosion Control",
-    "pest_deterrent":     "Pest Deterrent",
-    "hedge":              "Hedge",
+    "riparian_filter":    "Riparian Filter",
     "ornamental":         "Ornamental",
-    "water_purification": "Water Purification",
     "aquatic":            "Aquatic",
+    "medicinal":          "Medicinal",
 }
 
 
@@ -741,7 +753,17 @@ class PlantRowDelegate(QStyledItemDelegate):
             fruit   = plant.get("fruit_period") or "—"
             edible  = plant.get("edible_parts") or "—"
             uses_raw = plant.get("permaculture_uses") or ""
-            uses = ", ".join(_USE_LABELS.get(u.strip(), u.strip())
+            # V1.37: unknown tags (not in _USE_LABELS) used to render as
+            # the raw snake_case key — "food_forest" alongside
+            # "Pollinator Plant" looked inconsistent. Now we title-case
+            # them with spaces so the row reads uniformly regardless of
+            # whether each tag has a canonical entry yet.
+            def _format_use_tag(key: str) -> str:
+                label = _USE_LABELS.get(key)
+                if label:
+                    return label
+                return key.replace("_", " ").title()
+            uses = ", ".join(_format_use_tag(u.strip())
                              for u in uses_raw.split(",") if u.strip()) or "—"
 
             zmin = plant.get("hardiness_zone_min")

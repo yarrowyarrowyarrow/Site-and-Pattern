@@ -232,6 +232,136 @@ def _cache_save_json(key: str, data: dict) -> None:
 
 # ── Edmonton vector contour fetch ───────────────────────────────────────────
 
+# ── Offline at-point elevation lookup (V1.37) ───────────────────────────────
+#
+# When Open-Meteo's elevation endpoint is unreachable or returns null
+# at the property pin (e.g. river-valley pins where the Copernicus DEM
+# has gaps over water), fall back to the City of Edmonton's downloaded
+# 0.5 m LiDAR contours. This is local-only data, so it's both faster
+# (no network) and more accurate (0.5 m vs 30 m resolution) — when the
+# user has the offline pack.
+#
+# Result shape matches ``property_data._parse_elevation`` so the site
+# panel slot doesn't need to special-case it.
+
+def lookup_point_elevation_edmonton(
+    lat: float, lng: float, sample_m: float = 60.0,
+) -> Optional[dict]:
+    """Interpolate point elevation from the offline Edmonton LiDAR
+    contour dataset. Returns the same dict shape as
+    ``property_data._parse_elevation`` (elevation + slope + aspect) so
+    the site panel slot doesn't need to special-case it. Returns
+    ``None`` when offline data isn't present or the point falls
+    outside Edmonton's coverage."""
+    try:
+        from src.terrain_store import TerrainStore as _TerrainStore
+        ts = _TerrainStore()
+        if not ts.has_edmonton_data():
+            return None
+    except Exception:
+        return None
+
+    # Edmonton coverage envelope — fail fast on points clearly outside.
+    if not (53.30 <= lat <= 53.75 and -113.75 <= lng <= -113.20):
+        return None
+
+    # Pull contours in a small bbox around the pin — ~200 m radius is
+    # ample for IDW with the 0.5 m contour interval.
+    radius_m = max(200.0, 4.0 * sample_m)
+    mlat, mlng = metres_per_deg(lat)
+    dlat = radius_m / mlat
+    dlng = radius_m / mlng
+    bbox = {
+        "south": lat - dlat, "north": lat + dlat,
+        "west":  lng - dlng, "east":  lng + dlng,
+    }
+    try:
+        contours = ts.get_edmonton_contours(bbox, interval_m=0.5)
+    except Exception:
+        return None
+    if not contours:
+        return None
+
+    # Flatten to (lat, lng, elev) vertex list.
+    verts: list[tuple[float, float, float]] = []
+    for feat in contours:
+        elev = feat.get("elevation_m")
+        if elev is None:
+            continue
+        for coord in feat.get("coords") or []:
+            if len(coord) < 2:
+                continue
+            verts.append((coord[0], coord[1], float(elev)))
+    if not verts:
+        return None
+
+    # IDW the centre + 4 cardinal neighbours, then derive slope/aspect
+    # exactly like the Open-Meteo path so the result is interchangeable.
+    def _idw(plat: float, plng: float) -> Optional[float]:
+        sum_w = sum_we = 0.0
+        # Tight floor on d² so a sample exactly on a vertex doesn't
+        # blow up; ~0.25 m² matches the contour-vertex spacing.
+        for vlat, vlng, ve in verts:
+            dlat_m = (vlat - plat) * mlat
+            dlng_m = (vlng - plng) * mlng
+            d2 = max(dlat_m * dlat_m + dlng_m * dlng_m, 0.25)
+            w = 1.0 / d2
+            sum_w += w
+            sum_we += w * ve
+        return sum_we / sum_w if sum_w > 0 else None
+
+    centre = _idw(lat, lng)
+    if centre is None:
+        return None
+
+    # Sample N/E/S/W at sample_m offsets — same convention as
+    # property_data._slope_sample_points.
+    nlat = lat + sample_m / mlat
+    slat = lat - sample_m / mlat
+    elng = lng + sample_m / mlng
+    wlng = lng - sample_m / mlng
+    n = _idw(nlat, lng)
+    s = _idw(slat, lng)
+    e = _idw(lat,  elng)
+    w = _idw(lat,  wlng)
+
+    # All four neighbours come from the same contour cloud, so unlike
+    # the Open-Meteo path none of them will be None individually —
+    # but guard anyway.
+    if n is None or s is None or e is None or w is None:
+        return {
+            "elevation_m": round(centre, 1),
+            "slope_pct":   None, "slope_deg": None,
+            "aspect_deg":  None, "aspect":   "—",
+            "sample_m":    sample_m,
+            "source":      "City of Edmonton — 0.5 m LiDAR (offline IDW, centre only)",
+        }
+
+    dz_dx = (e - w) / (2.0 * sample_m)
+    dz_dy = (n - s) / (2.0 * sample_m)
+    grad = math.hypot(dz_dx, dz_dy)
+    slope_pct = round(grad * 100.0, 2)
+    slope_deg = round(math.degrees(math.atan(grad)), 2)
+    if slope_pct < 0.05:
+        aspect_deg, aspect = None, "Flat"
+    else:
+        ang = (math.degrees(math.atan2(-dz_dx, -dz_dy)) + 360.0) % 360.0
+        aspect_deg = round(ang, 1)
+        # Reuse the compass_label helper via local import to avoid a
+        # circular dependency (property_data already imports terrain).
+        from src.property_data import _compass_label as _compass
+        aspect = _compass(ang)
+    return {
+        "elevation_m": round(centre, 1),
+        "slope_pct":   slope_pct,
+        "slope_deg":   slope_deg,
+        "aspect_deg":  aspect_deg,
+        "aspect":      aspect,
+        "sample_m":    sample_m,
+        "source":      "City of Edmonton — 0.5 m LiDAR (offline IDW)",
+    }
+
+
 def fetch_edmonton_contours(bbox: dict, interval_m: float = 0.5) -> Optional[list[dict]]:
     """
     Fetch Edmonton 0.5 m contour lines intersecting ``bbox``.

@@ -166,5 +166,65 @@ class TestUsesJunction(unittest.TestCase):
         self.assertEqual(new_results, legacy)
 
 
+class TestUsesVocabularyRefresh(unittest.TestCase):
+    """V1.37 refresh of `_USE_DEFINITIONS`. Verifies the dropped /
+    renamed / promoted tags are reflected in the seeded `uses` lookup
+    table and (for the renames) that the existing JSON data files no
+    longer carry the old keys."""
+
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+
+    def _seeded_keys(self) -> set[str]:
+        conn = get_connection()
+        try:
+            return {r[0] for r in conn.execute("SELECT key FROM uses").fetchall()}
+        finally:
+            conn.close()
+
+    def test_dropped_tags_not_in_lookup(self):
+        keys = self._seeded_keys()
+        for dropped in ("biomass", "pest_deterrent",
+                        "food_forest", "edible_landscape"):
+            self.assertNotIn(dropped, keys,
+                             f"Dropped tag {dropped!r} should not be in `uses`")
+
+    def test_renamed_tags_use_new_keys(self):
+        keys = self._seeded_keys()
+        # New canonical names
+        for new in ("pioneer_species", "riparian_filter", "canopy_layer"):
+            self.assertIn(new, keys, f"Expected canonical tag {new!r}")
+        # Old names no longer canonical
+        for old in ("early_successional", "water_purification", "overstory"):
+            self.assertNotIn(old, keys, f"Old tag {old!r} should be renamed")
+
+    def test_no_data_record_references_dropped_or_old_tags(self):
+        """The migration script that ran in V1.37 must have cleaned up
+        every record — if a tag here surfaces in any record, the data
+        files and the lookup table will drift apart on next reseed."""
+        import json, os
+        forbidden = {
+            "biomass", "pest_deterrent", "food_forest", "edible_landscape",
+            "early_successional", "water_purification", "overstory",
+        }
+        project_root = os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__))
+        )
+        for fname in ("plants_master.json", "garden_plants.json"):
+            path = os.path.join(project_root, "data", fname)
+            with open(path, encoding="utf-8") as f:
+                records = json.load(f)
+            for r in records:
+                tags = (r.get("permaculture_uses") or "").split(",")
+                tags = {t.strip() for t in tags if t.strip()}
+                overlap = tags & forbidden
+                self.assertFalse(
+                    overlap,
+                    f"{fname}: {r.get('common_name')!r} still has "
+                    f"forbidden tag(s) {overlap}",
+                )
+
+
 if __name__ == "__main__":
     unittest.main()

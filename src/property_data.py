@@ -345,9 +345,28 @@ def fetch_elevation(lat: float, lng: float, sample_m: float = 60.0) -> Optional[
     lngs = ",".join(f"{p[1]:.6f}" for p in points)
     url  = f"https://api.open-meteo.com/v1/elevation?latitude={lats}&longitude={lngs}"
     data = _http_get_json(url)
-    if not data or "elevation" not in data:
-        return None
-    return _parse_elevation(data["elevation"], sample_m)
+    api_result = None
+    if data and "elevation" in data:
+        api_result = _parse_elevation(data["elevation"], sample_m)
+    if api_result is not None and api_result.get("slope_pct") is not None:
+        # Full success from Open-Meteo — no need to consult the
+        # offline pack.
+        return api_result
+
+    # V1.37: when Open-Meteo gives us no centre (returns None or null at
+    # centre) or only a centre with no slope, try the local Edmonton
+    # 0.5 m LiDAR pack. It's higher-resolution AND fills in
+    # river-valley pins where the Copernicus DEM has nulls.
+    try:
+        from src.terrain import lookup_point_elevation_edmonton
+        offline = lookup_point_elevation_edmonton(lat, lng, sample_m=sample_m)
+    except Exception:
+        offline = None
+    if offline is not None and offline.get("slope_pct") is not None:
+        return offline
+    # Fall back to whatever the API gave us (even if it's centre-only)
+    # so the user still sees an elevation reading in the at-pin row.
+    return api_result if api_result is not None else offline
 
 
 def _slope_sample_points(lat: float, lng: float, m: float):

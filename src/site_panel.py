@@ -74,21 +74,25 @@ class _SiteFetchWorker(QObject):
 
     @pyqtSlot()
     def run(self):
-        # Imported lazily so unit tests don't pull urllib at import time.
+        """V1.37: run the five fast fetches *concurrently* via a thread
+        pool, then declare "site data ready" as soon as they're all
+        in. Total perceived latency drops from ~sum-of-latencies
+        (sequential) to ~max-of-latencies (parallel) — typically
+        SoilGrids and Open-Meteo elevation run in 0.5-1.5 s and
+        used to stack, now they overlap. The slower climate fetch
+        still runs as a tail step so the GDD row updates from "—"
+        when its result arrives separately.
+
+        Cancellation is best-effort: in-flight HTTP requests can't
+        be interrupted, but no further work happens once cancel()
+        is called."""
+        from concurrent.futures import ThreadPoolExecutor
         from src.property_data import (
             fetch_rainfall, fetch_soil, fetch_elevation, fetch_hardiness,
             fetch_climate, fetch_ecoregion,
         )
         out = {"lat": self.lat, "lng": self.lng}
 
-        # V1.37: climate (Open-Meteo Historical Weather) is the only
-        # slow fetch here — 2-4 s vs <500 ms for everything else.
-        # Run the fast steps first so the site panel paints zone /
-        # elevation / rainfall / soil / ecoregion within a second,
-        # then declare "site data ready" before the climate call so
-        # the perceived pin-drop latency drops back to where it was
-        # pre-V1.35. The climate signal still fires later when the
-        # GDD / frost values arrive.
         fast_steps = [
             ("ecoregion", "Detecting ecoregion…",             fetch_ecoregion, self.ecoregion),
             ("hardiness", "Looking up hardiness zone…",       fetch_hardiness, self.hardiness),
@@ -96,23 +100,36 @@ class _SiteFetchWorker(QObject):
             ("rainfall",  "Computing ERA5-Land rainfall…",    fetch_rainfall,  self.rainfall),
             ("soil",      "Querying SoilGrids…",              fetch_soil,      self.soil),
         ]
-        for key, msg, fn, sig in fast_steps:
-            if self._cancelled:
-                break
-            self.progress.emit(msg)
-            try:
-                value = fn(self.lat, self.lng)
-            except Exception:
-                value = None
-            out[key] = value
-            sig.emit(value)
 
-        # Tell the panel "fast batch is in" so the green ready status
-        # flips immediately. The climate fetch then runs as a tail
-        # step — its result arrives separately via the `climate`
-        # signal. We only emit `finished` (which tears down the
-        # thread via `thread.quit`) after the tail step completes,
-        # so the thread can keep running.
+        def _run_step(fn):
+            try:
+                return fn(self.lat, self.lng)
+            except Exception:
+                return None
+
+        # Five concurrent HTTP / local-lookup calls. Sequential total
+        # was ~5 seconds; parallel runs in whatever the slowest single
+        # fetch takes (usually SoilGrids at ~1-2 s).
+        self.progress.emit("Fetching site data…")
+        with ThreadPoolExecutor(max_workers=len(fast_steps)) as pool:
+            future_to_step = {
+                pool.submit(_run_step, fn): (key, sig)
+                for key, _msg, fn, sig in fast_steps
+            }
+            # As each future completes, surface its result via the
+            # matching signal — the panel updates incrementally instead
+            # of waiting for the whole batch.
+            from concurrent.futures import as_completed
+            for future in as_completed(future_to_step):
+                if self._cancelled:
+                    break
+                key, sig = future_to_step[future]
+                value = future.result()
+                out[key] = value
+                sig.emit(value)
+
+        # Fast batch is in — flip the user-visible status to ready
+        # immediately. The climate signal will still arrive later.
         self.fast_ready.emit()
 
         if not self._cancelled:
@@ -123,6 +140,10 @@ class _SiteFetchWorker(QObject):
                 value = None
             out["climate"] = value
             self.climate.emit(value)
+            # Clear the progress line once the climate fetch is done —
+            # otherwise the "Computing growing-degree days…" message
+            # sits there forever even after the GDD row populates.
+            self.progress.emit("Site data ready.")
 
         self.finished.emit(out)
 
