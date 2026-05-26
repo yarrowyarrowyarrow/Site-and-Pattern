@@ -17,6 +17,7 @@ Layout
 
 import json
 import os
+import sys
 from datetime import datetime
 from typing import Optional
 
@@ -370,6 +371,204 @@ class MainWindow(QMainWindow):
             if len(sizes) >= 2 and sizes[1] < 100:
                 total = sum(sizes) or 1000
                 self._splitter.setSizes([int(total * 0.7), int(total * 0.3)])
+
+    # ── Help → About / Version / Switch (V1.37) ──────────────────────────────
+
+    def _repo_path(self):
+        """Absolute path to the project root (where .git lives for
+        source installs). Returns None if the running binary isn't
+        inside a git repo (e.g. PyInstaller .exe)."""
+        import os
+        here = os.path.dirname(os.path.abspath(__file__))
+        # src/app.py → repo root is one level up
+        candidate = os.path.dirname(here)
+        if os.path.isdir(os.path.join(candidate, ".git")):
+            return candidate
+        return None
+
+    def _current_branch_name(self):
+        """Return the current git branch name, or None for frozen /
+        non-git installs. Cached only across the call site that built
+        the menu label."""
+        repo = self._repo_path()
+        if not repo:
+            return None
+        import subprocess
+        try:
+            res = subprocess.run(
+                ["git", "-C", repo, "rev-parse", "--abbrev-ref", "HEAD"],
+                capture_output=True, text=True, timeout=3,
+            )
+            if res.returncode == 0:
+                return res.stdout.strip() or None
+        except Exception:
+            pass
+        return None
+
+    def _on_about(self):
+        """Show a small About dialog: current V<major>.<minor>, git
+        commit, schema version, and a link to the releases page."""
+        repo = self._repo_path()
+        branch = self._current_branch_name() or "?"
+        commit = "?"
+        if repo:
+            import subprocess
+            try:
+                res = subprocess.run(
+                    ["git", "-C", repo, "rev-parse", "--short", "HEAD"],
+                    capture_output=True, text=True, timeout=3,
+                )
+                if res.returncode == 0:
+                    commit = res.stdout.strip() or "?"
+            except Exception:
+                pass
+        try:
+            from src.db.plants import _SCHEMA_VERSION as schema_v
+        except Exception:
+            schema_v = "?"
+        from src.version_branch import parse_version_branch
+        is_release = parse_version_branch(branch) is not None
+        kind_note = "" if is_release else (
+            "\n\nYou're on a development branch — the V*.* branch "
+            "convention isn't being followed. Use Help → Switch to a "
+            "specific version to move to a release branch."
+        )
+        QMessageBox.information(
+            self, "About PermaDesign",
+            f"<b>PermaDesign</b><br>"
+            f"Branch: <b>{branch}</b><br>"
+            f"Commit: {commit}<br>"
+            f"Schema version: v{schema_v}<br><br>"
+            f"Native-plant landscape designer for Alberta and the "
+            f"Canadian prairies."
+            + kind_note
+        )
+
+    def _on_pick_version(self):
+        """Let the user pick any published V<major>.<minor> branch and
+        switch the checkout to it. Useful for rolling back to an older
+        release or jumping ahead. Frozen installs get redirected to
+        the releases page."""
+        # Frozen / non-git install — no checkout to switch.
+        if getattr(sys, "frozen", False):
+            self._open_releases_page()
+            return
+        repo = self._repo_path()
+        if not repo:
+            QMessageBox.information(
+                self, "Switch version",
+                "This install isn't a git checkout — there's nothing to "
+                "switch. Visit the releases page to download a specific "
+                "installer."
+            )
+            self._open_releases_page()
+            return
+
+        import subprocess
+
+        def _git(*args, timeout=10):
+            return subprocess.run(
+                ["git", "-C", repo, *args],
+                capture_output=True, text=True, timeout=timeout, check=False,
+            )
+
+        # Fetch so we see any branches published since launch.
+        self.statusBar().showMessage("Fetching version list…", 2000)
+        fetch = _git("fetch", "--prune", "--quiet")
+        if fetch.returncode != 0:
+            QMessageBox.warning(
+                self, "Switch version",
+                "Couldn't reach the git remote (check your network).\n\n"
+                f"{fetch.stderr.strip()}"
+            )
+            return
+
+        # Collect every V<major>.<minor> branch — remote + local — sorted
+        # newest first.
+        from src.version_branch import parse_version_branch
+        names: set[str] = set()
+        for ref_glob in ("refs/remotes/origin/", "refs/heads/"):
+            res = _git("for-each-ref", "--format=%(refname:short)", ref_glob)
+            if res.returncode != 0:
+                continue
+            for line in res.stdout.splitlines():
+                short = line.strip()
+                name = short[len("origin/"):] if short.startswith("origin/") else short
+                if parse_version_branch(name):
+                    names.add(name)
+        if not names:
+            QMessageBox.information(
+                self, "Switch version",
+                "No V<major>.<minor> branches found on this remote."
+            )
+            return
+        ordered = sorted(
+            names,
+            key=lambda n: parse_version_branch(n),
+            reverse=True,
+        )
+        current = self._current_branch_name() or "?"
+
+        # Build the list dialog. Pre-select the current branch if
+        # present in the list.
+        from PyQt6.QtWidgets import QInputDialog
+        labels = [
+            f"{n}  (current)" if n == current else n
+            for n in ordered
+        ]
+        try:
+            preselect = ordered.index(current)
+        except ValueError:
+            preselect = 0
+        choice, ok = QInputDialog.getItem(
+            self, "Switch to a specific version",
+            "Pick a release branch. The app will check out the chosen "
+            "branch and pull any new commits. You'll need to restart "
+            "the app to load the new code.",
+            labels, current=preselect, editable=False,
+        )
+        if not ok or not choice:
+            return
+        target = ordered[labels.index(choice)]
+        if target == current:
+            QMessageBox.information(
+                self, "Switch version",
+                f"You're already on {target}."
+            )
+            return
+
+        # Reuse the existing dirty-tree handling + offer-branch-switch
+        # path so behaviour matches Check for Updates exactly.
+        status = _git("status", "--porcelain")
+        stash_label = None
+        if status.returncode == 0 and status.stdout.strip():
+            choice2 = QMessageBox.question(
+                self, "Uncommitted changes",
+                "Your working tree has uncommitted changes. Stash them "
+                f"before switching to {target}? They'll be restored on "
+                f"the new branch via `git stash pop`.",
+                QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No
+                | QMessageBox.StandardButton.Cancel,
+            )
+            if choice2 == QMessageBox.StandardButton.Cancel:
+                return
+            if choice2 == QMessageBox.StandardButton.Yes:
+                stash_label = f"PermaDesign auto-stash before switch to {target}"
+                stash = _git("stash", "push", "-u", "-m", stash_label)
+                if stash.returncode != 0:
+                    QMessageBox.warning(
+                        self, "Stash failed",
+                        f"Couldn't stash local changes:\n\n{stash.stderr.strip()}"
+                    )
+                    return
+
+        self._offer_branch_switch(
+            _git,
+            target=target,
+            current=current,
+            stash_to_restore=stash_label,
+        )
 
     # ── Help → Check for Updates ──────────────────────────────────────────────
     #
@@ -812,10 +1011,32 @@ class MainWindow(QMainWindow):
         # Help menu
         help_menu = mb.addMenu("&Help")
 
+        # Show the current V<major>.<minor> in the menu item label itself
+        # so the user can read it without opening a dialog. The handler
+        # opens an About dialog with more detail (commit hash, schema
+        # version, etc).
+        from src.version_branch import parse_version_branch
+        current_branch = self._current_branch_name() or ""
+        version_disp = current_branch if parse_version_branch(current_branch) else "dev"
+        act_about = help_menu.addAction(f"&About / Version: {version_disp}")
+        act_about.setStatusTip(
+            "Show the current PermaDesign version, schema version, and "
+            "git commit hash"
+        )
+        act_about.triggered.connect(self._on_about)
+
         act_update = help_menu.addAction("Check for &Updates…")
         act_update.setStatusTip("Pull the latest version from GitHub (source installs) "
                                 "or open the releases page (.exe installs)")
         act_update.triggered.connect(self._on_check_for_updates)
+
+        act_pick = help_menu.addAction("&Switch to a specific version…")
+        act_pick.setStatusTip(
+            "Pick any published V<major>.<minor> branch and switch the "
+            "checkout to it. Handy for rolling back to an older release "
+            "or jumping ahead to one the auto-detector doesn't surface."
+        )
+        act_pick.triggered.connect(self._on_pick_version)
 
     # ── Signal wiring ─────────────────────────────────────────────────────────
 

@@ -660,14 +660,12 @@ EXAMPLE_POLYCULTURES = [
         ],
     },
     {
-        "name": "Medicinal Herb Circle",
-        "description": "Traditional native medicinal plant polyculture arranged in a circle garden. "
-                       "Centred on wild bergamot, an aromatic native mint used by First Nations for "
-                       "respiratory and digestive remedies and a favourite of native bumble bees. "
-                       "Yarrow is used by First Nations for wound care and fever. Wild mint and "
-                       "giant hyssop provide digestive and respiratory remedies. Valerian is a "
-                       "traditional sleep aid. Self-heal (Prunella vulgaris) is a widely used wound "
-                       "herb. All species are hardy native perennials proven in Zone 3 Alberta gardens.",
+        "name": "Aromatic Herb Circle",
+        "description": "A circle of seven hardy native perennials with strong aromatics and "
+                       "pollinator value. Wild bergamot anchors the centre as a magnet for native "
+                       "bumble bees; yarrow, wild mint, giant hyssop, valerian, and self-heal fill "
+                       "the surround. All species are Zone 3 proven in Alberta gardens and tolerate "
+                       "dry summers once established.",
         "members": [
             ("Wild Bergamot",             "pollinator",      0,    0),
             ("Yarrow",                    "soil_builder",    0.8,  0.5),
@@ -679,14 +677,19 @@ EXAMPLE_POLYCULTURES = [
         ],
         "variations": [
             {
-                "name": "First Nations Medicine Wheel",
-                "description": "Medicinal herb circle variant drawing on traditional Indigenous "
-                               "prairie plant uses. Sweetgrass is a sacred ceremonial plant. Rat "
-                               "root (Acorus calamus) is used for throat and stomach ailments. "
-                               "Seneca snakeroot is a traditional respiratory remedy. Prairie sage "
-                               "provides smudging material. Wild licorice root was used as a "
-                               "general tonic. Wild bergamot anchors the circle as a native "
-                               "pollinator and traditional medicinal mint.",
+                # Renamed from "First Nations Medicine Wheel" (V1.37).
+                # The original name and description framed the design as
+                # Indigenous traditional knowledge, which it isn't ours
+                # to claim or distribute. The plant list is unchanged —
+                # these are real native prairie species hardy in Zone 3 —
+                # but the framing is now strictly horticultural.
+                "name": "Native Prairie Aromatics",
+                "description": "Seven Alberta-native prairie perennials chosen for strong aromatics, "
+                               "pollinator support, and Zone 3 cold tolerance: wild bergamot, "
+                               "sweetgrass, prairie sage, rat root, wild licorice, seneca snakeroot, "
+                               "and yarrow. The species mix favours drought-tolerant plants once "
+                               "established and provides a long bloom window from June into "
+                               "September.",
                 "members": [
                     ("Wild Bergamot",             "pollinator",      0,    0),
                     ("Sweetgrass",                "other",           0.8,  0.5),

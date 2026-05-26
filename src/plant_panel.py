@@ -91,7 +91,7 @@ _USE_LABELS: dict[str, str] = {
     # Ecological function
     "nitrogen_fixer":     "Nitrogen Fixer",
     "soil_builder":       "Soil Builder",
-    "pioneer_species":    "Pioneer Species",
+    "early_successional": "Early Successional",
     # Functional landscape design
     "canopy_layer":       "Canopy Layer",
     "windbreak":          "Windbreak",

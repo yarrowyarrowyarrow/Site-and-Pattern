@@ -555,78 +555,15 @@ class SitePanel(QWidget):
         slope_btn_row.addWidget(btn_auto_clear)
         slope_layout.addLayout(slope_btn_row)
 
-        # ── Manual contour-line drawing (moved from Analysis tab) ───
-        contour_header = QLabel("<b>Draw contour line (manual)</b>")
-        contour_header.setStyleSheet("color: #a5d6a7; margin-top: 6px;")
-        slope_layout.addWidget(contour_header)
-
-        contour_info = QLabel(
-            "Draw manual contour lines to indicate terrain slope. Helps\n"
-            "place swales, ponds, and water features. Click points on the\n"
-            "map to draw, double-click to finish."
-        )
-        contour_info.setWordWrap(True)
-        contour_info.setStyleSheet("color: #90a4ae; font-size: 11px;")
-        slope_layout.addWidget(contour_info)
-
-        contour_form = QFormLayout()
-        contour_form.setContentsMargins(0, 0, 0, 0)
-
-        self._contour_elevation = QDoubleSpinBox()
-        self._contour_elevation.setRange(0, 2000)
-        self._contour_elevation.setSingleStep(0.5)
-        self._contour_elevation.setValue(0)
-        self._contour_elevation.setSuffix(" m")
-        contour_form.addRow("Elevation:", self._contour_elevation)
-
-        self._contour_interval = QDoubleSpinBox()
-        self._contour_interval.setRange(0.1, 10.0)
-        self._contour_interval.setSingleStep(0.5)
-        self._contour_interval.setValue(1.0)
-        self._contour_interval.setSuffix(" m")
-        contour_form.addRow("Interval:", self._contour_interval)
-
-        cc_row = QHBoxLayout()
-        self._contour_color_btn = QPushButton()
-        self._contour_color_btn.setFixedSize(28, 28)
-        self._contour_color_btn.setStyleSheet(
-            f"background: {self._contour_color}; border: 1px solid #4a7a4a; "
-            f"border-radius: 4px;"
-        )
-        self._contour_color_btn.clicked.connect(self._pick_contour_color)
-        cc_row.addWidget(self._contour_color_btn)
-        cc_row.addStretch()
-        contour_form.addRow("Color:", cc_row)
-
-        self._contour_labels = QCheckBox("Show elevation labels")
-        self._contour_labels.setChecked(True)
-        contour_form.addRow(self._contour_labels)
-
-        self._contour_slope_arrows = QCheckBox("Show downhill arrows")
-        self._contour_slope_arrows.setChecked(True)
-        self._contour_slope_arrows.setToolTip(
-            "Show arrows indicating downhill direction between contour lines"
-        )
-        contour_form.addRow(self._contour_slope_arrows)
-
-        slope_layout.addLayout(contour_form)
-
-        contour_btn_row = QHBoxLayout()
-        btn_draw_contour = QPushButton("Draw Contour Line")
-        btn_draw_contour.setStyleSheet(
-            "QPushButton { background: #5d4037; color: #efebe9; "
-            "border: 1px solid #795548; border-radius: 4px; padding: 6px; "
-            "font-weight: bold; }"
-            "QPushButton:hover { background: #6d4c41; }"
-        )
-        btn_draw_contour.clicked.connect(self._on_draw_contour)
-        contour_btn_row.addWidget(btn_draw_contour)
-
-        btn_clear_contour = QPushButton("Clear All")
-        btn_clear_contour.setStyleSheet(_BTN_SECONDARY)
-        btn_clear_contour.clicked.connect(self.contour_cleared.emit)
-        contour_btn_row.addWidget(btn_clear_contour)
-        slope_layout.addLayout(contour_btn_row)
+        # The manual "Draw contour line" UI lived here pre-V1.37. It
+        # was removed (user feedback: "I'm not sure a scenario where
+        # the draw manually option would be useful"). The Auto-contour
+        # & slope ramp section above generates contours from the DEM
+        # for any chosen area — that covers every real workflow we
+        # could think of. The `contour_requested` / `contour_cleared`
+        # signals + `_on_draw_contour` / `_pick_contour_color` helpers
+        # remain in place (they're cheap) so re-enabling the section
+        # is a single block of UI build code if the need arises.
 
         layout.addWidget(self._slope_box)
 
@@ -941,31 +878,18 @@ class SitePanel(QWidget):
         """Called from MainWindow with progress / queue / result info."""
         self._auto_status.setText(text)
 
-    # ── Manual contour drawing ─────────────────────────────────────────────
+    # ── Manual contour drawing (UI removed V1.37) ──────────────────────────
+    # Helpers below are intentional no-ops kept as placeholders so any
+    # stray callsite — e.g. a saved JSON pulled from an older session —
+    # finds the method names and doesn't crash. To re-enable manual
+    # contour drawing, restore the QGroupBox section in `_build_ui`
+    # and revert these stubs to the pre-V1.37 implementation.
 
     def _pick_contour_color(self):
-        color = QColorDialog.getColor(
-            QColor(self._contour_color), self, "Contour color"
-        )
-        if color.isValid():
-            self._contour_color = color.name()
-            self._contour_color_btn.setStyleSheet(
-                f"background: {self._contour_color}; "
-                f"border: 1px solid #4a7a4a; border-radius: 4px;"
-            )
+        return
 
     def _on_draw_contour(self):
-        self.contour_requested.emit({
-            "elevation_m":       self._contour_elevation.value(),
-            "interval_m":        self._contour_interval.value(),
-            "color":             self._contour_color,
-            "show_labels":       self._contour_labels.isChecked(),
-            "show_slope_arrows": self._contour_slope_arrows.isChecked(),
-        })
-        # Auto-increment elevation for next contour line.
-        self._contour_elevation.setValue(
-            self._contour_elevation.value() + self._contour_interval.value()
-        )
+        return
 
     # ── Terrain Data section ───────────────────────────────────────────────
 

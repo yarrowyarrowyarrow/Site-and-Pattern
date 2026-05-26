@@ -61,14 +61,22 @@ _PLANT_FAUNA_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "plant_fauna_maste
 # fresh on their next property pin set.
 # v15 (V1.37): plant-uses vocabulary refresh. Dropped permaculture-
 # flavored tags from `_USE_DEFINITIONS` (biomass, pest_deterrent,
-# food_forest, edible_landscape); renamed labels for clarity
+# food_forest, edible_landscape); renamed some labels for clarity
 # (host_plant → "Larval Host", pollinator → "Pollinator Support",
-# early_successional → "Pioneer Species", water_purification →
-# "Riparian Filter"); promoted "overstory" → "canopy_layer" so it's
-# a canonical tag rather than an informal one. Bump triggers a
-# reseed which repopulates the `uses` lookup + `plant_uses` junction
-# from the updated JSON.
-_SCHEMA_VERSION = 15
+# water_purification → "Riparian Filter"); promoted "overstory" →
+# "canopy_layer" so it's a canonical tag rather than an informal one.
+# v16 (V1.37, second pass): two reverts after user feedback.
+# (a) "Pioneer Species" / `pioneer_species` reverted to
+# "Early Successional" / `early_successional` — the "pioneer" framing
+# carries colonizer connotations that don't belong in this app's
+# vocabulary. (b) The "First Nations Medicine Wheel" polyculture
+# variation was renamed to "Native Prairie Aromatics" and its parent
+# was renamed from "Medicinal Herb Circle" to "Aromatic Herb Circle";
+# both descriptions stripped of the Indigenous-knowledge claims that
+# weren't ours to redistribute. The plant lists are unchanged — the
+# species are real Alberta natives — but the framing is now strictly
+# horticultural.
+_SCHEMA_VERSION = 16
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -91,7 +99,7 @@ _USE_DEFINITIONS: list[tuple[str, str, str, int]] = [
     ("wildlife_habitat",   "Wildlife Habitat",     "wildlife", 60),
     ("nitrogen_fixer",     "Nitrogen Fixer",       "function", 110),
     ("soil_builder",       "Soil Builder",         "function", 120),
-    ("pioneer_species",    "Pioneer Species",      "function", 130),
+    ("early_successional", "Early Successional",   "function", 130),
     ("canopy_layer",       "Canopy Layer",         "landscape", 205),
     ("windbreak",          "Windbreak",            "landscape", 210),
     ("hedge",              "Hedge",                "landscape", 220),

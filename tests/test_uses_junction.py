@@ -192,12 +192,18 @@ class TestUsesVocabularyRefresh(unittest.TestCase):
 
     def test_renamed_tags_use_new_keys(self):
         keys = self._seeded_keys()
-        # New canonical names
-        for new in ("pioneer_species", "riparian_filter", "canopy_layer"):
+        # New canonical names (V1.37 first pass)
+        for new in ("riparian_filter", "canopy_layer"):
             self.assertIn(new, keys, f"Expected canonical tag {new!r}")
         # Old names no longer canonical
-        for old in ("early_successional", "water_purification", "overstory"):
+        for old in ("water_purification", "overstory"):
             self.assertNotIn(old, keys, f"Old tag {old!r} should be renamed")
+        # V1.37 second pass: "Pioneer Species" reverted to
+        # "Early Successional" — user feedback flagged the colonizer
+        # framing of "pioneer". Key kept as the original
+        # `early_successional`.
+        self.assertIn("early_successional", keys)
+        self.assertNotIn("pioneer_species", keys)
 
     def test_no_data_record_references_dropped_or_old_tags(self):
         """The migration script that ran in V1.37 must have cleaned up
@@ -206,7 +212,7 @@ class TestUsesVocabularyRefresh(unittest.TestCase):
         import json, os
         forbidden = {
             "biomass", "pest_deterrent", "food_forest", "edible_landscape",
-            "early_successional", "water_purification", "overstory",
+            "water_purification", "overstory", "pioneer_species",
         }
         project_root = os.path.dirname(
             os.path.dirname(os.path.abspath(__file__))
