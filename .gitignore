@@ -31,3 +31,4 @@ Thumbs.db
 
 # Autosave
 *.perma.geojson.bak
+graphify-out/
