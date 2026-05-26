@@ -146,11 +146,10 @@ Things that happened, things that didn't, and why.
   vocabulary refocus. Renaming the column would require migration; for
   now, treat the name as historical and ignore. The user-facing label
   in the UI is "Uses".
-- **"Red Indian Paintbrush" common_name** (Castilleja species) was
-  NOT renamed in the V1.37 Indigenous-knowledge cleanup. It's the
-  established horticultural common name; renaming would affect
-  lookups and polyculture references. Flagged for an explicit
-  user decision.
+- **"Red Indian Paintbrush" → "Common Paintbrush"** (Castilleja
+  miniata), renamed in V1.37 with user approval. The scientific name
+  is the seed pipeline's lookup key, so polyculture / recipe
+  references kept working without further edits.
 
 ### Deferred work
 - **Pyproj / UTM projection** for accurate distance / area math.
@@ -183,6 +182,9 @@ Things that happened, things that didn't, and why.
 - **"First Nations Medicine Wheel"**: renamed to "Native Prairie
   Aromatics" with horticultural-only framing. Don't reintroduce the
   ceremonial / spiritual framing.
+- **"Red Indian Paintbrush"**: renamed to "Common Paintbrush"
+  (Castilleja miniata). The user explicitly approved this rename
+  because the colonial "Indian" descriptor wasn't ours to use.
 - **Vocabulary refresh**: drop tags that explicitly invoke permaculture
   (`biomass`, `pest_deterrent`, `food_forest`, `edible_landscape`).
   Keep tags that describe ecological function (`nitrogen_fixer`,

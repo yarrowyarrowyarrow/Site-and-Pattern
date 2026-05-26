@@ -76,7 +76,13 @@ _PLANT_FAUNA_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "plant_fauna_maste
 # weren't ours to redistribute. The plant lists are unchanged — the
 # species are real Alberta natives — but the framing is now strictly
 # horticultural.
-_SCHEMA_VERSION = 16
+# v17 (V1.37, third pass): "Red Indian Paintbrush" (Castilleja
+# miniata) renamed to "Common Paintbrush" — the historical horticultural
+# common name carried "Indian" as a colonial descriptor. The
+# scientific name is the lookup key in the seed pipeline, so existing
+# polyculture / recipe references continue to resolve correctly on
+# reseed; only the user-visible display name changes.
+_SCHEMA_VERSION = 17
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
