@@ -122,6 +122,144 @@ def test_zone_description_none():
     assert desc  # should not be empty
 
 
+# ── GDD + frost window (V1.35) ────────────────────────────────────────────────
+
+from src.climate import (
+    compute_gdd,
+    frost_window,
+    get_climate_summary,
+    doy_to_date_label,
+)
+
+
+def _synth_year(year: int, day_mean_c: float, day_amplitude_c: float = 5.0,
+                start: int = 1, end: int = 365) -> list[dict]:
+    """Build a year of synthetic daily temperature rows with a constant
+    mean and a fixed min/max amplitude."""
+    from datetime import date, timedelta
+    rows = []
+    d0 = date(year, 1, 1)
+    for doy in range(start, end + 1):
+        d = d0 + timedelta(days=doy - 1)
+        rows.append({
+            "date": d.isoformat(),
+            "tmin": day_mean_c - day_amplitude_c,
+            "tmax": day_mean_c + day_amplitude_c,
+        })
+    return rows
+
+
+def test_compute_gdd_zero_below_base():
+    """All days at -10 °C → no growing-degree days."""
+    rows = _synth_year(2024, day_mean_c=-10.0)
+    assert compute_gdd(rows, base=5.0) == 0.0
+
+
+def test_compute_gdd_simple_warm_year():
+    """365 days at mean 20 °C, base 5 → 365 * 15 = 5475."""
+    rows = _synth_year(2024, day_mean_c=20.0)
+    gdd = compute_gdd(rows, base=5.0)
+    assert abs(gdd - 5475.0) < 0.5
+
+
+def test_compute_gdd_averages_across_years():
+    """5 identical years → mean GDD = one-year GDD."""
+    rows = []
+    for y in range(2019, 2024):
+        rows.extend(_synth_year(y, day_mean_c=15.0))
+    gdd = compute_gdd(rows, base=5.0)
+    # 365 days * 10 (15-5) = 3650, averaged across 5 years = 3650
+    assert abs(gdd - 3650.0) < 0.5
+
+
+def test_compute_gdd_empty_returns_zero():
+    assert compute_gdd([], base=5.0) == 0.0
+
+
+def test_compute_gdd_handles_none_temps():
+    """A row with tmin/tmax=None should be skipped, not crash."""
+    rows = [
+        {"date": "2024-06-01", "tmin": 10.0, "tmax": 20.0},
+        {"date": "2024-06-02", "tmin": None, "tmax": None},
+        {"date": "2024-06-03", "tmin": 10.0, "tmax": 20.0},
+    ]
+    # Mean = 15 each valid day. Base 5. (15-5)*2 = 20. One year → 20.
+    assert abs(compute_gdd(rows, base=5.0) - 20.0) < 0.5
+
+
+def test_frost_window_finds_correct_dates():
+    """Synthetic year with explicit frost events on known DOYs."""
+    rows = [
+        {"date": "2024-04-15", "tmin": -3.0, "tmax": 5.0},   # spring frost
+        {"date": "2024-05-10", "tmin": -1.0, "tmax": 8.0},   # later spring frost
+        {"date": "2024-07-15", "tmin": 8.0,  "tmax": 22.0},  # warm middle
+        {"date": "2024-09-25", "tmin": -2.0, "tmax": 6.0},   # first fall frost
+        {"date": "2024-10-20", "tmin": -5.0, "tmax": 2.0},   # later fall frost
+    ]
+    fw = frost_window(rows)
+    from datetime import date
+    expected_last_spring = date(2024, 5, 10).timetuple().tm_yday
+    expected_first_fall = date(2024, 9, 25).timetuple().tm_yday
+    assert fw["last_spring_frost_doy"] == expected_last_spring
+    assert fw["first_fall_frost_doy"] == expected_first_fall
+    assert fw["frost_free_days"] == expected_first_fall - expected_last_spring
+    assert fw["years_used"] == 1
+
+
+def test_frost_window_averages_across_years():
+    rows = []
+    # Two years with last-spring DOY 100 and 110 → mean 105.
+    rows.append({"date": "2022-04-10", "tmin": -1.0, "tmax": 5.0})  # doy 100
+    rows.append({"date": "2023-04-20", "tmin": -1.0, "tmax": 5.0})  # doy 110
+    # Two years with first-fall DOY 270 and 280 → mean 275.
+    rows.append({"date": "2022-09-27", "tmin": -1.0, "tmax": 5.0})  # doy 270
+    rows.append({"date": "2023-10-07", "tmin": -1.0, "tmax": 5.0})  # doy 280
+    fw = frost_window(rows)
+    assert fw["last_spring_frost_doy"] == 105
+    assert fw["first_fall_frost_doy"] == 275
+    assert fw["frost_free_days"] == 170
+    assert fw["years_used"] == 2
+
+
+def test_frost_window_no_frost_returns_nones():
+    """Subtropical / coastal location — never freezes."""
+    rows = _synth_year(2024, day_mean_c=18.0)
+    fw = frost_window(rows)
+    assert fw["last_spring_frost_doy"] is None
+    assert fw["first_fall_frost_doy"] is None
+    assert fw["frost_free_days"] is None
+
+
+def test_get_climate_summary_with_mock_fetcher():
+    """End-to-end: a mock fetcher returns synthetic rows, summary
+    computes GDD/frost from them and returns the expected shape."""
+    rows = _synth_year(2024, day_mean_c=15.0)
+    summary = get_climate_summary(
+        53.5, -113.5, use_cache=False, _fetcher=lambda lat, lng: rows
+    )
+    assert summary is not None
+    assert "gdd5_mean" in summary
+    assert summary["gdd5_mean"] > 0
+    assert "last_spring_frost_doy" in summary
+    assert summary["source"] == "Open-Meteo / ERA5-Land"
+    assert summary["cached"] is False
+
+
+def test_get_climate_summary_handles_fetch_failure():
+    """If the fetcher returns None, summary returns None."""
+    summary = get_climate_summary(
+        53.5, -113.5, use_cache=False, _fetcher=lambda lat, lng: None
+    )
+    assert summary is None
+
+
+def test_doy_to_date_label():
+    """DOY 1 = Jan 1, DOY 60 = Feb 29 (leap)/Mar 1, etc."""
+    assert doy_to_date_label(1) in ("Jan 1", "Jan 01")
+    assert "Jul" in doy_to_date_label(196)
+    assert doy_to_date_label(None) == "—"
+
+
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

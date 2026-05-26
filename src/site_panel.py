@@ -62,6 +62,7 @@ class _SiteFetchWorker(QObject):
     soil      = pyqtSignal(object)
     elevation = pyqtSignal(object)
     hardiness = pyqtSignal(object)
+    climate   = pyqtSignal(object)            # GDD / frost-window summary
     finished  = pyqtSignal(dict)              # combined result dict
 
     def __init__(self, lat: float, lng: float):
@@ -74,6 +75,7 @@ class _SiteFetchWorker(QObject):
         # Imported lazily so unit tests don't pull urllib at import time.
         from src.property_data import (
             fetch_rainfall, fetch_soil, fetch_elevation, fetch_hardiness,
+            fetch_climate,
         )
         out = {"lat": self.lat, "lng": self.lng}
 
@@ -82,6 +84,7 @@ class _SiteFetchWorker(QObject):
             ("elevation", "Sampling Copernicus DEM…",         fetch_elevation, self.elevation),
             ("rainfall",  "Computing ERA5-Land rainfall…",    fetch_rainfall,  self.rainfall),
             ("soil",      "Querying SoilGrids…",              fetch_soil,      self.soil),
+            ("climate",   "Computing growing-degree days…",   fetch_climate,   self.climate),
         ]
         for key, msg, fn, sig in steps:
             if self._cancelled:
@@ -282,9 +285,12 @@ class SitePanel(QWidget):
         )
         layout.addWidget(self._lbl_status)
 
-        # ── Hardiness ────────────────────────────────────────────────
-        # Order: zone → rainfall → soil sit directly under the pin so
-        # the most-asked-for site stats are visible without scrolling.
+        # ── Hardiness + climate ──────────────────────────────────────
+        # Order: zone → GDD → frost window → rainfall → soil sit directly
+        # under the pin so the most-asked-for site stats are visible
+        # without scrolling. GDD/frost rows are V1.35 additions — they
+        # show "—" until the climate fetch completes (Open-Meteo
+        # archive call, ~3-5 s on first run per location).
         self._hard_box = QGroupBox("Hardiness zone")
         self._hard_box.setStyleSheet(_GROUP_STYLE)
         hl = QFormLayout(self._hard_box)
@@ -293,8 +299,24 @@ class SitePanel(QWidget):
         self._lbl_hard_src = QLabel("")
         self._lbl_hard_src.setStyleSheet("color: #78909c; font-size: 10px;")
         self._lbl_hard_src.setWordWrap(True)
-        hl.addRow("Zone:", self._lbl_zone)
+        self._lbl_gdd   = QLabel("—")
+        self._lbl_gdd.setStyleSheet("color: #c8e6c9;")
+        self._lbl_gdd.setToolTip(
+            "Growing-degree days (base 5 °C) — cumulative summer warmth "
+            "across the growing season. The single best predictor of "
+            "whether a plant has enough heat to flower, fruit, and reach "
+            "maturity at this location."
+        )
+        self._lbl_frost = QLabel("—")
+        self._lbl_frost.setStyleSheet("color: #c8e6c9;")
+        self._lbl_frost.setToolTip(
+            "Average last spring frost → first fall frost, computed "
+            "from the last 5 years of daily temperatures."
+        )
+        hl.addRow("Zone:",   self._lbl_zone)
         hl.addRow("Source:", self._lbl_hard_src)
+        hl.addRow("GDD₅:",   self._lbl_gdd)
+        hl.addRow("Frost:",  self._lbl_frost)
         layout.addWidget(self._hard_box)
 
         # ── Rainfall (moved up under pin/zone) ──────────────────────
@@ -608,6 +630,8 @@ class SitePanel(QWidget):
     def _reset_data_rows(self):
         self._lbl_zone.setText("—")
         self._lbl_hard_src.setText("")
+        self._lbl_gdd.setText("—")
+        self._lbl_frost.setText("—")
         self._lbl_elev.setText("—")
         self._lbl_slope.setText("—")
         self._lbl_aspect.setText("—")
@@ -637,6 +661,7 @@ class SitePanel(QWidget):
         worker.elevation.connect(self._on_elevation)
         worker.rainfall.connect(self._on_rainfall)
         worker.soil.connect(self._on_soil)
+        worker.climate.connect(self._on_climate)
         worker.finished.connect(self._on_finished)
 
         # Auto-teardown chain: when the worker emits finished, quit the
@@ -672,7 +697,7 @@ class SitePanel(QWidget):
             except Exception:
                 pass
             for sig_name in ("progress", "hardiness", "elevation",
-                             "rainfall", "soil", "finished"):
+                             "rainfall", "soil", "climate", "finished"):
                 try:
                     getattr(worker, sig_name).disconnect()
                 except (TypeError, RuntimeError):
@@ -701,6 +726,35 @@ class SitePanel(QWidget):
             zone_text += f"  ({data['avg_extreme_min_c']:.1f} °C avg min)"
         self._lbl_zone.setText(zone_text)
         self._lbl_hard_src.setText(data.get("source", ""))
+
+    def _on_climate(self, data):
+        """Update the GDD₅ + frost-window rows. ``data`` is the dict
+        returned by ``src.climate.get_climate_summary`` or ``None`` on
+        fetch failure."""
+        if not data:
+            self._lbl_gdd.setText("Unavailable (offline?)")
+            self._lbl_frost.setText("—")
+            return
+        from src.climate import doy_to_date_label
+        gdd = data.get("gdd5_mean")
+        if gdd is not None:
+            cached_marker = " (cached)" if data.get("cached") else ""
+            self._lbl_gdd.setText(
+                f"{int(round(gdd))}  ({data.get('years_used', 0)}-yr avg)"
+                + cached_marker
+            )
+        else:
+            self._lbl_gdd.setText("—")
+        last = data.get("last_spring_frost_doy")
+        first = data.get("first_fall_frost_doy")
+        free = data.get("frost_free_days")
+        if last is not None and first is not None:
+            self._lbl_frost.setText(
+                f"{doy_to_date_label(last)} → {doy_to_date_label(first)}"
+                + (f"  ({free} days)" if free is not None else "")
+            )
+        else:
+            self._lbl_frost.setText("—")
 
     def _on_elevation(self, data):
         if not data:

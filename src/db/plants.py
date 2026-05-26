@@ -54,7 +54,12 @@ _PLANT_FAUNA_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "plant_fauna_maste
 # junction table backed by a `uses` lookup, and added a `fauna` registry
 # plus `plant_fauna` relationship table for larval-host / nectar /
 # fruit-food / nesting links. See Step 1 and Step 2 in the V1.31 plan.
-_SCHEMA_VERSION = 13
+# v14 (V1.35): added `climate_cache` table for growing-degree-day +
+# frost-window stats fetched from Open-Meteo Historical Weather. The
+# cache is wiped on reseed like the other dependent tables, so users
+# upgrading from v13 get an empty cache on next launch and fetch
+# fresh on their next property pin set.
+_SCHEMA_VERSION = 14
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -580,6 +585,10 @@ def init_db() -> None:
             conn.execute("DELETE FROM polyculture_members")
             conn.execute("DELETE FROM polycultures")
             conn.execute("DELETE FROM plants")
+            # climate_cache is per-location user data, not seeded — wipe
+            # on reseed so the next launch refetches against any updated
+            # source defaults rather than serving stale interpretations.
+            conn.execute("DELETE FROM climate_cache")
             conn.commit()
             # Seed the uses lookup first so _seed_from_json_file can populate
             # plant_uses for each freshly inserted plant in the same pass.
@@ -1004,6 +1013,78 @@ def update_marker_color(plant_id: int, color: Optional[str]) -> None:
         conn.execute(
             "UPDATE plants SET marker_color = ? WHERE id = ?",
             (color, plant_id)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+# ── Climate cache (schema v14, V1.35) ────────────────────────────────────────
+#
+# Stores derived growing-degree-day + frost-window stats from
+# Open-Meteo Historical Weather, keyed by lat/lng quantized to 0.01°
+# (~1 km). The fetch costs several seconds against the live API, so
+# caching it per location lets the UI stay responsive when the user
+# nudges the property pin around.
+#
+# These helpers are the storage layer only; the orchestration (fetch
+# on cache miss, derive stats, persist) lives in src/climate.py.
+
+def _quantize_latlng(lat: float, lng: float) -> tuple[int, int]:
+    """Project (lat, lng) to integer keys at 0.01° resolution. ~1 km
+    granularity is fine — GDD and frost dates don't change meaningfully
+    over that scale outside mountain valleys."""
+    return int(round(lat * 100)), int(round(lng * 100))
+
+
+def get_cached_climate(lat: float, lng: float) -> Optional[dict]:
+    """Return the cached climate-summary dict for (lat, lng), or None on
+    miss. Caller is responsible for fetching + storing on a miss."""
+    lat_q, lng_q = _quantize_latlng(lat, lng)
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT gdd5_mean, last_spring_frost_doy, first_fall_frost_doy, "
+            "frost_free_days, years_used, source, cached_at "
+            "FROM climate_cache WHERE lat_q = ? AND lng_q = ?",
+            (lat_q, lng_q),
+        ).fetchone()
+        if row is None:
+            return None
+        return {
+            "gdd5_mean":             row["gdd5_mean"],
+            "last_spring_frost_doy": row["last_spring_frost_doy"],
+            "first_fall_frost_doy":  row["first_fall_frost_doy"],
+            "frost_free_days":       row["frost_free_days"],
+            "years_used":            row["years_used"],
+            "source":                row["source"],
+            "cached_at":             row["cached_at"],
+        }
+    finally:
+        conn.close()
+
+
+def store_cached_climate(lat: float, lng: float, summary: dict) -> None:
+    """Persist a climate summary for (lat, lng). Overwrites any prior
+    cached row at the same quantized location."""
+    lat_q, lng_q = _quantize_latlng(lat, lng)
+    conn = get_connection()
+    try:
+        conn.execute(
+            "INSERT OR REPLACE INTO climate_cache "
+            "(lat_q, lng_q, gdd5_mean, last_spring_frost_doy, "
+            " first_fall_frost_doy, frost_free_days, years_used, source, "
+            " cached_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+            (
+                lat_q, lng_q,
+                summary.get("gdd5_mean"),
+                summary.get("last_spring_frost_doy"),
+                summary.get("first_fall_frost_doy"),
+                summary.get("frost_free_days"),
+                summary.get("years_used"),
+                summary.get("source"),
+            ),
         )
         conn.commit()
     finally:

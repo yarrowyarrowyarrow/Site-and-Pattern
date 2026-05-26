@@ -635,10 +635,21 @@ def reverse_geocode(lat: float, lng: float) -> Optional[str]:
     return None
 
 
+# ── Climate (V1.35) ─────────────────────────────────────────────────────────
+
+def fetch_climate(lat: float, lng: float) -> Optional[dict]:
+    """Thin shim around ``src.climate.get_climate_summary`` so the site
+    panel's existing ``_SiteFetchWorker`` pattern can pick it up the
+    same way as rainfall / soil / elevation / hardiness. Returns the
+    climate-summary dict or ``None``."""
+    from src.climate import get_climate_summary
+    return get_climate_summary(lat, lng)
+
+
 # ── Aggregator ──────────────────────────────────────────────────────────────
 
 def fetch_all(lat: float, lng: float) -> dict:
-    """Fetch all four datasets sequentially. Caller may want a thread."""
+    """Fetch all five datasets sequentially. Caller may want a thread."""
     return {
         "lat":       lat,
         "lng":       lng,
@@ -646,4 +657,5 @@ def fetch_all(lat: float, lng: float) -> dict:
         "soil":      fetch_soil(lat, lng),
         "elevation": fetch_elevation(lat, lng),
         "hardiness": fetch_hardiness(lat, lng),
+        "climate":   fetch_climate(lat, lng),
     }

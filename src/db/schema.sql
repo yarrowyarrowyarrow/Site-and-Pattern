@@ -148,6 +148,27 @@ CREATE TABLE IF NOT EXISTS plant_fauna (
     PRIMARY KEY (plant_id, fauna_id, relationship)
 );
 
+-- Climate cache (schema v14, V1.35). One row per ~1 km^2 location;
+-- stores derived growing-degree-day and frost-window stats from the
+-- Open-Meteo Historical Weather endpoint. Lat/lng are quantized to
+-- 0.01 deg so close-by property pins reuse the same cached fetch
+-- (an Open-Meteo archive call costs ~3-5 s, worth avoiding on every
+-- pin move). The cache never auto-expires — ERA5 is historical and
+-- doesn't change. A schema bump or an explicit refresh button is the
+-- way to invalidate.
+CREATE TABLE IF NOT EXISTS climate_cache (
+    lat_q INTEGER NOT NULL,                    -- lat * 100, rounded
+    lng_q INTEGER NOT NULL,                    -- lng * 100, rounded
+    gdd5_mean REAL,                            -- mean annual GDD base 5C
+    last_spring_frost_doy INTEGER,             -- 1-365, average across years
+    first_fall_frost_doy  INTEGER,
+    frost_free_days       INTEGER,             -- first_fall - last_spring
+    years_used  INTEGER,
+    source      TEXT,
+    cached_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (lat_q, lng_q)
+);
+
 CREATE INDEX IF NOT EXISTS idx_plants_type    ON plants(plant_type);
 CREATE INDEX IF NOT EXISTS idx_plants_zone    ON plants(hardiness_zone_min, hardiness_zone_max);
 CREATE INDEX IF NOT EXISTS idx_plants_native  ON plants(native_to_alberta);
