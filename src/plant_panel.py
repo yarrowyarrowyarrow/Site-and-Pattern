@@ -30,6 +30,8 @@ from src.plant_list_view import (
     _SUN_LABELS,
     _USE_LABELS,
     _WATER_LABELS,
+    _PLANT_OBJ_ROLE,
+    _PLANT_EXPANDED_ROLE,
     _RESULTS_LIST_STYLE,
 )
 
