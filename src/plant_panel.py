@@ -225,8 +225,8 @@ class PlantListModel(QAbstractListModel):
         self._expanded_ids: set[int] = set()
         # Per-plant 12-month planting calendar, lazily fetched the first
         # time a row is expanded. None means "not yet attempted"; an empty
-        # list means "no calendar data" (e.g. Permapeople plants without
-        # local rows). Cache lives for the panel's lifetime.
+        # list means "no calendar data". Cache lives for the panel's
+        # lifetime.
         self._calendar_cache: dict[int, list[dict]] = {}
 
     # Standard model API -------------------------------------------------
@@ -290,9 +290,8 @@ class PlantListModel(QAbstractListModel):
     def calendar_for(self, plant_id: Optional[int]) -> list[dict]:
         """Return a 12-entry list of {month,status,notes} for plant_id.
 
-        Empty list when plant_id is missing or DB lookup fails (e.g. the
-        row is a Permapeople preview without a local id). Results are
-        memoised so paint() can call this on every redraw cheaply.
+        Empty list when plant_id is missing or DB lookup fails. Results
+        are memoised so paint() can call this on every redraw cheaply.
         """
         if not plant_id:
             return []
@@ -523,8 +522,7 @@ class PlantRowDelegate(QStyledItemDelegate):
             notes_h = min(wrapped_lines, 40) * fm.lineSpacing() + 8
         # Calendar strip: month-abbr row (12) + coloured cells (18) +
         # legend row (line height) + small gaps. Only reserved when the
-        # plant actually has a calendar in the local DB; Permapeople-only
-        # rows just skip it.
+        # plant actually has a calendar in the local DB.
         cal_h = 0
         model = index.model()
         if isinstance(model, PlantListModel):
@@ -777,8 +775,8 @@ class PlantRowDelegate(QStyledItemDelegate):
 
             # Schema v13: surface wildlife supported (lepidoptera larval
             # hosts + bird/bee links) inline in the detail block. Fetched
-            # lazily so the delegate stays cheap when the database is not
-            # available (e.g. Permapeople-only rows).
+            # lazily so the delegate stays cheap when the database is
+            # not available.
             hosts_text = self._wildlife_text_for_plant(plant.get("id"))
             companions_text = self._companions_text_for_plant(plant.get("id"))
 
@@ -1512,10 +1510,10 @@ class PlantPanel(QWidget):
         bot_layout.setSpacing(6)
 
         # The legacy "Selected Plant" detail group + standalone planting
-        # calendar QGroupBox were removed when the Permapeople tab was
-        # dropped — both are now redundant with the inline-expand chevron
-        # in the results list (which shows the full detail block + the
-        # 12-cell colour-coded month strip in one place).
+        # calendar QGroupBox were removed — both are now redundant with
+        # the inline-expand chevron in the results list (which shows the
+        # full detail block + the 12-cell colour-coded month strip in
+        # one place).
 
         # ── Pattern mode selector ───────────────────────────────────────
         # Single = click-to-place (current behaviour). Row/Grid/Circle take
@@ -1675,9 +1673,9 @@ class PlantPanel(QWidget):
         """QListView equivalent of the old QListWidget currentItemChanged.
 
         Selecting a row enables the Place button and updates the colour-
-        picker preview. The compact-list flow doesn't surface the bottom
-        detail group (the inline expand chevron is the discovery path);
-        that group is only used for the Permapeople tab.
+        picker preview. The compact-list flow doesn't surface a separate
+        bottom detail group — the inline expand chevron is the discovery
+        path.
         """
         if not current.isValid():
             self._selected_plant = None
@@ -2348,18 +2346,7 @@ class PlantPanel(QWidget):
                 "QPushButton:hover { border-color: #8aca8a; }"
             )
 
-    # ── Permapeople tab ────────────────────────────────────────────────────────
-
     # ── Public API ────────────────────────────────────────────────────────────
-
-    def set_api_keys(self, _key_id: str, _key_secret: str):
-        """Compatibility no-op — Permapeople integration was removed.
-
-        Kept so existing call-sites (app.py loads keys on startup) don't
-        crash; the keys themselves are simply ignored now. The setter
-        and the Settings dialog can be deleted entirely in a follow-up.
-        """
-        return
 
     def set_zone(self, zone: Optional[int]):
         """Called by the main window when the hardiness zone changes.

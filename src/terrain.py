@@ -1404,8 +1404,7 @@ def _levels_for_grid(grid: list[list[float]], interval_m: float) -> list[float]:
 if _HAVE_QT:
     class TerrainWorker(QObject):
         """
-        Run terrain generation off the UI thread. Mirrors the pattern in
-        ``src/api/permapeople.py``.
+        Run terrain generation off the UI thread.
 
             worker = TerrainWorker(bbox, options)
             worker.moveToThread(thread)

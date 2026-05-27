@@ -7,7 +7,7 @@ Layout (two stacked rows):
   │ Draw: ⬡ Boundary  📏 Measure  📝 Note  ⤺ Undo  ✕ Cancel        │
   ├────────────────────────────────────────────────────────────────┤
   │ View: 🛰 Satellite ⬡ Boundary 📏 Measurement # Grid▼            │
-  │       ✿ Plants 🌳 Canopy 🏗 Structures … ⚙ Settings 🔍 Zoom: …  │
+  │       ✿ Plants 🌳 Canopy 🏗 Structures … 🔍 Zoom: …             │
   └────────────────────────────────────────────────────────────────┘
 
 The View row order is fixed: Satellite, Boundary, Measurement, Grid,
@@ -140,9 +140,8 @@ class MainToolbar(QToolBar):
     """The Draw toolbar (top row).
 
     Holds a sibling `layers_bar` QToolBar exposed for the main window to
-    add on a second row. All signals — Draw, View, Settings, Zoom —
-    live on this object so app.py wiring stays a single connection
-    surface.
+    add on a second row. All signals — Draw, View, Zoom — live on this
+    object so app.py wiring stays a single connection surface.
     """
 
     # Drawing mode signals
@@ -161,9 +160,6 @@ class MainToolbar(QToolBar):
     structures_toggled   = pyqtSignal(bool)
     grid_settings_changed = pyqtSignal(dict)
     # ^ payload: {"enabled": bool, "size_m": float, "opacity": float, "color": str}
-
-    # Settings
-    settings_requested = pyqtSignal()
 
     # Zoom sensitivity changed ('fine'|'normal'|'fast'|'coarse')
     zoom_step_changed = pyqtSignal(str)
@@ -326,13 +322,6 @@ class MainToolbar(QToolBar):
         self._act_structures_layer.setStatusTip("Toggle structures/hedgerows/shapes visibility")
         self._act_structures_layer.toggled.connect(self.structures_toggled)
         bar.addAction(self._act_structures_layer)
-
-        bar.addSeparator()
-
-        act_settings = QAction("⚙ Settings", self)
-        act_settings.setStatusTip("Configure API keys and preferences")
-        act_settings.triggered.connect(self.settings_requested)
-        bar.addAction(act_settings)
 
         bar.addSeparator()
 

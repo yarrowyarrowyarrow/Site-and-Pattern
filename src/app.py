@@ -38,7 +38,6 @@ from src.planning_panel   import PlanningPanel
 from src.site_panel       import SitePanel
 from src.toolbar          import MainToolbar
 from src.climate          import get_zone, zone_label
-from src.settings         import SettingsDialog, get_api_keys
 from src.collapsible_panel import CollapsibleSidebar
 import src.project as project_io
 
@@ -183,7 +182,6 @@ class MainWindow(QMainWindow):
         self._build_ui()
         self._connect_signals()
         self._start_autosave()
-        self._load_api_keys()
 
     # ── UI construction ───────────────────────────────────────────────────────
 
@@ -1084,9 +1082,6 @@ class MainWindow(QMainWindow):
         b.annotate_requested.connect(self._on_annotate_requested)
         b.annotation_removed.connect(self._on_annotation_removed)
 
-        # Toolbar → settings
-        self.toolbar.settings_requested.connect(self._on_settings)
-
         # Polyculture panel → map (polyculture placement)
         self.polyculture_panel.placePolycultureRequested.connect(self._enter_polyculture_mode)
         # Stack → community: refresh the Communities tree when the Plants
@@ -1189,18 +1184,6 @@ class MainWindow(QMainWindow):
 
     def _on_map_ready(self):
         self._set_mode_label("Ready")
-
-    # ── Settings ──────────────────────────────────────────────────────────────
-
-    def _load_api_keys(self):
-        """Push stored API keys into the plant panel on startup."""
-        kid, ksec = get_api_keys()
-        self.plant_panel.set_api_keys(kid, ksec)
-
-    def _on_settings(self):
-        dlg = SettingsDialog(self)
-        if dlg.exec():
-            self._load_api_keys()
 
     def _on_plant_color_changed(self, plant_id: int, hex_color: str):
         """Update all existing markers for this plant on the map."""
