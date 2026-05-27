@@ -42,6 +42,7 @@ from src.climate          import get_zone, zone_label
 from src.collapsible_panel import CollapsibleSidebar
 import src.project as project_io
 from src.controllers.update_flow import UpdateFlowController
+from src.controllers.mode import ModeController
 
 
 # Marker colour tables for plant-community members.
@@ -185,6 +186,7 @@ class MainWindow(QMainWindow):
         # Constructed before _build_ui so QAction.connect() calls in the
         # menu builder can target the controller-backed shims below.
         self._update_flow = UpdateFlowController(self)
+        self._mode = ModeController(self)
 
         self._build_ui()
         self._connect_signals()
@@ -712,7 +714,8 @@ class MainWindow(QMainWindow):
                 pass
 
     def _set_mode_label(self, text: str):
-        self._sb_mode.setText(f"Mode: {text}")
+        # Shim → ModeController; see src/controllers/mode.py.
+        return self._mode._set_mode_label(text)
 
     def _mark_modified(self):
         self._modified = True
@@ -748,9 +751,8 @@ class MainWindow(QMainWindow):
     # ── Drawing modes ─────────────────────────────────────────────────────────
 
     def _enter_boundary_mode(self):
-        self._current_mode = 'boundary'
-        self.map_widget.set_mode('boundary')
-        self._set_mode_label("Drawing boundary — click to add points, double-click or click first point to close")
+        # Shim → ModeController; see src/controllers/mode.py.
+        return self._mode._enter_boundary_mode()
 
     def _enter_plant_mode(self, plant_id: int, common_name: str,
                           quantity: int = 1, pattern: dict | None = None):
@@ -820,14 +822,12 @@ class MainWindow(QMainWindow):
         return 1.0, "herb", ""
 
     def _enter_measure_mode(self):
-        self._current_mode = 'measure'
-        self.map_widget.set_mode('measure')
-        self._set_mode_label("Measure — click two points to see distance")
+        # Shim → ModeController; see src/controllers/mode.py.
+        return self._mode._enter_measure_mode()
 
     def _enter_annotate_mode(self):
-        self._current_mode = 'annotate'
-        self.map_widget.set_mode('annotate')
-        self._set_mode_label("Annotate — click map to place a note")
+        # Shim → ModeController; see src/controllers/mode.py.
+        return self._mode._enter_annotate_mode()
 
     def _on_annotate_requested(self, lat: float, lng: float):
         text, ok = QInputDialog.getText(
@@ -859,12 +859,8 @@ class MainWindow(QMainWindow):
     # ── Structure / Hedgerow / Shape modes ──────────────────────────────────
 
     def _enter_structure_mode(self, struct_def: dict):
-        self._current_mode = 'structure'
-        self.map_widget.set_structure_mode(struct_def)
-        self.toolbar.reset_draw_buttons()
-        self._set_mode_label(
-            f"Placing: {struct_def.get('icon', '')} {struct_def.get('name', 'Structure')} — click map, Esc to cancel"
-        )
+        # Shim → ModeController; see src/controllers/mode.py.
+        return self._mode._enter_structure_mode(struct_def)
 
     def _on_structure_placed(self, struct_id: str, name: str, lat: float, lng: float, size_m: float):
         from src.db.structures import get_structure
@@ -918,12 +914,8 @@ class MainWindow(QMainWindow):
         self._mark_modified()
 
     def _enter_hedgerow_mode(self, hedge_config: dict):
-        self._current_mode = 'hedgerow'
-        self.map_widget.set_hedgerow_mode(hedge_config)
-        self.toolbar.reset_draw_buttons()
-        self._set_mode_label(
-            "Drawing hedgerow — click to add points, double-click to finish"
-        )
+        # Shim → ModeController; see src/controllers/mode.py.
+        return self._mode._enter_hedgerow_mode(hedge_config)
 
     def _on_hedgerow_complete(self, hedge_id: str, points_json: str, species: str,
                                style: str, length_m: float, num_plants: int):
@@ -965,12 +957,8 @@ class MainWindow(QMainWindow):
         self._mark_modified()
 
     def _enter_shape_mode(self, shape_config: dict):
-        self._current_mode = 'shape'
-        self.map_widget.set_shape_mode(shape_config)
-        self.toolbar.reset_draw_buttons()
-        self._set_mode_label(
-            "Drawing shape — click points, double-click or click first point to close"
-        )
+        # Shim → ModeController; see src/controllers/mode.py.
+        return self._mode._enter_shape_mode(shape_config)
 
     def _on_shape_complete(self, shape_id: str, points_json: str, label: str,
                             shape_type: str, fill_color: str, stroke_color: str,
