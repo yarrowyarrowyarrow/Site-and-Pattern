@@ -44,6 +44,7 @@ import src.project as project_io
 from src.controllers.update_flow import UpdateFlowController
 from src.controllers.mode import ModeController
 from src.controllers.persistence import PersistenceController
+from src.controllers.map_events import MapEventRouter
 
 
 # Marker colour tables for plant-community members.
@@ -189,6 +190,7 @@ class MainWindow(QMainWindow):
         self._update_flow = UpdateFlowController(self)
         self._mode = ModeController(self)
         self._persistence = PersistenceController(self)
+        self._map_events = MapEventRouter(self)
 
         self._build_ui()
         self._connect_signals()
@@ -1655,68 +1657,25 @@ class MainWindow(QMainWindow):
 
     # ── Map event handlers ────────────────────────────────────────────────────
 
+    # ── Boundary handlers — shims → MapEventRouter ────────────────────────────
+    # Implementation in src/controllers/map_events.py. The method names stay
+    # on MainWindow so the QSignal.connect() bindings in _connect_signals
+    # (lines ~643-646) keep working without churn.
+
     def _on_boundary_complete(self, bid: str, coords: list, color: str):
-        """Multi-boundary: add a new boundary to the project."""
-        ring = [[pt[1], pt[0]] for pt in coords] + [[coords[0][1], coords[0][0]]]
-        self._project["features"].append({
-            "type": "Feature",
-            "geometry": {"type": "Polygon", "coordinates": [ring]},
-            "properties": {
-                "element_type": "property_boundary",
-                "boundary_id": bid,
-                "color": color,
-                "show_lengths": True,
-                "show_area": True,
-            }
-        })
-
-        lats = [pt[0] for pt in coords]
-        lngs = [pt[1] for pt in coords]
-        self._set_zone_display(get_zone(sum(lats)/len(lats), sum(lngs)/len(lngs)))
-
-        self._push_undo({
-            "action": "place_boundary",
-            "boundary_id": bid,
-            "coords": list(coords),
-            "color": color,
-        })
-
-        self._mark_modified()
-        self.toolbar.reset_draw_buttons()
-        self._set_mode_label(
-            f"Boundary added ({color}) — " + zone_label(self._current_zone)
-        )
+        return self._map_events._on_boundary_complete(bid, coords, color)
 
     def _on_boundary_geom_changed(self, bid: str, coords: list):
-        """Update geometry of an existing boundary after vertex/move/scale drag."""
-        ring = [[pt[1], pt[0]] for pt in coords] + [[coords[0][1], coords[0][0]]]
-        for f in self._project.get("features", []):
-            if (f.get("properties", {}).get("element_type") == "property_boundary"
-                    and f["properties"].get("boundary_id") == bid):
-                f["geometry"]["coordinates"] = [ring]
-                break
-        self._mark_modified()
+        return self._map_events._on_boundary_geom_changed(bid, coords)
 
     def _on_boundary_props_changed(self, bid: str, color: str,
                                     show_lengths: bool, show_area: bool):
-        """Update color/label toggles for an existing boundary."""
-        for f in self._project.get("features", []):
-            if (f.get("properties", {}).get("element_type") == "property_boundary"
-                    and f["properties"].get("boundary_id") == bid):
-                f["properties"]["color"] = color
-                f["properties"]["show_lengths"] = show_lengths
-                f["properties"]["show_area"] = show_area
-                break
-        self._mark_modified()
+        return self._map_events._on_boundary_props_changed(
+            bid, color, show_lengths, show_area,
+        )
 
     def _on_boundary_removed(self, bid: str):
-        """Remove a boundary from the project."""
-        self._project["features"] = [
-            f for f in self._project["features"]
-            if not (f.get("properties", {}).get("element_type") == "property_boundary"
-                    and f["properties"].get("boundary_id") == bid)
-        ]
-        self._mark_modified()
+        return self._map_events._on_boundary_removed(bid)
 
     def _on_plant_moved(self, marker_id: str, plant_id: int,
                         old_lat: float, old_lng: float,
