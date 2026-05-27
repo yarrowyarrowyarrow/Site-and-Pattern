@@ -865,146 +865,52 @@ class MainWindow(QMainWindow):
         # Shim → ModeController; see src/controllers/mode.py.
         return self._mode._enter_structure_mode(struct_def)
 
-    def _on_structure_placed(self, struct_id: str, name: str, lat: float, lng: float, size_m: float):
-        from src.db.structures import get_structure
-        struct_def = get_structure(struct_id)
-        if struct_def:
-            struct_def = dict(struct_def)
-            struct_def["size_m"] = size_m
-        else:
-            struct_def = {"id": struct_id, "name": name, "size_m": size_m}
+    # Structure handlers — shims → MapEventRouter; see src/controllers/map_events.py.
 
-        self._project["features"].append({
-            "type": "Feature",
-            "geometry": {"type": "Point", "coordinates": [lng, lat]},
-            "properties": {
-                "element_type": "structure",
-                "struct_id": struct_id,
-                "name": name,
-                "size_m": size_m,
-                "struct_def": struct_def,
-            }
-        })
-        self._push_undo({
-            "action": "place_structure",
-            "struct_id": struct_id,
-            "name": name,
-            "lat": lat,
-            "lng": lng,
-            "size_m": size_m,
-            "struct_def": struct_def,
-        })
-        self._mark_modified()
-        self.statusBar().showMessage(f"Placed {name}", 2000)
-        self._sync_planning_panel()
+    def _on_structure_placed(self, struct_id: str, name: str, lat: float,
+                              lng: float, size_m: float):
+        return self._map_events._on_structure_placed(
+            struct_id, name, lat, lng, size_m,
+        )
 
-    def _on_structure_removed(self, marker_id: str, struct_id: str, lat: float, lng: float):
-        kept = []
-        removed = False
-        for f in self._project["features"]:
-            props = f.get("properties", {})
-            coords = f.get("geometry", {}).get("coordinates", [])
-            if (not removed
-                    and props.get("element_type") == "structure"
-                    and props.get("struct_id") == struct_id
-                    and coords
-                    and abs(coords[1] - lat) < 1e-7
-                    and abs(coords[0] - lng) < 1e-7):
-                removed = True
-            else:
-                kept.append(f)
-        self._project["features"] = kept
-        self._mark_modified()
+    def _on_structure_removed(self, marker_id: str, struct_id: str,
+                               lat: float, lng: float):
+        return self._map_events._on_structure_removed(
+            marker_id, struct_id, lat, lng,
+        )
 
     def _enter_hedgerow_mode(self, hedge_config: dict):
         # Shim → ModeController; see src/controllers/mode.py.
         return self._mode._enter_hedgerow_mode(hedge_config)
 
-    def _on_hedgerow_complete(self, hedge_id: str, points_json: str, species: str,
-                               style: str, length_m: float, num_plants: int):
-        import json as _json
-        points = _json.loads(points_json)
-        # Store as GeoJSON LineString (lng, lat order)
-        coords = [[pt[1], pt[0]] for pt in points]
-        self._project["features"].append({
-            "type": "Feature",
-            "geometry": {"type": "LineString", "coordinates": coords},
-            "properties": {
-                "element_type": "hedgerow",
-                "hedge_id": hedge_id,
-                "species": species,
-                "style": style,
-                "length_m": length_m,
-                "num_plants": num_plants,
-                "color": "#4caf50",
-                "width_m": 1.5,
-                "spacing_m": 1.0,
-            }
-        })
-        self._push_undo({
-            "action": "place_hedgerow",
-            "hedge_id": hedge_id,
-            "length_m": length_m,
-        })
-        self._mark_modified()
-        self._set_mode_label("Ready")
-        self.statusBar().showMessage(
-            f"Hedgerow placed: {length_m:.1f}m, ~{num_plants} plants", 3000
+    # Hedgerow handlers — shims → MapEventRouter; see src/controllers/map_events.py.
+
+    def _on_hedgerow_complete(self, hedge_id: str, points_json: str,
+                               species: str, style: str, length_m: float,
+                               num_plants: int):
+        return self._map_events._on_hedgerow_complete(
+            hedge_id, points_json, species, style, length_m, num_plants,
         )
 
     def _on_hedgerow_removed(self, hedge_id: str, points_json: str):
-        self._project["features"] = [
-            f for f in self._project["features"]
-            if f.get("properties", {}).get("hedge_id") != hedge_id
-        ]
-        self._mark_modified()
+        return self._map_events._on_hedgerow_removed(hedge_id, points_json)
 
     def _enter_shape_mode(self, shape_config: dict):
         # Shim → ModeController; see src/controllers/mode.py.
         return self._mode._enter_shape_mode(shape_config)
 
+    # Shape handlers — shims → MapEventRouter; see src/controllers/map_events.py.
+
     def _on_shape_complete(self, shape_id: str, points_json: str, label: str,
                             shape_type: str, fill_color: str, stroke_color: str,
                             fill_opacity: float, dash_array: str, area_m2: float):
-        import json as _json
-        points = _json.loads(points_json)
-        # Store as GeoJSON Polygon (lng, lat; closed ring)
-        ring = [[pt[1], pt[0]] for pt in points]
-        ring.append(ring[0])  # close the ring
-        self._project["features"].append({
-            "type": "Feature",
-            "geometry": {"type": "Polygon", "coordinates": [ring]},
-            "properties": {
-                "element_type": "custom_shape",
-                "shape_id": shape_id,
-                "label": label,
-                "shape_type": shape_type,
-                "fill_color": fill_color,
-                "stroke_color": stroke_color,
-                "fill_opacity": fill_opacity,
-                "dash_array": dash_array,
-                "area_m2": area_m2,
-            }
-        })
-        self._push_undo({
-            "action": "place_custom_shape",
-            "shape_id": shape_id,
-            "label": label,
-            "shape_type": shape_type,
-        })
-        self._mark_modified()
-        self._set_mode_label("Ready")
-        area_str = f"{area_m2:.1f} m²" if area_m2 < 10000 else f"{area_m2/10000:.2f} ha"
-        self.statusBar().showMessage(
-            f"Shape placed: {label or shape_type} ({area_str})", 3000
+        return self._map_events._on_shape_complete(
+            shape_id, points_json, label, shape_type,
+            fill_color, stroke_color, fill_opacity, dash_array, area_m2,
         )
 
     def _on_shape_removed(self, shape_id: str):
-        self._project["features"] = [
-            f for f in self._project["features"]
-            if f.get("properties", {}).get("shape_id") != shape_id
-        ]
-        self._mark_modified()
+        return self._map_events._on_shape_removed(shape_id)
 
     # ── Analysis overlays (A1-A4) ──────────────────────────────────────────
 
