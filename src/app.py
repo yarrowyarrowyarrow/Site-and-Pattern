@@ -1927,7 +1927,6 @@ class MainWindow(QMainWindow):
 
     def _on_season_changed(self, season: str):
         """Apply seasonal view to the map — adjusts plant visibility by type."""
-        import json as _json
         from src.db.plants import get_plant
 
         # Seasonal opacity rules based on deciduous_evergreen field
@@ -1966,8 +1965,7 @@ class MainWindow(QMainWindow):
 
             pid_vis[pid] = rules[plant_cache[pid]]
 
-        js_data = _json.dumps(pid_vis)
-        self.map_widget.run_js(f"setSeasonView('{season}', {js_data});")
+        self.map_widget.set_season_view(season, pid_vis)
         self._set_mode_label(f"Season: {season}")
 
     def _enter_polyculture_mode(self, polyculture_data: dict):
@@ -1991,7 +1989,7 @@ class MainWindow(QMainWindow):
 
         self._current_mode = 'polyculture'
         self._pending_polyculture = polyculture_data
-        self.map_widget.run_js("map.getContainer().style.cursor = 'crosshair';")
+        self.map_widget.set_crosshair_cursor()
         self._set_mode_label(
             f"Placing plant community: {polyculture_data.get('name', '?')} — click map to place centre"
         )
@@ -2106,10 +2104,10 @@ class MainWindow(QMainWindow):
             mlat = lat + (m.get("offset_y", 0)) / 111320
             mlng = lng + (m.get("offset_x", 0)) / (111320 * cos_lat)
 
-            self.map_widget.run_js(
-                f"placePlantMarker({pid}, {repr(name)}, "
-                f"{mlat}, {mlng}, {spacing_m}, {repr(plant_type)}, "
-                f"{repr(color)}, {repr(group_id)});"
+            self.map_widget.place_plant_marker(
+                pid, name, mlat, mlng,
+                spacing_m=spacing_m, plant_type=plant_type,
+                color=color, group_id=group_id,
             )
             self._placed_plants.append({
                 "plant_id": pid, "common_name": name,
@@ -2399,10 +2397,7 @@ class MainWindow(QMainWindow):
             }
         })
         # Tell JS the marker's group id so right-click → "Delete group" works.
-        self.map_widget.run_js(
-            f"setPlantGroupForLatest({plant_id}, {lat}, {lng}, "
-            f"{repr(group_id)});"
-        )
+        self.map_widget.set_plant_group_for_latest(plant_id, lat, lng, group_id)
         self.plant_panel.on_plant_placed(plant_id, common_name)
         self._mark_modified()
         self._sync_planning_panel()
@@ -2442,10 +2437,10 @@ class MainWindow(QMainWindow):
                 mlat = lat + float(m.get("offset_y", 0) or 0) / 111320
                 mlng = lng + float(m.get("offset_x", 0) or 0) / (111320 * cos_lat)
 
-                self.map_widget.run_js(
-                    f"placePlantMarker({pid}, {repr(name)}, "
-                    f"{mlat}, {mlng}, {spacing_m}, {repr(plant_type)}, "
-                    f"{repr(color)}, {repr(group_id)});"
+                self.map_widget.place_plant_marker(
+                    pid, name, mlat, mlng,
+                    spacing_m=spacing_m, plant_type=plant_type,
+                    color=color, group_id=group_id,
                 )
                 self._placed_plants.append({
                     "plant_id": pid, "common_name": name,
@@ -2605,11 +2600,10 @@ class MainWindow(QMainWindow):
                 sp_color            = custom_color
 
             # Render the marker on the map.
-            self.map_widget.run_js(
-                f"placePlantMarker({pid}, {repr(name)}, "
-                f"{lat}, {lng}, {sp_space}, {repr(sp_type)}, "
-                f"{repr(sp_color) if sp_color else 'null'}, "
-                f"{repr(group_id)});"
+            self.map_widget.place_plant_marker(
+                pid, name, lat, lng,
+                spacing_m=sp_space, plant_type=sp_type,
+                color=sp_color or None, group_id=group_id,
             )
             # Mirror in project state.
             self._placed_plants.append({
@@ -2995,16 +2989,7 @@ class MainWindow(QMainWindow):
         # Contour lines are loaded via JS (finishContour re-uses the drawing logic)
         # We redraw them directly as polylines
         for ctr in data.get("contours", []):
-            import json as _json
-            self.map_widget.run_js(
-                f"(function() {{"
-                f"  var d = JSON.parse({_json.dumps(_json.dumps(ctr))});"
-                f"  contourPoints = d.points;"
-                f"  currentContour = d;"
-                f"  finishContour();"
-                f"  contourPoints = [];"
-                f"}})()"
-            )
+            self.map_widget.apply_loaded_contour(ctr)
 
         # Auto-generated contours (MultiLineString features) are restored
         # directly as a single layer group. Slope ramp PNG isn't persisted —
@@ -3270,7 +3255,6 @@ class MainWindow(QMainWindow):
 
     def _on_timeline_year_changed(self, year: int):
         """Compute per-plant scale factors for the timeline year and send to JS."""
-        import json as _json
         import math
 
         from src.db.plants import get_plant
@@ -3370,8 +3354,7 @@ class MainWindow(QMainWindow):
                     factor = ratio
             pid_factors[pid] = max(0.1, min(1.0, factor))
 
-        js_data = _json.dumps(pid_factors)
-        self.map_widget.run_js(f"setTimelineYearByPlantId({year}, {js_data});")
+        self.map_widget.set_timeline_year_by_plant_id(year, pid_factors)
 
     # ── Planning panel sync ──────────────────────────────────────────────
 
@@ -3431,22 +3414,7 @@ class MainWindow(QMainWindow):
         if action == "place_plant":
             # Remove the most recent marker matching this plant + coords
             pid, lat, lng = entry["plant_id"], entry["lat"], entry["lng"]
-            self.map_widget.run_js(
-                f"(function() {{"
-                f"  var keys = Object.keys(plantMarkers);"
-                f"  for (var i = keys.length - 1; i >= 0; i--) {{"
-                f"    var m = plantMarkers[keys[i]];"
-                f"    if (m._pd && m._pd.plantId === {pid}"
-                f"        && Math.abs(m._pd.lat - {lat}) < 1e-7"
-                f"        && Math.abs(m._pd.lng - {lng}) < 1e-7) {{"
-                f"      map.removeLayer(m);"
-                f"      if (plantLabels[keys[i]]) {{ map.removeLayer(plantLabels[keys[i]]); delete plantLabels[keys[i]]; }}"
-                f"      delete plantMarkers[keys[i]];"
-                f"      break;"
-                f"    }}"
-                f"  }}"
-                f"}})()"
-            )
+            self.map_widget.undo_place_plant(pid, lat, lng)
             # Remove from placed list
             for i in range(len(self._placed_plants) - 1, -1, -1):
                 p = self._placed_plants[i]
@@ -3476,13 +3444,10 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Undo: removed plant", 2000)
 
         elif action == "place_structure":
-            import json as _json
             sid = entry["struct_id"]
             lat = entry["lat"]
             lng = entry["lng"]
-            self.map_widget.run_js(
-                f"undoStructureAt({_json.dumps(sid)}, {lat}, {lng});"
-            )
+            self.map_widget.undo_structure_at(sid, lat, lng)
             kept = []
             removed = False
             for f in reversed(self._project["features"]):
@@ -3505,15 +3470,8 @@ class MainWindow(QMainWindow):
             self._sync_planning_panel()
 
         elif action == "place_boundary":
-            import json as _json
             bid = entry["boundary_id"]
-            self.map_widget.run_js(
-                f"(function() {{"
-                f"  if (typeof _removeBoundaryEntry === 'function') {{"
-                f"    _removeBoundaryEntry({_json.dumps(bid)});"
-                f"  }}"
-                f"}})()"
-            )
+            self.map_widget.undo_boundary(bid)
             self._project["features"] = [
                 f for f in self._project["features"]
                 if not (f.get("properties", {}).get("element_type")
@@ -3525,7 +3483,7 @@ class MainWindow(QMainWindow):
 
         elif action == "place_contour":
             elev = float(entry.get("elevation_m") or 0.0)
-            self.map_widget.run_js(f"undoLastContour({elev});")
+            self.map_widget.undo_last_contour(elev)
             kept = []
             removed = False
             for f in reversed(self._project["features"]):
@@ -3544,11 +3502,8 @@ class MainWindow(QMainWindow):
             )
 
         elif action == "place_hedgerow":
-            import json as _json
             hid = entry["hedge_id"]
-            self.map_widget.run_js(
-                f"undoHedgerowById({_json.dumps(hid)});"
-            )
+            self.map_widget.undo_hedgerow_by_id(hid)
             self._project["features"] = [
                 f for f in self._project["features"]
                 if f.get("properties", {}).get("hedge_id") != hid
@@ -3557,11 +3512,8 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Undo: removed hedgerow", 2000)
 
         elif action == "place_custom_shape":
-            import json as _json
             sid = entry["shape_id"]
-            self.map_widget.run_js(
-                f"undoCustomShapeById({_json.dumps(sid)});"
-            )
+            self.map_widget.undo_custom_shape_by_id(sid)
             self._project["features"] = [
                 f for f in self._project["features"]
                 if f.get("properties", {}).get("shape_id") != sid
@@ -3578,22 +3530,10 @@ class MainWindow(QMainWindow):
             old_lng = float(entry["old_lng"])
             new_lat = float(entry["new_lat"])
             new_lng = float(entry["new_lng"])
-            self.map_widget.run_js(
-                f"(function() {{"
-                f"  var keys = Object.keys(plantMarkers);"
-                f"  for (var i = keys.length - 1; i >= 0; i--) {{"
-                f"    var m = plantMarkers[keys[i]];"
-                f"    if (m._pd && m._pd.plantId === {pid}"
-                f"        && Math.abs(m._pd.lat - {new_lat}) < 1e-7"
-                f"        && Math.abs(m._pd.lng - {new_lng}) < 1e-7) {{"
-                f"      m.setLatLng([{old_lat}, {old_lng}]);"
-                f"      m._pd.lat = {old_lat}; m._pd.lng = {old_lng};"
-                f"      var lbl = plantLabels[keys[i]];"
-                f"      if (lbl) lbl.setLatLng([{old_lat}, {old_lng}]);"
-                f"      break;"
-                f"    }}"
-                f"  }}"
-                f"}})()"
+            # Search for the marker at its post-drag position; move it
+            # back to the pre-drag spot.
+            self.map_widget.revert_plant_position(
+                pid, new_lat, new_lng, old_lat, old_lng,
             )
             for p in self._placed_plants:
                 if (p["plant_id"] == pid
@@ -3616,7 +3556,6 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Undo: plant move", 2000)
 
         elif action == "move_plant_group":
-            import json as _json
             originals = entry.get("originals") or []
             moved     = entry.get("moved") or []
             moved_by_id = {m.get("markerId"): m for m in moved}
@@ -3632,23 +3571,9 @@ class MainWindow(QMainWindow):
                 og  = float(orig.get("lng") or 0.0)
                 nl  = float(new.get("lat") or 0.0)
                 ng  = float(new.get("lng") or 0.0)
-                self.map_widget.run_js(
-                    f"(function() {{"
-                    f"  var keys = Object.keys(plantMarkers);"
-                    f"  for (var i = keys.length - 1; i >= 0; i--) {{"
-                    f"    var m = plantMarkers[keys[i]];"
-                    f"    if (m._pd && m._pd.plantId === {pid}"
-                    f"        && Math.abs(m._pd.lat - {nl}) < 1e-7"
-                    f"        && Math.abs(m._pd.lng - {ng}) < 1e-7) {{"
-                    f"      m.setLatLng([{ol}, {og}]);"
-                    f"      m._pd.lat = {ol}; m._pd.lng = {og};"
-                    f"      var lbl = plantLabels[keys[i]];"
-                    f"      if (lbl) lbl.setLatLng([{ol}, {og}]);"
-                    f"      break;"
-                    f"    }}"
-                    f"  }}"
-                    f"}})()"
-                )
+                # Marker is currently at the post-drag (nl, ng); move it
+                # back to the pre-drag (ol, og).
+                self.map_widget.revert_plant_position(pid, nl, ng, ol, og)
                 for p in self._placed_plants:
                     if (p["plant_id"] == pid
                             and abs(p["lat"] - nl) < 1e-7
@@ -3776,10 +3701,10 @@ class MainWindow(QMainWindow):
         key = event.key()
         if key == Qt.Key.Key_Escape:
             self._cancel_draw()
-            self.map_widget.run_js("clearSelection();")
+            self.map_widget.clear_selection()
         elif key == Qt.Key.Key_Delete or key == Qt.Key.Key_Backspace:
             # Delete every currently-selected map item (across types).
-            self.map_widget.run_js("deleteSelected();")
+            self.map_widget.delete_selected()
         elif key == Qt.Key.Key_B and not event.modifiers():
             self._enter_boundary_mode()
         elif key == Qt.Key.Key_P and not event.modifiers():
@@ -3803,7 +3728,7 @@ class MainWindow(QMainWindow):
             self._enter_annotate_mode()
         elif key == Qt.Key.Key_L and not event.modifiers():
             # Toggle map legend
-            self.map_widget.run_js("toggleLegend();")
+            self.map_widget.toggle_legend()
         else:
             super().keyPressEvent(event)
 

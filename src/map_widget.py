@@ -2,8 +2,10 @@
 map_widget.py — QtWebEngine wrapper around the Leaflet map.
 
 Exposes a MapBridge QObject whose slots are callable from JavaScript via
-QWebChannel. Python code calls self.map_widget.run_js(...) to invoke JS
-functions defined in map.html.
+QWebChannel. Python code crosses the boundary the other way through the
+MapWidget methods below, which build their JS via the typed builders in
+``src/map_js.py`` — never via inline f-strings. If you need a new entry
+point, add a builder there and a thin method here.
 """
 
 import os
@@ -12,6 +14,8 @@ from PyQt6.QtCore import QObject, pyqtSlot, pyqtSignal, QUrl, QTimer
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
 from PyQt6.QtWebChannel import QWebChannel
+
+from src import map_js
 
 
 def _dbg(msg: str) -> None:
@@ -444,7 +448,6 @@ class MapWidget(QWebEngineView):
                                          "fill": bool}}
         """
         if mode == 'plant' and plant_id:
-            import json as _json
             payload = {
                 "id": plant_id,
                 "common_name": common_name,
@@ -458,53 +461,47 @@ class MapWidget(QWebEngineView):
                 # when missing, mirroring the get_plant fallback.
                 "mature_canopy_m": mature_canopy_m or (spacing_m * 1.5),
             }
-            js = f"setMode('plant', JSON.parse({_json.dumps(_json.dumps(payload))}));"
+            self.run_js(map_js.set_mode_with_payload("plant", payload))
         else:
-            js = f"setMode({repr(mode)});"
-        self.run_js(js)
+            self.run_js(map_js.set_mode(mode))
 
     def cancel_draw(self):
-        self.run_js("cancelDraw();")
+        self.run_js(map_js.cancel_draw())
 
     def clear_measure(self):
-        self.run_js("clearMeasure();")
+        self.run_js(map_js.clear_measure())
 
     def clear_all(self):
-        self.run_js("clearAll();")
+        self.run_js(map_js.clear_all())
 
     def set_satellite_visible(self, visible: bool):
-        v = 'true' if visible else 'false'
-        self.run_js(f"setSatelliteVisible({v});")
+        self.run_js(map_js.set_satellite_visible(visible))
 
     def set_boundary_visible(self, visible: bool):
-        v = 'true' if visible else 'false'
-        self.run_js(f"setBoundaryVisible({v});")
+        self.run_js(map_js.set_boundary_visible(visible))
 
     def set_measurements_visible(self, visible: bool):
-        v = 'true' if visible else 'false'
-        self.run_js(f"setMeasureVisible({v});")
+        self.run_js(map_js.set_measure_visible(visible))
 
     def set_plants_visible(self, visible: bool):
-        v = 'true' if visible else 'false'
-        self.run_js(f"setPlantsVisible({v});")
+        self.run_js(map_js.set_plants_visible(visible))
 
     def load_boundary(self, boundary_data: dict):
         """Load a boundary from a saved project. boundary_data has id/points/color/showLengths/showArea."""
-        import json
-        self.run_js(f"loadBoundary({json.dumps(json.dumps(boundary_data))});")
+        self.run_js(map_js.load_boundary(boundary_data))
 
     def load_plant_marker(self, plant_id: int, common_name: str, lat: float, lng: float,
                           spacing_m: float = 1.0, plant_type: str = "herb",
                           custom_color: str = "", group_id: str = ""):
-        color_arg = f", '{custom_color}'" if custom_color else ", null"
-        group_arg = f", {repr(group_id)}" if group_id else ", null"
-        self.run_js(
-            f"loadPlantMarker({plant_id}, {repr(common_name)}, {lat}, {lng}, "
-            f"{spacing_m}, {repr(plant_type)}{color_arg}{group_arg});"
-        )
+        self.run_js(map_js.load_plant_marker(
+            plant_id, common_name, lat, lng,
+            spacing_m=spacing_m, plant_type=plant_type,
+            custom_color=custom_color or None,
+            group_id=group_id or None,
+        ))
 
     def set_view(self, lat: float, lng: float, zoom: int = 14):
-        self.run_js(f"setView({lat}, {lng}, {zoom});")
+        self.run_js(map_js.set_view(lat, lng, zoom))
 
     # ── LOAD-BEARING RESIZE / INVALIDATE MACHINERY ───────────────────────
     # The block below (invalidate_size + resizeEvent + _do_invalidate) is
@@ -545,24 +542,16 @@ class MapWidget(QWebEngineView):
         canvas renderer cached at a stale size, which manifests as a blank
         map with dead zoom/satellite controls.
 
-        *** Do not "clean up" the console.log calls below. *** They look
-        like debug noise but each one reads clientWidth/clientHeight,
-        which forces a Chromium layout reflow as a documented browser
-        side effect. Without those reads, on Windows the embedded
-        viewport stays at the pre-resize size after a maximise and the
-        map paints only into the corner of the widget. See the block
-        comment above this method for the full context.
+        The JS string itself lives in ``map_js.invalidate_size()`` —
+        *** do not "clean up" the console.log calls there. *** They
+        look like debug noise but each one reads clientWidth /
+        clientHeight, which forces a Chromium layout reflow as a
+        documented browser side effect. Without those reads, on Windows
+        the embedded viewport stays at the pre-resize size after a
+        maximise and the map paints only into the corner of the widget.
+        See the block comment above this method for the full context.
         """
-        self.run_js(
-            "if (typeof map !== 'undefined' && map && map.invalidateSize) {"
-            "  console.log('[dbg] invalidateSize start, container=' + "
-            "    map.getContainer().clientWidth + 'x' + map.getContainer().clientHeight);"
-            "  var _t0 = performance.now();"
-            "  map.invalidateSize(false);"
-            "  console.log('[dbg] invalidateSize end, elapsed=' + "
-            "    (performance.now() - _t0).toFixed(1) + 'ms');"
-            "}"
-        )
+        self.run_js(map_js.invalidate_size())
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -585,193 +574,223 @@ class MapWidget(QWebEngineView):
 
     def place_site_pin(self, lat: float, lng: float, label: str = ""):
         """Place (or move) the property pin without going through the search box."""
-        import json as _json
-        self.run_js(
-            f"placeSitePin({lat}, {lng}, {_json.dumps(label or '')});"
-        )
+        self.run_js(map_js.place_site_pin(lat, lng, label or ""))
 
     def clear_site_pin(self):
-        self.run_js("clearSitePin(false);")
+        self.run_js(map_js.clear_site_pin())
 
     def set_site_pin_drop_mode(self, active: bool):
         """Toggle the crosshair cursor while the user is arming a pin drop."""
-        flag = "true" if active else "false"
-        self.run_js(f"setSitePinDropMode({flag});")
+        self.run_js(map_js.set_site_pin_drop_mode(active))
 
     def set_labels_visible(self, visible: bool):
-        v = 'true' if visible else 'false'
-        self.run_js(f"setLabelsVisible({v});")
+        self.run_js(map_js.set_labels_visible(visible))
 
     def update_marker_color(self, plant_id: int, color: str):
-        self.run_js(f"updateMarkerColor({plant_id}, '{color}');")
+        self.run_js(map_js.update_marker_color(plant_id, color))
 
     def place_annotation(self, ann_id: str, lat: float, lng: float, text: str):
-        self.run_js(
-            f"placeAnnotation({repr(ann_id)}, {lat}, {lng}, {repr(text)});"
-        )
+        self.run_js(map_js.place_annotation(ann_id, lat, lng, text))
 
     def set_canopy_visible(self, visible: bool):
-        v = 'true' if visible else 'false'
-        self.run_js(f"setCanopyVisible({v});")
+        self.run_js(map_js.set_canopy_visible(visible))
 
     def set_snap_enabled(self, enabled: bool, grid_size: float = 1.0):
-        e = 'true' if enabled else 'false'
-        self.run_js(f"setSnapEnabled({e}, {grid_size});")
+        self.run_js(map_js.set_snap_enabled(enabled, grid_size))
 
     def set_grid_style(self, color: str, opacity: float):
         """Update the on-map grid colour and opacity (0..1)."""
-        import json as _json
-        self.run_js(
-            f"setGridStyle({_json.dumps(color)}, {float(opacity)});"
-        )
+        self.run_js(map_js.set_grid_style(color, opacity))
 
     # ── Structure helpers ─────────────────────────────────────────────────────
 
     def set_structure_mode(self, struct_def: dict):
         """Enter structure placement mode with a structure definition."""
-        import json
-        self.run_js(f"setMode('structure', JSON.parse({json.dumps(json.dumps(struct_def))}));")
+        self.run_js(map_js.set_mode_with_payload("structure", struct_def))
 
     def load_structure(self, struct_def: dict, lat: float, lng: float):
         """Load a structure from a saved project."""
-        import json
-        self.run_js(f"loadStructure(JSON.parse({json.dumps(json.dumps(struct_def))}), {lat}, {lng});")
+        self.run_js(map_js.load_structure(struct_def, lat, lng))
 
     # ── Hedgerow helpers ──────────────────────────────────────────────────────
 
     def set_hedgerow_mode(self, hedge_config: dict):
         """Enter hedgerow drawing mode."""
-        import json
-        self.run_js(f"setMode('hedgerow', JSON.parse({json.dumps(json.dumps(hedge_config))}));")
+        self.run_js(map_js.set_mode_with_payload("hedgerow", hedge_config))
 
     def load_hedgerow(self, hedge_def: dict):
         """Load a hedgerow from a saved project."""
-        import json
-        self.run_js(f"loadHedgerow(JSON.parse({json.dumps(json.dumps(hedge_def))}));")
+        self.run_js(map_js.load_hedgerow(hedge_def))
 
     # ── Shape helpers ─────────────────────────────────────────────────────────
 
     def set_shape_mode(self, shape_config: dict):
         """Enter custom shape drawing mode."""
-        import json
-        self.run_js(f"setMode('shape', JSON.parse({json.dumps(json.dumps(shape_config))}));")
+        self.run_js(map_js.set_mode_with_payload("shape", shape_config))
 
     def load_shape(self, shape_def: dict):
         """Load a custom shape from a saved project."""
-        import json
-        self.run_js(f"loadShape(JSON.parse({json.dumps(json.dumps(shape_def))}));")
+        self.run_js(map_js.load_shape(shape_def))
 
     def set_structures_visible(self, visible: bool):
-        v = 'true' if visible else 'false'
-        self.run_js(
-            f"Object.values(structureMarkers).forEach(function(g) {{"
-            f"  if ({v}) g.addTo(map); else map.removeLayer(g);"
-            f"}});"
-            f"Object.values(hedgerowLayers).forEach(function(g) {{"
-            f"  if ({v}) g.addTo(map); else map.removeLayer(g);"
-            f"}});"
-            f"Object.values(shapeLayers).forEach(function(g) {{"
-            f"  if ({v}) g.addTo(map); else map.removeLayer(g);"
-            f"}});"
-        )
+        self.run_js(map_js.set_structures_visible(visible))
 
     # ── Analysis overlay helpers (A1-A4) ──────────────────────────────────────
 
     def enter_sun_anchor_mode(self):
         """Enter sun-path anchor placement mode (user clicks map to place)."""
-        self.run_js("setMode('sun_anchor');")
+        self.run_js(map_js.set_mode("sun_anchor"))
 
     def enter_sector_anchor_mode(self):
         """Enter sector anchor placement mode."""
-        self.run_js("setMode('sector_anchor');")
+        self.run_js(map_js.set_mode("sector_anchor"))
 
     def draw_sun_path(self, data: dict, lat: float = None, lng: float = None):
         """Draw the sun path arc and shadow arrows on the map."""
-        import json
         if lat is not None and lng is not None:
-            self.run_js(
-                f"drawSunPath(JSON.parse({json.dumps(json.dumps(data))}), {lat}, {lng});"
-            )
+            self.run_js(map_js.draw_sun_path(data, lat, lng))
         else:
-            self.run_js(f"drawSunPath(JSON.parse({json.dumps(json.dumps(data))}));")
+            self.run_js(map_js.draw_sun_path(data))
 
     def clear_sun_path(self):
-        self.run_js("clearSunPath();")
+        self.run_js(map_js.clear_sun_path())
 
     def draw_sectors(self, data: dict, lat: float = None, lng: float = None):
         """Draw sector analysis wedges on the map at the given anchor."""
-        import json
         if lat is not None and lng is not None:
-            self.run_js(
-                f"drawSectors(JSON.parse({json.dumps(json.dumps(data))}), {lat}, {lng});"
-            )
+            self.run_js(map_js.draw_sectors(data, lat, lng))
         else:
-            self.run_js(f"drawSectors(JSON.parse({json.dumps(json.dumps(data))}));")
+            self.run_js(map_js.draw_sectors(data))
 
     def clear_sectors(self):
-        self.run_js("clearSectors();")
+        self.run_js(map_js.clear_sectors())
 
     def set_zoom_sensitivity(self, level: str):
         """Set zoom sensitivity: 'fine'|'normal'|'fast'|'coarse'."""
-        self.run_js(f"setZoomSensitivity({repr(level)});")
+        self.run_js(map_js.set_zoom_sensitivity(level))
 
     def set_contour_mode(self, config: dict):
         """Enter contour drawing mode."""
-        import json
-        self.run_js(f"setMode('contour', JSON.parse({json.dumps(json.dumps(config))}));")
+        self.run_js(map_js.set_mode_with_payload("contour", config))
 
     def clear_contours(self):
-        self.run_js("clearContours();")
+        self.run_js(map_js.clear_contours())
 
     # ── Auto terrain (slope contours / ramp) ──────────────────────────────────
 
     def request_terrain_viewport(self):
         """Ask JS for the current viewport bbox; signalled back via terrain_bbox_ready."""
-        self.run_js("emitTerrainBboxFromViewport();")
+        self.run_js(map_js.request_terrain_viewport())
 
     def request_terrain_boundary_bbox(self):
         """Ask JS to compute the bbox of the (single) drawn property boundary."""
-        self.run_js("emitTerrainBboxFromBoundary();")
+        self.run_js(map_js.request_terrain_boundary_bbox())
 
     def enter_terrain_draw_mode(self):
         """Enter free-draw rectangle mode for picking a terrain bbox."""
-        self.run_js("setMode('terrain_rect');")
+        self.run_js(map_js.set_mode("terrain_rect"))
 
     def draw_auto_contours(self, contours: list[dict], color: str, show_labels: bool):
         """Render generated contour lines on the map. Replaces existing auto layer."""
-        import json as _json
-        payload = {
-            "contours":    contours,
-            "color":       color,
-            "show_labels": bool(show_labels),
-        }
-        self.run_js(
-            f"drawAutoContours(JSON.parse({_json.dumps(_json.dumps(payload))}));"
-        )
+        self.run_js(map_js.draw_auto_contours(contours, color, show_labels))
 
     def draw_slope_overlay(self, png_data_url: str, bbox: dict, opacity: float):
         """Render the slope ramp PNG as an ImageOverlay. Replaces any existing one."""
-        import json as _json
-        payload = {
-            "image":   png_data_url,
-            "bbox":    bbox,
-            "opacity": float(opacity),
-        }
-        self.run_js(
-            f"drawSlopeOverlay(JSON.parse({_json.dumps(_json.dumps(payload))}));"
-        )
+        self.run_js(map_js.draw_slope_overlay(png_data_url, bbox, opacity))
 
     def set_slope_overlay_opacity(self, opacity: float):
-        self.run_js(f"setSlopeOverlayOpacity({float(opacity)});")
+        self.run_js(map_js.set_slope_overlay_opacity(opacity))
 
     def clear_auto_terrain(self):
         """Remove auto-generated contours and slope overlay."""
-        self.run_js("clearAutoTerrain();")
+        self.run_js(map_js.clear_auto_terrain())
 
     def draw_wind_overlay(self, data: dict):
         """Draw wind direction arrows and shelter zones."""
-        import json
-        self.run_js(f"drawWindOverlay(JSON.parse({json.dumps(json.dumps(data))}));")
+        self.run_js(map_js.draw_wind_overlay(data))
 
     def clear_wind_overlay(self):
-        self.run_js("clearWindOverlay();")
+        self.run_js(map_js.clear_wind_overlay())
+
+    # ── New typed methods for the formerly-direct ``map_widget.run_js(...)``
+    # call sites in src/app.py. Each is a one-line wrapper around the
+    # matching builder in src.map_js. Keep this section in alphabetical
+    # order to make audit grep easy.
+
+    def apply_loaded_contour(self, contour: dict):
+        """Re-finish a saved contour on the map (re-uses the JS-side
+        in-progress drawing globals)."""
+        self.run_js(map_js.restore_contour(contour))
+
+    def clear_selection(self):
+        """Clear the current map selection (no delete)."""
+        self.run_js(map_js.clear_selection())
+
+    def delete_selected(self):
+        """Delete every currently-selected map item."""
+        self.run_js(map_js.delete_selected())
+
+    def place_plant_marker(self, plant_id: int, common_name: str,
+                            lat: float, lng: float,
+                            spacing_m: float = 1.0, plant_type: str = "herb",
+                            color: str | None = None,
+                            group_id: str | None = None):
+        """Place a plant marker as a fresh user action. Compare to
+        ``load_plant_marker`` which is the project-load variant."""
+        self.run_js(map_js.place_plant_marker(
+            plant_id, common_name, lat, lng,
+            spacing_m=spacing_m, plant_type=plant_type,
+            color=color, group_id=group_id,
+        ))
+
+    def revert_plant_position(self, plant_id: int,
+                                from_lat: float, from_lng: float,
+                                to_lat: float, to_lng: float):
+        """Used by undo/redo on a plant drag."""
+        self.run_js(map_js.revert_plant_position(
+            plant_id, from_lat, from_lng, to_lat, to_lng,
+        ))
+
+    def set_crosshair_cursor(self):
+        """Force a crosshair cursor on the map — used while arming a
+        plant-community click-to-place gesture."""
+        self.run_js(map_js.set_crosshair_cursor())
+
+    def set_plant_group_for_latest(self, plant_id: int, lat: float, lng: float,
+                                    group_id: str):
+        """Tell JS the freshest marker's group id so right-click →
+        Delete group works."""
+        self.run_js(map_js.set_plant_group_for_latest(
+            plant_id, lat, lng, group_id,
+        ))
+
+    def set_season_view(self, season: str, pid_visibility: dict):
+        """Highlight plants in/out of season for a given month name."""
+        self.run_js(map_js.set_season_view(season, pid_visibility))
+
+    def set_timeline_year_by_plant_id(self, year: int, pid_factors: dict):
+        """Drive the growth-timeline animation."""
+        self.run_js(map_js.set_timeline_year_by_plant_id(year, pid_factors))
+
+    def toggle_legend(self):
+        """Toggle the on-map legend overlay."""
+        self.run_js(map_js.toggle_legend())
+
+    def undo_boundary(self, boundary_id: str):
+        self.run_js(map_js.undo_boundary(boundary_id))
+
+    def undo_custom_shape_by_id(self, shape_id: str):
+        self.run_js(map_js.undo_custom_shape_by_id(shape_id))
+
+    def undo_hedgerow_by_id(self, hedge_id: str):
+        self.run_js(map_js.undo_hedgerow_by_id(hedge_id))
+
+    def undo_last_contour(self, elevation_m: float):
+        self.run_js(map_js.undo_last_contour(elevation_m))
+
+    def undo_place_plant(self, plant_id: int, lat: float, lng: float):
+        """Remove the most-recent marker matching (plant_id, lat, lng)."""
+        self.run_js(map_js.undo_place_plant(plant_id, lat, lng))
+
+    def undo_structure_at(self, struct_id: str, lat: float, lng: float):
+        self.run_js(map_js.undo_structure_at(struct_id, lat, lng))
