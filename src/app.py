@@ -680,7 +680,8 @@ class MainWindow(QMainWindow):
     # ── Map-ready ─────────────────────────────────────────────────────────────
 
     def _on_map_ready(self):
-        self._set_mode_label("Ready")
+        # Shim → MapEventRouter; see src/controllers/map_events.py.
+        return self._map_events._on_map_ready()
 
     def _on_plant_color_changed(self, plant_id: int, hex_color: str):
         """Update all existing markers for this plant on the map."""
@@ -689,7 +690,8 @@ class MainWindow(QMainWindow):
     # ── Status bar updates ────────────────────────────────────────────────────
 
     def _on_mouse_moved(self, lat: float, lng: float):
-        self._sb_coords.setText(f"Lat: {lat:.5f} , Lng: {lng:.5f}")
+        # Shim → MapEventRouter; see src/controllers/map_events.py.
+        return self._map_events._on_mouse_moved(lat, lng)
 
     def _set_zone_display(self, zone):
         self._current_zone = zone
@@ -983,9 +985,8 @@ class MainWindow(QMainWindow):
             )
 
     def _on_terrain_bbox_cancelled(self):
-        self._pending_terrain_config = None
-        self._set_mode_label("Ready")
-        self.site_panel.set_auto_terrain_status("Cancelled.")
+        # Shim → MapEventRouter; see src/controllers/map_events.py.
+        return self._map_events._on_terrain_bbox_cancelled()
 
     def _on_terrain_bbox_ready(self, bbox: dict):
         """Enqueue a TerrainWorker job for the chosen bbox and start it
@@ -1539,73 +1540,35 @@ class MainWindow(QMainWindow):
             group_id, originals_json, moved_json,
         )
 
+    # Sun-path / sector anchor handlers — shims → MapEventRouter.
+
     def _on_sun_anchor_placed(self, lat: float, lng: float):
-        """User placed sun-path anchor; now compute and draw."""
-        self._pending_sun_anchor = (lat, lng)
-        if self._pending_sun_config:
-            self._render_sun_path(self._pending_sun_config, lat, lng)
+        return self._map_events._on_sun_anchor_placed(lat, lng)
 
     def _on_sector_anchor_placed(self, lat: float, lng: float):
-        """User placed sector anchor; now draw."""
-        if self._pending_sector_config:
-            self.map_widget.draw_sectors(self._pending_sector_config, lat, lng)
-            names = [s["name"] for s in self._pending_sector_config.get("sectors", [])]
-            self._set_mode_label(f"Sectors: {', '.join(names)}")
-            self._pending_sector_config = None
+        return self._map_events._on_sector_anchor_placed(lat, lng)
 
     def _on_sun_path_removed(self):
-        self._set_mode_label("Sun path removed")
+        return self._map_events._on_sun_path_removed()
 
     def _on_anchor_cancelled(self, mode: str):
-        self.toolbar.reset_draw_buttons()
-        self._set_mode_label("Ready")
-        try:
-            self.plant_panel.clear_pending_polyculture()
-        except Exception:
-            pass
+        return self._map_events._on_anchor_cancelled(mode)
 
     def _on_sector_group_removed(self, sid: str):
-        self._set_mode_label("Sector group removed")
+        return self._map_events._on_sector_group_removed(sid)
 
     def _on_sector_group_moved(self, sid: str, lat: float, lng: float):
-        pass  # could persist if sectors were saved to project file
+        return self._map_events._on_sector_group_moved(sid, lat, lng)
 
     def _on_sector_group_rotated(self, sid: str, rotation_deg: float):
-        pass
+        return self._map_events._on_sector_group_rotated(sid, rotation_deg)
 
     def _on_sector_group_resized(self, sid: str, radius_m: float):
-        pass
+        return self._map_events._on_sector_group_resized(sid, radius_m)
 
     def _on_plant_placed(self, plant_id: int, common_name: str, lat: float, lng: float):
-        # Single-click placement: each plant gets its own singleton group.
-        group_id = project_io.new_placement_group_id()
-        self._push_undo({
-            "action": "place_plant",
-            "plant_id": plant_id, "common_name": common_name,
-            "lat": lat, "lng": lng,
-            "placement_group_id": group_id,
-        })
-        self._placed_plants.append({
-            "plant_id": plant_id, "common_name": common_name,
-            "lat": lat, "lng": lng,
-            "placement_group_id": group_id,
-        })
-        self._project["features"].append({
-            "type": "Feature",
-            "geometry": {"type": "Point", "coordinates": [lng, lat]},
-            "properties": {
-                "element_type": "plant",
-                "plant_id": plant_id,
-                "common_name": common_name,
-                "placement_group_id": group_id,
-                "quantity": 1
-            }
-        })
-        # Tell JS the marker's group id so right-click → "Delete group" works.
-        self.map_widget.set_plant_group_for_latest(plant_id, lat, lng, group_id)
-        self.plant_panel.on_plant_placed(plant_id, common_name)
-        self._mark_modified()
-        self._sync_planning_panel()
+        # Shim → MapEventRouter; see src/controllers/map_events.py.
+        return self._map_events._on_plant_placed(plant_id, common_name, lat, lng)
 
     def _expand_communities_at_positions(self, positions, community: dict,
                                           pattern_kind: str):
@@ -1847,113 +1810,25 @@ class MainWindow(QMainWindow):
             )
 
     def _on_plant_removed(self, marker_id: str, plant_id: int, lat: float, lng: float):
-        # Remove matching entry from placed list (match by plant_id + coords)
-        for i, p in enumerate(self._placed_plants):
-            if (p["plant_id"] == plant_id
-                    and abs(p["lat"] - lat) < 1e-7
-                    and abs(p["lng"] - lng) < 1e-7):
-                self._placed_plants.pop(i)
-                break
+        # Shim → MapEventRouter; see src/controllers/map_events.py.
+        return self._map_events._on_plant_removed(marker_id, plant_id, lat, lng)
 
-        # Remove matching feature from project
-        removed = False
-        kept = []
-        for f in self._project["features"]:
-            props = f.get("properties", {})
-            coords = f.get("geometry", {}).get("coordinates", [])
-            if (not removed
-                    and props.get("element_type") == "plant"
-                    and props.get("plant_id") == plant_id
-                    and coords
-                    and abs(coords[1] - lat) < 1e-7
-                    and abs(coords[0] - lng) < 1e-7):
-                removed = True
-            else:
-                kept.append(f)
-        self._project["features"] = kept
-
-        self.plant_panel.on_plant_removed(plant_id)
-        self._mark_modified()
-        self._sync_planning_panel()
-
-    def _on_polyculture_removed(self, polyculture_name: str, center_lat: float, center_lng: float):
-        """Remove all polyculture member plant features from project state.
-
-        Members are identified by the polyculture_center_{lat,lng} anchor they were
-        tagged with at placement time — the previous approach of matching
-        each plant's own coordinate against the center with a 0.001-degree
-        (~111 m) tolerance both missed members farther than 100 m from the
-        center and could match plants from adjacent polycultures with identical
-        names.
-        """
-        # 1e-7 deg ≈ 1 cm — plenty tight while absorbing float round-trip noise.
-        TOL = 1e-7
-
-        def _anchors_match(anchor_lat, anchor_lng):
-            if anchor_lat is None or anchor_lng is None:
-                return False
-            return (abs(anchor_lat - center_lat) < TOL
-                    and abs(anchor_lng - center_lng) < TOL)
-
-        kept_plants = []
-        for p in self._placed_plants:
-            if (p.get("polyculture_name") == polyculture_name
-                    and _anchors_match(p.get("polyculture_center_lat"),
-                                       p.get("polyculture_center_lng"))):
-                continue  # drop this polyculture member
-            kept_plants.append(p)
-        removed_count = len(self._placed_plants) - len(kept_plants)
-        self._placed_plants = kept_plants
-
-        kept_features = []
-        for f in self._project["features"]:
-            props = f.get("properties", {})
-            if (props.get("element_type") == "plant"
-                    and props.get("polyculture_name") == polyculture_name
-                    and _anchors_match(props.get("polyculture_center_lat"),
-                                       props.get("polyculture_center_lng"))):
-                continue  # drop this polyculture member
-            kept_features.append(f)
-        self._project["features"] = kept_features
-
-        # Update plant panel counts
-        for _ in range(removed_count):
-            self.plant_panel.on_plant_removed(0)
-        self._mark_modified()
-        self._sync_planning_panel()
+    def _on_polyculture_removed(self, polyculture_name: str,
+                                  center_lat: float, center_lng: float):
+        # Shim → MapEventRouter; see src/controllers/map_events.py.
+        return self._map_events._on_polyculture_removed(
+            polyculture_name, center_lat, center_lng,
+        )
 
     # ── Site pin / property data ──────────────────────────────────────────────
 
+    # Site-pin handlers — shims → MapEventRouter.
+
     def _on_site_pin_placed(self, lat: float, lng: float, label: str):
-        """User dropped a property pin (via search or manual click)."""
-        self._site_pin_mode = False
-        self.map_widget.set_site_pin_drop_mode(False)
-        self.site_panel.set_pin(lat, lng, label)
-        # Switch to the Site tab so results are visible.
-        try:
-            idx = self._side_tabs.indexOf(self.site_panel)
-            if idx >= 0:
-                self._side_tabs.setCurrentIndex(idx)
-        except Exception:
-            pass
-        # Persist coordinates immediately; site data fills in when fetcher returns.
-        sc = self._project["properties"].setdefault("site_config", {})
-        sc["latitude"]  = lat
-        sc["longitude"] = lng
-        if label:
-            sc["pin_label"] = label
-        self._mark_modified()
-        self._set_mode_label("Property pin set — fetching site data")
+        return self._map_events._on_site_pin_placed(lat, lng, label)
 
     def _on_site_pin_removed(self):
-        self.site_panel.clear_pin()
-        sc = self._project["properties"].setdefault("site_config", {})
-        for key in ("latitude", "longitude", "pin_label",
-                    "rainfall", "soil", "elevation", "hardiness",
-                    "data_fetched_at"):
-            sc.pop(key, None)
-        self._mark_modified()
-        self._set_mode_label("Property pin removed")
+        return self._map_events._on_site_pin_removed()
 
     def _on_site_pin_clear_clicked(self):
         self.map_widget.clear_site_pin()
