@@ -30,7 +30,8 @@ from PyQt6.QtCore import Qt, QTimer, QThread, QEvent
 from PyQt6.QtGui import QKeySequence, QShortcut
 
 from src.map_widget       import MapWidget
-from src.plant_panel      import PlantPanel, OnThisDesignPanel
+from src.plant_panel        import PlantPanel
+from src.on_this_design_panel import OnThisDesignPanel
 from src.polyculture_panel      import PolyculturePanel
 from src.structure_panel  import StructurePanel
 from src.analysis_panel   import AnalysisPanel
