@@ -43,6 +43,7 @@ from src.collapsible_panel import CollapsibleSidebar
 import src.project as project_io
 from src.controllers.update_flow import UpdateFlowController
 from src.controllers.mode import ModeController
+from src.controllers.persistence import PersistenceController
 
 
 # Marker colour tables for plant-community members.
@@ -187,6 +188,7 @@ class MainWindow(QMainWindow):
         # menu builder can target the controller-backed shims below.
         self._update_flow = UpdateFlowController(self)
         self._mode = ModeController(self)
+        self._persistence = PersistenceController(self)
 
         self._build_ui()
         self._connect_signals()
@@ -718,9 +720,8 @@ class MainWindow(QMainWindow):
         return self._mode._set_mode_label(text)
 
     def _mark_modified(self):
-        self._modified = True
-        if not self.windowTitle().endswith(' *'):
-            self.setWindowTitle(self.windowTitle() + ' *')
+        # Shim → PersistenceController; see src/controllers/persistence.py.
+        return self._persistence._mark_modified()
 
     # ── Seasonal tasks ────────────────────────────────────────────────────────
 
@@ -2516,49 +2517,26 @@ class MainWindow(QMainWindow):
         self._sync_planning_panel()
 
     def _on_save(self):
-        if self._project_path:
-            self._save_to_path(self._project_path)
-        else:
-            self._on_save_as()
+        # Shim → PersistenceController; see src/controllers/persistence.py.
+        return self._persistence._on_save()
 
     def _on_save_as(self):
-        path, _ = QFileDialog.getSaveFileName(
-            self, "Save Design", "",
-            "PermaDesign Files (*.perma.geojson);;GeoJSON (*.geojson)"
-        )
-        if not path:
-            return
-        if not path.endswith(".geojson"):
-            path += ".perma.geojson"
-        self._save_to_path(path)
+        # Shim → PersistenceController; see src/controllers/persistence.py.
+        return self._persistence._on_save_as()
 
     def _save_to_path(self, path: str):
-        try:
-            project_io.save_project(self._project, path)
-            self._project_path = path
-            self._modified     = False
-            name = self._project["properties"].get("project_name", "Design")
-            self.setWindowTitle(f"PermaDesign — {name}")
-            self.statusBar().showMessage(f"Saved: {path}", 3000)
-        except Exception as exc:
-            QMessageBox.critical(self, "Save failed", str(exc))
+        # Shim → PersistenceController; see src/controllers/persistence.py.
+        return self._persistence._save_to_path(path)
 
     # ── Autosave ──────────────────────────────────────────────────────────────
 
     def _start_autosave(self):
-        self._autosave_timer = QTimer(self)
-        self._autosave_timer.setInterval(self.AUTOSAVE_INTERVAL_MS)
-        self._autosave_timer.timeout.connect(self._autosave)
-        self._autosave_timer.start()
+        # Shim → PersistenceController; see src/controllers/persistence.py.
+        return self._persistence._start_autosave()
 
     def _autosave(self):
-        if not self._modified:
-            return
-        tmp = os.path.join(os.path.expanduser("~"), ".permadesign_autosave.perma.geojson")
-        try:
-            project_io.save_project(self._project, tmp)
-        except Exception:
-            pass
+        # Shim → PersistenceController; see src/controllers/persistence.py.
+        return self._persistence._autosave()
 
     # ── Plant order list export ──────────────────────────────────────────────
 
@@ -2877,12 +2855,8 @@ class MainWindow(QMainWindow):
             pass
 
     def _push_undo(self, entry: dict):
-        self._undo_stack.append(entry)
-        if len(self._undo_stack) > self._max_undo:
-            self._undo_stack.pop(0)
-        self._redo_stack.clear()
-        self._act_undo.setEnabled(True)
-        self._act_redo.setEnabled(False)
+        # Shim → PersistenceController; see src/controllers/persistence.py.
+        return self._persistence._push_undo(entry)
 
     def _do_undo(self):
         if not self._undo_stack:
