@@ -832,32 +832,13 @@ class MainWindow(QMainWindow):
         # Shim → ModeController; see src/controllers/mode.py.
         return self._mode._enter_annotate_mode()
 
+    # Annotation handlers — shims → MapEventRouter.
+
     def _on_annotate_requested(self, lat: float, lng: float):
-        text, ok = QInputDialog.getText(
-            self, "Add Note", "Note text:", text=""
-        )
-        if not ok or not text.strip():
-            return
-        ann_id = f"ann_{int(lat*1e6)}_{int(lng*1e6)}_{id(self)}"
-        self.map_widget.place_annotation(ann_id, lat, lng, text.strip())
-        # Save to project
-        self._project["features"].append({
-            "type": "Feature",
-            "geometry": {"type": "Point", "coordinates": [lng, lat]},
-            "properties": {
-                "element_type": "annotation",
-                "annotation_id": ann_id,
-                "text": text.strip(),
-            }
-        })
-        self._mark_modified()
+        return self._map_events._on_annotate_requested(lat, lng)
 
     def _on_annotation_removed(self, ann_id: str):
-        self._project["features"] = [
-            f for f in self._project["features"]
-            if f.get("properties", {}).get("annotation_id") != ann_id
-        ]
-        self._mark_modified()
+        return self._map_events._on_annotation_removed(ann_id)
 
     # ── Structure / Hedgerow / Shape modes ──────────────────────────────────
 
@@ -972,58 +953,18 @@ class MainWindow(QMainWindow):
             f"Drawing contour at {elev:.1f}m — click points, double-click to finish"
         )
 
-    def _on_contour_complete(self, points_json: str, elevation: float, color: str):
-        """Save contour line to project."""
-        import json as _json
-        points = _json.loads(points_json)
-        coords = [[pt[1], pt[0]] for pt in points]
-        self._project["features"].append({
-            "type": "Feature",
-            "geometry": {"type": "LineString", "coordinates": coords},
-            "properties": {
-                "element_type": "contour_line",
-                "elevation_m": elevation,
-                "color": color,
-            }
-        })
-        self._push_undo({
-            "action": "place_contour",
-            "points": list(points),
-            "elevation_m": elevation,
-            "color": color,
-        })
-        self._mark_modified()
-        self._set_mode_label("Ready")
-        self.statusBar().showMessage(
-            f"Contour line at {elevation:.1f}m placed", 2000
-        )
+    # Contour handlers — shims → MapEventRouter.
 
-    def _on_contour_removed(self, points_json: str, elevation: float, color: str):
-        """Remove a single contour line from project state."""
-        kept = []
-        removed = False
-        for f in self._project["features"]:
-            props = f.get("properties", {})
-            if (not removed
-                    and props.get("element_type") == "contour_line"
-                    and abs(props.get("elevation_m", -1) - elevation) < 0.01):
-                removed = True
-            else:
-                kept.append(f)
-        self._project["features"] = kept
-        self._mark_modified()
-        self.statusBar().showMessage(
-            f"Contour line at {elevation:.1f}m removed", 2000
-        )
+    def _on_contour_complete(self, points_json: str, elevation: float,
+                              color: str):
+        return self._map_events._on_contour_complete(points_json, elevation, color)
+
+    def _on_contour_removed(self, points_json: str, elevation: float,
+                             color: str):
+        return self._map_events._on_contour_removed(points_json, elevation, color)
 
     def _on_contour_cleared(self):
-        """Clear all contours from map and project."""
-        self.map_widget.clear_contours()
-        self._project["features"] = [
-            f for f in self._project["features"]
-            if f.get("properties", {}).get("element_type") != "contour_line"
-        ]
-        self._mark_modified()
+        return self._map_events._on_contour_cleared()
 
     # ── Auto-generated terrain (slope contours + ramp overlay) ────────────────
 
@@ -1583,100 +1524,19 @@ class MainWindow(QMainWindow):
     def _on_boundary_removed(self, bid: str):
         return self._map_events._on_boundary_removed(bid)
 
+    # Plant move handlers — shims → MapEventRouter.
+
     def _on_plant_moved(self, marker_id: str, plant_id: int,
                         old_lat: float, old_lng: float,
                         new_lat: float, new_lng: float):
-        """User dragged a singleton plant marker. Update project state
-        and push a single-move undo entry so Ctrl+Z restores the
-        previous position."""
-        if abs(new_lat - old_lat) < 1e-9 and abs(new_lng - old_lng) < 1e-9:
-            return
-        # _placed_plants list
-        for p in self._placed_plants:
-            if (p["plant_id"] == plant_id
-                    and abs(p["lat"] - old_lat) < 1e-7
-                    and abs(p["lng"] - old_lng) < 1e-7):
-                p["lat"] = new_lat
-                p["lng"] = new_lng
-                break
-        # Project features
-        for f in self._project["features"]:
-            props = f.get("properties", {})
-            coords = f.get("geometry", {}).get("coordinates", [])
-            if (props.get("element_type") == "plant"
-                    and props.get("plant_id") == plant_id
-                    and coords
-                    and abs(coords[1] - old_lat) < 1e-7
-                    and abs(coords[0] - old_lng) < 1e-7):
-                f["geometry"]["coordinates"] = [new_lng, new_lat]
-                break
-        self._push_undo({
-            "action":   "move_plant",
-            "plant_id": plant_id,
-            "old_lat":  old_lat, "old_lng": old_lng,
-            "new_lat":  new_lat, "new_lng": new_lng,
-        })
-        self._mark_modified()
+        return self._map_events._on_plant_moved(
+            marker_id, plant_id, old_lat, old_lng, new_lat, new_lng,
+        )
 
     def _on_plant_group_moved(self, group_id: str,
                               originals_json: str, moved_json: str):
-        """User dragged a polyculture (or other multi-plant) group as
-        a cohesive unit. Apply the per-marker delta to project state
-        and push a single group-move undo entry."""
-        import json as _json
-        try:
-            originals = _json.loads(originals_json or "[]")
-            moved     = _json.loads(moved_json or "[]")
-        except Exception:
-            return
-        if not originals or len(originals) != len(moved):
-            return
-        # Pair by markerId so updates land on the right feature even if
-        # the JSON arrays come back in a different order.
-        moved_by_id = {m.get("markerId"): m for m in moved}
-        any_change = False
-        for orig in originals:
-            mid = orig.get("markerId")
-            new = moved_by_id.get(mid)
-            if not new:
-                continue
-            old_lat = float(orig.get("lat") or 0.0)
-            old_lng = float(orig.get("lng") or 0.0)
-            new_lat = float(new.get("lat") or 0.0)
-            new_lng = float(new.get("lng") or 0.0)
-            if abs(new_lat - old_lat) < 1e-9 and abs(new_lng - old_lng) < 1e-9:
-                continue
-            any_change = True
-            plant_id = orig.get("plantId")
-            for p in self._placed_plants:
-                if (p["plant_id"] == plant_id
-                        and abs(p["lat"] - old_lat) < 1e-7
-                        and abs(p["lng"] - old_lng) < 1e-7):
-                    p["lat"] = new_lat
-                    p["lng"] = new_lng
-                    break
-            for f in self._project["features"]:
-                props = f.get("properties", {})
-                coords = f.get("geometry", {}).get("coordinates", [])
-                if (props.get("element_type") == "plant"
-                        and props.get("plant_id") == plant_id
-                        and props.get("placement_group_id") == group_id
-                        and coords
-                        and abs(coords[1] - old_lat) < 1e-7
-                        and abs(coords[0] - old_lng) < 1e-7):
-                    f["geometry"]["coordinates"] = [new_lng, new_lat]
-                    break
-        if not any_change:
-            return
-        self._push_undo({
-            "action":    "move_plant_group",
-            "group_id":  group_id,
-            "originals": list(originals),
-            "moved":     list(moved),
-        })
-        self._mark_modified()
-        self.statusBar().showMessage(
-            f"Moved polyculture group ({len(originals)} plants)", 2000
+        return self._map_events._on_plant_group_moved(
+            group_id, originals_json, moved_json,
         )
 
     def _on_sun_anchor_placed(self, lat: float, lng: float):
