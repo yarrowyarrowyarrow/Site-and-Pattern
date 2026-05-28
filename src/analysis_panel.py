@@ -647,23 +647,10 @@ class AnalysisPanel(QWidget):
 
         self._tabs.addTab(tab, "Habitat Value")
 
-    # Mapping from plant_type to vegetation layer used for layer-diversity scoring.
-    _PLANT_TYPE_TO_LAYER = {
-        "tree":        "overstory",
-        "shrub":       "shrub",
-        "herb":        "herbaceous",
-        "groundcover": "groundcover",
-        "vine":        "vine",
-        "root":        "herbaceous",
-    }
-
-    # Structure ids that contribute to habitat value (Water + Habitat categories
-    # from src/db/structures.py).
-    _HABITAT_STRUCTURE_IDS = {
-        "pond", "swale", "rain_garden", "rain_barrel",
-        "native_bee_log", "bee_hotel", "brush_pile", "snag",
-        "rock_xeriscape", "native_lawn_patch",
-    }
+    # Structure ids that contribute to habitat value — re-exported from
+    # src/habitat_score.py (where the scoring maths lives now) so the
+    # tips builder below and the score stay in lock-step.
+    from src.habitat_score import HABITAT_STRUCTURE_IDS as _HABITAT_STRUCTURE_IDS
 
     def set_placed_plants(self, plants: list[dict]):
         """Update the list of placed plants (from app.py)."""
@@ -674,125 +661,33 @@ class AnalysisPanel(QWidget):
         self._structures = structures
 
     def _calc_habitat_score(self):
-        if not self._placed_plants and not self._structures:
+        # Scoring maths moved to src/habitat_score.py (Chunk 6) so the
+        # headless scripting API and this panel share one implementation.
+        # The panel keeps all the rendering below.
+        from src.habitat_score import compute_habitat_score, HabitatScoreError
+        try:
+            result = compute_habitat_score(self._placed_plants, self._structures)
+        except HabitatScoreError:
+            self._habitat_score_label.setText("?")
+            self._habitat_breakdown.setText("Plant database unavailable.")
+            return
+        if result is None:
             self._habitat_score_label.setText("—")
             self._habitat_breakdown.setText("Place some plants and structures first.")
             return
 
-        # Pull DB rows for distinct placed species.
-        plant_rows: dict[int, dict] = {}
-        plant_uses_map: dict[int, set[str]] = {}
-        n_lepidoptera_supported = 0
-        try:
-            from src.db.plants import get_connection, plant_uses_for_ids
-            from src.db.fauna import lepidoptera_supported_by_plants
-            conn = get_connection()
-            try:
-                plant_ids = list({p["plant_id"] for p in self._placed_plants})
-                for pid in plant_ids:
-                    row = conn.execute(
-                        "SELECT id, common_name, plant_type, permaculture_uses, "
-                        "       native_to_alberta, bloom_period "
-                        "FROM plants WHERE id = ?",
-                        (pid,)
-                    ).fetchone()
-                    if row:
-                        plant_rows[pid] = dict(row)
-            finally:
-                conn.close()
-            # Schema v13: read tag membership from the plant_uses junction
-            # instead of substring-matching against the legacy comma blob.
-            plant_uses_map = plant_uses_for_ids(list(plant_rows.keys()))
-            # Schema v13: count distinct lepidoptera species larval-hosted
-            # by any placed plant. This drives the new wildlife component.
-            n_lepidoptera_supported = len(
-                lepidoptera_supported_by_plants(list(plant_rows.keys()))
-            )
-        except Exception:
-            self._habitat_score_label.setText("?")
-            self._habitat_breakdown.setText("Plant database unavailable.")
-            return
-
-        n_species = len(plant_rows)
-        n_total_plants = len(self._placed_plants)
-
-        def _has_use(pid: int, key: str) -> bool:
-            return key in plant_uses_map.get(pid, set())
-
-        # ── 1. % natives (20 pts) ─────────────────────────────────────────
-        native_species = sum(
-            1 for r in plant_rows.values() if r.get("native_to_alberta")
-        )
-        native_ratio = native_species / n_species if n_species else 0.0
-        score_native = native_ratio * 20
-
-        # ── 2. Keystone species (15 pts, full at 5 distinct species) ──────
-        keystone_species = [
-            r["common_name"] for pid, r in plant_rows.items()
-            if _has_use(pid, "keystone_species")
-        ]
-        score_keystone = min(len(keystone_species) / 5.0, 1.0) * 15
-
-        # ── 3. Host plant species (10 pts, full at 10) ────────────────────
-        host_species = [
-            r["common_name"] for pid, r in plant_rows.items()
-            if _has_use(pid, "host_plant")
-        ]
-        score_host = min(len(host_species) / 10.0, 1.0) * 10
-
-        # ── 4. Bird food species (10 pts, full at 10) ─────────────────────
-        bird_species = [
-            r["common_name"] for pid, r in plant_rows.items()
-            if _has_use(pid, "bird_food")
-        ]
-        score_bird = min(len(bird_species) / 10.0, 1.0) * 10
-
-        # ── 5. Vegetation layer diversity (15 pts, 3 pts per layer) ───────
-        layers_present = set()
-        for r in plant_rows.values():
-            layer = self._PLANT_TYPE_TO_LAYER.get(r.get("plant_type", ""))
-            if layer:
-                layers_present.add(layer)
-        # Count up to 5 canonical layers
-        canonical = {"overstory", "shrub", "herbaceous", "groundcover", "vine"}
-        score_layers = min(len(layers_present & canonical), 5) * 3
-
-        # ── 6. Structural diversity (10 pts, 2 pts per distinct type) ─────
-        habitat_struct_types = set()
-        for s in self._structures:
-            sid = s.get("id") or s.get("type") or s.get("name", "").lower().replace(" ", "_")
-            if sid in self._HABITAT_STRUCTURE_IDS:
-                habitat_struct_types.add(sid)
-        score_structs = min(len(habitat_struct_types), 5) * 2
-
-        # ── 7. Bloom continuity across growing season Apr–Oct (20 pts) ────
-        growing = set(range(4, 11))  # Apr=4..Oct=10
-        bloom_months: set[int] = set()
-        for r in plant_rows.values():
-            if r.get("bloom_period"):
-                for m in self._parse_month_range(r["bloom_period"]):
-                    if m in growing:
-                        bloom_months.add(m)
-        # 20 pts spread across 7 growing-season months
-        score_bloom = (len(bloom_months) / len(growing)) * 20
-
-        total = (score_native + score_keystone + score_host + score_bird
-                 + score_layers + score_structs + score_bloom)
-        total_int = int(round(total))
+        total_int = result.total
+        grade = result.grade
 
         # Score colour
         if total_int >= 75:
             color = "#a5d6a7"
-            grade = "Excellent habitat"
         elif total_int >= 50:
             color = "#dcedc8"
-            grade = "Solid habitat"
         elif total_int >= 25:
             color = "#fff59d"
-            grade = "Foundation laid"
         else:
             color = "#ffab91"
-            grade = "Just getting started"
 
         self._habitat_score_label.setText(f"{total_int} / 100")
         self._habitat_score_label.setStyleSheet(
@@ -800,54 +695,56 @@ class AnalysisPanel(QWidget):
             "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px; padding: 12px;"
         )
 
-        # Breakdown text
+        # Breakdown text — layout unchanged from the pre-extraction code;
+        # values now come off the HabitatScore result.
         lines = [
             f"{grade}",
             "",
-            f"Native ratio        {native_ratio*100:5.0f}%    {score_native:4.1f} / 20",
-            f"  ({native_species} of {n_species} species native to AB)",
+            f"Native ratio        {result.native_ratio*100:5.0f}%    {result.score_native:4.1f} / 20",
+            f"  ({result.native_species} of {result.n_species} species native to AB)",
             "",
-            f"Keystone species   {len(keystone_species):4d}     {score_keystone:4.1f} / 15",
-            f"Host plants        {len(host_species):4d}     {score_host:4.1f} / 10",
-            f"Bird-food species  {len(bird_species):4d}     {score_bird:4.1f} / 10",
+            f"Keystone species   {len(result.keystone_species):4d}     {result.score_keystone:4.1f} / 15",
+            f"Host plants        {len(result.host_species):4d}     {result.score_host:4.1f} / 10",
+            f"Bird-food species  {len(result.bird_species):4d}     {result.score_bird:4.1f} / 10",
             "",
-            f"Vegetation layers  {len(layers_present & canonical):4d}/5   {score_layers:4.1f} / 15",
-            f"  ({', '.join(sorted(layers_present & canonical)) or '—'})",
+            f"Vegetation layers  {len(result.layers_present):4d}/5   {result.score_layers:4.1f} / 15",
+            f"  ({', '.join(result.layers_present) or '—'})",
             "",
-            f"Habitat structures {len(habitat_struct_types):4d}     {score_structs:4.1f} / 10",
-            f"  ({', '.join(sorted(habitat_struct_types)) or '—'})",
+            f"Habitat structures {len(result.habitat_struct_types):4d}     {result.score_structs:4.1f} / 10",
+            f"  ({', '.join(result.habitat_struct_types) or '—'})",
             "",
-            f"Bloom continuity   {len(bloom_months)}/7 mo   {score_bloom:4.1f} / 20",
+            f"Bloom continuity   {len(result.bloom_months)}/7 mo   {result.score_bloom:4.1f} / 20",
             "",
             # Schema v13: informational counter — distinct lepidoptera species
             # whose caterpillars are larval-hosted by placed plants. Surfaced
             # alongside the score components rather than summed into the
             # headline so existing user scores don't shift when fauna data
             # grows over time.
-            f"Lepidoptera supported  {n_lepidoptera_supported:4d}    (larval-host species)",
+            f"Lepidoptera supported  {result.n_lepidoptera_supported:4d}    (larval-host species)",
         ]
-        gap = sorted(growing - bloom_months)
-        if gap:
+        if result.gap_months:
             month_names = ["Jan","Feb","Mar","Apr","May","Jun",
                            "Jul","Aug","Sep","Oct","Nov","Dec"]
             lines.append(
-                "  Gap months: " + ", ".join(month_names[m-1] for m in gap)
+                "  Gap months: " + ", ".join(month_names[m-1] for m in result.gap_months)
             )
         lines.append("")
-        lines.append(f"Total {n_total_plants} plants, {n_species} species")
+        lines.append(f"Total {result.n_total_plants} plants, {result.n_species} species")
 
         self._habitat_breakdown.setText("\n".join(lines))
 
         # ── Tips: targeted suggestions for the lowest-scoring categories ──
-        placed_ids = set(plant_rows.keys())
+        # Use the DB-backed id set (matches the pre-extraction behaviour
+        # of keying off plant_rows.keys()).
+        placed_ids = set(result.scored_plant_ids)
         tips_html = self._build_habitat_tips(
-            native_ratio=native_ratio,
-            n_keystone=len(keystone_species),
-            n_host=len(host_species),
-            n_bird=len(bird_species),
-            layers_present=(layers_present & canonical),
-            habitat_struct_types=habitat_struct_types,
-            gap_months=sorted(growing - bloom_months),
+            native_ratio=result.native_ratio,
+            n_keystone=len(result.keystone_species),
+            n_host=len(result.host_species),
+            n_bird=len(result.bird_species),
+            layers_present=set(result.layers_present),
+            habitat_struct_types=set(result.habitat_struct_types),
+            gap_months=result.gap_months,
             placed_ids=placed_ids,
         )
         self._habitat_tips.setHtml(tips_html)
@@ -1068,27 +965,10 @@ class AnalysisPanel(QWidget):
 
     @staticmethod
     def _parse_month_range(text: str) -> list[int]:
-        """Parse 'June-August' / 'May' style strings to month numbers (1-12)."""
-        month_map = {
-            "jan": 1, "january": 1, "feb": 2, "february": 2,
-            "mar": 3, "march": 3, "apr": 4, "april": 4,
-            "may": 5, "jun": 6, "june": 6,
-            "jul": 7, "july": 7, "aug": 8, "august": 8,
-            "sep": 9, "september": 9, "oct": 10, "october": 10,
-            "nov": 11, "november": 11, "dec": 12, "december": 12,
-        }
-        text = (text or "").lower().strip()
-        parts = text.replace("–", "-").replace("—", "-").split("-")
-        months = []
-        for part in parts:
-            part = part.strip()
-            for key, num in month_map.items():
-                if part.startswith(key):
-                    months.append(num)
-                    break
-        if len(months) == 2:
-            start, end = months
-            if start <= end:
-                return list(range(start, end + 1))
-            return list(range(start, 13)) + list(range(1, end + 1))
-        return months
+        """Parse 'June-August' / 'May' style strings to month numbers (1-12).
+
+        Thin delegate to src.habitat_score.parse_month_range so the panel's
+        bloom-month tips and the score's bloom component use identical
+        parsing."""
+        from src.habitat_score import parse_month_range
+        return parse_month_range(text)
