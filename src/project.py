@@ -7,7 +7,13 @@ but no file I/O yet.  The full implementation comes in Step 4.
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
+
+
+def _utc_now_iso() -> str:
+    """Naive-UTC ISO timestamp, matching the legacy datetime.utcnow()
+    output exactly while avoiding its Python 3.12+ deprecation warning."""
+    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
 SCHEMA_VERSION = "1.6"
 
@@ -29,7 +35,7 @@ def new_project(name: str = "Untitled Design") -> dict:
         "properties": {
             "schema_version": SCHEMA_VERSION,
             "project_name": name,
-            "created": datetime.utcnow().isoformat(),
+            "created": _utc_now_iso(),
             "hardiness_zone": None,
             "notes": "",
             "site_config": {

@@ -1024,12 +1024,12 @@ class MapEventRouter:
 
     def _on_site_data_updated(self, result: dict):
         """SitePanel finished fetching; persist results into project state."""
-        from datetime import datetime
+        from src.project import _utc_now_iso
         sc = self._main._project["properties"].setdefault("site_config", {})
         for key in ("rainfall", "soil", "elevation", "hardiness"):
             if result.get(key) is not None:
                 sc[key] = result[key]
-        sc["data_fetched_at"] = datetime.utcnow().isoformat()
+        sc["data_fetched_at"] = _utc_now_iso()
 
         # Mirror the auto-filled hardiness zone into the existing
         # top-level project field so the rest of the app picks it up.

@@ -187,7 +187,7 @@ class TestPolycultureCRUD(unittest.TestCase):
     # ── Readonly DB ──────────────────────────────────────────────────────────
 
     @unittest.skipIf(sys.platform == "win32", "chmod read-only unreliable on Windows CI")
-    @unittest.skipIf(os.getuid() == 0, "root ignores file permissions")
+    @unittest.skipIf(getattr(os, "getuid", lambda: -1)() == 0, "root ignores file permissions")
     def test_readonly_db_raises_not_silently_fails(self):
         """If the DB is read-only, create_polyculture must raise (not hang or return None)."""
         db_path = _plants_mod._DB_PATH

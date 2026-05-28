@@ -78,6 +78,16 @@ class TestPlantPanelSmoke(unittest.TestCase):
                 f"PlantPanel construction failed in this env: "
                 f"{type(self._construct_error).__name__}: {self._construct_error}"
             )
+        # The panel is constructed once for the class (setUpClass), so its
+        # mutable transient state leaks between test methods in alphabetical
+        # run order — e.g. test_add_to_mix_* would dirty _mix_species before
+        # test_constructed checks it's empty. Reset to construction defaults
+        # before each test so assertions are order-independent.
+        if self._panel is not None:
+            self._panel._mix_species = []
+            self._panel._selected_plant = None
+            self._panel._current_zone = None
+            self._panel._placed_counts = {}
 
     # ── Basic class shape ────────────────────────────────────────────────────
 
