@@ -934,3 +934,109 @@ class MapEventRouter:
                 and self._main._dl_thread is not None):
             self._main._dl_thread.deleteLater()
             self._main._dl_thread = None
+
+    # ── Sun / sector / contour / wind analysis-overlay request slots ────────
+
+    def _on_sun_path_requested(self, config: dict):
+        """A1: Enter anchor-placement mode; render after user clicks the map."""
+        self._main._pending_sun_config = config
+        self._main._pending_sun_anchor = None
+        self._main.map_widget.enter_sun_anchor_mode()
+        self._main._set_mode_label(
+            "Click map to place sun path anchor — right-click to cancel"
+        )
+
+    def _on_sector_requested(self, config: dict):
+        """A2: Enter anchor-placement mode; draw after user clicks the map."""
+        self._main._pending_sector_config = config
+        self._main.map_widget.enter_sector_anchor_mode()
+        self._main._set_mode_label(
+            "Click map to place sector anchor — right-click to cancel"
+        )
+
+    def _on_contour_requested(self, config: dict):
+        """A3: Enter contour drawing mode."""
+        self._main._current_mode = 'contour'
+        self._main.map_widget.set_contour_mode(config)
+        self._main.toolbar.reset_draw_buttons()
+        elev = config.get("elevation_m", 0)
+        self._main._set_mode_label(
+            f"Drawing contour at {elev:.1f}m — click points, double-click to finish"
+        )
+
+    def _on_wind_requested(self, config: dict):
+        """A4: Draw wind overlay with shelter zones."""
+        self._main.map_widget.draw_wind_overlay(config)
+        self._main._set_mode_label(
+            f"Wind from {config.get('direction_from', '?')}° "
+            f"({config.get('speed_label', '')})"
+        )
+
+    # ── Project notes ────────────────────────────────────────────────────────
+
+    def _on_notes_changed(self, text: str):
+        self._main._project["properties"]["notes"] = text
+        self._main._mark_modified()
+
+    # ── Manual pin drop + address resolve + reverse geocode ─────────────────
+
+    def _on_site_pin_clear_clicked(self):
+        self._main.map_widget.clear_site_pin()
+        self._on_site_pin_removed()
+
+    def _on_address_resolved(self, lat: float, lng: float, label: str):
+        """SitePanel resolved an address — drop the pin and re-centre the map.
+
+        The bridge will fire `site_pin_placed` back which runs the
+        existing site-data fetch flow; we just have to place the pin
+        and pan/zoom.
+        """
+        self._main.map_widget.place_site_pin(lat, lng, label or "")
+        # Centre on the new pin at a reasonable property-scale zoom.
+        self._main.map_widget.set_view(lat, lng, 17)
+
+    def _on_site_pin_click(self, lat: float, lng: float):
+        if not getattr(self._main, "_site_pin_mode", False):
+            return
+        self._main._site_pin_mode = False
+        self._main.map_widget.set_site_pin_drop_mode(False)
+        try:
+            self._main.map_widget.bridge.map_clicked.disconnect(
+                self._main._on_site_pin_click
+            )
+        except Exception:
+            pass
+        # Drop the pin immediately with just coordinates so the user gets
+        # instant feedback, then resolve the actual address in the
+        # background and refresh the pin label once we have it.
+        self._main.map_widget.place_site_pin(lat, lng, "")
+        self._main._start_pin_reverse_geocode(lat, lng)
+
+    def _on_pin_reverse_geocode_done(self, lat: float, lng: float,
+                                       label: str):
+        self._main._revgeo_worker = None
+        self._main._revgeo_thread = None
+        if not label:
+            return
+        # Re-place the pin with the resolved label so the marker tooltip
+        # and the Site panel both show the actual address.
+        self._main.map_widget.place_site_pin(lat, lng, label)
+
+    def _on_site_data_updated(self, result: dict):
+        """SitePanel finished fetching; persist results into project state."""
+        from datetime import datetime
+        sc = self._main._project["properties"].setdefault("site_config", {})
+        for key in ("rainfall", "soil", "elevation", "hardiness"):
+            if result.get(key) is not None:
+                sc[key] = result[key]
+        sc["data_fetched_at"] = datetime.utcnow().isoformat()
+
+        # Mirror the auto-filled hardiness zone into the existing
+        # top-level project field so the rest of the app picks it up.
+        hard = result.get("hardiness") or {}
+        zone = hard.get("zone")
+        if zone is not None:
+            self._main._set_zone_display(zone)
+
+        self._main._mark_modified()
+        self._main._set_mode_label("Site data ready")

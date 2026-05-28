@@ -898,11 +898,8 @@ class MainWindow(QMainWindow):
     # ── Analysis overlays (A1-A4) ──────────────────────────────────────────
 
     def _on_sun_path_requested(self, config: dict):
-        """A1: Enter anchor-placement mode; render after user clicks the map."""
-        self._pending_sun_config = config
-        self._pending_sun_anchor = None
-        self.map_widget.enter_sun_anchor_mode()
-        self._set_mode_label("Click map to place sun path anchor — right-click to cancel")
+        # Shim → MapEventRouter; see src/controllers/map_events.py.
+        return self._map_events._on_sun_path_requested(config)
 
     def _render_sun_path(self, config: dict, lat: float, lng: float):
         """Compute sun positions and send to JS with the clicked anchor."""
@@ -940,20 +937,12 @@ class MainWindow(QMainWindow):
         self._pending_sun_config = None
 
     def _on_sector_requested(self, config: dict):
-        """A2: Enter anchor-placement mode; draw after user clicks the map."""
-        self._pending_sector_config = config
-        self.map_widget.enter_sector_anchor_mode()
-        self._set_mode_label("Click map to place sector anchor — right-click to cancel")
+        # Shim → MapEventRouter; see src/controllers/map_events.py.
+        return self._map_events._on_sector_requested(config)
 
     def _on_contour_requested(self, config: dict):
-        """A3: Enter contour drawing mode."""
-        self._current_mode = 'contour'
-        self.map_widget.set_contour_mode(config)
-        self.toolbar.reset_draw_buttons()
-        elev = config.get("elevation_m", 0)
-        self._set_mode_label(
-            f"Drawing contour at {elev:.1f}m — click points, double-click to finish"
-        )
+        # Shim → MapEventRouter; see src/controllers/map_events.py.
+        return self._map_events._on_contour_requested(config)
 
     # Contour handlers — shims → MapEventRouter.
 
@@ -1027,11 +1016,8 @@ class MainWindow(QMainWindow):
         return self._map_events._on_dl_thread_done()
 
     def _on_wind_requested(self, config: dict):
-        """A4: Draw wind overlay with shelter zones."""
-        self.map_widget.draw_wind_overlay(config)
-        self._set_mode_label(
-            f"Wind from {config.get('direction_from', '?')}° ({config.get('speed_label', '')})"
-        )
+        # Shim → MapEventRouter; see src/controllers/map_events.py.
+        return self._map_events._on_wind_requested(config)
 
     def _on_season_changed(self, season: str):
         """Apply seasonal view to the map — adjusts plant visibility by type."""
@@ -1609,19 +1595,12 @@ class MainWindow(QMainWindow):
         return self._map_events._on_site_pin_removed()
 
     def _on_site_pin_clear_clicked(self):
-        self.map_widget.clear_site_pin()
-        self._on_site_pin_removed()
+        # Shim → MapEventRouter; see src/controllers/map_events.py.
+        return self._map_events._on_site_pin_clear_clicked()
 
     def _on_address_resolved(self, lat: float, lng: float, label: str):
-        """SitePanel resolved an address — drop the pin and re-centre the map.
-
-        The bridge will fire `site_pin_placed` back which runs the
-        existing site-data fetch flow; we just have to place the pin
-        and pan/zoom.
-        """
-        self.map_widget.place_site_pin(lat, lng, label or "")
-        # Centre on the new pin at a reasonable property-scale zoom.
-        self.map_widget.set_view(lat, lng, 17)
+        # Shim → MapEventRouter; see src/controllers/map_events.py.
+        return self._map_events._on_address_resolved(lat, lng, label)
 
     def _enter_site_pin_mode(self):
         """Manual pin-drop: next map click places the pin."""
@@ -1638,19 +1617,8 @@ class MainWindow(QMainWindow):
         self.map_widget.bridge.map_clicked.connect(self._on_site_pin_click)
 
     def _on_site_pin_click(self, lat: float, lng: float):
-        if not getattr(self, "_site_pin_mode", False):
-            return
-        self._site_pin_mode = False
-        self.map_widget.set_site_pin_drop_mode(False)
-        try:
-            self.map_widget.bridge.map_clicked.disconnect(self._on_site_pin_click)
-        except Exception:
-            pass
-        # Drop the pin immediately with just coordinates so the user gets
-        # instant feedback, then resolve the actual address in the
-        # background and refresh the pin label once we have it.
-        self.map_widget.place_site_pin(lat, lng, "")
-        self._start_pin_reverse_geocode(lat, lng)
+        # Shim → MapEventRouter; see src/controllers/map_events.py.
+        return self._map_events._on_site_pin_click(lat, lng)
 
     def _start_pin_reverse_geocode(self, lat: float, lng: float):
         """Look up the actual address for a manually-dropped pin.
@@ -1713,32 +1681,12 @@ class MainWindow(QMainWindow):
         thread.start()
 
     def _on_pin_reverse_geocode_done(self, lat: float, lng: float, label: str):
-        self._revgeo_worker = None
-        self._revgeo_thread = None
-        if not label:
-            return
-        # Re-place the pin with the resolved label so the marker tooltip
-        # and the Site panel both show the actual address.
-        self.map_widget.place_site_pin(lat, lng, label)
+        # Shim → MapEventRouter; see src/controllers/map_events.py.
+        return self._map_events._on_pin_reverse_geocode_done(lat, lng, label)
 
     def _on_site_data_updated(self, result: dict):
-        """SitePanel finished fetching; persist results into project state."""
-        from datetime import datetime
-        sc = self._project["properties"].setdefault("site_config", {})
-        for key in ("rainfall", "soil", "elevation", "hardiness"):
-            if result.get(key) is not None:
-                sc[key] = result[key]
-        sc["data_fetched_at"] = datetime.utcnow().isoformat()
-
-        # Mirror the auto-filled hardiness zone into the existing
-        # top-level project field so the rest of the app picks it up.
-        hard = result.get("hardiness") or {}
-        zone = hard.get("zone")
-        if zone is not None:
-            self._set_zone_display(zone)
-
-        self._mark_modified()
-        self._set_mode_label("Site data ready")
+        # Shim → MapEventRouter; see src/controllers/map_events.py.
+        return self._map_events._on_site_data_updated(result)
 
     # ── File operations ───────────────────────────────────────────────────────
 
@@ -2083,8 +2031,8 @@ class MainWindow(QMainWindow):
     # ── Design notes (V4) ────────────────────────────────────────────────
 
     def _on_notes_changed(self, text: str):
-        self._project["properties"]["notes"] = text
-        self._mark_modified()
+        # Shim → MapEventRouter; see src/controllers/map_events.py.
+        return self._map_events._on_notes_changed(text)
 
     # ── Timeline / succession ──────────────────────────────────────────────
 
