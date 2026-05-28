@@ -381,17 +381,16 @@ def stack_to_community_members(stack: list[dict]) -> list[dict]:
 
 
 def _to_local_xy(positions: list) -> list[tuple[float, float]]:
-    """Project [lat, lng] into local metres (flat-earth, centroid origin)."""
-    if not positions:
-        return []
-    mean_lat = sum(p[0] for p in positions) / len(positions)
-    cos_lat = math.cos(math.radians(mean_lat))
-    out = []
-    for lat, lng in positions:
-        x = lng * 111320.0 * cos_lat
-        y = lat * 111320.0
-        out.append((x, y))
-    return out
+    """Project [lat, lng] into local metres (centroid origin).
+
+    Delegates to src.projection (Chunk 8). The default coslat backend
+    yields the same *pairwise* geometry as the legacy formula (a pure
+    translation of the old absolute coords), so the layout optimiser's
+    results are unchanged; a project on the UTM backend gets a more
+    accurate planar projection for free.
+    """
+    from src.projection import to_local_xy
+    return to_local_xy(positions)
 
 
 def _pairwise_distances(pts_xy: list[tuple[float, float]]) -> list[list[float]]:

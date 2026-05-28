@@ -31,7 +31,11 @@ dependencies = []
 gui  = ["PyQt6>=6.6.0", "PyQt6-WebEngine>=6.6.0"]
 docx = ["python-docx>=1.1"]
 mcp  = ["mcp>=1.0"]
-full = ["PyQt6>=6.6.0", "PyQt6-WebEngine>=6.6.0", "python-docx>=1.1", "mcp>=1.0"]
+# Accurate UTM distance/area projection (Chunk 8). Optional and
+# off-by-default: src.projection falls back to the cosLat approximation
+# when pyproj is absent, so this never blocks an install.
+utm  = ["pyproj>=3.4"]
+full = ["PyQt6>=6.6.0", "PyQt6-WebEngine>=6.6.0", "python-docx>=1.1", "mcp>=1.0", "pyproj>=3.4"]
 
 [project.scripts]
 permadesign = "src.cli:main"

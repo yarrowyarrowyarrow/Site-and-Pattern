@@ -134,11 +134,15 @@ def _http_get_json_retry(url: str, attempts: int = _OPEN_METEO_RETRY_ATTEMPTS,
 # ── Bbox / projection helpers ───────────────────────────────────────────────
 
 def metres_per_deg(lat: float) -> tuple[float, float]:
-    """Approx (m_per_deg_lat, m_per_deg_lng) at this latitude."""
-    cos_lat = math.cos(math.radians(lat))
-    if abs(cos_lat) < 1e-9:
-        cos_lat = 1e-9
-    return 111320.0, 111320.0 * cos_lat
+    """Approx (m_per_deg_lat, m_per_deg_lng) at this latitude.
+
+    Delegates to src.projection (Chunk 8) so the cosLat ↔ UTM choice is
+    made in one place. The default backend is coslat, which returns the
+    exact legacy tuple, so terrain/bbox maths is unchanged unless a
+    project opts into UTM.
+    """
+    from src.projection import metres_per_deg as _mpd
+    return _mpd(lat)
 
 
 def bbox_size_m(bbox: dict) -> tuple[float, float]:
