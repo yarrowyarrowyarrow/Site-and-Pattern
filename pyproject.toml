@@ -1,0 +1,43 @@
+# pyproject.toml — packaging metadata for PermaDesign's installable
+# surfaces (the `permadesign` CLI and the MCP server).
+#
+# This is ADDITIVE. The GUI app still runs from source (`python main.py`)
+# and installs its runtime deps from requirements.txt; the Windows build
+# still uses PyInstaller + NSIS. This file exists so the headless
+# scripting surfaces can be `pip install`-ed:
+#
+#     pip install -e .            # headless CLI + scripting API (no Qt)
+#     pip install -e '.[mcp]'     # + the MCP server for AI agents
+#     pip install -e '.[gui]'     # + PyQt6 (or just use requirements.txt)
+#     pip install -e '.[full]'    # everything
+#
+# The core install pulls NO dependencies on purpose — src.permadesign_api
+# and src.cli are Qt-free and use only the stdlib + the repo's own code,
+# so an agent can drive PermaDesign headlessly with a minimal footprint.
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "permadesign"
+version = "1.41"
+description = "Native-plant landscape designer for Alberta and the Canadian prairies (headless scripting surface)."
+requires-python = ">=3.10"
+readme = "README.md"
+dependencies = []
+
+[project.optional-dependencies]
+gui  = ["PyQt6>=6.6.0", "PyQt6-WebEngine>=6.6.0"]
+docx = ["python-docx>=1.1"]
+mcp  = ["mcp>=1.0"]
+full = ["PyQt6>=6.6.0", "PyQt6-WebEngine>=6.6.0", "python-docx>=1.1", "mcp>=1.0"]
+
+[project.scripts]
+permadesign = "src.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["src*"]
+
+[tool.setuptools.package-data]
+src = ["py.typed"]

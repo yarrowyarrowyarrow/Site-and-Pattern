@@ -18,8 +18,8 @@ PermaDesign is a desktop application for designing landscapes with native plants
 - **Planning tools** — drag-and-place plant placement, undo/redo for plant placement
 - **Plant database** — 433 native and naturalized species of Alberta and the Canadian prairies
 - **Hardiness zone lookup** — automatic zone matching from location based on Canadian hardiness zone polygons
-- **Permapeople API integration** — optional supplementary plant data from the [Permapeople](https://permapeople.org/) open database (requires free API credentials, see [Permapeople API Setup](#permapeople-api-setup-optional))
 - **PDF export** — export your designs and plant lists as printable PDF documents
+- **Headless scripting** — a Qt-free Python API, CLI, and MCP server for automation and AI agents (see [AI agent usage](#ai-agent-usage-headless-scripting-cli-mcp))
 - **Local SQLite storage** — all your data stays on your machine
 
 ---
@@ -75,20 +75,73 @@ Plant data loads from `data/plants_master.json` on first run. The hardiness zone
 
 ---
 
-## Permapeople API Setup (optional)
+## AI agent usage (headless scripting, CLI, MCP)
 
-The Permapeople integration is optional and disabled by default. If you'd like to enrich plant entries with additional data from the [Permapeople](https://permapeople.org/) open plant database, you'll need free API credentials.
+PermaDesign can be driven entirely without the GUI through a Qt-free
+scripting surface — useful for automation, batch design, and AI agents.
+None of the surfaces below need a display, PyQt6, or a `QApplication`.
 
-1. Create a free account at [permapeople.org](https://permapeople.org/)
-2. Request API access from your account settings
-3. Add your credentials to a `.env` file in the project root:
-   ```
-   PERMAPEOPLE_KEY_ID=your_key_id_here
-   PERMAPEOPLE_KEY_SECRET=your_key_secret_here
-   ```
-4. Restart the app
+### Scripting API
 
-Without these credentials, the rest of PermaDesign works normally — only the Permapeople-specific lookups are unavailable.
+`src/permadesign_api.py` is the single entry point. A complete worked
+example lives in [`examples/agent_session.py`](examples/agent_session.py):
+
+```python
+from src.permadesign_api import Project, query_plants, run_analysis
+
+proj = Project.create("My Yard", boundary=[
+    (53.55, -113.50), (53.55, -113.49), (53.54, -113.49), (53.54, -113.50),
+])
+yarrow = query_plants(query="yarrow", native_only=True)[0]
+proj.place_plant(yarrow["id"], 53.545, -113.495)
+print(run_analysis(proj)["habitat_score"]["total"])   # → habitat score 0–100
+proj.save("my_yard.perma.geojson")
+```
+
+Projects written here open in the GUI and vice-versa. Failures raise
+typed exceptions from `src/errors.py` (never a GUI pop-up).
+
+### Command line
+
+```bash
+python -m src.cli query --native --pollinator "milkweed"   # search plants
+python -m src.cli list-communities                          # seeded communities
+python -m src.cli analyze my_yard.perma.geojson             # habitat score
+python -m src.cli analyze my_yard.perma.geojson --json      # machine-readable
+python -m src.cli export-catalogue plants.docx              # plant catalogue → DOCX
+python -m src.cli validate-data                             # check seed JSON
+```
+
+Installing the package registers a `permadesign` console script for the
+same commands:
+
+```bash
+pip install -e .            # headless CLI + scripting API (no Qt deps)
+pip install -e '.[mcp]'     # + the MCP server for AI agents
+```
+
+### MCP server (Claude Code & other MCP clients)
+
+`src/mcp_server.py` exposes the scripting API as MCP tools
+(`query_plants`, `list_communities`, `create_project`, `place_plant`,
+`place_community`, `place_structure`, `analyze_project`,
+`project_summary`, `export_catalogue`). Mutation tools are file-based:
+each loads a project, applies one change, and saves it back.
+
+```bash
+pip install -e '.[mcp]'
+python -m src.mcp_server        # runs over stdio
+```
+
+Register it with Claude Code:
+
+```bash
+claude mcp add permadesign -- python -m src.mcp_server
+```
+
+> PDF *design* export stays GUI-only — it needs a live Qt printer and a
+> rendered map screenshot. The headless export path is the plant
+> catalogue DOCX above.
 
 ---
 
@@ -122,7 +175,7 @@ The longer-term direction (cross-platform rewrite, ecoregion-aware nativity, exp
 
 ## Project History
 
-PermaDesign was built as a personal tool by Marci while studying ecological design in Alberta, with the goal of bringing native plant communities into landscape design more easily. The codebase has grown to include plant communities, site analysis, native habitat structures, planning tools, PDF export, and Permapeople integration, and now centres on lawn-to-habitat conversion for Alberta and prairie ecosystems.
+PermaDesign was built as a personal tool by Marci while studying ecological design in Alberta, with the goal of bringing native plant communities into landscape design more easily. The codebase has grown to include plant communities, site analysis, native habitat structures, planning tools, PDF export, and a headless scripting API (with CLI and MCP surfaces for AI agents), and now centres on lawn-to-habitat conversion for Alberta and prairie ecosystems.
 
 ---
 
@@ -133,6 +186,7 @@ PermaDesign was built as a personal tool by Marci while studying ecological desi
 - [`ROADMAP.md`](ROADMAP.md) — Feature roadmap with shipped vs. planned items
 - [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) — Developer-facing notes for active development sessions
 - [`USER_GUIDE.md`](USER_GUIDE.md) — In-app feature reference
+- [`examples/agent_session.py`](examples/agent_session.py) — Worked end-to-end headless scripting session (the canonical API example)
 - [`LICENSE`](LICENSE) — PolyForm Noncommercial License 1.0.0
 
 ---
