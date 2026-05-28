@@ -1040,3 +1040,151 @@ class MapEventRouter:
 
         self._main._mark_modified()
         self._main._set_mode_label("Site data ready")
+
+    # ── Season view + growth timeline ────────────────────────────────────────
+
+    def _on_season_changed(self, season: str):
+        """Apply seasonal view to the map — adjusts plant visibility by type."""
+        from src.db.plants import get_plant
+
+        # Seasonal opacity rules based on deciduous_evergreen field
+        # Summer: everything full
+        # Winter: deciduous → 0.15, herbaceous → 0.05, evergreen → 1.0
+        # Spring/Fall: intermediate
+        season_opacity = {
+            "Summer":  {"deciduous": 1.0, "evergreen": 1.0, "herbaceous": 1.0},
+            "Spring":  {"deciduous": 0.7, "evergreen": 1.0, "herbaceous": 0.6},
+            "Fall":    {"deciduous": 0.5, "evergreen": 1.0, "herbaceous": 0.4},
+            "Winter":  {"deciduous": 0.15, "evergreen": 1.0, "herbaceous": 0.05},
+        }
+        rules = season_opacity.get(season, season_opacity["Summer"])
+
+        pid_vis = {}
+        plant_cache = {}
+        for p in self._main._placed_plants:
+            pid = p["plant_id"]
+            if pid not in plant_cache:
+                plant = get_plant(pid)
+                if plant:
+                    de = (plant.get("deciduous_evergreen") or "").lower()
+                    if de in ("evergreen",):
+                        plant_cache[pid] = "evergreen"
+                    elif de in ("deciduous",):
+                        plant_cache[pid] = "deciduous"
+                    else:
+                        # Herbs, groundcover, etc. treated as herbaceous
+                        ptype = plant.get("plant_type", "herb")
+                        if ptype in ("tree", "shrub"):
+                            plant_cache[pid] = "deciduous"
+                        else:
+                            plant_cache[pid] = "herbaceous"
+                else:
+                    plant_cache[pid] = "herbaceous"
+
+            pid_vis[pid] = rules[plant_cache[pid]]
+
+        self._main.map_widget.set_season_view(season, pid_vis)
+        self._main._set_mode_label(f"Season: {season}")
+
+    def _on_timeline_year_changed(self, year: int):
+        """Compute per-plant scale factors for the timeline year and send to JS."""
+        import math
+
+        from src.db.plants import get_plant
+
+        _DEFAULT_YTM = {"tree": 15, "shrub": 5, "herb": 2, "groundcover": 1,
+                        "vine": 2, "root": 2}
+
+        # Build a mapping from markerId patterns to placed plants
+        # MarkerIds follow pattern: {plantId}_{timestamp}_{random}
+        # We need to iterate plantMarkers in JS, so we build scale data keyed by markerIds
+        # Since we don't have JS markerIds in Python, we build per-plant-id scale factors
+        # and let JS match by plantId
+        plant_cache = {}  # plant_id -> (ytm, curve, ptype)
+        summary_trees = 0
+        summary_mature = 0
+        summary_total = len(self._main._placed_plants)
+
+        for p in self._main._placed_plants:
+            pid = p["plant_id"]
+            if pid not in plant_cache:
+                plant = get_plant(pid)
+                if plant:
+                    ytm = plant.get("years_to_maturity") or _DEFAULT_YTM.get(
+                        plant.get("plant_type", "herb"), 2)
+                    curve = plant.get("growth_curve") or "steady"
+                    ptype = plant.get("plant_type", "herb")
+                else:
+                    ytm = 2
+                    curve = "steady"
+                    ptype = "herb"
+                plant_cache[pid] = (ytm, curve, ptype)
+
+            ytm, curve, ptype = plant_cache[pid]
+
+            if year == 0:
+                factor = 1.0
+            elif year >= ytm:
+                factor = 1.0
+            else:
+                ratio = year / ytm
+                if curve == "fast_early":
+                    factor = math.sqrt(ratio)
+                elif curve == "slow_start":
+                    factor = ratio ** 1.5
+                else:  # steady
+                    factor = ratio
+            factor = max(0.1, min(1.0, factor))
+
+            if ptype == "tree":
+                summary_trees += 1
+            if factor >= 0.95:
+                summary_mature += 1
+
+        # Build summary text
+        if year == 0:
+            summary = "Planting day — all plants at initial size."
+        else:
+            pct_mature = int(summary_mature / max(1, summary_total) * 100)
+            summary = (
+                f"Year {year}: {summary_mature}/{summary_total} plants at maturity "
+                f"({pct_mature}%)."
+            )
+            if summary_trees > 0:
+                # Find avg tree scale
+                tree_scales = []
+                for p in self._main._placed_plants:
+                    pid = p["plant_id"]
+                    ytm, curve, ptype = plant_cache[pid]
+                    if ptype == "tree":
+                        ratio = min(1.0, year / ytm)
+                        if curve == "fast_early":
+                            tree_scales.append(math.sqrt(ratio))
+                        elif curve == "slow_start":
+                            tree_scales.append(ratio ** 1.5)
+                        else:
+                            tree_scales.append(ratio)
+                avg_tree = sum(tree_scales) / len(tree_scales) if tree_scales else 0
+                summary += f"\nTrees: ~{int(avg_tree * 100)}% of mature canopy."
+
+        self._main.planning_panel.update_timeline_summary(summary)
+
+        # Send scale data to JS — we use a per-plantId approach
+        # JS will iterate plantMarkers and look up scaleFactor by plantId
+        pid_factors = {}
+        for pid, (ytm, curve, ptype) in plant_cache.items():
+            if year == 0:
+                factor = 1.0
+            elif year >= ytm:
+                factor = 1.0
+            else:
+                ratio = year / ytm
+                if curve == "fast_early":
+                    factor = math.sqrt(ratio)
+                elif curve == "slow_start":
+                    factor = ratio ** 1.5
+                else:
+                    factor = ratio
+            pid_factors[pid] = max(0.1, min(1.0, factor))
+
+        self._main.map_widget.set_timeline_year_by_plant_id(year, pid_factors)
