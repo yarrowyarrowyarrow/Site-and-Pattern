@@ -282,10 +282,19 @@ def _build_calendar(doc: Document, plants: list[dict]):
 
 # ── main ──────────────────────────────────────────────────────────────────────
 
-def main():
+def main(out_path: str | None = None) -> str:
+    """Build the plant-catalogue DOCX and return the path written.
+
+    Args:
+        out_path: where to write the .docx. Defaults to
+            ``<project_root>/plant_data.docx`` (the original CLI
+            behaviour). The headless scripting API
+            (src.permadesign_api.export_plant_catalogue_docx) passes an
+            explicit path here.
+    """
     project_root = Path(__file__).resolve().parent.parent
     plants_path = project_root / "data" / "plants_master.json"
-    output_path = project_root / "plant_data.docx"
+    output_path = Path(out_path) if out_path else (project_root / "plant_data.docx")
 
     with open(plants_path, encoding="utf-8") as f:
         plants = json.load(f)
@@ -314,6 +323,7 @@ def main():
 
     doc.save(str(output_path))
     print(f"Saved: {output_path}  ({len(plants)} plants)")
+    return str(output_path)
 
 
 if __name__ == "__main__":
