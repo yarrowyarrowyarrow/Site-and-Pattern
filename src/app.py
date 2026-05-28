@@ -970,283 +970,61 @@ class MainWindow(QMainWindow):
 
     # ── Auto-generated terrain (slope contours + ramp overlay) ────────────────
 
+    # ── Auto-terrain pipeline — shims → MapEventRouter ────────────────────────
+    # Implementation in src/controllers/map_events.py. Helpers like
+    # _maybe_start_next_terrain_job are referenced by name from
+    # QTimer.singleShot() inside the controller, so they live on
+    # MainWindow as shims that delegate down.
+
     def _on_auto_terrain_requested(self, config: dict):
-        """Stash config, then ask the JS map for the bbox to compute over."""
-        self._pending_terrain_config = dict(config)
-        area = config.get("area_source", "viewport")
-        if area == "viewport":
-            self.map_widget.request_terrain_viewport()
-        elif area == "boundary":
-            self.map_widget.request_terrain_boundary_bbox()
-        elif area == "draw":
-            self.map_widget.enter_terrain_draw_mode()
-            self._set_mode_label(
-                "Drag a rectangle on the map to set the slope-analysis area"
-            )
+        return self._map_events._on_auto_terrain_requested(config)
 
     def _on_terrain_bbox_cancelled(self):
-        # Shim → MapEventRouter; see src/controllers/map_events.py.
         return self._map_events._on_terrain_bbox_cancelled()
 
     def _on_terrain_bbox_ready(self, bbox: dict):
-        """Enqueue a TerrainWorker job for the chosen bbox and start it
-        if no other job is running. Multiple Generate clicks queue up
-        rather than getting rejected.
-        """
-        cfg = getattr(self, "_pending_terrain_config", None)
-        if not cfg:
-            return
-        self._pending_terrain_config = None
-
-        options = {
-            "interval_m":         cfg.get("interval_m", 0.5),
-            "resolution_m":       cfg.get("resolution_m", 30.0),
-            "want_contours":      cfg.get("want_contours", True),
-            "want_slope_overlay": cfg.get("want_slope_overlay", True),
-        }
-        prefs = {
-            "color":       cfg.get("color", "#5d4037"),
-            "opacity":     cfg.get("opacity", 0.6),
-            "show_labels": cfg.get("show_labels", True),
-        }
-        if not hasattr(self, "_terrain_queue"):
-            self._terrain_queue = []
-        self._terrain_queue.append({
-            "bbox": bbox, "options": options, "prefs": prefs,
-        })
-        self._update_terrain_queue_status()
-        self._maybe_start_next_terrain_job()
+        return self._map_events._on_terrain_bbox_ready(bbox)
 
     def _maybe_start_next_terrain_job(self):
-        """Pop the next queued job and run it, if nothing else is running."""
-        if getattr(self, "_terrain_running", False):
-            return
-        queue = getattr(self, "_terrain_queue", None) or []
-        if not queue:
-            return
-        job = queue.pop(0)
-        bbox    = job["bbox"]
-        options = job["options"]
-        self._terrain_render_prefs = job["prefs"]
-
-        from src.terrain import TerrainWorker, grid_dims
-        self._terrain_running = True
-        self._terrain_thread = QThread(self)
-        self._terrain_worker = TerrainWorker(bbox, options)
-        self._terrain_worker.moveToThread(self._terrain_thread)
-        self._terrain_thread.started.connect(self._terrain_worker.run)
-        self._terrain_worker.ready.connect(self._on_terrain_ready)
-        self._terrain_worker.failed.connect(self._on_terrain_failed)
-        self._terrain_worker.finished.connect(self._terrain_thread.quit)
-        self._terrain_worker.finished.connect(self._terrain_worker.deleteLater)
-        self._terrain_thread.finished.connect(self._on_terrain_thread_done)
-        self._terrain_thread.start()
-
-        self._set_mode_label("Generating slope contours…")
-        cols, rows = grid_dims(bbox, options["resolution_m"])
-        n_samples = cols * rows
-        prefix = self._terrain_queue_prefix()
-        if n_samples > 3000:
-            # ~0.3 s pacing per batch + request time ≈ 0.5 s/batch end-to-end.
-            est_seconds = max(5, int(round(n_samples / 100 * 0.6)))
-            self.site_panel.set_auto_terrain_status(
-                f"{prefix}Fetching elevation data for {cols}×{rows} samples "
-                f"— ~{est_seconds} s for an area this size…"
-            )
-        else:
-            self.site_panel.set_auto_terrain_status(
-                f"{prefix}Fetching elevation data…"
-            )
+        return self._map_events._maybe_start_next_terrain_job()
 
     def _terrain_queue_prefix(self) -> str:
-        """Render '[3 queued] ' before status text when other jobs wait."""
-        queued = len(getattr(self, "_terrain_queue", []) or [])
-        return f"[{queued} more queued] " if queued else ""
+        return self._map_events._terrain_queue_prefix()
 
     def _update_terrain_queue_status(self):
-        """Update the status line when queue changes but no job started yet."""
-        queue = getattr(self, "_terrain_queue", []) or []
-        if not getattr(self, "_terrain_running", False) and queue:
-            self.site_panel.set_auto_terrain_status(
-                f"Queued {len(queue)} job(s); starting next…"
-            )
+        return self._map_events._update_terrain_queue_status()
 
     def _on_terrain_thread_done(self):
-        """Clear stale references after a TerrainWorker run finishes, then
-        start the next queued job (if any).
-
-        Connected to QThread.finished. Drops the Python references *before*
-        scheduling deleteLater on the thread, so the next Generate click
-        can't observe a half-deleted wrapper.
-        """
-        thread = self._terrain_thread
-        self._terrain_thread = None
-        self._terrain_worker = None
-        self._terrain_running = False
-        if thread is not None:
-            thread.deleteLater()
-        # Defer the next start so deleteLater settles cleanly.
-        QTimer.singleShot(0, self._maybe_start_next_terrain_job)
-
-    # ── Edmonton offline dataset download ─────────────────────────────────────
-
-    def _on_download_edmonton_requested(self):
-        from src.terrain_downloader import EdmontonDownloadWorker
-        self._dl_thread = QThread(self)
-        self._dl_worker = EdmontonDownloadWorker()
-        self._dl_worker.moveToThread(self._dl_thread)
-        self._dl_thread.started.connect(self._dl_worker.run)
-        self._dl_worker.progress.connect(self._on_edmonton_dl_progress)
-        self._dl_worker.finished.connect(self._on_edmonton_dl_finished)
-        self._dl_worker.error.connect(self._on_edmonton_dl_error)
-        self._dl_worker.finished.connect(self._dl_thread.quit)
-        self._dl_worker.error.connect(self._dl_thread.quit)
-        self._dl_thread.finished.connect(self._on_dl_thread_done)
-        # Wire the Cancel button to the worker's cancel() slot
-        self.site_panel._terrain_cancel_btn.clicked.connect(self._dl_worker.cancel)
-        self._dl_thread.start()
-
-    def _on_edmonton_dl_progress(self, features_stored: int, page_num: int, text: str):
-        self.site_panel.set_download_progress(features_stored, page_num, text)
-
-    def _on_edmonton_dl_finished(self, total: int):
-        self.site_panel.set_terrain_status()
-        self.statusBar().showMessage(
-            f"Edmonton terrain download complete — {total:,} features stored offline.",
-            8000,
-        )
-
-    def _on_edmonton_dl_error(self, message: str):
-        self.site_panel.set_terrain_status()
-        self.statusBar().showMessage(f"Edmonton download failed: {message}", 10000)
-
-    def _on_dl_thread_done(self):
-        try:
-            self.site_panel._terrain_cancel_btn.clicked.disconnect(self._dl_worker.cancel)
-        except Exception:
-            pass
-        if hasattr(self, "_dl_worker") and self._dl_worker is not None:
-            self._dl_worker.deleteLater()
-            self._dl_worker = None
-        if hasattr(self, "_dl_thread") and self._dl_thread is not None:
-            self._dl_thread.deleteLater()
-            self._dl_thread = None
+        return self._map_events._on_terrain_thread_done()
 
     def _on_terrain_ready(self, result: dict):
-        """Render the worker's output and persist features in the project."""
-        prefs = getattr(self, "_terrain_render_prefs", {}) or {}
-        contours = result.get("contours") or []
-        png_bytes = result.get("slope_png_bytes")
-        slope_bbox = result.get("slope_bbox")
-
-        # Strip stale auto features before adding new ones.
-        self._project["features"] = [
-            f for f in self._project["features"]
-            if f.get("properties", {}).get("element_type") not in
-                ("auto_contour", "slope_overlay")
-        ]
-        self.map_widget.clear_auto_terrain()
-
-        # Render contour lines.
-        if contours:
-            self.map_widget.draw_auto_contours(
-                contours,
-                color=prefs.get("color", "#5d4037"),
-                show_labels=prefs.get("show_labels", True),
-            )
-            for c in contours:
-                # Each contour may have multiple disjoint segments;
-                # stored as a MultiLineString feature for round-tripping.
-                lines = []
-                for seg in c.get("segments", []):
-                    if len(seg) >= 2:
-                        # GeoJSON wants [lng, lat]
-                        lines.append([[pt[1], pt[0]] for pt in seg])
-                if not lines:
-                    continue
-                self._project["features"].append({
-                    "type": "Feature",
-                    "geometry": {
-                        "type": "MultiLineString",
-                        "coordinates": lines,
-                    },
-                    "properties": {
-                        "element_type": "auto_contour",
-                        "elevation_m":  c["elevation_m"],
-                        "color":        prefs.get("color", "#5d4037"),
-                        "source":       result.get("source", ""),
-                    },
-                })
-
-        # Render slope ramp overlay.
-        if png_bytes and slope_bbox:
-            import base64
-            data_url = "data:image/png;base64," + base64.b64encode(png_bytes).decode("ascii")
-            self.map_widget.draw_slope_overlay(
-                data_url, slope_bbox,
-                opacity=prefs.get("opacity", 0.6),
-            )
-            # Persist a marker feature so projects re-open with overlay
-            # information (the PNG itself is regenerated on demand).
-            ring = [
-                [slope_bbox["west"], slope_bbox["south"]],
-                [slope_bbox["east"], slope_bbox["south"]],
-                [slope_bbox["east"], slope_bbox["north"]],
-                [slope_bbox["west"], slope_bbox["north"]],
-                [slope_bbox["west"], slope_bbox["south"]],
-            ]
-            self._project["features"].append({
-                "type": "Feature",
-                "geometry": {"type": "Polygon", "coordinates": [ring]},
-                "properties": {
-                    "element_type": "slope_overlay",
-                    "bbox":         slope_bbox,
-                    "stats":        result.get("stats", {}),
-                    "interval_m":   result.get("interval_m"),
-                    "resolution_m": result.get("resolution_m"),
-                    "source":       result.get("source", ""),
-                },
-            })
-
-        self._mark_modified()
-        self._set_mode_label("Ready")
-
-        stats = result.get("stats", {})
-        bits = [f"Source: {result.get('source', '')}"]
-        if "max_slope_pct" in stats:
-            bits.append(
-                f"Max slope: {stats['max_slope_pct']:.1f}%, "
-                f"mean: {stats.get('mean_slope_pct', 0):.1f}%"
-            )
-        if "dominant_aspect" in stats:
-            share_pct = int(round(stats.get("dominant_aspect_share", 0) * 100))
-            bits.append(
-                f"Aspect: {stats['dominant_aspect']} ({share_pct}% of slope ≥2%)"
-            )
-        bits.append(f"{len(contours)} contour level(s)")
-        for w in (result.get("warnings") or []):
-            bits.append("⚠ " + w)
-        self.site_panel.set_auto_terrain_status(" — ".join(bits))
+        return self._map_events._on_terrain_ready(result)
 
     def _on_terrain_failed(self, message: str):
-        self._set_mode_label("Ready")
-        self.site_panel.set_auto_terrain_status(f"Failed: {message}")
-        # Avoid stacking modal dialogs when more jobs are queued — show
-        # one only when nothing else is pending. Queued failures still
-        # surface in the status line.
-        queued = len(getattr(self, "_terrain_queue", []) or [])
-        if queued == 0:
-            QMessageBox.warning(self, "Terrain Generation", message)
+        return self._map_events._on_terrain_failed(message)
 
     def _on_auto_terrain_cleared(self):
-        self.map_widget.clear_auto_terrain()
-        self._project["features"] = [
-            f for f in self._project["features"]
-            if f.get("properties", {}).get("element_type") not in
-                ("auto_contour", "slope_overlay")
-        ]
-        self._mark_modified()
-        self.site_panel.set_auto_terrain_status("")
+        return self._map_events._on_auto_terrain_cleared()
+
+    # ── Edmonton offline download — shims → MapEventRouter ───────────────────
+
+    def _on_download_edmonton_requested(self):
+        return self._map_events._on_download_edmonton_requested()
+
+    def _on_edmonton_dl_progress(self, features_stored: int, page_num: int,
+                                   text: str):
+        return self._map_events._on_edmonton_dl_progress(
+            features_stored, page_num, text,
+        )
+
+    def _on_edmonton_dl_finished(self, total: int):
+        return self._map_events._on_edmonton_dl_finished(total)
+
+    def _on_edmonton_dl_error(self, message: str):
+        return self._map_events._on_edmonton_dl_error(message)
+
+    def _on_dl_thread_done(self):
+        return self._map_events._on_dl_thread_done()
 
     def _on_wind_requested(self, config: dict):
         """A4: Draw wind overlay with shelter zones."""
