@@ -1563,10 +1563,20 @@
       if (currentMode !== 'none') return;
       var ev = e.originalEvent;
       if (ev && (ev.shiftKey || ev.ctrlKey || ev.metaKey)) return;
+      // Left button only — middle/right shouldn't arm a drag.
+      if (ev && ev.button !== undefined && ev.button !== 0) return;
       // Stop propagation so the map's panning handler doesn't also see
       // this mousedown. Don't call preventDefault — we still want the
       // click to fire if the user doesn't drag.
       L.DomEvent.stopPropagation(e);
+      // L.DomEvent.stopPropagation on a *canvas-layer* Leaflet event only
+      // sets originalEvent._stopped = true, which L.Draggable (the map's
+      // pan handler) does NOT check — so without the explicit disable
+      // below the map starts panning on the same mousedown and races the
+      // marker move. Disable for the whole gesture; _onPlantDragEnd
+      // re-enables unconditionally (even for a plain click that never
+      // armed a drag).
+      try { map.dragging.disable(); } catch (_) {}
       _plantDragState = {
         circle:   circle,
         startPx:  e.containerPoint || map.latLngToContainerPoint(e.latlng),
@@ -1636,8 +1646,11 @@
       if (!_plantDragState) return;
       var st = _plantDragState;
       _plantDragState = null;
-      if (!st.armed) return;     // just a click, nothing to commit
+      // Always re-enable map panning — it was disabled in
+      // _onPlantMouseDown for the whole gesture, so even a plain click
+      // (never armed) must restore it here or the map would freeze.
       try { map.dragging.enable(); } catch (_) {}
+      if (!st.armed) return;     // just a click, nothing to commit
       // Build the per-marker payload Python needs to update its
       // own state. Mirror the originals list so the receiver can pair
       // old/new positions and push a single undo entry for the whole
