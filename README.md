@@ -186,6 +186,9 @@ PermaDesign was built as a personal tool by Marci while studying ecological desi
 - [`ROADMAP.md`](ROADMAP.md) — Feature roadmap with shipped vs. planned items
 - [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) — Developer-facing notes for active development sessions
 - [`USER_GUIDE.md`](USER_GUIDE.md) — In-app feature reference
+- [`docs/AGENT_API.md`](docs/AGENT_API.md) — Headless scripting API, CLI, and MCP tool reference for automation & AI agents
+- [`docs/PROJECT_FILE_FORMAT.md`](docs/PROJECT_FILE_FORMAT.md) — The `.perma.geojson` project file format
+- [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) — SQLite schema, seeding, and the version-bump checklist
 - [`examples/agent_session.py`](examples/agent_session.py) — Worked end-to-end headless scripting session (the canonical API example)
 - [`LICENSE`](LICENSE) — PolyForm Noncommercial License 1.0.0
 
