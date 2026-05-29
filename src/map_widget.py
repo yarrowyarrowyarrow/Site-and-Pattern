@@ -492,12 +492,14 @@ class MapWidget(QWebEngineView):
 
     def load_plant_marker(self, plant_id: int, common_name: str, lat: float, lng: float,
                           spacing_m: float = 1.0, plant_type: str = "herb",
-                          custom_color: str = "", group_id: str = ""):
+                          custom_color: str = "", group_id: str = "",
+                          community_id: str = ""):
         self.run_js(map_js.load_plant_marker(
             plant_id, common_name, lat, lng,
             spacing_m=spacing_m, plant_type=plant_type,
             custom_color=custom_color or None,
             group_id=group_id or None,
+            community_id=community_id or None,
         ))
 
     def set_view(self, lat: float, lng: float, zoom: int = 14):
@@ -734,13 +736,14 @@ class MapWidget(QWebEngineView):
                             lat: float, lng: float,
                             spacing_m: float = 1.0, plant_type: str = "herb",
                             color: str | None = None,
-                            group_id: str | None = None):
+                            group_id: str | None = None,
+                            community_id: str | None = None):
         """Place a plant marker as a fresh user action. Compare to
         ``load_plant_marker`` which is the project-load variant."""
         self.run_js(map_js.place_plant_marker(
             plant_id, common_name, lat, lng,
             spacing_m=spacing_m, plant_type=plant_type,
-            color=color, group_id=group_id,
+            color=color, group_id=group_id, community_id=community_id,
         ))
 
     def revert_plant_position(self, plant_id: int,

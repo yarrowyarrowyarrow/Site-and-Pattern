@@ -283,9 +283,29 @@ class TestPlantMarkers(unittest.TestCase):
         # no stray quotes.
         self.assertTrue(out.endswith(");"))
 
+    def test_place_plant_marker_with_community_id(self):
+        out = mj.place_plant_marker(
+            7, "Yarrow", 53.5, -113.5,
+            group_id="pg_abc", community_id="53.5_-113.5",
+        )
+        # community_id is the trailing JS argument.
+        self.assertIn('"pg_abc", "53.5_-113.5");', out)
+
+    def test_place_plant_marker_omits_community_id(self):
+        out = mj.place_plant_marker(7, "Yarrow", 53.5, -113.5, group_id="pg_abc")
+        # Missing community_id comes through as JS `null`, not Python `None`.
+        self.assertIn('"pg_abc", null);', out)
+        self.assertNotIn("None", out)
+
     def test_load_plant_marker_same_shape(self):
         out = mj.load_plant_marker(7, "Yarrow", 1, 2)
         self.assertTrue(out.startswith("loadPlantMarker(7,"))
+
+    def test_load_plant_marker_passes_community_id(self):
+        out = mj.load_plant_marker(
+            7, "Yarrow", 1, 2, group_id="pg_x", community_id="1.0_2.0",
+        )
+        self.assertIn('"pg_x", "1.0_2.0");', out)
 
     def test_set_plant_group_for_latest(self):
         out = mj.set_plant_group_for_latest(7, 1.0, 2.0, "pg_x")

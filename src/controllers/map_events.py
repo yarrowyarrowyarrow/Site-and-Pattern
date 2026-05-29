@@ -28,8 +28,6 @@ Why one-domain-at-a-time:
 
 from __future__ import annotations
 
-from PyQt6.QtWidgets import QInputDialog
-
 from src.climate import get_zone, zone_label
 
 
@@ -311,6 +309,7 @@ class MapEventRouter:
     # ── Annotation handlers ──────────────────────────────────────────────────
 
     def _on_annotate_requested(self, lat: float, lng: float):
+        from PyQt6.QtWidgets import QInputDialog
         text, ok = QInputDialog.getText(
             self._main, "Add Note", "Note text:", text=""
         )
@@ -1218,6 +1217,7 @@ class MapEventRouter:
 
         poly_name = polyculture.get("name", "")
         group_id = project_io.new_placement_group_id()
+        community_id = project_io.community_id_for(lat, lng)
         cos_lat = math.cos(lat * math.pi / 180) or 1e-9
 
         batch_placements: list[tuple[int, str]] = []
@@ -1233,7 +1233,7 @@ class MapEventRouter:
             self._main.map_widget.place_plant_marker(
                 pid, name, mlat, mlng,
                 spacing_m=spacing_m, plant_type=plant_type,
-                color=color, group_id=group_id,
+                color=color, group_id=group_id, community_id=community_id,
             )
             self._main._placed_plants.append({
                 "plant_id": pid, "common_name": name,

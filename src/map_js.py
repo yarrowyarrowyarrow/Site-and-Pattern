@@ -194,14 +194,16 @@ def load_plant_marker(
     plant_type: str = "herb",
     custom_color: Optional[str] = None,
     group_id: Optional[str] = None,
+    community_id: Optional[str] = None,
 ) -> str:
     """Restore a plant marker from a loaded project (no undo entry)."""
     color = _jsstr(custom_color) if custom_color else "null"
     group = _jsstr(group_id) if group_id else "null"
+    community = _jsstr(community_id) if community_id else "null"
     return (
         f"loadPlantMarker({int(plant_id)}, {_jsstr(common_name)}, "
         f"{lat}, {lng}, {float(spacing_m)}, {_jsstr(plant_type)}, "
-        f"{color}, {group});"
+        f"{color}, {group}, {community});"
     )
 
 
@@ -214,16 +216,18 @@ def place_plant_marker(
     plant_type: str = "herb",
     color: Optional[str] = None,
     group_id: Optional[str] = None,
+    community_id: Optional[str] = None,
 ) -> str:
     """Place a plant marker as a fresh user action (drives the standard
     placePlantMarker code path on the JS side, including the post-place
     sync)."""
     color_arg = _jsstr(color) if color else "null"
     group_arg = _jsstr(group_id) if group_id else "null"
+    community_arg = _jsstr(community_id) if community_id else "null"
     return (
         f"placePlantMarker({int(plant_id)}, {_jsstr(common_name)}, "
         f"{lat}, {lng}, {float(spacing_m)}, {_jsstr(plant_type)}, "
-        f"{color_arg}, {group_arg});"
+        f"{color_arg}, {group_arg}, {community_arg});"
     )
 
 

@@ -28,6 +28,18 @@ def new_placement_group_id() -> str:
     return "pg_" + uuid.uuid4().hex[:10]
 
 
+def community_id_for(center_lat, center_lng):
+    """Stable per-instance key for a placed community, derived from its
+    anchor centre. Members of the same community instance share this key so
+    the map can isolate one community within a row/grid of communities (which
+    all share a single placement_group_id). Returns ``None`` for plants that
+    have no community centre.
+    """
+    if center_lat is None or center_lng is None:
+        return None
+    return f"{round(float(center_lat), 6)}_{round(float(center_lng), 6)}"
+
+
 def new_project(name: str = "Untitled Design") -> dict:
     """Return a fresh empty project dict."""
     return {

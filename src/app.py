@@ -1251,6 +1251,7 @@ class MainWindow(QMainWindow):
         batch_placements: list[tuple[int, str]] = []
         for (lat, lng) in positions:
             cos_lat = math.cos(lat * math.pi / 180) or 1e-9
+            community_id = project_io.community_id_for(lat, lng)
             for m in members:
                 pid = m["plant_id"]
                 name = m.get("common_name", "")
@@ -1262,7 +1263,7 @@ class MainWindow(QMainWindow):
                 self.map_widget.place_plant_marker(
                     pid, name, mlat, mlng,
                     spacing_m=spacing_m, plant_type=plant_type,
-                    color=color, group_id=group_id,
+                    color=color, group_id=group_id, community_id=community_id,
                 )
                 self._placed_plants.append({
                     "plant_id": pid, "common_name": name,
@@ -1513,10 +1514,14 @@ class MainWindow(QMainWindow):
 
         for p in data["plants"]:
             spacing_m, plant_type, custom_color = self._plant_info(p["plant_id"])
+            community_id = project_io.community_id_for(
+                p.get("polyculture_center_lat"), p.get("polyculture_center_lng")
+            )
             self.map_widget.load_plant_marker(
                 p["plant_id"], p["common_name"], p["lat"], p["lng"],
                 spacing_m, plant_type, custom_color,
-                p.get("placement_group_id", "")
+                p.get("placement_group_id", ""),
+                community_id or "",
             )
             self._placed_plants.append(p)
 

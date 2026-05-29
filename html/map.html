@@ -1430,7 +1430,9 @@
     // plantType   : 'tree' | 'shrub' | 'herb' | 'groundcover' | 'vine' | 'root'
     // customColor : optional hex colour override (e.g. '#ff5722')
     // groupId     : optional placement group id (plants placed together share one)
-    function placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor, groupId) {
+    // communityId : optional per-instance key shared by members of one community
+    //               (lets the map isolate one community within a multi-community group)
+    function placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor, groupId, communityId) {
       var markerId = plantId + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
       // Marker visual size = mature half-spacing (so two adjacent
       // markers at exactly `spacingM` apart just touch). The previous
@@ -1460,13 +1462,15 @@
       // Store metadata on the circle for later use
       circle._pd = { plantId: plantId, commonName: commonName, lat: lat, lng: lng,
                       spacingM: spacingM, plantType: plantType, customColor: customColor,
-                      groupId: groupId || null, markerId: markerId, kind: 'plant' };
+                      groupId: groupId || null, communityId: communityId || null,
+                      markerId: markerId, kind: 'plant' };
 
       circle.on('click', function(e) {
         L.DomEvent.stop(e);
         if (e.originalEvent && (e.originalEvent.shiftKey || e.originalEvent.ctrlKey || e.originalEvent.metaKey)) {
           toggleSelection(circle._pd);
         } else {
+          _cycleDragScope(circle._pd);
           if (bridge) bridge.onPlantMarkerClick(markerId, plantId, lat, lng);
         }
       });
@@ -1552,6 +1556,126 @@
       return n;
     }
 
+    // Count how many existing markers share a community-instance id.
+    function _communitySize(communityId) {
+      if (!communityId) return 0;
+      var n = 0;
+      var keys = Object.keys(plantMarkers);
+      for (var i = 0; i < keys.length; i++) {
+        var c = plantMarkers[keys[i]];
+        if (c._pd && c._pd.communityId === communityId) n++;
+      }
+      return n;
+    }
+
+    // ── Drag-scope cycling ───────────────────────────────────────────────
+    // A placed plant can belong to nested sets: the whole placement grouping
+    // (a row/grid/circle of communities or singles), one community instance
+    // within that grouping, and the single plant itself. Dragging moves one
+    // scope at a time; clicking the plant narrows the scope (broadest first).
+    //
+    // _scopesFor returns the distinct, non-trivial scopes for a marker,
+    // ordered broadest → narrowest. Scopes whose member set duplicates a
+    // broader one (e.g. a lone community whose group == community) collapse
+    // to a single level.
+    function _scopesFor(pd) {
+      var scopes = [];
+      var gSize = pd.groupId ? _groupSize(pd.groupId) : 0;
+      var cSize = pd.communityId ? _communitySize(pd.communityId) : 0;
+      if (pd.groupId && gSize >= 2) {
+        scopes.push({ name: 'group', size: gSize, label: 'whole grouping' });
+      }
+      // Community only when it is a proper, multi-plant subset of the group,
+      // or the only multi-plant scope when there is no broader group.
+      if (pd.communityId && cSize >= 2 && (cSize < gSize || gSize < 2)) {
+        scopes.push({ name: 'community', size: cSize, label: 'this community' });
+      }
+      scopes.push({ name: 'plant', size: 1, label: 'this plant' });
+      return scopes;
+    }
+
+    // Markers belonging to a given scope, relative to an anchor marker's _pd.
+    function _markersInScope(pd, scopeName) {
+      var out = [];
+      var keys = Object.keys(plantMarkers);
+      for (var i = 0; i < keys.length; i++) {
+        var m = plantMarkers[keys[i]];
+        if (!m._pd) continue;
+        if (scopeName === 'plant') {
+          if (m._pd.markerId === pd.markerId) out.push(m);
+        } else if (scopeName === 'community') {
+          if (pd.communityId && m._pd.communityId === pd.communityId) out.push(m);
+        } else if (scopeName === 'group') {
+          if (pd.groupId && m._pd.groupId === pd.groupId) out.push(m);
+        }
+      }
+      return out;
+    }
+
+    // Cycle state: which marker the scope cycle is anchored to, and where in
+    // its scope list we are. A fresh marker starts at the broadest scope.
+    var _dragScopeMarkerId = null;
+    var _dragScopeIndex = 0;
+    var _scopeHighlighted = [];   // markers currently restyled for feedback
+    var _scopeAnchorId = null;    // marker whose tooltip shows the scope hint
+
+    function _defaultPlantTooltip(commonName) {
+      return escH(commonName) +
+        '<br><span style="color:#78909c;font-size:10px">Right-click for options</span>';
+    }
+
+    function _clearScopeHighlight() {
+      for (var i = 0; i < _scopeHighlighted.length; i++) {
+        var m = _scopeHighlighted[i];
+        if (m && m.setStyle) m.setStyle({ weight: 1.5, fillOpacity: 0.35 });
+      }
+      _scopeHighlighted = [];
+      if (_scopeAnchorId) {
+        var a = plantMarkers[_scopeAnchorId];
+        if (a && a._pd && a.setTooltipContent) {
+          a.setTooltipContent(_defaultPlantTooltip(a._pd.commonName));
+        }
+        _scopeAnchorId = null;
+      }
+    }
+
+    function _applyScopeHighlight(pd, scope) {
+      _clearScopeHighlight();
+      if (!scope) return;
+      var markers = _markersInScope(pd, scope.name);
+      for (var i = 0; i < markers.length; i++) {
+        if (markers[i].setStyle) {
+          markers[i].setStyle({ weight: 3.5, fillOpacity: 0.6 });
+        }
+      }
+      _scopeHighlighted = markers;
+      // Name the active scope on the anchor marker's tooltip so the user can
+      // see what a drag will move, and that further clicks narrow it.
+      var anchor = plantMarkers[pd.markerId];
+      if (anchor && anchor.setTooltipContent) {
+        var more = _scopesFor(pd).length > 1 ? ' — click to narrow' : '';
+        anchor.setTooltipContent(
+          escH(pd.commonName) +
+          '<br><span style="color:#78909c;font-size:10px">Move: ' +
+          escH(scope.label) + ' (' + scope.size +
+          (scope.size === 1 ? ' plant' : ' plants') + ')' + more + '</span>'
+        );
+        _scopeAnchorId = pd.markerId;
+      }
+    }
+
+    // Advance the scope cycle for a clicked marker and refresh the highlight.
+    function _cycleDragScope(pd) {
+      var scopes = _scopesFor(pd);
+      if (_dragScopeMarkerId === pd.markerId && scopes.length > 1) {
+        _dragScopeIndex = (_dragScopeIndex + 1) % scopes.length;
+      } else {
+        _dragScopeMarkerId = pd.markerId;
+        _dragScopeIndex = 0;
+      }
+      _applyScopeHighlight(pd, scopes[_dragScopeIndex]);
+    }
+
     // ── Drag-to-reposition placed plants ─────────────────────────────────
     // Lazy-arms: a circle's mousedown sets up state but does NOT disable
     // map dragging until the cursor moves past a small pixel threshold.
@@ -1597,48 +1721,49 @@
         st.armed = true;
         map.dragging.disable();
         var pd = st.circle._pd;
-        st.groupId = pd.groupId;
-        st.mode = (pd.groupId && _groupSize(pd.groupId) >= 2)
-                    ? 'group' : 'single';
-        // Snapshot the original positions so undo can restore them.
+        // Pick the active scope. A marker the user has been clicking uses the
+        // cycled scope; a fresh marker starts at the broadest (group) scope.
+        var scopes = _scopesFor(pd);
+        if (_dragScopeMarkerId !== pd.markerId) {
+          _dragScopeMarkerId = pd.markerId;
+          _dragScopeIndex = 0;
+        }
+        if (_dragScopeIndex >= scopes.length) _dragScopeIndex = 0;
+        var scope = scopes[_dragScopeIndex];
+        st.scopeName = scope.name;
+        st.groupId   = pd.groupId;
+        // Capture the exact set of markers to move (by id, so the move loop
+        // is stable while their positions change underneath it).
+        st.memberIds = _markersInScope(pd, scope.name).map(function(m) {
+          return m._pd.markerId;
+        });
+        _applyScopeHighlight(pd, scope);
+        // Snapshot original positions so undo can restore them.
         st.originals = [];
-        if (st.mode === 'group') {
-          Object.keys(plantMarkers).forEach(function(mid) {
-            var m = plantMarkers[mid];
-            if (!m._pd || m._pd.groupId !== st.groupId) return;
-            st.originals.push({
-              markerId: mid, plantId: m._pd.plantId,
-              lat: m._pd.lat, lng: m._pd.lng,
-            });
-          });
-        } else {
+        for (var i = 0; i < st.memberIds.length; i++) {
+          var sm = plantMarkers[st.memberIds[i]];
+          if (!sm || !sm._pd) continue;
           st.originals.push({
-            markerId: pd.markerId, plantId: pd.plantId,
-            lat: pd.lat, lng: pd.lng,
+            markerId: sm._pd.markerId, plantId: sm._pd.plantId,
+            lat: sm._pd.lat, lng: sm._pd.lng,
           });
         }
       }
-      if (st.mode === 'group') {
-        var prev = st.circle.getLatLng();
-        var dlat = e.latlng.lat - prev.lat;
-        var dlng = e.latlng.lng - prev.lng;
-        Object.keys(plantMarkers).forEach(function(mid) {
-          var m = plantMarkers[mid];
-          if (!m._pd || m._pd.groupId !== st.groupId) return;
-          var ll = m.getLatLng();
-          var newLL = L.latLng(ll.lat + dlat, ll.lng + dlng);
-          m.setLatLng(newLL);
-          m._pd.lat = newLL.lat;
-          m._pd.lng = newLL.lng;
-          var lbl = plantLabels[m._pd.markerId];
-          if (lbl) lbl.setLatLng(newLL);
-        });
-      } else {
-        st.circle.setLatLng(e.latlng);
-        st.circle._pd.lat = e.latlng.lat;
-        st.circle._pd.lng = e.latlng.lng;
-        var lbl = plantLabels[st.circle._pd.markerId];
-        if (lbl) lbl.setLatLng(e.latlng);
+      // Move every captured member by the same delta, anchored to the dragged
+      // marker so it tracks the cursor exactly.
+      var prev = st.circle.getLatLng();
+      var dlat = e.latlng.lat - prev.lat;
+      var dlng = e.latlng.lng - prev.lng;
+      for (var j = 0; j < st.memberIds.length; j++) {
+        var m = plantMarkers[st.memberIds[j]];
+        if (!m || !m._pd) continue;
+        var ll = m.getLatLng();
+        var newLL = L.latLng(ll.lat + dlat, ll.lng + dlng);
+        m.setLatLng(newLL);
+        m._pd.lat = newLL.lat;
+        m._pd.lng = newLL.lng;
+        var lbl = plantLabels[m._pd.markerId];
+        if (lbl) lbl.setLatLng(newLL);
       }
     }
 
@@ -1651,20 +1776,27 @@
       // (never armed) must restore it here or the map would freeze.
       try { map.dragging.enable(); } catch (_) {}
       if (!st.armed) return;     // just a click, nothing to commit
-      // Build the per-marker payload Python needs to update its
-      // own state. Mirror the originals list so the receiver can pair
-      // old/new positions and push a single undo entry for the whole
-      // move.
+      // A completed drag resets the scope cycle — the next fresh interaction
+      // starts at the broadest scope again.
+      _dragScopeMarkerId = null;
+      _dragScopeIndex = 0;
+      _clearScopeHighlight();
+      // Build the per-marker payload Python needs to update its own state.
+      // Mirror the originals list so the receiver can pair old/new positions
+      // and push a single undo entry for the whole move.
       var moved = [];
-      if (st.mode === 'group') {
-        Object.keys(plantMarkers).forEach(function(mid) {
-          var m = plantMarkers[mid];
-          if (!m._pd || m._pd.groupId !== st.groupId) return;
-          moved.push({
-            markerId: mid, plantId: m._pd.plantId,
-            lat: m._pd.lat, lng: m._pd.lng,
-          });
+      for (var i = 0; i < st.memberIds.length; i++) {
+        var m = plantMarkers[st.memberIds[i]];
+        if (!m || !m._pd) continue;
+        moved.push({
+          markerId: m._pd.markerId, plantId: m._pd.plantId,
+          lat: m._pd.lat, lng: m._pd.lng,
         });
+      }
+      if (st.memberIds.length >= 2) {
+        // Group/community scope. All members share st.groupId, so the Python
+        // handler matches each moved feature by plant_id + old-coords +
+        // group_id — moving a community subset leaves the rest of the row put.
         if (bridge && bridge.onPlantGroupMoved) {
           bridge.onPlantGroupMoved(
             st.groupId,
@@ -1674,10 +1806,6 @@
         }
       } else {
         var pd = st.circle._pd;
-        moved.push({
-          markerId: pd.markerId, plantId: pd.plantId,
-          lat: pd.lat, lng: pd.lng,
-        });
         if (bridge && bridge.onPlantMoved) {
           var orig = st.originals[0] || {};
           bridge.onPlantMoved(
@@ -3061,8 +3189,8 @@
       map.fitBounds(entry.layer.getBounds());
     }
 
-    function loadPlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor, groupId) {
-      placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor || null, groupId || null);
+    function loadPlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor, groupId, communityId) {
+      placePlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor || null, groupId || null, communityId || null);
     }
 
     function setView(lat, lng, zoom) {
