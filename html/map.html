@@ -3110,6 +3110,20 @@
     }
 
     // ── Layer visibility ──────────────────────────────────────────────────────
+    var _satVisible = false;
+
+    function _updateSatLayer() {
+      if (!_satVisible) return;
+      var z = map.getZoom();
+      if (mapboxSat && z >= 21) {
+        if (!map.hasLayer(mapboxSat))    { mapboxSat.addTo(map); }
+        if (map.hasLayer(satelliteLayer)) { satelliteLayer.remove(); }
+      } else {
+        if (!map.hasLayer(satelliteLayer)) { satelliteLayer.addTo(map); }
+        if (mapboxSat && map.hasLayer(mapboxSat)) { mapboxSat.remove(); }
+      }
+    }
+
     function initMapboxLayer(token) {
       if (mapboxSat) { map.removeLayer(mapboxSat); }
       mapboxSat = L.tileLayer(
@@ -3117,20 +3131,19 @@
         { tileSize: 512, zoomOffset: -1, maxNativeZoom: 22, maxZoom: 22,
           attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }
       );
-      if (map.hasLayer(satelliteLayer)) {
-        satelliteLayer.remove();
-        mapboxSat.addTo(map);
-      }
+      map.on('zoomend', _updateSatLayer);
+      _updateSatLayer();
     }
 
     function setSatelliteVisible(visible) {
-      var activeLayer = mapboxSat || satelliteLayer;
+      _satVisible = visible;
       if (visible) {
-        activeLayer.addTo(map);
         osmLayer.remove();
+        _updateSatLayer();
       } else {
         osmLayer.addTo(map);
-        activeLayer.remove();
+        satelliteLayer.remove();
+        if (mapboxSat) { mapboxSat.remove(); }
       }
     }
 
