@@ -1401,9 +1401,9 @@
 
 
     // ── HTML escaping (guard against stored-XSS via project files and
-    //     Permapeople imports). Every user/file-sourced string that is
-    //     concatenated into Leaflet `html:` / `bindTooltip` / `setContent`
-    //     MUST flow through escH() first. ────────────────────────────────────
+    //     any externally-sourced plant data). Every user/file-sourced string
+    //     that is concatenated into Leaflet `html:` / `bindTooltip` /
+    //     `setContent` MUST flow through escH() first. ──────────────────────
     function escH(s) {
       if (s === null || s === undefined) return '';
       var d = document.createElement('div');

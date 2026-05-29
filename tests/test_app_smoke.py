@@ -172,9 +172,9 @@ class TestMainWindowSmoke(unittest.TestCase):
                 f"MainWindow.{name} should remain reachable after Chunk 5",
             )
 
-    # ── Permapeople surface is gone ──────────────────────────────────────────
+    # ── Legacy plant-API surface is gone ─────────────────────────────────────
 
-    def test_permapeople_helpers_removed(self):
+    def test_legacy_api_helpers_removed(self):
         for name in ("_load_api_keys", "_on_settings"):
             self.assertFalse(
                 hasattr(self._win, name),

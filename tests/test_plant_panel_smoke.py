@@ -98,7 +98,7 @@ class TestPlantPanelSmoke(unittest.TestCase):
         self.assertIsNone(self._panel._selected_plant)
         self.assertIsNone(self._panel._current_zone)
 
-    def test_no_permapeople_setter(self):
+    def test_no_legacy_api_setter(self):
         # Chunk 1 cleanup removed the set_api_keys no-op; verify it stays
         # gone so the upcoming Chunk 4 split doesn't accidentally
         # resurrect it.

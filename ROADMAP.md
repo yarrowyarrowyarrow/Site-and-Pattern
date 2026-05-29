@@ -126,7 +126,6 @@ Features for long-term planning and tracking.
 | Project save/load (GeoJSON) | Done |
 | Native plant order list export (grouped by AB nursery source) | Done |
 | Undo/redo | Done |
-| Permapeople API integration | Done |
 | Structures library (placeable structures across 5 categories: Water, Habitat, Growing, Storage, Infrastructure) | Done |
 | Hedgerow / fence line tool (4 styles, plant spacing, species) | Done |
 | Custom shape drawing (7 presets, fill/stroke, labels, area calc) | Done |

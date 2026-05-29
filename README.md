@@ -213,7 +213,6 @@ If you'd like to use PermaDesign commercially, please open an issue to discuss a
 ## Acknowledgments
 
 Plant data draws on:
-- The [Permapeople](https://permapeople.org/) open plant database
 - Native plant references for Alberta and the Canadian prairies
 - Hardiness zone data from Natural Resources Canada
 

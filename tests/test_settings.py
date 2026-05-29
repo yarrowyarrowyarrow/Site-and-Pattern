@@ -89,8 +89,8 @@ class TestSaveConfig(unittest.TestCase):
             self.assertIn("\n  ", text)
 
 
-class TestPermapeopleSurfaceIsGone(unittest.TestCase):
-    """After Chunk 1's cleanup, none of the Permapeople-era symbols should
+class TestLegacyPlantApiSurfaceIsGone(unittest.TestCase):
+    """After Chunk 1's cleanup, none of the legacy plant-API symbols should
     be reachable on the public module surface."""
 
     def test_removed_symbols(self):

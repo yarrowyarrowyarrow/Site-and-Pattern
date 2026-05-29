@@ -44,7 +44,7 @@ These need a small amount of new schema or new UI but reuse the placement / map 
 ### N1. Reference ecosystem picker — **SHIPPED**
 - New tag on plant records: `ab_ecoregion` (one or more of: Aspen Parkland, Mixedgrass Prairie, Fescue Grassland, Foothills, Boreal Mixedwood, Riparian, Wet Meadow, Subalpine).
 - New top-of-app selector: "Restoring toward: \[Aspen Parkland Edge ▼\]". Filters the plant panel and tints out-of-region species.
-- Tagging the 433-plant DB is the bulk of the work; could be done with a Permapeople / iNaturalist cross-reference pass.
+- Tagging the 433-plant DB is the bulk of the work; could be done with an iNaturalist cross-reference pass.
 
 ### N2. Lawn conversion zones
 - Existing: custom shape / boundary drawing tools (`html/map.html`, `src/map_widget.py`).

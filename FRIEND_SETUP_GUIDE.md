@@ -44,18 +44,6 @@ If you just want to use the app, do **Option 1** below and skip the rest.
 The first launch may take 5–10 seconds while the plant database is set up.
 That's normal and only happens once.
 
-### Step 4: (Optional) Connect the Permapeople plant database
-
-Skip this unless you want access to 8,500+ extra plant profiles from
-[permapeople.org](https://permapeople.org).
-
-1. Create a free account at **permapeople.org** and request API access from
-   your account settings — you'll get a **Key ID** and a **Key Secret**.
-2. In PermaDesign, click **⚙ Settings** in the toolbar.
-3. Paste the Key ID and Key Secret into the two fields and click **Save**.
-4. In the right-hand Plant Browser, switch to the **Permapeople** tab,
-   search any plant, and click **Import to Local Database** to keep it.
-
 ### Zip-only fallback
 
 If the release only has `PermaDesign-Windows.zip`:
@@ -249,10 +237,6 @@ The same workflow applies whether you installed via the `.exe` or from source.
 - An error occurred — re-open Command Prompt, navigate to the PermaDesign
   folder, run `python main.py` again, and read the error message shown
 
-**"No results" in Permapeople search**
-- Double-check your Key ID and Key Secret in Settings
-- Make sure you have an internet connection
-
 ---
 
 ## Where files are stored
@@ -260,4 +244,4 @@ The same workflow applies whether you installed via the `.exe` or from source.
 - **Designs** save wherever you choose with **File → Save**.
 - **Plant database** lives at `%APPDATA%\PermaDesign\permadesign.db` — you
   rarely need to touch it. Deleting it forces a fresh seed on next launch.
-- **Settings (API keys, preferences)** live alongside the database.
+- **Settings (preferences)** live alongside the database.

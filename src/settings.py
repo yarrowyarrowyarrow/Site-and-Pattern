@@ -3,8 +3,8 @@ settings.py — Persistent configuration storage.
 
 Lightweight JSON-backed config in ``~/.permadesign_config.json``. Used by
 the collapsible-sidebar state and the polyculture-recipes migration shim.
-The Permapeople API key UI lived here historically; it was removed once
-the integration itself was retired.
+A legacy plant-API key UI lived here historically; it was removed once
+that integration itself was retired.
 """
 
 from __future__ import annotations
