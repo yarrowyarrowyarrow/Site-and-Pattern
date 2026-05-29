@@ -221,7 +221,7 @@
 
   <script>
     // ── State ────────────────────────────────────────────────────────────────
-    var map, osmLayer, satelliteLayer, drawnItems, drawControl;
+    var map, osmLayer, satelliteLayer, mapboxSat, drawnItems, drawControl;
 
     // ── Multi-boundary state ─────────────────────────────────────────────────
     // Each entry: {id, layer, labelsLayer, areaLabel, points, color, showLengths, showArea}
@@ -619,7 +619,7 @@
 
       satelliteLayer = L.tileLayer(
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        { attribution: '© Esri', maxZoom: 22, maxNativeZoom: 19 }
+        { attribution: '© Esri', maxZoom: 22, maxNativeZoom: 20 }
       );
 
       drawnItems = new L.FeatureGroup().addTo(map);
@@ -3110,13 +3110,27 @@
     }
 
     // ── Layer visibility ──────────────────────────────────────────────────────
+    function initMapboxLayer(token) {
+      if (mapboxSat) { map.removeLayer(mapboxSat); }
+      mapboxSat = L.tileLayer(
+        'https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=' + token,
+        { tileSize: 512, zoomOffset: -1, maxNativeZoom: 22, maxZoom: 22,
+          attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }
+      );
+      if (map.hasLayer(satelliteLayer)) {
+        satelliteLayer.remove();
+        mapboxSat.addTo(map);
+      }
+    }
+
     function setSatelliteVisible(visible) {
+      var activeLayer = mapboxSat || satelliteLayer;
       if (visible) {
-        satelliteLayer.addTo(map);
+        activeLayer.addTo(map);
         osmLayer.remove();
       } else {
         osmLayer.addTo(map);
-        satelliteLayer.remove();
+        activeLayer.remove();
       }
     }
 

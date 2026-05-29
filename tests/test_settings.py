@@ -112,7 +112,10 @@ class TestLegacyPlantApiSurfaceIsGone(unittest.TestCase):
             n for n in public
             if getattr(getattr(settings, n), "__module__", "") == "src.settings"
         ]
-        self.assertEqual(sorted(defined_here), ["load_config", "save_config"])
+        self.assertEqual(
+            sorted(defined_here),
+            ["get_mapbox_token", "load_config", "save_config", "set_mapbox_token"],
+        )
 
 
 if __name__ == "__main__":

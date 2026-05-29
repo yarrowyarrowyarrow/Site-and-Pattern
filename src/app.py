@@ -371,6 +371,17 @@ class MainWindow(QMainWindow):
         v.addWidget(inner)
         return wrap
 
+    def _on_map_settings(self):
+        """View → Map Settings — configure optional map tokens."""
+        from src.preferences_dialog import MapPreferencesDialog
+        from src.settings import get_mapbox_token, set_mapbox_token
+        dlg = MapPreferencesDialog(current_token=get_mapbox_token() or "", parent=self)
+        if dlg.exec() == MapPreferencesDialog.DialogCode.Accepted:
+            token = dlg.token()
+            set_mapbox_token(token)
+            if token:
+                self.map_widget.set_mapbox_token(token)
+
     def _on_toggle_sidebar(self, checked: bool):
         """View → Show Side Panel (Ctrl+\\). Mirrors the chevron click."""
         self._side_wrapper.set_expanded(checked)
@@ -502,6 +513,13 @@ class MainWindow(QMainWindow):
             "Toggle the right-hand panel (Site / Plants / Analysis / …)"
         )
         self._act_show_sidebar.triggered.connect(self._on_toggle_sidebar)
+
+        view_menu.addSeparator()
+        act_map_settings = view_menu.addAction("&Map Settings…")
+        act_map_settings.setStatusTip(
+            "Configure optional map provider tokens (e.g. Mapbox high-res satellite)"
+        )
+        act_map_settings.triggered.connect(self._on_map_settings)
 
         # Help menu
         help_menu = mb.addMenu("&Help")

@@ -28,3 +28,19 @@ def save_config(config: dict) -> None:
     """Persist the full config dict to disk."""
     with open(_CONFIG_PATH, "w", encoding="utf-8") as f:
         json.dump(config, f, indent=2)
+
+
+def get_mapbox_token() -> str | None:
+    """Return the Mapbox access token from config or PERMADESIGN_MAPBOX_TOKEN env var."""
+    cfg = load_config()
+    return cfg.get("mapbox_token") or os.environ.get("PERMADESIGN_MAPBOX_TOKEN") or None
+
+
+def set_mapbox_token(token: str) -> None:
+    """Save the Mapbox access token to config. Pass empty string to clear."""
+    cfg = load_config()
+    if token.strip():
+        cfg["mapbox_token"] = token.strip()
+    else:
+        cfg.pop("mapbox_token", None)
+    save_config(cfg)

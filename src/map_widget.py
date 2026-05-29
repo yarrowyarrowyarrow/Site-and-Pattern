@@ -16,6 +16,7 @@ from PyQt6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
 from PyQt6.QtWebChannel import QWebChannel
 
 from src import map_js
+from src.settings import get_mapbox_token
 
 
 def _dbg(msg: str) -> None:
@@ -396,6 +397,7 @@ class MapWidget(QWebEngineView):
         self._last_center: tuple[float, float] | None = None
         self._last_zoom:   int | None = None
         self.bridge.map_moved.connect(self._on_map_moved)
+        self.bridge.map_ready.connect(self._on_map_ready)
 
         # Allow the local HTML file to load remote tile/CDN URLs (needed on Windows)
         s = self.page().settings()
@@ -411,6 +413,11 @@ class MapWidget(QWebEngineView):
     def _on_map_moved(self, lat: float, lng: float, zoom: int):
         self._last_center = (lat, lng)
         self._last_zoom = zoom
+
+    def _on_map_ready(self):
+        token = get_mapbox_token()
+        if token:
+            self.set_mapbox_token(token)
 
     def _on_render_terminated(self, status, exit_code):
         # status is QWebEnginePage.RenderProcessTerminationStatus; print
@@ -476,6 +483,9 @@ class MapWidget(QWebEngineView):
 
     def set_satellite_visible(self, visible: bool):
         self.run_js(map_js.set_satellite_visible(visible))
+
+    def set_mapbox_token(self, token: str):
+        self.run_js(map_js.init_mapbox_layer(token))
 
     def set_boundary_visible(self, visible: bool):
         self.run_js(map_js.set_boundary_visible(visible))

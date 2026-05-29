@@ -77,6 +77,10 @@ def set_satellite_visible(visible: bool) -> str:
     return f"setSatelliteVisible({_jsbool(visible)});"
 
 
+def init_mapbox_layer(token: str) -> str:
+    return f"initMapboxLayer({json.dumps(token)});"
+
+
 def set_boundary_visible(visible: bool) -> str:
     return f"setBoundaryVisible({_jsbool(visible)});"
 
