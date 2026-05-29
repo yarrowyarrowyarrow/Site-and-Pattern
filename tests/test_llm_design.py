@@ -41,11 +41,13 @@ class _FakeClient:
     def __init__(self, spec):
         self._spec = spec
         self.calls = []
+        self.extra_hints_seen = []
         self.endpoint = "fake://local"
         self.model = "fake-model"
 
-    def generate_spec(self, prompt, context):
+    def generate_spec(self, prompt, context, extra_hints=None):
         self.calls.append((prompt, context))
+        self.extra_hints_seen.append(list(extra_hints or []))
         return self._spec
 
 
@@ -158,6 +160,85 @@ class TestGenerateDesign(unittest.TestCase):
         client = _FakeClient({"plants": [{"query": "yarrow"}]})
         with self.assertRaises(LLMError):
             llm.generate_design("   ", site_config=_EDM, client=client)
+
+
+class TestGoalsAndOffline(unittest.TestCase):
+    """Design-goal wiring (hybrid filters + hints) and the no-LLM fallback."""
+
+    @classmethod
+    def setUpClass(cls):
+        _use_our_db()
+
+    def test_edible_and_perennial_filters_whitelisted(self):
+        self.assertIn("edible_only", llm._ALLOWED_FILTERS)
+        self.assertIn("perennial_only", llm._ALLOWED_FILTERS)
+
+    def test_goal_hard_filter_binds_without_spec_filters(self):
+        # Model returns bare names with no filters; native_only must still bind
+        # so everything placed is Alberta-native.
+        from src.db.plants import get_plant
+        spec = {"plants": [{"query": "willow"}, {"query": "yarrow"}]}
+        client = _FakeClient(spec)
+        project = llm.generate_design("x", site_config=_EDM, client=client,
+                                      goals=["native_only"])
+        placed = project.placed_plants
+        self.assertGreaterEqual(len(placed), 1)
+        for p in placed:
+            rec = get_plant(p["plant_id"])
+            self.assertTrue(rec and rec.get("native_to_alberta"),
+                            f"{p.get('common_name')} should be Alberta-native")
+
+    def test_goal_hint_appended_to_brief(self):
+        client = _FakeClient({"plants": [{"query": "yarrow"}]})
+        llm.generate_design("x", site_config=_EDM, client=client,
+                            goals=["pet_friendly"])
+        self.assertTrue(client.extra_hints_seen)
+        hints = client.extra_hints_seen[0]
+        self.assertTrue(any("toxic" in h.lower() for h in hints),
+                        f"pet_friendly hint missing from {hints}")
+
+    def test_unbacked_goal_recorded_as_warning(self):
+        client = _FakeClient({"plants": [{"query": "yarrow"}]})
+        project = llm.generate_design("x", site_config=_EDM, client=client,
+                                      goals=["pet_friendly", "kid_friendly"])
+        warnings = project.as_dict()["properties"].get("generation_warnings", [])
+        self.assertTrue(any("guidance" in w.lower() for w in warnings))
+
+    def test_apply_goal_feedback_repairs_unsatisfied_hard_goal(self):
+        from src.permadesign_api import Project, query_plants
+        from src.db.plants import get_plant
+        non_native = next((p for p in query_plants()
+                           if not p.get("native_to_alberta")), None)
+        if non_native is None:
+            self.skipTest("no non-native plants in catalogue")
+        project = Project.create("t", site_config=_EDM)
+        project.place_plant(non_native["id"], _EDM["latitude"], _EDM["longitude"])
+        llm._apply_goal_feedback(project, ["native_only"], query_plants,
+                                 (_EDM["latitude"], _EDM["longitude"]))
+        placed = project.placed_plants
+        self.assertEqual(len(placed), 2)  # original + one repair plant
+        self.assertTrue(any(get_plant(p["plant_id"]).get("native_to_alberta")
+                            for p in placed))
+        warnings = project.as_dict()["properties"]["generation_warnings"]
+        self.assertTrue(any("honour" in w.lower() for w in warnings))
+
+    def test_offline_generation_needs_no_client(self):
+        project = llm.generate_design_offline(site_config=_EDM,
+                                              goals=["food_producing"])
+        self.assertGreaterEqual(len(project.placed_plants), 1)
+
+    def test_offline_with_no_goals_still_produces_design(self):
+        project = llm.generate_design_offline(site_config=_EDM)
+        self.assertGreaterEqual(len(project.placed_plants), 1)
+
+    def test_offline_matches_community_by_name(self):
+        communities = _api.list_polycultures()
+        ids = llm._match_communities_by_name(communities, ["Pollinator"])
+        self.assertTrue(ids, "expected a 'Pollinator' community match")
+
+    def test_offline_requires_site_location(self):
+        with self.assertRaises(LLMError):
+            llm.generate_design_offline(goals=["native_only"])
 
 
 class TestSpecParsing(unittest.TestCase):

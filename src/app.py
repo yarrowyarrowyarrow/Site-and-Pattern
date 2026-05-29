@@ -45,6 +45,7 @@ from src.controllers.update_flow import UpdateFlowController
 from src.controllers.mode import ModeController
 from src.controllers.persistence import PersistenceController
 from src.controllers.map_events import MapEventRouter
+from src.controllers.generation import GenerationController
 
 
 # Marker colour tables for plant-community members.
@@ -191,6 +192,7 @@ class MainWindow(QMainWindow):
         self._mode = ModeController(self)
         self._persistence = PersistenceController(self)
         self._map_events = MapEventRouter(self)
+        self._generation = GenerationController(self)
 
         self._build_ui()
         self._connect_signals()
@@ -484,6 +486,16 @@ class MainWindow(QMainWindow):
         act_save_as = file_menu.addAction("Save &As…")
         act_save_as.setShortcut("Ctrl+Shift+S")
         act_save_as.triggered.connect(self._on_save_as)
+
+        file_menu.addSeparator()
+
+        act_generate = file_menu.addAction("✨ &Generate Design…")
+        act_generate.setShortcut("Ctrl+G")
+        act_generate.setStatusTip(
+            "Auto-generate a starting design from your goals "
+            "(local AI, with an offline fallback)")
+        act_generate.triggered.connect(self._on_generate_design)
+        self._act_generate = act_generate
 
         file_menu.addSeparator()
 
@@ -1241,6 +1253,10 @@ class MainWindow(QMainWindow):
     def _on_plant_placed(self, plant_id: int, common_name: str, lat: float, lng: float):
         # Shim → MapEventRouter; see src/controllers/map_events.py.
         return self._map_events._on_plant_placed(plant_id, common_name, lat, lng)
+
+    def _on_generate_design(self):
+        # Shim → GenerationController; see src/controllers/generation.py.
+        return self._generation.open_dialog()
 
     def _expand_communities_at_positions(self, positions, community: dict,
                                           pattern_kind: str):

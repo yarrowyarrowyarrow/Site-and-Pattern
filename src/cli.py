@@ -128,16 +128,36 @@ def _cmd_export_catalogue(args) -> int:
 
 
 def _cmd_generate(args) -> int:
-    from src.llm_design import generate_design, LLMClient
+    from src.llm_design import (
+        generate_design, generate_design_offline, LLMClient,
+    )
+    from src.errors import LLMError
     site_config = None
     if args.lat is not None and args.lng is not None:
         site_config = {"latitude": args.lat, "longitude": args.lng}
-    client = LLMClient(endpoint=args.endpoint or None, model=args.model or None)
-    print(f"Generating design via {client.model} at {client.endpoint} …")
-    project = generate_design(args.prompt, site_config=site_config, client=client)
+    goals = args.goals or []
+
+    if args.no_llm:
+        print("Building design offline (no LLM) …")
+        project = generate_design_offline(site_config=site_config, goals=goals)
+    else:
+        client = LLMClient(endpoint=args.endpoint or None, model=args.model or None)
+        print(f"Generating design via {client.model} at {client.endpoint} …")
+        try:
+            project = generate_design(args.prompt, site_config=site_config,
+                                      client=client, goals=goals)
+        except LLMError as exc:
+            # Unreachable model (or an unusable response): degrade to the
+            # deterministic, goal-driven path rather than failing outright.
+            print(f"LLM unavailable ({exc}); falling back to offline generation.",
+                  file=sys.stderr)
+            project = generate_design_offline(site_config=site_config, goals=goals)
+
     project.save(args.out)
     print(f"Wrote generated design ({len(project.placed_plants)} plant placements, "
           f"{len(project.structures)} structures) → {args.out}")
+    for w in project.as_dict().get("properties", {}).get("generation_warnings", []):
+        print(f"  note: {w}")
     return 0
 
 
@@ -217,11 +237,22 @@ def _build_parser() -> argparse.ArgumentParser:
     ec.set_defaults(func=_cmd_export_catalogue)
 
     # generate
+    from src.design_goals import goal_keys
     ge = sub.add_parser("generate",
-                        help="generate a design from a prompt via a local LLM")
-    ge.add_argument("prompt", help="natural-language design brief")
+                        help="generate a design from goals / a prompt (local LLM, "
+                             "with an offline fallback)")
+    ge.add_argument("prompt", nargs="?", default="",
+                    help="natural-language design brief "
+                         "(optional when using --goal / --no-llm)")
     ge.add_argument("--out", required=True,
                     help="output .perma.geojson path")
+    ge.add_argument("--goal", action="append", dest="goals", default=[],
+                    choices=goal_keys(),
+                    help="design goal, repeatable (choices: "
+                         + ", ".join(goal_keys()) + ")")
+    ge.add_argument("--no-llm", action="store_true", dest="no_llm",
+                    help="skip the LLM; build deterministically from the goals "
+                         "and seeded plant communities")
     ge.add_argument("--lat", type=float, default=None, help="site latitude")
     ge.add_argument("--lng", type=float, default=None, help="site longitude")
     ge.add_argument("--endpoint", default="",

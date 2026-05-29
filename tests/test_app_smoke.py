@@ -181,6 +181,48 @@ class TestMainWindowSmoke(unittest.TestCase):
                 f"MainWindow.{name} should have been removed in Chunk 1",
             )
 
+    # ── Generate-Design wiring (V1.44) ───────────────────────────────────────
+
+    def test_generate_design_wiring_present(self):
+        # The one-click entry point, its QAction, and the controller must exist.
+        self.assertTrue(callable(getattr(self._win, "_on_generate_design", None)))
+        self.assertTrue(hasattr(self._win, "_act_generate"))
+        self.assertIsNotNone(getattr(self._win, "_generation", None))
+
+
+@unittest.skipUnless(_qt_available(), "PyQt6 not installed in this env")
+class TestGenerateDesignDialog(unittest.TestCase):
+    """The goal-selection dialog stands alone (no MainWindow needed)."""
+
+    @classmethod
+    def setUpClass(cls):
+        from PyQt6.QtWidgets import QApplication
+        cls._app = QApplication.instance() or QApplication([])
+
+    def test_one_checkbox_per_goal_and_getters(self):
+        from src.generate_design_dialog import GenerateDesignDialog
+        from src.design_goals import GOALS
+        dlg = GenerateDesignDialog(has_boundary=True, has_pin=False,
+                                   preselected=["native_only"])
+        try:
+            self.assertEqual(len(dlg._checks), len(GOALS))
+            self.assertTrue(dlg._checks["native_only"].isChecked())
+            self.assertIn("native_only", dlg.selected_goals())
+            self.assertFalse(dlg.offline())
+        finally:
+            dlg.deleteLater()
+
+    def test_ok_disabled_without_location(self):
+        from src.generate_design_dialog import GenerateDesignDialog
+        from PyQt6.QtWidgets import QDialogButtonBox
+        dlg = GenerateDesignDialog(has_boundary=False, has_pin=False)
+        try:
+            box = dlg.findChild(QDialogButtonBox)
+            ok = box.button(QDialogButtonBox.StandardButton.Ok)
+            self.assertFalse(ok.isEnabled())
+        finally:
+            dlg.deleteLater()
+
 
 if __name__ == "__main__":
     unittest.main()

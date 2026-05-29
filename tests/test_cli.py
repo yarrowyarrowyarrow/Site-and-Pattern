@@ -117,6 +117,44 @@ class TestCli(unittest.TestCase):
         with self.assertRaises(SystemExit):
             _run([])
 
+    # ── generate (offline path — no LLM required) ────────────────────────────
+
+    def test_generate_offline_with_goals(self):
+        path = os.path.join(_TMP_DIR, "gen_offline.perma.geojson")
+        code, out, _ = _run([
+            "generate", "--no-llm",
+            "--goal", "native_only", "--goal", "food_producing",
+            "--lat", "53.5461", "--lng", "-113.4938", "--out", path,
+        ])
+        self.assertEqual(code, 0)
+        self.assertTrue(os.path.exists(path))
+        self.assertIn("plant placements", out)
+        from src.permadesign_api import Project
+        proj = Project.load(path)
+        self.assertGreaterEqual(len(proj.placed_plants), 1)
+
+    def test_generate_offline_without_goals(self):
+        path = os.path.join(_TMP_DIR, "gen_offline_nogoals.perma.geojson")
+        code, _out, _ = _run([
+            "generate", "--no-llm",
+            "--lat", "53.5461", "--lng", "-113.4938", "--out", path,
+        ])
+        self.assertEqual(code, 0)
+        self.assertTrue(os.path.exists(path))
+
+    def test_generate_rejects_unknown_goal(self):
+        path = os.path.join(_TMP_DIR, "gen_bad.perma.geojson")
+        with self.assertRaises(SystemExit):   # argparse `choices` rejects it
+            _run(["generate", "--no-llm", "--goal", "definitely_not_a_goal",
+                  "--lat", "53.5", "--lng", "-113.5", "--out", path])
+
+    def test_generate_offline_needs_location(self):
+        path = os.path.join(_TMP_DIR, "gen_noloc.perma.geojson")
+        code, _out, err = _run(["generate", "--no-llm",
+                                "--goal", "native_only", "--out", path])
+        self.assertEqual(code, 2)   # LLMError (no site location) → exit 2
+        self.assertIn("error:", err)
+
 
 if __name__ == "__main__":
     unittest.main()

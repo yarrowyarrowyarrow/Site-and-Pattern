@@ -43,8 +43,8 @@ _SPACING_M = 6.0
 # emits is dropped so a hallucinated filter name can't crash search_plants.
 _ALLOWED_FILTERS = {
     "query", "plant_type", "sun_req", "water_needs", "zone",
-    "native_only", "pollinator_only", "host_plant_only",
-    "keystone_only", "bird_food_only", "ab_ecoregion",
+    "native_only", "edible_only", "perennial_only", "pollinator_only",
+    "host_plant_only", "keystone_only", "bird_food_only", "ab_ecoregion",
 }
 
 _SYSTEM_PROMPT = """\
@@ -154,13 +154,17 @@ class LLMClient:
         except (KeyError, IndexError, TypeError) as exc:
             raise LLMError(f"unexpected LLM response shape: {data!r}") from exc
 
-    def generate_spec(self, prompt: str, context: dict) -> dict:
-        """Ask the model for a design spec and parse it into a dict."""
-        content = self.chat(_build_messages(prompt, context))
+    def generate_spec(self, prompt: str, context: dict,
+                      extra_hints: Optional[list] = None) -> dict:
+        """Ask the model for a design spec and parse it into a dict.
+
+        ``extra_hints`` (design-goal guidance) are appended to the brief."""
+        content = self.chat(_build_messages(prompt, context, extra_hints))
         return _parse_spec_json(content)
 
 
-def _build_messages(prompt: str, context: dict) -> list[dict]:
+def _build_messages(prompt: str, context: dict,
+                    extra_hints: Optional[list] = None) -> list[dict]:
     names = context.get("community_names") or []
     sids = context.get("structure_ids") or []
     site = context.get("site") or {}
@@ -173,6 +177,8 @@ def _build_messages(prompt: str, context: dict) -> list[dict]:
         lines.append(f"SITE: lat {site['latitude']}, lng {site['longitude']}"
                      + (f", hardiness zone {site['hardiness_zone']}"
                         if site.get("hardiness_zone") else ""))
+    if extra_hints:
+        lines.append("DESIGN GOALS (honour these): " + " ".join(extra_hints))
     return [
         {"role": "system", "content": "\n".join(lines)},
         {"role": "user", "content": str(prompt)},
@@ -225,28 +231,47 @@ def _clean_filters(filters: dict) -> dict:
     return {k: v for k, v in filters.items() if k in _ALLOWED_FILTERS}
 
 
-def _resolve_plants(entries: list, query_plants) -> list[tuple[int, int]]:
+def _resolve_plants(entries: list, query_plants,
+                    goal_filters: Optional[dict] = None) -> list[tuple[int, int]]:
     """Map each spec plant entry to ``(plant_id, quantity)`` via the catalogue.
-    Entries that resolve to nothing are skipped."""
+    Entries that resolve to nothing are skipped.
+
+    ``goal_filters`` (the hard filters for the user's selected design goals,
+    e.g. ``{"native_only": True}``) are merged *under* any per-entry filters and
+    the entry's text query, so a goal binds even when the model omits it. If the
+    goal-narrowed search finds nothing for a named plant we retry the bare text
+    query, so an explicitly requested species is never silently dropped — the
+    goal-satisfaction check in :func:`_apply_goal_feedback` flags any shortfall."""
+    goal_filters = goal_filters or {}
     out: list[tuple[int, int]] = []
     for e in entries:
         if not isinstance(e, dict):
             continue
         qty = _coerce_qty(e.get("quantity", 1))
+        term = str(e.get("query") or e.get("common_name")
+                   or e.get("name") or "").strip()
+        raw_filters = e.get("filters")
+        entry_filters = (_clean_filters(raw_filters)
+                         if isinstance(raw_filters, dict) else {})
+        base = {**goal_filters, **entry_filters}
+
+        # Try most specific first, then progressively relax.
+        attempts: list[dict] = []
+        if term:
+            attempts.append({**base, "query": term})
+            if base:  # goals/entry-filters present — allow a bare-term retry
+                attempts.append({"query": term})
+        elif base:
+            attempts.append(base)
+
         results: list[dict] = []
-        filters = e.get("filters")
-        if isinstance(filters, dict) and filters:
+        for kw in attempts:
             try:
-                results = query_plants(**_clean_filters(filters))
-            except Exception:  # noqa: BLE001 — fall back to text search
+                results = query_plants(**kw)
+            except Exception:  # noqa: BLE001 — try the next, less specific form
                 results = []
-        if not results:
-            term = e.get("query") or e.get("common_name") or e.get("name") or ""
-            if str(term).strip():
-                try:
-                    results = query_plants(query=str(term).strip())
-                except Exception:  # noqa: BLE001
-                    results = []
+            if results:
+                break
         if results:
             out.append((results[0]["id"], qty))
     return out
@@ -326,7 +351,8 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
                     name: str = "Generated Design",
                     client: Optional[LLMClient] = None,
                     endpoint: Optional[str] = None,
-                    model: Optional[str] = None):
+                    model: Optional[str] = None,
+                    goals: Optional[list] = None):
     """Generate a :class:`~src.permadesign_api.Project` from a prompt.
 
     The site location comes from ``boundary`` (centroid) or
@@ -334,6 +360,12 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
     geometry needs an anchor. ``client`` can be injected (tests pass a fake);
     otherwise an :class:`LLMClient` is built from ``endpoint``/``model``/env/
     config.
+
+    ``goals`` is a list of design-goal keys from :mod:`src.design_goals`
+    (e.g. ``["native_only", "food_producing"]``): each goal's hard filters
+    narrow plant selection and its hint is appended to the LLM brief (the
+    hybrid path). Unbacked goals, and hard goals nothing placed satisfies, are
+    reported in the returned project's ``properties.generation_warnings``.
 
     Raises:
         LLMError: endpoint unreachable, response unparseable, the spec is
@@ -364,10 +396,15 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
         "site": dict(site_config or {}),
     }
 
-    spec = client.generate_spec(prompt, context)
+    from src.design_goals import filters_for_goals, hints_for_goals
+    goal_filters = filters_for_goals(goals)
+
+    spec = client.generate_spec(prompt, context,
+                                extra_hints=hints_for_goals(goals))
     _validate_spec(spec)
 
-    plant_items = _resolve_plants(spec.get("plants") or [], query_plants)
+    plant_items = _resolve_plants(spec.get("plants") or [], query_plants,
+                                  goal_filters)
     community_items = _resolve_communities(spec.get("communities") or [], communities)
     structure_items = _resolve_structures(spec.get("structures") or [], structures)
 
@@ -393,4 +430,138 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
         lat, lng = positions[idx]; idx += 1
         project.place_structure(struct_id, lat, lng)
 
+    _apply_goal_feedback(project, goals, query_plants, center)
+    return project
+
+
+# ── Goal feedback + offline fallback ─────────────────────────────────────────
+
+_OFFLINE_PLANT_CAP = 7  # how many individual plants the no-LLM path places
+
+
+def _match_communities_by_name(communities: list[dict],
+                               hints: list) -> list[int]:
+    """Return ids of seeded communities whose name contains any of ``hints``
+    (case-insensitive substring), preserving catalogue order."""
+    lowered = [h.lower() for h in (hints or []) if h]
+    out: list[int] = []
+    for c in communities:
+        name = (c.get("name") or "").lower()
+        cid = c.get("id")
+        if cid is None or not name:
+            continue
+        if any(h in name for h in lowered):
+            out.append(cid)
+    return out
+
+
+def _apply_goal_feedback(project, goals, query_plants,
+                         center: tuple[float, float]) -> None:
+    """Record goal-related warnings on the project and, if a *backed* goal ends
+    up with no representation among the placed plants, drop in one satisfying
+    plant so the result never silently violates a hard goal.
+
+    Warnings live under ``properties.generation_warnings`` (a plain list on the
+    project dict — no schema concept) for the GUI/CLI to surface. The key is
+    only written when there is something to say. Deeper repair (e.g. filling
+    bloom gaps) waits on the data described in ``docs/data_gaps_v1.44.md``."""
+    from src.design_goals import filters_for_goals, unbacked_goals, get_goal
+
+    warnings: list = []
+    unbacked = unbacked_goals(goals)
+    if unbacked:
+        labels = [g.label for g in (get_goal(k) for k in unbacked) if g]
+        warnings.append(
+            "Applied as guidance to the AI only (no plant data backs these "
+            "yet, so they can't be guaranteed): " + ", ".join(labels) + "."
+        )
+
+    goal_filters = filters_for_goals(goals)
+    if goal_filters:
+        try:
+            satisfying = query_plants(**goal_filters)
+        except Exception:  # noqa: BLE001
+            satisfying = []
+        if not satisfying:
+            warnings.append(
+                "No catalogue plant satisfies all selected goals at once — the "
+                "design may not meet every goal."
+            )
+        else:
+            sat_ids = {p["id"] for p in satisfying}
+            placed_ids = {p.get("plant_id") for p in project.placed_plants}
+            if placed_ids.isdisjoint(sat_ids):
+                lat, lng = _grid_positions(center[0], center[1], 1)[0]
+                project.place_plant(satisfying[0]["id"], lat, lng, quantity=1)
+                warnings.append(
+                    "Added one plant to honour the selected goals "
+                    f"({satisfying[0].get('common_name', 'plant')})."
+                )
+
+    if warnings:
+        props = project.as_dict().setdefault("properties", {})
+        props.setdefault("generation_warnings", []).extend(warnings)
+
+
+def generate_design_offline(*, site_config: Optional[dict] = None,
+                            boundary: Optional[list] = None,
+                            name: str = "Generated Design",
+                            goals: Optional[list] = None):
+    """Generate a :class:`~src.permadesign_api.Project` WITHOUT an LLM.
+
+    Selects plants by the hard filters for ``goals`` (defaulting to Alberta
+    natives) and pulls in seeded plant communities whose names match the goals,
+    then lays everything out exactly like :func:`generate_design`. This is the
+    fallback the GUI/CLI use when no local model is reachable, so the one-click
+    button always produces a usable starting design.
+
+    Raises:
+        LLMError: if no site location (``boundary`` or ``site_config`` lat/lng)
+            is supplied — placed geometry needs an anchor.
+    """
+    from src.permadesign_api import Project, query_plants, list_polycultures
+    from src.design_goals import filters_for_goals, community_name_hints
+
+    center = _design_center(boundary, site_config)
+    if center is None:
+        raise LLMError(
+            "no site location: pass a boundary or site_config with "
+            "'latitude' and 'longitude'"
+        )
+
+    goal_filters = filters_for_goals(goals) or {"native_only": True}
+    try:
+        plants = query_plants(**goal_filters)
+    except Exception:  # noqa: BLE001
+        plants = []
+    if not plants:  # goals too restrictive — widen so we still produce a design
+        try:
+            plants = query_plants(native_only=True)
+        except Exception:  # noqa: BLE001
+            plants = []
+    plant_items = [(p["id"], 1) for p in plants[:_OFFLINE_PLANT_CAP]]
+
+    communities = list_polycultures()
+    community_items = _match_communities_by_name(
+        communities, community_name_hints(goals))
+    if not community_items and communities:
+        community_items = [communities[0]["id"]]  # a sensible default
+
+    if not plant_items and not community_items:
+        raise LLMError(
+            "offline generation found no plants or communities to place"
+        )
+
+    project = Project.create(name, site_config=site_config, boundary=boundary)
+    positions = _grid_positions(
+        center[0], center[1], len(plant_items) + len(community_items))
+    idx = 0
+    for plant_id, qty in plant_items:
+        lat, lng = positions[idx]; idx += 1
+        project.place_plant(plant_id, lat, lng, quantity=qty)
+    for poly_id in community_items:
+        lat, lng = positions[idx]; idx += 1
+        project.place_polyculture(poly_id, lat, lng)
+
+    _apply_goal_feedback(project, goals, query_plants, center)
     return project
