@@ -600,7 +600,7 @@
       map = L.map('map', {
         center: [53.5461, -113.4938],
         zoom: 12,
-        maxZoom: 22,
+        maxZoom: 23,
         zoomControl: true,
         zoomSnap: 0.1,
         zoomDelta: 0.15,          // ~1.1× per scroll tick ("fine" default)
@@ -619,7 +619,7 @@
 
       satelliteLayer = L.tileLayer(
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        { attribution: '© Esri', maxZoom: 22, maxNativeZoom: 20 }
+        { attribution: '© Esri', maxZoom: 23, maxNativeZoom: 23 }
       );
 
       drawnItems = new L.FeatureGroup().addTo(map);
@@ -3115,7 +3115,7 @@
     function _updateSatLayer() {
       if (!_satVisible) return;
       var z = map.getZoom();
-      if (mapboxSat && z >= 21) {
+      if (mapboxSat && z >= 23) {
         if (!map.hasLayer(mapboxSat))    { mapboxSat.addTo(map); }
         if (map.hasLayer(satelliteLayer)) { satelliteLayer.remove(); }
       } else {
