@@ -127,6 +127,20 @@ def _cmd_export_catalogue(args) -> int:
     return 0
 
 
+def _cmd_generate(args) -> int:
+    from src.llm_design import generate_design, LLMClient
+    site_config = None
+    if args.lat is not None and args.lng is not None:
+        site_config = {"latitude": args.lat, "longitude": args.lng}
+    client = LLMClient(endpoint=args.endpoint or None, model=args.model or None)
+    print(f"Generating design via {client.model} at {client.endpoint} …")
+    project = generate_design(args.prompt, site_config=site_config, client=client)
+    project.save(args.out)
+    print(f"Wrote generated design ({len(project.placed_plants)} plant placements, "
+          f"{len(project.structures)} structures) → {args.out}")
+    return 0
+
+
 def _cmd_validate_data(args) -> int:
     # Wraps src.data_quality.validate_all — the same check
     # scripts/check_plant_data.py runs. Exits non-zero on errors.
@@ -201,6 +215,20 @@ def _build_parser() -> argparse.ArgumentParser:
                         help="write the plant catalogue to a .docx")
     ec.add_argument("out", help="output .docx path")
     ec.set_defaults(func=_cmd_export_catalogue)
+
+    # generate
+    ge = sub.add_parser("generate",
+                        help="generate a design from a prompt via a local LLM")
+    ge.add_argument("prompt", help="natural-language design brief")
+    ge.add_argument("--out", required=True,
+                    help="output .perma.geojson path")
+    ge.add_argument("--lat", type=float, default=None, help="site latitude")
+    ge.add_argument("--lng", type=float, default=None, help="site longitude")
+    ge.add_argument("--endpoint", default="",
+                    help="OpenAI-compatible base URL (default: local Ollama)")
+    ge.add_argument("--model", default="",
+                    help="model name (default: env / config / llama3.2)")
+    ge.set_defaults(func=_cmd_generate)
 
     # validate-data
     vd = sub.add_parser("validate-data",

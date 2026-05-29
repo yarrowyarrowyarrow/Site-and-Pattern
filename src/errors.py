@@ -38,3 +38,9 @@ class AnalysisError(PermaDesignError):
 
 class ExportError(PermaDesignError):
     """An export (PDF / DOCX) failed or isn't available headlessly."""
+
+
+class LLMError(PermaDesignError):
+    """Prompt-driven generation failed — the local LLM endpoint was
+    unreachable, timed out, or returned a response that couldn't be parsed
+    into a valid design spec."""

@@ -157,6 +157,7 @@ python -m src.cli <subcommand> …      # or `permadesign <subcommand> …` once
 | `list-structures [--json]` | habitat structures |
 | `analyze <project.perma.geojson> [--json]` | habitat score of a saved project |
 | `export-catalogue <out.docx>` | plant catalogue → DOCX |
+| `generate <prompt> --out <project> [--lat --lng --endpoint --model]` | generate a design from a prompt via a local LLM (§4) |
 | `validate-data [--quiet --no-warnings]` | check shipped seed JSON |
 
 `--json` gives machine-readable output. Exit code is `0` on success, `2`
@@ -166,6 +167,8 @@ for bad usage.
 ```bash
 python -m src.cli query --native --pollinator "milkweed" --json
 python -m src.cli analyze my_yard.perma.geojson
+python -m src.cli generate "pollinator garden for a sunny Edmonton backyard" \
+    --lat 53.5 --lng -113.5 --out garden.perma.geojson   # needs a local LLM, see §4
 ```
 
 ---
@@ -202,14 +205,103 @@ claude mcp add permadesign -- python -m src.mcp_server
 | `analyze_project` | `project_path` | habitat-score analysis |
 | `project_summary` | `project_path` | name, counts, warnings |
 | `export_catalogue` | `out_path` | `{"path": …}` |
+| `generate_design` | `project_path`, `prompt`, `lat`, `lng`, `endpoint`, `model` | summary of a design generated from a prompt via a local LLM (§4) |
 
 A project summary is `{path, name, n_plants, n_structures, warnings}`.
+
+### Prompt-driven generation, two ways
+
+An agent can build a design from a natural-language brief by **composing the
+tools itself** — no LLM-of-its-own required, since the agent *is* the LLM:
+
+> "Design a pollinator garden at 53.5, -113.5."
+
+1. `query_plants(pollinator_only=True, native_only=True)` — pick species.
+2. `list_communities` / `list_structures` — find a community + a bee hotel.
+3. `create_project(path, name, boundary=[[lat,lng], …])`.
+4. `place_plant` / `place_community` / `place_structure` for each choice.
+5. `analyze_project(path)` — read back the habitat score and iterate.
+
+That sequence is exercised offline (no SDK, no network) by
+[`tests/test_agent_generation_loop.py`](../tests/test_agent_generation_loop.py).
+
+Alternatively, the **`generate_design` tool** delegates the whole brief to a
+*separate local LLM* in one call — useful for a non-agentic MCP client. It
+uses the same machinery as the CLI `generate` command; see §4.
 
 The tool *logic* lives in plain `tool_*` functions in `src/mcp_server.py`
 (testable without the MCP SDK); `build_server()` wires them into a
 `FastMCP` server. `TOOL_SPECS` is the single registry — the
 [architecture guard](../tests/test_architecture_guard.py) snapshots it so
 the tool surface can't change by accident.
+
+---
+
+## 4. Prompt-driven generation with a local LLM (`src.llm_design`)
+
+`generate_design(prompt, …)` turns a sentence into a starting
+`Project` using **any OpenAI-compatible chat endpoint** — by default a
+local [Ollama](https://ollama.com) server, so it runs fully offline with no
+API key and no extra dependencies (stdlib `urllib` only).
+
+**Division of labour.** The LLM does the ecological selection it's good at
+(which species, communities, and structures suit the brief) and returns a
+compact JSON spec. Python does the geometry — resolving names/queries to
+catalogue ids and laying everything out on a grid around the site — so the
+coordinates are always valid no matter how weak the model is at arithmetic.
+The result is a normal project the user opens in the GUI and refines.
+
+The model is asked to return JSON of this shape:
+
+```json
+{
+  "summary": "one sentence",
+  "plants":      [{"query": "wild bergamot", "quantity": 3}],
+  "communities": [{"query": "pollinator"}],
+  "structures":  [{"structure_id": "bee_hotel"}]
+}
+```
+
+`plants[].query` is run against the plant database (first match wins);
+`communities[].query` is matched against the seeded community names;
+`structures[].structure_id` must be a real structure id. Unresolvable
+entries are skipped; an empty/garbled response raises `LLMError`.
+
+### Setup (Ollama)
+
+```bash
+ollama serve                 # starts the local server on :11434
+ollama run llama3.2          # pull a model once
+python -m src.cli generate "pollinator garden for a sunny Edmonton backyard" \
+    --lat 53.5 --lng -113.5 --out garden.perma.geojson
+python -m src.cli analyze garden.perma.geojson
+```
+
+### Configuration
+
+Endpoint and model resolve in this order: explicit argument →
+environment variable → `~/.permadesign_config.json` → built-in default.
+
+| setting | env var | config key | default |
+|---|---|---|---|
+| endpoint (base URL) | `PERMADESIGN_LLM_ENDPOINT` | `llm_endpoint` | `http://localhost:11434/v1` |
+| model | `PERMADESIGN_LLM_MODEL` | `llm_model` | `llama3.2` |
+
+Any server speaking `POST /v1/chat/completions` works (LM Studio,
+llama.cpp's server, a cloud gateway). From Python:
+
+```python
+from src.llm_design import generate_design, LLMClient
+proj = generate_design(
+    "shade-tolerant native groundcover under a spruce",
+    site_config={"latitude": 53.5, "longitude": -113.5},
+    client=LLMClient(model="mistral"),
+)
+proj.save("understory.perma.geojson")
+```
+
+Tests inject a fake client (a canned spec), so generation is verified
+offline — see [`tests/test_llm_design.py`](../tests/test_llm_design.py).
 
 ---
 

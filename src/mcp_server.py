@@ -156,6 +156,30 @@ def tool_export_catalogue(out_path: str) -> dict:
     return {"path": written}
 
 
+def tool_generate_design(
+    project_path: str, prompt: str,
+    lat: Optional[float] = None, lng: Optional[float] = None,
+    endpoint: str = "", model: str = "",
+) -> dict:
+    """Generate a starting design from a natural-language ``prompt`` using a
+    local OpenAI-compatible LLM (default: Ollama), save it to
+    ``project_path``, and return a summary.
+
+    ``lat``/``lng`` anchor the placed geometry. ``endpoint``/``model``
+    override the LLM target (otherwise env vars / config / local default).
+    Raises ``LLMError`` if the endpoint is unreachable or the response can't
+    be turned into a valid design.
+    """
+    from src.llm_design import generate_design, LLMClient
+    site_config = None
+    if lat is not None and lng is not None:
+        site_config = {"latitude": float(lat), "longitude": float(lng)}
+    client = LLMClient(endpoint=endpoint or None, model=model or None)
+    project = generate_design(str(prompt), site_config=site_config, client=client)
+    project.save(project_path)
+    return _summary(project, project_path)
+
+
 def _summary(project: Project, path: str) -> dict:
     return {
         "path": path,
@@ -179,6 +203,7 @@ TOOL_SPECS: list[dict] = [
     {"name": "analyze_project",  "func": tool_analyze_project},
     {"name": "project_summary",  "func": tool_project_summary},
     {"name": "export_catalogue", "func": tool_export_catalogue},
+    {"name": "generate_design",  "func": tool_generate_design},
 ]
 
 

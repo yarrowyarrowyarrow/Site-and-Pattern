@@ -141,7 +141,7 @@ class TestAgentApiContract(unittest.TestCase):
         "query_plants", "list_communities", "list_structures",
         "create_project", "place_plant", "place_community",
         "place_structure", "analyze_project", "project_summary",
-        "export_catalogue",
+        "export_catalogue", "generate_design",
     }
 
     def test_facade_exports_stable(self):
