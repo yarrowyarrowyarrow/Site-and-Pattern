@@ -15,7 +15,11 @@ def _utc_now_iso() -> str:
     output exactly while avoiding its Python 3.12+ deprecation warning."""
     return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
-SCHEMA_VERSION = "1.6"
+# 1.7 (V1.48): added the `existing_tree` / `existing_building` feature types
+# (user-marked shade casters). Additive — older readers ignore unknown
+# element_types in project_to_map_data, so projects stay forward/backward
+# compatible.
+SCHEMA_VERSION = "1.7"
 
 
 def new_placement_group_id() -> str:

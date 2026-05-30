@@ -290,7 +290,31 @@ class TestSchemaVersionStable(unittest.TestCase):
     tests above — this assertion is a tripwire prompting that thought."""
 
     def test_schema_version_value(self):
-        self.assertEqual(SCHEMA_VERSION, "1.6")
+        # 1.7 (V1.48): added existing_tree / existing_building feature types.
+        self.assertEqual(SCHEMA_VERSION, "1.7")
+
+    def test_existing_feature_types_round_trip(self):
+        # The new shade-caster features must survive save → reload, and the
+        # loader must tolerate them (it ignores unknown element_types).
+        import json
+        import tempfile
+        from src.project import save_project, load_project, project_to_map_data
+        p = new_project("t")
+        p["features"].append({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [-113.5, 53.5]},
+            "properties": {"element_type": "existing_tree", "height_m": 8.0,
+                           "canopy_radius_m": 3.0},
+        })
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "t.perma.geojson")
+            save_project(p, path)
+            reloaded = load_project(path)
+        ets = [f["properties"]["element_type"]
+               for f in reloaded["features"]]
+        self.assertIn("existing_tree", ets)
+        # loader doesn't crash on the unknown type
+        project_to_map_data(reloaded)
 
 
 if __name__ == "__main__":

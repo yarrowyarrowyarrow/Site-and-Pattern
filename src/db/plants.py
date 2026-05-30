@@ -819,6 +819,8 @@ def search_plants(
     host_for_fauna_id: Optional[int] = None,
     supports_fauna_id: Optional[int] = None,
     supports_specialist: bool = False,
+    soil_ph: Optional[float] = None,
+    moisture: str = "",
 ) -> list[dict]:
     """
     Return plants matching all supplied filters.
@@ -947,6 +949,27 @@ def search_plants(
     if supports_specialist:
         sql += (" AND EXISTS (SELECT 1 FROM plant_fauna pf WHERE "
                 "pf.plant_id = plants.id AND pf.specificity = 'specialist')")
+
+    # Site-fit filters (V1.48). `soil_ph` keeps plants whose tolerance range
+    # brackets the site pH (containment, mirroring `zone`); unassessed bounds
+    # (NULL) pass so a missing range never excludes a plant. `moisture` maps a
+    # site wetness class to the existing water/habitat columns.
+    if soil_ph is not None:
+        sql += (" AND (soil_ph_min IS NULL OR soil_ph_min <= ?)"
+                " AND (soil_ph_max IS NULL OR soil_ph_max >= ?)")
+        params += [float(soil_ph), float(soil_ph)]
+
+    if moisture == "wet":
+        # Wet/low ground: high- or moderate-water plants, true aquatics, or
+        # species tagged to a wet ecoregion (wet_meadow / riparian).
+        sql += (" AND (water_needs IN ('high','moderate')"
+                " OR plant_type = 'aquatic'"
+                " OR (',' || COALESCE(ab_ecoregion,'') || ',') LIKE '%,wet_meadow,%'"
+                " OR (',' || COALESCE(ab_ecoregion,'') || ',') LIKE '%,riparian,%')")
+    elif moisture == "dry":
+        sql += " AND water_needs = 'low'"
+    elif moisture == "mesic":
+        sql += " AND water_needs IN ('medium','moderate')"
 
     sql += " ORDER BY plant_type, common_name"
 

@@ -119,6 +119,17 @@ class GenerateDesignDialog(QDialog):
         budget_row.addStretch(1)
         layout.addLayout(budget_row)
 
+        self._match_site_check = QCheckBox("Match to site conditions & terrain")
+        self._match_site_check.setChecked(True)
+        self._match_site_check.setToolTip(
+            "Place moisture-loving plants in low/wet ground, drought-tolerant "
+            "plants on dry slopes, and shade plants in shade — using the "
+            "terrain around your pin/boundary and any existing trees or "
+            "buildings you've marked. Needs elevation data (online); falls back "
+            "to whole-property matching if unavailable."
+        )
+        layout.addWidget(self._match_site_check)
+
         self._offline_check = QCheckBox("Build without AI (offline)")
         self._offline_check.setToolTip(
             "Skip the local AI model and build deterministically from your "
@@ -149,6 +160,11 @@ class GenerateDesignDialog(QDialog):
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+
+    def match_site(self) -> bool:
+        """Whether to derive wet/dry/shaded micro-zones from the terrain and
+        place plants/structures accordingly (V1.48)."""
+        return self._match_site_check.isChecked()
 
     def selected_goals(self) -> list:
         return [key for key, cb in self._checks.items() if cb.isChecked()]

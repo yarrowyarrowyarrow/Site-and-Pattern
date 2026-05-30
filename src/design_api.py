@@ -113,6 +113,41 @@ class DesignGenerator:
             }
         })
 
+    def add_existing_tree(self, lat: float, lng: float, *,
+                          height_m: float = 6.0,
+                          canopy_radius_m: float = 3.0,
+                          label: str = "") -> None:
+        """Mark an EXISTING on-site tree (not part of the design) so its cast
+        shade is honoured by the generator (V1.48). Stored as an
+        ``existing_tree`` point feature with height + canopy radius."""
+        self.project["features"].append({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [lng, lat]},
+            "properties": {
+                "element_type": "existing_tree",
+                "height_m": float(height_m),
+                "canopy_radius_m": float(canopy_radius_m),
+                "label": label or "Existing tree",
+            }
+        })
+
+    def add_existing_building(self, lat: float, lng: float, *,
+                              height_m: float = 5.0,
+                              footprint_radius_m: float = 4.0,
+                              label: str = "") -> None:
+        """Mark an EXISTING on-site building so its cast shade is honoured. A
+        point + a footprint radius (used as the shadow caster's half-width)."""
+        self.project["features"].append({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [lng, lat]},
+            "properties": {
+                "element_type": "existing_building",
+                "height_m": float(height_m),
+                "canopy_radius_m": float(footprint_radius_m),
+                "label": label or "Existing building",
+            }
+        })
+
     def get_project(self) -> dict:
         """Return the complete project dict, ready for save_project()."""
         return self.project

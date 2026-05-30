@@ -47,6 +47,7 @@ _ALLOWED_FILTERS = {
     "host_plant_only", "keystone_only", "bird_food_only", "ab_ecoregion",
     "max_unit_price", "common_only",
     "host_for_fauna_id", "supports_fauna_id", "supports_specialist",
+    "soil_ph", "moisture",
 }
 
 _SYSTEM_PROMPT = """\
@@ -72,11 +73,21 @@ shape:
 Rules:
 - "plants[].query" is a free-text search run against the plant database;
   use plain plant names or descriptive terms. "quantity" is a positive
-  integer (default 1).
+  integer (default 1). Prefer names from the PLANT PALETTE below — those are
+  real, in-stock, site-appropriate species.
 - "communities[].query" must loosely match one of the AVAILABLE COMMUNITIES
-  listed below.
+  listed below. Choose communities whose description suits the SITE
+  CONDITIONS (e.g. a riparian/willow community for wet ground, a mixedgrass
+  or aromatic community for a dry sunny site, a boreal/shade community for
+  shade).
 - "structures[].structure_id" must be one of the AVAILABLE STRUCTURE IDS
-  listed below.
+  listed below. Match structures to the site: pond / swale / rain_garden for
+  low or wet ground, bee_hotel / native_bee_log in sun, brush_pile / snag for
+  cover.
+- MATCH PLANTS TO THE SITE CONDITIONS: shade-tolerant plants for shaded
+  spots, moisture-loving / aquatic plants for wet or low ground, drought-
+  tolerant plants for dry slopes, and species whose hardiness and ecoregion
+  suit the site.
 - Favour native, pollinator-supporting, prairie-hardy species.
 - Include at least a few plants. Omit a section by giving an empty list.
 """
@@ -192,20 +203,176 @@ def _fauna_digest(limit_per_taxon: int = 4) -> str:
             "host these): " + "; ".join(parts))
 
 
+# ── Site-fit + catalogue context (V1.48) ─────────────────────────────────────
+
+def _site_filters(site_config: Optional[dict]) -> dict:
+    """Derive the baseline ``search_plants`` filters that bind a design to the
+    measured site: hardiness zone, ecoregion, and soil pH. Empty dict when the
+    site is unknown. These are applied *under* the model's own plant queries so
+    even a vague request is constrained to site-fit species."""
+    sc = site_config or {}
+    out: dict = {}
+    zone = sc.get("hardiness_zone")
+    if isinstance(zone, (int, float)):
+        out["zone"] = int(zone)
+    eco = sc.get("ecoregion_key")
+    if eco:
+        out["ab_ecoregion"] = str(eco)
+    ph = sc.get("soil_ph")
+    if isinstance(ph, (int, float)):
+        out["soil_ph"] = float(ph)
+    return out
+
+
+def _site_conditions_line(site_config: Optional[dict]) -> str:
+    """A compact, human-readable SITE CONDITIONS summary for the prompt — every
+    measured field we have, not just lat/lng/zone. Empty string when nothing
+    beyond coordinates is known."""
+    sc = site_config or {}
+    bits: list[str] = []
+    if sc.get("hardiness_zone") is not None:
+        bits.append(f"hardiness zone {sc['hardiness_zone']}")
+    if sc.get("ecoregion_label") or sc.get("ecoregion_key"):
+        bits.append(f"ecoregion {sc.get('ecoregion_label') or sc['ecoregion_key']}")
+    if isinstance(sc.get("gdd5_mean"), (int, float)):
+        bits.append(f"GDD5 ~{sc['gdd5_mean']:.0f}")
+    if isinstance(sc.get("frost_free_days"), (int, float)):
+        bits.append(f"{sc['frost_free_days']:.0f} frost-free days")
+    if isinstance(sc.get("annual_rainfall_mm"), (int, float)):
+        bits.append(f"{sc['annual_rainfall_mm']:.0f} mm annual rain")
+    if isinstance(sc.get("slope_pct"), (int, float)):
+        asp = sc.get("aspect")
+        bits.append(f"slope {sc['slope_pct']:.0f}%"
+                    + (f" facing {asp}" if asp else ""))
+    if isinstance(sc.get("soil_ph"), (int, float)):
+        tex = sc.get("soil_texture")
+        bits.append(f"soil pH {sc['soil_ph']:.1f}"
+                    + (f" ({tex})" if tex else ""))
+    return "SITE CONDITIONS: " + "; ".join(bits) + "." if bits else ""
+
+
+def _plant_palette(query_plants, site_filters: dict,
+                   limit_per_group: int = 8) -> str:
+    """A compact, catalogue-real plant palette grouped by type, restricted to
+    site-fit natives — grounds the model so it stops inventing names that get
+    snapped to whatever search finds. Best-effort: empty string on any error."""
+    try:
+        rows = query_plants(native_only=True, **site_filters)
+    except Exception:  # noqa: BLE001 — context enrichment is best-effort
+        try:
+            rows = query_plants(native_only=True)
+        except Exception:  # noqa: BLE001
+            return ""
+    groups: dict[str, list[str]] = {}
+    for r in rows:
+        nm = r.get("common_name")
+        if nm:
+            groups.setdefault(r.get("plant_type", "other"), []).append(nm)
+    order = ["tree", "shrub", "herb", "grass", "sedge", "rush",
+             "groundcover", "vine", "root", "fern", "aquatic"]
+    parts = []
+    for ptype in order + [g for g in groups if g not in order]:
+        names = groups.get(ptype)
+        if names:
+            parts.append(f"{ptype}: " + ", ".join(names[:limit_per_group]))
+    if not parts:
+        return ""
+    return ("PLANT PALETTE (site-fit natives — prefer these):\n  "
+            + "\n  ".join(parts))
+
+
+def _community_digest(limit: int = 14) -> str:
+    """Per-community one-liner: name — first sentence of description
+    [key members]. Replaces the names-only list so the model can choose a
+    community by scenario. Best-effort: empty string on any error."""
+    try:
+        from src.permadesign_api import list_polycultures
+        from src.db.polycultures import get_polyculture_by_id
+        comms = list_polycultures()
+    except Exception:  # noqa: BLE001
+        return ""
+    parts = []
+    for c in comms[:limit]:
+        name = c.get("name")
+        if not name:
+            continue
+        desc = (c.get("description") or "").strip()
+        first = desc.split(". ")[0].strip().rstrip(".") if desc else ""
+        members = []
+        try:
+            full = get_polyculture_by_id(c["id"]) if c.get("id") else None
+            members = [m.get("common_name") for m in (full or {}).get("members", [])
+                       if m.get("common_name")][:4]
+        except Exception:  # noqa: BLE001
+            members = []
+        line = f"- {name}"
+        if first:
+            line += f" — {first}"
+        if members:
+            line += f" [members: {', '.join(members)}]"
+        parts.append(line)
+    if not parts:
+        return ""
+    return "AVAILABLE COMMUNITIES:\n" + "\n".join(parts)
+
+
+def _structure_digest() -> str:
+    """Per-structure siting hint: ``id (Name): <first sentence of
+    description>``. Best-effort: empty string on any error."""
+    try:
+        from src.permadesign_api import list_structures
+        structs = list_structures()
+    except Exception:  # noqa: BLE001
+        return ""
+    parts = []
+    for s in structs:
+        sid = s.get("id")
+        if not sid:
+            continue
+        name = s.get("name") or sid
+        desc = (s.get("description") or "").strip()
+        first = desc.split(". ")[0].strip() if desc else ""
+        parts.append(f"- {sid} ({name})" + (f": {first}" if first else ""))
+    if not parts:
+        return ""
+    return "AVAILABLE STRUCTURE IDS:\n" + "\n".join(parts)
+
+
 def _build_messages(prompt: str, context: dict,
                     extra_hints: Optional[list] = None) -> list[dict]:
-    names = context.get("community_names") or []
-    sids = context.get("structure_ids") or []
-    site = context.get("site") or {}
     lines = [_SYSTEM_PROMPT, ""]
-    lines.append("AVAILABLE COMMUNITIES: " + ", ".join(names) if names
-                 else "AVAILABLE COMMUNITIES: (none)")
-    lines.append("AVAILABLE STRUCTURE IDS: " + ", ".join(str(s) for s in sids)
-                 if sids else "AVAILABLE STRUCTURE IDS: (none)")
+
+    # Rich digests when present (V1.48); fall back to the bare name/id lists.
+    comm = context.get("community_digest")
+    if comm:
+        lines.append(comm)
+    else:
+        names = context.get("community_names") or []
+        lines.append("AVAILABLE COMMUNITIES: " + ", ".join(names) if names
+                     else "AVAILABLE COMMUNITIES: (none)")
+
+    struct = context.get("structure_digest")
+    if struct:
+        lines.append(struct)
+    else:
+        sids = context.get("structure_ids") or []
+        lines.append("AVAILABLE STRUCTURE IDS: " + ", ".join(str(s) for s in sids)
+                     if sids else "AVAILABLE STRUCTURE IDS: (none)")
+
+    site = context.get("site") or {}
+    cond = context.get("site_conditions") or _site_conditions_line(site)
+    if cond:
+        lines.append(cond)
     if site.get("latitude") is not None and site.get("longitude") is not None:
-        lines.append(f"SITE: lat {site['latitude']}, lng {site['longitude']}"
-                     + (f", hardiness zone {site['hardiness_zone']}"
-                        if site.get("hardiness_zone") else ""))
+        lines.append(f"SITE LOCATION: lat {site['latitude']}, "
+                     f"lng {site['longitude']}")
+
+    palette = context.get("plant_palette")
+    if palette:
+        lines.append(palette)
+
+    if context.get("shade_note"):
+        lines.append(context["shade_note"])
     if context.get("fauna_note"):
         lines.append(context["fauna_note"])
     if extra_hints:
@@ -377,6 +544,86 @@ def _grid_positions(center_lat: float, center_lng: float, n: int,
     return positions
 
 
+# ── Boundary-aware placement (V1.48) ─────────────────────────────────────────
+
+def _boundary_polygon(boundary) -> Optional[list]:
+    """Convert a boundary given as a list of ``(lat, lng)`` tuples (the form
+    ``controllers/generation.py:_current_boundary`` produces) into a GeoJSON
+    polygon ``[[ [lng,lat], ... ]]`` for :func:`src.geometry.point_in_polygon`.
+    Returns ``None`` for a degenerate boundary."""
+    if not boundary or len(boundary) < 3:
+        return None
+    ring = [[float(p[1]), float(p[0])] for p in boundary]  # (lat,lng) → [lng,lat]
+    if ring[0] != ring[-1]:
+        ring.append(ring[0])
+    return [ring]
+
+
+def grid_cells_in_boundary(boundary, spacing_m: float = _SPACING_M
+                           ) -> list[tuple[float, float]]:
+    """All grid-cell centres (at ``spacing_m``) that fall strictly inside the
+    boundary polygon, row-major from the NW corner. The unit of "how many
+    plants fit" for trim-to-fit, and the position pool for clipped placement.
+    Empty list for a degenerate boundary."""
+    poly = _boundary_polygon(boundary)
+    if poly is None:
+        return []
+    from src.geometry import ring_bbox
+    min_lat, min_lng, max_lat, max_lng = ring_bbox(poly[0])
+    mid_lat = (min_lat + max_lat) / 2.0
+    cos_lat = math.cos(mid_lat * math.pi / 180) or 1e-9
+    dlat = spacing_m / 111320.0
+    dlng = spacing_m / (111320.0 * cos_lat)
+    if dlat <= 0 or dlng <= 0:
+        return []
+    from src.geometry import point_in_polygon
+    cells: list[tuple[float, float]] = []
+    # Start half a step in so cells sit inside rather than on the edge.
+    lat = max_lat - dlat / 2.0
+    while lat > min_lat:
+        lng = min_lng + dlng / 2.0
+        while lng < max_lng:
+            if point_in_polygon(lat, lng, poly):
+                cells.append((lat, lng))
+            lng += dlng
+        lat -= dlat
+    return cells
+
+
+def positions_in_boundary(boundary, n: int, center: tuple[float, float],
+                          spacing_m: float = _SPACING_M
+                          ) -> list[tuple[float, float]]:
+    """Up to ``n`` placement positions that are guaranteed inside ``boundary``.
+    Falls back to the unclipped centred grid around ``center`` when no usable
+    boundary is supplied (pin-only designs keep today's behaviour)."""
+    cells = grid_cells_in_boundary(boundary, spacing_m)
+    if cells:
+        return cells[:n]
+    return _grid_positions(center[0], center[1], n, spacing_m)
+
+
+def community_fits(boundary, center: tuple[float, float], radius_m: float
+                   ) -> bool:
+    """True when a community of the given natural radius, placed at ``center``,
+    fits inside the boundary — tested by sampling the radius circle's compass
+    points (so the expanded members don't spill outside). Always True when there
+    is no boundary to respect."""
+    poly = _boundary_polygon(boundary)
+    if poly is None:
+        return True
+    from src.geometry import point_in_polygon
+    if not point_in_polygon(center[0], center[1], poly):
+        return False
+    cos_lat = math.cos(center[0] * math.pi / 180) or 1e-9
+    for ang in range(0, 360, 45):
+        rad = math.radians(ang)
+        dlat = (radius_m * math.cos(rad)) / 111320.0
+        dlng = (radius_m * math.sin(rad)) / (111320.0 * cos_lat)
+        if not point_in_polygon(center[0] + dlat, center[1] + dlng, poly):
+            return False
+    return True
+
+
 def generate_design(prompt: str, *, site_config: Optional[dict] = None,
                     boundary: Optional[list] = None,
                     name: str = "Generated Design",
@@ -385,7 +632,8 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
                     model: Optional[str] = None,
                     goals: Optional[list] = None,
                     budget: Optional[float] = None,
-                    fauna_ids: Optional[list] = None):
+                    fauna_ids: Optional[list] = None,
+                    match_site: bool = True):
     """Generate a :class:`~src.permadesign_api.Project` from a prompt.
 
     The site location comes from ``boundary`` (centroid) or
@@ -423,15 +671,22 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
 
     communities = list_polycultures()
     structures = list_structures()
+    site_filters = _site_filters(site_config)
     context = {
         "community_names": [c.get("name") for c in communities if c.get("name")],
         "structure_ids": [s.get("id") for s in structures if s.get("id")],
+        "community_digest": _community_digest(),
+        "structure_digest": _structure_digest(),
         "site": dict(site_config or {}),
+        "site_conditions": _site_conditions_line(site_config),
+        "plant_palette": _plant_palette(query_plants, site_filters),
         "fauna_note": _fauna_digest(),
     }
 
     from src.design_goals import filters_for_goals, hints_for_goals
-    goal_filters = filters_for_goals(goals)
+    # Bind plant selection to the measured site (zone/ecoregion/soil pH) on top
+    # of the goal filters, so even a vague LLM query stays site-appropriate.
+    goal_filters = {**site_filters, **(filters_for_goals(goals) or {})}
 
     hints = hints_for_goals(goals)
     if budget and budget > 0:
@@ -476,25 +731,211 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
         )
 
     project = Project.create(name, site_config=site_config, boundary=boundary)
-    positions = _grid_positions(
-        center[0], center[1],
-        len(plant_items) + len(community_items) + len(structure_items),
-    )
-    idx = 0
-    for plant_id, qty in plant_items:
-        lat, lng = positions[idx]; idx += 1
-        project.place_plant(plant_id, lat, lng, quantity=qty)
-    for poly_id in community_items:
-        lat, lng = positions[idx]; idx += 1
-        project.place_polyculture(poly_id, lat, lng)
-    for struct_id in structure_items:
-        lat, lng = positions[idx]; idx += 1
-        project.place_structure(struct_id, lat, lng)
+    elev, zones, pzone, szone = _zone_context(
+        boundary, site_config, project.as_dict() if match_site else None)
+    _place_within_boundary(project, plant_items, community_items,
+                           structure_items, boundary, center,
+                           elev=elev, zones=zones,
+                           plant_zone_for=pzone, structure_zone_for=szone)
 
-    _apply_goal_feedback(project, goals, query_plants, center)
-    _apply_fauna_feedback(project, fauna_ids, query_plants, center)
+    _apply_goal_feedback(project, goals, query_plants, center, boundary)
+    _apply_fauna_feedback(project, fauna_ids, query_plants, center, boundary)
     _record_budget_note(project, project.placed_plants, budget, budget_dropped)
     return project
+
+
+def _zone_context(boundary, site_config, project_dict):
+    """Build the Tier-2 micro-zoning context for placement, or all-``None`` when
+    zoning is disabled (``project_dict is None``) or unavailable (no grid,
+    offline). Returns ``(elev, zones, plant_zone_for, structure_zone_for)``.
+
+    Best-effort and side-effect-free: any failure degrades to property-wide
+    placement (the Tier-1 path), which already keeps everything in-boundary."""
+    if project_dict is None:
+        return (None, None, None, None)
+    try:
+        from src import zoning, shade
+        elev = zoning.site_elevation_grid(boundary, site_config)
+        if not elev:
+            return (None, None, None, None)
+        shade_g = shade.shade_grid_for_design(project_dict, elev)
+        zones = zoning.classify_zones(elev, shade_g)
+        if not zones:
+            return (None, None, None, None)
+
+        def plant_zone_for(plant_id):
+            try:
+                from src.db.plants import get_plant
+                return zoning.preferred_zone_for_plant(get_plant(plant_id) or {})
+            except Exception:  # noqa: BLE001
+                return None
+
+        return (elev, zones, plant_zone_for,
+                zoning.preferred_zone_for_structure)
+    except Exception:  # noqa: BLE001 — zoning is best-effort
+        return (None, None, None, None)
+
+
+def _add_warning(project, message: str) -> None:
+    """Append a one-off message to ``properties.generation_warnings``."""
+    props = project.as_dict().setdefault("properties", {})
+    props.setdefault("generation_warnings", []).append(message)
+
+
+class _Positioner:
+    """Hands out placement positions, preferring a requested micro-zone.
+
+    Built from either a zone→positions map (Tier-2 zoning available) or a flat
+    in-boundary position list (Tier-1). ``take(zone)`` returns the next free
+    position whose zone matches, else spills to NEUTRAL, else any remaining
+    cell — so zoning *guides* placement without ever dropping a plant for lack
+    of a perfect cell. ``remaining`` tracks capacity for trim-to-fit."""
+
+    def __init__(self, zone_positions: Optional[dict], flat: list):
+        self._by_zone: dict = {}
+        if zone_positions:
+            for z, pts in zone_positions.items():
+                self._by_zone[z] = list(pts)
+        # A flat fallback pool (used when no zoning, and as the final spill).
+        self._flat = list(flat)
+        self._used: set = set()
+
+    @property
+    def remaining(self) -> int:
+        if self._by_zone:
+            return sum(len(v) for v in self._by_zone.values())
+        return len(self._flat)
+
+    def _pop_unused(self, lst: list):
+        while lst:
+            p = lst.pop(0)
+            if p not in self._used:
+                self._used.add(p)
+                return p
+        return None
+
+    def take(self, zone: Optional[str] = None):
+        from src import zoning
+        if self._by_zone:
+            order = []
+            if zone:
+                order.append(zone)
+            if zoning.NEUTRAL not in order:
+                order.append(zoning.NEUTRAL)
+            for z in (zone, zoning.NEUTRAL, zoning.WET, zoning.DRY,
+                      zoning.SHADED):
+                if z and z not in order:
+                    order.append(z)
+            for z in order:
+                p = self._pop_unused(self._by_zone.get(z, []))
+                if p is not None:
+                    return p
+            return None
+        return self._pop_unused(self._flat)
+
+
+def _place_within_boundary(project, plant_items, community_items,
+                           structure_items, boundary,
+                           center: tuple[float, float],
+                           elev: Optional[dict] = None,
+                           zones: Optional[dict] = None,
+                           plant_zone_for=None,
+                           structure_zone_for=None) -> None:
+    """Place plants, communities and structures so every element lands inside
+    the drawn boundary, trimming to fit at healthy spacing (V1.48).
+
+    Positions come from :func:`positions_in_boundary`; when the boundary is too
+    small to hold everything at ``_SPACING_M`` spacing we place what fits and
+    record a "trimmed N" warning. Communities are only placed where their whole
+    expanded footprint (``community_natural_radius``) fits — otherwise they are
+    skipped with a note, closing the member-offset spill path.
+
+    When an elevation grid + ``zones`` are supplied (Tier-2), plants/structures
+    are routed to their preferred micro-zone via ``plant_zone_for`` /
+    ``structure_zone_for`` (callables returning a zone label); otherwise a flat
+    in-boundary grid is used."""
+    from src.db.polycultures import (
+        get_polyculture_by_id, community_natural_radius,
+    )
+
+    # Build the position source: zoned (clipped to boundary) or flat.
+    zpos = None
+    if elev and zones:
+        try:
+            from src import zoning
+            zpos = zoning.zone_positions(elev, zones, boundary)
+        except Exception:  # noqa: BLE001
+            zpos = None
+    flat = positions_in_boundary(
+        boundary,
+        len(plant_items) + len(community_items) + len(structure_items),
+        center)
+    positioner = _Positioner(zpos, flat)
+
+    # Filter communities down to those whose footprint fits somewhere sensible.
+    placeable_comms: list[tuple[int, float]] = []
+    skipped_comms = 0
+    for cid in community_items:
+        try:
+            full = get_polyculture_by_id(cid)
+            radius = community_natural_radius(full)
+        except Exception:  # noqa: BLE001
+            radius = 1.0
+        placeable_comms.append((cid, radius))
+
+    total = len(plant_items) + len(placeable_comms) + len(structure_items)
+    capacity = positioner.remaining
+
+    # Trim-to-fit: when capacity can't hold everything at healthy spacing, drop
+    # the overflow (individual plants first — communities/structures are higher-
+    # value, larger commitments).
+    trimmed = 0
+    if capacity < total:
+        drop = min(total - capacity, len(plant_items))
+        if drop:
+            plant_items = plant_items[:len(plant_items) - drop]
+            trimmed += drop
+
+    for plant_id, qty in plant_items:
+        zone = None
+        if plant_zone_for is not None:
+            try:
+                zone = plant_zone_for(plant_id)
+            except Exception:  # noqa: BLE001
+                zone = None
+        pos = positioner.take(zone)
+        if pos is None:
+            break
+        project.place_plant(plant_id, pos[0], pos[1], quantity=qty)
+    for cid, radius in placeable_comms:
+        pos = positioner.take(None)
+        if pos is None:
+            break
+        if community_fits(boundary, pos, radius):
+            project.place_polyculture(cid, pos[0], pos[1])
+        else:
+            skipped_comms += 1
+    for struct_id in structure_items:
+        zone = None
+        if structure_zone_for is not None:
+            try:
+                zone = structure_zone_for(struct_id)
+            except Exception:  # noqa: BLE001
+                zone = None
+        pos = positioner.take(zone)
+        if pos is None:
+            break
+        project.place_structure(struct_id, pos[0], pos[1])
+
+    if trimmed:
+        _add_warning(project,
+                     f"Trimmed {trimmed} plant" + ("s" if trimmed != 1 else "")
+                     + " to fit the area at healthy spacing.")
+    if skipped_comms:
+        _add_warning(project,
+                     f"Skipped {skipped_comms} plant communit"
+                     + ("ies" if skipped_comms != 1 else "y")
+                     + " that did not fit inside the boundary.")
 
 
 # ── Goal feedback + offline fallback ─────────────────────────────────────────
@@ -536,8 +977,19 @@ def _fauna_names(fauna_ids) -> list:
     return out
 
 
+def _one_position_in_boundary(boundary, center: tuple[float, float]
+                              ) -> tuple[float, float]:
+    """A single placement spot inside the boundary (its first free grid cell),
+    falling back to the design centre when there is no usable boundary. Keeps
+    the goal/fauna repair additions from landing outside the drawn area."""
+    cells = grid_cells_in_boundary(boundary)
+    if cells:
+        return cells[0]
+    return _grid_positions(center[0], center[1], 1)[0]
+
+
 def _apply_fauna_feedback(project, fauna_ids, query_plants,
-                          center: tuple[float, float]) -> None:
+                          center: tuple[float, float], boundary=None) -> None:
     """Ensure the design actually serves each chosen wildlife species: for any
     selected fauna with no supporting plant among those placed, drop in one
     plant that supports it. Mirrors :func:`_apply_goal_feedback`; warnings live
@@ -554,7 +1006,7 @@ def _apply_fauna_feedback(project, fauna_ids, query_plants,
         if not supporters:
             continue
         if placed_ids.isdisjoint({p["id"] for p in supporters}):
-            lat, lng = _grid_positions(center[0], center[1], 1)[0]
+            lat, lng = _one_position_in_boundary(boundary, center)
             project.place_plant(supporters[0]["id"], lat, lng, quantity=1)
             placed_ids.add(supporters[0]["id"])
             added_any = True
@@ -567,7 +1019,7 @@ def _apply_fauna_feedback(project, fauna_ids, query_plants,
 
 
 def _apply_goal_feedback(project, goals, query_plants,
-                         center: tuple[float, float]) -> None:
+                         center: tuple[float, float], boundary=None) -> None:
     """Record goal-related warnings on the project and, if a *backed* goal ends
     up with no representation among the placed plants, drop in one satisfying
     plant so the result never silently violates a hard goal.
@@ -606,7 +1058,7 @@ def _apply_goal_feedback(project, goals, query_plants,
             sat_ids = {p["id"] for p in satisfying}
             placed_ids = {p.get("plant_id") for p in project.placed_plants}
             if placed_ids.isdisjoint(sat_ids):
-                lat, lng = _grid_positions(center[0], center[1], 1)[0]
+                lat, lng = _one_position_in_boundary(boundary, center)
                 project.place_plant(satisfying[0]["id"], lat, lng, quantity=1)
                 warnings.append(
                     "Added one plant to honour the selected goals "
@@ -645,7 +1097,8 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
                             name: str = "Generated Design",
                             goals: Optional[list] = None,
                             budget: Optional[float] = None,
-                            fauna_ids: Optional[list] = None):
+                            fauna_ids: Optional[list] = None,
+                            match_site: bool = True):
     """Generate a :class:`~src.permadesign_api.Project` WITHOUT an LLM.
 
     Selects plants by the hard filters for ``goals`` (defaulting to Alberta
@@ -668,12 +1121,21 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
             "'latitude' and 'longitude'"
         )
 
-    goal_filters = filters_for_goals(goals) or {"native_only": True}
+    # Bind selection to the measured site (zone/ecoregion/soil pH) on top of the
+    # goal filters so the offline design is site-appropriate too (V1.48).
+    site_filters = _site_filters(site_config)
+    goal_filters = {**site_filters,
+                    **(filters_for_goals(goals) or {"native_only": True})}
     try:
         plants = query_plants(**goal_filters)
     except Exception:  # noqa: BLE001
         plants = []
-    if not plants:  # goals too restrictive — widen so we still produce a design
+    if not plants:  # site+goals too restrictive — widen so we still produce one
+        try:
+            plants = query_plants(native_only=True, **site_filters)
+        except Exception:  # noqa: BLE001
+            plants = []
+    if not plants:
         try:
             plants = query_plants(native_only=True)
         except Exception:  # noqa: BLE001
@@ -729,17 +1191,13 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
         )
 
     project = Project.create(name, site_config=site_config, boundary=boundary)
-    positions = _grid_positions(
-        center[0], center[1], len(plant_items) + len(community_items))
-    idx = 0
-    for plant_id, qty in plant_items:
-        lat, lng = positions[idx]; idx += 1
-        project.place_plant(plant_id, lat, lng, quantity=qty)
-    for poly_id in community_items:
-        lat, lng = positions[idx]; idx += 1
-        project.place_polyculture(poly_id, lat, lng)
+    elev, zones, pzone, szone = _zone_context(
+        boundary, site_config, project.as_dict() if match_site else None)
+    _place_within_boundary(project, plant_items, community_items, [],
+                           boundary, center, elev=elev, zones=zones,
+                           plant_zone_for=pzone, structure_zone_for=szone)
 
-    _apply_goal_feedback(project, goals, query_plants, center)
-    _apply_fauna_feedback(project, fauna_ids, query_plants, center)
+    _apply_goal_feedback(project, goals, query_plants, center, boundary)
+    _apply_fauna_feedback(project, fauna_ids, query_plants, center, boundary)
     _record_budget_note(project, project.placed_plants, budget, budget_dropped)
     return project

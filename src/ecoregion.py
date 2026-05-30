@@ -74,43 +74,18 @@ def _load_features() -> list[dict]:
 
 
 def _point_in_ring(lat: float, lng: float, ring: list[list[float]]) -> bool:
-    """Standard ray-casting point-in-polygon test. ``ring`` is a list of
-    [lng, lat] pairs (GeoJSON convention) describing a closed ring.
-
-    Casts a horizontal ray east from (lng, lat) and counts the number
-    of times it crosses polygon edges; odd = inside, even = outside.
-    Robust against ring vertex ordering (CW or CCW both work)."""
-    inside = False
-    n = len(ring)
-    if n < 3:
-        return False
-    j = n - 1
-    for i in range(n):
-        xi, yi = ring[i][0], ring[i][1]
-        xj, yj = ring[j][0], ring[j][1]
-        # Edge from (xj, yj) to (xi, yi) straddles the horizontal line
-        # at y=lat, and the intersection x is east of lng.
-        intersect = ((yi > lat) != (yj > lat)) and (
-            lng < (xj - xi) * (lat - yi) / (yj - yi) + xi
-        )
-        if intersect:
-            inside = not inside
-        j = i
-    return inside
+    """Back-compat shim — the implementation now lives in ``src.geometry``
+    (extracted in V1.48 so the design generator can reuse it for boundary
+    clipping). Kept here so existing imports of ``ecoregion._point_in_ring``
+    keep working."""
+    from src.geometry import point_in_ring
+    return point_in_ring(lat, lng, ring)
 
 
 def _point_in_polygon(lat: float, lng: float, polygon: list[list[list[float]]]) -> bool:
-    """GeoJSON Polygon = exterior ring + zero or more holes. Inside =
-    point in the exterior ring AND not in any hole."""
-    if not polygon:
-        return False
-    exterior = polygon[0]
-    if not _point_in_ring(lat, lng, exterior):
-        return False
-    for hole in polygon[1:]:
-        if _point_in_ring(lat, lng, hole):
-            return False
-    return True
+    """Back-compat shim for ``src.geometry.point_in_polygon`` (see above)."""
+    from src.geometry import point_in_polygon
+    return point_in_polygon(lat, lng, polygon)
 
 
 def lookup_ecoregion(lat: float, lng: float) -> Optional[str]:

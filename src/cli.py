@@ -139,17 +139,19 @@ def _cmd_generate(args) -> int:
 
     budget = args.budget
     fauna_ids = args.fauna or []
+    match_site = not args.no_match_site
     if args.no_llm:
         print("Building design offline (no LLM) …")
         project = generate_design_offline(site_config=site_config, goals=goals,
-                                          budget=budget, fauna_ids=fauna_ids)
+                                          budget=budget, fauna_ids=fauna_ids,
+                                          match_site=match_site)
     else:
         client = LLMClient(endpoint=args.endpoint or None, model=args.model or None)
         print(f"Generating design via {client.model} at {client.endpoint} …")
         try:
             project = generate_design(args.prompt, site_config=site_config,
                                       client=client, goals=goals, budget=budget,
-                                      fauna_ids=fauna_ids)
+                                      fauna_ids=fauna_ids, match_site=match_site)
         except LLMError as exc:
             # Unreachable model (or an unusable response): degrade to the
             # deterministic, goal-driven path rather than failing outright.
@@ -157,7 +159,8 @@ def _cmd_generate(args) -> int:
                   file=sys.stderr)
             project = generate_design_offline(site_config=site_config,
                                               goals=goals, budget=budget,
-                                              fauna_ids=fauna_ids)
+                                              fauna_ids=fauna_ids,
+                                              match_site=match_site)
 
     project.save(args.out)
     print(f"Wrote generated design ({len(project.placed_plants)} plant placements, "
@@ -259,6 +262,9 @@ def _build_parser() -> argparse.ArgumentParser:
     ge.add_argument("--no-llm", action="store_true", dest="no_llm",
                     help="skip the LLM; build deterministically from the goals "
                          "and seeded plant communities")
+    ge.add_argument("--no-match-site", action="store_true", dest="no_match_site",
+                    help="skip terrain micro-zoning (wet/dry/shaded placement); "
+                         "still keeps the design inside the boundary")
     ge.add_argument("--lat", type=float, default=None, help="site latitude")
     ge.add_argument("--lng", type=float, default=None, help="site longitude")
     ge.add_argument("--budget", type=float, default=None,
