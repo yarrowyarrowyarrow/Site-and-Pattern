@@ -25,7 +25,8 @@ class GenerateWorker(QObject):
 
     def __init__(self, prompt: str, *, site_config: Optional[dict],
                  boundary: Optional[list], goals: list, offline: bool,
-                 budget: Optional[float] = None):
+                 budget: Optional[float] = None,
+                 fauna_ids: Optional[list] = None):
         super().__init__()
         self._prompt = prompt
         self._site_config = site_config
@@ -33,6 +34,7 @@ class GenerateWorker(QObject):
         self._goals = goals
         self._offline = offline
         self._budget = budget
+        self._fauna_ids = fauna_ids or []
 
     @pyqtSlot()
     def run(self):
@@ -43,20 +45,22 @@ class GenerateWorker(QObject):
                 self.progress.emit("Building design (offline)…")
                 project = generate_design_offline(
                     site_config=self._site_config, boundary=self._boundary,
-                    goals=self._goals, budget=self._budget)
+                    goals=self._goals, budget=self._budget,
+                    fauna_ids=self._fauna_ids)
             else:
                 self.progress.emit("Asking the local AI for a design…")
                 try:
                     project = generate_design(
                         self._prompt, site_config=self._site_config,
                         boundary=self._boundary, goals=self._goals,
-                        budget=self._budget)
+                        budget=self._budget, fauna_ids=self._fauna_ids)
                 except LLMError as exc:
                     self.progress.emit(
                         f"AI unavailable ({exc}); building offline…")
                     project = generate_design_offline(
                         site_config=self._site_config, boundary=self._boundary,
-                        goals=self._goals, budget=self._budget)
+                        goals=self._goals, budget=self._budget,
+                        fauna_ids=self._fauna_ids)
             self.finished.emit(project)
         except PermaDesignError as exc:
             self.failed.emit(str(exc))

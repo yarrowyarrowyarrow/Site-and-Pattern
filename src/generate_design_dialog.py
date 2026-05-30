@@ -10,9 +10,10 @@ runs generation on a background thread. Structure mirrors
 
 from __future__ import annotations
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QCheckBox, QDialog, QDialogButtonBox, QGroupBox, QHBoxLayout, QLabel,
-    QPlainTextEdit, QSpinBox, QVBoxLayout, QWidget,
+    QListWidget, QListWidgetItem, QPlainTextEdit, QSpinBox, QVBoxLayout, QWidget,
 )
 
 from src.design_goals import GOALS
@@ -23,11 +24,13 @@ class GenerateDesignDialog(QDialog):
 
     def __init__(self, *, has_boundary: bool, has_pin: bool,
                  preselected: list | None = None,
+                 fauna_options: list | None = None,
                  parent: QWidget | None = None):
         super().__init__(parent)
         self.setWindowTitle("Generate Design")
         self.setMinimumWidth(460)
         preselected = set(preselected or [])
+        self._fauna_list: QListWidget | None = None  # set below if options given
 
         layout = QVBoxLayout(self)
 
@@ -59,6 +62,38 @@ class GenerateDesignDialog(QDialog):
             goals_layout.addWidget(cb)
             self._checks[g.key] = cb
         layout.addWidget(goals_box)
+
+        # ── Optional: design for specific wildlife ──────────────────────────
+        # The controller passes fauna_options (so the dialog stays DB-free):
+        # a list of {"id", "common_name", "taxon", "icon"} dicts.
+        if fauna_options:
+            fauna_box = QGroupBox("Design for wildlife (optional)")
+            fauna_layout = QVBoxLayout(fauna_box)
+            hint = QLabel("Tick species to ensure the design includes plants "
+                          "that feed or host them.")
+            hint.setWordWrap(True)
+            fauna_layout.addWidget(hint)
+            self._fauna_list = QListWidget()
+            self._fauna_list.setMaximumHeight(140)
+            _taxon_label = {"lepidoptera": "butterfly/moth", "bird": "bird",
+                            "bee": "bee", "other_insect": "insect",
+                            "mammal": "mammal"}
+            for f in fauna_options:
+                fid = f.get("id")
+                if fid is None:
+                    continue
+                icon = f.get("icon") or ""
+                taxon = _taxon_label.get(f.get("taxon", ""), f.get("taxon", ""))
+                label = f"{icon} {f.get('common_name', '?')}".strip()
+                if taxon:
+                    label += f"  ({taxon})"
+                item = QListWidgetItem(label)
+                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                item.setCheckState(Qt.CheckState.Unchecked)
+                item.setData(Qt.ItemDataRole.UserRole, int(fid))
+                self._fauna_list.addItem(item)
+            fauna_layout.addWidget(self._fauna_list)
+            layout.addWidget(fauna_box)
 
         layout.addWidget(QLabel("Extra details (optional):"))
         self._brief = QPlainTextEdit()
@@ -117,6 +152,17 @@ class GenerateDesignDialog(QDialog):
 
     def selected_goals(self) -> list:
         return [key for key, cb in self._checks.items() if cb.isChecked()]
+
+    def selected_fauna(self) -> list:
+        """Fauna ids the user ticked (empty if none / no picker shown)."""
+        if self._fauna_list is None:
+            return []
+        out = []
+        for i in range(self._fauna_list.count()):
+            item = self._fauna_list.item(i)
+            if item.checkState() == Qt.CheckState.Checked:
+                out.append(item.data(Qt.ItemDataRole.UserRole))
+        return out
 
     def brief(self) -> str:
         return self._brief.toPlainText().strip()

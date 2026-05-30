@@ -44,7 +44,8 @@ class GenerationController:
 
         dlg = GenerateDesignDialog(
             has_boundary=bool(boundary), has_pin=has_pin,
-            preselected=site_config.get("priorities", []), parent=main)
+            preselected=site_config.get("priorities", []),
+            fauna_options=self._fauna_options(), parent=main)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
 
@@ -57,12 +58,12 @@ class GenerationController:
 
         self._start(prompt=dlg.brief(), site_config=site_config or None,
                     boundary=boundary, goals=goals, offline=dlg.offline(),
-                    budget=dlg.budget())
+                    budget=dlg.budget(), fauna_ids=dlg.selected_fauna())
 
     # ── Worker lifecycle (mirrors src/site_panel.py) ─────────────────────────
 
     def _start(self, *, prompt, site_config, boundary, goals, offline,
-               budget=None):
+               budget=None, fauna_ids=None):
         from src.generate_worker import GenerateWorker
         main = self._main
         if hasattr(main, "_act_generate"):
@@ -72,7 +73,7 @@ class GenerationController:
         thread = QThread(main)
         worker = GenerateWorker(prompt, site_config=site_config,
                                 boundary=boundary, goals=goals, offline=offline,
-                                budget=budget)
+                                budget=budget, fauna_ids=fauna_ids)
         worker.moveToThread(thread)
 
         thread.started.connect(worker.run)
@@ -114,6 +115,28 @@ class GenerationController:
         self._worker = None
 
     # ── Helpers ──────────────────────────────────────────────────────────────
+
+    def _fauna_options(self) -> list:
+        """Native fauna (with at least one plant link) for the dialog's wildlife
+        picker. Best-effort: returns [] if the registry is unavailable, so the
+        dialog simply omits the picker."""
+        try:
+            from src.db.fauna import list_fauna, plants_for_fauna
+        except Exception:  # noqa: BLE001
+            return []
+        out = []
+        try:
+            for f in list_fauna():
+                if not f.get("ab_native", 1):
+                    continue
+                fid = f.get("id")
+                if fid is None or not plants_for_fauna(fid):
+                    continue  # no supporting plants → nothing to design toward
+                out.append({"id": fid, "common_name": f.get("common_name"),
+                            "taxon": f.get("taxon"), "icon": f.get("icon")})
+        except Exception:  # noqa: BLE001
+            return []
+        return out
 
     def _current_boundary(self):
         """Return the first drawn boundary as a list of ``(lat, lng)``, else

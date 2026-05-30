@@ -142,6 +142,12 @@ class HabitatScore:
 
     n_lepidoptera_supported: int
 
+    # Informational, per-taxon count of distinct native fauna the placed
+    # plants support (schema v20 fauna expansion). Like n_lepidoptera_supported
+    # this is reported alongside the score but NOT summed into the headline, so
+    # existing designs' scores stay stable as the fauna dataset grows.
+    fauna_by_taxon: dict = field(default_factory=dict)
+
     def as_dict(self) -> dict:
         """JSON-serialisable view, used by the scripting API."""
         return {
@@ -168,6 +174,7 @@ class HabitatScore:
                                "score": round(self.score_bloom, 1), "max": 20},
             },
             "lepidoptera_supported": self.n_lepidoptera_supported,
+            "fauna_by_taxon": dict(self.fauna_by_taxon),
         }
 
 
@@ -214,7 +221,9 @@ def compute_habitat_score(
     owns_connection = connection is None
     try:
         from src.db.plants import plant_uses_for_ids
-        from src.db.fauna import lepidoptera_supported_by_plants
+        from src.db.fauna import (
+            lepidoptera_supported_by_plants, fauna_supported_by_plants,
+        )
         if owns_connection:
             from src.db.plants import get_connection
             connection = get_connection()
@@ -236,9 +245,16 @@ def compute_habitat_score(
         # Schema v13: tag membership from the plant_uses junction.
         plant_uses_map = plant_uses_for_ids(list(plant_rows.keys()))
         # Schema v13: distinct lepidoptera species larval-hosted.
+        scored_ids = list(plant_rows.keys())
         n_lepidoptera_supported = len(
-            lepidoptera_supported_by_plants(list(plant_rows.keys()))
+            lepidoptera_supported_by_plants(scored_ids)
         )
+        # Schema v20: distinct native fauna supported per taxon (informational).
+        fauna_by_taxon: dict[str, int] = {}
+        for _taxon in ("lepidoptera", "bird", "bee", "other_insect", "mammal"):
+            _n = len(fauna_supported_by_plants(scored_ids, taxon=_taxon))
+            if _n:
+                fauna_by_taxon[_taxon] = _n
     except Exception as exc:
         raise HabitatScoreError(str(exc)) from exc
     finally:
@@ -333,4 +349,5 @@ def compute_habitat_score(
         gap_months=sorted(growing - bloom_months),
         score_bloom=score_bloom,
         n_lepidoptera_supported=n_lepidoptera_supported,
+        fauna_by_taxon=fauna_by_taxon,
     )

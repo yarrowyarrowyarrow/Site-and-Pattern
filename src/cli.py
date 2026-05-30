@@ -138,23 +138,26 @@ def _cmd_generate(args) -> int:
     goals = args.goals or []
 
     budget = args.budget
+    fauna_ids = args.fauna or []
     if args.no_llm:
         print("Building design offline (no LLM) …")
         project = generate_design_offline(site_config=site_config, goals=goals,
-                                          budget=budget)
+                                          budget=budget, fauna_ids=fauna_ids)
     else:
         client = LLMClient(endpoint=args.endpoint or None, model=args.model or None)
         print(f"Generating design via {client.model} at {client.endpoint} …")
         try:
             project = generate_design(args.prompt, site_config=site_config,
-                                      client=client, goals=goals, budget=budget)
+                                      client=client, goals=goals, budget=budget,
+                                      fauna_ids=fauna_ids)
         except LLMError as exc:
             # Unreachable model (or an unusable response): degrade to the
             # deterministic, goal-driven path rather than failing outright.
             print(f"LLM unavailable ({exc}); falling back to offline generation.",
                   file=sys.stderr)
             project = generate_design_offline(site_config=site_config,
-                                              goals=goals, budget=budget)
+                                              goals=goals, budget=budget,
+                                              fauna_ids=fauna_ids)
 
     project.save(args.out)
     print(f"Wrote generated design ({len(project.placed_plants)} plant placements, "
@@ -261,6 +264,10 @@ def _build_parser() -> argparse.ArgumentParser:
     ge.add_argument("--budget", type=float, default=None,
                     help="approx. total plant budget in CAD; trims the priciest "
                          "plants to fit and prints an estimated cost")
+    ge.add_argument("--fauna", action="append", type=int, default=[],
+                    dest="fauna", metavar="FAUNA_ID",
+                    help="fauna id to design for (repeatable); ensures plants "
+                         "supporting that species are included")
     ge.add_argument("--endpoint", default="",
                     help="OpenAI-compatible base URL (default: local Ollama)")
     ge.add_argument("--model", default="",

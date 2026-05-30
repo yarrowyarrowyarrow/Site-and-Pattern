@@ -384,7 +384,8 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
                     endpoint: Optional[str] = None,
                     model: Optional[str] = None,
                     goals: Optional[list] = None,
-                    budget: Optional[float] = None):
+                    budget: Optional[float] = None,
+                    fauna_ids: Optional[list] = None):
     """Generate a :class:`~src.permadesign_api.Project` from a prompt.
 
     The site location comes from ``boundary`` (centroid) or
@@ -438,6 +439,12 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
             f"The total plant budget is about ${budget:.0f} CAD — favour "
             "common, lower-cost native species and avoid large specimen trees."
         ]
+    fauna_names = _fauna_names(fauna_ids)
+    if fauna_names:
+        hints = hints + [
+            "Prioritise plants that feed or host these species: "
+            + ", ".join(fauna_names) + "."
+        ]
 
     spec = client.generate_spec(prompt, context, extra_hints=hints)
     _validate_spec(spec)
@@ -485,6 +492,7 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
         project.place_structure(struct_id, lat, lng)
 
     _apply_goal_feedback(project, goals, query_plants, center)
+    _apply_fauna_feedback(project, fauna_ids, query_plants, center)
     _record_budget_note(project, project.placed_plants, budget, budget_dropped)
     return project
 
@@ -508,6 +516,54 @@ def _match_communities_by_name(communities: list[dict],
         if any(h in name for h in lowered):
             out.append(cid)
     return out
+
+
+def _fauna_names(fauna_ids) -> list:
+    """Resolve fauna ids to common names (for prompt hints / warnings). Skips
+    unknown ids; returns [] on any error."""
+    out: list = []
+    try:
+        from src.db.fauna import get_fauna
+    except Exception:  # noqa: BLE001
+        return out
+    for fid in fauna_ids or []:
+        try:
+            rec = get_fauna(int(fid))
+        except Exception:  # noqa: BLE001
+            rec = None
+        if rec and rec.get("common_name"):
+            out.append(rec["common_name"])
+    return out
+
+
+def _apply_fauna_feedback(project, fauna_ids, query_plants,
+                          center: tuple[float, float]) -> None:
+    """Ensure the design actually serves each chosen wildlife species: for any
+    selected fauna with no supporting plant among those placed, drop in one
+    plant that supports it. Mirrors :func:`_apply_goal_feedback`; warnings live
+    under ``properties.generation_warnings``."""
+    if not fauna_ids:
+        return
+    placed_ids = {p.get("plant_id") for p in project.placed_plants}
+    added_any = False
+    for fid in fauna_ids:
+        try:
+            supporters = query_plants(supports_fauna_id=int(fid))
+        except Exception:  # noqa: BLE001
+            supporters = []
+        if not supporters:
+            continue
+        if placed_ids.isdisjoint({p["id"] for p in supporters}):
+            lat, lng = _grid_positions(center[0], center[1], 1)[0]
+            project.place_plant(supporters[0]["id"], lat, lng, quantity=1)
+            placed_ids.add(supporters[0]["id"])
+            added_any = True
+    if added_any:
+        names = _fauna_names(fauna_ids)
+        msg = ("Added plants so the design supports your chosen wildlife"
+               + (f" ({', '.join(names)})." if names else "."))
+        props = project.as_dict().setdefault("properties", {})
+        props.setdefault("generation_warnings", []).append(msg)
 
 
 def _apply_goal_feedback(project, goals, query_plants,
@@ -588,7 +644,8 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
                             boundary: Optional[list] = None,
                             name: str = "Generated Design",
                             goals: Optional[list] = None,
-                            budget: Optional[float] = None):
+                            budget: Optional[float] = None,
+                            fauna_ids: Optional[list] = None):
     """Generate a :class:`~src.permadesign_api.Project` WITHOUT an LLM.
 
     Selects plants by the hard filters for ``goals`` (defaulting to Alberta
@@ -621,6 +678,27 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
             plants = query_plants(native_only=True)
         except Exception:  # noqa: BLE001
             plants = []
+
+    # If the user picked target wildlife, lead with plants that support it
+    # (intersected with the goals where possible), then fill with the rest so
+    # the capped selection still serves the chosen species.
+    if fauna_ids:
+        chosen: list = []
+        seen: set = set()
+        for fid in fauna_ids:
+            try:
+                hits = (query_plants(supports_fauna_id=int(fid), **goal_filters)
+                        or query_plants(supports_fauna_id=int(fid)))
+            except Exception:  # noqa: BLE001
+                hits = []
+            for pl in hits:
+                if pl["id"] not in seen:
+                    seen.add(pl["id"]); chosen.append(pl)
+        for pl in plants:
+            if pl["id"] not in seen:
+                seen.add(pl["id"]); chosen.append(pl)
+        plants = chosen
+
     plant_items = [(p["id"], 1) for p in plants[:_OFFLINE_PLANT_CAP]]
 
     communities = list_polycultures()
@@ -662,5 +740,6 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
         project.place_polyculture(poly_id, lat, lng)
 
     _apply_goal_feedback(project, goals, query_plants, center)
+    _apply_fauna_feedback(project, fauna_ids, query_plants, center)
     _record_budget_note(project, project.placed_plants, budget, budget_dropped)
     return project

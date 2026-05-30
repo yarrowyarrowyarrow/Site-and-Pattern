@@ -243,6 +243,26 @@ class TestFaunaExpansionV20(unittest.TestCase):
                   "site": {}, "fauna_note": digest})
         self.assertIn("NATIVE FAUNA", msgs[0]["content"])
 
+    def test_habitat_score_reports_fauna_by_taxon(self):
+        # The Habitat Score now carries an informational per-taxon support
+        # count across all taxa (schema v20), without changing the headline.
+        from src.habitat_score import compute_habitat_score
+        ids = [_pid(n) for n in
+               ("Showy Milkweed", "Trembling Aspen", "Canada Goldenrod",
+                "White Spruce", "Saskatoon Berry")]
+        placed = [{"plant_id": i} for i in ids if i]
+        score = compute_habitat_score(placed, [])
+        self.assertIsNotNone(score)
+        self.assertTrue(score.fauna_by_taxon)
+        # multiple taxa represented by this mix of host/food plants
+        self.assertGreaterEqual(len(score.fauna_by_taxon), 3)
+        # fauna_by_taxon counts ALL relationships, so its lepidoptera entry is
+        # a superset of the larval-host-only n_lepidoptera_supported.
+        self.assertGreaterEqual(score.fauna_by_taxon.get("lepidoptera", 0),
+                                score.n_lepidoptera_supported)
+        # the field round-trips through the JSON view used by the scripting API
+        self.assertIn("fauna_by_taxon", score.as_dict())
+
 
 if __name__ == "__main__":
     unittest.main()

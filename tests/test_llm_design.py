@@ -224,6 +224,45 @@ class TestGoalsAndOffline(unittest.TestCase):
         warnings = project.as_dict()["properties"].get("generation_warnings", [])
         self.assertFalse(any("Estimated plant cost" in w for w in warnings))
 
+    def test_offline_fauna_targeting_places_supporters(self):
+        # Designing for the Monarch must include a plant that supports it
+        # (milkweed); the offline path leads with such plants.
+        from src.db.fauna import list_fauna
+        from src.permadesign_api import query_plants
+        mon = next(f for f in list_fauna() if f["common_name"] == "Monarch")
+        project = llm.generate_design_offline(
+            site_config=_EDM, goals=["native_only"], fauna_ids=[mon["id"]])
+        placed = {p.get("plant_id") for p in project.placed_plants}
+        supporters = {p["id"] for p in query_plants(supports_fauna_id=mon["id"])}
+        self.assertTrue(supporters)
+        self.assertTrue(placed & supporters,
+                        "expected a Monarch-supporting plant in the design")
+
+    def test_fauna_feedback_adds_supporter_when_missing(self):
+        # A fake spec naming only an unrelated plant; fauna feedback should add
+        # a Monarch supporter so the chosen wildlife is actually served.
+        from src.db.fauna import list_fauna
+        from src.permadesign_api import query_plants
+        mon = next(f for f in list_fauna() if f["common_name"] == "Monarch")
+        client = _FakeClient({"plants": [{"query": "white spruce"}]})
+        project = llm.generate_design(
+            "x", site_config=_EDM, client=client, fauna_ids=[mon["id"]])
+        placed = {p.get("plant_id") for p in project.placed_plants}
+        supporters = {p["id"] for p in query_plants(supports_fauna_id=mon["id"])}
+        self.assertTrue(placed & supporters)
+        warnings = project.as_dict()["properties"].get("generation_warnings", [])
+        self.assertTrue(any("wildlife" in w.lower() for w in warnings))
+
+    def test_fauna_hint_reaches_brief(self):
+        from src.db.fauna import list_fauna
+        mon = next(f for f in list_fauna() if f["common_name"] == "Monarch")
+        client = _FakeClient({"plants": [{"query": "showy milkweed"}]})
+        llm.generate_design("x", site_config=_EDM, client=client,
+                            fauna_ids=[mon["id"]])
+        hints = client.extra_hints_seen[0]
+        self.assertTrue(any("Monarch" in h for h in hints),
+                        f"fauna hint missing from {hints}")
+
     def test_safety_goal_caveat_recorded(self):
         # Pet friendly is now backed by a denylist filter, but carries an
         # honest "not a guarantee" caveat in the generation warnings.

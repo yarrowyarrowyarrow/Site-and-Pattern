@@ -715,13 +715,22 @@ class AnalysisPanel(QWidget):
             "",
             f"Bloom continuity   {len(result.bloom_months)}/7 mo   {result.score_bloom:4.1f} / 20",
             "",
-            # Schema v13: informational counter — distinct lepidoptera species
-            # whose caterpillars are larval-hosted by placed plants. Surfaced
-            # alongside the score components rather than summed into the
-            # headline so existing user scores don't shift when fauna data
-            # grows over time.
+            # Informational fauna support (NOT summed into the headline, so
+            # existing scores stay stable as the fauna dataset grows). The
+            # lepidoptera line counts larval-host species (schema v13); the
+            # per-taxon line counts distinct native fauna the design supports
+            # across all taxa (schema v20 expansion).
             f"Lepidoptera supported  {result.n_lepidoptera_supported:4d}    (larval-host species)",
         ]
+        if getattr(result, "fauna_by_taxon", None):
+            _taxon_label = {
+                "lepidoptera": "butterflies/moths", "bird": "birds",
+                "bee": "bees", "other_insect": "other insects",
+                "mammal": "mammals",
+            }
+            parts = [f"{n} {_taxon_label.get(t, t)}"
+                     for t, n in result.fauna_by_taxon.items()]
+            lines.append("Wildlife supported   " + ", ".join(parts))
         if result.gap_months:
             month_names = ["Jan","Feb","Mar","Apr","May","Jun",
                            "Jul","Aug","Sep","Oct","Nov","Dec"]
