@@ -93,6 +93,13 @@ class TestDesignGoals(unittest.TestCase):
         self.assertEqual(
             len(dg.caveats_for_goals(["pet_friendly", "pet_friendly"])), 1)
 
+    def test_low_cost_goal_backed(self):
+        # Budget-friendly goal (V1.45) is backed by the common_only filter and
+        # carries an "estimate" caveat.
+        self.assertEqual(dg.filters_for_goals(["low_cost"]),
+                         {"common_only": True})
+        self.assertTrue(dg.caveats_for_goals(["low_cost"]))
+
 
 if __name__ == "__main__":
     unittest.main()

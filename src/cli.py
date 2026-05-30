@@ -137,21 +137,24 @@ def _cmd_generate(args) -> int:
         site_config = {"latitude": args.lat, "longitude": args.lng}
     goals = args.goals or []
 
+    budget = args.budget
     if args.no_llm:
         print("Building design offline (no LLM) …")
-        project = generate_design_offline(site_config=site_config, goals=goals)
+        project = generate_design_offline(site_config=site_config, goals=goals,
+                                          budget=budget)
     else:
         client = LLMClient(endpoint=args.endpoint or None, model=args.model or None)
         print(f"Generating design via {client.model} at {client.endpoint} …")
         try:
             project = generate_design(args.prompt, site_config=site_config,
-                                      client=client, goals=goals)
+                                      client=client, goals=goals, budget=budget)
         except LLMError as exc:
             # Unreachable model (or an unusable response): degrade to the
             # deterministic, goal-driven path rather than failing outright.
             print(f"LLM unavailable ({exc}); falling back to offline generation.",
                   file=sys.stderr)
-            project = generate_design_offline(site_config=site_config, goals=goals)
+            project = generate_design_offline(site_config=site_config,
+                                              goals=goals, budget=budget)
 
     project.save(args.out)
     print(f"Wrote generated design ({len(project.placed_plants)} plant placements, "
@@ -255,6 +258,9 @@ def _build_parser() -> argparse.ArgumentParser:
                          "and seeded plant communities")
     ge.add_argument("--lat", type=float, default=None, help="site latitude")
     ge.add_argument("--lng", type=float, default=None, help="site longitude")
+    ge.add_argument("--budget", type=float, default=None,
+                    help="approx. total plant budget in CAD; trims the priciest "
+                         "plants to fit and prints an estimated cost")
     ge.add_argument("--endpoint", default="",
                     help="OpenAI-compatible base URL (default: local Ollama)")
     ge.add_argument("--model", default="",

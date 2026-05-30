@@ -82,7 +82,7 @@ _PLANT_FAUNA_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "plant_fauna_maste
 # scientific name is the lookup key in the seed pipeline, so existing
 # polyculture / recipe references continue to resolve correctly on
 # reseed; only the user-visible display name changes.
-_SCHEMA_VERSION = 18
+_SCHEMA_VERSION = 19
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -234,6 +234,23 @@ def _migrate_to_v18(conn: sqlite3.Connection):
         ("has_thorns",      "INTEGER DEFAULT 0"),
         ("spread_habit",    "TEXT DEFAULT ''"),
         ("safety_source",   "TEXT DEFAULT ''"),
+    ]
+    for col_name, col_def in new_columns:
+        try:
+            conn.execute(f"ALTER TABLE plants ADD COLUMN {col_name} {col_def}")
+        except sqlite3.OperationalError:
+            pass  # column already present
+    conn.commit()
+
+
+def _migrate_to_v19(conn: sqlite3.Connection):
+    """Add the sourcing + cost columns (V1.45). The version bump triggers a
+    reseed that fills the values from the seed JSON."""
+    new_columns = [
+        ("price_low_cad",      "REAL"),
+        ("price_high_cad",     "REAL"),
+        ("availability_class", "TEXT DEFAULT ''"),
+        ("sourcing_notes",     "TEXT DEFAULT ''"),
     ]
     for col_name, col_def in new_columns:
         try:
@@ -508,6 +525,10 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             1 if p.get("has_thorns") else 0,
             p.get("spread_habit", ""),
             p.get("safety_source", ""),
+            p.get("price_low_cad"),
+            p.get("price_high_cad"),
+            p.get("availability_class", ""),
+            p.get("sourcing_notes", ""),
         ))
 
     conn.executemany(
@@ -523,8 +544,10 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             growth_rate, years_to_maturity, growth_curve,
             ab_ecoregion,
             toxicity_pets, toxicity_humans, has_thorns,
-            spread_habit, safety_source)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            spread_habit, safety_source,
+            price_low_cad, price_high_cad, availability_class,
+            sourcing_notes)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -604,6 +627,9 @@ def init_db() -> None:
 
         if current_version < 18:
             _migrate_to_v18(conn)
+
+        if current_version < 19:
+            _migrate_to_v19(conn)
 
         # Add parent_id to polycultures if missing
         try:
@@ -788,6 +814,8 @@ def search_plants(
     pet_safe_only: bool = False,
     kid_safe_only: bool = False,
     well_behaved_only: bool = False,
+    max_unit_price: Optional[float] = None,
+    common_only: bool = False,
 ) -> list[dict]:
     """
     Return plants matching all supplied filters.
@@ -884,6 +912,21 @@ def search_plants(
     if well_behaved_only:
         sql += (" AND COALESCE(spread_habit,'') NOT IN "
                 "('aggressive_rhizomatous','self_seeding')")
+
+    # Sourcing/cost filters (schema v19). `max_unit_price` keeps plants whose
+    # estimated LOW price is at/under the cap (a cheap-enough option exists);
+    # unpriced plants pass (NULL price). `common_only` is a denylist — it drops
+    # only plants KNOWN to be hard to source; unassessed availability passes.
+    if max_unit_price is not None:
+        sql += " AND (price_low_cad IS NULL OR price_low_cad <= ?)"
+        params.append(float(max_unit_price))
+
+    if common_only:
+        # Denylist: drop only plants that are genuinely hard to buy (seed/plug
+        # only or rare). Native specialists are the normal channel for AB
+        # natives, so they pass — as does unassessed availability.
+        sql += (" AND COALESCE(availability_class,'') NOT IN "
+                "('seed_or_plug','rare')")
 
     sql += " ORDER BY plant_type, common_name"
 

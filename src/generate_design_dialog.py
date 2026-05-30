@@ -11,8 +11,8 @@ runs generation on a background thread. Structure mirrors
 from __future__ import annotations
 
 from PyQt6.QtWidgets import (
-    QCheckBox, QDialog, QDialogButtonBox, QGroupBox, QLabel,
-    QPlainTextEdit, QVBoxLayout, QWidget,
+    QCheckBox, QDialog, QDialogButtonBox, QGroupBox, QHBoxLayout, QLabel,
+    QPlainTextEdit, QSpinBox, QVBoxLayout, QWidget,
 )
 
 from src.design_goals import GOALS
@@ -68,6 +68,22 @@ class GenerateDesignDialog(QDialog):
         self._brief.setFixedHeight(70)
         layout.addWidget(self._brief)
 
+        budget_row = QHBoxLayout()
+        budget_row.addWidget(QLabel("Budget (optional):"))
+        self._budget = QSpinBox()
+        self._budget.setRange(0, 100000)
+        self._budget.setSingleStep(25)
+        self._budget.setPrefix("$ ")
+        self._budget.setSpecialValueText("no limit")  # shown at value 0
+        self._budget.setToolTip(
+            "Approximate total plant budget in CAD. The priciest plants are "
+            "trimmed to fit, and an estimated cost is shown afterwards. Prices "
+            "are estimates (ranges), not quotes."
+        )
+        budget_row.addWidget(self._budget)
+        budget_row.addStretch(1)
+        layout.addLayout(budget_row)
+
         self._offline_check = QCheckBox("Build without AI (offline)")
         self._offline_check.setToolTip(
             "Skip the local AI model and build deterministically from your "
@@ -107,3 +123,8 @@ class GenerateDesignDialog(QDialog):
 
     def offline(self) -> bool:
         return self._offline_check.isChecked()
+
+    def budget(self) -> float | None:
+        """Total plant budget in CAD, or ``None`` for no limit (value 0)."""
+        v = self._budget.value()
+        return float(v) if v > 0 else None

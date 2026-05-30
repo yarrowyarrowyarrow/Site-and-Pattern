@@ -135,6 +135,20 @@ GOALS: list[Goal] = [
         caveat=("Won't-take-over excludes plants known to spread aggressively; "
                 "unassessed plants are still shown."),
     ),
+    Goal(
+        key="low_cost",
+        label="Budget-friendly / easy to find",
+        # Denylist (schema v19): drop only plants that are hard to source
+        # (seed/plug-only or rare). Pair with the dialog's Budget field, which
+        # caps the design's estimated total.
+        filters={"common_only": True},
+        prompt_hint=(
+            "Prefer affordable, readily available native plants; avoid rare or "
+            "seed-only specialties and large specimen trees."
+        ),
+        caveat=("Budget-friendly uses estimated Alberta retail prices (ranges, "
+                "not quotes) and excludes only hard-to-source plants."),
+    ),
 ]
 
 _BY_KEY: dict[str, Goal] = {g.key: g for g in GOALS}

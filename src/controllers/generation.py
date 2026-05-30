@@ -56,11 +56,13 @@ class GenerationController:
         main._mark_modified()
 
         self._start(prompt=dlg.brief(), site_config=site_config or None,
-                    boundary=boundary, goals=goals, offline=dlg.offline())
+                    boundary=boundary, goals=goals, offline=dlg.offline(),
+                    budget=dlg.budget())
 
     # ── Worker lifecycle (mirrors src/site_panel.py) ─────────────────────────
 
-    def _start(self, *, prompt, site_config, boundary, goals, offline):
+    def _start(self, *, prompt, site_config, boundary, goals, offline,
+               budget=None):
         from src.generate_worker import GenerateWorker
         main = self._main
         if hasattr(main, "_act_generate"):
@@ -69,7 +71,8 @@ class GenerationController:
 
         thread = QThread(main)
         worker = GenerateWorker(prompt, site_config=site_config,
-                                boundary=boundary, goals=goals, offline=offline)
+                                boundary=boundary, goals=goals, offline=offline,
+                                budget=budget)
         worker.moveToThread(thread)
 
         thread.started.connect(worker.run)

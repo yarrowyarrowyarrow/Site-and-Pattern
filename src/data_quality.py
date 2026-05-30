@@ -77,6 +77,9 @@ GROWTH_RATES      = {"slow", "moderate", "fast"}
 TOXICITY_LEVELS   = {"none", "low", "high"}
 SPREAD_HABITS     = {"clumping", "slow_spreader",
                      "aggressive_rhizomatous", "self_seeding"}
+# Sourcing (schema v19). Empty string = unassessed, always allowed.
+AVAILABILITY_CLASSES = {"big_box", "garden_centre", "native_specialist",
+                        "seed_or_plug", "rare"}
 
 # ── Soft enum allowlists (drift here is a WARNING) ──────────────────────────
 
@@ -231,6 +234,7 @@ def validate_plant(
         ("toxicity_pets",       TOXICITY_LEVELS),
         ("toxicity_humans",     TOXICITY_LEVELS),
         ("spread_habit",        SPREAD_HABITS),
+        ("availability_class",  AVAILABILITY_CLASSES),
     ):
         val = (record.get(field) or "").strip()
         if val and val not in allowed:

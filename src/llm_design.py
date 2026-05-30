@@ -45,6 +45,7 @@ _ALLOWED_FILTERS = {
     "query", "plant_type", "sun_req", "water_needs", "zone",
     "native_only", "edible_only", "perennial_only", "pollinator_only",
     "host_plant_only", "keystone_only", "bird_food_only", "ab_ecoregion",
+    "max_unit_price", "common_only",
 }
 
 _SYSTEM_PROMPT = """\
@@ -352,7 +353,8 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
                     client: Optional[LLMClient] = None,
                     endpoint: Optional[str] = None,
                     model: Optional[str] = None,
-                    goals: Optional[list] = None):
+                    goals: Optional[list] = None,
+                    budget: Optional[float] = None):
     """Generate a :class:`~src.permadesign_api.Project` from a prompt.
 
     The site location comes from ``boundary`` (centroid) or
@@ -399,14 +401,27 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
     from src.design_goals import filters_for_goals, hints_for_goals
     goal_filters = filters_for_goals(goals)
 
-    spec = client.generate_spec(prompt, context,
-                                extra_hints=hints_for_goals(goals))
+    hints = hints_for_goals(goals)
+    if budget and budget > 0:
+        hints = hints + [
+            f"The total plant budget is about ${budget:.0f} CAD — favour "
+            "common, lower-cost native species and avoid large specimen trees."
+        ]
+
+    spec = client.generate_spec(prompt, context, extra_hints=hints)
     _validate_spec(spec)
 
     plant_items = _resolve_plants(spec.get("plants") or [], query_plants,
                                   goal_filters)
     community_items = _resolve_communities(spec.get("communities") or [], communities)
     structure_items = _resolve_structures(spec.get("structures") or [], structures)
+
+    # Keep the design within budget by trimming the priciest plants *before*
+    # placement (no project-removal API needed). Communities aren't costed here.
+    budget_dropped = 0
+    if budget and budget > 0:
+        from src.sourcing import trim_to_budget
+        plant_items, budget_dropped = trim_to_budget(plant_items, budget)
 
     if not plant_items and not community_items:
         raise LLMError(
@@ -431,6 +446,7 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
         project.place_structure(struct_id, lat, lng)
 
     _apply_goal_feedback(project, goals, query_plants, center)
+    _record_budget_note(project, project.placed_plants, budget, budget_dropped)
     return project
 
 
@@ -507,10 +523,32 @@ def _apply_goal_feedback(project, goals, query_plants,
         props.setdefault("generation_warnings", []).extend(warnings)
 
 
+def _record_budget_note(project, placed, budget,
+                        dropped: int = 0) -> None:
+    """Append an estimated-cost note (and any budget-trim message) to the
+    project's ``generation_warnings``. ``placed`` is the project's placed-plant
+    list, so the estimate covers the whole design (individual plants plus any
+    community-expanded ones). No-op unless a budget was given."""
+    if not budget or budget <= 0:
+        return
+    from src.sourcing import estimate_cost, format_cost
+    low, high = estimate_cost(placed)
+    msg = f"Estimated plant cost {format_cost(low, high)} CAD (estimate)"
+    if dropped:
+        msg += f" — trimmed {dropped} plant(s) to fit your ${budget:.0f} budget"
+    if low > budget:
+        msg += f"; still above ${budget:.0f} (kept the most affordable option)"
+    elif not dropped:
+        msg += f" — within your ${budget:.0f} budget"
+    props = project.as_dict().setdefault("properties", {})
+    props.setdefault("generation_warnings", []).append(msg)
+
+
 def generate_design_offline(*, site_config: Optional[dict] = None,
                             boundary: Optional[list] = None,
                             name: str = "Generated Design",
-                            goals: Optional[list] = None):
+                            goals: Optional[list] = None,
+                            budget: Optional[float] = None):
     """Generate a :class:`~src.permadesign_api.Project` WITHOUT an LLM.
 
     Selects plants by the hard filters for ``goals`` (defaulting to Alberta
@@ -544,11 +582,17 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
         except Exception:  # noqa: BLE001
             plants = []
     plant_items = [(p["id"], 1) for p in plants[:_OFFLINE_PLANT_CAP]]
+    budget_dropped = 0
+    if budget and budget > 0:
+        from src.sourcing import trim_to_budget
+        plant_items, budget_dropped = trim_to_budget(plant_items, budget)
 
     communities = list_polycultures()
     community_items = _match_communities_by_name(
         communities, community_name_hints(goals))
-    if not community_items and communities:
+    # A budget targets the individual plant list; don't force an arbitrary
+    # default community that would blow it (goal-matched communities still add).
+    if not community_items and communities and not budget:
         community_items = [communities[0]["id"]]  # a sensible default
 
     if not plant_items and not community_items:
@@ -568,4 +612,5 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
         project.place_polyculture(poly_id, lat, lng)
 
     _apply_goal_feedback(project, goals, query_plants, center)
+    _record_budget_note(project, project.placed_plants, budget, budget_dropped)
     return project

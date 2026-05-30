@@ -29,6 +29,7 @@ additional field ideas raised alongside the feature request.
 | `pet_friendly` | ✅ denylist (chunk 2) | hard filter `pet_safe_only=True` excludes `toxicity_pets ∈ {low,high}`; unassessed pass (caveat) |
 | `kid_friendly` | ✅ denylist (chunk 2) | hard filter `kid_safe_only=True` excludes `toxicity_humans ∈ {low,high}` or `has_thorns` |
 | `well_behaved` | ✅ denylist (chunk 2) | hard filter `well_behaved_only=True` excludes aggressive `spread_habit` |
+| `low_cost` | ✅ filter (V1.45) | hard filter `common_only=True` (excludes seed-only/rare) + the dialog Budget field caps the estimated total |
 | `year_round_interest` | ⛅ hint only | `deciduous_evergreen` / `fruit_period` exist but aren't filterable |
 
 ## Standing conventions for every data chunk below
@@ -137,10 +138,16 @@ allowlist mode is ever wanted.
   separate concept — it drops results into the same communities the app already
   uses. Expose via the scripting API + a "Build a community around this plant"
   GUI action.
-- `availability_class TEXT` ∈ `big_box | standard_nursery | native_specialist |
-  rare_seed_only` — prevents "ghost gardens" of plants users can't buy
-  (Home Depot vs. Salisbury/Greengate vs. ALCLA/Wild About Flowers vs. seed
-  only). Low effort / no safety risk → can be pulled earlier as an easy win.
+- ✅ **Shipped V1.45 (schema v19) — Sourcing & Budget.** `availability_class`
+  (`big_box | garden_centre | native_specialist | seed_or_plug | rare`) — to
+  prevent "ghost gardens" of plants users can't buy — plus a price *range*
+  (`price_low_cad` / `price_high_cad`, defaulted by `plant_type` with curated
+  overrides) and `sourcing_notes`, seeded by the re-runnable
+  `scripts/apply_sourcing_data.py`. Wired: `search_plants(max_unit_price,
+  common_only)`, the `src/sourcing.py` cost-estimate + budget-trim helpers, a
+  `low_cost` goal, a "Budget $" field in the generate dialog, `--budget` on the
+  CLI, and an estimated-cost line in the analysis panel. Prices are *estimates*
+  (ranges, AB retail, as-of year), surfaced with that disclaimer.
 - `polyculture_tags` table (or a `goals` CSV column on `polycultures`) so the
   offline fallback selects communities by **tag** rather than name-substring
   matching — the single biggest lever for making the no-LLM path precise.

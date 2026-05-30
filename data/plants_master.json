@@ -35,7 +35,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Alberta Penstemon",
@@ -73,7 +77,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Alder-leaved Buckthorn",
@@ -111,7 +119,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "5",
     "growth_curve": "steady",
-    "ab_ecoregion": "riparian,subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "riparian,subalpine_montane,boreal_mixedwood",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Alkali Bulrush",
@@ -149,7 +161,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 3,
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,aspen_parkland,mixedgrass_prairie"
+    "ab_ecoregion": "wet_meadow,aspen_parkland,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Alkali Cord Grass",
@@ -187,7 +203,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "wet_meadow,mixedgrass_prairie"
+    "ab_ecoregion": "wet_meadow,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Alpine Aster",
@@ -225,7 +245,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Alpine Bistort",
@@ -263,7 +287,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Alpine Bluegrass",
@@ -301,7 +329,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Alpine Forget-me-not",
@@ -339,7 +371,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Alpine Hedysarum (Bear Root)",
@@ -377,7 +413,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 4,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Alpine Rock Jasmine",
@@ -415,7 +455,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "American Brooklime",
@@ -453,7 +497,11 @@
     "growth_rate": "fast",
     "years_to_maturity": "2",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "riparian"
+    "ab_ecoregion": "riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Arctic Aster",
@@ -491,7 +539,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Arum-leaved Arrowhead",
@@ -529,7 +581,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "steady",
-    "ab_ecoregion": "riparian"
+    "ab_ecoregion": "riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
   },
   {
     "common_name": "Ascending Milkvetch",
@@ -570,7 +626,11 @@
     "ab_ecoregion": "mixedgrass_prairie",
     "toxicity_pets": "low",
     "toxicity_humans": "",
-    "safety_source": "Milkvetch/locoweed: many species toxic to livestock/pets"
+    "safety_source": "Milkvetch/locoweed: many species toxic to livestock/pets",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Awned Sedge",
@@ -608,7 +668,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,riparian"
+    "ab_ecoregion": "wet_meadow,riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Ball Cactus",
@@ -646,7 +710,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "10",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Balsam Fir",
@@ -684,7 +752,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 25,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 60,
+    "price_high_cad": 150,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (large specimen tree); AB retail as of 2026"
   },
   {
     "common_name": "Balsam Poplar",
@@ -722,7 +794,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 15,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 60,
+    "price_high_cad": 150,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (large specimen tree); AB retail as of 2026"
   },
   {
     "common_name": "Balsamroot",
@@ -760,7 +836,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "5",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Basket Willow",
@@ -798,7 +878,11 @@
     "growth_rate": "fast",
     "years_to_maturity": "4",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow,riparian,mixedgrass_prairie"
+    "ab_ecoregion": "wet_meadow,riparian,mixedgrass_prairie",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Beaked Hazelnut",
@@ -836,7 +920,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 6,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Beaked Sedge",
@@ -874,7 +962,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Bearberry",
@@ -912,7 +1004,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 4,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Bebb's Sedge",
@@ -950,7 +1046,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,riparian"
+    "ab_ecoregion": "wet_meadow,riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Bebb's Willow",
@@ -988,7 +1088,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 8,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "riparian"
+    "ab_ecoregion": "riparian",
+    "price_low_cad": 45,
+    "price_high_cad": 120,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (tree default); AB retail as of 2026"
   },
   {
     "common_name": "Big Bluestem",
@@ -1026,7 +1130,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Big Sagebrush",
@@ -1064,7 +1172,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "5",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Big-head Rush",
@@ -1102,7 +1214,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 4,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood,aspen_parkland"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood,aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (rush default); AB retail as of 2026"
   },
   {
     "common_name": "Birch-leaved Spirea",
@@ -1140,7 +1256,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "steady",
-    "ab_ecoregion": "subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "subalpine_montane,boreal_mixedwood",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Bishop's Cap",
@@ -1178,7 +1298,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "boreal_mixedwood"
+    "ab_ecoregion": "boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Black Hawthorn",
@@ -1218,7 +1342,11 @@
     "cal_nov": "dormant",
     "cal_dec": "dormant",
     "ab_ecoregion": "aspen_parkland",
-    "has_thorns": 1
+    "has_thorns": 1,
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Black Spruce",
@@ -1256,7 +1384,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 25,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "wet_meadow"
+    "ab_ecoregion": "wet_meadow",
+    "price_low_cad": 60,
+    "price_high_cad": 150,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (large specimen tree); AB retail as of 2026"
   },
   {
     "common_name": "Black-eyed Susan",
@@ -1295,7 +1427,11 @@
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
     "ab_ecoregion": "mixedgrass_prairie",
-    "spread_habit": "self_seeding"
+    "spread_habit": "self_seeding",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Blanketflower",
@@ -1334,7 +1470,11 @@
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
     "ab_ecoregion": "mixedgrass_prairie",
-    "spread_habit": "self_seeding"
+    "spread_habit": "self_seeding",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Blue Clematis",
@@ -1372,7 +1512,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,subalpine_montane,boreal_mixedwood",
+    "price_low_cad": 15,
+    "price_high_cad": 35,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (vine default); AB retail as of 2026"
   },
   {
     "common_name": "Blue Columbine",
@@ -1413,7 +1557,11 @@
     "ab_ecoregion": "aspen_parkland",
     "toxicity_pets": "low",
     "toxicity_humans": "low",
-    "safety_source": "Columbine: mild cardiogenic toxins in seeds/roots"
+    "safety_source": "Columbine: mild cardiogenic toxins in seeds/roots",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Blue Grama Grass",
@@ -1451,7 +1599,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Blue-eyed Grass",
@@ -1489,7 +1641,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Bluebunch Fescue",
@@ -1527,7 +1683,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Bluejoint Reed Grass",
@@ -1565,7 +1725,11 @@
     "growth_rate": "fast",
     "years_to_maturity": "2",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow,riparian,subalpine_montane,boreal_mixedwood,mixedgrass_prairie"
+    "ab_ecoregion": "wet_meadow,riparian,subalpine_montane,boreal_mixedwood,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Bog Blueberry",
@@ -1603,7 +1767,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 6,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "wet_meadow"
+    "ab_ecoregion": "wet_meadow",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Bog Cranberry",
@@ -1641,7 +1809,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 4,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Boreal Yarrow",
@@ -1682,7 +1854,11 @@
     "ab_ecoregion": "subalpine_montane,boreal_mixedwood,fescue_foothills",
     "toxicity_pets": "low",
     "toxicity_humans": "",
-    "safety_source": "Yarrow: ASPCA toxic to dogs/cats/horses (mild GI); culinary/medicinal for people"
+    "safety_source": "Yarrow: ASPCA toxic to dogs/cats/horses (mild GI); culinary/medicinal for people",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Boreale Oxytropis",
@@ -1723,7 +1899,11 @@
     "ab_ecoregion": "boreal_mixedwood,mixedgrass_prairie",
     "toxicity_pets": "low",
     "toxicity_humans": "",
-    "safety_source": "Locoweed: swainsonine, toxic to livestock/pets"
+    "safety_source": "Locoweed: swainsonine, toxic to livestock/pets",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Bracted Honeysuckle",
@@ -1762,7 +1942,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "riparian"
+    "ab_ecoregion": "riparian",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Bristly Black Currant",
@@ -1801,7 +1985,11 @@
     "years_to_maturity": 5,
     "growth_curve": "steady",
     "ab_ecoregion": "aspen_parkland",
-    "has_thorns": 1
+    "has_thorns": 1,
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Brittle Prickly-pear",
@@ -1839,7 +2027,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 4,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Broad-leaved Arrowhead",
@@ -1877,7 +2069,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow"
+    "ab_ecoregion": "wet_meadow",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
   },
   {
     "common_name": "Broad-leaved Water-plantain",
@@ -1915,7 +2111,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,riparian"
+    "ab_ecoregion": "wet_meadow,riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
   },
   {
     "common_name": "Bronze Bells",
@@ -1956,7 +2156,11 @@
     "ab_ecoregion": "subalpine_montane,fescue_foothills",
     "toxicity_pets": "high",
     "toxicity_humans": "high",
-    "safety_source": "Death camas (Anticlea, formerly Zigadenus): zygacine alkaloids, often fatal (poison-control)"
+    "safety_source": "Death camas (Anticlea, formerly Zigadenus): zygacine alkaloids, often fatal (poison-control)",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Broomweed",
@@ -1994,7 +2198,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Buckbean",
@@ -2033,7 +2241,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Bunchberry",
@@ -2071,7 +2283,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Bur Oak",
@@ -2109,7 +2325,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "30",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "aspen_parkland,mixedgrass_prairie"
+    "ab_ecoregion": "aspen_parkland,mixedgrass_prairie",
+    "price_low_cad": 60,
+    "price_high_cad": 150,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (large specimen tree); AB retail as of 2026"
   },
   {
     "common_name": "Butte Primrose",
@@ -2147,7 +2367,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Canada Anemone",
@@ -2185,7 +2409,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Canada Buffaloberry",
@@ -2224,7 +2452,11 @@
     "years_to_maturity": 5,
     "growth_curve": "steady",
     "ab_ecoregion": "aspen_parkland",
-    "has_thorns": 1
+    "has_thorns": 1,
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Canada Goldenrod",
@@ -2264,7 +2496,11 @@
     "growth_curve": "fast_early",
     "marker_color": "",
     "ab_ecoregion": "aspen_parkland",
-    "spread_habit": "aggressive_rhizomatous"
+    "spread_habit": "aggressive_rhizomatous",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Canada Milk Vetch",
@@ -2305,7 +2541,11 @@
     "ab_ecoregion": "aspen_parkland",
     "toxicity_pets": "low",
     "toxicity_humans": "",
-    "safety_source": "Milkvetch/locoweed: many species toxic to livestock/pets"
+    "safety_source": "Milkvetch/locoweed: many species toxic to livestock/pets",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Canada Rice Grass",
@@ -2343,7 +2583,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 3,
     "growth_curve": "steady",
-    "ab_ecoregion": "riparian,mixedgrass_prairie"
+    "ab_ecoregion": "riparian,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Canada Waterweed",
@@ -2381,7 +2625,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
   },
   {
     "common_name": "Canada Wild Rye",
@@ -2419,7 +2667,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Cattail",
@@ -2457,7 +2709,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Chokecherry",
@@ -2498,7 +2754,11 @@
     "ab_ecoregion": "aspen_parkland",
     "toxicity_pets": "high",
     "toxicity_humans": "low",
-    "safety_source": "Cherry/chokecherry: cyanogenic foliage/twigs/pits (toxic to pets/livestock); fruit flesh edible, pits hazardous"
+    "safety_source": "Cherry/chokecherry: cyanogenic foliage/twigs/pits (toxic to pets/livestock); fruit flesh edible, pits hazardous",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Common Alumroot",
@@ -2537,7 +2797,11 @@
     "years_to_maturity": 2,
     "growth_curve": "steady",
     "marker_color": "",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Common Bladderwort",
@@ -2575,7 +2839,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
   },
   {
     "common_name": "Common Horsetail",
@@ -2614,7 +2882,11 @@
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
     "ab_ecoregion": "aspen_parkland",
-    "spread_habit": "aggressive_rhizomatous"
+    "spread_habit": "aggressive_rhizomatous",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Common Juniper",
@@ -2652,7 +2924,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 10,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Common Mare's-tail",
@@ -2690,7 +2966,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow"
+    "ab_ecoregion": "wet_meadow",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
   },
   {
     "common_name": "Common Scouring-rush",
@@ -2729,7 +3009,11 @@
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
     "ab_ecoregion": "riparian",
-    "spread_habit": "aggressive_rhizomatous"
+    "spread_habit": "aggressive_rhizomatous",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (rush default); AB retail as of 2026"
   },
   {
     "common_name": "Common Snowberry",
@@ -2770,7 +3054,11 @@
     "ab_ecoregion": "aspen_parkland",
     "toxicity_pets": "low",
     "toxicity_humans": "low",
-    "safety_source": "Snowberry: saponins in berries, mildly toxic"
+    "safety_source": "Snowberry: saponins in berries, mildly toxic",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Common Sunflower",
@@ -2808,7 +3096,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Common Tall Manna Grass",
@@ -2846,7 +3138,11 @@
     "growth_rate": "fast",
     "years_to_maturity": "2",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Common Twinpod",
@@ -2884,7 +3180,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Cream-Coloured Peavine",
@@ -2926,7 +3226,11 @@
     "ab_ecoregion": "boreal_mixedwood,aspen_parkland",
     "toxicity_pets": "low",
     "toxicity_humans": "low",
-    "safety_source": "Peavine: lathyrogens in seeds, toxic in quantity (poison-control)"
+    "safety_source": "Peavine: lathyrogens in seeds, toxic in quantity (poison-control)",
+    "price_low_cad": 15,
+    "price_high_cad": 35,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (vine default); AB retail as of 2026"
   },
   {
     "common_name": "Creeping Juniper",
@@ -2964,7 +3268,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 5,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Creeping Oregon Grape",
@@ -3002,7 +3310,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 4,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Creeping Sibbaldia",
@@ -3040,7 +3352,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Creeping Spikerush",
@@ -3078,7 +3394,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow"
+    "ab_ecoregion": "wet_meadow",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Crowfoot Violet",
@@ -3116,7 +3436,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Cushion Umbrella Plant",
@@ -3154,7 +3478,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 4,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Cut-leaved Anemone",
@@ -3196,7 +3524,11 @@
     "ab_ecoregion": "mixedgrass_prairie",
     "toxicity_pets": "low",
     "toxicity_humans": "low",
-    "safety_source": "Anemone: protoanemonin, irritant to skin/GI (poison-control)"
+    "safety_source": "Anemone: protoanemonin, irritant to skin/GI (poison-control)",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Cut-leaved Nightshade",
@@ -3237,7 +3569,11 @@
     "ab_ecoregion": "mixedgrass_prairie",
     "toxicity_pets": "high",
     "toxicity_humans": "high",
-    "safety_source": "Nightshade: solanine in foliage/unripe fruit (ASPCA)"
+    "safety_source": "Nightshade: solanine in foliage/unripe fruit (ASPCA)",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Cyperus-like Sedge",
@@ -3275,7 +3611,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 3,
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood,aspen_parkland"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood,aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Desert Shooting Star",
@@ -3313,7 +3653,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Dewberry",
@@ -3352,7 +3696,11 @@
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
     "ab_ecoregion": "aspen_parkland",
-    "has_thorns": 1
+    "has_thorns": 1,
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Dotted Blazingstar",
@@ -3390,7 +3738,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Douglas Fir",
@@ -3428,7 +3780,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "20",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 60,
+    "price_high_cad": 150,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (large specimen tree); AB retail as of 2026"
   },
   {
     "common_name": "Douglas Maple",
@@ -3466,7 +3822,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "10",
     "growth_curve": "steady",
-    "ab_ecoregion": "riparian,subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "riparian,subalpine_montane,fescue_foothills",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Drooping Wood-reed",
@@ -3504,7 +3864,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "subalpine_montane,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Drummond's Milkvetch",
@@ -3545,7 +3909,11 @@
     "ab_ecoregion": "mixedgrass_prairie",
     "toxicity_pets": "low",
     "toxicity_humans": "",
-    "safety_source": "Milkvetch/locoweed: many species toxic to livestock/pets"
+    "safety_source": "Milkvetch/locoweed: many species toxic to livestock/pets",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Drummond's Rush",
@@ -3583,7 +3951,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 5,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (rush default); AB retail as of 2026"
   },
   {
     "common_name": "Dwarf Birch",
@@ -3621,7 +3993,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "8",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "wet_meadow,subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,subalpine_montane,boreal_mixedwood",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Dwarf Raspberry",
@@ -3660,7 +4036,11 @@
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
     "ab_ecoregion": "boreal_mixedwood",
-    "has_thorns": 1
+    "has_thorns": 1,
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Early Blue Violet",
@@ -3698,7 +4078,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Early Yellow Oxytropis",
@@ -3739,7 +4123,11 @@
     "ab_ecoregion": "fescue_foothills",
     "toxicity_pets": "low",
     "toxicity_humans": "",
-    "safety_source": "Locoweed: swainsonine, toxic to livestock/pets"
+    "safety_source": "Locoweed: swainsonine, toxic to livestock/pets",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Eastern Red Columbine",
@@ -3780,7 +4168,11 @@
     "ab_ecoregion": "aspen_parkland",
     "toxicity_pets": "low",
     "toxicity_humans": "low",
-    "safety_source": "Columbine: mild cardiogenic toxins in seeds/roots"
+    "safety_source": "Columbine: mild cardiogenic toxins in seeds/roots",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Elegant Goldenrod",
@@ -3818,7 +4210,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Evening Primrose",
@@ -3857,7 +4253,11 @@
     "cal_oct": "harvest",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "False Box (Mountain Boxwood)",
@@ -3896,7 +4296,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "False Dragonhead",
@@ -3934,7 +4338,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "wet_meadow,riparian,mixedgrass_prairie"
+    "ab_ecoregion": "wet_meadow,riparian,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "False Dragonhead (Western Obedient Plant)",
@@ -3973,7 +4381,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "wet_meadow,riparian"
+    "ab_ecoregion": "wet_meadow,riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "False Solomon's Seal",
@@ -4014,7 +4426,11 @@
     "ab_ecoregion": "aspen_parkland",
     "toxicity_pets": "low",
     "toxicity_humans": "low",
-    "safety_source": "Wild lily-of-the-valley (NOT Convallaria): berries mildly toxic in quantity"
+    "safety_source": "Wild lily-of-the-valley (NOT Convallaria): berries mildly toxic in quantity",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Field Chickweed",
@@ -4052,7 +4468,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Field Pussytoes",
@@ -4090,7 +4510,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "aspen_parkland,mixedgrass_prairie"
+    "ab_ecoregion": "aspen_parkland,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Fireweed",
@@ -4128,7 +4552,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "subalpine_montane,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Flat-topped Goldenrod",
@@ -4166,7 +4594,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 3,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland,mixedgrass_prairie"
+    "ab_ecoregion": "aspen_parkland,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Flat-topped White Aster",
@@ -4205,7 +4637,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "wet_meadow"
+    "ab_ecoregion": "wet_meadow",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Floating Marsh-marigold",
@@ -4246,7 +4682,11 @@
     "ab_ecoregion": "wet_meadow,boreal_mixedwood",
     "toxicity_pets": "low",
     "toxicity_humans": "low",
-    "safety_source": "Marsh marigold: protoanemonin, toxic raw (poison-control)"
+    "safety_source": "Marsh marigold: protoanemonin, toxic raw (poison-control)",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
   },
   {
     "common_name": "Foothills Rough Fescue",
@@ -4284,7 +4724,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 4,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Fowl Manna Grass",
@@ -4322,7 +4766,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,subalpine_montane,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Fragrant Sumac",
@@ -4360,7 +4808,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 5,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Fringed Brome",
@@ -4398,7 +4850,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Fringed Loosestrife",
@@ -4436,7 +4892,11 @@
     "growth_rate": "fast",
     "years_to_maturity": "2",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow,riparian"
+    "ab_ecoregion": "wet_meadow,riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Fuzzy-tongue Penstemon",
@@ -4474,7 +4934,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Giant Bur-reed",
@@ -4512,7 +4976,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow,riparian"
+    "ab_ecoregion": "wet_meadow,riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
   },
   {
     "common_name": "Giant Hyssop",
@@ -4550,7 +5018,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Giant Sunflower",
@@ -4588,7 +5060,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Giant Wild Rye",
@@ -4626,7 +5102,11 @@
     "growth_rate": "fast",
     "years_to_maturity": "3",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Glacier Lily",
@@ -4664,7 +5144,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "4",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Golden Bean",
@@ -4705,7 +5189,11 @@
     "ab_ecoregion": "mixedgrass_prairie",
     "toxicity_pets": "high",
     "toxicity_humans": "high",
-    "safety_source": "Golden bean: quinolizidine alkaloids; pea-like pods attract children (poison-control)"
+    "safety_source": "Golden bean: quinolizidine alkaloids; pea-like pods attract children (poison-control)",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Golden Currant (Buffalo Currant)",
@@ -4744,7 +5232,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Golden Draba",
@@ -4782,7 +5274,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Golden Sedge",
@@ -4820,7 +5316,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "riparian"
+    "ab_ecoregion": "riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Golden Tickseed",
@@ -4858,7 +5358,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Gray Goldenrod",
@@ -4896,7 +5400,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Great Bulrush",
@@ -4934,7 +5442,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow"
+    "ab_ecoregion": "wet_meadow",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
   },
   {
     "common_name": "Greater Northern Aster",
@@ -4973,7 +5485,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "riparian,boreal_mixedwood,fescue_foothills"
+    "ab_ecoregion": "riparian,boreal_mixedwood,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Green Alder",
@@ -5011,7 +5527,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 5,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "riparian,subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "riparian,subalpine_montane,boreal_mixedwood",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Green Milkweed",
@@ -5052,7 +5572,11 @@
     "ab_ecoregion": "aspen_parkland,mixedgrass_prairie",
     "toxicity_pets": "high",
     "toxicity_humans": "high",
-    "safety_source": "Milkweed: cardenolides (ASPCA toxic to dogs/cats/horses)"
+    "safety_source": "Milkweed: cardenolides (ASPCA toxic to dogs/cats/horses)",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Green Needle Grass",
@@ -5091,7 +5615,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Ground Plum",
@@ -5132,7 +5660,11 @@
     "ab_ecoregion": "mixedgrass_prairie",
     "toxicity_pets": "low",
     "toxicity_humans": "",
-    "safety_source": "Milkvetch/locoweed: many species toxic to livestock/pets"
+    "safety_source": "Milkvetch/locoweed: many species toxic to livestock/pets",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Gumweed",
@@ -5170,7 +5702,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Hairy Arnica",
@@ -5208,7 +5744,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Hairy Golden Aster",
@@ -5246,7 +5786,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Hairy Wild Rye",
@@ -5284,7 +5828,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Harebell",
@@ -5322,7 +5870,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Heart-leaved Alexanders (Golden Alexanders)",
@@ -5361,7 +5913,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Heart-leaved Arnica",
@@ -5399,7 +5955,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "subalpine_montane,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Highbush Cranberry",
@@ -5437,7 +5997,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 4,
     "growth_curve": "steady",
-    "ab_ecoregion": "riparian,boreal_mixedwood"
+    "ab_ecoregion": "riparian,boreal_mixedwood",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Hoary Aster",
@@ -5475,7 +6039,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Hooded Ladies' Tresses",
@@ -5514,7 +6082,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Hooker's Oat Grass",
@@ -5552,7 +6124,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Indigenous Ricegrass",
@@ -5590,7 +6166,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Ivy-leaved Duckweed",
@@ -5628,7 +6208,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "boreal_mixedwood"
+    "ab_ecoregion": "boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
   },
   {
     "common_name": "Jack Pine",
@@ -5666,7 +6250,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "20",
     "growth_curve": "steady",
-    "ab_ecoregion": "boreal_mixedwood,mixedgrass_prairie"
+    "ab_ecoregion": "boreal_mixedwood,mixedgrass_prairie",
+    "price_low_cad": 60,
+    "price_high_cad": 150,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (large specimen tree); AB retail as of 2026"
   },
   {
     "common_name": "Jerusalem Artichoke",
@@ -5704,7 +6292,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Joe-Pye Weed",
@@ -5742,7 +6334,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "June Grass",
@@ -5781,7 +6377,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Knotted Rush",
@@ -5819,7 +6419,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 3,
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood,aspen_parkland"
+    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood,aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (rush default); AB retail as of 2026"
   },
   {
     "common_name": "Labrador Tea",
@@ -5857,7 +6461,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "5",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Lakeshore Sedge",
@@ -5895,7 +6503,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 3,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow,riparian"
+    "ab_ecoregion": "wet_meadow,riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Lance-leaved Stonecrop",
@@ -5934,7 +6546,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "subalpine_montane,mixedgrass_prairie"
+    "ab_ecoregion": "subalpine_montane,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Large-leaved Avens",
@@ -5973,7 +6589,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "boreal_mixedwood,aspen_parkland"
+    "ab_ecoregion": "boreal_mixedwood,aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Late Goldenrod",
@@ -6011,7 +6631,11 @@
     "growth_rate": "fast",
     "years_to_maturity": "2",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Late Yellow Oxytropis",
@@ -6052,7 +6676,11 @@
     "ab_ecoregion": "subalpine_montane,fescue_foothills",
     "toxicity_pets": "low",
     "toxicity_humans": "",
-    "safety_source": "Locoweed: swainsonine, toxic to livestock/pets"
+    "safety_source": "Locoweed: swainsonine, toxic to livestock/pets",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Leafy Arnica",
@@ -6091,7 +6719,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Leafy Aster",
@@ -6129,7 +6761,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "steady",
-    "ab_ecoregion": "riparian,subalpine_montane"
+    "ab_ecoregion": "riparian,subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Lilac Penstemon",
@@ -6167,7 +6803,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Lindley's Aster",
@@ -6206,7 +6846,11 @@
     "years_to_maturity": 2,
     "growth_curve": "steady",
     "marker_color": "",
-    "ab_ecoregion": "boreal_mixedwood"
+    "ab_ecoregion": "boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Little Bluestem",
@@ -6244,7 +6888,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Little-leaved Alumroot",
@@ -6282,7 +6930,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "4",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Lodgepole Pine",
@@ -6320,7 +6972,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "60",
     "growth_curve": "steady",
-    "ab_ecoregion": "subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "subalpine_montane,boreal_mixedwood",
+    "price_low_cad": 60,
+    "price_high_cad": 150,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (large specimen tree); AB retail as of 2026"
   },
   {
     "common_name": "Long-fruited Anemone",
@@ -6362,7 +7018,11 @@
     "ab_ecoregion": "aspen_parkland,mixedgrass_prairie",
     "toxicity_pets": "low",
     "toxicity_humans": "low",
-    "safety_source": "Anemone: protoanemonin, irritant to skin/GI (poison-control)"
+    "safety_source": "Anemone: protoanemonin, irritant to skin/GI (poison-control)",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Low Bilberry",
@@ -6400,7 +7060,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "5",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "boreal_mixedwood"
+    "ab_ecoregion": "boreal_mixedwood",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Low Townsendia",
@@ -6438,7 +7102,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Low-bush Cranberry",
@@ -6476,7 +7144,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 5,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Lyalls Penstemon",
@@ -6514,7 +7186,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "MacKenzie's Hedysarum",
@@ -6552,7 +7228,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "steady",
-    "ab_ecoregion": "subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "subalpine_montane,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Many-flowered Aster (Tufted White Prairie Aster)",
@@ -6591,7 +7271,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Marsh Aster",
@@ -6629,7 +7313,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood,aspen_parkland,mixedgrass_prairie"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood,aspen_parkland,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Marsh Cinquefoil",
@@ -6668,7 +7356,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Marsh Hedge Nettle",
@@ -6706,7 +7398,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,riparian"
+    "ab_ecoregion": "wet_meadow,riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Marsh Hedge Nettle (Marsh Woundwort)",
@@ -6745,7 +7441,11 @@
     "cal_oct": "harvest",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Marsh Marigold",
@@ -6786,7 +7486,11 @@
     "ab_ecoregion": "wet_meadow",
     "toxicity_pets": "low",
     "toxicity_humans": "low",
-    "safety_source": "Marsh marigold: protoanemonin, toxic raw (poison-control)"
+    "safety_source": "Marsh marigold: protoanemonin, toxic raw (poison-control)",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Marsh Skullcap",
@@ -6825,7 +7529,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Marsh Violet",
@@ -6863,7 +7571,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Maximilian Sunflower",
@@ -6901,7 +7613,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Meadow Arnica",
@@ -6940,7 +7656,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Meadow Blazingstar",
@@ -6979,7 +7699,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Meadow Sedge",
@@ -7017,7 +7741,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland,fescue_foothills"
+    "ab_ecoregion": "aspen_parkland,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Meadowsweet",
@@ -7055,7 +7783,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 3,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Missouri Milkvetch",
@@ -7096,7 +7828,11 @@
     "ab_ecoregion": "mixedgrass_prairie",
     "toxicity_pets": "low",
     "toxicity_humans": "",
-    "safety_source": "Milkvetch/locoweed: many species toxic to livestock/pets"
+    "safety_source": "Milkvetch/locoweed: many species toxic to livestock/pets",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Moss Campion",
@@ -7134,7 +7870,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "10",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Moss Phlox",
@@ -7172,7 +7912,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Mountain Brome",
@@ -7210,7 +7954,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Mountain Gentian",
@@ -7248,7 +7996,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "4",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 18,
+    "price_high_cad": 40,
+    "availability_class": "rare",
+    "sourcing_notes": "Estimate (specialist / rare); AB retail as of 2026"
   },
   {
     "common_name": "Mountain Hollyhock",
@@ -7286,7 +8038,11 @@
     "growth_rate": "fast",
     "years_to_maturity": "2",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "riparian,subalpine_montane"
+    "ab_ecoregion": "riparian,subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Mountain Sweet Cicely",
@@ -7324,7 +8080,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "steady",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Narrow-leaf Willow",
@@ -7362,7 +8122,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 5,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "riparian,mixedgrass_prairie"
+    "ab_ecoregion": "riparian,mixedgrass_prairie",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Narrow-leaved Hawkweed",
@@ -7400,7 +8164,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "boreal_mixedwood,aspen_parkland"
+    "ab_ecoregion": "boreal_mixedwood,aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Narrowleaf Cotton-grass",
@@ -7438,7 +8206,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Needle and Thread Grass",
@@ -7476,7 +8248,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Needle Spike-rush",
@@ -7514,7 +8290,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood,aspen_parkland"
+    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood,aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (rush default); AB retail as of 2026"
   },
   {
     "common_name": "Nodding Onion",
@@ -7555,7 +8335,11 @@
     "ab_ecoregion": "aspen_parkland",
     "toxicity_pets": "low",
     "toxicity_humans": "",
-    "safety_source": "Wild onion/chives: ASPCA toxic to pets (hemolytic anemia); edible for people"
+    "safety_source": "Wild onion/chives: ASPCA toxic to pets (hemolytic anemia); edible for people",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Northern Bedstraw",
@@ -7593,7 +8377,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "boreal_mixedwood"
+    "ab_ecoregion": "boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Northern Black Currant",
@@ -7631,7 +8419,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 5,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Northern Gentian",
@@ -7670,7 +8462,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood,mixedgrass_prairie"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood,mixedgrass_prairie",
+    "price_low_cad": 18,
+    "price_high_cad": 40,
+    "availability_class": "rare",
+    "sourcing_notes": "Estimate (specialist / rare); AB retail as of 2026"
   },
   {
     "common_name": "Northern Hedysarum",
@@ -7708,7 +8504,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "boreal_mixedwood,aspen_parkland,mixedgrass_prairie"
+    "ab_ecoregion": "boreal_mixedwood,aspen_parkland,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Northern Wheat Grass",
@@ -7746,7 +8546,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 3,
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Nuttall's Sunflower",
@@ -7785,7 +8589,11 @@
     "cal_oct": "harvest",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "wet_meadow"
+    "ab_ecoregion": "wet_meadow",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Old Man's Whiskers (Prairie Smoke)",
@@ -7824,7 +8632,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Ostrich Fern",
@@ -7862,7 +8674,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 4,
     "growth_curve": "steady",
-    "ab_ecoregion": "riparian,boreal_mixedwood"
+    "ab_ecoregion": "riparian,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (fern default); AB retail as of 2026"
   },
   {
     "common_name": "Pale Agoseris",
@@ -7901,7 +8717,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Palmate-leaved Coltsfoot",
@@ -7940,7 +8760,11 @@
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
     "ab_ecoregion": "riparian,subalpine_montane,boreal_mixedwood",
-    "spread_habit": "aggressive_rhizomatous"
+    "spread_habit": "aggressive_rhizomatous",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Paper Birch",
@@ -7978,7 +8802,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 20,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 60,
+    "price_high_cad": 150,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (large specimen tree); AB retail as of 2026"
   },
   {
     "common_name": "Parry's Oatgrass",
@@ -8016,7 +8844,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,aspen_parkland,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,aspen_parkland,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Parry's Townsendia",
@@ -8054,7 +8886,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Pearly Everlasting",
@@ -8093,7 +8929,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "boreal_mixedwood"
+    "ab_ecoregion": "boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Philadelphia Fleabane",
@@ -8132,7 +8972,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Pin Cherry",
@@ -8173,7 +9017,11 @@
     "ab_ecoregion": "aspen_parkland",
     "toxicity_pets": "high",
     "toxicity_humans": "low",
-    "safety_source": "Cherry/chokecherry: cyanogenic foliage/twigs/pits (toxic to pets/livestock); fruit flesh edible, pits hazardous"
+    "safety_source": "Cherry/chokecherry: cyanogenic foliage/twigs/pits (toxic to pets/livestock); fruit flesh edible, pits hazardous",
+    "price_low_cad": 45,
+    "price_high_cad": 120,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (tree default); AB retail as of 2026"
   },
   {
     "common_name": "Pink Corydalis",
@@ -8211,7 +9059,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "subalpine_montane,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Pink Monkey Flower",
@@ -8249,7 +9101,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,riparian,subalpine_montane"
+    "ab_ecoregion": "wet_meadow,riparian,subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Pink Pussytoes",
@@ -8288,7 +9144,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Pink Pyrola",
@@ -8327,7 +9187,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "boreal_mixedwood"
+    "ab_ecoregion": "boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Pink Spirea",
@@ -8365,7 +9229,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 3,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow,riparian"
+    "ab_ecoregion": "wet_meadow,riparian",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Pink Spirea (Rose Meadowsweet)",
@@ -8403,7 +9271,11 @@
     "cal_sep": "growing",
     "cal_oct": "dormant",
     "cal_nov": "dormant",
-    "cal_dec": "dormant"
+    "cal_dec": "dormant",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Plains Muhly",
@@ -8441,7 +9313,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Plains Prickly Pear Cactus",
@@ -8479,7 +9355,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "4",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Plains Wormwood",
@@ -8517,7 +9397,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Porcupine Grass",
@@ -8555,7 +9439,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Porcupine Sedge",
@@ -8593,7 +9481,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 3,
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,riparian"
+    "ab_ecoregion": "wet_meadow,riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Poverty Oat Grass",
@@ -8631,7 +9523,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Prairie Buttercup",
@@ -8673,7 +9569,11 @@
     "ab_ecoregion": "aspen_parkland,mixedgrass_prairie",
     "toxicity_pets": "low",
     "toxicity_humans": "low",
-    "safety_source": "Buttercup: protoanemonin, irritant (poison-control)"
+    "safety_source": "Buttercup: protoanemonin, irritant (poison-control)",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Prairie Cinquefoil",
@@ -8711,7 +9611,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Prairie Cinquefoil (Tall Cinquefoil)",
@@ -8750,7 +9654,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "aspen_parkland,mixedgrass_prairie"
+    "ab_ecoregion": "aspen_parkland,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Prairie Coneflower",
@@ -8788,7 +9696,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Prairie Cord Grass",
@@ -8826,7 +9738,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow,riparian,aspen_parkland,mixedgrass_prairie"
+    "ab_ecoregion": "wet_meadow,riparian,aspen_parkland,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Prairie Crocus",
@@ -8867,7 +9783,11 @@
     "ab_ecoregion": "mixedgrass_prairie",
     "toxicity_pets": "low",
     "toxicity_humans": "low",
-    "safety_source": "Prairie crocus: protoanemonin, irritant (poison-control)"
+    "safety_source": "Prairie crocus: protoanemonin, irritant (poison-control)",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Prairie Dropseed",
@@ -8905,7 +9825,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Prairie Gentian",
@@ -8943,7 +9867,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 18,
+    "price_high_cad": 40,
+    "availability_class": "rare",
+    "sourcing_notes": "Estimate (specialist / rare); AB retail as of 2026"
   },
   {
     "common_name": "Prairie Goldenrod",
@@ -8981,7 +9909,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Prairie Onion (Textile Onion)",
@@ -9023,7 +9955,11 @@
     "ab_ecoregion": "mixedgrass_prairie",
     "toxicity_pets": "low",
     "toxicity_humans": "",
-    "safety_source": "Wild onion/chives: ASPCA toxic to pets (hemolytic anemia); edible for people"
+    "safety_source": "Wild onion/chives: ASPCA toxic to pets (hemolytic anemia); edible for people",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Prairie Rose",
@@ -9062,7 +9998,11 @@
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
     "ab_ecoregion": "mixedgrass_prairie",
-    "has_thorns": 1
+    "has_thorns": 1,
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Prairie Sage",
@@ -9100,7 +10040,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Prairie Sagewort",
@@ -9138,7 +10082,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Prairie Smoke",
@@ -9177,7 +10125,11 @@
     "years_to_maturity": 2,
     "growth_curve": "slow_start",
     "marker_color": "",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Prairie Thistle",
@@ -9216,7 +10168,11 @@
     "years_to_maturity": "2",
     "growth_curve": "steady",
     "ab_ecoregion": "mixedgrass_prairie",
-    "has_thorns": 1
+    "has_thorns": 1,
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Prairie Turnip",
@@ -9254,7 +10210,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "4",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Prairie Wedge Grass",
@@ -9292,7 +10252,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,riparian,mixedgrass_prairie"
+    "ab_ecoregion": "wet_meadow,riparian,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Prickly Wild Rose",
@@ -9331,7 +10295,11 @@
     "years_to_maturity": 3,
     "growth_curve": "fast_early",
     "ab_ecoregion": "aspen_parkland",
-    "has_thorns": 1
+    "has_thorns": 1,
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Purple Avens (Water Avens)",
@@ -9370,7 +10338,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Purple Coneflower",
@@ -9408,7 +10380,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 4,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Purple Oat Grass",
@@ -9446,7 +10422,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,boreal_mixedwood,aspen_parkland"
+    "ab_ecoregion": "subalpine_montane,boreal_mixedwood,aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Purple Peavine",
@@ -9487,7 +10467,11 @@
     "ab_ecoregion": "boreal_mixedwood,aspen_parkland",
     "toxicity_pets": "low",
     "toxicity_humans": "low",
-    "safety_source": "Peavine: lathyrogens in seeds, toxic in quantity (poison-control)"
+    "safety_source": "Peavine: lathyrogens in seeds, toxic in quantity (poison-control)",
+    "price_low_cad": 15,
+    "price_high_cad": 35,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (vine default); AB retail as of 2026"
   },
   {
     "common_name": "Purple Prairie Clover",
@@ -9525,7 +10509,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Purple Reed Grass",
@@ -9563,7 +10551,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "subalpine_montane,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Purple-stemmed Tall Aster (Swamp Aster)",
@@ -9602,7 +10594,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "wet_meadow,riparian"
+    "ab_ecoregion": "wet_meadow,riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Pussy Willow",
@@ -9640,7 +10636,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 5,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "riparian"
+    "ab_ecoregion": "riparian",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Rabbitbrush",
@@ -9678,7 +10678,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 3,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Rat Root",
@@ -9716,7 +10720,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow"
+    "ab_ecoregion": "wet_meadow",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Raymond's Sedge",
@@ -9754,7 +10762,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Red Baneberry",
@@ -9795,7 +10807,11 @@
     "ab_ecoregion": "subalpine_montane,boreal_mixedwood",
     "toxicity_pets": "high",
     "toxicity_humans": "high",
-    "safety_source": "Baneberry: cardiogenic glycosides + protoanemonin (ASPCA; poison-control)"
+    "safety_source": "Baneberry: cardiogenic glycosides + protoanemonin (ASPCA; poison-control)",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Red Columbine",
@@ -9836,7 +10852,11 @@
     "ab_ecoregion": "subalpine_montane,fescue_foothills",
     "toxicity_pets": "low",
     "toxicity_humans": "low",
-    "safety_source": "Columbine: mild cardiogenic toxins in seeds/roots"
+    "safety_source": "Columbine: mild cardiogenic toxins in seeds/roots",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Common Paintbrush",
@@ -9874,7 +10894,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 2,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Red Osier Dogwood",
@@ -9913,7 +10937,11 @@
     "years_to_maturity": 4,
     "growth_curve": "fast_early",
     "ab_ecoregion": "riparian",
-    "spread_habit": "slow_spreader"
+    "spread_habit": "slow_spreader",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Richardson's Needlegrass",
@@ -9951,7 +10979,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "River Beauty",
@@ -9989,7 +11021,11 @@
     "growth_rate": "fast",
     "years_to_maturity": "2",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "riparian"
+    "ab_ecoregion": "riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "River Bulrush",
@@ -10027,7 +11063,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow,riparian"
+    "ab_ecoregion": "wet_meadow,riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Roadside Agrimony (Woodland Agrimony)",
@@ -10066,7 +11106,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Rocky Mountain Beeplant",
@@ -10104,7 +11148,11 @@
     "growth_rate": "fast",
     "years_to_maturity": "1",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Rocky Mountain Fescue",
@@ -10142,7 +11190,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Rocky-Ledge Beardtongue",
@@ -10180,7 +11232,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Roseroot",
@@ -10218,7 +11274,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "4",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Rosy Pussytoes (Littleleaf Pussytoes)",
@@ -10257,7 +11317,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Rough Fescue",
@@ -10295,7 +11359,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 3,
     "growth_curve": "steady",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Rough-fruited Fairy Bells",
@@ -10334,7 +11402,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "boreal_mixedwood,aspen_parkland"
+    "ab_ecoregion": "boreal_mixedwood,aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Round-leaved Alumroot",
@@ -10373,7 +11445,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Round-leaved Sundew",
@@ -10412,7 +11488,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Round-leaved Yellow Violet",
@@ -10450,7 +11530,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "2",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Sago Pondweed",
@@ -10488,7 +11572,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood,mixedgrass_prairie"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
   },
   {
     "common_name": "Saline Shooting Star",
@@ -10526,7 +11614,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "wet_meadow,aspen_parkland,mixedgrass_prairie"
+    "ab_ecoregion": "wet_meadow,aspen_parkland,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Saltgrass",
@@ -10564,7 +11656,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow,mixedgrass_prairie"
+    "ab_ecoregion": "wet_meadow,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Sand Grass",
@@ -10602,7 +11698,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Sandbar Willow",
@@ -10640,7 +11740,11 @@
     "growth_rate": "fast",
     "years_to_maturity": "3",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "riparian,mixedgrass_prairie"
+    "ab_ecoregion": "riparian,mixedgrass_prairie",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Sandberg Bluegrass",
@@ -10678,7 +11782,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Sartwell's Sedge",
@@ -10716,7 +11824,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood,aspen_parkland"
+    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood,aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Saskatoon Berry",
@@ -10754,7 +11866,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 5,
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Scarlet Butterfly Plant",
@@ -10792,7 +11908,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Scorpion Weed",
@@ -10830,7 +11950,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Self-heal",
@@ -10868,7 +11992,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Seneca Snakeroot",
@@ -10906,7 +12034,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Sheep Fescue",
@@ -10944,7 +12076,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Shooting Star",
@@ -10982,7 +12118,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Short-beaked Agoseris",
@@ -11020,7 +12160,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "2",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Short-capsuled Willow",
@@ -11058,7 +12202,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "4",
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,riparian,subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,riparian,subalpine_montane,boreal_mixedwood",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Showy Aster",
@@ -11096,7 +12244,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Showy Fleabane",
@@ -11134,7 +12286,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Showy Jacob's-ladder",
@@ -11172,7 +12328,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Showy Locoweed",
@@ -11213,7 +12373,11 @@
     "ab_ecoregion": "mixedgrass_prairie",
     "toxicity_pets": "low",
     "toxicity_humans": "",
-    "safety_source": "Locoweed: swainsonine, toxic to livestock/pets"
+    "safety_source": "Locoweed: swainsonine, toxic to livestock/pets",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Showy Milkweed",
@@ -11254,7 +12418,11 @@
     "ab_ecoregion": "aspen_parkland",
     "toxicity_pets": "high",
     "toxicity_humans": "high",
-    "safety_source": "Milkweed: cardenolides (ASPCA toxic to dogs/cats/horses)"
+    "safety_source": "Milkweed: cardenolides (ASPCA toxic to dogs/cats/horses)",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Showy Pussytoes",
@@ -11292,7 +12460,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Shrubby Cinquefoil",
@@ -11330,7 +12502,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 4,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Sideoats Grama",
@@ -11368,7 +12544,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Silky Lupine",
@@ -11409,7 +12589,11 @@
     "ab_ecoregion": "subalpine_montane,fescue_foothills",
     "toxicity_pets": "high",
     "toxicity_humans": "high",
-    "safety_source": "Lupine: quinolizidine alkaloids, esp. seeds (ASPCA)"
+    "safety_source": "Lupine: quinolizidine alkaloids, esp. seeds (ASPCA)",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Silver Buffaloberry",
@@ -11448,7 +12632,11 @@
     "years_to_maturity": 6,
     "growth_curve": "steady",
     "ab_ecoregion": "aspen_parkland",
-    "has_thorns": 1
+    "has_thorns": 1,
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Silver Sagebrush",
@@ -11486,7 +12674,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "4",
     "growth_curve": "steady",
-    "ab_ecoregion": "riparian,mixedgrass_prairie"
+    "ab_ecoregion": "riparian,mixedgrass_prairie",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Silverberry",
@@ -11525,7 +12717,11 @@
     "years_to_maturity": 4,
     "growth_curve": "fast_early",
     "ab_ecoregion": "aspen_parkland",
-    "has_thorns": 1
+    "has_thorns": 1,
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Silverweed",
@@ -11563,7 +12759,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Silvery Lupine",
@@ -11604,7 +12804,11 @@
     "ab_ecoregion": "subalpine_montane,fescue_foothills",
     "toxicity_pets": "high",
     "toxicity_humans": "high",
-    "safety_source": "Lupine: quinolizidine alkaloids, esp. seeds (ASPCA)"
+    "safety_source": "Lupine: quinolizidine alkaloids, esp. seeds (ASPCA)",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Sitka Valerian",
@@ -11642,7 +12846,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Skunk Currant",
@@ -11680,7 +12888,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "4",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "boreal_mixedwood"
+    "ab_ecoregion": "boreal_mixedwood",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Slender Blue Beardtongue",
@@ -11718,7 +12930,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Slender Cinquefoil (Graceful Cinquefoil)",
@@ -11757,7 +12973,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "aspen_parkland,fescue_foothills"
+    "ab_ecoregion": "aspen_parkland,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Slender Nettle",
@@ -11796,7 +13016,11 @@
     "years_to_maturity": "2",
     "growth_curve": "fast_early",
     "ab_ecoregion": "riparian",
-    "spread_habit": "aggressive_rhizomatous"
+    "spread_habit": "aggressive_rhizomatous",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Slender Wheatgrass",
@@ -11834,7 +13058,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Slough Grass",
@@ -11872,7 +13100,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow,riparian,aspen_parkland"
+    "ab_ecoregion": "wet_meadow,riparian,aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Small Bottle Sedge",
@@ -11910,7 +13142,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood,fescue_foothills"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
   },
   {
     "common_name": "Small-fruited Bulrush",
@@ -11948,7 +13184,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,subalpine_montane,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Small-leaved Everlasting (Small-leaved Pussytoes)",
@@ -11987,7 +13227,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Smooth Aster",
@@ -12025,7 +13269,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Smooth Blue Beardtongue",
@@ -12063,7 +13311,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Smooth Fleabane (Streamside Fleabane)",
@@ -12102,7 +13354,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "riparian,mixedgrass_prairie"
+    "ab_ecoregion": "riparian,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Smooth Sweet Cicely",
@@ -12140,7 +13396,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Smooth Wild Rye",
@@ -12178,7 +13438,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "steady",
-    "ab_ecoregion": "riparian,mixedgrass_prairie"
+    "ab_ecoregion": "riparian,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Sneezeweed",
@@ -12216,7 +13480,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "riparian"
+    "ab_ecoregion": "riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Soapweed Yucca",
@@ -12254,7 +13522,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 5,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Spear-leaved Arnica",
@@ -12292,7 +13564,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "subalpine_montane,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Spike Trisetum",
@@ -12330,7 +13606,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Spiked Water-milfoil",
@@ -12368,7 +13648,11 @@
     "growth_rate": "fast",
     "years_to_maturity": "1",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "boreal_mixedwood,mixedgrass_prairie"
+    "ab_ecoregion": "boreal_mixedwood,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
   },
   {
     "common_name": "Spreading Dogbane",
@@ -12410,7 +13694,11 @@
     "ab_ecoregion": "aspen_parkland",
     "toxicity_pets": "high",
     "toxicity_humans": "high",
-    "safety_source": "Dogbane: cardiac glycosides (poison-control)"
+    "safety_source": "Dogbane: cardiac glycosides (poison-control)",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Sprengel's Sedge",
@@ -12448,7 +13736,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "aspen_parkland,fescue_foothills"
+    "ab_ecoregion": "aspen_parkland,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Spring Beauty",
@@ -12486,7 +13778,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Square-stem Monkeyflower",
@@ -12524,7 +13820,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,riparian"
+    "ab_ecoregion": "wet_meadow,riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Star-flowered Solomon's Seal",
@@ -12565,7 +13865,11 @@
     "ab_ecoregion": "aspen_parkland",
     "toxicity_pets": "low",
     "toxicity_humans": "low",
-    "safety_source": "Wild lily-of-the-valley (NOT Convallaria): berries mildly toxic in quantity"
+    "safety_source": "Wild lily-of-the-valley (NOT Convallaria): berries mildly toxic in quantity",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Sticky Goldenrod",
@@ -12603,7 +13907,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Sticky Goldenrod (Mount Albert Goldenrod)",
@@ -12642,7 +13950,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Sticky Purple Geranium",
@@ -12680,7 +13992,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Stiff Goldenrod",
@@ -12718,7 +14034,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Stiff Sunflower (Rhombic-leaved Sunflower)",
@@ -12757,7 +14077,11 @@
     "cal_oct": "harvest",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Stinging Nettle",
@@ -12796,7 +14120,11 @@
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
     "ab_ecoregion": "aspen_parkland",
-    "spread_habit": "aggressive_rhizomatous"
+    "spread_habit": "aggressive_rhizomatous",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Strawberry Spinach",
@@ -12834,7 +14162,11 @@
     "growth_rate": "fast",
     "years_to_maturity": "1",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Sulphur Hedysarum",
@@ -12872,7 +14204,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Swamp Horsetail",
@@ -12911,7 +14247,11 @@
     "years_to_maturity": "2",
     "growth_curve": "fast_early",
     "ab_ecoregion": "wet_meadow,boreal_mixedwood",
-    "spread_habit": "aggressive_rhizomatous"
+    "spread_habit": "aggressive_rhizomatous",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
   },
   {
     "common_name": "Sweet Broom (Alpine Sweetvetch)",
@@ -12950,7 +14290,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "riparian,subalpine_montane,boreal_mixedwood,fescue_foothills"
+    "ab_ecoregion": "riparian,subalpine_montane,boreal_mixedwood,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Sweet-scented Bedstraw",
@@ -12988,7 +14332,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Sweetgrass",
@@ -13026,7 +14374,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "riparian,boreal_mixedwood,mixedgrass_prairie"
+    "ab_ecoregion": "riparian,boreal_mixedwood,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Switchgrass",
@@ -13064,7 +14416,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Tall Anemone (Thimbleweed)",
@@ -13106,7 +14462,11 @@
     "ab_ecoregion": "mixedgrass_prairie",
     "toxicity_pets": "low",
     "toxicity_humans": "low",
-    "safety_source": "Anemone: protoanemonin, irritant to skin/GI (poison-control)"
+    "safety_source": "Anemone: protoanemonin, irritant to skin/GI (poison-control)",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Tall Goldenrod",
@@ -13144,7 +14504,11 @@
     "growth_rate": "fast",
     "years_to_maturity": "2",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Tall Jacob's Ladder",
@@ -13183,7 +14547,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "wet_meadow,riparian,subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,riparian,subalpine_montane,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Tall Larkspur",
@@ -13224,7 +14592,11 @@
     "ab_ecoregion": "riparian",
     "toxicity_pets": "high",
     "toxicity_humans": "high",
-    "safety_source": "Larkspur: diterpenoid alkaloids (ASPCA; poison-control)"
+    "safety_source": "Larkspur: diterpenoid alkaloids (ASPCA; poison-control)",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Tall Lungwort (Blue Bells)",
@@ -13263,7 +14635,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "riparian,boreal_mixedwood"
+    "ab_ecoregion": "riparian,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Tall Meadow Rue",
@@ -13301,7 +14677,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "steady",
-    "ab_ecoregion": "riparian,mixedgrass_prairie"
+    "ab_ecoregion": "riparian,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Tall Showy Yarrow",
@@ -13342,7 +14722,11 @@
     "ab_ecoregion": "aspen_parkland",
     "toxicity_pets": "low",
     "toxicity_humans": "",
-    "safety_source": "Yarrow: ASPCA toxic to dogs/cats/horses (mild GI); culinary/medicinal for people"
+    "safety_source": "Yarrow: ASPCA toxic to dogs/cats/horses (mild GI); culinary/medicinal for people",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Tamarack",
@@ -13380,7 +14764,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 20,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 60,
+    "price_high_cad": 150,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (large specimen tree); AB retail as of 2026"
   },
   {
     "common_name": "Thimbleberry",
@@ -13419,7 +14807,11 @@
     "years_to_maturity": 3,
     "growth_curve": "fast_early",
     "ab_ecoregion": "aspen_parkland",
-    "has_thorns": 1
+    "has_thorns": 1,
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Thinleaf Alder",
@@ -13457,7 +14849,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 5,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Three-square Rush",
@@ -13495,7 +14891,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,riparian"
+    "ab_ecoregion": "wet_meadow,riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Ticklegrass",
@@ -13533,7 +14933,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Torrey's Rush",
@@ -13571,7 +14975,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (rush default); AB retail as of 2026"
   },
   {
     "common_name": "Trailing Raspberry",
@@ -13610,7 +15018,11 @@
     "years_to_maturity": 2,
     "growth_curve": "steady",
     "ab_ecoregion": "riparian",
-    "has_thorns": 1
+    "has_thorns": 1,
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Trembling Aspen",
@@ -13648,7 +15060,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 15,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 45,
+    "price_high_cad": 120,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (tree default); AB retail as of 2026"
   },
   {
     "common_name": "Tufted Hairgrass",
@@ -13686,7 +15102,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,riparian"
+    "ab_ecoregion": "wet_meadow,riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Tufted Tall Manna Grass",
@@ -13724,7 +15144,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,riparian,fescue_foothills"
+    "ab_ecoregion": "wet_meadow,riparian,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Turned Sedge",
@@ -13762,7 +15186,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood,aspen_parkland"
+    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood,aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Twin Arnica",
@@ -13800,7 +15228,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "aspen_parkland,mixedgrass_prairie"
+    "ab_ecoregion": "aspen_parkland,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Twinflower",
@@ -13838,7 +15270,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "boreal_mixedwood"
+    "ab_ecoregion": "boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Twining Honeysuckle (Limber Honeysuckle)",
@@ -13877,7 +15313,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 15,
+    "price_high_cad": 35,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (vine default); AB retail as of 2026"
   },
   {
     "common_name": "Umbrella Buckwheat",
@@ -13915,7 +15355,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "4",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Valerian",
@@ -13953,7 +15397,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "steady",
-    "ab_ecoregion": "riparian,subalpine_montane"
+    "ab_ecoregion": "riparian,subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Variegated Horsetail",
@@ -13992,7 +15440,11 @@
     "years_to_maturity": "3",
     "growth_curve": "steady",
     "ab_ecoregion": "wet_meadow,riparian",
-    "spread_habit": "aggressive_rhizomatous"
+    "spread_habit": "aggressive_rhizomatous",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (rush default); AB retail as of 2026"
   },
   {
     "common_name": "Veiny Meadow-Rue",
@@ -14031,7 +15483,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "aspen_parkland,mixedgrass_prairie"
+    "ab_ecoregion": "aspen_parkland,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Velvet-leaf Blueberry",
@@ -14069,7 +15525,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 5,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Water Arum (Wild Calla)",
@@ -14108,7 +15568,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Water Birch",
@@ -14146,7 +15610,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 12,
     "growth_curve": "steady",
-    "ab_ecoregion": "riparian"
+    "ab_ecoregion": "riparian",
+    "price_low_cad": 60,
+    "price_high_cad": 150,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (large specimen tree); AB retail as of 2026"
   },
   {
     "common_name": "Water Parsnip",
@@ -14184,7 +15652,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,riparian"
+    "ab_ecoregion": "wet_meadow,riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
   },
   {
     "common_name": "Water Sedge",
@@ -14222,7 +15694,11 @@
     "growth_rate": "fast",
     "years_to_maturity": "2",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow,mixedgrass_prairie"
+    "ab_ecoregion": "wet_meadow,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Water Smartweed",
@@ -14261,7 +15737,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "riparian,boreal_mixedwood"
+    "ab_ecoregion": "riparian,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Western Blue Iris",
@@ -14302,7 +15782,11 @@
     "ab_ecoregion": "mixedgrass_prairie",
     "toxicity_pets": "low",
     "toxicity_humans": "low",
-    "safety_source": "Iris: irritant resins in rhizomes (ASPCA, GI upset)"
+    "safety_source": "Iris: irritant resins in rhizomes (ASPCA, GI upset)",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Western Canada Violet",
@@ -14340,7 +15824,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Western Fescue",
@@ -14378,7 +15866,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Western Meadow Aster",
@@ -14416,7 +15908,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Western Meadowrue",
@@ -14454,7 +15950,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Western Mountain Ash",
@@ -14493,7 +15993,11 @@
     "cal_oct": "harvest",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Western Porcupine Grass",
@@ -14531,7 +16035,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Western Snowberry",
@@ -14572,7 +16080,11 @@
     "ab_ecoregion": "aspen_parkland",
     "toxicity_pets": "low",
     "toxicity_humans": "low",
-    "safety_source": "Snowberry: saponins in berries, mildly toxic"
+    "safety_source": "Snowberry: saponins in berries, mildly toxic",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Western Wheatgrass",
@@ -14610,7 +16122,11 @@
     "growth_rate": "fast",
     "years_to_maturity": "2",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Western Willow Aster",
@@ -14649,7 +16165,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "wet_meadow,riparian,mixedgrass_prairie"
+    "ab_ecoregion": "wet_meadow,riparian,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Western Wood Lily",
@@ -14687,7 +16207,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 18,
+    "price_high_cad": 40,
+    "availability_class": "rare",
+    "sourcing_notes": "Estimate (specialist / rare); AB retail as of 2026"
   },
   {
     "common_name": "White Camas",
@@ -14728,7 +16252,11 @@
     "ab_ecoregion": "subalpine_montane",
     "toxicity_pets": "high",
     "toxicity_humans": "high",
-    "safety_source": "Death camas (Anticlea, formerly Zigadenus): zygacine alkaloids, often fatal (poison-control)"
+    "safety_source": "Death camas (Anticlea, formerly Zigadenus): zygacine alkaloids, often fatal (poison-control)",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "White Evening Primrose",
@@ -14766,7 +16294,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "White Geranium",
@@ -14805,7 +16337,11 @@
     "years_to_maturity": 2,
     "growth_curve": "steady",
     "marker_color": "",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "White Mountain Avens",
@@ -14843,7 +16379,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "5",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "White Prairie Clover",
@@ -14881,7 +16421,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "White Spruce",
@@ -14919,7 +16463,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 25,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "boreal_mixedwood"
+    "ab_ecoregion": "boreal_mixedwood",
+    "price_low_cad": 60,
+    "price_high_cad": 150,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (large specimen tree); AB retail as of 2026"
   },
   {
     "common_name": "White-grained Mountain Rice Grass",
@@ -14957,7 +16505,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "subalpine_montane,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
   },
   {
     "common_name": "Wild Bergamot",
@@ -14996,7 +16548,11 @@
     "years_to_maturity": 2,
     "growth_curve": "steady",
     "ab_ecoregion": "aspen_parkland",
-    "spread_habit": "slow_spreader"
+    "spread_habit": "slow_spreader",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Wild Black Currant",
@@ -15034,7 +16590,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 4,
     "growth_curve": "steady",
-    "ab_ecoregion": "riparian,mixedgrass_prairie"
+    "ab_ecoregion": "riparian,mixedgrass_prairie",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Wild Blue Flax",
@@ -15072,7 +16632,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Wild Chives",
@@ -15113,7 +16677,11 @@
     "ab_ecoregion": "aspen_parkland",
     "toxicity_pets": "low",
     "toxicity_humans": "",
-    "safety_source": "Wild onion/chives: ASPCA toxic to pets (hemolytic anemia); edible for people"
+    "safety_source": "Wild onion/chives: ASPCA toxic to pets (hemolytic anemia); edible for people",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Wild Clematis",
@@ -15151,7 +16719,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 3,
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 15,
+    "price_high_cad": 35,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (vine default); AB retail as of 2026"
   },
   {
     "common_name": "Wild Gooseberry",
@@ -15190,7 +16762,11 @@
     "years_to_maturity": 4,
     "growth_curve": "steady",
     "ab_ecoregion": "aspen_parkland",
-    "has_thorns": 1
+    "has_thorns": 1,
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Wild Licorice",
@@ -15229,7 +16805,11 @@
     "years_to_maturity": 3,
     "growth_curve": "steady",
     "ab_ecoregion": "aspen_parkland",
-    "spread_habit": "aggressive_rhizomatous"
+    "spread_habit": "aggressive_rhizomatous",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Wild Lily-of-the-valley",
@@ -15271,7 +16851,11 @@
     "toxicity_pets": "low",
     "toxicity_humans": "low",
     "safety_source": "Wild lily-of-the-valley (NOT Convallaria): berries mildly toxic in quantity",
-    "spread_habit": "aggressive_rhizomatous"
+    "spread_habit": "aggressive_rhizomatous",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Wild Mint",
@@ -15310,7 +16894,11 @@
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
     "ab_ecoregion": "aspen_parkland",
-    "spread_habit": "aggressive_rhizomatous"
+    "spread_habit": "aggressive_rhizomatous",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Wild Raspberry",
@@ -15349,7 +16937,11 @@
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
     "ab_ecoregion": "aspen_parkland",
-    "has_thorns": 1
+    "has_thorns": 1,
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Wild Red Currant",
@@ -15387,7 +16979,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 4,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Wild Sarsaparilla",
@@ -15425,7 +17021,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 3,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Wild Strawberry",
@@ -15464,7 +17064,11 @@
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
     "ab_ecoregion": "aspen_parkland",
-    "spread_habit": "slow_spreader"
+    "spread_habit": "slow_spreader",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Wild Vetch",
@@ -15505,7 +17109,11 @@
     "ab_ecoregion": "aspen_parkland",
     "toxicity_pets": "low",
     "toxicity_humans": "low",
-    "safety_source": "Vetch: toxins in seeds (poison-control)"
+    "safety_source": "Vetch: toxins in seeds (poison-control)",
+    "price_low_cad": 15,
+    "price_high_cad": 35,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (vine default); AB retail as of 2026"
   },
   {
     "common_name": "Willow Aster",
@@ -15543,7 +17151,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "riparian"
+    "ab_ecoregion": "riparian",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Winterfat",
@@ -15581,7 +17193,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 4,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Wire Rush",
@@ -15619,7 +17235,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (rush default); AB retail as of 2026"
   },
   {
     "common_name": "Wood Betony (Bracted Lousewort)",
@@ -15658,7 +17278,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "subalpine_montane,boreal_mixedwood,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,boreal_mixedwood,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Woodland Strawberry",
@@ -15697,7 +17321,11 @@
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
     "ab_ecoregion": "subalpine_montane",
-    "spread_habit": "slow_spreader"
+    "spread_habit": "slow_spreader",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Woods' Rose",
@@ -15736,7 +17364,11 @@
     "years_to_maturity": 3,
     "growth_curve": "steady",
     "ab_ecoregion": "aspen_parkland",
-    "has_thorns": 1
+    "has_thorns": 1,
+    "price_low_cad": 25,
+    "price_high_cad": 50,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
   },
   {
     "common_name": "Woolly Cinquefoil",
@@ -15774,7 +17406,11 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Woolly Sedge",
@@ -15812,7 +17448,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood,aspen_parkland"
+    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood,aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
   },
   {
     "common_name": "Yarrow",
@@ -15854,7 +17494,11 @@
     "spread_habit": "self_seeding",
     "toxicity_pets": "low",
     "toxicity_humans": "",
-    "safety_source": "Yarrow: ASPCA toxic to dogs/cats/horses (mild GI); culinary/medicinal for people"
+    "safety_source": "Yarrow: ASPCA toxic to dogs/cats/horses (mild GI); culinary/medicinal for people",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Yellow Angelica",
@@ -15892,7 +17536,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Yellow Avens",
@@ -15931,7 +17579,11 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "boreal_mixedwood,aspen_parkland"
+    "ab_ecoregion": "boreal_mixedwood,aspen_parkland",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Yellow Beardtongue",
@@ -15969,7 +17621,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "riparian,aspen_parkland,fescue_foothills"
+    "ab_ecoregion": "riparian,aspen_parkland,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Yellow Buckwheat",
@@ -16007,7 +17663,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Yellow Columbine",
@@ -16049,7 +17709,11 @@
     "ab_ecoregion": "subalpine_montane,fescue_foothills",
     "toxicity_pets": "low",
     "toxicity_humans": "low",
-    "safety_source": "Columbine: mild cardiogenic toxins in seeds/roots"
+    "safety_source": "Columbine: mild cardiogenic toxins in seeds/roots",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "garden_centre",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Yellow Flax",
@@ -16087,7 +17751,11 @@
     "growth_rate": "fast",
     "years_to_maturity": "1",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Yellow Lady's Slipper",
@@ -16125,7 +17793,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "7",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,riparian,boreal_mixedwood",
+    "price_low_cad": 18,
+    "price_high_cad": 40,
+    "availability_class": "rare",
+    "sourcing_notes": "Estimate (specialist / rare); AB retail as of 2026"
   },
   {
     "common_name": "Yellow Monkey Flower",
@@ -16163,7 +17835,11 @@
     "growth_rate": "fast",
     "years_to_maturity": "1",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow,riparian,fescue_foothills"
+    "ab_ecoregion": "wet_meadow,riparian,fescue_foothills",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Yellow Mountain Avens",
@@ -16201,7 +17877,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "4",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "riparian,subalpine_montane"
+    "ab_ecoregion": "riparian,subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
   },
   {
     "common_name": "Yellow Owl Clover",
@@ -16239,7 +17919,11 @@
     "growth_rate": "fast",
     "years_to_maturity": "1",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Yellow Paintbrush",
@@ -16277,7 +17961,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Yellow Pond-lily",
@@ -16315,7 +18003,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "boreal_mixedwood"
+    "ab_ecoregion": "boreal_mixedwood",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
   },
   {
     "common_name": "Yellow Pucoon",
@@ -16353,7 +18045,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "4",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Yellow Rattle",
@@ -16392,7 +18088,11 @@
     "cal_oct": "direct_sow",
     "cal_nov": "direct_sow",
     "cal_dec": "dormant",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood,mixedgrass_prairie"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood,mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Yellow-flowered Locoweed",
@@ -16434,7 +18134,11 @@
     "ab_ecoregion": "fescue_foothills",
     "toxicity_pets": "low",
     "toxicity_humans": "",
-    "safety_source": "Locoweed: swainsonine, toxic to livestock/pets"
+    "safety_source": "Locoweed: swainsonine, toxic to livestock/pets",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Yellowbells",
@@ -16472,7 +18176,11 @@
     "growth_rate": "slow",
     "years_to_maturity": "4",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   },
   {
     "common_name": "Yellowstone Draba",
@@ -16510,6 +18218,10 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "price_low_cad": 8,
+    "price_high_cad": 16,
+    "availability_class": "native_specialist",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
   }
 ]

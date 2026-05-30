@@ -205,6 +205,25 @@ class TestGoalsAndOffline(unittest.TestCase):
         warnings = project.as_dict()["properties"].get("generation_warnings", [])
         self.assertTrue(any("guidance" in w.lower() for w in warnings))
 
+    def test_allowed_filters_include_cost(self):
+        self.assertIn("max_unit_price", llm._ALLOWED_FILTERS)
+        self.assertIn("common_only", llm._ALLOWED_FILTERS)
+
+    def test_offline_budget_trims_and_notes(self):
+        # A tight budget still yields a usable design and records a cost note.
+        project = llm.generate_design_offline(
+            site_config=_EDM, goals=["native_only"], budget=20)
+        self.assertGreaterEqual(len(project.placed_plants), 1)
+        warnings = project.as_dict()["properties"].get("generation_warnings", [])
+        self.assertTrue(any("Estimated plant cost" in w for w in warnings),
+                        f"cost note missing from {warnings}")
+
+    def test_offline_no_budget_has_no_cost_note(self):
+        project = llm.generate_design_offline(
+            site_config=_EDM, goals=["native_only"])
+        warnings = project.as_dict()["properties"].get("generation_warnings", [])
+        self.assertFalse(any("Estimated plant cost" in w for w in warnings))
+
     def test_safety_goal_caveat_recorded(self):
         # Pet friendly is now backed by a denylist filter, but carries an
         # honest "not a guarantee" caveat in the generation warnings.

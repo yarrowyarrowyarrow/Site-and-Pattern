@@ -40,7 +40,15 @@ CREATE TABLE IF NOT EXISTS plants (
     toxicity_humans TEXT DEFAULT '',    -- '' (unassessed) | none | low | high
     has_thorns INTEGER DEFAULT 0,       -- 1 = thorns / spines / prickles
     spread_habit TEXT DEFAULT '',       -- '' | clumping | slow_spreader | aggressive_rhizomatous | self_seeding
-    safety_source TEXT DEFAULT ''       -- provenance note for the safety classification
+    safety_source TEXT DEFAULT '',      -- provenance note for the safety classification
+    -- Sourcing + cost (schema v19, V1.45). ESTIMATES ONLY — Alberta retail
+    -- ranges per single nursery plant; region/year-dependent, surfaced with an
+    -- "estimate" disclaimer. Empty / NULL = unpriced (a plant_type default is
+    -- used at estimate time, see src/sourcing.py).
+    price_low_cad REAL,                 -- est. low retail price, one nursery plant (CAD)
+    price_high_cad REAL,                -- est. high retail price (CAD)
+    availability_class TEXT DEFAULT '', -- '' | big_box | garden_centre | native_specialist | seed_or_plug | rare
+    sourcing_notes TEXT DEFAULT ''      -- form sold / example AB nurseries / as-of year
 );
 
 CREATE TABLE IF NOT EXISTS companion_friends (

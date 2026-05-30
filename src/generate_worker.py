@@ -24,13 +24,15 @@ class GenerateWorker(QObject):
     failed = pyqtSignal(str)
 
     def __init__(self, prompt: str, *, site_config: Optional[dict],
-                 boundary: Optional[list], goals: list, offline: bool):
+                 boundary: Optional[list], goals: list, offline: bool,
+                 budget: Optional[float] = None):
         super().__init__()
         self._prompt = prompt
         self._site_config = site_config
         self._boundary = boundary
         self._goals = goals
         self._offline = offline
+        self._budget = budget
 
     @pyqtSlot()
     def run(self):
@@ -41,19 +43,20 @@ class GenerateWorker(QObject):
                 self.progress.emit("Building design (offline)…")
                 project = generate_design_offline(
                     site_config=self._site_config, boundary=self._boundary,
-                    goals=self._goals)
+                    goals=self._goals, budget=self._budget)
             else:
                 self.progress.emit("Asking the local AI for a design…")
                 try:
                     project = generate_design(
                         self._prompt, site_config=self._site_config,
-                        boundary=self._boundary, goals=self._goals)
+                        boundary=self._boundary, goals=self._goals,
+                        budget=self._budget)
                 except LLMError as exc:
                     self.progress.emit(
                         f"AI unavailable ({exc}); building offline…")
                     project = generate_design_offline(
                         site_config=self._site_config, boundary=self._boundary,
-                        goals=self._goals)
+                        goals=self._goals, budget=self._budget)
             self.finished.emit(project)
         except PermaDesignError as exc:
             self.failed.emit(str(exc))

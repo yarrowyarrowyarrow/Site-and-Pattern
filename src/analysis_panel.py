@@ -731,6 +731,16 @@ class AnalysisPanel(QWidget):
         lines.append("")
         lines.append(f"Total {result.n_total_plants} plants, {result.n_species} species")
 
+        # Estimated plant cost (schema v19) — a range, AB retail estimate.
+        try:
+            from src.sourcing import estimate_cost, format_cost
+            low, high = estimate_cost(self._placed_plants)
+            if high > 0:
+                lines.append(
+                    f"Est. plant cost    {format_cost(low, high)}   (AB retail estimate)")
+        except Exception:  # noqa: BLE001 — cost is a nicety, never break the score
+            pass
+
         self._habitat_breakdown.setText("\n".join(lines))
 
         # ── Tips: targeted suggestions for the lowest-scoring categories ──
