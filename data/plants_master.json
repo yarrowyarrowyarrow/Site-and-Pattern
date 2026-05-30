@@ -567,7 +567,10 @@
     "growth_rate": "slow",
     "years_to_maturity": "4",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "toxicity_pets": "low",
+    "toxicity_humans": "",
+    "safety_source": "Milkvetch/locoweed: many species toxic to livestock/pets"
   },
   {
     "common_name": "Awned Sedge",
@@ -1214,7 +1217,8 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "has_thorns": 1
   },
   {
     "common_name": "Black Spruce",
@@ -1290,7 +1294,8 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "spread_habit": "self_seeding"
   },
   {
     "common_name": "Blanketflower",
@@ -1328,7 +1333,8 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "spread_habit": "self_seeding"
   },
   {
     "common_name": "Blue Clematis",
@@ -1404,7 +1410,10 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Columbine: mild cardiogenic toxins in seeds/roots"
   },
   {
     "common_name": "Blue Grama Grass",
@@ -1670,7 +1679,10 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "subalpine_montane,boreal_mixedwood,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,boreal_mixedwood,fescue_foothills",
+    "toxicity_pets": "low",
+    "toxicity_humans": "",
+    "safety_source": "Yarrow: ASPCA toxic to dogs/cats/horses (mild GI); culinary/medicinal for people"
   },
   {
     "common_name": "Boreale Oxytropis",
@@ -1708,7 +1720,10 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "boreal_mixedwood,mixedgrass_prairie"
+    "ab_ecoregion": "boreal_mixedwood,mixedgrass_prairie",
+    "toxicity_pets": "low",
+    "toxicity_humans": "",
+    "safety_source": "Locoweed: swainsonine, toxic to livestock/pets"
   },
   {
     "common_name": "Bracted Honeysuckle",
@@ -1785,7 +1800,8 @@
     "growth_rate": "moderate",
     "years_to_maturity": 5,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "has_thorns": 1
   },
   {
     "common_name": "Brittle Prickly-pear",
@@ -1937,7 +1953,10 @@
     "growth_rate": "slow",
     "years_to_maturity": 5,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "toxicity_pets": "high",
+    "toxicity_humans": "high",
+    "safety_source": "Death camas (Anticlea, formerly Zigadenus): zygacine alkaloids, often fatal (poison-control)"
   },
   {
     "common_name": "Broomweed",
@@ -2204,7 +2223,8 @@
     "growth_rate": "moderate",
     "years_to_maturity": 5,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "has_thorns": 1
   },
   {
     "common_name": "Canada Goldenrod",
@@ -2243,7 +2263,8 @@
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
     "marker_color": "",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "spread_habit": "aggressive_rhizomatous"
   },
   {
     "common_name": "Canada Milk Vetch",
@@ -2281,7 +2302,10 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "toxicity_pets": "low",
+    "toxicity_humans": "",
+    "safety_source": "Milkvetch/locoweed: many species toxic to livestock/pets"
   },
   {
     "common_name": "Canada Rice Grass",
@@ -2471,7 +2495,10 @@
     "growth_rate": "moderate",
     "years_to_maturity": 6,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "toxicity_pets": "high",
+    "toxicity_humans": "low",
+    "safety_source": "Cherry/chokecherry: cyanogenic foliage/twigs/pits (toxic to pets/livestock); fruit flesh edible, pits hazardous"
   },
   {
     "common_name": "Common Alumroot",
@@ -2586,7 +2613,8 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "spread_habit": "aggressive_rhizomatous"
   },
   {
     "common_name": "Common Juniper",
@@ -2700,7 +2728,8 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "riparian"
+    "ab_ecoregion": "riparian",
+    "spread_habit": "aggressive_rhizomatous"
   },
   {
     "common_name": "Common Snowberry",
@@ -2738,7 +2767,10 @@
     "growth_rate": "fast",
     "years_to_maturity": 3,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Snowberry: saponins in berries, mildly toxic"
   },
   {
     "common_name": "Common Sunflower",
@@ -2891,7 +2923,10 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "boreal_mixedwood,aspen_parkland"
+    "ab_ecoregion": "boreal_mixedwood,aspen_parkland",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Peavine: lathyrogens in seeds, toxic in quantity (poison-control)"
   },
   {
     "common_name": "Creeping Juniper",
@@ -3158,7 +3193,10 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Anemone: protoanemonin, irritant to skin/GI (poison-control)"
   },
   {
     "common_name": "Cut-leaved Nightshade",
@@ -3196,7 +3234,10 @@
     "growth_rate": "fast",
     "years_to_maturity": "1",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "toxicity_pets": "high",
+    "toxicity_humans": "high",
+    "safety_source": "Nightshade: solanine in foliage/unripe fruit (ASPCA)"
   },
   {
     "common_name": "Cyperus-like Sedge",
@@ -3310,7 +3351,8 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "has_thorns": 1
   },
   {
     "common_name": "Dotted Blazingstar",
@@ -3500,7 +3542,10 @@
     "growth_rate": "slow",
     "years_to_maturity": "4",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "toxicity_pets": "low",
+    "toxicity_humans": "",
+    "safety_source": "Milkvetch/locoweed: many species toxic to livestock/pets"
   },
   {
     "common_name": "Drummond's Rush",
@@ -3614,7 +3659,8 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "boreal_mixedwood"
+    "ab_ecoregion": "boreal_mixedwood",
+    "has_thorns": 1
   },
   {
     "common_name": "Early Blue Violet",
@@ -3690,7 +3736,10 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "toxicity_pets": "low",
+    "toxicity_humans": "",
+    "safety_source": "Locoweed: swainsonine, toxic to livestock/pets"
   },
   {
     "common_name": "Eastern Red Columbine",
@@ -3728,7 +3777,10 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Columbine: mild cardiogenic toxins in seeds/roots"
   },
   {
     "common_name": "Elegant Goldenrod",
@@ -3959,7 +4011,10 @@
     "growth_rate": "slow",
     "years_to_maturity": "4",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Wild lily-of-the-valley (NOT Convallaria): berries mildly toxic in quantity"
   },
   {
     "common_name": "Field Chickweed",
@@ -4188,7 +4243,10 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Marsh marigold: protoanemonin, toxic raw (poison-control)"
   },
   {
     "common_name": "Foothills Rough Fescue",
@@ -4644,7 +4702,10 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "toxicity_pets": "high",
+    "toxicity_humans": "high",
+    "safety_source": "Golden bean: quinolizidine alkaloids; pea-like pods attract children (poison-control)"
   },
   {
     "common_name": "Golden Currant (Buffalo Currant)",
@@ -4988,7 +5049,10 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "aspen_parkland,mixedgrass_prairie"
+    "ab_ecoregion": "aspen_parkland,mixedgrass_prairie",
+    "toxicity_pets": "high",
+    "toxicity_humans": "high",
+    "safety_source": "Milkweed: cardenolides (ASPCA toxic to dogs/cats/horses)"
   },
   {
     "common_name": "Green Needle Grass",
@@ -5065,7 +5129,10 @@
     "growth_rate": "slow",
     "years_to_maturity": 3,
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "toxicity_pets": "low",
+    "toxicity_humans": "",
+    "safety_source": "Milkvetch/locoweed: many species toxic to livestock/pets"
   },
   {
     "common_name": "Gumweed",
@@ -5982,7 +6049,10 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "toxicity_pets": "low",
+    "toxicity_humans": "",
+    "safety_source": "Locoweed: swainsonine, toxic to livestock/pets"
   },
   {
     "common_name": "Leafy Arnica",
@@ -6289,7 +6359,10 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "aspen_parkland,mixedgrass_prairie"
+    "ab_ecoregion": "aspen_parkland,mixedgrass_prairie",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Anemone: protoanemonin, irritant to skin/GI (poison-control)"
   },
   {
     "common_name": "Low Bilberry",
@@ -6710,7 +6783,10 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow"
+    "ab_ecoregion": "wet_meadow",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Marsh marigold: protoanemonin, toxic raw (poison-control)"
   },
   {
     "common_name": "Marsh Skullcap",
@@ -7017,7 +7093,10 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "toxicity_pets": "low",
+    "toxicity_humans": "",
+    "safety_source": "Milkvetch/locoweed: many species toxic to livestock/pets"
   },
   {
     "common_name": "Moss Campion",
@@ -7473,7 +7552,10 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "toxicity_pets": "low",
+    "toxicity_humans": "",
+    "safety_source": "Wild onion/chives: ASPCA toxic to pets (hemolytic anemia); edible for people"
   },
   {
     "common_name": "Northern Bedstraw",
@@ -7857,7 +7939,8 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "riparian,subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "riparian,subalpine_montane,boreal_mixedwood",
+    "spread_habit": "aggressive_rhizomatous"
   },
   {
     "common_name": "Paper Birch",
@@ -8087,7 +8170,10 @@
     "growth_rate": "fast",
     "years_to_maturity": 8,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "toxicity_pets": "high",
+    "toxicity_humans": "low",
+    "safety_source": "Cherry/chokecherry: cyanogenic foliage/twigs/pits (toxic to pets/livestock); fruit flesh edible, pits hazardous"
   },
   {
     "common_name": "Pink Corydalis",
@@ -8584,7 +8670,10 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "aspen_parkland,mixedgrass_prairie"
+    "ab_ecoregion": "aspen_parkland,mixedgrass_prairie",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Buttercup: protoanemonin, irritant (poison-control)"
   },
   {
     "common_name": "Prairie Cinquefoil",
@@ -8775,7 +8864,10 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Prairie crocus: protoanemonin, irritant (poison-control)"
   },
   {
     "common_name": "Prairie Dropseed",
@@ -8928,7 +9020,10 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "toxicity_pets": "low",
+    "toxicity_humans": "",
+    "safety_source": "Wild onion/chives: ASPCA toxic to pets (hemolytic anemia); edible for people"
   },
   {
     "common_name": "Prairie Rose",
@@ -8966,7 +9061,8 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "has_thorns": 1
   },
   {
     "common_name": "Prairie Sage",
@@ -9119,7 +9215,8 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "has_thorns": 1
   },
   {
     "common_name": "Prairie Turnip",
@@ -9233,7 +9330,8 @@
     "growth_rate": "fast",
     "years_to_maturity": 3,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "has_thorns": 1
   },
   {
     "common_name": "Purple Avens (Water Avens)",
@@ -9386,7 +9484,10 @@
     "growth_rate": "moderate",
     "years_to_maturity": 3,
     "growth_curve": "steady",
-    "ab_ecoregion": "boreal_mixedwood,aspen_parkland"
+    "ab_ecoregion": "boreal_mixedwood,aspen_parkland",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Peavine: lathyrogens in seeds, toxic in quantity (poison-control)"
   },
   {
     "common_name": "Purple Prairie Clover",
@@ -9691,7 +9792,10 @@
     "growth_rate": "slow",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,boreal_mixedwood"
+    "ab_ecoregion": "subalpine_montane,boreal_mixedwood",
+    "toxicity_pets": "high",
+    "toxicity_humans": "high",
+    "safety_source": "Baneberry: cardiogenic glycosides + protoanemonin (ASPCA; poison-control)"
   },
   {
     "common_name": "Red Columbine",
@@ -9729,7 +9833,10 @@
     "growth_rate": "moderate",
     "years_to_maturity": "2",
     "growth_curve": "steady",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Columbine: mild cardiogenic toxins in seeds/roots"
   },
   {
     "common_name": "Common Paintbrush",
@@ -9805,7 +9912,8 @@
     "growth_rate": "fast",
     "years_to_maturity": 4,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "riparian"
+    "ab_ecoregion": "riparian",
+    "spread_habit": "slow_spreader"
   },
   {
     "common_name": "Richardson's Needlegrass",
@@ -11102,7 +11210,10 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "toxicity_pets": "low",
+    "toxicity_humans": "",
+    "safety_source": "Locoweed: swainsonine, toxic to livestock/pets"
   },
   {
     "common_name": "Showy Milkweed",
@@ -11140,7 +11251,10 @@
     "growth_rate": "moderate",
     "years_to_maturity": 3,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "toxicity_pets": "high",
+    "toxicity_humans": "high",
+    "safety_source": "Milkweed: cardenolides (ASPCA toxic to dogs/cats/horses)"
   },
   {
     "common_name": "Showy Pussytoes",
@@ -11292,7 +11406,10 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "toxicity_pets": "high",
+    "toxicity_humans": "high",
+    "safety_source": "Lupine: quinolizidine alkaloids, esp. seeds (ASPCA)"
   },
   {
     "common_name": "Silver Buffaloberry",
@@ -11330,7 +11447,8 @@
     "growth_rate": "moderate",
     "years_to_maturity": 6,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "has_thorns": 1
   },
   {
     "common_name": "Silver Sagebrush",
@@ -11406,7 +11524,8 @@
     "growth_rate": "fast",
     "years_to_maturity": 4,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "has_thorns": 1
   },
   {
     "common_name": "Silverweed",
@@ -11482,7 +11601,10 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "toxicity_pets": "high",
+    "toxicity_humans": "high",
+    "safety_source": "Lupine: quinolizidine alkaloids, esp. seeds (ASPCA)"
   },
   {
     "common_name": "Sitka Valerian",
@@ -11673,7 +11795,8 @@
     "growth_rate": "fast",
     "years_to_maturity": "2",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "riparian"
+    "ab_ecoregion": "riparian",
+    "spread_habit": "aggressive_rhizomatous"
   },
   {
     "common_name": "Slender Wheatgrass",
@@ -12284,7 +12407,10 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "toxicity_pets": "high",
+    "toxicity_humans": "high",
+    "safety_source": "Dogbane: cardiac glycosides (poison-control)"
   },
   {
     "common_name": "Sprengel's Sedge",
@@ -12436,7 +12562,10 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Wild lily-of-the-valley (NOT Convallaria): berries mildly toxic in quantity"
   },
   {
     "common_name": "Sticky Goldenrod",
@@ -12666,7 +12795,8 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "spread_habit": "aggressive_rhizomatous"
   },
   {
     "common_name": "Strawberry Spinach",
@@ -12780,7 +12910,8 @@
     "growth_rate": "fast",
     "years_to_maturity": "2",
     "growth_curve": "fast_early",
-    "ab_ecoregion": "wet_meadow,boreal_mixedwood"
+    "ab_ecoregion": "wet_meadow,boreal_mixedwood",
+    "spread_habit": "aggressive_rhizomatous"
   },
   {
     "common_name": "Sweet Broom (Alpine Sweetvetch)",
@@ -12972,7 +13103,10 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Anemone: protoanemonin, irritant to skin/GI (poison-control)"
   },
   {
     "common_name": "Tall Goldenrod",
@@ -13087,7 +13221,10 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "riparian"
+    "ab_ecoregion": "riparian",
+    "toxicity_pets": "high",
+    "toxicity_humans": "high",
+    "safety_source": "Larkspur: diterpenoid alkaloids (ASPCA; poison-control)"
   },
   {
     "common_name": "Tall Lungwort (Blue Bells)",
@@ -13202,7 +13339,10 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "toxicity_pets": "low",
+    "toxicity_humans": "",
+    "safety_source": "Yarrow: ASPCA toxic to dogs/cats/horses (mild GI); culinary/medicinal for people"
   },
   {
     "common_name": "Tamarack",
@@ -13278,7 +13418,8 @@
     "growth_rate": "fast",
     "years_to_maturity": 3,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "has_thorns": 1
   },
   {
     "common_name": "Thinleaf Alder",
@@ -13468,7 +13609,8 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "riparian"
+    "ab_ecoregion": "riparian",
+    "has_thorns": 1
   },
   {
     "common_name": "Trembling Aspen",
@@ -13849,7 +13991,8 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "steady",
-    "ab_ecoregion": "wet_meadow,riparian"
+    "ab_ecoregion": "wet_meadow,riparian",
+    "spread_habit": "aggressive_rhizomatous"
   },
   {
     "common_name": "Veiny Meadow-Rue",
@@ -14156,7 +14299,10 @@
     "growth_rate": "moderate",
     "years_to_maturity": "3",
     "growth_curve": "steady",
-    "ab_ecoregion": "mixedgrass_prairie"
+    "ab_ecoregion": "mixedgrass_prairie",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Iris: irritant resins in rhizomes (ASPCA, GI upset)"
   },
   {
     "common_name": "Western Canada Violet",
@@ -14423,7 +14569,10 @@
     "growth_rate": "fast",
     "years_to_maturity": 3,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Snowberry: saponins in berries, mildly toxic"
   },
   {
     "common_name": "Western Wheatgrass",
@@ -14576,7 +14725,10 @@
     "growth_rate": "slow",
     "years_to_maturity": "4",
     "growth_curve": "slow_start",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "toxicity_pets": "high",
+    "toxicity_humans": "high",
+    "safety_source": "Death camas (Anticlea, formerly Zigadenus): zygacine alkaloids, often fatal (poison-control)"
   },
   {
     "common_name": "White Evening Primrose",
@@ -14843,7 +14995,8 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "spread_habit": "slow_spreader"
   },
   {
     "common_name": "Wild Black Currant",
@@ -14957,7 +15110,10 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "toxicity_pets": "low",
+    "toxicity_humans": "",
+    "safety_source": "Wild onion/chives: ASPCA toxic to pets (hemolytic anemia); edible for people"
   },
   {
     "common_name": "Wild Clematis",
@@ -15033,7 +15189,8 @@
     "growth_rate": "moderate",
     "years_to_maturity": 4,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "has_thorns": 1
   },
   {
     "common_name": "Wild Licorice",
@@ -15071,7 +15228,8 @@
     "growth_rate": "moderate",
     "years_to_maturity": 3,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "spread_habit": "aggressive_rhizomatous"
   },
   {
     "common_name": "Wild Lily-of-the-valley",
@@ -15109,7 +15267,11 @@
     "growth_rate": "moderate",
     "years_to_maturity": 2,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Wild lily-of-the-valley (NOT Convallaria): berries mildly toxic in quantity",
+    "spread_habit": "aggressive_rhizomatous"
   },
   {
     "common_name": "Wild Mint",
@@ -15147,7 +15309,8 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "spread_habit": "aggressive_rhizomatous"
   },
   {
     "common_name": "Wild Raspberry",
@@ -15185,7 +15348,8 @@
     "growth_rate": "fast",
     "years_to_maturity": 2,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "has_thorns": 1
   },
   {
     "common_name": "Wild Red Currant",
@@ -15299,7 +15463,8 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "spread_habit": "slow_spreader"
   },
   {
     "common_name": "Wild Vetch",
@@ -15337,7 +15502,10 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Vetch: toxins in seeds (poison-control)"
   },
   {
     "common_name": "Willow Aster",
@@ -15528,7 +15696,8 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "subalpine_montane"
+    "ab_ecoregion": "subalpine_montane",
+    "spread_habit": "slow_spreader"
   },
   {
     "common_name": "Woods' Rose",
@@ -15566,7 +15735,8 @@
     "growth_rate": "moderate",
     "years_to_maturity": 3,
     "growth_curve": "steady",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "has_thorns": 1
   },
   {
     "common_name": "Woolly Cinquefoil",
@@ -15680,7 +15850,11 @@
     "growth_rate": "fast",
     "years_to_maturity": 1,
     "growth_curve": "fast_early",
-    "ab_ecoregion": "aspen_parkland"
+    "ab_ecoregion": "aspen_parkland",
+    "spread_habit": "self_seeding",
+    "toxicity_pets": "low",
+    "toxicity_humans": "",
+    "safety_source": "Yarrow: ASPCA toxic to dogs/cats/horses (mild GI); culinary/medicinal for people"
   },
   {
     "common_name": "Yellow Angelica",
@@ -15872,7 +16046,10 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "subalpine_montane,fescue_foothills"
+    "ab_ecoregion": "subalpine_montane,fescue_foothills",
+    "toxicity_pets": "low",
+    "toxicity_humans": "low",
+    "safety_source": "Columbine: mild cardiogenic toxins in seeds/roots"
   },
   {
     "common_name": "Yellow Flax",
@@ -16254,7 +16431,10 @@
     "cal_oct": "dormant",
     "cal_nov": "dormant",
     "cal_dec": "dormant",
-    "ab_ecoregion": "fescue_foothills"
+    "ab_ecoregion": "fescue_foothills",
+    "toxicity_pets": "low",
+    "toxicity_humans": "",
+    "safety_source": "Locoweed: swainsonine, toxic to livestock/pets"
   },
   {
     "common_name": "Yellowbells",

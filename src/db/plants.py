@@ -82,7 +82,7 @@ _PLANT_FAUNA_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "plant_fauna_maste
 # scientific name is the lookup key in the seed pipeline, so existing
 # polyculture / recipe references continue to resolve correctly on
 # reseed; only the user-visible display name changes.
-_SCHEMA_VERSION = 17
+_SCHEMA_VERSION = 18
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -221,6 +221,25 @@ def _migrate_to_v11(conn: sqlite3.Connection):
         conn.execute("ALTER TABLE plants ADD COLUMN ab_ecoregion TEXT")
     except sqlite3.OperationalError:
         pass  # column already present
+    conn.commit()
+
+
+def _migrate_to_v18(conn: sqlite3.Connection):
+    """Add the safety + spread columns (V1.44 chunk 2). Existing installs get
+    the columns added; the reseed that the version bump triggers then fills the
+    classified values from the seed JSON."""
+    new_columns = [
+        ("toxicity_pets",   "TEXT DEFAULT ''"),
+        ("toxicity_humans", "TEXT DEFAULT ''"),
+        ("has_thorns",      "INTEGER DEFAULT 0"),
+        ("spread_habit",    "TEXT DEFAULT ''"),
+        ("safety_source",   "TEXT DEFAULT ''"),
+    ]
+    for col_name, col_def in new_columns:
+        try:
+            conn.execute(f"ALTER TABLE plants ADD COLUMN {col_name} {col_def}")
+        except sqlite3.OperationalError:
+            pass  # column already present
     conn.commit()
 
 
@@ -484,6 +503,11 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("years_to_maturity"),
             p.get("growth_curve"),
             ecoregion,
+            p.get("toxicity_pets", ""),
+            p.get("toxicity_humans", ""),
+            1 if p.get("has_thorns") else 0,
+            p.get("spread_habit", ""),
+            p.get("safety_source", ""),
         ))
 
     conn.executemany(
@@ -497,8 +521,10 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             edible_parts, deciduous_evergreen,
             soil_ph_min, soil_ph_max, perennial_or_annual,
             growth_rate, years_to_maturity, growth_curve,
-            ab_ecoregion)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            ab_ecoregion,
+            toxicity_pets, toxicity_humans, has_thorns,
+            spread_habit, safety_source)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -575,6 +601,9 @@ def init_db() -> None:
 
         if current_version < 11:
             _migrate_to_v11(conn)
+
+        if current_version < 18:
+            _migrate_to_v18(conn)
 
         # Add parent_id to polycultures if missing
         try:
@@ -756,6 +785,9 @@ def search_plants(
     keystone_only: bool = False,
     bird_food_only: bool = False,
     ab_ecoregion: str = "",
+    pet_safe_only: bool = False,
+    kid_safe_only: bool = False,
+    well_behaved_only: bool = False,
 ) -> list[dict]:
     """
     Return plants matching all supplied filters.
@@ -837,6 +869,21 @@ def search_plants(
         # match against any one of them with a substring-safe pattern.
         sql += " AND (',' || ab_ecoregion || ',') LIKE ?"
         params.append(f"%,{ab_ecoregion},%")
+
+    # Safety filters (schema v18) use a DENYLIST: exclude only plants we have
+    # classified as toxic. Unassessed ('') and explicit 'none' both pass, so
+    # "pet/kid safe" means "no KNOWN toxicity", not a guarantee — surfaced as a
+    # caveat in the UI (see src/design_goals.py).
+    if pet_safe_only:
+        sql += " AND COALESCE(toxicity_pets,'') NOT IN ('low','high')"
+
+    if kid_safe_only:
+        sql += (" AND COALESCE(toxicity_humans,'') NOT IN ('low','high')"
+                " AND COALESCE(has_thorns,0) = 0")
+
+    if well_behaved_only:
+        sql += (" AND COALESCE(spread_habit,'') NOT IN "
+                "('aggressive_rhizomatous','self_seeding')")
 
     sql += " ORDER BY plant_type, common_name"
 

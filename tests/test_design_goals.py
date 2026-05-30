@@ -30,9 +30,19 @@ class TestDesignGoals(unittest.TestCase):
         self.assertEqual(merged, {"edible_only": True, "native_only": True})
 
     def test_filters_skip_unknown_and_unbacked(self):
-        # pet_friendly is hint-only (no filters); the bogus key is ignored.
-        merged = dg.filters_for_goals(["pet_friendly", "bogus", "pollinator"])
+        # flowers_all_season is hint-only (no filters); the bogus key is ignored.
+        merged = dg.filters_for_goals(["flowers_all_season", "bogus", "pollinator"])
         self.assertEqual(merged, {"pollinator_only": True})
+
+    def test_safety_goals_backed_with_filters(self):
+        # Pet/kid/well-behaved are now backed by denylist filters (schema v18).
+        merged = dg.filters_for_goals(
+            ["pet_friendly", "kid_friendly", "well_behaved"])
+        self.assertEqual(
+            merged,
+            {"pet_safe_only": True, "kid_safe_only": True,
+             "well_behaved_only": True},
+        )
 
     def test_filters_none_is_empty(self):
         self.assertEqual(dg.filters_for_goals(None), {})
@@ -49,6 +59,8 @@ class TestDesignGoals(unittest.TestCase):
         self.assertIn("Berry", dg.community_name_hints(["food_producing"]))
 
     def test_unbacked_goals(self):
+        # pet/kid friendly are now backed (denylist) — only the genuinely
+        # data-less goals remain unbacked.
         unbacked = dg.unbacked_goals([
             "native_only", "pollinator", "food_producing",
             "flowers_all_season", "pet_friendly", "kid_friendly",
@@ -56,8 +68,7 @@ class TestDesignGoals(unittest.TestCase):
         ])
         self.assertEqual(
             set(unbacked),
-            {"flowers_all_season", "pet_friendly", "kid_friendly",
-             "year_round_interest"},
+            {"flowers_all_season", "year_round_interest"},
         )
 
     def test_backed_goals_have_filters(self):
@@ -65,6 +76,22 @@ class TestDesignGoals(unittest.TestCase):
             if g.backed:
                 self.assertTrue(
                     g.filters, f"backed goal {g.key} should declare filters")
+
+    def test_well_behaved_goal_registered(self):
+        self.assertIsNotNone(dg.get_goal("well_behaved"))
+
+    def test_caveats_for_safety_goals(self):
+        # Denylist-backed goals carry an honest "not a guarantee" caveat …
+        caveats = dg.caveats_for_goals(["pet_friendly", "kid_friendly"])
+        self.assertEqual(len(caveats), 2)
+        self.assertTrue(all("guarantee" in c.lower() for c in caveats))
+        # … goals backed by real data (or none selected) carry none.
+        self.assertEqual(dg.caveats_for_goals(["native_only"]), [])
+        self.assertEqual(dg.caveats_for_goals(None), [])
+
+    def test_caveats_deduplicated(self):
+        self.assertEqual(
+            len(dg.caveats_for_goals(["pet_friendly", "pet_friendly"])), 1)
 
 
 if __name__ == "__main__":

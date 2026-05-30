@@ -465,7 +465,9 @@ def _apply_goal_feedback(project, goals, query_plants,
     project dict — no schema concept) for the GUI/CLI to surface. The key is
     only written when there is something to say. Deeper repair (e.g. filling
     bloom gaps) waits on the data described in ``docs/data_gaps_v1.44.md``."""
-    from src.design_goals import filters_for_goals, unbacked_goals, get_goal
+    from src.design_goals import (
+        filters_for_goals, unbacked_goals, get_goal, caveats_for_goals,
+    )
 
     warnings: list = []
     unbacked = unbacked_goals(goals)
@@ -475,6 +477,8 @@ def _apply_goal_feedback(project, goals, query_plants,
             "Applied as guidance to the AI only (no plant data backs these "
             "yet, so they can't be guaranteed): " + ", ".join(labels) + "."
         )
+    # Advisories for goals honoured by a denylist (e.g. the safety goals).
+    warnings.extend(caveats_for_goals(goals))
 
     goal_filters = filters_for_goals(goals)
     if goal_filters:

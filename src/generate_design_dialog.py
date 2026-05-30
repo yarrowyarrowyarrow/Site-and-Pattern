@@ -54,6 +54,8 @@ class GenerateDesignDialog(QDialog):
                     "There's no plant data backing this goal yet, so it's "
                     "passed to the AI as guidance and can't be guaranteed."
                 )
+            elif g.caveat:
+                cb.setToolTip(g.caveat)
             goals_layout.addWidget(cb)
             self._checks[g.key] = cb
         layout.addWidget(goals_box)

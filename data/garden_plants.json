@@ -108,7 +108,10 @@
     "native_to_alberta": 0,
     "growth_rate": "moderate",
     "years_to_maturity": "4",
-    "growth_curve": "moderate"
+    "growth_curve": "moderate",
+    "toxicity_pets": "high",
+    "toxicity_humans": "low",
+    "safety_source": "Cherry/chokecherry: cyanogenic foliage/twigs/pits (toxic to pets/livestock); fruit flesh edible, pits hazardous"
   },
   {
     "common_name": "Nanking Cherry",
@@ -145,7 +148,10 @@
     "native_to_alberta": 0,
     "growth_rate": "fast",
     "years_to_maturity": "3",
-    "growth_curve": "fast_start"
+    "growth_curve": "fast_start",
+    "toxicity_pets": "high",
+    "toxicity_humans": "low",
+    "safety_source": "Cherry/chokecherry: cyanogenic foliage/twigs/pits (toxic to pets/livestock); fruit flesh edible, pits hazardous"
   },
   {
     "common_name": "Bee Balm (Wild Bergamot)",
@@ -182,6 +188,7 @@
     "native_to_alberta": 1,
     "growth_rate": "fast",
     "years_to_maturity": "2",
-    "growth_curve": "fast_start"
+    "growth_curve": "fast_start",
+    "spread_habit": "slow_spreader"
   }
 ]

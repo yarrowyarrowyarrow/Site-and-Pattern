@@ -73,6 +73,10 @@ PLANT_TYPES       = {"tree", "shrub", "herb", "groundcover", "vine",
 LIFE_CYCLES       = {"perennial", "annual", "biennial"}
 DECIDUOUSNESS     = {"deciduous", "evergreen", "herbaceous", "semi-evergreen"}
 GROWTH_RATES      = {"slow", "moderate", "fast"}
+# Safety + spread (schema v18). Empty string = unassessed, always allowed.
+TOXICITY_LEVELS   = {"none", "low", "high"}
+SPREAD_HABITS     = {"clumping", "slow_spreader",
+                     "aggressive_rhizomatous", "self_seeding"}
 
 # ── Soft enum allowlists (drift here is a WARNING) ──────────────────────────
 
@@ -224,6 +228,9 @@ def validate_plant(
         ("perennial_annual",    LIFE_CYCLES),
         ("deciduous_evergreen", DECIDUOUSNESS),
         ("growth_rate",         GROWTH_RATES),
+        ("toxicity_pets",       TOXICITY_LEVELS),
+        ("toxicity_humans",     TOXICITY_LEVELS),
+        ("spread_habit",        SPREAD_HABITS),
     ):
         val = (record.get(field) or "").strip()
         if val and val not in allowed:

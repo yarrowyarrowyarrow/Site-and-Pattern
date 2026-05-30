@@ -46,6 +46,9 @@ class Goal:
     prompt_hint: str = ""
     community_hints: tuple[str, ...] = ()
     backed: bool = True
+    # An advisory shown when the goal is honoured by a DENYLIST (exclude
+    # known-bad) rather than a positive guarantee — e.g. the safety goals.
+    caveat: str = ""
 
 
 # Order here is the order checkboxes appear in the dialog. The two fully-backed
@@ -87,19 +90,26 @@ GOALS: list[Goal] = [
     Goal(
         key="pet_friendly",
         label="Pet friendly",
-        # No toxicity data yet (data gap #1) — hint only.
+        # Backed by a denylist (schema v18): excludes plants classified toxic
+        # to pets. Unassessed plants pass — hence the caveat.
+        filters={"pet_safe_only": True},
         prompt_hint="Avoid plants toxic to dogs and cats.",
-        backed=False,
+        caveat=("Pet friendly excludes plants known to be toxic to pets, but "
+                "the absence of a flag is not a guarantee of safety — confirm "
+                "before planting where it matters."),
     ),
     Goal(
         key="kid_friendly",
         label="Kid friendly",
-        # No toxicity / thorn data yet (data gap #1) — hint only.
+        # Denylist: excludes plants toxic to people AND thorny ones.
+        filters={"kid_safe_only": True},
         prompt_hint=(
             "Avoid plants with toxic berries or sharp thorns near areas where "
             "children play."
         ),
-        backed=False,
+        caveat=("Kid friendly excludes plants known to be toxic to people and "
+                "those with thorns, but is not a guarantee of safety — confirm "
+                "before planting where children play."),
     ),
     Goal(
         key="year_round_interest",
@@ -112,6 +122,18 @@ GOALS: list[Goal] = [
         ),
         community_hints=("Berry",),
         backed=False,
+    ),
+    Goal(
+        key="well_behaved",
+        label="Won't take over the yard",
+        # Denylist: excludes aggressive rhizomatous spreaders + heavy self-seeders.
+        filters={"well_behaved_only": True},
+        prompt_hint=(
+            "Prefer clumping, well-behaved plants; avoid aggressive "
+            "rhizomatous spreaders and heavy self-seeders."
+        ),
+        caveat=("Won't-take-over excludes plants known to spread aggressively; "
+                "unassessed plants are still shown."),
     ),
 ]
 
@@ -175,6 +197,22 @@ def community_name_hints(keys) -> list[str]:
             if hint not in seen:
                 seen.add(hint)
                 out.append(hint)
+    return out
+
+
+def caveats_for_goals(keys) -> list[str]:
+    """Ordered, de-duplicated caveat strings for ``keys`` — advisories for
+    goals honoured by a denylist (e.g. the safety goals) rather than a positive
+    guarantee. Unknown keys are skipped."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for key in keys or ():
+        goal = _BY_KEY.get(key)
+        if goal is None or not goal.caveat:
+            continue
+        if goal.caveat not in seen:
+            seen.add(goal.caveat)
+            out.append(goal.caveat)
     return out
 
 

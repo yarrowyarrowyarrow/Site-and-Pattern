@@ -6,10 +6,13 @@ have a local LLM — or a deterministic offline fallback — assemble a starting
 design. Goals are wired through `src/design_goals.py` (the single registry the
 GUI, CLI, and generation engine all read).
 
-This release ships **no schema or seed-data change**. Goals are honoured
-**hybrid**-style: a hard `search_plants` filter where the data already exists,
-an LLM prompt hint where it doesn't, plus a post-generation check that warns
-when an unbacked goal could only be applied as guidance.
+The initial feature shipped with **no schema or seed-data change**; **chunk 2
+(below) has since landed** the first data chunk (schema v18 — safety + spread).
+Goals are honoured **hybrid**-style: a hard `search_plants` filter where the
+data exists (now including a *denylist* for the safety goals), an LLM prompt
+hint where it doesn't, plus a post-generation check that warns when an unbacked
+goal could only be applied as guidance — or, for a denylist goal, surfaces an
+honest "not a guarantee" caveat.
 
 This document is the **roadmap for the data work** that turns the hint-only
 goals into real, filterable, verifiable design constraints — and folds in the
@@ -23,8 +26,9 @@ additional field ideas raised alongside the feature request.
 | `pollinator` | ✅ | hard filter `pollinator_only=True` (`plant_uses` junction) |
 | `food_producing` | ✅ | hard filter `edible_only=True` (`plants.edible_parts`) |
 | `flowers_all_season` | ⛅ hint only | `bloom_period` is free text, not month-queryable |
-| `pet_friendly` | ❌ hint only | no toxicity data exists |
-| `kid_friendly` | ❌ hint only | no toxicity / thorn data exists |
+| `pet_friendly` | ✅ denylist (chunk 2) | hard filter `pet_safe_only=True` excludes `toxicity_pets ∈ {low,high}`; unassessed pass (caveat) |
+| `kid_friendly` | ✅ denylist (chunk 2) | hard filter `kid_safe_only=True` excludes `toxicity_humans ∈ {low,high}` or `has_thorns` |
+| `well_behaved` | ✅ denylist (chunk 2) | hard filter `well_behaved_only=True` excludes aggressive `spread_habit` |
 | `year_round_interest` | ⛅ hint only | `deciduous_evergreen` / `fruit_period` exist but aren't filterable |
 
 ## Standing conventions for every data chunk below
@@ -56,18 +60,41 @@ column to `plants`.
 
 ---
 
-## Chunk 2 — Safety & small-lot fit  *(makes Pet/Kid friendly real)*
+## Chunk 2 — Safety & small-lot fit  *(makes Pet/Kid friendly real)* — ✅ SHIPPED (schema v18)
 
-- `safety_rating TEXT` ∈ `safe | toxic_pets | toxic_humans` (e.g. Monkshood,
-  Water Hemlock). Source per plant from ASPCA + provincial toxic-plant lists;
-  record a `safety_source` note. Add `pet_safe_only` / `kid_safe_only` kwargs to
-  `search_plants`.
-- `has_thorns INTEGER DEFAULT 0` (kid-proximity safety).
-- `growth_habit_logic TEXT` ∈ `clumping | slow_spreader |
-  aggressive_rhizomatous | self_seeding` — critical on small urban Edmonton
-  lots (e.g. flag Canada Anemone). Add a "well-behaved on small lots" filter.
-- Flip `pet_friendly` / `kid_friendly` to hard filters; add a "won't take over"
-  goal. → `_SCHEMA_VERSION` 18.
+Curated by `scripts/apply_safety_tags.py` — a re-runnable, idempotent, sourced
+denylist (classifications from ASPCA + poison-control references, noted per
+record in `safety_source`). What shipped:
+
+- **Split toxicity, not a single `safety_rating`.** `plants` gained
+  `toxicity_pets` and `toxicity_humans`, each `'' (unassessed) | none | low |
+  high`. The split (vs. the originally sketched single field) lets a plant be
+  *toxic to pets yet edible for people* — e.g. wild onion/chives and yarrow are
+  flagged pets-only, so they fail Pet-friendly but still pass Kid-friendly.
+- `has_thorns INTEGER DEFAULT 0` — kid-proximity safety (rose, hawthorn,
+  raspberry, buffaloberry, gooseberry, thistle).
+- `spread_habit TEXT` ∈ `clumping | slow_spreader | aggressive_rhizomatous |
+  self_seeding` (the doc's `growth_habit_logic`) — flags Canada Anemone, mints,
+  horsetails, Canada goldenrod, locoweeds, etc.
+- `search_plants` gained `pet_safe_only` / `kid_safe_only` / `well_behaved_only`;
+  `pet_friendly` / `kid_friendly` flipped to backed filters and a new
+  **`well_behaved`** ("won't take over the yard") goal added. `_SCHEMA_VERSION`
+  → **18**.
+
+**Denylist semantics (important).** Per the "never default to safe" rule above,
+the filters exclude only plants we have *classified* toxic/thorny/aggressive;
+the large unassessed remainder still appears. "Pet/Kid friendly" therefore means
+"no *known* hazard," not a guarantee — surfaced as a `Goal.caveat` (dialog
+tooltip + a generation-warning advisory). Safety-critical natives in the
+catalogue are covered, including **death camas (`Anticlea`)**, golden bean,
+larkspur, baneberry, milkweeds, dogbane, nightshade and the cyanogenic `Prunus`
+cherries (toxic foliage/pits, edible fruit — so they stay in *food* results
+while dropping out of pet/kid-safe).
+
+**Still open (future):** broaden coverage beyond the curated denylist (common
+fruit trees with cyanogenic seeds such as `Malus` are intentionally left
+unassessed for now); optionally promote positive `none` assertions if an
+allowlist mode is ever wanted.
 
 ## Chunk 3 — Year-round aesthetics  *(makes Year-round + Flowers-all-season real)*
 

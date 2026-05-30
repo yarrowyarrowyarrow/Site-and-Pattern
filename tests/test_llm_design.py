@@ -198,11 +198,24 @@ class TestGoalsAndOffline(unittest.TestCase):
                         f"pet_friendly hint missing from {hints}")
 
     def test_unbacked_goal_recorded_as_warning(self):
+        # year_round_interest is still hint-only (no data backs it).
         client = _FakeClient({"plants": [{"query": "yarrow"}]})
         project = llm.generate_design("x", site_config=_EDM, client=client,
-                                      goals=["pet_friendly", "kid_friendly"])
+                                      goals=["year_round_interest"])
         warnings = project.as_dict()["properties"].get("generation_warnings", [])
         self.assertTrue(any("guidance" in w.lower() for w in warnings))
+
+    def test_safety_goal_caveat_recorded(self):
+        # Pet friendly is now backed by a denylist filter, but carries an
+        # honest "not a guarantee" caveat in the generation warnings.
+        client = _FakeClient({"plants": [{"query": "saskatoon"}]})
+        project = llm.generate_design("x", site_config=_EDM, client=client,
+                                      goals=["pet_friendly"])
+        warnings = project.as_dict()["properties"].get("generation_warnings", [])
+        self.assertTrue(any("guarantee" in w.lower() for w in warnings),
+                        f"safety caveat missing from {warnings}")
+        # And it should NOT be mislabelled as unbacked "guidance".
+        self.assertFalse(any("guidance" in w.lower() for w in warnings))
 
     def test_apply_goal_feedback_repairs_unsatisfied_hard_goal(self):
         from src.permadesign_api import Project, query_plants

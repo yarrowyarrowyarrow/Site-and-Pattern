@@ -28,10 +28,19 @@ CREATE TABLE IF NOT EXISTS plants (
     years_to_maturity INTEGER,      -- estimated years to reach mature size
     growth_curve TEXT,              -- fast_early | steady | slow_start
     -- Schema v11
-    ab_ecoregion TEXT               -- comma-separated AB ecoregion tags
+    ab_ecoregion TEXT,              -- comma-separated AB ecoregion tags
                                     -- (aspen_parkland, mixedgrass_prairie,
                                     --  fescue_foothills, boreal_mixedwood,
                                     --  riparian, wet_meadow, subalpine_montane)
+    -- Safety + spread (schema v18, V1.44 chunk 2). Empty string = UNASSESSED,
+    -- which is deliberately NOT the same as 'none' — the safety filters use a
+    -- denylist (exclude only known-toxic), so unassessed plants are surfaced
+    -- with an honest "no known toxicity, not a guarantee" caveat.
+    toxicity_pets TEXT DEFAULT '',      -- '' (unassessed) | none | low | high
+    toxicity_humans TEXT DEFAULT '',    -- '' (unassessed) | none | low | high
+    has_thorns INTEGER DEFAULT 0,       -- 1 = thorns / spines / prickles
+    spread_habit TEXT DEFAULT '',       -- '' | clumping | slow_spreader | aggressive_rhizomatous | self_seeding
+    safety_source TEXT DEFAULT ''       -- provenance note for the safety classification
 );
 
 CREATE TABLE IF NOT EXISTS companion_friends (
