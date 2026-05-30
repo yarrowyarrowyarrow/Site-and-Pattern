@@ -46,6 +46,7 @@ _ALLOWED_FILTERS = {
     "native_only", "edible_only", "perennial_only", "pollinator_only",
     "host_plant_only", "keystone_only", "bird_food_only", "ab_ecoregion",
     "max_unit_price", "common_only",
+    "host_for_fauna_id", "supports_fauna_id", "supports_specialist",
 }
 
 _SYSTEM_PROMPT = """\
@@ -164,6 +165,33 @@ class LLMClient:
         return _parse_spec_json(content)
 
 
+def _fauna_digest(limit_per_taxon: int = 4) -> str:
+    """A compact, prompt-friendly summary of native fauna the catalogue can
+    support, grouped by taxon — grounds the model toward designing for real
+    species (the plant_fauna junction, schema v20). Empty string on any error."""
+    try:
+        from src.db.fauna import list_fauna
+        rows = list_fauna()
+    except Exception:  # noqa: BLE001 — context enrichment is best-effort
+        return ""
+    by_taxon: dict[str, list] = {}
+    for r in rows:
+        nm = r.get("common_name") or r.get("scientific_name")
+        if nm:
+            by_taxon.setdefault(r.get("taxon", "other"), []).append(nm)
+    label = {"lepidoptera": "butterflies/moths", "bird": "birds", "bee": "bees",
+             "other_insect": "other beneficial insects", "mammal": "mammals"}
+    parts = []
+    for taxon, names in by_taxon.items():
+        sample = ", ".join(names[:limit_per_taxon])
+        if sample:
+            parts.append(f"{label.get(taxon, taxon)}: {sample}")
+    if not parts:
+        return ""
+    return ("NATIVE FAUNA the catalogue can support (favour plants that feed or "
+            "host these): " + "; ".join(parts))
+
+
 def _build_messages(prompt: str, context: dict,
                     extra_hints: Optional[list] = None) -> list[dict]:
     names = context.get("community_names") or []
@@ -178,6 +206,8 @@ def _build_messages(prompt: str, context: dict,
         lines.append(f"SITE: lat {site['latitude']}, lng {site['longitude']}"
                      + (f", hardiness zone {site['hardiness_zone']}"
                         if site.get("hardiness_zone") else ""))
+    if context.get("fauna_note"):
+        lines.append(context["fauna_note"])
     if extra_hints:
         lines.append("DESIGN GOALS (honour these): " + " ".join(extra_hints))
     return [
@@ -396,6 +426,7 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
         "community_names": [c.get("name") for c in communities if c.get("name")],
         "structure_ids": [s.get("id") for s in structures if s.get("id")],
         "site": dict(site_config or {}),
+        "fauna_note": _fauna_digest(),
     }
 
     from src.design_goals import filters_for_goals, hints_for_goals

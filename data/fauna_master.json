@@ -313,5 +313,491 @@
     "range_notes": "Common throughout open Alberta habitats.",
     "icon": "🐝",
     "description": "Small to medium ground-nesting bees, often metallic green. Highly generalist on composites and other prairie flowers."
+  },
+  {
+    "scientific_name": "Bombus huntii",
+    "common_name": "Hunt's Bumble Bee",
+    "taxon": "bee",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🐝",
+    "description": "Common prairie/parkland bumble bee; long colony season makes it a key generalist pollinator of asters, clovers and mints."
+  },
+  {
+    "scientific_name": "Bombus ternarius",
+    "common_name": "Tricoloured Bumble Bee",
+    "taxon": "bee",
+    "ab_native": 1,
+    "range_notes": "Central & northern AB.",
+    "icon": "🐝",
+    "description": "Orange-banded bumble bee of boreal and parkland edges; forages willow, blueberry, goldenrod."
+  },
+  {
+    "scientific_name": "Bombus rufocinctus",
+    "common_name": "Red-belted Bumble Bee",
+    "taxon": "bee",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🐝",
+    "description": "Highly variable short-tongued bumble bee common in gardens and grassland."
+  },
+  {
+    "scientific_name": "Bombus borealis",
+    "common_name": "Northern Amber Bumble Bee",
+    "taxon": "bee",
+    "ab_native": 1,
+    "range_notes": "Aspen parkland & boreal.",
+    "icon": "🐝",
+    "description": "Long-tongued bumble bee favouring deep flowers (legumes, mints)."
+  },
+  {
+    "scientific_name": "Osmia lignaria",
+    "common_name": "Blue Orchard Mason Bee",
+    "taxon": "bee",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🐝",
+    "description": "Spring solitary bee; superb fruit-tree and willow pollinator that nests in cavities (and bee hotels)."
+  },
+  {
+    "scientific_name": "Megachile relativa",
+    "common_name": "A Leafcutter Bee",
+    "taxon": "bee",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🐝",
+    "description": "Solitary cavity-nester that cuts leaf discs (often from rose) to line its nest cells; strong summer pollinator of legumes and asters."
+  },
+  {
+    "scientific_name": "Agapostemon virescens",
+    "common_name": "Bicoloured Sweat Bee",
+    "taxon": "bee",
+    "ab_native": 1,
+    "range_notes": "Prairie & parkland.",
+    "icon": "🐝",
+    "description": "Metallic-green communal ground-nesting bee; generalist on open flowers."
+  },
+  {
+    "scientific_name": "Lasioglossum spp.",
+    "common_name": "Small Sweat Bees",
+    "taxon": "bee",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🐝",
+    "description": "Hugely diverse genus of tiny ground-nesting generalist pollinators — among the most abundant bees in any Alberta garden."
+  },
+  {
+    "scientific_name": "Colletes inaequalis",
+    "common_name": "Spring Cellophane Bee",
+    "taxon": "bee",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🐝",
+    "description": "Early ground-nesting bee that lines burrows with a cellophane-like secretion; vital willow and early-spring pollinator."
+  },
+  {
+    "scientific_name": "Halictus rubicundus",
+    "common_name": "Orange-legged Furrow Bee",
+    "taxon": "bee",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🐝",
+    "description": "Social sweat bee nesting in bare soil; generalist on composites."
+  },
+  {
+    "scientific_name": "Anthophora terminalis",
+    "common_name": "A Digger Bee",
+    "taxon": "bee",
+    "ab_native": 1,
+    "range_notes": "Parkland & foothills.",
+    "icon": "🐝",
+    "description": "Fast-flying solitary digger bee; long tongue suits penstemons and mints."
+  },
+  {
+    "scientific_name": "Buteo jamaicensis",
+    "common_name": "Red-tailed Hawk",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🦅",
+    "description": "Open-country raptor that nests in tall poplars and spruce and hunts small mammals over meadows."
+  },
+  {
+    "scientific_name": "Bubo virginianus",
+    "common_name": "Great Horned Owl",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🦉",
+    "description": "Alberta's provincial bird; nests in poplar/spruce, controls rodents."
+  },
+  {
+    "scientific_name": "Falco columbarius",
+    "common_name": "Merlin",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🦅",
+    "description": "Small falcon that reuses old crow/magpie nests in spruce; hunts small birds in towns and parkland."
+  },
+  {
+    "scientific_name": "Falco sparverius",
+    "common_name": "American Kestrel",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🦅",
+    "description": "Cavity-nesting little falcon of open country; eats grasshoppers, voles."
+  },
+  {
+    "scientific_name": "Dryobates pubescens",
+    "common_name": "Downy Woodpecker",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🐦",
+    "description": "Smallest woodpecker; forages insects on shrubs and trees and excavates nest cavities in soft dead wood (poplar, birch)."
+  },
+  {
+    "scientific_name": "Colaptes auratus",
+    "common_name": "Northern Flicker",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🐦",
+    "description": "Ground-foraging woodpecker that eats ants and autumn fruit; nests in aspen/poplar snags."
+  },
+  {
+    "scientific_name": "Cyanocitta cristata",
+    "common_name": "Blue Jay",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Central & southern AB.",
+    "icon": "🐦",
+    "description": "Bold parkland corvid; caches acorns and conifer seeds and takes fruit."
+  },
+  {
+    "scientific_name": "Pica hudsonia",
+    "common_name": "Black-billed Magpie",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🐦",
+    "description": "Ubiquitous corvid; omnivore whose bulky thorny nests shelter other species after use."
+  },
+  {
+    "scientific_name": "Perisoreus canadensis",
+    "common_name": "Canada Jay",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Boreal & foothills.",
+    "icon": "🐦",
+    "description": "Boreal/foothills jay that caches food in spruce; year-round resident."
+  },
+  {
+    "scientific_name": "Sitta canadensis",
+    "common_name": "Red-breasted Nuthatch",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🐦",
+    "description": "Conifer specialist that eats spruce/pine seeds and bark insects; nests in cavities."
+  },
+  {
+    "scientific_name": "Melospiza melodia",
+    "common_name": "Song Sparrow",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🐦",
+    "description": "Shrub-and-edge sparrow; eats grass and forb seeds and nests low in dense cover."
+  },
+  {
+    "scientific_name": "Junco hyemalis",
+    "common_name": "Dark-eyed Junco",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🐦",
+    "description": "Ground-feeding sparrow of forest edges; winters on fallen weed seeds."
+  },
+  {
+    "scientific_name": "Pinicola enucleator",
+    "common_name": "Pine Grosbeak",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Boreal; winters south.",
+    "icon": "🐦",
+    "description": "Large winter finch that feeds on mountain-ash and other persistent fruit plus conifer and birch seeds."
+  },
+  {
+    "scientific_name": "Bombycilla garrulus",
+    "common_name": "Bohemian Waxwing",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Winters throughout AB.",
+    "icon": "🐦",
+    "description": "Winter-flocking frugivore that strips berries from saskatoon, highbush-cranberry, hawthorn and rose."
+  },
+  {
+    "scientific_name": "Bonasa umbellus",
+    "common_name": "Ruffed Grouse",
+    "taxon": "bird",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🐦",
+    "description": "Aspen-woodland grouse that eats poplar/willow buds, catkins and shrub fruit; broods need insect-rich understory."
+  },
+  {
+    "scientific_name": "Eristalis tenax",
+    "common_name": "Drone Fly",
+    "taxon": "other_insect",
+    "ab_native": 0,
+    "range_notes": "Throughout AB.",
+    "icon": "🪰",
+    "description": "Honey-bee-mimicking hover fly (introduced from Europe, now widespread); adults are major generalist pollinators of composites and umbels."
+  },
+  {
+    "scientific_name": "Syrphus ribesii",
+    "common_name": "A Flower Fly",
+    "taxon": "other_insect",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🪰",
+    "description": "Hover fly whose aphid-eating larvae are valuable biocontrol; adults take pollen and nectar."
+  },
+  {
+    "scientific_name": "Toxomerus marginatus",
+    "common_name": "Calligrapher Fly",
+    "taxon": "other_insect",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🪰",
+    "description": "Tiny hover fly; aphid-predator larvae, pollinator adults."
+  },
+  {
+    "scientific_name": "Hippodamia convergens",
+    "common_name": "Convergent Lady Beetle",
+    "taxon": "other_insect",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🐞",
+    "description": "Native lady beetle; both adults and larvae eat aphids, adults also take pollen and nectar."
+  },
+  {
+    "scientific_name": "Coccinella novemnotata",
+    "common_name": "Nine-spotted Lady Beetle",
+    "taxon": "other_insect",
+    "ab_native": 1,
+    "range_notes": "Prairie & parkland.",
+    "icon": "🐞",
+    "description": "Declining native lady beetle; aphid predator of grassland and gardens."
+  },
+  {
+    "scientific_name": "Chrysoperla carnea",
+    "common_name": "Green Lacewing",
+    "taxon": "other_insect",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🦗",
+    "description": "'Aphid lions' as larvae; adults sip nectar and honeydew. Key garden biocontrol."
+  },
+  {
+    "scientific_name": "Pterostichus spp.",
+    "common_name": "Woodland Ground Beetles",
+    "taxon": "other_insect",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🪲",
+    "description": "Night-active predators of slugs, cutworms and weed seeds; shelter in leaf litter and groundcover."
+  },
+  {
+    "scientific_name": "Chauliognathus pensylvanicus",
+    "common_name": "Goldenrod Soldier Beetle",
+    "taxon": "other_insect",
+    "ab_native": 1,
+    "range_notes": "Prairie & parkland.",
+    "icon": "🪲",
+    "description": "Pollen- and nectar-feeding beetle of late-summer goldenrod; larvae are soil predators."
+  },
+  {
+    "scientific_name": "Anax junius",
+    "common_name": "Common Green Darner",
+    "taxon": "other_insect",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🪰",
+    "description": "Large migratory dragonfly; aerial predator of mosquitoes and flies, needs ponds with emergent sedges."
+  },
+  {
+    "scientific_name": "Libellula quadrimaculata",
+    "common_name": "Four-spotted Skimmer",
+    "taxon": "other_insect",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🪰",
+    "description": "Pond dragonfly of marsh edges; voracious insect predator."
+  },
+  {
+    "scientific_name": "Sympetrum internum",
+    "common_name": "Cherry-faced Meadowhawk",
+    "taxon": "other_insect",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🪰",
+    "description": "Late-season red dragonfly of wet meadows and pond margins."
+  },
+  {
+    "scientific_name": "Enallagma cyathigerum",
+    "common_name": "Common Blue Damselfly",
+    "taxon": "other_insect",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🪰",
+    "description": "Slender damselfly of vegetated still water; larvae and adults prey on small insects."
+  },
+  {
+    "scientific_name": "Myotis lucifugus",
+    "common_name": "Little Brown Bat",
+    "taxon": "mammal",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🦇",
+    "description": "Insectivorous bat eating thousands of mosquitoes nightly; roosts under bark and in tree cavities. SARA-listed (Endangered)."
+  },
+  {
+    "scientific_name": "Eptesicus fuscus",
+    "common_name": "Big Brown Bat",
+    "taxon": "mammal",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🦇",
+    "description": "Hardy urban-tolerant bat; forages beetles and moths over meadows and water."
+  },
+  {
+    "scientific_name": "Lasionycteris noctivagans",
+    "common_name": "Silver-haired Bat",
+    "taxon": "mammal",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🦇",
+    "description": "Migratory tree bat roosting under bark of poplar and spruce."
+  },
+  {
+    "scientific_name": "Peromyscus maniculatus",
+    "common_name": "Deer Mouse",
+    "taxon": "mammal",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🐭",
+    "description": "Abundant native seed-eater and key prey for owls, hawks and foxes; disperses seeds and fungi."
+  },
+  {
+    "scientific_name": "Microtus pennsylvanicus",
+    "common_name": "Meadow Vole",
+    "taxon": "mammal",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🐭",
+    "description": "Grassland herbivore whose runways shape meadows; cornerstone prey for raptors and weasels."
+  },
+  {
+    "scientific_name": "Sorex cinereus",
+    "common_name": "Masked Shrew",
+    "taxon": "mammal",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🐭",
+    "description": "Tiny voracious insectivore of moist litter; eats insects, slugs and larvae."
+  },
+  {
+    "scientific_name": "Hyles lineata",
+    "common_name": "White-lined Sphinx",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🦋",
+    "description": "Day-and-dusk hawkmoth; a hummingbird-like nectar pollinator of tubular flowers; larvae feed on flax and evening-primrose family plants."
+  },
+  {
+    "scientific_name": "Pachysphinx modesta",
+    "common_name": "Big Poplar Sphinx",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🦋",
+    "description": "Large hawkmoth whose caterpillars feed on poplar and willow foliage."
+  },
+  {
+    "scientific_name": "Smerinthus jamaicensis",
+    "common_name": "Twin-spotted Sphinx",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🦋",
+    "description": "Eyed hawkmoth; larvae host on willow, birch and cherry."
+  },
+  {
+    "scientific_name": "Pyrrharctia isabella",
+    "common_name": "Isabella Tiger Moth",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🦋",
+    "description": "The 'woolly bear' caterpillar; a generalist on asters, goldenrods and many forbs that overwinters as a larva."
+  },
+  {
+    "scientific_name": "Lophocampa maculata",
+    "common_name": "Spotted Tussock Moth",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🦋",
+    "description": "Tussock caterpillar feeding on willow, poplar, alder and birch."
+  },
+  {
+    "scientific_name": "Epargyreus clarus",
+    "common_name": "Silver-spotted Skipper",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Southern & central AB.",
+    "icon": "🦋",
+    "description": "Large skipper; caterpillars host on native legumes (milkvetch, vetch)."
+  },
+  {
+    "scientific_name": "Coenonympha tullia",
+    "common_name": "Common Ringlet",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🦋",
+    "description": "Abundant grassland butterfly; caterpillars feed on native grasses."
+  },
+  {
+    "scientific_name": "Colias philodice",
+    "common_name": "Clouded Sulphur",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🦋",
+    "description": "Ubiquitous yellow butterfly; caterpillars host on legumes (vetch, milkvetch, lupine)."
+  },
+  {
+    "scientific_name": "Plebejus melissa",
+    "common_name": "Melissa Blue",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Prairie & parkland.",
+    "icon": "🦋",
+    "description": "Prairie blue whose caterpillars feed on legumes and are tended by ants."
+  },
+  {
+    "scientific_name": "Phyciodes cocyta",
+    "common_name": "Northern Crescent",
+    "taxon": "lepidoptera",
+    "ab_native": 1,
+    "range_notes": "Throughout AB.",
+    "icon": "🦋",
+    "description": "Small orange-and-black butterfly; caterpillars host on native asters."
   }
 ]

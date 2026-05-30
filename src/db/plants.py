@@ -82,7 +82,7 @@ _PLANT_FAUNA_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "plant_fauna_maste
 # scientific name is the lookup key in the seed pipeline, so existing
 # polyculture / recipe references continue to resolve correctly on
 # reseed; only the user-visible display name changes.
-_SCHEMA_VERSION = 19
+_SCHEMA_VERSION = 20
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -816,6 +816,9 @@ def search_plants(
     well_behaved_only: bool = False,
     max_unit_price: Optional[float] = None,
     common_only: bool = False,
+    host_for_fauna_id: Optional[int] = None,
+    supports_fauna_id: Optional[int] = None,
+    supports_specialist: bool = False,
 ) -> list[dict]:
     """
     Return plants matching all supplied filters.
@@ -927,6 +930,23 @@ def search_plants(
         # natives, so they pass — as does unassessed availability.
         sql += (" AND COALESCE(availability_class,'') NOT IN "
                 "('seed_or_plug','rare')")
+
+    # Fauna-support filters (schema v20) via the plant_fauna junction. Reuse the
+    # EXISTS-subquery style used by the use-tag filters above.
+    if host_for_fauna_id is not None:
+        sql += (" AND EXISTS (SELECT 1 FROM plant_fauna pf WHERE "
+                "pf.plant_id = plants.id AND pf.fauna_id = ? "
+                "AND pf.relationship = 'larval_host')")
+        params.append(int(host_for_fauna_id))
+
+    if supports_fauna_id is not None:
+        sql += (" AND EXISTS (SELECT 1 FROM plant_fauna pf WHERE "
+                "pf.plant_id = plants.id AND pf.fauna_id = ?)")
+        params.append(int(supports_fauna_id))
+
+    if supports_specialist:
+        sql += (" AND EXISTS (SELECT 1 FROM plant_fauna pf WHERE "
+                "pf.plant_id = plants.id AND pf.specificity = 'specialist')")
 
     sql += " ORDER BY plant_type, common_name"
 

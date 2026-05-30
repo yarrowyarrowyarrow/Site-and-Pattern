@@ -165,5 +165,84 @@ class TestFaunaSchema(unittest.TestCase):
         self.assertGreater(len(birds), 0)
 
 
+class TestFaunaExpansionV20(unittest.TestCase):
+    """V1.46 (schema v20): the registry grew to ~2.5× with the first
+    other_insect + mammal taxa, and search_plants gained fauna-support filters
+    backed by the plant_fauna junction."""
+
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+        cls.fauna = list_fauna()
+        cls.by_sci = {f["scientific_name"]: f for f in cls.fauna}
+
+    def test_expanded_count(self):
+        # 35 -> ~89 (a 2-3x expansion).
+        self.assertGreaterEqual(len(self.fauna), 80)
+
+    def test_all_five_taxa_present(self):
+        taxa = {f["taxon"] for f in self.fauna}
+        self.assertSetEqual(
+            taxa, {"lepidoptera", "bird", "bee", "other_insect", "mammal"})
+
+    def test_new_taxa_have_records(self):
+        # other_insect and mammal are brand new in this chunk.
+        counts = {t: sum(1 for f in self.fauna if f["taxon"] == t)
+                  for t in ("other_insect", "mammal")}
+        self.assertGreaterEqual(counts["other_insect"], 5)
+        self.assertGreaterEqual(counts["mammal"], 3)
+
+    def test_introduced_species_marked_non_native(self):
+        # The drone fly is introduced; it must not claim ab_native.
+        drone = self.by_sci.get("Eristalis tenax")
+        self.assertIsNotNone(drone)
+        self.assertEqual(drone["ab_native"], 0)
+
+    def test_host_for_fauna_filter(self):
+        from src.db.plants import search_plants
+        sphinx = self.by_sci.get("Pachysphinx modesta")  # Big Poplar Sphinx
+        self.assertIsNotNone(sphinx)
+        hosts = {p["common_name"]
+                 for p in search_plants(host_for_fauna_id=sphinx["id"])}
+        self.assertTrue(hosts, "expected larval-host plants for the sphinx")
+        self.assertTrue(hosts & {"Balsam Poplar", "Trembling Aspen",
+                                 "Pussy Willow"})
+
+    def test_supports_fauna_superset_of_host(self):
+        from src.db.plants import search_plants
+        sphinx = self.by_sci.get("Pachysphinx modesta")
+        host = {p["common_name"]
+                for p in search_plants(host_for_fauna_id=sphinx["id"])}
+        any_rel = {p["common_name"]
+                   for p in search_plants(supports_fauna_id=sphinx["id"])}
+        self.assertTrue(host.issubset(any_rel))
+
+    def test_supports_specialist_filter(self):
+        from src.db.plants import search_plants
+        sp = search_plants(supports_specialist=True)
+        allp = search_plants()
+        self.assertLess(len(sp), len(allp))         # a genuine subset
+        self.assertTrue(sp, "seed data includes specialist relationships")
+        for p in sp[:5]:                            # each really has one
+            rels = fauna_for_plant(p["id"])
+            self.assertTrue(any(r.get("specificity") == "specialist"
+                                for r in rels))
+
+    def test_allowed_filters_include_fauna(self):
+        import src.llm_design as llm
+        for k in ("host_for_fauna_id", "supports_fauna_id",
+                  "supports_specialist"):
+            self.assertIn(k, llm._ALLOWED_FILTERS)
+
+    def test_fauna_digest_builds_and_reaches_brief(self):
+        import src.llm_design as llm
+        digest = llm._fauna_digest()
+        self.assertTrue(digest)
+        msgs = llm._build_messages(
+            "x", {"community_names": [], "structure_ids": [],
+                  "site": {}, "fauna_note": digest})
+        self.assertIn("NATIVE FAUNA", msgs[0]["content"])
+
+
 if __name__ == "__main__":
     unittest.main()

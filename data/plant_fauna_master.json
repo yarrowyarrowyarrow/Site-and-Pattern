@@ -8,221 +8,2079 @@
       "Wilson & Carril (2015), The Bees in Your Backyard"
     ]
   },
-
-  {"plant": "Showy Milkweed",   "fauna": "Danaus plexippus", "relationship": "larval_host", "specificity": "specialist", "source": "Acorn & Sheldon 2006", "notes": "Sole larval food source for Monarch caterpillars (Asclepias only)."},
-  {"plant": "Green Milkweed",   "fauna": "Danaus plexippus", "relationship": "larval_host", "specificity": "specialist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Showy Milkweed",   "fauna": "Bombus spp.",      "relationship": "nectar",      "specificity": "generalist", "source": "Wilson & Carril 2015"},
-
-  {"plant": "Trembling Aspen",  "fauna": "Papilio canadensis", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Paper Birch",      "fauna": "Papilio canadensis", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Water Birch",      "fauna": "Papilio canadensis", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Dwarf Birch",      "fauna": "Papilio canadensis", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Pussy Willow",     "fauna": "Papilio canadensis", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Sandbar Willow",   "fauna": "Papilio canadensis", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Bebb's Willow",    "fauna": "Papilio canadensis", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Chokecherry",      "fauna": "Papilio canadensis", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Pin Cherry",       "fauna": "Papilio canadensis", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Western Mountain Ash","fauna": "Papilio canadensis","relationship": "larval_host","specificity": "generalist","source": "Pohl et al. 2018"},
-
-  {"plant": "Pussy Willow",     "fauna": "Papilio rutulus", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Sandbar Willow",   "fauna": "Papilio rutulus", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Bebb's Willow",    "fauna": "Papilio rutulus", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Trembling Aspen",  "fauna": "Papilio rutulus", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Chokecherry",      "fauna": "Papilio rutulus", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Pin Cherry",       "fauna": "Papilio rutulus", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-
-  {"plant": "Big Sagebrush",     "fauna": "Papilio machaon", "relationship": "larval_host", "specificity": "specialist", "source": "Acorn & Sheldon 2006", "notes": "Prairie subspecies dodi is an Artemisia specialist."},
-  {"plant": "Silver Sagebrush",  "fauna": "Papilio machaon", "relationship": "larval_host", "specificity": "specialist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Prairie Sage",      "fauna": "Papilio machaon", "relationship": "larval_host", "specificity": "specialist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Prairie Sagewort",  "fauna": "Papilio machaon", "relationship": "larval_host", "specificity": "specialist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Plains Wormwood",   "fauna": "Papilio machaon", "relationship": "larval_host", "specificity": "specialist", "source": "Acorn & Sheldon 2006"},
-
-  {"plant": "Pussy Willow",     "fauna": "Nymphalis antiopa", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Sandbar Willow",   "fauna": "Nymphalis antiopa", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Bebb's Willow",    "fauna": "Nymphalis antiopa", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Basket Willow",    "fauna": "Nymphalis antiopa", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Narrow-leaf Willow","fauna": "Nymphalis antiopa","relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Trembling Aspen",  "fauna": "Nymphalis antiopa", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Paper Birch",      "fauna": "Nymphalis antiopa", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Water Birch",      "fauna": "Nymphalis antiopa", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-
-  {"plant": "Stinging Nettle",  "fauna": "Aglais milberti", "relationship": "larval_host", "specificity": "specialist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Slender Nettle",   "fauna": "Aglais milberti", "relationship": "larval_host", "specificity": "specialist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Stinging Nettle",  "fauna": "Vanessa atalanta", "relationship": "larval_host", "specificity": "specialist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Slender Nettle",   "fauna": "Vanessa atalanta", "relationship": "larval_host", "specificity": "specialist", "source": "Acorn & Sheldon 2006"},
-
-  {"plant": "Trembling Aspen",  "fauna": "Nymphalis l-album", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Paper Birch",      "fauna": "Nymphalis l-album", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Water Birch",      "fauna": "Nymphalis l-album", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Pussy Willow",     "fauna": "Nymphalis l-album", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Sandbar Willow",   "fauna": "Nymphalis l-album", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-
-  {"plant": "Prairie Thistle",  "fauna": "Vanessa cardui", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-
-  {"plant": "Trembling Aspen",  "fauna": "Limenitis arthemis", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Paper Birch",      "fauna": "Limenitis arthemis", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Pussy Willow",     "fauna": "Limenitis arthemis", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Sandbar Willow",   "fauna": "Limenitis arthemis", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-
-  {"plant": "Early Blue Violet",     "fauna": "Speyeria aphrodite", "relationship": "larval_host", "specificity": "specialist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Crowfoot Violet",       "fauna": "Speyeria aphrodite", "relationship": "larval_host", "specificity": "specialist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Marsh Violet",          "fauna": "Speyeria aphrodite", "relationship": "larval_host", "specificity": "specialist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Round-leaved Yellow Violet","fauna": "Speyeria aphrodite","relationship": "larval_host","specificity": "specialist","source": "Acorn & Sheldon 2006"},
-  {"plant": "Western Canada Violet", "fauna": "Speyeria aphrodite", "relationship": "larval_host", "specificity": "specialist", "source": "Acorn & Sheldon 2006"},
-
-  {"plant": "Early Blue Violet",     "fauna": "Speyeria mormonia", "relationship": "larval_host", "specificity": "specialist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Crowfoot Violet",       "fauna": "Speyeria mormonia", "relationship": "larval_host", "specificity": "specialist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Marsh Violet",          "fauna": "Speyeria mormonia", "relationship": "larval_host", "specificity": "specialist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Round-leaved Yellow Violet","fauna": "Speyeria mormonia","relationship": "larval_host","specificity": "specialist","source": "Acorn & Sheldon 2006"},
-  {"plant": "Western Canada Violet", "fauna": "Speyeria mormonia", "relationship": "larval_host", "specificity": "specialist", "source": "Acorn & Sheldon 2006"},
-
-  {"plant": "Red Osier Dogwood",     "fauna": "Celastrina ladon", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Bunchberry",            "fauna": "Celastrina ladon", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Highbush Cranberry",    "fauna": "Celastrina ladon", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Chokecherry",           "fauna": "Celastrina ladon", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-
-  {"plant": "Silvery Lupine",        "fauna": "Glaucopsyche lygdamus", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Silky Lupine",          "fauna": "Glaucopsyche lygdamus", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Canada Milk Vetch",     "fauna": "Glaucopsyche lygdamus", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Ascending Milkvetch",   "fauna": "Glaucopsyche lygdamus", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Drummond's Milkvetch",  "fauna": "Glaucopsyche lygdamus", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Missouri Milkvetch",    "fauna": "Glaucopsyche lygdamus", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Wild Vetch",            "fauna": "Glaucopsyche lygdamus", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Sweet Broom (Alpine Sweetvetch)","fauna": "Glaucopsyche lygdamus","relationship": "larval_host","specificity": "generalist","source": "Acorn & Sheldon 2006"},
-
-  {"plant": "Canada Milk Vetch",     "fauna": "Cupido amyntula", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Ascending Milkvetch",   "fauna": "Cupido amyntula", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Drummond's Milkvetch",  "fauna": "Cupido amyntula", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Missouri Milkvetch",    "fauna": "Cupido amyntula", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Wild Vetch",            "fauna": "Cupido amyntula", "relationship": "larval_host", "specificity": "generalist", "source": "Acorn & Sheldon 2006"},
-  {"plant": "Sweet Broom (Alpine Sweetvetch)","fauna": "Cupido amyntula","relationship": "larval_host","specificity": "generalist","source": "Acorn & Sheldon 2006"},
-
-  {"plant": "Paper Birch",   "fauna": "Antheraea polyphemus", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Water Birch",   "fauna": "Antheraea polyphemus", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Trembling Aspen","fauna": "Antheraea polyphemus","relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Pussy Willow",  "fauna": "Antheraea polyphemus", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Sandbar Willow","fauna": "Antheraea polyphemus", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Chokecherry",   "fauna": "Antheraea polyphemus", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Saskatoon Berry","fauna": "Antheraea polyphemus","relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-
-  {"plant": "Pussy Willow",  "fauna": "Hyalophora cecropia", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Sandbar Willow","fauna": "Hyalophora cecropia", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Chokecherry",   "fauna": "Hyalophora cecropia", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Pin Cherry",    "fauna": "Hyalophora cecropia", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Paper Birch",   "fauna": "Hyalophora cecropia", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-
-  {"plant": "Bracted Honeysuckle",             "fauna": "Hemaris thysbe", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Twining Honeysuckle (Limber Honeysuckle)","fauna": "Hemaris thysbe","relationship": "larval_host","specificity": "generalist","source": "Pohl et al. 2018"},
-  {"plant": "Common Snowberry",                "fauna": "Hemaris thysbe", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Western Snowberry",               "fauna": "Hemaris thysbe", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-
-  {"plant": "Common Snowberry",                "fauna": "Hemaris diffinis", "relationship": "larval_host", "specificity": "specialist", "source": "Pohl et al. 2018"},
-  {"plant": "Western Snowberry",               "fauna": "Hemaris diffinis", "relationship": "larval_host", "specificity": "specialist", "source": "Pohl et al. 2018"},
-  {"plant": "Bracted Honeysuckle",             "fauna": "Hemaris diffinis", "relationship": "larval_host", "specificity": "generalist", "source": "Pohl et al. 2018"},
-  {"plant": "Twining Honeysuckle (Limber Honeysuckle)","fauna": "Hemaris diffinis","relationship": "larval_host","specificity": "generalist","source": "Pohl et al. 2018"},
-
-  {"plant": "Saskatoon Berry",       "fauna": "Bombycilla cedrorum", "relationship": "fruit_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Western Mountain Ash",  "fauna": "Bombycilla cedrorum", "relationship": "fruit_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Highbush Cranberry",    "fauna": "Bombycilla cedrorum", "relationship": "fruit_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Chokecherry",           "fauna": "Bombycilla cedrorum", "relationship": "fruit_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Red Osier Dogwood",     "fauna": "Bombycilla cedrorum", "relationship": "fruit_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Pin Cherry",            "fauna": "Bombycilla cedrorum", "relationship": "fruit_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Black Hawthorn",        "fauna": "Bombycilla cedrorum", "relationship": "fruit_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Bunchberry",            "fauna": "Bombycilla cedrorum", "relationship": "fruit_food", "specificity": "generalist", "source": "Birds of the World"},
-
-  {"plant": "Common Sunflower",      "fauna": "Spinus tristis", "relationship": "seed_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Maximilian Sunflower",  "fauna": "Spinus tristis", "relationship": "seed_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Nuttall's Sunflower",   "fauna": "Spinus tristis", "relationship": "seed_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Giant Sunflower",       "fauna": "Spinus tristis", "relationship": "seed_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Stiff Sunflower (Rhombic-leaved Sunflower)","fauna": "Spinus tristis","relationship": "seed_food","specificity": "generalist","source": "Birds of the World"},
-  {"plant": "Canada Goldenrod",      "fauna": "Spinus tristis", "relationship": "seed_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Tall Goldenrod",        "fauna": "Spinus tristis", "relationship": "seed_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Late Goldenrod",        "fauna": "Spinus tristis", "relationship": "seed_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Prairie Goldenrod",     "fauna": "Spinus tristis", "relationship": "seed_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Gray Goldenrod",        "fauna": "Spinus tristis", "relationship": "seed_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Stiff Goldenrod",       "fauna": "Spinus tristis", "relationship": "seed_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Smooth Aster",          "fauna": "Spinus tristis", "relationship": "seed_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Showy Aster",           "fauna": "Spinus tristis", "relationship": "seed_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Prairie Thistle",       "fauna": "Spinus tristis", "relationship": "seed_food", "specificity": "specialist", "source": "Birds of the World"},
-
-  {"plant": "Paper Birch", "fauna": "Spinus pinus",     "relationship": "seed_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Water Birch", "fauna": "Spinus pinus",     "relationship": "seed_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Dwarf Birch", "fauna": "Spinus pinus",     "relationship": "seed_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Paper Birch", "fauna": "Acanthis flammea", "relationship": "seed_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Water Birch", "fauna": "Acanthis flammea", "relationship": "seed_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Dwarf Birch", "fauna": "Acanthis flammea", "relationship": "seed_food", "specificity": "generalist", "source": "Birds of the World"},
-
-  {"plant": "Wild Bergamot",         "fauna": "Archilochus colubris", "relationship": "nectar", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Eastern Red Columbine", "fauna": "Archilochus colubris", "relationship": "nectar", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Red Columbine",         "fauna": "Archilochus colubris", "relationship": "nectar", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Blue Columbine",        "fauna": "Archilochus colubris", "relationship": "nectar", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Yellow Columbine",      "fauna": "Archilochus colubris", "relationship": "nectar", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Bracted Honeysuckle",   "fauna": "Archilochus colubris", "relationship": "nectar", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Twining Honeysuckle (Limber Honeysuckle)","fauna": "Archilochus colubris","relationship": "nectar","specificity": "generalist","source": "Birds of the World"},
-  {"plant": "Alberta Penstemon",     "fauna": "Archilochus colubris", "relationship": "nectar", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Lilac Penstemon",       "fauna": "Archilochus colubris", "relationship": "nectar", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Lyalls Penstemon",      "fauna": "Archilochus colubris", "relationship": "nectar", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Fuzzy-tongue Penstemon","fauna": "Archilochus colubris", "relationship": "nectar", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Tall Larkspur",         "fauna": "Archilochus colubris", "relationship": "nectar", "specificity": "generalist", "source": "Birds of the World"},
-
-  {"plant": "Wild Bergamot",         "fauna": "Selasphorus rufus", "relationship": "nectar", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Eastern Red Columbine", "fauna": "Selasphorus rufus", "relationship": "nectar", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Red Columbine",         "fauna": "Selasphorus rufus", "relationship": "nectar", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Blue Columbine",        "fauna": "Selasphorus rufus", "relationship": "nectar", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Bracted Honeysuckle",   "fauna": "Selasphorus rufus", "relationship": "nectar", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Twining Honeysuckle (Limber Honeysuckle)","fauna": "Selasphorus rufus","relationship": "nectar","specificity": "generalist","source": "Birds of the World"},
-  {"plant": "Alberta Penstemon",     "fauna": "Selasphorus rufus", "relationship": "nectar", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Lilac Penstemon",       "fauna": "Selasphorus rufus", "relationship": "nectar", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Lyalls Penstemon",      "fauna": "Selasphorus rufus", "relationship": "nectar", "specificity": "generalist", "source": "Birds of the World"},
-
-  {"plant": "Trembling Aspen", "fauna": "Poecile atricapillus", "relationship": "cover", "specificity": "generalist", "source": "Birds of the World", "notes": "Aspens host hundreds of moth/butterfly species; their caterpillars are critical chickadee nestling food."},
-  {"plant": "Paper Birch",     "fauna": "Poecile atricapillus", "relationship": "cover", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Pussy Willow",    "fauna": "Poecile atricapillus", "relationship": "cover", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Sandbar Willow",  "fauna": "Poecile atricapillus", "relationship": "cover", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Chokecherry",     "fauna": "Poecile atricapillus", "relationship": "cover", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Pin Cherry",      "fauna": "Poecile atricapillus", "relationship": "cover", "specificity": "generalist", "source": "Birds of the World"},
-
-  {"plant": "Pussy Willow",      "fauna": "Setophaga petechia", "relationship": "nesting", "specificity": "specialist", "source": "Birds of the World"},
-  {"plant": "Sandbar Willow",    "fauna": "Setophaga petechia", "relationship": "nesting", "specificity": "specialist", "source": "Birds of the World"},
-  {"plant": "Bebb's Willow",     "fauna": "Setophaga petechia", "relationship": "nesting", "specificity": "specialist", "source": "Birds of the World"},
-  {"plant": "Red Osier Dogwood", "fauna": "Setophaga petechia", "relationship": "nesting", "specificity": "specialist", "source": "Birds of the World"},
-
-  {"plant": "Saskatoon Berry",      "fauna": "Turdus migratorius", "relationship": "fruit_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Western Mountain Ash", "fauna": "Turdus migratorius", "relationship": "fruit_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Chokecherry",          "fauna": "Turdus migratorius", "relationship": "fruit_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Black Hawthorn",       "fauna": "Turdus migratorius", "relationship": "fruit_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Pin Cherry",           "fauna": "Turdus migratorius", "relationship": "fruit_food", "specificity": "generalist", "source": "Birds of the World"},
-  {"plant": "Highbush Cranberry",   "fauna": "Turdus migratorius", "relationship": "fruit_food", "specificity": "generalist", "source": "Birds of the World"},
-
-  {"plant": "Wild Bergamot",        "fauna": "Bombus spp.", "relationship": "nectar", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Silvery Lupine",       "fauna": "Bombus spp.", "relationship": "pollen", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Silky Lupine",         "fauna": "Bombus spp.", "relationship": "pollen", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Canada Goldenrod",     "fauna": "Bombus spp.", "relationship": "nectar", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Smooth Aster",         "fauna": "Bombus spp.", "relationship": "nectar", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Showy Aster",          "fauna": "Bombus spp.", "relationship": "nectar", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Common Sunflower",     "fauna": "Bombus spp.", "relationship": "nectar", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Maximilian Sunflower", "fauna": "Bombus spp.", "relationship": "nectar", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Red Columbine",        "fauna": "Bombus spp.", "relationship": "nectar", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Blue Columbine",       "fauna": "Bombus spp.", "relationship": "nectar", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Tall Larkspur",        "fauna": "Bombus spp.", "relationship": "nectar", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-
-  {"plant": "Pussy Willow",   "fauna": "Andrena spp.", "relationship": "pollen", "specificity": "specialist", "source": "Wilson & Carril 2015", "notes": "Spring-flying mining bees are tightly linked to willow catkins."},
-  {"plant": "Sandbar Willow", "fauna": "Andrena spp.", "relationship": "pollen", "specificity": "specialist", "source": "Wilson & Carril 2015"},
-  {"plant": "Bebb's Willow",  "fauna": "Andrena spp.", "relationship": "pollen", "specificity": "specialist", "source": "Wilson & Carril 2015"},
-
-  {"plant": "Saskatoon Berry","fauna": "Osmia spp.", "relationship": "pollen", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Chokecherry",    "fauna": "Osmia spp.", "relationship": "pollen", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Pin Cherry",     "fauna": "Osmia spp.", "relationship": "pollen", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Wild Strawberry","fauna": "Osmia spp.", "relationship": "pollen", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-
-  {"plant": "Silvery Lupine",   "fauna": "Megachile spp.", "relationship": "pollen", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Silky Lupine",     "fauna": "Megachile spp.", "relationship": "pollen", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Canada Milk Vetch","fauna": "Megachile spp.", "relationship": "pollen", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Smooth Aster",     "fauna": "Megachile spp.", "relationship": "pollen", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Showy Aster",      "fauna": "Megachile spp.", "relationship": "pollen", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-
-  {"plant": "Smooth Aster",         "fauna": "Halictus spp.", "relationship": "pollen", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Canada Goldenrod",     "fauna": "Halictus spp.", "relationship": "pollen", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Common Sunflower",     "fauna": "Halictus spp.", "relationship": "pollen", "specificity": "generalist", "source": "Wilson & Carril 2015"},
-  {"plant": "Maximilian Sunflower", "fauna": "Halictus spp.", "relationship": "pollen", "specificity": "generalist", "source": "Wilson & Carril 2015"}
+  {
+    "plant": "Showy Milkweed",
+    "fauna": "Danaus plexippus",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006",
+    "notes": "Sole larval food source for Monarch caterpillars (Asclepias only)."
+  },
+  {
+    "plant": "Green Milkweed",
+    "fauna": "Danaus plexippus",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Showy Milkweed",
+    "fauna": "Bombus spp.",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Trembling Aspen",
+    "fauna": "Papilio canadensis",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Paper Birch",
+    "fauna": "Papilio canadensis",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Water Birch",
+    "fauna": "Papilio canadensis",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Dwarf Birch",
+    "fauna": "Papilio canadensis",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Pussy Willow",
+    "fauna": "Papilio canadensis",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Sandbar Willow",
+    "fauna": "Papilio canadensis",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Bebb's Willow",
+    "fauna": "Papilio canadensis",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Chokecherry",
+    "fauna": "Papilio canadensis",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Pin Cherry",
+    "fauna": "Papilio canadensis",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Western Mountain Ash",
+    "fauna": "Papilio canadensis",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Pussy Willow",
+    "fauna": "Papilio rutulus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Sandbar Willow",
+    "fauna": "Papilio rutulus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Bebb's Willow",
+    "fauna": "Papilio rutulus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Trembling Aspen",
+    "fauna": "Papilio rutulus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Chokecherry",
+    "fauna": "Papilio rutulus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Pin Cherry",
+    "fauna": "Papilio rutulus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Big Sagebrush",
+    "fauna": "Papilio machaon",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006",
+    "notes": "Prairie subspecies dodi is an Artemisia specialist."
+  },
+  {
+    "plant": "Silver Sagebrush",
+    "fauna": "Papilio machaon",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Prairie Sage",
+    "fauna": "Papilio machaon",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Prairie Sagewort",
+    "fauna": "Papilio machaon",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Plains Wormwood",
+    "fauna": "Papilio machaon",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Pussy Willow",
+    "fauna": "Nymphalis antiopa",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Sandbar Willow",
+    "fauna": "Nymphalis antiopa",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Bebb's Willow",
+    "fauna": "Nymphalis antiopa",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Basket Willow",
+    "fauna": "Nymphalis antiopa",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Narrow-leaf Willow",
+    "fauna": "Nymphalis antiopa",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Trembling Aspen",
+    "fauna": "Nymphalis antiopa",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Paper Birch",
+    "fauna": "Nymphalis antiopa",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Water Birch",
+    "fauna": "Nymphalis antiopa",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Stinging Nettle",
+    "fauna": "Aglais milberti",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Slender Nettle",
+    "fauna": "Aglais milberti",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Stinging Nettle",
+    "fauna": "Vanessa atalanta",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Slender Nettle",
+    "fauna": "Vanessa atalanta",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Trembling Aspen",
+    "fauna": "Nymphalis l-album",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Paper Birch",
+    "fauna": "Nymphalis l-album",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Water Birch",
+    "fauna": "Nymphalis l-album",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Pussy Willow",
+    "fauna": "Nymphalis l-album",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Sandbar Willow",
+    "fauna": "Nymphalis l-album",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Prairie Thistle",
+    "fauna": "Vanessa cardui",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Trembling Aspen",
+    "fauna": "Limenitis arthemis",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Paper Birch",
+    "fauna": "Limenitis arthemis",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Pussy Willow",
+    "fauna": "Limenitis arthemis",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Sandbar Willow",
+    "fauna": "Limenitis arthemis",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Early Blue Violet",
+    "fauna": "Speyeria aphrodite",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Crowfoot Violet",
+    "fauna": "Speyeria aphrodite",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Marsh Violet",
+    "fauna": "Speyeria aphrodite",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Round-leaved Yellow Violet",
+    "fauna": "Speyeria aphrodite",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Western Canada Violet",
+    "fauna": "Speyeria aphrodite",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Early Blue Violet",
+    "fauna": "Speyeria mormonia",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Crowfoot Violet",
+    "fauna": "Speyeria mormonia",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Marsh Violet",
+    "fauna": "Speyeria mormonia",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Round-leaved Yellow Violet",
+    "fauna": "Speyeria mormonia",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Western Canada Violet",
+    "fauna": "Speyeria mormonia",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Red Osier Dogwood",
+    "fauna": "Celastrina ladon",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Bunchberry",
+    "fauna": "Celastrina ladon",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Highbush Cranberry",
+    "fauna": "Celastrina ladon",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Chokecherry",
+    "fauna": "Celastrina ladon",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Silvery Lupine",
+    "fauna": "Glaucopsyche lygdamus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Silky Lupine",
+    "fauna": "Glaucopsyche lygdamus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Canada Milk Vetch",
+    "fauna": "Glaucopsyche lygdamus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Ascending Milkvetch",
+    "fauna": "Glaucopsyche lygdamus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Drummond's Milkvetch",
+    "fauna": "Glaucopsyche lygdamus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Missouri Milkvetch",
+    "fauna": "Glaucopsyche lygdamus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Wild Vetch",
+    "fauna": "Glaucopsyche lygdamus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Sweet Broom (Alpine Sweetvetch)",
+    "fauna": "Glaucopsyche lygdamus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Canada Milk Vetch",
+    "fauna": "Cupido amyntula",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Ascending Milkvetch",
+    "fauna": "Cupido amyntula",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Drummond's Milkvetch",
+    "fauna": "Cupido amyntula",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Missouri Milkvetch",
+    "fauna": "Cupido amyntula",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Wild Vetch",
+    "fauna": "Cupido amyntula",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Sweet Broom (Alpine Sweetvetch)",
+    "fauna": "Cupido amyntula",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Paper Birch",
+    "fauna": "Antheraea polyphemus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Water Birch",
+    "fauna": "Antheraea polyphemus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Trembling Aspen",
+    "fauna": "Antheraea polyphemus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Pussy Willow",
+    "fauna": "Antheraea polyphemus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Sandbar Willow",
+    "fauna": "Antheraea polyphemus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Chokecherry",
+    "fauna": "Antheraea polyphemus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Saskatoon Berry",
+    "fauna": "Antheraea polyphemus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Pussy Willow",
+    "fauna": "Hyalophora cecropia",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Sandbar Willow",
+    "fauna": "Hyalophora cecropia",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Chokecherry",
+    "fauna": "Hyalophora cecropia",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Pin Cherry",
+    "fauna": "Hyalophora cecropia",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Paper Birch",
+    "fauna": "Hyalophora cecropia",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Bracted Honeysuckle",
+    "fauna": "Hemaris thysbe",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Twining Honeysuckle (Limber Honeysuckle)",
+    "fauna": "Hemaris thysbe",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Common Snowberry",
+    "fauna": "Hemaris thysbe",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Western Snowberry",
+    "fauna": "Hemaris thysbe",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Common Snowberry",
+    "fauna": "Hemaris diffinis",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Western Snowberry",
+    "fauna": "Hemaris diffinis",
+    "relationship": "larval_host",
+    "specificity": "specialist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Bracted Honeysuckle",
+    "fauna": "Hemaris diffinis",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Twining Honeysuckle (Limber Honeysuckle)",
+    "fauna": "Hemaris diffinis",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018"
+  },
+  {
+    "plant": "Saskatoon Berry",
+    "fauna": "Bombycilla cedrorum",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Western Mountain Ash",
+    "fauna": "Bombycilla cedrorum",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Highbush Cranberry",
+    "fauna": "Bombycilla cedrorum",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Chokecherry",
+    "fauna": "Bombycilla cedrorum",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Red Osier Dogwood",
+    "fauna": "Bombycilla cedrorum",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Pin Cherry",
+    "fauna": "Bombycilla cedrorum",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Black Hawthorn",
+    "fauna": "Bombycilla cedrorum",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Bunchberry",
+    "fauna": "Bombycilla cedrorum",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Common Sunflower",
+    "fauna": "Spinus tristis",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Maximilian Sunflower",
+    "fauna": "Spinus tristis",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Nuttall's Sunflower",
+    "fauna": "Spinus tristis",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Giant Sunflower",
+    "fauna": "Spinus tristis",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Stiff Sunflower (Rhombic-leaved Sunflower)",
+    "fauna": "Spinus tristis",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Canada Goldenrod",
+    "fauna": "Spinus tristis",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Tall Goldenrod",
+    "fauna": "Spinus tristis",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Late Goldenrod",
+    "fauna": "Spinus tristis",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Prairie Goldenrod",
+    "fauna": "Spinus tristis",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Gray Goldenrod",
+    "fauna": "Spinus tristis",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Stiff Goldenrod",
+    "fauna": "Spinus tristis",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Spinus tristis",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Showy Aster",
+    "fauna": "Spinus tristis",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Prairie Thistle",
+    "fauna": "Spinus tristis",
+    "relationship": "seed_food",
+    "specificity": "specialist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Paper Birch",
+    "fauna": "Spinus pinus",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Water Birch",
+    "fauna": "Spinus pinus",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Dwarf Birch",
+    "fauna": "Spinus pinus",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Paper Birch",
+    "fauna": "Acanthis flammea",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Water Birch",
+    "fauna": "Acanthis flammea",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Dwarf Birch",
+    "fauna": "Acanthis flammea",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Wild Bergamot",
+    "fauna": "Archilochus colubris",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Eastern Red Columbine",
+    "fauna": "Archilochus colubris",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Red Columbine",
+    "fauna": "Archilochus colubris",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Blue Columbine",
+    "fauna": "Archilochus colubris",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Yellow Columbine",
+    "fauna": "Archilochus colubris",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Bracted Honeysuckle",
+    "fauna": "Archilochus colubris",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Twining Honeysuckle (Limber Honeysuckle)",
+    "fauna": "Archilochus colubris",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Alberta Penstemon",
+    "fauna": "Archilochus colubris",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Lilac Penstemon",
+    "fauna": "Archilochus colubris",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Lyalls Penstemon",
+    "fauna": "Archilochus colubris",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Fuzzy-tongue Penstemon",
+    "fauna": "Archilochus colubris",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Tall Larkspur",
+    "fauna": "Archilochus colubris",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Wild Bergamot",
+    "fauna": "Selasphorus rufus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Eastern Red Columbine",
+    "fauna": "Selasphorus rufus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Red Columbine",
+    "fauna": "Selasphorus rufus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Blue Columbine",
+    "fauna": "Selasphorus rufus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Bracted Honeysuckle",
+    "fauna": "Selasphorus rufus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Twining Honeysuckle (Limber Honeysuckle)",
+    "fauna": "Selasphorus rufus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Alberta Penstemon",
+    "fauna": "Selasphorus rufus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Lilac Penstemon",
+    "fauna": "Selasphorus rufus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Lyalls Penstemon",
+    "fauna": "Selasphorus rufus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Trembling Aspen",
+    "fauna": "Poecile atricapillus",
+    "relationship": "cover",
+    "specificity": "generalist",
+    "source": "Birds of the World",
+    "notes": "Aspens host hundreds of moth/butterfly species; their caterpillars are critical chickadee nestling food."
+  },
+  {
+    "plant": "Paper Birch",
+    "fauna": "Poecile atricapillus",
+    "relationship": "cover",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Pussy Willow",
+    "fauna": "Poecile atricapillus",
+    "relationship": "cover",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Sandbar Willow",
+    "fauna": "Poecile atricapillus",
+    "relationship": "cover",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Chokecherry",
+    "fauna": "Poecile atricapillus",
+    "relationship": "cover",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Pin Cherry",
+    "fauna": "Poecile atricapillus",
+    "relationship": "cover",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Pussy Willow",
+    "fauna": "Setophaga petechia",
+    "relationship": "nesting",
+    "specificity": "specialist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Sandbar Willow",
+    "fauna": "Setophaga petechia",
+    "relationship": "nesting",
+    "specificity": "specialist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Bebb's Willow",
+    "fauna": "Setophaga petechia",
+    "relationship": "nesting",
+    "specificity": "specialist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Red Osier Dogwood",
+    "fauna": "Setophaga petechia",
+    "relationship": "nesting",
+    "specificity": "specialist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Saskatoon Berry",
+    "fauna": "Turdus migratorius",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Western Mountain Ash",
+    "fauna": "Turdus migratorius",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Chokecherry",
+    "fauna": "Turdus migratorius",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Black Hawthorn",
+    "fauna": "Turdus migratorius",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Pin Cherry",
+    "fauna": "Turdus migratorius",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Highbush Cranberry",
+    "fauna": "Turdus migratorius",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Birds of the World"
+  },
+  {
+    "plant": "Wild Bergamot",
+    "fauna": "Bombus spp.",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Silvery Lupine",
+    "fauna": "Bombus spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Silky Lupine",
+    "fauna": "Bombus spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Canada Goldenrod",
+    "fauna": "Bombus spp.",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Bombus spp.",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Showy Aster",
+    "fauna": "Bombus spp.",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Common Sunflower",
+    "fauna": "Bombus spp.",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Maximilian Sunflower",
+    "fauna": "Bombus spp.",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Red Columbine",
+    "fauna": "Bombus spp.",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Blue Columbine",
+    "fauna": "Bombus spp.",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Tall Larkspur",
+    "fauna": "Bombus spp.",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Pussy Willow",
+    "fauna": "Andrena spp.",
+    "relationship": "pollen",
+    "specificity": "specialist",
+    "source": "Wilson & Carril 2015",
+    "notes": "Spring-flying mining bees are tightly linked to willow catkins."
+  },
+  {
+    "plant": "Sandbar Willow",
+    "fauna": "Andrena spp.",
+    "relationship": "pollen",
+    "specificity": "specialist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Bebb's Willow",
+    "fauna": "Andrena spp.",
+    "relationship": "pollen",
+    "specificity": "specialist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Saskatoon Berry",
+    "fauna": "Osmia spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Chokecherry",
+    "fauna": "Osmia spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Pin Cherry",
+    "fauna": "Osmia spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Wild Strawberry",
+    "fauna": "Osmia spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Silvery Lupine",
+    "fauna": "Megachile spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Silky Lupine",
+    "fauna": "Megachile spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Canada Milk Vetch",
+    "fauna": "Megachile spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Megachile spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Showy Aster",
+    "fauna": "Megachile spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Halictus spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Canada Goldenrod",
+    "fauna": "Halictus spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Common Sunflower",
+    "fauna": "Halictus spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Maximilian Sunflower",
+    "fauna": "Halictus spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Wilson & Carril 2015"
+  },
+  {
+    "plant": "Pussy Willow",
+    "fauna": "Colletes inaequalis",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada",
+    "notes": "Critical early-spring pollen for emerging solitary bees."
+  },
+  {
+    "plant": "Pussy Willow",
+    "fauna": "Osmia lignaria",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Sandbar Willow",
+    "fauna": "Bombus ternarius",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Saskatoon Berry",
+    "fauna": "Osmia lignaria",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada",
+    "notes": "Mason bees are key spring fruit-tree pollinators."
+  },
+  {
+    "plant": "Chokecherry",
+    "fauna": "Osmia lignaria",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Wild Bergamot",
+    "fauna": "Bombus borealis",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Wild Bergamot",
+    "fauna": "Anthophora terminalis",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Smooth Blue Beardtongue",
+    "fauna": "Anthophora terminalis",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Canada Goldenrod",
+    "fauna": "Bombus rufocinctus",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Canada Goldenrod",
+    "fauna": "Agapostemon virescens",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Canada Goldenrod",
+    "fauna": "Halictus rubicundus",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Late Goldenrod",
+    "fauna": "Lasioglossum spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Bombus huntii",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Lasioglossum spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Megachile relativa",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Maximilian Sunflower",
+    "fauna": "Agapostemon virescens",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Maximilian Sunflower",
+    "fauna": "Halictus rubicundus",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Blanketflower",
+    "fauna": "Megachile relativa",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Prickly Wild Rose",
+    "fauna": "Megachile relativa",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada",
+    "notes": "Leafcutters cut discs from rose foliage to line nest cells."
+  },
+  {
+    "plant": "Silky Lupine",
+    "fauna": "Bombus borealis",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Shrubby Cinquefoil",
+    "fauna": "Bombus huntii",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Wild Blue Flax",
+    "fauna": "Lasioglossum spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Showy Milkweed",
+    "fauna": "Bombus huntii",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Dotted Blazingstar",
+    "fauna": "Bombus huntii",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Dotted Blazingstar",
+    "fauna": "Bombus rufocinctus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Packer, Bees of Canada"
+  },
+  {
+    "plant": "Saskatoon Berry",
+    "fauna": "Bombycilla garrulus",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Saskatoon Berry",
+    "fauna": "Pinicola enucleator",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Saskatoon Berry",
+    "fauna": "Bonasa umbellus",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Highbush Cranberry",
+    "fauna": "Bombycilla garrulus",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Highbush Cranberry",
+    "fauna": "Pinicola enucleator",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Highbush Cranberry",
+    "fauna": "Bonasa umbellus",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Black Hawthorn",
+    "fauna": "Bombycilla garrulus",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Chokecherry",
+    "fauna": "Bombycilla garrulus",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Chokecherry",
+    "fauna": "Cyanocitta cristata",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Red Osier Dogwood",
+    "fauna": "Cyanocitta cristata",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Prickly Wild Rose",
+    "fauna": "Bombycilla garrulus",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World",
+    "notes": "Rose hips persist into winter for waxwings and grosbeaks."
+  },
+  {
+    "plant": "Canada Buffaloberry",
+    "fauna": "Bonasa umbellus",
+    "relationship": "fruit_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Maximilian Sunflower",
+    "fauna": "Junco hyemalis",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Maximilian Sunflower",
+    "fauna": "Melospiza melodia",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Common Sunflower",
+    "fauna": "Cyanocitta cristata",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Canada Goldenrod",
+    "fauna": "Junco hyemalis",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "White Spruce",
+    "fauna": "Sitta canadensis",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "White Spruce",
+    "fauna": "Pinicola enucleator",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Lodgepole Pine",
+    "fauna": "Sitta canadensis",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Bur Oak",
+    "fauna": "Cyanocitta cristata",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World",
+    "notes": "Blue Jays cache acorns, aiding oak dispersal."
+  },
+  {
+    "plant": "Paper Birch",
+    "fauna": "Pinicola enucleator",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Paper Birch",
+    "fauna": "Bonasa umbellus",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World",
+    "notes": "Grouse eat birch catkins and buds in winter."
+  },
+  {
+    "plant": "Trembling Aspen",
+    "fauna": "Bubo virginianus",
+    "relationship": "nesting",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Trembling Aspen",
+    "fauna": "Colaptes auratus",
+    "relationship": "nesting",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World",
+    "notes": "Flickers excavate cavities in aspen snags later used by many species."
+  },
+  {
+    "plant": "Trembling Aspen",
+    "fauna": "Dryobates pubescens",
+    "relationship": "nesting",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Trembling Aspen",
+    "fauna": "Bonasa umbellus",
+    "relationship": "cover",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Balsam Poplar",
+    "fauna": "Buteo jamaicensis",
+    "relationship": "nesting",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "White Spruce",
+    "fauna": "Bubo virginianus",
+    "relationship": "cover",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "White Spruce",
+    "fauna": "Falco columbarius",
+    "relationship": "nesting",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World",
+    "notes": "Merlins reuse old corvid nests in spruce."
+  },
+  {
+    "plant": "White Spruce",
+    "fauna": "Perisoreus canadensis",
+    "relationship": "cover",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Paper Birch",
+    "fauna": "Dryobates pubescens",
+    "relationship": "nesting",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Prickly Wild Rose",
+    "fauna": "Melospiza melodia",
+    "relationship": "nesting",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World",
+    "notes": "Dense thorny shrubs shelter low nests."
+  },
+  {
+    "plant": "Western Snowberry",
+    "fauna": "Melospiza melodia",
+    "relationship": "cover",
+    "specificity": "generalist",
+    "source": "Cornell Birds of the World"
+  },
+  {
+    "plant": "Yarrow",
+    "fauna": "Eristalis tenax",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn, Bugs of Alberta"
+  },
+  {
+    "plant": "Yarrow",
+    "fauna": "Syrphus ribesii",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn, Bugs of Alberta"
+  },
+  {
+    "plant": "Yarrow",
+    "fauna": "Chrysoperla carnea",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn, Bugs of Alberta"
+  },
+  {
+    "plant": "Yarrow",
+    "fauna": "Hippodamia convergens",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn, Bugs of Alberta"
+  },
+  {
+    "plant": "Canada Goldenrod",
+    "fauna": "Chauliognathus pensylvanicus",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Acorn, Bugs of Alberta"
+  },
+  {
+    "plant": "Canada Goldenrod",
+    "fauna": "Eristalis tenax",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn, Bugs of Alberta"
+  },
+  {
+    "plant": "Late Goldenrod",
+    "fauna": "Hippodamia convergens",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn, Bugs of Alberta"
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Toxomerus marginatus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn, Bugs of Alberta"
+  },
+  {
+    "plant": "Philadelphia Fleabane",
+    "fauna": "Syrphus ribesii",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn, Bugs of Alberta"
+  },
+  {
+    "plant": "Blanketflower",
+    "fauna": "Coccinella novemnotata",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn, Bugs of Alberta"
+  },
+  {
+    "plant": "Wild Strawberry",
+    "fauna": "Pterostichus spp.",
+    "relationship": "cover",
+    "specificity": "generalist",
+    "source": "Acorn, Bugs of Alberta",
+    "notes": "Groundcover and litter shelter predatory ground beetles."
+  },
+  {
+    "plant": "Bunchberry",
+    "fauna": "Pterostichus spp.",
+    "relationship": "cover",
+    "specificity": "generalist",
+    "source": "Acorn, Bugs of Alberta"
+  },
+  {
+    "plant": "Water Sedge",
+    "fauna": "Anax junius",
+    "relationship": "cover",
+    "specificity": "generalist",
+    "source": "Acorn, Bugs of Alberta",
+    "notes": "Dragonfly larvae develop among submerged/emergent sedge stems."
+  },
+  {
+    "plant": "Beaked Sedge",
+    "fauna": "Libellula quadrimaculata",
+    "relationship": "cover",
+    "specificity": "generalist",
+    "source": "Acorn, Bugs of Alberta"
+  },
+  {
+    "plant": "Water Sedge",
+    "fauna": "Enallagma cyathigerum",
+    "relationship": "cover",
+    "specificity": "generalist",
+    "source": "Acorn, Bugs of Alberta"
+  },
+  {
+    "plant": "Beaked Sedge",
+    "fauna": "Sympetrum internum",
+    "relationship": "cover",
+    "specificity": "generalist",
+    "source": "Acorn, Bugs of Alberta"
+  },
+  {
+    "plant": "Trembling Aspen",
+    "fauna": "Lasionycteris noctivagans",
+    "relationship": "cover",
+    "specificity": "generalist",
+    "source": "Pattie & Fisher, Mammals of Alberta",
+    "notes": "Silver-haired bats roost under loose bark."
+  },
+  {
+    "plant": "Balsam Poplar",
+    "fauna": "Myotis lucifugus",
+    "relationship": "cover",
+    "specificity": "generalist",
+    "source": "Pattie & Fisher, Mammals of Alberta"
+  },
+  {
+    "plant": "Maximilian Sunflower",
+    "fauna": "Peromyscus maniculatus",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Pattie & Fisher, Mammals of Alberta"
+  },
+  {
+    "plant": "Rough Fescue",
+    "fauna": "Microtus pennsylvanicus",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Pattie & Fisher, Mammals of Alberta",
+    "notes": "Bunchgrass provides voles food and runway cover."
+  },
+  {
+    "plant": "Blue Grama Grass",
+    "fauna": "Peromyscus maniculatus",
+    "relationship": "seed_food",
+    "specificity": "generalist",
+    "source": "Pattie & Fisher, Mammals of Alberta"
+  },
+  {
+    "plant": "Wild Strawberry",
+    "fauna": "Sorex cinereus",
+    "relationship": "cover",
+    "specificity": "generalist",
+    "source": "Pattie & Fisher, Mammals of Alberta"
+  },
+  {
+    "plant": "Balsam Poplar",
+    "fauna": "Pachysphinx modesta",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018 (Moths of Alberta)"
+  },
+  {
+    "plant": "Trembling Aspen",
+    "fauna": "Pachysphinx modesta",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018 (Moths of Alberta)"
+  },
+  {
+    "plant": "Pussy Willow",
+    "fauna": "Pachysphinx modesta",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018 (Moths of Alberta)"
+  },
+  {
+    "plant": "Pussy Willow",
+    "fauna": "Smerinthus jamaicensis",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018 (Moths of Alberta)"
+  },
+  {
+    "plant": "Paper Birch",
+    "fauna": "Smerinthus jamaicensis",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018 (Moths of Alberta)"
+  },
+  {
+    "plant": "Pin Cherry",
+    "fauna": "Smerinthus jamaicensis",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018 (Moths of Alberta)"
+  },
+  {
+    "plant": "Sandbar Willow",
+    "fauna": "Lophocampa maculata",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018 (Moths of Alberta)"
+  },
+  {
+    "plant": "Trembling Aspen",
+    "fauna": "Lophocampa maculata",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018 (Moths of Alberta)"
+  },
+  {
+    "plant": "Green Alder",
+    "fauna": "Lophocampa maculata",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018 (Moths of Alberta)"
+  },
+  {
+    "plant": "Canada Goldenrod",
+    "fauna": "Pyrrharctia isabella",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018 (Moths of Alberta)"
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Pyrrharctia isabella",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018 (Moths of Alberta)"
+  },
+  {
+    "plant": "Wild Blue Flax",
+    "fauna": "Hyles lineata",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018 (Moths of Alberta)"
+  },
+  {
+    "plant": "Dotted Blazingstar",
+    "fauna": "Hyles lineata",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018 (Moths of Alberta)"
+  },
+  {
+    "plant": "Wild Bergamot",
+    "fauna": "Hyles lineata",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Pohl et al. 2018 (Moths of Alberta)"
+  },
+  {
+    "plant": "Canada Milk Vetch",
+    "fauna": "Epargyreus clarus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Wild Vetch",
+    "fauna": "Epargyreus clarus",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Rough Fescue",
+    "fauna": "Coenonympha tullia",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Foothills Rough Fescue",
+    "fauna": "Coenonympha tullia",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Wild Vetch",
+    "fauna": "Colias philodice",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Silky Lupine",
+    "fauna": "Colias philodice",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Ascending Milkvetch",
+    "fauna": "Colias philodice",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Silvery Lupine",
+    "fauna": "Plebejus melissa",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Canada Milk Vetch",
+    "fauna": "Plebejus melissa",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Phyciodes cocyta",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Lindley's Aster",
+    "fauna": "Phyciodes cocyta",
+    "relationship": "larval_host",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Wild Bergamot",
+    "fauna": "Epargyreus clarus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Dotted Blazingstar",
+    "fauna": "Colias philodice",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Canada Goldenrod",
+    "fauna": "Phyciodes cocyta",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006"
+  }
 ]
