@@ -17,6 +17,7 @@ from PyQt6.QtGui import QColor, QPixmap, QPainter, QFont, QIcon
 
 from src.db.structures import (
     STRUCTURES, STRUCTURE_CATEGORIES, get_structure, get_all_structures,
+    EXISTING_TREE_ID, EXISTING_BUILDING_ID, existing_feature_def,
 )
 
 
@@ -155,7 +156,65 @@ class StructurePanel(QWidget):
         self._btn_place.clicked.connect(self._on_place_clicked)
         layout.addWidget(self._btn_place)
 
+        self._build_existing_features_section(layout)
+
         self._populate_structures()
+
+    def _build_existing_features_section(self, layout):
+        """Mark EXISTING on-site trees / buildings (V1.49). Not placeable
+        structures — context for the generator's shade model. Rides the same
+        click-to-place pipeline via reserved structure ids."""
+        box = QGroupBox("Existing site features")
+        box.setToolTip(
+            "Mark trees and buildings already on your property so the design "
+            "generator places shade-loving plants in their cast shade."
+        )
+        vb = QVBoxLayout(box)
+        vb.setContentsMargins(6, 6, 6, 6)
+        vb.setSpacing(4)
+
+        hint = QLabel("Set height/size, click a button, then click the map.")
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        vb.addWidget(hint)
+
+        dims = QHBoxLayout()
+        dims.addWidget(QLabel("Height (m):"))
+        self._exist_height = QDoubleSpinBox()
+        self._exist_height.setRange(1.0, 60.0)
+        self._exist_height.setSingleStep(0.5)
+        self._exist_height.setValue(6.0)
+        dims.addWidget(self._exist_height)
+        dims.addWidget(QLabel("Size (m):"))
+        self._exist_size = QDoubleSpinBox()
+        self._exist_size.setRange(0.5, 40.0)
+        self._exist_size.setSingleStep(0.5)
+        self._exist_size.setValue(6.0)
+        self._exist_size.setToolTip("Canopy diameter (tree) or footprint width "
+                                    "(building).")
+        dims.addWidget(self._exist_size)
+        vb.addLayout(dims)
+
+        btns = QHBoxLayout()
+        btn_tree = QPushButton("🌳 Mark existing tree")
+        btn_tree.clicked.connect(lambda: self._on_mark_existing(EXISTING_TREE_ID))
+        btn_bldg = QPushButton("🏠 Mark existing building")
+        btn_bldg.clicked.connect(
+            lambda: self._on_mark_existing(EXISTING_BUILDING_ID))
+        btns.addWidget(btn_tree)
+        btns.addWidget(btn_bldg)
+        vb.addLayout(btns)
+
+        layout.addWidget(box)
+
+    def _on_mark_existing(self, feature_id: str):
+        """Emit a placement request for an existing tree/building, reusing the
+        structure placement pipeline (the controller routes the reserved id to
+        an existing_* feature)."""
+        payload = existing_feature_def(
+            feature_id, size_m=self._exist_size.value(),
+            height_m=self._exist_height.value())
+        self.place_structure_requested.emit(payload)
 
     def _populate_structures(self):
         self._struct_list.clear()

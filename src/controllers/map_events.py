@@ -111,7 +111,15 @@ class MapEventRouter:
 
     def _on_structure_placed(self, struct_id: str, name: str, lat: float,
                               lng: float, size_m: float):
-        from src.db.structures import get_structure
+        from src.db.structures import get_structure, EXISTING_FEATURE_IDS
+
+        # V1.49: reserved ids mean the user marked an EXISTING on-site tree /
+        # building (a shade caster for the generator), not a placeable
+        # structure. Write the existing_* feature type the shade model reads.
+        if struct_id in EXISTING_FEATURE_IDS:
+            self._on_existing_feature_placed(struct_id, name, lat, lng, size_m)
+            return
+
         struct_def = get_structure(struct_id)
         if struct_def:
             struct_def = dict(struct_def)
@@ -143,15 +151,52 @@ class MapEventRouter:
         self._main.statusBar().showMessage(f"Placed {name}", 2000)
         self._main._sync_planning_panel()
 
+    def _on_existing_feature_placed(self, struct_id: str, name: str,
+                                    lat: float, lng: float, size_m: float):
+        """Persist a user-marked existing tree/building (V1.49) as the
+        existing_* feature type the generator's shade model reads. Height comes
+        from the mode controller's stash (the JS callback doesn't echo it)."""
+        from src.db.structures import EXISTING_TREE_ID
+        height_m = getattr(self._main, "_existing_feature_height_m", None)
+        etype = ("existing_tree" if struct_id == EXISTING_TREE_ID
+                 else "existing_building")
+        props = {
+            "element_type": etype,
+            "height_m": float(height_m) if height_m else (
+                6.0 if etype == "existing_tree" else 5.0),
+            # size_m is the diameter; the shade model wants a radius.
+            "canopy_radius_m": max(0.5, float(size_m) / 2.0),
+            "label": name,
+            # keep struct identity so right-click removal (which emits the
+            # struct path) can find and drop this feature too.
+            "struct_id": struct_id,
+            "size_m": size_m,
+        }
+        self._main._project["features"].append({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [lng, lat]},
+            "properties": props,
+        })
+        self._main._push_undo({
+            "action": "place_structure", "struct_id": struct_id,
+            "name": name, "lat": lat, "lng": lng, "size_m": size_m,
+            "struct_def": {"id": struct_id, "name": name, "size_m": size_m},
+        })
+        self._main._mark_modified()
+        self._main.statusBar().showMessage(f"Marked {name}", 2000)
+
     def _on_structure_removed(self, marker_id: str, struct_id: str,
                                lat: float, lng: float):
         kept = []
         removed = False
+        # Existing tree/building marks ride the structure-removal path too
+        # (V1.49) — match them alongside real structures.
+        _removable = {"structure", "existing_tree", "existing_building"}
         for f in self._main._project["features"]:
             props = f.get("properties", {})
             coords = f.get("geometry", {}).get("coordinates", [])
             if (not removed
-                    and props.get("element_type") == "structure"
+                    and props.get("element_type") in _removable
                     and props.get("struct_id") == struct_id
                     and coords
                     and abs(coords[1] - lat) < 1e-7

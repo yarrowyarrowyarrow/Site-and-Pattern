@@ -264,3 +264,39 @@ def get_structures_by_category(category: str) -> list[dict]:
 def get_all_structures() -> list[dict]:
     """Return all structure definitions."""
     return STRUCTURES.copy()
+
+
+# ── Existing on-site features (V1.49) ────────────────────────────────────────
+#
+# Trees and buildings that already exist on the property. These are NOT part of
+# the placeable structure catalogue (they don't belong in the structure browser
+# and don't count toward the Habitat Value Score) — they're context the user
+# marks so the design generator's shade model honours their cast shade
+# (src/shade.py reads element_type existing_tree / existing_building). They ride
+# the existing structure placement pipeline via these reserved ids, which
+# src/controllers/map_events.py:_on_structure_placed recognises and writes as
+# the existing_* feature types instead of a structure.
+
+EXISTING_TREE_ID = "existing_tree"
+EXISTING_BUILDING_ID = "existing_building"
+EXISTING_FEATURE_IDS = frozenset({EXISTING_TREE_ID, EXISTING_BUILDING_ID})
+
+
+def existing_feature_def(feature_id: str, *, size_m: float,
+                         height_m: float) -> dict:
+    """Build a structure-style placement payload for an existing tree/building
+    so it flows through the normal click-to-place machinery (the map renders it
+    like any structure). ``size_m`` is the canopy/footprint diameter; height is
+    carried through for the shade model."""
+    if feature_id == EXISTING_TREE_ID:
+        return {"id": EXISTING_TREE_ID, "name": "Existing tree", "icon": "🌳",
+                "shape": "circle", "size_m": float(size_m),
+                "color": "#33691e", "fill_color": "#7cb342",
+                "fill_opacity": 0.25, "height_m": float(height_m),
+                "category": "Existing"}
+    return {"id": EXISTING_BUILDING_ID, "name": "Existing building",
+            "icon": "🏠", "shape": "rectangle", "size_m": float(size_m),
+            "width_m": float(size_m), "color": "#5d4037",
+            "fill_color": "#8d6e63", "fill_opacity": 0.3,
+            "height_m": float(height_m), "category": "Existing"}
+

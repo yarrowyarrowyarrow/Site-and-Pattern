@@ -134,6 +134,25 @@ def project_to_map_data(project: dict) -> dict:
                 "polyculture_center_lng": props.get("polyculture_center_lng"),
             })
 
+        elif etype in ("existing_tree", "existing_building") \
+                and geom.get("type") == "Point":
+            # V1.49: user-marked existing trees/buildings. Reconstruct a
+            # structure-style def so they render through the same map path
+            # (loadStructure) on reload.
+            lng, lat = geom["coordinates"]
+            from src.db.structures import existing_feature_def
+            sid = ("existing_tree" if etype == "existing_tree"
+                   else "existing_building")
+            size_m = props.get("size_m")
+            if not size_m:
+                size_m = float(props.get("canopy_radius_m", 3.0)) * 2.0
+            sd = existing_feature_def(sid, size_m=size_m,
+                                      height_m=props.get("height_m") or 6.0)
+            sd["name"] = props.get("label", sd["name"])
+            result["structures"].append({
+                "lat": lat, "lng": lng, "struct_def": sd,
+            })
+
         elif etype == "structure" and geom.get("type") == "Point":
             lng, lat = geom["coordinates"]
             result["structures"].append({

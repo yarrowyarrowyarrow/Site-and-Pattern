@@ -54,6 +54,11 @@ class ModeController:
 
     def _enter_structure_mode(self, struct_def: dict):
         self._main._current_mode = 'structure'
+        # Stash height for existing tree/building marks (V1.49) — the JS
+        # placement callback only echoes (id, name, lat, lng, size), so the
+        # shade-relevant height is remembered here and read back in
+        # map_events._on_existing_feature_placed.
+        self._main._existing_feature_height_m = struct_def.get("height_m")
         self._main.map_widget.set_structure_mode(struct_def)
         self._main.toolbar.reset_draw_buttons()
         self._set_mode_label(

@@ -1908,11 +1908,13 @@ class MainWindow(QMainWindow):
             self.map_widget.undo_structure_at(sid, lat, lng)
             kept = []
             removed = False
+            # Existing tree/building marks (V1.49) also undo through here.
+            _undoable = {"structure", "existing_tree", "existing_building"}
             for f in reversed(self._project["features"]):
                 props = f.get("properties", {})
                 coords = f.get("geometry", {}).get("coordinates", [])
                 if (not removed
-                        and props.get("element_type") == "structure"
+                        and props.get("element_type") in _undoable
                         and props.get("struct_id") == sid
                         and coords
                         and abs(coords[1] - lat) < 1e-7
