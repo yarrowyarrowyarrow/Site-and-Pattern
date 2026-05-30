@@ -416,12 +416,20 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
     community_items = _resolve_communities(spec.get("communities") or [], communities)
     structure_items = _resolve_structures(spec.get("structures") or [], structures)
 
-    # Keep the design within budget by trimming the priciest plants *before*
-    # placement (no project-removal API needed). Communities aren't costed here.
+    # Keep the design within budget *before* placement (no project-removal API
+    # needed): count the atomic community cost first, drop a community that alone
+    # blows the budget (only if individual plants remain to carry the design),
+    # then trim individual plants to the remainder.
     budget_dropped = 0
     if budget and budget > 0:
-        from src.sourcing import trim_to_budget
-        plant_items, budget_dropped = trim_to_budget(plant_items, budget)
+        from src.sourcing import trim_to_budget, polyculture_cost
+        clow, chigh = polyculture_cost(community_items)
+        cmid = (clow + chigh) / 2.0
+        if cmid > budget and plant_items:
+            community_items = []
+            cmid = 0.0
+        plant_items, budget_dropped = trim_to_budget(
+            plant_items, max(budget - cmid, 0.0))
 
     if not plant_items and not community_items:
         raise LLMError(
@@ -533,13 +541,14 @@ def _record_budget_note(project, placed, budget,
         return
     from src.sourcing import estimate_cost, format_cost
     low, high = estimate_cost(placed)
-    msg = f"Estimated plant cost {format_cost(low, high)} CAD (estimate)"
+    mid = (low + high) / 2.0
+    status = (f"within your ${budget:.0f} budget" if mid <= budget
+              else f"above your ${budget:.0f} budget")
+    msg = (f"Estimated plant cost {format_cost(low, high)} CAD "
+           f"(Alberta retail estimate) — {status}")
     if dropped:
-        msg += f" — trimmed {dropped} plant(s) to fit your ${budget:.0f} budget"
-    if low > budget:
-        msg += f"; still above ${budget:.0f} (kept the most affordable option)"
-    elif not dropped:
-        msg += f" — within your ${budget:.0f} budget"
+        msg += (f"; trimmed {dropped} plant" + ("s" if dropped != 1 else "")
+                + " to reduce cost")
     props = project.as_dict().setdefault("properties", {})
     props.setdefault("generation_warnings", []).append(msg)
 
@@ -582,18 +591,28 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
         except Exception:  # noqa: BLE001
             plants = []
     plant_items = [(p["id"], 1) for p in plants[:_OFFLINE_PLANT_CAP]]
-    budget_dropped = 0
-    if budget and budget > 0:
-        from src.sourcing import trim_to_budget
-        plant_items, budget_dropped = trim_to_budget(plant_items, budget)
 
     communities = list_polycultures()
     community_items = _match_communities_by_name(
         communities, community_name_hints(goals))
-    # A budget targets the individual plant list; don't force an arbitrary
-    # default community that would blow it (goal-matched communities still add).
+    # Don't force an arbitrary default community in budget mode — it would blow
+    # an individual-plant budget; a goal-matched community still applies.
     if not community_items and communities and not budget:
         community_items = [communities[0]["id"]]  # a sensible default
+
+    # Budget: count the (atomic) community cost first, drop a matched community
+    # that alone blows the budget (when individuals remain to carry the design),
+    # then trim individual plants to the remainder so the whole design fits.
+    budget_dropped = 0
+    if budget and budget > 0:
+        from src.sourcing import trim_to_budget, polyculture_cost
+        clow, chigh = polyculture_cost(community_items)
+        cmid = (clow + chigh) / 2.0
+        if cmid > budget and plant_items:
+            community_items = []
+            cmid = 0.0
+        plant_items, budget_dropped = trim_to_budget(
+            plant_items, max(budget - cmid, 0.0))
 
     if not plant_items and not community_items:
         raise LLMError(

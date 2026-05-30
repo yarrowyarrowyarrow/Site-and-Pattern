@@ -86,6 +86,22 @@ def estimate_cost(items, get_plant=None) -> tuple[float, float]:
     return (round(total_lo, 2), round(total_hi, 2))
 
 
+def polyculture_cost(poly_ids, get_polyculture=None,
+                     get_plant=None) -> tuple[float, float]:
+    """Estimated ``(low, high)`` CAD to plant the given communities — the sum of
+    their member plants. Used to budget the (atomic) communities before trimming
+    individual plants."""
+    if get_polyculture is None:
+        from src.db.polycultures import get_polyculture_by_id as get_polyculture
+    low = high = 0.0
+    for pid in poly_ids or []:
+        pc = get_polyculture(pid) or {}
+        lo, hi = estimate_cost(pc.get("members", []), get_plant=get_plant)
+        low += lo
+        high += hi
+    return (round(low, 2), round(high, 2))
+
+
 def trim_to_budget(items, budget, get_plant=None) -> tuple[list, int]:
     """Drop the most expensive items until the design's *midpoint* estimate
     fits ``budget``, keeping at least one. Returns ``(kept_items, n_dropped)``.
