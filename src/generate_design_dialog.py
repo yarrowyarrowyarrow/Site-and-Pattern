@@ -12,8 +12,9 @@ from __future__ import annotations
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QCheckBox, QDialog, QDialogButtonBox, QGroupBox, QHBoxLayout, QLabel,
-    QListWidget, QListWidgetItem, QPlainTextEdit, QSpinBox, QVBoxLayout, QWidget,
+    QCheckBox, QComboBox, QDialog, QDialogButtonBox, QGroupBox, QHBoxLayout,
+    QLabel, QListWidget, QListWidgetItem, QPlainTextEdit, QSpinBox,
+    QVBoxLayout, QWidget,
 )
 
 from src.design_goals import GOALS
@@ -119,6 +120,22 @@ class GenerateDesignDialog(QDialog):
         budget_row.addStretch(1)
         layout.addLayout(budget_row)
 
+        density_row = QHBoxLayout()
+        density_row.addWidget(QLabel("Planting density:"))
+        self._density_combo = QComboBox()
+        # data = the value generate_design expects; label = user-facing.
+        for label, val in (("Sparse", "sparse"), ("Balanced", "balanced"),
+                           ("Full", "full")):
+            self._density_combo.addItem(label, val)
+        self._density_combo.setCurrentIndex(1)   # Balanced
+        self._density_combo.setToolTip(
+            "How much of the boundary to fill: Sparse leaves room, Full packs "
+            "the space at healthy spacing."
+        )
+        density_row.addWidget(self._density_combo)
+        density_row.addStretch(1)
+        layout.addLayout(density_row)
+
         self._match_site_check = QCheckBox("Match to site conditions & terrain")
         self._match_site_check.setChecked(True)
         self._match_site_check.setToolTip(
@@ -165,6 +182,10 @@ class GenerateDesignDialog(QDialog):
         """Whether to derive wet/dry/shaded micro-zones from the terrain and
         place plants/structures accordingly (V1.48)."""
         return self._match_site_check.isChecked()
+
+    def density(self) -> str:
+        """Planting density: 'sparse' | 'balanced' | 'full' (V1.50)."""
+        return self._density_combo.currentData() or "balanced"
 
     def selected_goals(self) -> list:
         return [key for key, cb in self._checks.items() if cb.isChecked()]

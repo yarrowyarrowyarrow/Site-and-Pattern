@@ -133,6 +133,20 @@ class TestCli(unittest.TestCase):
         proj = Project.load(path)
         self.assertGreaterEqual(len(proj.placed_plants), 1)
 
+    def test_generate_density_flag(self):
+        path = os.path.join(_TMP_DIR, "gen_density.perma.geojson")
+        code, _out, err = _run([
+            "generate", "--no-llm", "--density", "full", "--goal", "native_only",
+            "--lat", "53.5461", "--lng", "-113.4938", "--out", path,
+        ])
+        self.assertEqual(code, 0, err)
+        self.assertTrue(os.path.exists(path))
+
+    def test_generate_rejects_bad_density(self):
+        with self.assertRaises(SystemExit):   # argparse `choices` rejects it
+            _run(["generate", "--no-llm", "--density", "nope",
+                  "--lat", "53.5", "--lng", "-113.5", "--out", "x.geojson"])
+
     def test_generate_offline_without_goals(self):
         path = os.path.join(_TMP_DIR, "gen_offline_nogoals.perma.geojson")
         code, _out, _ = _run([

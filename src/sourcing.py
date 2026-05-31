@@ -57,7 +57,9 @@ def _as_pairs(items) -> list[tuple]:
             pairs.append((it.get("plant_id") or it.get("id"),
                           int(it.get("quantity") or 1)))
         else:
-            pid, qty = it
+            # (plant_id, qty) or (plant_id, qty, layout) — V1.50 added a layout
+            # element; only the first two matter for costing.
+            pid, qty = it[0], it[1]
             pairs.append((pid, int(qty or 1)))
     return pairs
 

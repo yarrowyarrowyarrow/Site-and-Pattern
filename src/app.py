@@ -489,7 +489,7 @@ class MainWindow(QMainWindow):
 
         file_menu.addSeparator()
 
-        act_generate = file_menu.addAction("✨ &Generate Design…")
+        act_generate = file_menu.addAction("&Generate Design…")
         act_generate.setShortcut("Ctrl+G")
         act_generate.setStatusTip(
             "Auto-generate a starting design from your goals "

@@ -99,20 +99,32 @@ class TestBoundaryClipping(unittest.TestCase):
         poly = self._poly()
         self.assertTrue(all(point_in_polygon(la, ln, poly) for la, ln in cells))
 
-    def test_trim_to_fit_warns_and_caps(self):
-        # A tiny ~8 m boundary holds only a cell or two at 6 m spacing.
+    def test_fills_within_capacity_no_overflow(self):
+        # V1.50: a tiny boundary fills up to (not beyond) its plantable
+        # capacity — every plant stays inside, none spill out, even when the
+        # spec asks for many. (Trim-to-fit was replaced by capacity-bounded,
+        # density-driven fill.)
         tiny = [(53.5000, -113.50000), (53.5000, -113.49988),
                 (53.50007, -113.49988), (53.50007, -113.50000)]
-        cap = len(llm.grid_cells_in_boundary(tiny))
-        client = _FakeClient({"plants": [{"query": "yarrow", "quantity": 1}] * 10})
+        client = _FakeClient({"plants": [{"query": "yarrow", "quantity": 5,
+                                          "layout": "grid"}] * 4})
         proj = llm.generate_design("x",
                                    site_config={"latitude": 53.50003,
                                                 "longitude": -113.49994},
-                                   boundary=tiny, client=client, match_site=False)
-        self.assertLessEqual(len(proj.placed_plants), cap)
-        warnings = proj.as_dict()["properties"].get("generation_warnings", [])
-        self.assertTrue(any("Trimmed" in w for w in warnings),
-                        f"expected a trim warning, got {warnings}")
+                                   boundary=tiny, client=client,
+                                   match_site=False, density="full")
+        poly = self._poly_for(tiny)
+        placed = proj.placed_plants
+        self.assertTrue(placed)
+        # The headline invariant: nothing spills outside the boundary, no
+        # matter how dense or how many groups were requested.
+        for pp in placed:
+            self.assertTrue(point_in_polygon(pp["lat"], pp["lng"], poly),
+                            "a plant spilled outside the tiny boundary")
+
+    @staticmethod
+    def _poly_for(boundary):
+        return llm._boundary_polygon(boundary)
 
     def test_community_fits_guard(self):
         # A community larger than the boundary radius must be rejected.
@@ -121,6 +133,66 @@ class TestBoundaryClipping(unittest.TestCase):
         self.assertFalse(llm.community_fits(tiny, (53.500009, -113.499985), 2.69))
         self.assertTrue(llm.community_fits(tiny, (53.500009, -113.499985), 0.4))
         self.assertTrue(llm.community_fits(None, (53.5, -113.5), 99.0))
+
+
+class TestV150Intelligence(unittest.TestCase):
+    """Density-driven space fill, keep-out, and LLM-chosen layout (V1.50)."""
+
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+
+    def _gen(self, spec, **kw):
+        client = _FakeClient(spec)
+        return llm.generate_design(
+            "x", site_config={"latitude": _CENTER[0], "longitude": _CENTER[1]},
+            boundary=_BOUNDARY, client=client, match_site=False, **kw)
+
+    def test_full_denser_than_sparse(self):
+        spec = {"plants": [{"query": "yarrow", "quantity": 3}]}
+        sparse = self._gen(dict(spec), density="sparse")
+        full = self._gen(dict(spec), density="full")
+        self.assertGreater(len(full.placed_plants), len(sparse.placed_plants))
+        # Full should fill a good chunk of the ~60 m boundary.
+        self.assertGreater(len(full.placed_plants), 20)
+
+    def test_density_fill_stays_inside(self):
+        proj = self._gen({"plants": [{"query": "yarrow", "quantity": 3}]},
+                         density="full")
+        poly = llm._boundary_polygon(_BOUNDARY)
+        for pp in proj.placed_plants:
+            self.assertTrue(point_in_polygon(pp["lat"], pp["lng"], poly))
+
+    def test_keepout_blocks_planting_on_existing_tree(self):
+        # Pre-mark a big existing tree at the centre; no plant may land inside
+        # its canopy.
+        from src.permadesign_api import Project
+        proj = Project.create("t", site_config={"latitude": _CENTER[0],
+                              "longitude": _CENTER[1]}, boundary=_BOUNDARY)
+        tlat, tlng = _CENTER
+        proj._gen.add_existing_tree(tlat, tlng, height_m=12.0,
+                                    canopy_radius_m=10.0)
+        from src.exclusion import keepout_circles
+        keep = keepout_circles(proj.as_dict())
+        yid = search_plants(query="yarrow")[0]["id"]
+        items = llm._apply_density([(yid, 4, "scatter")], _BOUNDARY, "full", keep)
+        llm._place_within_boundary(proj, items, [], [], _BOUNDARY, _CENTER,
+                                   keepout=keep)
+        cl = math.cos(tlat * math.pi / 180)
+
+        def d(la, ln):
+            return math.hypot((ln - tlng) * 111320 * cl, (la - tlat) * 111320)
+        viol = [pp for pp in proj.placed_plants if d(pp["lat"], pp["lng"]) < 10.0]
+        self.assertTrue(proj.placed_plants)
+        self.assertEqual(viol, [])
+
+    def test_layout_field_parsed_from_spec(self):
+        from src.permadesign_api import query_plants
+        items = llm._resolve_plants(
+            [{"query": "yarrow", "quantity": 4, "layout": "row"}], query_plants)
+        self.assertTrue(items)
+        self.assertEqual(len(items[0]), 3)        # (id, qty, layout)
+        self.assertEqual(items[0][2], "row")
 
 
 class TestSiteFitFilters(unittest.TestCase):

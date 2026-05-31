@@ -70,8 +70,10 @@ class TestGenerateDesign(unittest.TestCase):
             "a pollinator garden", site_config=_EDM, client=client,
         )
         placed = project.placed_plants
-        self.assertEqual(len(placed), 2)
-        # The two placements resolve to the same ids a direct query would.
+        # V1.50: each group expands into its quantity via a layout pattern, so
+        # the yarrow(3) + willow(1) spec yields several placements, not 2.
+        self.assertGreaterEqual(len(placed), 4)
+        # Both requested species resolve and appear.
         expected_first = _api.query_plants(query="yarrow")[0]["id"]
         placed_ids = {p["plant_id"] for p in placed}
         self.assertIn(expected_first, placed_ids)
@@ -132,7 +134,13 @@ class TestGenerateDesign(unittest.TestCase):
                     (53.54, -113.49), (53.54, -113.50)]
         client = _FakeClient({"plants": [{"query": "yarrow"}]})
         project = llm.generate_design("x", boundary=boundary, client=client)
-        self.assertEqual(len(project.placed_plants), 1)
+        # A boundary alone anchors placement (no site_config needed); plants are
+        # placed inside it. (Count is density-driven in V1.50, so don't pin it.)
+        self.assertGreaterEqual(len(project.placed_plants), 1)
+        poly = llm._boundary_polygon(boundary)
+        from src.geometry import point_in_polygon
+        for p in project.placed_plants:
+            self.assertTrue(point_in_polygon(p["lat"], p["lng"], poly))
 
     # ── Failure modes ────────────────────────────────────────────────────────
 
@@ -287,7 +295,9 @@ class TestGoalsAndOffline(unittest.TestCase):
         llm._apply_goal_feedback(project, ["native_only"], query_plants,
                                  (_EDM["latitude"], _EDM["longitude"]))
         placed = project.placed_plants
-        self.assertEqual(len(placed), 2)  # original + one repair plant
+        # The repair adds at least one native to honour the goal (exact count
+        # isn't pinned — the invariant is that a native was added).
+        self.assertGreaterEqual(len(placed), 2)
         self.assertTrue(any(get_plant(p["plant_id"]).get("native_to_alberta")
                             for p in placed))
         warnings = project.as_dict()["properties"]["generation_warnings"]

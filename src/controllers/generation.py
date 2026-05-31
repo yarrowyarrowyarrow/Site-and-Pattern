@@ -59,12 +59,13 @@ class GenerationController:
         self._start(prompt=dlg.brief(), site_config=site_config or None,
                     boundary=boundary, goals=goals, offline=dlg.offline(),
                     budget=dlg.budget(), fauna_ids=dlg.selected_fauna(),
-                    match_site=dlg.match_site())
+                    match_site=dlg.match_site(), density=dlg.density())
 
     # ── Worker lifecycle (mirrors src/site_panel.py) ─────────────────────────
 
     def _start(self, *, prompt, site_config, boundary, goals, offline,
-               budget=None, fauna_ids=None, match_site=True):
+               budget=None, fauna_ids=None, match_site=True,
+               density="balanced"):
         from src.generate_worker import GenerateWorker
         main = self._main
         if hasattr(main, "_act_generate"):
@@ -75,7 +76,7 @@ class GenerationController:
         worker = GenerateWorker(prompt, site_config=site_config,
                                 boundary=boundary, goals=goals, offline=offline,
                                 budget=budget, fauna_ids=fauna_ids,
-                                match_site=match_site)
+                                match_site=match_site, density=density)
         worker.moveToThread(thread)
 
         thread.started.connect(worker.run)
