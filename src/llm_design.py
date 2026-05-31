@@ -773,7 +773,7 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
     # existing trees/buildings the user/site already has.
     project_ctx = Project.create(name, site_config=site_config, boundary=boundary)
     from src.exclusion import keepout_circles
-    elev, zones, pzone, szone = _zone_context(
+    elev, zones, pzone, szone, cell_env_map = _zone_context(
         boundary, site_config, project_ctx.as_dict() if match_site else None)
     keepout = keepout_circles(project_ctx.as_dict())
 
@@ -858,7 +858,8 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
                            structure_items, boundary, center,
                            elev=elev, zones=zones,
                            plant_zone_for=pzone, structure_zone_for=szone,
-                           keepout=keepout)
+                           keepout=keepout,
+                           cell_env_map=cell_env_map)
 
     _apply_goal_feedback(project, goals, query_plants, center, boundary)
     _apply_fauna_feedback(project, fauna_ids, query_plants, center, boundary)
@@ -869,21 +870,26 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
 def _zone_context(boundary, site_config, project_dict):
     """Build the Tier-2 micro-zoning context for placement, or all-``None`` when
     zoning is disabled (``project_dict is None``) or unavailable (no grid,
-    offline). Returns ``(elev, zones, plant_zone_for, structure_zone_for)``.
+    offline). Returns ``(elev, zones, plant_zone_for, structure_zone_for,
+    cell_env_map)`` where ``cell_env_map`` is a ``{(lat,lng): CellEnv}`` dict
+    for scored placement (``None`` on any failure).
 
     Best-effort and side-effect-free: any failure degrades to property-wide
     placement (the Tier-1 path), which already keeps everything in-boundary."""
     if project_dict is None:
-        return (None, None, None, None)
+        return (None, None, None, None, None)
     try:
         from src import zoning, shade
+        from src import terrain as _terrain
+        from src.placement_score import build_cell_env_map
+
         elev = zoning.site_elevation_grid(boundary, site_config)
         if not elev:
-            return (None, None, None, None)
+            return (None, None, None, None, None)
         shade_g = shade.shade_grid_for_design(project_dict, elev)
         zones = zoning.classify_zones(elev, shade_g)
         if not zones:
-            return (None, None, None, None)
+            return (None, None, None, None, None)
 
         def plant_zone_for(plant_id):
             try:
@@ -892,10 +898,24 @@ def _zone_context(boundary, site_config, project_dict):
             except Exception:  # noqa: BLE001
                 return None
 
+        # Build scored cell map: slope + aspect extend the coarse zone routing
+        # with continuous microsite signals (S-facing drier, steep = poor for
+        # trees, etc.).  Best-effort — falls back to None on any failure.
+        cell_env_map = None
+        try:
+            slope_g = _terrain.compute_slope_grid(elev)
+            aspect_g = _terrain.compute_aspect_grid(elev)
+            cells = grid_cells_in_boundary(boundary)
+            if cells:
+                cell_env_map = build_cell_env_map(
+                    cells, shade_g, elev, slope_g, aspect_g)
+        except Exception:  # noqa: BLE001
+            cell_env_map = None
+
         return (elev, zones, plant_zone_for,
-                zoning.preferred_zone_for_structure)
+                zoning.preferred_zone_for_structure, cell_env_map)
     except Exception:  # noqa: BLE001 — zoning is best-effort
-        return (None, None, None, None)
+        return (None, None, None, None, None)
 
 
 def _add_warning(project, message: str) -> None:
@@ -977,6 +997,132 @@ class _Positioner:
         return self._pop_unused(self._flat)
 
 
+class ScoredPositioner:
+    """Placement cell pool that picks ecologically optimal positions (V1.51).
+
+    Scores every available cell for the requesting plant using
+    :func:`src.placement_score.score_cell_for_plant` and returns the
+    highest-scoring unoccupied one.  Falls back transparently to
+    ``_Positioner`` zone-routing when ``cell_env_map`` is absent — so
+    offline / terrain-unavailable cases keep working exactly as before.
+
+    ``_bonus_cells`` carries temporary drip-line bonuses for the cells
+    adjacent to a newly placed canopy tree; cleared after each non-tree
+    group so the bonus doesn't bleed across unrelated placements."""
+
+    def __init__(self, cell_env_map: Optional[dict],
+                 zone_positions: Optional[dict],
+                 flat: list,
+                 elev: Optional[dict] = None):
+        self._env_map = cell_env_map  # {(lat,lng): CellEnv} or None
+        self._fallback = _Positioner(zone_positions, flat)
+        # All available cells as a list so we can iterate and score.
+        if zone_positions:
+            all_pts: list = []
+            for pts in zone_positions.values():
+                all_pts.extend(pts)
+            # Also include flat-only cells not in any zone bucket.
+            zone_set = set(all_pts)
+            for p in flat:
+                if p not in zone_set:
+                    all_pts.append(p)
+            self._all = all_pts
+        else:
+            self._all = list(flat)
+        self._used: set = set()
+        self._bonus_cells: dict = {}   # {(lat,lng): float bonus addend}
+
+    @property
+    def remaining(self) -> int:
+        return self._fallback.remaining
+
+    def _pop_unused(self, lst: list):
+        return self._fallback._pop_unused(lst)
+
+    def take_best(self, plant: dict,
+                  zone: Optional[str] = None) -> Optional[tuple]:
+        """Return the highest-scoring available cell for this plant.
+
+        If ``cell_env_map`` is None, delegates to ``_Positioner.take(zone)``
+        so behaviour is identical to the pre-V1.51 path.  Otherwise iterates
+        all available cells, scores each, and picks the best; still returns
+        something (the best of what remains) rather than None when capacity
+        exists, matching ``_Positioner``'s never-drop-a-plant guarantee."""
+        if self._env_map is None:
+            return self._fallback.take(zone)
+
+        from src.placement_score import score_cell_for_plant
+        best_cell: Optional[tuple] = None
+        best_score = -1.0
+
+        for cell in self._all:
+            if cell in self._used:
+                continue
+            env = self._env_map.get(cell)
+            if env is None:
+                # Cell not in env map (e.g. added from flat fallback);
+                # give it a neutral score so it can still be selected.
+                score = 0.5
+            else:
+                score = score_cell_for_plant(plant, env)
+            score += self._bonus_cells.get(cell, 0.0)
+            if score > best_score:
+                best_score = score
+                best_cell = cell
+
+        if best_cell is not None:
+            self._used.add(best_cell)
+            # Keep fallback in sync so remaining count stays accurate.
+            self._fallback._used.add(best_cell)
+            return best_cell
+        return None
+
+    def reserve_near(self, positions, radius_m: float) -> None:
+        """Delegate to ``_Positioner.reserve_near``; also marks cells in our
+        own ``_used`` set so ``take_best`` skips them."""
+        self._fallback.reserve_near(positions, radius_m)
+        self._used |= self._fallback._used
+
+    def clear_bonus(self) -> None:
+        """Clear temporary drip-line bonuses."""
+        self._bonus_cells.clear()
+
+
+def _apply_dripline_bonus(positioner: ScoredPositioner,
+                          positions: list,
+                          canopy_radius_m: float,
+                          spacing_m: float) -> None:
+    """Mark cells in the 0.5×–1.5× canopy-radius ring around each placed
+    tree position with a +0.2 score bonus.  Subsequent understory plants
+    are attracted to the drip-line — ecologically the most productive zone
+    under a canopy tree."""
+    if not positions or canopy_radius_m <= 0:
+        return
+    import math as _m
+    cos_lat = _m.cos(positions[0][0] * _m.pi / 180) or 1e-9
+    inner = 0.5 * canopy_radius_m
+    outer = 1.5 * canopy_radius_m
+    for cell in positioner._all:
+        if cell in positioner._used:
+            continue
+        for (la, ln) in positions:
+            dx = (cell[1] - ln) * 111320.0 * cos_lat
+            dy = (cell[0] - la) * 111320.0
+            dist = _m.hypot(dx, dy)
+            if inner <= dist <= outer:
+                positioner._bonus_cells[cell] = (
+                    positioner._bonus_cells.get(cell, 0.0) + 0.2)
+                break
+
+
+# Ecological layer order — canopy trees anchor first so later groups
+# get to fill the spaces around them (understory, groundcover last).
+_LAYER_ORDER: dict = {
+    "tree": 0, "shrub": 1, "vine": 2,
+    "grass": 3, "herb": 4, "root": 5, "groundcover": 6,
+}
+
+
 # Density → fraction of the boundary's plantable capacity to fill (V1.50).
 _DENSITY_FRACTION = {"sparse": 0.30, "balanced": 0.60, "full": 0.90}
 
@@ -1047,23 +1193,26 @@ def _place_within_boundary(project, plant_items, community_items,
                            zones: Optional[dict] = None,
                            plant_zone_for=None,
                            structure_zone_for=None,
-                           keepout=None) -> None:
+                           keepout=None,
+                           cell_env_map: Optional[dict] = None) -> None:
     """Place plants (in their requested LAYOUT pattern), communities and
     structures so everything lands inside the boundary, avoids keep-out zones
     (existing trees/buildings/water structures), and spreads to use the space.
 
-    Each plant group is anchored on a free (zone-appropriate) cell, then
-    expanded by :mod:`src.layout` into ``qty`` positions around that anchor;
-    every position is boundary-clipped and keep-out-filtered. Anchors are drawn
-    from distinct cells so groups distribute across the polygon rather than
-    piling at the centre (V1.50). Communities only place where their whole
-    footprint fits; structures route to their preferred zone."""
+    V1.51: Plants are placed in ecological layer order (trees first,
+    groundcover last) using scored cell selection when terrain data is
+    available — continuous shade, moisture, slope, and edge-preference scores
+    replace the coarse four-bucket zone system for anchor selection.  A
+    drip-line bonus attracts understory plants to the productive zone around
+    newly placed canopy trees.  Companion proximity warnings are appended to
+    ``generation_warnings`` after placement.  Falls back to the V1.50
+    zone-routing positioner when terrain data is absent."""
     from src.db.polycultures import (
         get_polyculture_by_id, community_natural_radius,
     )
     from src import layout as _layout
     from src.exclusion import is_clear
-    from src.db.plants import get_plant
+    from src.db.plants import get_plant, get_plant_uses
 
     keepout = keepout or []
 
@@ -1082,7 +1231,8 @@ def _place_within_boundary(project, plant_items, community_items,
         if zpos:
             zpos = {z: [p for p in pts if is_clear(p[0], p[1], keepout)]
                     for z, pts in zpos.items()}
-    positioner = _Positioner(zpos, flat)
+
+    positioner = ScoredPositioner(cell_env_map, zpos, flat, elev=elev)
 
     def _clip_keepout(positions, half_canopy_m=0.0):
         """Keep only positions inside the boundary AND clear of keep-out."""
@@ -1095,8 +1245,19 @@ def _place_within_boundary(project, plant_items, community_items,
             out.append((la, ln))
         return out
 
-    # ── Plant groups: expand each into its layout pattern ──────────────────
-    for item in plant_items:
+    # ── Plant groups: layer-ordered, ecologically scored ───────────────────
+    # Sort by ecological layer so canopy trees anchor first and subsequent
+    # groups fill around them (stable sort preserves LLM order within layers).
+    def _layer_rank(item):
+        try:
+            row = get_plant(item[0]) or {}
+            return _LAYER_ORDER.get(row.get("plant_type", ""), 7)
+        except Exception:  # noqa: BLE001
+            return 7
+
+    plant_items_sorted = sorted(plant_items, key=_layer_rank)
+
+    for item in plant_items_sorted:
         plant_id, qty = item[0], item[1]
         group_layout = item[2] if len(item) > 2 else ""
         zone = None
@@ -1105,12 +1266,21 @@ def _place_within_boundary(project, plant_items, community_items,
                 zone = plant_zone_for(plant_id)
             except Exception:  # noqa: BLE001
                 zone = None
-        anchor = positioner.take(zone)
+
+        # Fetch plant row once; embed use tags so scorer can read them without
+        # an extra DB call per cell.
+        plant_row = get_plant(plant_id) or {}
+        try:
+            plant_row["_uses"] = set(get_plant_uses(plant_id))
+        except Exception:  # noqa: BLE001
+            plant_row["_uses"] = set()
+
+        anchor = positioner.take_best(plant_row, zone)
         if anchor is None:
             break
         if not group_layout:
-            row = get_plant(plant_id) or {}
-            group_layout = _layout.default_layout_for(row.get("plant_type", ""))
+            group_layout = _layout.default_layout_for(
+                plant_row.get("plant_type", ""))
         spacing = _plant_spacing_m(plant_id)
         positions = _layout.positions_for_layout(
             group_layout, anchor[0], anchor[1], qty, spacing)
@@ -1123,6 +1293,18 @@ def _place_within_boundary(project, plant_items, community_items,
         # Reserve the group's footprint so later groups don't reuse those cells.
         positioner.reserve_near(positions, spacing)
 
+        # After placing a canopy tree, attract understory plants to the
+        # drip-line ring; clear the bonus once a non-tree group has used it.
+        plant_type = plant_row.get("plant_type", "")
+        height = plant_row.get("mature_height_meters") or 0
+        is_canopy = plant_type == "tree" and (height or 0) >= 4.0
+        if is_canopy:
+            canopy_r = plant_row.get("mature_canopy_m") or spacing
+            _apply_dripline_bonus(positioner, positions,
+                                  float(canopy_r), spacing)
+        elif positioner._bonus_cells:
+            positioner.clear_bonus()
+
     # ── Communities: only where the whole footprint fits + clears keep-out ──
     skipped_comms = 0
     for cid in community_items:
@@ -1130,7 +1312,7 @@ def _place_within_boundary(project, plant_items, community_items,
             radius = community_natural_radius(get_polyculture_by_id(cid))
         except Exception:  # noqa: BLE001
             radius = 1.0
-        anchor = positioner.take(None)
+        anchor = positioner.take_best({}, None)
         if anchor is None:
             break
         if (community_fits(boundary, anchor, radius)
@@ -1148,7 +1330,7 @@ def _place_within_boundary(project, plant_items, community_items,
                 zone = structure_zone_for(struct_id)
             except Exception:  # noqa: BLE001
                 zone = None
-        anchor = positioner.take(zone)
+        anchor = positioner.take_best({}, zone)
         if anchor is None:
             break
         project.place_structure(struct_id, anchor[0], anchor[1])
@@ -1159,6 +1341,19 @@ def _place_within_boundary(project, plant_items, community_items,
                      + ("ies" if skipped_comms != 1 else "y")
                      + " that did not fit inside the boundary or clear an "
                      "existing feature.")
+
+    # ── Companion proximity check (post-placement warnings only) ───────────
+    try:
+        from src.placement_score import build_companion_graph, check_companion_spacing
+        placed = project.placed_plants
+        unique_ids = list({p.get("plant_id") for p in placed
+                           if p.get("plant_id") is not None})
+        if len(unique_ids) > 1:
+            graph = build_companion_graph(unique_ids)
+            for w in check_companion_spacing(placed, graph):
+                _add_warning(project, w)
+    except Exception:  # noqa: BLE001 — companion checking is best-effort
+        pass
 
 
 # ── Goal feedback + offline fallback ─────────────────────────────────────────
@@ -1420,7 +1615,7 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
         )
 
     project = Project.create(name, site_config=site_config, boundary=boundary)
-    elev, zones, pzone, szone = _zone_context(
+    elev, zones, pzone, szone, cell_env_map = _zone_context(
         boundary, site_config, project.as_dict() if match_site else None)
     from src.exclusion import keepout_circles
     keepout = keepout_circles(project.as_dict())
@@ -1428,7 +1623,8 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
     _place_within_boundary(project, plant_items, community_items, [],
                            boundary, center, elev=elev, zones=zones,
                            plant_zone_for=pzone, structure_zone_for=szone,
-                           keepout=keepout)
+                           keepout=keepout,
+                           cell_env_map=cell_env_map)
 
     _apply_goal_feedback(project, goals, query_plants, center, boundary)
     _apply_fauna_feedback(project, fauna_ids, query_plants, center, boundary)
