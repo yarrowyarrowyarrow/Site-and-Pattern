@@ -112,8 +112,8 @@ class MapBridge(QObject):
     hedgerow_removed = pyqtSignal(str, str)                         # id, pointsJson
 
     # Shape signals
-    shape_complete = pyqtSignal(str, str, str, str, str, str, float, str, float)
-        # id, pointsJson, label, shapeType, fillColor, strokeColor, fillOpacity, dashArray, areaM2
+    shape_complete = pyqtSignal(str, str, str, str, str, str, float, str, float, float)
+        # id, pointsJson, label, shapeType, fillColor, strokeColor, fillOpacity, dashArray, areaM2, heightM
     shape_removed = pyqtSignal(str)                                 # id
 
     # Polyculture removal signal
@@ -302,12 +302,14 @@ class MapBridge(QObject):
 
     # ── Shape slots ───────────────────────────────────────────────────────────
 
-    @pyqtSlot(str, str, str, str, str, str, float, str, float)
+    @pyqtSlot(str, str, str, str, str, str, float, str, float, float)
     def onShapeComplete(self, shape_id: str, points_json: str, label: str,
                         shape_type: str, fill_color: str, stroke_color: str,
-                        fill_opacity: float, dash_array: str, area_m2: float):
+                        fill_opacity: float, dash_array: str, area_m2: float,
+                        height_m: float = 0.0):
         self.shape_complete.emit(shape_id, points_json, label, shape_type,
-                                 fill_color, stroke_color, fill_opacity, dash_array, area_m2)
+                                 fill_color, stroke_color, fill_opacity,
+                                 dash_array, area_m2, height_m)
 
     @pyqtSlot(str)
     def onShapeRemoved(self, shape_id: str):

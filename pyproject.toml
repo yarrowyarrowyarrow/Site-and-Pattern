@@ -35,7 +35,11 @@ mcp  = ["mcp>=1.0"]
 # off-by-default: src.projection falls back to the cosLat approximation
 # when pyproj is absent, so this never blocks an install.
 utm  = ["pyproj>=3.4"]
-full = ["PyQt6>=6.6.0", "PyQt6-WebEngine>=6.6.0", "python-docx>=1.1", "mcp>=1.0", "pyproj>=3.4"]
+# Footprint-polygon shadow casting (Chunk V1.53). Optional and off-by-default:
+# src.shadow_geometry guards the shapely import and src.shade falls back to the
+# circle model when it's absent, so this never blocks a headless install.
+shade = ["shapely>=2.0"]
+full = ["PyQt6>=6.6.0", "PyQt6-WebEngine>=6.6.0", "python-docx>=1.1", "mcp>=1.0", "pyproj>=3.4", "shapely>=2.0"]
 
 [project.scripts]
 permadesign = "src.cli:main"

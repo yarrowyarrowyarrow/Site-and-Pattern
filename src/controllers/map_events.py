@@ -253,26 +253,36 @@ class MapEventRouter:
 
     def _on_shape_complete(self, shape_id: str, points_json: str, label: str,
                             shape_type: str, fill_color: str, stroke_color: str,
-                            fill_opacity: float, dash_array: str, area_m2: float):
+                            fill_opacity: float, dash_array: str, area_m2: float,
+                            height_m: float = 0.0):
         import json as _json
         points = _json.loads(points_json)
         # Store as GeoJSON Polygon (lng, lat; closed ring)
         ring = [[pt[1], pt[0]] for pt in points]
         ring.append(ring[0])  # close the ring
+        # A height > 0 makes this a shade-casting footprint (a drawn canopy or
+        # building perimeter). It's tagged element_type "canopy_footprint" with
+        # cast_shade=True so shade.casters_from_project picks it up as a true
+        # polygon caster; the footprint geometry stays here in the project file.
+        casts_shade = bool(height_m and height_m > 0)
+        props = {
+            "element_type": "canopy_footprint" if casts_shade else "custom_shape",
+            "shape_id": shape_id,
+            "label": label,
+            "shape_type": shape_type,
+            "fill_color": fill_color,
+            "stroke_color": stroke_color,
+            "fill_opacity": fill_opacity,
+            "dash_array": dash_array,
+            "area_m2": area_m2,
+        }
+        if casts_shade:
+            props["height_m"] = float(height_m)
+            props["cast_shade"] = True
         self._main._project["features"].append({
             "type": "Feature",
             "geometry": {"type": "Polygon", "coordinates": [ring]},
-            "properties": {
-                "element_type": "custom_shape",
-                "shape_id": shape_id,
-                "label": label,
-                "shape_type": shape_type,
-                "fill_color": fill_color,
-                "stroke_color": stroke_color,
-                "fill_opacity": fill_opacity,
-                "dash_array": dash_array,
-                "area_m2": area_m2,
-            }
+            "properties": props,
         })
         self._main._push_undo({
             "action": "place_custom_shape",
@@ -283,8 +293,9 @@ class MapEventRouter:
         self._main._mark_modified()
         self._main._set_mode_label("Ready")
         area_str = f"{area_m2:.1f} m²" if area_m2 < 10000 else f"{area_m2/10000:.2f} ha"
+        extra = f", {height_m:.1f} m tall — casts shade" if casts_shade else ""
         self._main.statusBar().showMessage(
-            f"Shape placed: {label or shape_type} ({area_str})", 3000
+            f"Shape placed: {label or shape_type} ({area_str}{extra})", 3000
         )
 
     def _on_shape_removed(self, shape_id: str):
@@ -983,6 +994,52 @@ class MapEventRouter:
             payload["data_url"], payload["bbox"],
             getattr(self._main, "_shade_opacity", 0.5))
         self._main.statusBar().showMessage("Shade overlay updated.", 3000)
+
+    def _on_shade_zones_requested(self):
+        """Classify every planting cell full sun / partial / full shade from the
+        season-average grid and cache the tags (src/db/shade_zones.py), off the
+        UI thread (ShadeZoneWorker — the elevation fetch can be slow). Geometry
+        stays in the project file; only the derived tags are persisted."""
+        from PyQt6.QtCore import QThread
+        from src.shade import ShadeZoneWorker
+
+        sc = dict(self._main._project.get("properties", {})
+                  .get("site_config", {}) or {})
+        boundary = self._project_boundary_latlng()
+        if boundary is None and sc.get("latitude") is None:
+            self._main.site_panel.set_shade_zone_status(
+                "Drop a property pin or draw a boundary first.")
+            return
+
+        self._main.site_panel.set_shade_zone_status("Classifying planting zones…")
+        thread = QThread(self._main)
+        worker = ShadeZoneWorker(self._main._project, boundary, sc)
+        worker.moveToThread(thread)
+        thread.started.connect(worker.run)
+        worker.ready.connect(self._on_shade_zones_ready)
+        worker.finished.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        self._main._shade_zone_thread = thread
+        self._main._shade_zone_worker = worker
+        thread.start()
+
+    def _on_shade_zones_ready(self, rows):
+        if not rows:
+            self._main.site_panel.set_shade_zone_status(
+                "Couldn't classify — no terrain grid for this site yet.")
+            return
+        from src.db import shade_zones
+        pk = shade_zones.project_key_for(getattr(self._main, "_project_path", None))
+        shade_zones.clear_zone_tags(pk)
+        shade_zones.store_zone_tags(pk, rows)
+        counts = shade_zones.tag_counts(pk)
+        self._main.site_panel.set_shade_zone_status(
+            f"Classified {len(rows)} spots — "
+            f"{counts['full_sun']} full sun, "
+            f"{counts['partial_shade']} partial, "
+            f"{counts['full_shade']} full shade.")
+        self._main.statusBar().showMessage("Planting zones classified.", 3000)
 
     # ── Existing features from OpenStreetMap (V1.51) ─────────────────────────
 

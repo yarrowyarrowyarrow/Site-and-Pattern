@@ -82,7 +82,12 @@ _PLANT_FAUNA_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "plant_fauna_maste
 # scientific name is the lookup key in the seed pipeline, so existing
 # polyculture / recipe references continue to resolve correctly on
 # reseed; only the user-visible display name changes.
-_SCHEMA_VERSION = 20
+# v21 (V1.53): added `shade_zone_cache` — a derived per-zone shade-tag index
+# (full_sun / partial_shade / full_shade) keyed by project + zone. Footprint
+# geometry stays in the project GeoJSON per CLAUDE.md; this is an OUTPUT cache,
+# wiped on reseed like climate_cache. The new table is created by the
+# executescript(schema.sql) in init_db, so no ALTER migration is needed.
+_SCHEMA_VERSION = 21
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -671,6 +676,10 @@ def init_db() -> None:
             # on reseed so the next launch refetches against any updated
             # source defaults rather than serving stale interpretations.
             conn.execute("DELETE FROM climate_cache")
+            # shade_zone_cache is per-project derived output (not seeded) — wipe
+            # on reseed like climate_cache so it recomputes against any updated
+            # shade model rather than serving stale tags.
+            conn.execute("DELETE FROM shade_zone_cache")
             conn.commit()
             # Seed the uses lookup first so _seed_from_json_file can populate
             # plant_uses for each freshly inserted plant in the same pass.

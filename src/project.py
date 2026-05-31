@@ -172,12 +172,16 @@ def project_to_map_data(project: dict) -> dict:
                 "species": props.get("species", ""),
             })
 
-        elif etype == "custom_shape" and geom.get("type") == "Polygon":
+        elif (etype in ("custom_shape", "canopy_footprint")
+              and geom.get("type") == "Polygon"):
             ring = geom["coordinates"][0]
             points = [[pt[1], pt[0]] for pt in ring]
             # Remove closing duplicate if present
             if len(points) > 1 and points[0] == points[-1]:
                 points = points[:-1]
+            # canopy_footprint carries a height (it casts shade); plain shapes
+            # default to 0. The height round-trips through the shape dict so the
+            # reloaded polygon stays a shade caster.
             result["shapes"].append({
                 "points": points,
                 "shape_type": props.get("shape_type", "Custom"),
@@ -186,6 +190,7 @@ def project_to_map_data(project: dict) -> dict:
                 "stroke_color": props.get("stroke_color", "#2e7d32"),
                 "fill_opacity": props.get("fill_opacity", 0.25),
                 "dash_array": props.get("dash_array", ""),
+                "height_m": props.get("height_m", 0.0),
             })
 
         elif etype == "contour_line" and geom.get("type") == "LineString":

@@ -125,5 +125,106 @@ class TestOverlayPayload(unittest.TestCase):
             zoning.site_elevation_grid = orig
 
 
+class TestPolygonCaster(unittest.TestCase):
+    """V1.53 — a drawn canopy_footprint polygon casts shade north of a
+    southern sun, and casters_from_project parses it."""
+
+    def _ring(self, half_m=2.0):
+        dlat = half_m / 111320.0
+        dlng = half_m / (111320.0 * math.cos(math.radians(_CLAT)))
+        return [[_CLNG - dlng, _CLAT - dlat], [_CLNG + dlng, _CLAT - dlat],
+                [_CLNG + dlng, _CLAT + dlat], [_CLNG - dlng, _CLAT + dlat],
+                [_CLNG - dlng, _CLAT - dlat]]
+
+    def test_canopy_footprint_parsed_as_caster(self):
+        project = {"features": [
+            {"geometry": {"type": "Polygon", "coordinates": [self._ring()]},
+             "properties": {"element_type": "canopy_footprint",
+                            "height_m": 10.0}},
+        ]}
+        casters = shade.casters_from_project(project)
+        self.assertEqual(len(casters), 1)
+        self.assertIn("footprint", casters[0])
+        self.assertEqual(casters[0]["height_m"], 10.0)
+
+    def test_custom_shape_requires_cast_shade_flag(self):
+        ring = self._ring()
+        without = {"features": [
+            {"geometry": {"type": "Polygon", "coordinates": [ring]},
+             "properties": {"element_type": "custom_shape", "height_m": 5.0}}]}
+        self.assertEqual(shade.casters_from_project(without), [])
+        with_flag = {"features": [
+            {"geometry": {"type": "Polygon", "coordinates": [ring]},
+             "properties": {"element_type": "custom_shape", "height_m": 5.0,
+                            "cast_shade": True}}]}
+        self.assertEqual(len(shade.casters_from_project(with_flag)), 1)
+
+    def test_polygon_caster_shades_north(self):
+        casters = [{"lat": _CLAT, "lng": _CLNG, "height_m": 12.0,
+                    "radius_m": 3.0, "footprint": self._ring(2.0)}]
+        g = shade.shade_grid(casters, _ELEV, dates=[(6, 21)], hours=[12])
+        self.assertGreater(_north(g), _south(g))
+        self.assertGreater(_north(g), 0.0)
+
+
+class TestClassifyZoneTags(unittest.TestCase):
+    """V1.53 — classify_zone_tags turns the shade grid into per-cell tag rows
+    for the SQLite cache, without touching geometry."""
+
+    def test_rows_have_tags_and_centroids(self):
+        import src.zoning as zoning
+        orig = zoning.site_elevation_grid
+        zoning.site_elevation_grid = lambda *a, **k: _ELEV
+        try:
+            project = {"features": [
+                {"geometry": {"type": "Point", "coordinates": [_CLNG, _CLAT]},
+                 "properties": {"element_type": "existing_tree",
+                                "height_m": 12.0, "canopy_radius_m": 4.0}},
+            ]}
+            rows = shade.classify_zone_tags(project, None, {})
+            self.assertIsNotNone(rows)
+            self.assertEqual(len(rows), _N * _N)
+            valid = {"full_sun", "partial_shade", "full_shade"}
+            for row in rows:
+                self.assertIn(row["shade_tag"], valid)
+                self.assertIn("centroid_lat", row)
+                self.assertTrue(row["zone_id"].startswith("r"))
+            # The tree shades some cells → at least one non-full-sun tag.
+            self.assertTrue(any(r["shade_tag"] != "full_sun" for r in rows))
+        finally:
+            zoning.site_elevation_grid = orig
+
+    def test_none_without_grid(self):
+        import src.zoning as zoning
+        orig = zoning.site_elevation_grid
+        zoning.site_elevation_grid = lambda *a, **k: None
+        try:
+            self.assertIsNone(shade.classify_zone_tags({"features": []}, None, {}))
+        finally:
+            zoning.site_elevation_grid = orig
+
+
+class TestBothPathsAgree(unittest.TestCase):
+    """The circle fallback and the polygon path both return a same-shaped grid
+    in [0, 1] with a northward shadow, so downstream consumers are unaffected
+    by which path runs."""
+
+    def _run(self, have_shapely):
+        orig = shade._HAVE_SHAPELY
+        shade._HAVE_SHAPELY = have_shapely
+        try:
+            return shade.shade_grid(_TREE, _ELEV, dates=[(6, 21)], hours=[12])
+        finally:
+            shade._HAVE_SHAPELY = orig
+
+    def test_shape_and_range_both_paths(self):
+        for have in (True, False):
+            g = self._run(have)
+            self.assertEqual(len(g), _N)
+            self.assertEqual(len(g[0]), _N)
+            self.assertTrue(all(0.0 <= v <= 1.0 for row in g for v in row))
+            self.assertGreater(_north(g), _south(g))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -664,6 +664,7 @@ class MainWindow(QMainWindow):
         self.site_panel.shade_requested.connect(self._on_shade_requested)
         self.site_panel.shade_cleared.connect(self.map_widget.clear_shade_overlay)
         self.site_panel.shade_opacity.connect(self.map_widget.set_shade_overlay_opacity)
+        self.site_panel.shade_zones_requested.connect(self._on_shade_zones_requested)
         self.site_panel.osm_import_requested.connect(self._on_osm_import_requested)
         self.analysis_panel.wind_requested.connect(self._on_wind_requested)
         self.analysis_panel.wind_cleared.connect(self.map_widget.clear_wind_overlay)
@@ -921,10 +922,12 @@ class MainWindow(QMainWindow):
 
     def _on_shape_complete(self, shape_id: str, points_json: str, label: str,
                             shape_type: str, fill_color: str, stroke_color: str,
-                            fill_opacity: float, dash_array: str, area_m2: float):
+                            fill_opacity: float, dash_array: str, area_m2: float,
+                            height_m: float = 0.0):
         return self._map_events._on_shape_complete(
             shape_id, points_json, label, shape_type,
             fill_color, stroke_color, fill_opacity, dash_array, area_m2,
+            height_m,
         )
 
     def _on_shape_removed(self, shape_id: str):
@@ -1034,6 +1037,9 @@ class MainWindow(QMainWindow):
 
     def _on_shade_requested(self, config: dict):
         return self._map_events._on_shade_requested(config)
+
+    def _on_shade_zones_requested(self):
+        return self._map_events._on_shade_zones_requested()
 
     def _on_osm_import_requested(self):
         return self._map_events._on_osm_import_requested()

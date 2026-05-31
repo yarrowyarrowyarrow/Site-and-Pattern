@@ -208,6 +208,7 @@ class SitePanel(QWidget):
     shade_requested = pyqtSignal(dict)    # {"when": (month, day, hour) | None}
     shade_cleared   = pyqtSignal()
     shade_opacity   = pyqtSignal(float)   # 0..1, live slider
+    shade_zones_requested = pyqtSignal()  # classify planting zones → tag cache
 
     # Import existing trees/buildings from OpenStreetMap (V1.51).
     osm_import_requested = pyqtSignal()
@@ -946,7 +947,28 @@ class SitePanel(QWidget):
         btn_row.addWidget(btn_clear)
         v.addLayout(btn_row)
 
+        # Classify each planting cell as full sun / partial / full shade from
+        # the season-average grid and cache the tags (src/db/shade_zones.py) so
+        # plant matching can read them without recomputing.
+        btn_classify = QPushButton("Classify planting zones")
+        btn_classify.setStyleSheet(_BTN_SECONDARY)
+        btn_classify.setToolTip(
+            "Tag every spot full sun / partial shade / full shade from the "
+            "season-average shade, and cache it for plant matching.")
+        btn_classify.clicked.connect(self.shade_zones_requested.emit)
+        v.addWidget(btn_classify)
+
+        self._shade_zone_status = QLabel("")
+        self._shade_zone_status.setWordWrap(True)
+        self._shade_zone_status.setStyleSheet("color: #a5d6a7; font-size: 11px;")
+        v.addWidget(self._shade_zone_status)
+
         parent_layout.addWidget(box)
+
+    def set_shade_zone_status(self, text: str):
+        """Show a short result line under the Classify button."""
+        if hasattr(self, "_shade_zone_status"):
+            self._shade_zone_status.setText(text)
 
     def _on_show_shade(self):
         season = self._shade_season.currentData()    # (month, day) or None

@@ -457,6 +457,21 @@ class StructurePanel(QWidget):
 
         layout.addLayout(color_form)
 
+        # Shade height — when > 0 the drawn perimeter becomes a shade caster
+        # (a tree canopy or building footprint) instead of a flat area shape.
+        height_form = QFormLayout()
+        self._shape_height = QDoubleSpinBox()
+        self._shape_height.setRange(0.0, 60.0)
+        self._shape_height.setSingleStep(0.5)
+        self._shape_height.setValue(0.0)
+        self._shape_height.setSuffix(" m")
+        self._shape_height.setToolTip(
+            "Height of the structure/canopy. 0 = a flat area shape (no shade).\n"
+            "Set a height to cast a shadow from this footprint (e.g. 8 m for a\n"
+            "house, 6 m for a mature tree canopy).")
+        height_form.addRow("Casts shade — height:", self._shape_height)
+        layout.addLayout(height_form)
+
         # Draw button
         self._btn_shape = QPushButton("Draw Shape on Map")
         self._btn_shape.setStyleSheet(
@@ -524,4 +539,6 @@ class StructurePanel(QWidget):
             "stroke_color": self._shape_stroke,
             "fill_opacity": self._shape_opacity.value(),
             "dash_array": pattern_map.get(self._shape_pattern.currentText(), ""),
+            # >0 → the drawn footprint casts shade (canopy / building perimeter).
+            "height_m": self._shape_height.value(),
         })

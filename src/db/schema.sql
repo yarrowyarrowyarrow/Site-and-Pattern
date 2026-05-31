@@ -186,6 +186,27 @@ CREATE TABLE IF NOT EXISTS climate_cache (
     PRIMARY KEY (lat_q, lng_q)
 );
 
+-- Shade-zone tag cache (schema v21, V1.53). DERIVED output only: caches the
+-- resulting shade classification (full_sun / partial_shade / full_shade) per
+-- planting zone, keyed by project + zone id, so the placement UI / analysis
+-- panel can query without recomputing the cast-shade grid. Footprint geometry
+-- and heights remain the project .perma.geojson file's responsibility (per
+-- CLAUDE.md, project geometry never lives in the global DB); this table is a
+-- fast index of the OUTPUT and is safe to wipe/recompute. project_key is a
+-- stable id derived from the project file path (NOT geometry).
+CREATE TABLE IF NOT EXISTS shade_zone_cache (
+    project_key   TEXT NOT NULL,
+    zone_id       TEXT NOT NULL,         -- e.g. "r{row}c{col}" grid cell or named zone
+    shade_tag     TEXT NOT NULL CHECK (shade_tag IN
+                    ('full_sun', 'partial_shade', 'full_shade')),
+    shade_frac    REAL,                  -- season-avg fraction it was derived from
+    centroid_lat  REAL,
+    centroid_lng  REAL,
+    computed_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (project_key, zone_id)
+);
+CREATE INDEX IF NOT EXISTS idx_shade_zone_project ON shade_zone_cache(project_key);
+
 CREATE INDEX IF NOT EXISTS idx_plants_type    ON plants(plant_type);
 CREATE INDEX IF NOT EXISTS idx_plants_zone    ON plants(hardiness_zone_min, hardiness_zone_max);
 CREATE INDEX IF NOT EXISTS idx_plants_native  ON plants(native_to_alberta);
