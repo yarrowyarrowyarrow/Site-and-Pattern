@@ -660,6 +660,11 @@ class MainWindow(QMainWindow):
         self.site_panel.download_edmonton_requested.connect(
             self._on_download_edmonton_requested
         )
+        # Shade overlay + OSM import (V1.51).
+        self.site_panel.shade_requested.connect(self._on_shade_requested)
+        self.site_panel.shade_cleared.connect(self.map_widget.clear_shade_overlay)
+        self.site_panel.shade_opacity.connect(self.map_widget.set_shade_overlay_opacity)
+        self.site_panel.osm_import_requested.connect(self._on_osm_import_requested)
         self.analysis_panel.wind_requested.connect(self._on_wind_requested)
         self.analysis_panel.wind_cleared.connect(self.map_widget.clear_wind_overlay)
         self.analysis_panel.season_changed.connect(self._on_season_changed)
@@ -1024,6 +1029,14 @@ class MainWindow(QMainWindow):
 
     def _on_auto_terrain_cleared(self):
         return self._map_events._on_auto_terrain_cleared()
+
+    # ── Shade overlay + OSM import (V1.51) — shims → MapEventRouter ───────────
+
+    def _on_shade_requested(self, config: dict):
+        return self._map_events._on_shade_requested(config)
+
+    def _on_osm_import_requested(self):
+        return self._map_events._on_osm_import_requested()
 
     # ── Edmonton offline download — shims → MapEventRouter ───────────────────
 

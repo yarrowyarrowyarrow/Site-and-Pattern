@@ -444,6 +444,20 @@ def set_slope_overlay_opacity(opacity: float) -> str:
     return f"setSlopeOverlayOpacity({float(opacity)});"
 
 
+def draw_shade_overlay(png_data_url: str, bbox: dict, opacity: float) -> str:
+    """Render the shade-fraction PNG as a separate image overlay (V1.51)."""
+    payload = {"image": png_data_url, "bbox": bbox, "opacity": float(opacity)}
+    return f"drawShadeOverlay({_jsobj(payload)});"
+
+
+def set_shade_overlay_opacity(opacity: float) -> str:
+    return f"setShadeOverlayOpacity({float(opacity)});"
+
+
+def clear_shade_overlay() -> str:
+    return "clearShadeOverlay();"
+
+
 def clear_auto_terrain() -> str:
     return "clearAutoTerrain();"
 

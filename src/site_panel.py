@@ -203,6 +203,15 @@ class SitePanel(QWidget):
     # Offline Edmonton terrain dataset download.
     download_edmonton_requested = pyqtSignal()
 
+    # Shade overlay (V1.51): show/clear, live opacity, and a (month, day, hour)
+    # time selection for the time-of-day / season view.
+    shade_requested = pyqtSignal(dict)    # {"when": (month, day, hour) | None}
+    shade_cleared   = pyqtSignal()
+    shade_opacity   = pyqtSignal(float)   # 0..1, live slider
+
+    # Import existing trees/buildings from OpenStreetMap (V1.51).
+    osm_import_requested = pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._lat: Optional[float] = None
@@ -555,6 +564,9 @@ class SitePanel(QWidget):
         slope_btn_row.addWidget(btn_auto_clear)
         slope_layout.addLayout(slope_btn_row)
 
+        self._build_shade_section(slope_layout)
+        self._build_osm_section(slope_layout)
+
         # The manual "Draw contour line" UI lived here pre-V1.37. It
         # was removed (user feedback: "I'm not sure a scenario where
         # the draw manually option would be useful"). The Auto-contour
@@ -877,6 +889,94 @@ class SitePanel(QWidget):
     def set_auto_terrain_status(self, text: str):
         """Called from MainWindow with progress / queue / result info."""
         self._auto_status.setText(text)
+
+    # ── Shade overlay (V1.51) ──────────────────────────────────────────────
+
+    def _build_shade_section(self, parent_layout):
+        """Show-shade button + opacity, plus season & time-of-day selectors that
+        drive the time-aware shade overlay (src/shade.py + ShadeWorker)."""
+        from src.solar import KEY_DATES
+        box = QGroupBox("Shade map")
+        box.setToolTip("Cast shade from existing trees/buildings and the "
+                       "design's own canopy, at a chosen season and time of day.")
+        v = QVBoxLayout(box)
+        v.setContentsMargins(6, 6, 6, 6)
+        v.setSpacing(4)
+
+        season_row = QHBoxLayout()
+        season_row.addWidget(QLabel("Season:"))
+        self._shade_season = QComboBox()
+        # data = (month, day); default to a season-averaged "Typical" entry.
+        self._shade_season.addItem("Typical (averaged)", None)
+        for label, d in KEY_DATES.items():
+            self._shade_season.addItem(label, (d.month, d.day))
+        season_row.addWidget(self._shade_season)
+        v.addLayout(season_row)
+
+        time_row = QHBoxLayout()
+        time_row.addWidget(QLabel("Time:"))
+        self._shade_hour = QSlider(Qt.Orientation.Horizontal)
+        self._shade_hour.setRange(5, 21)        # 5 AM – 9 PM local solar
+        self._shade_hour.setValue(12)
+        self._shade_hour_lbl = QLabel("12:00")
+        self._shade_hour.valueChanged.connect(
+            lambda h: self._shade_hour_lbl.setText(f"{h:02d}:00"))
+        time_row.addWidget(self._shade_hour)
+        time_row.addWidget(self._shade_hour_lbl)
+        v.addLayout(time_row)
+
+        opa_row = QHBoxLayout()
+        opa_row.addWidget(QLabel("Opacity:"))
+        self._shade_opacity = QSlider(Qt.Orientation.Horizontal)
+        self._shade_opacity.setRange(0, 100)
+        self._shade_opacity.setValue(50)
+        self._shade_opacity.valueChanged.connect(
+            lambda val: self.shade_opacity.emit(val / 100.0))
+        opa_row.addWidget(self._shade_opacity)
+        v.addLayout(opa_row)
+
+        btn_row = QHBoxLayout()
+        btn_show = QPushButton("Show shade")
+        btn_show.setStyleSheet(_BTN_PRIMARY)
+        btn_show.clicked.connect(self._on_show_shade)
+        btn_row.addWidget(btn_show)
+        btn_clear = QPushButton("Clear")
+        btn_clear.setStyleSheet(_BTN_SECONDARY)
+        btn_clear.clicked.connect(self.shade_cleared.emit)
+        btn_row.addWidget(btn_clear)
+        v.addLayout(btn_row)
+
+        parent_layout.addWidget(box)
+
+    def _on_show_shade(self):
+        season = self._shade_season.currentData()    # (month, day) or None
+        when = None
+        if season is not None:
+            when = (season[0], season[1], self._shade_hour.value())
+        self.shade_requested.emit({"when": when})
+
+    # ── Existing features from OpenStreetMap (V1.51) ───────────────────────
+
+    def _build_osm_section(self, parent_layout):
+        box = QGroupBox("Existing features (OpenStreetMap)")
+        box.setToolTip("Import nearby buildings and mapped trees from "
+                       "OpenStreetMap so the design accounts for their shade "
+                       "and keeps plants off them. Anything missing can still "
+                       "be marked by hand in the Structures tab.")
+        v = QVBoxLayout(box)
+        v.setContentsMargins(6, 6, 6, 6)
+        btn = QPushButton("Import from OpenStreetMap")
+        btn.setStyleSheet(_BTN_SECONDARY)
+        btn.clicked.connect(self.osm_import_requested.emit)
+        v.addWidget(btn)
+        self._osm_status = QLabel("")
+        self._osm_status.setWordWrap(True)
+        self._osm_status.setStyleSheet("color: #ffcc80; font-size: 11px;")
+        v.addWidget(self._osm_status)
+        parent_layout.addWidget(box)
+
+    def set_osm_status(self, text: str):
+        self._osm_status.setText(text)
 
     # ── Manual contour drawing (UI removed V1.37) ──────────────────────────
     # Helpers below are intentional no-ops kept as placeholders so any

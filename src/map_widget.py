@@ -713,6 +713,16 @@ class MapWidget(QWebEngineView):
     def set_slope_overlay_opacity(self, opacity: float):
         self.run_js(map_js.set_slope_overlay_opacity(opacity))
 
+    def draw_shade_overlay(self, png_data_url: str, bbox: dict, opacity: float):
+        """Render the shade-fraction PNG as a separate ImageOverlay (V1.51)."""
+        self.run_js(map_js.draw_shade_overlay(png_data_url, bbox, opacity))
+
+    def set_shade_overlay_opacity(self, opacity: float):
+        self.run_js(map_js.set_shade_overlay_opacity(opacity))
+
+    def clear_shade_overlay(self):
+        self.run_js(map_js.clear_shade_overlay())
+
     def clear_auto_terrain(self):
         """Remove auto-generated contours and slope overlay."""
         self.run_js(map_js.clear_auto_terrain())

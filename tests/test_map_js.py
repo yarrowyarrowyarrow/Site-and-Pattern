@@ -110,6 +110,7 @@ class TestJsEntryPointsExist(unittest.TestCase):
         "emitTerrainBboxFromViewport", "emitTerrainBboxFromBoundary",
         "drawAutoContours", "drawSlopeOverlay", "setSlopeOverlayOpacity",
         "clearAutoTerrain",
+        "drawShadeOverlay", "setShadeOverlayOpacity", "clearShadeOverlay",
         "_removeBoundaryEntry",
         # Globals touched by the inline IIFEs:
         "plantMarkers", "plantLabels",

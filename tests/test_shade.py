@@ -1,0 +1,129 @@
+"""
+tests/test_shade.py
+
+V1.51 — time-of-day / season shade and the shade overlay encoding. Pure
+geometry + a stdlib PNG encode; no Qt, no network (the overlay payload's
+elevation fetch is exercised only via a monkeypatched grid).
+"""
+
+import math
+import os
+import sys
+import unittest
+from datetime import datetime
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import src.shade as shade  # noqa: E402
+
+_N = 9
+_BBOX = {"north": 53.50020, "south": 53.49980,
+         "east": -113.49966, "west": -113.50034}
+_ELEV = {"grid": [[100.0] * _N for _ in range(_N)], "rows": _N, "cols": _N,
+         "bbox": _BBOX}
+_CLAT = (_BBOX["north"] + _BBOX["south"]) / 2
+_CLNG = (_BBOX["east"] + _BBOX["west"]) / 2
+_TREE = [{"lat": _CLAT, "lng": _CLNG, "height_m": 12.0, "radius_m": 4.0}]
+
+
+def _west(g):
+    return sum(g[r][c] for r in range(_N) for c in range(0, 4))
+
+
+def _east(g):
+    return sum(g[r][c] for r in range(_N) for c in range(5, _N))
+
+
+def _north(g):
+    return sum(g[r][c] for r in range(0, 4) for c in range(_N))
+
+
+def _south(g):
+    return sum(g[r][c] for r in range(5, _N) for c in range(_N))
+
+
+class TestSeasonAverage(unittest.TestCase):
+    def test_shadow_falls_north(self):
+        g = shade.shade_grid(_TREE, _ELEV)
+        self.assertGreater(_north(g), _south(g))
+        self.assertGreater(_north(g), 0.0)
+
+    def test_no_casters_zero(self):
+        g = shade.shade_grid([], _ELEV)
+        self.assertTrue(all(v == 0.0 for row in g for v in row))
+
+    def test_custom_dates_hours_accepted(self):
+        # A single noon sample still yields a northward shadow.
+        g = shade.shade_grid(_TREE, _ELEV, dates=[(6, 21)], hours=[12])
+        self.assertGreater(_north(g), _south(g))
+
+
+class TestTimeOfDay(unittest.TestCase):
+    def test_morning_shadow_west(self):
+        g = shade.shade_grid_at(_TREE, _ELEV, datetime(2025, 6, 21, 9, 0))
+        self.assertGreater(_west(g), _east(g))
+
+    def test_afternoon_shadow_east(self):
+        g = shade.shade_grid_at(_TREE, _ELEV, datetime(2025, 6, 21, 15, 0))
+        self.assertGreater(_east(g), _west(g))
+
+    def test_night_no_shade(self):
+        g = shade.shade_grid_at(_TREE, _ELEV, datetime(2025, 6, 21, 2, 0))
+        self.assertTrue(all(v == 0.0 for row in g for v in row))
+
+
+class TestShadeRamp(unittest.TestCase):
+    def test_rgba_dimensions(self):
+        g = shade.shade_grid(_TREE, _ELEV)
+        rgba, w, h = shade.shade_ramp_rgba(g)
+        self.assertEqual(w, _N)
+        self.assertEqual(h, _N)
+        self.assertEqual(len(rgba), w * h * 4)
+
+    def test_lit_cells_transparent(self):
+        # A fully-lit grid encodes to all-transparent (alpha 0).
+        lit = [[0.0] * 2 for _ in range(2)]
+        rgba, w, h = shade.shade_ramp_rgba(lit)
+        alphas = [rgba[i * 4 + 3] for i in range(w * h)]
+        self.assertTrue(all(a == 0 for a in alphas))
+
+    def test_deep_shade_opaque(self):
+        deep = [[1.0]]
+        rgba, _, _ = shade.shade_ramp_rgba(deep)
+        self.assertGreater(rgba[3], 0)   # alpha > 0
+
+
+class TestOverlayPayload(unittest.TestCase):
+    def test_payload_from_monkeypatched_grid(self):
+        # Avoid the network: feed a fixed elevation grid + a marked tree.
+        import src.zoning as zoning
+        orig = zoning.site_elevation_grid
+        zoning.site_elevation_grid = lambda *a, **k: _ELEV
+        try:
+            project = {"features": [
+                {"geometry": {"type": "Point", "coordinates": [_CLNG, _CLAT]},
+                 "properties": {"element_type": "existing_tree",
+                                "height_m": 12.0, "canopy_radius_m": 4.0}},
+            ]}
+            payload = shade.shade_overlay_payload(project, None, {})
+            self.assertIsNotNone(payload)
+            self.assertTrue(payload["data_url"].startswith(
+                "data:image/png;base64,"))
+            for k in ("south", "north", "west", "east"):
+                self.assertIn(k, payload["bbox"])
+        finally:
+            zoning.site_elevation_grid = orig
+
+    def test_payload_none_without_casters(self):
+        import src.zoning as zoning
+        orig = zoning.site_elevation_grid
+        zoning.site_elevation_grid = lambda *a, **k: _ELEV
+        try:
+            payload = shade.shade_overlay_payload({"features": []}, None, {})
+            self.assertIsNone(payload)     # nothing shaded → nothing to draw
+        finally:
+            zoning.site_elevation_grid = orig
+
+
+if __name__ == "__main__":
+    unittest.main()

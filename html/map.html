@@ -4021,6 +4021,38 @@
       }
     }
 
+    // ── Shade overlay (V1.51) — a SEPARATE image layer from the slope
+    // overlay so the two can be shown at once. Mirrors drawSlopeOverlay.
+    var shadeOverlayLayer = null;
+
+    function drawShadeOverlay(payload) {
+      // payload: {image: data-url, bbox: {south, north, west, east}, opacity}
+      if (shadeOverlayLayer) {
+        map.removeLayer(shadeOverlayLayer);
+        shadeOverlayLayer = null;
+      }
+      if (!payload || !payload.image || !payload.bbox) return;
+      var b = payload.bbox;
+      var bnds = L.latLngBounds([b.south, b.west], [b.north, b.east]);
+      shadeOverlayLayer = L.imageOverlay(payload.image, bnds, {
+        opacity: typeof payload.opacity === 'number' ? payload.opacity : 0.5,
+        interactive: false
+      }).addTo(map);
+    }
+
+    function setShadeOverlayOpacity(opacity) {
+      if (shadeOverlayLayer && shadeOverlayLayer.setOpacity) {
+        shadeOverlayLayer.setOpacity(opacity);
+      }
+    }
+
+    function clearShadeOverlay() {
+      if (shadeOverlayLayer) {
+        map.removeLayer(shadeOverlayLayer);
+        shadeOverlayLayer = null;
+      }
+    }
+
     // ── A4: Wind overlay ────────────────────────────────────────────────────
     var windLayer = null;
 

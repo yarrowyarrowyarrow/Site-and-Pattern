@@ -922,6 +922,162 @@ class MapEventRouter:
         self._main._mark_modified()
         self._main.site_panel.set_auto_terrain_status("")
 
+    # ── Shade overlay (V1.51) ────────────────────────────────────────────────
+
+    def _project_boundary_latlng(self):
+        """First drawn boundary as [(lat, lng), …], or None — for shade/zoning."""
+        import src.project as project_io
+        try:
+            data = project_io.project_to_map_data(self._main._project)
+        except Exception:  # noqa: BLE001
+            return None
+        for b in data.get("boundaries", []):
+            pts = b.get("points") or []
+            if len(pts) >= 3:
+                return [(float(p[0]), float(p[1])) for p in pts]
+        return None
+
+    def _on_shade_requested(self, config: dict):
+        """Compute the shade overlay off-thread (ShadeWorker) and draw it. The
+        elevation fetch can be slow/network-bound, so it never blocks the UI."""
+        from datetime import datetime
+        from PyQt6.QtCore import QThread
+        from src.shade import ShadeWorker
+
+        sc = dict(self._main._project.get("properties", {})
+                  .get("site_config", {}) or {})
+        boundary = self._project_boundary_latlng()
+        if boundary is None and sc.get("latitude") is None:
+            self._main.statusBar().showMessage(
+                "Drop a property pin or draw a boundary first.", 4000)
+            return
+
+        when = None
+        w = (config or {}).get("when")
+        if w:                       # (month, day, hour) local solar
+            when = datetime(2025, w[0], w[1], int(w[2]), 0)
+
+        opacity = self._main.site_panel._shade_opacity.value() / 100.0
+        self._main._shade_opacity = opacity
+        self._main.statusBar().showMessage("Computing shade…")
+
+        thread = QThread(self._main)
+        worker = ShadeWorker(self._main._project, boundary, sc, when)
+        worker.moveToThread(thread)
+        thread.started.connect(worker.run)
+        worker.ready.connect(self._on_shade_ready)
+        worker.finished.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        self._main._shade_thread = thread
+        self._main._shade_worker = worker
+        thread.start()
+
+    def _on_shade_ready(self, payload):
+        if not payload:
+            self._main.statusBar().showMessage(
+                "No shade to show — mark or import some trees/buildings, or add "
+                "trees to the design first.", 5000)
+            return
+        self._main.map_widget.draw_shade_overlay(
+            payload["data_url"], payload["bbox"],
+            getattr(self._main, "_shade_opacity", 0.5))
+        self._main.statusBar().showMessage("Shade overlay updated.", 3000)
+
+    # ── Existing features from OpenStreetMap (V1.51) ─────────────────────────
+
+    def _on_osm_import_requested(self):
+        """Fetch buildings/trees from OSM for the boundary/pin area off-thread,
+        then add them as existing_* features (deduped). Degrades gracefully."""
+        from PyQt6.QtCore import QObject, QThread, pyqtSignal
+
+        sc = dict(self._main._project.get("properties", {})
+                  .get("site_config", {}) or {})
+        boundary = self._project_boundary_latlng()
+        bbox = self._osm_bbox(boundary, sc)
+        if bbox is None:
+            self._main.site_panel.set_osm_status(
+                "Drop a pin or draw a boundary first.")
+            return
+
+        class _OSMWorker(QObject):
+            ready = pyqtSignal(object)
+            finished = pyqtSignal()
+
+            def __init__(self, bbox):
+                super().__init__()
+                self._bbox = bbox
+
+            def run(self):
+                try:
+                    from src.osm_features import fetch_existing_features
+                    res = fetch_existing_features(self._bbox)
+                except Exception:  # noqa: BLE001
+                    res = None
+                self.ready.emit(res)
+                self.finished.emit()
+
+        self._main.site_panel.set_osm_status("Querying OpenStreetMap…")
+        thread = QThread(self._main)
+        worker = _OSMWorker(bbox)
+        worker.moveToThread(thread)
+        thread.started.connect(worker.run)
+        worker.ready.connect(self._on_osm_ready)
+        worker.finished.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        self._main._osm_thread = thread
+        self._main._osm_worker = worker
+        thread.start()
+
+    def _osm_bbox(self, boundary, site_config, radius_m: float = 60.0):
+        """A bbox (terrain.py convention) from the boundary, else a box around
+        the pin. None when neither is available."""
+        import math
+        if boundary and len(boundary) >= 3:
+            lats = [p[0] for p in boundary]
+            lngs = [p[1] for p in boundary]
+            return {"north": max(lats), "south": min(lats),
+                    "east": max(lngs), "west": min(lngs)}
+        lat, lng = site_config.get("latitude"), site_config.get("longitude")
+        if lat is None or lng is None:
+            return None
+        cos_lat = math.cos(lat * math.pi / 180) or 1e-9
+        dlat = radius_m / 111320.0
+        dlng = radius_m / (111320.0 * cos_lat)
+        return {"north": lat + dlat, "south": lat - dlat,
+                "east": lng + dlng, "west": lng - dlng}
+
+    def _on_osm_ready(self, res):
+        if not res:
+            self._main.site_panel.set_osm_status(
+                "OpenStreetMap unavailable or nothing found nearby.")
+            return
+        from src.osm_features import add_features_to_project
+        feats = list(res.get("buildings", [])) + list(res.get("trees", []))
+        added = add_features_to_project(feats, self._main._project)
+        if added:
+            self._main._mark_modified()
+            # Re-render the newly imported features through the structure path.
+            self._reload_existing_features()
+        n_b = len(res.get("buildings", []))
+        n_t = len(res.get("trees", []))
+        self._main.site_panel.set_osm_status(
+            f"Found {n_b} building(s), {n_t} tree(s); added {added} new.")
+
+    def _reload_existing_features(self):
+        """Draw any existing_tree/building features that aren't yet on the map
+        (reuses the structure render path via project_to_map_data)."""
+        import src.project as project_io
+        try:
+            data = project_io.project_to_map_data(self._main._project)
+        except Exception:  # noqa: BLE001
+            return
+        for s in data.get("structures", []):
+            sd = s.get("struct_def", {})
+            if sd.get("id") in ("existing_tree", "existing_building"):
+                self._main.map_widget.load_structure(sd, s["lat"], s["lng"])
+
     # ── Edmonton offline dataset download ────────────────────────────────────
     # State on MainWindow: _dl_thread, _dl_worker.
 
