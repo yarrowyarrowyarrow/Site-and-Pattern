@@ -94,5 +94,45 @@ class TestCanopyFootprint(unittest.TestCase):
         self.assertEqual(main._project["features"], [])
 
 
+class TestShapeHeightEdit(unittest.TestCase):
+    """V1.53 — right-click 'edit height' updates the feature in place."""
+
+    def test_set_height_promotes_flat_shape(self):
+        router, main = _router()
+        router._on_shape_complete(
+            "s1", json.dumps(_PTS), "Bed", "Garden Bed",
+            "#4caf50", "#2e7d32", 0.25, "", 50.0, 0.0)
+        self.assertEqual(
+            main._project["features"][0]["properties"]["element_type"],
+            "custom_shape")
+        router._on_shape_height_changed("s1", 7.0)
+        props = main._project["features"][0]["properties"]
+        self.assertEqual(props["element_type"], "canopy_footprint")
+        self.assertEqual(props["height_m"], 7.0)
+        self.assertTrue(props["cast_shade"])
+
+    def test_zero_height_demotes_caster(self):
+        router, main = _router()
+        router._on_shape_complete(
+            "s2", json.dumps(_PTS), "House", "Custom",
+            "#78909c", "#546e7a", 0.4, "", 80.0, 8.0)
+        router._on_shape_height_changed("s2", 0.0)
+        props = main._project["features"][0]["properties"]
+        self.assertEqual(props["element_type"], "custom_shape")
+        self.assertIsNone(props["height_m"])
+        # And it no longer reads as a shade caster.
+        self.assertEqual(shade.casters_from_project(main._project), [])
+
+    def test_height_change_updates_caster_value(self):
+        router, main = _router()
+        router._on_shape_complete(
+            "s3", json.dumps(_PTS), "Tree", "Custom",
+            "#66bb6a", "#43a047", 0.3, "", 60.0, 6.0)
+        router._on_shape_height_changed("s3", 11.0)
+        casters = shade.casters_from_project(main._project)
+        self.assertEqual(len(casters), 1)
+        self.assertEqual(casters[0]["height_m"], 11.0)
+
+
 if __name__ == "__main__":
     unittest.main()

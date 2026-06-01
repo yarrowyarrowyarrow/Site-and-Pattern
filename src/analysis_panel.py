@@ -635,6 +635,23 @@ class AnalysisPanel(QWidget):
         self._habitat_tips.setMinimumHeight(160)
         layout.addWidget(self._habitat_tips, 1)
 
+        # Shade-zone breakdown — read-only summary of the cached shade tags
+        # (Site tab → "Classify planting zones"). Shown here so the light mix is
+        # visible alongside habitat value without recomputing the shade grid.
+        shade_label = QLabel("Light / shade mix")
+        shade_label.setStyleSheet(
+            "color: #a5d6a7; font-size: 12px; font-weight: bold; padding: 4px 0 2px 0;")
+        layout.addWidget(shade_label)
+
+        self._shade_breakdown = QLabel(
+            "Run 'Classify planting zones' on the Site tab to see the\n"
+            "full-sun / partial-shade / full-shade mix.")
+        self._shade_breakdown.setWordWrap(True)
+        self._shade_breakdown.setStyleSheet(
+            "color: #c8e6c9; font-size: 11px; padding: 6px; "
+            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px;")
+        layout.addWidget(self._shade_breakdown)
+
         # Reference link
         ref = QLabel(
             "Based on Doug Tallamy's keystone-species framework\n"
@@ -644,6 +661,27 @@ class AnalysisPanel(QWidget):
         ref.setWordWrap(True)
         ref.setStyleSheet("color: #607d8b; font-size: 10px; font-style: italic;")
         layout.addWidget(ref)
+
+    def set_shade_breakdown(self, counts: dict | None):
+        """Render the cached shade-tag mix (``{tag: n}`` from
+        shade_zones.tag_counts), or a prompt when nothing is classified yet.
+        Called by the main window after classification / project load."""
+        if not hasattr(self, "_shade_breakdown"):
+            return
+        total = sum((counts or {}).values())
+        if not total:
+            self._shade_breakdown.setText(
+                "Run 'Classify planting zones' on the Site tab to see the\n"
+                "full-sun / partial-shade / full-shade mix.")
+            return
+
+        def _pct(n):
+            return f"{n} ({n * 100 // total}%)"
+        self._shade_breakdown.setText(
+            f"Across {total} classified spots:\n"
+            f"  ☀️  Full sun       {_pct(counts.get('full_sun', 0))}\n"
+            f"  ⛅  Partial shade  {_pct(counts.get('partial_shade', 0))}\n"
+            f"  🌑  Full shade     {_pct(counts.get('full_shade', 0))}")
 
         self._tabs.addTab(tab, "Habitat Value")
 

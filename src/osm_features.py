@@ -220,3 +220,37 @@ def add_features_to_project(features: list[dict], project_dict: dict) -> int:
         existing_pts.append((lat, lng))
         added += 1
     return added
+
+
+# ── Qt worker thread (optional; mirrors shade.ShadeWorker) ───────────────────
+# Defined only when PyQt6 is importable so the pure fetch above stays usable
+# headless. The GUI runs fetch_existing_features off the UI thread because it
+# does a network Overpass query.
+try:
+    from PyQt6.QtCore import QObject, pyqtSignal
+    _HAVE_QT = True
+except ImportError:
+    _HAVE_QT = False
+
+if _HAVE_QT:
+    class OSMWorker(QObject):
+        """Fetch existing OSM features for a bbox off the UI thread.
+
+            worker = OSMWorker(bbox)
+            worker.ready.connect(on_ready)   # emits the fetch result, or None
+        """
+
+        ready = pyqtSignal(object)
+        finished = pyqtSignal()
+
+        def __init__(self, bbox, parent=None):
+            super().__init__(parent)
+            self._bbox = bbox
+
+        def run(self):
+            try:
+                res = fetch_existing_features(self._bbox)
+            except Exception:  # noqa: BLE001 — never crash the worker thread
+                res = None
+            self.ready.emit(res)
+            self.finished.emit()

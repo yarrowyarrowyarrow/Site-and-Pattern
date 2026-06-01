@@ -233,6 +233,26 @@ class TestProjectToMapData(unittest.TestCase):
         # Closing vertex was identical to opening; project_to_map_data drops it.
         self.assertEqual(len(shape["points"]), 3)
 
+    def test_canopy_footprint_round_trips_height_and_id(self):
+        # V1.53: a shade-casting canopy_footprint loads back through the same
+        # shapes channel, preserving its height and shape_id.
+        ring = [[-113.5, 53.5], [-113.5, 53.6], [-113.4, 53.6], [-113.5, 53.5]]
+        p = self._make({
+            "type": "Feature",
+            "geometry": {"type": "Polygon", "coordinates": [ring]},
+            "properties": {
+                "element_type": "canopy_footprint",
+                "shape_id": "shape_abc",
+                "label": "House",
+                "height_m": 8.0,
+                "cast_shade": True,
+            },
+        })
+        shapes = project_to_map_data(p)["shapes"]
+        self.assertEqual(len(shapes), 1)
+        self.assertEqual(shapes[0]["height_m"], 8.0)
+        self.assertEqual(shapes[0]["shape_id"], "shape_abc")
+
     def test_contour_line_and_auto_contour(self):
         p = self._make(
             {

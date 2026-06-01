@@ -2900,8 +2900,12 @@
       if (shapePreview) { map.removeLayer(shapePreview); shapePreview = null; }
       drawnItems.clearLayers();
 
-      var id = 'shape_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
       var cfg = currentShape || {};
+      // Reuse an existing id when re-drawing in place (height edit) or loading a
+      // saved shape, so the JS layer id stays in sync with the project feature's
+      // shape_id; otherwise mint a fresh one.
+      var id = cfg.shape_id || cfg.id ||
+        ('shape_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5));
       var fillColor   = cfg.fill_color   || '#4caf50';
       var strokeColor = cfg.stroke_color || '#2e7d32';
       var fillOpacity = cfg.fill_opacity !== undefined ? cfg.fill_opacity : 0.25;
@@ -2913,13 +2917,17 @@
 
       var group = L.layerGroup().addTo(map);
 
+      // A shade caster (heightM > 0) reads distinctly from a flat area shape:
+      // a dashed stroke and a thin diagonal-hatch feel via a heavier border.
+      var castsShade = heightM > 0;
+
       // Main polygon
       var polygon = L.polygon(shapePoints, {
         color: strokeColor,
-        weight: 2,
+        weight: castsShade ? 3 : 2,
         fillColor: fillColor,
         fillOpacity: fillOpacity,
-        dashArray: dashArray || null
+        dashArray: castsShade ? '6 4' : (dashArray || null)
       }).addTo(group);
 
       // Calculate area
@@ -2928,10 +2936,11 @@
         areaM2.toFixed(1) + ' m²' :
         (areaM2 / 10000).toFixed(2) + ' ha';
 
-      // Centre label
+      // Centre label — append a shade marker (☀ + height) for casters.
       var center = polygon.getBounds().getCenter();
-      if (label || shapeType !== 'Custom') {
-        var displayLabel = label || shapeType;
+      if (label || shapeType !== 'Custom' || castsShade) {
+        var displayLabel = label || shapeType || 'Shade';
+        if (castsShade) displayLabel += ' ☀️' + heightM + 'm';
         var labelIcon = L.divIcon({
           className: 'shape-label',
           html: escH(displayLabel),
@@ -2942,9 +2951,14 @@
       }
 
       // Tooltip
+      var shadeLine = castsShade
+        ? '<br>Casts shade — ' + escH(String(heightM)) + ' m tall'
+          + '<br>Right-click to edit height or remove'
+        : '<br>Right-click to remove';
       polygon.bindTooltip(
         '<b>' + escH(label || shapeType) + '</b><br>' +
-        '<span style="color:#78909c;font-size:10px">Area: ' + escH(areaStr) + '<br>Right-click to remove</span>',
+        '<span style="color:#78909c;font-size:10px">Area: ' + escH(areaStr)
+          + shadeLine + '</span>',
         { className: 'plant-marker-label' }
       );
 
@@ -2962,9 +2976,34 @@
         heightM: heightM
       };
 
-      // Right-click to remove
+      // Right-click: edit height (shade casters) or remove. A shade caster
+      // offers a height prompt; anything else just removes.
       polygon.on('contextmenu', function(e) {
         L.DomEvent.stop(e);
+        if (castsShade) {
+          var entry = prompt(
+            'Height of this shade caster in metres (blank or 0 to remove):',
+            String(heightM));
+          if (entry === null) return;          // cancelled
+          var newH = parseFloat(entry);
+          if (!isNaN(newH) && newH > 0) {
+            if (bridge) bridge.onShapeHeightChanged(id, newH);
+            // Redraw in place with the new height.
+            map.removeLayer(group);
+            delete shapeLayers[id];
+            currentShape = {
+              shape_id: id,
+              points: shapePoints.length ? shapePoints : polygon._shape.points,
+              shape_type: shapeType, label: label,
+              fill_color: fillColor, stroke_color: strokeColor,
+              fill_opacity: fillOpacity, dash_array: dashArray,
+              height_m: newH, _suppressBridge: true
+            };
+            shapePoints = polygon._shape.points.slice();
+            finishShape();
+            return;
+          }
+        }
         map.removeLayer(group);
         delete shapeLayers[id];
         if (bridge) bridge.onShapeRemoved(id);
@@ -2972,8 +3011,12 @@
 
       shapeLayers[id] = group;
 
-      // Notify Python (trailing heightM; >0 promotes this to a shade caster)
-      if (bridge) bridge.onShapeComplete(id, JSON.stringify(shapePoints.slice()), label, shapeType, fillColor, strokeColor, fillOpacity, dashArray, areaM2, heightM);
+      // Notify Python (trailing heightM; >0 promotes this to a shade caster).
+      // _suppressBridge avoids a duplicate append when re-drawing in place
+      // (height edit) or loading a saved shape.
+      if (bridge && !(currentShape && currentShape._suppressBridge)) {
+        bridge.onShapeComplete(id, JSON.stringify(shapePoints.slice()), label, shapeType, fillColor, strokeColor, fillOpacity, dashArray, areaM2, heightM);
+      }
 
       shapePoints = [];
       setMode('none');
@@ -2993,7 +3036,9 @@
       var pts = shapeDef.points || [];
       if (pts.length < 3) return;
       shapePoints = pts;
-      currentShape = shapeDef;
+      // Rendering a saved shape must not notify Python (the feature already
+      // exists in the project); suppress the bridge for this redraw.
+      currentShape = Object.assign({}, shapeDef, { _suppressBridge: true });
       finishShape();
       shapePoints = [];
     }

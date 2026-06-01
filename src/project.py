@@ -184,13 +184,15 @@ def project_to_map_data(project: dict) -> dict:
             # reloaded polygon stays a shade caster.
             result["shapes"].append({
                 "points": points,
+                "shape_id": props.get("shape_id"),
                 "shape_type": props.get("shape_type", "Custom"),
                 "label": props.get("label", ""),
                 "fill_color": props.get("fill_color", "#4caf50"),
                 "stroke_color": props.get("stroke_color", "#2e7d32"),
                 "fill_opacity": props.get("fill_opacity", 0.25),
                 "dash_array": props.get("dash_array", ""),
-                "height_m": props.get("height_m", 0.0),
+                # `or 0.0` coalesces a demoted shape's explicit None height.
+                "height_m": props.get("height_m") or 0.0,
             })
 
         elif etype == "contour_line" and geom.get("type") == "LineString":

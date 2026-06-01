@@ -639,6 +639,7 @@ class MainWindow(QMainWindow):
         b.hedgerow_removed.connect(self._on_hedgerow_removed)
         b.shape_complete.connect(self._on_shape_complete)
         b.shape_removed.connect(self._on_shape_removed)
+        b.shape_height_changed.connect(self._on_shape_height_changed)
 
         # Toolbar → structures layer toggle
         self.toolbar.structures_toggled.connect(self.map_widget.set_structures_visible)
@@ -932,6 +933,9 @@ class MainWindow(QMainWindow):
 
     def _on_shape_removed(self, shape_id: str):
         return self._map_events._on_shape_removed(shape_id)
+
+    def _on_shape_height_changed(self, shape_id: str, height_m: float):
+        return self._map_events._on_shape_height_changed(shape_id, height_m)
 
     # ── Analysis overlays (A1-A4) ──────────────────────────────────────────
 
@@ -1867,6 +1871,14 @@ class MainWindow(QMainWindow):
         # Habitat Value Score tab in the analysis panel uses the same data.
         self.analysis_panel.set_placed_plants(enriched)
         self.analysis_panel.set_structures(structs)
+
+        # Read-only shade-mix breakdown from the cached tags (if classified).
+        try:
+            from src.db import shade_zones
+            pk = shade_zones.project_key_for(getattr(self, "_project_path", None))
+            self.analysis_panel.set_shade_breakdown(shade_zones.tag_counts(pk))
+        except Exception:  # noqa: BLE001
+            pass
 
         # "On This Design" sibling inner tab. Push both: Communities + Stats
         # sub-tabs read from the enriched list; the Plants sub-tab reads

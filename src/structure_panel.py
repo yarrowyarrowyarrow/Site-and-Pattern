@@ -205,7 +205,31 @@ class StructurePanel(QWidget):
         btns.addWidget(btn_bldg)
         vb.addLayout(btns)
 
+        # Draw a building's true perimeter (a rectangular point footprint casts
+        # a round shadow; the real outline casts an accurate one). Reuses the
+        # shape-draw pipeline with the entered height so it lands as a
+        # canopy_footprint shade caster.
+        btn_outline = QPushButton("✏️ Draw building footprint")
+        btn_outline.setToolTip(
+            "Draw the building's outline on the map (click corners, double-click "
+            "to finish). Uses the height above; casts an accurate shadow.")
+        btn_outline.clicked.connect(self._on_draw_building_footprint)
+        vb.addWidget(btn_outline)
+
         layout.addWidget(box)
+
+    def _on_draw_building_footprint(self):
+        """Start shape-draw mode pre-set as a building footprint at the entered
+        height, so the finished polygon becomes a shade-casting canopy."""
+        self.place_shape_requested.emit({
+            "shape_type": "Building footprint",
+            "label": "Building",
+            "fill_color": "#8d6e63",
+            "stroke_color": "#5d4037",
+            "fill_opacity": 0.3,
+            "dash_array": "",
+            "height_m": self._exist_height.value(),
+        })
 
     def _on_mark_existing(self, feature_id: str):
         """Emit a placement request for an existing tree/building, reusing the

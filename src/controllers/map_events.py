@@ -305,6 +305,23 @@ class MapEventRouter:
         ]
         self._main._mark_modified()
 
+    def _on_shape_height_changed(self, shape_id: str, height_m: float):
+        """Update a drawn shape's height in place (map right-click 'edit
+        height'). A positive height makes it a shade-casting canopy_footprint;
+        the JS side has already re-rendered the polygon."""
+        casts = bool(height_m and height_m > 0)
+        for f in self._main._project["features"]:
+            props = f.get("properties", {})
+            if props.get("shape_id") != shape_id:
+                continue
+            props["element_type"] = "canopy_footprint" if casts else "custom_shape"
+            props["height_m"] = float(height_m) if casts else None
+            props["cast_shade"] = True if casts else None
+            self._main._mark_modified()
+            self._main.statusBar().showMessage(
+                f"Shade height updated to {height_m:.1f} m.", 3000)
+            break
+
     # ── Contour handlers ─────────────────────────────────────────────────────
 
     def _on_contour_complete(self, points_json: str, elevation: float,
@@ -948,11 +965,27 @@ class MapEventRouter:
                 return [(float(p[0]), float(p[1])) for p in pts]
         return None
 
+    def _run_worker(self, worker, on_ready, attr_prefix: str):
+        """Run a QObject worker (with ``run``/``ready``/``finished``) on its own
+        QThread and auto-tear-down. Keeps a ref on the main window under
+        ``_{attr_prefix}_thread``/``_worker`` so it isn't GC'd mid-flight.
+        Shared by the shade overlay + zone-classify flows."""
+        from PyQt6.QtCore import QThread
+        thread = QThread(self._main)
+        worker.moveToThread(thread)
+        thread.started.connect(worker.run)
+        worker.ready.connect(on_ready)
+        worker.finished.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        setattr(self._main, f"_{attr_prefix}_thread", thread)
+        setattr(self._main, f"_{attr_prefix}_worker", worker)
+        thread.start()
+
     def _on_shade_requested(self, config: dict):
         """Compute the shade overlay off-thread (ShadeWorker) and draw it. The
         elevation fetch can be slow/network-bound, so it never blocks the UI."""
         from datetime import datetime
-        from PyQt6.QtCore import QThread
         from src.shade import ShadeWorker
 
         sc = dict(self._main._project.get("properties", {})
@@ -968,21 +1001,11 @@ class MapEventRouter:
         if w:                       # (month, day, hour) local solar
             when = datetime(2025, w[0], w[1], int(w[2]), 0)
 
-        opacity = self._main.site_panel._shade_opacity.value() / 100.0
-        self._main._shade_opacity = opacity
+        self._main._shade_opacity = (
+            self._main.site_panel._shade_opacity.value() / 100.0)
         self._main.statusBar().showMessage("Computing shade…")
-
-        thread = QThread(self._main)
-        worker = ShadeWorker(self._main._project, boundary, sc, when)
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.ready.connect(self._on_shade_ready)
-        worker.finished.connect(thread.quit)
-        worker.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        self._main._shade_thread = thread
-        self._main._shade_worker = worker
-        thread.start()
+        self._run_worker(ShadeWorker(self._main._project, boundary, sc, when),
+                         self._on_shade_ready, "shade")
 
     def _on_shade_ready(self, payload):
         if not payload:
@@ -998,7 +1021,6 @@ class MapEventRouter:
     def _on_shade_zones_requested(self):
         """Classify planting cells (full sun / partial / full shade) off the UI
         thread and cache the derived tags (src/db/shade_zones.py)."""
-        from PyQt6.QtCore import QThread
         from src.shade import ShadeZoneWorker
 
         sc = dict(self._main._project.get("properties", {})
@@ -1010,17 +1032,8 @@ class MapEventRouter:
             return
 
         self._main.site_panel.set_shade_zone_status("Classifying planting zones…")
-        thread = QThread(self._main)
-        worker = ShadeZoneWorker(self._main._project, boundary, sc)
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.ready.connect(self._on_shade_zones_ready)
-        worker.finished.connect(thread.quit)
-        worker.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        self._main._shade_zone_thread = thread
-        self._main._shade_zone_worker = worker
-        thread.start()
+        self._run_worker(ShadeZoneWorker(self._main._project, boundary, sc),
+                         self._on_shade_zones_ready, "shade_zone")
 
     def _on_shade_zones_ready(self, rows):
         if not rows:
@@ -1039,9 +1052,14 @@ class MapEventRouter:
                 getattr(self._main, "_placed_plants", None) or [], pk)
         except Exception:  # noqa: BLE001 — feedback is best-effort
             mismatches = []
+        counts = shade_zones.tag_counts(pk)
         self._main.site_panel.set_shade_zone_status(
-            shade_zones.format_classification_status(
-                len(rows), shade_zones.tag_counts(pk), mismatches))
+            shade_zones.format_classification_status(len(rows), counts, mismatches))
+        # Mirror the mix into the Analysis tab's read-only breakdown.
+        try:
+            self._main.analysis_panel.set_shade_breakdown(counts)
+        except Exception:  # noqa: BLE001
+            pass
         self._main.statusBar().showMessage("Planting zones classified.", 3000)
 
     # ── Existing features from OpenStreetMap (V1.51) ─────────────────────────
@@ -1049,7 +1067,7 @@ class MapEventRouter:
     def _on_osm_import_requested(self):
         """Fetch buildings/trees from OSM for the boundary/pin area off-thread,
         then add them as existing_* features (deduped). Degrades gracefully."""
-        from PyQt6.QtCore import QObject, QThread, pyqtSignal
+        from src.osm_features import OSMWorker
 
         sc = dict(self._main._project.get("properties", {})
                   .get("site_config", {}) or {})
@@ -1060,35 +1078,8 @@ class MapEventRouter:
                 "Drop a pin or draw a boundary first.")
             return
 
-        class _OSMWorker(QObject):
-            ready = pyqtSignal(object)
-            finished = pyqtSignal()
-
-            def __init__(self, bbox):
-                super().__init__()
-                self._bbox = bbox
-
-            def run(self):
-                try:
-                    from src.osm_features import fetch_existing_features
-                    res = fetch_existing_features(self._bbox)
-                except Exception:  # noqa: BLE001
-                    res = None
-                self.ready.emit(res)
-                self.finished.emit()
-
         self._main.site_panel.set_osm_status("Querying OpenStreetMap…")
-        thread = QThread(self._main)
-        worker = _OSMWorker(bbox)
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.ready.connect(self._on_osm_ready)
-        worker.finished.connect(thread.quit)
-        worker.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        self._main._osm_thread = thread
-        self._main._osm_worker = worker
-        thread.start()
+        self._run_worker(OSMWorker(bbox), self._on_osm_ready, "osm")
 
     def _osm_bbox(self, boundary, site_config, radius_m: float = 60.0):
         """A bbox (terrain.py convention) from the boundary, else a box around

@@ -115,6 +115,7 @@ class MapBridge(QObject):
     shape_complete = pyqtSignal(str, str, str, str, str, str, float, str, float, float)
         # id, pointsJson, label, shapeType, fillColor, strokeColor, fillOpacity, dashArray, areaM2, heightM
     shape_removed = pyqtSignal(str)                                 # id
+    shape_height_changed = pyqtSignal(str, float)                  # id, heightM
 
     # Polyculture removal signal
     polyculture_removed = pyqtSignal(str, float, float)                   # polycultureName, centerLat, centerLng
@@ -314,6 +315,10 @@ class MapBridge(QObject):
     @pyqtSlot(str)
     def onShapeRemoved(self, shape_id: str):
         self.shape_removed.emit(shape_id)
+
+    @pyqtSlot(str, float)
+    def onShapeHeightChanged(self, shape_id: str, height_m: float):
+        self.shape_height_changed.emit(shape_id, height_m)
 
     # ── Contour slots ─────────────────────────────────────────────────────────
 
