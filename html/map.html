@@ -4101,6 +4101,49 @@
       }
     }
 
+    // ── Vector shadow overlay (true-shape polygons) ─────────────────────────
+    // Preferred over the raster shade overlay when shapely is available: real
+    // footprint shadows drawn as crisp polygons that stay sharp at any zoom and
+    // don't get dropped by the coarse elevation grid.
+    var shadowPolyLayer = null;
+
+    function _shadowStyle(opacity) {
+      return {
+        stroke: true, color: '#283593',
+        weight: 1, opacity: Math.min(1, opacity + 0.2),
+        fill: true, fillColor: '#3f51b5', fillOpacity: opacity,
+        interactive: false
+      };
+    }
+
+    function drawShadowPolygons(payload) {
+      // payload: {polygons: [ [ringLatLng, hole...], ... ], opacity}
+      clearShadowPolygons();
+      if (!payload || !payload.polygons || !payload.polygons.length) return;
+      var opacity = (typeof payload.opacity === 'number') ? payload.opacity : 0.5;
+      shadowPolyLayer = L.layerGroup();
+      payload.polygons.forEach(function (rings) {
+        // rings = [exterior, hole1, ...]; L.polygon takes [lat,lng] pairs and
+        // treats trailing rings as holes.
+        L.polygon(rings, _shadowStyle(opacity)).addTo(shadowPolyLayer);
+      });
+      shadowPolyLayer.addTo(map);
+    }
+
+    function setShadowPolygonOpacity(opacity) {
+      if (!shadowPolyLayer) return;
+      shadowPolyLayer.eachLayer(function (l) {
+        if (l.setStyle) l.setStyle(_shadowStyle(opacity));
+      });
+    }
+
+    function clearShadowPolygons() {
+      if (shadowPolyLayer) {
+        map.removeLayer(shadowPolyLayer);
+        shadowPolyLayer = null;
+      }
+    }
+
     // ── A4: Wind overlay ────────────────────────────────────────────────────
     var windLayer = null;
 

@@ -70,6 +70,14 @@ class _MetricOrigin:
         y = (lat - self.lat0) * _M_PER_DEG_LAT
         return x, y
 
+    def to_lnglat(self, x: float, y: float) -> tuple[float, float]:
+        """Inverse of :meth:`to_xy` — local metres back to ``(lng, lat)``. Used
+        to project metric shadow polygons back onto the map for the vector
+        overlay."""
+        lng = self.lng0 + x / (_M_PER_DEG_LAT * self._cos_lat)
+        lat = self.lat0 + y / _M_PER_DEG_LAT
+        return lng, lat
+
 
 def origin_for_bbox(bbox: dict) -> "_MetricOrigin":
     """Build a metric origin anchored at a grid bbox's SW corner."""
@@ -197,6 +205,61 @@ def union_shadows(metric_casters: list, azimuth: float, altitude: float):
         return unary_union(shadows)
     except Exception:  # noqa: BLE001
         return None
+
+
+def union_geometries(geoms: list):
+    """Union an arbitrary list of (Multi)Polygons into one geometry — used to
+    fold every sampled sun-moment's shadow into a single "ever-shaded" envelope.
+    Returns ``None`` when shapely is absent or there is nothing to union."""
+    if not _HAVE_SHAPELY:
+        return None
+    parts = [g for g in geoms if g is not None and not g.is_empty]
+    if not parts:
+        return None
+    try:
+        merged = unary_union(parts)
+        if not merged.is_valid:
+            merged = merged.buffer(0)
+        return merged if (merged and not merged.is_empty) else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def latlng_rings(geom, origin: "_MetricOrigin") -> list:
+    """Project a metric (Multi)Polygon shadow back to map coordinates for the
+    Leaflet vector overlay.
+
+    Returns a list of polygons, each polygon a list of rings (the first is the
+    exterior, any others are holes), each ring a list of ``[lat, lng]`` pairs —
+    the nested shape ``L.polygon`` accepts (holes included, so concave shadows /
+    courtyards stay open). Empty list when shapely is absent or ``geom`` is
+    empty."""
+    if not _HAVE_SHAPELY or geom is None or geom.is_empty:
+        return []
+
+    def _ring_latlng(coords):
+        out = []
+        for x, y in coords:
+            lng, lat = origin.to_lnglat(x, y)
+            out.append([lat, lng])
+        return out
+
+    if geom.geom_type == "Polygon":
+        members = [geom]
+    elif geom.geom_type in ("MultiPolygon", "GeometryCollection"):
+        members = list(getattr(geom, "geoms", []))
+    else:
+        return []
+
+    polys: list = []
+    for poly in members:
+        if getattr(poly, "geom_type", "") != "Polygon" or poly.is_empty:
+            continue
+        rings = [_ring_latlng(poly.exterior.coords)]
+        for interior in poly.interiors:
+            rings.append(_ring_latlng(interior.coords))
+        polys.append(rings)
+    return polys
 
 
 def rasterize_to_grid(shadow_geom, elev: dict,

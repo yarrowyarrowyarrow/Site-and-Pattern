@@ -154,5 +154,71 @@ class TestUnionAndRasterize(unittest.TestCase):
         self.assertTrue(any(v for row in grid for v in row))
 
 
+class TestMetricRoundTrip(unittest.TestCase):
+    """V1.54 — the inverse projection used to draw vector shadows back on the
+    map must round-trip with the forward transform."""
+
+    def test_to_xy_to_lnglat_round_trip(self):
+        origin = sg.origin_for_bbox(_BBOX)
+        for lng, lat in [(_CLNG, _CLAT),
+                         (_BBOX["west"], _BBOX["south"]),
+                         (_BBOX["east"], _BBOX["north"])]:
+            x, y = origin.to_xy(lng, lat)
+            lng2, lat2 = origin.to_lnglat(x, y)
+            self.assertAlmostEqual(lng, lng2, places=9)
+            self.assertAlmostEqual(lat, lat2, places=9)
+
+    def test_origin_maps_to_zero(self):
+        origin = sg.origin_for_bbox(_BBOX)
+        x, y = origin.to_xy(_BBOX["west"], _BBOX["south"])
+        self.assertAlmostEqual(x, 0.0, places=6)
+        self.assertAlmostEqual(y, 0.0, places=6)
+
+
+@unittest.skipUnless(sg._HAVE_SHAPELY, "shapely not installed")
+class TestLatLngRings(unittest.TestCase):
+    """V1.54 — projecting metric shadow polygons back to [lat,lng] rings for the
+    Leaflet vector overlay."""
+
+    def setUp(self):
+        self.origin = sg.origin_for_bbox(_BBOX)
+        self.poly = sg.footprint_to_metric(
+            _square_ring(_CLAT, _CLNG, 2.0), self.origin)
+
+    def test_rings_shape_and_location(self):
+        shadow = sg.cast_shadow(self.poly, 10.0, 180.0, 45.0)
+        polys = sg.latlng_rings(shadow, self.origin)
+        self.assertTrue(polys)                       # at least one polygon
+        ext = polys[0][0]                            # first polygon, exterior
+        self.assertGreaterEqual(len(ext), 4)
+        # Every vertex is a [lat, lng] pair near the site.
+        for lat, lng in ext:
+            self.assertAlmostEqual(lat, _CLAT, delta=0.01)
+            self.assertAlmostEqual(lng, _CLNG, delta=0.01)
+        # Shadow extends north of the footprint centre (southern sun).
+        self.assertGreater(max(p[0] for p in ext), _CLAT)
+
+    def test_empty_geometry_returns_empty(self):
+        self.assertEqual(sg.latlng_rings(None, self.origin), [])
+
+    def test_concave_hole_preserved(self):
+        from shapely.geometry import Polygon
+        # A square with a square hole → one polygon with an exterior + a hole.
+        outer = [(0, 0), (20, 0), (20, 20), (0, 20)]
+        hole = [(5, 5), (5, 15), (15, 15), (15, 5)]
+        poly = Polygon(outer, [hole])
+        polys = sg.latlng_rings(poly, self.origin)
+        self.assertEqual(len(polys), 1)
+        self.assertEqual(len(polys[0]), 2)           # exterior + 1 hole
+
+    def test_union_geometries_folds_moments(self):
+        a = sg.cast_shadow(self.poly, 10.0, 180.0, 45.0)   # north
+        b = sg.cast_shadow(self.poly, 10.0, 90.0, 45.0)    # west
+        merged = sg.union_geometries([a, b])
+        self.assertIsNotNone(merged)
+        self.assertGreaterEqual(merged.area, a.area)
+        self.assertGreaterEqual(merged.area, b.area)
+
+
 if __name__ == "__main__":
     unittest.main()

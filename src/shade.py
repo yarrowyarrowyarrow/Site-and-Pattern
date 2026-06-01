@@ -346,6 +346,107 @@ def shade_overlay_payload(project_dict: dict, boundary, site_config,
         return None
 
 
+def _casters_extent_bbox(casters: list) -> Optional[dict]:
+    """South/north/west/east envelope of every caster (footprint vertices or the
+    point lat/lng). Anchors the metric origin for the vector path without needing
+    a DEM grid."""
+    lats: list = []
+    lngs: list = []
+    for cv in casters:
+        ring = cv.get("footprint")
+        if ring:
+            for p in ring:
+                lngs.append(p[0])
+                lats.append(p[1])
+        else:
+            lats.append(cv["lat"])
+            lngs.append(cv["lng"])
+    if not lats:
+        return None
+    return {"south": min(lats), "north": max(lats),
+            "west": min(lngs), "east": max(lngs)}
+
+
+def shadow_polygons_payload(project_dict: dict, boundary, site_config,
+                            when: Optional[datetime] = None) -> Optional[dict]:
+    """Qt-free: build true-shape shadow polygons (lat/lng) for the map's vector
+    overlay — crisp, real-shape shadows at any zoom, decoupled from the coarse
+    elevation grid (which can drop a small building's short noon shadow).
+
+    With ``when`` set the shadows are for that *exact instant*; with ``when=None``
+    (Typical) they are the union of every season/day sample moment — the
+    "ever-shaded" envelope. Returns ``{"polygons": [...], "bbox": {...}}`` where
+    each polygon is a list of rings (exterior first, then holes) of ``[lat, lng]``
+    pairs for ``map_widget.draw_shadow_polygons``. ``None`` when shapely is
+    unavailable, no casters cast a shadow, or no site origin is known — the caller
+    then falls back to the grid/PNG overlay."""
+    if not _HAVE_SHAPELY:
+        return None
+    try:
+        casters = casters_from_project(project_dict)
+        casters = [c for c in casters if c.get("height_m", 0.0) > 0]
+        if not casters:
+            return None
+
+        bbox = _casters_extent_bbox(casters)
+        if bbox is None:
+            return None
+        origin = shadow_geometry.origin_for_bbox(bbox)
+
+        # Build metric footprints once; reuse across every sun moment.
+        metric: list = []
+        for cv in casters:
+            ring = cv.get("footprint")
+            if ring:
+                poly = shadow_geometry.footprint_to_metric(ring, origin)
+            else:
+                poly = shadow_geometry.point_footprint_metric(
+                    cv["lng"], cv["lat"], cv.get("radius_m", 0.5), origin)
+            if poly is not None and not poly.is_empty:
+                metric.append((poly, cv["height_m"]))
+        if not metric:
+            return None
+
+        from src.solar import sun_position
+        clat = (bbox["north"] + bbox["south"]) / 2.0
+        clng = (bbox["east"] + bbox["west"]) / 2.0
+
+        moments: list = []
+        if when is not None:
+            moments.append(when)
+        else:
+            for mo, day in _SAMPLE_MONTHS_DAYS:
+                for hr in _SAMPLE_HOURS_LOCAL:
+                    moments.append(datetime(2025, mo, day) + timedelta(hours=hr))
+
+        shadows: list = []
+        for local_dt in moments:
+            # sun_position expects UTC and re-derives local solar time from lng.
+            dt_utc = local_dt + timedelta(hours=-clng / 15.0)
+            sun = sun_position(clat, clng, dt_utc)
+            if sun.altitude < _MIN_SUN_ALT:
+                continue
+            g = shadow_geometry.union_shadows(metric, sun.azimuth, sun.altitude)
+            if g is not None and not g.is_empty:
+                shadows.append(g)
+        if not shadows:
+            return None
+
+        merged = shadow_geometry.union_geometries(shadows)
+        polygons = shadow_geometry.latlng_rings(merged, origin)
+        if not polygons:
+            return None
+
+        # Envelope of the drawn shadows (for fit/debug; vector layer needs no bbox).
+        all_lat = [pt[0] for poly in polygons for ring in poly for pt in ring]
+        all_lng = [pt[1] for poly in polygons for ring in poly for pt in ring]
+        out_bbox = {"south": min(all_lat), "north": max(all_lat),
+                    "west": min(all_lng), "east": max(all_lng)}
+        return {"polygons": polygons, "bbox": out_bbox}
+    except Exception:  # noqa: BLE001 — overlay is best-effort
+        return None
+
+
 def classify_zone_tags(project_dict: dict, boundary, site_config
                        ) -> Optional[list]:
     """Qt-free: compute the season-average shade grid for the site and turn each
@@ -416,6 +517,31 @@ if _HAVE_QT:
         def run(self):
             try:
                 payload = shade_overlay_payload(
+                    self._project, self._boundary, self._site_config, self._when)
+            except Exception:  # noqa: BLE001 — never crash the worker thread
+                payload = None
+            self.ready.emit(payload)
+            self.finished.emit()
+
+    class ShadowPolygonWorker(QObject):
+        """Compute the true-shape vector shadow payload off the UI thread.
+        Mirrors ShadeWorker; emits the ``shadow_polygons_payload`` result (or
+        None) so the caller can fall back to the grid/PNG overlay."""
+
+        ready = pyqtSignal(object)   # {"polygons", "bbox"} dict, or None
+        finished = pyqtSignal()
+
+        def __init__(self, project_dict, boundary, site_config, when=None,
+                     parent=None):
+            super().__init__(parent)
+            self._project = project_dict
+            self._boundary = boundary
+            self._site_config = site_config
+            self._when = when
+
+        def run(self):
+            try:
+                payload = shadow_polygons_payload(
                     self._project, self._boundary, self._site_config, self._when)
             except Exception:  # noqa: BLE001 — never crash the worker thread
                 payload = None

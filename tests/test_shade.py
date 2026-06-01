@@ -167,6 +167,94 @@ class TestPolygonCaster(unittest.TestCase):
         self.assertGreater(_north(g), 0.0)
 
 
+@unittest.skipUnless(shade._HAVE_SHAPELY, "shapely not installed")
+class TestShadowPolygonsPayload(unittest.TestCase):
+    """V1.54 — the grid-independent vector shadow payload for the map overlay."""
+
+    def _ring(self, half_m=4.0):
+        dlat = half_m / 111320.0
+        dlng = half_m / (111320.0 * math.cos(math.radians(_CLAT)))
+        return [[_CLNG - dlng, _CLAT - dlat], [_CLNG + dlng, _CLAT - dlat],
+                [_CLNG + dlng, _CLAT + dlat], [_CLNG - dlng, _CLAT + dlat],
+                [_CLNG - dlng, _CLAT - dlat]]
+
+    def _building_project(self, height_m=8.0):
+        return {"features": [
+            {"geometry": {"type": "Polygon", "coordinates": [self._ring()]},
+             "properties": {"element_type": "existing_building",
+                            "height_m": height_m}},
+        ]}
+
+    def test_none_when_no_casters(self):
+        self.assertIsNone(
+            shade.shadow_polygons_payload({"features": []}, None, {}))
+
+    def test_instant_payload_has_polygons_north(self):
+        # Summer-solstice noon: a small building still casts a real polygon.
+        payload = shade.shadow_polygons_payload(
+            self._building_project(), None, {},
+            when=datetime(2025, 6, 21, 12, 0))
+        self.assertIsNotNone(payload)
+        self.assertTrue(payload["polygons"])
+        pts = [pt for poly in payload["polygons"] for ring in poly for pt in ring]
+        # Shadow reaches north of the building centre (sun is to the south).
+        self.assertGreater(max(p[0] for p in pts), _CLAT)
+        # bbox brackets the drawn rings.
+        b = payload["bbox"]
+        self.assertLessEqual(b["south"], min(p[0] for p in pts) + 1e-9)
+        self.assertGreaterEqual(b["north"], max(p[0] for p in pts) - 1e-9)
+
+    def test_low_sun_shadow_longer_than_noon(self):
+        noon = shade.shadow_polygons_payload(
+            self._building_project(), None, {},
+            when=datetime(2025, 6, 21, 12, 0))
+        evening = shade.shadow_polygons_payload(
+            self._building_project(), None, {},
+            when=datetime(2025, 6, 21, 18, 0))
+        self.assertIsNotNone(noon)
+        self.assertIsNotNone(evening)
+
+        def _max_reach(p):
+            # Longest distance (metres-ish) from the building centre to any
+            # shadow vertex — direction-agnostic, since the evening sun throws
+            # the shadow east, not north.
+            cos = math.cos(math.radians(_CLAT))
+            pts = [pt for poly in p["polygons"] for ring in poly for pt in ring]
+            return max(math.hypot((q[0] - _CLAT),
+                                  (q[1] - _CLNG) * cos) for q in pts)
+        # Lower evening sun → longer shadow than the high noon sun.
+        self.assertGreater(_max_reach(evening), _max_reach(noon))
+
+    def test_typical_envelope_covers_instant(self):
+        proj = self._building_project()
+        envelope = shade.shadow_polygons_payload(proj, None, {}, when=None)
+        instant = shade.shadow_polygons_payload(
+            proj, None, {}, when=datetime(2025, 6, 21, 12, 0))
+        self.assertIsNotNone(envelope)
+        self.assertIsNotNone(instant)
+
+        def _span(p):
+            pts = [pt for poly in p["polygons"]
+                   for ring in poly for pt in ring]
+            lats = [q[0] for q in pts]
+            lngs = [q[1] for q in pts]
+            return (max(lats) - min(lats), max(lngs) - min(lngs))
+        env_dlat, env_dlng = _span(envelope)
+        ins_dlat, ins_dlng = _span(instant)
+        # The all-day envelope is at least as wide/tall as a single moment.
+        self.assertGreaterEqual(env_dlat, ins_dlat - 1e-9)
+        self.assertGreaterEqual(env_dlng, ins_dlng - 1e-9)
+
+    def test_none_without_shapely(self):
+        orig = shade._HAVE_SHAPELY
+        shade._HAVE_SHAPELY = False
+        try:
+            self.assertIsNone(
+                shade.shadow_polygons_payload(self._building_project(), None, {}))
+        finally:
+            shade._HAVE_SHAPELY = orig
+
+
 class TestClassifyZoneTags(unittest.TestCase):
     """V1.53 — classify_zone_tags turns the shade grid into per-cell tag rows
     for the SQLite cache, without touching geometry."""

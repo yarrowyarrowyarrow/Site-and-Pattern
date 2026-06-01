@@ -662,6 +662,8 @@ class AnalysisPanel(QWidget):
         ref.setStyleSheet("color: #607d8b; font-size: 10px; font-style: italic;")
         layout.addWidget(ref)
 
+        self._tabs.addTab(tab, "Habitat Value")
+
     def set_shade_breakdown(self, counts: dict | None):
         """Render the cached shade-tag mix (``{tag: n}`` from
         shade_zones.tag_counts), or a prompt when nothing is classified yet.
@@ -682,8 +684,6 @@ class AnalysisPanel(QWidget):
             f"  ☀️  Full sun       {_pct(counts.get('full_sun', 0))}\n"
             f"  ⛅  Partial shade  {_pct(counts.get('partial_shade', 0))}\n"
             f"  🌑  Full shade     {_pct(counts.get('full_shade', 0))}")
-
-        self._tabs.addTab(tab, "Habitat Value")
 
     # Structure ids that contribute to habitat value — re-exported from
     # src/habitat_score.py (where the scoring maths lives now) so the

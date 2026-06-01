@@ -730,6 +730,16 @@ class MapWidget(QWebEngineView):
     def clear_shade_overlay(self):
         self.run_js(map_js.clear_shade_overlay())
 
+    def draw_shadow_polygons(self, polygons: list, bbox: dict, opacity: float):
+        """Render true-shape shadows as vector polygons (V1.54)."""
+        self.run_js(map_js.draw_shadow_polygons(polygons, bbox, opacity))
+
+    def set_shadow_polygon_opacity(self, opacity: float):
+        self.run_js(map_js.set_shadow_polygon_opacity(opacity))
+
+    def clear_shadow_polygons(self):
+        self.run_js(map_js.clear_shadow_polygons())
+
     def clear_auto_terrain(self):
         """Remove auto-generated contours and slope overlay."""
         self.run_js(map_js.clear_auto_terrain())

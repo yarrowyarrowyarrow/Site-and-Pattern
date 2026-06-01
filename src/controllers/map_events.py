@@ -983,10 +983,14 @@ class MapEventRouter:
         thread.start()
 
     def _on_shade_requested(self, config: dict):
-        """Compute the shade overlay off-thread (ShadeWorker) and draw it. The
-        elevation fetch can be slow/network-bound, so it never blocks the UI."""
+        """Compute the shade overlay off-thread and draw it. The elevation fetch
+        can be slow/network-bound, so it never blocks the UI.
+
+        Prefers the true-shape vector path (ShadowPolygonWorker) when shapely is
+        available — crisp polygon shadows that don't get dropped by the coarse
+        elevation grid. Falls back to the raster ShadeWorker without shapely."""
         from datetime import datetime
-        from src.shade import ShadeWorker
+        from src.shade import ShadeWorker, _HAVE_SHAPELY
 
         sc = dict(self._main._project.get("properties", {})
                   .get("site_config", {}) or {})
@@ -1004,10 +1008,31 @@ class MapEventRouter:
         self._main._shade_opacity = (
             self._main.site_panel._shade_opacity.value() / 100.0)
         self._main.statusBar().showMessage("Computing shade…")
-        self._run_worker(ShadeWorker(self._main._project, boundary, sc, when),
-                         self._on_shade_ready, "shade")
+        if _HAVE_SHAPELY:
+            from src.shade import ShadowPolygonWorker
+            self._run_worker(
+                ShadowPolygonWorker(self._main._project, boundary, sc, when),
+                self._on_shadow_polygons_ready, "shade")
+        else:
+            self._run_worker(ShadeWorker(self._main._project, boundary, sc, when),
+                             self._on_shade_ready, "shade")
+
+    def _on_shadow_polygons_ready(self, payload):
+        """Draw the true-shape vector shadows. Clears the raster overlay so the
+        two never stack, and degrades to the message below when nothing casts."""
+        self._main.map_widget.clear_shade_overlay()
+        if not payload or not payload.get("polygons"):
+            self._main.statusBar().showMessage(
+                "No shade to show — mark or import some trees/buildings, or add "
+                "trees to the design first.", 5000)
+            return
+        self._main.map_widget.draw_shadow_polygons(
+            payload["polygons"], payload.get("bbox"),
+            getattr(self._main, "_shade_opacity", 0.5))
+        self._main.statusBar().showMessage("Shade overlay updated.", 3000)
 
     def _on_shade_ready(self, payload):
+        self._main.map_widget.clear_shadow_polygons()
         if not payload:
             self._main.statusBar().showMessage(
                 "No shade to show — mark or import some trees/buildings, or add "
@@ -1017,6 +1042,17 @@ class MapEventRouter:
             payload["data_url"], payload["bbox"],
             getattr(self._main, "_shade_opacity", 0.5))
         self._main.statusBar().showMessage("Shade overlay updated.", 3000)
+
+    def _on_shade_cleared(self):
+        """Clear both shade overlays (raster + vector)."""
+        self._main.map_widget.clear_shade_overlay()
+        self._main.map_widget.clear_shadow_polygons()
+
+    def _on_shade_opacity(self, opacity: float):
+        """Drive opacity on whichever shade overlay is showing."""
+        self._main._shade_opacity = opacity
+        self._main.map_widget.set_shade_overlay_opacity(opacity)
+        self._main.map_widget.set_shadow_polygon_opacity(opacity)
 
     def _on_shade_zones_requested(self):
         """Classify planting cells (full sun / partial / full shade) off the UI

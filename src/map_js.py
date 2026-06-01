@@ -458,6 +458,21 @@ def clear_shade_overlay() -> str:
     return "clearShadeOverlay();"
 
 
+def draw_shadow_polygons(polygons: list, bbox: dict, opacity: float) -> str:
+    """Render true-shape shadows as vector polygons (V1.54). ``polygons`` is a
+    list of rings-lists of ``[lat, lng]`` pairs (exterior first, then holes)."""
+    payload = {"polygons": polygons, "bbox": bbox, "opacity": float(opacity)}
+    return f"drawShadowPolygons({_jsobj(payload)});"
+
+
+def set_shadow_polygon_opacity(opacity: float) -> str:
+    return f"setShadowPolygonOpacity({float(opacity)});"
+
+
+def clear_shadow_polygons() -> str:
+    return "clearShadowPolygons();"
+
+
 def clear_auto_terrain() -> str:
     return "clearAutoTerrain();"
 

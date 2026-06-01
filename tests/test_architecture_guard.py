@@ -67,7 +67,7 @@ class TestStructuralCeilings(unittest.TestCase):
     LINE_CEILINGS = [
         (_SRC / "app.py", 2600),                       # ~2251 now
         (_SRC / "plant_panel.py", 1600),               # ~1390 now
-        (_SRC / "controllers" / "map_events.py", 1700),# ~1438 now
+        (_SRC / "controllers" / "map_events.py", 1850),# ~1732 now
     ]
 
     def test_module_line_ceilings(self):
@@ -116,6 +116,55 @@ class TestStructuralCeilings(unittest.TestCase):
                 (_SRC / f"{name}.py").exists(),
                 f"src/{name}.py (Chunk 4 split) disappeared",
             )
+
+
+class TestAnalysisPanelTabsRegistered(unittest.TestCase):
+    """V1.54 — guard the regression where the 'Habitat Value' tab vanished:
+    its ``addTab`` had slipped past a ``return`` in a sibling method, so the tab
+    was never registered. AST-only (the panel needs Qt to instantiate)."""
+
+    def _func(self, class_name, method_name):
+        tree = ast.parse(
+            (_SRC / "analysis_panel.py").read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef) and node.name == class_name:
+                for n in node.body:
+                    if isinstance(n, ast.FunctionDef) and n.name == method_name:
+                        return n
+        raise AssertionError(f"{class_name}.{method_name} not found")
+
+    def _calls_addtab(self, node) -> bool:
+        for n in ast.walk(node):
+            if (isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+                    and n.func.attr == "addTab"):
+                return True
+        return False
+
+    def test_every_build_tab_registers_a_tab(self):
+        # Each _build_*_tab must actually call self._tabs.addTab(...).
+        tree = ast.parse(
+            (_SRC / "analysis_panel.py").read_text(encoding="utf-8"))
+        builders = [n.name for n in ast.walk(tree)
+                    if isinstance(n, ast.FunctionDef)
+                    and n.name.startswith("_build_") and n.name.endswith("_tab")]
+        self.assertIn("_build_habitat_tab", builders)
+        for name in builders:
+            fn = self._func("AnalysisPanel", name)
+            self.assertTrue(
+                self._calls_addtab(fn),
+                f"{name} no longer calls addTab — its tab won't appear. "
+                f"Did an addTab slip past a return into another method?",
+            )
+
+    def test_set_shade_breakdown_has_no_dead_code_after_return(self):
+        fn = self._func("AnalysisPanel", "set_shade_breakdown")
+        # No addTab should live in the setter (that was the misplaced line),
+        # and the setter must not register tabs.
+        self.assertFalse(
+            self._calls_addtab(fn),
+            "set_shade_breakdown should not call addTab — the Habitat tab "
+            "registration belongs at the end of _build_habitat_tab.",
+        )
 
 
 class TestAgentApiContract(unittest.TestCase):

@@ -663,8 +663,8 @@ class MainWindow(QMainWindow):
         )
         # Shade overlay + OSM import (V1.51).
         self.site_panel.shade_requested.connect(self._on_shade_requested)
-        self.site_panel.shade_cleared.connect(self.map_widget.clear_shade_overlay)
-        self.site_panel.shade_opacity.connect(self.map_widget.set_shade_overlay_opacity)
+        self.site_panel.shade_cleared.connect(self._on_shade_cleared)
+        self.site_panel.shade_opacity.connect(self._on_shade_opacity)
         self.site_panel.shade_zones_requested.connect(self._on_shade_zones_requested)
         self.site_panel.osm_import_requested.connect(self._on_osm_import_requested)
         self.site_panel.footprint_import_requested.connect(
@@ -1043,6 +1043,12 @@ class MainWindow(QMainWindow):
 
     def _on_shade_requested(self, config: dict):
         return self._map_events._on_shade_requested(config)
+
+    def _on_shade_cleared(self):
+        return self._map_events._on_shade_cleared()
+
+    def _on_shade_opacity(self, opacity: float):
+        return self._map_events._on_shade_opacity(opacity)
 
     def _on_shade_zones_requested(self):
         return self._map_events._on_shade_zones_requested()
