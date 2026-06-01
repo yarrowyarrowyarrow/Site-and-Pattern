@@ -213,6 +213,9 @@ class SitePanel(QWidget):
     # Import existing trees/buildings from OpenStreetMap (V1.51).
     osm_import_requested = pyqtSignal()
 
+    # Import shade-casting footprints from an nDSM GeoTIFF (V1.53).
+    footprint_import_requested = pyqtSignal(str)   # tiff path
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._lat: Optional[float] = None
@@ -1039,11 +1042,35 @@ class SitePanel(QWidget):
         btn.setStyleSheet(_BTN_SECONDARY)
         btn.clicked.connect(self.osm_import_requested.emit)
         v.addWidget(btn)
+
+        # Import shade-casting footprints from a height raster (nDSM GeoTIFF) —
+        # the whiteboxtools-style path. Only shown when a backend is available
+        # (numpy + shapely present), so a minimal install hides it.
+        from src.footprint_extract import extraction_available
+        if extraction_available():
+            btn_tiff = QPushButton("Import footprints (nDSM GeoTIFF)…")
+            btn_tiff.setStyleSheet(_BTN_SECONDARY)
+            btn_tiff.setToolTip(
+                "Vectorize building/canopy footprints (with heights) from a "
+                "normalized-DSM GeoTIFF (DSM minus DEM). They land as "
+                "shade-casting footprints you can edit or remove.")
+            btn_tiff.clicked.connect(self._on_pick_footprint_tiff)
+            v.addWidget(btn_tiff)
+
         self._osm_status = QLabel("")
         self._osm_status.setWordWrap(True)
         self._osm_status.setStyleSheet("color: #ffcc80; font-size: 11px;")
         v.addWidget(self._osm_status)
         parent_layout.addWidget(box)
+
+    def _on_pick_footprint_tiff(self):
+        """Pick an nDSM GeoTIFF and emit the import request with its path."""
+        from PyQt6.QtWidgets import QFileDialog
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Import footprints from nDSM GeoTIFF", "",
+            "GeoTIFF (*.tif *.tiff);;All files (*)")
+        if path:
+            self.footprint_import_requested.emit(path)
 
     def set_osm_status(self, text: str):
         self._osm_status.setText(text)

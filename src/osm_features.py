@@ -254,3 +254,23 @@ if _HAVE_QT:
                 res = None
             self.ready.emit(res)
             self.finished.emit()
+
+
+def bbox_from_boundary_or_pin(boundary, site_config: dict,
+                              radius_m: float = 60.0):
+    """A bbox (terrain.py convention) from a boundary polygon, else a square of
+    half-extent ``radius_m`` around the property pin. None when neither is
+    available. Pure geometry, shared by the OSM + footprint import flows."""
+    if boundary and len(boundary) >= 3:
+        lats = [p[0] for p in boundary]
+        lngs = [p[1] for p in boundary]
+        return {"north": max(lats), "south": min(lats),
+                "east": max(lngs), "west": min(lngs)}
+    lat, lng = site_config.get("latitude"), site_config.get("longitude")
+    if lat is None or lng is None:
+        return None
+    cos_lat = math.cos(lat * math.pi / 180) or 1e-9
+    dlat = radius_m / 111320.0
+    dlng = radius_m / (111320.0 * cos_lat)
+    return {"north": lat + dlat, "south": lat - dlat,
+            "east": lng + dlng, "west": lng - dlng}

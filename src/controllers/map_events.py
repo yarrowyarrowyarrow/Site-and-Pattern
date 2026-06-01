@@ -1067,12 +1067,12 @@ class MapEventRouter:
     def _on_osm_import_requested(self):
         """Fetch buildings/trees from OSM for the boundary/pin area off-thread,
         then add them as existing_* features (deduped). Degrades gracefully."""
-        from src.osm_features import OSMWorker
+        from src.osm_features import OSMWorker, bbox_from_boundary_or_pin
 
         sc = dict(self._main._project.get("properties", {})
                   .get("site_config", {}) or {})
         boundary = self._project_boundary_latlng()
-        bbox = self._osm_bbox(boundary, sc)
+        bbox = bbox_from_boundary_or_pin(boundary, sc)
         if bbox is None:
             self._main.site_panel.set_osm_status(
                 "Drop a pin or draw a boundary first.")
@@ -1081,23 +1081,29 @@ class MapEventRouter:
         self._main.site_panel.set_osm_status("Querying OpenStreetMap…")
         self._run_worker(OSMWorker(bbox), self._on_osm_ready, "osm")
 
-    def _osm_bbox(self, boundary, site_config, radius_m: float = 60.0):
-        """A bbox (terrain.py convention) from the boundary, else a box around
-        the pin. None when neither is available."""
-        import math
-        if boundary and len(boundary) >= 3:
-            lats = [p[0] for p in boundary]
-            lngs = [p[1] for p in boundary]
-            return {"north": max(lats), "south": min(lats),
-                    "east": max(lngs), "west": min(lngs)}
-        lat, lng = site_config.get("latitude"), site_config.get("longitude")
-        if lat is None or lng is None:
-            return None
-        cos_lat = math.cos(lat * math.pi / 180) or 1e-9
-        dlat = radius_m / 111320.0
-        dlng = radius_m / (111320.0 * cos_lat)
-        return {"north": lat + dlat, "south": lat - dlat,
-                "east": lng + dlng, "west": lng - dlng}
+    def _on_footprint_import_requested(self, tiff_path: str):
+        """Vectorize shade-casting footprints from an nDSM GeoTIFF off-thread."""
+        from src.footprint_ndsm import FootprintExtractWorker
+        self._main.site_panel.set_osm_status("Reading GeoTIFF…")
+        self._run_worker(FootprintExtractWorker(tiff_path),
+                         self._on_footprint_import_ready, "footprint")
+
+    def _on_footprint_import_ready(self, payload):
+        if payload.get("error"):
+            self._main.site_panel.set_osm_status(
+                f"Footprint import failed: {payload['error']}")
+            return
+        from src.footprint_extract import add_extracted_footprints
+        from src.project import feature_to_shape
+        new_feats = add_extracted_footprints(payload.get("rings") or [],
+                                             self._main._project)
+        for f in new_feats:                     # render only the new footprints
+            self._main.map_widget.load_shape(feature_to_shape(f))
+        if new_feats:
+            self._main._mark_modified()
+        self._main.site_panel.set_osm_status(
+            f"Imported {len(new_feats)} footprint(s) from the GeoTIFF."
+            if new_feats else "No raised footprints found in that GeoTIFF.")
 
     def _on_osm_ready(self, res):
         if not res:

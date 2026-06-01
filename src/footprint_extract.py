@@ -8,19 +8,22 @@ attribute). This module defines the abstraction by which they could *instead* be
 auto-extracted from an imported satellite / aerial TIFF in a future release —
 without shipping any heavy dependency now.
 
-Two backends are anticipated and plug in behind ``FootprintExtractor``:
-  * **Segment Anything (SAM):** segment building roofs / tree crowns from RGB
-    imagery, then vectorize the masks to lng/lat rings.
-  * **whiteboxtools:** derive an nDSM (DSM − DEM) and threshold/segment it into
-    building and canopy polygons *with* heights — the ideal source since shadow
-    length needs a height.
+Two backends plug in behind ``FootprintExtractor``:
+  * **whiteboxtools / nDSM (SHIPPED, V1.53):** derive an nDSM (DSM − DEM) and
+    threshold/vectorize it into building & canopy polygons *with* heights — the
+    ideal source since shadow length needs a height. Implemented in
+    ``src/footprint_ndsm.py``; its vectorizer core needs only numpy + shapely.
+  * **Segment Anything (SAM) (future):** segment roofs / crowns from RGB imagery,
+    then vectorize the masks to lng/lat rings. Produces footprints *without*
+    heights (filled in by hand), so it's a weaker input than an nDSM.
 
 Per the project's optional-dependency policy (cf. ``src/projection.py``'s pyproj
-backend and ``src/shadow_geometry.py``'s shapely guard) this module is **pure
-Python and imports nothing heavy** — no torch, no GDAL, no rasterio ship today.
-``get_extractor()`` returns a stub that raises ``NotImplementedError`` with a
-clear message; real backends register themselves here later and the rest of the
-app (which only depends on the returned lng/lat rings + heights) stays unchanged.
+backend and ``src/shadow_geometry.py``'s shapely guard) this module stays **pure
+Python and imports nothing heavy** — no torch, no GDAL. ``get_extractor()``
+returns the built-in nDSM backend when numpy + shapely are present, an explicitly
+registered backend if one was set, else a stub that raises ``NotImplementedError``
+with a clear message. The rest of the app only depends on the returned lng/lat
+rings + heights, so swapping backends changes nothing downstream.
 """
 
 from __future__ import annotations
@@ -87,13 +90,64 @@ def set_extractor(extractor: "FootprintExtractor") -> None:
 
 
 def get_extractor() -> "FootprintExtractor":
-    """Return the active extractor, or the NotImplemented stub if none is
-    registered. Always returns an object satisfying ``FootprintExtractor``."""
-    return _extractor if _extractor is not None else NotImplementedExtractor()
+    """Return the active extractor.
+
+    Preference order: an explicitly registered backend (``set_extractor``), else
+    the built-in nDSM backend when its deps (numpy + shapely) are importable,
+    else the NotImplemented stub. Always returns a ``FootprintExtractor``."""
+    if _extractor is not None:
+        return _extractor
+    try:
+        from src.footprint_ndsm import NdsmExtractor, _HAVE_NUMPY, _HAVE_SHAPELY
+        if _HAVE_NUMPY and _HAVE_SHAPELY:
+            return NdsmExtractor()
+    except Exception:  # noqa: BLE001 — fall through to the stub
+        pass
+    return NotImplementedExtractor()
 
 
 def extraction_available() -> bool:
-    """True when a real (non-stub) extraction backend is registered, so the UI
-    can show/hide an 'auto-extract from imagery' action accordingly."""
-    return _extractor is not None and not isinstance(
-        _extractor, NotImplementedExtractor)
+    """True when a real (non-stub) extraction backend is available — either
+    explicitly registered or the built-in nDSM backend whose deps are present.
+    Lets the UI show/hide the 'import footprints from imagery' action."""
+    return not isinstance(get_extractor(), NotImplementedExtractor)
+
+
+def add_extracted_footprints(rings_heights: list, project_dict: dict,
+                             *, source: str = "extract") -> list:
+    """Append extracted ``(ring_lnglat, height_m)`` footprints to a project as
+    shade-casting ``canopy_footprint`` polygon features (the same element type
+    the manual draw flow produces, so shade.casters_from_project picks them up).
+
+    Pure: mutates ``project_dict['features']`` in place and returns the list of
+    feature dicts it added. Rings with fewer than 3 vertices are skipped. The
+    GUI calls this on the main thread after the (optionally off-thread)
+    extraction, then renders the returned features."""
+    import time
+    feats = project_dict.setdefault("features", [])
+    new_feats = []
+    for ring, height_m in rings_heights or []:
+        if not ring or len(ring) < 3:
+            continue
+        coords = [[float(p[0]), float(p[1])] for p in ring]
+        if coords[0] != coords[-1]:
+            coords.append(coords[0])           # close the ring
+        new_feats.append({
+            "type": "Feature",
+            "geometry": {"type": "Polygon", "coordinates": [coords]},
+            "properties": {
+                "element_type": "canopy_footprint",
+                "shape_id": f"shape_extract_{int(time.time()*1000)}_{len(new_feats)}",
+                "label": "Footprint (imported)",
+                "shape_type": "Imported footprint",
+                "fill_color": "#8d6e63",
+                "stroke_color": "#5d4037",
+                "fill_opacity": 0.3,
+                "dash_array": "",
+                "height_m": float(height_m) if height_m else 0.0,
+                "cast_shade": bool(height_m and height_m > 0),
+                "source": source,
+            },
+        })
+    feats.extend(new_feats)
+    return new_feats

@@ -8,6 +8,7 @@ but no file I/O yet.  The full implementation comes in Step 4.
 import json
 import os
 from datetime import datetime, timezone
+from typing import Optional
 
 
 def _utc_now_iso() -> str:
@@ -79,6 +80,38 @@ def load_project(path: str) -> dict:
     """Read and return a project dict from a .perma.geojson file."""
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def feature_to_shape(feature: dict) -> Optional[dict]:
+    """Convert one ``custom_shape`` / ``canopy_footprint`` Polygon feature to the
+    map-widget shape dict (``loadShape`` input), or ``None`` if it isn't a usable
+    polygon. Shared by ``project_to_map_data`` and the footprint-import path so
+    both build the shape dict identically (id + height round-trip)."""
+    geom = feature.get("geometry", {})
+    if geom.get("type") != "Polygon":
+        return None
+    coords = geom.get("coordinates") or []
+    if not coords:
+        return None
+    props = feature.get("properties", {})
+    points = [[pt[1], pt[0]] for pt in coords[0]]   # (lng,lat) → (lat,lng)
+    if len(points) > 1 and points[0] == points[-1]:
+        points = points[:-1]                        # drop closing duplicate
+    if len(points) < 3:
+        return None
+    # canopy_footprint carries a height (it casts shade); plain shapes default
+    # to 0. `or 0.0` coalesces a demoted shape's explicit None height.
+    return {
+        "points": points,
+        "shape_id": props.get("shape_id"),
+        "shape_type": props.get("shape_type", "Custom"),
+        "label": props.get("label", ""),
+        "fill_color": props.get("fill_color", "#4caf50"),
+        "stroke_color": props.get("stroke_color", "#2e7d32"),
+        "fill_opacity": props.get("fill_opacity", 0.25),
+        "dash_array": props.get("dash_array", ""),
+        "height_m": props.get("height_m") or 0.0,
+    }
 
 
 def project_to_map_data(project: dict) -> dict:
@@ -174,26 +207,9 @@ def project_to_map_data(project: dict) -> dict:
 
         elif (etype in ("custom_shape", "canopy_footprint")
               and geom.get("type") == "Polygon"):
-            ring = geom["coordinates"][0]
-            points = [[pt[1], pt[0]] for pt in ring]
-            # Remove closing duplicate if present
-            if len(points) > 1 and points[0] == points[-1]:
-                points = points[:-1]
-            # canopy_footprint carries a height (it casts shade); plain shapes
-            # default to 0. The height round-trips through the shape dict so the
-            # reloaded polygon stays a shade caster.
-            result["shapes"].append({
-                "points": points,
-                "shape_id": props.get("shape_id"),
-                "shape_type": props.get("shape_type", "Custom"),
-                "label": props.get("label", ""),
-                "fill_color": props.get("fill_color", "#4caf50"),
-                "stroke_color": props.get("stroke_color", "#2e7d32"),
-                "fill_opacity": props.get("fill_opacity", 0.25),
-                "dash_array": props.get("dash_array", ""),
-                # `or 0.0` coalesces a demoted shape's explicit None height.
-                "height_m": props.get("height_m") or 0.0,
-            })
+            sh = feature_to_shape(feature)
+            if sh:
+                result["shapes"].append(sh)
 
         elif etype == "contour_line" and geom.get("type") == "LineString":
             points = [[pt[1], pt[0]] for pt in geom["coordinates"]]

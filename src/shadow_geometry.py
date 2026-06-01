@@ -109,22 +109,60 @@ def point_footprint_metric(lng: float, lat: float, radius_m: float,
 
 # ── Core shadow algorithm ─────────────────────────────────────────────────────
 
+def _is_convex(poly) -> bool:
+    """True when ``poly`` is (near-)convex — its area matches its convex hull's.
+    Lets the swept-region builder take the cheap exact path for convex
+    footprints (the common building/canopy case)."""
+    try:
+        hull = poly.convex_hull
+        if hull.area <= 0:
+            return True
+        return (hull.area - poly.area) <= 1e-9 * hull.area
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _swept_region(poly, dx, dy):
+    """Exact region a footprint sweeps when translated by ``(dx, dy)`` — the
+    Minkowski sum of ``poly`` with the segment ``[(0,0), (dx,dy)]``.
+
+    For a convex footprint this equals ``convex_hull(P ∪ P+v)`` (cheap path).
+    For a concave footprint the hull would wrongly fill its notches, so we union
+    the footprint, its translate, and the parallelogram strip swept by every
+    boundary edge (exterior + any holes) — the geometrically exact shadow
+    silhouette."""
+    shifted = affinity.translate(poly, xoff=dx, yoff=dy)
+    if _is_convex(poly):
+        return unary_union([poly, shifted]).convex_hull
+    parts = [poly, shifted]
+    rings = [poly.exterior]
+    rings.extend(poly.interiors)
+    for ring in rings:
+        coords = list(ring.coords)
+        for (ax, ay), (bx, by) in zip(coords, coords[1:]):
+            quad = Polygon([(ax, ay), (bx, by),
+                            (bx + dx, by + dy), (ax + dx, ay + dy)])
+            if not quad.is_valid:
+                quad = quad.buffer(0)
+            if not quad.is_empty:
+                parts.append(quad)
+    swept = unary_union(parts)
+    if not swept.is_valid:
+        swept = swept.buffer(0)
+    return swept
+
+
 def cast_shadow(polygon, height_m: float, azimuth: float, altitude: float):
     """Cast a single footprint ``polygon`` (metric shapely Polygon) into its
     ground shadow for a sun at ``azimuth``/``altitude`` (degrees).
 
-    The shadow is the convex hull of the footprint and a copy translated
-    down-sun by ``height / tan(altitude)`` (clamped to ``_MAX_SHADOW_M``) — the
-    silhouette swept as the shadow extends along the solar vector. Returns an
-    empty/None geometry when the sun is below ``_MIN_SUN_ALT`` (no useful
-    shadow, and ``1/tan`` blows up) or inputs are unusable.
-
-    NOTE: the convex hull is exact for convex footprints and a slight
-    over-estimate for strongly concave ones (the exact swept region is the
-    union of the footprint, its translate, and the quad-strips between
-    corresponding edges). The hull is the accepted v1 approximation and matches
-    the "translate vertices + union" brief.
-    """
+    The shadow is the region the footprint sweeps as it is translated down-sun
+    by ``height / tan(altitude)`` (clamped to ``_MAX_SHADOW_M``) — the exact
+    Minkowski-sum silhouette (see ``_swept_region``), so concave footprints
+    (L-shaped buildings, courtyards) keep their notches instead of being filled
+    in by a convex hull. Returns an empty/None geometry when the sun is below
+    ``_MIN_SUN_ALT`` (no useful shadow, and ``1/tan`` blows up) or inputs are
+    unusable."""
     if not _HAVE_SHAPELY or polygon is None or polygon.is_empty:
         return None
     if altitude < _MIN_SUN_ALT or height_m <= 0:
@@ -135,12 +173,11 @@ def cast_shadow(polygon, height_m: float, azimuth: float, altitude: float):
     shadow_dir = math.radians((azimuth + 180.0) % 360.0)
     dx = shadow_len * math.sin(shadow_dir)
     dy = shadow_len * math.cos(shadow_dir)
-    shifted = affinity.translate(polygon, xoff=dx, yoff=dy)
     try:
-        hull = unary_union([polygon, shifted]).convex_hull
+        swept = _swept_region(polygon, dx, dy)
     except Exception:  # noqa: BLE001
         return None
-    return hull if (hull and not hull.is_empty) else None
+    return swept if (swept and not swept.is_empty) else None
 
 
 def union_shadows(metric_casters: list, azimuth: float, altitude: float):

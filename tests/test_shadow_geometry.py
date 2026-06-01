@@ -77,6 +77,49 @@ class TestCastShadow(unittest.TestCase):
 
 
 @unittest.skipUnless(sg._HAVE_SHAPELY, "shapely not installed")
+class TestConcaveSweptRegion(unittest.TestCase):
+    """V1.53 — the exact Minkowski-sum swept region keeps concave footprints'
+    notches instead of filling them with a convex hull."""
+
+    def _L(self):
+        from shapely.geometry import Polygon
+        # An L-shape (clearly concave): a 4x4 square with the top-right cut out.
+        return Polygon([(0, 0), (4, 0), (4, 1), (1, 1), (1, 4), (0, 4)])
+
+    def test_is_convex_detection(self):
+        from shapely.geometry import Polygon
+        square = Polygon([(0, 0), (2, 0), (2, 2), (0, 2)])
+        self.assertTrue(sg._is_convex(square))
+        self.assertFalse(sg._is_convex(self._L()))
+
+    def test_concave_swept_smaller_than_hull(self):
+        # Translate straight north by 2 m: the exact swept region must be
+        # smaller than its convex hull (the hull fills the L's notch).
+        L = self._L()
+        swept = sg._swept_region(L, 0.0, 2.0)
+        self.assertTrue(swept.is_valid)
+        self.assertLess(swept.area, swept.convex_hull.area - 1e-6)
+        # And it must cover at least the footprint plus its translate.
+        from shapely import affinity
+        from shapely.ops import unary_union
+        lo = unary_union([L, affinity.translate(L, yoff=2.0)])
+        self.assertGreaterEqual(swept.area, lo.area - 1e-6)
+
+    def test_convex_swept_equals_hull(self):
+        from shapely.geometry import Polygon
+        square = Polygon([(0, 0), (2, 0), (2, 2), (0, 2)])
+        swept = sg._swept_region(square, 1.0, 3.0)
+        self.assertAlmostEqual(swept.area, swept.convex_hull.area, places=6)
+
+    def test_cast_shadow_concave_valid(self):
+        L = self._L()
+        shadow = sg.cast_shadow(L, height_m=2.0, azimuth=180.0, altitude=45.0)
+        self.assertIsNotNone(shadow)
+        self.assertTrue(shadow.is_valid)
+        self.assertLess(shadow.area, shadow.convex_hull.area - 1e-6)
+
+
+@unittest.skipUnless(sg._HAVE_SHAPELY, "shapely not installed")
 class TestUnionAndRasterize(unittest.TestCase):
 
     def setUp(self):
