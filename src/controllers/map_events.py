@@ -996,10 +996,8 @@ class MapEventRouter:
         self._main.statusBar().showMessage("Shade overlay updated.", 3000)
 
     def _on_shade_zones_requested(self):
-        """Classify every planting cell full sun / partial / full shade from the
-        season-average grid and cache the tags (src/db/shade_zones.py), off the
-        UI thread (ShadeZoneWorker — the elevation fetch can be slow). Geometry
-        stays in the project file; only the derived tags are persisted."""
+        """Classify planting cells (full sun / partial / full shade) off the UI
+        thread and cache the derived tags (src/db/shade_zones.py)."""
         from PyQt6.QtCore import QThread
         from src.shade import ShadeZoneWorker
 
@@ -1033,12 +1031,17 @@ class MapEventRouter:
         pk = shade_zones.project_key_for(getattr(self._main, "_project_path", None))
         shade_zones.clear_zone_tags(pk)
         shade_zones.store_zone_tags(pk, rows)
-        counts = shade_zones.tag_counts(pk)
+        # Now the tags exist, flag any placed plant whose sun requirement
+        # clashes with its spot (full-sun plant in deep shade, etc.).
+        try:
+            from src.placement_score import check_shade_matches
+            mismatches = check_shade_matches(
+                getattr(self._main, "_placed_plants", None) or [], pk)
+        except Exception:  # noqa: BLE001 — feedback is best-effort
+            mismatches = []
         self._main.site_panel.set_shade_zone_status(
-            f"Classified {len(rows)} spots — "
-            f"{counts['full_sun']} full sun, "
-            f"{counts['partial_shade']} partial, "
-            f"{counts['full_shade']} full shade.")
+            shade_zones.format_classification_status(
+                len(rows), shade_zones.tag_counts(pk), mismatches))
         self._main.statusBar().showMessage("Planting zones classified.", 3000)
 
     # ── Existing features from OpenStreetMap (V1.51) ─────────────────────────

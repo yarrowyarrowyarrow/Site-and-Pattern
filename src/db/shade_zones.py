@@ -19,6 +19,7 @@ Mirrors the ``get_cached_climate`` / ``store_cached_climate`` helper style in
 from __future__ import annotations
 
 import hashlib
+import math
 import os
 from typing import Optional
 
@@ -125,6 +126,69 @@ def get_zone_tags(project_key: str) -> dict:
         }
     finally:
         conn.close()
+
+
+def has_tags(project_key: str) -> bool:
+    """True when a project has any cached shade tags (i.e. the user has run
+    'Classify planting zones' at least once)."""
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM shade_zone_cache WHERE project_key = ? LIMIT 1",
+            (project_key,),
+        ).fetchone()
+        return row is not None
+    finally:
+        conn.close()
+
+
+def tag_at(project_key: str, lat: float, lng: float,
+           max_dist_m: float = 30.0) -> Optional[str]:
+    """Return the cached shade tag for the zone nearest ``(lat, lng)``, or
+    ``None`` when there are no tags or the nearest zone centroid is farther than
+    ``max_dist_m`` (so a point well outside the classified grid isn't matched to
+    a distant cell). Uses the same cosLat planar metric as the rest of the app.
+
+    Reads the derived tag cache only — geometry stays in the project file."""
+    tags = get_zone_tags(project_key)
+    if not tags:
+        return None
+    cos_lat = math.cos(math.radians(lat)) or 1e-9
+    best_tag = None
+    best_d2 = None
+    for info in tags.values():
+        clat = info.get("centroid_lat")
+        clng = info.get("centroid_lng")
+        if clat is None or clng is None:
+            continue
+        dx = (clng - lng) * 111320.0 * cos_lat
+        dy = (clat - lat) * 111320.0
+        d2 = dx * dx + dy * dy
+        if best_d2 is None or d2 < best_d2:
+            best_d2 = d2
+            best_tag = info.get("shade_tag")
+    if best_d2 is None or best_d2 > max_dist_m * max_dist_m:
+        return None
+    return best_tag
+
+
+def format_classification_status(n_spots: int, counts: dict,
+                                 mismatches: Optional[list] = None) -> str:
+    """Build the one-line (plus mismatch detail) status string shown after a
+    'Classify planting zones' run. Qt-free so it can be unit-tested and reused.
+
+    ``counts`` is a ``{tag: n}`` dict (e.g. from :func:`tag_counts`);
+    ``mismatches`` is the list of shade-mismatch warning strings (or None)."""
+    status = (
+        f"Classified {n_spots} spots — "
+        f"{counts.get('full_sun', 0)} full sun, "
+        f"{counts.get('partial_shade', 0)} partial, "
+        f"{counts.get('full_shade', 0)} full shade.")
+    if mismatches:
+        shown = "  ".join(f"• {m}" for m in mismatches[:3])
+        more = f"  (+{len(mismatches) - 3} more)" if len(mismatches) > 3 else ""
+        status += f"\n{len(mismatches)} shade mismatch(es): {shown}{more}"
+    return status
 
 
 def tag_counts(project_key: str) -> dict:

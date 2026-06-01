@@ -503,5 +503,72 @@ class TestScoredPositioner(unittest.TestCase):
                          "far cell should not have a bonus")
 
 
+class TestShadeMatch(unittest.TestCase):
+    """V1.53 — check_shade_matches reads the cached shade tags and flags plants
+    placed in incompatible light."""
+
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+
+    def setUp(self):
+        from src.placement_score import shade_tag_matches_plant
+        from src.db import shade_zones
+        self._sz = shade_zones
+        self._matches = shade_tag_matches_plant
+        self.pk = shade_zones.project_key_for("/tmp/proj/shadematch.perma.geojson")
+        shade_zones.clear_zone_tags(self.pk)
+
+    def test_compatibility_table(self):
+        self.assertTrue(self._matches("full_sun", "full_sun"))
+        self.assertTrue(self._matches("full_sun", "partial_shade"))
+        self.assertFalse(self._matches("full_sun", "full_shade"))
+        self.assertTrue(self._matches("full_shade", "full_shade"))
+        self.assertFalse(self._matches("full_shade", "full_sun"))
+        # partial-shade plants tolerate everything; unknown reqs are tolerant.
+        for tag in ("full_sun", "partial_shade", "full_shade"):
+            self.assertTrue(self._matches("partial_shade", tag))
+            self.assertTrue(self._matches("", tag))
+
+    def test_no_tags_no_warnings(self):
+        from src.placement_score import check_shade_matches
+        placed = [{"plant_id": 1, "lat": 53.5, "lng": -113.5,
+                   "sun_requirement": "full_sun", "common_name": "Sun Lover"}]
+        self.assertEqual(check_shade_matches(placed, self.pk), [])
+
+    def test_mismatch_warns(self):
+        from src.placement_score import check_shade_matches
+        self._sz.store_zone_tags(self.pk, [
+            {"zone_id": "a", "shade_tag": "full_shade",
+             "centroid_lat": 53.5000, "centroid_lng": -113.5000}])
+        placed = [{"plant_id": 1, "lat": 53.5000, "lng": -113.5000,
+                   "sun_requirement": "full_sun", "common_name": "Sun Lover"}]
+        warns = check_shade_matches(placed, self.pk)
+        self.assertEqual(len(warns), 1)
+        self.assertIn("Sun Lover", warns[0])
+
+    def test_match_is_silent(self):
+        from src.placement_score import check_shade_matches
+        self._sz.store_zone_tags(self.pk, [
+            {"zone_id": "a", "shade_tag": "full_sun",
+             "centroid_lat": 53.5000, "centroid_lng": -113.5000}])
+        placed = [{"plant_id": 1, "lat": 53.5000, "lng": -113.5000,
+                   "sun_requirement": "full_sun", "common_name": "Sun Lover"}]
+        self.assertEqual(check_shade_matches(placed, self.pk), [])
+
+    def test_dedup_per_species(self):
+        from src.placement_score import check_shade_matches
+        self._sz.store_zone_tags(self.pk, [
+            {"zone_id": "a", "shade_tag": "full_shade",
+             "centroid_lat": 53.5000, "centroid_lng": -113.5000}])
+        placed = [
+            {"plant_id": 7, "lat": 53.5000, "lng": -113.5000,
+             "sun_requirement": "full_sun", "common_name": "Sun Lover"},
+            {"plant_id": 7, "lat": 53.50001, "lng": -113.5000,
+             "sun_requirement": "full_sun", "common_name": "Sun Lover"},
+        ]
+        self.assertEqual(len(check_shade_matches(placed, self.pk)), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

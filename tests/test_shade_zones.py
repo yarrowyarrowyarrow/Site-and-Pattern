@@ -130,6 +130,46 @@ class TestShadeZoneCache(unittest.TestCase):
         finally:
             conn.close()
 
+    def test_has_tags(self):
+        self.assertFalse(sz.has_tags(self.pk))
+        sz.store_zone_tags(self.pk, [
+            {"zone_id": "r0c0", "shade_tag": "full_sun"}])
+        self.assertTrue(sz.has_tags(self.pk))
+
+    def test_tag_at_nearest(self):
+        sz.store_zone_tags(self.pk, [
+            {"zone_id": "a", "shade_tag": "full_sun",
+             "centroid_lat": 53.5000, "centroid_lng": -113.5000},
+            {"zone_id": "b", "shade_tag": "full_shade",
+             "centroid_lat": 53.5010, "centroid_lng": -113.5000},
+        ])
+        # Closer to 'a' → full_sun; closer to 'b' → full_shade.
+        self.assertEqual(sz.tag_at(self.pk, 53.5001, -113.5000), "full_sun")
+        self.assertEqual(sz.tag_at(self.pk, 53.5009, -113.5000), "full_shade")
+
+    def test_tag_at_too_far_returns_none(self):
+        sz.store_zone_tags(self.pk, [
+            {"zone_id": "a", "shade_tag": "full_sun",
+             "centroid_lat": 53.5000, "centroid_lng": -113.5000}])
+        # ~1 km away, beyond the default 30 m match radius.
+        self.assertIsNone(sz.tag_at(self.pk, 53.5090, -113.5000))
+
+    def test_tag_at_empty_cache(self):
+        self.assertIsNone(sz.tag_at(self.pk, 53.5, -113.5))
+
+    def test_format_classification_status(self):
+        counts = {"full_sun": 5, "partial_shade": 2, "full_shade": 1}
+        s = sz.format_classification_status(8, counts)
+        self.assertIn("8 spots", s)
+        self.assertIn("5 full sun", s)
+        self.assertNotIn("mismatch", s)
+        s2 = sz.format_classification_status(8, counts, ["A wants X", "B wants Y"])
+        self.assertIn("2 shade mismatch", s2)
+        # More than 3 mismatches → truncates with a "+N more".
+        s3 = sz.format_classification_status(
+            8, counts, [f"w{i}" for i in range(5)])
+        self.assertIn("+2 more", s3)
+
 
 if __name__ == "__main__":
     unittest.main()

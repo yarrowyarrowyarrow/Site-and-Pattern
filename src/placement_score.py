@@ -260,6 +260,94 @@ def score_cell_for_plant(plant: dict, cell: CellEnv) -> float:
         0.35 * shade_s + 0.35 * moist_s + 0.15 * slope_s + 0.15 * edge_s))
 
 
+# ── Shade-tag matching against the cached zone tags ───────────────────────────
+
+# Which cached zone tags are an acceptable home for each plant sun requirement.
+# A full-sun plant tolerates partial shade but not full shade; a full-shade
+# plant wants shade and is stressed in full sun; partial-shade plants are the
+# generalists. Tags come from src/db/shade_zones.tag_for_fraction.
+_SUN_REQ_OK_TAGS = {
+    "full_sun":      {"full_sun", "partial_shade"},
+    "partial_shade": {"full_sun", "partial_shade", "full_shade"},
+    "full_shade":    {"partial_shade", "full_shade"},
+}
+
+_TAG_LABEL = {
+    "full_sun":      "full sun",
+    "partial_shade": "partial shade",
+    "full_shade":    "full shade",
+}
+
+
+def shade_tag_matches_plant(sun_req: str, tag: str) -> bool:
+    """True when a plant's ``sun_requirement`` is compatible with a spot's
+    cached shade ``tag``. Unknown requirements are treated as tolerant (True)
+    so we never warn on incomplete catalogue data."""
+    sun_req = (sun_req or "").lower()
+    if sun_req not in _SUN_REQ_OK_TAGS:
+        return True
+    return tag in _SUN_REQ_OK_TAGS[sun_req]
+
+
+def check_shade_matches(placed_plants: list, project_key: str) -> list:
+    """Warn when a placed plant sits in a spot whose cached shade tag clashes
+    with its sun requirement (e.g. a full-sun plant under full shade).
+
+    Reads the derived shade-tag cache (``src/db/shade_zones.py``) — the live
+    grid stays authoritative during generation; this is fast GUI feedback after
+    the user has run 'Classify planting zones'. Returns [] when nothing is
+    cached, so it is silent until classification has happened.
+
+    ``placed_plants``: dicts with ``plant_id``/``lat``/``lng`` and optionally
+    ``common_name`` and ``sun_requirement`` (looked up from the catalogue when
+    absent). One warning per plant species (deduped)."""
+    if not placed_plants:
+        return []
+    try:
+        from src.db import shade_zones
+        if not shade_zones.has_tags(project_key):
+            return []
+    except Exception:  # noqa: BLE001 — matching is best-effort
+        return []
+
+    # Resolve sun requirement + display name per plant_id, catalogue-backed.
+    def _plant_meta(p):
+        sun = p.get("sun_requirement")
+        name = p.get("common_name")
+        if sun is None or name is None:
+            try:
+                from src.db.plants import get_plant
+                row = get_plant(p.get("plant_id")) or {}
+                sun = sun if sun is not None else row.get("sun_requirement")
+                name = name if name is not None else row.get("common_name")
+            except Exception:  # noqa: BLE001
+                pass
+        return (sun or ""), (name or str(p.get("plant_id")))
+
+    warnings: list = []
+    seen: set = set()
+    for p in placed_plants:
+        try:
+            lat, lng = float(p["lat"]), float(p["lng"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        sun_req, name = _plant_meta(p)
+        tag = shade_zones.tag_at(project_key, lat, lng)
+        if not tag or shade_tag_matches_plant(sun_req, tag):
+            continue
+        key = (p.get("plant_id"), tag)
+        if key in seen:
+            continue
+        seen.add(key)
+        want = _TAG_LABEL.get(sun_req, sun_req or "different light")
+        got = _TAG_LABEL.get(tag, tag)
+        warnings.append(
+            f"{name} wants {want} but is placed in a {got} spot — "
+            "consider moving it or choosing a shade-matched plant."
+        )
+    return warnings
+
+
 # ── Companion relationship graph ──────────────────────────────────────────────
 
 def build_companion_graph(plant_ids: list) -> dict:

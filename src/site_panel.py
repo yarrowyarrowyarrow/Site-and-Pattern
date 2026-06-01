@@ -599,6 +599,9 @@ class SitePanel(QWidget):
             self._lbl_label.setText(self._label)
         else:
             self._lbl_label.setText("(custom pin)")
+        # Re-clamp the shade time slider to this location's daylight window.
+        if hasattr(self, "_shade_season"):
+            self._on_shade_season_changed(self._shade_season.currentIndex())
         self._reset_data_rows()
         if fetch:
             self._start_fetch()
@@ -911,6 +914,7 @@ class SitePanel(QWidget):
         self._shade_season.addItem("Typical (averaged)", None)
         for label, d in KEY_DATES.items():
             self._shade_season.addItem(label, (d.month, d.day))
+        self._shade_season.currentIndexChanged.connect(self._on_shade_season_changed)
         season_row.addWidget(self._shade_season)
         v.addLayout(season_row)
 
@@ -922,6 +926,14 @@ class SitePanel(QWidget):
         self._shade_hour_lbl = QLabel("12:00")
         self._shade_hour.valueChanged.connect(
             lambda h: self._shade_hour_lbl.setText(f"{h:02d}:00"))
+        # Scrub the slider to sweep shadows across the day. A short debounce
+        # coalesces rapid drags into one recompute, and only a real day (not
+        # "Typical") drives a live overlay — the averaged view has no time.
+        self._shade_scrub = QTimer(self)
+        self._shade_scrub.setSingleShot(True)
+        self._shade_scrub.setInterval(180)
+        self._shade_scrub.timeout.connect(self._emit_shade_for_scrub)
+        self._shade_hour.valueChanged.connect(self._on_shade_hour_scrubbed)
         time_row.addWidget(self._shade_hour)
         time_row.addWidget(self._shade_hour_lbl)
         v.addLayout(time_row)
@@ -976,6 +988,42 @@ class SitePanel(QWidget):
         if season is not None:
             when = (season[0], season[1], self._shade_hour.value())
         self.shade_requested.emit({"when": when})
+
+    def _on_shade_season_changed(self, _idx):
+        """Clamp the time slider to the chosen day's sunrise→sunset so the user
+        scrubs only through real daylight, and label the ends. 'Typical'
+        (averaged) keeps the generic 5 AM–9 PM range and no live scrubbing."""
+        season = self._shade_season.currentData()
+        if season is None or self._lat is None or self._lng is None:
+            self._shade_hour.setRange(5, 21)
+            return
+        try:
+            from datetime import date
+            from src.solar import sunrise_sunset
+            sr, ss = sunrise_sunset(self._lat, self._lng,
+                                    date(2025, season[0], season[1]))
+            lo = max(0, int(sr))            # floor sunrise, ceil sunset
+            hi = min(23, int(ss) + 1)
+            if hi <= lo:
+                lo, hi = 5, 21
+        except Exception:  # noqa: BLE001 — fall back to the generic window
+            lo, hi = 5, 21
+        cur = self._shade_hour.value()
+        self._shade_hour.setRange(lo, hi)
+        self._shade_hour.setValue(min(max(cur, lo), hi))
+
+    def _on_shade_hour_scrubbed(self, _h):
+        """Slider moved — debounce a live overlay recompute (real days only)."""
+        if self._shade_season.currentData() is None:
+            return                          # averaged view has no time-of-day
+        self._shade_scrub.start()           # (re)arm the debounce
+
+    def _emit_shade_for_scrub(self):
+        season = self._shade_season.currentData()
+        if season is None:
+            return
+        self.shade_requested.emit(
+            {"when": (season[0], season[1], self._shade_hour.value())})
 
     # ── Existing features from OpenStreetMap (V1.51) ───────────────────────
 
