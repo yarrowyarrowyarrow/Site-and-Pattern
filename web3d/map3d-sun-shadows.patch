@@ -1,0 +1,154 @@
+diff --git a/src/state/sunStore.ts b/src/state/sunStore.ts
+new file mode 100644
+index 0000000..0fb427c
+--- /dev/null
++++ b/src/state/sunStore.ts
+@@ -0,0 +1,30 @@
++import { create } from "zustand";
++
++// Sun position driving the scene's shadow-casting light. Angles follow the
++// usual convention so a desktop host (e.g. PermaDesign's sun-path engine,
++// src/solar.py) can push values straight from its own solar calculation:
++//   azimuthDeg  — degrees clockwise from north (0 = N, 90 = E, 180 = S, 270 = W)
++//   altitudeDeg — degrees above the horizon (0 = horizon, 90 = zenith)
++type SunStore = {
++  azimuthDeg: number;
++  altitudeDeg: number;
++  setSun: (azimuthDeg: number, altitudeDeg: number) => void;
++};
++
++export const useSunStore = create<SunStore>((set) => ({
++  // Default: an oblique mid-morning southern sun, so shadows are clearly
++  // visible out of the box even before a host drives the angles.
++  azimuthDeg: 150,
++  altitudeDeg: 40,
++  setSun: (azimuthDeg, altitudeDeg) => set(() => ({ azimuthDeg, altitudeDeg })),
++}));
++
++// Bridge hook: let the embedding desktop app set the sun from its own sun-path
++// (over the QWebChannel bridge), e.g. window.permaSetSun(azimuthDeg, altitudeDeg).
++// No-op cost when running standalone in a normal browser.
++if (typeof window !== "undefined") {
++  (window as unknown as Record<string, unknown>).permaSetSun = (
++    azimuthDeg: number,
++    altitudeDeg: number
++  ) => useSunStore.getState().setSun(azimuthDeg, altitudeDeg);
++}
+diff --git a/src/three/Space.tsx b/src/three/Space.tsx
+index 94c99c6..81bc7fc 100644
+--- a/src/three/Space.tsx
++++ b/src/three/Space.tsx
+@@ -7,6 +7,7 @@ import { useActionStore } from "@/state/exportStore";
+ import { GLTFExporter } from "three/examples/jsm/Addons.js";
+ import Car from "./Car";
+ import instanceFleet from "@/api/axios";
++import { useSunStore } from "@/state/sunStore";
+ 
+ const scale = 51000;
+ 
+@@ -43,6 +44,8 @@ function Building({
+         e.stopPropagation();
+       }}
+       rotation={[-Math.PI / 2, 0, 0]}
++      castShadow
++      receiveShadow
+       userData={{ exportToGLB: true }}
+     >
+       <extrudeGeometry args={[shape, extrudeSettings]} />
+@@ -439,6 +442,60 @@ export function Export() {
+   return null;
+ }
+ 
++// Scene axes (see project() below): +X = east, +Y = up, +Z = south, because
++// north (v.y) is mapped to -Z. Convert a sun azimuth (deg clockwise from north)
++// and altitude (deg above the horizon) into the direction the sun shines FROM.
++function sunVector(azimuthDeg: number, altitudeDeg: number) {
++  const az = (azimuthDeg * Math.PI) / 180;
++  const alt = (altitudeDeg * Math.PI) / 180;
++  const east = Math.sin(az) * Math.cos(alt);
++  const north = Math.cos(az) * Math.cos(alt);
++  const up = Math.sin(alt);
++  return new THREE.Vector3(east, up, -north);
++}
++
++// The sun: a shadow-casting directional light whose direction tracks the sun
++// store (the defaults when standalone, or values pushed by the host via
++// window.permaSetSun). A matching drei <Sky> keeps the visible sun aligned with
++// the shadow direction. The orthographic shadow frustum is sized to the scene
++// (radius) so shadows stay sharp and fully covered.
++function Sun({ radius }: { radius: number }) {
++  const azimuthDeg = useSunStore((s) => s.azimuthDeg);
++  const altitudeDeg = useSunStore((s) => s.altitudeDeg);
++  const dir = sunVector(azimuthDeg, Math.max(2, altitudeDeg));
++  const dist = radius * 2.2;
++  return (
++    <>
++      <directionalLight
++        position={[dir.x * dist, dir.y * dist, dir.z * dist]}
++        intensity={2.2}
++        castShadow
++        shadow-mapSize-width={2048}
++        shadow-mapSize-height={2048}
++        shadow-camera-near={1}
++        shadow-camera-far={dist * 2.5}
++        shadow-camera-left={-radius}
++        shadow-camera-right={radius}
++        shadow-camera-top={radius}
++        shadow-camera-bottom={-radius}
++        shadow-bias={-0.0004}
++      />
++      <Sky distance={450000} sunPosition={[dir.x, dir.y, dir.z]} />
++    </>
++  );
++}
++
++// Transparent shadow-catcher ground: only darkens where shadows land, so the
++// existing sky/environment look is preserved while shadows become visible.
++function Ground({ radius }: { radius: number }) {
++  return (
++    <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
++      <planeGeometry args={[radius * 4, radius * 4]} />
++      <shadowMaterial transparent opacity={0.35} />
++    </mesh>
++  );
++}
++
+ export function Space() {
+   const areas = useAreaStore((state) => state.areas);
+   const [realCenter, setRealCenter] = useState<any>();
+@@ -484,10 +541,20 @@ export function Space() {
+ 
+   const buildingsData = areaData();
+ 
++  // Half-extent of the area in scene units — sizes the sun's shadow frustum and
++  // the ground shadow-catcher so shadows stay sharp and fully cover the scene.
++  const spanLat = Math.abs(center[0].lat - center[1].lat);
++  const spanLng = Math.abs(center[0].lng - center[1].lng);
++  const radius =
++    Math.max(spanLat * scale, spanLng * scale * Math.cos((refLat * Math.PI) / 180)) *
++      0.6 +
++    60;
++
+   return (
+-    <Canvas camera={{ fov: 90, near: 0.1, far: 7000 }}>
+-      <ambientLight intensity={Math.PI / 2} />
+-      <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} decay={0} intensity={Math.PI} />
++    <Canvas shadows camera={{ fov: 90, near: 0.1, far: 7000 }}>
++      {/* Soft fill so shaded faces aren't pure black; the sun is the key light. */}
++      <ambientLight intensity={0.55} />
++      <Sun radius={radius} />
+       {buildingsData.map((item, index) => (
+         <Building
+           key={index}
+@@ -498,10 +565,9 @@ export function Space() {
+       ))}
+ 
+       <Roads area={realCenter} />
+-      <pointLight position={[-10, -10, -10]} decay={0} intensity={Math.PI} />
++      <Ground radius={radius} />
+       <Car />
+       <Export />
+-      <Sky distance={450000} sunPosition={[0, 1, 0]} inclination={0} azimuth={0.25} />
+       <Environment preset="city" />
+     </Canvas>
+   );
