@@ -29,6 +29,12 @@ Both share the same ``[[fraction]]`` grid contract, so ``src/zoning.py``,
 ``src/placement_score.py`` and the map overlay are unaffected by which path
 runs. ``shapely`` is optional — headless installs / CI use the circle fallback.
 Accurate enough to steer planting; not a ray-traced shadow study.
+
+**Terrain self-shadowing (V1.55):** when the site's elevation grid carries real
+relief, ``src/terrain_shade.py`` adds a per-moment DEM horizon mask (a ridge or
+hillside shading ground down-sun) that is unioned with the footprint shadows
+below — so a valley floor reads shady even with no caster nearby. Flat grids
+yield no terrain mask, leaving the footprint-only result unchanged.
 """
 
 from __future__ import annotations
@@ -132,17 +138,37 @@ def casters_from_project(project_dict: dict) -> list[dict]:
     return casters
 
 
-def _accumulate_shade(out, casters, sun, lat, lng, rows, cols, bbox) -> bool:
+def _accumulate_shade(out, casters, sun, lat, lng, rows, cols, bbox,
+                      terrain_elev=None) -> bool:
     """Add one sun-moment's shadow footprint into ``out`` (in place). Returns
     True when the sun was high enough to cast (so the caller can count valid
     samples). Shared by the season-averaged and single-instant entry points.
 
     Dispatches on shapely availability: the polygon path (preferred) casts the
     true footprints and rasterizes the union; the circle path is the legacy
-    fallback used when shapely is absent (or the polygon path yields nothing)."""
+    fallback used when shapely is absent (or the polygon path yields nothing).
+
+    When ``terrain_elev`` (a real elevation grid dict) is supplied, terrain
+    self-shadowing for this moment is unioned in alongside the footprint
+    shadows, so a ridge / hillside shades cells even with no caster nearby
+    (V1.55; ``src/terrain_shade.py``). It is ``None`` on flat sites, so the
+    footprint-only behaviour is unchanged there."""
     if sun.altitude < _MIN_SUN_ALT:
         return False
-    if _HAVE_SHAPELY:
+    # Terrain self-shadow mask for this moment (caster-independent). None on a
+    # flat grid / no elevation, so the footprint paths below are untouched there.
+    tmask = None
+    if terrain_elev is not None:
+        try:
+            from src import terrain_shade
+            tmask = terrain_shade.terrain_shadow_mask(
+                terrain_elev, sun.azimuth, sun.altitude)
+        except Exception:  # noqa: BLE001 — terrain shadow is best-effort
+            tmask = None
+    # Polygon path only when there ARE casters; an empty caster list goes
+    # straight to the circle helper, which applies the terrain mask alone
+    # without calling shadow_geometry with no footprints.
+    if casters and _HAVE_SHAPELY:
         elev = {"grid": out, "rows": rows, "cols": cols, "bbox": bbox}
         inc = shadow_geometry.shade_increment_for_moment(
             casters, elev, sun.azimuth, sun.altitude)
@@ -150,20 +176,29 @@ def _accumulate_shade(out, casters, sun, lat, lng, rows, cols, bbox) -> bool:
             for r in range(rows):
                 row_inc = inc[r]
                 out_r = out[r]
+                trow = tmask[r] if tmask is not None else None
                 for c in range(cols):
-                    if row_inc[c]:
+                    if row_inc[c] or (trow is not None and trow[c]):
                         out_r[c] += 1.0
             return True
         # Polygon path produced nothing usable (e.g. degenerate footprints) —
         # fall through to the circle model so a marked caster still casts.
-    return _accumulate_shade_circle(out, casters, sun, lat, lng, rows, cols, bbox)
+    return _accumulate_shade_circle(out, casters, sun, lat, lng, rows, cols,
+                                    bbox, tmask=tmask)
 
 
-def _accumulate_shade_circle(out, casters, sun, lat, lng, rows, cols, bbox) -> bool:
+def _accumulate_shade_circle(out, casters, sun, lat, lng, rows, cols, bbox,
+                             tmask=None) -> bool:
     """Legacy circle shadow model: each caster's shadow is a circle of its
     canopy radius displaced down-sun by ``height / tan(altitude)``. Used when
-    shapely is unavailable. Kept verbatim so behaviour is unchanged on
-    shapely-less installs (and so ``tests/test_shade.py`` passes on both paths)."""
+    shapely is unavailable, when the polygon path yields nothing, and for the
+    terrain-only pass (empty caster list).
+
+    Casters and the terrain mask ``tmask`` (when given) are combined into a
+    single per-moment boolean union, so a cell shaded by several casters and/or
+    terrain still contributes at most 1.0 for the moment. With ``tmask=None`` and
+    a single caster this is identical to the original per-caster increment, so
+    ``tests/test_shade.py`` passes unchanged on shapely-less installs."""
     from src.solar import shadow_azimuth, shadow_length_factor
     if sun.altitude < _MIN_SUN_ALT:
         return False
@@ -177,6 +212,7 @@ def _accumulate_shade_circle(out, casters, sun, lat, lng, rows, cols, bbox) -> b
         return (bbox["north"] - t * (bbox["north"] - bbox["south"]),
                 bbox["west"] + u * (bbox["east"] - bbox["west"]))
 
+    moment = [[False] * cols for _ in range(rows)]
     for cv in casters:
         shadow_len = min(cv["height_m"] * length_factor, _MAX_SHADOW_M)
         # Shadow centre: caster displaced down-sun. Azimuth is degrees clockwise
@@ -191,27 +227,62 @@ def _accumulate_shade_circle(out, casters, sun, lat, lng, rows, cols, bbox) -> b
                 ndx = (clng - s_lng) / rad_lng if rad_lng else 0.0
                 ndy = (clat - s_lat) / rad_lat if rad_lat else 0.0
                 if ndx * ndx + ndy * ndy <= 1.0:
-                    out[r][c] += 1.0
+                    moment[r][c] = True
+    if tmask is not None:
+        for r in range(rows):
+            trow = tmask[r]
+            mrow = moment[r]
+            for c in range(cols):
+                if trow[c]:
+                    mrow[c] = True
+    for r in range(rows):
+        out_r = out[r]
+        mrow = moment[r]
+        for c in range(cols):
+            if mrow[c]:
+                out_r[c] += 1.0
     return True
+
+
+def _terrain_elev_or_none(elev: dict):
+    """Return ``elev`` when it carries enough vertical relief for terrain
+    self-shadowing to matter, else ``None`` — flat sites then keep the
+    footprint-only behaviour bit-for-bit. Cheap min/max scan via
+    ``terrain_shade.has_relief``; degrades to ``None`` if that import fails."""
+    try:
+        from src import terrain_shade
+        return elev if terrain_shade.has_relief(elev) else None
+    except Exception:  # noqa: BLE001 — terrain shadow is best-effort
+        return None
 
 
 def shade_grid(casters: list[dict], elev: dict,
                lat: Optional[float] = None,
                lng: Optional[float] = None,
                dates: Optional[list] = None,
-               hours: Optional[list] = None) -> list[list[float]]:
+               hours: Optional[list] = None,
+               terrain: bool = True) -> list[list[float]]:
     """``[[fraction]]`` grid (same shape as ``elev['grid']``): per cell, the
-    fraction of sampled daylight moments it is shaded by any caster.
+    fraction of sampled daylight moments it is shaded by any caster or (when
+    the grid carries relief) by upwind terrain.
 
     ``dates`` is a list of ``(month, day)`` and ``hours`` a list of local solar
     hours; both default to the season/day-spread sample (equinox + solstices ×
     morning/noon/afternoon) — the season-averaged shade used for placement.
-    ``lat``/``lng`` default to the grid-bbox centre."""
+    ``lat``/``lng`` default to the grid-bbox centre. ``terrain`` enables the DEM
+    self-shadowing pass (``src/terrain_shade.py``); a no-op on flat grids."""
     grid = elev.get("grid") or []
     rows = elev.get("rows", len(grid))
     cols = elev.get("cols", len(grid[0]) if grid else 0)
     out = [[0.0] * cols for _ in range(rows)]
-    if not casters or rows == 0 or cols == 0:
+    if rows == 0 or cols == 0:
+        return out
+    # Terrain self-shadowing can shade cells with no nearby caster (a valley
+    # floor, the lee of a ridge), so only bail when there is NEITHER a caster
+    # NOR usable terrain relief. Flat grids → terrain_elev None → the
+    # footprint-only result is identical to pre-V1.55.
+    terrain_elev = _terrain_elev_or_none(elev) if terrain else None
+    if not casters and terrain_elev is None:
         return out
 
     bbox = elev["bbox"]
@@ -232,7 +303,8 @@ def shade_grid(casters: list[dict], elev: dict,
             # (utc = local - lng/15). Without this, noon would read as dawn.
             dt = datetime(2025, mo, day) + timedelta(hours=hr - lng / 15.0)
             if _accumulate_shade(out, casters, sun_position(lat, lng, dt),
-                                 lat, lng, rows, cols, bbox):
+                                 lat, lng, rows, cols, bbox,
+                                 terrain_elev=terrain_elev):
                 samples += 1
 
     if samples:
@@ -244,15 +316,21 @@ def shade_grid(casters: list[dict], elev: dict,
 
 def shade_grid_at(casters: list[dict], elev: dict, when: datetime,
                   lat: Optional[float] = None,
-                  lng: Optional[float] = None) -> list[list[float]]:
+                  lng: Optional[float] = None,
+                  terrain: bool = True) -> list[list[float]]:
     """Binary shade grid for a single instant ``when`` (a naive *local* solar
     datetime): 1.0 where shaded, 0.0 where lit. Used by the time-of-day overlay
-    slider so the user can watch shadows sweep across the day/season."""
+    slider so the user can watch shadows sweep across the day/season.
+    ``terrain`` unions in the DEM self-shadow for the instant (no-op on flat
+    grids)."""
     grid = elev.get("grid") or []
     rows = elev.get("rows", len(grid))
     cols = elev.get("cols", len(grid[0]) if grid else 0)
     out = [[0.0] * cols for _ in range(rows)]
-    if not casters or rows == 0 or cols == 0:
+    if rows == 0 or cols == 0:
+        return out
+    terrain_elev = _terrain_elev_or_none(elev) if terrain else None
+    if not casters and terrain_elev is None:
         return out
     bbox = elev["bbox"]
     if lat is None:
@@ -262,23 +340,25 @@ def shade_grid_at(casters: list[dict], elev: dict, when: datetime,
     from src.solar import sun_position
     dt_utc = when + timedelta(hours=-lng / 15.0)
     _accumulate_shade(out, casters, sun_position(lat, lng, dt_utc),
-                      lat, lng, rows, cols, bbox)
+                      lat, lng, rows, cols, bbox, terrain_elev=terrain_elev)
     return out
 
 
 def shade_grid_for_design(project_dict: dict, elev: dict,
                           extra_casters: Optional[list] = None,
-                          when: Optional[datetime] = None
+                          when: Optional[datetime] = None,
+                          terrain: bool = True
                           ) -> list[list[float]]:
     """Convenience wrapper: gather casters from the project (existing + placed)
     plus any ``extra_casters`` and compute the shade grid over ``elev``. With
-    ``when`` set, returns the single-instant grid; otherwise the season-average."""
+    ``when`` set, returns the single-instant grid; otherwise the season-average.
+    ``terrain`` toggles the DEM self-shadowing pass (default on)."""
     casters = casters_from_project(project_dict)
     if extra_casters:
         casters = casters + list(extra_casters)
     if when is not None:
-        return shade_grid_at(casters, elev, when)
-    return shade_grid(casters, elev)
+        return shade_grid_at(casters, elev, when, terrain=terrain)
+    return shade_grid(casters, elev, terrain=terrain)
 
 
 # Shade colour ramp: translucent indigo that deepens with shade fraction.

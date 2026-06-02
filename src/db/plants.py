@@ -87,7 +87,12 @@ _PLANT_FAUNA_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "plant_fauna_maste
 # geometry stays in the project GeoJSON per CLAUDE.md; this is an OUTPUT cache,
 # wiped on reseed like climate_cache. The new table is created by the
 # executescript(schema.sql) in init_db, so no ALTER migration is needed.
-_SCHEMA_VERSION = 21
+# v22 (V1.55): terrain self-shadowing (src/terrain_shade.py) now folds DEM
+# horizon shadows into the shade grid, so a zone previously tagged full_sun may
+# now be (partial) shade. No DDL change — this bump is a deliberate cache-buster
+# that re-wipes the derived `shade_zone_cache` (already in the reseed block) so
+# stale tags can't outlive the model change.
+_SCHEMA_VERSION = 22
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────

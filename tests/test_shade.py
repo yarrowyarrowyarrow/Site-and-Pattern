@@ -314,5 +314,39 @@ class TestBothPathsAgree(unittest.TestCase):
             self.assertGreater(_north(g), _south(g))
 
 
+class TestTerrainSelfShadow(unittest.TestCase):
+    """V1.55 — the DEM horizon pass shades cells from terrain relief even with
+    no footprint casters, and leaves flat sites bit-for-bit unchanged."""
+
+    def _south_wall(self, height=80.0, base=100.0):
+        # A tall E–W wall along the south edge (rows 7-8; row 0 = north). The
+        # Edmonton sun stays in the southern sky, so the wall shades the ground
+        # to its north at every sampled moment.
+        grid = [[base] * _N for _ in range(_N)]
+        for r in (7, 8):
+            for c in range(_N):
+                grid[r][c] = base + height
+        return {"grid": grid, "rows": _N, "cols": _N, "bbox": _BBOX}
+
+    def test_terrain_shades_without_any_casters(self):
+        # No footprint casters at all — the shade comes purely from terrain.
+        g = shade.shade_grid([], self._south_wall())
+        self.assertTrue(any(v > 0.0 for row in g for v in row))
+
+    def test_shadow_appears_just_north_of_the_wall(self):
+        g = shade.shade_grid([], self._south_wall())
+        # Row 6 sits one cell north of the southern wall → in its shadow.
+        self.assertGreater(sum(g[6]), 0.0)
+
+    def test_flat_grid_identical_with_or_without_terrain(self):
+        # A flat site must be untouched by the terrain pass (back-compat).
+        self.assertEqual(shade.shade_grid(_TREE, _ELEV, terrain=True),
+                         shade.shade_grid(_TREE, _ELEV, terrain=False))
+
+    def test_flat_no_casters_still_zero(self):
+        self.assertTrue(
+            all(v == 0.0 for row in shade.shade_grid([], _ELEV) for v in row))
+
+
 if __name__ == "__main__":
     unittest.main()

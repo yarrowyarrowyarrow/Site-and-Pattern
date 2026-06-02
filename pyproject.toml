@@ -39,6 +39,10 @@ utm  = ["pyproj>=3.4"]
 # src.shadow_geometry guards the shapely import and src.shade falls back to the
 # circle model when it's absent, so this never blocks a headless install.
 shade = ["shapely>=2.0"]
+# Terrain self-shadowing accelerator (V1.55). Optional and off-by-default:
+# src.terrain_shade has a pure-Python fallback, so numpy only speeds up the DEM
+# horizon ray-march; the feature still works without it.
+terrain = ["numpy>=1.21"]
 # Footprint extraction from an nDSM GeoTIFF (V1.53). The vectorizer core needs
 # only numpy + shapely; rasterio (+ pyproj for reprojection) is needed only to
 # READ the GeoTIFF. All optional — the feature hides itself when absent.
