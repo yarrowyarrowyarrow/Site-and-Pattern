@@ -22,13 +22,13 @@ from __future__ import annotations
 
 import json
 import math
-import os
 import urllib.parse
 import urllib.request
 from datetime import date, timedelta
 from typing import Optional
 
 from src.climate import get_zone
+from src.resources import resource_path
 
 
 _TIMEOUT = 8.0
@@ -86,9 +86,7 @@ def _alberta_rainfall_fallback(lat: float, lng: float) -> Optional[dict]:
     import json as _json
     import math as _math
 
-    here = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(here)
-    path = os.path.join(project_root, "data", "rainfall_fallback_alberta.json")
+    path = resource_path("data", "rainfall_fallback_alberta.json")
     try:
         with open(path, "r", encoding="utf-8") as f:
             entries = _json.load(f)
@@ -193,9 +191,7 @@ def _alberta_soil_fallback(lat: float, lng: float) -> Optional[dict]:
     import json as _json
     import math as _math
 
-    here = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(here)
-    path = os.path.join(project_root, "data", "soil_fallback_alberta.json")
+    path = resource_path("data", "soil_fallback_alberta.json")
     try:
         with open(path, "r", encoding="utf-8") as f:
             entries = _json.load(f)

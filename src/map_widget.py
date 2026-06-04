@@ -16,6 +16,7 @@ from PyQt6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
 from PyQt6.QtWebChannel import QWebChannel
 
 from src import map_js
+from src.resources import resource_path
 from src.settings import get_mapbox_token
 
 
@@ -411,10 +412,7 @@ class MapWidget(QWebEngineView):
         s.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
         s.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
 
-        html_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "html", "map.html"
-        )
+        html_path = resource_path("html", "map.html")
         self.load(QUrl.fromLocalFile(html_path))
 
     def _on_map_moved(self, lat: float, lng: float, zoom: int):

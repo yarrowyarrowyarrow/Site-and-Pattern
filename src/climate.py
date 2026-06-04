@@ -30,10 +30,9 @@ from datetime import date
 from functools import lru_cache
 from typing import Optional
 
-_DATA_FILE = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "data", "hardiness_zones.json"
-)
+from src.resources import resource_path
+
+_DATA_FILE = resource_path("data", "hardiness_zones.json")
 
 
 @lru_cache(maxsize=1)

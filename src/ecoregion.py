@@ -43,15 +43,13 @@ Implementation notes:
 """
 
 import json
-import os
 from functools import lru_cache
 from typing import Optional
 
+from src.resources import resource_path
 
-_DATA_FILE = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "data", "ecoregions_canada.geojson",
-)
+
+_DATA_FILE = resource_path("data", "ecoregions_canada.geojson")
 
 
 @lru_cache(maxsize=1)

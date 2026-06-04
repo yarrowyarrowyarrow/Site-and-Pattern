@@ -17,10 +17,14 @@ import sqlite3
 import sys
 from typing import Optional
 
+from src.resources import resource_path
+
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
 _HERE        = os.path.dirname(os.path.abspath(__file__))
-_SCHEMA_PATH = os.path.join(_HERE, "schema.sql")
+# Resolve through resource_path so the schema is found inside a PyInstaller
+# bundle (where a module's __file__ is unreliable), not just in a source tree.
+_SCHEMA_PATH = resource_path("src", "db", "schema.sql")
 
 
 def _user_data_dir() -> pathlib.Path:
@@ -41,11 +45,12 @@ _DB_PATH  = str(_user_data_dir() / "permadesign.db")
 _PROJECT_ROOT    = os.path.dirname(os.path.dirname(_HERE))
 _LEGACY_DB_PATH  = os.path.join(_PROJECT_ROOT, "data", "permadesign.db")
 
-# Master plant data (shipped with the application)
-_MASTER_JSON_PATH       = os.path.join(_PROJECT_ROOT, "data", "plants_master.json")
-_GARDEN_JSON_PATH       = os.path.join(_PROJECT_ROOT, "data", "garden_plants.json")
-_FAUNA_JSON_PATH        = os.path.join(_PROJECT_ROOT, "data", "fauna_master.json")
-_PLANT_FAUNA_JSON_PATH  = os.path.join(_PROJECT_ROOT, "data", "plant_fauna_master.json")
+# Master plant data (shipped with the application — resolved via resource_path
+# so the seed JSON is found both in a source tree and inside a frozen bundle).
+_MASTER_JSON_PATH       = resource_path("data", "plants_master.json")
+_GARDEN_JSON_PATH       = resource_path("data", "garden_plants.json")
+_FAUNA_JSON_PATH        = resource_path("data", "fauna_master.json")
+_PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 
 # Current schema version — bump when adding columns/tables, or when the
 # bundled seed data changes meaningfully (forces a reseed on next start).

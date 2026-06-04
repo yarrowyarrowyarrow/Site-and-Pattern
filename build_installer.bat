@@ -36,8 +36,15 @@ if exist venv (
     call venv\Scripts\activate.bat
 )
 
-REM Install build dependencies
-echo Installing build dependencies...
+REM Install runtime + build dependencies. requirements.txt must be installed
+REM first so PyInstaller can actually find PyQt6 et al. to bundle — otherwise
+REM it silently produces a broken app that crashes on launch.
+echo Installing dependencies...
+pip install -q -r requirements.txt
+if !ERRORLEVEL! neq 0 (
+    echo ERROR: failed to install requirements.txt. Aborting.
+    exit /b 1
+)
 pip install -q pyinstaller
 
 REM Build with PyInstaller — bail if it fails so we don't ship a broken bundle.

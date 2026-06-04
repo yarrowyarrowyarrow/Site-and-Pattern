@@ -11,9 +11,9 @@ Can be run directly to reset the database:
 import json
 import os
 
-_HERE        = os.path.dirname(os.path.abspath(__file__))
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(_HERE))
-_MASTER_JSON  = os.path.join(_PROJECT_ROOT, "data", "plants_master.json")
+from src.resources import resource_path
+
+_MASTER_JSON  = resource_path("data", "plants_master.json")
 
 
 def load_plants_from_master() -> list[dict]:

@@ -21,6 +21,7 @@ import urllib.request
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
+from src.resources import resource_path
 from src.terrain import (
     _EDM_RESOURCE,
     _USER_AGENT,
@@ -66,13 +67,11 @@ def _diag_fetch(url: str, timeout: float = 30.0) -> "tuple[bool, int | None, dic
         return False, None, None, f"{type(exc).__name__} after {dt:.1f}s: {exc}", ""
 
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_PROJECT_ROOT = os.path.dirname(_HERE)
 _SEED_CANDIDATES = (
-    os.path.join(_PROJECT_ROOT, "data", "edmonton_contours.geojson"),
-    os.path.join(_PROJECT_ROOT, "data", "edmonton_contours.geojson.gz"),
-    os.path.join(_PROJECT_ROOT, "data", "edmonton_contours.json"),
-    os.path.join(_PROJECT_ROOT, "data", "edmonton_contours.json.gz"),
+    resource_path("data", "edmonton_contours.geojson"),
+    resource_path("data", "edmonton_contours.geojson.gz"),
+    resource_path("data", "edmonton_contours.json"),
+    resource_path("data", "edmonton_contours.json.gz"),
 )
 
 

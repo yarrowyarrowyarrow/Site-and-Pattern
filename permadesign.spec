@@ -20,6 +20,7 @@ a = Analysis(
         'PyQt6.QtWidgets',
         'PyQt6.QtWebEngineWidgets',
         'PyQt6.sip',
+        'sqlite3',
     ],
     hookspath=[],
     hooksconfig={},
