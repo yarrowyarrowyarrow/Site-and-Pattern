@@ -254,6 +254,23 @@ class TestShadowPolygonsPayload(unittest.TestCase):
         finally:
             shade._HAVE_SHAPELY = orig
 
+    def test_degenerate_ring_falls_back_to_radius_circle(self):
+        # A caster whose footprint ring is collinear (shapely can't build a
+        # polygon from it) must still cast via its radius circle, not silently
+        # vanish — guards the V1.58 fallback in shadow_polygons_payload.
+        d = 0.0001
+        collinear = [[_CLNG - d, _CLAT], [_CLNG, _CLAT],
+                     [_CLNG + d, _CLAT], [_CLNG - d, _CLAT]]   # all one line
+        project = {"features": [
+            {"geometry": {"type": "Polygon", "coordinates": [collinear]},
+             "properties": {"element_type": "canopy_footprint",
+                            "height_m": 8.0, "canopy_radius_m": 3.0}},
+        ]}
+        payload = shade.shadow_polygons_payload(
+            project, None, {}, when=datetime(2025, 6, 21, 12, 0))
+        self.assertIsNotNone(payload)            # caster wasn't dropped
+        self.assertTrue(payload["polygons"])
+
 
 class TestClassifyZoneTags(unittest.TestCase):
     """V1.53 — classify_zone_tags turns the shade grid into per-cell tag rows

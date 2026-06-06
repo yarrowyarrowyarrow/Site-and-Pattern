@@ -220,14 +220,19 @@ def _too_close(lat, lng, existing, min_m=2.0) -> bool:
     return False
 
 
-def _osm_building_feature(item: dict, seq: int) -> Optional[dict]:
+def _osm_building_feature(item: dict) -> Optional[dict]:
     """Build a shade-casting ``canopy_footprint`` Polygon feature from an OSM
     building dict carrying a ``footprint`` ring. Mirrors
     ``footprint_extract.add_extracted_footprints`` so the building renders as a
     true outline AND casts a true-shape shadow, while ``canopy_radius_m`` + a
     stored centroid keep the keep-out (``src/exclusion.py``) and circle fallback
     working. ``None`` when the footprint is missing/degenerate (caller then
-    falls back to a Point ``existing_building``)."""
+    falls back to a Point ``existing_building``).
+
+    The ``shape_id`` is a fresh uuid so it can never collide with an existing or
+    re-imported footprint (a count/time-based scheme could repeat after a
+    building is deleted, or for two imports in the same millisecond)."""
+    import uuid
     footprint = item.get("footprint")
     if not footprint or len(footprint) < 4:
         return None
@@ -239,7 +244,7 @@ def _osm_building_feature(item: dict, seq: int) -> Optional[dict]:
         "geometry": {"type": "Polygon", "coordinates": [coords]},
         "properties": {
             "element_type": "canopy_footprint",
-            "shape_id": f"shape_osm_{seq}",
+            "shape_id": f"shape_osm_{uuid.uuid4().hex[:12]}",
             "label": "Building (OSM)",
             "shape_type": "Building (OSM)",
             "fill_color": "#8d6e63",
@@ -269,7 +274,6 @@ def add_features_to_project(features: list[dict], project_dict: dict) -> int:
     usable ring falls back to the legacy ``existing_building`` Point."""
     feats = project_dict.setdefault("features", [])
     existing_pts = []
-    osm_seq = 0
     for f in feats:
         props = f.get("properties") or {}
         et = props.get("element_type")
@@ -279,7 +283,6 @@ def add_features_to_project(features: list[dict], project_dict: dict) -> int:
             if len(c) >= 2:
                 existing_pts.append((c[1], c[0]))
         elif et == "canopy_footprint" and props.get("source") == "osm":
-            osm_seq += 1
             la, ln = props.get("lat"), props.get("lng")
             if la is None or ln is None:
                 ring = (geom.get("coordinates") or [None])[0]
@@ -293,10 +296,9 @@ def add_features_to_project(features: list[dict], project_dict: dict) -> int:
         if lat is None or lng is None or _too_close(lat, lng, existing_pts):
             continue
         if item.get("kind") == "building":
-            feat = _osm_building_feature(item, osm_seq)
+            feat = _osm_building_feature(item)
             if feat is not None:
                 feats.append(feat)
-                osm_seq += 1
                 existing_pts.append((lat, lng))
                 added += 1
                 continue

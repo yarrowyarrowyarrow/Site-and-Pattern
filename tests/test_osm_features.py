@@ -124,6 +124,28 @@ class TestImport(unittest.TestCase):
         n2 = osm.add_features_to_project(osm.parse_elements(_FIXTURE), proj)
         self.assertEqual(n2, 0)
 
+    def test_building_shape_ids_unique(self):
+        # Two buildings must get distinct shape_ids — a count-based scheme could
+        # collide after a delete; uuids never do.
+        two = {"elements": [
+            {"type": "way", "tags": {"building": "yes"},
+             "geometry": [{"lat": 53.5000, "lon": -113.5000},
+                          {"lat": 53.5000, "lon": -113.4998},
+                          {"lat": 53.5002, "lon": -113.4998},
+                          {"lat": 53.5000, "lon": -113.5000}]},
+            {"type": "way", "tags": {"building": "yes"},
+             "geometry": [{"lat": 53.5010, "lon": -113.5010},
+                          {"lat": 53.5010, "lon": -113.5008},
+                          {"lat": 53.5012, "lon": -113.5008},
+                          {"lat": 53.5010, "lon": -113.5010}]},
+        ]}
+        proj = new_project("t")
+        osm.add_features_to_project(osm.parse_elements(two), proj)
+        ids = [f["properties"]["shape_id"] for f in proj["features"]
+               if f["properties"].get("element_type") == "canopy_footprint"]
+        self.assertEqual(len(ids), 2)
+        self.assertEqual(len(set(ids)), 2)          # all unique
+
     def test_dedupes_against_existing(self):
         proj = new_project("t")
         # Pre-mark a tree at the same spot as one OSM tree.

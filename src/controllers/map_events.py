@@ -301,6 +301,8 @@ class MapEventRouter:
         self._main.statusBar().showMessage(
             f"Shape placed: {label or shape_type} ({area_str}{extra})", 3000
         )
+        if casts_shade:
+            self._refresh_shade_if_active()   # new caster updates a live overlay
 
     def _on_shape_removed(self, shape_id: str):
         self._main._project["features"] = [

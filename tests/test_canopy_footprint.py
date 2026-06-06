@@ -134,5 +134,38 @@ class TestShapeHeightEdit(unittest.TestCase):
         self.assertEqual(casters[0]["height_m"], 11.0)
 
 
+class TestShapeGeometryEditController(unittest.TestCase):
+    """V1.58 — dragging a footprint's outline updates geometry in place and
+    refreshes a live shade overlay only when one is shown."""
+
+    def test_geom_change_rewrites_polygon_and_resizes(self):
+        router, main = _router()
+        router._on_shape_complete(
+            "s1", json.dumps(_PTS), "House", "Custom",
+            "#78909c", "#546e7a", 0.4, "", 80.0, 8.0)
+        r0 = main._project["features"][0]["properties"]["canopy_radius_m"]
+        # A clearly larger outline, as the [lat,lng] open ring the map sends.
+        bigger = [[53.500, -113.500], [53.500, -113.498],
+                  [53.502, -113.498], [53.502, -113.500]]
+        router._on_shape_geom_changed("s1", bigger)
+        ring = main._project["features"][0]["geometry"]["coordinates"][0]
+        self.assertEqual(ring[0], ring[-1])             # re-closed
+        self.assertGreater(
+            main._project["features"][0]["properties"]["canopy_radius_m"], r0)
+
+    def test_refresh_only_when_overlay_active(self):
+        router, main = _router()
+        calls = []
+        router._on_shade_requested = lambda cfg: calls.append(cfg)
+        main._last_shade_config = {"when": (6, 21, 15)}
+        # No overlay shown → editing must not pop a recompute.
+        router._refresh_shade_if_active()
+        self.assertEqual(calls, [])
+        # Overlay shown → recompute reusing the last request.
+        main._shade_overlay_active = True
+        router._refresh_shade_if_active()
+        self.assertEqual(calls, [{"when": (6, 21, 15)}])
+
+
 if __name__ == "__main__":
     unittest.main()

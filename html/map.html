@@ -3055,6 +3055,7 @@
       // offers a height prompt; anything else just removes.
       polygon.on('contextmenu', function(e) {
         L.DomEvent.stop(e);
+        if (shapeEditId === id) exitShapeEditMode();   // tearing this shape down
         if (castsShade) {
           var entry = prompt(
             'Height of this shade caster in metres (blank or 0 to remove):',
@@ -3168,6 +3169,9 @@
       currentStructure = null;
       currentHedgerow  = null;
       currentShape     = null;
+      // Starting any tool ends an in-progress outline edit so its vertex
+      // handles (added to the map, not the shape group) don't orphan.
+      if (shapeEditId !== null) exitShapeEditMode();
 
       switch (mode) {
         case 'boundary':
@@ -3305,6 +3309,7 @@
     // ── Project load/clear ────────────────────────────────────────────────────
     function clearAll() {
       if (boundaryEditId !== null) exitBoundaryEditMode();
+      if (shapeEditId !== null) exitShapeEditMode();
       boundaries.forEach(function(b) {
         map.removeLayer(b.layer);
         if (b.labelsLayer) map.removeLayer(b.labelsLayer);

@@ -998,8 +998,8 @@ class SitePanel(QWidget):
 
     def _on_shade_season_changed(self, _idx):
         """Clamp the time slider to the chosen day's sunrise→sunset so the user
-        scrubs only through real daylight, and label the ends. 'Typical'
-        (averaged) keeps the generic 5 AM–9 PM range and no live scrubbing."""
+        scrubs only through real daylight, and label the ends. Falls back to the
+        generic 5 AM–9 PM range until a site location is known."""
         season = self._shade_season.currentData()
         if season is None or self._lat is None or self._lng is None:
             self._shade_hour.setRange(5, 21)

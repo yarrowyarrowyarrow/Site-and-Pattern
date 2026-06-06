@@ -350,6 +350,24 @@ class TestUpdateShapeGeometry(unittest.TestCase):
         self.assertFalse(update_shape_geometry(
             p, "nope", [[53.5, -113.5], [53.6, -113.5], [53.6, -113.4]]))
 
+    def test_non_cast_shape_updates_geometry_only(self):
+        # A plain custom_shape (not a caster) gets its outline rewritten but must
+        # NOT acquire a canopy_radius_m, so it never becomes a keep-out zone.
+        p = new_project("t")
+        p["features"].append({
+            "type": "Feature",
+            "geometry": {"type": "Polygon", "coordinates": [[
+                [-113.5, 53.5], [-113.499, 53.5], [-113.499, 53.501],
+                [-113.5, 53.501], [-113.5, 53.5]]]},
+            "properties": {"element_type": "custom_shape", "shape_id": "s1"},
+        })
+        new = [[53.50, -113.50], [53.50, -113.48], [53.52, -113.48]]
+        self.assertTrue(update_shape_geometry(p, "s1", new))
+        props = p["features"][0]["properties"]
+        self.assertNotIn("canopy_radius_m", props)      # still not a keep-out
+        ring = p["features"][0]["geometry"]["coordinates"][0]
+        self.assertEqual(ring[0], ring[-1])             # rewritten + re-closed
+
     def test_osm_building_round_trips_as_shape(self):
         p = new_project("t")
         p["features"].append(self._osm_building())
