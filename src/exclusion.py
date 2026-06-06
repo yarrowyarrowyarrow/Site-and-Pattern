@@ -14,6 +14,9 @@ clipping (≈1 % error under ~2 km, well within planting tolerance).
 Feature sources (project FeatureCollection):
   * ``existing_tree``     → canopy_radius_m (fallback size_m/2).
   * ``existing_building`` → canopy_radius_m (footprint half-width).
+  * ``canopy_footprint`` imported from OSM (``source="osm"``) → stored centroid
+    + canopy_radius_m (V1.58: OSM buildings are polygons, not points, but still
+    keep planting out).
   * ``structure`` whose struct id is a water feature → struct size_m / 2.
 """
 
@@ -46,8 +49,15 @@ def keepout_circles(project_dict: dict) -> list[tuple[float, float, float]]:
         et = props.get("element_type")
         geom = f.get("geometry", {}) or {}
         if geom.get("type") != "Point":
-            # Buildings/structures are stored as points in this app; skip any
-            # non-point geometry defensively.
+            # V1.58: OSM buildings import as canopy_footprint Polygons but must
+            # still keep planting out. They stamp a centroid + canopy_radius_m at
+            # import, so reuse those rather than re-deriving the ring here. Any
+            # other non-point geometry is skipped defensively.
+            if et == "canopy_footprint" and props.get("source") == "osm":
+                la, ln = props.get("lat"), props.get("lng")
+                r = props.get("canopy_radius_m")
+                if la is not None and ln is not None and r:
+                    circles.append((float(la), float(ln), max(0.5, float(r))))
             continue
         coords = geom.get("coordinates") or []
         if len(coords) < 2:

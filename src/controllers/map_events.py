@@ -279,6 +279,10 @@ class MapEventRouter:
         if casts_shade:
             props["height_m"] = float(height_m)
             props["cast_shade"] = True
+            # Size the footprint from its ring so the keep-out / circle fallback
+            # match the drawn shape rather than a hard-coded default.
+            from src.osm_features import ring_radius_m
+            props["canopy_radius_m"] = max(0.5, ring_radius_m(ring))
         self._main._project["features"].append({
             "type": "Feature",
             "geometry": {"type": "Polygon", "coordinates": [ring]},
@@ -317,10 +321,25 @@ class MapEventRouter:
             props["element_type"] = "canopy_footprint" if casts else "custom_shape"
             props["height_m"] = float(height_m) if casts else None
             props["cast_shade"] = True if casts else None
+            if casts and not props.get("canopy_radius_m"):
+                from src.osm_features import ring_radius_m
+                ring = (f.get("geometry", {}).get("coordinates") or [None])[0]
+                if ring:
+                    props["canopy_radius_m"] = max(0.5, ring_radius_m(ring))
             self._main._mark_modified()
             self._main.statusBar().showMessage(
                 f"Shade height updated to {height_m:.1f} m.", 3000)
             break
+        self._refresh_shade_if_active()
+
+    def _on_shape_geom_changed(self, shape_id: str, points: list):
+        """A drawn/imported shape's outline was dragged in edit mode — update the
+        project geometry and refresh a live shade overlay so the shadow follows
+        the edited footprint. Thin wrapper over project.update_shape_geometry."""
+        from src.project import update_shape_geometry
+        if update_shape_geometry(self._main._project, shape_id, points):
+            self._main._mark_modified()
+        self._refresh_shade_if_active()
 
     # ── Contour handlers ─────────────────────────────────────────────────────
 
@@ -1005,6 +1024,9 @@ class MapEventRouter:
         if w:                       # (month, day, hour) local solar
             when = datetime(2025, w[0], w[1], int(w[2]), 0)
 
+        # Remember the request so an outline/height edit can recompute the same
+        # view in place (see _refresh_shade_if_active).
+        self._main._last_shade_config = dict(config or {})
         self._main._shade_opacity = (
             self._main.site_panel._shade_opacity.value() / 100.0)
         self._main.statusBar().showMessage("Computing shade…")
@@ -1022,6 +1044,7 @@ class MapEventRouter:
         two never stack, and degrades to the message below when nothing casts."""
         self._main.map_widget.clear_shade_overlay()
         if not payload or not payload.get("polygons"):
+            self._main._shade_overlay_active = False
             self._main.statusBar().showMessage(
                 "No shade to show — mark or import some trees/buildings, or add "
                 "trees to the design first.", 5000)
@@ -1029,11 +1052,13 @@ class MapEventRouter:
         self._main.map_widget.draw_shadow_polygons(
             payload["polygons"], payload.get("bbox"),
             getattr(self._main, "_shade_opacity", 0.5))
+        self._main._shade_overlay_active = True
         self._main.statusBar().showMessage("Shade overlay updated.", 3000)
 
     def _on_shade_ready(self, payload):
         self._main.map_widget.clear_shadow_polygons()
         if not payload:
+            self._main._shade_overlay_active = False
             self._main.statusBar().showMessage(
                 "No shade to show — mark or import some trees/buildings, or add "
                 "trees to the design first.", 5000)
@@ -1041,12 +1066,24 @@ class MapEventRouter:
         self._main.map_widget.draw_shade_overlay(
             payload["data_url"], payload["bbox"],
             getattr(self._main, "_shade_opacity", 0.5))
+        self._main._shade_overlay_active = True
         self._main.statusBar().showMessage("Shade overlay updated.", 3000)
 
     def _on_shade_cleared(self):
         """Clear both shade overlays (raster + vector)."""
+        self._main._shade_overlay_active = False
         self._main.map_widget.clear_shade_overlay()
         self._main.map_widget.clear_shadow_polygons()
+
+    def _refresh_shade_if_active(self):
+        """Recompute the shade overlay in place after a footprint edit, but only
+        when one is currently shown — so editing an outline never pops an overlay
+        the user didn't ask for. Reuses the last shade request."""
+        if not getattr(self._main, "_shade_overlay_active", False):
+            return
+        cfg = getattr(self._main, "_last_shade_config", None)
+        if cfg is not None:
+            self._on_shade_requested(cfg)
 
     def _on_shade_opacity(self, opacity: float):
         """Drive opacity on whichever shade overlay is showing."""
@@ -1159,8 +1196,10 @@ class MapEventRouter:
             f"Found {n_b} building(s), {n_t} tree(s); added {added} new.")
 
     def _reload_existing_features(self):
-        """Draw any existing_tree/building features that aren't yet on the map
-        (reuses the structure render path via project_to_map_data)."""
+        """Draw OSM-imported existing features that aren't yet on the map: trees
+        (Point structures) and buildings (V1.58 ``canopy_footprint`` polygons).
+        Both render idempotently — ``load_structure`` / ``load_shape`` reuse the
+        id and re-draw in place, so calling this after each import is safe."""
         import src.project as project_io
         try:
             data = project_io.project_to_map_data(self._main._project)
@@ -1170,6 +1209,16 @@ class MapEventRouter:
             sd = s.get("struct_def", {})
             if sd.get("id") in ("existing_tree", "existing_building"):
                 self._main.map_widget.load_structure(sd, s["lat"], s["lng"])
+        # Buildings now arrive as true-outline canopy_footprint polygons — render
+        # them through the shape path so the user sees the real footprint.
+        for f in self._main._project.get("features", []):
+            props = f.get("properties", {}) or {}
+            if (props.get("source") == "osm"
+                    and props.get("element_type") in ("canopy_footprint",
+                                                      "custom_shape")):
+                sh = project_io.feature_to_shape(f)
+                if sh:
+                    self._main.map_widget.load_shape(sh)
 
     # ── Edmonton offline dataset download ────────────────────────────────────
     # State on MainWindow: _dl_thread, _dl_worker.

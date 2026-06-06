@@ -913,10 +913,13 @@ class SitePanel(QWidget):
         season_row = QHBoxLayout()
         season_row.addWidget(QLabel("Season:"))
         self._shade_season = QComboBox()
-        # data = (month, day); default to a season-averaged "Typical" entry.
-        self._shade_season.addItem("Typical (averaged)", None)
+        # data = (month, day). V1.58: the overlay always shows a crisp single
+        # instant (a real date + the time slider) so shadows track the sun and
+        # match each building's outline — no season-averaged "blob". Planting-zone
+        # classification still uses the season average internally (separate path).
         for label, d in KEY_DATES.items():
             self._shade_season.addItem(label, (d.month, d.day))
+        self._shade_season.setCurrentIndex(0)          # Summer Solstice
         self._shade_season.currentIndexChanged.connect(self._on_shade_season_changed)
         season_row.addWidget(self._shade_season)
         v.addLayout(season_row)
@@ -925,8 +928,9 @@ class SitePanel(QWidget):
         time_row.addWidget(QLabel("Time:"))
         self._shade_hour = QSlider(Qt.Orientation.Horizontal)
         self._shade_hour.setRange(5, 21)        # 5 AM – 9 PM local solar
-        self._shade_hour.setValue(12)
-        self._shade_hour_lbl = QLabel("12:00")
+        self._shade_hour.setValue(15)           # mid-afternoon: long, clearly
+                                                # directional shadows by default
+        self._shade_hour_lbl = QLabel("15:00")
         self._shade_hour.valueChanged.connect(
             lambda h: self._shade_hour_lbl.setText(f"{h:02d}:00"))
         # Scrub the slider to sweep shadows across the day. A short debounce

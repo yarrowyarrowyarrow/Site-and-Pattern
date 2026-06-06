@@ -477,9 +477,13 @@ def shadow_polygons_payload(project_dict: dict, boundary, site_config,
         metric: list = []
         for cv in casters:
             ring = cv.get("footprint")
+            poly = None
             if ring:
                 poly = shadow_geometry.footprint_to_metric(ring, origin)
-            else:
+            if poly is None or poly.is_empty:
+                # No ring, or a degenerate ring shapely couldn't repair — keep
+                # the caster by falling back to its radius circle instead of
+                # dropping it, so a building never silently casts nothing.
                 poly = shadow_geometry.point_footprint_metric(
                     cv["lng"], cv["lat"], cv.get("radius_m", 0.5), origin)
             if poly is not None and not poly.is_empty:

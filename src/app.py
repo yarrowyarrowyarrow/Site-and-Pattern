@@ -640,6 +640,7 @@ class MainWindow(QMainWindow):
         b.shape_complete.connect(self._on_shape_complete)
         b.shape_removed.connect(self._on_shape_removed)
         b.shape_height_changed.connect(self._on_shape_height_changed)
+        b.shape_geom_changed.connect(self._on_shape_geom_changed)
 
         # Toolbar → structures layer toggle
         self.toolbar.structures_toggled.connect(self.map_widget.set_structures_visible)
@@ -938,6 +939,9 @@ class MainWindow(QMainWindow):
 
     def _on_shape_height_changed(self, shape_id: str, height_m: float):
         return self._map_events._on_shape_height_changed(shape_id, height_m)
+
+    def _on_shape_geom_changed(self, shape_id: str, points: list):
+        return self._map_events._on_shape_geom_changed(shape_id, points)
 
     # ── Analysis overlays (A1-A4) ──────────────────────────────────────────
 

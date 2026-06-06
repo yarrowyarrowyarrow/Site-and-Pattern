@@ -117,6 +117,7 @@ class MapBridge(QObject):
         # id, pointsJson, label, shapeType, fillColor, strokeColor, fillOpacity, dashArray, areaM2, heightM
     shape_removed = pyqtSignal(str)                                 # id
     shape_height_changed = pyqtSignal(str, float)                  # id, heightM
+    shape_geom_changed = pyqtSignal(str, list)                     # id, points [[lat,lng],…]
 
     # Polyculture removal signal
     polyculture_removed = pyqtSignal(str, float, float)                   # polycultureName, centerLat, centerLng
@@ -320,6 +321,18 @@ class MapBridge(QObject):
     @pyqtSlot(str, float)
     def onShapeHeightChanged(self, shape_id: str, height_m: float):
         self.shape_height_changed.emit(shape_id, height_m)
+
+    @pyqtSlot(str, str)
+    def onShapeGeomChanged(self, shape_id: str, points_json: str):
+        """A drawn/imported shape's outline was dragged in edit mode — relay the
+        new ring so the project geometry (and its shadow) can update. Mirrors
+        onBoundaryGeomChanged."""
+        import json
+        try:
+            points = json.loads(points_json)
+            self.shape_geom_changed.emit(shape_id, points)
+        except Exception:
+            pass
 
     # ── Contour slots ─────────────────────────────────────────────────────────
 

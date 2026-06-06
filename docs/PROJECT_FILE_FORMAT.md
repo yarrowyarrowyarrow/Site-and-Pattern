@@ -149,6 +149,28 @@ load.
 }
 ```
 
+### `canopy_footprint` — Polygon (shade caster)
+A footprint with a `height_m > 0` that casts a true-shape shadow (a drawn
+building/canopy perimeter, an imported nDSM footprint, or — V1.58 — a building
+imported from OpenStreetMap, which keeps its real outline instead of collapsing
+to a point + radius). `source` records the origin (`"osm"`, `"extract"`, or
+absent for hand-drawn). OSM buildings also stamp the centroid (`lat`/`lng`) and
+`canopy_radius_m` so the generator's keep-out (`src/exclusion.py`) still avoids
+them. The outline is editable on the map (drag its vertices), which rewrites the
+ring and re-derives `canopy_radius_m`.
+```jsonc
+{
+  "geometry": { "type": "Polygon", "coordinates": [[[lng, lat], ...]] },
+  "properties": {
+    "element_type": "canopy_footprint",
+    "shape_id": "shape_osm_0", "label": "Building (OSM)",
+    "height_m": 6.0, "cast_shade": true, "canopy_radius_m": 7.1,
+    "lat": 53.5, "lng": -113.5, "source": "osm",
+    "fill_color": "#8d6e63", "stroke_color": "#5d4037", "fill_opacity": 0.3
+  }
+}
+```
+
 ### `contour_line` — LineString
 ```jsonc
 {

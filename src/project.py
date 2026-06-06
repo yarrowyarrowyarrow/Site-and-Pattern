@@ -114,6 +114,38 @@ def feature_to_shape(feature: dict) -> Optional[dict]:
     }
 
 
+def update_shape_geometry(project: dict, shape_id: str,
+                          points_latlng: list) -> bool:
+    """Rewrite a ``custom_shape`` / ``canopy_footprint`` feature's polygon to a
+    new outline after a map vertex-drag edit. ``points_latlng`` is the open ring
+    the map sends (a list of ``[lat, lng]`` vertices). Re-sizes the footprint's
+    ``canopy_radius_m`` from the new ring, and refreshes the stored centroid for
+    OSM buildings, so keep-out (``src/exclusion.py``) and the circle fallback
+    stay in step with the edited shape. Returns True when a matching shape was
+    updated. Pure — mutates ``project`` in place (Qt-free, unit-testable)."""
+    if not points_latlng or len(points_latlng) < 3:
+        return False
+    from src.osm_features import ring_radius_m, ring_centroid
+    ring = [[pt[1], pt[0]] for pt in points_latlng]    # [lat,lng] → [lng,lat]
+    ring.append(ring[0])                               # close the ring
+    for f in project.get("features", []):
+        props = f.get("properties", {}) or {}
+        if props.get("shape_id") != shape_id:
+            continue
+        geom = f.setdefault("geometry", {})
+        geom["type"] = "Polygon"
+        geom["coordinates"] = [ring]
+        if (props.get("cast_shade")
+                or props.get("element_type") == "canopy_footprint"):
+            props["canopy_radius_m"] = max(0.5, ring_radius_m(ring))
+            if props.get("source") == "osm":
+                c = ring_centroid(ring)
+                if c:
+                    props["lat"], props["lng"] = c
+        return True
+    return False
+
+
 def project_to_map_data(project: dict) -> dict:
     """
     Extract map elements from the project for loading into the map widget.

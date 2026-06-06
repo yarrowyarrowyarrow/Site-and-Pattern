@@ -154,6 +154,47 @@ class TestUnionAndRasterize(unittest.TestCase):
         self.assertTrue(any(v for row in grid for v in row))
 
 
+@unittest.skipUnless(sg._HAVE_SHAPELY, "shapely not installed")
+class TestTrueShapeVsCircle(unittest.TestCase):
+    """A real building footprint casts its true outline, not a round blob —
+    the core of the V1.58 fix for OSM buildings that used to be circles."""
+
+    def setUp(self):
+        self.origin = sg.origin_for_bbox(_BBOX)
+
+    def _rect_ring(self, half_w_m, half_h_m):
+        dlat = half_h_m / 111320.0
+        dlng = half_w_m / (111320.0 * math.cos(math.radians(_CLAT)))
+        return [(_CLNG - dlng, _CLAT - dlat), (_CLNG + dlng, _CLAT - dlat),
+                (_CLNG + dlng, _CLAT + dlat), (_CLNG - dlng, _CLAT + dlat),
+                (_CLNG - dlng, _CLAT - dlat)]
+
+    def test_wide_rectangle_keeps_its_aspect(self):
+        # A wide, shallow building (10 m × 2 m). A high southern sun throws the
+        # shadow north; the silhouette must stay much wider (E-W) than it is
+        # deep (N-S) — a circle would be ~symmetric.
+        poly = sg.footprint_to_metric(self._rect_ring(5.0, 1.0), self.origin)
+        shadow = sg.cast_shadow(poly, height_m=4.0, azimuth=180.0, altitude=60.0)
+        self.assertIsNotNone(shadow)
+        minx, miny, maxx, maxy = shadow.bounds
+        self.assertGreater(maxx - minx, maxy - miny)   # wider than deep
+        self.assertGreater(maxx - minx, 9.0)           # ~10 m width preserved
+
+    def test_polygon_shadow_differs_from_point_circle(self):
+        # Same spot / height / sun: a true rectangle footprint and a point
+        # (radius circle) caster produce different silhouettes — proving the
+        # polygon path is not the old circle blob.
+        poly = sg.footprint_to_metric(self._rect_ring(5.0, 1.0), self.origin)
+        rect_shadow = sg.cast_shadow(poly, 4.0, 180.0, 60.0)
+        circ = sg.point_footprint_metric(_CLNG, _CLAT, 2.0, self.origin)
+        circ_shadow = sg.cast_shadow(circ, 4.0, 180.0, 60.0)
+        self.assertIsNotNone(rect_shadow)
+        self.assertIsNotNone(circ_shadow)
+        rw = rect_shadow.bounds[2] - rect_shadow.bounds[0]
+        cw = circ_shadow.bounds[2] - circ_shadow.bounds[0]
+        self.assertGreater(rw, cw)                      # rectangle is wider
+
+
 class TestMetricRoundTrip(unittest.TestCase):
     """V1.54 — the inverse projection used to draw vector shadows back on the
     map must round-trip with the forward transform."""

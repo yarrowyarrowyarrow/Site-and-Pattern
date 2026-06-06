@@ -28,7 +28,9 @@ from src.project import (  # noqa: E402
     save_project,
     load_project,
     project_to_map_data,
+    update_shape_geometry,
 )
+import math  # noqa: E402
 
 
 class TestNewProject(unittest.TestCase):
@@ -303,6 +305,62 @@ class TestProjectToMapData(unittest.TestCase):
         meta = project_to_map_data(p)["slope_overlay"]
         self.assertEqual(meta["source"], "lidar")
         self.assertEqual(meta["interval_m"], 0.5)
+
+
+class TestUpdateShapeGeometry(unittest.TestCase):
+    """V1.58 — editing a footprint's outline updates the project geometry and
+    re-sizes its keep-out / circle radius from the new ring (Step F)."""
+
+    def _osm_building(self, half_m=4.0, clat=53.5, clng=-113.5):
+        dlat = half_m / 111320.0
+        dlng = half_m / (111320.0 * math.cos(math.radians(clat)))
+        ring = [[clng - dlng, clat - dlat], [clng + dlng, clat - dlat],
+                [clng + dlng, clat + dlat], [clng - dlng, clat + dlat],
+                [clng - dlng, clat - dlat]]
+        return {
+            "type": "Feature",
+            "geometry": {"type": "Polygon", "coordinates": [ring]},
+            "properties": {
+                "element_type": "canopy_footprint", "shape_id": "shape_osm_0",
+                "height_m": 6.0, "cast_shade": True, "canopy_radius_m": half_m,
+                "lat": clat, "lng": clng, "source": "osm"},
+        }
+
+    def test_enlarging_outline_grows_radius_and_keepout(self):
+        from src.exclusion import keepout_circles
+        p = new_project("t")
+        p["features"].append(self._osm_building(half_m=4.0))
+        r0 = keepout_circles(p)[0][2]
+        # A larger outline (~12 m half-extent), as the [lat,lng] open ring the
+        # map sends after a vertex drag.
+        clat, clng, half_m = 53.5, -113.5, 12.0
+        dlat = half_m / 111320.0
+        dlng = half_m / (111320.0 * math.cos(math.radians(clat)))
+        bigger = [[clat - dlat, clng - dlng], [clat - dlat, clng + dlng],
+                  [clat + dlat, clng + dlng], [clat + dlat, clng - dlng]]
+        self.assertTrue(update_shape_geometry(p, "shape_osm_0", bigger))
+        ring = p["features"][0]["geometry"]["coordinates"][0]
+        self.assertEqual(ring[0], ring[-1])          # ring re-closed
+        self.assertGreater(p["features"][0]["properties"]["canopy_radius_m"], 4.0)
+        self.assertGreater(keepout_circles(p)[0][2], r0 + 1.0)   # keep-out grew
+
+    def test_unknown_shape_id_is_noop(self):
+        p = new_project("t")
+        p["features"].append(self._osm_building())
+        self.assertFalse(update_shape_geometry(
+            p, "nope", [[53.5, -113.5], [53.6, -113.5], [53.6, -113.4]]))
+
+    def test_osm_building_round_trips_as_shape(self):
+        p = new_project("t")
+        p["features"].append(self._osm_building())
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "t.perma.geojson")
+            save_project(p, path)
+            reloaded = load_project(path)
+        shapes = project_to_map_data(reloaded)["shapes"]
+        self.assertEqual(len(shapes), 1)
+        self.assertEqual(shapes[0]["shape_id"], "shape_osm_0")
+        self.assertEqual(shapes[0]["height_m"], 6.0)
 
 
 class TestSchemaVersionStable(unittest.TestCase):

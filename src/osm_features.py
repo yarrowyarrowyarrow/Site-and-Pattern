@@ -92,24 +92,61 @@ def _parse_height(tags: dict, default: float) -> float:
     return default
 
 
-def _ring_centroid_radius(geometry: list) -> Optional[tuple]:
-    """Centroid (lat, lng) and an enclosing radius (m) for an Overpass ``geom``
-    way (list of ``{"lat","lon"}``). ``None`` for a degenerate ring."""
-    pts = [(g["lat"], g["lon"]) for g in geometry
+def _ring_lnglat(geometry: list) -> Optional[list]:
+    """Cleaned, **closed** ring of ``[lng, lat]`` pairs (GeoJSON order) from an
+    Overpass ``geom`` way (a list of ``{"lat","lon"}``). ``None`` for a
+    degenerate ring (fewer than 3 distinct vertices). The ring is what lets the
+    shapely shadow path cast the building's true footprint."""
+    pts = [[float(g["lon"]), float(g["lat"])] for g in geometry
            if "lat" in g and "lon" in g]
+    # Distinct vertices, ignoring a closing duplicate.
+    core = pts[:-1] if len(pts) > 1 and pts[0] == pts[-1] else pts
+    if len(core) < 3:
+        return None
+    ring = list(core)
+    ring.append(ring[0])            # close the ring
+    return ring
+
+
+def ring_centroid(ring_lnglat: list) -> Optional[tuple]:
+    """``(lat, lng)`` centroid of a ring of ``[lng, lat]`` pairs, or ``None``
+    for a degenerate ring (<3 distinct vertices)."""
+    pts = [(p[1], p[0]) for p in (ring_lnglat or []) if len(p) >= 2]
+    if len(pts) > 1 and pts[0] == pts[-1]:
+        pts = pts[:-1]              # drop closing duplicate
     if len(pts) < 3:
         return None
     clat = sum(p[0] for p in pts) / len(pts)
     clng = sum(p[1] for p in pts) / len(pts)
+    return (clat, clng)
+
+
+def ring_radius_m(ring_lnglat: list, center: Optional[tuple] = None) -> float:
+    """Enclosing radius in metres: the max distance from ``center`` (``(lat,
+    lng)``; defaults to the ring centroid) to any vertex of ``ring_lnglat`` (a
+    ring of ``[lng, lat]`` pairs). ``0.0`` for an empty ring.
+
+    Shared by the OSM import, the drawn-shape, and the footprint-edit paths so
+    they all size a footprint's ``canopy_radius_m`` identically — covering the
+    structure for keep-out and the circle fallback."""
+    pts = [(p[1], p[0]) for p in (ring_lnglat or []) if len(p) >= 2]
+    if not pts:
+        return 0.0
+    if center is None:
+        # Drop a closing-duplicate vertex so it doesn't skew the centroid
+        # (mirrors ring_centroid); the max scan below still covers every vertex.
+        core = pts[:-1] if len(pts) > 1 and pts[0] == pts[-1] else pts
+        clat = sum(p[0] for p in core) / len(core)
+        clng = sum(p[1] for p in core) / len(core)
+    else:
+        clat, clng = center
     cos_lat = math.cos(clat * math.pi / 180) or 1e-9
-    # Footprint "radius" = max vertex distance from centroid (covers the
-    # building for keep-out / a coarse shadow caster).
     radius = 0.0
     for la, ln in pts:
         dx = (ln - clng) * 111320.0 * cos_lat
         dy = (la - clat) * 111320.0
         radius = max(radius, math.hypot(dx, dy))
-    return (clat, clng, max(1.0, radius))
+    return radius
 
 
 def parse_elements(data: Optional[dict]) -> list[dict]:
@@ -134,14 +171,18 @@ def parse_elements(data: Optional[dict]) -> list[dict]:
                         "height_m": _parse_height(tags, _DEFAULT_TREE_HEIGHT_M),
                         "radius_m": radius})
         elif etype == "way" and tags.get("building"):
-            cr = _ring_centroid_radius(el.get("geometry", []) or [])
-            if cr is None:
+            ring = _ring_lnglat(el.get("geometry", []) or [])
+            if ring is None:
                 continue
-            clat, clng, radius = cr
+            c = ring_centroid(ring)
+            if c is None:
+                continue
+            clat, clng = c
             out.append({"kind": "building", "lat": clat, "lng": clng,
                         "height_m": _parse_height(
                             tags, _DEFAULT_BUILDING_HEIGHT_M),
-                        "radius_m": radius})
+                        "radius_m": max(1.0, ring_radius_m(ring, (clat, clng))),
+                        "footprint": ring})
     return out
 
 
@@ -179,25 +220,87 @@ def _too_close(lat, lng, existing, min_m=2.0) -> bool:
     return False
 
 
+def _osm_building_feature(item: dict, seq: int) -> Optional[dict]:
+    """Build a shade-casting ``canopy_footprint`` Polygon feature from an OSM
+    building dict carrying a ``footprint`` ring. Mirrors
+    ``footprint_extract.add_extracted_footprints`` so the building renders as a
+    true outline AND casts a true-shape shadow, while ``canopy_radius_m`` + a
+    stored centroid keep the keep-out (``src/exclusion.py``) and circle fallback
+    working. ``None`` when the footprint is missing/degenerate (caller then
+    falls back to a Point ``existing_building``)."""
+    footprint = item.get("footprint")
+    if not footprint or len(footprint) < 4:
+        return None
+    coords = [[float(p[0]), float(p[1])] for p in footprint]
+    if coords[0] != coords[-1]:
+        coords.append(coords[0])            # close the ring
+    return {
+        "type": "Feature",
+        "geometry": {"type": "Polygon", "coordinates": [coords]},
+        "properties": {
+            "element_type": "canopy_footprint",
+            "shape_id": f"shape_osm_{seq}",
+            "label": "Building (OSM)",
+            "shape_type": "Building (OSM)",
+            "fill_color": "#8d6e63",
+            "stroke_color": "#5d4037",
+            "fill_opacity": 0.3,
+            "dash_array": "",
+            "height_m": float(item.get("height_m") or _DEFAULT_BUILDING_HEIGHT_M),
+            "cast_shade": True,
+            # Centroid + radius let keepout_circles / the circle fallback treat
+            # the polygon like the old point building without re-deriving them.
+            "canopy_radius_m": float(item.get("radius_m") or 4.0),
+            "lat": float(item["lat"]), "lng": float(item["lng"]),
+            "source": "osm",
+        },
+    }
+
+
 def add_features_to_project(features: list[dict], project_dict: dict) -> int:
-    """Append OSM-derived existing trees/buildings to a project's feature list
-    (the V1.49 ``existing_tree`` / ``existing_building`` shapes), skipping any
-    that duplicate a feature already present. Returns the number added. Pure
-    (mutates the dict in place); the GUI calls this on the main thread after the
-    off-thread fetch."""
+    """Append OSM-derived existing trees/buildings to a project's feature list,
+    skipping any that duplicate a feature already present. Returns the number
+    added. Pure (mutates the dict in place); the GUI calls this on the main
+    thread after the off-thread fetch.
+
+    Trees become ``existing_tree`` Points (canopy circle). Buildings with a true
+    footprint become shade-casting ``canopy_footprint`` Polygons (V1.58) so they
+    render as real outlines and cast true-shape shadows; a building without a
+    usable ring falls back to the legacy ``existing_building`` Point."""
     feats = project_dict.setdefault("features", [])
     existing_pts = []
+    osm_seq = 0
     for f in feats:
-        et = (f.get("properties") or {}).get("element_type")
+        props = f.get("properties") or {}
+        et = props.get("element_type")
+        geom = f.get("geometry") or {}
         if et in ("existing_tree", "existing_building"):
-            c = (f.get("geometry") or {}).get("coordinates") or []
+            c = geom.get("coordinates") or []
             if len(c) >= 2:
                 existing_pts.append((c[1], c[0]))
+        elif et == "canopy_footprint" and props.get("source") == "osm":
+            osm_seq += 1
+            la, ln = props.get("lat"), props.get("lng")
+            if la is None or ln is None:
+                ring = (geom.get("coordinates") or [None])[0]
+                cc = ring_centroid(ring) if ring else None
+                la, ln = cc if cc else (None, None)
+            if la is not None and ln is not None:
+                existing_pts.append((la, ln))
     added = 0
     for item in features or []:
         lat, lng = item.get("lat"), item.get("lng")
         if lat is None or lng is None or _too_close(lat, lng, existing_pts):
             continue
+        if item.get("kind") == "building":
+            feat = _osm_building_feature(item, osm_seq)
+            if feat is not None:
+                feats.append(feat)
+                osm_seq += 1
+                existing_pts.append((lat, lng))
+                added += 1
+                continue
+        # Tree, or a building with no usable footprint → legacy Point feature.
         etype = ("existing_tree" if item.get("kind") == "tree"
                  else "existing_building")
         feats.append({

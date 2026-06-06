@@ -675,7 +675,9 @@
       // Escape exits edit mode / cancels in-progress polygon
       document.addEventListener('keydown', function(ev) {
         if (ev.key === 'Escape') {
-          if (boundaryEditId !== null) {
+          if (shapeEditId !== null) {
+            exitShapeEditMode();
+          } else if (boundaryEditId !== null) {
             exitBoundaryEditMode();
           } else if (currentMode !== 'none') {
             setMode('none');
@@ -683,10 +685,13 @@
         }
       });
 
-      // Click on map background while in boundary-edit → exit edit mode
+      // Click on map background while in boundary/shape-edit → exit edit mode
       // (polygon clicks stop propagation so this only fires on background)
       map.on('click', function() {
-        if (boundaryEditId !== null && currentMode === 'none') {
+        if (currentMode !== 'none') return;
+        if (shapeEditId !== null) {
+          exitShapeEditMode();
+        } else if (boundaryEditId !== null) {
           exitBoundaryEditMode();
         }
       });
@@ -1231,6 +1236,7 @@
     // ── Boundary edit mode ────────────────────────────────────────────────────
 
     function enterBoundaryEditMode(id) {
+      if (shapeEditId !== null) exitShapeEditMode();
       if (boundaryEditId !== null) exitBoundaryEditMode();
       var b = _getBoundaryEntry(id);
       if (!b) return;
@@ -1396,6 +1402,75 @@
       boundaryBboxHandles.forEach(function(h) { map.removeLayer(h); });
       boundaryBboxHandles = [];
       boundaryEditId = null;
+      map.getContainer().style.cursor = '';
+    }
+
+
+    // ── Shape (footprint) outline edit mode ───────────────────────────────────
+    // Reuses the boundary vertex-drag pattern so imported OSM building outlines
+    // (and any drawn canopy footprint) can be resized/reshaped to match reality.
+    // Drag a vertex → the polygon updates and Python is told the new ring.
+    var shapeEditId      = null;       // shape_id currently in outline-edit mode
+    var shapeEditHandles = [];         // draggable vertex handle markers
+
+    function _getShapePolygon(id) {
+      var group = shapeLayers[id];
+      if (!group) return null;
+      var found = null;
+      group.eachLayer(function(layer) {
+        if (!found && layer instanceof L.Polygon) found = layer;
+      });
+      return found;
+    }
+
+    function enterShapeEditMode(id) {
+      if (boundaryEditId !== null) exitBoundaryEditMode();
+      if (shapeEditId !== null) exitShapeEditMode();
+      var poly = _getShapePolygon(id);
+      if (!poly || !poly._shape) return;
+      shapeEditId = id;
+      map.getContainer().style.cursor = 'move';
+      poly._shape.points.forEach(function(pt, idx) {
+        var h = L.circleMarker([pt[0], pt[1]], {
+          radius: 7, color: '#fff', fillColor: '#5d4037', fillOpacity: 1,
+          weight: 2, interactive: true
+        }).addTo(map);
+        _makeShapeVertexDraggable(h, id, idx);
+        shapeEditHandles.push(h);
+      });
+    }
+
+    function _makeShapeVertexDraggable(marker, sid, idx) {
+      marker.on('mousedown', function(e) {
+        L.DomEvent.stop(e);
+        map.dragging.disable();
+        function onMove(ev) {
+          var ll = map.containerPointToLatLng([ev.clientX, ev.clientY]);
+          marker.setLatLng(ll);
+          var poly = _getShapePolygon(sid);
+          if (!poly || !poly._shape) return;
+          poly._shape.points[idx] = [ll.lat, ll.lng];
+          poly.setLatLngs(poly._shape.points);
+        }
+        function onUp() {
+          map.dragging.enable();
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          var poly = _getShapePolygon(sid);
+          if (poly && poly._shape && bridge) {
+            bridge.onShapeGeomChanged(sid, JSON.stringify(poly._shape.points));
+          }
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+    }
+
+    function exitShapeEditMode() {
+      if (shapeEditId === null) return;
+      shapeEditHandles.forEach(function(h) { map.removeLayer(h); });
+      shapeEditHandles = [];
+      shapeEditId = null;
       map.getContainer().style.cursor = '';
     }
 
@@ -2953,8 +3028,8 @@
       // Tooltip
       var shadeLine = castsShade
         ? '<br>Casts shade — ' + escH(String(heightM)) + ' m tall'
-          + '<br>Right-click to edit height or remove'
-        : '<br>Right-click to remove';
+          + '<br>Click to edit outline · right-click for height/remove'
+        : '<br>Click to edit outline · right-click to remove';
       polygon.bindTooltip(
         '<b>' + escH(label || shapeType) + '</b><br>' +
         '<span style="color:#78909c;font-size:10px">Area: ' + escH(areaStr)
@@ -3007,6 +3082,16 @@
         map.removeLayer(group);
         delete shapeLayers[id];
         if (bridge) bridge.onShapeRemoved(id);
+      });
+
+      // Left-click → edit the outline (drag vertices), mirroring boundaries.
+      // Guarded on 'none' mode so it never hijacks a placement click; modifier
+      // clicks are left for selection elsewhere.
+      polygon.on('click', function(e) {
+        L.DomEvent.stop(e);
+        var oe = e.originalEvent;
+        if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) return;
+        if (currentMode === 'none') enterShapeEditMode(id);
       });
 
       shapeLayers[id] = group;

@@ -124,6 +124,7 @@ def add_extracted_footprints(rings_heights: list, project_dict: dict,
     GUI calls this on the main thread after the (optionally off-thread)
     extraction, then renders the returned features."""
     import time
+    from src.osm_features import ring_radius_m   # shared footprint sizing
     feats = project_dict.setdefault("features", [])
     new_feats = []
     for ring, height_m in rings_heights or []:
@@ -146,6 +147,9 @@ def add_extracted_footprints(rings_heights: list, project_dict: dict,
                 "dash_array": "",
                 "height_m": float(height_m) if height_m else 0.0,
                 "cast_shade": bool(height_m and height_m > 0),
+                # Sized from the ring so the keep-out / circle fallback match the
+                # footprint instead of a hard-coded default.
+                "canopy_radius_m": max(0.5, ring_radius_m(coords)),
                 "source": source,
             },
         })
