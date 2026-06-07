@@ -28,6 +28,22 @@ def _pt_feature(etype, lat, lng, **props):
             "properties": p}
 
 
+def _square_ring(lat, lng, half_m):
+    dlat = half_m / 111320.0
+    dlng = half_m / (111320.0 * math.cos(math.radians(lat)))
+    return [[lng - dlng, lat - dlat], [lng + dlng, lat - dlat],
+            [lng + dlng, lat + dlat], [lng - dlng, lat + dlat],
+            [lng - dlng, lat - dlat]]
+
+
+def _poly_feature(etype, clat, clng, half_m, **props):
+    p = {"element_type": etype}
+    p.update(props)
+    return {"geometry": {"type": "Polygon",
+                         "coordinates": [_square_ring(clat, clng, half_m)]},
+            "properties": p}
+
+
 class TestKeepoutCircles(unittest.TestCase):
     def test_existing_tree_uses_canopy_radius(self):
         proj = _project(_pt_feature("existing_tree", _LAT, _LNG,
@@ -58,6 +74,44 @@ class TestKeepoutCircles(unittest.TestCase):
 
     def test_plant_not_counted(self):
         proj = _project(_pt_feature("plant", _LAT, _LNG, plant_id=1))
+        self.assertEqual(X.keepout_circles(proj), [])
+
+
+class TestCanopyFootprintKeepout(unittest.TestCase):
+    """V1.59 — any canopy_footprint polygon with a canopy_radius_m keeps planting
+    out (OSM, hand-drawn building outlines, and nDSM-extracted footprints), not
+    just OSM imports."""
+
+    def test_osm_footprint_uses_stored_centroid(self):
+        proj = _project(_poly_feature(
+            "canopy_footprint", _LAT, _LNG, 4.0,
+            source="osm", lat=_LAT, lng=_LNG, canopy_radius_m=7.1))
+        circles = X.keepout_circles(proj)
+        self.assertEqual(len(circles), 1)
+        self.assertAlmostEqual(circles[0][0], _LAT, places=6)
+        self.assertAlmostEqual(circles[0][1], _LNG, places=6)
+        self.assertEqual(circles[0][2], 7.1)
+
+    def test_drawn_footprint_derives_centroid_from_ring(self):
+        # A hand-drawn building outline (no source, no stored lat/lng) must still
+        # keep planting out, deriving its centroid from the ring.
+        proj = _project(_poly_feature(
+            "canopy_footprint", _LAT, _LNG, 5.0, canopy_radius_m=6.0))
+        circles = X.keepout_circles(proj)
+        self.assertEqual(len(circles), 1)
+        self.assertAlmostEqual(circles[0][0], _LAT, places=5)
+        self.assertAlmostEqual(circles[0][1], _LNG, places=5)
+        self.assertEqual(circles[0][2], 6.0)
+
+    def test_extracted_footprint_kept_out(self):
+        proj = _project(_poly_feature(
+            "canopy_footprint", _LAT, _LNG, 5.0,
+            source="extract", canopy_radius_m=7.0))
+        self.assertEqual(len(X.keepout_circles(proj)), 1)
+
+    def test_plain_custom_shape_not_kept_out(self):
+        # A non-casting custom_shape (no canopy_radius_m) is just an area marker.
+        proj = _project(_poly_feature("custom_shape", _LAT, _LNG, 5.0))
         self.assertEqual(X.keepout_circles(proj), [])
 
 

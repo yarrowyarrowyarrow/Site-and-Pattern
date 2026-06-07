@@ -114,15 +114,35 @@ def feature_to_shape(feature: dict) -> Optional[dict]:
     }
 
 
+def _ring_area_m2(ring_lnglat: list) -> float:
+    """Planar shoelace area (m²) of a closed ``[lng, lat]`` ring via the local
+    cos-lat metric — mirrors ``html/map.html``'s ``_polygonArea`` so the stored
+    area matches what the map shows. ``0.0`` for a degenerate ring."""
+    import math
+    pts = ring_lnglat or []
+    if len(pts) < 3:
+        return 0.0
+    ref_lng, ref_lat = pts[0][0], pts[0][1]
+    cos_lat = math.cos(ref_lat * math.pi / 180.0) or 1e-9
+    m = [((p[0] - ref_lng) * 111320.0 * cos_lat,
+          (p[1] - ref_lat) * 111320.0) for p in pts]
+    area = 0.0
+    for i in range(len(m)):
+        j = (i + 1) % len(m)
+        area += m[i][0] * m[j][1] - m[j][0] * m[i][1]
+    return abs(area / 2.0)
+
+
 def update_shape_geometry(project: dict, shape_id: str,
                           points_latlng: list) -> bool:
     """Rewrite a ``custom_shape`` / ``canopy_footprint`` feature's polygon to a
     new outline after a map vertex-drag edit. ``points_latlng`` is the open ring
     the map sends (a list of ``[lat, lng]`` vertices). Re-sizes the footprint's
-    ``canopy_radius_m`` from the new ring, and refreshes the stored centroid for
-    OSM buildings, so keep-out (``src/exclusion.py``) and the circle fallback
-    stay in step with the edited shape. Returns True when a matching shape was
-    updated. Pure — mutates ``project`` in place (Qt-free, unit-testable)."""
+    ``canopy_radius_m`` from the new ring, refreshes the stored ``area_m2``, and
+    refreshes the stored centroid for OSM buildings, so keep-out
+    (``src/exclusion.py``), the area readout, and the circle fallback stay in
+    step with the edited shape. Returns True when a matching shape was updated.
+    Pure — mutates ``project`` in place (Qt-free, unit-testable)."""
     if not points_latlng or len(points_latlng) < 3:
         return False
     from src.osm_features import ring_radius_m, ring_centroid
@@ -135,6 +155,7 @@ def update_shape_geometry(project: dict, shape_id: str,
         geom = f.setdefault("geometry", {})
         geom["type"] = "Polygon"
         geom["coordinates"] = [ring]
+        props["area_m2"] = _ring_area_m2(ring)         # keep the area readout fresh
         if (props.get("cast_shade")
                 or props.get("element_type") == "canopy_footprint"):
             props["canopy_radius_m"] = max(0.5, ring_radius_m(ring))

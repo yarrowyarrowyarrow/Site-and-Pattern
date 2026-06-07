@@ -368,6 +368,26 @@ class TestUpdateShapeGeometry(unittest.TestCase):
         ring = p["features"][0]["geometry"]["coordinates"][0]
         self.assertEqual(ring[0], ring[-1])             # rewritten + re-closed
 
+    def test_area_m2_refreshed_after_edit(self):
+        # Reshaping the outline must refresh the stored area so the readout/tooltip
+        # don't go stale. A ~10 m square is ~100 m².
+        p = new_project("t")
+        p["features"].append({
+            "type": "Feature",
+            "geometry": {"type": "Polygon", "coordinates": [[
+                [-113.5, 53.5], [-113.5, 53.5], [-113.5, 53.5]]]},
+            "properties": {"element_type": "custom_shape", "shape_id": "s1",
+                           "area_m2": 1.0},
+        })
+        half = 5.0
+        dlat = half / 111320.0
+        dlng = half / (111320.0 * math.cos(math.radians(53.5)))
+        square = [[53.5 - dlat, -113.5 - dlng], [53.5 - dlat, -113.5 + dlng],
+                  [53.5 + dlat, -113.5 + dlng], [53.5 + dlat, -113.5 - dlng]]
+        self.assertTrue(update_shape_geometry(p, "s1", square))
+        self.assertAlmostEqual(
+            p["features"][0]["properties"]["area_m2"], 100.0, delta=2.0)
+
     def test_osm_building_round_trips_as_shape(self):
         p = new_project("t")
         p["features"].append(self._osm_building())

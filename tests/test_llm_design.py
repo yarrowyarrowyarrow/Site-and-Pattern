@@ -375,5 +375,34 @@ class TestLLMClientConfig(unittest.TestCase):
         self.assertEqual(c2._completions_url(), "http://host:9/v1/chat/completions")
 
 
+class TestExistingFeaturesNote(unittest.TestCase):
+    """V1.59 — OSM buildings now import as canopy_footprint polygons, so the
+    'design around these' prompt note must still count them (and hand-drawn
+    building outlines)."""
+
+    def _feat(self, et, **props):
+        props["element_type"] = et
+        return {"properties": props}
+
+    def test_counts_canopy_footprint_buildings(self):
+        proj = {"features": [
+            self._feat("existing_tree"),
+            self._feat("canopy_footprint", cast_shade=True, source="osm"),
+            self._feat("canopy_footprint", cast_shade=True),   # hand-drawn
+        ]}
+        note = llm._existing_features_note(proj)
+        self.assertIn("2 buildings", note)
+        self.assertIn("1 existing tree", note)
+
+    def test_non_casting_shape_not_counted(self):
+        # A plain area marker (custom_shape, or a canopy_footprint without
+        # cast_shade) is not an obstacle to mention.
+        proj = {"features": [
+            self._feat("custom_shape"),
+            self._feat("canopy_footprint"),
+        ]}
+        self.assertEqual(llm._existing_features_note(proj), "")
+
+
 if __name__ == "__main__":
     unittest.main()

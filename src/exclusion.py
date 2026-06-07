@@ -14,9 +14,10 @@ clipping (≈1 % error under ~2 km, well within planting tolerance).
 Feature sources (project FeatureCollection):
   * ``existing_tree``     → canopy_radius_m (fallback size_m/2).
   * ``existing_building`` → canopy_radius_m (footprint half-width).
-  * ``canopy_footprint`` imported from OSM (``source="osm"``) → stored centroid
-    + canopy_radius_m (V1.58: OSM buildings are polygons, not points, but still
-    keep planting out).
+  * ``canopy_footprint`` Polygons (OSM buildings, hand-drawn building/canopy
+    perimeters, nDSM-extracted footprints) → canopy_radius_m + a centroid
+    (stored for OSM, else derived from the ring). They are polygons, not points,
+    but still keep planting out.
   * ``structure`` whose struct id is a water feature → struct size_m / 2.
 """
 
@@ -43,19 +44,26 @@ def _struct_id_of(props: dict) -> str:
 def keepout_circles(project_dict: dict) -> list[tuple[float, float, float]]:
     """Collect keep-out circles ``(lat, lng, radius_m)`` from a project. Empty
     list when there's nothing to avoid."""
+    from src.osm_features import ring_centroid   # shared ring centroid helper
     circles: list[tuple[float, float, float]] = []
     for f in (project_dict or {}).get("features", []) or []:
         props = f.get("properties", {}) or {}
         et = props.get("element_type")
         geom = f.get("geometry", {}) or {}
         if geom.get("type") != "Point":
-            # V1.58: OSM buildings import as canopy_footprint Polygons but must
-            # still keep planting out. They stamp a centroid + canopy_radius_m at
-            # import, so reuse those rather than re-deriving the ring here. Any
-            # other non-point geometry is skipped defensively.
-            if et == "canopy_footprint" and props.get("source") == "osm":
-                la, ln = props.get("lat"), props.get("lng")
+            # canopy_footprint Polygons (OSM buildings, hand-drawn building/canopy
+            # perimeters, and nDSM-extracted footprints) carry a canopy_radius_m
+            # and must keep planting out. OSM imports also stamp a centroid; for
+            # the others derive it from the ring. Any other non-point geometry is
+            # skipped defensively.
+            if et == "canopy_footprint":
                 r = props.get("canopy_radius_m")
+                la, ln = props.get("lat"), props.get("lng")
+                if (la is None or ln is None):
+                    ring = (geom.get("coordinates") or [None])[0]
+                    c = ring_centroid(ring) if ring else None
+                    if c is not None:
+                        la, ln = c
                 if la is not None and ln is not None and r:
                     circles.append((float(la), float(ln), max(0.5, float(r))))
             continue

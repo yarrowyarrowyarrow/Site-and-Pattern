@@ -1457,8 +1457,24 @@
           document.removeEventListener('mousemove', onMove);
           document.removeEventListener('mouseup', onUp);
           var poly = _getShapePolygon(sid);
-          if (poly && poly._shape && bridge) {
-            bridge.onShapeGeomChanged(sid, JSON.stringify(poly._shape.points));
+          if (poly && poly._shape) {
+            // Keep the area readout in step with the reshaped outline.
+            var sh = poly._shape;
+            sh.areaM2 = _polygonArea(sh.points);
+            if (poly.getTooltip()) {
+              var cast = sh.heightM > 0;
+              var aStr = sh.areaM2 < 10000 ? sh.areaM2.toFixed(1) + ' m²'
+                : (sh.areaM2 / 10000).toFixed(2) + ' ha';
+              var line = cast
+                ? '<br>Casts shade — ' + escH(String(sh.heightM)) + ' m tall'
+                  + '<br>Click to edit outline · right-click for height/remove'
+                : '<br>Click to edit outline · right-click to remove';
+              poly.setTooltipContent(
+                '<b>' + escH(sh.label || sh.shapeType) + '</b><br>' +
+                '<span style="color:#78909c;font-size:10px">Area: ' + escH(aStr)
+                  + line + '</span>');
+            }
+            if (bridge) bridge.onShapeGeomChanged(sid, JSON.stringify(sh.points));
           }
         }
         document.addEventListener('mousemove', onMove);
@@ -2716,6 +2732,10 @@
 
     // Load a structure from saved project
     function loadStructure(structDef, lat, lng) {
+      // Idempotent: drop any marker already at this exact spot so re-rendering
+      // (e.g. a second OSM import) replaces it in place instead of stacking a
+      // duplicate. Project load clears first, so this is a no-op there.
+      undoStructureAt(structDef.id, lat, lng);
       placeStructureOnMap(structDef, lat, lng);
     }
 
@@ -2981,6 +3001,14 @@
       // shape_id; otherwise mint a fresh one.
       var id = cfg.shape_id || cfg.id ||
         ('shape_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5));
+      // Idempotent redraw: re-rendering an id already on the map (e.g. a second
+      // OSM import, or a load_shape after an edit) must replace in place, not
+      // stack an orphaned duplicate layer. Drop any existing group first.
+      if (shapeLayers[id]) {
+        if (shapeEditId === id) exitShapeEditMode();
+        map.removeLayer(shapeLayers[id]);
+        delete shapeLayers[id];
+      }
       var fillColor   = cfg.fill_color   || '#4caf50';
       var strokeColor = cfg.stroke_color || '#2e7d32';
       var fillOpacity = cfg.fill_opacity !== undefined ? cfg.fill_opacity : 0.25;

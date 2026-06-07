@@ -326,10 +326,15 @@ def _existing_features_note(project_dict: dict) -> str:
     Empty when there are none."""
     n_tree = n_bldg = 0
     for f in (project_dict or {}).get("features", []) or []:
-        et = (f.get("properties") or {}).get("element_type")
+        props = f.get("properties") or {}
+        et = props.get("element_type")
         if et == "existing_tree":
             n_tree += 1
         elif et == "existing_building":
+            n_bldg += 1
+        elif et == "canopy_footprint" and props.get("cast_shade"):
+            # V1.58: OSM buildings + hand-drawn building/canopy perimeters import
+            # as shade-casting canopy_footprint polygons rather than points.
             n_bldg += 1
     if not (n_tree or n_bldg):
         return ""

@@ -189,16 +189,20 @@ def _accumulate_shade(out, casters, sun, lat, lng, rows, cols, bbox,
 
 def _accumulate_shade_circle(out, casters, sun, lat, lng, rows, cols, bbox,
                              tmask=None) -> bool:
-    """Legacy circle shadow model: each caster's shadow is a circle of its
-    canopy radius displaced down-sun by ``height / tan(altitude)``. Used when
-    shapely is unavailable, when the polygon path yields nothing, and for the
-    terrain-only pass (empty caster list).
+    """Capsule shadow model: each caster's shadow is the swept region — width =
+    its canopy radius — from the caster's base to its down-sun tip displaced by
+    ``height / tan(altitude)``. Used when shapely is unavailable, when the
+    polygon path yields nothing, and for the terrain-only pass (empty caster
+    list).
+
+    Sweeping the whole base→tip segment (rather than parking a circle at the
+    tip) matters at a low sun: the tip can fall off the grid, but the lit cells
+    *between* the caster and the tip — what the user actually sees — still land
+    inside the capsule, so evening / early-morning shadows no longer vanish.
 
     Casters and the terrain mask ``tmask`` (when given) are combined into a
     single per-moment boolean union, so a cell shaded by several casters and/or
-    terrain still contributes at most 1.0 for the moment. With ``tmask=None`` and
-    a single caster this is identical to the original per-caster increment, so
-    ``tests/test_shade.py`` passes unchanged on shapely-less installs."""
+    terrain still contributes at most 1.0 for the moment."""
     from src.solar import shadow_azimuth, shadow_length_factor
     if sun.altitude < _MIN_SUN_ALT:
         return False
@@ -215,18 +219,29 @@ def _accumulate_shade_circle(out, casters, sun, lat, lng, rows, cols, bbox,
     moment = [[False] * cols for _ in range(rows)]
     for cv in casters:
         shadow_len = min(cv["height_m"] * length_factor, _MAX_SHADOW_M)
-        # Shadow centre: caster displaced down-sun. Azimuth is degrees clockwise
-        # from north → north component = cos, east component = sin.
-        s_lat = cv["lat"] + (shadow_len * math.cos(shadow_dir)) / 111320.0
-        s_lng = cv["lng"] + (shadow_len * math.sin(shadow_dir)) / (111320.0 * cos_lat)
-        rad_lat = cv["radius_m"] / 111320.0
-        rad_lng = cv["radius_m"] / (111320.0 * cos_lat)
+        radius_m = cv["radius_m"]
+        # Down-sun tip offset from the caster, in metres. Azimuth is degrees
+        # clockwise from north → north component = cos, east component = sin.
+        tip_n = shadow_len * math.cos(shadow_dir)
+        tip_e = shadow_len * math.sin(shadow_dir)
+        seg_len2 = tip_n * tip_n + tip_e * tip_e
+        r2 = radius_m * radius_m
         for r in range(rows):
             for c in range(cols):
                 clat, clng = _cell_ll(r, c)
-                ndx = (clng - s_lng) / rad_lng if rad_lng else 0.0
-                ndy = (clat - s_lat) / rad_lat if rad_lat else 0.0
-                if ndx * ndx + ndy * ndy <= 1.0:
+                # Cell offset from the caster, in metres.
+                pe = (clng - cv["lng"]) * 111320.0 * cos_lat
+                pn = (clat - cv["lat"]) * 111320.0
+                # Distance² from the cell to the base→tip segment; shaded when it
+                # falls within the canopy radius of the swept shadow.
+                if seg_len2 <= 1e-9:
+                    t = 0.0
+                else:
+                    t = (pe * tip_e + pn * tip_n) / seg_len2
+                    t = 0.0 if t < 0.0 else (1.0 if t > 1.0 else t)
+                de = pe - t * tip_e
+                dn = pn - t * tip_n
+                if de * de + dn * dn <= r2:
                     moment[r][c] = True
     if tmask is not None:
         for r in range(rows):
