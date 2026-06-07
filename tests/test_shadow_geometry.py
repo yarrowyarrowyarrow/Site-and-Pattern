@@ -261,5 +261,62 @@ class TestLatLngRings(unittest.TestCase):
         self.assertGreaterEqual(merged.area, b.area)
 
 
+@unittest.skipUnless(sg._HAVE_SHAPELY, "shapely not installed")
+class TestCastTreeShadow(unittest.TestCase):
+    """V1.59 — a tree casts a thin trunk + a canopy that tapers to the tip,
+    not a building's vertical (convex) extrusion."""
+
+    def setUp(self):
+        self.origin = sg.origin_for_bbox(_BBOX)
+        self.center = self.origin.to_xy(_CLNG, _CLAT)
+
+    def test_extends_north_for_southern_sun(self):
+        # Sun due south, altitude 45 (tan=1) → tip ~height north of the base.
+        shadow = sg.cast_tree_shadow(self.center, radius_m=3.0, height_m=10.0,
+                                     azimuth=180.0, altitude=45.0)
+        self.assertIsNotNone(shadow)
+        self.assertGreater(shadow.bounds[3], self.center[1] + 8.0)
+
+    def test_low_sun_no_shadow(self):
+        self.assertIsNone(
+            sg.cast_tree_shadow(self.center, 3.0, 10.0, 180.0,
+                                sg._MIN_SUN_ALT - 1.0))
+
+    def test_length_clamped(self):
+        shadow = sg.cast_tree_shadow(self.center, 3.0, 100.0, 180.0, 6.0)
+        self.assertIsNotNone(shadow)
+        self.assertLessEqual(shadow.bounds[3] - self.center[1],
+                             sg._MAX_SHADOW_M + 5.0)
+
+    def test_tapers_toward_the_tip(self):
+        # A thin cross-slab near the tip is much narrower than one through the
+        # crown — the canopy narrows to a point.
+        from shapely.geometry import box
+        shadow = sg.cast_tree_shadow(self.center, radius_m=4.0, height_m=12.0,
+                                     azimuth=180.0, altitude=45.0)
+        minx, miny, maxx, maxy = shadow.bounds
+
+        def width_at(frac):
+            y = miny + (maxy - miny) * frac
+            inter = shadow.intersection(box(minx - 1, y - 0.05,
+                                            maxx + 1, y + 0.05))
+            return 0.0 if inter.is_empty else inter.bounds[2] - inter.bounds[0]
+
+        self.assertLess(width_at(0.95), width_at(0.6))
+
+    def test_smaller_than_building_of_equal_size(self):
+        # Same height + size: the tapering tree covers less ground than the
+        # building's swept extrusion of an equivalent footprint.
+        tree = sg.cast_tree_shadow(self.center, radius_m=3.0, height_m=10.0,
+                                   azimuth=180.0, altitude=45.0)
+        bpoly = sg.footprint_to_metric(_square_ring(_CLAT, _CLNG, 3.0),
+                                       self.origin)
+        bldg = sg.cast_shadow(bpoly, height_m=10.0, azimuth=180.0,
+                              altitude=45.0)
+        self.assertIsNotNone(tree)
+        self.assertIsNotNone(bldg)
+        self.assertLess(tree.area, bldg.area)
+
+
 if __name__ == "__main__":
     unittest.main()

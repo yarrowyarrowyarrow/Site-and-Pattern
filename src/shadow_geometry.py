@@ -47,6 +47,15 @@ _M_PER_DEG_LAT = 111320.0
 _MIN_SUN_ALT = 5.0
 _MAX_SHADOW_M = 60.0
 
+# Tree-canopy shadow model. A tree is a thin trunk topped by a rounded crown
+# that tapers toward the top — not a solid column. So its shadow is the union of
+# a thin trunk streak and a canopy blob that is full width near the trunk and
+# narrows to a point at the tip. Fractions are of the full down-sun length L
+# (= height/tan(altitude)); _TREE_TRUNK_W is a fraction of the canopy radius.
+_TREE_TRUNK_FRAC = 0.30   # crown base / top of bare trunk
+_TREE_CROWN_FRAC = 0.65   # widest part of the crown
+_TREE_TRUNK_W = 0.15      # trunk shadow half-width, as a fraction of radius
+
 
 # ── Local metric projection ───────────────────────────────────────────────────
 
@@ -186,6 +195,59 @@ def cast_shadow(polygon, height_m: float, azimuth: float, altitude: float):
     except Exception:  # noqa: BLE001
         return None
     return swept if (swept and not swept.is_empty) else None
+
+
+def cast_tree_shadow(center_xy, radius_m: float, height_m: float,
+                     azimuth: float, altitude: float):
+    """Cast a tree's shadow as a thin trunk streak plus a tapering canopy blob.
+
+    ``center_xy`` is the trunk base in the metric plane (``(x, y)`` metres east /
+    north, e.g. ``origin.to_xy(lng, lat)``). Unlike a building (a vertical
+    extrusion of its footprint), a tree crown is rounded and tapers, so the
+    shadow is the union of:
+
+      * a thin trunk shadow from the base out to the crown base, and
+      * the canopy: the convex hull of a full-radius disk at the crown's widest
+        height and a single apex point at the very tip — full width near the
+        trunk, narrowing to a point at the far end.
+
+    Returns a shapely (Multi)Polygon, or ``None`` when the sun is too low or
+    inputs are unusable."""
+    if not _HAVE_SHAPELY or center_xy is None:
+        return None
+    if altitude < _MIN_SUN_ALT or height_m <= 0:
+        return None
+    r = max(0.5, float(radius_m))
+    full = min(height_m / math.tan(math.radians(altitude)), _MAX_SHADOW_M)
+    # Down-sun unit vector (azimuth CW from north → east = sin, north = cos).
+    shadow_dir = math.radians((azimuth + 180.0) % 360.0)
+    ux, uy = math.sin(shadow_dir), math.cos(shadow_dir)
+    cx, cy = float(center_xy[0]), float(center_xy[1])
+
+    def _at(frac):
+        d = full * frac
+        return (cx + ux * d, cy + uy * d)
+
+    try:
+        parts = []
+        # Canopy: full-radius disk at the crown's widest height, hulled with the
+        # apex point at the tip → a teardrop tapering to a point.
+        crown = Point(*_at(_TREE_CROWN_FRAC)).buffer(r)
+        apex = Point(*_at(1.0))
+        canopy = unary_union([crown, apex]).convex_hull
+        parts.append(canopy)
+        # Trunk: a thin streak from the base to the crown base.
+        trunk_w = max(0.2, r * _TREE_TRUNK_W)
+        base, crown_base = Point(*_at(0.0)), Point(*_at(_TREE_TRUNK_FRAC))
+        trunk = unary_union([base, crown_base]).convex_hull.buffer(trunk_w)
+        if not trunk.is_empty:
+            parts.append(trunk)
+        shadow = unary_union(parts)
+        if not shadow.is_valid:
+            shadow = shadow.buffer(0)
+        return shadow if (shadow and not shadow.is_empty) else None
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def union_shadows(metric_casters: list, azimuth: float, altitude: float):

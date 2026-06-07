@@ -354,19 +354,12 @@ class MainWindow(QMainWindow):
         v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(0)
 
+        from src.ui_style import inner_tab_stylesheet
         inner = QTabWidget(wrap)
         inner.setDocumentMode(True)
         inner.tabBar().setUsesScrollButtons(False)
         inner.tabBar().setExpanding(True)
-        inner.setStyleSheet(
-            "QTabWidget::pane { border: none; background: #1e2a1e; }"
-            "QTabBar::tab { background: #15251a; color: #90a4ae; "
-            "padding: 4px 10px; font-size: 11px; "
-            "border-bottom: 2px solid transparent; }"
-            "QTabBar::tab:selected { color: #a5d6a7; "
-            "border-bottom: 2px solid #66bb6a; }"
-            "QTabBar::tab:hover { color: #c8e6c9; }"
-        )
+        inner.setStyleSheet(inner_tab_stylesheet())
         inner.addTab(self.plant_panel, "Plants")
         inner.addTab(self.polyculture_panel, "Plant Communities")
         inner.addTab(self.on_this_design, "On This Design")
@@ -670,6 +663,11 @@ class MainWindow(QMainWindow):
         self.site_panel.osm_import_requested.connect(self._on_osm_import_requested)
         self.site_panel.footprint_import_requested.connect(
             self._on_footprint_import_requested)
+        # Shade sub-tab: mark/draw existing trees & buildings (relocated from
+        # the Structures panel) — reuse the structure/shape placement pipeline.
+        self.site_panel.place_structure_requested.connect(
+            self._enter_structure_mode)
+        self.site_panel.place_shape_requested.connect(self._enter_shape_mode)
         self.analysis_panel.wind_requested.connect(self._on_wind_requested)
         self.analysis_panel.wind_cleared.connect(self.map_widget.clear_wind_overlay)
         self.analysis_panel.season_changed.connect(self._on_season_changed)
@@ -1618,7 +1616,7 @@ class MainWindow(QMainWindow):
         # the user re-runs Generate to recompute it on demand.
         auto_contours = data.get("auto_contours") or []
         if auto_contours:
-            color = auto_contours[0].get("color", "#5d4037")
+            color = auto_contours[0].get("color", "#44cc00")
             self.map_widget.draw_auto_contours(
                 [{"elevation_m": c["elevation_m"], "segments": c["segments"]}
                  for c in auto_contours],

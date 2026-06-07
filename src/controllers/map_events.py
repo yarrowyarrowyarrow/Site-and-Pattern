@@ -296,6 +296,10 @@ class MapEventRouter:
             # match the drawn shape rather than a hard-coded default.
             from src.osm_features import ring_radius_m
             props["canopy_radius_m"] = max(0.5, ring_radius_m(ring))
+            # A drawn tree canopy casts a tapering tree shadow, not a building
+            # extrusion (see shade.casters_from_project / cast_tree_shadow).
+            if shape_type == "Tree canopy":
+                props["caster_kind"] = "tree"
         self._main._project["features"].append({
             "type": "Feature",
             "geometry": {"type": "Polygon", "coordinates": [ring]},
@@ -780,7 +784,7 @@ class MapEventRouter:
             "want_slope_overlay": cfg.get("want_slope_overlay", True),
         }
         prefs = {
-            "color":       cfg.get("color", "#5d4037"),
+            "color":       cfg.get("color", "#44cc00"),
             "opacity":     cfg.get("opacity", 0.6),
             "show_labels": cfg.get("show_labels", True),
         }
@@ -886,7 +890,7 @@ class MapEventRouter:
         if contours:
             self._main.map_widget.draw_auto_contours(
                 contours,
-                color=prefs.get("color", "#5d4037"),
+                color=prefs.get("color", "#44cc00"),
                 show_labels=prefs.get("show_labels", True),
             )
             for c in contours:
@@ -908,7 +912,7 @@ class MapEventRouter:
                     "properties": {
                         "element_type": "auto_contour",
                         "elevation_m":  c["elevation_m"],
-                        "color":        prefs.get("color", "#5d4037"),
+                        "color":        prefs.get("color", "#44cc00"),
                         "source":       result.get("source", ""),
                     },
                 })

@@ -185,9 +185,11 @@ def _qt_available():
 
 
 @unittest.skipUnless(_qt_available(), "PyQt6 not installed in this env")
-class TestStructurePanelButtons(unittest.TestCase):
-    """The Existing-features buttons emit a place_structure_requested payload
-    carrying the reserved id + height/size from the spinboxes."""
+class TestSitePanelShadeButtons(unittest.TestCase):
+    """V1.59 — the mark/draw tools moved from Structures to Site → Shade. The
+    buttons emit place_structure_requested (existing tree/building) and
+    place_shape_requested (draw building / draw tree canopy) payloads carrying
+    the height/size from the spinboxes."""
 
     _app = None
 
@@ -197,9 +199,9 @@ class TestStructurePanelButtons(unittest.TestCase):
         from PyQt6.QtWidgets import QApplication
         cls._app = QApplication.instance() or QApplication([])
 
-    def test_mark_tree_emits_payload(self):
-        from src.structure_panel import StructurePanel
-        panel = StructurePanel()
+    def test_mark_tree_emits_structure_payload(self):
+        from src.site_panel import SitePanel
+        panel = SitePanel()
         captured = []
         panel.place_structure_requested.connect(captured.append)
         panel._exist_height.setValue(12.0)
@@ -210,6 +212,30 @@ class TestStructurePanelButtons(unittest.TestCase):
         self.assertEqual(payload["id"], EXISTING_TREE_ID)
         self.assertEqual(payload["height_m"], 12.0)
         self.assertEqual(payload["size_m"], 9.0)
+        panel.deleteLater()
+
+    def test_draw_tree_canopy_emits_tree_shape(self):
+        from src.site_panel import SitePanel
+        panel = SitePanel()
+        captured = []
+        panel.place_shape_requested.connect(captured.append)
+        panel._exist_height.setValue(7.0)
+        panel._on_draw_tree_canopy()
+        self.assertEqual(len(captured), 1)
+        self.assertEqual(captured[0]["shape_type"], "Tree canopy")
+        self.assertEqual(captured[0]["height_m"], 7.0)
+        panel.deleteLater()
+
+    def test_draw_building_emits_building_shape(self):
+        from src.site_panel import SitePanel
+        panel = SitePanel()
+        captured = []
+        panel.place_shape_requested.connect(captured.append)
+        panel._exist_height.setValue(5.0)
+        panel._on_draw_building_footprint()
+        self.assertEqual(len(captured), 1)
+        self.assertEqual(captured[0]["shape_type"], "Building footprint")
+        self.assertEqual(captured[0]["height_m"], 5.0)
         panel.deleteLater()
 
 

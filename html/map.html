@@ -1438,6 +1438,28 @@
         _makeShapeVertexDraggable(h, id, idx);
         shapeEditHandles.push(h);
       });
+      // Drag on the polygon interior → translate the whole outline (mirrors the
+      // boundary edit). Vertex handles sit on top, so a grab on one still wins.
+      poly.on('mousedown', _onShapePolyMousedown);
+    }
+
+    // Refresh a shape's stored area + on-map tooltip after its outline changes.
+    function _refreshShapeReadout(poly) {
+      if (!poly || !poly._shape) return;
+      var sh = poly._shape;
+      sh.areaM2 = _polygonArea(sh.points);
+      if (!poly.getTooltip()) return;
+      var cast = sh.heightM > 0;
+      var aStr = sh.areaM2 < 10000 ? sh.areaM2.toFixed(1) + ' m²'
+        : (sh.areaM2 / 10000).toFixed(2) + ' ha';
+      var line = cast
+        ? '<br>Casts shade — ' + escH(String(sh.heightM)) + ' m tall'
+          + '<br>Click to edit outline · right-click for height/remove'
+        : '<br>Click to edit outline · right-click to remove';
+      poly.setTooltipContent(
+        '<b>' + escH(sh.label || sh.shapeType) + '</b><br>' +
+        '<span style="color:#78909c;font-size:10px">Area: ' + escH(aStr)
+          + line + '</span>');
     }
 
     function _makeShapeVertexDraggable(marker, sid, idx) {
@@ -1458,23 +1480,8 @@
           document.removeEventListener('mouseup', onUp);
           var poly = _getShapePolygon(sid);
           if (poly && poly._shape) {
-            // Keep the area readout in step with the reshaped outline.
-            var sh = poly._shape;
-            sh.areaM2 = _polygonArea(sh.points);
-            if (poly.getTooltip()) {
-              var cast = sh.heightM > 0;
-              var aStr = sh.areaM2 < 10000 ? sh.areaM2.toFixed(1) + ' m²'
-                : (sh.areaM2 / 10000).toFixed(2) + ' ha';
-              var line = cast
-                ? '<br>Casts shade — ' + escH(String(sh.heightM)) + ' m tall'
-                  + '<br>Click to edit outline · right-click for height/remove'
-                : '<br>Click to edit outline · right-click to remove';
-              poly.setTooltipContent(
-                '<b>' + escH(sh.label || sh.shapeType) + '</b><br>' +
-                '<span style="color:#78909c;font-size:10px">Area: ' + escH(aStr)
-                  + line + '</span>');
-            }
-            if (bridge) bridge.onShapeGeomChanged(sid, JSON.stringify(sh.points));
+            _refreshShapeReadout(poly);
+            if (bridge) bridge.onShapeGeomChanged(sid, JSON.stringify(poly._shape.points));
           }
         }
         document.addEventListener('mousemove', onMove);
@@ -1482,8 +1489,50 @@
       });
     }
 
+    // Drag the whole outline (every vertex together), keyed on the shape in edit
+    // mode. Mirrors _onBoundaryPolyMousedown.
+    function _onShapePolyMousedown(e) {
+      if (e.originalEvent.button !== 0) return;     // left-drag only
+      if (shapeEditId === null) return;
+      L.DomEvent.stop(e);
+      var sid = shapeEditId;
+      var startLL = e.latlng;
+      var poly = _getShapePolygon(sid);
+      if (!poly || !poly._shape) return;
+      var origPts = poly._shape.points.map(function(p) { return [p[0], p[1]]; });
+      map.dragging.disable();
+      function onMove(ev) {
+        var ll = map.containerPointToLatLng(map.mouseEventToContainerPoint(ev));
+        var dLat = ll.lat - startLL.lat;
+        var dLng = ll.lng - startLL.lng;
+        var p2 = _getShapePolygon(sid);
+        if (!p2 || !p2._shape) return;
+        p2._shape.points = origPts.map(function(p) {
+          return [p[0] + dLat, p[1] + dLng];
+        });
+        p2.setLatLngs(p2._shape.points);
+        shapeEditHandles.forEach(function(vh, vi) {
+          if (p2._shape.points[vi]) vh.setLatLng(p2._shape.points[vi]);
+        });
+      }
+      function onUp() {
+        map.dragging.enable();
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        var p3 = _getShapePolygon(sid);
+        if (p3 && p3._shape) {
+          _refreshShapeReadout(p3);
+          if (bridge) bridge.onShapeGeomChanged(sid, JSON.stringify(p3._shape.points));
+        }
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    }
+
     function exitShapeEditMode() {
       if (shapeEditId === null) return;
+      var poly = _getShapePolygon(shapeEditId);
+      if (poly) poly.off('mousedown', _onShapePolyMousedown);
       shapeEditHandles.forEach(function(h) { map.removeLayer(h); });
       shapeEditHandles = [];
       shapeEditId = null;

@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
     QFormLayout, QFrame, QGroupBox, QScrollArea, QComboBox,
     QDoubleSpinBox, QSpinBox, QCheckBox, QSlider, QColorDialog,
-    QListWidget, QListWidgetItem, QProgressBar,
+    QListWidget, QListWidgetItem, QProgressBar, QTabWidget,
 )
 
 
@@ -216,6 +216,11 @@ class SitePanel(QWidget):
     # Import shade-casting footprints from an nDSM GeoTIFF (V1.53).
     footprint_import_requested = pyqtSignal(str)   # tiff path
 
+    # Mark/draw existing shade casters on the Shade sub-tab (V1.59 — relocated
+    # from the Structures panel). Reuse the existing placement pipeline.
+    place_structure_requested = pyqtSignal(dict)   # existing tree/building point
+    place_shape_requested     = pyqtSignal(dict)   # draw footprint / tree canopy
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._lat: Optional[float] = None
@@ -226,7 +231,7 @@ class SitePanel(QWidget):
         self._geo_thread: Optional[QThread] = None
         self._geo_worker: Optional[_GeocodeWorker] = None
         self._geo_debounce: Optional[QTimer] = None
-        self._auto_color = "#5d4037"
+        self._auto_color = "#44cc00"
         self._contour_color = "#795548"
         # Map widget reference, set by MainWindow via attach_map_widget().
         # Used to bias the address-finder search against the current
@@ -243,21 +248,39 @@ class SitePanel(QWidget):
     # ── Construction ────────────────────────────────────────────────────────
 
     def _build_ui(self):
+        """Site panel split into three sub-tabs (mirrors the Plants panel):
+        Site Information, Slope, and Shade."""
+        from src.ui_style import inner_tab_stylesheet
         outer = QVBoxLayout(self)
         outer.setContentsMargins(4, 4, 4, 4)
         outer.setSpacing(0)
 
+        tabs = QTabWidget()
+        tabs.setDocumentMode(True)
+        tabs.tabBar().setUsesScrollButtons(False)
+        tabs.tabBar().setExpanding(True)
+        tabs.setStyleSheet(inner_tab_stylesheet())
+        outer.addWidget(tabs)
+
+        self._build_info_page(self._add_scroll_page(tabs, "Site Information"))
+        self._build_slope_page(self._add_scroll_page(tabs, "Slope"))
+        self._build_shade_page(self._add_scroll_page(tabs, "Shade"))
+
+    def _add_scroll_page(self, tabs, title):
+        """Add a scrollable page to the inner tab strip; return its body layout."""
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
-        outer.addWidget(scroll)
-
         body = QWidget()
         scroll.setWidget(body)
         layout = QVBoxLayout(body)
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(8)
+        tabs.addTab(scroll, title)
+        return layout
 
+    def _build_info_page(self, layout):
+        """Site Information sub-tab: property pin/address + climate + soil."""
         info = QLabel(
             "Search an Alberta address below to drop a property pin and\n"
             "auto-fill site data from public sources. Drag the pin to\n"
@@ -426,11 +449,11 @@ class SitePanel(QWidget):
         sl.addRow("Source:",        self._lbl_soil_src)
         layout.addWidget(self._soil_box)
 
-        # ── Slope analysis (area) ───────────────────────────────────
-        # Now hosts the single-point Elevation/slope readout (top), the
-        # auto-generated contour/ramp controls (middle), and the manual
-        # Contour-line drawing controls (bottom — formerly on the
-        # Analysis tab).
+        layout.addStretch()
+
+    def _build_slope_page(self, layout):
+        """Slope sub-tab: single-point elevation/slope, auto contours + slope
+        colour ramp, and the offline terrain data download."""
         # Single-point Elevation / slope readout (formerly its own box).
         self._elev_box = QGroupBox("Elevation / slope (at pin)")
         self._elev_box.setStyleSheet(_GROUP_STYLE)
@@ -568,9 +591,6 @@ class SitePanel(QWidget):
         slope_btn_row.addWidget(btn_auto_clear)
         slope_layout.addLayout(slope_btn_row)
 
-        self._build_shade_section(slope_layout)
-        self._build_osm_section(slope_layout)
-
         # The manual "Draw contour line" UI lived here pre-V1.37. It
         # was removed (user feedback: "I'm not sure a scenario where
         # the draw manually option would be useful"). The Auto-contour
@@ -585,6 +605,14 @@ class SitePanel(QWidget):
 
         self._build_terrain_data_section(layout)
 
+        layout.addStretch()
+
+    def _build_shade_page(self, layout):
+        """Shade sub-tab: shade map, existing shade casters (mark/draw trees and
+        buildings), and the OpenStreetMap import."""
+        self._build_shade_section(layout)
+        self._build_existing_features_section(layout)
+        self._build_osm_section(layout)
         layout.addStretch()
 
     # ── Public API (called from MainWindow) ─────────────────────────────────
@@ -1037,6 +1065,110 @@ class SitePanel(QWidget):
         v = self._shade_hour.value()                 # minutes since midnight
         self.shade_requested.emit(
             {"when": (season[0], season[1], v // 60, v % 60)})
+
+    # ── Existing shade casters: mark/draw trees & buildings ────────────────
+    # Relocated from the Structures panel (V1.59) so all shade casters — drawn,
+    # marked, and OSM-imported — live together on the Shade sub-tab. Reuses the
+    # structure/shape placement pipeline via the panel's signals.
+
+    def _build_existing_features_section(self, layout):
+        from src.db.structures import EXISTING_TREE_ID, EXISTING_BUILDING_ID
+        box = QGroupBox("Existing features (trees & buildings)")
+        box.setStyleSheet(_GROUP_STYLE)
+        box.setToolTip(
+            "Mark trees and buildings already on your property so the design "
+            "generator places shade-loving plants in their cast shade."
+        )
+        vb = QVBoxLayout(box)
+        vb.setContentsMargins(6, 6, 6, 6)
+        vb.setSpacing(4)
+
+        hint = QLabel("Set height/size, click a button, then click the map.")
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        vb.addWidget(hint)
+
+        dims = QHBoxLayout()
+        dims.addWidget(QLabel("Height (m):"))
+        self._exist_height = QDoubleSpinBox()
+        self._exist_height.setRange(1.0, 60.0)
+        self._exist_height.setSingleStep(0.5)
+        self._exist_height.setValue(6.0)
+        dims.addWidget(self._exist_height)
+        dims.addWidget(QLabel("Size (m):"))
+        self._exist_size = QDoubleSpinBox()
+        self._exist_size.setRange(0.5, 40.0)
+        self._exist_size.setSingleStep(0.5)
+        self._exist_size.setValue(6.0)
+        self._exist_size.setToolTip("Canopy diameter (tree) or footprint width "
+                                    "(building).")
+        dims.addWidget(self._exist_size)
+        vb.addLayout(dims)
+
+        btns = QHBoxLayout()
+        btn_tree = QPushButton("🌳 Mark tree")
+        btn_tree.clicked.connect(lambda: self._on_mark_existing(EXISTING_TREE_ID))
+        btn_bldg = QPushButton("🏠 Mark building")
+        btn_bldg.clicked.connect(
+            lambda: self._on_mark_existing(EXISTING_BUILDING_ID))
+        btns.addWidget(btn_tree)
+        btns.addWidget(btn_bldg)
+        vb.addLayout(btns)
+
+        draw_btns = QHBoxLayout()
+        btn_tree_outline = QPushButton("🌲 Draw tree canopy")
+        btn_tree_outline.setToolTip(
+            "Draw a tree canopy outline (click points, double-click to finish). "
+            "Uses the height above; casts a tapering tree shadow.")
+        btn_tree_outline.clicked.connect(self._on_draw_tree_canopy)
+        draw_btns.addWidget(btn_tree_outline)
+
+        btn_outline = QPushButton("✏️ Draw building")
+        btn_outline.setToolTip(
+            "Draw the building's outline (click corners, double-click to "
+            "finish). Uses the height above; casts an accurate shadow.")
+        btn_outline.clicked.connect(self._on_draw_building_footprint)
+        draw_btns.addWidget(btn_outline)
+        vb.addLayout(draw_btns)
+
+        layout.addWidget(box)
+
+    def _on_mark_existing(self, feature_id: str):
+        """Emit a placement request for an existing tree/building, reusing the
+        structure placement pipeline (the controller routes the reserved id to
+        an existing_* feature)."""
+        from src.db.structures import existing_feature_def
+        payload = existing_feature_def(
+            feature_id, size_m=self._exist_size.value(),
+            height_m=self._exist_height.value())
+        self.place_structure_requested.emit(payload)
+
+    def _on_draw_building_footprint(self):
+        """Start shape-draw pre-set as a building footprint at the entered
+        height, so the finished polygon becomes a shade-casting canopy."""
+        self.place_shape_requested.emit({
+            "shape_type": "Building footprint",
+            "label": "Building",
+            "fill_color": "#8d6e63",
+            "stroke_color": "#5d4037",
+            "fill_opacity": 0.3,
+            "dash_array": "",
+            "height_m": self._exist_height.value(),
+        })
+
+    def _on_draw_tree_canopy(self):
+        """Start shape-draw pre-set as a tree canopy at the entered height; the
+        finished polygon becomes a tapering tree shade caster (shape_type
+        'Tree canopy' → caster_kind='tree' in the controller)."""
+        self.place_shape_requested.emit({
+            "shape_type": "Tree canopy",
+            "label": "Tree",
+            "fill_color": "#44cc00",
+            "stroke_color": "#2e7d32",
+            "fill_opacity": 0.3,
+            "dash_array": "",
+            "height_m": self._exist_height.value(),
+        })
 
     # ── Existing features from OpenStreetMap (V1.51) ───────────────────────
 

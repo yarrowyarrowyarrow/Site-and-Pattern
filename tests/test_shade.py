@@ -174,6 +174,73 @@ class TestPolygonCaster(unittest.TestCase):
         self.assertGreater(_north(g), 0.0)
 
 
+class TestCasterKind(unittest.TestCase):
+    """V1.59 — casters carry a ``kind`` so trees cast a tapering canopy shadow
+    while buildings extrude. casters_from_project derives it from element_type /
+    caster_kind, and the raster path tapers tree shadows."""
+
+    def _ring(self, half_m=3.0):
+        dlat = half_m / 111320.0
+        dlng = half_m / (111320.0 * math.cos(math.radians(_CLAT)))
+        return [[_CLNG - dlng, _CLAT - dlat], [_CLNG + dlng, _CLAT - dlat],
+                [_CLNG + dlng, _CLAT + dlat], [_CLNG - dlng, _CLAT + dlat],
+                [_CLNG - dlng, _CLAT - dlat]]
+
+    def test_existing_tree_is_tree_kind(self):
+        project = {"features": [
+            {"geometry": {"type": "Point", "coordinates": [_CLNG, _CLAT]},
+             "properties": {"element_type": "existing_tree",
+                            "height_m": 8.0, "canopy_radius_m": 3.0}}]}
+        self.assertEqual(
+            shade.casters_from_project(project)[0]["kind"], "tree")
+
+    def test_existing_building_is_building_kind(self):
+        project = {"features": [
+            {"geometry": {"type": "Point", "coordinates": [_CLNG, _CLAT]},
+             "properties": {"element_type": "existing_building",
+                            "height_m": 8.0, "canopy_radius_m": 4.0}}]}
+        self.assertEqual(
+            shade.casters_from_project(project)[0]["kind"], "building")
+
+    def test_canopy_footprint_kind_follows_caster_kind(self):
+        tree = {"features": [
+            {"geometry": {"type": "Polygon", "coordinates": [self._ring()]},
+             "properties": {"element_type": "canopy_footprint",
+                            "height_m": 10.0, "caster_kind": "tree"}}]}
+        bldg = {"features": [
+            {"geometry": {"type": "Polygon", "coordinates": [self._ring()]},
+             "properties": {"element_type": "canopy_footprint",
+                            "height_m": 10.0}}]}
+        self.assertEqual(shade.casters_from_project(tree)[0]["kind"], "tree")
+        self.assertEqual(shade.casters_from_project(bldg)[0]["kind"],
+                         "building")
+
+    def test_raster_tree_shadow_smaller_than_building(self):
+        # Force the raster (capsule) path so this runs with or without shapely;
+        # the tree tapers, so it shades strictly fewer cells than an equal
+        # building. Uses a finer local grid so the taper resolves.
+        orig = shade._HAVE_SHAPELY
+        shade._HAVE_SHAPELY = False
+        try:
+            n = 21
+            bbox = {"north": 53.5005, "south": 53.4995,
+                    "east": -113.4992, "west": -113.5008}
+            elev = {"grid": [[100.0] * n for _ in range(n)], "rows": n,
+                    "cols": n, "bbox": bbox}
+            clat = (bbox["north"] + bbox["south"]) / 2
+            clng = (bbox["east"] + bbox["west"]) / 2
+            base = {"lat": clat, "lng": clng, "height_m": 12.0, "radius_m": 4.0}
+            gt = shade.shade_grid([dict(base, kind="tree")], elev,
+                                  dates=[(6, 21)], hours=[16])
+            gb = shade.shade_grid([dict(base, kind="building")], elev,
+                                  dates=[(6, 21)], hours=[16])
+            tot = lambda g: sum(v for row in g for v in row)   # noqa: E731
+            self.assertGreater(tot(gb), 0.0)
+            self.assertLess(tot(gt), tot(gb))
+        finally:
+            shade._HAVE_SHAPELY = orig
+
+
 @unittest.skipUnless(shade._HAVE_SHAPELY, "shapely not installed")
 class TestShadowPolygonsPayload(unittest.TestCase):
     """V1.54 — the grid-independent vector shadow payload for the map overlay."""

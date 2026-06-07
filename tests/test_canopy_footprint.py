@@ -94,6 +94,32 @@ class TestCanopyFootprint(unittest.TestCase):
         self.assertEqual(main._project["features"], [])
 
 
+class TestTreeCanopyCaster(unittest.TestCase):
+    """V1.59 — a drawn 'Tree canopy' shape is tagged caster_kind='tree' so it
+    reads back as a tapering tree caster; other footprints stay buildings."""
+
+    def test_tree_canopy_tagged(self):
+        router, main = _router()
+        router._on_shape_complete(
+            "t1", json.dumps(_PTS), "Tree", "Tree canopy",
+            "#44cc00", "#2e7d32", 0.3, "", 60.0, 6.0)
+        props = main._project["features"][0]["properties"]
+        self.assertEqual(props["element_type"], "canopy_footprint")
+        self.assertEqual(props.get("caster_kind"), "tree")
+        casters = shade.casters_from_project(main._project)
+        self.assertEqual(casters[0]["kind"], "tree")
+
+    def test_building_footprint_not_tree(self):
+        router, main = _router()
+        router._on_shape_complete(
+            "b1", json.dumps(_PTS), "Building", "Building footprint",
+            "#8d6e63", "#5d4037", 0.3, "", 80.0, 8.0)
+        props = main._project["features"][0]["properties"]
+        self.assertNotIn("caster_kind", props)
+        casters = shade.casters_from_project(main._project)
+        self.assertEqual(casters[0]["kind"], "building")
+
+
 class TestShapeHeightEdit(unittest.TestCase):
     """V1.53 — right-click 'edit height' updates the feature in place."""
 

@@ -60,12 +60,14 @@ _MAX_SHADOW_M = 60.0                        # clamp absurd low-sun shadows
 
 
 def _caster(lat: float, lng: float, height_m: float, radius_m: float,
-            footprint: Optional[list] = None) -> dict:
+            footprint: Optional[list] = None, kind: str = "building") -> dict:
     """A shade caster. ``footprint`` (a ring of ``(lng, lat)`` pairs), when
     present, is the true perimeter used by the shapely polygon path; the
-    circle fallback always uses ``lat``/``lng`` + ``radius_m``."""
+    circle fallback always uses ``lat``/``lng`` + ``radius_m``. ``kind`` is
+    ``"tree"`` (rounded crown that tapers — cast as a tapering canopy) or
+    ``"building"`` (vertical extrusion of the footprint)."""
     c = {"lat": lat, "lng": lng, "height_m": max(0.0, float(height_m)),
-         "radius_m": max(0.5, float(radius_m))}
+         "radius_m": max(0.5, float(radius_m)), "kind": kind}
     if footprint:
         c["footprint"] = footprint
     return c
@@ -108,33 +110,36 @@ def casters_from_project(project_dict: dict) -> list[dict]:
                 lat = sum(p[1] for p in ring) / len(ring)
             except Exception:  # noqa: BLE001
                 continue
+        # A footprint/canopy tagged caster_kind="tree" (or an existing_tree)
+        # casts a tapering tree shadow; everything else extrudes as a building.
+        kind = "tree" if props.get("caster_kind") == "tree" else "building"
         if et == "existing_tree":
             casters.append(_caster(lat, lng, props.get("height_m", 6.0),
                                    props.get("canopy_radius_m", 3.0),
-                                   footprint=ring))
+                                   footprint=ring, kind="tree"))
         elif et == "existing_building":
             casters.append(_caster(lat, lng, props.get("height_m", 5.0),
                                    props.get("canopy_radius_m", 4.0),
-                                   footprint=ring))
+                                   footprint=ring, kind="building"))
         elif et == "canopy_footprint":
             # User-drawn canopy/structure perimeter with a height attribute.
             h = props.get("height_m", 0.0)
             if h and h > 0:
                 casters.append(_caster(lat, lng, h,
                                        props.get("canopy_radius_m", 3.0),
-                                       footprint=ring))
+                                       footprint=ring, kind=kind))
         elif et == "custom_shape" and props.get("cast_shade"):
             # A generic drawn shape opted in as a shade caster.
             h = props.get("height_m", 0.0)
             if h and h > 0:
                 casters.append(_caster(lat, lng, h,
                                        props.get("canopy_radius_m", 3.0),
-                                       footprint=ring))
+                                       footprint=ring, kind=kind))
         elif et == "plant":
             pid = props.get("plant_id")
             h, r = _plant_dims(pid)
             if h >= 2.0:                      # only trees/large shrubs matter
-                casters.append(_caster(lat, lng, h, r))
+                casters.append(_caster(lat, lng, h, r, kind="tree"))
     return casters
 
 
@@ -187,6 +192,21 @@ def _accumulate_shade(out, casters, sun, lat, lng, rows, cols, bbox,
                                     bbox, tmask=tmask)
 
 
+def _tree_halfwidth(t: float, radius_m: float) -> float:
+    """Tree-shadow half-width at fraction ``t`` along the base→tip segment: a
+    thin trunk up to the crown base, ramping to the full canopy radius at the
+    crown's widest point, then tapering to ~0 at the tip. Mirrors the silhouette
+    of ``shadow_geometry.cast_tree_shadow`` for the raster fallback."""
+    tf = getattr(shadow_geometry, "_TREE_TRUNK_FRAC", 0.30)
+    cf = getattr(shadow_geometry, "_TREE_CROWN_FRAC", 0.65)
+    tw = max(0.2, radius_m * getattr(shadow_geometry, "_TREE_TRUNK_W", 0.15))
+    if t <= tf:
+        return tw
+    if t <= cf:
+        return tw + (radius_m - tw) * (t - tf) / (cf - tf)
+    return radius_m * (1.0 - (t - cf) / (1.0 - cf))
+
+
 def _accumulate_shade_circle(out, casters, sun, lat, lng, rows, cols, bbox,
                              tmask=None) -> bool:
     """Capsule shadow model: each caster's shadow is the swept region — width =
@@ -220,6 +240,7 @@ def _accumulate_shade_circle(out, casters, sun, lat, lng, rows, cols, bbox,
     for cv in casters:
         shadow_len = min(cv["height_m"] * length_factor, _MAX_SHADOW_M)
         radius_m = cv["radius_m"]
+        is_tree = cv.get("kind") == "tree"
         # Down-sun tip offset from the caster, in metres. Azimuth is degrees
         # clockwise from north → north component = cos, east component = sin.
         tip_n = shadow_len * math.cos(shadow_dir)
@@ -232,8 +253,7 @@ def _accumulate_shade_circle(out, casters, sun, lat, lng, rows, cols, bbox,
                 # Cell offset from the caster, in metres.
                 pe = (clng - cv["lng"]) * 111320.0 * cos_lat
                 pn = (clat - cv["lat"]) * 111320.0
-                # Distance² from the cell to the base→tip segment; shaded when it
-                # falls within the canopy radius of the swept shadow.
+                # Project onto the base→tip segment (t clamped to [0,1]).
                 if seg_len2 <= 1e-9:
                     t = 0.0
                 else:
@@ -241,7 +261,15 @@ def _accumulate_shade_circle(out, casters, sun, lat, lng, rows, cols, bbox,
                     t = 0.0 if t < 0.0 else (1.0 if t > 1.0 else t)
                 de = pe - t * tip_e
                 dn = pn - t * tip_n
-                if de * de + dn * dn <= r2:
+                d2 = de * de + dn * dn
+                # A building is a constant-radius capsule; a tree tapers — thin
+                # trunk near the base, full radius at the crown, → 0 at the tip.
+                if is_tree:
+                    w = _tree_halfwidth(t, radius_m)
+                    shaded = d2 <= w * w
+                else:
+                    shaded = d2 <= r2
+                if shaded:
                     moment[r][c] = True
     if tmask is not None:
         for r in range(rows):
@@ -488,9 +516,18 @@ def shadow_polygons_payload(project_dict: dict, boundary, site_config,
             return None
         origin = shadow_geometry.origin_for_bbox(bbox)
 
-        # Build metric footprints once; reuse across every sun moment.
-        metric: list = []
+        # Build metric casters once; reuse across every sun moment. Buildings
+        # extrude their footprint vertically; trees have a rounded crown that
+        # tapers, so they're cast per-moment from their centre + radius via
+        # cast_tree_shadow.
+        metric_buildings: list = []     # (poly, height_m)
+        metric_trees: list = []         # (center_xy, radius_m, height_m)
         for cv in casters:
+            if cv.get("kind") == "tree":
+                xy = origin.to_xy(cv["lng"], cv["lat"])
+                metric_trees.append(
+                    (xy, cv.get("radius_m", 3.0), cv["height_m"]))
+                continue
             ring = cv.get("footprint")
             poly = None
             if ring:
@@ -502,8 +539,8 @@ def shadow_polygons_payload(project_dict: dict, boundary, site_config,
                 poly = shadow_geometry.point_footprint_metric(
                     cv["lng"], cv["lat"], cv.get("radius_m", 0.5), origin)
             if poly is not None and not poly.is_empty:
-                metric.append((poly, cv["height_m"]))
-        if not metric:
+                metric_buildings.append((poly, cv["height_m"]))
+        if not metric_buildings and not metric_trees:
             return None
 
         from src.solar import sun_position
@@ -525,9 +562,16 @@ def shadow_polygons_payload(project_dict: dict, boundary, site_config,
             sun = sun_position(clat, clng, dt_utc)
             if sun.altitude < _MIN_SUN_ALT:
                 continue
-            g = shadow_geometry.union_shadows(metric, sun.azimuth, sun.altitude)
-            if g is not None and not g.is_empty:
-                shadows.append(g)
+            if metric_buildings:
+                g = shadow_geometry.union_shadows(
+                    metric_buildings, sun.azimuth, sun.altitude)
+                if g is not None and not g.is_empty:
+                    shadows.append(g)
+            for xy, rad, h in metric_trees:
+                tg = shadow_geometry.cast_tree_shadow(
+                    xy, rad, h, sun.azimuth, sun.altitude)
+                if tg is not None and not tg.is_empty:
+                    shadows.append(tg)
         if not shadows:
             return None
 

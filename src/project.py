@@ -285,7 +285,7 @@ def project_to_map_data(project: dict) -> dict:
             if segments:
                 result["auto_contours"].append({
                     "elevation_m": props.get("elevation_m", 0),
-                    "color":       props.get("color", "#5d4037"),
+                    "color":       props.get("color", "#44cc00"),
                     "segments":    segments,
                 })
 
