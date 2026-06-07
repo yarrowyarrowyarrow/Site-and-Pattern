@@ -31,6 +31,19 @@ from __future__ import annotations
 from src.climate import get_zone, zone_label
 
 
+def _when_from_config(config: dict):
+    """Naive local-solar datetime for a shade request, or None for the
+    season-average envelope. Accepts ``(month, day, hour)`` or
+    ``(month, day, hour, minute)`` (minute defaults to 0, for the sub-hour time
+    slider). Pure / Qt-free so it can be unit-tested directly."""
+    from datetime import datetime
+    w = (config or {}).get("when")
+    if not w:
+        return None
+    minute = int(w[3]) if len(w) > 3 else 0
+    return datetime(2025, int(w[0]), int(w[1]), int(w[2]), minute)
+
+
 class MapEventRouter:
     """MapBridge slot handlers. Holds a MainWindow reference so handlers
     can mutate ``_project["features"]`` and call back into the other
@@ -1010,7 +1023,6 @@ class MapEventRouter:
         Prefers the true-shape vector path (ShadowPolygonWorker) when shapely is
         available — crisp polygon shadows that don't get dropped by the coarse
         elevation grid. Falls back to the raster ShadeWorker without shapely."""
-        from datetime import datetime
         from src.shade import ShadeWorker, _HAVE_SHAPELY
 
         sc = dict(self._main._project.get("properties", {})
@@ -1021,10 +1033,7 @@ class MapEventRouter:
                 "Drop a property pin or draw a boundary first.", 4000)
             return
 
-        when = None
-        w = (config or {}).get("when")
-        if w:                       # (month, day, hour) local solar
-            when = datetime(2025, w[0], w[1], int(w[2]), 0)
+        when = _when_from_config(config)    # (month, day, hour[, minute]) local
 
         # Remember the request so an outline/height edit can recompute the same
         # view in place (see _refresh_shade_if_active).
@@ -1046,6 +1055,9 @@ class MapEventRouter:
         two never stack, and degrades to the message below when nothing casts."""
         self._main.map_widget.clear_shade_overlay()
         if not payload or not payload.get("polygons"):
+            # Also clear any prior vector shadows so scrubbing past sunset fades
+            # them out instead of freezing the last frame on screen.
+            self._main.map_widget.clear_shadow_polygons()
             self._main._shade_overlay_active = False
             self._main.statusBar().showMessage(
                 "No shade to show — mark or import some trees/buildings, or add "
@@ -1060,6 +1072,7 @@ class MapEventRouter:
     def _on_shade_ready(self, payload):
         self._main.map_widget.clear_shadow_polygons()
         if not payload:
+            self._main.map_widget.clear_shade_overlay()   # fade out past sunset
             self._main._shade_overlay_active = False
             self._main.statusBar().showMessage(
                 "No shade to show — mark or import some trees/buildings, or add "

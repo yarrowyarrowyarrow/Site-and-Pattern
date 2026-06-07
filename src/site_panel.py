@@ -927,12 +927,16 @@ class SitePanel(QWidget):
         time_row = QHBoxLayout()
         time_row.addWidget(QLabel("Time:"))
         self._shade_hour = QSlider(Qt.Orientation.Horizontal)
-        self._shade_hour.setRange(5, 21)        # 5 AM – 9 PM local solar
-        self._shade_hour.setValue(15)           # mid-afternoon: long, clearly
+        # Minutes since midnight in 15-min steps, so shadows sweep smoothly
+        # rather than jumping by whole hours. 5 AM – 9 PM local solar by default.
+        self._shade_hour.setRange(5 * 60, 21 * 60)
+        self._shade_hour.setSingleStep(15)
+        self._shade_hour.setPageStep(60)
+        self._shade_hour.setValue(15 * 60)      # mid-afternoon: long, clearly
                                                 # directional shadows by default
         self._shade_hour_lbl = QLabel("15:00")
         self._shade_hour.valueChanged.connect(
-            lambda h: self._shade_hour_lbl.setText(f"{h:02d}:00"))
+            lambda v: self._shade_hour_lbl.setText(f"{v // 60:02d}:{v % 60:02d}"))
         # Scrub the slider to sweep shadows across the day. A short debounce
         # coalesces rapid drags into one recompute, and only a real day (not
         # "Typical") drives a live overlay — the averaged view has no time.
@@ -993,7 +997,8 @@ class SitePanel(QWidget):
         season = self._shade_season.currentData()    # (month, day) or None
         when = None
         if season is not None:
-            when = (season[0], season[1], self._shade_hour.value())
+            v = self._shade_hour.value()             # minutes since midnight
+            when = (season[0], season[1], v // 60, v % 60)
         self.shade_requested.emit({"when": when})
 
     def _on_shade_season_changed(self, _idx):
@@ -1002,19 +1007,19 @@ class SitePanel(QWidget):
         generic 5 AM–9 PM range until a site location is known."""
         season = self._shade_season.currentData()
         if season is None or self._lat is None or self._lng is None:
-            self._shade_hour.setRange(5, 21)
+            self._shade_hour.setRange(5 * 60, 21 * 60)
             return
         try:
             from datetime import date
             from src.solar import sunrise_sunset
             sr, ss = sunrise_sunset(self._lat, self._lng,
                                     date(2025, season[0], season[1]))
-            lo = max(0, int(sr))            # floor sunrise, ceil sunset
-            hi = min(23, int(ss) + 1)
+            lo = max(0, int(sr * 60))                  # floor sunrise (minutes)
+            hi = min(24 * 60 - 1, int(ss * 60) + 15)   # a touch past sunset
             if hi <= lo:
-                lo, hi = 5, 21
+                lo, hi = 5 * 60, 21 * 60
         except Exception:  # noqa: BLE001 — fall back to the generic window
-            lo, hi = 5, 21
+            lo, hi = 5 * 60, 21 * 60
         cur = self._shade_hour.value()
         self._shade_hour.setRange(lo, hi)
         self._shade_hour.setValue(min(max(cur, lo), hi))
@@ -1029,8 +1034,9 @@ class SitePanel(QWidget):
         season = self._shade_season.currentData()
         if season is None:
             return
+        v = self._shade_hour.value()                 # minutes since midnight
         self.shade_requested.emit(
-            {"when": (season[0], season[1], self._shade_hour.value())})
+            {"when": (season[0], season[1], v // 60, v % 60)})
 
     # ── Existing features from OpenStreetMap (V1.51) ───────────────────────
 

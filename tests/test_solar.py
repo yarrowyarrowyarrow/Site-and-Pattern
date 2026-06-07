@@ -156,6 +156,36 @@ class TestShadowGeometry(unittest.TestCase):
         self.assertEqual(shadow_length_factor(-5.0), float("inf"))
 
 
+class TestEveningAzimuthDirection(unittest.TestCase):
+    """Regression: late-afternoon/evening shadows used to mirror to the morning
+    direction. The shade paths convert a local-solar hour to UTC by adding
+    -lng/15 (~+7.6 h in Alberta), so an evening time crosses midnight UTC and
+    pushed solar_time negative — which dropped the afternoon azimuth correction
+    in sun_position. Wrapping solar_time to [0,24) fixes it."""
+
+    def _utc_for_local(self, local_hour: float, d: date) -> datetime:
+        # Mirror shade_grid_at / shadow_polygons_payload: utc = local - lng/15.
+        from datetime import timedelta
+        return (datetime(d.year, d.month, d.day, 0, 0)
+                + timedelta(hours=local_hour - _LNG / 15.0))
+
+    def test_late_afternoon_sun_bears_west(self):
+        d = KEY_DATES["Summer Solstice"]
+        for local_hour in (17, 18, 19):
+            pos = sun_position(_LAT, _LNG, self._utc_for_local(local_hour, d))
+            self.assertGreater(pos.altitude, 0.0,
+                               f"sun should be up at {local_hour}:00")
+            self.assertTrue(180.0 < pos.azimuth < 360.0,
+                            f"PM sun should bear west at {local_hour}:00 "
+                            f"(got azimuth={pos.azimuth:.1f}°)")
+
+    def test_morning_sun_bears_east(self):
+        d = KEY_DATES["Summer Solstice"]
+        pos = sun_position(_LAT, _LNG, self._utc_for_local(8, d))
+        self.assertTrue(0.0 < pos.azimuth < 180.0,
+                        f"AM sun should bear east (got azimuth={pos.azimuth:.1f}°)")
+
+
 # Local import kept out of module top to keep the oracle helper readable.
 from datetime import timedelta as _timedelta  # noqa: E402
 

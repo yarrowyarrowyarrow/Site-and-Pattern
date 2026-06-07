@@ -67,6 +67,13 @@ class TestTimeOfDay(unittest.TestCase):
         g = shade.shade_grid_at(_TREE, _ELEV, datetime(2025, 6, 21, 15, 0))
         self.assertGreater(_east(g), _west(g))
 
+    def test_evening_shadow_east(self):
+        # Regression: the late-afternoon sun is in the west, so shadows fall
+        # EAST. Before the solar_time wrap fix, 18:00 (which crosses midnight
+        # UTC after the -lng/15 offset) mirrored the shadow back to the west.
+        g = shade.shade_grid_at(_TREE, _ELEV, datetime(2025, 6, 21, 18, 0))
+        self.assertGreater(_east(g), _west(g))
+
     def test_night_no_shade(self):
         g = shade.shade_grid_at(_TREE, _ELEV, datetime(2025, 6, 21, 2, 0))
         self.assertTrue(all(v == 0.0 for row in g for v in row))

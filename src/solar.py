@@ -52,8 +52,13 @@ def sun_position(lat: float, lng: float, dt: datetime) -> SunPosition:
     # Local solar time
     utc_hours = dt.hour + dt.minute / 60 + dt.second / 3600
     # Time correction for longitude (4 min per degree from standard meridian)
-    # Using lng directly as offset from UTC (simplified)
-    solar_time = utc_hours + lng / 15 + eot / 60
+    # Using lng directly as offset from UTC (simplified). Wrap to [0,24): the
+    # local→UTC conversion in the shade paths adds -lng/15 (~+7.6 h in Alberta),
+    # so an evening local time crosses midnight UTC and would push solar_time
+    # negative — which flips the sign of hour_angle below and skips the
+    # afternoon azimuth correction (evening shadows then mirror to the morning
+    # direction). cos(hour_angle) for altitude is unaffected by the wrap.
+    solar_time = (utc_hours + lng / 15 + eot / 60) % 24
 
     # Hour angle (degrees, 15° per hour from solar noon)
     hour_angle = math.radians((solar_time - 12) * 15)

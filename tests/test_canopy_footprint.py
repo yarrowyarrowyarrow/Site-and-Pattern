@@ -167,5 +167,25 @@ class TestShapeGeometryEditController(unittest.TestCase):
         self.assertEqual(calls, [{"when": (6, 21, 15)}])
 
 
+class TestWhenFromConfig(unittest.TestCase):
+    """V1.58 — the sub-hour time slider passes (month, day, hour, minute); the
+    season-average request has no time."""
+
+    def test_three_tuple_minute_zero(self):
+        from src.controllers.map_events import _when_from_config
+        dt = _when_from_config({"when": (6, 21, 15)})
+        self.assertEqual((dt.month, dt.day, dt.hour, dt.minute), (6, 21, 15, 0))
+
+    def test_four_tuple_carries_minute(self):
+        from src.controllers.map_events import _when_from_config
+        dt = _when_from_config({"when": (6, 21, 18, 45)})
+        self.assertEqual((dt.month, dt.day, dt.hour, dt.minute), (6, 21, 18, 45))
+
+    def test_none_when_absent(self):
+        from src.controllers.map_events import _when_from_config
+        self.assertIsNone(_when_from_config({"when": None}))
+        self.assertIsNone(_when_from_config({}))
+
+
 if __name__ == "__main__":
     unittest.main()
