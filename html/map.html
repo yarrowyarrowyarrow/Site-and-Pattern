@@ -600,7 +600,7 @@
       map = L.map('map', {
         center: [53.5461, -113.4938],
         zoom: 12,
-        maxZoom: 23,
+        maxZoom: 24,
         zoomControl: true,
         zoomSnap: 0.1,
         zoomDelta: 0.15,          // ~1.1× per scroll tick ("fine" default)
@@ -619,15 +619,18 @@
 
       // Satellite imagery lives in its own pane (below the tile pane so the
       // shade/contour overlays still draw on top) so the alignment nudge
-      // (setSatelliteOffset) can shift just these tiles. maxNativeZoom < maxZoom
-      // lets Leaflet upscale the deepest real tiles instead of showing Esri's
-      // "Map Data Unavailable" placeholder when you zoom past its coverage.
+      // (setSatelliteOffset) can shift just these tiles. maxNativeZoom starts
+      // safe and is raised to the deepest real Esri zoom for the current area
+      // by _refreshSatNativeZoom() (it probes Esri's tilemap) — that keeps full
+      // detail where it exists, while maxZoom > maxNativeZoom lets Leaflet
+      // upscale ("enlarge") past coverage instead of showing Esri's
+      // "Map Data Unavailable" placeholder.
       map.createPane('satellitePane');
       map.getPane('satellitePane').style.zIndex = 150;
 
       satelliteLayer = L.tileLayer(
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        { attribution: '© Esri', maxZoom: 23, maxNativeZoom: 19,
+        { attribution: '© Esri', maxZoom: 24, maxNativeZoom: 19,
           pane: 'satellitePane' }
       );
 
@@ -710,6 +713,10 @@
 
       // Re-apply the satellite alignment nudge — metres→pixels changes per zoom.
       map.on('zoomend', _applySatOffset);
+
+      // Re-check how deep Esri imagery actually goes for the current area, so we
+      // keep full detail and only upscale past real coverage.
+      map.on('moveend', _scheduleSatProbe);
 
       // Load-bearing: don't remove. This listener is what makes
       // Leaflet's own _onResize handler fire reliably after a Qt
@@ -3372,6 +3379,101 @@
       _applySatOffset();
     }
 
+    // ── Adaptive satellite detail ("enlarge past coverage") ─────────────────
+    // Esri World Imagery's real depth varies by area (some residential blocks
+    // stop at ~z20). Rather than statically capping detail or showing Esri's
+    // "Map Data Unavailable" placeholder, we probe Esri's tilemap for the
+    // deepest available zoom over the current view and set that as the layer's
+    // maxNativeZoom. Below it: real, full-detail tiles. Above it: Leaflet
+    // upscales the deepest real tile (the "screenshot" enlarge). Probes are
+    // debounced + cached per coarse area, and degrade safely to z19 (globally
+    // present) if the network/CORS blocks them — so we never regress to the
+    // placeholder.
+    var _ESRI_TILEMAP =
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tilemap/';
+    var _SAT_MIN_NATIVE = 19;   // assumed globally present
+    var _SAT_MAX_NATIVE = 23;   // deepest Esri ever caches
+    var _satNativeCache = {};    // coarse-tile key -> deepest native zoom
+    var _satProbeTimer = null;
+
+    function _tileXY(lat, lng, z) {
+      var n = Math.pow(2, z);
+      var latRad = lat * Math.PI / 180;
+      return {
+        x: Math.floor((lng + 180) / 360 * n),
+        y: Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) /
+                       Math.PI) / 2 * n)
+      };
+    }
+
+    // Is a single Esri tile real (cached) at (z,x,y)? cb(true|false|null);
+    // null means the probe itself failed (network/CORS/timeout).
+    function _probeTile(z, x, y, cb) {
+      var url = _ESRI_TILEMAP + z + '/' + y + '/' + x + '/1/1?f=json';
+      var done = false;
+      var to = setTimeout(function () {
+        if (!done) { done = true; cb(null); }
+      }, 4000);
+      fetch(url)
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          if (done) return;
+          done = true; clearTimeout(to);
+          cb(!!(j && j.data && j.data[0] === 1));
+        })
+        .catch(function () {
+          if (done) return;
+          done = true; clearTimeout(to); cb(null);
+        });
+    }
+
+    // Climb from _SAT_MIN_NATIVE+1 upward until a tile is missing; the last
+    // present zoom is the deepest real detail for this spot.
+    function _probeMaxNative(lat, lng, cb) {
+      var best = _SAT_MIN_NATIVE;
+      (function step(z) {
+        if (z > _SAT_MAX_NATIVE) { cb(best); return; }
+        var t = _tileXY(lat, lng, z);
+        _probeTile(z, t.x, t.y, function (avail) {
+          if (avail === true) { best = z; step(z + 1); }
+          else { cb(best); }    // missing, or probe failed → stop at best
+        });
+      })(_SAT_MIN_NATIVE + 1);
+    }
+
+    function _setSatNative(z) {
+      if (!satelliteLayer || satelliteLayer.options.maxNativeZoom === z) return;
+      satelliteLayer.options.maxNativeZoom = z;
+      // Re-add (public API) so the new clamp takes effect; the pane + its
+      // alignment margin persist across this.
+      if (map.hasLayer(satelliteLayer)) {
+        satelliteLayer.remove();
+        satelliteLayer.addTo(map);
+      }
+    }
+
+    function _refreshSatNativeZoom() {
+      if (!_satVisible || !satelliteLayer) return;
+      if (map.getZoom() < 17) return;           // detail only matters up close
+      var c = map.getCenter();
+      var k = _tileXY(c.lat, c.lng, 13);          // coarse area key (~z13 tile)
+      var ck = k.x + '_' + k.y;
+      if (_satNativeCache[ck] !== undefined) {
+        _setSatNative(_satNativeCache[ck]);
+        return;
+      }
+      _probeMaxNative(c.lat, c.lng, function (maxN) {
+        _satNativeCache[ck] = maxN;
+        _setSatNative(maxN);
+      });
+    }
+
+    function _scheduleSatProbe() {
+      if (!_satVisible) return;
+      if (_satProbeTimer) clearTimeout(_satProbeTimer);
+      _satProbeTimer = setTimeout(_refreshSatNativeZoom, 400);
+    }
+
     // ── Layer visibility ──────────────────────────────────────────────────────
     var _satVisible = false;
 
@@ -3403,6 +3505,7 @@
       if (visible) {
         osmLayer.remove();
         _updateSatLayer();
+        _scheduleSatProbe();    // learn this area's deepest real detail
       } else {
         osmLayer.addTo(map);
         satelliteLayer.remove();

@@ -250,25 +250,18 @@ class MainWindow(QMainWindow):
         self._side_tabs.tabBar().setUsesScrollButtons(False)
         self._side_tabs.tabBar().setElideMode(Qt.TextElideMode.ElideNone)
         self._side_tabs.tabBar().setExpanding(False)
-        # Tab styling — selected tab is a bright-green pill so the active
-        # panel is unmistakable; padding/min-width are sized so all five
-        # labels render fully without ellipsis at the panel's minimum
-        # width.
+        # Tab styling — every tab strip in the app (these top-level tabs plus
+        # the Site/Plants/Analysis/Planning sub-tabs) shares the same
+        # green-underline look so the whole UI is consistent. A subtle pane
+        # border frames the side panel.
+        from src.ui_style import inner_tab_stylesheet
         self._side_tabs.setStyleSheet(
-            "QTabWidget::pane { border: 1px solid #2e4a2e; "
-            "background: #1e2a1e; top: -1px; }"
-            "QTabBar { qproperty-drawBase: 0; background: #122012; }"
-            "QTabBar::tab { background: #1a2a1a; color: #90a4ae; "
-            "padding: 5px 8px; margin-right: 1px; "
-            "border: 1px solid #2e4a2e; border-bottom: none; "
-            "border-top-left-radius: 4px; border-top-right-radius: 4px; "
-            "font-size: 11px; min-width: 44px; }"
-            "QTabBar::tab:hover { background: #284028; color: #c8e6c9; }"
-            "QTabBar::tab:selected { background: #2e7d32; color: #ffffff; "
-            "font-weight: bold; border: 1px solid #66bb6a; "
-            "border-bottom: 2px solid #66bb6a; }"
-            "QTabBar::tab:!selected { margin-top: 2px; }"
-            "QWidget { background-color: #1e2a1e; color: #c8e6c9; }"
+            inner_tab_stylesheet()
+            + "QTabWidget::pane { border: 1px solid #2e4a2e; top: -1px; }"
+            # Tighter horizontal padding than the sub-tabs so all five top-level
+            # labels still render in full at the 260px minimum panel width.
+            + "QTabBar::tab { padding: 5px 8px; }"
+            + "QWidget { background-color: #1e2a1e; color: #c8e6c9; }"
         )
 
         # Wrap in a CollapsibleSidebar so the entire side panel can be
