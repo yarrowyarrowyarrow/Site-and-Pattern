@@ -616,6 +616,11 @@ class MapWidget(QWebEngineView):
     def set_labels_visible(self, visible: bool):
         self.run_js(map_js.set_labels_visible(visible))
 
+    def set_satellite_offset(self, east_m: float, north_m: float):
+        """Nudge the satellite imagery by (east, north) metres to line it up with
+        OSM/placements. Cosmetic only — does not move any data."""
+        self.run_js(map_js.set_satellite_offset(east_m, north_m))
+
     def update_marker_color(self, plant_id: int, color: str):
         self.run_js(map_js.update_marker_color(plant_id, color))
 

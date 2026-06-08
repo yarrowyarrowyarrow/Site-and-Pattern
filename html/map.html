@@ -617,9 +617,18 @@
         }
       ).addTo(map);
 
+      // Satellite imagery lives in its own pane (below the tile pane so the
+      // shade/contour overlays still draw on top) so the alignment nudge
+      // (setSatelliteOffset) can shift just these tiles. maxNativeZoom < maxZoom
+      // lets Leaflet upscale the deepest real tiles instead of showing Esri's
+      // "Map Data Unavailable" placeholder when you zoom past its coverage.
+      map.createPane('satellitePane');
+      map.getPane('satellitePane').style.zIndex = 150;
+
       satelliteLayer = L.tileLayer(
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        { attribution: '© Esri', maxZoom: 23, maxNativeZoom: 23 }
+        { attribution: '© Esri', maxZoom: 23, maxNativeZoom: 19,
+          pane: 'satellitePane' }
       );
 
       drawnItems = new L.FeatureGroup().addTo(map);
@@ -698,6 +707,9 @@
 
       // Zoom-dependent label visibility
       map.on('zoomend', updateLabelVisibility);
+
+      // Re-apply the satellite alignment nudge — metres→pixels changes per zoom.
+      map.on('zoomend', _applySatOffset);
 
       // Load-bearing: don't remove. This listener is what makes
       // Leaflet's own _onResize handler fire reliably after a Qt
@@ -3088,11 +3100,19 @@
         areaM2.toFixed(1) + ' m²' :
         (areaM2 / 10000).toFixed(2) + ' ha';
 
-      // Centre label — append a shade marker (☀ + height) for casters.
+      // Centre label. A shade caster shows a compact badge — a house/tree icon
+      // (by what it represents) plus the height, e.g. "🏠 5m" / "🌳 5m" —
+      // instead of the busier "<label> ☀ 5m". A flat area shape keeps its text
+      // label. Hidden together with the shape via the "Structures" view toggle.
       var center = polygon.getBounds().getCenter();
       if (label || shapeType !== 'Custom' || castsShade) {
-        var displayLabel = label || shapeType || 'Shade';
-        if (castsShade) displayLabel += ' ☀️' + heightM + 'm';
+        var displayLabel;
+        if (castsShade) {
+          var treeCaster = /tree/i.test(shapeType) || cfg.caster_kind === 'tree';
+          displayLabel = (treeCaster ? '🌳 ' : '🏠 ') + heightM + 'm';
+        } else {
+          displayLabel = label || shapeType || 'Shape';
+        }
         var labelIcon = L.divIcon({
           className: 'shape-label',
           html: escH(displayLabel),
@@ -3321,6 +3341,35 @@
           _resetPatternState();
           drawnItems.clearLayers();
       }
+    }
+
+    // ── Satellite imagery alignment nudge ──────────────────────────────────
+    // Esri World Imagery is often georegistered a few metres off from OSM /
+    // ground truth. This shifts ONLY the satellite tiles (a pane margin, which
+    // Leaflet leaves alone) so the user can line the imagery up with OSM
+    // buildings and their placements. It never moves any data.
+    var satOffset = { east: 0, north: 0 };   // metres; +east, +north
+
+    function _applySatOffset() {
+      var pane = map.getPane('satellitePane');
+      if (!pane) return;
+      if (!satOffset.east && !satOffset.north) {
+        pane.style.marginLeft = '0px';
+        pane.style.marginTop = '0px';
+        return;
+      }
+      // Metres per pixel at the current zoom/latitude (Web Mercator).
+      var lat = map.getCenter().lat;
+      var mPerPx = 40075016.686 * Math.abs(Math.cos(lat * Math.PI / 180)) /
+                   Math.pow(2, map.getZoom() + 8);
+      pane.style.marginLeft = (satOffset.east / mPerPx) + 'px';
+      pane.style.marginTop = (-satOffset.north / mPerPx) + 'px';   // screen y is down
+    }
+
+    function setSatelliteOffset(east, north) {
+      satOffset.east = +east || 0;
+      satOffset.north = +north || 0;
+      _applySatOffset();
     }
 
     // ── Layer visibility ──────────────────────────────────────────────────────

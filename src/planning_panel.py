@@ -84,8 +84,12 @@ class PlanningPanel(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(0)
 
+        from src.ui_style import inner_tab_stylesheet
         self._tabs = QTabWidget()
-        self._tabs.setStyleSheet("QTabBar::tab { padding: 4px 8px; }")
+        self._tabs.setDocumentMode(True)
+        # Many tabs here — keep scroll buttons (don't force-expand) so the wider
+        # labels don't elide, while still using the shared green-underline look.
+        self._tabs.setStyleSheet(inner_tab_stylesheet())
 
         self._build_maintenance_tab()
         self._build_wildlife_forage_tab()

@@ -101,6 +101,12 @@ def set_canopy_visible(visible: bool) -> str:
     return f"setCanopyVisible({_jsbool(visible)});"
 
 
+def set_satellite_offset(east_m: float, north_m: float) -> str:
+    """Nudge the satellite basemap by (east, north) metres — cosmetic alignment
+    only; never moves project data."""
+    return f"setSatelliteOffset({float(east_m)}, {float(north_m)});"
+
+
 def set_structures_visible(visible: bool) -> str:
     """Toggle the *combined* layer group for structures + hedgerows +
     shapes. No JS function exists for this — the call inlines the loop

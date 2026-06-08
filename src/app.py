@@ -668,6 +668,9 @@ class MainWindow(QMainWindow):
         self.site_panel.place_structure_requested.connect(
             self._enter_structure_mode)
         self.site_panel.place_shape_requested.connect(self._enter_shape_mode)
+        # Satellite imagery alignment nudge → shift the basemap tiles (cosmetic).
+        self.site_panel.satellite_offset_changed.connect(
+            self.map_widget.set_satellite_offset)
         self.analysis_panel.wind_requested.connect(self._on_wind_requested)
         self.analysis_panel.wind_cleared.connect(self.map_widget.clear_wind_overlay)
         self.analysis_panel.season_changed.connect(self._on_season_changed)

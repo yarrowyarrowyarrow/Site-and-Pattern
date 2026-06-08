@@ -221,6 +221,10 @@ class SitePanel(QWidget):
     place_structure_requested = pyqtSignal(dict)   # existing tree/building point
     place_shape_requested     = pyqtSignal(dict)   # draw footprint / tree canopy
 
+    # Satellite imagery alignment nudge (V1.60) — (east_m, north_m). Cosmetic:
+    # shifts only the basemap tiles so they line up with OSM/placements.
+    satellite_offset_changed  = pyqtSignal(float, float)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._lat: Optional[float] = None
@@ -609,11 +613,68 @@ class SitePanel(QWidget):
 
     def _build_shade_page(self, layout):
         """Shade sub-tab: shade map, existing shade casters (mark/draw trees and
-        buildings), and the OpenStreetMap import."""
+        buildings), the OpenStreetMap import, and the satellite alignment nudge."""
         self._build_shade_section(layout)
         self._build_existing_features_section(layout)
         self._build_osm_section(layout)
+        self._build_imagery_align_section(layout)
         layout.addStretch()
+
+    def _build_imagery_align_section(self, layout):
+        """Nudge the satellite basemap a few metres to line it up with OSM
+        buildings / placements. Esri imagery is often georegistered slightly
+        off; this is cosmetic and never moves project data."""
+        box = QGroupBox("Satellite alignment")
+        box.setStyleSheet(_GROUP_STYLE)
+        box.setToolTip(
+            "Esri satellite imagery is often a few metres off from OpenStreetMap "
+            "and ground truth. Nudge it here to line the imagery up with OSM "
+            "buildings and your placements. Cosmetic only — it never moves data."
+        )
+        vb = QVBoxLayout(box)
+        vb.setContentsMargins(6, 6, 6, 6)
+        vb.setSpacing(4)
+
+        hint = QLabel("Shifts the satellite basemap only — not your data.")
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        vb.addWidget(hint)
+
+        form = QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        self._sat_east = QDoubleSpinBox()
+        self._sat_east.setRange(-30.0, 30.0)
+        self._sat_east.setSingleStep(0.5)
+        self._sat_east.setSuffix(" m")
+        self._sat_east.setToolTip("Positive shifts the imagery east.")
+        self._sat_east.valueChanged.connect(self._emit_sat_offset)
+        self._sat_north = QDoubleSpinBox()
+        self._sat_north.setRange(-30.0, 30.0)
+        self._sat_north.setSingleStep(0.5)
+        self._sat_north.setSuffix(" m")
+        self._sat_north.setToolTip("Positive shifts the imagery north.")
+        self._sat_north.valueChanged.connect(self._emit_sat_offset)
+        form.addRow("East:", self._sat_east)
+        form.addRow("North:", self._sat_north)
+        vb.addLayout(form)
+
+        reset = QPushButton("Reset alignment")
+        reset.setStyleSheet(_BTN_SECONDARY)
+        reset.clicked.connect(self._reset_sat_offset)
+        vb.addWidget(reset)
+
+        layout.addWidget(box)
+
+    def _emit_sat_offset(self):
+        self.satellite_offset_changed.emit(
+            self._sat_east.value(), self._sat_north.value())
+
+    def _reset_sat_offset(self):
+        for sp in (self._sat_east, self._sat_north):
+            sp.blockSignals(True)
+            sp.setValue(0.0)
+            sp.blockSignals(False)
+        self._emit_sat_offset()
 
     # ── Public API (called from MainWindow) ─────────────────────────────────
 

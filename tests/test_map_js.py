@@ -94,6 +94,7 @@ class TestJsEntryPointsExist(unittest.TestCase):
         "deleteSelected", "toggleLegend",
         "setSatelliteVisible", "setBoundaryVisible", "setMeasureVisible",
         "setPlantsVisible", "setLabelsVisible", "setCanopyVisible",
+        "setSatelliteOffset",
         "setView", "setZoomSensitivity", "setGridStyle", "setSnapEnabled",
         "loadBoundary",
         "loadPlantMarker", "placePlantMarker", "setPlantGroupForLatest",
@@ -190,6 +191,12 @@ class TestVisibilityToggles(unittest.TestCase):
     def test_set_structures_visible_false(self):
         out = mj.set_structures_visible(False)
         self.assertIn("if (false)", out)
+
+    def test_set_satellite_offset_emits_metres(self):
+        self.assertEqual(mj.set_satellite_offset(-4.0, 2.5),
+                         "setSatelliteOffset(-4.0, 2.5);")
+        self.assertEqual(mj.set_satellite_offset(0, 0),
+                         "setSatelliteOffset(0.0, 0.0);")
 
 
 class TestClears(unittest.TestCase):

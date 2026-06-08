@@ -56,8 +56,12 @@ class AnalysisPanel(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(0)
 
+        from src.ui_style import inner_tab_stylesheet
         self._tabs = QTabWidget()
-        self._tabs.setStyleSheet("QTabBar::tab { padding: 4px 8px; }")
+        self._tabs.setDocumentMode(True)
+        self._tabs.tabBar().setUsesScrollButtons(False)
+        self._tabs.tabBar().setExpanding(True)
+        self._tabs.setStyleSheet(inner_tab_stylesheet())
 
         self._build_sun_tab()
         self._build_sector_tab()
