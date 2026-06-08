@@ -38,6 +38,8 @@ class TestFillTabWidget(unittest.TestCase):
         from PyQt6.QtWidgets import QWidget
         from src.fill_tab_widget import FillTabWidget, _FillTabBar
         w = FillTabWidget()
+        # Document mode lets the bar span the full width (as the app sets it).
+        w.setDocumentMode(True)
         w.setStyleSheet("QTabBar::tab { padding: 4px 10px; }")
         for name in ("Site", "Plants", "Structures"):
             w.addTab(QWidget(), name)
@@ -46,10 +48,12 @@ class TestFillTabWidget(unittest.TestCase):
         w.show()
         self._app.processEvents()
         bar = w.tabBar()
+        # End-to-end: the tabs span the whole strip — the last tab reaches the
+        # widget's right edge (no empty gap), and each tab expanded past its
+        # tight content width.
+        last = bar.tabRect(bar.count() - 1)
+        self.assertGreaterEqual(last.right(), w.width() - 8)
         widths = [bar.tabSizeHint(i).width() for i in range(3)]
-        # Tabs share the full bar width (remainder lands on the last tab).
-        self.assertAlmostEqual(sum(widths), bar.width(), delta=4)
-        # And each tab is wider than its tight content padding (it expanded).
         self.assertGreater(min(widths), 30)
         w.hide()
         w.deleteLater()

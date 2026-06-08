@@ -232,7 +232,9 @@ class MainWindow(QMainWindow):
 
         from src.fill_tab_widget import FillTabWidget
         self._side_tabs = FillTabWidget()
-        self._side_tabs.setDocumentMode(False)
+        # Document mode lets the tab bar span the full width, which is what lets
+        # FillTabWidget stretch the tabs edge-to-edge (no gap after "Planning").
+        self._side_tabs.setDocumentMode(True)
         self._side_tabs.addTab(self.site_panel, "Site")
         self._side_tabs.addTab(self._plant_poly_tab, "Plants")
         self._side_tabs.addTab(self.structure_panel, "Structures")

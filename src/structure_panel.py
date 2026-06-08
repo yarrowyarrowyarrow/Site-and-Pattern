@@ -55,6 +55,9 @@ class StructurePanel(QWidget):
 
         from src.fill_tab_widget import FillTabWidget
         self._tabs = FillTabWidget()
+        # Document mode lets the bar span the full width so FillTabWidget can
+        # stretch Structures/Hedgerow/Shapes edge-to-edge.
+        self._tabs.setDocumentMode(True)
         self._tabs.setStyleSheet(
             "QTabBar::tab { padding: 4px 10px; }"
         )
