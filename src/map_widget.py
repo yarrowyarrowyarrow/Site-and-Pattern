@@ -746,6 +746,16 @@ class MapWidget(QWebEngineView):
     def clear_shade_overlay(self):
         self.run_js(map_js.clear_shade_overlay())
 
+    def draw_shade_zones(self, cells: list, d_lat: float, d_lng: float,
+                         opacity: float = 0.45):
+        self.run_js(map_js.draw_shade_zones(cells, d_lat, d_lng, opacity))
+
+    def set_shade_zones_visible(self, visible: bool):
+        self.run_js(map_js.set_shade_zones_visible(visible))
+
+    def clear_shade_zones(self):
+        self.run_js(map_js.clear_shade_zones())
+
     def draw_shadow_polygons(self, polygons: list, bbox: dict, opacity: float):
         """Render true-shape shadows as vector polygons (V1.54)."""
         self.run_js(map_js.draw_shadow_polygons(polygons, bbox, opacity))

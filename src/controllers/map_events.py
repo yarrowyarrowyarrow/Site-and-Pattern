@@ -1152,7 +1152,28 @@ class MapEventRouter:
             self._main.analysis_panel.set_shade_breakdown(counts)
         except Exception:  # noqa: BLE001
             pass
+        # Draw the classified zones on the map as a coloured grid so the user can
+        # see where the sun/partial/shade planting spots are.
+        try:
+            cells = [{"lat": r["centroid_lat"], "lng": r["centroid_lng"],
+                      "tag": r["shade_tag"]} for r in rows
+                     if r.get("centroid_lat") is not None]
+            d_lat = self._grid_spacing([r["centroid_lat"] for r in rows]) or 0.00004
+            d_lng = self._grid_spacing([r["centroid_lng"] for r in rows]) or 0.00006
+            if cells:
+                self._main.map_widget.draw_shade_zones(cells, d_lat, d_lng)
+                self._main.site_panel.mark_zones_shown()
+        except Exception:  # noqa: BLE001 — visualisation is best-effort
+            pass
         self._main.statusBar().showMessage("Planting zones classified.", 3000)
+
+    @staticmethod
+    def _grid_spacing(values) -> float:
+        """Smallest positive gap between distinct sorted values — the grid cell
+        size in degrees, used to size the drawn shade-zone rectangles."""
+        u = sorted({round(float(v), 9) for v in values if v is not None})
+        diffs = [b - a for a, b in zip(u, u[1:]) if b - a > 1e-9]
+        return min(diffs) if diffs else 0.0
 
     # ── Existing features from OpenStreetMap (V1.51) ─────────────────────────
 

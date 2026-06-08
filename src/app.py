@@ -244,12 +244,11 @@ class MainWindow(QMainWindow):
         # when setExpanding(True).
         self._side_tabs.setMinimumWidth(260)
         self._side_tabs.setMaximumWidth(480)
-        # Show every label in full: turn off scroll-button fallback, turn
-        # off ellipsis truncation, and let tabs grow to fit their content
-        # instead of squeezing into an equal share.
+        # Show every label in full, and stretch the tabs to fill the whole tab
+        # strip (no empty gap to the right of "Planning").
         self._side_tabs.tabBar().setUsesScrollButtons(False)
         self._side_tabs.tabBar().setElideMode(Qt.TextElideMode.ElideNone)
-        self._side_tabs.tabBar().setExpanding(False)
+        self._side_tabs.tabBar().setExpanding(True)
         # Tab styling — every tab strip in the app (these top-level tabs plus
         # the Site/Plants/Analysis/Planning sub-tabs) shares the same
         # green-underline look so the whole UI is consistent. A subtle pane
@@ -653,6 +652,8 @@ class MainWindow(QMainWindow):
         self.site_panel.shade_cleared.connect(self._on_shade_cleared)
         self.site_panel.shade_opacity.connect(self._on_shade_opacity)
         self.site_panel.shade_zones_requested.connect(self._on_shade_zones_requested)
+        self.site_panel.shade_zones_visible_changed.connect(
+            self.map_widget.set_shade_zones_visible)
         self.site_panel.osm_import_requested.connect(self._on_osm_import_requested)
         self.site_panel.footprint_import_requested.connect(
             self._on_footprint_import_requested)

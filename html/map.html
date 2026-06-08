@@ -3560,6 +3560,7 @@
       clearContours();
       clearAutoTerrain();
       clearWindOverlay();
+      clearShadeZones();
       clearSitePin(false);
       drawnItems.clearLayers();
     }
@@ -4418,6 +4419,46 @@
         map.removeLayer(shadeOverlayLayer);
         shadeOverlayLayer = null;
       }
+    }
+
+    // ── Planting-zone shade map (discrete sun/partial/shade cells) ──────────
+    // The "Classify planting zones" result drawn as a coloured grid so you can
+    // see, at a glance, where full-sun / partial / full-shade planting spots
+    // are. Toggleable via setShadeZonesVisible.
+    var shadeZonesLayer = null;
+    var SHADE_ZONE_COLORS = {
+      full_sun:      '#ffd54f',   // gold
+      partial_shade: '#fb8c00',   // orange
+      full_shade:    '#5c6bc0'    // indigo
+    };
+
+    function drawShadeZones(payload) {
+      // payload: {cells: [{lat,lng,tag}], dLat, dLng, opacity}
+      clearShadeZones();
+      if (!payload || !payload.cells || !payload.cells.length) return;
+      var op = (typeof payload.opacity === 'number') ? payload.opacity : 0.45;
+      var hLat = (payload.dLat || 0.00004) / 2;
+      var hLng = (payload.dLng || 0.00006) / 2;
+      shadeZonesLayer = L.layerGroup();
+      payload.cells.forEach(function (z) {
+        var color = SHADE_ZONE_COLORS[z.tag] || '#90a4ae';
+        L.rectangle(
+          [[z.lat - hLat, z.lng - hLng], [z.lat + hLat, z.lng + hLng]],
+          { stroke: false, fill: true, fillColor: color, fillOpacity: op,
+            interactive: false, renderer: canvasRenderer }
+        ).addTo(shadeZonesLayer);
+      });
+      shadeZonesLayer.addTo(map);
+    }
+
+    function setShadeZonesVisible(visible) {
+      if (!shadeZonesLayer) return;
+      if (visible) { shadeZonesLayer.addTo(map); }
+      else { map.removeLayer(shadeZonesLayer); }
+    }
+
+    function clearShadeZones() {
+      if (shadeZonesLayer) { map.removeLayer(shadeZonesLayer); shadeZonesLayer = null; }
     }
 
     // ── Vector shadow overlay (true-shape polygons) ─────────────────────────

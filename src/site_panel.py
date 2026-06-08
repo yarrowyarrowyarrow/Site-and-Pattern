@@ -209,6 +209,7 @@ class SitePanel(QWidget):
     shade_cleared   = pyqtSignal()
     shade_opacity   = pyqtSignal(float)   # 0..1, live slider
     shade_zones_requested = pyqtSignal()  # classify planting zones → tag cache
+    shade_zones_visible_changed = pyqtSignal(bool)  # show/hide the zone grid
 
     # Import existing trees/buildings from OpenStreetMap (V1.51).
     osm_import_requested = pyqtSignal()
@@ -1070,12 +1071,36 @@ class SitePanel(QWidget):
         btn_classify.clicked.connect(self.shade_zones_requested.emit)
         v.addWidget(btn_classify)
 
+        # Show-on-map toggle + colour legend for the classified zones.
+        zrow = QHBoxLayout()
+        self._zones_show_cb = QCheckBox("Show on map")
+        self._zones_show_cb.setChecked(True)
+        self._zones_show_cb.setToolTip(
+            "Show/hide the classified planting zones on the map.")
+        self._zones_show_cb.toggled.connect(self.shade_zones_visible_changed.emit)
+        zrow.addWidget(self._zones_show_cb)
+        legend = QLabel(
+            '<span style="color:#ffd54f">■</span> Full sun&nbsp;&nbsp;'
+            '<span style="color:#fb8c00">■</span> Partial&nbsp;&nbsp;'
+            '<span style="color:#5c6bc0">■</span> Full shade')
+        legend.setStyleSheet("font-size: 11px;")
+        zrow.addWidget(legend)
+        zrow.addStretch()
+        v.addLayout(zrow)
+
         self._shade_zone_status = QLabel("")
         self._shade_zone_status.setWordWrap(True)
         self._shade_zone_status.setStyleSheet("color: #a5d6a7; font-size: 11px;")
         v.addWidget(self._shade_zone_status)
 
         parent_layout.addWidget(box)
+
+    def mark_zones_shown(self):
+        """Re-check the 'Show on map' box (without re-emitting) after a classify
+        run draws the zones, so the toggle reflects what's on the map."""
+        self._zones_show_cb.blockSignals(True)
+        self._zones_show_cb.setChecked(True)
+        self._zones_show_cb.blockSignals(False)
 
     def set_shade_zone_status(self, text: str):
         """Show a short result line under the Classify button."""

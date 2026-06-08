@@ -120,6 +120,21 @@ class TestTreeCanopyCaster(unittest.TestCase):
         self.assertEqual(casters[0]["kind"], "building")
 
 
+class TestGridSpacing(unittest.TestCase):
+    """V1.60 — the shade-zone grid cell size used to draw the classified zones."""
+
+    def test_smallest_positive_gap(self):
+        from src.controllers.map_events import MapEventRouter
+        self.assertAlmostEqual(
+            MapEventRouter._grid_spacing([1.0, 1.0001, 1.0002, 1.0]),
+            0.0001, places=7)
+
+    def test_degenerate_inputs(self):
+        from src.controllers.map_events import MapEventRouter
+        self.assertEqual(MapEventRouter._grid_spacing([]), 0.0)
+        self.assertEqual(MapEventRouter._grid_spacing([5.0, 5.0, 5.0]), 0.0)
+
+
 class TestShapeHeightEdit(unittest.TestCase):
     """V1.53 — right-click 'edit height' updates the feature in place."""
 

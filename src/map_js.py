@@ -464,6 +464,24 @@ def clear_shade_overlay() -> str:
     return "clearShadeOverlay();"
 
 
+def draw_shade_zones(cells: list, d_lat: float, d_lng: float,
+                     opacity: float = 0.45) -> str:
+    """Draw the classified planting zones as a coloured grid (V1.60). ``cells``
+    is a list of ``{lat, lng, tag}`` dicts; ``d_lat``/``d_lng`` are the grid
+    cell size in degrees so each cell renders as a filled rectangle."""
+    payload = {"cells": cells, "dLat": float(d_lat), "dLng": float(d_lng),
+               "opacity": float(opacity)}
+    return f"drawShadeZones({_jsobj(payload)});"
+
+
+def set_shade_zones_visible(visible: bool) -> str:
+    return f"setShadeZonesVisible({_jsbool(visible)});"
+
+
+def clear_shade_zones() -> str:
+    return "clearShadeZones();"
+
+
 def draw_shadow_polygons(polygons: list, bbox: dict, opacity: float) -> str:
     """Render true-shape shadows as vector polygons (V1.54). ``polygons`` is a
     list of rings-lists of ``[lat, lng]`` pairs (exterior first, then holes)."""

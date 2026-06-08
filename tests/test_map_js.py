@@ -112,6 +112,7 @@ class TestJsEntryPointsExist(unittest.TestCase):
         "drawAutoContours", "drawSlopeOverlay", "setSlopeOverlayOpacity",
         "clearAutoTerrain",
         "drawShadeOverlay", "setShadeOverlayOpacity", "clearShadeOverlay",
+        "drawShadeZones", "setShadeZonesVisible", "clearShadeZones",
         "_removeBoundaryEntry",
         # Globals touched by the inline IIFEs:
         "plantMarkers", "plantLabels",
@@ -197,6 +198,17 @@ class TestVisibilityToggles(unittest.TestCase):
                          "setSatelliteOffset(-4.0, 2.5);")
         self.assertEqual(mj.set_satellite_offset(0, 0),
                          "setSatelliteOffset(0.0, 0.0);")
+
+    def test_shade_zones_builders(self):
+        cells = [{"lat": 53.5, "lng": -113.5, "tag": "full_sun"}]
+        out = mj.draw_shade_zones(cells, 0.0001, 0.0002, 0.4)
+        self.assertTrue(out.startswith("drawShadeZones("))
+        self.assertIn("full_sun", out)
+        self.assertIn("dLat", out)
+        self.assertIn("0.0001", out)
+        self.assertEqual(mj.set_shade_zones_visible(True),
+                         "setShadeZonesVisible(true);")
+        self.assertEqual(mj.clear_shade_zones(), "clearShadeZones();")
 
 
 class TestClears(unittest.TestCase):
