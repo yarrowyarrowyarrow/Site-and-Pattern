@@ -230,7 +230,8 @@ class MainWindow(QMainWindow):
         # tab inside "Plants".
         self._plant_poly_tab = self._build_plants_polycultures_tab()
 
-        self._side_tabs = QTabWidget()
+        from src.fill_tab_widget import FillTabWidget
+        self._side_tabs = FillTabWidget()
         self._side_tabs.setDocumentMode(False)
         self._side_tabs.addTab(self.site_panel, "Site")
         self._side_tabs.addTab(self._plant_poly_tab, "Plants")
@@ -347,7 +348,8 @@ class MainWindow(QMainWindow):
         v.setSpacing(0)
 
         from src.ui_style import inner_tab_stylesheet
-        inner = QTabWidget(wrap)
+        from src.fill_tab_widget import FillTabWidget
+        inner = FillTabWidget(wrap)
         inner.setDocumentMode(True)
         inner.tabBar().setUsesScrollButtons(False)
         inner.tabBar().setExpanding(True)

@@ -46,7 +46,8 @@ class OnThisDesignPanel(QWidget):
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(2)
-        self._tabs = QTabWidget()
+        from src.fill_tab_widget import FillTabWidget
+        self._tabs = FillTabWidget()
         self._tabs.setStyleSheet(
             "QTabWidget::pane { border: 1px solid #2e4a2e; background: #1a2a1a; }"
             "QTabBar::tab { background: #1e2e1e; color: #a5d6a7; "

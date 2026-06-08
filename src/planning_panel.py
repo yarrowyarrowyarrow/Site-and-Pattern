@@ -85,7 +85,8 @@ class PlanningPanel(QWidget):
         layout.setSpacing(0)
 
         from src.ui_style import inner_tab_stylesheet
-        self._tabs = QTabWidget()
+        from src.fill_tab_widget import FillTabWidget
+        self._tabs = FillTabWidget()
         self._tabs.setDocumentMode(True)
         # Many tabs here — keep scroll buttons (don't force-expand) so the wider
         # labels don't elide, while still using the shared green-underline look.

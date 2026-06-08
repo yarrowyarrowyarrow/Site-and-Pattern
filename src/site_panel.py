@@ -260,7 +260,8 @@ class SitePanel(QWidget):
         outer.setContentsMargins(4, 4, 4, 4)
         outer.setSpacing(0)
 
-        tabs = QTabWidget()
+        from src.fill_tab_widget import FillTabWidget
+        tabs = FillTabWidget()
         tabs.setDocumentMode(True)
         tabs.tabBar().setUsesScrollButtons(False)
         tabs.tabBar().setExpanding(True)

@@ -53,7 +53,8 @@ class StructurePanel(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(0)
 
-        self._tabs = QTabWidget()
+        from src.fill_tab_widget import FillTabWidget
+        self._tabs = FillTabWidget()
         self._tabs.setStyleSheet(
             "QTabBar::tab { padding: 4px 10px; }"
         )

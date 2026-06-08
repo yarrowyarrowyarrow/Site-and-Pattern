@@ -57,7 +57,8 @@ class AnalysisPanel(QWidget):
         layout.setSpacing(0)
 
         from src.ui_style import inner_tab_stylesheet
-        self._tabs = QTabWidget()
+        from src.fill_tab_widget import FillTabWidget
+        self._tabs = FillTabWidget()
         self._tabs.setDocumentMode(True)
         self._tabs.tabBar().setUsesScrollButtons(False)
         self._tabs.tabBar().setExpanding(True)
