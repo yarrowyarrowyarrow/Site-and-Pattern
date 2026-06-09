@@ -2,119 +2,289 @@
 
 ## Context
 
-The first pivot pass (branding + taxonomy + structures swap) shipped on `claude/youthful-mayer-VpuXj`. The app now *reads* as a Native Habitat Designer but most analysis/planning panels still reflect their food-forest origins (harvest calendar, water budget, maintenance estimator). This document proposes the next round of **functional** changes — reframes and additions that make the app genuinely useful for lawn-to-habitat conversion in Alberta, while keeping the landscape-design core.
+The early pivot (branding + taxonomy + structures swap) and the entire **Tier-0
+reframe set** have shipped — the app no longer just *reads* as a Native Habitat
+Designer, it scores and plans like one. Most of the original Tier-1 work landed
+too. What remains splits three ways:
 
-Grouped by effort tier so you can pick a sprint slice. Each item notes what existing code it leans on.
+- **finishing started work** — the succession timeline and the polygon/zone
+  drawing ideas were only partly built;
+- **the next functional layer** — whole-design costing, group editing, and an
+  Alberta-community preset library, most of which *extend* infrastructure that
+  already exists rather than starting from scratch;
+- **two larger bets** — a synchronized **3-D viewport** and a **flora/fauna image
+  library**.
 
----
-
-## Tier 0 — Reframes of existing features (low effort, high payoff)
-
-These reuse infrastructure that already exists; mostly UI copy + small data joins.
-
-### R1. Bloom & Berry Calendar (replaces Harvest Calendar) — **SHIPPED**
-- Existing: `src/planning_panel.py` P3 tab; plants already have `bloom_period` + `fruit_period` strings.
-- Change: split the P3 table into two columns — **"When pollinators feed"** (bloom_period) and **"When birds feed"** (fruit_period). Highlight **nectar gaps** (months with no blooming species) in red.
-- Why: same data, but framed for habitat continuity instead of human harvest scheduling.
-
-### R2. Habitat Value Score (new tab on Analysis panel) — **SHIPPED**
-- Existing: `src/analysis_panel.py`; plant-tag system already includes `keystone_species`, `host_plant`, `bird_food`, `nesting_material`, `native_to_alberta`.
-- Change: composite 0–100 score with breakdown — % natives, # keystone species, # host plant species, vegetation-layer diversity (overstory/understory/shrub/herb/groundcover), structural diversity (snag/brush pile/bee log/water feature), bloom continuity months. Tallamy-style live readout as the user places elements.
-- Why: gives the user a single ecological-quality dial to optimize against.
-
-### R3. Native Plant Order List (replaces generic Shopping List export) — **SHIPPED**
-- Existing: shopping list export already produces a plant tally.
-- Change: group by **Alberta nursery source** (ALCLA, Bow Valley Habitat Development, Wild About Flowers, Bedrock Seed Bank); add a "seed vs. plug vs. container" column inferred from plant type; surface a footer link to each nursery.
-- Why: removes the biggest friction step between *design* and *actually planting it*.
-
-### R4. Maintenance estimator → Establishment Effort — **SHIPPED**
-- Existing: `src/planning_panel.py` P2 tab.
-- Change: split the labour number into **Year 1 establishment hours** (watering-in, weeding bare zones, smother prep) vs. **Year 3+ stewardship hours** (much lower for established native communities). Communicates the "front-load now, hands-off later" reality of native plantings.
-
-### R5. Water Budget → Establishment Water Budget — **SHIPPED**
-- Existing: `src/planning_panel.py` P6 tab.
-- Change: same calculation, but two columns — Year 1 (full demand, irrigation often needed) and Year 3+ (most natives at 0–25% of base demand). Caveat for newly-seeded zones.
+This document is the working backlog. The first section is an honest ledger of
+what's already done so we stop re-proposing shipped features; everything after it
+is the live list, grouped by effort tier, each item annotated with the code it
+leans on.
 
 ---
 
-## Tier 1 — New native-habitat features (medium effort)
+## Status ledger — where the original brainstorm landed
 
-These need a small amount of new schema or new UI but reuse the placement / map / DB infra.
+| ID | Item | Status | Proof / where it lives |
+|----|------|--------|------------------------|
+| R1 | Bloom & Berry Calendar | ✅ Shipped | `planning_panel.py` "Wildlife Forage" tab — bloom vs. fruit split, nectar-gap warning |
+| R2 | Habitat Value Score | ✅ Shipped | `analysis_panel.py` + `habitat_score.py` — 0–100, 7 weighted components |
+| R3 | Native Plant Order List | ✅ Shipped | `app.py:_on_export_shopping_list()` — grouped by AB nursery, form column, footer links |
+| R4 | Establishment Effort (Yr 1 vs Yr 3+) | ✅ Shipped | `planning_panel.py` "Effort" tab |
+| R5 | Establishment Water Budget (Yr 1 vs Yr 3+) | ✅ Shipped | `planning_panel.py` "Water" tab |
+| N1 | Reference ecosystem picker | ✅ Shipped (+) | `plant_panel.py` + `ecoregion.py`; `ab_ecoregion` on 100% of plants; **plus** auto-detect from lat/lng |
+| N4 | Pollinator & bird species supported | ✅ Shipped (≠ plan) | Built on the `fauna`/`plant_fauna` DB junction (`db/fauna.py`) — richer than the planned flat JSON fields |
+| N5 | Ecological succession | ◐ Partial | Year 0–20 timeline slider exists (`planning_panel.py` timeline tab + `controllers/map_events.py`), but **not** reframed to restoration stages; `early_successional` tag unused; no `climax` flag → see N5 below |
+| N2 | Lawn conversion zones | ⬜ Not started | → carried forward below |
+| N3 | Native seed-mix broadcast zones | ⬜ Not started | → reframed & carried forward as **N3′** below |
+| L1 | "Convert my lawn" wizard | ⛔ Shelved | "no new wizards" — see Parked |
+| L2 | Habitat corridor analysis | ⛔ Parked | not this round |
+| L3 | Soil / disturbance overlay | ⛔ Parked | not this round |
+| L4 | Crop rotation / input-output mapping | ✂ Dropped | permaculture-era, out of scope |
 
-### N1. Reference ecosystem picker — **SHIPPED**
-- New tag on plant records: `ab_ecoregion` (one or more of: Aspen Parkland, Mixedgrass Prairie, Fescue Grassland, Foothills, Boreal Mixedwood, Riparian, Wet Meadow, Subalpine).
-- New top-of-app selector: "Restoring toward: \[Aspen Parkland Edge ▼\]". Filters the plant panel and tints out-of-region species.
-- Tagging the 433-plant DB is the bulk of the work; could be done with an iNaturalist cross-reference pass.
-
-### N2. Lawn conversion zones
-- Existing: custom shape / boundary drawing tools (`html/map.html`, `src/map_widget.py`).
-- Change: add a `zone_type` enum to drawn polygons — `lawn_remaining`, `restoration_year_1`, `restoration_year_3`, `established_native`, `existing_remnant`. Show a status-bar readout of square metres converted, with a year-by-year breakdown.
-- Why: makes "I converted X m² of lawn this year" a first-class number the app tracks for you.
-
-### N3. Native seed-mix broadcast zones
-- Alternative to point-placing individual plants in large meadow areas.
-- Draw a polygon → assign a built-in Alberta seed mix ("Boulevard pollinator strip", "Dry foothills fescue meadow", "Wet sedge meadow", "Riparian willow understory"). Each mix is a recipe of species + relative cover %.
-- Renders as a hatched fill; counts toward all the habitat-value metrics.
-
-### N4. Pollinator & bird species attracted
-- New small static dataset: maps key Alberta natives → specialist pollinator / bird species supported (Asclepias → Monarch; willow → Mourning Cloak, Tiger Swallowtail, ~30 native bee species; chokecherry → cedar waxwing, Bohemian waxwing; etc.).
-- New analysis-panel readout: "Your design supports an estimated 4 specialist bee species, 12 bird species, 2 butterfly species."
-- Most impactful when paired with R2 habitat score.
-
-### N5. Reframe P1 "Succession timeline" as **Ecological Succession**
-- Already planned in ROADMAP (Tier 3 P1).
-- Reframe slider stages from food-forest years to restoration years: Year 1 (bare/seeded, pioneer forbs), Year 3 (forb–grass matrix), Year 5 (shrubs establishing), Year 10+ (climax community / canopy).
-- Plants flagged `early_successional` show up at Year 1–3 and fade; climax species emerge over time.
+**Data enrichment recap:** `ab_ecoregion` is 100% populated and powers N1. The
+planned `pollinator_specialists` / `bird_value` JSON fields were *not* added —
+the fauna DB junction covers N4's purpose instead. `establishment_difficulty`
+was never added; R4 uses plant-type heuristics.
 
 ---
 
-## Tier 2 — Larger / longer-horizon (high impact, more work)
+## Active backlog
 
-### L1. "Convert my lawn" onboarding flow
-- Optional wizard: draw lot → mark existing lawn → pick ecoregion → pick a starter community (boulevard pollinator strip, backyard meadow patch, hedgerow shelterbelt) → wizard drops a seed mix + 1–2 habitat structures (bee log, brush pile) onto the map.
-- Lower priority than the rest because you previously said "no new wizards" — listed here in case opinion shifts after seeing R1–R5 land.
+### Tier 0 — UX polish (low effort, immediate quality-of-life)
 
-### L2. Habitat corridor analysis
-- If the user marks an adjacent natural feature (river valley, ravine, park, undeveloped lot), suggest planting strips that bridge to it; visual heat overlay of connectivity. Most relevant for Edmonton river valley, Calgary Bow corridor, Red Deer.
+#### U1. Planning sub-tabs: all visible, none hidden
+- **Problem:** the Planning panel's six sub-tabs (Effort, Wildlife Forage, Human
+  Forage, Water, Timeline, **Notes**) overflow into a scroll chevron, so *Notes*
+  is hidden until you click the arrow.
+- **Root cause:** `planning_panel.py:_build_ui` uses `FillTabWidget` with
+  `setDocumentMode(True)` and *deliberately keeps scroll buttons* (no
+  `setExpanding`) "so the wider labels don't elide."
+- **Change:** match the Analysis and Site panels, which already do
+  `setUsesScrollButtons(False)` + `tabBar().setExpanding(True)`
+  (`analysis_panel.py:54-76`, `site_panel.py:255-273`).
+- **Trade-off to accept:** six labels on a ~280–320 px panel will elide; pair the
+  switch with shorter labels (e.g. "Forage (wildlife)" → "Wildlife") if elision
+  reads badly.
 
-### L3. Soil / site disturbance overlay
-- Mark zones as `lawn_turf`, `compacted_subsoil`, `bare_disturbed`, `remnant_native`. Each zone surfaces a recommended prep method (smother / sheet mulch / solarize / no-till broadcast).
-- Pairs naturally with N2 seed-mix zones.
+#### U2. Sub-tab description text uses the full panel width
+- **Problem:** the small grey description label under each sub-tab appears not to
+  use the horizontal space available (screenshot supplied). Affects Site (site
+  information), Structures (hedgerows & shapes), and every Analysis/Planning
+  sub-tab.
+- **State:** these info `QLabel`s already set `setWordWrap(True)` with no
+  max-width; width is bounded only by the panel. So this is **not** a width cap —
+  likely a `sizePolicy`/alignment/parent-stretch issue.
+- **Change:** ensure the info labels expand horizontally (Expanding size policy,
+  no centering/left-stretch swallowing the row) so the text reflows to the full
+  available width.
 
-### L4. Drop from roadmap entirely
-- **P4 Crop rotation tracker** — annual food-garden feature, doesn't fit.
-- **P5 Input/output mapping** — permaculture energy-flow concept; drop or shelve indefinitely.
+### Tier 1 — habitat & design features (medium effort)
+
+#### N2. Lawn conversion zones
+- **Existing:** polygon/boundary drawing (`html/map.html`, `map_widget.py`) and
+  the new classified planting-zone work landing on V1.59.
+- **Change:** add a `zone_type` enum to drawn polygons — `lawn_remaining`,
+  `restoration_year_1`, `restoration_year_3`, `established_native`,
+  `existing_remnant` — and a status readout of **m² of lawn converted**, with a
+  year-by-year breakdown.
+- **Why:** makes "I converted X m² of lawn this year" a first-class number the
+  app tracks for you.
+
+#### N3′. Polygon-fill placement — single species *or* a community/mix *(reframed)*
+- **Reframe:** the original N3 (seed-mix-only broadcast zones) is **superseded**
+  by a more general **polygon-fill placement mode**: draw a polygon, then fill it
+  with either a single chosen species *or* a plant community / mix.
+- **Mix recipe:** reuse polyculture/recipe data (`db/polycultures.py`,
+  `db/recipes.py`) — a mix is species + relative cover %.
+- **Render:** hatched/stippled fill; fill counts toward all habitat-value metrics
+  (R2) like point-placed plants do.
+- **Why:** one fill tool replaces both manual point-placing across large meadow
+  areas *and* the seed-mix concept, and it's the natural drop target for the
+  preset communities in P1.
+
+#### N5. Finish Ecological Succession + extend the time horizon
+- **Reframe stages:** relabel the timeline from generic "Year N" to restoration
+  stages — **Year 1** pioneer forbs (bare/seeded), **Year 3** forb–grass matrix,
+  **Year 5** shrubs establishing, **Year 10+** climax / canopy.
+- **Use the flags:** actually filter on the existing `early_successional` tag
+  (58/427 plants) so pioneers fade *out* over time, and add a **new `climax`
+  flag** so climax species fade *in*. (Schema/seed change → bump `_SCHEMA_VERSION`
+  and add the reseed step per `CLAUDE.md` when this is built.)
+- **Extend the horizon:** the slider currently caps at 20 years; many trees aren't
+  mature by then. Extend the max to the **longest `years_to_maturity` in the
+  current design** (with a sensible upper cap) so slow species reach full size.
+- **Touches:** `planning_panel.py` timeline tab + `controllers/map_events.py`
+  (which already maps year → per-plant maturity factor via `growth_curve` /
+  `years_to_maturity`).
+
+#### C1. Whole-design cost *(extend, not new)*
+- **Already there:** `sourcing.py` has `plant_price_range`, `estimate_cost`,
+  `polyculture_cost`, `trim_to_budget`, `format_cost`; plants are 100% priced
+  (`price_low_cad`/`price_high_cad`); the Habitat tab already prints
+  "Est. plant cost $X–$Y" (`analysis_panel.py:786-794`).
+- **Change:** broaden cost beyond plants —
+  - **mulch** = area × depth × material price,
+  - **hardscaping / structures** = a new `install_cost_cad` (one-time) on the
+    structures definitions,
+  - surface a full breakdown in the **"On this design"** readout
+    (`on_this_design_panel.py`), and
+  - add a **cost column + section subtotals + grand total** to the order export
+    (`app.py:_on_export_shopping_list`), which currently has no cost at all.
+- **Why:** prices the whole design, not just the plant list — the number the user
+  actually needs before committing.
+
+#### G1. Group select-and-move *(extend, not new)*
+- **Already there:** a shift+drag marquee exists in `html/map.html` (~lines
+  423-510: `selectedItems[]`, `deleteSelected()`, Delete/Escape keys), but it only
+  covers **plants, boundaries, and sun-path sectors**, and only supports **bulk
+  delete**.
+- **Change:** (a) extend the marquee to capture **all** placeables — structures,
+  hedgerows, shapes, OSM building outlines, measurements; (b) add **group
+  drag-move** so a captured selection can be repositioned as a unit, not just
+  deleted.
+- **Why:** matches the user's mental model — pull a box around everything in a
+  corner of the design and move or delete it together.
+
+#### P1. Alberta community presets
+- **What:** a small library of curated, ready-to-place starter communities —
+  boulevard pollinator strip, backyard meadow patch, hedgerow shelterbelt — that
+  drop straight in via the N3′ fill mode.
+- **Not a wizard:** these are presets/templates, deliberately *not* the shelved
+  L1 onboarding flow. Reuse the polyculture seeding pattern.
+
+#### P2. Printable planting plan
+- **What:** one exportable document (PDF) combining a **map snapshot + plant list
+  + order list + habitat score** — a hand-off artifact for a client, a nursery
+  order, or a permit application.
+- **Leans on:** the existing order-list export (R3), the habitat score (R2), and a
+  map snapshot from the `QWebEngineView`.
+
+### Tier 2 — larger / longer-horizon
+
+#### D1. 3-D viewport (synchronized with the 2-D canvas)
+A bird's-eye + eye-level 3-D view that grows plants over time and casts
+sun-accurate shadows. **Recommendation and refactor notes in the dedicated
+section below** — this is the round's biggest architectural item.
+
+#### I1. Flora & fauna image library
+- **State:** *no* image fields today. Plants carry a `marker_color`; fauna carry
+  an emoji `icon`; there is no assets directory and no image UI.
+- **Change:** add `image_url` + `image_attribution` + `image_license` columns to
+  `plants` and `fauna`; source **openly-licensed** imagery (Wikimedia Commons,
+  iNaturalist — CC0 / CC-BY / public domain); show a gallery in the plant/fauna
+  detail panel; cache locally for offline use.
+- **Licensing reality:** the books you own are copyrighted — those scans can't
+  ship. Every image needs an open license recorded with its citation. This is a
+  schema + data-sourcing + UI effort and a natural fit for the separate "local AI
+  workflow" that already handles dataset growth.
+
+#### D2. Generate Design improvements *(scope-first)*
+- **What exists today** (so we improve, not rebuild): an LLM path via local Ollama
+  (`llm_design.py`, `generate_worker.py`, `generate_design_dialog.py`,
+  `controllers/generation.py`) with an **offline fallback**; goal- and
+  site-driven filtering (ecoregion, hardiness, soil pH), layout patterns
+  (scatter/row/grid/circle), budget trimming (`trim_to_budget`), and optional
+  site micro-zoning (wet/dry/shade cells).
+- **Candidate directions** (need a dedicated scoping pass before committing):
+  polyculture-aware offline placement (the offline path is species-list only
+  today), better spacing/competition rules, and prompt/quality tuning for the LLM
+  path.
+
+---
+
+## Parked / shelved
+
+- **L1 — "Convert my lawn" onboarding wizard.** Shelved by preference ("no new
+  wizards"). The useful kernel — drop a starter community — is delivered instead
+  as **P1 presets** + **N3′ fill mode**, no multi-step flow.
+- **L2 — Habitat corridor analysis.** Connect to adjacent natural features with a
+  connectivity overlay. Good idea, not this round.
+- **L3 — Soil / site-disturbance overlay.** Zone the site by disturbance and
+  recommend a prep method; pairs with N2/N3′. Revisit after the fill/zone tools
+  land.
+- **L4 — Crop-rotation tracker & input/output mapping.** Dropped — annual-food /
+  permaculture-era concepts that don't fit a native-habitat designer.
 
 ---
 
 ## Data work that unlocks the above
 
-The biggest single unlock is **enriching `data/plants_master.json`** with a few new fields. None of this requires schema migrations beyond the existing JSON ingest:
-- `ab_ecoregion` — list of ecoregions where the species naturally occurs (enables N1).
-- `pollinator_specialists` — list of bee/butterfly/moth species the plant hosts (enables N4 + boosts R2).
-- `bird_value` — short list of bird species that use the plant for food / cover / nesting (enables N4).
-- `establishment_difficulty` — `easy/moderate/hard` for Year-1 effort (refines R4).
+- **`climax` flag** on plant records (+ keep using `early_successional`) — unlocks
+  the N5 succession fade-in/out. Schema + seed change → version bump + reseed step.
+- **Open-licensed imagery + attribution/license fields** — unlocks I1; the biggest
+  single data lift here.
+- **`install_cost_cad` on structures** (+ mulch/material price reference) —
+  unlocks the non-plant half of C1.
+- *(Optional)* `establishment_difficulty` (`easy/moderate/hard`) — would let R4
+  stop inferring Year-1 effort from plant type.
 
-These are tractable as a one-shot enrichment pass against Audubon / Xerces / iNaturalist / ALCLA references. You previously noted that schema expansion and dataset growth are being handled separately on a "local AI workflow" — that workflow is the natural home for this enrichment.
-
----
-
-## First slice (shipped)
-
-The first focused PR shipped R1 + R2 + R3 — all UI / scoring work over existing data, no plant-DB enrichment needed. Together they shift the feel of the app from "permaculture planner with new labels" to "habitat designer that scores my design."
-
-1. **R1** — Bloom & Berry Calendar (`src/planning_panel.py`)
-2. **R2** — Habitat Value Score, new tab on Analysis panel (`src/analysis_panel.py`)
-3. **R3** — Native Plant Order List export grouped by AB nursery source (`src/app.py`)
-
-Remaining tier-0 reframes (R4 establishment-effort split, R5 establishment-water-budget split) are good follow-up candidates.
+These are tractable as enrichment passes against Audubon / Xerces / iNaturalist /
+ALCLA references and belong in the separate local-AI dataset workflow.
 
 ---
 
-## Verification (when something from this list is built)
+## 3-D viewport — architecture recommendation
 
-- Open an existing project — confirm Year-1 vs. Year-3+ readouts make sense for known native plantings (e.g., a chokecherry / saskatoon / wolf willow community).
-- Habitat value score: place a known high-keystone Alberta species (Populus tremuloides, Salix bebbiana, Solidago canadensis) and confirm the score rises meaningfully.
-- Bloom & berry calendar: confirm a design heavy on Asteraceae shows late-summer nectar coverage; confirm spring-gap warning surfaces on a shrub-only design.
-- Invasive warning: try placing creeping bellflower or ornamental caragana — banner should appear.
-- Order list export: groupings by Alberta nursery should be present and clickable.
+The supplied blueprint asks which of three paths fits: **(A)** embedded Three.js
+via `QWebEngineView`, **(B)** Panda3D, or **(C)** ModernGL. The answer, grounded in
+how this codebase is already built:
+
+**Recommend Option A — embedded Three.js in a second `QWebEngineView`, driven over
+QWebChannel** — for two concrete reasons:
+
+1. **The app is already all-in on that exact stack.** The 2-D map is a
+   `QWebEngineView` (`map_widget.py`) talking to a mature `MapBridge` QWebChannel
+   (~50 slots, JSON payloads). A 3-D view reuses the same transport — no new IPC
+   mechanism, no native window-pinning headaches (B), no from-scratch engine (C).
+2. **Scaffolding already exists.** `web3d/` documents adopting the MIT
+   **map3d** (React + React-Three-Fiber) viewer and ships
+   `map3d-sun-shadows.patch`, and `src/map3d_js.py` already builds the JS to drive
+   its sun (`set_sun_for(lat, lng, when)`), reusing `src/solar.py`. By
+   construction the 3-D shadows track the same solar positions as the 2-D shade
+   engine (`shade.py` / `terrain_shade.py`).
+   - **Honest caveat:** this is *scaffolding + a patch*, not a running feature —
+     there is **no `Map3DWidget` mounted and no built `dist/` loaded** yet.
+
+Panda3D and ModernGL both throw away the QWebChannel investment; ModernGL also
+means writing shaders, a model loader, and camera math by hand. Reject both for
+this codebase.
+
+**The real cost is state, not rendering.** Placement is **lat/lon-only** today,
+and plant size is *derived at render time* from the `plants` table
+(`growth_curve`, `years_to_maturity`, `mature_height_*`, `mature_canopy_m`) — there
+is no single source of truth a second view can subscribe to. The key refactor is
+to **extract a shared placement/timeline state object** that both the 2-D Leaflet
+markers and the 3-D scene read from, so the growth slider (N5) and a sun/time
+control move both views in lockstep. *(Class names floated during exploration —
+`PlacementStateStore`, `TimelineState` — are illustrative, not prescribed.)*
+
+**Suggested staging:**
+1. Mount the map3d fork as a second viewport with sun-driven shadows (reuses
+   `map3d_js` + `solar`).
+2. Extract the shared state object; pipe the N5 growth timeline into 3-D so plants
+   scale with the year slider.
+3. Real plant geometry / seasonal phenology / interactive 3-D placement.
+
+---
+
+## Verification (when an item here is built)
+
+- **N5:** open a design with a slow tree (e.g. *Populus tremuloides*); confirm the
+  slider extends past 20 yr and the tree keeps growing to maturity; confirm
+  pioneers (`early_successional`) fade out and `climax` species fade in across
+  stages.
+- **N2:** draw lawn-remaining vs. restoration polygons; confirm the m²-converted
+  readout updates and breaks down by year.
+- **N3′:** fill a polygon with a community mix; confirm hatched render and that the
+  R2 habitat score moves as if the plants were point-placed.
+- **C1:** add mulch + a structure to a priced design; confirm the "On this design"
+  breakdown and the exported order file both show line items, subtotals, and a
+  grand total.
+- **G1:** marquee-select a corner containing a plant, a structure, a building
+  outline, and a measurement; confirm all are captured and move together, and that
+  delete still removes the whole selection.
+- **U1/U2:** open the Planning panel; confirm all six sub-tabs (incl. Notes) are
+  visible without a scroll chevron, and that each sub-tab's description text
+  reflows to the full panel width.
+- **D1:** slide the time/season control; confirm 3-D shadows and the 2-D shade
+  overlay agree, and that the growth year scales plants in both views.
