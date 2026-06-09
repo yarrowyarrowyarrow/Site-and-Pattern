@@ -926,6 +926,7 @@ class PolycultureBuilderDialog(QDialog):
 
 class PolyculturePanel(QWidget):
     placePolycultureRequested = pyqtSignal(dict)  # polyculture data with members
+    fillAreaRequested = pyqtSignal(int, float)    # polyculture_id, cell spacing (m)
     # Emitted when the panel creates a brand-new community (e.g. via
     # "Save stack as Community" from the Plants tab), so external views
     # can refresh their library lists.
@@ -1092,6 +1093,16 @@ class PolyculturePanel(QWidget):
         self.place_btn.setMinimumWidth(110)
         self.place_btn.clicked.connect(self._on_place)
         action_row.addWidget(self.place_btn, 2)
+
+        self.fill_area_btn = QPushButton("Fill Area")
+        self.fill_area_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self.fill_area_btn.setEnabled(False)
+        self.fill_area_btn.setToolTip(
+            "Fill the most recently drawn shape (Structures → Shapes) with this "
+            "community, scattered at the cell spacing below (N3′)."
+        )
+        self.fill_area_btn.clicked.connect(self._on_fill_area)
+        action_row.addWidget(self.fill_area_btn, 1)
 
         self.edit_btn = QPushButton("Edit")
         self.edit_btn.setStyleSheet(_POLY_BTN_STYLE)
@@ -1521,6 +1532,7 @@ class PolyculturePanel(QWidget):
         self.delete_btn.setEnabled(has_selection)
         self.dup_btn.setEnabled(has_selection)
         self.place_btn.setEnabled(has_selection)
+        self.fill_area_btn.setEnabled(has_selection)
         self.export_btn.setEnabled(has_selection)
         self.edit_btn.setEnabled(has_selection)
         # Only allow adding variations to top-level polycultures
@@ -1711,6 +1723,16 @@ class PolyculturePanel(QWidget):
     def _get_selected_polyculture_id(self):
         item = self.polyculture_tree.currentItem()
         return item.data(0, Qt.ItemDataRole.UserRole) if item else None
+
+    def _on_fill_area(self):
+        """Ask the app to fill the last-drawn shape with the selected community
+        at the current cell spacing (N3′). App resolves the target polygon."""
+        poly_id = self._get_selected_polyculture_id()
+        if poly_id is None:
+            return
+        spacing = float(getattr(self, "pattern_spacing", None).value()
+                        if getattr(self, "pattern_spacing", None) else 4.0)
+        self.fillAreaRequested.emit(int(poly_id), spacing)
 
     def _on_new_polyculture(self):
         """Open the visual builder for a brand-new polyculture.

@@ -96,17 +96,29 @@ was never added; R4 uses plant-type heuristics.
 - **Year-by-year:** the zone *stage* (Year 1 / Year 3 / established) is the
   breakdown; the percentage tracks "converted ÷ (lawn + restoration)".
 
-#### N3′. Polygon-fill placement — single species *or* a community/mix *(reframed)*
-- **Reframe:** the original N3 (seed-mix-only broadcast zones) is **superseded**
-  by a more general **polygon-fill placement mode**: draw a polygon, then fill it
-  with either a single chosen species *or* a plant community / mix.
-- **Mix recipe:** reuse polyculture/recipe data (`db/polycultures.py`,
-  `db/recipes.py`) — a mix is species + relative cover %.
-- **Render:** hatched/stippled fill; fill counts toward all habitat-value metrics
-  (R2) like point-placed plants do.
-- **Why:** one fill tool replaces both manual point-placing across large meadow
-  areas *and* the seed-mix concept, and it's the natural drop target for the
-  preset communities in P1.
+#### N3′. Polygon-fill placement — single species *or* a community/mix — ✅ Done (V1.60)
+- **Reused the verified shape-drawing flow (no new draw-mode JS):** you draw a
+  shape (Structures → Shapes), then select a community and click **Fill Area** in
+  the Plant Communities panel — the fill targets your most recently drawn shape.
+- **New pure core** `src/area_fill.py` (fully unit-tested): `fill_points`
+  (interior hex-offset grid at a metre spacing via `geometry.point_in_polygon`),
+  `assign_members` (largest-remainder allocation by cover weight + round-robin so
+  species are spatially intermixed), and `plan_fill`.
+- **New `AreaFillController`** places the result through the *same* dual-store
+  bookkeeping the design generator uses (markers + project features + one shared
+  placement group, tagged `pattern_kind="area_fill"`) — so rendering, undo-as-a-
+  unit, the habitat score and the cost readout all just work.
+- **Wiring:** `polyculture_panel` gains a Fill Area button + `fillAreaRequested`
+  signal; `app._on_fill_area_with_community` resolves the target polygon + the
+  community's members and invokes the controller at the panel's cell spacing.
+- **Verified:** 11 `test_area_fill` cases (geometry, proportional allocation,
+  controller placement) + the app handler exercised end-to-end against a seeded
+  DB (a drawn bed filled with a 6-member community → 64 plants across all 6
+  species). The literal button-click (signal `.connect`) wasn't headless-tested.
+- **Note:** mix weights are equal per member today (the polyculture schema has no
+  cover %); `assign_members` already takes weights, so cover % drops in later.
+  Single-species fill = a one-member spec. Markers render via the existing plant
+  layer (no hatch fill — point markers, which is what the score/cost count).
 
 #### N5. Finish Ecological Succession + extend the time horizon — ✅ Done (V1.60)
 - **New pure core** `src/succession.py` (Qt-free, DB-free, fully unit-tested):

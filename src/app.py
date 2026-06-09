@@ -46,6 +46,7 @@ from src.controllers.mode import ModeController
 from src.controllers.persistence import PersistenceController
 from src.controllers.map_events import MapEventRouter
 from src.controllers.generation import GenerationController
+from src.controllers.area_fill_controller import AreaFillController
 
 
 # Marker colour tables for plant-community members.
@@ -193,6 +194,7 @@ class MainWindow(QMainWindow):
         self._persistence = PersistenceController(self)
         self._map_events = MapEventRouter(self)
         self._generation = GenerationController(self)
+        self._area_fill = AreaFillController(self)
 
         self._build_ui()
         self._connect_signals()
@@ -600,6 +602,7 @@ class MainWindow(QMainWindow):
 
         # Polyculture panel → map (polyculture placement)
         self.polyculture_panel.placePolycultureRequested.connect(self._enter_polyculture_mode)
+        self.polyculture_panel.fillAreaRequested.connect(self._on_fill_area_with_community)
         # Stack → community: refresh the Communities tree when the Plants
         # tab (or anywhere else) creates a brand-new plant community.
         self.plant_panel.communityCreated.connect(
@@ -1089,6 +1092,41 @@ class MainWindow(QMainWindow):
     def _on_season_changed(self, season: str):
         # Shim → MapEventRouter; see src/controllers/map_events.py.
         return self._map_events._on_season_changed(season)
+
+    def _on_fill_area_with_community(self, poly_id: int, spacing_m: float):
+        """Fill the most recently drawn shape with the selected community,
+        scattered at ``spacing_m`` (N3′). The target polygon is the last drawn
+        custom shape so this reuses the verified shape-drawing flow."""
+        ring = None
+        for f in reversed(self._project.get("features", [])):
+            props = f.get("properties", {})
+            if props.get("element_type") in ("custom_shape", "canopy_footprint"):
+                coords = (f.get("geometry", {}) or {}).get("coordinates") or []
+                if coords:
+                    ring = coords[0]
+                break
+        if not ring:
+            QMessageBox.information(
+                self, "Fill Area",
+                "Draw a shape first (Structures → Shapes), then select a "
+                "community and click Fill Area — the fill uses your most "
+                "recently drawn shape.")
+            return
+        from src.db.polycultures import get_polyculture_by_id
+        pc = get_polyculture_by_id(poly_id) or {}
+        specs = [(m["plant_id"], 1) for m in pc.get("members", [])
+                 if m.get("plant_id")]
+        if not specs:
+            QMessageBox.information(self, "Fill Area",
+                                    "That community has no members to place.")
+            return
+        n = self._area_fill.fill(ring, specs, spacing_m,
+                                 poly_name=pc.get("name", ""))
+        if n == 0:
+            QMessageBox.information(
+                self, "Fill Area",
+                "No room to place plants in that shape at this spacing — try a "
+                "smaller cell spacing or a larger area.")
 
     def _enter_polyculture_mode(self, polyculture_data: dict):
         """Place a polyculture on the map.
