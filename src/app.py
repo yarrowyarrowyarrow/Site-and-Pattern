@@ -1699,6 +1699,9 @@ class MainWindow(QMainWindow):
             return
 
         from collections import Counter
+        from src.sourcing import (
+            plant_price_range, structure_cost, mulch_cost, format_cost,
+        )
         counts: Counter = Counter()
         names: dict[int, str] = {}
         for p in self._placed_plants:
@@ -1711,13 +1714,14 @@ class MainWindow(QMainWindow):
         except Exception:
             get_plant = lambda pid: None
 
-        # Bucket by sourcing channel:
+        # Bucket by sourcing channel. Each entry carries its extended price range
+        # (unit range × qty) so each section can subtotal and the design can total.
         #   native_trees_shrubs → ALCLA / Bow Valley Habitat Development
         #   native_herbaceous   → ALCLA / Wild About Flowers / Bedrock Seed Bank
         #   cultivated          → local garden centres
-        native_woody: list[tuple[str, str, str, int]] = []
-        native_herb:  list[tuple[str, str, str, int]] = []
-        cultivated:   list[tuple[str, str, str, int]] = []
+        native_woody: list[tuple] = []
+        native_herb:  list[tuple] = []
+        cultivated:   list[tuple] = []
 
         total = 0
         for pid, qty in counts.items():
@@ -1726,7 +1730,8 @@ class MainWindow(QMainWindow):
             sci   = plant.get("scientific_name", "")
             native = bool(plant.get("native_to_alberta"))
             form  = self._PLANT_FORM_BY_TYPE.get(ptype, "—")
-            entry = (names[pid], sci, form, qty)
+            lo, hi = plant_price_range(plant)
+            entry = (names[pid], sci, form, qty, lo * qty, hi * qty)
             if native and ptype in ("tree", "shrub", "vine"):
                 native_woody.append(entry)
             elif native:
@@ -1735,17 +1740,26 @@ class MainWindow(QMainWindow):
                 cultivated.append(entry)
             total += qty
 
-        def fmt_section(title: str, items: list[tuple[str, str, str, int]]) -> list[str]:
+        plants_lo = plants_hi = 0.0
+
+        def fmt_section(title: str, items: list[tuple]) -> list[str]:
+            nonlocal plants_lo, plants_hi
             if not items:
                 return []
             out = [title, "-" * len(title)]
-            for name, sci, form, qty in sorted(items, key=lambda x: x[0].lower()):
+            sub_lo = sub_hi = 0.0
+            for name, sci, form, qty, clo, chi in sorted(items, key=lambda x: x[0].lower()):
                 line = f"  {name}"
                 if sci:
                     line += f"  ({sci})"
-                line += f"  ×{qty}  [{form}]"
+                line += f"  ×{qty}  [{form}]  ~{format_cost(clo, chi)}"
                 out.append(line)
+                sub_lo += clo
+                sub_hi += chi
+            out.append(f"  Subtotal: {format_cost(sub_lo, sub_hi)}")
             out.append("")
+            plants_lo += sub_lo
+            plants_hi += sub_hi
             return out
 
         lines = [
@@ -1767,12 +1781,62 @@ class MainWindow(QMainWindow):
             cultivated,
         )
 
+        # Non-plant costs: structures (install) + mulch for any drawn beds.
+        structs = [
+            f["properties"]["struct_def"]
+            for f in self._project.get("features", [])
+            if f.get("properties", {}).get("element_type") == "structure"
+            and f.get("properties", {}).get("struct_def")
+        ]
+        bed_area = sum(
+            float(f.get("properties", {}).get("area_m2") or 0.0)
+            for f in self._project.get("features", [])
+            if f.get("properties", {}).get("element_type") == "custom_shape"
+        )
+        struct_lo, struct_hi = structure_cost(structs)
+        mulch_lo, mulch_hi = mulch_cost(bed_area)
+        if structs or bed_area > 0:
+            sec_title = "SITE PREP & STRUCTURES  (estimated install / materials)"
+            lines.append(sec_title)
+            lines.append("-" * len(sec_title))
+            from src.db.structures import get_structure
+            scount: Counter = Counter(s.get("id") for s in structs)
+            sdef_by_id = {s.get("id"): s for s in structs}
+            for sid, n in sorted(scount.items(), key=lambda kv: str(kv[0])):
+                sdef = sdef_by_id.get(sid, {})
+                catalogue = get_structure(sid) or {}
+                nm = sdef.get("name") or catalogue.get("name") or (sid or "structure")
+                # Prefer the catalogue's current install cost so older projects
+                # (whose stored struct_def predates install_cost_cad) still cost
+                # correctly and match the grand total below.
+                ic = catalogue.get("install_cost_cad") or sdef.get("install_cost_cad") or (0.0, 0.0)
+                lines.append(
+                    f"  {nm}  ×{n}  ~{format_cost(ic[0] * n, ic[1] * n)}"
+                )
+            if bed_area > 0:
+                lines.append(
+                    f"  Mulch — {bed_area:,.0f} m² @ 7.5 cm  "
+                    f"~{format_cost(mulch_lo, mulch_hi)}"
+                )
+            lines.append("")
+
         lines.append("=" * 44)
-        n_native = sum(qty for _, _, _, qty in native_woody + native_herb)
-        n_cult   = sum(qty for _, _, _, qty in cultivated)
+        n_native = sum(e[3] for e in native_woody + native_herb)
+        n_cult   = sum(e[3] for e in cultivated)
         lines.append(
             f"Total: {total} plants ({len(counts)} species)  "
             f"— {n_native} native, {n_cult} cultivated"
+        )
+        grand_lo = plants_lo + struct_lo + mulch_lo
+        grand_hi = plants_hi + struct_hi + mulch_hi
+        lines.append(f"Plants:           {format_cost(plants_lo, plants_hi)}")
+        if structs:
+            lines.append(f"Structures:       {format_cost(struct_lo, struct_hi)}")
+        if bed_area > 0:
+            lines.append(f"Mulch:            {format_cost(mulch_lo, mulch_hi)}")
+        lines.append(
+            f"ESTIMATED TOTAL:  {format_cost(grand_lo, grand_hi)}  "
+            f"(AB retail/install estimate — varies by nursery, year, site)"
         )
         lines.append("")
         lines.append("Alberta native plant nurseries / seed sources:")
@@ -1901,6 +1965,16 @@ class MainWindow(QMainWindow):
         try:
             self.on_this_design.set_plants_counts(self.plant_panel._placed_counts)
             self.on_this_design.set_design_data(enriched)
+            # Whole-design cost (C1): plants + structure install + bed mulch.
+            from src.sourcing import design_cost
+            bed_area = sum(
+                float(f.get("properties", {}).get("area_m2") or 0.0)
+                for f in self._project.get("features", [])
+                if f.get("properties", {}).get("element_type") == "custom_shape"
+            )
+            self.on_this_design.set_cost_breakdown(
+                design_cost(enriched, structures=structs, mulch_area_m2=bed_area)
+            )
         except Exception:
             pass
 

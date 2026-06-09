@@ -111,6 +111,8 @@ class OnThisDesignPanel(QWidget):
         # Latest enriched snapshot — stashed so Stats can refresh without
         # the caller re-pushing it.
         self._latest_enriched: list[dict] = []
+        # Whole-design cost breakdown (C1) — set by app.py via set_cost_breakdown.
+        self._cost_breakdown: dict | None = None
 
     # ── Plants sub-tab ────────────────────────────────────────────────
 
@@ -185,11 +187,42 @@ class OnThisDesignPanel(QWidget):
             f"{'s' if len(instances) != 1 else ''}"
         )
 
+    def set_cost_breakdown(self, breakdown: dict | None):
+        """Store the whole-design cost breakdown (from ``sourcing.design_cost``)
+        and refresh the Stats tab. Keys ``plants``/``structures``/``mulch``/
+        ``total`` each map to a ``(low, high)`` CAD tuple."""
+        self._cost_breakdown = breakdown or None
+        self._refresh_stats(self._latest_enriched)
+
+    def _cost_block_html(self) -> str:
+        bd = self._cost_breakdown
+        if not bd:
+            return ""
+        from src.sourcing import format_cost
+
+        def row(label: str, key: str) -> str:
+            v = bd.get(key)
+            return f"{label}: {format_cost(v[0], v[1])}<br>" if v else ""
+
+        parts = ["<p><b>Estimated cost (CAD)</b><br>", row("Plants", "plants")]
+        if bd.get("structures") and bd["structures"][1] > 0:
+            parts.append(row("Structures", "structures"))
+        if bd.get("mulch") and bd["mulch"][1] > 0:
+            parts.append(row("Mulch", "mulch"))
+        tot = bd.get("total")
+        if tot:
+            parts.append(f"<b>Total: {format_cost(tot[0], tot[1])}</b>")
+        parts.append(
+            "<br><span style='color:#78909c;font-size:10px;'>AB retail/install "
+            "estimate — varies by nursery, year, site.</span></p>"
+        )
+        return "".join(parts)
+
     def _refresh_stats(self, enriched: list[dict]):
+        cost_html = self._cost_block_html()
         if not enriched:
-            self._stats_text.setHtml(
-                "<i style='color:#78909c;'>Nothing placed yet.</i>"
-            )
+            body = "<i style='color:#78909c;'>Nothing placed yet.</i>"
+            self._stats_text.setHtml(body + cost_html)
             return
         from src.db.plants import get_plant
         total = len(enriched)
@@ -259,4 +292,5 @@ class OnThisDesignPanel(QWidget):
                 )
             )
             rows.append("</p>")
+        rows.append(cost_html)
         self._stats_text.setHtml("".join(rows))

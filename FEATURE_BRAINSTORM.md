@@ -113,21 +113,25 @@ was never added; R4 uses plant-type heuristics.
   (which already maps year → per-plant maturity factor via `growth_curve` /
   `years_to_maturity`).
 
-#### C1. Whole-design cost *(extend, not new)*
-- **Already there:** `sourcing.py` has `plant_price_range`, `estimate_cost`,
-  `polyculture_cost`, `trim_to_budget`, `format_cost`; plants are 100% priced
-  (`price_low_cad`/`price_high_cad`); the Habitat tab already prints
-  "Est. plant cost $X–$Y" (`analysis_panel.py:786-794`).
-- **Change:** broaden cost beyond plants —
-  - **mulch** = area × depth × material price,
-  - **hardscaping / structures** = a new `install_cost_cad` (one-time) on the
-    structures definitions,
-  - surface a full breakdown in the **"On this design"** readout
-    (`on_this_design_panel.py`), and
-  - add a **cost column + section subtotals + grand total** to the order export
-    (`app.py:_on_export_shopping_list`), which currently has no cost at all.
-- **Why:** prices the whole design, not just the plant list — the number the user
-  actually needs before committing.
+#### C1. Whole-design cost *(extend, not new)* — ✅ Done (V1.60)
+- **Built on:** `sourcing.py`'s existing `plant_price_range` / `estimate_cost` /
+  `format_cost` and the 100%-priced plant data.
+- **Added:**
+  - `install_cost_cad` (low, high) on every structure (`db/structures.py`), with
+    a catalogue-lookup fallback so older saved projects still cost correctly.
+  - `structure_cost`, `mulch_cost` (area × depth × per-m³ range), and
+    `design_cost` (plants + structures + mulch + total) in `sourcing.py`.
+  - A full **Estimated cost** block in the "On this design" → Stats tab
+    (`on_this_design_panel.py`), fed from `_sync_planning_panel`.
+  - **Per-line cost, section subtotals, a SITE PREP & STRUCTURES section
+    (structures + bed mulch), and an estimated grand total** in the order export
+    (`app.py:_on_export_shopping_list`).
+- **Verified:** 21 `test_sourcing` cases (incl. the new costing fns + every
+  structure priced); panel cost block rendered offscreen; order export run
+  end-to-end against a real seeded DB (plant subtotals, catalogue-resolved Pond
+  install cost, 50 m² mulch, grand total).
+- **Note:** mulch area = sum of drawn `custom_shape` beds; estimates carry the
+  same "varies by nursery/year/site" disclaimer as plant pricing.
 
 #### G1. Group select-and-move *(extend, not new)*
 - **Already there:** a shift+drag marquee exists in `html/map.html` (~lines

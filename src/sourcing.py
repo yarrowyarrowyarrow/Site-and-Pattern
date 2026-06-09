@@ -147,3 +147,60 @@ def trim_to_budget(items, budget, get_plant=None) -> tuple[list, int]:
 def format_cost(low: float, high: float) -> str:
     """Compact ``$low–$high`` (whole-dollar) for UI/CLI display."""
     return f"${low:,.0f}–${high:,.0f}"
+
+
+# ── Whole-design costing (C1) ────────────────────────────────────────────────
+#
+# A design is more than its plants: structures (ponds, fences, raised beds…)
+# carry an install cost, and new beds need mulch. These let the app price the
+# *whole* design, not just the plant order — same estimate-with-a-disclaimer
+# spirit as the plant ranges above. Kept Qt-free and dependency-injectable.
+
+# Bulk landscape mulch, delivered (CAD per cubic metre). Coarse Alberta estimate;
+# arborist chips can be free, bagged retail is dearer — this brackets the middle.
+MULCH_PRICE_PER_M3: tuple[float, float] = (35.0, 75.0)
+DEFAULT_MULCH_DEPTH_CM: float = 7.5  # a typical establishment mulch depth
+
+
+def structure_cost(structures, get_structure=None) -> tuple[float, float]:
+    """Total estimated ``(low, high)`` CAD install cost across placed structures.
+
+    ``structures`` may be structure-definition dicts (as stored on a placed
+    feature's ``struct_def``) or bare structure ids. A structure with no
+    ``install_cost_cad`` contributes 0 — retained snags/brush piles and existing
+    trees/buildings cost nothing to install. ``get_structure`` is injectable for
+    tests; it defaults to the real catalogue lookup."""
+    if get_structure is None:
+        from src.db.structures import get_structure as _gs
+        get_structure = _gs
+    lo = hi = 0.0
+    for s in structures or []:
+        rec = s if isinstance(s, dict) else (get_structure(s) or {})
+        ic = rec.get("install_cost_cad")
+        if ic is None and rec.get("id"):   # older project: stamp from catalogue
+            ic = (get_structure(rec["id"]) or {}).get("install_cost_cad")
+        if ic:
+            lo += float(ic[0])
+            hi += float(ic[1])
+    return (round(lo, 2), round(hi, 2))
+
+
+def mulch_cost(area_m2, depth_cm: float = DEFAULT_MULCH_DEPTH_CM,
+               price_per_m3: tuple[float, float] = MULCH_PRICE_PER_M3
+               ) -> tuple[float, float]:
+    """Estimated ``(low, high)`` CAD to mulch ``area_m2`` at ``depth_cm`` deep."""
+    area = max(0.0, float(area_m2 or 0.0))
+    volume_m3 = area * (max(0.0, float(depth_cm)) / 100.0)
+    return (round(volume_m3 * price_per_m3[0], 2),
+            round(volume_m3 * price_per_m3[1], 2))
+
+
+def design_cost(plants, structures=None, mulch_area_m2: float = 0.0,
+                get_plant=None, get_structure=None) -> dict:
+    """Whole-design cost breakdown. Returns a dict of ``(low, high)`` CAD tuples
+    keyed ``plants`` / ``structures`` / ``mulch`` / ``total``."""
+    p = estimate_cost(plants, get_plant=get_plant)
+    s = structure_cost(structures or [], get_structure=get_structure)
+    m = mulch_cost(mulch_area_m2)
+    total = (round(p[0] + s[0] + m[0], 2), round(p[1] + s[1] + m[1], 2))
+    return {"plants": p, "structures": s, "mulch": m, "total": total}

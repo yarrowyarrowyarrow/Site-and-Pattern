@@ -240,6 +240,30 @@ STRUCTURES: list[dict] = [
     },
 ]
 
+# One-time install-cost estimate (CAD low, high) per structure id. Coarse
+# Alberta material/DIY-install ranges — surfaced only as an estimate, with the
+# same disclaimer as plant pricing (see src/sourcing.py). Retained natural
+# features (brush pile, snag) and free salvage cost nothing to "install".
+_INSTALL_COST_CAD: dict[str, tuple[float, float]] = {
+    "pond":             (400.0, 2000.0),
+    "swale":            (150.0, 700.0),
+    "rain_garden":      (150.0, 600.0),
+    "rain_barrel":      (60.0, 160.0),
+    "native_bee_log":   (0.0, 50.0),
+    "bee_hotel":        (25.0, 90.0),
+    "brush_pile":       (0.0, 0.0),
+    "snag":             (0.0, 0.0),
+    "rock_xeriscape":   (120.0, 600.0),
+    "native_lawn_patch": (50.0, 200.0),
+    "raised_bed":       (80.0, 350.0),
+    "compost_bin":      (50.0, 300.0),
+    "shed":             (400.0, 2500.0),
+    "fence":            (250.0, 1500.0),
+    "fire_pit":         (120.0, 900.0),
+}
+for _s in STRUCTURES:
+    _s.setdefault("install_cost_cad", _INSTALL_COST_CAD.get(_s["id"], (0.0, 0.0)))
+
 # Quick lookup by id
 _BY_ID: dict[str, dict] = {s["id"]: s for s in STRUCTURES}
 

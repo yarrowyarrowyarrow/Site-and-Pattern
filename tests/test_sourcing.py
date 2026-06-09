@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.sourcing import (  # noqa: E402
     plant_price_range, estimate_cost, trim_to_budget, format_cost,
     TYPE_PRICE_DEFAULTS,
+    structure_cost, mulch_cost, design_cost,
 )
 
 # ── Fake catalogue for the pure-helper tests ────────────────────────────────
@@ -84,6 +85,66 @@ class TestPricingHelpers(unittest.TestCase):
 
     def test_format_cost(self):
         self.assertEqual(format_cost(8.0, 16.0), "$8–$16")
+
+
+_FAKE_STRUCTS = {
+    "pond":    {"id": "pond", "install_cost_cad": (400.0, 2000.0)},
+    "snag":    {"id": "snag", "install_cost_cad": (0.0, 0.0)},
+    "mystery": {"id": "mystery"},   # no install cost recorded → 0
+}
+
+
+def _fake_struct(sid):
+    return _FAKE_STRUCTS.get(sid)
+
+
+class TestWholeDesignCost(unittest.TestCase):
+    """C1 — costing structures + mulch + the combined design total."""
+
+    def test_structure_cost_sums_dicts(self):
+        lo, hi = structure_cost(
+            [_FAKE_STRUCTS["pond"], _FAKE_STRUCTS["snag"]],
+            get_structure=_fake_struct)
+        self.assertEqual((lo, hi), (400.0, 2000.0))
+
+    def test_structure_cost_accepts_ids(self):
+        lo, hi = structure_cost(["pond", "pond"], get_structure=_fake_struct)
+        self.assertEqual((lo, hi), (800.0, 4000.0))
+
+    def test_structure_cost_missing_is_zero(self):
+        self.assertEqual(
+            structure_cost([{"id": "mystery"}], get_structure=_fake_struct),
+            (0.0, 0.0))
+
+    def test_mulch_cost_volume_math(self):
+        # 100 m² × 0.075 m = 7.5 m³, costed against the per-m³ range.
+        lo, hi = mulch_cost(100.0)
+        self.assertAlmostEqual(lo, 7.5 * 35.0, places=2)
+        self.assertAlmostEqual(hi, 7.5 * 75.0, places=2)
+
+    def test_mulch_cost_zero_or_none_area(self):
+        self.assertEqual(mulch_cost(0), (0.0, 0.0))
+        self.assertEqual(mulch_cost(None), (0.0, 0.0))
+
+    def test_design_cost_combines_and_totals(self):
+        bd = design_cost([(1, 1)], structures=["pond"], mulch_area_m2=100.0,
+                         get_plant=_fake_get, get_structure=_fake_struct)
+        self.assertEqual(bd["plants"], (60.0, 150.0))
+        self.assertEqual(bd["structures"], (400.0, 2000.0))
+        self.assertEqual(bd["total"][0],
+                         bd["plants"][0] + bd["structures"][0] + bd["mulch"][0])
+        self.assertEqual(bd["total"][1],
+                         bd["plants"][1] + bd["structures"][1] + bd["mulch"][1])
+
+
+class TestStructureCatalogueCost(unittest.TestCase):
+    def test_every_structure_has_install_cost(self):
+        from src.db.structures import get_all_structures
+        for s in get_all_structures():
+            ic = s.get("install_cost_cad")
+            self.assertIsNotNone(ic, msg=s["id"])
+            self.assertEqual(len(ic), 2, msg=s["id"])
+            self.assertLessEqual(ic[0], ic[1], msg=s["id"])
 
 
 class TestSeededSourcingData(unittest.TestCase):
