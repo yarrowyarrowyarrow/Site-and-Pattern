@@ -315,9 +315,20 @@ class MapEventRouter:
         self._main._set_mode_label("Ready")
         area_str = f"{area_m2:.1f} m²" if area_m2 < 10000 else f"{area_m2/10000:.2f} ha"
         extra = f", {height_m:.1f} m tall — casts shade" if casts_shade else ""
-        self._main.statusBar().showMessage(
-            f"Shape placed: {label or shape_type} ({area_str}{extra})", 3000
-        )
+        # Lawn-conversion zone (N2): report the running converted total.
+        from src.lawn_zones import is_zone_label, conversion_summary
+        if is_zone_label(shape_type):
+            summ = conversion_summary(self._main._project["features"])
+            self._main.statusBar().showMessage(
+                f"Zone added: {label or shape_type} ({area_str}). "
+                f"Converted so far: {summ['converted_m2']:,.0f} m² "
+                f"({summ['pct_converted']:.0f}% of lawn+restoration); "
+                f"lawn left: {summ['lawn_remaining_m2']:,.0f} m².", 6000
+            )
+        else:
+            self._main.statusBar().showMessage(
+                f"Shape placed: {label or shape_type} ({area_str}{extra})", 3000
+            )
         if casts_shade:
             self._refresh_shade_if_active()   # new caster updates a live overlay
 

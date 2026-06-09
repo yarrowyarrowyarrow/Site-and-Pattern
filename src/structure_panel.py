@@ -339,7 +339,10 @@ class StructurePanel(QWidget):
         form = QFormLayout()
         form.setContentsMargins(0, 0, 0, 0)
 
-        # Shape presets
+        # Shape presets — the general beds/paths set plus the lawn-to-habitat
+        # conversion zones (N2), whose labels/colours come from src.lawn_zones so
+        # the drawer and the conversion tally never drift.
+        from src.lawn_zones import ZONE_TYPES
         self._shape_preset = QComboBox()
         self._shape_preset.addItems([
             "Garden Bed",
@@ -350,6 +353,8 @@ class StructurePanel(QWidget):
             "Water Feature",
             "Custom",
         ])
+        self._shape_preset.insertSeparator(self._shape_preset.count())
+        self._shape_preset.addItems([spec["label"] for spec in ZONE_TYPES.values()])
         self._shape_preset.currentIndexChanged.connect(self._on_shape_preset_changed)
         form.addRow("Type:", self._shape_preset)
 
@@ -446,7 +451,16 @@ class StructurePanel(QWidget):
 
     def _on_shape_preset_changed(self, _idx):
         name = self._shape_preset.currentText()
-        preset = self._SHAPE_PRESETS.get(name, self._SHAPE_PRESETS["Custom"])
+        preset = self._SHAPE_PRESETS.get(name)
+        if preset is None:
+            # A lawn-conversion zone (or the separator): pull its style from
+            # src.lawn_zones; fall back to Custom for the empty separator row.
+            from src.lawn_zones import ZONE_TYPES
+            zspec = next((s for s in ZONE_TYPES.values() if s["label"] == name),
+                         None)
+            preset = ({"fill": zspec["fill"], "stroke": zspec["stroke"],
+                       "opacity": zspec["opacity"], "pattern": "Solid"}
+                      if zspec else self._SHAPE_PRESETS["Custom"])
         self._shape_fill = preset["fill"]
         self._shape_stroke = preset["stroke"]
         self._shape_fill_btn.setStyleSheet(

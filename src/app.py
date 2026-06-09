@@ -1975,6 +1975,11 @@ class MainWindow(QMainWindow):
             self.on_this_design.set_cost_breakdown(
                 design_cost(enriched, structures=structs, mulch_area_m2=bed_area)
             )
+            # Lawn-to-habitat conversion tally (N2).
+            from src.lawn_zones import conversion_summary
+            self.on_this_design.set_lawn_conversion(
+                conversion_summary(self._project.get("features", []))
+            )
         except Exception:
             pass
 

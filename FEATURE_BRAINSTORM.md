@@ -76,15 +76,25 @@ was never added; R4 uses plant-type heuristics.
 
 ### Tier 1 — habitat & design features (medium effort)
 
-#### N2. Lawn conversion zones
-- **Existing:** polygon/boundary drawing (`html/map.html`, `map_widget.py`) and
-  the new classified planting-zone work landing on V1.59.
-- **Change:** add a `zone_type` enum to drawn polygons — `lawn_remaining`,
+#### N2. Lawn conversion zones — ✅ Done (V1.60)
+- **Reused the shape pipeline (no new JS):** a conversion zone is a drawn
+  `custom_shape` whose `shape_type` is one of five zone labels, so zones get
+  drawing / colour / area / save-load for free.
+- **New pure core** `src/lawn_zones.py`: the zone catalogue (`lawn_remaining`,
   `restoration_year_1`, `restoration_year_3`, `established_native`,
-  `existing_remnant` — and a status readout of **m² of lawn converted**, with a
-  year-by-year breakdown.
-- **Why:** makes "I converted X m² of lawn this year" a first-class number the
-  app tracks for you.
+  `existing_remnant` — label + fill/stroke/opacity + stage), `conversion_summary`
+  (m² per zone → converted / lawn-remaining / remnant / % converted) and a
+  compact formatter. One source of truth shared by the drawer and the readout.
+- **Drawer:** the Structures → Shapes preset list now offers the five zones
+  (`structure_panel.py`), styled from `ZONE_TYPES`.
+- **Readouts:** a running "converted so far / lawn left" status-bar message when
+  a zone is drawn (`map_events._on_shape_complete`), and a **Lawn conversion**
+  block in the "On this design" → Stats tab fed from `_sync_planning_panel`.
+- **Verified:** 7 `test_lawn_zones` cases (tally, %, non-zone exclusion,
+  formatting); offscreen checks that the drawer carries the zone presets and the
+  panel renders the conversion block.
+- **Year-by-year:** the zone *stage* (Year 1 / Year 3 / established) is the
+  breakdown; the percentage tracks "converted ÷ (lawn + restoration)".
 
 #### N3′. Polygon-fill placement — single species *or* a community/mix *(reframed)*
 - **Reframe:** the original N3 (seed-mix-only broadcast zones) is **superseded**

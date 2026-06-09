@@ -113,6 +113,8 @@ class OnThisDesignPanel(QWidget):
         self._latest_enriched: list[dict] = []
         # Whole-design cost breakdown (C1) — set by app.py via set_cost_breakdown.
         self._cost_breakdown: dict | None = None
+        # Lawn-conversion zone summary (N2) — set via set_lawn_conversion.
+        self._lawn_conversion: dict | None = None
 
     # ── Plants sub-tab ────────────────────────────────────────────────
 
@@ -194,6 +196,36 @@ class OnThisDesignPanel(QWidget):
         self._cost_breakdown = breakdown or None
         self._refresh_stats(self._latest_enriched)
 
+    def set_lawn_conversion(self, summary: dict | None):
+        """Store the lawn-conversion zone summary (from
+        ``lawn_zones.conversion_summary``) and refresh the Stats tab."""
+        self._lawn_conversion = summary or None
+        self._refresh_stats(self._latest_enriched)
+
+    def _lawn_block_html(self) -> str:
+        s = self._lawn_conversion
+        if not s or s.get("total_zone_m2", 0) <= 0:
+            return ""
+        from src.lawn_zones import ZONE_TYPES
+
+        def area(m2):
+            return f"{m2:,.0f} m²" if m2 < 10000 else f"{m2 / 10000:.2f} ha"
+
+        parts = [
+            "<p><b>Lawn conversion</b><br>",
+            f"Converted: {area(s['converted_m2'])} "
+            f"({s['pct_converted']:.0f}% of lawn+restoration)<br>",
+            f"Lawn remaining: {area(s['lawn_remaining_m2'])}<br>",
+        ]
+        by = s.get("by_zone", {})
+        rows = [f"{spec['label']}: {area(by[key])}"
+                for key, spec in ZONE_TYPES.items() if by.get(key, 0) > 0]
+        if rows:
+            parts.append("<span style='color:#90a4ae;font-size:10px;'>"
+                         + " · ".join(rows) + "</span>")
+        parts.append("</p>")
+        return "".join(parts)
+
     def _cost_block_html(self) -> str:
         bd = self._cost_breakdown
         if not bd:
@@ -220,9 +252,10 @@ class OnThisDesignPanel(QWidget):
 
     def _refresh_stats(self, enriched: list[dict]):
         cost_html = self._cost_block_html()
+        lawn_html = self._lawn_block_html()
         if not enriched:
             body = "<i style='color:#78909c;'>Nothing placed yet.</i>"
-            self._stats_text.setHtml(body + cost_html)
+            self._stats_text.setHtml(body + lawn_html + cost_html)
             return
         from src.db.plants import get_plant
         total = len(enriched)
@@ -292,5 +325,6 @@ class OnThisDesignPanel(QWidget):
                 )
             )
             rows.append("</p>")
+        rows.append(lawn_html)
         rows.append(cost_html)
         self._stats_text.setHtml("".join(rows))
