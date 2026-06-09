@@ -1473,6 +1473,9 @@ class MapEventRouter:
         import math
 
         from src.db.plants import get_plant
+        from src.succession import (
+            successional_role, presence_factor, restoration_stage,
+        )
 
         _DEFAULT_YTM = {"tree": 15, "shrub": 5, "herb": 2, "groundcover": 1,
                         "vine": 2, "root": 2}
@@ -1482,9 +1485,11 @@ class MapEventRouter:
         # We need to iterate plantMarkers in JS, so we build scale data keyed by markerIds
         # Since we don't have JS markerIds in Python, we build per-plant-id scale factors
         # and let JS match by plantId
-        plant_cache = {}  # plant_id -> (ytm, curve, ptype)
+        plant_cache = {}  # plant_id -> (ytm, curve, ptype, role)
         summary_trees = 0
         summary_mature = 0
+        summary_fading = 0
+        summary_emerging = 0
         summary_total = len(self._main._placed_plants)
 
         for p in self._main._placed_plants:
@@ -1496,13 +1501,20 @@ class MapEventRouter:
                         plant.get("plant_type", "herb"), 2)
                     curve = plant.get("growth_curve") or "steady"
                     ptype = plant.get("plant_type", "herb")
+                    role = successional_role(plant)
                 else:
                     ytm = 2
                     curve = "steady"
                     ptype = "herb"
-                plant_cache[pid] = (ytm, curve, ptype)
+                    role = "mid"
+                plant_cache[pid] = (ytm, curve, ptype, role)
 
-            ytm, curve, ptype = plant_cache[pid]
+            ytm, curve, ptype, role = plant_cache[pid]
+            pres = presence_factor(role, year, ytm)
+            if role == "pioneer" and pres < 0.9:
+                summary_fading += 1
+            elif role == "climax" and pres < 0.9:
+                summary_emerging += 1
 
             if year == 0:
                 factor = 1.0
@@ -1529,15 +1541,25 @@ class MapEventRouter:
         else:
             pct_mature = int(summary_mature / max(1, summary_total) * 100)
             summary = (
-                f"Year {year}: {summary_mature}/{summary_total} plants at maturity "
+                f"Year {year} — {restoration_stage(year)}: "
+                f"{summary_mature}/{summary_total} plants at maturity "
                 f"({pct_mature}%)."
             )
+            if summary_fading:
+                summary += (
+                    f"\n{summary_fading} pioneer "
+                    f"species fading as the canopy fills in."
+                )
+            if summary_emerging:
+                summary += (
+                    f"\n{summary_emerging} climax species still coming up."
+                )
             if summary_trees > 0:
                 # Find avg tree scale
                 tree_scales = []
                 for p in self._main._placed_plants:
                     pid = p["plant_id"]
-                    ytm, curve, ptype = plant_cache[pid]
+                    ytm, curve, ptype, role = plant_cache[pid]
                     if ptype == "tree":
                         ratio = min(1.0, year / ytm)
                         if curve == "fast_early":
@@ -1552,9 +1574,11 @@ class MapEventRouter:
         self._main.planning_panel.update_timeline_summary(summary)
 
         # Send scale data to JS — we use a per-plantId approach
-        # JS will iterate plantMarkers and look up scaleFactor by plantId
+        # JS will iterate plantMarkers and look up scaleFactor by plantId.
+        # pid_presence carries the succession fade (pioneers out, climax in).
         pid_factors = {}
-        for pid, (ytm, curve, ptype) in plant_cache.items():
+        pid_presence = {}
+        for pid, (ytm, curve, ptype, role) in plant_cache.items():
             if year == 0:
                 factor = 1.0
             elif year >= ytm:
@@ -1568,8 +1592,10 @@ class MapEventRouter:
                 else:
                     factor = ratio
             pid_factors[pid] = max(0.1, min(1.0, factor))
+            pid_presence[pid] = presence_factor(role, year, ytm)
 
-        self._main.map_widget.set_timeline_year_by_plant_id(year, pid_factors)
+        self._main.map_widget.set_timeline_year_by_plant_id(
+            year, pid_factors, pid_presence)
 
     # ── Polyculture click placement ──────────────────────────────────────────
 

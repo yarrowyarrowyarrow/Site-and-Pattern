@@ -1094,26 +1094,28 @@ class PlanningPanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Visualise how your landscape changes over time.\n"
-            "Drag the slider to see plant sizes at different\n"
-            "stages of maturity (species-specific growth curves)."
+            "Watch the planting move through ecological succession. Drag the "
+            "slider from planting day toward maturity: pioneer forbs fill in "
+            "first and fade as shrubs and climax trees take over. The slider "
+            "reaches the slowest species' mature age."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
         layout.addWidget(info)
 
-        # Year slider
+        # Year slider — range extends to the slowest plant's maturity once a
+        # design is loaded (see _update_timeline_horizon); 20 yr until then.
         slider_row = QHBoxLayout()
         slider_row.addWidget(QLabel("Year:"))
         self._year_slider = QSlider(Qt.Orientation.Horizontal)
         self._year_slider.setRange(0, 20)
         self._year_slider.setValue(0)
         self._year_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-        self._year_slider.setTickInterval(1)
+        self._year_slider.setTickInterval(2)
         self._year_slider.setPageStep(5)
         slider_row.addWidget(self._year_slider)
         self._year_label = QLabel("Year 0 (Planting)")
-        self._year_label.setMinimumWidth(110)
+        self._year_label.setMinimumWidth(150)
         self._year_label.setStyleSheet("font-weight: bold; color: #a5d6a7;")
         slider_row.addWidget(self._year_label)
         layout.addLayout(slider_row)
@@ -1144,9 +1146,8 @@ class PlanningPanel(QWidget):
         self._tabs.addTab(tab, "Timeline")
 
     def _on_year_slider_changed(self, value: int):
-        labels = {0: "Year 0 (Planting)", 1: "Year 1", 3: "Year 3",
-                  5: "Year 5", 10: "Year 10", 15: "Year 15", 20: "Year 20"}
-        self._year_label.setText(labels.get(value, f"Year {value}"))
+        from src.succession import year_label
+        self._year_label.setText(year_label(value))
         self._timeline_timer.start()  # debounce
 
     def _emit_timeline_year(self):
@@ -1160,6 +1161,27 @@ class PlanningPanel(QWidget):
     def set_placed_plants(self, plants: list[dict]):
         """Update the list of placed plants (from app.py)."""
         self._placed_plants = plants
+        self._update_timeline_horizon()
+
+    def _update_timeline_horizon(self):
+        """Extend the timeline slider to the slowest placed plant's maturity so
+        slow trees actually reach full size (N5). Clamped 20–60 yr."""
+        slider = getattr(self, "_year_slider", None)
+        if slider is None:
+            return
+        try:
+            from src.succession import timeline_max_years
+            max_year = timeline_max_years(self._placed_plants)
+        except Exception:
+            max_year = 20
+        cur = slider.value()
+        slider.blockSignals(True)
+        slider.setMaximum(max_year)
+        slider.setTickInterval(max(1, max_year // 10))
+        slider.setPageStep(max(1, max_year // 4))
+        slider.blockSignals(False)
+        if cur > max_year:
+            slider.setValue(max_year)
 
     def set_structures(self, structures: list[dict]):
         """Update the list of placed structures (from app.py)."""

@@ -387,9 +387,15 @@ def set_season_view(season: str, pid_visibility: dict) -> str:
     return f"setSeasonView({_jsstr(season)}, {_jslit(pid_visibility)});"
 
 
-def set_timeline_year_by_plant_id(year: int, pid_factors: dict) -> str:
-    """Drive the growth-timeline animation: each entry in ``pid_factors``
-    is plant_id → maturity-factor (0..1)."""
+def set_timeline_year_by_plant_id(year: int, pid_factors: dict,
+                                  pid_presence: dict | None = None) -> str:
+    """Drive the growth-timeline animation: each entry in ``pid_factors`` is
+    plant_id → maturity-factor (0..1) for size. Optional ``pid_presence`` maps
+    plant_id → presence-opacity (0..1) so pioneers fade out and climax species
+    fade in along the succession timeline (N5); omitted ⇒ all fully present."""
+    if pid_presence:
+        return (f"setTimelineYearByPlantId({int(year)}, {_jslit(pid_factors)}, "
+                f"{_jslit(pid_presence)});")
     return f"setTimelineYearByPlantId({int(year)}, {_jslit(pid_factors)});"
 
 

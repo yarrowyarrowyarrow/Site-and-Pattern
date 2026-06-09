@@ -834,9 +834,11 @@ class MapWidget(QWebEngineView):
         """Highlight plants in/out of season for a given month name."""
         self.run_js(map_js.set_season_view(season, pid_visibility))
 
-    def set_timeline_year_by_plant_id(self, year: int, pid_factors: dict):
-        """Drive the growth-timeline animation."""
-        self.run_js(map_js.set_timeline_year_by_plant_id(year, pid_factors))
+    def set_timeline_year_by_plant_id(self, year: int, pid_factors: dict,
+                                      pid_presence: dict | None = None):
+        """Drive the growth-timeline animation (size + succession fade)."""
+        self.run_js(map_js.set_timeline_year_by_plant_id(
+            year, pid_factors, pid_presence))
 
     def toggle_legend(self):
         """Toggle the on-map legend overlay."""

@@ -2473,8 +2473,11 @@
     var timelineActive = false;
     var originalRadii = {};  // markerId -> original radius (for reset)
 
-    function setTimelineYearByPlantId(year, pidFactors) {
+    function setTimelineYearByPlantId(year, pidFactors, pidPresence) {
       // pidFactors: {plantId: scaleFactor} where scaleFactor is 0.1 to 1.0
+      // pidPresence (optional): {plantId: 0..1} succession opacity — pioneers
+      //   fade out, climax species fade in. Absent ⇒ all fully present.
+      pidPresence = pidPresence || {};
       if (year === 0) {
         // Reset all markers to original size
         timelineActive = false;
@@ -2507,9 +2510,13 @@
         var currentRadius = matureRadius * factor;
         m.setRadius(Math.max(currentRadius, 0.3));
 
-        // Young plants more transparent
-        var opacity = 0.15 + 0.20 * factor;
-        m.setStyle({fillOpacity: opacity, opacity: 0.4 + 0.6 * factor});
+        // Young plants more transparent; succession presence dims pioneers as
+        // they fade and keeps climax species faint until they come up.
+        var presence = pidPresence[m._pd.plantId];
+        if (presence === undefined) presence = 1.0;
+        var fillOp = (0.15 + 0.20 * factor) * presence;
+        var strokeOp = (0.4 + 0.6 * factor) * presence;
+        m.setStyle({fillOpacity: fillOp, opacity: strokeOp});
       });
 
       // Rebuild canopy if visible (canopy scales with markers)

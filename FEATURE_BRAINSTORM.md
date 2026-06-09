@@ -98,20 +98,29 @@ was never added; R4 uses plant-type heuristics.
   areas *and* the seed-mix concept, and it's the natural drop target for the
   preset communities in P1.
 
-#### N5. Finish Ecological Succession + extend the time horizon
-- **Reframe stages:** relabel the timeline from generic "Year N" to restoration
-  stages — **Year 1** pioneer forbs (bare/seeded), **Year 3** forb–grass matrix,
-  **Year 5** shrubs establishing, **Year 10+** climax / canopy.
-- **Use the flags:** actually filter on the existing `early_successional` tag
-  (58/427 plants) so pioneers fade *out* over time, and add a **new `climax`
-  flag** so climax species fade *in*. (Schema/seed change → bump `_SCHEMA_VERSION`
-  and add the reseed step per `CLAUDE.md` when this is built.)
-- **Extend the horizon:** the slider currently caps at 20 years; many trees aren't
-  mature by then. Extend the max to the **longest `years_to_maturity` in the
-  current design** (with a sensible upper cap) so slow species reach full size.
-- **Touches:** `planning_panel.py` timeline tab + `controllers/map_events.py`
-  (which already maps year → per-plant maturity factor via `growth_curve` /
-  `years_to_maturity`).
+#### N5. Finish Ecological Succession + extend the time horizon — ✅ Done (V1.60)
+- **New pure core** `src/succession.py` (Qt-free, DB-free, fully unit-tested):
+  restoration-stage labels, `successional_role`, `presence_factor`,
+  `timeline_max_years`.
+- **Reframed stages:** the timeline label now reads e.g. "Year 3 · Forb–grass
+  matrix" / "Year 60 · Climax / canopy" instead of a bare year, via
+  `succession.year_label` (`planning_panel.py`).
+- **Flags used — fade in/out:** pioneers (`early_successional` tag, already on
+  58 plants) fade *out* and climax species fade *in* as the design matures,
+  rendered as a per-plant **presence opacity** sent to the map (backward-compatible
+  3rd arg through `map_js` / `map_widget` / `html/map.html`).
+  - **No schema bump needed:** roles read from the existing `permaculture_uses`
+    blob; an explicit `climax` tag is honoured if present, and a **maturity
+    heuristic** (long-lived woody species) covers climax until the dataset is
+    enriched — so it works on today's data.
+  - **Lifecycle-scaled fade:** the pioneer fade scales to the species' own
+    maturity, so short-lived forbs fade within a few years while pioneer *trees*
+    (lodgepole, aspen) persist for decades instead of vanishing at full canopy.
+- **Extended horizon:** the slider now reaches the **slowest placed species'
+  maturity** (clamped 20–60 yr) via `timeline_max_years`, refreshed whenever the
+  design changes — verified extending to 60 yr for Lodgepole Pine.
+- **Verified:** 18 `test_succession` cases + the timeline controller path
+  exercised end-to-end against a seeded DB (stage text, presence, summary).
 
 #### C1. Whole-design cost *(extend, not new)* — ✅ Done (V1.60)
 - **Built on:** `sourcing.py`'s existing `plant_price_range` / `estimate_cost` /
