@@ -154,12 +154,22 @@ was never added; R4 uses plant-type heuristics.
 - **Why:** matches the user's mental model — pull a box around everything in a
   corner of the design and move or delete it together.
 
-#### P1. Alberta community presets
-- **What:** a small library of curated, ready-to-place starter communities —
-  boulevard pollinator strip, backyard meadow patch, hedgerow shelterbelt — that
-  drop straight in via the N3′ fill mode.
-- **Not a wizard:** these are presets/templates, deliberately *not* the shelved
-  L1 onboarding flow. Reuse the polyculture seeding pattern.
+#### P1. Alberta community presets — ✅ Done (V1.60)
+- **Mostly already there:** the seeded polyculture library already held ~18 AB
+  communities (Continuous Bloom Pollinator Strip, Tall Prairie Meadow, Native
+  Berry Hedge, Aspen Parkland Edge, Mixedgrass Prairie Patch, …), placeable via
+  the existing community picker — no wizard.
+- **Added the missing brainstorm-named starters** to `EXAMPLE_POLYCULTURES`
+  (`db/polycultures.py`): **Boulevard Pollinator Strip** (tough hellstrip),
+  **Backyard Meadow Patch** (residential meadow) and **Hedgerow Shelterbelt**
+  (layered windbreak with an overstory tree) — all members are confirmed native
+  catalogue rows (the legacy food-forest presets reference since-dropped names).
+- **Reseed:** bumped `_SCHEMA_VERSION` 22 → 23 so existing installs re-run the
+  polyculture seed (already in the reseed wipe list) and pick the starters up.
+- **Verified:** new `test_polycultures.TestStarterCommunities` confirms all three
+  seed with all six members resolved (guards against future name drift).
+- **Fill-mode note:** "drop via N3′ fill" depends on N3′; until then they place
+  through the existing point-based community placement.
 
 #### P2. Printable planting plan — ✅ Done (V1.60)
 - **Was already there:** `pdf_export.py` rendered a title + map snapshot, a plant

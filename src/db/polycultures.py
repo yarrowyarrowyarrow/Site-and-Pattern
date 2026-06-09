@@ -915,6 +915,60 @@ EXAMPLE_POLYCULTURES = [
             ("Wild Strawberry",            "groundcover",     0.0,   2.5),
         ],
     },
+    # ── Lawn-to-habitat starter communities (P1) ──────────────────────────────
+    # Ready-to-place AB starters for the three most common conversions; named to
+    # match how people describe the project ("a boulevard strip", "a meadow
+    # patch", "a shelterbelt"). All members are confirmed native catalogue rows.
+    {
+        "name": "Boulevard Pollinator Strip",
+        "description": "A tough, low-growing nectar strip for hellstrips and "
+                       "boulevards — sun-baked, salt- and drought-tolerant natives "
+                       "kept short for sightlines. Blue grama forms a fine "
+                       "warm-season matrix; blanketflower, black-eyed Susan and wild "
+                       "bergamot carry summer bloom; purple prairie clover fixes "
+                       "nitrogen and prairie goldenrod extends nectar into fall.",
+        "members": [
+            ("Wild Bergamot",          "pollinator",      0,    0),
+            ("Blanketflower",          "pollinator",      1.0,  0.6),
+            ("Black-eyed Susan",       "pollinator",     -1.0,  0.6),
+            ("Purple Prairie Clover",  "nitrogen_fixer",  0.0, -0.8),
+            ("Blue Grama Grass",       "groundcover",     1.2, -0.6),
+            ("Prairie Goldenrod",      "pollinator",     -1.2, -0.5),
+        ],
+    },
+    {
+        "name": "Backyard Meadow Patch",
+        "description": "A residential-scale sunny meadow for a back corner. Little "
+                       "bluestem and sheep fescue form the grass matrix; prairie "
+                       "coneflower, blanketflower and wild bergamot bring layered "
+                       "bloom; silvery lupine fixes nitrogen and wild strawberry "
+                       "knits the ground layer.",
+        "members": [
+            ("Little Bluestem",    "matrix_grass",    0,    0),
+            ("Sheep Fescue",       "matrix_grass",    1.2,  0.8),
+            ("Prairie Coneflower", "pollinator",     -1.0,  0.8),
+            ("Blanketflower",      "pollinator",      1.0, -0.8),
+            ("Silvery Lupine",     "nitrogen_fixer", -1.1, -0.7),
+            ("Wild Strawberry",    "groundcover",     0.2,  1.3),
+        ],
+    },
+    {
+        "name": "Hedgerow Shelterbelt",
+        "description": "A layered native windbreak and bird hedge for a property "
+                       "edge. Trembling aspen gives quick height and shelter; "
+                       "chokecherry and saskatoon supply fruit; buffaloberry fixes "
+                       "nitrogen and feeds waxwings; highbush cranberry holds winter "
+                       "fruit; snowberry fills the low layer. Plant in a row along "
+                       "the boundary you want to screen.",
+        "members": [
+            ("Trembling Aspen",     "overstory",       0,    0),
+            ("Chokecherry",         "shrub_layer",     2.5,  0.4),
+            ("Saskatoon Berry",     "shrub_layer",    -2.5,  0.4),
+            ("Canada Buffaloberry", "nitrogen_fixer",  4.5, -0.4),
+            ("Highbush Cranberry",  "shrub_layer",    -4.5, -0.4),
+            ("Common Snowberry",    "groundcover",     0.0, -1.2),
+        ],
+    },
 ]
 
 

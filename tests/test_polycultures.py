@@ -200,5 +200,45 @@ class TestPolycultureCRUD(unittest.TestCase):
             os.chmod(db_path, original_mode)
 
 
+class TestStarterCommunities(unittest.TestCase):
+    """P1 — the lawn-to-habitat starter communities seed with every member
+    resolved (guards against the member-name drift the legacy food-forest
+    presets suffer from)."""
+
+    STARTERS = (
+        "Boulevard Pollinator Strip",
+        "Backyard Meadow Patch",
+        "Hedgerow Shelterbelt",
+    )
+
+    @classmethod
+    def setUpClass(cls):
+        _setup_db()
+        # Other test classes share this temp DB and create polycultures, so the
+        # one-shot seed (which only runs on an empty table) may have been
+        # skipped. Wipe + re-seed to guarantee a clean starter set here.
+        conn = get_connection()
+        conn.execute("DELETE FROM polyculture_members")
+        conn.execute("DELETE FROM polycultures")
+        conn.commit()
+        conn.close()
+        polycultures.seed_example_polycultures()
+
+    def test_starters_seed_with_all_members(self):
+        conn = get_connection()
+        try:
+            for name in self.STARTERS:
+                pc = polycultures.get_polyculture_by_name(name)
+                self.assertIsNotNone(pc, f"{name} not seeded")
+                n = conn.execute(
+                    "SELECT COUNT(*) FROM polyculture_members WHERE polyculture_id=?",
+                    (pc["id"],)).fetchone()[0]
+                # each starter defines six members; all must resolve to real
+                # catalogue rows (0 silently-skipped names)
+                self.assertEqual(n, 6, f"{name} resolved {n}/6 members")
+        finally:
+            conn.close()
+
+
 if __name__ == "__main__":
     unittest.main()

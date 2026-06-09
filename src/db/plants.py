@@ -97,7 +97,12 @@ _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 # now be (partial) shade. No DDL change — this bump is a deliberate cache-buster
 # that re-wipes the derived `shade_zone_cache` (already in the reseed block) so
 # stale tags can't outlive the model change.
-_SCHEMA_VERSION = 22
+# v23 (V1.60): added the lawn-to-habitat starter communities (Boulevard
+# Pollinator Strip, Backyard Meadow Patch, Hedgerow Shelterbelt) to the seeded
+# polycultures (P1). No DDL change — the bump re-runs the polyculture seed
+# (polycultures / polyculture_members are already wiped in the reseed block) so
+# existing installs pick the new communities up.
+_SCHEMA_VERSION = 23
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
