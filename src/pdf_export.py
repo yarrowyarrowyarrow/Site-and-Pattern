@@ -102,8 +102,27 @@ def export_pdf(
             )
             y += 40 * dpi_scale
 
+        # Habitat Value Score + whole-design cost for the summary block.
+        try:
+            from src.habitat_score import compute_habitat_score
+            score = compute_habitat_score(placed_plants, structures)
+        except Exception:
+            score = None
+        try:
+            from src.sourcing import design_cost
+            bed_area = sum(
+                float(f.get("properties", {}).get("area_m2") or 0.0)
+                for f in project.get("features", [])
+                if f.get("properties", {}).get("element_type") == "custom_shape"
+            )
+            cost = design_cost(placed_plants, structures=structures,
+                               mulch_area_m2=bed_area)
+        except Exception:
+            cost = None
+
         # Quick summary on page 1
-        y = _draw_summary(painter, w, y, placed_plants, structures, dpi_scale)
+        y = _draw_summary(painter, w, y, placed_plants, structures, dpi_scale,
+                          score, cost)
 
         # ── Page 2: Plant List ────────────────────────────────────────────
         printer.newPage()
@@ -145,8 +164,9 @@ def _draw_title_block(painter: QPainter, w: float, name: str,
 
 
 def _draw_summary(painter: QPainter, w: float, y: float,
-                  plants: list[dict], structures: list[dict], s: float) -> float:
-    """Draw a quick design summary."""
+                  plants: list[dict], structures: list[dict], s: float,
+                  score=None, cost=None) -> float:
+    """Draw a quick design summary (counts + habitat score + cost)."""
     painter.setPen(QColor("#a5d6a7"))
     painter.setFont(QFont("Arial", _safe_size(12 * s), QFont.Weight.Bold))
     painter.drawText(QRectF(15 * s, y, w, 20 * s),
@@ -174,6 +194,23 @@ def _draw_summary(painter: QPainter, w: float, y: float,
         lines.append("  " + ", ".join(type_parts))
     if structures:
         lines.append(f"Structures: {len(structures)}")
+    if score is not None:
+        lines.append(
+            f"Habitat Value Score: {score.total}/100  (grade {score.grade})"
+        )
+        lines.append(
+            f"  {int(round(score.native_ratio * 100))}% native · "
+            f"{len(score.keystone_species)} keystone · "
+            f"{len(score.layers_present)} vegetation layers"
+        )
+    if cost is not None:
+        try:
+            from src.sourcing import format_cost
+            lines.append(
+                f"Estimated cost: {format_cost(*cost['total'])}  (AB estimate)"
+            )
+        except Exception:
+            pass
 
     for line in lines:
         painter.drawText(QRectF(20 * s, y, w - 40 * s, 14 * s),
@@ -249,6 +286,25 @@ def _draw_plant_list(painter: QPainter, w: float, h: float,
                 painter.drawText(QRectF(col_x[i], y, 180 * s, 14 * s),
                                  Qt.AlignmentFlag.AlignLeft, val)
         y += 14 * s
+
+    # Alberta native sourcing footer (mirrors the plant-order export).
+    if y < h - 50 * s:
+        y += 14 * s
+        painter.setFont(QFont("Arial", _safe_size(7 * s), QFont.Weight.Bold))
+        painter.setPen(QColor("#a5d6a7"))
+        painter.drawText(QRectF(15 * s, y, w - 30 * s, 12 * s),
+                         Qt.AlignmentFlag.AlignLeft,
+                         "Alberta native plant / seed sources")
+        y += 13 * s
+        painter.setFont(QFont("Arial", _safe_size(7 * s)))
+        painter.setPen(QColor("#78909c"))
+        for src_line in (
+            "ALCLA Native Plants · Bow Valley Habitat Development",
+            "Wild About Flowers · Bedrock Seed Bank",
+        ):
+            painter.drawText(QRectF(15 * s, y, w - 30 * s, 12 * s),
+                             Qt.AlignmentFlag.AlignLeft, src_line)
+            y += 12 * s
 
     return y
 

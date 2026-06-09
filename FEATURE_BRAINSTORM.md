@@ -161,12 +161,17 @@ was never added; R4 uses plant-type heuristics.
 - **Not a wizard:** these are presets/templates, deliberately *not* the shelved
   L1 onboarding flow. Reuse the polyculture seeding pattern.
 
-#### P2. Printable planting plan
-- **What:** one exportable document (PDF) combining a **map snapshot + plant list
-  + order list + habitat score** — a hand-off artifact for a client, a nursery
-  order, or a permit application.
-- **Leans on:** the existing order-list export (R3), the habitat score (R2), and a
-  map snapshot from the `QWebEngineView`.
+#### P2. Printable planting plan — ✅ Done (V1.60)
+- **Was already there:** `pdf_export.py` rendered a title + map snapshot, a plant
+  list, and a notes page via QPrinter/QPainter (no external PDF lib).
+- **Added (the brainstorm's missing pieces):** the **Habitat Value Score**
+  (total + grade + native % / keystone / layer counts) and the **whole-design
+  cost** (C1) now appear in the page-1 summary, and the plant-list page carries
+  the **Alberta nursery sources** footer — so the one document now covers map +
+  plant list + order sourcing + score + cost.
+- **Verified:** `test_pdf_export` (guarded) renders a non-trivial `%PDF-` file
+  for a seeded design and handles the empty-design case without raising; run
+  end-to-end offscreen (27 KB PDF, score + cost present).
 
 ### Tier 2 — larger / longer-horizon
 
