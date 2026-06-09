@@ -86,9 +86,8 @@ class AnalysisPanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Show the sun's arc across the sky and shadow\n"
-            "direction arrows for the selected date.\n"
-            "Helps place shade-sensitive crops."
+            "Show the sun's arc across the sky and shadow direction arrows "
+            "for the selected date. Helps place shade-sensitive crops."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
@@ -209,9 +208,8 @@ class AnalysisPanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Draw directional wedges on the map for\n"
-            "sun, wind, frost flow, noise, views — site\n"
-            "analysis of environmental influences."
+            "Draw directional wedges on the map for sun, wind, frost flow, "
+            "noise, views — site analysis of environmental influences."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
@@ -332,12 +330,10 @@ class AnalysisPanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Draw manual contour lines to indicate terrain\n"
-            "slope. Helps place swales, ponds, and water\n"
-            "features correctly.\n\n"
-            "Click points on the map to draw a contour line,\n"
-            "double-click to finish. Add multiple lines at\n"
-            "different elevations."
+            "Draw manual contour lines to indicate terrain slope. Helps "
+            "place swales, ponds, and water features correctly.\n\n"
+            "Click points on the map to draw a contour line, double-click "
+            "to finish. Add multiple lines at different elevations."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
@@ -453,9 +449,8 @@ class AnalysisPanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Mark prevailing wind direction. Windbreak\n"
-            "structures and hedges show a shelter zone\n"
-            "behind them (10× their height).\n\n"
+            "Mark prevailing wind direction. Windbreak structures and hedges "
+            "show a shelter zone behind them (10× their height).\n\n"
             "Edmonton prevailing: NW in summer, W in winter."
         )
         info.setWordWrap(True)
@@ -540,10 +535,9 @@ class AnalysisPanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Preview how your landscape looks in different\n"
-            "seasons. Deciduous plants fade in winter,\n"
-            "herbaceous perennials disappear, evergreens\n"
-            "stay full."
+            "Preview how your landscape looks in different seasons. "
+            "Deciduous plants fade in winter, herbaceous perennials "
+            "disappear, evergreens stay full."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
@@ -585,11 +579,10 @@ class AnalysisPanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "How much native habitat your design actually\n"
-            "provides — scored 0–100 from native ratio,\n"
-            "keystone species, host plants, bird food,\n"
-            "vegetation-layer diversity, habitat structures,\n"
-            "and bloom continuity."
+            "How much native habitat your design actually provides — scored "
+            "0–100 from native ratio, keystone species, host plants, bird "
+            "food, vegetation-layer diversity, habitat structures, and bloom "
+            "continuity."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
@@ -659,9 +652,9 @@ class AnalysisPanel(QWidget):
 
         # Reference link
         ref = QLabel(
-            "Based on Doug Tallamy's keystone-species framework\n"
-            "(homegrownnationalpark.org) — high-value native species\n"
-            "support 90% of insect biodiversity."
+            "Based on Doug Tallamy's keystone-species framework "
+            "(homegrownnationalpark.org) — high-value native species support "
+            "90% of insect biodiversity."
         )
         ref.setWordWrap(True)
         ref.setStyleSheet("color: #607d8b; font-size: 10px; font-style: italic;")

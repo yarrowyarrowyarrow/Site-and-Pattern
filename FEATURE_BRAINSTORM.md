@@ -52,31 +52,27 @@ was never added; R4 uses plant-type heuristics.
 
 ### Tier 0 — UX polish (low effort, immediate quality-of-life)
 
-#### U1. Planning sub-tabs: all visible, none hidden
-- **Problem:** the Planning panel's six sub-tabs (Effort, Wildlife Forage, Human
-  Forage, Water, Timeline, **Notes**) overflow into a scroll chevron, so *Notes*
-  is hidden until you click the arrow.
-- **Root cause:** `planning_panel.py:_build_ui` uses `FillTabWidget` with
-  `setDocumentMode(True)` and *deliberately keeps scroll buttons* (no
-  `setExpanding`) "so the wider labels don't elide."
-- **Change:** match the Analysis and Site panels, which already do
-  `setUsesScrollButtons(False)` + `tabBar().setExpanding(True)`
-  (`analysis_panel.py:54-76`, `site_panel.py:255-273`).
-- **Trade-off to accept:** six labels on a ~280–320 px panel will elide; pair the
-  switch with shorter labels (e.g. "Forage (wildlife)" → "Wildlife") if elision
-  reads badly.
+#### U1. Planning sub-tabs: all visible, none hidden — ✅ Done (V1.60)
+- **Was:** the six Planning sub-tabs overflowed into a scroll chevron, hiding
+  *Notes* until you clicked the arrow.
+- **Fix:** `_FillTabBar` (`fill_tab_widget.py`) now **shrinks tabs to an equal
+  share when crowded** — it previously only ever widened, which is why a scroll
+  chevron appeared. The Planning bar (`planning_panel.py:_build_ui`) sets
+  `setUsesScrollButtons(False)` + `setExpanding(True)` + `ElideRight`, and the
+  two wide labels were shortened (Wildlife Forage → "Wildlife", Human Forage →
+  "Harvest"). Verified offscreen: all six tabs visible across the full
+  260–480 px side-panel range (≈44 px each at the 260 px minimum, filling the
+  strip at 480 px). The shrink behaviour also benefits the Analysis/Site/outer
+  tab strips, which previously could overflow too.
 
-#### U2. Sub-tab description text uses the full panel width
-- **Problem:** the small grey description label under each sub-tab appears not to
-  use the horizontal space available (screenshot supplied). Affects Site (site
-  information), Structures (hedgerows & shapes), and every Analysis/Planning
-  sub-tab.
-- **State:** these info `QLabel`s already set `setWordWrap(True)` with no
-  max-width; width is bounded only by the panel. So this is **not** a width cap —
-  likely a `sizePolicy`/alignment/parent-stretch issue.
-- **Change:** ensure the info labels expand horizontally (Expanding size policy,
-  no centering/left-stretch swallowing the row) so the text reflows to the full
-  available width.
+#### U2. Sub-tab description text uses the full panel width — ✅ Done (V1.60)
+- **Root cause (corrected from the plan's guess):** the description `QLabel`s
+  contained **hard-coded `\n` line breaks**, which forced narrow wrapping no
+  matter how wide the panel was — not a `sizePolicy` cap.
+- **Fix:** stripped the embedded `\n` from the info labels in the Site,
+  Structures, Analysis and Planning panels so `setWordWrap(True)` reflows them to
+  the full available width. Intentional `\n\n` paragraph breaks and structural /
+  table readouts (sun-path breakdown, shade mix) were left untouched.
 
 ### Tier 1 — habitat & design features (medium effort)
 

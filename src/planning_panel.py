@@ -88,8 +88,12 @@ class PlanningPanel(QWidget):
         from src.fill_tab_widget import FillTabWidget
         self._tabs = FillTabWidget()
         self._tabs.setDocumentMode(True)
-        # Many tabs here — keep scroll buttons (don't force-expand) so the wider
-        # labels don't elide, while still using the shared green-underline look.
+        # Show every sub-tab at once — no scroll chevron hiding "Notes". The
+        # FillTabBar spreads them edge-to-edge; labels are kept short enough
+        # that all six fit without eliding on a narrow side panel.
+        self._tabs.tabBar().setUsesScrollButtons(False)
+        self._tabs.tabBar().setExpanding(True)
+        self._tabs.tabBar().setElideMode(Qt.TextElideMode.ElideRight)
         self._tabs.setStyleSheet(inner_tab_stylesheet())
 
         self._build_maintenance_tab()
@@ -112,10 +116,9 @@ class PlanningPanel(QWidget):
         layout.setSpacing(6)
 
         info = QLabel(
-            "Establishment vs. stewardship effort. Year 1\n"
-            "front-loads watering-in, weeding, and mulching;\n"
-            "established native plantings settle into a much\n"
-            "lower maintenance floor by Year 3+."
+            "Establishment vs. stewardship effort. Year 1 front-loads "
+            "watering-in, weeding, and mulching; established native "
+            "plantings settle into a much lower maintenance floor by Year 3+."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
@@ -376,10 +379,10 @@ class PlanningPanel(QWidget):
         layout.setSpacing(6)
 
         info = QLabel(
-            "When pollinators feed (blooms) and when birds\n"
-            "feed (berries/seeds). Expand a month to see the\n"
-            "individual plants providing forage. Apr–Oct months\n"
-            "with no bloom source are flagged as nectar gaps."
+            "When pollinators feed (blooms) and when birds feed "
+            "(berries/seeds). Expand a month to see the individual plants "
+            "providing forage. Apr–Oct months with no bloom source are "
+            "flagged as nectar gaps."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
@@ -432,7 +435,7 @@ class PlanningPanel(QWidget):
         self._wildlife_tree.setRootIsDecorated(True)
         layout.addWidget(self._wildlife_tree, 1)
 
-        self._tabs.addTab(tab, "Wildlife Forage")
+        self._tabs.addTab(tab, "Wildlife")
 
     def _calc_wildlife_forage(self):
         self._wildlife_tree.clear()
@@ -564,10 +567,9 @@ class PlanningPanel(QWidget):
         layout.setSpacing(6)
 
         info = QLabel(
-            "What you can harvest from your design, by month.\n"
-            "Includes only plants with an edible part recorded\n"
-            "in the database — berries, fruits, edible leaves /\n"
-            "roots / shoots."
+            "What you can harvest from your design, by month. Includes only "
+            "plants with an edible part recorded in the database — berries, "
+            "fruits, edible leaves / roots / shoots."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
@@ -614,7 +616,7 @@ class PlanningPanel(QWidget):
         )
         layout.addWidget(self._human_tree, 1)
 
-        self._tabs.addTab(tab, "Human Forage")
+        self._tabs.addTab(tab, "Harvest")
 
     def _calc_human_forage(self):
         self._human_tree.clear()
@@ -734,10 +736,9 @@ class PlanningPanel(QWidget):
         layout.setSpacing(6)
 
         info = QLabel(
-            "Establishment water (Year 1, heavy hand-watering)\n"
-            "vs. stewardship water (Year 3+, mostly natives at\n"
-            "0.2× base demand). Compared against growing-season\n"
-            "rainfall and catchment capacity."
+            "Establishment water (Year 1, heavy hand-watering) vs. "
+            "stewardship water (Year 3+, mostly natives at 0.2× base demand). "
+            "Compared against growing-season rainfall and catchment capacity."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
@@ -1009,8 +1010,8 @@ class PlanningPanel(QWidget):
         layout.setSpacing(6)
 
         info = QLabel(
-            "Record observations, soil test results,\n"
-            "and design rationale for this project."
+            "Record observations, soil test results, and design rationale "
+            "for this project."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")

@@ -230,8 +230,8 @@ class StructurePanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Draw a hedgerow or fence line on the map.\n"
-            "Click points to define the line, then double-click to finish."
+            "Draw a hedgerow or fence line on the map. Click points to "
+            "define the line, then double-click to finish."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
@@ -329,9 +329,8 @@ class StructurePanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Draw custom shapes on the map for garden beds,\n"
-            "pathways, patios, and other areas.\n"
-            "Click points to define, double-click to finish."
+            "Draw custom shapes on the map for garden beds, pathways, patios, "
+            "and other areas. Click points to define, double-click to finish."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")

@@ -288,9 +288,9 @@ class SitePanel(QWidget):
     def _build_info_page(self, layout):
         """Site Information sub-tab: property pin/address + climate + soil."""
         info = QLabel(
-            "Search an Alberta address below to drop a property pin and\n"
-            "auto-fill site data from public sources. Drag the pin to\n"
-            "refine; right-click on the pin to remove."
+            "Search an Alberta address below to drop a property pin and "
+            "auto-fill site data from public sources. Drag the pin to refine; "
+            "right-click on the pin to remove."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
@@ -495,9 +495,9 @@ class SitePanel(QWidget):
         slope_layout.addWidget(auto_header)
 
         slope_info = QLabel(
-            "Choose an area, then Generate. Edmonton uses the City's\n"
-            "0.5 m LiDAR contours; elsewhere falls back to Copernicus DEM.\n"
-            "30 m grid matches the DEM's native resolution — finer settings\n"
+            "Choose an area, then Generate. Edmonton uses the City's 0.5 m "
+            "LiDAR contours; elsewhere falls back to Copernicus DEM. 30 m "
+            "grid matches the DEM's native resolution — finer settings "
             "interpolate but don't add real detail."
         )
         slope_info.setWordWrap(True)
@@ -1326,10 +1326,9 @@ class SitePanel(QWidget):
         vl.setSpacing(6)
 
         note = QLabel(
-            "Download the full City of Edmonton 0.5 m LiDAR contour\n"
-            "dataset for instant offline access. One-time download\n"
-            "(~1 GB unpacked). SRTM data outside Edmonton is cached\n"
-            "automatically as you use it."
+            "Download the full City of Edmonton 0.5 m LiDAR contour dataset "
+            "for instant offline access. One-time download (~1 GB unpacked). "
+            "SRTM data outside Edmonton is cached automatically as you use it."
         )
         note.setWordWrap(True)
         note.setStyleSheet("color: #90a4ae; font-size: 11px;")
