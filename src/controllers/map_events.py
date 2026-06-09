@@ -556,6 +556,59 @@ class MapEventRouter:
             f"Moved polyculture group ({len(originals)} plants)", 2000
         )
 
+    def _on_selection_moved(self, originals_json: str, moved_json: str):
+        """User dragged a marquee selection of plants as a unit (G1). Unlike
+        ``_on_plant_group_moved`` this matches features by ``plant_id`` + old
+        coordinates *without* a placement-group constraint, so a selection
+        spanning several groups (or ungrouped plants) updates correctly."""
+        import json as _json
+        try:
+            originals = _json.loads(originals_json or "[]")
+            moved = _json.loads(moved_json or "[]")
+        except Exception:
+            return
+        if not originals or len(originals) != len(moved):
+            return
+        moved_by_id = {m.get("markerId"): m for m in moved}
+        any_change = False
+        for orig in originals:
+            new = moved_by_id.get(orig.get("markerId"))
+            if not new:
+                continue
+            old_lat, old_lng = float(orig.get("lat") or 0.0), float(orig.get("lng") or 0.0)
+            new_lat, new_lng = float(new.get("lat") or 0.0), float(new.get("lng") or 0.0)
+            if abs(new_lat - old_lat) < 1e-9 and abs(new_lng - old_lng) < 1e-9:
+                continue
+            plant_id = orig.get("plantId")
+            for p in self._main._placed_plants:
+                if (p["plant_id"] == plant_id
+                        and abs(p["lat"] - old_lat) < 1e-7
+                        and abs(p["lng"] - old_lng) < 1e-7):
+                    p["lat"], p["lng"] = new_lat, new_lng
+                    any_change = True
+                    break
+            for f in self._main._project["features"]:
+                props = f.get("properties", {})
+                coords = f.get("geometry", {}).get("coordinates", [])
+                if (props.get("element_type") == "plant"
+                        and props.get("plant_id") == plant_id
+                        and coords
+                        and abs(coords[1] - old_lat) < 1e-7
+                        and abs(coords[0] - old_lng) < 1e-7):
+                    f["geometry"]["coordinates"] = [new_lng, new_lat]
+                    break
+        if not any_change:
+            return
+        self._main._push_undo({
+            "action": "move_selection",
+            "originals": list(originals),
+            "moved": list(moved),
+        })
+        self._main._mark_modified()
+        self._main.statusBar().showMessage(
+            f"Moved selection ({len(originals)} plants)", 2000
+        )
+
     # ── Ready / mouse-move ───────────────────────────────────────────────────
 
     def _on_map_ready(self):

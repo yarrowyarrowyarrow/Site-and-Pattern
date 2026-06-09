@@ -314,11 +314,21 @@
 
     function _sameSelectable(a, b) {
       if (!a || !b || a.kind !== b.kind) return false;
-      if (a.kind === 'plant')    return a.markerId === b.markerId;
-      if (a.kind === 'boundary') return a.boundaryId === b.boundaryId;
-      if (a.kind === 'sector')   return a.sectorId === b.sectorId;
-      if (a.kind === 'sunpath')  return true;   // single sunpath at a time
+      if (a.kind === 'plant')     return a.markerId === b.markerId;
+      if (a.kind === 'boundary')  return a.boundaryId === b.boundaryId;
+      if (a.kind === 'sector')    return a.sectorId === b.sectorId;
+      if (a.kind === 'structure') return a.structureId === b.structureId;
+      if (a.kind === 'sunpath')   return true;   // single sunpath at a time
       return false;
+    }
+
+    // How many plants are in the current marquee selection (drives group-move).
+    function _selectedPlantCount() {
+      var n = 0;
+      for (var i = 0; i < selectedItems.length; i++) {
+        if (selectedItems[i].kind === 'plant') n++;
+      }
+      return n;
     }
 
     function _clearSelectionEntry(markerId) {
@@ -386,6 +396,16 @@
           }
         });
       }
+      // Structures — thicken the outline of the selected ones.
+      Object.keys(structureMarkers).forEach(function(sid) {
+        var sel = _selectionContains({ kind: 'structure', structureId: sid });
+        var g = structureMarkers[sid];
+        if (g && g.eachLayer) {
+          g.eachLayer(function(lyr) {
+            if (lyr.setStyle) lyr.setStyle({ weight: sel ? 4 : 2 });
+          });
+        }
+      });
       _updateSelectionBadge();
     }
 
@@ -541,6 +561,15 @@
           }
         });
       }
+      // Structures — anchor point stashed on the layer group.
+      Object.keys(structureMarkers).forEach(function(sid) {
+        var g = structureMarkers[sid];
+        var anc = g && g._pdStruct;
+        if (anc && bounds.contains(L.latLng(anc.lat, anc.lng))) {
+          hits.push({ kind: 'structure', structureId: sid,
+                      structId: anc.structId, lat: anc.lat, lng: anc.lng });
+        }
+      });
       // Sun path — represented by its centre tooltip; we check the
       // existing centre marker via sunPathLayer if present.
       if (typeof sunPathLayer !== 'undefined' && sunPathLayer && sunPathLayer.getLayers) {
@@ -578,6 +607,13 @@
           if (typeof _removeSectorGroup === 'function') {
             _removeSectorGroup(item.sectorId);
             if (bridge) bridge.onSectorGroupRemoved(item.sectorId);
+          }
+        } else if (item.kind === 'structure') {
+          var sg2 = structureMarkers[item.structureId];
+          if (sg2) { map.removeLayer(sg2); delete structureMarkers[item.structureId]; }
+          if (bridge && bridge.onStructureRemoved) {
+            bridge.onStructureRemoved(item.structureId, item.structId,
+                                      item.lat, item.lng);
           }
         } else if (item.kind === 'sunpath') {
           if (typeof clearSunPath === 'function') {
@@ -1739,6 +1775,13 @@
     // to a single level.
     function _scopesFor(pd) {
       var scopes = [];
+      // Marquee selection (G1) wins first: dragging a plant that's part of a
+      // multi-plant selection moves the whole selected set as a unit.
+      if (_selectedPlantCount() >= 2 &&
+          _selectionContains({ kind: 'plant', markerId: pd.markerId })) {
+        scopes.push({ name: 'selection', size: _selectedPlantCount(),
+                      label: 'selection' });
+      }
       var gSize = pd.groupId ? _groupSize(pd.groupId) : 0;
       var cSize = pd.communityId ? _communitySize(pd.communityId) : 0;
       if (pd.groupId && gSize >= 2) {
@@ -1762,6 +1805,9 @@
         if (!m._pd) continue;
         if (scopeName === 'plant') {
           if (m._pd.markerId === pd.markerId) out.push(m);
+        } else if (scopeName === 'selection') {
+          if (_selectionContains({ kind: 'plant', markerId: m._pd.markerId }))
+            out.push(m);
         } else if (scopeName === 'community') {
           if (pd.communityId && m._pd.communityId === pd.communityId) out.push(m);
         } else if (scopeName === 'group') {
@@ -1952,7 +1998,15 @@
           lat: m._pd.lat, lng: m._pd.lng,
         });
       }
-      if (st.memberIds.length >= 2) {
+      if (st.scopeName === 'selection') {
+        // Marquee selection (G1): may span several placement groups, so persist
+        // via the group-agnostic handler (matches by plant_id + old-coords).
+        if (bridge && bridge.onSelectionMoved) {
+          bridge.onSelectionMoved(
+            JSON.stringify(st.originals), JSON.stringify(moved)
+          );
+        }
+      } else if (st.memberIds.length >= 2) {
         // Group/community scope. All members share st.groupId, so the Python
         // handler matches each moved feature by plant_id + old-coords +
         // group_id — moving a community subset leaves the rest of the row put.

@@ -566,6 +566,7 @@ class MainWindow(QMainWindow):
         b.plant_placed.connect(self._on_plant_placed)
         b.plant_moved.connect(self._on_plant_moved)
         b.plant_group_moved.connect(self._on_plant_group_moved)
+        b.selection_moved.connect(self._on_selection_moved)
         b.map_ready.connect(self._on_map_ready)
 
         # Toolbar → map
@@ -1298,6 +1299,9 @@ class MainWindow(QMainWindow):
         return self._map_events._on_plant_group_moved(
             group_id, originals_json, moved_json,
         )
+
+    def _on_selection_moved(self, originals_json: str, moved_json: str):
+        return self._map_events._on_selection_moved(originals_json, moved_json)
 
     # Sun-path / sector anchor handlers — shims → MapEventRouter.
 

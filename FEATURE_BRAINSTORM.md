@@ -164,17 +164,31 @@ was never added; R4 uses plant-type heuristics.
 - **Note:** mulch area = sum of drawn `custom_shape` beds; estimates carry the
   same "varies by nursery/year/site" disclaimer as plant pricing.
 
-#### G1. Group select-and-move *(extend, not new)*
-- **Already there:** a shift+drag marquee exists in `html/map.html` (~lines
-  423-510: `selectedItems[]`, `deleteSelected()`, Delete/Escape keys), but it only
-  covers **plants, boundaries, and sun-path sectors**, and only supports **bulk
-  delete**.
-- **Change:** (a) extend the marquee to capture **all** placeables — structures,
-  hedgerows, shapes, OSM building outlines, measurements; (b) add **group
-  drag-move** so a captured selection can be repositioned as a unit, not just
-  deleted.
-- **Why:** matches the user's mental model — pull a box around everything in a
-  corner of the design and move or delete it together.
+#### G1. Group select-and-move *(extend, not new)* — ✅ Done (V1.60)
+- **Built on** the existing shift+drag marquee (`selectedItems[]`,
+  `deleteSelected()`, Delete/Escape) which already covered plants / boundaries /
+  sun-sectors with bulk delete.
+- **Extended selection + bulk-delete to structures:** the marquee hit-test,
+  highlight and delete now include placed structures (reusing the existing
+  `onStructureRemoved` bridge call) — so you can box a corner and delete plants +
+  boundaries + sectors + structures together.
+- **Group drag-move (marquee):** dragging a plant that's part of a ≥2-plant
+  selection now moves the **whole selected set** as a unit. Added a `selection`
+  drag scope (`_scopesFor` / `_markersInScope`) and a new **group-agnostic**
+  persistence path — `onSelectionMoved` → `MapEventRouter._on_selection_moved`,
+  which matches features by `plant_id` + old-coords *without* a placement-group
+  constraint (the existing `onPlantGroupMoved` only matches within one group, so
+  it couldn't move a cross-group selection).
+- **Verified:** new `test_map_events_drag.TestSelectionMove` proves a selection
+  spanning two placement groups moves correctly and leaves non-selected plants
+  put; the inline map JS passes `node --check`; the `test_map_js` presence test
+  is green. **Needs in-app verification:** the interactive marquee/drag gestures
+  themselves (selecting structures, dragging the selection) can't be exercised in
+  a headless environment — the logic underneath is tested, the Leaflet gestures
+  are not.
+- **Deferred within G1:** group *move* for non-plant types (structures/shapes)
+  and selecting hedgerows / OSM buildings / measurements — those carry their own
+  per-type geometry + persistence and are better done with the app running.
 
 #### P1. Alberta community presets — ✅ Done (V1.60)
 - **Mostly already there:** the seeded polyculture library already held ~18 AB

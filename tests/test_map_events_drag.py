@@ -134,5 +134,52 @@ class TestCommunitySubsetMove(unittest.TestCase):
         self.assertEqual(len(main.undo_entries[0]["originals"]), 3)
 
 
+class TestSelectionMove(unittest.TestCase):
+    """G1 — a marquee selection may span several placement groups, so
+    _on_selection_moved must match by plant_id + old-coords WITHOUT a
+    group constraint (unlike _on_plant_group_moved)."""
+
+    def _build(self):
+        placed = [
+            {"plant_id": 1, "common_name": "A", "lat": 53.50, "lng": -113.50,
+             "placement_group_id": "g1"},
+            {"plant_id": 2, "common_name": "B", "lat": 53.51, "lng": -113.51,
+             "placement_group_id": "g2"},          # different group
+            {"plant_id": 3, "common_name": "C", "lat": 53.52, "lng": -113.52,
+             "placement_group_id": "g2"},          # not in the selection
+        ]
+        features = [
+            _plant_feature(1, 53.50, -113.50, "g1", (53.50, -113.50)),
+            _plant_feature(2, 53.51, -113.51, "g2", (53.51, -113.51)),
+            _plant_feature(3, 53.52, -113.52, "g2", (53.52, -113.52)),
+        ]
+        return _FakeMain(placed, {"features": features})
+
+    def test_moves_cross_group_selection_and_leaves_rest(self):
+        main = self._build()
+        router = MapEventRouter(main)
+        originals = [
+            {"markerId": "m1", "plantId": 1, "lat": 53.50, "lng": -113.50},
+            {"markerId": "m2", "plantId": 2, "lat": 53.51, "lng": -113.51},
+        ]
+        moved = [
+            {"markerId": "m1", "plantId": 1, "lat": 53.60, "lng": -113.60},
+            {"markerId": "m2", "plantId": 2, "lat": 53.61, "lng": -113.61},
+        ]
+        router._on_selection_moved(json.dumps(originals), json.dumps(moved))
+
+        p1 = next(p for p in main._placed_plants if p["plant_id"] == 1)
+        p2 = next(p for p in main._placed_plants if p["plant_id"] == 2)
+        p3 = next(p for p in main._placed_plants if p["plant_id"] == 3)
+        self.assertEqual((p1["lat"], p1["lng"]), (53.60, -113.60))
+        self.assertEqual((p2["lat"], p2["lng"]), (53.61, -113.61))     # other group
+        self.assertEqual((p3["lat"], p3["lng"]), (53.52, -113.52))     # untouched
+        # features updated for both moved plants (no group filter)
+        f2 = next(f for f in main._project["features"]
+                  if f["properties"]["plant_id"] == 2)
+        self.assertEqual(f2["geometry"]["coordinates"], [-113.61, 53.61])
+        self.assertEqual(main.undo_entries[0]["action"], "move_selection")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -97,6 +97,7 @@ class MapBridge(QObject):
 
     # An entire placement group (polyculture etc.) was dragged
     plant_group_moved = pyqtSignal(str, str, str)
+    selection_moved = pyqtSignal(str, str)   # originals_json, moved_json (G1)
     # ^ groupId, originals_json, moved_json
     # both JSON strings are arrays of {markerId, plantId, lat, lng}.
 
@@ -273,6 +274,10 @@ class MapBridge(QObject):
     def onPlantGroupMoved(self, group_id: str,
                           originals_json: str, moved_json: str):
         self.plant_group_moved.emit(group_id, originals_json, moved_json)
+
+    @pyqtSlot(str, str)
+    def onSelectionMoved(self, originals_json: str, moved_json: str):
+        self.selection_moved.emit(originals_json, moved_json)
 
     @pyqtSlot(float, float)
     def onAnnotateRequested(self, lat: float, lng: float):
