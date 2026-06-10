@@ -359,6 +359,15 @@ class PlantPanel(QWidget):
         self._birdfood_btn.toggled.connect(self._run_search)
         habitat_row.addWidget(self._birdfood_btn)
 
+        self._has_image_btn = QPushButton("Photo")
+        self._has_image_btn.setCheckable(True)
+        self._has_image_btn.setToolTip(
+            "Only show plants that have a photo (openly licensed, from iNaturalist)"
+        )
+        self._has_image_btn.setStyleSheet(_toggle_style)
+        self._has_image_btn.toggled.connect(self._run_search)
+        habitat_row.addWidget(self._has_image_btn)
+
         habitat_row.addStretch(1)
         top_layout.addLayout(habitat_row)
 
@@ -574,6 +583,7 @@ class PlantPanel(QWidget):
                 host_plant_only = self._host_btn.isChecked(),
                 keystone_only   = self._keystone_btn.isChecked(),
                 bird_food_only  = self._birdfood_btn.isChecked(),
+                has_image_only  = self._has_image_btn.isChecked(),
                 ab_ecoregion    = self._combo_value(self._ecoregion_combo),
             )
         except Exception as exc:

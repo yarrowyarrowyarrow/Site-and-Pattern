@@ -99,6 +99,15 @@ class TestImageSchema(unittest.TestCase):
         self.assertIn("image_url", rec)
         self.assertIn("image_attribution", rec)
 
+    def test_has_image_only_filter(self):
+        """The 'Photo' browser filter narrows to plants with an image_url."""
+        from src.db.plants import search_plants
+        all_plants = search_plants()
+        with_photo = search_plants(has_image_only=True)
+        self.assertTrue(0 < len(with_photo) < len(all_plants))
+        self.assertTrue(
+            all((p.get("image_url") or "").strip() for p in with_photo))
+
 
 if __name__ == "__main__":
     unittest.main()

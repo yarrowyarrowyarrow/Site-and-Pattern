@@ -865,6 +865,7 @@ def search_plants(
     host_plant_only: bool = False,
     keystone_only: bool = False,
     bird_food_only: bool = False,
+    has_image_only: bool = False,
     ab_ecoregion: str = "",
     pet_safe_only: bool = False,
     kid_safe_only: bool = False,
@@ -951,6 +952,9 @@ def search_plants(
     if bird_food_only:
         sql += _use_filter("bird_food")
         params.append("bird_food")
+
+    if has_image_only:
+        sql += " AND image_url IS NOT NULL AND image_url != ''"
 
     if ab_ecoregion:
         # ab_ecoregion column is a comma-separated list of region ids;
