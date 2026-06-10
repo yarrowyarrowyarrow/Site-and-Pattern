@@ -232,6 +232,21 @@ class TestGoalsAndOffline(unittest.TestCase):
         warnings = project.as_dict()["properties"].get("generation_warnings", [])
         self.assertFalse(any("Estimated plant cost" in w for w in warnings))
 
+    def test_offline_places_multiple_communities(self):
+        # D2: a pollinator design now lays down >=2 distinct seeded communities
+        # as grouped units (previously a single default).
+        project = llm.generate_design_offline(
+            site_config=_EDM, goals=["pollinator"])
+        names = set()
+        for f in project.as_dict().get("features", []):
+            props = f.get("properties", {})
+            if props.get("element_type") == "plant":
+                pn = (props.get("polyculture_name") or "").strip()
+                if pn:
+                    names.add(pn)
+        self.assertGreaterEqual(
+            len(names), 2, f"expected >=2 communities placed, got {names}")
+
     def test_offline_fauna_targeting_places_supporters(self):
         # Designing for the Monarch must include a plant that supports it
         # (milkweed); the offline path leads with such plants.

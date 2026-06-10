@@ -238,17 +238,23 @@ section below** — this is the round's biggest architectural item.
   schema + data-sourcing + UI effort and a natural fit for the separate "local AI
   workflow" that already handles dataset growth.
 
-#### D2. Generate Design improvements *(scope-first)*
-- **What exists today** (so we improve, not rebuild): an LLM path via local Ollama
-  (`llm_design.py`, `generate_worker.py`, `generate_design_dialog.py`,
-  `controllers/generation.py`) with an **offline fallback**; goal- and
-  site-driven filtering (ecoregion, hardiness, soil pH), layout patterns
-  (scatter/row/grid/circle), budget trimming (`trim_to_budget`), and optional
-  site micro-zoning (wet/dry/shade cells).
-- **Candidate directions** (need a dedicated scoping pass before committing):
-  polyculture-aware offline placement (the offline path is species-list only
-  today), better spacing/competition rules, and prompt/quality tuning for the LLM
-  path.
+#### D2. Generate Design improvements — ◐ First slice done (V1.60)
+- **Shipped — community-aware offline placement:** the no-LLM path used to drop a
+  single default community onto a flat species list. It now selects **2–3
+  site/goal-fit seeded communities** as grouped polycultures via the new
+  `_select_offline_communities` (`llm_design.py`), scored by goal-name match
+  (+2 each) and **ecoregion-name match** (+3, e.g. an `aspen_parkland` site
+  surfaces "Aspen Parkland Edge"). The budget path was upgraded from
+  all-or-nothing to dropping the priciest/lowest-ranked communities one at a time
+  until the set fits.
+- **Verified:** 7 pure `test_offline_communities` cases (goal/ecoregion scoring,
+  caps, budget fallback) + an integration test (`test_llm_design`) confirming a
+  pollinator design now places ≥2 distinct communities.
+- **Still open (future):** spacing/competition rules and LLM-path prompt/quality
+  tuning — the remaining D2 candidates, deferred.
+- **Unchanged base** (for reference): LLM path via local Ollama
+  (`generate_worker.py`, `generate_design_dialog.py`, `controllers/generation.py`),
+  goal/site filtering, layout patterns, and site micro-zoning.
 
 ---
 

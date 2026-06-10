@@ -1382,6 +1382,49 @@ def _match_communities_by_name(communities: list[dict],
     return out
 
 
+# Ecoregion key → the human words seeded community names use, so an
+# ecoregion-tagged site prefers its matching community (aspen_parkland →
+# "Aspen Parkland Edge", riparian → "Riparian Willow Thicket", …).
+_ECOREGION_WORDS = {
+    "aspen_parkland":     "aspen parkland",
+    "mixedgrass_prairie": "mixedgrass",
+    "fescue_foothills":   "foothills",
+    "boreal_mixedwood":   "boreal",
+    "riparian":           "riparian",
+    "wet_meadow":         "wet meadow",
+    "subalpine_montane":  "subalpine",
+}
+
+
+def _select_offline_communities(communities: list[dict], goals, site_config,
+                                budget, max_n: int = 3) -> list[int]:
+    """Pick up to ``max_n`` seeded communities that fit the goals + site for the
+    no-LLM path, scored by goal-name match (+2 each) and ecoregion-name match
+    (+3). This is the D2 upgrade: the offline design lays down a couple of
+    grounded plant communities instead of a single default. Falls back to one
+    sensible default when nothing scores and there's no budget pressure."""
+    if not communities:
+        return []
+    from src.design_goals import community_name_hints
+    hints = [h.lower() for h in (community_name_hints(goals) or []) if h]
+    eco_word = _ECOREGION_WORDS.get((site_config or {}).get("ecoregion_key"))
+
+    def _score(c: dict) -> int:
+        text = ((c.get("name") or "") + " " + (c.get("description") or "")).lower()
+        s = sum(2 for h in hints if h in text)
+        if eco_word and eco_word in text:
+            s += 3
+        return s
+
+    scored = [(_score(c), c) for c in communities]
+    # stable sort keeps catalogue order among equal scores
+    scored.sort(key=lambda t: t[0], reverse=True)
+    picks = [c for sc, c in scored if sc > 0][:max_n]
+    if not picks and not budget:
+        picks = [communities[0]]
+    return [c["id"] for c in picks if c.get("id") is not None]
+
+
 def _fauna_names(fauna_ids) -> list:
     """Resolve fauna ids to common names (for prompt hints / warnings). Skips
     unknown ids; returns [] on any error."""
@@ -1593,24 +1636,24 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
                    for p in plants[:_OFFLINE_PLANT_CAP]]
 
     communities = list_polycultures()
-    community_items = _match_communities_by_name(
-        communities, community_name_hints(goals))
-    # Don't force an arbitrary default community in budget mode — it would blow
-    # an individual-plant budget; a goal-matched community still applies.
-    if not community_items and communities and not budget:
-        community_items = [communities[0]["id"]]  # a sensible default
+    # D2: place a couple of site/goal-fit communities as grouped units, not a
+    # single default — scored by goal + ecoregion name match.
+    community_items = _select_offline_communities(
+        communities, goals, site_config, budget)
 
-    # Budget: count the (atomic) community cost first, drop a matched community
-    # that alone blows the budget (when individuals remain to carry the design),
-    # then trim individual plants to the remainder so the whole design fits.
+    # Budget: count the (atomic) community cost first; drop the priciest /
+    # lowest-ranked communities one at a time until they fit (keeping individuals
+    # to carry the design), then trim individual plants to the remainder.
     budget_dropped = 0
     if budget and budget > 0:
         from src.sourcing import trim_to_budget, polyculture_cost
+        while community_items:
+            clow, chigh = polyculture_cost(community_items)
+            if (clow + chigh) / 2.0 <= budget or not plant_items:
+                break
+            community_items = community_items[:-1]  # drop lowest-ranked
         clow, chigh = polyculture_cost(community_items)
         cmid = (clow + chigh) / 2.0
-        if cmid > budget and plant_items:
-            community_items = []
-            cmid = 0.0
         plant_items, budget_dropped = trim_to_budget(
             plant_items, max(budget - cmid, 0.0))
 
