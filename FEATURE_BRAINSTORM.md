@@ -249,17 +249,32 @@ map3d fork + a browser):
   show, and an empty "3D" tab would confuse users. Mounting is the next D1 step
   once the fork is built.
 
-#### I1. Flora & fauna image library
-- **State:** *no* image fields today. Plants carry a `marker_color`; fauna carry
-  an emoji `icon`; there is no assets directory and no image UI.
-- **Change:** add `image_url` + `image_attribution` + `image_license` columns to
-  `plants` and `fauna`; source **openly-licensed** imagery (Wikimedia Commons,
-  iNaturalist — CC0 / CC-BY / public domain); show a gallery in the plant/fauna
-  detail panel; cache locally for offline use.
-- **Licensing reality:** the books you own are copyrighted — those scans can't
-  ship. Every image needs an open license recorded with its citation. This is a
-  schema + data-sourcing + UI effort and a natural fit for the separate "local AI
-  workflow" that already handles dataset growth.
+#### I1. Flora & fauna image library — ✅ Infrastructure done (V1.60)
+- **Schema (v24):** added `image_url` / `image_attribution` / `image_license` to
+  **plants and fauna** (`schema.sql` + `_migrate_to_v24` ALTERs existing installs;
+  `_SCHEMA_VERSION` 23 → 24). The seed pipeline reads the three fields from the
+  master JSON, so the dataset workflow just adds them per record.
+- **Cache/resolver** `src/image_cache.py` (Qt-free, stdlib `urllib`, graceful
+  degradation like `climate.py`): `get_cached_image` (cache-only, never blocks),
+  `fetch_and_cache_image` / `resolve_image` (fetch once, store under the user-data
+  dir with the attribution + license in a JSON sidecar). Local file paths resolve
+  directly.
+- **Plant detail UI:** the expanded plant row now shows the cached photo + its
+  attribution above the detail rows (`plant_list_view.py`), **gated on a cached
+  image** so it's completely inert until images exist (zero change to today's
+  rows). A one-time **background fetch** (`QThreadPool`) warms the photo when a
+  row is expanded and repaints it.
+- **Verified:** 6 `test_image_cache` cases — incl. the fetch+cache+attribution
+  path exercised offline via a `file://` URL — plus a schema test (both tables
+  carry the columns; `get_plant` exposes them). Panel/model construct offscreen;
+  128 DB-seeding tests green at v24.
+- **Still the dataset workflow's job** (per the brief): sourcing the actual
+  openly-licensed photos (Wikimedia/iNaturalist, CC0/CC-BY/PD) with citations —
+  the app side is ready for them. Fauna images: columns + cache are in place; a
+  fauna-picker thumbnail is the small remaining UI follow-up.
+- **Licensing reality (unchanged):** book scans are copyrighted; every image
+  needs an open license recorded with its citation — the schema now enforces a
+  place for it.
 
 #### D2. Generate Design improvements — ◐ First slice done (V1.60)
 - **Shipped — community-aware offline placement:** the no-LLM path used to drop a

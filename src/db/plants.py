@@ -102,7 +102,10 @@ _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 # polycultures (P1). No DDL change — the bump re-runs the polyculture seed
 # (polycultures / polyculture_members are already wiped in the reseed block) so
 # existing installs pick the new communities up.
-_SCHEMA_VERSION = 23
+# v24 (V1.60): imagery columns (image_url / image_attribution / image_license)
+# on plants + fauna (I1). _migrate_to_v24 ALTERs existing tables; the reseed
+# fills any values present in the seed JSON.
+_SCHEMA_VERSION = 24
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -280,6 +283,20 @@ def _migrate_to_v19(conn: sqlite3.Connection):
     conn.commit()
 
 
+def _migrate_to_v24(conn: sqlite3.Connection):
+    """Add the imagery columns (V1.60) to plants and fauna. The version bump
+    triggers a reseed that fills any values present in the seed JSON; existing
+    installs keep their rows and just gain the (empty) columns here."""
+    for table in ("plants", "fauna"):
+        for col_name in ("image_url", "image_attribution", "image_license"):
+            try:
+                conn.execute(
+                    f"ALTER TABLE {table} ADD COLUMN {col_name} TEXT DEFAULT ''")
+            except sqlite3.OperationalError:
+                pass  # column already present
+    conn.commit()
+
+
 # Vegetation layers and ecological functions used to split the legacy
 # single `role` field on polyculture_members. Mirrored in
 # src/polyculture_panel.py so the UI and the migration use one source of
@@ -425,6 +442,9 @@ def _seed_fauna(conn: sqlite3.Connection) -> int:
                 e.get("range_notes"),
                 e.get("icon"),
                 e.get("description"),
+                e.get("image_url", ""),
+                e.get("image_attribution", ""),
+                e.get("image_license", ""),
             )
             for e in fauna_entries
             if "scientific_name" in e and "common_name" in e and "taxon" in e
@@ -433,8 +453,9 @@ def _seed_fauna(conn: sqlite3.Connection) -> int:
             conn.executemany(
                 "INSERT OR IGNORE INTO fauna "
                 "(scientific_name, common_name, taxon, ab_native, "
-                " range_notes, icon, description) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                " range_notes, icon, description, "
+                " image_url, image_attribution, image_license) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 fauna_rows,
             )
             conn.commit()
@@ -549,6 +570,9 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("price_high_cad"),
             p.get("availability_class", ""),
             p.get("sourcing_notes", ""),
+            p.get("image_url", ""),
+            p.get("image_attribution", ""),
+            p.get("image_license", ""),
         ))
 
     conn.executemany(
@@ -566,8 +590,9 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             toxicity_pets, toxicity_humans, has_thorns,
             spread_habit, safety_source,
             price_low_cad, price_high_cad, availability_class,
-            sourcing_notes)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            sourcing_notes,
+            image_url, image_attribution, image_license)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -650,6 +675,9 @@ def init_db() -> None:
 
         if current_version < 19:
             _migrate_to_v19(conn)
+
+        if current_version < 24:
+            _migrate_to_v24(conn)
 
         # Add parent_id to polycultures if missing
         try:

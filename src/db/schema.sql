@@ -48,7 +48,13 @@ CREATE TABLE IF NOT EXISTS plants (
     price_low_cad REAL,                 -- est. low retail price, one nursery plant (CAD)
     price_high_cad REAL,                -- est. high retail price (CAD)
     availability_class TEXT DEFAULT '', -- '' | big_box | garden_centre | native_specialist | seed_or_plug | rare
-    sourcing_notes TEXT DEFAULT ''      -- form sold / example AB nurseries / as-of year
+    sourcing_notes TEXT DEFAULT '',     -- form sold / example AB nurseries / as-of year
+    -- Imagery (schema v24, V1.60). An OPENLY-licensed photo + its citation;
+    -- NULL/empty until the dataset workflow fills them. The app caches the URL
+    -- locally and shows the attribution beside the photo (src/image_cache.py).
+    image_url TEXT DEFAULT '',          -- http(s) URL or local path to an open-licensed photo
+    image_attribution TEXT DEFAULT '',  -- e.g. "© Photographer, CC BY-SA 4.0 (via Wikimedia)"
+    image_license TEXT DEFAULT ''       -- e.g. CC0 / CC BY / CC BY-SA / public domain
 );
 
 CREATE TABLE IF NOT EXISTS companion_friends (
@@ -149,7 +155,11 @@ CREATE TABLE IF NOT EXISTS fauna (
     ab_native INTEGER NOT NULL DEFAULT 1,
     range_notes TEXT,
     icon TEXT,
-    description TEXT
+    description TEXT,
+    -- Imagery (schema v24, V1.60) — see the plants table note.
+    image_url TEXT DEFAULT '',
+    image_attribution TEXT DEFAULT '',
+    image_license TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS plant_fauna (

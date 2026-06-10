@@ -20,6 +20,7 @@ from typing import Optional
 
 from PyQt6.QtCore import (
     Qt, QAbstractListModel, QModelIndex, QRect, QSize, QEvent,
+    QRunnable, QThreadPool, pyqtSignal,
 )
 from PyQt6.QtGui import (
     QColor, QIcon, QPixmap, QPainter, QFont, QBrush, QPen, QFontMetrics,
@@ -191,6 +192,9 @@ _CAL_GAP         = 3
 _CAL_BLOCK_H     = (_CAL_MONTH_ROW_H + _CAL_STRIP_H + _CAL_LEGEND_H
                     + _CAL_GAP * 3)
 
+# Expanded-row photo block (I1): max image height + two attribution lines.
+_IMG_MAX_H = 110
+
 
 def _zone_badge_text(plant: dict) -> str:
     zmin = plant.get("hardiness_zone_min")
@@ -202,6 +206,20 @@ def _zone_badge_text(plant: dict) -> str:
     return ""
 
 
+def _detail_image_path(plant: dict):
+    """Local path to this plant's open-licensed photo if it's already cached /
+    local, else None (I1). Cache-only — never blocks paint — so the expanded-row
+    image is inert until the image dataset / cache is populated."""
+    url = (plant or {}).get("image_url")
+    if not url:
+        return None
+    try:
+        from src.image_cache import get_cached_image
+        return get_cached_image(url)
+    except Exception:
+        return None
+
+
 class PlantListModel(QAbstractListModel):
     """List model for compact one-line plant rows with expand-in-place state.
 
@@ -209,6 +227,10 @@ class PlantListModel(QAbstractListModel):
     a tall row that includes the detail block). Expansion state survives
     filter changes for any plant whose id is still in the new result set.
     """
+
+    # Emitted (from a worker thread) when a plant's photo finishes caching, so
+    # the row can repaint with the image. Carries the plant id.
+    imageReady = pyqtSignal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -220,6 +242,9 @@ class PlantListModel(QAbstractListModel):
         # list means "no calendar data". Cache lives for the panel's
         # lifetime.
         self._calendar_cache: dict[int, list[dict]] = {}
+        # Plant ids whose photo we've already kicked a background fetch for.
+        self._img_prefetched: set[int] = set()
+        self.imageReady.connect(self._on_image_ready)
 
     # Standard model API -------------------------------------------------
 
@@ -263,13 +288,56 @@ class PlantListModel(QAbstractListModel):
 
     def toggle_expanded(self, row: int):
         if 0 <= row < len(self._plants):
-            pid = self._plants[row].get("id")
+            plant = self._plants[row]
+            pid = plant.get("id")
             if pid in self._expanded_ids:
                 self._expanded_ids.discard(pid)
             else:
                 self._expanded_ids.add(pid)
+                self._prefetch_image(plant)   # warm the photo for this row
             idx = self.index(row)
             self.dataChanged.emit(idx, idx, [_PLANT_EXPANDED_ROLE])
+
+    def _prefetch_image(self, plant: dict):
+        """Kick a one-time background fetch of a plant's photo into the local
+        cache (I1). Off the UI thread; emits ``imageReady`` when done so the row
+        repaints. No-op without a URL, when already cached, or if Qt threading is
+        unavailable."""
+        url = (plant or {}).get("image_url")
+        pid = plant.get("id")
+        if not url or pid is None or pid in self._img_prefetched:
+            return
+        self._img_prefetched.add(pid)
+        try:
+            from src.image_cache import get_cached_image
+            if get_cached_image(url):
+                return  # already available — nothing to fetch
+        except Exception:
+            return
+        attribution = plant.get("image_attribution", "")
+        license_str = plant.get("image_license", "")
+        signal = self.imageReady
+
+        class _FetchTask(QRunnable):
+            def run(self):
+                try:
+                    from src.image_cache import resolve_image
+                    if resolve_image(url, attribution, license_str):
+                        signal.emit(pid)
+                except Exception:
+                    pass
+
+        try:
+            QThreadPool.globalInstance().start(_FetchTask())
+        except Exception:
+            pass
+
+    def _on_image_ready(self, plant_id: int):
+        for row, p in enumerate(self._plants):
+            if p.get("id") == plant_id:
+                idx = self.index(row)
+                self.dataChanged.emit(idx, idx, [_PLANT_OBJ_ROLE])
+                break
 
     def collapse_all(self):
         if self._expanded_ids:
@@ -521,14 +589,48 @@ class PlantRowDelegate(QStyledItemDelegate):
             cal = model.calendar_for(plant.get("id"))
             if cal:
                 cal_h = _CAL_BLOCK_H
+        # Open-licensed photo (I1): reserved only when one is cached, so the
+        # row height is unchanged until images exist.
+        image_h = 0
+        if _detail_image_path(plant):
+            image_h = _IMG_MAX_H + 2 * fm.lineSpacing() + 6
         # Detail rows: 5 single-line + 3 double-line (Uses, Wildlife,
         # Companions) = 11 lineSpacing units; round up to 12 for the
         # gap before the calendar block. V1.37 made the three list
         # rows wrap so Bur Oak's full companion + uses lists fit.
-        detail_h = 12 * fm.lineSpacing() + cal_h + notes_h + 8
+        detail_h = 12 * fm.lineSpacing() + cal_h + notes_h + image_h + 8
         return QSize(0, compact_h + detail_h)
 
     # Painting -----------------------------------------------------------
+
+    def _paint_detail_image(self, painter: QPainter, detail: QRect,
+                            plant: dict, img_path: str) -> QRect:
+        """Draw the plant's cached photo + its attribution at the top of the
+        detail block. Returns a detail rect shifted below them so the existing
+        detail rows reflow down. Falls back to the original rect if the pixmap
+        can't load."""
+        pm = QPixmap(img_path)
+        if pm.isNull():
+            return detail
+        scaled = pm.scaled(detail.width(), _IMG_MAX_H,
+                           Qt.AspectRatioMode.KeepAspectRatio,
+                           Qt.TransformationMode.SmoothTransformation)
+        painter.drawPixmap(detail.left(), detail.top(), scaled)
+        y = detail.top() + scaled.height() + 2
+        fm_s = QFontMetrics(self._small_font)
+        attr = (plant.get("image_attribution") or "").strip()
+        if attr:
+            painter.setPen(QColor("#78909c"))
+            painter.setFont(self._small_font)
+            painter.drawText(
+                QRect(detail.left(), y, detail.width(), 2 * fm_s.lineSpacing()),
+                int(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
+                    | Qt.TextFlag.TextWordWrap),
+                attr)
+            y += 2 * fm_s.lineSpacing()
+        y += 4
+        return QRect(detail.left(), y, detail.width(),
+                     max(0, detail.bottom() - y))
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
         plant = index.data(_PLANT_OBJ_ROLE) or {}
@@ -708,6 +810,12 @@ class PlantRowDelegate(QStyledItemDelegate):
         if expanded:
             detail = QRect(rect.left() + 8, compact.bottom() + 4,
                            rect.width() - 16, rect.height() - compact_h - 8)
+            # Open-licensed photo (I1) at the top of the detail block — only when
+            # cached, so this whole branch is inert until images exist. Returns a
+            # detail rect shifted below the image so the rows reflow down.
+            img_path = _detail_image_path(plant)
+            if img_path:
+                detail = self._paint_detail_image(painter, detail, plant, img_path)
             painter.setPen(QColor("#90a4ae"))
             painter.setFont(self._small_font)
             fm_s = QFontMetrics(self._small_font)
