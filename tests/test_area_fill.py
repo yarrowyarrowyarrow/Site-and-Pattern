@@ -214,6 +214,36 @@ class TestAreaFillController(unittest.TestCase):
         self.assertEqual(AreaFillController(main).fill_communities(
             _RING, {"name": "x", "members": []}, spacing_m=4.0), 0)
 
+    def _community(self, name, a, b):
+        return {"id": abs(hash(name)) % 100000, "name": name, "members": [
+            {"plant_id": a, "common_name": "C", "offset_x": 0.0, "offset_y": 0.0},
+            {"plant_id": b, "common_name": "E", "offset_x": 1.5, "offset_y": 0.0},
+        ]}
+
+    def test_fill_community_mix_scatters_both(self):
+        from src.controllers.area_fill_controller import AreaFillController
+        main, calls = self._stub_main()
+        mix = [
+            {"id": 1, "weight": 1, "name": "Guild A",
+             "polyculture": self._community("Guild A", self._a, self._b)},
+            {"id": 2, "weight": 1, "name": "Guild B",
+             "polyculture": self._community("Guild B", self._b, self._a)},
+        ]
+        n = AreaFillController(main).fill_community_mix(_RING, mix, spacing_m=2.0)
+        self.assertGreater(n, 1)
+        names = {p["polyculture_name"] for p in main._placed_plants}
+        self.assertEqual(names, {"Guild A", "Guild B"})   # both represented
+        # 2 members per unit; one shared placement group.
+        self.assertEqual(len(main._placed_plants), n * 2)
+        self.assertEqual(
+            len({p["placement_group_id"] for p in main._placed_plants}), 1)
+
+    def test_fill_community_mix_empty(self):
+        from src.controllers.area_fill_controller import AreaFillController
+        main, _ = self._stub_main()
+        self.assertEqual(
+            AreaFillController(main).fill_community_mix(_RING, [], 2.0), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

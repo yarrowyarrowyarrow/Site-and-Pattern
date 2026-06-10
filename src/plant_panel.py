@@ -492,33 +492,9 @@ class PlantPanel(QWidget):
         place_row.addWidget(self._place_btn)
 
         bot_layout.addLayout(place_row)
-
-        # Fill-area row (F3): draw a polygon on the map and scatter the selected
-        # plant — or the current mix (≥2 species) — inside it.
-        fill_row = QHBoxLayout()
-        fill_row.setSpacing(4)
-        self._fill_btn = QPushButton("Fill Area…")
-        self._fill_btn.setEnabled(False)
-        self._fill_btn.setToolTip(
-            "Draw an area on the map and scatter the selected plant — or your "
-            "current mix (≥2 species) — inside it at the spacing shown."
-        )
-        self._fill_btn.clicked.connect(self._on_fill_area_clicked)
-        self._fill_btn.setStyleSheet(_PLACE_BTN_STYLE)
-        fill_row.addWidget(self._fill_btn)
-        sp_label = QLabel("Spacing:")
-        sp_label.setStyleSheet("color: #90a4ae; font-size: 11px;")
-        fill_row.addWidget(sp_label)
-        self._fill_spacing = QDoubleSpinBox()
-        self._fill_spacing.setRange(0.3, 20.0)
-        self._fill_spacing.setSingleStep(0.5)
-        self._fill_spacing.setValue(1.5)
-        self._fill_spacing.setSuffix(" m")
-        self._fill_spacing.setFixedWidth(75)
-        self._fill_spacing.setToolTip("Centre-to-centre spacing of the scattered plants.")
-        fill_row.addWidget(self._fill_spacing)
-        fill_row.addStretch(1)
-        bot_layout.addLayout(fill_row)
+        # Fill Area now lives in the Placement Mode selector (choose "Fill Area",
+        # set spacing, click Place, then draw the polygon) — see
+        # _on_place_clicked + PlacementControlsWidget.
 
         # Bottom pane: just placement controls now. (On This Design lives
         # in a sibling inner tab at the same level as Plants and Plant
@@ -627,13 +603,13 @@ class PlantPanel(QWidget):
         plant = current.data(_PLANT_OBJ_ROLE)
         if not plant:
             self._selected_plant = None
-            self._place_btn.setEnabled(False)
-            self._fill_btn.setEnabled(len(self._mix_species) >= 2)
+            # A built mix can still be Placed (incl. Fill Area) without a
+            # current list selection.
+            self._place_btn.setEnabled(len(self._mix_species) >= 2)
             return
         self._selected_plant = plant
         self._update_color_btn(plant.get("marker_color") or "")
         self._place_btn.setEnabled(True)
-        self._fill_btn.setEnabled(True)
 
     def _on_view_double_clicked(self, index: QModelIndex):
         """Double-click: place the plant directly (Single mode)."""
@@ -644,7 +620,7 @@ class PlantPanel(QWidget):
             self._selected_plant = plant
             self._on_place_clicked()
 
-    # ── Fill an area with plants (F3) ───────────────────────────────────────────
+    # ── Fill an area with plants (Placement Mode → Fill Area) ───────────────────
 
     def _fill_members(self):
         """``(members, name)`` for an area fill: the current mix (≥2 species) if
@@ -658,13 +634,6 @@ class PlantPanel(QWidget):
             return ([(int(self._selected_plant["id"]), 1.0)],
                     self._selected_plant.get("common_name", ""))
         return [], ""
-
-    def _on_fill_area_clicked(self):
-        members, name = self._fill_members()
-        if not members:
-            return
-        self.fill_area_requested.emit(
-            members, float(self._fill_spacing.value()), name)
 
     # ── Place on map ──────────────────────────────────────────────────────────
 
@@ -884,16 +853,14 @@ class PlantPanel(QWidget):
 
         n = len(self._mix_species)
 
-        # Place button label tracks the active mix.
+        # Place button label tracks the active mix; a built mix is placeable
+        # (incl. Fill Area) even when nothing is selected in the list.
         if hasattr(self, "_place_btn"):
             self._place_btn.setText(
                 "Place Mix on Map" if n >= 2 else "Place on Map"
             )
-        # Fill button: usable with a built mix even if nothing is list-selected.
-        if hasattr(self, "_fill_btn"):
-            self._fill_btn.setText("Fill Area (mix)…" if n >= 2 else "Fill Area…")
             if n >= 2:
-                self._fill_btn.setEnabled(True)
+                self._place_btn.setEnabled(True)
 
         if n == 0:
             self._mix_status.setText(
@@ -1194,9 +1161,18 @@ class PlantPanel(QWidget):
     # ── Place on map ──────────────────────────────────────────────────────────
 
     def _on_place_clicked(self, _item=None):
+        pattern = self._current_pattern()
+        # Fill Area is a placement mode now: draw a polygon and the selected
+        # plant — or the current mix — scatters inside it (evenly distributed).
+        if pattern.get("kind") == "fill":
+            members, name = self._fill_members()
+            if not members:
+                return
+            self.fill_area_requested.emit(
+                members, self._placement.fill_spacing(), name)
+            return
         if not self._selected_plant:
             return
-        pattern = self._current_pattern()
         # Stash the polyculture recipe in flight so App can read it back
         # in `_on_pattern_placed` after JS finishes the 2-click gesture.
         # Cleared on consumption.

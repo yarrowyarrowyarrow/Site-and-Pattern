@@ -556,6 +556,7 @@ class MainWindow(QMainWindow):
         # Polyculture panel → map (polyculture placement)
         self.polyculture_panel.placePolycultureRequested.connect(self._enter_polyculture_mode)
         self.polyculture_panel.fillAreaRequested.connect(self._on_community_fill_requested)
+        self.polyculture_panel.fillCommunityMixRequested.connect(self._on_community_mix_fill_requested)
         self.plant_panel.fill_area_requested.connect(self._on_plants_fill_requested)
         # Stack → community: refresh the Communities tree when the Plants
         # tab (or anywhere else) creates a brand-new plant community.
@@ -1089,6 +1090,16 @@ class MainWindow(QMainWindow):
                               "spacing": float(spacing_m or 0.0)}
         self._mode._enter_fill_mode()
 
+    def _on_community_mix_fill_requested(self, communities, spacing_m: float):
+        """Plant Communities tab → fill an area with whole units drawn from a
+        community MIX (scattered evenly by weight)."""
+        communities = list(communities or [])
+        if len(communities) < 2:
+            return
+        self._pending_fill = {"kind": "community_mix", "communities": communities,
+                              "spacing": float(spacing_m or 0.0)}
+        self._mode._enter_fill_mode()
+
     def _on_fill_area_complete(self, points_json: str):
         """User finished drawing the fill polygon — scatter the pending plants in
         it via AreaFillController (markers only; no hardscape shape)."""
@@ -1104,10 +1115,15 @@ class MainWindow(QMainWindow):
             return
         # JS sends [lat, lng] pairs; area_fill rings are [lng, lat] (GeoJSON).
         ring = [[p[1], p[0]] for p in pts]
-        if spec.get("kind") == "community":
+        kind = spec.get("kind")
+        if kind == "community":
             n = self._area_fill.fill_communities(ring, spec["polyculture"],
                                                  spec["spacing"])
             what = "communities"
+        elif kind == "community_mix":
+            n = self._area_fill.fill_community_mix(ring, spec["communities"],
+                                                   spec["spacing"])
+            what = "community units"
         else:
             n = self._area_fill.fill(ring, spec["members"], spec["spacing"],
                                      poly_name=spec["name"])

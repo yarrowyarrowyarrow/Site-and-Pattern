@@ -14,6 +14,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
+    QDoubleSpinBox,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -138,6 +139,7 @@ class PlacementControlsWidget(QWidget):
             ("row",    "Row",    "Click start, then end — fills a line"),
             ("grid",   "Grid",   "Click two opposite corners — fills a rectangle"),
             ("circle", "Circle", "Click centre, then radius — places items on a circle"),
+            ("fill",   "Fill Area", "Draw an area on the map — fills it evenly at the spacing below"),
         ]:
             btn = QPushButton(label)
             btn.setCheckable(True)
@@ -235,6 +237,28 @@ class PlacementControlsWidget(QWidget):
         cl.addStretch()
         self._stack.addWidget(circle_panel)
 
+        # Fill Area — spacing of the scattered items (draw the polygon on the map).
+        fill_panel = QWidget()
+        fl = QHBoxLayout(fill_panel)
+        fl.setContentsMargins(0, 0, 0, 0)
+        fl.setSpacing(4)
+        fl.addWidget(_small_label("Spacing:"))
+        self._fill_spacing = QDoubleSpinBox()
+        self._fill_spacing.setRange(0.3, 20.0)
+        self._fill_spacing.setSingleStep(0.5)
+        self._fill_spacing.setValue(1.5)
+        self._fill_spacing.setSuffix(" m")
+        self._fill_spacing.setFixedWidth(85)
+        self._fill_spacing.setToolTip(
+            "Centre-to-centre spacing of the scattered items. For a community "
+            "(or community mix) this is the gap between whole community units."
+        )
+        self._fill_spacing.setStyleSheet(_QTY_SPIN_STYLE)
+        fl.addWidget(self._fill_spacing)
+        fl.addWidget(_small_label("Click Place, then draw the area."))
+        fl.addStretch()
+        self._stack.addWidget(fill_panel)
+
         # ── Overlap / gap slider (applies to all multi modes) ─────────
         ov = QHBoxLayout()
         ov.setSpacing(4)
@@ -319,15 +343,21 @@ class PlacementControlsWidget(QWidget):
                 "overlap": overlap,
                 "use_canopy": use_canopy,
             }
+        elif kind == "fill":
+            params = {"spacing": float(self._fill_spacing.value())}
         else:
             return {"kind": "single", "params": {}}
         return {"kind": kind, "params": params}
+
+    def fill_spacing(self) -> float:
+        """Convenience accessor for the Fill Area spacing (metres)."""
+        return float(self._fill_spacing.value())
 
     # ── Internals ─────────────────────────────────────────────────────
 
     def _on_kind_changed(self, btn):
         kind = btn.property("pattern_kind") or "single"
         self._kind = kind
-        idx = {"single": 0, "row": 1, "grid": 2, "circle": 3}.get(kind, 0)
+        idx = {"single": 0, "row": 1, "grid": 2, "circle": 3, "fill": 4}.get(kind, 0)
         self._stack.setCurrentIndex(idx)
         self.patternKindChanged.emit(kind)

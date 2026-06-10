@@ -67,36 +67,32 @@ def assign_members(points, members) -> list:
     """Distribute ``points`` across ``members`` by weight (cover %).
 
     ``members`` is a list of ``(key, weight)`` — weights need not sum to 1; a
-    non-positive total falls back to an even split. Uses largest-remainder
-    allocation so counts stay proportional and sum exactly to ``len(points)``,
-    then round-robins the keys across points so species are spatially intermixed
-    rather than placed in blocks. Returns ``[(key, lat, lng), ...]``."""
+    non-positive total falls back to an even split. Counts stay proportional and
+    sum exactly to ``len(points)``; the keys are then spread across the points so
+    same-key plants land as far apart as the geometry allows — the SAME
+    ratio-correct assignment + repulsion optimiser the Row/Grid/Circle mixes use
+    (src.polyculture), so an area fill is distributed as evenly as a Circle fill
+    rather than in round-robin diagonal stripes. Returns ``[(key, lat, lng), …]``."""
     pts = list(points)
     n = len(pts)
     if n == 0 or not members:
         return []
-    keys = [m[0] for m in members]
-    weights = [max(0.0, float(m[1])) for m in members]
-    total = sum(weights)
-    if total <= 0:
-        weights = [1.0] * len(members)
-        total = float(len(members))
+    if len(members) == 1:
+        k0 = members[0][0]
+        return [(k0, p[0], p[1]) for p in pts]
 
-    raw = [w / total * n for w in weights]
-    counts = [int(math.floor(r)) for r in raw]
-    remainder = n - sum(counts)
-    order = sorted(range(len(members)),
-                   key=lambda i: raw[i] - counts[i], reverse=True)
-    for k in range(remainder):
-        counts[order[k % len(order)]] += 1
-
-    pools = [[keys[i]] * counts[i] for i in range(len(members))]
-    seq: list = []
-    while any(pools):
-        for pool in pools:
-            if pool:
-                seq.append(pool.pop())
-    return [(seq[i], pts[i][0], pts[i][1]) for i in range(n)]
+    from src.polyculture import assign_species, optimize_layout
+    # Pose each member as a "species" dict; only id + weight matter here.
+    species = [{"id": m[0], "weight": max(0.0, float(m[1]))} for m in members]
+    positions = [(p[0], p[1]) for p in pts]
+    assignments = assign_species(positions, species, "even_split")
+    try:
+        # Spread same-key plants apart — only swaps positions, so the per-key
+        # counts are preserved exactly. Same optimiser as the Circle-fill mix.
+        assignments = optimize_layout(positions, assignments)
+    except Exception:  # noqa: BLE001 — never fail a fill over the optimiser
+        pass
+    return [(assignments[i]["id"], pts[i][0], pts[i][1]) for i in range(n)]
 
 
 def plan_fill(ring, members, spacing_m: float, jitter: float = 0.0, rng=None) -> list:

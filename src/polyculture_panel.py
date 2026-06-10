@@ -927,6 +927,7 @@ class PolycultureBuilderDialog(QDialog):
 class PolyculturePanel(QWidget):
     placePolycultureRequested = pyqtSignal(dict)  # polyculture data with members
     fillAreaRequested = pyqtSignal(int, float)    # polyculture_id, cell spacing (m)
+    fillCommunityMixRequested = pyqtSignal(object, float)  # [{id,weight,name,polyculture}], spacing
     # Emitted when the panel creates a brand-new community (e.g. via
     # "Save stack as Community" from the Plants tab), so external views
     # can refresh their library lists.
@@ -1094,16 +1095,10 @@ class PolyculturePanel(QWidget):
         self.place_btn.clicked.connect(self._on_place)
         action_row.addWidget(self.place_btn, 2)
 
-        self.fill_area_btn = QPushButton("Fill Area")
-        self.fill_area_btn.setStyleSheet(_POLY_BTN_STYLE)
-        self.fill_area_btn.setEnabled(False)
-        self.fill_area_btn.setToolTip(
-            "Draw an area on the map and fill it with whole units of this "
-            "community (each unit keeps its designed arrangement), with the "
-            "cell spacing below as the gap between units."
-        )
-        self.fill_area_btn.clicked.connect(self._on_fill_area)
-        action_row.addWidget(self.fill_area_btn, 1)
+        # Fill Area moved into the Placement Mode selector (choose "Fill Area",
+        # set spacing, click Place, then draw the polygon) — see _on_place +
+        # PlacementControlsWidget. A community fill drops whole units; a
+        # community-mix fill scatters units from the mix.
 
         self.edit_btn = QPushButton("Edit")
         self.edit_btn.setStyleSheet(_POLY_BTN_STYLE)
@@ -1361,11 +1356,22 @@ class PolyculturePanel(QWidget):
             return
         pattern = self.placement_widget.current_pattern()
         kind = pattern["kind"]
+        if kind == "fill":
+            # Fill an area with whole units drawn from the community mix.
+            self.fillCommunityMixRequested.emit(
+                [
+                    {"id": int(c["id"]), "weight": int(c["weight"]),
+                     "name": c["name"], "polyculture": c["polyculture"]}
+                    for c in self._mix_communities
+                ],
+                self.placement_widget.fill_spacing(),
+            )
+            return
         if kind == "single":
             from PyQt6.QtWidgets import QMessageBox
             QMessageBox.information(
                 self, "Pick a pattern",
-                "Community mixes need Row, Grid, or Circle pattern. "
+                "Community mixes need Row, Grid, Circle, or Fill Area. "
                 "Switch the pattern above and try again."
             )
             return
@@ -1533,7 +1539,6 @@ class PolyculturePanel(QWidget):
         self.delete_btn.setEnabled(has_selection)
         self.dup_btn.setEnabled(has_selection)
         self.place_btn.setEnabled(has_selection)
-        self.fill_area_btn.setEnabled(has_selection)
         self.export_btn.setEnabled(has_selection)
         self.edit_btn.setEnabled(has_selection)
         # Only allow adding variations to top-level polycultures
@@ -1725,16 +1730,6 @@ class PolyculturePanel(QWidget):
         item = self.polyculture_tree.currentItem()
         return item.data(0, Qt.ItemDataRole.UserRole) if item else None
 
-    def _on_fill_area(self):
-        """Ask the app to fill the last-drawn shape with the selected community
-        at the current cell spacing (N3′). App resolves the target polygon."""
-        poly_id = self._get_selected_polyculture_id()
-        if poly_id is None:
-            return
-        spacing = float(getattr(self, "pattern_spacing", None).value()
-                        if getattr(self, "pattern_spacing", None) else 4.0)
-        self.fillAreaRequested.emit(int(poly_id), spacing)
-
     def _on_new_polyculture(self):
         """Open the visual builder for a brand-new polyculture.
 
@@ -1844,6 +1839,12 @@ class PolyculturePanel(QWidget):
         # the community or to fan it across a row/grid/circle.
         pattern = self.placement_widget.current_pattern()
         kind = pattern["kind"]
+        if kind == "fill":
+            # Draw-an-area fill: whole community units scattered inside the
+            # polygon (app enters fill-draw mode on this signal).
+            self.fillAreaRequested.emit(int(polyculture_id),
+                                        self.placement_widget.fill_spacing())
+            return
         if kind != "single":
             spacing = float(self.pattern_spacing.value() or 4.0)
             polyculture = dict(polyculture)
