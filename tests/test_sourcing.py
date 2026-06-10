@@ -141,9 +141,15 @@ class TestCostByType(unittest.TestCase):
     def test_groups_and_sums_by_type(self):
         # tree id1 (60-150), shrub id3 (25-50)x2, herb id2 (default 8-16)
         out = cost_by_type([(1, 1), (3, 2), (2, 1)], get_plant=_fake_get)
-        self.assertEqual(out["tree"], (60.0, 150.0))
-        self.assertEqual(out["shrub"], (50.0, 100.0))
-        self.assertEqual(out["herb"], TYPE_PRICE_DEFAULTS["herb"])
+        self.assertEqual(out["tree"], (60.0, 150.0, 1))
+        self.assertEqual(out["shrub"], (50.0, 100.0, 2))
+        self.assertEqual(out["herb"], (*TYPE_PRICE_DEFAULTS["herb"], 1))
+
+    def test_counts_enable_per_plant_math(self):
+        # R4: the per-type count divides back to the per-plant range.
+        out = cost_by_type([(3, 2)], get_plant=_fake_get)
+        lo, hi, n = out["shrub"]
+        self.assertEqual((lo / n, hi / n), (25.0, 50.0))
 
     def test_totals_match_estimate_cost(self):
         items = [(1, 1), (3, 2), (2, 1)]

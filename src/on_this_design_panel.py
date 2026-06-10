@@ -237,21 +237,29 @@ class OnThisDesignPanel(QWidget):
             return f"{label}: {format_cost(v[0], v[1])}<br>" if v else ""
 
         parts = ["<p><b>Estimated cost (CAD)</b><br>", row("Plants", "plants")]
-        # Per-type breakdown so the plant total isn't one intimidating number (F2).
+        # Per-type breakdown so the plant total isn't one intimidating number,
+        # with the math shown — count × per-plant range (F2 + R4).
         type_costs = bd.get("type_costs") or {}
         if type_costs:
             _LABELS = {"tree": "Trees", "shrub": "Shrubs", "vine": "Vines",
                        "herb": "Herbaceous", "grass": "Grasses",
                        "groundcover": "Groundcover", "root": "Roots/bulbs"}
-            chips = [
-                f"{_LABELS.get(t, t.replace('_', ' ').title())} "
-                f"{format_cost(v[0], v[1])}"
-                for t, v in sorted(type_costs.items(), key=lambda kv: -kv[1][1])
-                if v[1] > 0
-            ]
+            chips = []
+            for t, v in sorted(type_costs.items(), key=lambda kv: -kv[1][1]):
+                lo, hi = v[0], v[1]
+                count = v[2] if len(v) > 2 else 0
+                if hi <= 0:
+                    continue
+                label = _LABELS.get(t, t.replace("_", " ").title())
+                if count:
+                    each = format_cost(lo / count, hi / count)
+                    chips.append(f"{label} {format_cost(lo, hi)} "
+                                 f"({count} × {each} ea)")
+                else:
+                    chips.append(f"{label} {format_cost(lo, hi)}")
             if chips:
                 parts.append("<span style='color:#90a4ae;font-size:10px;'>&nbsp;&nbsp;"
-                             + " · ".join(chips) + "</span><br>")
+                             + "<br>&nbsp;&nbsp;".join(chips) + "</span><br>")
         if bd.get("structures") and bd["structures"][1] > 0:
             parts.append(row("Structures", "structures"))
         if bd.get("mulch") and bd["mulch"][1] > 0:
