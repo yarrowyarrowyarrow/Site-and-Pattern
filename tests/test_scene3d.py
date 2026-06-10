@@ -1,0 +1,114 @@
+"""
+tests/test_scene3d.py
+
+D1 foundation — the shared placement/timeline state module. Pure (no Qt / DB;
+get_plant injected). Guards that growth_scale_factor matches the 2D timeline's
+formula and that per-plant 3D state scales height/canopy and carries the
+succession presence opacity.
+"""
+
+import math
+import os
+import sys
+import unittest
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from src.scene3d import (  # noqa: E402
+    growth_scale_factor, plant_3d_state, placed_plants_3d_state,
+)
+
+
+class TestGrowthScaleFactor(unittest.TestCase):
+    def test_year_zero_and_maturity_are_full(self):
+        self.assertEqual(growth_scale_factor(0, 20, "steady"), 1.0)
+        self.assertEqual(growth_scale_factor(20, 20, "steady"), 1.0)
+        self.assertEqual(growth_scale_factor(40, 20, "steady"), 1.0)
+
+    def test_steady_is_linear(self):
+        self.assertAlmostEqual(growth_scale_factor(10, 20, "steady"), 0.5)
+
+    def test_fast_early_is_sqrt(self):
+        self.assertAlmostEqual(growth_scale_factor(5, 20, "fast_early"),
+                               math.sqrt(0.25))
+
+    def test_slow_start_is_pow(self):
+        self.assertAlmostEqual(growth_scale_factor(5, 20, "slow_start"),
+                               0.25 ** 1.5)
+
+    def test_floor_clamp(self):
+        # very young → never below the 0.1 floor
+        self.assertEqual(growth_scale_factor(1, 1000, "steady"), 0.1)
+
+    def test_matches_2d_inline_formula(self):
+        # Replicate the old inline 2D formula and confirm parity across cases.
+        def inline(year, ytm, curve):
+            if year == 0 or year >= ytm:
+                f = 1.0
+            else:
+                r = year / ytm
+                f = (math.sqrt(r) if curve == "fast_early"
+                     else r ** 1.5 if curve == "slow_start" else r)
+            return max(0.1, min(1.0, f))
+        for ytm in (2, 5, 15, 60):
+            for curve in ("steady", "fast_early", "slow_start"):
+                for year in (0, 1, 3, 5, 10, 30, 60):
+                    self.assertAlmostEqual(
+                        growth_scale_factor(year, ytm, curve),
+                        inline(year, ytm, curve), places=9,
+                        msg=f"{year}/{ytm}/{curve}")
+
+
+class TestPlant3DState(unittest.TestCase):
+    def test_scales_height_and_canopy(self):
+        tree = {"plant_type": "tree", "years_to_maturity": 20,
+                "growth_curve": "steady", "mature_height_meters": 10.0,
+                "mature_canopy_m": 6.0}
+        st = plant_3d_state(tree, 53.5, -113.5, 10)   # half-grown
+        self.assertAlmostEqual(st["scale_factor"], 0.5)
+        self.assertAlmostEqual(st["height_m"], 5.0)
+        self.assertAlmostEqual(st["canopy_m"], 3.0)
+        self.assertEqual((st["lat"], st["lng"]), (53.5, -113.5))
+
+    def test_presence_for_climax_tree(self):
+        # untagged long-lived tree reads as climax → faint when young
+        tree = {"plant_type": "tree", "years_to_maturity": 40,
+                "mature_height_meters": 15.0}
+        st = plant_3d_state(tree, 0, 0, 4)
+        self.assertLess(st["presence_opacity"], 1.0)
+        self.assertGreaterEqual(st["presence_opacity"], 0.2)
+
+    def test_defaults_when_dimensions_missing(self):
+        st = plant_3d_state({"plant_type": "shrub"}, 0, 0, 100)  # fully grown
+        self.assertGreater(st["height_m"], 0)
+        self.assertGreater(st["canopy_m"], 0)
+
+
+class TestPlacedPlants3DState(unittest.TestCase):
+    _FAKE = {
+        1: {"plant_type": "tree", "years_to_maturity": 20, "growth_curve": "steady",
+            "mature_height_meters": 10.0, "mature_canopy_m": 6.0},
+        2: {"plant_type": "herb", "years_to_maturity": 2},
+    }
+
+    def _get(self, pid):
+        return self._FAKE.get(pid)
+
+    def test_per_plant_records(self):
+        placed = [{"plant_id": 1, "lat": 53.5, "lng": -113.5},
+                  {"plant_id": 2, "lat": 53.6, "lng": -113.6}]
+        out = placed_plants_3d_state(placed, 10, get_plant=self._get)
+        self.assertEqual(len(out), 2)
+        self.assertEqual({r["plant_id"] for r in out}, {1, 2})
+        tree = next(r for r in out if r["plant_id"] == 1)
+        self.assertAlmostEqual(tree["height_m"], 5.0)
+
+    def test_skips_missing_coords(self):
+        placed = [{"plant_id": 1, "lat": None, "lng": None},
+                  {"plant_id": 2, "lat": 1.0, "lng": 2.0}]
+        out = placed_plants_3d_state(placed, 5, get_plant=self._get)
+        self.assertEqual([r["plant_id"] for r in out], [2])
+
+
+if __name__ == "__main__":
+    unittest.main()

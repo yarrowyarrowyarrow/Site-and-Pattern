@@ -221,10 +221,33 @@ was never added; R4 uses plant-type heuristics.
 
 ### Tier 2 — larger / longer-horizon
 
-#### D1. 3-D viewport (synchronized with the 2-D canvas)
+#### D1. 3-D viewport (synchronized with the 2-D canvas) — ◐ Foundation done (V1.60)
 A bird's-eye + eye-level 3-D view that grows plants over time and casts
 sun-accurate shadows. **Recommendation and refactor notes in the dedicated
-section below** — this is the round's biggest architectural item.
+section below.** This round delivers the **testable, low-risk foundation** the
+brainstorm flagged as the real cost — not the live render (that needs the built
+map3d fork + a browser):
+- **Shared state — `src/scene3d.py`** (pure, Qt-free, fully tested): the single
+  source of truth for "how big / how present is each plant at year N" —
+  `growth_scale_factor` (matches the 2D timeline *exactly*; a parity test proves
+  it), `plant_3d_state` (lat/lng + height/canopy scaled to the year +
+  scale_factor + succession presence opacity), and `placed_plants_3d_state`.
+  The 2D timeline controller was refactored to call `growth_scale_factor`, so the
+  two views can never drift on the growth curve.
+- **`src/map3d_js.set_plants`** — a guarded `window.permaSetPlants(...)` builder
+  alongside the existing `set_sun` (tested).
+- **`src/map3d_widget.Map3DWidget`** — a `QWebEngineView` scaffold mirroring
+  `MapWidget`: loads `web3d/dist/` when the fork is built, else a placeholder;
+  `set_sun_for` + `set_scene` drive the scene via `map3d_js` + `scene3d`.
+- **Verified:** 11 `test_scene3d` (incl. exact-parity with the old 2D formula) +
+  the `set_plants` builder; live 2D timeline re-checked (identical factors).
+  **Not verified here:** `Map3DWidget` construction (QtWebEngine can't init in a
+  headless container — same as `test_app_smoke`; runs under a display) and the
+  actual 3-D rendering (needs the built map3d fork — npm build of the external
+  repo + the sun-shadow patch).
+- **Deliberately NOT mounted** in the main window yet — there's no built scene to
+  show, and an empty "3D" tab would confuse users. Mounting is the next D1 step
+  once the fork is built.
 
 #### I1. Flora & fauna image library
 - **State:** *no* image fields today. Plants carry a `marker_color`; fauna carry

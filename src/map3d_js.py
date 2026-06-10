@@ -41,3 +41,13 @@ def set_sun_for(lat: float, lng: float, when: datetime) -> Optional[str]:
     if sun.altitude <= 0:
         return None
     return set_sun(sun.azimuth, sun.altitude)
+
+
+def set_plants(records: list) -> str:
+    """JS to (re)populate the 3D scene with placed plants. ``records`` are the
+    per-plant 3D-state dicts from ``src.scene3d.placed_plants_3d_state`` (lat /
+    lng / height_m / canopy_m / scale_factor / presence_opacity / plant_type /
+    plant_id). Guarded with ``&&`` so it's a no-op until the scene registers the
+    ``window.permaSetPlants`` hook."""
+    return ("window.permaSetPlants && window.permaSetPlants("
+            f"{json.dumps(records or [])});")

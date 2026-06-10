@@ -1640,22 +1640,13 @@ class MapEventRouter:
         # Send scale data to JS — we use a per-plantId approach
         # JS will iterate plantMarkers and look up scaleFactor by plantId.
         # pid_presence carries the succession fade (pioneers out, climax in).
+        from src.scene3d import growth_scale_factor
         pid_factors = {}
         pid_presence = {}
         for pid, (ytm, curve, ptype, role) in plant_cache.items():
-            if year == 0:
-                factor = 1.0
-            elif year >= ytm:
-                factor = 1.0
-            else:
-                ratio = year / ytm
-                if curve == "fast_early":
-                    factor = math.sqrt(ratio)
-                elif curve == "slow_start":
-                    factor = ratio ** 1.5
-                else:
-                    factor = ratio
-            pid_factors[pid] = max(0.1, min(1.0, factor))
+            # Shared with the (future) 3D view via src.scene3d so the two never
+            # drift on the growth curve.
+            pid_factors[pid] = growth_scale_factor(year, ytm, curve)
             pid_presence[pid] = presence_factor(role, year, ytm)
 
         self._main.map_widget.set_timeline_year_by_plant_id(

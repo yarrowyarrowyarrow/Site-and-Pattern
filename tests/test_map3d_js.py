@@ -58,5 +58,20 @@ class TestSetSunFor(unittest.TestCase):
         self.assertIn(str(float(sun.altitude)), js)
 
 
+class TestSetPlants(unittest.TestCase):
+    def test_emits_guarded_hook_with_json(self):
+        recs = [{"plant_id": 1, "lat": 53.5, "lng": -113.5,
+                 "height_m": 5.0, "canopy_m": 3.0}]
+        js = m3.set_plants(recs)
+        self.assertIn("window.permaSetPlants && window.permaSetPlants(", js)
+        self.assertIn('"plant_id": 1', js)
+        self.assertIn('"height_m": 5.0', js)
+        self.assertTrue(js.strip().endswith(");"))
+
+    def test_empty_list(self):
+        js = m3.set_plants([])
+        self.assertIn("window.permaSetPlants && window.permaSetPlants([]", js)
+
+
 if __name__ == "__main__":
     unittest.main()
