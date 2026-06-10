@@ -834,8 +834,8 @@
         // Stay in structure mode for multiple placements
       } else if (currentMode === 'hedgerow') {
         handleHedgerowClick(lat, lng);
-      } else if (currentMode === 'shape') {
-        handleShapeClick(lat, lng);
+      } else if (currentMode === 'shape' || currentMode === 'fill') {
+        handleShapeClick(lat, lng);   // 'fill' reuses the shape polygon drawing
       } else if (currentMode === 'measure') {
         handleMeasureClick(lat, lng);
       } else if (currentMode === 'annotate') {
@@ -860,7 +860,7 @@
       if (currentMode === 'hedgerow' && hedgerowPoints.length > 0) {
         updateHedgerowPreview(e.latlng);
       }
-      if (currentMode === 'shape' && shapePoints.length > 0) {
+      if ((currentMode === 'shape' || currentMode === 'fill') && shapePoints.length > 0) {
         updateShapePreview(e.latlng);
       }
       if (currentMode === 'contour' && contourPoints.length > 0) {
@@ -883,6 +883,8 @@
         finishHedgerow();
       } else if (currentMode === 'shape' && shapePoints.length >= 3) {
         finishShape();
+      } else if (currentMode === 'fill' && shapePoints.length >= 3) {
+        finishFillArea();
       } else if (currentMode === 'contour' && contourPoints.length >= 2) {
         finishContour();
       }
@@ -3074,7 +3076,7 @@
         var clickPx = map.latLngToContainerPoint(L.latLng(lat, lng));
         var dist = Math.sqrt(Math.pow(firstPx.x - clickPx.x, 2) + Math.pow(firstPx.y - clickPx.y, 2));
         if (dist < 12) {
-          finishShape();
+          if (currentMode === 'fill') { finishFillArea(); } else { finishShape(); }
           return;
         }
       }
@@ -3276,6 +3278,21 @@
       setMode('none');
     }
 
+    // Draw-then-fill (F3): finish the drawn polygon WITHOUT creating a shape —
+    // hand the ring to Python, which scatters the chosen plant/mix/community
+    // inside it and leaves only the plant markers (no hardscape shape).
+    function finishFillArea() {
+      if (shapePoints.length < 3) return;
+      var pts = shapePoints.slice();
+      if (shapePreview) { map.removeLayer(shapePreview); shapePreview = null; }
+      drawnItems.clearLayers();   // remove the temporary vertex/preview artifacts
+      shapePoints = [];
+      setMode('none');
+      if (bridge && bridge.onFillAreaComplete) {
+        bridge.onFillAreaComplete(JSON.stringify(pts));
+      }
+    }
+
     // Undo helper — remove a custom-shape layer group by its id.
     function undoCustomShapeById(shapeId) {
       var group = shapeLayers[shapeId];
@@ -3377,6 +3394,14 @@
           break;
         case 'shape':
           currentShape = data || null;
+          shapePoints = [];
+          map.getContainer().style.cursor = 'crosshair';
+          break;
+        case 'fill':
+          // Draw-then-fill (F3): reuse the shape polygon drawing, but finish via
+          // finishFillArea() → onFillAreaComplete (scatters plants, makes no shape).
+          currentShape = {stroke_color: '#66bb6a', fill_color: '#66bb6a',
+                          fill_opacity: 0.12, _fillMode: true};
           shapePoints = [];
           map.getContainer().style.cursor = 'crosshair';
           break;

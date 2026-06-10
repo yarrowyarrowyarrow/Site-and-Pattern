@@ -1098,8 +1098,8 @@ class PolyculturePanel(QWidget):
         self.fill_area_btn.setStyleSheet(_POLY_BTN_STYLE)
         self.fill_area_btn.setEnabled(False)
         self.fill_area_btn.setToolTip(
-            "Fill the most recently drawn shape (Structures → Shapes) with this "
-            "community, scattered at the cell spacing below (N3′)."
+            "Draw an area on the map and fill it with this community, scattered "
+            "at the cell spacing below."
         )
         self.fill_area_btn.clicked.connect(self._on_fill_area)
         action_row.addWidget(self.fill_area_btn, 1)

@@ -60,6 +60,15 @@ class ModeController:
             "or press Delete"
         )
 
+    def _enter_fill_mode(self):
+        self._main._current_mode = 'fill'
+        self._main.map_widget.set_mode('fill')
+        self._main.toolbar.reset_draw_buttons()
+        self._set_mode_label(
+            "Fill area — click to draw a polygon, double-click to finish; "
+            "the plants scatter inside it"
+        )
+
     def _enter_structure_mode(self, struct_def: dict):
         self._main._current_mode = 'structure'
         # Stash height for existing tree/building marks (V1.49) — the JS

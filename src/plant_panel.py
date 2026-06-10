@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QComboBox, QListWidget, QFrame,
     QPushButton, QSizePolicy, QScrollArea, QSplitter,
-    QGroupBox, QSpinBox,
+    QGroupBox, QSpinBox, QDoubleSpinBox,
     QColorDialog, QMenu, QListView,
 )
 from PyQt6.QtCore import (
@@ -98,6 +98,7 @@ class PlantPanel(QWidget):
     # quantity spinner value (used when pattern["kind"]=="single"); the
     # fourth is the pattern descriptor — see MapWidget.set_mode docstring.
     place_plant_requested = pyqtSignal(int, str, int, dict)   # plant_id, common_name, quantity, pattern
+    fill_area_requested = pyqtSignal(object, float, str)       # members [(pid,weight)], spacing_m, name (F3)
     color_changed = pyqtSignal(int, str)                       # plant_id, hex_color
     # Emitted when "Save as Plant Community" creates a new community from
     # the stack, so the Communities tab can refresh its library list.
@@ -492,6 +493,33 @@ class PlantPanel(QWidget):
 
         bot_layout.addLayout(place_row)
 
+        # Fill-area row (F3): draw a polygon on the map and scatter the selected
+        # plant — or the current mix (≥2 species) — inside it.
+        fill_row = QHBoxLayout()
+        fill_row.setSpacing(4)
+        self._fill_btn = QPushButton("Fill Area…")
+        self._fill_btn.setEnabled(False)
+        self._fill_btn.setToolTip(
+            "Draw an area on the map and scatter the selected plant — or your "
+            "current mix (≥2 species) — inside it at the spacing shown."
+        )
+        self._fill_btn.clicked.connect(self._on_fill_area_clicked)
+        self._fill_btn.setStyleSheet(_PLACE_BTN_STYLE)
+        fill_row.addWidget(self._fill_btn)
+        sp_label = QLabel("Spacing:")
+        sp_label.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        fill_row.addWidget(sp_label)
+        self._fill_spacing = QDoubleSpinBox()
+        self._fill_spacing.setRange(0.3, 20.0)
+        self._fill_spacing.setSingleStep(0.5)
+        self._fill_spacing.setValue(1.5)
+        self._fill_spacing.setSuffix(" m")
+        self._fill_spacing.setFixedWidth(75)
+        self._fill_spacing.setToolTip("Centre-to-centre spacing of the scattered plants.")
+        fill_row.addWidget(self._fill_spacing)
+        fill_row.addStretch(1)
+        bot_layout.addLayout(fill_row)
+
         # Bottom pane: just placement controls now. (On This Design lives
         # in a sibling inner tab at the same level as Plants and Plant
         # Communities — see app.py's inner QTabWidget.) The widget+scroll
@@ -600,10 +628,12 @@ class PlantPanel(QWidget):
         if not plant:
             self._selected_plant = None
             self._place_btn.setEnabled(False)
+            self._fill_btn.setEnabled(len(self._mix_species) >= 2)
             return
         self._selected_plant = plant
         self._update_color_btn(plant.get("marker_color") or "")
         self._place_btn.setEnabled(True)
+        self._fill_btn.setEnabled(True)
 
     def _on_view_double_clicked(self, index: QModelIndex):
         """Double-click: place the plant directly (Single mode)."""
@@ -613,6 +643,28 @@ class PlantPanel(QWidget):
         if plant:
             self._selected_plant = plant
             self._on_place_clicked()
+
+    # ── Fill an area with plants (F3) ───────────────────────────────────────────
+
+    def _fill_members(self):
+        """``(members, name)`` for an area fill: the current mix (≥2 species) if
+        one is built, else the selected single plant. ``members`` is a list of
+        ``(plant_id, weight)``."""
+        if len(self._mix_species) >= 2:
+            members = [(int(s["id"]), float(s.get("_weight", 1) or 1))
+                       for s in self._mix_species if s.get("id")]
+            return members, "Custom mix"
+        if self._selected_plant and self._selected_plant.get("id"):
+            return ([(int(self._selected_plant["id"]), 1.0)],
+                    self._selected_plant.get("common_name", ""))
+        return [], ""
+
+    def _on_fill_area_clicked(self):
+        members, name = self._fill_members()
+        if not members:
+            return
+        self.fill_area_requested.emit(
+            members, float(self._fill_spacing.value()), name)
 
     # ── Place on map ──────────────────────────────────────────────────────────
 
@@ -837,6 +889,11 @@ class PlantPanel(QWidget):
             self._place_btn.setText(
                 "Place Mix on Map" if n >= 2 else "Place on Map"
             )
+        # Fill button: usable with a built mix even if nothing is list-selected.
+        if hasattr(self, "_fill_btn"):
+            self._fill_btn.setText("Fill Area (mix)…" if n >= 2 else "Fill Area…")
+            if n >= 2:
+                self._fill_btn.setEnabled(True)
 
         if n == 0:
             self._mix_status.setText(

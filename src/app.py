@@ -195,6 +195,9 @@ class MainWindow(QMainWindow):
         self._map_events = MapEventRouter(self)
         self._generation = GenerationController(self)
         self._area_fill = AreaFillController(self)
+        # Pending draw-then-fill spec (F3): {members, spacing, name} set when a
+        # Fill Area button is clicked; consumed when the user finishes the polygon.
+        self._pending_fill = None
 
         self._build_ui()
         self._connect_signals()
@@ -567,6 +570,7 @@ class MainWindow(QMainWindow):
         b.plant_moved.connect(self._on_plant_moved)
         b.plant_group_moved.connect(self._on_plant_group_moved)
         b.selection_moved.connect(self._on_selection_moved)
+        b.fill_area_complete.connect(self._on_fill_area_complete)
         b.map_ready.connect(self._on_map_ready)
 
         # Toolbar → map
@@ -604,7 +608,8 @@ class MainWindow(QMainWindow):
 
         # Polyculture panel → map (polyculture placement)
         self.polyculture_panel.placePolycultureRequested.connect(self._enter_polyculture_mode)
-        self.polyculture_panel.fillAreaRequested.connect(self._on_fill_area_with_community)
+        self.polyculture_panel.fillAreaRequested.connect(self._on_community_fill_requested)
+        self.plant_panel.fill_area_requested.connect(self._on_plants_fill_requested)
         # Stack → community: refresh the Communities tree when the Plants
         # tab (or anywhere else) creates a brand-new plant community.
         self.plant_panel.communityCreated.connect(
@@ -1099,40 +1104,60 @@ class MainWindow(QMainWindow):
         # Shim → MapEventRouter; see src/controllers/map_events.py.
         return self._map_events._on_season_changed(season)
 
-    def _on_fill_area_with_community(self, poly_id: int, spacing_m: float):
-        """Fill the most recently drawn shape with the selected community,
-        scattered at ``spacing_m`` (N3′). The target polygon is the last drawn
-        custom shape so this reuses the verified shape-drawing flow."""
-        ring = None
-        for f in reversed(self._project.get("features", [])):
-            props = f.get("properties", {})
-            if props.get("element_type") in ("custom_shape", "canopy_footprint"):
-                coords = (f.get("geometry", {}) or {}).get("coordinates") or []
-                if coords:
-                    ring = coords[0]
-                break
-        if not ring:
+    # ── Draw-then-fill plant placement (F3) ──────────────────────────────────
+
+    def _start_fill(self, members, spacing_m, name):
+        """Arm a draw-then-fill: stash the spec, then enter the map 'fill' mode so
+        the user draws the polygon to scatter ``members`` (each ``(plant_id,
+        weight)``) inside. Shared by the Plants tab (single plant / current mix)
+        and the Plant Communities tab."""
+        members = [(int(pid), float(w)) for pid, w in (members or [])
+                   if pid is not None]
+        if not members:
             QMessageBox.information(
                 self, "Fill Area",
-                "Draw a shape first (Structures → Shapes), then select a "
-                "community and click Fill Area — the fill uses your most "
-                "recently drawn shape.")
+                "Pick a plant, build a mix, or select a community first, then "
+                "click Fill Area and draw the area to plant.")
             return
+        self._pending_fill = {"members": members,
+                              "spacing": float(spacing_m or 4.0),
+                              "name": name or ""}
+        self._mode._enter_fill_mode()
+
+    def _on_plants_fill_requested(self, members, spacing_m, name):
+        """Plants tab → fill an area with the current mix or selected plant."""
+        self._start_fill(members, spacing_m, name)
+
+    def _on_community_fill_requested(self, poly_id: int, spacing_m: float):
+        """Plant Communities tab → fill an area with the selected community."""
         from src.db.polycultures import get_polyculture_by_id
-        pc = get_polyculture_by_id(poly_id) or {}
-        specs = [(m["plant_id"], 1) for m in pc.get("members", [])
-                 if m.get("plant_id")]
-        if not specs:
-            QMessageBox.information(self, "Fill Area",
-                                    "That community has no members to place.")
+        pc = get_polyculture_by_id(int(poly_id)) or {}
+        members = [(m["plant_id"], 1) for m in pc.get("members", [])
+                   if m.get("plant_id")]
+        self._start_fill(members, spacing_m, pc.get("name", ""))
+
+    def _on_fill_area_complete(self, points_json: str):
+        """User finished drawing the fill polygon — scatter the pending plants in
+        it via AreaFillController (markers only; no hardscape shape)."""
+        spec, self._pending_fill = self._pending_fill, None
+        if not spec:
             return
-        n = self._area_fill.fill(ring, specs, spacing_m,
-                                 poly_name=pc.get("name", ""))
+        import json as _json
+        try:
+            pts = _json.loads(points_json or "[]")
+        except Exception:
+            return
+        if len(pts) < 3:
+            return
+        # JS sends [lat, lng] pairs; area_fill rings are [lng, lat] (GeoJSON).
+        ring = [[p[1], p[0]] for p in pts]
+        n = self._area_fill.fill(ring, spec["members"], spec["spacing"],
+                                 poly_name=spec["name"])
         if n == 0:
             QMessageBox.information(
                 self, "Fill Area",
-                "No room to place plants in that shape at this spacing — try a "
-                "smaller cell spacing or a larger area.")
+                "No room to place plants in that area at this spacing — try a "
+                "smaller spacing or a larger area.")
 
     def _enter_polyculture_mode(self, polyculture_data: dict):
         """Place a polyculture on the map.
