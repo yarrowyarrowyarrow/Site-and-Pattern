@@ -22,12 +22,20 @@ After a run, bump ``src/db/plants.py:_SCHEMA_VERSION`` (24 → 25) so existing
 installs reseed and pick up the new images.
 
 This script needs outbound network to api.inaturalist.org. Run it on a machine
-with internet (the build sandbox blocks general egress):
+with internet (the build sandbox blocks general egress).
 
+macOS / Linux (bash):
     python scripts/fetch_inaturalist_images.py            # plants + fauna
     python scripts/fetch_inaturalist_images.py --plants   # plants only
     python scripts/fetch_inaturalist_images.py --limit 20 # try the first 20
     python scripts/fetch_inaturalist_images.py --force    # re-fetch all
+
+Windows (PowerShell) — from the repo root:
+    python .\scripts\fetch_inaturalist_images.py            # plants + fauna
+    python .\scripts\fetch_inaturalist_images.py --limit 20 # try the first 20
+    python .\scripts\fetch_inaturalist_images.py --plants   # plants only
+    python .\scripts\fetch_inaturalist_images.py --force    # re-fetch all
+(If `python` isn't found, try `py` instead — e.g. `py .\scripts\...`.)
 """
 
 from __future__ import annotations
