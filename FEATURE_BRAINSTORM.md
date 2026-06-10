@@ -48,6 +48,34 @@ was never added; R4 uses plant-type heuristics.
 
 ---
 
+## V1.61 — feedback on V1.60 (shipped)
+
+A review pass after V1.60. All six items landed on branch `V1.61`:
+
+- **F1 — Squished "On this design" sub-tabs (regression):** made
+  `_FillTabBar` shrink-to-fit **opt-in** (default widen-only); only the Planning
+  panel opts in. Nested short strips render full-size again.
+- **F2 — Cost by plant type:** the "Estimated cost" block now breaks the plant
+  total into Trees / Shrubs / Herbaceous / … (`sourcing.cost_by_type`).
+- **F3 — Draw-then-fill plant placement:** "Fill Area" now lives on the **Plants
+  tab** (single plant or current mix) **and** the Communities tab — click it,
+  draw a polygon, plants scatter inside (new map `fill` mode → `area_fill`).
+  Planting fill stays separate from the hardscape/zones layer.
+- **F4 — Discoverable Select:** a "Select" toolbar button enters a box-select
+  mode (drag, no Shift needed); Shift+drag still works.
+- **F5 — Zones steer Generate Design:** the drawn design-intent layer now feeds
+  the generator — it fills drawn restoration / lawn-conversion zones and avoids
+  existing-remnant + hardscape + existing trees/buildings (`exclusion.fill_regions`
+  + extended keepout; threaded through `generate_design[_offline]`).
+- **F6 — iNaturalist images:** `scripts/fetch_inaturalist_images.py` sources
+  open-licensed photos (CC0 / CC BY / CC BY-SA only) + citations into the seed
+  JSON. The sandbox blocks egress, so **run it on a networked machine** then bump
+  `_SCHEMA_VERSION` 24→25 to reseed; the columns + cache + detail-UI shipped in V1.60.
+- **Needs in-app verification** (headless can't render Leaflet): the F3 fill-draw
+  gesture and the F4 box-select drag. Logic underneath each is unit-tested.
+
+---
+
 ## Active backlog
 
 ### Tier 0 — UX polish (low effort, immediate quality-of-life)
