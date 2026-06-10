@@ -544,6 +544,7 @@ class MainWindow(QMainWindow):
 
         # Map → remove plant marker
         b.plant_removed.connect(self._on_plant_removed)
+        b.plants_removed_batch.connect(self._on_plants_removed_batch)
 
         # Map → batch placement (Burst, Row, Grid, Circle)
         b.pattern_placed.connect(self._on_pattern_placed)
@@ -1417,6 +1418,10 @@ class MainWindow(QMainWindow):
     def _on_plant_removed(self, marker_id: str, plant_id: int, lat: float, lng: float):
         # Shim → MapEventRouter; see src/controllers/map_events.py.
         return self._map_events._on_plant_removed(marker_id, plant_id, lat, lng)
+
+    def _on_plants_removed_batch(self, batch_json: str):
+        # Shim → MapEventRouter; see src/controllers/map_events.py.
+        return self._map_events._on_plants_removed_batch(batch_json)
 
     def _on_polyculture_removed(self, polyculture_name: str,
                                   center_lat: float, center_lng: float):

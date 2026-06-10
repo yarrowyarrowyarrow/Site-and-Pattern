@@ -90,6 +90,7 @@ class MapBridge(QObject):
 
     # A plant marker was right-click removed
     plant_removed = pyqtSignal(str, int, float, float)         # markerId, plantId, lat, lng
+    plants_removed_batch = pyqtSignal(str)                     # JSON [{plantId,lat,lng}] (R2 perf)
 
     # A single placed plant was dragged to a new location
     plant_moved = pyqtSignal(str, int, float, float, float, float)
@@ -262,6 +263,10 @@ class MapBridge(QObject):
     @pyqtSlot(str, int, float, float)
     def onPlantRemoved(self, marker_id: str, plant_id: int, lat: float, lng: float):
         self.plant_removed.emit(marker_id, plant_id, lat, lng)
+
+    @pyqtSlot(str)
+    def onPlantsRemovedBatch(self, batch_json: str):
+        self.plants_removed_batch.emit(batch_json)
 
     @pyqtSlot(str, int, float, float, float, float)
     def onPlantMoved(self, marker_id: str, plant_id: int,

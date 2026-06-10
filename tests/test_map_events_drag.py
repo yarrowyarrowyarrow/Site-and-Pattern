@@ -181,5 +181,59 @@ class TestSelectionMove(unittest.TestCase):
         self.assertEqual(main.undo_entries[0]["action"], "move_selection")
 
 
+class TestBatchRemove(unittest.TestCase):
+    """R2 — deleting a multi-plant selection removes them in one pass with a
+    single planning re-sync (was a per-plant round-trip that recomputed the
+    habitat score each time → lag)."""
+
+    def _main(self):
+        placed = [
+            {"plant_id": 1, "lat": 53.50, "lng": -113.50},
+            {"plant_id": 1, "lat": 53.50, "lng": -113.50},   # duplicate position
+            {"plant_id": 2, "lat": 53.51, "lng": -113.49},
+            {"plant_id": 3, "lat": 53.52, "lng": -113.48},
+        ]
+        features = [_plant_feature(1, 53.50, -113.50, "g", (0, 0)),
+                    _plant_feature(1, 53.50, -113.50, "g", (0, 0)),
+                    _plant_feature(2, 53.51, -113.49, "g", (0, 0)),
+                    _plant_feature(3, 53.52, -113.48, "g", (0, 0))]
+        m = _FakeMain(placed, {"features": features})
+        m._sync_count = 0
+        m._sync_planning_panel = lambda: setattr(m, "_sync_count",
+                                                 m._sync_count + 1)
+        m.plant_panel = type("PP", (), {
+            "removed": [],
+            "on_plants_removed_batch": lambda self, ids: self.removed.extend(ids),
+        })()
+        return m
+
+    def test_batch_removes_and_syncs_once(self):
+        main = self._main()
+        router = MapEventRouter.__new__(MapEventRouter)
+        router._main = main
+        # Delete one of the duplicate id=1 plants and the id=3 plant.
+        batch = json.dumps([
+            {"plantId": 1, "lat": 53.50, "lng": -113.50},
+            {"plantId": 3, "lat": 53.52, "lng": -113.48},
+        ])
+        router._on_plants_removed_batch(batch)
+
+        ids = sorted(p["plant_id"] for p in main._placed_plants)
+        self.assertEqual(ids, [1, 2])      # one duplicate id=1 survives
+        feat_ids = sorted(f["properties"]["plant_id"]
+                          for f in main._project["features"])
+        self.assertEqual(feat_ids, [1, 2])
+        self.assertEqual(main._sync_count, 1)         # ONE re-sync for the batch
+        self.assertEqual(sorted(main.plant_panel.removed), [1, 3])
+
+    def test_empty_batch_noops(self):
+        main = self._main()
+        router = MapEventRouter.__new__(MapEventRouter)
+        router._main = main
+        router._on_plants_removed_batch("[]")
+        self.assertEqual(len(main._placed_plants), 4)
+        self.assertEqual(main._sync_count, 0)
+
+
 if __name__ == "__main__":
     unittest.main()

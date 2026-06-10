@@ -1362,6 +1362,21 @@ class PlantPanel(QWidget):
         self._results_model.set_placed_counts(self._placed_counts)
         self.placed_counts_changed.emit()
 
+    def on_plants_removed_batch(self, plant_ids: list[int]):
+        """Notify the panel that several plants were removed at once — decrement
+        counts for all, rebuild the results model once (mirrors
+        on_plants_placed_batch; avoids the per-plant rebuild that made
+        multi-delete lag)."""
+        if not plant_ids:
+            return
+        for pid in plant_ids:
+            if pid in self._placed_counts:
+                self._placed_counts[pid] -= 1
+                if self._placed_counts[pid] <= 0:
+                    del self._placed_counts[pid]
+        self._results_model.set_placed_counts(self._placed_counts)
+        self.placed_counts_changed.emit()
+
     def clear_placed(self):
         """Clear the placed-plants list (e.g. on New project)."""
         self._placed_counts.clear()

@@ -461,6 +461,24 @@
       document.addEventListener('mouseup',   _marqueeOnUp,   true);
     }
 
+    // True when the cursor is over a placed plant marker (canvas-rendered, so
+    // not reachable via DOM hit-testing). Used so Select-mode drags on a plant
+    // move it instead of starting a marquee.
+    function _marqueePointHitsPlant(ev) {
+      var rect = map.getContainer().getBoundingClientRect();
+      var cx = ev.clientX - rect.left, cy = ev.clientY - rect.top;
+      var keys = Object.keys(plantMarkers);
+      for (var i = 0; i < keys.length; i++) {
+        var m = plantMarkers[keys[i]];
+        if (!m || !m._pd) continue;
+        var p = map.latLngToContainerPoint(m.getLatLng());
+        var r = ((m.options && m.options.radius) || 6) + 4;
+        var dx = p.x - cx, dy = p.y - cy;
+        if (dx * dx + dy * dy <= r * r) return true;
+      }
+      return false;
+    }
+
     function _marqueeOnDown(ev) {
       // Arm on Shift+drag (any time) OR on a plain drag while the Select tool is
       // active (the toolbar "Select" button → setMode('select')).
@@ -469,6 +487,10 @@
       // Skip if the user is interacting with a feature — Leaflet handles
       // those events on the marker itself before bubbling here.
       if (ev.target && ev.target.closest && ev.target.closest('.leaflet-marker-pane > *')) return;
+      // Plants are drawn on a canvas (not in the marker-pane), so the check
+      // above can't see them. In Select mode a mousedown on a plant must NOT
+      // start a marquee — let it through so the plant/selection drag arms.
+      if (inSelectMode && _marqueePointHitsPlant(ev)) return;
       // Outside Select mode, only Shift-arm when idle / placing plants.
       if (!inSelectMode && currentMode !== 'none' && currentMode !== 'plant') return;
       ev.stopPropagation();
@@ -595,10 +617,16 @@
     function deleteSelected() {
       var snapshot = selectedItems.slice();
       selectedItems = [];
+      var removedPlants = [];   // batch plant removals into one bridge call
       for (var i = 0; i < snapshot.length; i++) {
         var item = snapshot[i];
         if (item.kind === 'plant') {
-          _removeSinglePlantMarker(item.markerId);
+          var c = plantMarkers[item.markerId];
+          if (c && c._pd) {
+            removedPlants.push({ plantId: c._pd.plantId,
+                                 lat: c._pd.lat, lng: c._pd.lng });
+          }
+          _removeSinglePlantMarker(item.markerId, true);
         } else if (item.kind === 'boundary') {
           if (boundaryEditId === item.boundaryId && typeof exitBoundaryEditMode === 'function') {
             exitBoundaryEditMode();
@@ -625,6 +653,9 @@
             if (bridge) bridge.onSunPathRemoved();
           }
         }
+      }
+      if (removedPlants.length && bridge && bridge.onPlantsRemovedBatch) {
+        bridge.onPlantsRemovedBatch(JSON.stringify(removedPlants));
       }
       _refreshSelectionVisuals();
     }
@@ -1731,7 +1762,7 @@
       showContextMenu(ev.clientX, ev.clientY, items);
     }
 
-    function _removeSinglePlantMarker(markerId) {
+    function _removeSinglePlantMarker(markerId, skipBridge) {
       var circle = plantMarkers[markerId];
       if (!circle) return;
       var pd = circle._pd;
@@ -1742,7 +1773,10 @@
         delete plantLabels[markerId];
       }
       delete plantMarkers[markerId];
-      if (bridge) bridge.onPlantRemoved(markerId, pd.plantId, pd.lat, pd.lng);
+      // skipBridge lets a batch caller (deleteSelected) collect all removals
+      // and notify Python ONCE — a per-plant bridge call re-syncs the planning
+      // panel (habitat recompute) each time, which is what made multi-delete lag.
+      if (!skipBridge && bridge) bridge.onPlantRemoved(markerId, pd.plantId, pd.lat, pd.lng);
     }
 
     // Count how many existing markers share a group id.
@@ -1895,7 +1929,9 @@
     var _plantDragState = null;
 
     function _onPlantMouseDown(circle, e) {
-      if (currentMode !== 'none') return;
+      // Draggable when idle OR in Select mode (so a box-selected set can be
+      // dragged as a unit — see _scopesFor's 'selection' scope).
+      if (currentMode !== 'none' && currentMode !== 'select') return;
       var ev = e.originalEvent;
       if (ev && (ev.shiftKey || ev.ctrlKey || ev.metaKey)) return;
       // Left button only — middle/right shouldn't arm a drag.

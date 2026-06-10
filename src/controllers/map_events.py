@@ -758,6 +758,63 @@ class MapEventRouter:
         self._main._mark_modified()
         self._main._sync_planning_panel()
 
+    def _on_plants_removed_batch(self, batch_json: str):
+        """Remove many plants in one pass — one feature rebuild + one planning
+        re-sync for the whole selection, instead of the per-plant round-trip
+        (each of which recomputed the habitat score) that made multi-delete lag.
+        """
+        import json as _json
+        try:
+            batch = _json.loads(batch_json or "[]")
+        except Exception:
+            return
+        if not batch:
+            return
+        main = self._main
+
+        # Multiset of (plant_id, rounded lat, rounded lng) keys, so duplicate-
+        # position plants are each removed exactly once.
+        def _key(pid, lat, lng):
+            return (int(pid), round(float(lat), 7), round(float(lng), 7))
+
+        want: dict = {}
+        removed_ids: list = []
+        for d in batch:
+            k = _key(d["plantId"], d["lat"], d["lng"])
+            want[k] = want.get(k, 0) + 1
+            removed_ids.append(int(d["plantId"]))
+
+        kept_plants = []
+        for p in main._placed_plants:
+            k = _key(p["plant_id"], p["lat"], p["lng"])
+            if want.get(k, 0) > 0:
+                want[k] -= 1
+            else:
+                kept_plants.append(p)
+        main._placed_plants = kept_plants
+
+        # Independent tally for the feature pass (the list pass consumed `want`).
+        want2: dict = {}
+        for d in batch:
+            want2[_key(d["plantId"], d["lat"], d["lng"])] = \
+                want2.get(_key(d["plantId"], d["lat"], d["lng"]), 0) + 1
+        kept_features = []
+        for f in main._project["features"]:
+            props = f.get("properties", {})
+            coords = f.get("geometry", {}).get("coordinates", [])
+            if props.get("element_type") == "plant" and coords:
+                fk = _key(props.get("plant_id"), coords[1], coords[0])
+                if want2.get(fk, 0) > 0:
+                    want2[fk] -= 1
+                    continue
+            kept_features.append(f)
+        main._project["features"] = kept_features
+
+        # One panel rebuild + one re-sync for the whole batch.
+        main.plant_panel.on_plants_removed_batch(removed_ids)
+        main._mark_modified()
+        main._sync_planning_panel()
+
     def _on_polyculture_removed(self, polyculture_name: str,
                                   center_lat: float, center_lng: float):
         """Remove all polyculture member plant features from project state.
