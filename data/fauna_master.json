@@ -60,7 +60,10 @@
     "ab_native": 1,
     "range_notes": "Boreal forest and parkland.",
     "icon": "🦋",
-    "description": "Mottled brown-and-orange tortoiseshell. Caterpillars feed on birch, aspen, and willow."
+    "description": "Mottled brown-and-orange tortoiseshell. Caterpillars feed on birch, aspen, and willow.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/221383/medium.jpg",
+    "image_attribution": "(c) D. Gordon E. Robertson, some rights reserved (CC BY-SA)",
+    "image_license": "cc-by-sa"
   },
   {
     "scientific_name": "Vanessa cardui",
@@ -78,7 +81,10 @@
     "ab_native": 1,
     "range_notes": "Widespread immigrant across the province.",
     "icon": "🦋",
-    "description": "Dark butterfly with red wing-bands. Caterpillars feed on stinging nettle."
+    "description": "Dark butterfly with red wing-bands. Caterpillars feed on stinging nettle.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/53928483/medium.jpg",
+    "image_attribution": "(c) Gilles San Martin, some rights reserved (CC BY-SA), uploaded by Gilles San Martin",
+    "image_license": "cc-by-sa"
   },
   {
     "scientific_name": "Limenitis arthemis",
@@ -159,7 +165,10 @@
     "ab_native": 1,
     "range_notes": "Boreal and parkland Alberta.",
     "icon": "🦋",
-    "description": "Large silk moth with eye-spots on hind wings. Caterpillars feed on birch, aspen, willow, and cherry."
+    "description": "Large silk moth with eye-spots on hind wings. Caterpillars feed on birch, aspen, willow, and cherry.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/205949886/medium.jpg",
+    "image_attribution": "(c) Trevor Van Loon, some rights reserved (CC BY), uploaded by Trevor Van Loon",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Hyalophora cecropia",
@@ -213,7 +222,10 @@
     "ab_native": 1,
     "range_notes": "Year-round in boreal regions; irruptive elsewhere.",
     "icon": "🐦",
-    "description": "Streaked finch that feeds on birch, alder, and conifer seeds."
+    "description": "Streaked finch that feeds on birch, alder, and conifer seeds.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/13823002/medium.jpg",
+    "image_attribution": "(c) Cephas, some rights reserved (CC BY-SA)",
+    "image_license": "cc-by-sa"
   },
   {
     "scientific_name": "Acanthis flammea",
@@ -366,7 +378,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🐝",
-    "description": "Solitary cavity-nester that cuts leaf discs (often from rose) to line its nest cells; strong summer pollinator of legumes and asters."
+    "description": "Solitary cavity-nester that cuts leaf discs (often from rose) to line its nest cells; strong summer pollinator of legumes and asters.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/50861753/medium.jpg",
+    "image_attribution": "(c) Owen Strickland, some rights reserved (CC BY), uploaded by Owen Strickland",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Agapostemon virescens",
@@ -411,7 +426,10 @@
     "ab_native": 1,
     "range_notes": "Parkland & foothills.",
     "icon": "🐝",
-    "description": "Fast-flying solitary digger bee; long tongue suits penstemons and mints."
+    "description": "Fast-flying solitary digger bee; long tongue suits penstemons and mints.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/89785587/medium.jpeg",
+    "image_attribution": "(c) Amy Schnebelin, some rights reserved (CC BY), uploaded by Amy Schnebelin",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Buteo jamaicensis",
@@ -474,7 +492,10 @@
     "ab_native": 1,
     "range_notes": "Central & southern AB.",
     "icon": "🐦",
-    "description": "Bold parkland corvid; caches acorns and conifer seeds and takes fruit."
+    "description": "Bold parkland corvid; caches acorns and conifer seeds and takes fruit.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/530721418/medium.jpg",
+    "image_attribution": "(c) Judy Gallagher, some rights reserved (CC BY)",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Pica hudsonia",
@@ -618,7 +639,10 @@
     "ab_native": 1,
     "range_notes": "Prairie & parkland.",
     "icon": "🪲",
-    "description": "Pollen- and nectar-feeding beetle of late-summer goldenrod; larvae are soil predators."
+    "description": "Pollen- and nectar-feeding beetle of late-summer goldenrod; larvae are soil predators.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/602935258/medium.jpg",
+    "image_attribution": "(c) \nWildreturn, some rights reserved (CC BY)",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Anax junius",
@@ -753,7 +777,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🦋",
-    "description": "Tussock caterpillar feeding on willow, poplar, alder and birch."
+    "description": "Tussock caterpillar feeding on willow, poplar, alder and birch.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/28723853/medium.jpeg",
+    "image_attribution": "(c) Paul Bedell, some rights reserved (CC BY-SA), uploaded by Paul Bedell",
+    "image_license": "cc-by-sa"
   },
   {
     "scientific_name": "Epargyreus clarus",

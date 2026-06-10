@@ -39,7 +39,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "garden_centre",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/178876/medium.jpg",
+    "image_attribution": "(c) Denali National Park and Preserve, some rights reserved (CC BY)",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Alberta Penstemon",
@@ -81,7 +84,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/526964920/medium.jpg",
+    "image_attribution": "no rights reserved, uploaded by Kallum McDonald",
+    "image_license": "cc0"
   },
   {
     "common_name": "Alder-leaved Buckthorn",
@@ -375,7 +381,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/147278593/medium.jpg",
+    "image_attribution": "(c) Caleb Catto, some rights reserved (CC BY), uploaded by Caleb Catto",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Alpine Hedysarum (Bear Root)",
@@ -459,7 +468,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/5153683/medium.jpg",
+    "image_attribution": "(c) Drepanostoma, nekatere pravice pridžane (CC BY), naložena od Drepanostoma",
+    "image_license": "cc-by"
   },
   {
     "common_name": "American Brooklime",
@@ -630,7 +642,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/526467990/medium.jpg",
+    "image_attribution": "no rights reserved, uploaded by Kallum McDonald",
+    "image_license": "cc0"
   },
   {
     "common_name": "Awned Sedge",
@@ -672,7 +687,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/42831601/medium.jpeg",
+    "image_attribution": "no rights reserved, uploaded by Reuven Martin",
+    "image_license": "cc0"
   },
   {
     "common_name": "Ball Cactus",
@@ -924,7 +942,10 @@
     "price_low_cad": 25,
     "price_high_cad": 50,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/141313270/medium.jpeg",
+    "image_attribution": "no rights reserved, uploaded by Lynn Harper",
+    "image_license": "cc0"
   },
   {
     "common_name": "Beaked Sedge",
@@ -1431,7 +1452,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "garden_centre",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/7861779/medium.jpg",
+    "image_attribution": "no rights reserved, uploaded by Brady Reed",
+    "image_license": "cc0"
   },
   {
     "common_name": "Blanketflower",
@@ -1603,7 +1627,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "garden_centre",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/79232001/medium.jpg",
+    "image_attribution": "(c) Matt Berger, some rights reserved (CC BY), uploaded by Matt Berger",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Blue-eyed Grass",
@@ -1858,7 +1885,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "garden_centre",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/77485559/medium.jpg",
+    "image_attribution": "no rights reserved, uploaded by Alan Weakley",
+    "image_license": "cc0"
   },
   {
     "common_name": "Boreale Oxytropis",
@@ -2160,7 +2190,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/410886697/medium.jpeg",
+    "image_attribution": "no rights reserved, uploaded by Kallum McDonald",
+    "image_license": "cc0"
   },
   {
     "common_name": "Broomweed",
@@ -2202,7 +2235,10 @@
     "price_low_cad": 25,
     "price_high_cad": 50,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/11161458/medium.jpg",
+    "image_attribution": "(c) W. Terry Hunefeld, some rights reserved (CC BY), uploaded by W. Terry Hunefeld",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Buckbean",
@@ -2413,7 +2449,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/162600164/medium.jpg",
+    "image_attribution": "(c) Dendroica cerulea, some rights reserved (CC BY)",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Canada Buffaloberry",
@@ -2843,7 +2882,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/23261039/medium.jpeg",
+    "image_attribution": "(c) Andre Hosper, some rights reserved (CC BY), uploaded by Andre Hosper",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Common Horsetail",
@@ -3142,7 +3184,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/24258314/medium.jpg",
+    "image_attribution": "(c) aarongunnar, some rights reserved (CC BY), uploaded by aarongunnar",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Common Twinpod",
@@ -3398,7 +3443,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/169132999/medium.jpg",
+    "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY)",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Crowfoot Violet",
@@ -3440,7 +3488,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/3514117/medium.jpg",
+    "image_attribution": "(c) Joshua Mayer, some rights reserved (CC BY-SA)",
+    "image_license": "cc-by-sa"
   },
   {
     "common_name": "Cushion Umbrella Plant",
@@ -3700,7 +3751,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/3674707/medium.JPG",
+    "image_attribution": "(c) aarongunnar, some rights reserved (CC BY), uploaded by aarongunnar",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Dotted Blazingstar",
@@ -3997,7 +4051,10 @@
     "price_low_cad": 25,
     "price_high_cad": 50,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/354824045/medium.jpg",
+    "image_attribution": "(c) Dustin Snider, some rights reserved (CC BY), uploaded by Dustin Snider",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Dwarf Raspberry",
@@ -4257,7 +4314,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/149646914/medium.jpg",
+    "image_attribution": "(c) Tom Pollard, some rights reserved (CC BY), uploaded by Tom Pollard",
+    "image_license": "cc-by"
   },
   {
     "common_name": "False Box (Mountain Boxwood)",
@@ -4686,7 +4746,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/297093572/medium.jpg",
+    "image_attribution": "(c) Rob Foster, some rights reserved (CC BY), uploaded by Rob Foster",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Foothills Rough Fescue",
@@ -4770,7 +4833,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/129824/medium.jpg",
+    "image_attribution": "(c) Jason Hollinger, some rights reserved (CC BY)",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Fragrant Sumac",
@@ -4812,7 +4878,10 @@
     "price_low_cad": 25,
     "price_high_cad": 50,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/310253516/medium.jpg",
+    "image_attribution": "(c) Catherine C. Galley, some rights reserved (CC BY), uploaded by Catherine C. Galley",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Fringed Brome",
@@ -4896,7 +4965,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/83474552/medium.jpeg",
+    "image_attribution": "(c) er-birds, some rights reserved (CC BY), uploaded by er-birds",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Fuzzy-tongue Penstemon",
@@ -5022,7 +5094,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/417901162/medium.jpeg",
+    "image_attribution": "(c) Alan Prather, some rights reserved (CC BY), uploaded by Alan Prather",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Giant Sunflower",
@@ -5064,7 +5139,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/133696/medium.gif",
+    "image_attribution": "(c) Homer Edward Price, some rights reserved (CC BY)",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Giant Wild Rye",
@@ -5664,7 +5742,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/819101/medium.jpg",
+    "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
+    "image_license": "cc-by-sa"
   },
   {
     "common_name": "Gumweed",
@@ -5748,7 +5829,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/14867705/medium.jpg",
+    "image_attribution": "(c) Jim Morefield, some rights reserved (CC BY)",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Hairy Golden Aster",
@@ -5790,7 +5874,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "garden_centre",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/133695/medium.jpg",
+    "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
+    "image_license": "cc-by-sa"
   },
   {
     "common_name": "Hairy Wild Rye",
@@ -5917,7 +6004,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/75570328/medium.jpeg",
+    "image_attribution": "(c) psweet, some rights reserved (CC BY-SA), uploaded by psweet",
+    "image_license": "cc-by-sa"
   },
   {
     "common_name": "Heart-leaved Arnica",
@@ -6043,7 +6133,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "garden_centre",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/175949800/medium.jpg",
+    "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY)",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Hooded Ladies' Tresses",
@@ -6507,7 +6600,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/11398286/medium.jpg",
+    "image_attribution": "(c) aarongunnar, some rights reserved (CC BY), uploaded by aarongunnar",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Lance-leaved Stonecrop",
@@ -6723,7 +6819,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/438586/medium.jpeg",
+    "image_attribution": "(c) H. Zell, some rights reserved (CC BY-SA)",
+    "image_license": "cc-by-sa"
   },
   {
     "common_name": "Leafy Aster",
@@ -6850,7 +6949,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "garden_centre",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/229411227/medium.jpeg",
+    "image_attribution": "no rights reserved, uploaded by Ian Whyte",
+    "image_license": "cc0"
   },
   {
     "common_name": "Little Bluestem",
@@ -6934,7 +7036,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/158899829/medium.jpg",
+    "image_attribution": "(c) Steve Matson, some rights reserved (CC BY), uploaded by Steve Matson",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Lodgepole Pine",
@@ -6976,7 +7081,10 @@
     "price_low_cad": 60,
     "price_high_cad": 150,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (large specimen tree); AB retail as of 2026"
+    "sourcing_notes": "Estimate (large specimen tree); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/45880976/medium.jpeg",
+    "image_attribution": "(c) Alison Northup, some rights reserved (CC BY), uploaded by Alison Northup",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Long-fruited Anemone",
@@ -7490,7 +7598,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/324010734/medium.jpeg",
+    "image_attribution": "(c) eeyipes, some rights reserved (CC BY)",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Marsh Skullcap",
@@ -7533,7 +7644,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/143255406/medium.jpg",
+    "image_attribution": "(c) Benoit Renaud, some rights reserved (CC BY), uploaded by Benoit Renaud",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Marsh Violet",
@@ -7832,7 +7946,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/4251117/medium.jpg",
+    "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
+    "image_license": "cc-by-sa"
   },
   {
     "common_name": "Moss Campion",
@@ -7874,7 +7991,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/292886591/medium.jpg",
+    "image_attribution": "(c) Katrin Simon, some rights reserved (CC BY), uploaded by Katrin Simon",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Moss Phlox",
@@ -8252,7 +8372,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/205959218/medium.jpg",
+    "image_attribution": "(c) Trevor Van Loon, some rights reserved (CC BY), uploaded by Trevor Van Loon",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Needle Spike-rush",
@@ -8678,7 +8801,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (fern default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (fern default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/394351700/medium.jpeg",
+    "image_attribution": "(c) Tom Norton, some rights reserved (CC BY), uploaded by Tom Norton",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Pale Agoseris",
@@ -8848,7 +8974,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/444569936/medium.jpeg",
+    "image_attribution": "(c) Matt Berger, some rights reserved (CC BY), uploaded by Matt Berger",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Parry's Townsendia",
@@ -9401,7 +9530,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/62121020/medium.jpg",
+    "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
+    "image_license": "cc-by-sa"
   },
   {
     "common_name": "Porcupine Grass",
@@ -9871,7 +10003,10 @@
     "price_low_cad": 18,
     "price_high_cad": 40,
     "availability_class": "rare",
-    "sourcing_notes": "Estimate (specialist / rare); AB retail as of 2026"
+    "sourcing_notes": "Estimate (specialist / rare); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/543658130/medium.jpg",
+    "image_attribution": "(c) Cesar Ormazabal, some rights reserved (CC BY), uploaded by Cesar Ormazabal",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Prairie Goldenrod",
@@ -9959,7 +10094,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/346456/medium.jpg",
+    "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
+    "image_license": "cc-by-sa"
   },
   {
     "common_name": "Prairie Rose",
@@ -10724,7 +10862,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/52334427/medium.jpg",
+    "image_attribution": "no rights reserved, uploaded by Bonnie Isaac",
+    "image_license": "cc0"
   },
   {
     "common_name": "Raymond's Sedge",
@@ -11406,7 +11547,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/291460013/medium.jpeg",
+    "image_attribution": "(c) Darrin Gobble, some rights reserved (CC BY), uploaded by Darrin Gobble",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Round-leaved Alumroot",
@@ -11576,7 +11720,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/150019714/medium.jpeg",
+    "image_attribution": "(c) Igor Balashov, some rights reserved (CC BY), uploaded by Igor Balashov",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Saline Shooting Star",
@@ -11618,7 +11765,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/197377759/medium.jpg",
+    "image_attribution": "no rights reserved, uploaded by Kate Manning",
+    "image_license": "cc0"
   },
   {
     "common_name": "Saltgrass",
@@ -12290,7 +12440,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/1111920/medium.jpg",
+    "image_attribution": "(c) Fluff Berger, some rights reserved (CC BY-SA), uploaded by Fluff Berger",
+    "image_license": "cc-by-sa"
   },
   {
     "common_name": "Showy Jacob's-ladder",
@@ -12548,7 +12701,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/5329132/medium.jpeg",
+    "image_attribution": "(c) psweet, some rights reserved (CC BY-SA), uploaded by psweet",
+    "image_license": "cc-by-sa"
   },
   {
     "common_name": "Silky Lupine",
@@ -12808,7 +12964,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/18421301/medium.jpg",
+    "image_attribution": "(c) Tim Messick, some rights reserved (CC BY), uploaded by Tim Messick",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Sitka Valerian",
@@ -12934,7 +13093,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/208854642/medium.jpg",
+    "image_attribution": "(c) Jason Alexander, some rights reserved (CC BY), uploaded by Jason Alexander",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Slender Cinquefoil (Graceful Cinquefoil)",
@@ -13610,7 +13772,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (grass default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/14190852/medium.jpg",
+    "image_attribution": "(c) Jim Morefield, some rights reserved (CC BY)",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Spiked Water-milfoil",
@@ -13740,7 +13905,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (sedge default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/2063546/medium.jpg",
+    "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
+    "image_license": "cc-by-sa"
   },
   {
     "common_name": "Spring Beauty",
@@ -14208,7 +14376,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/87544386/medium.jpeg",
+    "image_attribution": "(c) Kate, some rights reserved (CC BY), uploaded by Kate",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Swamp Horsetail",
@@ -14420,7 +14591,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/9682082/medium.jpg",
+    "image_attribution": "(c) aarongunnar, some rights reserved (CC BY), uploaded by aarongunnar",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Tall Anemone (Thimbleweed)",
@@ -15828,7 +16002,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/125678/medium.jpg",
+    "image_attribution": "(c) Katja Schulz, some rights reserved (CC BY)",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Western Fescue",
@@ -16636,7 +16813,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/14428/medium.jpg",
+    "image_attribution": "(c) Tom Hilton, some rights reserved (CC BY), uploaded by Tom Hilton",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Wild Chives",
@@ -16941,7 +17121,10 @@
     "price_low_cad": 25,
     "price_high_cad": 50,
     "availability_class": "garden_centre",
-    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/358785151/medium.jpg",
+    "image_attribution": "(c) Ole Husby, some rights reserved (CC BY-SA)",
+    "image_license": "cc-by-sa"
   },
   {
     "common_name": "Wild Red Currant",
@@ -17068,7 +17251,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/600014255/medium.jpg",
+    "image_attribution": "(c) Abby Hyde, some rights reserved (CC BY), uploaded by Abby Hyde",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Wild Vetch",
@@ -17113,7 +17299,10 @@
     "price_low_cad": 15,
     "price_high_cad": 35,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (vine default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (vine default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/71578389/medium.jpg",
+    "image_attribution": "(c) Andrea Romero, some rights reserved (CC BY), uploaded by Andrea Romero",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Willow Aster",
@@ -17368,7 +17557,10 @@
     "price_low_cad": 25,
     "price_high_cad": 50,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/4560367/medium.jpeg",
+    "image_attribution": "(c) Don Loarie, some rights reserved (CC BY), uploaded by Don Loarie",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Woolly Cinquefoil",
@@ -17839,7 +18031,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/80360799/medium.jpeg",
+    "image_attribution": "(c) Matt Berger, some rights reserved (CC BY), uploaded by Matt Berger",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Yellow Mountain Avens",
@@ -17881,7 +18076,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/39572/medium.jpg",
+    "image_attribution": "(c) Jason Hollinger, some rights reserved (CC BY-SA)",
+    "image_license": "cc-by-sa"
   },
   {
     "common_name": "Yellow Owl Clover",
@@ -18007,7 +18205,10 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "native_specialist",
-    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/5483368/medium.jpg",
+    "image_attribution": "(c) gonodactylus, some rights reserved (CC BY), uploaded by gonodactylus",
+    "image_license": "cc-by"
   },
   {
     "common_name": "Yellow Pucoon",
