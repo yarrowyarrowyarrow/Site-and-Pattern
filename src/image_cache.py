@@ -94,7 +94,11 @@ def fetch_and_cache_image(url: str, attribution: str = "", license_str: str = ""
     if cached:
         return cached
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as resp:
+        # A descriptive User-Agent — some hosts (incl. iNaturalist) reject the
+        # default urllib agent with HTTP 403.
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "PermaDesign (native habitat design app)"})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             data = resp.read()
             ctype = (resp.headers.get("Content-Type") or "").split(";")[0].strip()
     except (urllib.error.URLError, urllib.error.HTTPError,
