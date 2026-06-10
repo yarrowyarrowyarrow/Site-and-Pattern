@@ -61,3 +61,10 @@ class FillTabWidget(QTabWidget):
     def __init__(self, parent=None, *, allow_shrink: bool = False):
         super().__init__(parent)
         self.setTabBar(_FillTabBar(self, allow_shrink=allow_shrink))
+        # Document mode is a *prerequisite* for filling: without it Qt sizes the
+        # tab bar to its own size hint (the sum of natural tab widths), so
+        # ``tabSizeHint`` never sees the full strip width and the widen logic
+        # has nothing to widen into. Most call sites set this; the ones that
+        # forgot got natural-width tabs with a gap — so own it here.
+        self.setDocumentMode(True)
+        self.tabBar().setUsesScrollButtons(False)
