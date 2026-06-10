@@ -6,7 +6,10 @@
     "ab_native": 1,
     "range_notes": "Migrates through southern Alberta; breeds where milkweeds occur.",
     "icon": "🦋",
-    "description": "Iconic migratory butterfly. Caterpillars feed only on milkweeds (Asclepias). Listed as Endangered under SARA in Canada."
+    "description": "Iconic migratory butterfly. Caterpillars feed only on milkweeds (Asclepias). Listed as Endangered under SARA in Canada.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/111043173/medium.jpg",
+    "image_attribution": "(c) Christine Young, some rights reserved (CC BY), uploaded by Christine Young",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Papilio canadensis",
@@ -15,7 +18,10 @@
     "ab_native": 1,
     "range_notes": "Widespread across boreal and aspen parkland Alberta.",
     "icon": "🦋",
-    "description": "Large yellow-and-black swallowtail. Caterpillars feed on aspen, birch, willow, and chokecherry."
+    "description": "Large yellow-and-black swallowtail. Caterpillars feed on aspen, birch, willow, and chokecherry.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/139866260/medium.jpeg",
+    "image_attribution": "(c) Bex Goreham, some rights reserved (CC BY), uploaded by Bex Goreham",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Papilio rutulus",
@@ -24,7 +30,10 @@
     "ab_native": 1,
     "range_notes": "Southwestern Alberta foothills and river valleys.",
     "icon": "🦋",
-    "description": "Closely related to the Canadian Tiger Swallowtail. Caterpillars feed on willow, cottonwood, and chokecherry."
+    "description": "Closely related to the Canadian Tiger Swallowtail. Caterpillars feed on willow, cottonwood, and chokecherry.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/7915359/medium.jpg",
+    "image_attribution": "(c) Don Loarie, some rights reserved (CC BY), uploaded by Don Loarie",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Papilio machaon",
@@ -33,7 +42,10 @@
     "ab_native": 1,
     "range_notes": "Prairie populations across southern Alberta.",
     "icon": "🦋",
-    "description": "Yellow-and-black swallowtail of open prairie. Prairie subspecies caterpillars feed on Artemisia (wild sages)."
+    "description": "Yellow-and-black swallowtail of open prairie. Prairie subspecies caterpillars feed on Artemisia (wild sages).",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/30565267/medium.jpg",
+    "image_attribution": "(c) lugachev_vitaly, some rights reserved (CC BY), uploaded by lugachev_vitaly",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Nymphalis antiopa",
@@ -51,7 +63,10 @@
     "ab_native": 1,
     "range_notes": "Common in moist meadows and disturbed ground.",
     "icon": "🦋",
-    "description": "Orange-banded tortoiseshell butterfly. Caterpillars feed exclusively on stinging nettle (Urtica)."
+    "description": "Orange-banded tortoiseshell butterfly. Caterpillars feed exclusively on stinging nettle (Urtica).",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/79087633/medium.jpeg",
+    "image_attribution": "(c) Matt Muir, some rights reserved (CC BY), uploaded by Matt Muir",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Nymphalis l-album",
@@ -72,7 +87,10 @@
     "ab_native": 1,
     "range_notes": "Periodic immigrant; major irruptions every several years.",
     "icon": "🦋",
-    "description": "Cosmopolitan migrant butterfly. Caterpillars are generalists on Asteraceae, especially thistles."
+    "description": "Cosmopolitan migrant butterfly. Caterpillars are generalists on Asteraceae, especially thistles.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/3347095/medium.jpg",
+    "image_attribution": "no rights reserved, uploaded by Joan C. Hinojosa",
+    "image_license": "cc0"
   },
   {
     "scientific_name": "Vanessa atalanta",
@@ -120,7 +138,10 @@
     "ab_native": 1,
     "range_notes": "Tall-grass meadows and aspen openings.",
     "icon": "🦋",
-    "description": "Brown butterfly with eye-spots. Caterpillars feed on native grasses."
+    "description": "Brown butterfly with eye-spots. Caterpillars feed on native grasses.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/20727940/medium.jpg",
+    "image_attribution": "(c) Judy Gallagher, some rights reserved (CC BY-SA), uploaded by Judy Gallagher",
+    "image_license": "cc-by-sa"
   },
   {
     "scientific_name": "Celastrina ladon",
@@ -138,7 +159,10 @@
     "ab_native": 1,
     "range_notes": "Meadows and clearings throughout Alberta.",
     "icon": "🦋",
-    "description": "Small blue butterfly with silvery underside. Caterpillars feed on lupines, vetches, and milkvetches."
+    "description": "Small blue butterfly with silvery underside. Caterpillars feed on lupines, vetches, and milkvetches.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/20225419/medium.jpg",
+    "image_attribution": "(c) Owen Strickland, some rights reserved (CC BY), uploaded by Owen Strickland",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Cupido amyntula",
@@ -147,7 +171,10 @@
     "ab_native": 1,
     "range_notes": "Meadows and roadsides.",
     "icon": "🦋",
-    "description": "Small tailed-blue butterfly. Caterpillars feed on legume seedpods (milkvetch, vetch)."
+    "description": "Small tailed-blue butterfly. Caterpillars feed on legume seedpods (milkvetch, vetch).",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/39663223/medium.jpg",
+    "image_attribution": "(c) Matt Benotsch, some rights reserved (CC BY), uploaded by Matt Benotsch",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Hesperia comma",
@@ -177,7 +204,10 @@
     "ab_native": 1,
     "range_notes": "Boreal Alberta; uncommon.",
     "icon": "🦋",
-    "description": "Largest North American silk moth. Caterpillars feed on willow, cherry, birch, and maple."
+    "description": "Largest North American silk moth. Caterpillars feed on willow, cherry, birch, and maple.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/75088649/medium.jpg",
+    "image_attribution": "(c) Ryan Hodnett, some rights reserved (CC BY-SA), uploaded by Ryan Hodnett",
+    "image_license": "cc-by-sa"
   },
   {
     "scientific_name": "Hemaris thysbe",
@@ -195,7 +225,10 @@
     "ab_native": 1,
     "range_notes": "Open habitats with snowberry thickets.",
     "icon": "🦋",
-    "description": "Black-and-yellow day-flying moth. Caterpillars feed on snowberry and honeysuckle."
+    "description": "Black-and-yellow day-flying moth. Caterpillars feed on snowberry and honeysuckle.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/3374057/medium.jpg",
+    "image_attribution": "(c) Marvin Smith, some rights reserved (CC BY-SA)",
+    "image_license": "cc-by-sa"
   },
   {
     "scientific_name": "Bombycilla cedrorum",
@@ -204,7 +237,10 @@
     "ab_native": 1,
     "range_notes": "Widespread breeder; nomadic in winter following fruit.",
     "icon": "🐦",
-    "description": "Sleek crested songbird that feeds primarily on fruit. Strongly associated with serviceberry, mountain ash, and viburnum."
+    "description": "Sleek crested songbird that feeds primarily on fruit. Strongly associated with serviceberry, mountain ash, and viburnum.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/170848062/medium.jpg",
+    "image_attribution": "(c) Christian Back, some rights reserved (CC BY), uploaded by Christian Back",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Spinus tristis",
@@ -213,7 +249,10 @@
     "ab_native": 1,
     "range_notes": "Summer breeder across Alberta.",
     "icon": "🐦",
-    "description": "Bright yellow seed-eating finch. Heavily dependent on Asteraceae seed (sunflower, thistle, goldenrod, aster)."
+    "description": "Bright yellow seed-eating finch. Heavily dependent on Asteraceae seed (sunflower, thistle, goldenrod, aster).",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/84579952/medium.jpeg",
+    "image_attribution": "no rights reserved, uploaded by Glenn Berry",
+    "image_license": "cc0"
   },
   {
     "scientific_name": "Spinus pinus",
@@ -234,7 +273,10 @@
     "ab_native": 1,
     "range_notes": "Winter visitor; breeds in the far north.",
     "icon": "🐦",
-    "description": "Small streaky finch with red cap. Winter diet is dominated by birch and alder seeds."
+    "description": "Small streaky finch with red cap. Winter diet is dominated by birch and alder seeds.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/446599304/medium.jpg",
+    "image_attribution": "(c) caroline legg, some rights reserved (CC BY)",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Archilochus colubris",
@@ -261,7 +303,10 @@
     "ab_native": 1,
     "range_notes": "Year-round resident throughout Alberta.",
     "icon": "🐦",
-    "description": "Insectivorous songbird; nestlings depend almost entirely on caterpillars. Native trees rich in lepidoptera (aspen, willow, birch, cherry) anchor its food supply."
+    "description": "Insectivorous songbird; nestlings depend almost entirely on caterpillars. Native trees rich in lepidoptera (aspen, willow, birch, cherry) anchor its food supply.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/155785914/medium.jpg",
+    "image_attribution": "(c) Blake Ross, some rights reserved (CC BY), uploaded by Blake Ross",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Setophaga petechia",
@@ -270,7 +315,10 @@
     "ab_native": 1,
     "range_notes": "Summer breeder; strongly tied to riparian willow and dogwood thickets.",
     "icon": "🐦",
-    "description": "Bright yellow warbler that nests almost exclusively in willow and dogwood shrubs along streams and wetland edges."
+    "description": "Bright yellow warbler that nests almost exclusively in willow and dogwood shrubs along streams and wetland edges.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/241265435/medium.jpg",
+    "image_attribution": "(c) Aitor, some rights reserved (CC BY), uploaded by Aitor",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Turdus migratorius",
@@ -279,7 +327,10 @@
     "ab_native": 1,
     "range_notes": "Widespread breeder across Alberta.",
     "icon": "🐦",
-    "description": "Familiar thrush. Eats earthworms in spring/summer; switches to fruit (serviceberry, mountain ash, chokecherry, hawthorn) in fall and winter."
+    "description": "Familiar thrush. Eats earthworms in spring/summer; switches to fruit (serviceberry, mountain ash, chokecherry, hawthorn) in fall and winter.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/111891996/medium.jpg",
+    "image_attribution": "(c) Judy Gallagher, some rights reserved (CC BY)",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Bombus spp.",
@@ -333,7 +384,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🐝",
-    "description": "Common prairie/parkland bumble bee; long colony season makes it a key generalist pollinator of asters, clovers and mints."
+    "description": "Common prairie/parkland bumble bee; long colony season makes it a key generalist pollinator of asters, clovers and mints.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/571456/medium.jpg",
+    "image_attribution": "no rights reserved, uploaded by USGS Bee Inventory and Monitoring Lab",
+    "image_license": "cc0"
   },
   {
     "scientific_name": "Bombus ternarius",
@@ -342,7 +396,10 @@
     "ab_native": 1,
     "range_notes": "Central & northern AB.",
     "icon": "🐝",
-    "description": "Orange-banded bumble bee of boreal and parkland edges; forages willow, blueberry, goldenrod."
+    "description": "Orange-banded bumble bee of boreal and parkland edges; forages willow, blueberry, goldenrod.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/115590/medium.jpg",
+    "image_attribution": "no rights reserved, uploaded by Kent McFarland",
+    "image_license": "cc0"
   },
   {
     "scientific_name": "Bombus rufocinctus",
@@ -369,7 +426,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🐝",
-    "description": "Spring solitary bee; superb fruit-tree and willow pollinator that nests in cavities (and bee hotels)."
+    "description": "Spring solitary bee; superb fruit-tree and willow pollinator that nests in cavities (and bee hotels).",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/15276353/medium.jpg",
+    "image_attribution": "(c) Harley Hosford, some rights reserved (CC BY), uploaded by Harley Hosford",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Megachile relativa",
@@ -390,7 +450,10 @@
     "ab_native": 1,
     "range_notes": "Prairie & parkland.",
     "icon": "🐝",
-    "description": "Metallic-green communal ground-nesting bee; generalist on open flowers."
+    "description": "Metallic-green communal ground-nesting bee; generalist on open flowers.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/106992772/medium.jpg",
+    "image_attribution": "(c) Christina Butler, some rights reserved (CC BY)",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Lasioglossum spp.",
@@ -417,7 +480,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🐝",
-    "description": "Social sweat bee nesting in bare soil; generalist on composites."
+    "description": "Social sweat bee nesting in bare soil; generalist on composites.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/234768554/medium.jpg",
+    "image_attribution": "(c) Michelle Orcutt, some rights reserved (CC BY), uploaded by Michelle Orcutt",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Anthophora terminalis",
@@ -447,7 +513,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🦉",
-    "description": "Alberta's provincial bird; nests in poplar/spruce, controls rodents."
+    "description": "Alberta's provincial bird; nests in poplar/spruce, controls rodents.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/79388250/medium.jpg",
+    "image_attribution": "(c) Ben Hayden, some rights reserved (CC BY), uploaded by Ben Hayden",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Falco columbarius",
@@ -465,7 +534,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🦅",
-    "description": "Cavity-nesting little falcon of open country; eats grasshoppers, voles."
+    "description": "Cavity-nesting little falcon of open country; eats grasshoppers, voles.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/180143049/medium.jpg",
+    "image_attribution": "(c) Jonathan Eisen, some rights reserved (CC BY), uploaded by Jonathan Eisen",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Dryobates pubescens",
@@ -474,7 +546,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🐦",
-    "description": "Smallest woodpecker; forages insects on shrubs and trees and excavates nest cavities in soft dead wood (poplar, birch)."
+    "description": "Smallest woodpecker; forages insects on shrubs and trees and excavates nest cavities in soft dead wood (poplar, birch).",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/177108982/medium.jpeg",
+    "image_attribution": "(c) Alexis Williams, some rights reserved (CC BY), uploaded by Alexis Williams",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Colaptes auratus",
@@ -483,7 +558,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🐦",
-    "description": "Ground-foraging woodpecker that eats ants and autumn fruit; nests in aspen/poplar snags."
+    "description": "Ground-foraging woodpecker that eats ants and autumn fruit; nests in aspen/poplar snags.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/115602651/medium.jpeg",
+    "image_attribution": "(c) Jon Robson, some rights reserved (CC BY-SA), uploaded by Jon Robson",
+    "image_license": "cc-by-sa"
   },
   {
     "scientific_name": "Cyanocitta cristata",
@@ -504,7 +582,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🐦",
-    "description": "Ubiquitous corvid; omnivore whose bulky thorny nests shelter other species after use."
+    "description": "Ubiquitous corvid; omnivore whose bulky thorny nests shelter other species after use.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/107880579/medium.jpeg",
+    "image_attribution": "(c) Rose Zappa, some rights reserved (CC BY), uploaded by Rose Zappa",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Perisoreus canadensis",
@@ -513,7 +594,10 @@
     "ab_native": 1,
     "range_notes": "Boreal & foothills.",
     "icon": "🐦",
-    "description": "Boreal/foothills jay that caches food in spruce; year-round resident."
+    "description": "Boreal/foothills jay that caches food in spruce; year-round resident.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/31718325/medium.jpg",
+    "image_attribution": "(c) Owen Strickland, some rights reserved (CC BY), uploaded by Owen Strickland",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Sitta canadensis",
@@ -522,7 +606,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🐦",
-    "description": "Conifer specialist that eats spruce/pine seeds and bark insects; nests in cavities."
+    "description": "Conifer specialist that eats spruce/pine seeds and bark insects; nests in cavities.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/226568368/medium.jpg",
+    "image_attribution": "no rights reserved, uploaded by Claude Lyneis",
+    "image_license": "cc0"
   },
   {
     "scientific_name": "Melospiza melodia",
@@ -531,7 +618,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🐦",
-    "description": "Shrub-and-edge sparrow; eats grass and forb seeds and nests low in dense cover."
+    "description": "Shrub-and-edge sparrow; eats grass and forb seeds and nests low in dense cover.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/355151027/medium.png",
+    "image_attribution": "(c) Daniel Levitis, some rights reserved (CC BY), uploaded by Daniel Levitis",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Junco hyemalis",
@@ -540,7 +630,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🐦",
-    "description": "Ground-feeding sparrow of forest edges; winters on fallen weed seeds."
+    "description": "Ground-feeding sparrow of forest edges; winters on fallen weed seeds.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/462900958/medium.jpg",
+    "image_attribution": "(c) Becky Matsubara, some rights reserved (CC BY)",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Pinicola enucleator",
@@ -558,7 +651,10 @@
     "ab_native": 1,
     "range_notes": "Winters throughout AB.",
     "icon": "🐦",
-    "description": "Winter-flocking frugivore that strips berries from saskatoon, highbush-cranberry, hawthorn and rose."
+    "description": "Winter-flocking frugivore that strips berries from saskatoon, highbush-cranberry, hawthorn and rose.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/4836587/medium.jpg",
+    "image_attribution": "(c) Fyn Kynd, some rights reserved (CC BY-SA), uploaded by Fyn Kynd",
+    "image_license": "cc-by-sa"
   },
   {
     "scientific_name": "Bonasa umbellus",
@@ -567,7 +663,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🐦",
-    "description": "Aspen-woodland grouse that eats poplar/willow buds, catkins and shrub fruit; broods need insect-rich understory."
+    "description": "Aspen-woodland grouse that eats poplar/willow buds, catkins and shrub fruit; broods need insect-rich understory.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/171717411/medium.jpeg",
+    "image_attribution": "(c) Alexis Godin, some rights reserved (CC BY), uploaded by Alexis Godin",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Eristalis tenax",
@@ -576,7 +675,10 @@
     "ab_native": 0,
     "range_notes": "Throughout AB.",
     "icon": "🪰",
-    "description": "Honey-bee-mimicking hover fly (introduced from Europe, now widespread); adults are major generalist pollinators of composites and umbels."
+    "description": "Honey-bee-mimicking hover fly (introduced from Europe, now widespread); adults are major generalist pollinators of composites and umbels.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/16984655/medium.jpg",
+    "image_attribution": "(c) Drepanostoma, some rights reserved (CC BY), uploaded by Drepanostoma",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Syrphus ribesii",
@@ -585,7 +687,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🪰",
-    "description": "Hover fly whose aphid-eating larvae are valuable biocontrol; adults take pollen and nectar."
+    "description": "Hover fly whose aphid-eating larvae are valuable biocontrol; adults take pollen and nectar.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/83052302/medium.jpg",
+    "image_attribution": "(c) Virginia Heatwole, some rights reserved (CC BY), uploaded by Virginia Heatwole",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Toxomerus marginatus",
@@ -594,7 +699,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🪰",
-    "description": "Tiny hover fly; aphid-predator larvae, pollinator adults."
+    "description": "Tiny hover fly; aphid-predator larvae, pollinator adults.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/7594978/medium.jpg",
+    "image_attribution": "no rights reserved, uploaded by Jesse Rorabaugh",
+    "image_license": "cc0"
   },
   {
     "scientific_name": "Hippodamia convergens",
@@ -651,7 +759,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🪰",
-    "description": "Large migratory dragonfly; aerial predator of mosquitoes and flies, needs ponds with emergent sedges."
+    "description": "Large migratory dragonfly; aerial predator of mosquitoes and flies, needs ponds with emergent sedges.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/196627/medium.jpg",
+    "image_attribution": "(c) Eugene Zelenko, some rights reserved (CC BY-SA)",
+    "image_license": "cc-by-sa"
   },
   {
     "scientific_name": "Libellula quadrimaculata",
@@ -660,7 +771,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🪰",
-    "description": "Pond dragonfly of marsh edges; voracious insect predator."
+    "description": "Pond dragonfly of marsh edges; voracious insect predator.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/1900478/medium.jpg",
+    "image_attribution": "(c) Peter Preus, some rights reserved (CC BY), uploaded by Peter Preus",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Sympetrum internum",
@@ -669,7 +783,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🪰",
-    "description": "Late-season red dragonfly of wet meadows and pond margins."
+    "description": "Late-season red dragonfly of wet meadows and pond margins.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/4938018/medium.jpg",
+    "image_attribution": "(c) Nick Block, some rights reserved (CC BY), uploaded by Nick Block",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Enallagma cyathigerum",
@@ -678,7 +795,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🪰",
-    "description": "Slender damselfly of vegetated still water; larvae and adults prey on small insects."
+    "description": "Slender damselfly of vegetated still water; larvae and adults prey on small insects.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/383652098/medium.jpeg",
+    "image_attribution": "(c) Diego González Dopico, some rights reserved (CC BY), uploaded by Diego González Dopico",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Myotis lucifugus",
@@ -687,7 +807,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🦇",
-    "description": "Insectivorous bat eating thousands of mosquitoes nightly; roosts under bark and in tree cavities. SARA-listed (Endangered)."
+    "description": "Insectivorous bat eating thousands of mosquitoes nightly; roosts under bark and in tree cavities. SARA-listed (Endangered).",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/1132874/medium.jpeg",
+    "image_attribution": "(c) SMBishop, some rights reserved (CC BY-SA)",
+    "image_license": "cc-by-sa"
   },
   {
     "scientific_name": "Eptesicus fuscus",
@@ -696,7 +819,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🦇",
-    "description": "Hardy urban-tolerant bat; forages beetles and moths over meadows and water."
+    "description": "Hardy urban-tolerant bat; forages beetles and moths over meadows and water.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/411695/medium.jpg",
+    "image_attribution": "(c) Juan Cruzado Cortés, some rights reserved (CC BY-SA), uploaded by Juan Cruzado Cortés",
+    "image_license": "cc-by-sa"
   },
   {
     "scientific_name": "Lasionycteris noctivagans",
@@ -714,7 +840,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🐭",
-    "description": "Abundant native seed-eater and key prey for owls, hawks and foxes; disperses seeds and fungi."
+    "description": "Abundant native seed-eater and key prey for owls, hawks and foxes; disperses seeds and fungi.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/6120722/medium.jpeg",
+    "image_attribution": "(c) Don Loarie, some rights reserved (CC BY), uploaded by Don Loarie",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Microtus pennsylvanicus",
@@ -732,7 +861,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🐭",
-    "description": "Tiny voracious insectivore of moist litter; eats insects, slugs and larvae."
+    "description": "Tiny voracious insectivore of moist litter; eats insects, slugs and larvae.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/41185191/medium.jpg",
+    "image_attribution": "(c) Dan MacNeal, some rights reserved (CC BY), uploaded by Dan MacNeal",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Hyles lineata",
@@ -741,7 +873,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🦋",
-    "description": "Day-and-dusk hawkmoth; a hummingbird-like nectar pollinator of tubular flowers; larvae feed on flax and evening-primrose family plants."
+    "description": "Day-and-dusk hawkmoth; a hummingbird-like nectar pollinator of tubular flowers; larvae feed on flax and evening-primrose family plants.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/62012378/medium.jpeg",
+    "image_attribution": "(c) Michelle W. （鍾偉瑋）, some rights reserved (CC BY), uploaded by Michelle W. （鍾偉瑋）",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Pachysphinx modesta",
@@ -750,7 +885,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🦋",
-    "description": "Large hawkmoth whose caterpillars feed on poplar and willow foliage."
+    "description": "Large hawkmoth whose caterpillars feed on poplar and willow foliage.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/43769287/medium.jpeg",
+    "image_attribution": "(c) Ian Manning, some rights reserved (CC BY), uploaded by Ian Manning",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Smerinthus jamaicensis",
@@ -759,7 +897,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🦋",
-    "description": "Eyed hawkmoth; larvae host on willow, birch and cherry."
+    "description": "Eyed hawkmoth; larvae host on willow, birch and cherry.",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/241500271/medium.jpg",
+    "image_attribution": "no rights reserved, uploaded by kent ozment",
+    "image_license": "cc0"
   },
   {
     "scientific_name": "Pyrrharctia isabella",
@@ -789,7 +930,10 @@
     "ab_native": 1,
     "range_notes": "Southern & central AB.",
     "icon": "🦋",
-    "description": "Large skipper; caterpillars host on native legumes (milkvetch, vetch)."
+    "description": "Large skipper; caterpillars host on native legumes (milkvetch, vetch).",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/10035663/medium.jpg",
+    "image_attribution": "(c) christine123, some rights reserved (CC BY), uploaded by christine123",
+    "image_license": "cc-by"
   },
   {
     "scientific_name": "Coenonympha tullia",
@@ -807,7 +951,10 @@
     "ab_native": 1,
     "range_notes": "Throughout AB.",
     "icon": "🦋",
-    "description": "Ubiquitous yellow butterfly; caterpillars host on legumes (vetch, milkvetch, lupine)."
+    "description": "Ubiquitous yellow butterfly; caterpillars host on legumes (vetch, milkvetch, lupine).",
+    "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/47009160/medium.jpg",
+    "image_attribution": "(c) Jimmy Dee, some rights reserved (CC BY-SA), uploaded by Jimmy Dee",
+    "image_license": "cc-by-sa"
   },
   {
     "scientific_name": "Plebejus melissa",
