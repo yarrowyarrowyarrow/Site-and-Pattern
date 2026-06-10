@@ -2007,16 +2007,17 @@ class MainWindow(QMainWindow):
         try:
             self.on_this_design.set_plants_counts(self.plant_panel._placed_counts)
             self.on_this_design.set_design_data(enriched)
-            # Whole-design cost (C1): plants + structure install + bed mulch.
-            from src.sourcing import design_cost
+            # Whole-design cost (C1): plants + structure install + bed mulch,
+            # with the plant total broken down by type (F2).
+            from src.sourcing import design_cost, cost_by_type
             bed_area = sum(
                 float(f.get("properties", {}).get("area_m2") or 0.0)
                 for f in self._project.get("features", [])
                 if f.get("properties", {}).get("element_type") == "custom_shape"
             )
-            self.on_this_design.set_cost_breakdown(
-                design_cost(enriched, structures=structs, mulch_area_m2=bed_area)
-            )
+            _cost = design_cost(enriched, structures=structs, mulch_area_m2=bed_area)
+            _cost["type_costs"] = cost_by_type(enriched)
+            self.on_this_design.set_cost_breakdown(_cost)
             # Lawn-to-habitat conversion tally (N2).
             from src.lawn_zones import conversion_summary
             self.on_this_design.set_lawn_conversion(

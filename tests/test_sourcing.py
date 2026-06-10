@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.sourcing import (  # noqa: E402
     plant_price_range, estimate_cost, trim_to_budget, format_cost,
     TYPE_PRICE_DEFAULTS,
-    structure_cost, mulch_cost, design_cost,
+    structure_cost, mulch_cost, design_cost, cost_by_type,
 )
 
 # ── Fake catalogue for the pure-helper tests ────────────────────────────────
@@ -135,6 +135,26 @@ class TestWholeDesignCost(unittest.TestCase):
                          bd["plants"][0] + bd["structures"][0] + bd["mulch"][0])
         self.assertEqual(bd["total"][1],
                          bd["plants"][1] + bd["structures"][1] + bd["mulch"][1])
+
+
+class TestCostByType(unittest.TestCase):
+    def test_groups_and_sums_by_type(self):
+        # tree id1 (60-150), shrub id3 (25-50)x2, herb id2 (default 8-16)
+        out = cost_by_type([(1, 1), (3, 2), (2, 1)], get_plant=_fake_get)
+        self.assertEqual(out["tree"], (60.0, 150.0))
+        self.assertEqual(out["shrub"], (50.0, 100.0))
+        self.assertEqual(out["herb"], TYPE_PRICE_DEFAULTS["herb"])
+
+    def test_totals_match_estimate_cost(self):
+        items = [(1, 1), (3, 2), (2, 1)]
+        by = cost_by_type(items, get_plant=_fake_get)
+        lo = sum(v[0] for v in by.values())
+        hi = sum(v[1] for v in by.values())
+        self.assertEqual((round(lo, 2), round(hi, 2)),
+                         estimate_cost(items, get_plant=_fake_get))
+
+    def test_empty(self):
+        self.assertEqual(cost_by_type([], get_plant=_fake_get), {})
 
 
 class TestStructureCatalogueCost(unittest.TestCase):

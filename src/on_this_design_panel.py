@@ -237,6 +237,21 @@ class OnThisDesignPanel(QWidget):
             return f"{label}: {format_cost(v[0], v[1])}<br>" if v else ""
 
         parts = ["<p><b>Estimated cost (CAD)</b><br>", row("Plants", "plants")]
+        # Per-type breakdown so the plant total isn't one intimidating number (F2).
+        type_costs = bd.get("type_costs") or {}
+        if type_costs:
+            _LABELS = {"tree": "Trees", "shrub": "Shrubs", "vine": "Vines",
+                       "herb": "Herbaceous", "grass": "Grasses",
+                       "groundcover": "Groundcover", "root": "Roots/bulbs"}
+            chips = [
+                f"{_LABELS.get(t, t.replace('_', ' ').title())} "
+                f"{format_cost(v[0], v[1])}"
+                for t, v in sorted(type_costs.items(), key=lambda kv: -kv[1][1])
+                if v[1] > 0
+            ]
+            if chips:
+                parts.append("<span style='color:#90a4ae;font-size:10px;'>&nbsp;&nbsp;"
+                             + " · ".join(chips) + "</span><br>")
         if bd.get("structures") and bd["structures"][1] > 0:
             parts.append(row("Structures", "structures"))
         if bd.get("mulch") and bd["mulch"][1] > 0:

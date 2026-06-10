@@ -88,6 +88,30 @@ def estimate_cost(items, get_plant=None) -> tuple[float, float]:
     return (round(total_lo, 2), round(total_hi, 2))
 
 
+def cost_by_type(items, get_plant=None) -> dict:
+    """Estimated ``(low, high)`` CAD per ``plant_type`` across ``items`` ×
+    quantity — so a design's plant cost can be shown broken down by tree / shrub /
+    herb / … instead of one intimidating total. ``items`` are placed-plant dicts
+    or ``(plant_id, qty)`` tuples; ``get_plant`` is injectable for tests."""
+    if get_plant is None:
+        from src.db.plants import get_plant as _gp
+        get_plant = _gp
+    out: dict = {}
+    cache: dict = {}
+    for pid, qty in _as_pairs(items):
+        if pid is None:
+            continue
+        rec = cache.get(pid)
+        if rec is None:
+            rec = get_plant(pid) or {}
+            cache[pid] = rec
+        ptype = (rec.get("plant_type") or "other").strip().lower()
+        lo, hi = plant_price_range(rec)
+        clo, chi = out.get(ptype, (0.0, 0.0))
+        out[ptype] = (clo + lo * qty, chi + hi * qty)
+    return {k: (round(v[0], 2), round(v[1], 2)) for k, v in out.items()}
+
+
 def polyculture_cost(poly_ids, get_polyculture=None,
                      get_plant=None) -> tuple[float, float]:
     """Estimated ``(low, high)`` CAD to plant the given communities — the sum of
