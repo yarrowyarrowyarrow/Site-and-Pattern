@@ -105,7 +105,10 @@ _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 # v24 (V1.60): imagery columns (image_url / image_attribution / image_license)
 # on plants + fauna (I1). _migrate_to_v24 ALTERs existing tables; the reseed
 # fills any values present in the seed JSON.
-_SCHEMA_VERSION = 24
+# v25 (V1.61): no DDL — image data populated from iNaturalist (323 plants /
+# 58 fauna, CC0/CC-BY/CC-BY-SA only, with attribution). The bump reseeds so
+# existing installs pick the photo URLs up.
+_SCHEMA_VERSION = 25
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
