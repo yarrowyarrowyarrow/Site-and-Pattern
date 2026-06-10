@@ -148,6 +148,7 @@ class MainToolbar(QToolBar):
     draw_boundary_requested   = pyqtSignal()
     measure_requested         = pyqtSignal()
     annotate_requested        = pyqtSignal()
+    select_requested          = pyqtSignal()
     cancel_draw_requested     = pyqtSignal()
     undo_requested            = pyqtSignal()
 
@@ -207,12 +208,24 @@ class MainToolbar(QToolBar):
         self._act_annotate.triggered.connect(self._on_annotate_toggled)
         self.addAction(self._act_annotate)
 
+        self._act_select = QAction("⬚ Select", self)
+        self._act_select.setCheckable(True)
+        self._act_select.setStatusTip("Drag a box to select plants, structures, boundaries…")
+        self._act_select.setToolTip(
+            "Box-select: drag a rectangle on the map to select everything inside\n"
+            "(plants, structures, boundaries, sun sectors). Then drag the\n"
+            "selection to move it, or press Delete. (Shift+drag works any time too.)"
+        )
+        self._act_select.triggered.connect(self._on_select_toggled)
+        self.addAction(self._act_select)
+
         # Mutual exclusion for drawing modes
         self._draw_group = QActionGroup(self)
         self._draw_group.setExclusive(False)
         self._draw_group.addAction(self._act_boundary)
         self._draw_group.addAction(self._act_measure)
         self._draw_group.addAction(self._act_annotate)
+        self._draw_group.addAction(self._act_select)
 
         self.addSeparator()
 
@@ -383,8 +396,16 @@ class MainToolbar(QToolBar):
         else:
             self.cancel_draw_requested.emit()
 
+    def _on_select_toggled(self, checked: bool):
+        if checked:
+            self._uncheck_except(self._act_select)
+            self.select_requested.emit()
+        else:
+            self.cancel_draw_requested.emit()
+
     def _uncheck_except(self, keep: QAction):
-        for act in [self._act_boundary, self._act_measure, self._act_annotate]:
+        for act in [self._act_boundary, self._act_measure, self._act_annotate,
+                    self._act_select]:
             if act is not keep:
                 act.setChecked(False)
 
@@ -392,6 +413,7 @@ class MainToolbar(QToolBar):
         self._act_boundary.setChecked(False)
         self._act_measure.setChecked(False)
         self._act_annotate.setChecked(False)
+        self._act_select.setChecked(False)
         self.cancel_draw_requested.emit()
 
     def _emit_grid_settings(self, *_):

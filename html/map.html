@@ -462,12 +462,15 @@
     }
 
     function _marqueeOnDown(ev) {
-      if (!ev.shiftKey || ev.button !== 0) return;
+      // Arm on Shift+drag (any time) OR on a plain drag while the Select tool is
+      // active (the toolbar "Select" button → setMode('select')).
+      var inSelectMode = (currentMode === 'select');
+      if ((!ev.shiftKey && !inSelectMode) || ev.button !== 0) return;
       // Skip if the user is interacting with a feature — Leaflet handles
       // those events on the marker itself before bubbling here.
       if (ev.target && ev.target.closest && ev.target.closest('.leaflet-marker-pane > *')) return;
-      // Skip if any drawing/edit mode is active.
-      if (currentMode !== 'none' && currentMode !== 'plant') return;
+      // Outside Select mode, only Shift-arm when idle / placing plants.
+      if (!inSelectMode && currentMode !== 'none' && currentMode !== 'plant') return;
       ev.stopPropagation();
       ev.preventDefault();
       var rect = container.getBoundingClientRect();
@@ -3355,6 +3358,13 @@
           break;
         case 'annotate':
           map.getContainer().style.cursor = 'text';
+          break;
+        case 'select':
+          // Box-select mode: a plain drag draws the marquee (see _marqueeOnDown),
+          // no Shift needed. A crosshair signals "drag to select".
+          map.getContainer().style.cursor = 'crosshair';
+          drawingPolygon = false;
+          polygonPoints  = [];
           break;
         case 'structure':
           currentStructure = data || null;

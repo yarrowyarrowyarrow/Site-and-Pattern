@@ -52,6 +52,14 @@ class ModeController:
         self._main.map_widget.set_mode('annotate')
         self._set_mode_label("Annotate — click map to place a note")
 
+    def _enter_select_mode(self):
+        self._main._current_mode = 'select'
+        self._main.map_widget.set_mode('select')
+        self._set_mode_label(
+            "Select — drag a box to select; drag the selection to move it, "
+            "or press Delete"
+        )
+
     def _enter_structure_mode(self, struct_def: dict):
         self._main._current_mode = 'structure'
         # Stash height for existing tree/building marks (V1.49) — the JS

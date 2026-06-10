@@ -573,6 +573,7 @@ class MainWindow(QMainWindow):
         self.toolbar.draw_boundary_requested.connect(self._enter_boundary_mode)
         self.toolbar.measure_requested.connect(self._enter_measure_mode)
         self.toolbar.annotate_requested.connect(self._enter_annotate_mode)
+        self.toolbar.select_requested.connect(self._enter_select_mode)
         self.toolbar.cancel_draw_requested.connect(self._cancel_draw)
         self.toolbar.undo_requested.connect(self._do_undo)
 
@@ -876,6 +877,10 @@ class MainWindow(QMainWindow):
     def _enter_annotate_mode(self):
         # Shim → ModeController; see src/controllers/mode.py.
         return self._mode._enter_annotate_mode()
+
+    def _enter_select_mode(self):
+        # Shim → ModeController; see src/controllers/mode.py.
+        return self._mode._enter_select_mode()
 
     # Annotation handlers — shims → MapEventRouter.
 
