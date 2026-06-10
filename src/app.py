@@ -49,70 +49,16 @@ from src.controllers.generation import GenerationController
 from src.controllers.area_fill_controller import AreaFillController
 
 
-# Marker colour tables for plant-community members.
-#
-# Vegetation layer is the primary signal — when a member has a layer set
-# we colour by that so the canopy structure reads at a glance on the
-# map. Function colours are used only when a member has no layer (i.e.
-# functional-only roles like "windbreak" or "nitrogen_fixer"). Legacy
-# single-value `role` data falls through to either table.
-_LAYER_COLORS = {
-    'overstory':           '#1b5e20',
-    'understory':          '#388e3c',
-    'shrub_layer':         '#4a8b3a',
-    'groundcover':         '#66bb6a',
-    'herbaceous':          '#9ccc65',
-    'vine':                '#7cb342',
-    'root':                '#8d6e63',
-}
-
-_FUNCTION_COLORS = {
-    'nitrogen_fixer':      '#43a047',
-    'soil_builder':        '#2e7d32',
-    'pest_deterrent':      '#7cb342',
-    'pollinator':          '#aed581',
-    'windbreak':           '#558b2f',
-}
-
-# Legacy aliases mapped through to the new tables so projects saved
-# before the role rename still render.
-_LEGACY_ROLE_ALIASES = {
-    'canopy':              ('overstory',      'layer'),
-    'dynamic_accumulator': ('soil_builder',   'function'),
-    'pest_repellent':      ('pest_deterrent', 'function'),
-}
-
-_OTHER_COLOR = '#81c784'
-
-
-def _member_color(member: dict) -> str:
-    """Pick a marker colour for a polyculture member.
-
-    Resolution order:
-      1. Explicit `layer` → _LAYER_COLORS.
-      2. First entry in `functions` → _FUNCTION_COLORS.
-      3. Legacy single `role` (with alias mapping) → either table.
-      4. Fallback to _OTHER_COLOR.
-    """
-    layer = (member.get('layer') or '').strip().lower()
-    if layer in _LAYER_COLORS:
-        return _LAYER_COLORS[layer]
-    funcs = member.get('functions') or []
-    if isinstance(funcs, list) and funcs:
-        f0 = str(funcs[0]).strip().lower()
-        if f0 in _FUNCTION_COLORS:
-            return _FUNCTION_COLORS[f0]
-    role = (member.get('role') or '').strip().lower()
-    if role in _LEGACY_ROLE_ALIASES:
-        canonical, kind = _LEGACY_ROLE_ALIASES[role]
-        if kind == 'layer':
-            return _LAYER_COLORS.get(canonical, _OTHER_COLOR)
-        return _FUNCTION_COLORS.get(canonical, _OTHER_COLOR)
-    if role in _LAYER_COLORS:
-        return _LAYER_COLORS[role]
-    if role in _FUNCTION_COLORS:
-        return _FUNCTION_COLORS[role]
-    return _OTHER_COLOR
+# Marker colour tables for plant-community members — moved to the Qt-free
+# src.member_colors so placement controllers can colour members without
+# importing this (QtWebEngine-bound) module. Re-exported under the old names
+# for existing importers.
+from src.member_colors import (
+    LAYER_COLORS as _LAYER_COLORS,
+    FUNCTION_COLORS as _FUNCTION_COLORS,
+    OTHER_COLOR as _OTHER_COLOR,
+    member_color as _member_color,
+)
 
 
 # Back-compat shim — older code paths still reference _ROLE_COLORS by

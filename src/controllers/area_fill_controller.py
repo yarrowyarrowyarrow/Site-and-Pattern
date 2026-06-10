@@ -120,7 +120,7 @@ class AreaFillController:
 
         main = self._main
         import src.project as project_io
-        from src.app import _member_color
+        from src.member_colors import member_color
         poly_name = polyculture.get("name", "")
         group_id = project_io.new_placement_group_id()
 
@@ -139,7 +139,7 @@ class AreaFillController:
                 mlng = alng + float(m.get("offset_x") or 0.0) / (111320 * cos_lat)
                 main.map_widget.place_plant_marker(
                     pid, name, mlat, mlng, spacing_m=spacing,
-                    plant_type=plant_type, color=_member_color(m),
+                    plant_type=plant_type, color=member_color(m),
                     group_id=group_id, community_id=community_id)
                 main._placed_plants.append({
                     "plant_id": pid, "common_name": name,
