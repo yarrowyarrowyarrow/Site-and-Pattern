@@ -86,7 +86,9 @@ class PlanningPanel(QWidget):
 
         from src.ui_style import inner_tab_stylesheet
         from src.fill_tab_widget import FillTabWidget
-        self._tabs = FillTabWidget()
+        # Six wide sub-tabs on a narrow panel — opt into shrink-to-fit so they all
+        # stay visible (with elide), instead of a scroll chevron hiding "Notes".
+        self._tabs = FillTabWidget(allow_shrink=True)
         self._tabs.setDocumentMode(True)
         # Show every sub-tab at once — no scroll chevron hiding "Notes". The
         # FillTabBar spreads them edge-to-edge; labels are kept short enough
