@@ -28,7 +28,8 @@ class GenerateWorker(QObject):
                  budget: Optional[float] = None,
                  fauna_ids: Optional[list] = None,
                  match_site: bool = True,
-                 density: str = "balanced"):
+                 density: str = "balanced",
+                 existing_features: Optional[list] = None):
         super().__init__()
         self._prompt = prompt
         self._site_config = site_config
@@ -39,6 +40,7 @@ class GenerateWorker(QObject):
         self._fauna_ids = fauna_ids or []
         self._match_site = match_site
         self._density = density
+        self._existing_features = existing_features or []
 
     @pyqtSlot()
     def run(self):
@@ -51,7 +53,8 @@ class GenerateWorker(QObject):
                     site_config=self._site_config, boundary=self._boundary,
                     goals=self._goals, budget=self._budget,
                     fauna_ids=self._fauna_ids, match_site=self._match_site,
-                    density=self._density)
+                    density=self._density,
+                    existing_features=self._existing_features)
             else:
                 self.progress.emit("Asking the local AI for a design…")
                 try:
@@ -59,7 +62,8 @@ class GenerateWorker(QObject):
                         self._prompt, site_config=self._site_config,
                         boundary=self._boundary, goals=self._goals,
                         budget=self._budget, fauna_ids=self._fauna_ids,
-                        match_site=self._match_site, density=self._density)
+                        match_site=self._match_site, density=self._density,
+                        existing_features=self._existing_features)
                 except LLMError as exc:
                     self.progress.emit(
                         f"AI unavailable ({exc}); building offline…")
@@ -67,7 +71,8 @@ class GenerateWorker(QObject):
                         site_config=self._site_config, boundary=self._boundary,
                         goals=self._goals, budget=self._budget,
                         fauna_ids=self._fauna_ids, match_site=self._match_site,
-                        density=self._density)
+                        density=self._density,
+                        existing_features=self._existing_features)
             self.finished.emit(project)
         except PermaDesignError as exc:
             self.failed.emit(str(exc))

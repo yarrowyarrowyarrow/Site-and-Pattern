@@ -144,5 +144,49 @@ class TestIsClear(unittest.TestCase):
         self.assertEqual(len(kept), 1)
 
 
+class TestZoneSteering(unittest.TestCase):
+    """F5 — drawn zones steer the generator: keep out of existing-remnant +
+    hardscape areas; fill into restoration / lawn-conversion areas."""
+
+    def _label(self, key):
+        from src.lawn_zones import ZONE_TYPES
+        return ZONE_TYPES[key]["label"]
+
+    def test_remnant_and_hardscape_become_keepout(self):
+        proj = _project(
+            _poly_feature("custom_shape", _LAT, _LNG, 6.0,
+                          shape_type=self._label("existing_remnant")),
+            _poly_feature("custom_shape", _LAT, _LNG + 0.001, 4.0,
+                          shape_type="Pathway"),
+            _poly_feature("custom_shape", _LAT, _LNG + 0.002, 4.0,
+                          shape_type="Patio / Deck"),
+        )
+        self.assertEqual(len(X.keepout_circles(proj)), 3)
+
+    def test_plantable_shapes_are_not_keepout(self):
+        # Garden bed / lawn / mulch shapes stay plantable (not avoided).
+        proj = _project(
+            _poly_feature("custom_shape", _LAT, _LNG, 5.0, shape_type="Garden Bed"),
+            _poly_feature("custom_shape", _LAT, _LNG, 5.0, shape_type="Lawn Area"),
+        )
+        self.assertEqual(X.keepout_circles(proj), [])
+
+    def test_fill_regions_returns_only_restoration_zones(self):
+        proj = _project(
+            _poly_feature("custom_shape", _LAT, _LNG, 5.0,
+                          shape_type=self._label("restoration_year_1")),
+            _poly_feature("custom_shape", _LAT, _LNG, 5.0,
+                          shape_type=self._label("lawn_remaining")),
+            _poly_feature("custom_shape", _LAT, _LNG, 5.0,
+                          shape_type=self._label("existing_remnant")),  # not a fill
+            _poly_feature("custom_shape", _LAT, _LNG, 5.0, shape_type="Pathway"),
+        )
+        regions = X.fill_regions(proj)
+        self.assertEqual(len(regions), 2)   # the two restoration/lawn zones only
+
+    def test_fill_regions_empty_when_none(self):
+        self.assertEqual(X.fill_regions(_project()), [])
+
+
 if __name__ == "__main__":
     unittest.main()

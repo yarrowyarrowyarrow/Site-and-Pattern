@@ -41,15 +41,59 @@ def _struct_id_of(props: dict) -> str:
             or "")
 
 
+# Drawn custom_shape shape_types the generator should plant AROUND, not on:
+# the "existing remnant" conversion zone (don't disturb it) plus hardscape
+# (walkways/patios/water features). Garden-bed / lawn / mulch shapes stay
+# plantable. (Zone labels come from src.lawn_zones so the two never drift.)
+def _avoid_shape_types() -> set:
+    from src.lawn_zones import ZONE_TYPES
+    return {ZONE_TYPES["existing_remnant"]["label"],
+            "Pathway", "Patio / Deck", "Water Feature"}
+
+
+# Conversion zones the generator should plant INTO (fill targets).
+def _fill_zone_shape_types() -> set:
+    from src.lawn_zones import ZONE_TYPES
+    return {ZONE_TYPES[k]["label"] for k in
+            ("lawn_remaining", "restoration_year_1",
+             "restoration_year_3", "established_native")}
+
+
+def fill_regions(project_dict: dict) -> list:
+    """Rings ``[[lng, lat], …]`` of drawn restoration / lawn-conversion zones —
+    the areas the generator should steer planting INTO. Empty when none drawn."""
+    want = _fill_zone_shape_types()
+    out: list = []
+    for f in (project_dict or {}).get("features", []) or []:
+        props = f.get("properties", {}) or {}
+        if (props.get("element_type") in ("custom_shape", "canopy_footprint")
+                and props.get("shape_type") in want):
+            ring = (f.get("geometry", {}) or {}).get("coordinates") or []
+            if ring and ring[0] and len(ring[0]) >= 3:
+                out.append(ring[0])
+    return out
+
+
 def keepout_circles(project_dict: dict) -> list[tuple[float, float, float]]:
     """Collect keep-out circles ``(lat, lng, radius_m)`` from a project. Empty
     list when there's nothing to avoid."""
-    from src.osm_features import ring_centroid   # shared ring centroid helper
+    from src.osm_features import ring_centroid, ring_radius_m   # ring helpers
+    avoid_shapes = _avoid_shape_types()
     circles: list[tuple[float, float, float]] = []
     for f in (project_dict or {}).get("features", []) or []:
         props = f.get("properties", {}) or {}
         et = props.get("element_type")
         geom = f.get("geometry", {}) or {}
+        # Drawn "existing remnant" / hardscape areas → keep planting out (model
+        # the polygon as a centroid + radius circle, like canopy footprints).
+        if (et in ("custom_shape", "canopy_footprint")
+                and props.get("shape_type") in avoid_shapes):
+            ring = (geom.get("coordinates") or [None])[0]
+            c = ring_centroid(ring) if ring else None
+            if c is not None:
+                circles.append((float(c[0]), float(c[1]),
+                                max(0.5, ring_radius_m(ring, c))))
+            continue
         if geom.get("type") != "Point":
             # canopy_footprint Polygons (OSM buildings, hand-drawn building/canopy
             # perimeters, and nDSM-extracted footprints) carry a canopy_radius_m

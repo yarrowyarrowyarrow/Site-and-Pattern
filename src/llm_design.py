@@ -736,7 +736,8 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
                     budget: Optional[float] = None,
                     fauna_ids: Optional[list] = None,
                     match_site: bool = True,
-                    density: str = "balanced"):
+                    density: str = "balanced",
+                    existing_features: Optional[list] = None):
     """Generate a :class:`~src.permadesign_api.Project` from a prompt.
 
     The site location comes from ``boundary`` (centroid) or
@@ -777,10 +778,16 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
     # existing features) and placement. project_for_ctx carries any marked
     # existing trees/buildings the user/site already has.
     project_ctx = Project.create(name, site_config=site_config, boundary=boundary)
-    from src.exclusion import keepout_circles
+    from src.exclusion import keepout_circles, fill_regions
     elev, zones, pzone, szone, cell_env_map = _zone_context(
         boundary, site_config, project_ctx.as_dict() if match_site else None)
-    keepout = keepout_circles(project_ctx.as_dict())
+    # F5: fold the user's existing drawn layer (existing trees/buildings,
+    # existing-remnant + hardscape zones, restoration fill zones) into the
+    # context so it both informs the prompt and steers placement.
+    _ctx_dict = {"features": (project_ctx.as_dict().get("features") or [])
+                 + (existing_features or [])}
+    keepout = keepout_circles(_ctx_dict)
+    fills = fill_regions(_ctx_dict)
 
     communities = list_polycultures()
     structures = list_structures()
@@ -793,7 +800,7 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
         "site": dict(site_config or {}),
         "site_conditions": _site_conditions_line(site_config),
         "zones_note": _zones_note(elev, zones),
-        "existing_note": _existing_features_note(project_ctx.as_dict()),
+        "existing_note": _existing_features_note(_ctx_dict),
         "plant_palette": _plant_palette(query_plants, site_filters),
         "fauna_note": _fauna_digest(),
     }
@@ -864,7 +871,7 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
                            elev=elev, zones=zones,
                            plant_zone_for=pzone, structure_zone_for=szone,
                            keepout=keepout,
-                           cell_env_map=cell_env_map)
+                           cell_env_map=cell_env_map, fill_regions=fills)
 
     _apply_goal_feedback(project, goals, query_plants, center, boundary)
     _apply_fauna_feedback(project, fauna_ids, query_plants, center, boundary)
@@ -1199,7 +1206,8 @@ def _place_within_boundary(project, plant_items, community_items,
                            plant_zone_for=None,
                            structure_zone_for=None,
                            keepout=None,
-                           cell_env_map: Optional[dict] = None) -> None:
+                           cell_env_map: Optional[dict] = None,
+                           fill_regions=None) -> None:
     """Place plants (in their requested LAYOUT pattern), communities and
     structures so everything lands inside the boundary, avoids keep-out zones
     (existing trees/buildings/water structures), and spreads to use the space.
@@ -1236,6 +1244,22 @@ def _place_within_boundary(project, plant_items, community_items,
         if zpos:
             zpos = {z: [p for p in pts if is_clear(p[0], p[1], keepout)]
                     for z, pts in zpos.items()}
+    # Steer planting INTO drawn restoration / lawn-conversion zones when any are
+    # present (F5): restrict the anchor pool to cells inside those rings. Guarded
+    # so a tiny/empty zone set never starves placement — fall back to the whole
+    # boundary if the restriction leaves nothing.
+    if fill_regions:
+        from src.geometry import point_in_ring
+
+        def _in_fill(la, ln):
+            return any(point_in_ring(la, ln, r) for r in fill_regions)
+
+        ff = [p for p in flat if _in_fill(p[0], p[1])]
+        if ff:
+            flat = ff
+            if zpos:
+                zpos = {z: [p for p in pts if _in_fill(p[0], p[1])]
+                        for z, pts in zpos.items()}
 
     positioner = ScoredPositioner(cell_env_map, zpos, flat, elev=elev)
 
@@ -1565,7 +1589,8 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
                             budget: Optional[float] = None,
                             fauna_ids: Optional[list] = None,
                             match_site: bool = True,
-                            density: str = "balanced"):
+                            density: str = "balanced",
+                            existing_features: Optional[list] = None):
     """Generate a :class:`~src.permadesign_api.Project` WITHOUT an LLM.
 
     Selects plants by the hard filters for ``goals`` (defaulting to Alberta
@@ -1665,14 +1690,19 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
     project = Project.create(name, site_config=site_config, boundary=boundary)
     elev, zones, pzone, szone, cell_env_map = _zone_context(
         boundary, site_config, project.as_dict() if match_site else None)
-    from src.exclusion import keepout_circles
-    keepout = keepout_circles(project.as_dict())
+    # F5: the user's existing drawn layer steers placement — keep out of
+    # existing-remnant zones / hardscape / existing trees & buildings, and fill
+    # into drawn restoration / lawn-conversion zones.
+    from src.exclusion import keepout_circles, fill_regions
+    _ctx = {"features": existing_features or []}
+    keepout = keepout_circles(project.as_dict()) + keepout_circles(_ctx)
+    fills = fill_regions(_ctx)
     plant_items = _apply_density(plant_items, boundary, density, keepout)
     _place_within_boundary(project, plant_items, community_items, [],
                            boundary, center, elev=elev, zones=zones,
                            plant_zone_for=pzone, structure_zone_for=szone,
                            keepout=keepout,
-                           cell_env_map=cell_env_map)
+                           cell_env_map=cell_env_map, fill_regions=fills)
 
     _apply_goal_feedback(project, goals, query_plants, center, boundary)
     _apply_fauna_feedback(project, fauna_ids, query_plants, center, boundary)
