@@ -1098,8 +1098,9 @@ class PolyculturePanel(QWidget):
         self.fill_area_btn.setStyleSheet(_POLY_BTN_STYLE)
         self.fill_area_btn.setEnabled(False)
         self.fill_area_btn.setToolTip(
-            "Draw an area on the map and fill it with this community, scattered "
-            "at the cell spacing below."
+            "Draw an area on the map and fill it with whole units of this "
+            "community (each unit keeps its designed arrangement), with the "
+            "cell spacing below as the gap between units."
         )
         self.fill_area_btn.clicked.connect(self._on_fill_area)
         action_row.addWidget(self.fill_area_btn, 1)

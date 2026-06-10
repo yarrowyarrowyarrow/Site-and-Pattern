@@ -1129,12 +1129,18 @@ class MainWindow(QMainWindow):
         self._start_fill(members, spacing_m, name)
 
     def _on_community_fill_requested(self, poly_id: int, spacing_m: float):
-        """Plant Communities tab → fill an area with the selected community."""
+        """Plant Communities tab → fill an area with whole community UNITS (each
+        anchor expands the members at their designed offsets), not a scatter of
+        the individual member plants."""
         from src.db.polycultures import get_polyculture_by_id
         pc = get_polyculture_by_id(int(poly_id)) or {}
-        members = [(m["plant_id"], 1) for m in pc.get("members", [])
-                   if m.get("plant_id")]
-        self._start_fill(members, spacing_m, pc.get("name", ""))
+        if not pc.get("members"):
+            QMessageBox.information(self, "Fill Area",
+                                    "That community has no members to place.")
+            return
+        self._pending_fill = {"kind": "community", "polyculture": pc,
+                              "spacing": float(spacing_m or 0.0)}
+        self._mode._enter_fill_mode()
 
     def _on_fill_area_complete(self, points_json: str):
         """User finished drawing the fill polygon — scatter the pending plants in
@@ -1151,12 +1157,18 @@ class MainWindow(QMainWindow):
             return
         # JS sends [lat, lng] pairs; area_fill rings are [lng, lat] (GeoJSON).
         ring = [[p[1], p[0]] for p in pts]
-        n = self._area_fill.fill(ring, spec["members"], spec["spacing"],
-                                 poly_name=spec["name"])
+        if spec.get("kind") == "community":
+            n = self._area_fill.fill_communities(ring, spec["polyculture"],
+                                                 spec["spacing"])
+            what = "communities"
+        else:
+            n = self._area_fill.fill(ring, spec["members"], spec["spacing"],
+                                     poly_name=spec["name"])
+            what = "plants"
         if n == 0:
             QMessageBox.information(
                 self, "Fill Area",
-                "No room to place plants in that area at this spacing — try a "
+                f"No room to place {what} in that area at this spacing — try a "
                 "smaller spacing or a larger area.")
 
     def _enter_polyculture_mode(self, polyculture_data: dict):

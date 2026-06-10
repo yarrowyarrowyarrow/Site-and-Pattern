@@ -158,6 +158,62 @@ class TestAreaFillController(unittest.TestCase):
             AreaFillController(main).fill([], [(self._a, 1)], spacing_m=6.0), 0)
         self.assertEqual(main._placed_plants, [])
 
+    # ── R3: fill with whole community units ──────────────────────────────────
+
+    def _polyculture(self):
+        return {"name": "Test Guild", "members": [
+            {"plant_id": self._a, "common_name": "Centre Plant",
+             "offset_x": 0.0, "offset_y": 0.0},
+            {"plant_id": self._b, "common_name": "Edge Plant",
+             "offset_x": 2.0, "offset_y": 0.0},
+        ]}
+
+    def test_fill_communities_places_whole_units(self):
+        from src.controllers.area_fill_controller import AreaFillController
+        main, calls = self._stub_main()
+        n = AreaFillController(main).fill_communities(
+            _RING, self._polyculture(), spacing_m=4.0)
+        self.assertGreater(n, 0)
+        # Every unit expands to BOTH members (units, not a member scatter).
+        self.assertEqual(len(main._placed_plants), n * 2)
+        self.assertEqual(calls["markers"], n * 2)
+        # Each placement keeps its community centre + name (so it reads as a
+        # community placement everywhere downstream).
+        centres = set()
+        for p in main._placed_plants:
+            self.assertEqual(p["polyculture_name"], "Test Guild")
+            centres.add((p["polyculture_center_lat"],
+                         p["polyculture_center_lng"]))
+        self.assertEqual(len(centres), n)   # one distinct centre per unit
+        # The edge member sits ~2 m east of its unit's centre.
+        import math
+        edge = next(p for p in main._placed_plants
+                    if p["common_name"] == "Edge Plant")
+        dx = (edge["lng"] - edge["polyculture_center_lng"]) \
+            * 111_320.0 * math.cos(math.radians(edge["lat"]))
+        self.assertAlmostEqual(dx, 2.0, delta=0.05)
+        # One shared placement group: the fill deletes as a unit.
+        self.assertEqual(
+            len({p["placement_group_id"] for p in main._placed_plants}), 1)
+
+    def test_fill_communities_tiny_area_drops_one_at_centroid(self):
+        from src.controllers.area_fill_controller import AreaFillController
+        main, _ = self._stub_main()
+        # A ~3 m square: far too small for the unit grid, but one unit fits.
+        d = 3.0 / 111_320.0
+        tiny = [[-113.5, _LAT], [-113.5 + d, _LAT],
+                [-113.5 + d, _LAT + d], [-113.5, _LAT + d]]
+        n = AreaFillController(main).fill_communities(
+            tiny, self._polyculture(), spacing_m=4.0)
+        self.assertEqual(n, 1)
+        self.assertEqual(len(main._placed_plants), 2)
+
+    def test_fill_communities_empty_members(self):
+        from src.controllers.area_fill_controller import AreaFillController
+        main, _ = self._stub_main()
+        self.assertEqual(AreaFillController(main).fill_communities(
+            _RING, {"name": "x", "members": []}, spacing_m=4.0), 0)
+
 
 if __name__ == "__main__":
     unittest.main()
