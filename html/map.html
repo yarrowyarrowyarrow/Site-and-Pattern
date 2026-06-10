@@ -473,6 +473,7 @@
       if (!inSelectMode && currentMode !== 'none' && currentMode !== 'plant') return;
       ev.stopPropagation();
       ev.preventDefault();
+      var container = map.getContainer();
       var rect = container.getBoundingClientRect();
       var x = ev.clientX - rect.left;
       var y = ev.clientY - rect.top;
