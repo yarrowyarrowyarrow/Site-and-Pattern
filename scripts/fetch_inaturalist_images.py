@@ -5,9 +5,13 @@ V1.60) on plants + fauna from iNaturalist, keeping ONLY openly-licensed photos
 that are safe to redistribute in a shipped installer.
 
 For each record's ``scientific_name`` it queries the iNaturalist taxa endpoint
-(no API key needed for read), takes the matched taxon's ``default_photo``, and —
-when the photo's licence is in the redistributable whitelist (CC0 / CC BY /
-CC BY-SA; NC / ND / all-rights-reserved are SKIPPED) — writes:
+(no API key needed for read) and scans the species' photos for the first one
+whose licence is in the redistributable whitelist (CC0 / CC BY / CC BY-SA; NC /
+ND / all-rights-reserved are SKIPPED). It checks the curated ``default_photo``
+first, then — if that isn't openly licensed — the species' WIDER photo set from
+the taxon-detail endpoint (often ~12 photos by different photographers), so a
+species isn't skipped just because its single default photo is NonCommercial.
+On a match it writes:
 
     image_url           the photo URL (iNaturalist static CDN, medium size)
     image_attribution   the photographer + licence credit string
@@ -15,7 +19,8 @@ CC BY-SA; NC / ND / all-rights-reserved are SKIPPED) — writes:
 
 into ``data/plants_master.json`` and ``data/fauna_master.json``. Re-runnable and
 idempotent: records that already have an ``image_url`` are skipped unless
-``--force``. Throttled to be polite to the API (≈1 req/s; iNat asks for ≤60/min
+``--force`` — so a plain re-run retries only the species still missing a photo
+(e.g. to pick up the wider-photo-set scan added after a first pass). Throttled to be polite to the API (≈1 req/s; iNat asks for ≤60/min
 and a descriptive User-Agent).
 
 After a run, bump ``src/db/plants.py:_SCHEMA_VERSION`` (24 → 25) so existing
@@ -79,18 +84,51 @@ def best_taxon(results, scientific_name):
     return None
 
 
+def taxon_candidates(taxon) -> list:
+    """Ordered candidate photo dicts for a taxon: the curated ``default_photo``
+    first, then every ``taxon_photos`` entry (the species' wider photo set). This
+    is what lets us rescue a species whose default photo is NC/ND but which has
+    other, openly-licensed photos."""
+    if not taxon:
+        return []
+    out = []
+    dp = taxon.get("default_photo")
+    if dp:
+        out.append(dp)
+    for tp in taxon.get("taxon_photos") or []:
+        ph = tp.get("photo") if isinstance(tp, dict) else None
+        if ph:
+            out.append(ph)
+    return out
+
+
+def pick_photo(candidates) -> "tuple | None":
+    """First ``(url, attribution, license_code)`` among ``candidates`` whose
+    licence is redistributable, else None. De-dupes by photo id so a photo that
+    appears as both the default and in taxon_photos isn't checked twice."""
+    seen = set()
+    for ph in candidates or []:
+        if not isinstance(ph, dict):
+            continue
+        pid = ph.get("id")
+        if pid is not None:
+            if pid in seen:
+                continue
+            seen.add(pid)
+        code = (ph.get("license_code") or "").strip().lower()
+        if not license_ok(code):
+            continue
+        url = ph.get("medium_url") or ph.get("url") or ph.get("square_url")
+        if not url:
+            continue
+        return (url, (ph.get("attribution") or "").strip(), code)
+    return None
+
+
 def photo_from_taxon(taxon) -> "tuple | None":
-    """``(url, attribution, license_code)`` from a taxon's ``default_photo`` when
-    its licence is redistributable, else None."""
-    dp = (taxon or {}).get("default_photo") or {}
-    code = (dp.get("license_code") or "").strip().lower()
-    if not license_ok(code):
-        return None
-    url = dp.get("medium_url") or dp.get("url") or dp.get("square_url")
-    if not url:
-        return None
-    attribution = (dp.get("attribution") or "").strip()
-    return (url, attribution, code)
+    """``(url, attribution, license_code)`` for the first redistributable photo
+    in the taxon's photo set (default first, then taxon_photos), else None."""
+    return pick_photo(taxon_candidates(taxon))
 
 
 # ── Network ───────────────────────────────────────────────────────────────--
@@ -108,6 +146,19 @@ def _query_taxon(scientific_name: str, timeout: float = 20.0):
     return best_taxon(data.get("results"), scientific_name)
 
 
+def _fetch_taxon_detail(taxon_id, timeout: float = 20.0):
+    """Fetch the full taxon record (``/v1/taxa/{id}``) — its ``taxon_photos`` is
+    the wider photo set (often ~12) used to find an openly-licensed photo when
+    the default isn't one. Returns the taxon dict or None."""
+    req = urllib.request.Request(
+        f"{_API}/{int(taxon_id)}",
+        headers={"User-Agent": _USER_AGENT, "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    results = data.get("results") or []
+    return results[0] if results else None
+
+
 def _process(path: str, label: str, *, force: bool, limit, sleep: float) -> None:
     if not os.path.exists(path):
         print(f"  (skip {label}: {path} not found)")
@@ -123,7 +174,7 @@ def _process(path: str, label: str, *, force: bool, limit, sleep: float) -> None
     print(f"{label}: {len(todo)} record(s) to fetch "
           f"(of {len(records)} total).")
 
-    found = skipped = errors = 0
+    found = skipped = errors = deep = 0
     for i, rec in enumerate(todo, 1):
         sci = rec["scientific_name"]
         try:
@@ -133,14 +184,31 @@ def _process(path: str, label: str, *, force: bool, limit, sleep: float) -> None
             print(f"  [{i}/{len(todo)}] {sci}: ERROR {exc}")
             time.sleep(sleep)
             continue
-        photo = photo_from_taxon(taxon) if taxon else None
+
+        # Try the photos already in the search result first (default + any
+        # taxon_photos). If none are openly licensed, pull the full photo set
+        # from the taxon-detail endpoint and scan that (one extra request, only
+        # for the species that need it).
+        photo = pick_photo(taxon_candidates(taxon)) if taxon else None
+        via = "default/set"
+        if not photo and taxon and taxon.get("id"):
+            time.sleep(sleep)
+            try:
+                detail = _fetch_taxon_detail(taxon["id"])
+            except Exception as exc:  # noqa: BLE001
+                detail = None
+                print(f"  [{i}/{len(todo)}] {sci}: detail fetch error {exc}")
+            deep += 1
+            photo = pick_photo(taxon_candidates(detail)) if detail else None
+            via = "full set"
+
         if photo:
             url, attribution, code = photo
             rec["image_url"] = url
             rec["image_attribution"] = attribution
             rec["image_license"] = code
             found += 1
-            print(f"  [{i}/{len(todo)}] {sci}: ✓ {code}")
+            print(f"  [{i}/{len(todo)}] {sci}: ✓ {code} ({via})")
         else:
             skipped += 1
             print(f"  [{i}/{len(todo)}] {sci}: — no redistributable photo")
@@ -149,7 +217,8 @@ def _process(path: str, label: str, *, force: bool, limit, sleep: float) -> None
     with open(path, "w", encoding="utf-8") as f:
         json.dump(records, f, indent=2, ensure_ascii=False)
     print(f"{label}: wrote {found} image(s); {skipped} without a usable "
-          f"licence; {errors} error(s). Saved {path}.")
+          f"licence; {errors} error(s); {deep} needed the full photo set. "
+          f"Saved {path}.")
 
 
 def main(argv=None) -> int:

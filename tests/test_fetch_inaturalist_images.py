@@ -74,5 +74,57 @@ class TestPhotoFromTaxon(unittest.TestCase):
         self.assertEqual(out[2], "cc0")
 
 
+class TestWiderPhotoSet(unittest.TestCase):
+    """Scan beyond the default photo so a species with an NC default but an
+    openly-licensed alternate still gets an image."""
+
+    def _photo(self, pid, code):
+        return {"id": pid, "license_code": code,
+                "medium_url": f"https://static.inaturalist.org/{pid}.jpg",
+                "attribution": f"(c) someone {pid}"}
+
+    def test_default_preferred_when_open(self):
+        taxon = {"default_photo": self._photo(1, "cc-by"),
+                 "taxon_photos": [{"photo": self._photo(2, "cc0")}]}
+        out = F.pick_photo(F.taxon_candidates(taxon))
+        self.assertEqual(out[0], "https://static.inaturalist.org/1.jpg")  # default
+
+    def test_rescues_species_with_nc_default(self):
+        # Default is NonCommercial; a later photo is CC0 → use it.
+        taxon = {
+            "default_photo": self._photo(1, "cc-by-nc"),
+            "taxon_photos": [
+                {"photo": self._photo(2, "cc-by-nd")},     # also unusable
+                {"photo": self._photo(3, "cc0")},          # ← redistributable
+                {"photo": self._photo(4, "cc-by")},
+            ],
+        }
+        out = F.pick_photo(F.taxon_candidates(taxon))
+        self.assertIsNotNone(out)
+        self.assertEqual(out[2], "cc0")
+        self.assertEqual(out[0], "https://static.inaturalist.org/3.jpg")
+
+    def test_none_when_all_unusable(self):
+        taxon = {
+            "default_photo": self._photo(1, "cc-by-nc"),
+            "taxon_photos": [{"photo": self._photo(2, "c")},
+                             {"photo": self._photo(3, "cc-by-nd")}],
+        }
+        self.assertIsNone(F.pick_photo(F.taxon_candidates(taxon)))
+
+    def test_dedupes_by_photo_id(self):
+        # Same photo as default and in taxon_photos — counted once, no crash.
+        p = self._photo(1, "cc-by-nc")
+        taxon = {"default_photo": p, "taxon_photos": [{"photo": p}]}
+        self.assertEqual(len(F.taxon_candidates(taxon)), 2)
+        self.assertIsNone(F.pick_photo(F.taxon_candidates(taxon)))
+
+    def test_candidates_order_default_first(self):
+        taxon = {"default_photo": self._photo(9, "cc0"),
+                 "taxon_photos": [{"photo": self._photo(8, "cc-by")}]}
+        cands = F.taxon_candidates(taxon)
+        self.assertEqual([c["id"] for c in cands], [9, 8])
+
+
 if __name__ == "__main__":
     unittest.main()
