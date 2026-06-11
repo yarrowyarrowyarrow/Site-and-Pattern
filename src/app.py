@@ -527,7 +527,7 @@ class MainWindow(QMainWindow):
 
         act_update = help_menu.addAction("Check for &Updates…")
         act_update.setStatusTip("Pull the latest version from GitHub (source installs) "
-                                "or open the releases page (.exe installs)")
+                                "or open the releases page (packaged installs)")
         act_update.triggered.connect(self._on_check_for_updates)
 
         act_pick = help_menu.addAction("&Switch to a specific version…")

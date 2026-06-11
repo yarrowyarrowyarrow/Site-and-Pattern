@@ -26,8 +26,8 @@ PermaDesign is a desktop application for designing landscapes with native plants
 
 ## Requirements
 
-- Windows 10 or 11 (primary target; macOS/Linux from-source may work but is untested)
-- Python 3.10 or newer (only required for from-source installs — the one-click `.exe` bundles its own runtime)
+- Windows 10 or 11, or macOS 11 Big Sur or newer (Linux from-source may work but is untested)
+- Python 3.10 or newer (only required for from-source installs — the one-click Windows `.exe` and the macOS `.dmg` bundle their own runtime)
 - ~200 MB disk space for the app and shipped data; up to ~16 GB if running with the full optional terrain/soil datasets
 
 ---
@@ -47,9 +47,12 @@ PermaDesign is a desktop application for designing landscapes with native plants
 2. Create a virtual environment and install dependencies:
    ```bash
    python -m venv venv
-   venv\Scripts\activate
+   venv\Scripts\activate          # Windows
+   source venv/bin/activate       # macOS / Linux
    pip install -r requirements.txt
    ```
+   On macOS, `requirements.txt` automatically pins Qt to the 6.7 series —
+   the last release that still runs on macOS 11 Big Sur.
 
 3. Run the app:
    ```bash

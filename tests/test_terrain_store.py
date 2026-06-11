@@ -116,5 +116,41 @@ class TestSrtmCache(unittest.TestCase):
         self.assertTrue(os.path.exists(self._db))
 
 
+class TestDbPathPlatforms(unittest.TestCase):
+    """_db_path resolves the platform-correct per-user data directory.
+
+    os.name / sys.platform / env vars are patched so all three branches
+    are exercised regardless of the host OS; os.makedirs is stubbed so no
+    real directories are created.
+    """
+
+    def test_windows_uses_appdata(self):
+        appdata = os.path.join("C:", "Users", "x", "AppData", "Roaming")
+        with mock.patch.object(os, "name", "nt"), \
+             mock.patch.dict(os.environ, {"APPDATA": appdata}), \
+             mock.patch.object(os, "makedirs"):
+            path = ts._db_path()
+        self.assertEqual(path, os.path.join(appdata, "PermaDesign", "terrain.db"))
+
+    def test_macos_uses_application_support(self):
+        with mock.patch.object(os, "name", "posix"), \
+             mock.patch.object(sys, "platform", "darwin"), \
+             mock.patch.object(os, "makedirs"):
+            path = ts._db_path()
+        expected = os.path.join(os.path.expanduser("~"),
+                                "Library", "Application Support",
+                                "PermaDesign", "terrain.db")
+        self.assertEqual(path, expected)
+
+    def test_linux_uses_xdg_data_home(self):
+        with mock.patch.object(os, "name", "posix"), \
+             mock.patch.object(sys, "platform", "linux"), \
+             mock.patch.dict(os.environ, {"XDG_DATA_HOME": "/tmp/xdg-test"}), \
+             mock.patch.object(os, "makedirs"):
+            path = ts._db_path()
+        self.assertEqual(path, os.path.join("/tmp/xdg-test",
+                                            "PermaDesign", "terrain.db"))
+
+
 if __name__ == "__main__":
     unittest.main()

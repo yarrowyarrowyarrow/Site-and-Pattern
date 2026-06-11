@@ -2,6 +2,8 @@
 # PyInstaller spec for PermaDesign (one-directory bundled mode)
 # Build with: pyinstaller permadesign.spec
 
+import sys
+
 block_cipher = None
 
 a = Analysis(
@@ -64,3 +66,20 @@ coll = COLLECT(
     upx_exclude=[],
     name='PermaDesign',
 )
+
+if sys.platform == 'darwin':
+    # Wrap the one-directory build in a proper .app bundle so macOS users
+    # get a normal double-clickable application. LSMinimumSystemVersion
+    # matches the Qt 6.7 cap in requirements.txt (Big Sur 11 onwards).
+    app = BUNDLE(
+        coll,
+        name='PermaDesign.app',
+        icon=None,
+        bundle_identifier='com.permadesign.app',
+        info_plist={
+            'CFBundleName': 'PermaDesign',
+            'CFBundleDisplayName': 'PermaDesign',
+            'NSHighResolutionCapable': True,
+            'LSMinimumSystemVersion': '11.0',
+        },
+    )

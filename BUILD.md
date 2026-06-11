@@ -87,12 +87,41 @@ The executable will be in `dist\PermaDesign\PermaDesign.exe`.
 ### macOS: Create App Bundle & DMG
 
 ```bash
+git clone https://github.com/yarrowyarrowyarrow/PermaDesign.git
+cd PermaDesign
+python3 -m venv venv
 source venv/bin/activate
+pip install -r requirements.txt
 bash build_installer.sh
 ```
 
 **Output:**
-- `dist/PermaDesign.dmg` — Drag-and-drop installer (~200-300 MB)
+- `dist/PermaDesign.app` — the application bundle (run it with `open dist/PermaDesign.app`)
+- `dist/PermaDesign.dmg` — drag-and-drop installer for sharing (~200-300 MB)
+
+The DMG contains the app, an Applications shortcut for drag-to-install, and
+a `READ ME FIRST.txt` explaining the one-time unsigned-app launch step.
+
+**Big Sur (macOS 11) compatibility notes:**
+- `requirements.txt` pins Qt to the 6.7 series on macOS — Qt 6.8+ requires
+  macOS 12 and would silently break Big Sur support. Don't override the pin.
+- Build on the **oldest macOS you intend to support** (e.g. a Big Sur
+  machine). The resulting app runs on that version and everything newer.
+- An Intel-built app also runs on Apple Silicon Macs via Rosetta (macOS
+  offers a one-click Rosetta install on first launch if needed).
+
+**Unsigned-app warning (no Apple Developer account):**
+The build script applies an ad-hoc code signature, which prevents
+"app is damaged" errors, but recipients still see a one-time Gatekeeper
+warning on first launch:
+- macOS 11–14: right-click the app → Open → Open (once).
+- macOS 15+: double-click once (blocked), then System Settings →
+  Privacy & Security → "Open Anyway".
+
+Removing that warning entirely requires an Apple Developer account
+(US$99/yr): set `codesign_identity` (a "Developer ID Application"
+certificate) and `entitlements_file` in `permadesign.spec`, then notarize
+the DMG with `xcrun notarytool submit` and staple the ticket.
 
 ### Linux: Create Executable & Archive
 
@@ -115,6 +144,7 @@ Run via: `./dist/PermaDesign/PermaDesign`
 
 1. **Windows**: Send `PermaDesign-Installer.exe` — they double-click to install
 2. **macOS**: Send `PermaDesign.dmg` — they drag PermaDesign.app to Applications
+   (the `READ ME FIRST.txt` inside the DMG covers the one-time first-launch step)
 3. **Linux**: Send `PermaDesign-Linux.zip` — they extract and run the binary
 
 ### File Sizes (Typical)
@@ -126,10 +156,10 @@ Run via: `./dist/PermaDesign/PermaDesign`
 
 To avoid security warnings on macOS/Windows:
 
-**macOS:**
-```bash
-codesign -s - dist/PermaDesign/PermaDesign.app/Contents/MacOS/PermaDesign
-```
+**macOS:** `build_installer.sh` already applies an ad-hoc signature
+(`codesign --force --deep -s - dist/PermaDesign.app`). Fully removing the
+first-launch Gatekeeper warning requires an Apple Developer ID certificate
+plus notarization — see the macOS build section above.
 
 **Windows:** Requires a code-signing certificate (paid or self-signed).
 
@@ -163,7 +193,7 @@ hiddenimports=[
 The installer includes all dependencies. If it fails to start:
 1. Run from command line to see error messages:
    - **Windows**: `"C:\Program Files\PermaDesign\PermaDesign.exe"`
-   - **macOS**: `./dist/PermaDesign/PermaDesign.app/Contents/MacOS/PermaDesign`
+   - **macOS**: `dist/PermaDesign.app/Contents/MacOS/PermaDesign`
    - **Linux**: `./dist/PermaDesign/PermaDesign`
 2. Check that `data/` and `html/` directories are included
 

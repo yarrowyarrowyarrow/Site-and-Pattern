@@ -6,8 +6,9 @@ Stores the full City of Edmonton 0.5 m LiDAR contour dataset in
 Also stores Open-Meteo/Copernicus DEM grid responses for durability.
 
 Database location:
-  Linux/macOS : ~/.local/share/PermaDesign/terrain.db
-  Windows     : %APPDATA%\\PermaDesign\\terrain.db
+  Linux   : ~/.local/share/PermaDesign/terrain.db
+  macOS   : ~/Library/Application Support/PermaDesign/terrain.db
+  Windows : %APPDATA%\\PermaDesign\\terrain.db
 """
 
 import hashlib
@@ -15,6 +16,7 @@ import json
 import math
 import os
 import sqlite3
+import sys
 import zlib
 from datetime import datetime, timezone
 from typing import Optional
@@ -25,6 +27,9 @@ from typing import Optional
 def _db_path() -> str:
     if os.name == "nt":
         base = os.environ.get("APPDATA", os.path.expanduser("~"))
+    elif sys.platform == "darwin":
+        base = os.path.join(os.path.expanduser("~"),
+                            "Library", "Application Support")
     else:
         base = os.environ.get("XDG_DATA_HOME",
                               os.path.join(os.path.expanduser("~"), ".local", "share"))

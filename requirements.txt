@@ -1,5 +1,11 @@
-PyQt6>=6.6.0
-PyQt6-WebEngine>=6.6.0
+# Qt is capped at <6.8 on macOS only: Qt 6.8 dropped macOS 11 Big Sur
+# (requires macOS 12+), and PermaDesign supports Big Sur onwards. The
+# 6.7.x wheels are universal2 (Intel + Apple Silicon). Windows/Linux
+# stay uncapped.
+PyQt6>=6.6.0; sys_platform != "darwin"
+PyQt6>=6.6.0,<6.8; sys_platform == "darwin"
+PyQt6-WebEngine>=6.6.0; sys_platform != "darwin"
+PyQt6-WebEngine>=6.6.0,<6.8; sys_platform == "darwin"
 python-docx>=1.1
 # Footprint-polygon shadow casting (V1.53, src/shadow_geometry.py). Optional:
 # every import is guarded and src/shade.py falls back to its circle model when
