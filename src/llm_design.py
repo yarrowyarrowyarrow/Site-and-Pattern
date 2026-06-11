@@ -1123,6 +1123,15 @@ class ScoredPositioner:
             self._all = list(flat)
         self._used: set = set()
         self._bonus_cells: dict = {}   # {(lat,lng): float bonus addend}
+        # Aesthetic context (V1.62): the pool's latitude span for the
+        # tall-north/low-south gradient, and the groups anchored so far
+        # for bed cohesion + repetition rhythm.
+        if self._all:
+            lats = [c[0] for c in self._all]
+            self._lat_range: Optional[tuple] = (min(lats), max(lats))
+        else:
+            self._lat_range = None
+        self._anchors: list = []   # [(lat, lng, plant_id, height_m), ...]
 
     @property
     def remaining(self) -> int:
@@ -1131,19 +1140,32 @@ class ScoredPositioner:
     def _pop_unused(self, lst: list):
         return self._fallback._pop_unused(lst)
 
+    def note_anchor(self, cell: Optional[tuple], plant: dict) -> None:
+        """Record an anchored group so later ``take_best`` calls can score
+        bed cohesion and same-species rhythm against it."""
+        if cell is None:
+            return
+        self._anchors.append((
+            cell[0], cell[1], plant.get("id"),
+            float(plant.get("mature_height_meters") or 0.0),
+        ))
+
     def take_best(self, plant: dict,
                   zone: Optional[str] = None) -> Optional[tuple]:
         """Return the highest-scoring available cell for this plant.
 
         If ``cell_env_map`` is None, delegates to ``_Positioner.take(zone)``
         so behaviour is identical to the pre-V1.51 path.  Otherwise iterates
-        all available cells, scores each, and picks the best; still returns
-        something (the best of what remains) rather than None when capacity
-        exists, matching ``_Positioner``'s never-drop-a-plant guarantee."""
+        all available cells, scoring each 80% on ecological fit
+        (:func:`score_cell_for_plant`) and 20% on composition
+        (:func:`aesthetic_score` — tall-north gradient, bed cohesion,
+        repetition rhythm), and picks the best; still returns something
+        (the best of what remains) rather than None when capacity exists,
+        matching ``_Positioner``'s never-drop-a-plant guarantee."""
         if self._env_map is None:
             return self._fallback.take(zone)
 
-        from src.placement_score import score_cell_for_plant
+        from src.placement_score import aesthetic_score, score_cell_for_plant
         best_cell: Optional[tuple] = None
         best_score = -1.0
 
@@ -1154,9 +1176,13 @@ class ScoredPositioner:
             if env is None:
                 # Cell not in env map (e.g. added from flat fallback);
                 # give it a neutral score so it can still be selected.
-                score = 0.5
+                eco = 0.5
             else:
-                score = score_cell_for_plant(plant, env)
+                eco = score_cell_for_plant(plant, env)
+            beauty = aesthetic_score(plant, cell,
+                                     lat_range=self._lat_range,
+                                     anchors=self._anchors)
+            score = 0.8 * eco + 0.2 * beauty
             score += self._bonus_cells.get(cell, 0.0)
             if score > best_score:
                 best_score = score
@@ -1387,6 +1413,7 @@ def _place_within_boundary(project, plant_items, community_items,
         anchor = positioner.take_best(plant_row, zone)
         if anchor is None:
             break
+        positioner.note_anchor(anchor, plant_row)
         if not group_layout:
             group_layout = _layout.default_layout_for(
                 plant_row.get("plant_type", ""))
@@ -1427,6 +1454,7 @@ def _place_within_boundary(project, plant_items, community_items,
         if (community_fits(boundary, anchor, radius)
                 and is_clear(anchor[0], anchor[1], keepout, radius)):
             project.place_polyculture(cid, anchor[0], anchor[1])
+            positioner.note_anchor(anchor, {})
             positioner.reserve_near([anchor], radius * 2)
         else:
             skipped_comms += 1

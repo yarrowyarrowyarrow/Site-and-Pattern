@@ -260,6 +260,111 @@ def score_cell_for_plant(plant: dict, cell: CellEnv) -> float:
         0.35 * shade_s + 0.35 * moist_s + 0.15 * slope_s + 0.15 * edge_s))
 
 
+# ── Aesthetic composition scoring (V1.62) ────────────────────────────────────
+#
+# Ecology decides whether a plant THRIVES in a cell; these terms decide
+# whether the result READS as a designed bed rather than ecologically-sound
+# scatter. Three classic planting-design heuristics, all computable:
+#
+#   * height gradient — tall plants to the north of the bed (back-of-border
+#     from the sun-facing view, and they don't shade the rest of the design;
+#     standard prairie-garden guidance), low plants to the south/front;
+#   * bed cohesion — a new group wants to sit NEAR the bed that's already
+#     forming (one to a few group-spacings away), not crowded onto it and
+#     not stranded as an island;
+#   * repetition rhythm — repeating a species is good design, but at a
+#     rhythmic distance, not as one mega-clump.
+#
+# Combined by ScoredPositioner at ~20% of the total score, so a strong
+# ecological signal (wrong shade/moisture) always outvotes composition.
+
+TALL_HEIGHT_M = 3.0    # mature height ≥ this → "back of border" plant
+LOW_HEIGHT_M = 1.0     # mature height < this → "front of border" plant
+
+
+def _latlng_dist_m(a: tuple, b: tuple) -> float:
+    cos_lat = math.cos(a[0] * math.pi / 180) or 1e-9
+    dx = (b[1] - a[1]) * 111320.0 * cos_lat
+    dy = (b[0] - a[0]) * 111320.0
+    return math.hypot(dx, dy)
+
+
+def _height_gradient(height_m: float, north_frac: float) -> float:
+    """Tall → north (north_frac 1), low → south (north_frac 0); mid-height
+    and unknown heights are indifferent."""
+    if height_m >= TALL_HEIGHT_M:
+        return north_frac
+    if 0.0 < height_m < LOW_HEIGHT_M:
+        return 1.0 - north_frac
+    return 0.5
+
+
+def _cohesion(dist_to_bed_m: Optional[float], spacing_m: float) -> float:
+    """1.0 in the 'joins the bed' band (1–4 group spacings from the nearest
+    anchored group), easing toward 0.4 when crowding it and 0.2 when
+    stranded far away. Neutral 0.5 before anything is anchored."""
+    if dist_to_bed_m is None:
+        return 0.5
+    lo, hi = spacing_m, spacing_m * 4.0
+    if dist_to_bed_m < lo:
+        return 0.4 + 0.6 * (dist_to_bed_m / lo)
+    if dist_to_bed_m <= hi:
+        return 1.0
+    # Linear decay past the band; floor at 0.2 by ~5 bands out.
+    over = (dist_to_bed_m - hi) / (spacing_m * 5.0)
+    return max(0.2, 1.0 - 0.8 * min(1.0, over))
+
+
+def _rhythm(dist_to_same_m: Optional[float], spacing_m: float) -> float:
+    """Repeating a species reads best at a rhythmic distance: penalise
+    fusing into one mega-clump (< 1.5 spacings), reward a repeat 1.5–5
+    spacings away, indifferent beyond. Neutral when the species hasn't
+    been anchored yet."""
+    if dist_to_same_m is None:
+        return 0.5
+    lo, hi = spacing_m * 1.5, spacing_m * 5.0
+    if dist_to_same_m < lo:
+        return 0.2
+    if dist_to_same_m <= hi:
+        return 1.0
+    return 0.5
+
+
+def aesthetic_score(plant: dict, cell: tuple, *,
+                    lat_range: Optional[tuple],
+                    anchors: list,
+                    spacing_m: float = _SPACING_M) -> float:
+    """Composition fitness (0–1) of anchoring ``plant``'s group at ``cell``.
+
+    ``lat_range`` is ``(min_lat, max_lat)`` of the placement pool (for the
+    north/south gradient; None → gradient neutral). ``anchors`` is the
+    list of already-anchored groups as ``(lat, lng, plant_id, height_m)``
+    tuples — see ``ScoredPositioner.note_anchor``.
+
+    Weights: height gradient 40%, bed cohesion 35%, repetition rhythm 25%.
+    """
+    north_frac = 0.5
+    if lat_range and lat_range[1] > lat_range[0]:
+        north_frac = (cell[0] - lat_range[0]) / (lat_range[1] - lat_range[0])
+        north_frac = max(0.0, min(1.0, north_frac))
+
+    height = float(plant.get("mature_height_meters") or 0.0)
+    h_s = _height_gradient(height, north_frac)
+
+    d_bed = d_same = None
+    pid = plant.get("id")
+    for (alat, alng, apid, _ah) in anchors:
+        d = _latlng_dist_m(cell, (alat, alng))
+        if d_bed is None or d < d_bed:
+            d_bed = d
+        if pid is not None and apid == pid and (d_same is None or d < d_same):
+            d_same = d
+    c_s = _cohesion(d_bed, spacing_m)
+    r_s = _rhythm(d_same, spacing_m)
+
+    return max(0.0, min(1.0, 0.40 * h_s + 0.35 * c_s + 0.25 * r_s))
+
+
 # ── Shade-tag matching against the cached zone tags ───────────────────────────
 
 # Which cached zone tags are an acceptable home for each plant sun requirement.
