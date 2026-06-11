@@ -86,7 +86,7 @@ only, doesn't affect real commits.
 | `src/plant_panel.py` | Right-side plant browser + custom delegate. |
 | `src/polyculture_panel.py` | Polyculture/community builder UI. |
 | `src/analysis_panel.py` | Site analysis + Habitat Value Score breakdown. |
-| `src/map_widget.py` + `html/map.html` | Leaflet map embedded via QWebEngineView. |
+| `src/map_widget.py` + `html/map.html` + `html/map/*.js` | Leaflet map embedded via QWebEngineView. The JS is split into six sequential classic scripts (V1.64) — shared-global model, NOT ES modules; load order matters. |
 | `src/llm_design.py` | Generate Design: LLM spec → deterministic placement (scored cells, zones, keep-out, density). |
 | `src/design_critic.py` | Evaluate→revise→repair loop for generated designs (V1.62). |
 | `src/placement_score.py` | Per-cell ecological scoring + aesthetic composition terms (V1.62). |

@@ -64,10 +64,20 @@ class TestStructuralCeilings(unittest.TestCase):
     """D2 — keep the decomposed modules from regrowing."""
 
     # (path, ceiling) — current value in the comment.
+    _HTML = _SRC.parent / "html"
     LINE_CEILINGS = [
         (_SRC / "app.py", 2600),                       # ~2251 now
         (_SRC / "plant_panel.py", 1600),               # ~1390 now
         (_SRC / "controllers" / "map_events.py", 1850),# ~1732 now
+        # V1.64: the former 4,900-line map.html monolith — keep the shell
+        # thin and the split files from regrowing into a new monolith.
+        (_HTML / "map.html", 400),                     # ~230 now
+        (_HTML / "map" / "01-core.js", 950),           # ~814 now
+        (_HTML / "map" / "02-boundary.js", 750),       # ~616 now
+        (_HTML / "map" / "03-plants.js", 950),         # ~817 now
+        (_HTML / "map" / "04-tools.js", 450),          # ~360 now
+        (_HTML / "map" / "05-features.js", 1100),      # ~956 now
+        (_HTML / "map" / "06-overlays.js", 1400),      # ~1193 now
     ]
 
     def test_module_line_ceilings(self):

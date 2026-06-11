@@ -60,19 +60,28 @@ def _mapbridge_signals() -> set:
     return out
 
 
+def _map_js_source() -> str:
+    """map.html plus every html/map/*.js split file (V1.64) — the bridge
+    calls can live in any of them."""
+    out = _MAP_HTML.read_text(encoding="utf-8")
+    for js in sorted((_MAP_HTML.parent / "map").glob("*.js")):
+        out += "\n" + js.read_text(encoding="utf-8")
+    return out
+
+
 class TestJsToPythonBridge(unittest.TestCase):
-    """Every bridge.<name>( call in map.html resolves on MapBridge."""
+    """Every bridge.<name>( call on the JS side resolves on MapBridge."""
 
     def test_all_bridge_calls_resolve(self):
-        html = _MAP_HTML.read_text(encoding="utf-8")
+        html = _map_js_source()
         called = set(re.findall(r"\bbridge\.(\w+)\s*\(", html))
-        self.assertTrue(called, "map.html makes no bridge calls — did the "
-                                "QWebChannel wiring move?")
+        self.assertTrue(called, "the map JS makes no bridge calls — did "
+                                "the QWebChannel wiring move?")
         known = _mapbridge_methods() | _mapbridge_signals()
         missing = sorted(c for c in called if c not in known)
         self.assertFalse(
             missing,
-            "html/map.html calls bridge methods that don't exist on "
+            "the map JS calls bridge methods that don't exist on "
             f"MapBridge (renamed slot?): {missing}")
 
 

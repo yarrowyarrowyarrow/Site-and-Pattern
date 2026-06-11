@@ -86,7 +86,12 @@ class TestJsEntryPointsExist(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        # V1.64: the map's JS lives in html/map/*.js (classic scripts the
+        # 230-line map.html loads in order); definitions may sit in any of
+        # them, so the walk covers the shell plus every split file.
         cls.html = _HTML_PATH.read_text(encoding="utf-8")
+        for js in sorted((_HTML_PATH.parent / "map").glob("*.js")):
+            cls.html += "\n" + js.read_text(encoding="utf-8")
 
     JS_NAMES = [
         "setMode",
