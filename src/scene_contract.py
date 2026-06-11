@@ -23,6 +23,7 @@ Scene schema (``SCENE_VERSION`` = 1)::
       "structures": [{x, y, struct_id, name, size_m, height_m}, ...],
       "terrain": {rows, cols, min_x, min_y, max_x, max_y, base_m,
                   heights: [[m above base_m, row 0 = north], ...]} | None,
+      "scan_points": [[x, y, z], ...] | None,   # imported yard scan (V1.63)
       "sun": {"azimuth_deg": .., "altitude_deg": ..} | None,
     }
 
@@ -141,12 +142,16 @@ def _terrain_block(elevation: Optional[dict], proj: Projector) -> Optional[dict]
 def build_scene(project: dict, *, year: int = 0,
                 get_plant: Optional[Callable] = None,
                 elevation: Optional[dict] = None,
-                when: Optional[datetime] = None) -> dict:
+                when: Optional[datetime] = None,
+                scan: Optional[dict] = None) -> dict:
     """Build the Scene JSON for ``project`` at growth-timeline ``year``.
 
     ``get_plant`` is injectable for tests (defaults to the DB);
     ``elevation`` is an optional ``fetch_openmeteo_grid`` result;
-    ``when`` is the local-solar moment for the sun (default summer noon).
+    ``when`` is the local-solar moment for the sun (default summer noon);
+    ``scan`` is an optional ``scan_import.sample_for_scene`` result —
+    its points are re-framed from the scan's projection origin into this
+    scene's and exposed as ``scene["scan_points"]``.
     """
     if get_plant is None:
         from src.db.plants import get_plant as _gp
@@ -272,6 +277,18 @@ def build_scene(project: dict, *, year: int = 0,
         "max_y": round(max(max(ys) + pad, 25.0), 2),
     }
 
+    scan_points = None
+    if scan and scan.get("points"):
+        # Re-frame from the scan's projection origin into this scene's:
+        # both are local cosLat frames, so the shift is a constant offset.
+        from src.projection import metres_per_deg
+        so = scan.get("origin") or {}
+        m_lat, m_lng = metres_per_deg(lat0)
+        dx = ((so.get("lng") or lng0) - lng0) * m_lng
+        dy = ((so.get("lat") or lat0) - lat0) * m_lat
+        scan_points = [[round(p[0] + dx, 2), round(p[1] + dy, 2), p[2]]
+                       for p in scan["points"]]
+
     return {
         "version": SCENE_VERSION,
         "year": int(year),
@@ -282,5 +299,6 @@ def build_scene(project: dict, *, year: int = 0,
         "buildings": buildings,
         "structures": structures,
         "terrain": _terrain_block(elevation, proj),
+        "scan_points": scan_points,
         "sun": _sun_for(lat0, lng0, when or _DEFAULT_WHEN),
     }

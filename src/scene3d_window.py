@@ -124,6 +124,9 @@ class Scene3DWindow(QWidget):
             year=self._year.value(),
             elevation=self._elevation,
             when=self._when(),
+            # Set by the scan-import flow for this session (not persisted —
+            # the scan's footprints are; the raw points are a preview aid).
+            scan=getattr(self._main, "_scan_scene_sample", None),
         )
         self.viewer.apply_scene(scene)
 

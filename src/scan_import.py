@@ -311,18 +311,52 @@ def scan_to_footprints(points: "np.ndarray", projector, extent_cell_m: float = 0
                           pixel_size_m=extent_cell_m)
 
 
+def sample_for_scene(points: "np.ndarray", projector, *,
+                     max_points: int = 120_000,
+                     ground_percentile: float = 2.0) -> dict:
+    """Downsample an aligned cloud for the 3D viewer's point layer.
+
+    Returns ``{"origin": {"lat", "lng"}, "points": [[x, y, z], ...]}`` —
+    x/y in ``projector``'s local-metre frame, z relative to the cloud's
+    ground estimate (so the scan sits on the scene's ground plane). The
+    cloud is uniformly subsampled to ``max_points`` so the JSON push to
+    the viewer stays a few MB at most. Feed the result to
+    ``scene_contract.build_scene(scan=...)``."""
+    n = points.shape[0]
+    if n > max_points:
+        idx = np.linspace(0, n - 1, max_points).astype("int64")
+        pts = points[idx]
+    else:
+        pts = points
+    ground = float(np.percentile(points[:, 2], ground_percentile))
+    out = np.column_stack([pts[:, 0], pts[:, 1],
+                           np.clip(pts[:, 2] - ground, -0.5, 60.0)])
+    return {
+        "origin": {"lat": projector.lat0, "lng": projector.lng0},
+        "points": np.round(out, 2).tolist(),
+    }
+
+
 def import_scan(path: str, project_dict: dict, control_scan_xy: list,
                 control_latlng: list, *, up: str = "z",
-                cell_m: float = 0.25, min_height_m: float = 2.0) -> list:
+                cell_m: float = 0.25, min_height_m: float = 2.0) -> dict:
     """One call from file to project: read, georeference, rasterize,
     vectorize, and append the footprints as shade-casting
     ``canopy_footprint`` features (via
-    :func:`src.footprint_extract.add_extracted_footprints`). Returns the
-    feature dicts added — once in, the scanned structures shade the 2D
-    design and extrude in the 3D preview automatically."""
+    :func:`src.footprint_extract.add_extracted_footprints`).
+
+    Returns ``{"features": [...], "scan_sample": {...}}`` — the feature
+    dicts added (the scanned structures now shade the 2D design and
+    extrude in the 3D preview automatically) plus a
+    :func:`sample_for_scene` point sample for the 3D viewer's
+    ground-truth scan layer."""
     from src.footprint_extract import add_extracted_footprints
     points = read_points(path, up=up)
     aligned, proj = align_scan(points, control_scan_xy, control_latlng)
     rings = scan_to_footprints(aligned, proj, cell_m,
                                min_height_m=min_height_m)
-    return add_extracted_footprints(rings, project_dict, source="scan")
+    return {
+        "features": add_extracted_footprints(rings, project_dict,
+                                             source="scan"),
+        "scan_sample": sample_for_scene(aligned, proj),
+    }

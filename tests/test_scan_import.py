@@ -234,7 +234,8 @@ class TestEndToEnd(unittest.TestCase):
 
         project = {"type": "FeatureCollection", "properties": {},
                    "features": []}
-        added = import_scan(ply, project, ctrl_scan.tolist(), ctrl_latlng)
+        result = import_scan(ply, project, ctrl_scan.tolist(), ctrl_latlng)
+        added = result["features"]
         self.assertEqual(len(added), 1)
         props = added[0]["properties"]
         self.assertEqual(props["element_type"], "canopy_footprint")
@@ -242,13 +243,41 @@ class TestEndToEnd(unittest.TestCase):
         self.assertEqual(props["source"], "scan")
         self.assertAlmostEqual(props["height_m"], 3.0, delta=0.3)
 
-        # And the 3D scene contract extrudes it with no further wiring.
+        # And the 3D scene contract extrudes it — plus renders the raw
+        # scan sample — with no further wiring.
         from src.scene_contract import build_scene
-        scene = build_scene(project, get_plant=lambda pid: None)
+        scene = build_scene(project, get_plant=lambda pid: None,
+                            scan=result["scan_sample"])
         self.assertEqual(len(scene["buildings"]), 1)
         self.assertEqual(scene["buildings"][0]["kind"], "canopy")
         self.assertAlmostEqual(scene["buildings"][0]["height_m"], 3.0,
                                delta=0.3)
+        self.assertTrue(scene["scan_points"])
+        # Shed-top points exist near 3 m in the scan layer.
+        tops = [p for p in scene["scan_points"] if p[2] > 2.5]
+        self.assertTrue(tops)
+
+    def test_sample_for_scene_caps_and_reframes(self):
+        from src.projection import Projector
+        from src.scan_import import sample_for_scene
+        from src.scene_contract import build_scene
+        rng = np.random.default_rng(1)
+        pts = np.column_stack([rng.uniform(-5, 5, 5000),
+                               rng.uniform(-5, 5, 5000),
+                               rng.uniform(0, 2, 5000)])
+        proj = Projector(_LAT0, _LNG0)
+        sample = sample_for_scene(pts, proj, max_points=1000)
+        self.assertEqual(len(sample["points"]), 1000)
+        self.assertEqual(sample["origin"]["lat"], _LAT0)
+
+        # A scene whose origin is ~111 m north sees the points shifted south.
+        project = {"type": "FeatureCollection",
+                   "properties": {"site_config": {
+                       "latitude": _LAT0 + 0.001, "longitude": _LNG0}},
+                   "features": []}
+        scene = build_scene(project, get_plant=lambda pid: None, scan=sample)
+        ys = [p[1] for p in scene["scan_points"]]
+        self.assertAlmostEqual(sum(ys) / len(ys), -111.32, delta=6.0)
 
 
 if __name__ == "__main__":

@@ -295,6 +295,27 @@ function buildPlants(group, plants) {
   }
 }
 
+function buildScanPoints(group, pts) {
+  // The imported yard scan as a height-tinted point layer — ground truth
+  // behind the proposed design. Sampled host-side (≤ ~120k points).
+  if (!pts || !pts.length) return;
+  const pos = new Float32Array(pts.length * 3);
+  const col = new Float32Array(pts.length * 3);
+  const lo = new THREE.Color(0x4e5d52), hi = new THREE.Color(0xe8f0d8);
+  const c = new THREE.Color();
+  for (let i = 0; i < pts.length; i++) {
+    const [x, y, z] = pts[i];
+    pos[i * 3] = x; pos[i * 3 + 1] = z; pos[i * 3 + 2] = -y;
+    c.copy(lo).lerp(hi, Math.max(0, Math.min(1, z / 6)));
+    col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  group.add(new THREE.Points(geo, new THREE.PointsMaterial({
+    size: 0.08, vertexColors: true })));
+}
+
 function buildStructures(group, structures) {
   for (const s of structures || []) {
     const size = Math.max(0.3, s.size_m || 1), h = Math.max(0.3, s.height_m || 1);
@@ -321,6 +342,7 @@ window.permaSetScene = function (sc) {
   buildBuildings(designGroup, sc.buildings);
   buildPlants(designGroup, sc.plants);
   buildStructures(designGroup, sc.structures);
+  buildScanPoints(designGroup, sc.scan_points);
   if (sc.sun) setSun(sc.sun.azimuth_deg, sc.sun.altitude_deg);
   fitShadowAndCamera(sc.bounds);
 
