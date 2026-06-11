@@ -92,7 +92,7 @@ only, doesn't affect real commits.
 | `src/placement_score.py` | Per-cell ecological scoring + aesthetic composition terms (V1.62). |
 | `src/scene_contract.py` | Versioned Scene JSON (`build_scene`) — the project→3D contract (V1.62). |
 | `src/scene3d_window.py` + `src/map3d_widget.py` + `html/scene3d.html` | View → 3D Preview: built-in three.js viewer (or the `web3d/dist` map3d fork build when present). |
-| `src/scan_import.py` | Phone-scan import: point cloud → georeference → nDSM → shade-casting footprints (V1.62). |
+| `src/scan_import.py` + `src/scan_import_dialog.py` | Phone-scan import: point cloud → control-point georeference → nDSM → shade-casting footprints + 3D point layer (V1.62–63). |
 | `src/permadesign_api.py` + `src/mcp_server.py` | Scripting facade + MCP tools (contract frozen by `test_architecture_guard.py`). |
 | `src/terrain.py` etc. | DEM fetch + slope grid + contour rendering. |
 | `data/*.json` | Shipped seed data (plants, fauna, plant↔fauna links). |

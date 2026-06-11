@@ -63,10 +63,20 @@ class TestUndoRedoRoundTrips(unittest.TestCase):
     byte-identical) → undo again (gone)."""
 
     def setUp(self):
-        _app, self.w = _make_window()
+        self._app, self.w = _make_window()
 
     def tearDown(self):
+        # Tear the WebEngine pages down promptly and clear _modified first —
+        # closeEvent otherwise blocks forever on its modal "unsaved changes"
+        # QMessageBox under a headless run. (A Chromium teardown segfault at
+        # interpreter exit can still occur in dbus-less containers; it
+        # pre-exists for any QWebEngineView there — test_map3d_widget alone
+        # reproduces it — and doesn't affect test results.)
+        self.w._modified = False
+        self.w.close()
         self.w.deleteLater()
+        for _ in range(5):
+            self._app.processEvents()
 
     # ── helpers ──────────────────────────────────────────────────────────
 

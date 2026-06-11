@@ -89,7 +89,7 @@ Features for long-term planning and tracking.
 |----|---------|-------------|--------|
 | X1 | **Google Earth integration** | Import KML/KMZ from Google Earth for property boundaries, elevations, and satellite imagery; export designs back to Google Earth for 3D fly-through visualization | Planned |
 | X2 | **3D view** | View → 3D Preview (V1.62): built-in three.js viewer — instanced plant archetypes on the growth-year slider, extruded buildings/footprints, terrain mesh, sun-driven shadows matching the 2D shade engine. Scene contract in `src/scene_contract.py`. | Done (v1) |
-| X3 | **Elevation / LIDAR import** | Engine shipped (V1.62): `src/scan_import.py` ingests phone-scan point clouds (PLY/XYZ/LAS), georeferences with 2+ control points, rasterizes an nDSM, and lands shade-casting footprints in the design. Remaining: GUI for picking control-point pairs + rendering the raw scan in the 3D view. | Engine done; GUI planned |
+| X3 | **Elevation / LIDAR import** | Done (V1.63): File → Import Yard Scan… ingests phone-scan point clouds (PLY/XYZ/LAS), georeferences with click-click control-point pairs (scan preview ⟷ live map), and lands shade-casting footprints in the design; the raw scan renders as a point layer in the 3D Preview. Engine: `src/scan_import.py`; GUI: `src/scan_import_dialog.py`. | Done (v1) |
 | X4 | **Community design sharing** | Export/import complete designs with a shared online library | Planned |
 | X5 | **Sensor integration** | Connect soil moisture / temperature sensors for real-time data overlay | Planned |
 
