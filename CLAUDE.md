@@ -73,7 +73,9 @@ only, doesn't affect real commits.
 | Path | What's there |
 |------|--------------|
 | `main.py` | Entry point. Installs Qt warning filter, constructs `MainWindow`. |
-| `src/app.py` | `MainWindow` — the top-level window, menu bar, "Check for Updates" logic. |
+| `src/app.py` | `MainWindow` — the top-level window, menu bar, "Check for Updates" logic. Behaviour lives in `src/controllers/` (shim pattern; see `tests/test_architecture_guard.py`). |
+| `src/project_store.py` | **The single write path for placed-plant state** (V1.62). Never mutate `_placed_plants` / plant features directly — `tests/test_project_store.py` greps the tree for violations. |
+| `src/controllers/` | MainWindow's extracted behaviour: map-event router, persistence/undo, mode, generation, area fill, update flow. |
 | `src/db/schema.sql` | Authoritative DDL. Loaded on every `init_db`. |
 | `src/db/plants.py` | Database access layer + migration logic + seed helpers. |
 | `src/db/fauna.py` | Query API for the fauna registry and plant↔fauna junction (V1.31+). |
@@ -85,6 +87,13 @@ only, doesn't affect real commits.
 | `src/polyculture_panel.py` | Polyculture/community builder UI. |
 | `src/analysis_panel.py` | Site analysis + Habitat Value Score breakdown. |
 | `src/map_widget.py` + `html/map.html` | Leaflet map embedded via QWebEngineView. |
+| `src/llm_design.py` | Generate Design: LLM spec → deterministic placement (scored cells, zones, keep-out, density). |
+| `src/design_critic.py` | Evaluate→revise→repair loop for generated designs (V1.62). |
+| `src/placement_score.py` | Per-cell ecological scoring + aesthetic composition terms (V1.62). |
+| `src/scene_contract.py` | Versioned Scene JSON (`build_scene`) — the project→3D contract (V1.62). |
+| `src/scene3d_window.py` + `src/map3d_widget.py` + `html/scene3d.html` | View → 3D Preview: built-in three.js viewer (or the `web3d/dist` map3d fork build when present). |
+| `src/scan_import.py` | Phone-scan import: point cloud → georeference → nDSM → shade-casting footprints (V1.62). |
+| `src/permadesign_api.py` + `src/mcp_server.py` | Scripting facade + MCP tools (contract frozen by `test_architecture_guard.py`). |
 | `src/terrain.py` etc. | DEM fetch + slope grid + contour rendering. |
 | `data/*.json` | Shipped seed data (plants, fauna, plant↔fauna links). |
 
@@ -101,9 +110,14 @@ only, doesn't affect real commits.
   `plants` is kept populated for one release cycle while filter queries
   migrate to the `plant_uses` junction (V1.31). When safe, the column
   can be dropped — but only after every read site is checked.
-- **The map only stores `(lat, lon)`.** All distance/area math currently
-  uses an ad-hoc cosLat projection (~1% error at <2 km). Migrating to
-  proper UTM via `pyproj` is a planned future step.
+- **The map only stores `(lat, lon)`.** Distance/area math goes through
+  `src/projection.py` — default backend is the legacy cosLat metric
+  (~1% error at <2 km); an optional UTM backend (pyproj) exists behind
+  the per-project `use_utm_projection` flag.
+- **Placed-plant state has ONE write path:** `src/project_store.py`
+  (V1.62). The project dict's plant features and the `_placed_plants`
+  index are kept in sync by the store; `tests/test_project_store.py`
+  fails the build on any new direct mutation in `src/`.
 
 ## When making schema/data changes
 

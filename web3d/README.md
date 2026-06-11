@@ -1,6 +1,13 @@
 # web3d — sun-driven shadows for the embedded map3d 3D view
 
-The 3D view is the MIT-licensed [cartesiancs/map3d](https://github.com/cartesiancs/map3d)
+> **Note (V1.62):** building this fork is now OPTIONAL. When `web3d/dist/`
+> is absent, `Map3DWidget` loads the built-in viewer `html/scene3d.html`
+> instead — a self-contained three.js scene that renders the design itself
+> (plants, buildings, terrain, boundary, sun shadows) from the Scene JSON
+> contract (`src/scene_contract.py`). Build this fork when you also want
+> the map3d city context (OSM buildings + roads) around the design.
+
+The 3D view fork is the MIT-licensed [cartesiancs/map3d](https://github.com/cartesiancs/map3d)
 (React + React-Three-Fiber). Upstream renders 3D buildings but **casts no
 shadows** — its `<Canvas>` has no shadow renderer, its lights are fill-only, and
 there is no ground for shadows to land on.
