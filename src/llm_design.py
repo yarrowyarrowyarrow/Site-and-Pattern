@@ -183,6 +183,28 @@ class LLMClient:
         content = self.chat(_build_messages(prompt, context, extra_hints))
         return _parse_spec_json(content)
 
+    def revise_spec(self, prompt: str, context: dict, first_spec: dict,
+                    critique: list,
+                    extra_hints: Optional[list] = None) -> dict:
+        """One evaluate→revise round (V1.62): show the model the spec it
+        produced plus the habitat-score critique of the placed result, and
+        ask for an improved complete spec in the same format. The caller
+        re-validates, re-places, and only adopts the revision when the
+        habitat score actually improves."""
+        messages = _build_messages(prompt, context, extra_hints)
+        messages.append({"role": "assistant",
+                         "content": json.dumps(first_spec)})
+        messages.append({"role": "user", "content": (
+            "Your design was placed on the site and evaluated with the "
+            "Habitat Value Score. Issues found:\n- "
+            + "\n- ".join(str(c) for c in critique)
+            + "\n\nReturn an improved COMPLETE design spec in the exact "
+              "same JSON format (not a diff). Keep what already works; "
+              "fix the issues by adding species or communities that close "
+              "the gaps, and drop anything that doesn't serve the goals."
+        )})
+        return _parse_spec_json(self.chat(messages))
+
 
 def _fauna_digest(limit_per_taxon: int = 4) -> str:
     """A compact, prompt-friendly summary of native fauna the catalogue can
@@ -737,7 +759,8 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
                     fauna_ids: Optional[list] = None,
                     match_site: bool = True,
                     density: str = "balanced",
-                    existing_features: Optional[list] = None):
+                    existing_features: Optional[list] = None,
+                    revise: bool = True):
     """Generate a :class:`~src.permadesign_api.Project` from a prompt.
 
     The site location comes from ``boundary`` (centroid) or
@@ -751,6 +774,13 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
     narrow plant selection and its hint is appended to the LLM brief (the
     hybrid path). Unbacked goals, and hard goals nothing placed satisfies, are
     reported in the returned project's ``properties.generation_warnings``.
+
+    ``revise=True`` (default) runs one evaluate→revise round: the placed
+    design is scored with the Habitat Value Score, the concrete issues are
+    fed back to the model, and its revised spec is re-placed — adopted only
+    when the score improves (see :mod:`src.design_critic`). The
+    deterministic critic repairs (keystone / host / bloom-gap fills) run
+    either way.
 
     Raises:
         LLMError: endpoint unreachable, response unparseable, the spec is
@@ -833,45 +863,95 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
             f"space at a {density} density."
         ]
 
+    def _realize(spec_dict, into_project=None):
+        """Resolve a spec against the catalogue and place it. Returns
+        ``(project, budget_dropped)``; raises LLMError when nothing in the
+        spec matched. Placement is deterministic, so realizing a revised
+        spec is cheap — only the LLM round costs anything."""
+        p_items = _resolve_plants(spec_dict.get("plants") or [],
+                                  query_plants, goal_filters)
+        c_items = _resolve_communities(spec_dict.get("communities") or [],
+                                       communities)
+        s_items = _resolve_structures(spec_dict.get("structures") or [],
+                                      structures)
+
+        # Keep the design within budget *before* placement (no
+        # project-removal API needed): count the atomic community cost
+        # first, drop a community that alone blows the budget (only if
+        # individual plants remain to carry the design), then trim
+        # individual plants to the remainder.
+        dropped = 0
+        if budget and budget > 0:
+            from src.sourcing import trim_to_budget, polyculture_cost
+            clow, chigh = polyculture_cost(c_items)
+            cmid = (clow + chigh) / 2.0
+            if cmid > budget and p_items:
+                c_items = []
+                cmid = 0.0
+            p_items, dropped = trim_to_budget(p_items,
+                                              max(budget - cmid, 0.0))
+
+        if not p_items and not c_items:
+            raise LLMError(
+                "generated design had no plants or communities that "
+                "matched the catalogue"
+            )
+
+        proj = into_project if into_project is not None else Project.create(
+            name, site_config=site_config, boundary=boundary)
+        p_items = _apply_density(p_items, boundary, density, keepout)
+        _place_within_boundary(proj, p_items, c_items, s_items,
+                               boundary, center,
+                               elev=elev, zones=zones,
+                               plant_zone_for=pzone,
+                               structure_zone_for=szone,
+                               keepout=keepout,
+                               cell_env_map=cell_env_map,
+                               fill_regions=fills)
+        return proj, dropped
+
     spec = client.generate_spec(prompt, context, extra_hints=hints)
     _validate_spec(spec)
+    # Round 1 reuses the project built up front (zoning + keep-out were
+    # already computed for the prompt).
+    project, budget_dropped = _realize(spec, into_project=project_ctx)
 
-    plant_items = _resolve_plants(spec.get("plants") or [], query_plants,
-                                  goal_filters)
-    community_items = _resolve_communities(spec.get("communities") or [], communities)
-    structure_items = _resolve_structures(spec.get("structures") or [], structures)
+    # ── Evaluate → revise → re-place (V1.62) ────────────────────────────
+    # Score the placed design with the same Habitat Value Score the
+    # Analysis panel shows, hand the model its own spec + the concrete
+    # issues, and re-place its revision. The revision is adopted ONLY if
+    # the score actually improves, so the loop can never make a design
+    # worse by our own metric.
+    from src.design_critic import (
+        apply_repairs, critique_lines, evaluate_design,
+    )
+    revise_fn = getattr(client, "revise_spec", None)
+    if revise and revise_fn is not None:
+        eval1 = evaluate_design(project)
+        issues = critique_lines(eval1) if eval1 else []
+        if issues:
+            try:
+                spec2 = revise_fn(prompt, context, spec, issues,
+                                  extra_hints=hints)
+                _validate_spec(spec2)
+                project2, dropped2 = _realize(spec2)
+                eval2 = evaluate_design(project2)
+                if (eval2 and eval1
+                        and eval2.get("total", 0) > eval1.get("total", 0)):
+                    project, budget_dropped = project2, dropped2
+                    _add_warning(project,
+                                 "Design revised after evaluation — "
+                                 f"Habitat Score {eval1['total']} → "
+                                 f"{eval2['total']}.")
+            except Exception:  # noqa: BLE001 — revision is opportunistic;
+                pass           # any failure keeps the valid round-1 design
 
-    # Keep the design within budget *before* placement (no project-removal API
-    # needed): count the atomic community cost first, drop a community that alone
-    # blows the budget (only if individual plants remain to carry the design),
-    # then trim individual plants to the remainder.
-    budget_dropped = 0
-    if budget and budget > 0:
-        from src.sourcing import trim_to_budget, polyculture_cost
-        clow, chigh = polyculture_cost(community_items)
-        cmid = (clow + chigh) / 2.0
-        if cmid > budget and plant_items:
-            community_items = []
-            cmid = 0.0
-        plant_items, budget_dropped = trim_to_budget(
-            plant_items, max(budget - cmid, 0.0))
-
-    if not plant_items and not community_items:
-        raise LLMError(
-            "generated design had no plants or communities that matched the "
-            "catalogue"
-        )
-
-    # Reuse the project built up front (carries existing features); zoning +
-    # keep-out were already computed for the prompt.
-    project = project_ctx
-    plant_items = _apply_density(plant_items, boundary, density, keepout)
-    _place_within_boundary(project, plant_items, community_items,
-                           structure_items, boundary, center,
-                           elev=elev, zones=zones,
-                           plant_zone_for=pzone, structure_zone_for=szone,
-                           keepout=keepout,
-                           cell_env_map=cell_env_map, fill_regions=fills)
+    # Deterministic backstop for whichever round won: mend the most
+    # impactful remaining gaps straight from the catalogue.
+    for msg in apply_repairs(
+            project, query_plants,
+            lambda: _one_position_in_boundary(boundary, center)):
+        _add_warning(project, msg)
 
     _apply_goal_feedback(project, goals, query_plants, center, boundary)
     _apply_fauna_feedback(project, fauna_ids, query_plants, center, boundary)
@@ -1703,6 +1783,14 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
                            plant_zone_for=pzone, structure_zone_for=szone,
                            keepout=keepout,
                            cell_env_map=cell_env_map, fill_regions=fills)
+
+    # The deterministic critic runs offline too (V1.62): score the placed
+    # design and mend the most impactful gaps straight from the catalogue.
+    from src.design_critic import apply_repairs
+    for msg in apply_repairs(
+            project, query_plants,
+            lambda: _one_position_in_boundary(boundary, center)):
+        _add_warning(project, msg)
 
     _apply_goal_feedback(project, goals, query_plants, center, boundary)
     _apply_fauna_feedback(project, fauna_ids, query_plants, center, boundary)
