@@ -45,7 +45,7 @@ class TestGenerateDialogFaunaPicker(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from PyQt6.QtWidgets import QApplication
-        cls._app = QApplication.instance() or QApplication([])
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
     def _make(self, **kw):
         from src.generate_design_dialog import GenerateDesignDialog

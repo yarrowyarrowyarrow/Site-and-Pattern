@@ -29,6 +29,7 @@ Why one-domain-at-a-time:
 from __future__ import annotations
 
 from src.climate import get_zone, zone_label
+from src.project_store import store_for
 
 
 def _when_from_config(config: dict):
@@ -468,25 +469,8 @@ class MapEventRouter:
         previous position."""
         if abs(new_lat - old_lat) < 1e-9 and abs(new_lng - old_lng) < 1e-9:
             return
-        # _placed_plants list
-        for p in self._main._placed_plants:
-            if (p["plant_id"] == plant_id
-                    and abs(p["lat"] - old_lat) < 1e-7
-                    and abs(p["lng"] - old_lng) < 1e-7):
-                p["lat"] = new_lat
-                p["lng"] = new_lng
-                break
-        # Project features
-        for f in self._main._project["features"]:
-            props = f.get("properties", {})
-            coords = f.get("geometry", {}).get("coordinates", [])
-            if (props.get("element_type") == "plant"
-                    and props.get("plant_id") == plant_id
-                    and coords
-                    and abs(coords[1] - old_lat) < 1e-7
-                    and abs(coords[0] - old_lng) < 1e-7):
-                f["geometry"]["coordinates"] = [new_lng, new_lat]
-                break
+        store_for(self._main).move_plant(
+            plant_id, old_lat, old_lng, new_lat, new_lng)
         self._main._push_undo({
             "action":   "move_plant",
             "plant_id": plant_id,
@@ -524,25 +508,9 @@ class MapEventRouter:
             if abs(new_lat - old_lat) < 1e-9 and abs(new_lng - old_lng) < 1e-9:
                 continue
             any_change = True
-            plant_id = orig.get("plantId")
-            for p in self._main._placed_plants:
-                if (p["plant_id"] == plant_id
-                        and abs(p["lat"] - old_lat) < 1e-7
-                        and abs(p["lng"] - old_lng) < 1e-7):
-                    p["lat"] = new_lat
-                    p["lng"] = new_lng
-                    break
-            for f in self._main._project["features"]:
-                props = f.get("properties", {})
-                coords = f.get("geometry", {}).get("coordinates", [])
-                if (props.get("element_type") == "plant"
-                        and props.get("plant_id") == plant_id
-                        and props.get("placement_group_id") == group_id
-                        and coords
-                        and abs(coords[1] - old_lat) < 1e-7
-                        and abs(coords[0] - old_lng) < 1e-7):
-                    f["geometry"]["coordinates"] = [new_lng, new_lat]
-                    break
+            store_for(self._main).move_plant(
+                orig.get("plantId"), old_lat, old_lng, new_lat, new_lng,
+                group_id=group_id)
         if not any_change:
             return
         self._main._push_undo({
@@ -579,24 +547,10 @@ class MapEventRouter:
             new_lat, new_lng = float(new.get("lat") or 0.0), float(new.get("lng") or 0.0)
             if abs(new_lat - old_lat) < 1e-9 and abs(new_lng - old_lng) < 1e-9:
                 continue
-            plant_id = orig.get("plantId")
-            for p in self._main._placed_plants:
-                if (p["plant_id"] == plant_id
-                        and abs(p["lat"] - old_lat) < 1e-7
-                        and abs(p["lng"] - old_lng) < 1e-7):
-                    p["lat"], p["lng"] = new_lat, new_lng
-                    any_change = True
-                    break
-            for f in self._main._project["features"]:
-                props = f.get("properties", {})
-                coords = f.get("geometry", {}).get("coordinates", [])
-                if (props.get("element_type") == "plant"
-                        and props.get("plant_id") == plant_id
-                        and coords
-                        and abs(coords[1] - old_lat) < 1e-7
-                        and abs(coords[0] - old_lng) < 1e-7):
-                    f["geometry"]["coordinates"] = [new_lng, new_lat]
-                    break
+            if store_for(self._main).move_plant(
+                    orig.get("plantId"), old_lat, old_lng,
+                    new_lat, new_lng):
+                any_change = True
         if not any_change:
             return
         self._main._push_undo({
@@ -705,22 +659,8 @@ class MapEventRouter:
             "lat": lat, "lng": lng,
             "placement_group_id": group_id,
         })
-        self._main._placed_plants.append({
-            "plant_id": plant_id, "common_name": common_name,
-            "lat": lat, "lng": lng,
-            "placement_group_id": group_id,
-        })
-        self._main._project["features"].append({
-            "type": "Feature",
-            "geometry": {"type": "Point", "coordinates": [lng, lat]},
-            "properties": {
-                "element_type": "plant",
-                "plant_id": plant_id,
-                "common_name": common_name,
-                "placement_group_id": group_id,
-                "quantity": 1
-            }
-        })
+        store_for(self._main).add_plant(
+            plant_id, common_name, lat, lng, placement_group_id=group_id)
         # Tell JS the marker's group id so right-click → "Delete group" works.
         self._main.map_widget.set_plant_group_for_latest(plant_id, lat, lng, group_id)
         self._main.plant_panel.on_plant_placed(plant_id, common_name)
@@ -729,31 +669,7 @@ class MapEventRouter:
 
     def _on_plant_removed(self, marker_id: str, plant_id: int,
                            lat: float, lng: float):
-        # Remove matching entry from placed list (match by plant_id + coords)
-        for i, p in enumerate(self._main._placed_plants):
-            if (p["plant_id"] == plant_id
-                    and abs(p["lat"] - lat) < 1e-7
-                    and abs(p["lng"] - lng) < 1e-7):
-                self._main._placed_plants.pop(i)
-                break
-
-        # Remove matching feature from project
-        removed = False
-        kept = []
-        for f in self._main._project["features"]:
-            props = f.get("properties", {})
-            coords = f.get("geometry", {}).get("coordinates", [])
-            if (not removed
-                    and props.get("element_type") == "plant"
-                    and props.get("plant_id") == plant_id
-                    and coords
-                    and abs(coords[1] - lat) < 1e-7
-                    and abs(coords[0] - lng) < 1e-7):
-                removed = True
-            else:
-                kept.append(f)
-        self._main._project["features"] = kept
-
+        store_for(self._main).remove_plant(plant_id, lat, lng)
         self._main.plant_panel.on_plant_removed(plant_id)
         self._main._mark_modified()
         self._main._sync_planning_panel()
@@ -772,43 +688,9 @@ class MapEventRouter:
             return
         main = self._main
 
-        # Multiset of (plant_id, rounded lat, rounded lng) keys, so duplicate-
-        # position plants are each removed exactly once.
-        def _key(pid, lat, lng):
-            return (int(pid), round(float(lat), 7), round(float(lng), 7))
-
-        want: dict = {}
-        removed_ids: list = []
-        for d in batch:
-            k = _key(d["plantId"], d["lat"], d["lng"])
-            want[k] = want.get(k, 0) + 1
-            removed_ids.append(int(d["plantId"]))
-
-        kept_plants = []
-        for p in main._placed_plants:
-            k = _key(p["plant_id"], p["lat"], p["lng"])
-            if want.get(k, 0) > 0:
-                want[k] -= 1
-            else:
-                kept_plants.append(p)
-        main._placed_plants = kept_plants
-
-        # Independent tally for the feature pass (the list pass consumed `want`).
-        want2: dict = {}
-        for d in batch:
-            want2[_key(d["plantId"], d["lat"], d["lng"])] = \
-                want2.get(_key(d["plantId"], d["lat"], d["lng"]), 0) + 1
-        kept_features = []
-        for f in main._project["features"]:
-            props = f.get("properties", {})
-            coords = f.get("geometry", {}).get("coordinates", [])
-            if props.get("element_type") == "plant" and coords:
-                fk = _key(props.get("plant_id"), coords[1], coords[0])
-                if want2.get(fk, 0) > 0:
-                    want2[fk] -= 1
-                    continue
-            kept_features.append(f)
-        main._project["features"] = kept_features
+        removed_ids = [int(d["plantId"]) for d in batch]
+        store_for(main).remove_plants_batch(
+            (d["plantId"], d["lat"], d["lng"]) for d in batch)
 
         # One panel rebuild + one re-sync for the whole batch.
         main.plant_panel.on_plants_removed_batch(removed_ids)
@@ -826,35 +708,8 @@ class MapEventRouter:
         center and could match plants from adjacent polycultures with identical
         names.
         """
-        # 1e-7 deg ≈ 1 cm — plenty tight while absorbing float round-trip noise.
-        TOL = 1e-7
-
-        def _anchors_match(anchor_lat, anchor_lng):
-            if anchor_lat is None or anchor_lng is None:
-                return False
-            return (abs(anchor_lat - center_lat) < TOL
-                    and abs(anchor_lng - center_lng) < TOL)
-
-        kept_plants = []
-        for p in self._main._placed_plants:
-            if (p.get("polyculture_name") == polyculture_name
-                    and _anchors_match(p.get("polyculture_center_lat"),
-                                       p.get("polyculture_center_lng"))):
-                continue  # drop this polyculture member
-            kept_plants.append(p)
-        removed_count = len(self._main._placed_plants) - len(kept_plants)
-        self._main._placed_plants = kept_plants
-
-        kept_features = []
-        for f in self._main._project["features"]:
-            props = f.get("properties", {})
-            if (props.get("element_type") == "plant"
-                    and props.get("polyculture_name") == polyculture_name
-                    and _anchors_match(props.get("polyculture_center_lat"),
-                                       props.get("polyculture_center_lng"))):
-                continue  # drop this polyculture member
-            kept_features.append(f)
-        self._main._project["features"] = kept_features
+        removed_count = store_for(self._main).remove_polyculture(
+            polyculture_name, center_lat, center_lng)
 
         # Update plant panel counts
         for _ in range(removed_count):
@@ -1756,27 +1611,11 @@ class MapEventRouter:
                 spacing_m=spacing_m, plant_type=plant_type,
                 color=color, group_id=group_id, community_id=community_id,
             )
-            self._main._placed_plants.append({
-                "plant_id": pid, "common_name": name,
-                "lat": mlat, "lng": mlng,
-                "polyculture_name": poly_name,
-                "polyculture_center_lat": lat, "polyculture_center_lng": lng,
-                "placement_group_id": group_id,
-            })
-            self._main._project["features"].append({
-                "type": "Feature",
-                "geometry": {"type": "Point", "coordinates": [mlng, mlat]},
-                "properties": {
-                    "element_type": "plant",
-                    "plant_id": pid,
-                    "common_name": name,
-                    "polyculture_name": poly_name,
-                    "polyculture_center_lat": lat,
-                    "polyculture_center_lng": lng,
-                    "placement_group_id": group_id,
-                    "quantity": 1
-                }
-            })
+            store_for(self._main).add_plant(
+                pid, name, mlat, mlng,
+                placement_group_id=group_id,
+                polyculture_name=poly_name,
+                polyculture_center_lat=lat, polyculture_center_lng=lng)
             batch_placements.append((pid, name))
 
         # One placed-list rebuild per polyculture click instead of N — see
@@ -1845,21 +1684,30 @@ class MapEventRouter:
             except Exception:
                 assignments = [mix_items[0]] * len(positions)
             poly_by_id = {int(c["id"]): c["polyculture"] for c in community_mix}
-            # Per-anchor calls so each instance gets its own
-            # placement_group_id — deleting one community doesn't take
-            # out the rest of the row.
+            # One unit per anchor, each with its own placement_group_id —
+            # deleting one community doesn't take out the rest of the row.
+            n_units = 0
             for (lat, lng), assignment in zip(positions, assignments):
                 community = poly_by_id.get(int(assignment["id"]))
                 if not community:
                     continue
-                community_payload = {
-                    "name": community.get("name", ""),
-                    "spacing_m": 1.0,
-                    "members": [dict(m) for m in (community.get("members") or [])],
-                }
-                self._main._expand_communities_at_positions(
-                    [(lat, lng)], community_payload, pattern_kind
+                self._main._area_fill._place_community_units(
+                    [(lat, lng, community)],
+                    project_io.new_placement_group_id(),
+                    pattern_kind=pattern_kind,
                 )
+                n_units += 1
+            self._main._mark_modified()
+            self._main._sync_planning_panel()
+            self._main._set_mode_label(
+                f"Placed {n_units} communities from the mix "
+                f"({pattern_kind}). Click again for another, or press "
+                f"Esc to finish."
+            )
+            self._main.statusBar().showMessage(
+                f"Placed {n_units} communities from the mix "
+                f"({pattern_kind})", 3000
+            )
             return
 
         # ── Community-as-pattern branch ────────────────────────────────
@@ -1870,8 +1718,29 @@ class MapEventRouter:
         # community for pattern placement clears any plant mix.
         community = getattr(self._main, "_pending_community_pattern", None)
         if community:
-            self._main._expand_communities_at_positions(
-                positions, community, pattern_kind
+            members = community.get("members") or []
+            if not members:
+                return
+            # All anchors share ONE placement_group_id so "Delete group"
+            # removes the whole pattern; each anchor's members carry the
+            # per-instance polyculture_center anchor for one-at-a-time
+            # community deletion.
+            poly_name = community.get("name") or ""
+            self._main._area_fill._place_community_units(
+                [(lat, lng, community) for (lat, lng) in positions],
+                project_io.new_placement_group_id(),
+                pattern_kind=pattern_kind,
+            )
+            self._main._mark_modified()
+            self._main._sync_planning_panel()
+            self._main._set_mode_label(
+                f"Placed {len(positions)} × '{poly_name}' ({pattern_kind}). "
+                "Click again for another, or press Esc to finish."
+            )
+            self._main.statusBar().showMessage(
+                f"Placed {len(positions)} communities of '{poly_name}' "
+                f"({len(members)} members each)",
+                3000,
             )
             return
 
@@ -1923,23 +1792,9 @@ class MapEventRouter:
                 color=sp_color or None, group_id=group_id,
             )
             # Mirror in project state.
-            self._main._placed_plants.append({
-                "plant_id": pid, "common_name": name,
-                "lat": lat, "lng": lng,
-                "placement_group_id": group_id,
-            })
-            self._main._project["features"].append({
-                "type": "Feature",
-                "geometry": {"type": "Point", "coordinates": [lng, lat]},
-                "properties": {
-                    "element_type": "plant",
-                    "plant_id": pid,
-                    "common_name": name,
-                    "placement_group_id": group_id,
-                    "pattern_kind": pattern_kind,
-                    "quantity": 1
-                }
-            })
+            store_for(self._main).add_plant(
+                pid, name, lat, lng, placement_group_id=group_id,
+                pattern_kind=pattern_kind)
             self._main.plant_panel.on_plant_placed(pid, name)
         self._main._mark_modified()
         self._main._sync_planning_panel()

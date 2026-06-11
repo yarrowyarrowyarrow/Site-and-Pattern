@@ -32,7 +32,7 @@ class TestFillTabWidget(unittest.TestCase):
     def setUpClass(cls):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
         from PyQt6.QtWidgets import QApplication
-        cls._app = QApplication.instance() or QApplication([])
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
     def test_tabs_fill_the_bar_width(self):
         from PyQt6.QtWidgets import QWidget

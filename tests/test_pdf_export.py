@@ -41,7 +41,7 @@ class TestPdfExport(unittest.TestCase):
         from src.db.plants import init_db
         init_db()
         from PyQt6.QtWidgets import QApplication
-        cls._app = QApplication.instance() or QApplication([])
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
     def _sample(self):
         from src.db.plants import search_plants

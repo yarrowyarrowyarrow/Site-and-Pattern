@@ -38,7 +38,7 @@ class TestMap3DWidget(unittest.TestCase):
         # WebEngine needs this set before the QApplication is created.
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
         import PyQt6.QtWebEngineWidgets  # noqa: F401
-        cls._app = QApplication.instance() or QApplication([])
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
     def test_constructs_without_built_dist(self):
         from src.map3d_widget import Map3DWidget, dist_index_path

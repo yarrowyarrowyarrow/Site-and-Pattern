@@ -64,7 +64,7 @@ class TestMainWindowSmoke(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from PyQt6.QtWidgets import QApplication
-        cls._app = QApplication.instance() or QApplication([])
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
         try:
             from src.app import MainWindow
             cls._win = MainWindow()
@@ -197,7 +197,7 @@ class TestGenerateDesignDialog(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from PyQt6.QtWidgets import QApplication
-        cls._app = QApplication.instance() or QApplication([])
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
     def test_one_checkbox_per_goal_and_getters(self):
         from src.generate_design_dialog import GenerateDesignDialog

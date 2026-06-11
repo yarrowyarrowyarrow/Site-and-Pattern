@@ -16,14 +16,15 @@ from PyQt6.QtCore import QThread
 from PyQt6.QtWidgets import QDialog, QMessageBox
 
 import src.project as project_io
+from src.project_store import store_for
 
 
 class GenerationController:
     """Drives the Generate-Design dialog, worker thread, and result rendering.
 
     Holds a MainWindow reference so it can read ``_project`` / ``map_widget`` /
-    ``plant_panel`` and reuse the same placement bookkeeping the manual
-    placement path uses (``_placed_plants`` + ``_project['features']``)."""
+    ``plant_panel`` and place plants through the same ProjectStore write path
+    the manual placement gestures use."""
 
     def __init__(self, main_window):
         self._main = main_window
@@ -163,8 +164,8 @@ class GenerationController:
     def _render(self, project):
         """Place every plant from the generated project onto the map and into
         the live project, under one shared placement group so the whole design
-        deletes as a unit. Reuses the dual-store bookkeeping (``_placed_plants``
-        + ``_project['features']``) from MainWindow's manual placement path."""
+        deletes as a unit. Plants land through the ProjectStore write path,
+        same as MainWindow's manual placement gestures."""
         main = self._main
         plants = list(_iter_generated_plants(project))
         if not plants:
@@ -189,24 +190,10 @@ class GenerationController:
             main.map_widget.place_plant_marker(
                 pid, name, lat, lng, spacing_m=spacing_m, plant_type=plant_type,
                 color=None, group_id=group_id, community_id=community_id)
-            main._placed_plants.append({
-                "plant_id": pid, "common_name": name, "lat": lat, "lng": lng,
-                "polyculture_name": poly_name,
-                "placement_group_id": group_id,
-            })
-            main._project["features"].append({
-                "type": "Feature",
-                "geometry": {"type": "Point", "coordinates": [lng, lat]},
-                "properties": {
-                    "element_type": "plant",
-                    "plant_id": pid,
-                    "common_name": name,
-                    "polyculture_name": poly_name,
-                    "placement_group_id": group_id,
-                    "pattern_kind": "generated",
-                    "quantity": qty,
-                },
-            })
+            store_for(main).add_plant(
+                pid, name, lat, lng, placement_group_id=group_id,
+                polyculture_name=poly_name, pattern_kind="generated",
+                quantity=qty)
             batch.append((pid, name))
 
         main.plant_panel.on_plants_placed_batch(batch)

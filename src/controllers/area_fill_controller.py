@@ -1,16 +1,17 @@
 """
 src/controllers/area_fill_controller.py — place a polygon fill (N3′).
 
-Turns the pure ``area_fill.plan_fill`` output into placed plants using the same
-dual-store bookkeeping (``_placed_plants`` + ``_project['features']`` + a shared
-placement group) as the design generator, so rendering, undo-as-a-unit, the
-habitat score and the cost readout all work on a filled area exactly as they do
-for a generated or hand-placed design.
+Turns the pure ``area_fill.plan_fill`` output into placed plants through the
+ProjectStore single write path (``src/project_store.py``) plus a shared
+placement group, so rendering, undo-as-a-unit, the habitat score and the cost
+readout all work on a filled area exactly as they do for a generated or
+hand-placed design.
 """
 
 from __future__ import annotations
 
 from src import area_fill
+from src.project_store import store_for
 
 
 class AreaFillController:
@@ -57,23 +58,9 @@ class AreaFillController:
             main.map_widget.place_plant_marker(
                 pid, name, lat, lng, spacing_m=spacing, plant_type=plant_type,
                 color=None, group_id=group_id, community_id=community_id)
-            main._placed_plants.append({
-                "plant_id": pid, "common_name": name, "lat": lat, "lng": lng,
-                "polyculture_name": poly_name,
-                "placement_group_id": group_id,
-            })
-            main._project["features"].append({
-                "type": "Feature",
-                "geometry": {"type": "Point", "coordinates": [lng, lat]},
-                "properties": {
-                    "element_type": "plant",
-                    "plant_id": pid,
-                    "common_name": name,
-                    "polyculture_name": poly_name,
-                    "placement_group_id": group_id,
-                    "pattern_kind": "area_fill",
-                },
-            })
+            store_for(main).add_plant(
+                pid, name, lat, lng, placement_group_id=group_id,
+                polyculture_name=poly_name, pattern_kind="area_fill")
             batch.append((pid, name))
 
         try:
@@ -186,9 +173,14 @@ class AreaFillController:
 
     # ── shared placement bookkeeping ─────────────────────────────────────────
 
-    def _place_community_units(self, units, group_id) -> int:
+    def _place_community_units(self, units, group_id, *,
+                               pattern_kind: str = "area_fill") -> int:
         """Place a list of ``(anchor_lat, anchor_lng, polyculture)`` community
-        units, expanding each member at its offset. Returns the plant count."""
+        units, expanding each member at its offset. Returns the plant count.
+
+        Also the engine behind community-as-pattern placement (Row / Grid /
+        Circle of communities) — those call sites pass their own
+        ``pattern_kind`` so the feature records how the plant was placed."""
         import math
         import src.project as project_io
         from src.member_colors import member_color
@@ -211,29 +203,12 @@ class AreaFillController:
                     pid, name, mlat, mlng, spacing_m=spacing,
                     plant_type=plant_type, color=member_color(m),
                     group_id=group_id, community_id=community_id)
-                main._placed_plants.append({
-                    "plant_id": pid, "common_name": name,
-                    "lat": mlat, "lng": mlng,
-                    "polyculture_name": poly_name,
-                    "polyculture_center_lat": alat,
-                    "polyculture_center_lng": alng,
-                    "placement_group_id": group_id,
-                })
-                main._project["features"].append({
-                    "type": "Feature",
-                    "geometry": {"type": "Point", "coordinates": [mlng, mlat]},
-                    "properties": {
-                        "element_type": "plant",
-                        "plant_id": pid,
-                        "common_name": name,
-                        "polyculture_name": poly_name,
-                        "polyculture_center_lat": alat,
-                        "polyculture_center_lng": alng,
-                        "placement_group_id": group_id,
-                        "pattern_kind": "area_fill",
-                        "quantity": 1,
-                    },
-                })
+                store_for(main).add_plant(
+                    pid, name, mlat, mlng, placement_group_id=group_id,
+                    polyculture_name=poly_name,
+                    polyculture_center_lat=alat,
+                    polyculture_center_lng=alng,
+                    pattern_kind=pattern_kind)
                 batch.append((pid, name))
         try:
             main.plant_panel.on_plants_placed_batch(batch)

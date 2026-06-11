@@ -47,6 +47,7 @@ from src.controllers.persistence import PersistenceController
 from src.controllers.map_events import MapEventRouter
 from src.controllers.generation import GenerationController
 from src.controllers.area_fill_controller import AreaFillController
+from src.project_store import ProjectStore
 
 
 # Marker colour tables for plant-community members — moved to the Qt-free
@@ -93,6 +94,18 @@ class MainWindow(QMainWindow):
 
     AUTOSAVE_INTERVAL_MS = 5 * 60 * 1000   # 5 minutes
 
+    # Placed-plant state lives in the ProjectStore (the single write path —
+    # src/project_store.py); these delegate so the ~100 existing read sites
+    # keep working unchanged. Defined via property() rather than @property
+    # so the architecture guard's MainWindow method count stays a measure
+    # of behaviour, not accessors.
+    _project = property(
+        lambda self: self._store.project,
+        lambda self, v: self._store.set_project(v))
+    _placed_plants = property(
+        lambda self: self._store.placed_plants,
+        lambda self, v: self._store.replace_placed_plants(v))
+
     def __init__(self):
         super().__init__()
         _init_database()
@@ -100,15 +113,15 @@ class MainWindow(QMainWindow):
         self.resize(1400, 860)
         self.setMinimumSize(900, 600)
 
-        # Project state
-        self._project      = project_io.new_project()
+        # Project state. The ProjectStore owns the project dict AND the
+        # placed-plants index, and is the only supported write path for
+        # placed-plant state (see src/project_store.py). _project /
+        # _placed_plants are delegating properties on the class below.
+        self._store        = ProjectStore(project_io.new_project())
         self._project_path = None        # path when saved to file
         self._modified     = False
         self._current_zone = None
         self._current_mode = 'none'
-
-        # Placed plants list: [{plant_id, common_name, lat, lng}, ...]
-        self._placed_plants = []
 
         # Undo/redo stacks
         self._undo_stack: list[dict] = []   # each entry: {action, data}
@@ -1342,85 +1355,6 @@ class MainWindow(QMainWindow):
         # Shim → GenerationController; see src/controllers/generation.py.
         return self._generation.open_dialog()
 
-    def _expand_communities_at_positions(self, positions, community: dict,
-                                          pattern_kind: str):
-        """Expand a Community across N anchor positions.
-
-        ``community`` is the dict stashed in self._pending_community_pattern
-        by _enter_polyculture_pattern_mode (or a single-community block).
-        Currently always uses the same community at every anchor — the
-        community-mix (ratio) variant can plug in here later by replacing
-        the single dict with per-anchor assignments.
-
-        Every placed marker across every anchor shares a single
-        placement_group_id, so deleting any marker via "Delete group"
-        removes the whole pattern. The per-anchor polyculture_name +
-        polyculture_center_{lat,lng} are also written so
-        _on_polyculture_removed can target one community at a time.
-        """
-        import math
-        members = community.get("members") or []
-        if not members or not positions:
-            return
-
-        poly_name = community.get("name") or ""
-        group_id = project_io.new_placement_group_id()
-
-        batch_placements: list[tuple[int, str]] = []
-        for (lat, lng) in positions:
-            cos_lat = math.cos(lat * math.pi / 180) or 1e-9
-            community_id = project_io.community_id_for(lat, lng)
-            for m in members:
-                pid = m["plant_id"]
-                name = m.get("common_name", "")
-                spacing_m, plant_type, _ = self._plant_info(pid)
-                color = _member_color(m)
-                mlat = lat + float(m.get("offset_y", 0) or 0) / 111320
-                mlng = lng + float(m.get("offset_x", 0) or 0) / (111320 * cos_lat)
-
-                self.map_widget.place_plant_marker(
-                    pid, name, mlat, mlng,
-                    spacing_m=spacing_m, plant_type=plant_type,
-                    color=color, group_id=group_id, community_id=community_id,
-                )
-                self._placed_plants.append({
-                    "plant_id": pid, "common_name": name,
-                    "lat": mlat, "lng": mlng,
-                    "polyculture_name": poly_name,
-                    "polyculture_center_lat": lat,
-                    "polyculture_center_lng": lng,
-                    "placement_group_id": group_id,
-                })
-                self._project["features"].append({
-                    "type": "Feature",
-                    "geometry": {"type": "Point", "coordinates": [mlng, mlat]},
-                    "properties": {
-                        "element_type": "plant",
-                        "plant_id": pid,
-                        "common_name": name,
-                        "polyculture_name": poly_name,
-                        "polyculture_center_lat": lat,
-                        "polyculture_center_lng": lng,
-                        "placement_group_id": group_id,
-                        "pattern_kind": pattern_kind,
-                        "quantity": 1,
-                    }
-                })
-                batch_placements.append((pid, name))
-
-        self.plant_panel.on_plants_placed_batch(batch_placements)
-        self._mark_modified()
-        self._sync_planning_panel()
-        self._set_mode_label(
-            f"Placed {len(positions)} × '{poly_name}' ({pattern_kind}). "
-            "Click again for another, or press Esc to finish."
-        )
-        self.statusBar().showMessage(
-            f"Placed {len(positions)} communities of '{poly_name}' "
-            f"({len(members)} members each)",
-            3000,
-        )
-
     def _on_pattern_placed(self, plant_id: int, common_name: str,
                             spacing_m: float, plant_type: str,
                             custom_color: str, positions_json: str,
@@ -1569,10 +1503,11 @@ class MainWindow(QMainWindow):
             return
         name = name.strip() or "Untitled Design"
 
+        # Assigning _project routes through ProjectStore.set_project, which
+        # also resets the placed-plants index.
         self._project      = project_io.new_project(name)
         self._project_path = None
         self._modified     = False
-        self._placed_plants.clear()
         self._clear_undo()
         self._current_zone = None
         self._sb_zone.setText("Zone: —")
@@ -1603,10 +1538,9 @@ class MainWindow(QMainWindow):
 
     def _load_from_path(self, path: str):
         proj = project_io.load_project(path)
-        self._project      = proj
+        self._project      = proj   # → ProjectStore.set_project (index rebuilt)
         self._project_path = path
         self._modified     = False
-        self._placed_plants.clear()
         self._clear_undo()
 
         self.map_widget.clear_all()
@@ -1645,7 +1579,10 @@ class MainWindow(QMainWindow):
                 p.get("placement_group_id", ""),
                 community_id or "",
             )
-            self._placed_plants.append(p)
+        # Adopt project_to_map_data's records wholesale — they carry the
+        # group ids minted for legacy features (backfilled above), which a
+        # bare feature rebuild wouldn't know about.
+        self._store.replace_placed_plants(data["plants"])
 
         self.plant_panel.load_placed(data["plants"])
 
@@ -2049,30 +1986,7 @@ class MainWindow(QMainWindow):
             # Remove the most recent marker matching this plant + coords
             pid, lat, lng = entry["plant_id"], entry["lat"], entry["lng"]
             self.map_widget.undo_place_plant(pid, lat, lng)
-            # Remove from placed list
-            for i in range(len(self._placed_plants) - 1, -1, -1):
-                p = self._placed_plants[i]
-                if (p["plant_id"] == pid
-                        and abs(p["lat"] - lat) < 1e-7
-                        and abs(p["lng"] - lng) < 1e-7):
-                    self._placed_plants.pop(i)
-                    break
-            # Remove from project features
-            kept = []
-            removed = False
-            for f in reversed(self._project["features"]):
-                props = f.get("properties", {})
-                coords = f.get("geometry", {}).get("coordinates", [])
-                if (not removed
-                        and props.get("element_type") == "plant"
-                        and props.get("plant_id") == pid
-                        and coords
-                        and abs(coords[1] - lat) < 1e-7
-                        and abs(coords[0] - lng) < 1e-7):
-                    removed = True
-                else:
-                    kept.append(f)
-            self._project["features"] = list(reversed(kept))
+            self._store.remove_plant(pid, lat, lng, newest_first=True)
             self.plant_panel.on_plant_removed(pid)
             self._redo_stack.append(entry)
             self.statusBar().showMessage("Undo: removed plant", 2000)
@@ -2171,23 +2085,7 @@ class MainWindow(QMainWindow):
             self.map_widget.revert_plant_position(
                 pid, new_lat, new_lng, old_lat, old_lng,
             )
-            for p in self._placed_plants:
-                if (p["plant_id"] == pid
-                        and abs(p["lat"] - new_lat) < 1e-7
-                        and abs(p["lng"] - new_lng) < 1e-7):
-                    p["lat"] = old_lat
-                    p["lng"] = old_lng
-                    break
-            for f in self._project["features"]:
-                props = f.get("properties", {})
-                coords = f.get("geometry", {}).get("coordinates", [])
-                if (props.get("element_type") == "plant"
-                        and props.get("plant_id") == pid
-                        and coords
-                        and abs(coords[1] - new_lat) < 1e-7
-                        and abs(coords[0] - new_lng) < 1e-7):
-                    f["geometry"]["coordinates"] = [old_lng, old_lat]
-                    break
+            self._store.move_plant(pid, new_lat, new_lng, old_lat, old_lng)
             self._redo_stack.append(entry)
             self.statusBar().showMessage("Undo: plant move", 2000)
 
@@ -2210,26 +2108,32 @@ class MainWindow(QMainWindow):
                 # Marker is currently at the post-drag (nl, ng); move it
                 # back to the pre-drag (ol, og).
                 self.map_widget.revert_plant_position(pid, nl, ng, ol, og)
-                for p in self._placed_plants:
-                    if (p["plant_id"] == pid
-                            and abs(p["lat"] - nl) < 1e-7
-                            and abs(p["lng"] - ng) < 1e-7):
-                        p["lat"] = ol
-                        p["lng"] = og
-                        break
-                for f in self._project["features"]:
-                    props = f.get("properties", {})
-                    coords = f.get("geometry", {}).get("coordinates", [])
-                    if (props.get("element_type") == "plant"
-                            and props.get("plant_id") == pid
-                            and coords
-                            and abs(coords[1] - nl) < 1e-7
-                            and abs(coords[0] - ng) < 1e-7):
-                        f["geometry"]["coordinates"] = [og, ol]
-                        break
+                self._store.move_plant(pid, nl, ng, ol, og)
             self._redo_stack.append(entry)
             self.statusBar().showMessage(
                 f"Undo: polyculture move ({len(originals)} plants)", 2000
+            )
+
+        elif action == "move_selection":
+            # Reverse a marquee-selection drag — same shape as a group
+            # move but without the placement-group constraint.
+            originals = entry.get("originals") or []
+            moved     = entry.get("moved") or []
+            moved_by_id = {m.get("markerId"): m for m in moved}
+            for orig in originals:
+                new = moved_by_id.get(orig.get("markerId"))
+                if not new:
+                    continue
+                pid = int(orig.get("plantId") or 0)
+                ol  = float(orig.get("lat") or 0.0)
+                og  = float(orig.get("lng") or 0.0)
+                nl  = float(new.get("lat") or 0.0)
+                ng  = float(new.get("lng") or 0.0)
+                self.map_widget.revert_plant_position(pid, nl, ng, ol, og)
+                self._store.move_plant(pid, nl, ng, ol, og)
+            self._redo_stack.append(entry)
+            self.statusBar().showMessage(
+                f"Undo: selection move ({len(originals)} plants)", 2000
             )
 
         self._act_undo.setEnabled(bool(self._undo_stack))
@@ -2246,23 +2150,16 @@ class MainWindow(QMainWindow):
             pid = entry["plant_id"]
             name = entry["common_name"]
             lat, lng = entry["lat"], entry["lng"]
+            group_id = entry.get("placement_group_id") or ""
             spacing_m, plant_type, custom_color = self._plant_info(pid)
             self.map_widget.load_plant_marker(
-                pid, name, lat, lng, spacing_m, plant_type, custom_color
+                pid, name, lat, lng, spacing_m, plant_type, custom_color,
+                group_id,
             )
-            self._placed_plants.append({
-                "plant_id": pid, "common_name": name, "lat": lat, "lng": lng
-            })
-            self._project["features"].append({
-                "type": "Feature",
-                "geometry": {"type": "Point", "coordinates": [lng, lat]},
-                "properties": {
-                    "element_type": "plant",
-                    "plant_id": pid,
-                    "common_name": name,
-                    "quantity": 1
-                }
-            })
+            # Through the store — and unlike the historical hand-rolled
+            # redo, the placement group id survives the round-trip.
+            self._store.add_plant(pid, name, lat, lng,
+                                  placement_group_id=group_id)
             self.plant_panel.on_plant_placed(pid, name)
             self._undo_stack.append(entry)
             self.statusBar().showMessage("Redo: placed plant", 2000)

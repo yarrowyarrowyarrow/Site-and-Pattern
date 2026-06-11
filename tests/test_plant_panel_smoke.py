@@ -56,7 +56,7 @@ class TestPlantPanelSmoke(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from PyQt6.QtWidgets import QApplication
-        cls._app = QApplication.instance() or QApplication([])
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
         try:
             from src.db.plants import init_db
             init_db()  # seeds the temp DB so PlantPanel queries succeed
