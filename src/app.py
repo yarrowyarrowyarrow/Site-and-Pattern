@@ -48,6 +48,7 @@ from src.controllers.map_events import MapEventRouter
 from src.controllers.generation import GenerationController
 from src.controllers.area_fill_controller import AreaFillController
 from src.project_store import ProjectStore
+from src.scan_import_dialog import start_scan_import as _start_scan_import
 from src.scene3d_window import open_3d_view as _open_3d_view
 
 
@@ -450,6 +451,15 @@ class MainWindow(QMainWindow):
             "(local AI, with an offline fallback)")
         act_generate.triggered.connect(self._on_generate_design)
         self._act_generate = act_generate
+
+        act_scan = file_menu.addAction("Import &Yard Scan…")
+        act_scan.setStatusTip(
+            "Import a phone scan (Polycam/Scaniverse PLY, XYZ, LAS) — "
+            "match 2+ points to the map and the scanned structures cast "
+            "shade and appear in 3D")
+        # Lambda, not a MainWindow method — the flow lives in
+        # src/scan_import_dialog.py (architecture-guard method ceiling).
+        act_scan.triggered.connect(lambda: _start_scan_import(self))
 
         file_menu.addSeparator()
 
