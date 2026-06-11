@@ -43,6 +43,15 @@ def set_sun_for(lat: float, lng: float, when: datetime) -> Optional[str]:
     return set_sun(sun.azimuth, sun.altitude)
 
 
+def set_scene(scene: dict) -> str:
+    """JS to (re)build the whole 3D scene from a Scene JSON dict
+    (``src.scene_contract.build_scene`` output: terrain, buildings, plants,
+    boundary, structures, sun — all in local metres). Guarded with ``&&``
+    so it's a no-op until the viewer registers ``window.permaSetScene``."""
+    return ("window.permaSetScene && window.permaSetScene("
+            f"{json.dumps(scene or {})});")
+
+
 def set_plants(records: list) -> str:
     """JS to (re)populate the 3D scene with placed plants. ``records`` are the
     per-plant 3D-state dicts from ``src.scene3d.placed_plants_3d_state`` (lat /

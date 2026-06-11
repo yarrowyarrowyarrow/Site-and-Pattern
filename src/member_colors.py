@@ -42,6 +42,19 @@ LEGACY_ROLE_ALIASES = {
 
 OTHER_COLOR = '#81c784'
 
+# Canonical per-plant-type marker colours. Shared by the plant browser
+# (src/plant_list_view re-exports it as _TYPE_COLORS), the map markers
+# (html/map.html mirrors it as TYPE_COLORS), and the 3D scene contract
+# (src/scene_contract) — lives here because this module is Qt-free.
+TYPE_COLORS: dict[str, str] = {
+    "tree":        "#2e7d32",
+    "shrub":       "#558b2f",
+    "herb":        "#7cb342",
+    "groundcover": "#c6a817",
+    "vine":        "#00838f",
+    "root":        "#6d4c41",
+}
+
 
 def member_color(member: dict) -> str:
     """Pick a marker colour for a polyculture member.

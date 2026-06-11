@@ -58,6 +58,29 @@ class TestSetSunFor(unittest.TestCase):
         self.assertIn(str(float(sun.altitude)), js)
 
 
+class TestSetScene(unittest.TestCase):
+    def test_emits_guarded_hook_with_scene_json(self):
+        scene = {"version": 1, "bounds": {"min_x": -25, "min_y": -25,
+                                          "max_x": 25, "max_y": 25},
+                 "plants": [], "buildings": [], "structures": [],
+                 "boundary": None, "terrain": None, "sun": None}
+        js = m3.set_scene(scene)
+        self.assertIn("window.permaSetScene && window.permaSetScene(", js)
+        self.assertIn('"version": 1', js)
+        self.assertTrue(js.strip().endswith(");"))
+
+    def test_round_trips_build_scene_output(self):
+        # The builder must serialise a real contract dict untouched.
+        import json
+        from src.scene_contract import build_scene
+        scene = build_scene({"type": "FeatureCollection",
+                             "properties": {}, "features": []},
+                            get_plant=lambda pid: None)
+        js = m3.set_scene(scene)
+        payload = js[js.index("(", js.index("permaSetScene(")) + 1:-2]
+        self.assertEqual(json.loads(payload), scene)
+
+
 class TestSetPlants(unittest.TestCase):
     def test_emits_guarded_hook_with_json(self):
         recs = [{"plant_id": 1, "lat": 53.5, "lng": -113.5,

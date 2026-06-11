@@ -1,14 +1,21 @@
 """
-src/map3d_widget.py — Map3DWidget scaffold (D1 foundation).
+src/map3d_widget.py — Map3DWidget, the embedded 3D viewport.
 
-A ``QWebEngineView`` that mirrors ``src/map_widget.MapWidget`` for a 3D viewport.
-It loads the built map3d fork from ``web3d/dist/`` when that build is present (see
-``web3d/README.md``); until then it shows a small placeholder so the widget can be
-constructed without crashing. Sun and per-plant growth state are pushed through
-``src/map3d_js`` (guarded ``window.permaSetSun`` / ``window.permaSetPlants`` hooks)
-and the shared ``src/scene3d`` state — so this wiring is ready the moment the fork
-is built and its hooks register. The widget is intentionally NOT mounted in the
-main window yet (no built scene to show); mounting is the next D1 step.
+A ``QWebEngineView`` that mirrors ``src/map_widget.MapWidget`` for 3D. Two
+page sources, picked at construction:
+
+  * the built map3d fork from ``web3d/dist/`` when present (buildings +
+    roads context — see ``web3d/README.md``), or
+  * the built-in viewer ``html/scene3d.html`` (V1.62) — a self-contained
+    three.js scene that renders the *design itself*: terrain, extruded
+    buildings/footprints, instanced plant archetypes on the growth
+    timeline, boundary, structures, and a sun-driven shadow light.
+
+Both register the same guarded hooks (``window.permaSetSun``,
+``window.permaSetPlants``, and — built-in viewer — ``window.permaSetScene``),
+driven from Python via ``src/map3d_js`` builders. The widget re-pushes the
+last scene on ``loadFinished`` so a push that raced the page load is never
+lost (the ``&&`` guards silently drop early calls).
 """
 
 from __future__ import annotations
@@ -22,44 +29,69 @@ from PyQt6.QtWebEngineWidgets import QWebEngineView
 from src import map3d_js
 
 
-_PLACEHOLDER_HTML = """<!doctype html><html><head><meta charset="utf-8"><style>
-html,body{margin:0;height:100%;background:#16201a;color:#90a4ae;
-font-family:sans-serif;display:flex;align-items:center;justify-content:center;
-text-align:center}div{max-width:340px;padding:20px;line-height:1.5}
-b{color:#a5d6a7}code{color:#80cbc4}</style></head><body><div>
-<b>3D view</b><br>Build the map3d fork to enable it — apply
-<code>web3d/map3d-sun-shadows.patch</code> and copy its <code>dist/</code> in
-(see <code>web3d/README.md</code>). Sun &amp; growth are already wired.
-</div></body></html>"""
+def _repo_path(*parts) -> str:
+    try:
+        from src.resources import resource_path
+        return resource_path(*parts)
+    except Exception:
+        return os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            *parts)
 
 
 def dist_index_path() -> str | None:
     """Path to the built map3d ``index.html`` if it exists, else ``None``."""
-    try:
-        from src.resources import resource_path
-        p = resource_path("web3d", "dist", "index.html")
-    except Exception:
-        p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                         "web3d", "dist", "index.html")
+    p = _repo_path("web3d", "dist", "index.html")
+    return p if p and os.path.exists(p) else None
+
+
+def builtin_viewer_path() -> str | None:
+    """Path to the built-in three.js viewer (``html/scene3d.html``)."""
+    p = _repo_path("html", "scene3d.html")
     return p if p and os.path.exists(p) else None
 
 
 class Map3DWidget(QWebEngineView):
-    """Embedded 3D viewport — loads the built map3d fork when present, else a
-    placeholder. Sun/scene are driven via ``map3d_js`` + ``scene3d``."""
+    """Embedded 3D viewport — the map3d fork build when present, else the
+    built-in scene3d viewer. Sun/scene are driven via ``map3d_js``."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         dist = dist_index_path()
+        builtin = builtin_viewer_path()
         self.has_scene = bool(dist)
-        if dist:
-            self.load(QUrl.fromLocalFile(dist))
-        else:
-            self.setHtml(_PLACEHOLDER_HTML)
+        self.mode = "fork" if dist else "builtin"
+        self._pending_js: list[str] = []
+        self._loaded = False
+        self.loadFinished.connect(self._on_load_finished)
+        page_path = dist or builtin
+        if page_path:
+            self.load(QUrl.fromLocalFile(page_path))
+        else:   # neither shipped (broken bundle) — don't crash the window
+            self.setHtml("<html><body style='background:#16201a;color:#90a4ae;"
+                         "font-family:sans-serif'><p style='padding:2em'>"
+                         "3D viewer assets missing (html/scene3d.html)."
+                         "</p></body></html>")
+
+    def _on_load_finished(self, ok: bool):
+        self._loaded = True
+        for js in self._pending_js:
+            self.page().runJavaScript(js)
+        self._pending_js = []
 
     def run_js(self, js: str):
-        if js:
-            self.page().runJavaScript(js)
+        if not js:
+            return
+        if not self._loaded:
+            # The page hasn't registered its hooks yet; the && guards would
+            # silently drop this call. Queue and replay on loadFinished.
+            self._pending_js.append(js)
+            return
+        self.page().runJavaScript(js)
+
+    def apply_scene(self, scene: dict):
+        """Push a full Scene JSON (``src.scene_contract.build_scene``)."""
+        self.run_js(map3d_js.set_scene(scene))
 
     def set_sun_for(self, lat: float, lng: float, when: datetime):
         """Point the 3D sun for a place/time (reuses ``src/solar`` via map3d_js)."""

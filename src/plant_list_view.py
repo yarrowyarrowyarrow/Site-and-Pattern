@@ -31,14 +31,9 @@ from PyQt6.QtWidgets import (
 
 
 # ── Type colours ──────────────────────────────────────────────────────────────
-_TYPE_COLORS: dict[str, str] = {
-    "tree":        "#2e7d32",
-    "shrub":       "#558b2f",
-    "herb":        "#7cb342",
-    "groundcover": "#c6a817",
-    "vine":        "#00838f",
-    "root":        "#6d4c41",
-}
+# Canonical table lives in src/member_colors (Qt-free); re-exported under
+# the historical name for PlantPanel and friends.
+from src.member_colors import TYPE_COLORS as _TYPE_COLORS
 
 # ── Vocabulary labels (also imported by plant_panel.py for filter UI) ─────────
 _SUN_LABELS: dict[str, str] = {

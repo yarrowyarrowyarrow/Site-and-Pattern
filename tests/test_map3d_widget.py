@@ -41,10 +41,37 @@ class TestMap3DWidget(unittest.TestCase):
         cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
     def test_constructs_without_built_dist(self):
-        from src.map3d_widget import Map3DWidget, dist_index_path
+        from src.map3d_widget import (Map3DWidget, builtin_viewer_path,
+                                      dist_index_path)
         w = Map3DWidget()
-        # No built map3d dist checked in → placeholder, has_scene False.
+        # No built map3d dist checked in → the built-in scene3d viewer.
         self.assertEqual(w.has_scene, dist_index_path() is not None)
+        if dist_index_path() is None:
+            self.assertEqual(w.mode, "builtin")
+            self.assertIsNotNone(builtin_viewer_path())
+        w.deleteLater()
+
+    def test_js_queued_until_load_finished(self):
+        # Pushes that race the page load must be replayed, not dropped —
+        # the && guards in the page silently no-op early calls.
+        from src.map3d_widget import Map3DWidget
+        w = Map3DWidget()
+        ran = []
+
+        class _FakePage:
+            def runJavaScript(self, js):
+                ran.append(js)
+
+        w.page = lambda: _FakePage()           # capture instead of running
+        w._loaded = False                      # simulate pre-load push
+        w.apply_scene({"version": 1, "bounds": {}})
+        self.assertEqual(ran, [])
+        self.assertEqual(len(w._pending_js), 1)
+        w._on_load_finished(True)              # page ready → replay
+        self.assertEqual(len(ran), 1)
+        self.assertIn("permaSetScene", ran[0])
+        w.run_js("window.permaSetSun && window.permaSetSun(1.0, 2.0);")
+        self.assertEqual(len(ran), 2)          # post-load runs immediately
         w.deleteLater()
 
     def test_set_scene_pushes_guarded_plants_js(self):

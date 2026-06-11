@@ -1,0 +1,360 @@
+<!doctype html>
+<!--
+  html/scene3d.html — PermaDesign's built-in 3D design viewer (V1.62).
+
+  Self-contained three.js scene driven entirely by the desktop host through
+  three guarded hooks (all registered at module init):
+
+    window.permaSetScene(scene)  — full rebuild from a Scene JSON dict
+                                   (src/scene_contract.py, SCENE_VERSION 1;
+                                   local metres: +x east, +y north)
+    window.permaSetSun(az, alt)  — point the shadow-casting sun
+                                   (azimuth deg CW from north, altitude deg)
+    window.permaSetPlants(recs)  — legacy per-plant update (lat/lng records
+                                   from src/scene3d.py); projected with the
+                                   cosLat metric about the last scene origin
+
+  Axis mapping (scene → three.js, Y-up): x_east → +x, y_north → −z,
+  height → +y.
+
+  three.js loads from unpkg, matching how html/map.html loads Leaflet —
+  the map already assumes network for tiles. Offline shows a notice
+  instead of a scene.
+
+  Plants render as instanced archetype meshes (trunk+crown trees, shrub
+  domes, herb cones, groundcover discs) — hundreds of plants are two-digit
+  draw calls. presence_opacity is encoded by fading the instance colour
+  toward the sky tint (per-instance alpha isn't a thing for InstancedMesh).
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<title>PermaDesign 3D</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #cfe3f2; }
+  #hud {
+    position: absolute; top: 10px; left: 10px; z-index: 5;
+    font-family: system-ui, sans-serif; font-size: 13px; color: #1b3a26;
+    background: rgba(255,255,255,.82); border-radius: 8px; padding: 7px 12px;
+    pointer-events: none; line-height: 1.45;
+  }
+  #offline {
+    position: absolute; inset: 0; display: none; z-index: 10;
+    align-items: center; justify-content: center; text-align: center;
+    font-family: system-ui, sans-serif; color: #5d4037; background: #efebe9;
+  }
+</style>
+</head>
+<body>
+<div id="hud">3D view — loading…</div>
+<div id="offline"><div id="offline-msg"><b>3D viewer needs the network once</b><br>
+three.js couldn't be loaded (offline?). The 2D map is unaffected.</div></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script>
+  // Fail loudly, not with a stuck "loading…": if the module graph didn't
+  // initialise within 8s (offline → three.js unfetchable, or WebGL
+  // unavailable → renderer construction threw), say which.
+  window.permaFatal = function (msg) {
+    document.getElementById('offline-msg').innerHTML = msg;
+    document.getElementById('offline').style.display = 'flex';
+  };
+  setTimeout(function () {
+    if (!window.permaSetScene) {
+      window.permaFatal(window.permaBootError ||
+        '<b>3D viewer needs the network once</b><br>' +
+        'three.js couldn\'t be loaded (offline?). The 2D map is unaffected.');
+    }
+  }, 8000);
+  // Users can't see the devtools console — surface uncaught errors.
+  window.addEventListener('error', function (e) {
+    var hud = document.getElementById('hud');
+    if (hud && e && e.message) {
+      hud.innerHTML = '3D viewer error: ' + String(e.message).slice(0, 160);
+    }
+  });
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const SKY = 0xcfe3f2, GROUND = 0x8aa86f;
+
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+} catch (e) {
+  window.permaBootError = '<b>3D needs WebGL</b><br>This system\'s graphics '
+    + 'stack doesn\'t offer WebGL, so the 3D preview can\'t render here. '
+    + 'The 2D map is unaffected.';
+  window.permaFatal(window.permaBootError);
+  throw e;
+}
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(SKY);
+scene.fog = new THREE.Fog(SKY, 400, 1400);
+
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 4000);
+camera.position.set(45, 38, 55);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.maxPolarAngle = Math.PI / 2 - 0.02;   // never go underground
+controls.target.set(0, 0, 0);
+
+scene.add(new THREE.HemisphereLight(0xdfeefc, 0x5d6e51, 0.75));
+const sun = new THREE.DirectionalLight(0xfff4d6, 2.1);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+scene.add(sun, sun.target);
+
+// Everything rebuilt per scene push lives under one group.
+let designGroup = null;
+let lastOrigin = null;      // {lat, lng} for the legacy permaSetPlants hook
+let plantsGroup = null;     // sub-group holding plant instanced meshes
+
+function sunVector(azDeg, altDeg) {
+  // azimuth CW from north; scene: north = -z, east = +x.
+  const az = azDeg * Math.PI / 180, alt = altDeg * Math.PI / 180;
+  return new THREE.Vector3(
+    Math.sin(az) * Math.cos(alt),    // east
+    Math.sin(alt),                   // up
+    -Math.cos(az) * Math.cos(alt),   // north → -z
+  );
+}
+
+function setSun(azDeg, altDeg) {
+  const v = sunVector(azDeg, altDeg).multiplyScalar(300);
+  sun.position.copy(v);
+  sun.target.position.set(0, 0, 0);
+}
+setSun(180, 55);   // sane default until the host pushes the real sun
+
+function fitShadowAndCamera(bounds) {
+  const w = bounds.max_x - bounds.min_x, d = bounds.max_y - bounds.min_y;
+  const r = Math.max(w, d) * 0.75;
+  const cam = sun.shadow.camera;
+  cam.left = -r; cam.right = r; cam.top = r; cam.bottom = -r;
+  cam.near = 1; cam.far = 900;
+  cam.updateProjectionMatrix();
+  const cx = (bounds.min_x + bounds.max_x) / 2;
+  const cz = -(bounds.min_y + bounds.max_y) / 2;
+  controls.target.set(cx, 0, cz);
+  camera.position.set(cx + r * 0.9, r * 0.85, cz + r * 1.1);
+}
+
+function fadeToward(hex, opacity) {
+  // presence_opacity < 1 → blend the colour toward the sky tint.
+  const c = new THREE.Color(hex || '#66bb6a');
+  return c.lerp(new THREE.Color(SKY), 1 - Math.max(0, Math.min(1, opacity ?? 1)));
+}
+
+// ── terrain / ground ────────────────────────────────────────────────────────
+
+function buildGround(group, sc) {
+  const b = sc.bounds, t = sc.terrain;
+  if (t && t.rows > 1 && t.cols > 1) {
+    const w = t.max_x - t.min_x, d = t.max_y - t.min_y;
+    const geo = new THREE.PlaneGeometry(w, d, t.cols - 1, t.rows - 1);
+    // PlaneGeometry grid: row 0 = +y edge (north after rotation) — matches
+    // the contract's "heights row 0 = north".
+    const pos = geo.attributes.position;
+    for (let r = 0; r < t.rows; r++)
+      for (let c = 0; c < t.cols; c++)
+        pos.setZ(r * t.cols + c, t.heights[r][c]);
+    geo.computeVertexNormals();
+    const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+      color: GROUND, roughness: 1 }));
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.set(t.min_x + w / 2, 0, -(t.min_y + d / 2));
+    mesh.receiveShadow = true;
+    group.add(mesh);
+  }
+  // A wide flat apron under/around everything (also the only ground when
+  // no terrain came with the scene).
+  const aw = (b.max_x - b.min_x) * 3, ad = (b.max_y - b.min_y) * 3;
+  const apron = new THREE.Mesh(
+    new THREE.PlaneGeometry(aw, ad),
+    new THREE.MeshStandardMaterial({ color: GROUND, roughness: 1 }));
+  apron.rotation.x = -Math.PI / 2;
+  apron.position.set((b.min_x + b.max_x) / 2, -0.02, -(b.min_y + b.max_y) / 2);
+  apron.receiveShadow = true;
+  group.add(apron);
+}
+
+function buildBoundary(group, ring) {
+  if (!ring || ring.length < 3) return;
+  const pts = ring.concat([ring[0]]).map(p => new THREE.Vector3(p[0], 0.12, -p[1]));
+  const line = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: 0xf9a825 }));
+  group.add(line);
+}
+
+// ── buildings / footprints ─────────────────────────────────────────────────
+
+function buildBuildings(group, buildings) {
+  for (const bld of buildings || []) {
+    const ring = bld.ring || [];
+    if (ring.length < 3) continue;
+    const shape = new THREE.Shape(ring.map(p => new THREE.Vector2(p[0], p[1])));
+    const geo = new THREE.ExtrudeGeometry(shape, {
+      depth: Math.max(0.3, bld.height_m || 3), bevelEnabled: false });
+    const mat = bld.kind === 'canopy'
+      ? new THREE.MeshStandardMaterial({ color: 0x4e6e52, roughness: 1,
+                                         transparent: true, opacity: 0.85 })
+      : new THREE.MeshStandardMaterial({ color: 0xb0a18c, roughness: 0.9 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.rotation.x = -Math.PI / 2;     // shape (x,y) → (x, -z); depth → +y
+    mesh.castShadow = mesh.receiveShadow = true;
+    group.add(mesh);
+  }
+}
+
+// ── plants (instanced archetypes) ──────────────────────────────────────────
+
+const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(),
+      _s = new THREE.Vector3(), _v = new THREE.Vector3();
+
+function instanced(geo, count, rough = 0.95) {
+  const mesh = new THREE.InstancedMesh(
+    geo, new THREE.MeshStandardMaterial({ roughness: rough }), count);
+  mesh.castShadow = mesh.receiveShadow = true;
+  return mesh;
+}
+
+function setInst(mesh, i, x, h0, z, sx, sy, sz, colorHex, opacity) {
+  _v.set(x, h0, z); _s.set(sx, sy, sz); _q.identity();
+  _m.compose(_v, _q, _s);
+  mesh.setMatrixAt(i, _m);
+  mesh.setColorAt(i, fadeToward(colorHex, opacity));
+}
+
+// Unit geometries (height 1, radius 0.5) scaled per instance.
+const GEO = {
+  trunk: new THREE.CylinderGeometry(0.5, 0.6, 1, 6).translate(0, 0.5, 0),
+  crown: new THREE.SphereGeometry(0.5, 10, 8).translate(0, 0.5, 0),
+  dome:  new THREE.SphereGeometry(0.5, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+  cone:  new THREE.ConeGeometry(0.5, 1, 7).translate(0, 0.5, 0),
+  disc:  new THREE.CylinderGeometry(0.5, 0.5, 1, 10).translate(0, 0.5, 0),
+};
+
+function buildPlants(group, plants) {
+  if (plantsGroup) { group.remove(plantsGroup); }
+  plantsGroup = new THREE.Group();
+  group.add(plantsGroup);
+  const byKind = { tree: [], shrub: [], vine: [], groundcover: [], herb: [] };
+  for (const p of plants || []) {
+    const k = byKind[p.plant_type] ? p.plant_type : 'herb';
+    byKind[k].push(p);
+  }
+
+  if (byKind.tree.length) {
+    const trunks = instanced(GEO.trunk, byKind.tree.length);
+    const crowns = instanced(GEO.crown, byKind.tree.length);
+    byKind.tree.forEach((p, i) => {
+      const h = Math.max(0.3, p.height_m), c = Math.max(0.3, p.canopy_m);
+      const trunkH = h * 0.35;
+      setInst(trunks, i, p.x, 0, -p.y, c * 0.12, trunkH, c * 0.12,
+              '#6d4c41', p.opacity);
+      setInst(crowns, i, p.x, trunkH, -p.y, c, h - trunkH, c,
+              p.color, p.opacity);
+    });
+    plantsGroup.add(trunks, crowns);
+  }
+  const simple = [
+    ['shrub', GEO.dome, (p, h, c) => [c, Math.max(0.2, h) * 2, c]],
+    ['vine', GEO.cone, (p, h, c) => [Math.max(0.25, c * 0.6), h, Math.max(0.25, c * 0.6)]],
+    ['herb', GEO.cone, (p, h, c) => [c, h, c]],
+    ['groundcover', GEO.disc, (p, h, c) => [c, Math.min(0.12, Math.max(0.04, h)), c]],
+  ];
+  for (const [kind, geo, scale] of simple) {
+    const list = byKind[kind];
+    if (!list.length) continue;
+    const mesh = instanced(geo, list.length);
+    list.forEach((p, i) => {
+      const h = Math.max(0.08, p.height_m), c = Math.max(0.15, p.canopy_m);
+      const [sx, sy, sz] = scale(p, h, c);
+      setInst(mesh, i, p.x, 0, -p.y, sx, sy, sz, p.color, p.opacity);
+    });
+    plantsGroup.add(mesh);
+  }
+}
+
+function buildStructures(group, structures) {
+  for (const s of structures || []) {
+    const size = Math.max(0.3, s.size_m || 1), h = Math.max(0.3, s.height_m || 1);
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(size, h, size),
+      new THREE.MeshStandardMaterial({ color: 0x8d6e63, roughness: 0.9 }));
+    mesh.position.set(s.x, h / 2, -s.y);
+    mesh.castShadow = mesh.receiveShadow = true;
+    group.add(mesh);
+  }
+}
+
+// ── hooks ───────────────────────────────────────────────────────────────────
+
+window.permaSetScene = function (sc) {
+  if (!sc || !sc.bounds) return;
+  if (designGroup) scene.remove(designGroup);
+  designGroup = new THREE.Group();
+  scene.add(designGroup);
+  lastOrigin = sc.origin || null;
+
+  buildGround(designGroup, sc);
+  buildBoundary(designGroup, sc.boundary);
+  buildBuildings(designGroup, sc.buildings);
+  buildPlants(designGroup, sc.plants);
+  buildStructures(designGroup, sc.structures);
+  if (sc.sun) setSun(sc.sun.azimuth_deg, sc.sun.altitude_deg);
+  fitShadowAndCamera(sc.bounds);
+
+  const n = (sc.plants || []).length;
+  document.getElementById('hud').innerHTML =
+    `<b>Year ${sc.year}</b> &nbsp;·&nbsp; ${n} plant${n === 1 ? '' : 's'}`
+    + ((sc.buildings || []).length ? ` &nbsp;·&nbsp; ${sc.buildings.length} structure footprint(s)` : '')
+    + (sc.terrain ? ' &nbsp;·&nbsp; terrain' : '');
+};
+
+window.permaSetSun = function (azDeg, altDeg) { setSun(azDeg, altDeg); };
+
+// Legacy hook: scene3d.placed_plants_3d_state records carry lat/lng — project
+// them with the cosLat metric about the last scene origin.
+window.permaSetPlants = function (records) {
+  if (!designGroup || !lastOrigin) return;
+  const mPerDegLat = 111320.0;
+  const cosLat = Math.max(1e-9, Math.cos(lastOrigin.lat * Math.PI / 180));
+  const plants = (records || []).map(r => ({
+    x: (r.lng - lastOrigin.lng) * mPerDegLat * cosLat,
+    y: (r.lat - lastOrigin.lat) * mPerDegLat,
+    height_m: r.height_m, canopy_m: r.canopy_m,
+    plant_type: r.plant_type, color: r.color, opacity: r.presence_opacity,
+  }));
+  buildPlants(designGroup, plants);
+};
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+</script>
+</body>
+</html>

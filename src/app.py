@@ -48,6 +48,7 @@ from src.controllers.map_events import MapEventRouter
 from src.controllers.generation import GenerationController
 from src.controllers.area_fill_controller import AreaFillController
 from src.project_store import ProjectStore
+from src.scene3d_window import open_3d_view as _open_3d_view
 
 
 # Marker colour tables for plant-community members — moved to the Qt-free
@@ -478,6 +479,17 @@ class MainWindow(QMainWindow):
             "Toggle the right-hand panel (Site / Plants / Analysis / …)"
         )
         self._act_show_sidebar.triggered.connect(self._on_toggle_sidebar)
+
+        view_menu.addSeparator()
+        act_3d = view_menu.addAction("&3D Preview…")
+        act_3d.setStatusTip(
+            "Open the 3D view of this design — growth timeline, sun "
+            "shadows, terrain"
+        )
+        # Lambda (not a MainWindow method) on purpose: the window manages
+        # itself in src/scene3d_window.py and the architecture guard's
+        # method ceiling stays meaningful.
+        act_3d.triggered.connect(lambda: _open_3d_view(self))
 
         view_menu.addSeparator()
         act_map_settings = view_menu.addAction("&Map Settings…")
