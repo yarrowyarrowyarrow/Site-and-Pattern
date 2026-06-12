@@ -70,8 +70,10 @@
 
     // ── Unified selection model ──────────────────────────────────────────────
     // Each entry is a `_pd`-style descriptor with at least { kind, ... }
-    // where kind ∈ 'plant' | 'boundary' | 'sector' | 'sunpath' and the rest of
-    // the fields identify the underlying object (markerId, boundaryId, etc.).
+    // where kind ∈ 'plant' | 'boundary' | 'sector' | 'structure' | 'shape'
+    // | 'sunpath' and the rest of the fields identify the underlying object
+    // (markerId, boundaryId, shapeId, etc.). 'shape' covers OSM buildings,
+    // shade-casting footprints and custom area shapes — all in shapeLayers.
     // Keeping a flat list lets marquee/Delete/right-click operate uniformly
     // across feature types — the previous code had per-type isolated state.
     var selectedItems = [];
@@ -105,6 +107,7 @@
       if (a.kind === 'boundary')  return a.boundaryId === b.boundaryId;
       if (a.kind === 'sector')    return a.sectorId === b.sectorId;
       if (a.kind === 'structure') return a.structureId === b.structureId;
+      if (a.kind === 'shape')     return a.shapeId === b.shapeId;
       if (a.kind === 'sunpath')   return true;   // single sunpath at a time
       return false;
     }
@@ -193,6 +196,24 @@
           });
         }
       });
+      // Shapes (OSM buildings, shade footprints, custom shapes) — yellow
+      // outline while selected; base style restored from the polygon's own
+      // _shape metadata on deselect (shade casters draw heavier at rest).
+      if (typeof shapeLayers !== 'undefined') {
+        Object.keys(shapeLayers).forEach(function(shid) {
+          var sel = _selectionContains({ kind: 'shape', shapeId: shid });
+          var g = shapeLayers[shid];
+          if (!g || !g.eachLayer) return;
+          g.eachLayer(function(lyr) {
+            var meta = lyr._shape;
+            if (!meta || !lyr.setStyle) return;
+            lyr.setStyle({
+              color:  sel ? '#fdd835' : (meta.strokeColor || '#2e7d32'),
+              weight: sel ? 4 : ((meta.heightM > 0) ? 3 : 2)
+            });
+          });
+        });
+      }
       _updateSelectionBadge();
     }
 
@@ -229,11 +250,13 @@
 
     // ── Marquee (shift+drag) selection ───────────────────────────────────────
     // Shift+drag on the map background draws a yellow dashed rectangle and
-    // selects every plant / boundary / sector / sun-path centre that
-    // intersects it. Plain drag continues to pan; ctrl+shift+drag is
-    // additive (extend the existing selection). We intercept at the DOM
-    // level so we don't fight Leaflet's pan handler — when shift is held on
-    // mousedown we simply prevent Leaflet from receiving the event.
+    // selects every plant / boundary / sector / structure (incl. marked
+    // trees+buildings) / shape (OSM buildings, shade footprints, custom
+    // shapes) / sun-path centre that intersects it. Plain drag continues to
+    // pan; ctrl+shift+drag is additive (extend the existing selection). We
+    // intercept at the DOM level so we don't fight Leaflet's pan handler —
+    // when shift is held on mousedown we simply prevent Leaflet from
+    // receiving the event.
 
     function _initMarqueeHandlers() {
       // Disable Leaflet's native shift-zoom box so it doesn't collide
@@ -383,6 +406,31 @@
                       structId: anc.structId, lat: anc.lat, lng: anc.lng });
         }
       });
+      // Shapes (OSM buildings, shade footprints, custom shapes) — any
+      // vertex inside the rect counts (matching boundaries), with a
+      // centroid fallback so a marquee drawn fully inside a large
+      // footprint still catches it.
+      if (typeof shapeLayers !== 'undefined') {
+        Object.keys(shapeLayers).forEach(function(shid) {
+          var g = shapeLayers[shid];
+          if (!g || !g.eachLayer) return;
+          var hit = false;
+          g.eachLayer(function(lyr) {
+            if (hit || !lyr._shape) return;
+            var ps = lyr._shape.points || [];
+            for (var i = 0; i < ps.length; i++) {
+              if (bounds.contains(L.latLng(ps[i][0], ps[i][1]))) {
+                hit = true;
+                return;
+              }
+            }
+            if (lyr.getBounds && bounds.contains(lyr.getBounds().getCenter())) {
+              hit = true;
+            }
+          });
+          if (hit) hits.push({ kind: 'shape', shapeId: shid });
+        });
+      }
       // Sun path — represented by its centre tooltip; we check the
       // existing centre marker via sunPathLayer if present.
       if (typeof sunPathLayer !== 'undefined' && sunPathLayer && sunPathLayer.getLayers) {
@@ -434,6 +482,14 @@
             bridge.onStructureRemoved(item.structureId, item.structId,
                                       item.lat, item.lng);
           }
+        } else if (item.kind === 'shape') {
+          if (typeof shapeEditId !== 'undefined' && shapeEditId === item.shapeId
+              && typeof exitShapeEditMode === 'function') {
+            exitShapeEditMode();
+          }
+          var shg = (typeof shapeLayers !== 'undefined') ? shapeLayers[item.shapeId] : null;
+          if (shg) { map.removeLayer(shg); delete shapeLayers[item.shapeId]; }
+          if (bridge && bridge.onShapeRemoved) bridge.onShapeRemoved(item.shapeId);
         } else if (item.kind === 'sunpath') {
           if (typeof clearSunPath === 'function') {
             clearSunPath();

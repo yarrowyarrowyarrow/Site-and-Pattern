@@ -334,11 +334,19 @@ class MapEventRouter:
             self._refresh_shade_if_active()   # new caster updates a live overlay
 
     def _on_shape_removed(self, shape_id: str):
+        feats = self._main._project["features"]
+        removed_caster = any(
+            f.get("properties", {}).get("shape_id") == shape_id
+            and f.get("properties", {}).get("cast_shade")
+            for f in feats
+        )
         self._main._project["features"] = [
-            f for f in self._main._project["features"]
+            f for f in feats
             if f.get("properties", {}).get("shape_id") != shape_id
         ]
         self._main._mark_modified()
+        if removed_caster:
+            self._refresh_shade_if_active()   # shadow must follow its caster
 
     def _on_shape_height_changed(self, shape_id: str, height_m: float):
         """Update a drawn shape's height in place (map right-click 'edit

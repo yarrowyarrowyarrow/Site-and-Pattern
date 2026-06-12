@@ -509,12 +509,18 @@
       });
 
       // Left-click → edit the outline (drag vertices), mirroring boundaries.
-      // Guarded on 'none' mode so it never hijacks a placement click; modifier
-      // clicks are left for selection elsewhere.
+      // Guarded on 'none' mode so it never hijacks a placement click; a
+      // modifier click (shift/ctrl/cmd) toggles selection instead, matching
+      // plants/boundaries/structures.
       polygon.on('click', function(e) {
         L.DomEvent.stop(e);
         var oe = e.originalEvent;
-        if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) return;
+        if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) {
+          if (typeof toggleSelection === 'function') {
+            toggleSelection({ kind: 'shape', shapeId: id });
+          }
+          return;
+        }
         if (currentMode === 'none') enterShapeEditMode(id);
       });
 
