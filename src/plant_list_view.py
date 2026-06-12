@@ -186,6 +186,9 @@ _CAL_LEGEND_H    = 14
 _CAL_GAP         = 3
 _CAL_BLOCK_H     = (_CAL_MONTH_ROW_H + _CAL_STRIP_H + _CAL_LEGEND_H
                     + _CAL_GAP * 3)
+# Breathing room between the legend's last line and the notes paragraph,
+# so even a wrapped legend (macOS's wider font) reads clearly separated.
+_CAL_NOTES_GAP   = 6
 
 # Expanded-row photo block (I1): max image height + two attribution lines.
 _IMG_MAX_H = 110
@@ -588,7 +591,8 @@ class PlantRowDelegate(QStyledItemDelegate):
                 # Reserve the extra lines the legend wraps onto (wider
                 # macOS fonts), mirroring the offset used in paint().
                 extra_rows = self._legend_rows_for_width(avail_w) - 1
-                cal_h = _CAL_BLOCK_H + extra_rows * (_CAL_LEGEND_H + 2)
+                cal_h = (_CAL_BLOCK_H + extra_rows * (_CAL_LEGEND_H + 2)
+                         + _CAL_NOTES_GAP)
         # Open-licensed photo (I1): reserved only when one is cached, so the
         # row height is unchanged until images exist.
         image_h = 0
@@ -913,7 +917,8 @@ class PlantRowDelegate(QStyledItemDelegate):
                 # below it instead of underneath it.
                 extra_rows = self._legend_rows_for_width(detail.width()) - 1
                 notes_top_offset = (12 * line_h + _CAL_BLOCK_H
-                                    + extra_rows * (_CAL_LEGEND_H + 2))
+                                    + extra_rows * (_CAL_LEGEND_H + 2)
+                                    + _CAL_NOTES_GAP)
             else:
                 notes_top_offset = 12 * line_h + 4
 
