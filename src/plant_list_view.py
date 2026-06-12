@@ -557,7 +557,9 @@ class PlantRowDelegate(QStyledItemDelegate):
         if not expanded:
             return QSize(0, compact_h)
         # Estimate detail height: base + per-line height for description.
-        avail_w = max(200, panel_w - 12)
+        # 16 matches the painted detail rect (rect.width() - 16) so the
+        # wrap estimate and the painted wrap agree.
+        avail_w = max(200, panel_w - 16)
         fm = QFontMetrics(self._small_font)
         notes = plant.get("notes") or ""
         notes_h = 0
@@ -583,7 +585,10 @@ class PlantRowDelegate(QStyledItemDelegate):
         if isinstance(model, PlantListModel):
             cal = model.calendar_for(plant.get("id"))
             if cal:
-                cal_h = _CAL_BLOCK_H
+                # Reserve the extra lines the legend wraps onto (wider
+                # macOS fonts), mirroring the offset used in paint().
+                extra_rows = self._legend_rows_for_width(avail_w) - 1
+                cal_h = _CAL_BLOCK_H + extra_rows * (_CAL_LEGEND_H + 2)
         # Open-licensed photo (I1): reserved only when one is cached, so the
         # row height is unchanged until images exist.
         image_h = 0
@@ -903,7 +908,12 @@ class PlantRowDelegate(QStyledItemDelegate):
                 cal = model.calendar_for(plant.get("id"))
             if cal:
                 self._paint_calendar(painter, detail, cal_block_top, cal)
-                notes_top_offset = 12 * line_h + _CAL_BLOCK_H
+                # _CAL_BLOCK_H covers a single legend line; add the lines
+                # the legend actually wrapped onto so the notes start
+                # below it instead of underneath it.
+                extra_rows = self._legend_rows_for_width(detail.width()) - 1
+                notes_top_offset = (12 * line_h + _CAL_BLOCK_H
+                                    + extra_rows * (_CAL_LEGEND_H + 2))
             else:
                 notes_top_offset = 12 * line_h + 4
 
@@ -922,6 +932,28 @@ class PlantRowDelegate(QStyledItemDelegate):
         painter.restore()
 
     # ── Calendar strip painter ──────────────────────────────────────────
+
+    def _legend_rows_for_width(self, detail_w: int) -> int:
+        """How many lines the calendar legend wraps onto at this width.
+
+        Mirrors the wrap loop in ``_paint_calendar`` exactly, so the
+        painted legend and the heights reserved in sizeHint/paint can
+        never disagree — macOS's wider font wraps "Pruning" onto a second
+        legend line that used to be painted straight over the notes text
+        below (the _CAL_BLOCK_H constant only covers one legend line).
+        """
+        fm = QFontMetrics(self._small_font)
+        rows = 1
+        x = 0
+        for status in _CALENDAR_STATUS_COLORS:
+            if status == "dormant":
+                continue   # skipped by the painter too
+            tw = fm.horizontalAdvance(_CALENDAR_STATUS_LABELS[status])
+            if x + 9 + tw + 8 > detail_w - 1:   # detail.right() == left+w-1
+                rows += 1
+                x = 0
+            x += 9 + tw + 8
+        return rows
 
     def _paint_calendar(self, painter: QPainter, detail: QRect, top: int,
                         cal: list[dict]):
