@@ -37,17 +37,6 @@
 - 52 seed plants fully populated with new fields
 - Detail panel shows all new fields including colour-coded companion display
 
-### Step B — Permapeople API
-- `src/api/permapeople.py` — urllib-based client (no extra dependencies),
-  `POST /api/search` with JSON body `{"q": "term"}`, field normalisation
-  mapping Permapeople schema → local schema, `PermapeopleWorker(QObject)`
-  runs in `QThread` so UI never freezes
-- `src/settings.py` — stores key_id + key_secret in
-  `~/.permadesign_config.json`; `SettingsDialog` for entering/updating keys
-- Plant panel has two tabs: **Local** (existing browser) and **Permapeople**
-  (live search + import-to-DB button)
-- Imported plants land in the local DB and can be placed on the map
-
 ### Step C — Edmonton Planting Calendar (NEW)
 - New DB table: `planting_calendar(plant_id, month, status, notes)`
   - Status values: `dormant`, `start_indoors`, `direct_sow`, `transplant`,
@@ -96,12 +85,10 @@ PermaDesign/
 │   ├── app.py                  MainWindow — project state, signal wiring
 │   ├── climate.py              get_zone(lat, lng), zone_label()
 │   ├── map_widget.py           MapBridge (QObject) + MapWidget (QWebEngineView)
-│   ├── plant_panel.py          PlantPanel — Local + Permapeople tabs + calendar grid
+│   ├── plant_panel.py          PlantPanel — plant browser + calendar grid
 │   ├── project.py              GeoJSON save/load helpers
 │   ├── settings.py             Config file + SettingsDialog
 │   ├── toolbar.py              MainToolbar
-│   ├── api/
-│   │   └── permapeople.py      Permapeople API client + QThread worker
 │   └── db/
 │       ├── plants.py           DB access layer — init, search, get, companions, calendar
 │       ├── schema.sql          SQL schema (v3) — plants + companion + calendar tables
@@ -119,10 +106,10 @@ PermaDesign/
 
 ## Next Steps (Ideas for Future Development)
 
-### Step E — Layer Management & Plant Guilds
-- Group plants into permaculture guilds (e.g. apple guild, nitrogen-fixer ring)
-- Visual guild overlay on the map with toggle
-- Guild template library for common food forest patterns
+### Step E — Layer Management & Plant Polycultures
+- Group plants into permaculture polycultures (e.g. apple polyculture, nitrogen-fixer ring)
+- Visual polyculture overlay on the map with toggle
+- Polyculture template library for common food forest patterns
 
 ### Step F — Seasonal Timeline View
 - Timeline showing all plants' activities across the year in one view
@@ -150,11 +137,6 @@ PermaDesign/
 
 - `QFont::setPointSize` warnings in the console on Windows — harmless Qt noise,
   can be suppressed by setting `QT_LOGGING_RULES=qt.qpa.*=false` env var
-- Permapeople API response format: `POST /api/search` with JSON body `{"q":"term"}`;
-  the `data` field in each plant object may be a list rather than a dict —
-  already guarded against in `_normalize_plant()`
-- The Permapeople `_normalize_plant()` field mapping is best-effort; some fields
-  (hardiness zone, spacing) may come back as None for plants with sparse data
 - USDA import script (`import_usda.py`) auto-download may fail if the USDA API
   changes; manual CSV download is the reliable fallback
 - Calendar data is Edmonton-specific; other zones would need different timing
@@ -174,7 +156,7 @@ Paste this at the start of your next Claude Code session:
 > **Repository:** yarrowyarrowyarrow/PermaDesign
 > **Branch:** `claude/build-step-1-v1-hTpZB`
 >
-> Steps 1–4 (core app), Step A (expanded schema), Step B (Permapeople API),
+> Steps 1–4 (core app), Step A (expanded schema),
 > Step C (Edmonton planting calendar), and Step D (USDA CSV import) are
 > complete and working.
 >

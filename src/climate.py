@@ -1,19 +1,38 @@
 """
-climate.py — Hardiness zone lookup from latitude/longitude.
+climate.py — Hardiness zone lookup + growing-degree-day stats.
 
-Uses data/hardiness_zones.json (a set of bounding-box regions for Western
-Canada).  Falls back to simple latitude bands when no region matches.
+Two responsibilities:
+
+  * **Hardiness zone** (legacy): bounding-box lookup against
+    ``data/hardiness_zones.json``. Tells the user how cold the winters
+    get at the property location.
+
+  * **Growing-degree days + frost window** (V1.35): historical-temperature
+    aggregates from the Open-Meteo Historical Weather endpoint. Tells
+    the user how much *summer warmth* accumulates — the missing other
+    half of the climate picture. Two locations can share a hardiness
+    zone but differ in GDD by 30%+, which is the difference between
+    "apricots ripen here" and "apricots survive but never fruit".
+
+The GDD/frost code follows the existing rainfall-fetch pattern in
+``src/property_data.py`` (same vendor, same archive endpoint, same
+graceful-degradation pattern). Results are cached in the
+``climate_cache`` table (schema v14) keyed on the lat/lng quantized to
+0.01° so repeated pin-set events near the same spot don't re-fetch.
 """
 
 import json
+import math
 import os
+import urllib.error
+import urllib.request
+from datetime import date
 from functools import lru_cache
 from typing import Optional
 
-_DATA_FILE = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "data", "hardiness_zones.json"
-)
+from src.resources import resource_path
+
+_DATA_FILE = resource_path("data", "hardiness_zones.json")
 
 
 @lru_cache(maxsize=1)
@@ -89,3 +108,237 @@ def zone_description(zone: Optional[int]) -> str:
         9: "Zone 9 — warm (-7 to -1 °C winters) — Victoria",
     }
     return _desc.get(zone, zone_label(zone))
+
+
+# ── Growing-degree days + frost window (V1.35, schema v14) ──────────────────
+#
+# GDD₅ (growing-degree days, base 5°C) is the standard climate metric for
+# whether a plant has enough cumulative warmth to flower, set fruit, and
+# reach maturity in a given location. Computed as the sum of
+# max(0, daily_mean_temp - 5°C) across the growing season. Two locations
+# can share a hardiness zone but differ in GDD₅ by 30%+ — Lethbridge
+# accumulates ~1700 per year, Fort McMurray ~1300, both nominally Zone 3.
+#
+# Frost window is the average last-spring-frost day and first-fall-frost
+# day across the historical record. The difference is the average
+# frost-free-day count, which is what most planting calendars actually
+# care about.
+
+
+def compute_gdd(daily_rows: list[dict], base: float = 5.0) -> float:
+    """Compute total growing-degree days from a list of daily-temperature
+    rows. Each row is ``{"date": "YYYY-MM-DD", "tmin": float, "tmax":
+    float}`` or similar with both temps in °C. Returns 0.0 on empty
+    input. Returns the *mean per year* if rows span multiple years
+    (callers usually want the annual mean, not the multi-year total).
+    """
+    if not daily_rows:
+        return 0.0
+    total = 0.0
+    years: set[int] = set()
+    for row in daily_rows:
+        tmin = row.get("tmin")
+        tmax = row.get("tmax")
+        if tmin is None or tmax is None:
+            continue
+        # Daily mean approximation — standard for GDD when only daily
+        # min/max are available (vs hourly).
+        tmean = (float(tmin) + float(tmax)) / 2.0
+        if tmean > base:
+            total += (tmean - base)
+        date_str = row.get("date") or ""
+        if len(date_str) >= 4:
+            try:
+                years.add(int(date_str[:4]))
+            except ValueError:
+                pass
+    n_years = len(years) or 1
+    return round(total / n_years, 1)
+
+
+def frost_window(daily_rows: list[dict]) -> dict:
+    """Compute average last-spring-frost and first-fall-frost across all
+    years in ``daily_rows``. "Frost" is tmin ≤ 0 °C. Returns:
+
+        {
+          "last_spring_frost_doy": int | None,   # avg day-of-year in Jan-Jun
+          "first_fall_frost_doy":  int | None,   # avg day-of-year in Jul-Dec
+          "frost_free_days":       int | None,
+          "years_used":            int,
+        }
+
+    Returns Nones for the frost-day fields when no frost events were
+    found (e.g. coastal subtropical locations) or when input is empty.
+    """
+    by_year: dict[int, list[dict]] = {}
+    for row in daily_rows:
+        date_str = row.get("date") or ""
+        if len(date_str) < 4:
+            continue
+        try:
+            year = int(date_str[:4])
+        except ValueError:
+            continue
+        by_year.setdefault(year, []).append(row)
+
+    last_spring_doys: list[int] = []
+    first_fall_doys: list[int] = []
+    for year, rows in by_year.items():
+        last_spring: Optional[int] = None
+        first_fall: Optional[int] = None
+        for row in rows:
+            tmin = row.get("tmin")
+            if tmin is None or float(tmin) > 0:
+                continue
+            try:
+                d = date.fromisoformat(row["date"])
+            except (KeyError, ValueError):
+                continue
+            doy = d.timetuple().tm_yday
+            if d.month <= 6:
+                # First half of year — track the LAST frost we see.
+                if last_spring is None or doy > last_spring:
+                    last_spring = doy
+            else:
+                # Second half — track the FIRST frost we see.
+                if first_fall is None or doy < first_fall:
+                    first_fall = doy
+        if last_spring is not None:
+            last_spring_doys.append(last_spring)
+        if first_fall is not None:
+            first_fall_doys.append(first_fall)
+
+    last_avg  = round(sum(last_spring_doys) / len(last_spring_doys)) \
+        if last_spring_doys else None
+    first_avg = round(sum(first_fall_doys) / len(first_fall_doys)) \
+        if first_fall_doys else None
+    free_days: Optional[int] = None
+    if last_avg is not None and first_avg is not None:
+        free_days = first_avg - last_avg
+    return {
+        "last_spring_frost_doy": last_avg,
+        "first_fall_frost_doy":  first_avg,
+        "frost_free_days":       free_days,
+        "years_used":            len(by_year),
+    }
+
+
+def _http_get_json(url: str, timeout: float = 20.0) -> Optional[dict]:
+    """Minimal stdlib JSON fetch. Mirrors the pattern in property_data so
+    we don't drag in `requests` for one endpoint. Returns None on any
+    network/parse failure — caller renders 'unavailable' rather than
+    crashing."""
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except (urllib.error.URLError, urllib.error.HTTPError,
+            json.JSONDecodeError, TimeoutError, OSError):
+        return None
+
+
+def fetch_historical_temps(
+    lat: float, lng: float, years: int = 3,
+) -> Optional[list[dict]]:
+    """Fetch the last ``years`` complete calendar years of daily min/max
+    temperature for (lat, lng) from Open-Meteo Historical Weather
+    (ERA5-Land). Returns a list of ``{date, tmin, tmax}`` dicts in
+    chronological order, or ``None`` on any failure.
+
+    Default ``years=3`` since V1.37 — the GDD + frost-window stats
+    are stable across 3+ year windows in continental climates, and
+    the smaller payload halves the on-pin-drop fetch time vs. the
+    original 5-year window. Caller can pass a larger ``years`` for
+    higher-resolution averaging when latency doesn't matter.
+
+    Same vendor / endpoint / timeout policy as
+    ``property_data.fetch_rainfall`` — keeping the network surface
+    uniform across the codebase."""
+    today = date.today()
+    end_d = date(today.year - 1, 12, 31)
+    start = date(end_d.year - years + 1, 1, 1)
+    url = (
+        "https://archive-api.open-meteo.com/v1/archive?"
+        f"latitude={lat:.4f}&longitude={lng:.4f}"
+        f"&start_date={start.isoformat()}&end_date={end_d.isoformat()}"
+        "&daily=temperature_2m_min,temperature_2m_max&timezone=UTC"
+    )
+    data = _http_get_json(url)
+    if not data or "daily" not in data:
+        return None
+    daily = data["daily"]
+    times  = daily.get("time")          or []
+    tmins  = daily.get("temperature_2m_min") or []
+    tmaxs  = daily.get("temperature_2m_max") or []
+    if not times or len(times) != len(tmins) or len(times) != len(tmaxs):
+        return None
+    return [
+        {"date": t, "tmin": tmin, "tmax": tmax}
+        for t, tmin, tmax in zip(times, tmins, tmaxs)
+        if tmin is not None and tmax is not None
+    ]
+
+
+def get_climate_summary(
+    lat: float, lng: float,
+    *,
+    use_cache: bool = True,
+    _fetcher=fetch_historical_temps,
+) -> Optional[dict]:
+    """Return a climate-summary dict for (lat, lng), or ``None`` if the
+    fetch fails and nothing is cached. Shape:
+
+        {
+          "gdd5_mean":             float,
+          "last_spring_frost_doy": int,
+          "first_fall_frost_doy":  int,
+          "frost_free_days":       int,
+          "years_used":            int,
+          "source":                str,
+          "cached":                bool,   # True if served from DB cache
+        }
+
+    On a cache miss, fetches from Open-Meteo, derives the stats, stores
+    them, and returns ``cached=False``. The ``_fetcher`` parameter
+    exists for tests (mock the network call without monkey-patching the
+    module attribute)."""
+    if use_cache:
+        try:
+            from src.db.plants import get_cached_climate
+            cached = get_cached_climate(lat, lng)
+        except Exception:
+            cached = None
+        if cached:
+            cached["cached"] = True
+            return cached
+
+    rows = _fetcher(lat, lng)
+    if not rows:
+        return None
+
+    summary = {
+        "gdd5_mean": compute_gdd(rows, base=5.0),
+        "source":    "Open-Meteo / ERA5-Land",
+        "cached":    False,
+    }
+    summary.update(frost_window(rows))
+
+    if use_cache:
+        try:
+            from src.db.plants import store_cached_climate
+            store_cached_climate(lat, lng, summary)
+        except Exception:
+            pass            # cache failure shouldn't block the result
+    return summary
+
+
+def doy_to_date_label(doy: Optional[int], year: int = 2025) -> str:
+    """Format a day-of-year as 'Jun 15' for UI display. Uses a non-leap
+    reference year by default — the difference vs leap years is at most
+    one day."""
+    if doy is None:
+        return "—"
+    try:
+        d = date.fromordinal(date(year, 1, 1).toordinal() + int(doy) - 1)
+    except (ValueError, OverflowError):
+        return "—"
+    return d.strftime("%b %-d") if os.name != "nt" else d.strftime("%b %d").lstrip("0")

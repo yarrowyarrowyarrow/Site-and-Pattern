@@ -28,6 +28,7 @@ from datetime import date, timedelta
 from typing import Optional
 
 from src.climate import get_zone
+from src.resources import resource_path
 
 
 _TIMEOUT = 8.0
@@ -49,9 +50,13 @@ def _http_get_json(url: str, timeout: float = _TIMEOUT) -> Optional[dict]:
 def fetch_rainfall(lat: float, lng: float, years: int = 10) -> Optional[dict]:
     """
     Annual + monthly mean precipitation (mm) from ERA5-Land via Open-Meteo.
+    Falls back to a bundled Alberta climate-normal dataset
+    (``data/rainfall_fallback_alberta.json``) when the live API is
+    unreachable or returns no usable data, so the UI never has to show
+    a bare "unavailable" in an offline / firewalled / API-down session.
 
     Returns ``{"annual_mm", "monthly_mm" (12), "years_used", "source"}``
-    or ``None`` if the request fails.
+    or ``None`` if both the live fetch and the fallback fail.
     """
     today = date.today()
     end_d = date(today.year - 1, 12, 31)
@@ -62,10 +67,52 @@ def fetch_rainfall(lat: float, lng: float, years: int = 10) -> Optional[dict]:
         f"&start_date={start.isoformat()}&end_date={end_d.isoformat()}"
         "&daily=precipitation_sum&timezone=UTC"
     )
-    data = _http_get_json(url)
-    if not data or "daily" not in data:
+    # The archive API ships ~10 years of daily data per call; the
+    # default 8 s timeout is borderline on slower connections, so give
+    # this endpoint more breathing room before declaring failure.
+    data = _http_get_json(url, timeout=20.0)
+    parsed = _parse_rainfall(data) if data and "daily" in data else None
+    if parsed is not None:
+        return parsed
+    return _alberta_rainfall_fallback(lat, lng)
+
+
+def _alberta_rainfall_fallback(lat: float, lng: float) -> Optional[dict]:
+    """Return the closest bundled Alberta climate-normal rainfall, or None.
+
+    Mirrors the soil-fallback pattern so the UI can render it without a
+    special case. ``source`` makes the approximation explicit.
+    """
+    import json as _json
+    import math as _math
+
+    path = resource_path("data", "rainfall_fallback_alberta.json")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            entries = _json.load(f)
+    except (OSError, ValueError):
         return None
-    return _parse_rainfall(data)
+    if not isinstance(entries, list) or not entries:
+        return None
+
+    def _dist2(p, q):
+        dlat = p[0] - q[0]
+        dlng = (p[1] - q[1]) * _math.cos(_math.radians((p[0] + q[0]) / 2))
+        return dlat * dlat + dlng * dlng
+
+    best = min(
+        entries,
+        key=lambda e: _dist2((lat, lng), tuple(e.get("centroid") or (0, 0))),
+    )
+    monthly = best.get("monthly_mm") or []
+    if len(monthly) != 12:
+        return None
+    return {
+        "annual_mm":   round(float(best.get("annual_mm") or sum(monthly)), 1),
+        "monthly_mm":  [round(float(m), 1) for m in monthly],
+        "years_used":  30,
+        "source":      f"AB climate normal — {best.get('region', 'nearest station')} (live API unavailable)",
+    }
 
 
 def _parse_rainfall(data: dict) -> Optional[dict]:
@@ -97,10 +144,17 @@ def _parse_rainfall(data: dict) -> Optional[dict]:
 
 def fetch_soil(lat: float, lng: float) -> Optional[dict]:
     """
-    Soil pH, sand/silt/clay %, and reported depth from SoilGrids v2.0.
+    Soil pH, sand/silt/clay %, and reported depth.
 
-    Top-layer values are surfaced in ``summary``; per-depth values are kept
-    in ``properties`` for callers that want the full profile.
+    Tries SoilGrids v2.0 (ISRIC) first; if the live API is unavailable
+    or returns no usable data, falls back to a curated Alberta regional
+    approximation bundled with the app (see
+    ``data/soil_fallback_alberta.json``). The returned dict's
+    ``source`` field always reflects which path was used so the UI can
+    label the data appropriately.
+
+    Top-layer values are surfaced in ``summary``; per-depth values are
+    kept in ``properties`` for callers that want the full profile.
     """
     qs = urllib.parse.urlencode([
         ("lat", f"{lat:.4f}"),
@@ -118,9 +172,71 @@ def fetch_soil(lat: float, lng: float) -> Optional[dict]:
     ], doseq=True)
     url = f"https://rest.isric.org/soilgrids/v2.0/properties/query?{qs}"
     data = _http_get_json(url)
-    if not data:
+    parsed = _parse_soilgrids(data) if data else None
+    if parsed is not None:
+        return parsed
+    # Fallback: nearest Alberta regional profile.
+    return _alberta_soil_fallback(lat, lng)
+
+
+def _alberta_soil_fallback(lat: float, lng: float) -> Optional[dict]:
+    """Return the closest bundled Alberta regional soil profile, or None.
+
+    The result is shaped like ``_parse_soilgrids`` output (same
+    ``summary`` keys, plus a single synthetic ``properties`` block) so
+    the UI can render it without a special case. ``source`` makes the
+    approximation explicit so users don't mistake it for a measured
+    point estimate.
+    """
+    import json as _json
+    import math as _math
+
+    path = resource_path("data", "soil_fallback_alberta.json")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            entries = _json.load(f)
+    except (OSError, ValueError):
         return None
-    return _parse_soilgrids(data)
+    if not isinstance(entries, list) or not entries:
+        return None
+
+    def _dist2(p, q):
+        # Squared great-circle approximation in degrees — fine for
+        # picking the nearest centroid out of a half-dozen candidates.
+        dlat = p[0] - q[0]
+        dlng = (p[1] - q[1]) * _math.cos(_math.radians((p[0] + q[0]) / 2))
+        return dlat * dlat + dlng * dlng
+
+    best = min(entries, key=lambda e: _dist2((lat, lng), tuple(e.get("centroid") or (0, 0))))
+    ph    = best.get("ph_top")
+    sand  = best.get("sand_pct_top")
+    silt  = best.get("silt_pct_top")
+    clay  = best.get("clay_pct_top")
+    depth = best.get("max_reported_depth_cm")
+
+    by_prop = {}
+    if ph   is not None: by_prop["phh2o"] = [{"label": "0-30cm (regional)", "value": ph}]
+    if sand is not None: by_prop["sand"]  = [{"label": "0-30cm (regional)", "value": sand}]
+    if silt is not None: by_prop["silt"]  = [{"label": "0-30cm (regional)", "value": silt}]
+    if clay is not None: by_prop["clay"]  = [{"label": "0-30cm (regional)", "value": clay}]
+
+    return {
+        "properties": by_prop,
+        "summary": {
+            "ph_top":               ph,
+            "sand_pct_top":         sand,
+            "silt_pct_top":         silt,
+            "clay_pct_top":         clay,
+            "texture_class":        best.get("texture_class") or _texture_class(sand, silt, clay),
+            "max_reported_depth_cm": depth,
+        },
+        "source": (
+            f"Regional approximation — {best.get('region', 'Alberta')} "
+            f"(SoilGrids v2.0 unavailable; bundled AB soil atlas)"
+        ),
+        "fallback": True,
+        "fallback_notes": best.get("notes", ""),
+    }
 
 
 # SoilGrids stores values as int * d_factor. For phh2o (pH) and sand/silt/clay
@@ -225,9 +341,28 @@ def fetch_elevation(lat: float, lng: float, sample_m: float = 60.0) -> Optional[
     lngs = ",".join(f"{p[1]:.6f}" for p in points)
     url  = f"https://api.open-meteo.com/v1/elevation?latitude={lats}&longitude={lngs}"
     data = _http_get_json(url)
-    if not data or "elevation" not in data:
-        return None
-    return _parse_elevation(data["elevation"], sample_m)
+    api_result = None
+    if data and "elevation" in data:
+        api_result = _parse_elevation(data["elevation"], sample_m)
+    if api_result is not None and api_result.get("slope_pct") is not None:
+        # Full success from Open-Meteo — no need to consult the
+        # offline pack.
+        return api_result
+
+    # V1.37: when Open-Meteo gives us no centre (returns None or null at
+    # centre) or only a centre with no slope, try the local Edmonton
+    # 0.5 m LiDAR pack. It's higher-resolution AND fills in
+    # river-valley pins where the Copernicus DEM has nulls.
+    try:
+        from src.terrain import lookup_point_elevation_edmonton
+        offline = lookup_point_elevation_edmonton(lat, lng, sample_m=sample_m)
+    except Exception:
+        offline = None
+    if offline is not None and offline.get("slope_pct") is not None:
+        return offline
+    # Fall back to whatever the API gave us (even if it's centre-only)
+    # so the user still sees an elevation reading in the at-pin row.
+    return api_result if api_result is not None else offline
 
 
 def _slope_sample_points(lat: float, lng: float, m: float):
@@ -247,24 +382,60 @@ def _slope_sample_points(lat: float, lng: float, m: float):
 
 
 def _parse_elevation(elev: list, sample_m: float) -> Optional[dict]:
-    if not elev or len(elev) < 5 or any(v is None for v in elev[:5]):
+    """V1.37: degrades gracefully when some of the 5 sample points are
+    null. Pins on water (where the DEM has no value) used to fail the
+    whole readout — now we return whatever we can:
+
+      * Centre null → return None (no useful info).
+      * Centre present, all 4 neighbours null → return elevation only;
+        slope/aspect show as "—" instead of breaking the row.
+      * Centre present, some neighbours null → use only the axes
+        where both neighbours are present (e.g. N+S but not E+W).
+
+    The "at-pin" elevation source is Copernicus DEM 30 m, which omits
+    water surfaces; the river-pin case the user hit in V1.36 testing
+    was the canonical failure mode."""
+    if not elev or len(elev) < 1 or elev[0] is None:
         return None
-    centre, n, e, s, w = elev[:5]
-    dz_dx = (e - w) / (2.0 * sample_m)   # +x = east
-    dz_dy = (n - s) / (2.0 * sample_m)   # +y = north
-    grad   = math.hypot(dz_dx, dz_dy)
+    centre = elev[0]
+    # Pad to 5 samples so the unpacking below is safe regardless of
+    # how many neighbours the DEM returned.
+    padded = list(elev[:5]) + [None] * max(0, 5 - len(elev[:5]))
+    _, n, e, s, w = padded
+
+    have_ns = n is not None and s is not None
+    have_ew = e is not None and w is not None
+    dz_dy = (n - s) / (2.0 * sample_m) if have_ns else 0.0   # +y = north
+    dz_dx = (e - w) / (2.0 * sample_m) if have_ew else 0.0   # +x = east
+
+    if not have_ns and not have_ew:
+        # Centre only — no gradient available.
+        return {
+            "elevation_m": round(centre, 1),
+            "slope_pct":   None,
+            "slope_deg":   None,
+            "aspect_deg":  None,
+            "aspect":      "—",
+            "sample_m":    sample_m,
+            "source":      "Copernicus DEM 30m (via Open-Meteo, "
+                           "neighbours over water — slope unavailable)",
+        }
+
+    grad      = math.hypot(dz_dx, dz_dy)
     slope_pct = round(grad * 100.0, 2)
     slope_deg = round(math.degrees(math.atan(grad)), 2)
 
     if slope_pct < 0.05:
         aspect_deg, aspect = None, "Flat"
     else:
-        # Downhill direction: azimuth (deg from N, clockwise) of -gradient.
         ang = math.degrees(math.atan2(-dz_dx, -dz_dy))
         ang = (ang + 360.0) % 360.0
         aspect_deg = round(ang, 1)
         aspect     = _compass_label(ang)
 
+    src_note = ""
+    if not (have_ns and have_ew):
+        src_note = " (partial — only one axis sampled, neighbours over water)"
     return {
         "elevation_m": round(centre, 1),
         "slope_pct":   slope_pct,
@@ -272,7 +443,7 @@ def _parse_elevation(elev: list, sample_m: float) -> Optional[dict]:
         "aspect_deg":  aspect_deg,
         "aspect":      aspect,
         "sample_m":    sample_m,
-        "source":      "Copernicus DEM 30m (via Open-Meteo)",
+        "source":      "Copernicus DEM 30m (via Open-Meteo)" + src_note,
     }
 
 
@@ -351,19 +522,35 @@ def usda_zone_from_min_c(min_c: float) -> int:
 _AB_VIEWBOX = "-120.0,48.95,-109.95,60.05"   # lng_min, lat_min, lng_max, lat_max
 
 
-def geocode_alberta(query: str, limit: int = 6) -> list[dict]:
+def geocode_alberta(query: str, limit: int = 6,
+                    *, near: "tuple[float, float] | None" = None,
+                    radius_km: float = 50.0) -> list[dict]:
     """Forward-geocode an address or place name, restricted to Alberta.
 
     Returns a list of ``{"label", "lat", "lng"}`` dicts, or ``[]`` on
-    failure / no match. Uses OSM Nominatim (the same backend the in-map
-    search bar used to call from JS).
+    failure / no match. Uses OSM Nominatim.
+
+    Results are re-ranked client-side so that hits whose street-number
+    starts with a numeric token in the query (e.g. typing "4916" should
+    surface 4916-something as the first result) sort ahead of generic
+    matches that just happen to mention the digits anywhere in the
+    display name.
+
+    When ``near=(lat, lng)`` is supplied, the search is biased toward
+    that point: the Nominatim viewbox shrinks to a ~``radius_km``-wide
+    box around it instead of all of Alberta, and ``lat``/``lon`` query
+    params are forwarded so Nominatim's own ranking weights local
+    matches more heavily. This is what lets a short numeric query like
+    "4916" surface real houses near where the user is looking instead
+    of random province-wide hits.
     """
+    import re
+
     q = (query or "").strip()
     if not q:
         return []
 
     # Direct "lat, lng" entry shortcut.
-    import re
     m = re.match(r"^\s*(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)\s*$", q)
     if m:
         try:
@@ -376,21 +563,51 @@ def geocode_alberta(query: str, limit: int = 6) -> list[dict]:
         except ValueError:
             pass
 
+    # Ask Nominatim for a few extra candidates so the client-side
+    # re-ranking has something to work with even when the top raw match
+    # is a generic placename.
+    fetch_limit = max(int(limit), 10)
+    extra_params: dict[str, str] = {}
+    if near is not None:
+        try:
+            blat = float(near[0])
+            blng = float(near[1])
+            # ~111 km per latitude degree; AB longitude shrinks by ~cos(lat).
+            dlat = max(0.05, float(radius_km) / 111.0)
+            dlng = dlat / max(0.2, math.cos(math.radians(blat)))
+            viewbox = (
+                f"{blng - dlng:.5f},{blat - dlat:.5f},"
+                f"{blng + dlng:.5f},{blat + dlat:.5f}"
+            )
+            extra_params["lat"] = f"{blat:.5f}"
+            extra_params["lon"] = f"{blng:.5f}"
+        except (TypeError, ValueError):
+            viewbox = _AB_VIEWBOX
+    else:
+        viewbox = _AB_VIEWBOX
+
     params = urllib.parse.urlencode({
         "format": "json",
-        "limit":  str(max(1, int(limit))),
+        "limit":  str(fetch_limit),
         "addressdetails": "1",
         "countrycodes": "ca",
-        "viewbox": _AB_VIEWBOX,
+        "viewbox": viewbox,
         "bounded": "1",
+        "dedupe": "1",
         "q": q,
+        **extra_params,
     })
     url = "https://nominatim.openstreetmap.org/search?" + params
     data = _http_get_json(url)
     if not isinstance(data, list):
         return []
-    out = []
-    for it in data:
+
+    numeric_tokens = re.findall(r"\d+", q)
+    word_tokens = [w.lower() for w in re.findall(r"[A-Za-z]{2,}", q)]
+    q_lower = q.lower()
+
+    out: list[tuple[int, int, dict]] = []  # (-score, original_idx, hit)
+    for idx, it in enumerate(data):
         addr = it.get("address") or {}
         # Defence in depth: drop anything outside Alberta.
         if addr.get("state") != "Alberta" and addr.get("ISO3166-2-lvl4") != "CA-AB":
@@ -400,18 +617,112 @@ def geocode_alberta(query: str, limit: int = 6) -> list[dict]:
             lng = float(it["lon"])
         except (KeyError, ValueError, TypeError):
             continue
-        out.append({
-            "label": it.get("display_name") or q,
+
+        display_name = it.get("display_name") or q
+        house_number = (addr.get("house_number") or "").strip()
+        display_lower = display_name.lower()
+
+        score = 0
+        # Strongest signal: house number begins with a numeric token from
+        # the query. Equality outranks startswith.
+        for tok in numeric_tokens:
+            if house_number == tok:
+                score += 200
+            elif house_number.startswith(tok):
+                score += 120
+            elif tok in house_number:
+                score += 40
+            if tok in display_lower:
+                score += 15
+        # Word-token coverage in the display name (street name etc.).
+        for w in word_tokens:
+            if w in display_lower:
+                score += 10
+        # Whole-query substring hit on display name is also informative.
+        if q_lower and q_lower in display_lower:
+            score += 25
+        # Mild boost for exact match on Nominatim's own importance ranking.
+        try:
+            score += int(float(it.get("importance") or 0) * 5)
+        except (TypeError, ValueError):
+            pass
+
+        out.append((-score, idx, {
+            "label": display_name,
             "lat": lat,
             "lng": lng,
+            "house_number": house_number,
+        }))
+
+    out.sort()
+    ranked = [hit for _, _, hit in out]
+    return ranked[:max(1, int(limit))]
+
+
+def reverse_geocode(lat: float, lng: float) -> Optional[str]:
+    """Reverse-geocode a coordinate to a human-readable address.
+
+    Returns Nominatim's ``display_name`` string, or ``None`` if the
+    lookup fails. Used by the Site panel to fill in the actual address
+    when the user drops a pin manually.
+    """
+    try:
+        params = urllib.parse.urlencode({
+            "format": "json",
+            "lat": f"{float(lat):.6f}",
+            "lon": f"{float(lng):.6f}",
+            "zoom": "18",
+            "addressdetails": "1",
         })
-    return out
+    except (TypeError, ValueError):
+        return None
+    url = "https://nominatim.openstreetmap.org/reverse?" + params
+    data = _http_get_json(url)
+    if not isinstance(data, dict):
+        return None
+    label = data.get("display_name")
+    if isinstance(label, str) and label.strip():
+        return label.strip()
+    return None
+
+
+# ── Climate (V1.35) ─────────────────────────────────────────────────────────
+
+def fetch_climate(lat: float, lng: float) -> Optional[dict]:
+    """Thin shim around ``src.climate.get_climate_summary`` so the site
+    panel's existing ``_SiteFetchWorker`` pattern can pick it up the
+    same way as rainfall / soil / elevation / hardiness. Returns the
+    climate-summary dict or ``None``."""
+    from src.climate import get_climate_summary
+    return get_climate_summary(lat, lng)
+
+
+# ── Ecoregion (V1.36) ───────────────────────────────────────────────────────
+
+def fetch_ecoregion(lat: float, lng: float) -> Optional[dict]:
+    """Look up the AB ecoregion for (lat, lng) via point-in-polygon.
+    Returns ``{"key": "aspen_parkland", "label": "Aspen Parkland (central AB)",
+    "source": "..."}`` or ``None`` if the point falls outside every
+    shipped polygon.
+
+    Synchronous and local (no network) — runs instantly. Plugged into
+    the site panel's existing worker-step list for shape-uniformity
+    with the other fetchers, not because it needs the background thread."""
+    from src.ecoregion import lookup_ecoregion, label_for_key
+    key = lookup_ecoregion(lat, lng)
+    if not key:
+        return None
+    return {
+        "key":    key,
+        "label":  label_for_key(key),
+        "source": "ecoregions_canada.geojson (auto)",
+    }
 
 
 # ── Aggregator ──────────────────────────────────────────────────────────────
 
 def fetch_all(lat: float, lng: float) -> dict:
-    """Fetch all four datasets sequentially. Caller may want a thread."""
+    """Fetch all six datasets sequentially. Caller may want a thread."""
     return {
         "lat":       lat,
         "lng":       lng,
@@ -419,4 +730,6 @@ def fetch_all(lat: float, lng: float) -> dict:
         "soil":      fetch_soil(lat, lng),
         "elevation": fetch_elevation(lat, lng),
         "hardiness": fetch_hardiness(lat, lng),
+        "climate":   fetch_climate(lat, lng),
+        "ecoregion": fetch_ecoregion(lat, lng),
     }

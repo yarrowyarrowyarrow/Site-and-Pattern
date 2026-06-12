@@ -1,11 +1,65 @@
-# PermaDesign — Setup Guide for Windows
+# PermaDesign — Friend Setup Guide for Windows
 
 This guide walks you through getting PermaDesign running on a Windows laptop
 from scratch. No coding experience needed — just follow each step in order.
 
+There are two ways to install PermaDesign:
+
+1. **One-click installer (recommended)** — download a single `.exe` file and
+   click through it. No Python, no command line.
+2. **From source** — useful if the installer is not yet available for the
+   version you want, or if you plan to tinker with the code.
+
+If you just want to use the app, do **Option 1** below and skip the rest.
+
 ---
 
-## Part 1 — Install the Required Programs (one-time only)
+## Option 1 — One-Click Installer (recommended)
+
+### Step 1: Download the installer
+
+1. Go to the project's **Releases** page (link from the PermaDesign GitHub
+   page → "Releases" on the right sidebar).
+2. Download **`PermaDesign-Installer.exe`** from the latest release.
+   - If the release only ships `PermaDesign-Windows.zip`, see the
+     "Zip-only fallback" section at the bottom of this option.
+
+### Step 2: Run the installer
+
+1. Double-click **`PermaDesign-Installer.exe`** in your Downloads folder.
+2. Windows SmartScreen may show a blue warning ("Windows protected your PC").
+   Click **More info** → **Run anyway**. This appears because the installer
+   isn't code-signed; the file is safe.
+3. Click **Next** through the installer screens.
+   - You can change the install folder if you want, but the default is fine.
+   - Leave the **Create desktop shortcut** box checked.
+4. Click **Install** and wait for it to finish.
+5. Click **Finish**. The installer is done.
+
+### Step 3: Launch the app
+
+- Double-click the **PermaDesign** icon on your desktop, **or**
+- Open the Start menu, type **PermaDesign**, and press Enter.
+
+The first launch may take 5–10 seconds while the plant database is set up.
+That's normal and only happens once.
+
+### Zip-only fallback
+
+If the release only has `PermaDesign-Windows.zip`:
+
+1. Right-click the zip → **Extract All...** → choose your Desktop.
+2. Open the extracted **PermaDesign** folder.
+3. Double-click **`PermaDesign.exe`** to run the app.
+
+No installation needed — keep the whole folder together.
+
+---
+
+## Option 2 — From Source (advanced)
+
+Use this only if the one-click installer is not available, or if you want to
+run the latest in-development code.
 
 ### Step 1: Install Python
 
@@ -16,126 +70,178 @@ from scratch. No coding experience needed — just follow each step in order.
    **"Add Python to PATH"** before clicking Install
 5. Click "Install Now" and wait for it to finish
 
-To confirm it worked: open the Start menu, search for **Command Prompt**,
-open it, and type:
+Confirm it worked — open Command Prompt and run:
 ```
 python --version
 ```
-You should see something like `Python 3.11.x`. If so, you're good.
-
----
+You should see something like `Python 3.11.x`.
 
 ### Step 2: Install Git
 
 1. Go to **git-scm.com/download/win**
-2. The download should start automatically — run the installer
-3. Click Next through all the screens (defaults are fine)
-4. Click Finish when done
+2. Run the installer; click Next through all screens (defaults are fine).
 
----
-
-## Part 2 — Download the App (one-time only)
+### Step 3: Download the app
 
 1. Open **Command Prompt** (Start menu → search "cmd")
-2. Navigate to your Desktop:
-   ```
+2. ```
    cd %USERPROFILE%\Desktop
-   ```
-3. Download the app:
-   ```
    git clone https://github.com/yarrowyarrowyarrow/PermaDesign.git
-   ```
-4. Move into the folder:
-   ```
    cd PermaDesign
-   ```
-5. Switch to the correct version:
-   ```
-   git checkout claude/build-step-1-v1-hTpZB
-   ```
-6. Install the app's dependencies:
-   ```
    pip install -r requirements.txt
    ```
-   This may take a minute or two — that's normal.
 
----
-
-## Part 3 — Run the App
+### Step 4: Run the app
 
 Every time you want to use PermaDesign:
 
-1. Open **File Explorer** and navigate to your **Desktop → PermaDesign** folder
-2. Click the address bar at the top of File Explorer
-3. Type `cmd` and press Enter (this opens a Command Prompt in the right folder)
-4. Type:
-   ```
+1. Open File Explorer → **Desktop → PermaDesign**
+2. Click the address bar, type `cmd`, press Enter
+3. ```
    python main.py
    ```
-5. The app will open — the Command Prompt window needs to stay open while you use it
+4. Keep the Command Prompt window open while you use the app.
 
 ---
 
-## Part 4 — Connect the Permapeople Plant Database (optional but recommended)
+## Updating to the newest version
 
-Permapeople gives you access to 8,500+ permaculture plant profiles to search
-and import directly into your designs.
+PermaDesign updates often. There are three ways to pull the latest code,
+in order of "easiest" to "most-control."
 
-### Get your free API key
+### Easiest — use the in-app button
 
-1. Go to **permapeople.org** and create a free account
-2. Once logged in, go to your account settings and look for **API** or **API Access**
-3. Generate a key — you will receive two values:
-   - A **Key ID** (looks like a username or code)
-   - A **Key Secret** (looks like a long password)
-4. Copy both — you will need them in the next step
+Open PermaDesign and click **Help → Check for Updates…** in the menu bar.
 
-### Enter the key in the app
+- **If you installed from source (Option 2)**, the app runs `git pull` for
+  you behind the scenes. It will:
+  - Refuse to pull if you have unsaved local edits — pick **Stash &
+    update** (preserves your changes) or **Discard & update** (throws
+    them away) if so.
+  - Show you the recent incoming commits and ask for confirmation.
+  - Tell you to **close and relaunch the app** once the pull succeeds —
+    the new code only loads on the next start.
+- **If you installed via the `.exe` (Option 1)**, the button opens the
+  GitHub Releases page in your browser so you can download the next
+  installer manually (see the next section).
 
-1. Open PermaDesign (follow Part 3 above)
-2. Click **⚙ Settings** in the toolbar at the top
-3. Paste your Key ID and Key Secret into the two fields
-4. Click Save
+### From source — terminal commands
 
-### Use it
+If you'd rather run the update from the command line (or the in-app
+button isn't behaving), open Command Prompt:
 
-1. In the Plant Browser panel on the right, click the **Permapeople** tab
-2. Type any plant name in the search box and press Enter
-3. Click a result to preview it
-4. Click **Import to Local Database** to save it — it then appears in your
-   Local tab and can be placed on the map
+```
+cd %USERPROFILE%\Desktop\PermaDesign
+git pull
+pip install -r requirements.txt
+python main.py
+```
+
+That's it. `git pull` grabs the newest code; the `pip install` line
+makes sure any new Python dependencies are installed (usually a no-op);
+`python main.py` relaunches the app.
+
+If `git pull` complains about **"local changes that would be overwritten"**,
+you have unsaved edits in the source folder. Two options:
+
+- **Keep your edits**: `git stash`, then `git pull`, then
+  `git stash pop` to restore them.
+- **Throw them away**: `git checkout -- .` then `git pull`.
+
+If you're not sure, run `git status` first to see what's changed.
+
+On the first launch after an update, the plant database may take a few
+extra seconds to apply any schema migrations and reseed new plant
+communities. That's normal.
+
+### From the `.exe` installer
+
+There's no auto-updater for the installer build. To update:
+
+1. Go to the project's **Releases** page on GitHub.
+2. Download the newest **`PermaDesign-Installer.exe`**.
+3. Run it. The installer detects the existing install and updates it in
+   place — your designs and database are kept.
+
+Or use the in-app **Help → Check for Updates…** button, which opens the
+releases page for you.
+
+### What's new since the last "Native Habitat Designer" version
+
+The most recent update bundles the following — you'll see them
+automatically after the update + first restart:
+
+- **Wildlife Forage** and **Human Forage** tabs (expandable monthly trees
+  showing pollinator blooms, bird food, and human-edible harvests).
+- **Habitat Value Score** tab on the Analysis panel (0–100 composite
+  score with concrete tips for raising it).
+- **Establishment Effort** and **Establishment Water Budget** splits
+  (Year 1 vs. Year 3+ for both labour hours and water demand).
+- **Reference Ecosystem picker** ("Restoring toward:" combo on the
+  Plants tab — filters to Aspen Parkland, Mixedgrass Prairie, Foothills,
+  Boreal Mixedwood, Riparian, Wet Meadow, or Subalpine).
+- **10 new plant communities** built around habitat-value categories
+  (Keystone Pollinator Mound, Caterpillar Host Garden, Songbird Berry
+  Patch, Late-Season Pollinator Refuge, Riparian Willow Thicket, etc.).
+- **12 non-native plants pruned** from the database, **Bur Oak added** as
+  the keystone of the parkland-oak-savanna community.
+- **Alberta rainfall fallback** — if the live weather API is
+  unreachable, the Site panel uses bundled Environment Canada climate
+  normals from the nearest of 8 Alberta stations.
+- **Native Plant Order List** export grouped by Alberta nursery source
+  (ALCLA, Bow Valley Habitat, Wild About Flowers, Bedrock Seed Bank).
+
+---
+
+## Basic App Functionality
+
+The same workflow applies whether you installed via the `.exe` or from source.
+
+| Step | What to do | How |
+|---|---|---|
+| 1 | **Find your property** | Type the address in the Site panel's Address Finder, or click **Use Pin Drop** and click on the map. |
+| 2 | **Draw your boundary** | Toolbar → **Boundary** → click points around your lot → double-click to close. |
+| 3 | **Switch to satellite** | Top **View** bar → toggle **Satellite**. The View bar groups: Satellite, Boundary, Measurement, Grid, Plants, Canopy, Structures. |
+| 4 | **Pick a plant** | In the right Plant panel, search by name or use the filters (Native AB, Edible, Pollinator, …). |
+| 5 | **Place a plant** | Select it → click **Place on Map** → click the spot. The canopy circle previews mature size. |
+| 6 | **Place a polyculture** | In the **Polycultures** tab, double-click a polyculture and click on the map to drop the whole grouping. |
+| 7 | **Build a custom polyculture** | Polycultures tab → **New** → use the visual grid to add 5–8 Alberta-suitable plants → **Save**. The polyculture is stored locally and reusable. |
+| 8 | **Move things you've placed** | Click and drag any placed plant. To move an entire polyculture as one unit, click its centre marker and drag. |
+| 9 | **Measure distances** | View bar → **Measurement** → click two points. Toggling Measurement off **hides** measurements; right-click a measurement to delete it. |
+| 10 | **Snap to grid** | View bar → **Grid** dropdown → choose 1×1 m / 5×5 m / 10×10 m / 100×100 m, and adjust opacity/colour. |
+| 11 | **Undo a mistake** | **Ctrl+Z** undoes the last placement (plants, structures, boundaries, contours — all globally). |
+| 12 | **Save your design** | **File → Save** (Ctrl+S). Designs are stored as `.geojson` files anywhere on your computer. |
+| 13 | **Export a PDF** | **File → Export PDF**. Includes map screenshot, plant list, and notes. |
 
 ---
 
 ## Troubleshooting
 
-**"python is not recognized"**
-- You forgot to check "Add Python to PATH" during install
-- Uninstall Python and reinstall, making sure to check that box
+**One-click installer is blocked by Windows ("Windows protected your PC")**
+- Click **More info** → **Run anyway**. The installer is not code-signed,
+  which is normal for a small project.
 
 **The app opens but the map is black**
 - Wait 5–10 seconds for the map tiles to load
 - Make sure you have an internet connection
 
-**The Command Prompt closes and the app disappears**
+**App crashes when I click "Clear" on the address finder**
+- Known issue being patched this sprint. As a workaround, use the small ✕ on
+  the address field to clear instead of the big Clear button.
+
+**"python is not recognized"** (from-source only)
+- You forgot to check "Add Python to PATH" during install
+- Uninstall Python and reinstall, making sure to check that box
+
+**The Command Prompt closes and the app disappears** (from-source only)
 - An error occurred — re-open Command Prompt, navigate to the PermaDesign
   folder, run `python main.py` again, and read the error message shown
 
-**"No results" in Permapeople search**
-- Double-check your Key ID and Key Secret in Settings
-- Make sure you have an internet connection
-
 ---
 
-## Everyday Use at a Glance
+## Where files are stored
 
-| What you want to do | How |
-|---|---|
-| Start the app | Open cmd in PermaDesign folder → `python main.py` |
-| Draw your property boundary | Toolbar → Boundary → click points on map → double-click to close |
-| Place permaculture zones | Toolbar → Zone Circles → click centre point |
-| Find a plant | Search in Plant Browser (right panel) |
-| Place a plant | Select it → click Place on Map → click on the map |
-| Remove a plant | Right-click the plant circle on the map |
-| Save your design | File → Save (Ctrl+S) |
-| Search 8,500+ plants | Permapeople tab in Plant Browser |
+- **Designs** save wherever you choose with **File → Save**.
+- **Plant database** lives at `%APPDATA%\PermaDesign\permadesign.db` — you
+  rarely need to touch it. Deleting it forces a fresh seed on next launch.
+- **Settings (preferences)** live alongside the database.

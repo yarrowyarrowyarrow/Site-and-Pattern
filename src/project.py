@@ -7,19 +7,42 @@ but no file I/O yet.  The full implementation comes in Step 4.
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Optional
 
-SCHEMA_VERSION = "1.6"
+
+def _utc_now_iso() -> str:
+    """Naive-UTC ISO timestamp, matching the legacy datetime.utcnow()
+    output exactly while avoiding its Python 3.12+ deprecation warning."""
+    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+
+# 1.7 (V1.48): added the `existing_tree` / `existing_building` feature types
+# (user-marked shade casters). Additive — older readers ignore unknown
+# element_types in project_to_map_data, so projects stay forward/backward
+# compatible.
+SCHEMA_VERSION = "1.7"
 
 
 def new_placement_group_id() -> str:
     """Generate a fresh unique placement group identifier.
 
-    Plants placed by the same gesture (Single click, Row, Grid, Circle, Guild)
+    Plants placed by the same gesture (Single click, Row, Grid, Circle, Polyculture)
     share a group id so they can be selected/deleted as one unit.
     """
     import uuid
     return "pg_" + uuid.uuid4().hex[:10]
+
+
+def community_id_for(center_lat, center_lng):
+    """Stable per-instance key for a placed community, derived from its
+    anchor centre. Members of the same community instance share this key so
+    the map can isolate one community within a row/grid of communities (which
+    all share a single placement_group_id). Returns ``None`` for plants that
+    have no community centre.
+    """
+    if center_lat is None or center_lng is None:
+        return None
+    return f"{round(float(center_lat), 6)}_{round(float(center_lng), 6)}"
 
 
 def new_project(name: str = "Untitled Design") -> dict:
@@ -29,7 +52,7 @@ def new_project(name: str = "Untitled Design") -> dict:
         "properties": {
             "schema_version": SCHEMA_VERSION,
             "project_name": name,
-            "created": datetime.utcnow().isoformat(),
+            "created": _utc_now_iso(),
             "hardiness_zone": None,
             "notes": "",
             "site_config": {
@@ -59,16 +82,100 @@ def load_project(path: str) -> dict:
         return json.load(f)
 
 
+def feature_to_shape(feature: dict) -> Optional[dict]:
+    """Convert one ``custom_shape`` / ``canopy_footprint`` Polygon feature to the
+    map-widget shape dict (``loadShape`` input), or ``None`` if it isn't a usable
+    polygon. Shared by ``project_to_map_data`` and the footprint-import path so
+    both build the shape dict identically (id + height round-trip)."""
+    geom = feature.get("geometry", {})
+    if geom.get("type") != "Polygon":
+        return None
+    coords = geom.get("coordinates") or []
+    if not coords:
+        return None
+    props = feature.get("properties", {})
+    points = [[pt[1], pt[0]] for pt in coords[0]]   # (lng,lat) → (lat,lng)
+    if len(points) > 1 and points[0] == points[-1]:
+        points = points[:-1]                        # drop closing duplicate
+    if len(points) < 3:
+        return None
+    # canopy_footprint carries a height (it casts shade); plain shapes default
+    # to 0. `or 0.0` coalesces a demoted shape's explicit None height.
+    return {
+        "points": points,
+        "shape_id": props.get("shape_id"),
+        "shape_type": props.get("shape_type", "Custom"),
+        "label": props.get("label", ""),
+        "fill_color": props.get("fill_color", "#4caf50"),
+        "stroke_color": props.get("stroke_color", "#2e7d32"),
+        "fill_opacity": props.get("fill_opacity", 0.25),
+        "dash_array": props.get("dash_array", ""),
+        "height_m": props.get("height_m") or 0.0,
+    }
+
+
+def _ring_area_m2(ring_lnglat: list) -> float:
+    """Planar shoelace area (m²) of a closed ``[lng, lat]`` ring via the local
+    cos-lat metric — mirrors ``html/map.html``'s ``_polygonArea`` so the stored
+    area matches what the map shows. ``0.0`` for a degenerate ring."""
+    import math
+    pts = ring_lnglat or []
+    if len(pts) < 3:
+        return 0.0
+    ref_lng, ref_lat = pts[0][0], pts[0][1]
+    cos_lat = math.cos(ref_lat * math.pi / 180.0) or 1e-9
+    m = [((p[0] - ref_lng) * 111320.0 * cos_lat,
+          (p[1] - ref_lat) * 111320.0) for p in pts]
+    area = 0.0
+    for i in range(len(m)):
+        j = (i + 1) % len(m)
+        area += m[i][0] * m[j][1] - m[j][0] * m[i][1]
+    return abs(area / 2.0)
+
+
+def update_shape_geometry(project: dict, shape_id: str,
+                          points_latlng: list) -> bool:
+    """Rewrite a ``custom_shape`` / ``canopy_footprint`` feature's polygon to a
+    new outline after a map vertex-drag edit. ``points_latlng`` is the open ring
+    the map sends (a list of ``[lat, lng]`` vertices). Re-sizes the footprint's
+    ``canopy_radius_m`` from the new ring, refreshes the stored ``area_m2``, and
+    refreshes the stored centroid for OSM buildings, so keep-out
+    (``src/exclusion.py``), the area readout, and the circle fallback stay in
+    step with the edited shape. Returns True when a matching shape was updated.
+    Pure — mutates ``project`` in place (Qt-free, unit-testable)."""
+    if not points_latlng or len(points_latlng) < 3:
+        return False
+    from src.osm_features import ring_radius_m, ring_centroid
+    ring = [[pt[1], pt[0]] for pt in points_latlng]    # [lat,lng] → [lng,lat]
+    ring.append(ring[0])                               # close the ring
+    for f in project.get("features", []):
+        props = f.get("properties", {}) or {}
+        if props.get("shape_id") != shape_id:
+            continue
+        geom = f.setdefault("geometry", {})
+        geom["type"] = "Polygon"
+        geom["coordinates"] = [ring]
+        props["area_m2"] = _ring_area_m2(ring)         # keep the area readout fresh
+        if (props.get("cast_shade")
+                or props.get("element_type") == "canopy_footprint"):
+            props["canopy_radius_m"] = max(0.5, ring_radius_m(ring))
+            if props.get("source") == "osm":
+                c = ring_centroid(ring)
+                if c:
+                    props["lat"], props["lng"] = c
+        return True
+    return False
+
+
 def project_to_map_data(project: dict) -> dict:
     """
     Extract map elements from the project for loading into the map widget.
-    Returns dict with boundaries (list), plants, zone_center, structures, hedgerows, shapes.
+    Returns dict with boundaries (list), plants, structures, hedgerows, shapes.
     """
     result = {
         "boundaries": [],   # list of {id, points, color, showLengths, showArea}
         "boundary": None,   # kept for backward compat — first boundary's points
         "plants": [],
-        "zone_center": None,
         "structures": [],
         "hedgerows": [],
         "shapes": [],
@@ -108,14 +215,29 @@ def project_to_map_data(project: dict) -> dict:
                 "lat": lat,
                 "lng": lng,
                 "placement_group_id": group_id,
-                "guild_name": props.get("guild_name", ""),
-                "guild_center_lat": props.get("guild_center_lat"),
-                "guild_center_lng": props.get("guild_center_lng"),
+                "polyculture_name": props.get("polyculture_name", ""),
+                "polyculture_center_lat": props.get("polyculture_center_lat"),
+                "polyculture_center_lng": props.get("polyculture_center_lng"),
             })
 
-        elif etype == "zone_center" and geom.get("type") == "Point":
+        elif etype in ("existing_tree", "existing_building") \
+                and geom.get("type") == "Point":
+            # V1.49: user-marked existing trees/buildings. Reconstruct a
+            # structure-style def so they render through the same map path
+            # (loadStructure) on reload.
             lng, lat = geom["coordinates"]
-            result["zone_center"] = (lat, lng)
+            from src.db.structures import existing_feature_def
+            sid = ("existing_tree" if etype == "existing_tree"
+                   else "existing_building")
+            size_m = props.get("size_m")
+            if not size_m:
+                size_m = float(props.get("canopy_radius_m", 3.0)) * 2.0
+            sd = existing_feature_def(sid, size_m=size_m,
+                                      height_m=props.get("height_m") or 6.0)
+            sd["name"] = props.get("label", sd["name"])
+            result["structures"].append({
+                "lat": lat, "lng": lng, "struct_def": sd,
+            })
 
         elif etype == "structure" and geom.get("type") == "Point":
             lng, lat = geom["coordinates"]
@@ -136,21 +258,11 @@ def project_to_map_data(project: dict) -> dict:
                 "species": props.get("species", ""),
             })
 
-        elif etype == "custom_shape" and geom.get("type") == "Polygon":
-            ring = geom["coordinates"][0]
-            points = [[pt[1], pt[0]] for pt in ring]
-            # Remove closing duplicate if present
-            if len(points) > 1 and points[0] == points[-1]:
-                points = points[:-1]
-            result["shapes"].append({
-                "points": points,
-                "shape_type": props.get("shape_type", "Custom"),
-                "label": props.get("label", ""),
-                "fill_color": props.get("fill_color", "#4caf50"),
-                "stroke_color": props.get("stroke_color", "#2e7d32"),
-                "fill_opacity": props.get("fill_opacity", 0.25),
-                "dash_array": props.get("dash_array", ""),
-            })
+        elif (etype in ("custom_shape", "canopy_footprint")
+              and geom.get("type") == "Polygon"):
+            sh = feature_to_shape(feature)
+            if sh:
+                result["shapes"].append(sh)
 
         elif etype == "contour_line" and geom.get("type") == "LineString":
             points = [[pt[1], pt[0]] for pt in geom["coordinates"]]
@@ -173,7 +285,7 @@ def project_to_map_data(project: dict) -> dict:
             if segments:
                 result["auto_contours"].append({
                     "elevation_m": props.get("elevation_m", 0),
-                    "color":       props.get("color", "#5d4037"),
+                    "color":       props.get("color", "#44cc00"),
                     "segments":    segments,
                 })
 

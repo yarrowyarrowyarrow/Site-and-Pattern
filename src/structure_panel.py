@@ -53,7 +53,11 @@ class StructurePanel(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(0)
 
-        self._tabs = QTabWidget()
+        from src.fill_tab_widget import FillTabWidget
+        self._tabs = FillTabWidget()
+        # Document mode lets the bar span the full width so FillTabWidget can
+        # stretch Structures/Hedgerow/Shapes edge-to-edge.
+        self._tabs.setDocumentMode(True)
         self._tabs.setStyleSheet(
             "QTabBar::tab { padding: 4px 10px; }"
         )
@@ -155,6 +159,9 @@ class StructurePanel(QWidget):
         self._btn_place.clicked.connect(self._on_place_clicked)
         layout.addWidget(self._btn_place)
 
+        # Existing on-site trees/buildings moved to Site → Shade (V1.59), where
+        # they sit alongside the shade map and OSM import.
+
         self._populate_structures()
 
     def _populate_structures(self):
@@ -223,8 +230,8 @@ class StructurePanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Draw a hedgerow or fence line on the map.\n"
-            "Click points to define the line, then double-click to finish."
+            "Draw a hedgerow or fence line on the map. Click points to "
+            "define the line, then double-click to finish."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
@@ -322,9 +329,8 @@ class StructurePanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Draw custom shapes on the map for garden beds,\n"
-            "pathways, patios, and other areas.\n"
-            "Click points to define, double-click to finish."
+            "Draw custom shapes on the map for garden beds, pathways, patios, "
+            "and other areas. Click points to define, double-click to finish."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
@@ -333,7 +339,10 @@ class StructurePanel(QWidget):
         form = QFormLayout()
         form.setContentsMargins(0, 0, 0, 0)
 
-        # Shape presets
+        # Shape presets — the general beds/paths set plus the lawn-to-habitat
+        # conversion zones (N2), whose labels/colours come from src.lawn_zones so
+        # the drawer and the conversion tally never drift.
+        from src.lawn_zones import ZONE_TYPES
         self._shape_preset = QComboBox()
         self._shape_preset.addItems([
             "Garden Bed",
@@ -344,6 +353,8 @@ class StructurePanel(QWidget):
             "Water Feature",
             "Custom",
         ])
+        self._shape_preset.insertSeparator(self._shape_preset.count())
+        self._shape_preset.addItems([spec["label"] for spec in ZONE_TYPES.values()])
         self._shape_preset.currentIndexChanged.connect(self._on_shape_preset_changed)
         form.addRow("Type:", self._shape_preset)
 
@@ -398,6 +409,21 @@ class StructurePanel(QWidget):
 
         layout.addLayout(color_form)
 
+        # Shade height — when > 0 the drawn perimeter becomes a shade caster
+        # (a tree canopy or building footprint) instead of a flat area shape.
+        height_form = QFormLayout()
+        self._shape_height = QDoubleSpinBox()
+        self._shape_height.setRange(0.0, 60.0)
+        self._shape_height.setSingleStep(0.5)
+        self._shape_height.setValue(0.0)
+        self._shape_height.setSuffix(" m")
+        self._shape_height.setToolTip(
+            "Height of the structure/canopy. 0 = a flat area shape (no shade).\n"
+            "Set a height to cast a shadow from this footprint (e.g. 8 m for a\n"
+            "house, 6 m for a mature tree canopy).")
+        height_form.addRow("Casts shade — height:", self._shape_height)
+        layout.addLayout(height_form)
+
         # Draw button
         self._btn_shape = QPushButton("Draw Shape on Map")
         self._btn_shape.setStyleSheet(
@@ -425,7 +451,16 @@ class StructurePanel(QWidget):
 
     def _on_shape_preset_changed(self, _idx):
         name = self._shape_preset.currentText()
-        preset = self._SHAPE_PRESETS.get(name, self._SHAPE_PRESETS["Custom"])
+        preset = self._SHAPE_PRESETS.get(name)
+        if preset is None:
+            # A lawn-conversion zone (or the separator): pull its style from
+            # src.lawn_zones; fall back to Custom for the empty separator row.
+            from src.lawn_zones import ZONE_TYPES
+            zspec = next((s for s in ZONE_TYPES.values() if s["label"] == name),
+                         None)
+            preset = ({"fill": zspec["fill"], "stroke": zspec["stroke"],
+                       "opacity": zspec["opacity"], "pattern": "Solid"}
+                      if zspec else self._SHAPE_PRESETS["Custom"])
         self._shape_fill = preset["fill"]
         self._shape_stroke = preset["stroke"]
         self._shape_fill_btn.setStyleSheet(
@@ -465,4 +500,6 @@ class StructurePanel(QWidget):
             "stroke_color": self._shape_stroke,
             "fill_opacity": self._shape_opacity.value(),
             "dash_array": pattern_map.get(self._shape_pattern.currentText(), ""),
+            # >0 → the drawn footprint casts shade (canopy / building perimeter).
+            "height_m": self._shape_height.value(),
         })

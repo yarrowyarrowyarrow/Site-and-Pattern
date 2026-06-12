@@ -260,18 +260,137 @@ def optimize_layout(
     return cur
 
 
-def _to_local_xy(positions: list) -> list[tuple[float, float]]:
-    """Project [lat, lng] into local metres (flat-earth, centroid origin)."""
-    if not positions:
+def hex_pack_disc_local(radius_m: float, spacing_m: float) -> list[tuple[float, float]]:
+    """Return hex-packed (x, y) positions in metres that fit inside a disc
+    of the given radius. Mirrors the JS `_hexPackedDisc` in html/map.html
+    so the polyculture builder can preview the same packing the map uses.
+
+    Always starts with (0, 0) (the centre) and walks rows outward; honey-
+    comb spacing keeps each plant equidistant from its six nearest
+    neighbours. Returns an empty list if spacing is wider than the disc.
+    """
+    if radius_m <= 0 or spacing_m <= 0:
         return []
-    mean_lat = sum(p[0] for p in positions) / len(positions)
-    cos_lat = math.cos(math.radians(mean_lat))
-    out = []
-    for lat, lng in positions:
-        x = lng * 111320.0 * cos_lat
-        y = lat * 111320.0
-        out.append((x, y))
-    return out
+    row_spacing = spacing_m * math.sqrt(3.0) / 2.0
+    if row_spacing > radius_m:
+        # Even a single ring won't fit — just return the centre point.
+        return [(0.0, 0.0)] if spacing_m <= radius_m * 2 else []
+    positions: list[tuple[float, float]] = [(0.0, 0.0)]
+    n_rows = int(math.floor(radius_m / row_spacing))
+    for r in range(1, n_rows + 1):
+        y = r * row_spacing
+        x_shift = (spacing_m / 2.0) if (r % 2 == 1) else 0.0
+        # Walk x outward from the shifted start, stopping when outside
+        # the disc.
+        k = 0
+        while True:
+            x = x_shift + k * spacing_m
+            if math.sqrt(x * x + y * y) > radius_m:
+                break
+            positions.append((x, y))
+            positions.append((-x if x > 0 else x, y))
+            positions.append((x, -y))
+            positions.append((-x if x > 0 else x, -y))
+            k += 1
+        # The k=0, x_shift=0 case duplicates (0, y), (0, -y) — dedupe.
+    # Dedupe while preserving order.
+    seen = set()
+    unique: list[tuple[float, float]] = []
+    for p in positions:
+        key = (round(p[0], 6), round(p[1], 6))
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(p)
+    return unique
+
+
+def stack_to_community_members(stack: list[dict]) -> list[dict]:
+    """Hex-pack a ratio-weighted stack of species into a disc at the
+    widest member's planting spacing. Returns member dicts ready to feed
+    into ``polycultures.replace_polyculture_members``.
+
+    Each input species dict carries at least ``id``, ``common_name``,
+    ``spacing_m`` (or ``spacing_meters``), and an optional ``_weight``
+    ratio integer. The total disc capacity is sized to fit
+    ``sum(weights)`` positions at the max member spacing; species are
+    distributed across positions in their ratios, then permuted to
+    spread same-species members apart.
+    """
+    if not stack:
+        return []
+    species = []
+    total_weight = 0
+    for s in stack:
+        pid = s.get("id") or s.get("plant_id")
+        if not pid:
+            continue
+        weight = max(1, int(s.get("_weight") or s.get("weight") or 1))
+        spacing = float(s.get("spacing_m") or s.get("spacing_meters") or 1.0)
+        species.append({
+            "id": int(pid),
+            "common_name": s.get("common_name") or "",
+            "spacing_m": spacing,
+            "plant_type": s.get("plant_type") or "herb",
+            "color": s.get("color") or s.get("marker_color") or "",
+            "weight": weight,
+        })
+        total_weight += weight
+    if not species:
+        return []
+
+    spacing_m = resolve_spacing(species, "max")
+    # Pick a radius big enough to fit at least `total_weight` positions
+    # plus a little slack so optimize_layout has somewhere to swap.
+    n_target = max(total_weight, 1)
+    # Hex disc capacity ≈ (π r² · 2) / (s²·√3). Solve for r:
+    radius_m = math.sqrt(n_target * spacing_m * spacing_m * math.sqrt(3.0) / (2.0 * math.pi))
+    radius_m = max(spacing_m, radius_m)
+    positions = hex_pack_disc_local(radius_m, spacing_m)
+    # Grow until we have enough positions (rare — only when packing wastes
+    # the budget at small radii).
+    grow_guard = 0
+    while len(positions) < n_target and grow_guard < 10:
+        radius_m *= 1.25
+        positions = hex_pack_disc_local(radius_m, spacing_m)
+        grow_guard += 1
+    if len(positions) > n_target:
+        positions = positions[:n_target]
+
+    pseudo_latlng = [[y, x] for (x, y) in positions]
+    assignments = assign_species(pseudo_latlng, species)
+    try:
+        assignments = optimize_layout(pseudo_latlng, assignments)
+    except Exception:
+        pass
+
+    members: list[dict] = []
+    for (x_m, y_m), sp in zip(positions, assignments):
+        members.append({
+            "plant_id":    int(sp["id"]),
+            "common_name": sp.get("common_name") or "",
+            "role":        "other",
+            "layer":       None,
+            "functions":   [],
+            "color":       sp.get("color") or "",
+            "spacing_m":   float(sp.get("spacing_m") or 1.0),
+            "offset_x":    round(float(x_m), 2),
+            "offset_y":    round(float(y_m), 2),
+        })
+    return members
+
+
+def _to_local_xy(positions: list) -> list[tuple[float, float]]:
+    """Project [lat, lng] into local metres (centroid origin).
+
+    Delegates to src.projection (Chunk 8). The default coslat backend
+    yields the same *pairwise* geometry as the legacy formula (a pure
+    translation of the old absolute coords), so the layout optimiser's
+    results are unchanged; a project on the UTM backend gets a more
+    accurate planar projection for free.
+    """
+    from src.projection import to_local_xy
+    return to_local_xy(positions)
 
 
 def _pairwise_distances(pts_xy: list[tuple[float, float]]) -> list[list[float]]:

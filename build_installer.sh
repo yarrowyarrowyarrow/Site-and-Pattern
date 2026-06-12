@@ -30,11 +30,50 @@ pyinstaller permadesign.spec --clean
 
 # Create platform-specific installer
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS: Create DMG
+    # macOS: package the .app bundle into a drag-to-install DMG
+    APP="dist/PermaDesign.app"
+    if [ ! -d "$APP" ]; then
+        echo "ERROR: $APP not found — the darwin BUNDLE step in permadesign.spec did not run." >&2
+        exit 1
+    fi
+
+    # Re-apply an ad-hoc signature over the whole bundle. PyInstaller signs
+    # ad-hoc by default, but a final deep re-sign prevents Gatekeeper
+    # "app is damaged" errors on recipients' Macs.
+    echo -e "${YELLOW}Ad-hoc signing the app bundle...${NC}"
+    codesign --force --deep -s - "$APP"
+
     echo -e "${YELLOW}Creating macOS DMG installer...${NC}"
-    mkdir -p dist/PermaDesign
-    cp -r dist/PermaDesign/* dist/PermaDesign/ 2>/dev/null || true
-    hdiutil create -volname "PermaDesign" -srcfolder dist/PermaDesign -ov -format UDZO dist/PermaDesign.dmg
+    STAGING="dist/dmg-staging"
+    rm -rf "$STAGING"
+    mkdir -p "$STAGING"
+    cp -R "$APP" "$STAGING/"
+    ln -s /Applications "$STAGING/Applications"
+    cat > "$STAGING/READ ME FIRST.txt" <<'EOF'
+Installing PermaDesign
+======================
+
+1. Drag the PermaDesign icon onto the Applications folder in this window.
+
+2. The FIRST time you open it, macOS will warn you because the app is not
+   notarized by Apple. This is a one-time step:
+
+   * macOS 11-14 (Big Sur through Sonoma):
+     In Applications, right-click (or Ctrl-click) PermaDesign, choose
+     "Open", then click "Open" in the dialog.
+
+   * macOS 15 (Sequoia) or newer:
+     Double-click PermaDesign once (it will be blocked), then open
+     System Settings > Privacy & Security, scroll down, and click
+     "Open Anyway" next to PermaDesign.
+
+3. Apple Silicon (M1/M2/M3/M4) Macs: if macOS offers to install Rosetta
+   on first launch, click Install (one time only).
+
+After the first launch, PermaDesign opens normally like any other app.
+EOF
+    hdiutil create -volname "PermaDesign" -srcfolder "$STAGING" -ov -format UDZO dist/PermaDesign.dmg
+    rm -rf "$STAGING"
     echo -e "${GREEN}✓ Created dist/PermaDesign.dmg${NC}"
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     # Linux: Create AppImage (requires appimagetool)
@@ -60,7 +99,10 @@ echo "Installer location: $(pwd)/dist/"
 echo ""
 echo "To run the application:"
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    echo "  ./dist/PermaDesign/PermaDesign.app/Contents/MacOS/PermaDesign"
+    echo "  open dist/PermaDesign.app"
+    echo ""
+    echo "To share with other Macs (macOS 11 Big Sur or newer):"
+    echo "  send dist/PermaDesign.dmg"
 else
     echo "  ./dist/PermaDesign/PermaDesign"
 fi

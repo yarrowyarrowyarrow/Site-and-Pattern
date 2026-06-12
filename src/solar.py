@@ -3,7 +3,7 @@ solar.py — Solar position calculations for sun path overlay.
 
 Uses simplified astronomical formulas (no external deps) to compute
 sun altitude and azimuth for any lat/lng/datetime. Accurate to ~1°
-which is sufficient for permaculture design visualization.
+which is sufficient for native habitat design visualization.
 
 Reference: NOAA Solar Calculator methodology (simplified).
 """
@@ -52,8 +52,13 @@ def sun_position(lat: float, lng: float, dt: datetime) -> SunPosition:
     # Local solar time
     utc_hours = dt.hour + dt.minute / 60 + dt.second / 3600
     # Time correction for longitude (4 min per degree from standard meridian)
-    # Using lng directly as offset from UTC (simplified)
-    solar_time = utc_hours + lng / 15 + eot / 60
+    # Using lng directly as offset from UTC (simplified). Wrap to [0,24): the
+    # local→UTC conversion in the shade paths adds -lng/15 (~+7.6 h in Alberta),
+    # so an evening local time crosses midnight UTC and would push solar_time
+    # negative — which flips the sign of hour_angle below and skips the
+    # afternoon azimuth correction (evening shadows then mirror to the morning
+    # direction). cos(hour_angle) for altitude is unaffected by the wrap.
+    solar_time = (utc_hours + lng / 15 + eot / 60) % 24
 
     # Hour angle (degrees, 15° per hour from solar noon)
     hour_angle = math.radians((solar_time - 12) * 15)
@@ -138,7 +143,7 @@ def shadow_length_factor(sun_alt: float) -> float:
 EDMONTON_LAT = 53.5461
 EDMONTON_LNG = -113.4938
 
-# Key dates for permaculture design
+# Key dates for native habitat design — solstices, equinoxes, frost-free window
 KEY_DATES = {
     "Summer Solstice": date(2025, 6, 21),
     "Winter Solstice": date(2025, 12, 21),

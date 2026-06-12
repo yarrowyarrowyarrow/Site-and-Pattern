@@ -1,3 +1,22 @@
-PyQt6>=6.6.0
-PyQt6-WebEngine>=6.6.0
+# Qt is capped at <6.8 on macOS only: Qt 6.8 dropped macOS 11 Big Sur
+# (requires macOS 12+), and PermaDesign supports Big Sur onwards. The
+# 6.7.x wheels are universal2 (Intel + Apple Silicon). Windows/Linux
+# stay uncapped.
+PyQt6>=6.6.0; sys_platform != "darwin"
+PyQt6>=6.6.0,<6.8; sys_platform == "darwin"
+PyQt6-WebEngine>=6.6.0; sys_platform != "darwin"
+PyQt6-WebEngine>=6.6.0,<6.8; sys_platform == "darwin"
 python-docx>=1.1
+# CA bundle for https fetches (plant photos, elevation, OSM import).
+# Required on macOS and in frozen builds, where Python ships no root
+# certificates; harmless elsewhere (src/ssl_bootstrap.py only uses it
+# when the system bundle is missing).
+certifi>=2023.7.22
+# Footprint-polygon shadow casting (V1.53, src/shadow_geometry.py). Optional:
+# every import is guarded and src/shade.py falls back to its circle model when
+# shapely is absent, so a shapely-less install still runs (with coarser shade).
+shapely>=2.0
+# Terrain self-shadowing accelerator (V1.55, src/terrain_shade.py). Optional:
+# the DEM horizon ray-march has a pure-Python fallback, so a numpy-less install
+# still computes terrain shade (just slower); numpy only speeds it up.
+numpy>=1.21

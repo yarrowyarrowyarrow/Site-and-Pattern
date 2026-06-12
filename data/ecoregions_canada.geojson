@@ -1,0 +1,93 @@
+{
+  "type": "FeatureCollection",
+  "name": "Alberta ecoregions (V1.36 starter set)",
+  "comment": "Hand-drawn approximations of Alberta's five major terrestrial ecoregions, used by src/ecoregion.py:lookup_ecoregion. The polygons are rectangular bounding regions chosen for non-overlap rather than fidelity to natural boundaries (e.g. river valleys). scripts/prepare_ecoregions.py is the documented upgrade path: replace this file with simplified polygons derived from the CEC Level III Ecoregions of North America shapefile when fidelity matters. Riparian and Wet Meadow are intentionally absent — those are per-feature rather than per-region at the provincial scale, so they remain manual-only in the plant filter.",
+  "crs": "WGS84",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "key":   "boreal_mixedwood",
+        "label": "Boreal Mixedwood (north AB)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-120.0, 54.0],
+          [-110.0, 54.0],
+          [-110.0, 60.0],
+          [-120.0, 60.0],
+          [-120.0, 54.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key":   "aspen_parkland",
+        "label": "Aspen Parkland (central AB)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-115.0, 52.0],
+          [-110.0, 52.0],
+          [-110.0, 54.0],
+          [-115.0, 54.0],
+          [-115.0, 52.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key":   "mixedgrass_prairie",
+        "label": "Mixedgrass Prairie (south AB)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-113.5, 49.0],
+          [-110.0, 49.0],
+          [-110.0, 52.0],
+          [-113.5, 52.0],
+          [-113.5, 49.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key":   "fescue_foothills",
+        "label": "Fescue / Foothills (SW AB)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-114.5, 49.0],
+          [-113.5, 49.0],
+          [-113.5, 52.0],
+          [-114.5, 52.0],
+          [-114.5, 49.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key":   "subalpine_montane",
+        "label": "Subalpine / Montane (mountains)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-120.0, 49.0],
+          [-114.5, 49.0],
+          [-114.5, 54.0],
+          [-120.0, 54.0],
+          [-120.0, 49.0]
+        ]]
+      }
+    }
+  ]
+}

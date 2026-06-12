@@ -26,8 +26,30 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
     QFormLayout, QFrame, QGroupBox, QScrollArea, QComboBox,
     QDoubleSpinBox, QSpinBox, QCheckBox, QSlider, QColorDialog,
-    QListWidget, QListWidgetItem, QProgressBar,
+    QListWidget, QListWidgetItem, QProgressBar, QTabWidget,
 )
+
+
+# ── QThread-lifecycle helper ─────────────────────────────────────────────────
+
+def _safe_is_running(thread) -> bool:
+    """Return True only if ``thread`` is a still-live QThread that's running.
+
+    The auto-teardown chain wired up in ``_start_fetch`` / ``_run_geocode``
+    deletes the underlying C++ QThread once it stops. Our Python proxy
+    can outlive that — calling any method on it (including
+    ``isRunning()``) then raises
+    ``RuntimeError: wrapped C/C++ object of type QThread has been deleted``,
+    which is what crashed the app on Clear pin. Treating that as
+    "not running" is the right semantics: if the C++ side is gone the
+    thread definitely isn't running anymore.
+    """
+    if thread is None:
+        return False
+    try:
+        return thread.isRunning()
+    except RuntimeError:
+        return False
 
 
 # ── Background fetcher ───────────────────────────────────────────────────────
@@ -35,12 +57,15 @@ from PyQt6.QtWidgets import (
 class _SiteFetchWorker(QObject):
     """Runs in its own QThread; emits a signal per dataset as it completes."""
 
-    progress  = pyqtSignal(str)               # status message
-    rainfall  = pyqtSignal(object)            # dict | None
-    soil      = pyqtSignal(object)
-    elevation = pyqtSignal(object)
-    hardiness = pyqtSignal(object)
-    finished  = pyqtSignal(dict)              # combined result dict
+    progress      = pyqtSignal(str)           # status message
+    rainfall      = pyqtSignal(object)        # dict | None
+    soil          = pyqtSignal(object)
+    elevation     = pyqtSignal(object)
+    hardiness     = pyqtSignal(object)
+    climate       = pyqtSignal(object)        # GDD / frost-window summary
+    ecoregion     = pyqtSignal(object)        # auto-detected AB ecoregion
+    fast_ready    = pyqtSignal()              # fast batch done — climate may still be loading
+    finished      = pyqtSignal(dict)          # combined result dict
 
     def __init__(self, lat: float, lng: float):
         super().__init__()
@@ -49,28 +74,76 @@ class _SiteFetchWorker(QObject):
 
     @pyqtSlot()
     def run(self):
-        # Imported lazily so unit tests don't pull urllib at import time.
+        """V1.37: run the five fast fetches *concurrently* via a thread
+        pool, then declare "site data ready" as soon as they're all
+        in. Total perceived latency drops from ~sum-of-latencies
+        (sequential) to ~max-of-latencies (parallel) — typically
+        SoilGrids and Open-Meteo elevation run in 0.5-1.5 s and
+        used to stack, now they overlap. The slower climate fetch
+        still runs as a tail step so the GDD row updates from "—"
+        when its result arrives separately.
+
+        Cancellation is best-effort: in-flight HTTP requests can't
+        be interrupted, but no further work happens once cancel()
+        is called."""
+        from concurrent.futures import ThreadPoolExecutor
         from src.property_data import (
             fetch_rainfall, fetch_soil, fetch_elevation, fetch_hardiness,
+            fetch_climate, fetch_ecoregion,
         )
         out = {"lat": self.lat, "lng": self.lng}
 
-        steps = [
+        fast_steps = [
+            ("ecoregion", "Detecting ecoregion…",             fetch_ecoregion, self.ecoregion),
             ("hardiness", "Looking up hardiness zone…",       fetch_hardiness, self.hardiness),
             ("elevation", "Sampling Copernicus DEM…",         fetch_elevation, self.elevation),
             ("rainfall",  "Computing ERA5-Land rainfall…",    fetch_rainfall,  self.rainfall),
             ("soil",      "Querying SoilGrids…",              fetch_soil,      self.soil),
         ]
-        for key, msg, fn, sig in steps:
-            if self._cancelled:
-                break
-            self.progress.emit(msg)
+
+        def _run_step(fn):
             try:
-                value = fn(self.lat, self.lng)
+                return fn(self.lat, self.lng)
+            except Exception:
+                return None
+
+        # Five concurrent HTTP / local-lookup calls. Sequential total
+        # was ~5 seconds; parallel runs in whatever the slowest single
+        # fetch takes (usually SoilGrids at ~1-2 s).
+        self.progress.emit("Fetching site data…")
+        with ThreadPoolExecutor(max_workers=len(fast_steps)) as pool:
+            future_to_step = {
+                pool.submit(_run_step, fn): (key, sig)
+                for key, _msg, fn, sig in fast_steps
+            }
+            # As each future completes, surface its result via the
+            # matching signal — the panel updates incrementally instead
+            # of waiting for the whole batch.
+            from concurrent.futures import as_completed
+            for future in as_completed(future_to_step):
+                if self._cancelled:
+                    break
+                key, sig = future_to_step[future]
+                value = future.result()
+                out[key] = value
+                sig.emit(value)
+
+        # Fast batch is in — flip the user-visible status to ready
+        # immediately. The climate signal will still arrive later.
+        self.fast_ready.emit()
+
+        if not self._cancelled:
+            self.progress.emit("Computing growing-degree days…")
+            try:
+                value = fetch_climate(self.lat, self.lng)
             except Exception:
                 value = None
-            out[key] = value
-            sig.emit(value)
+            out["climate"] = value
+            self.climate.emit(value)
+            # Clear the progress line once the climate fetch is done —
+            # otherwise the "Computing growing-degree days…" message
+            # sits there forever even after the GDD row populates.
+            self.progress.emit("Site data ready.")
 
         self.finished.emit(out)
 
@@ -86,15 +159,17 @@ class _GeocodeWorker(QObject):
     results = pyqtSignal(list)        # list[{label, lat, lng}]
     failed  = pyqtSignal(str)         # error message
 
-    def __init__(self, query: str):
+    def __init__(self, query: str,
+                 near: "tuple[float, float] | None" = None):
         super().__init__()
         self._query = query
+        self._near  = near
 
     @pyqtSlot()
     def run(self):
         try:
             from src.property_data import geocode_alberta
-            hits = geocode_alberta(self._query) or []
+            hits = geocode_alberta(self._query, near=self._near) or []
             self.results.emit(hits)
         except Exception as exc:
             self.failed.emit(str(exc))
@@ -128,6 +203,29 @@ class SitePanel(QWidget):
     # Offline Edmonton terrain dataset download.
     download_edmonton_requested = pyqtSignal()
 
+    # Shade overlay (V1.51): show/clear, live opacity, and a (month, day, hour)
+    # time selection for the time-of-day / season view.
+    shade_requested = pyqtSignal(dict)    # {"when": (month, day, hour) | None}
+    shade_cleared   = pyqtSignal()
+    shade_opacity   = pyqtSignal(float)   # 0..1, live slider
+    shade_zones_requested = pyqtSignal()  # classify planting zones → tag cache
+    shade_zones_visible_changed = pyqtSignal(bool)  # show/hide the zone grid
+
+    # Import existing trees/buildings from OpenStreetMap (V1.51).
+    osm_import_requested = pyqtSignal()
+
+    # Import shade-casting footprints from an nDSM GeoTIFF (V1.53).
+    footprint_import_requested = pyqtSignal(str)   # tiff path
+
+    # Mark/draw existing shade casters on the Shade sub-tab (V1.59 — relocated
+    # from the Structures panel). Reuse the existing placement pipeline.
+    place_structure_requested = pyqtSignal(dict)   # existing tree/building point
+    place_shape_requested     = pyqtSignal(dict)   # draw footprint / tree canopy
+
+    # Satellite imagery alignment nudge (V1.60) — (east_m, north_m). Cosmetic:
+    # shifts only the basemap tiles so they line up with OSM/placements.
+    satellite_offset_changed  = pyqtSignal(float, float)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._lat: Optional[float] = None
@@ -138,33 +236,61 @@ class SitePanel(QWidget):
         self._geo_thread: Optional[QThread] = None
         self._geo_worker: Optional[_GeocodeWorker] = None
         self._geo_debounce: Optional[QTimer] = None
-        self._auto_color = "#5d4037"
+        self._auto_color = "#44cc00"
         self._contour_color = "#795548"
+        # Map widget reference, set by MainWindow via attach_map_widget().
+        # Used to bias the address-finder search against the current
+        # view centre — without it we fall back to all-of-Alberta.
+        self._map_widget = None
         self._build_ui()
         self._set_empty_state()
+
+    def attach_map_widget(self, map_widget):
+        """Wire the panel to the map widget so the address finder can
+        bias its query against the map's current view centre."""
+        self._map_widget = map_widget
 
     # ── Construction ────────────────────────────────────────────────────────
 
     def _build_ui(self):
+        """Site panel split into three sub-tabs (mirrors the Plants panel):
+        Site Information, Slope, and Shade."""
+        from src.ui_style import inner_tab_stylesheet
         outer = QVBoxLayout(self)
         outer.setContentsMargins(4, 4, 4, 4)
         outer.setSpacing(0)
 
+        from src.fill_tab_widget import FillTabWidget
+        tabs = FillTabWidget()
+        tabs.setDocumentMode(True)
+        tabs.tabBar().setUsesScrollButtons(False)
+        tabs.tabBar().setExpanding(True)
+        tabs.setStyleSheet(inner_tab_stylesheet())
+        outer.addWidget(tabs)
+
+        self._build_info_page(self._add_scroll_page(tabs, "Site Information"))
+        self._build_slope_page(self._add_scroll_page(tabs, "Slope"))
+        self._build_shade_page(self._add_scroll_page(tabs, "Shade"))
+
+    def _add_scroll_page(self, tabs, title):
+        """Add a scrollable page to the inner tab strip; return its body layout."""
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
-        outer.addWidget(scroll)
-
         body = QWidget()
         scroll.setWidget(body)
         layout = QVBoxLayout(body)
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(8)
+        tabs.addTab(scroll, title)
+        return layout
 
+    def _build_info_page(self, layout):
+        """Site Information sub-tab: property pin/address + climate + soil."""
         info = QLabel(
-            "Search an Alberta address below to drop a property pin and\n"
-            "auto-fill site data from public sources. Drag the pin to\n"
-            "refine; right-click on the pin to remove."
+            "Search an Alberta address below to drop a property pin and "
+            "auto-fill site data from public sources. Drag the pin to refine; "
+            "right-click on the pin to remove."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
@@ -249,9 +375,12 @@ class SitePanel(QWidget):
         )
         layout.addWidget(self._lbl_status)
 
-        # ── Hardiness ────────────────────────────────────────────────
-        # Order: zone → rainfall → soil sit directly under the pin so
-        # the most-asked-for site stats are visible without scrolling.
+        # ── Hardiness + climate ──────────────────────────────────────
+        # Order: zone → GDD → frost window → rainfall → soil sit directly
+        # under the pin so the most-asked-for site stats are visible
+        # without scrolling. GDD/frost rows are V1.35 additions — they
+        # show "—" until the climate fetch completes (Open-Meteo
+        # archive call, ~3-5 s on first run per location).
         self._hard_box = QGroupBox("Hardiness zone")
         self._hard_box.setStyleSheet(_GROUP_STYLE)
         hl = QFormLayout(self._hard_box)
@@ -260,8 +389,34 @@ class SitePanel(QWidget):
         self._lbl_hard_src = QLabel("")
         self._lbl_hard_src.setStyleSheet("color: #78909c; font-size: 10px;")
         self._lbl_hard_src.setWordWrap(True)
-        hl.addRow("Zone:", self._lbl_zone)
-        hl.addRow("Source:", self._lbl_hard_src)
+        self._lbl_gdd   = QLabel("—")
+        self._lbl_gdd.setStyleSheet("color: #c8e6c9;")
+        self._lbl_gdd.setToolTip(
+            "Growing-degree days (base 5 °C) — cumulative summer warmth "
+            "across the growing season. The single best predictor of "
+            "whether a plant has enough heat to flower, fruit, and reach "
+            "maturity at this location."
+        )
+        self._lbl_frost = QLabel("—")
+        self._lbl_frost.setStyleSheet("color: #c8e6c9;")
+        self._lbl_frost.setToolTip(
+            "Average last spring frost → first fall frost, computed "
+            "from the last 5 years of daily temperatures."
+        )
+        self._lbl_ecoregion = QLabel("—")
+        self._lbl_ecoregion.setStyleSheet("color: #c8e6c9;")
+        self._lbl_ecoregion.setToolTip(
+            "Auto-detected from the property's latitude and longitude. "
+            "The plant filter's ecoregion dropdown pre-populates from "
+            "this value, so the suggestions you see are filtered to "
+            "species native to your area. You can still override the "
+            "filter manually."
+        )
+        hl.addRow("Zone:",                self._lbl_zone)
+        hl.addRow("Source:",              self._lbl_hard_src)
+        hl.addRow("Growing-degree days:", self._lbl_gdd)
+        hl.addRow("Frost window:",        self._lbl_frost)
+        hl.addRow("Ecoregion:",           self._lbl_ecoregion)
         layout.addWidget(self._hard_box)
 
         # ── Rainfall (moved up under pin/zone) ──────────────────────
@@ -300,11 +455,11 @@ class SitePanel(QWidget):
         sl.addRow("Source:",        self._lbl_soil_src)
         layout.addWidget(self._soil_box)
 
-        # ── Slope analysis (area) ───────────────────────────────────
-        # Now hosts the single-point Elevation/slope readout (top), the
-        # auto-generated contour/ramp controls (middle), and the manual
-        # Contour-line drawing controls (bottom — formerly on the
-        # Analysis tab).
+        layout.addStretch()
+
+    def _build_slope_page(self, layout):
+        """Slope sub-tab: single-point elevation/slope, auto contours + slope
+        colour ramp, and the offline terrain data download."""
         # Single-point Elevation / slope readout (formerly its own box).
         self._elev_box = QGroupBox("Elevation / slope (at pin)")
         self._elev_box.setStyleSheet(_GROUP_STYLE)
@@ -340,9 +495,9 @@ class SitePanel(QWidget):
         slope_layout.addWidget(auto_header)
 
         slope_info = QLabel(
-            "Choose an area, then Generate. Edmonton uses the City's\n"
-            "0.5 m LiDAR contours; elsewhere falls back to Copernicus DEM.\n"
-            "30 m grid matches the DEM's native resolution — finer settings\n"
+            "Choose an area, then Generate. Edmonton uses the City's 0.5 m "
+            "LiDAR contours; elsewhere falls back to Copernicus DEM. 30 m "
+            "grid matches the DEM's native resolution — finer settings "
             "interpolate but don't add real detail."
         )
         slope_info.setWordWrap(True)
@@ -442,84 +597,86 @@ class SitePanel(QWidget):
         slope_btn_row.addWidget(btn_auto_clear)
         slope_layout.addLayout(slope_btn_row)
 
-        # ── Manual contour-line drawing (moved from Analysis tab) ───
-        contour_header = QLabel("<b>Draw contour line (manual)</b>")
-        contour_header.setStyleSheet("color: #a5d6a7; margin-top: 6px;")
-        slope_layout.addWidget(contour_header)
-
-        contour_info = QLabel(
-            "Draw manual contour lines to indicate terrain slope. Helps\n"
-            "place swales, ponds, and water features. Click points on the\n"
-            "map to draw, double-click to finish."
-        )
-        contour_info.setWordWrap(True)
-        contour_info.setStyleSheet("color: #90a4ae; font-size: 11px;")
-        slope_layout.addWidget(contour_info)
-
-        contour_form = QFormLayout()
-        contour_form.setContentsMargins(0, 0, 0, 0)
-
-        self._contour_elevation = QDoubleSpinBox()
-        self._contour_elevation.setRange(0, 2000)
-        self._contour_elevation.setSingleStep(0.5)
-        self._contour_elevation.setValue(0)
-        self._contour_elevation.setSuffix(" m")
-        contour_form.addRow("Elevation:", self._contour_elevation)
-
-        self._contour_interval = QDoubleSpinBox()
-        self._contour_interval.setRange(0.1, 10.0)
-        self._contour_interval.setSingleStep(0.5)
-        self._contour_interval.setValue(1.0)
-        self._contour_interval.setSuffix(" m")
-        contour_form.addRow("Interval:", self._contour_interval)
-
-        cc_row = QHBoxLayout()
-        self._contour_color_btn = QPushButton()
-        self._contour_color_btn.setFixedSize(28, 28)
-        self._contour_color_btn.setStyleSheet(
-            f"background: {self._contour_color}; border: 1px solid #4a7a4a; "
-            f"border-radius: 4px;"
-        )
-        self._contour_color_btn.clicked.connect(self._pick_contour_color)
-        cc_row.addWidget(self._contour_color_btn)
-        cc_row.addStretch()
-        contour_form.addRow("Color:", cc_row)
-
-        self._contour_labels = QCheckBox("Show elevation labels")
-        self._contour_labels.setChecked(True)
-        contour_form.addRow(self._contour_labels)
-
-        self._contour_slope_arrows = QCheckBox("Show downhill arrows")
-        self._contour_slope_arrows.setChecked(True)
-        self._contour_slope_arrows.setToolTip(
-            "Show arrows indicating downhill direction between contour lines"
-        )
-        contour_form.addRow(self._contour_slope_arrows)
-
-        slope_layout.addLayout(contour_form)
-
-        contour_btn_row = QHBoxLayout()
-        btn_draw_contour = QPushButton("Draw Contour Line")
-        btn_draw_contour.setStyleSheet(
-            "QPushButton { background: #5d4037; color: #efebe9; "
-            "border: 1px solid #795548; border-radius: 4px; padding: 6px; "
-            "font-weight: bold; }"
-            "QPushButton:hover { background: #6d4c41; }"
-        )
-        btn_draw_contour.clicked.connect(self._on_draw_contour)
-        contour_btn_row.addWidget(btn_draw_contour)
-
-        btn_clear_contour = QPushButton("Clear All")
-        btn_clear_contour.setStyleSheet(_BTN_SECONDARY)
-        btn_clear_contour.clicked.connect(self.contour_cleared.emit)
-        contour_btn_row.addWidget(btn_clear_contour)
-        slope_layout.addLayout(contour_btn_row)
+        # The manual "Draw contour line" UI lived here pre-V1.37. It
+        # was removed (user feedback: "I'm not sure a scenario where
+        # the draw manually option would be useful"). The Auto-contour
+        # & slope ramp section above generates contours from the DEM
+        # for any chosen area — that covers every real workflow we
+        # could think of. The `contour_requested` / `contour_cleared`
+        # signals + `_on_draw_contour` / `_pick_contour_color` helpers
+        # remain in place (they're cheap) so re-enabling the section
+        # is a single block of UI build code if the need arises.
 
         layout.addWidget(self._slope_box)
 
         self._build_terrain_data_section(layout)
 
         layout.addStretch()
+
+    def _build_shade_page(self, layout):
+        """Shade sub-tab: shade map, existing shade casters (mark/draw trees and
+        buildings), the OpenStreetMap import, and the satellite alignment nudge."""
+        self._build_shade_section(layout)
+        self._build_existing_features_section(layout)
+        self._build_osm_section(layout)
+        self._build_imagery_align_section(layout)
+        layout.addStretch()
+
+    def _build_imagery_align_section(self, layout):
+        """Nudge the satellite basemap a few metres to line it up with OSM
+        buildings / placements. Esri imagery is often georegistered slightly
+        off; this is cosmetic and never moves project data."""
+        box = QGroupBox("Satellite alignment")
+        box.setStyleSheet(_GROUP_STYLE)
+        box.setToolTip(
+            "Esri satellite imagery is often a few metres off from OpenStreetMap "
+            "and ground truth. Nudge it here to line the imagery up with OSM "
+            "buildings and your placements. Cosmetic only — it never moves data."
+        )
+        vb = QVBoxLayout(box)
+        vb.setContentsMargins(6, 6, 6, 6)
+        vb.setSpacing(4)
+
+        hint = QLabel("Shifts the satellite basemap only — not your data.")
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        vb.addWidget(hint)
+
+        form = QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        self._sat_east = QDoubleSpinBox()
+        self._sat_east.setRange(-30.0, 30.0)
+        self._sat_east.setSingleStep(0.5)
+        self._sat_east.setSuffix(" m")
+        self._sat_east.setToolTip("Positive shifts the imagery east.")
+        self._sat_east.valueChanged.connect(self._emit_sat_offset)
+        self._sat_north = QDoubleSpinBox()
+        self._sat_north.setRange(-30.0, 30.0)
+        self._sat_north.setSingleStep(0.5)
+        self._sat_north.setSuffix(" m")
+        self._sat_north.setToolTip("Positive shifts the imagery north.")
+        self._sat_north.valueChanged.connect(self._emit_sat_offset)
+        form.addRow("East:", self._sat_east)
+        form.addRow("North:", self._sat_north)
+        vb.addLayout(form)
+
+        reset = QPushButton("Reset alignment")
+        reset.setStyleSheet(_BTN_SECONDARY)
+        reset.clicked.connect(self._reset_sat_offset)
+        vb.addWidget(reset)
+
+        layout.addWidget(box)
+
+    def _emit_sat_offset(self):
+        self.satellite_offset_changed.emit(
+            self._sat_east.value(), self._sat_north.value())
+
+    def _reset_sat_offset(self):
+        for sp in (self._sat_east, self._sat_north):
+            sp.blockSignals(True)
+            sp.setValue(0.0)
+            sp.blockSignals(False)
+        self._emit_sat_offset()
 
     # ── Public API (called from MainWindow) ─────────────────────────────────
 
@@ -536,6 +693,9 @@ class SitePanel(QWidget):
             self._lbl_label.setText(self._label)
         else:
             self._lbl_label.setText("(custom pin)")
+        # Re-clamp the shade time slider to this location's daylight window.
+        if hasattr(self, "_shade_season"):
+            self._on_shade_season_changed(self._shade_season.currentIndex())
         self._reset_data_rows()
         if fetch:
             self._start_fetch()
@@ -575,6 +735,9 @@ class SitePanel(QWidget):
     def _reset_data_rows(self):
         self._lbl_zone.setText("—")
         self._lbl_hard_src.setText("")
+        self._lbl_gdd.setText("—")
+        self._lbl_frost.setText("—")
+        self._lbl_ecoregion.setText("—")
         self._lbl_elev.setText("—")
         self._lbl_slope.setText("—")
         self._lbl_aspect.setText("—")
@@ -594,37 +757,71 @@ class SitePanel(QWidget):
             return
         self._lbl_status.setText("Fetching site data…")
 
-        self._thread = QThread(self)
-        self._worker = _SiteFetchWorker(self._lat, self._lng)
-        self._worker.moveToThread(self._thread)
+        thread = QThread(self)
+        worker = _SiteFetchWorker(self._lat, self._lng)
+        worker.moveToThread(thread)
 
-        self._thread.started.connect(self._worker.run)
-        self._worker.progress.connect(self._lbl_status.setText)
-        self._worker.hardiness.connect(self._on_hardiness)
-        self._worker.elevation.connect(self._on_elevation)
-        self._worker.rainfall.connect(self._on_rainfall)
-        self._worker.soil.connect(self._on_soil)
-        self._worker.finished.connect(self._on_finished)
-        self._worker.finished.connect(self._thread.quit)
-        self._thread.finished.connect(self._cleanup_thread)
+        thread.started.connect(worker.run)
+        worker.progress.connect(self._lbl_status.setText)
+        worker.hardiness.connect(self._on_hardiness)
+        worker.elevation.connect(self._on_elevation)
+        worker.rainfall.connect(self._on_rainfall)
+        worker.soil.connect(self._on_soil)
+        worker.climate.connect(self._on_climate)
+        worker.ecoregion.connect(self._on_ecoregion)
+        worker.fast_ready.connect(self._on_fast_ready)
+        worker.finished.connect(self._on_finished)
 
-        self._thread.start()
+        # Auto-teardown chain: when the worker emits finished, quit the
+        # thread's event loop, then both objects schedule themselves for
+        # deletion once the thread has actually stopped running. We never
+        # delete a thread synchronously while it could still be executing
+        # — that race is what crashed the app on Clear pin.
+        worker.finished.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+
+        self._thread = thread
+        self._worker = worker
+        thread.start()
 
     def _cancel_thread(self):
-        if self._worker is not None:
-            self._worker.cancel()
-        if self._thread is not None and self._thread.isRunning():
-            self._thread.quit()
-            self._thread.wait(500)
-        self._cleanup_thread()
+        """Detach the in-flight site-data worker without blocking.
+
+        Sets the worker's cancelled flag, asks the thread's event loop to
+        quit, and drops our references. The auto-teardown chain wired in
+        ``_start_fetch`` finishes the cleanup once the worker actually
+        returns. Disconnecting the worker's signals beforehand stops the
+        cancelled run from clobbering the UI with stale results.
+        """
+        worker = self._worker
+        thread = self._thread
+        self._worker = None
+        self._thread = None
+
+        if worker is not None:
+            try:
+                worker.cancel()
+            except Exception:
+                pass
+            for sig_name in ("progress", "hardiness", "elevation",
+                             "rainfall", "soil", "climate", "ecoregion",
+                             "fast_ready", "finished"):
+                try:
+                    getattr(worker, sig_name).disconnect()
+                except (TypeError, RuntimeError):
+                    pass
+        if _safe_is_running(thread):
+            try:
+                thread.quit()
+            except RuntimeError:
+                pass
 
     def _cleanup_thread(self):
-        if self._worker is not None:
-            self._worker.deleteLater()
-            self._worker = None
-        if self._thread is not None:
-            self._thread.deleteLater()
-            self._thread = None
+        # Retained for backward-compat with any external callers; the
+        # auto-teardown chain in _start_fetch now handles deletion.
+        self._worker = None
+        self._thread = None
 
     # ── Slot handlers (UI thread) ───────────────────────────────────────────
 
@@ -639,14 +836,69 @@ class SitePanel(QWidget):
         self._lbl_zone.setText(zone_text)
         self._lbl_hard_src.setText(data.get("source", ""))
 
+    def _on_ecoregion(self, data):
+        """Surface the auto-detected ecoregion in the readout and write
+        it to the QSettings key the plant panel checks so its filter
+        dropdown pre-populates. Only writes the auto key — the user's
+        explicit choice (``plant_panel/ab_ecoregion``) is untouched."""
+        if not data:
+            self._lbl_ecoregion.setText("Outside known regions")
+            return
+        label = data.get("label") or data.get("key") or "—"
+        self._lbl_ecoregion.setText(f"{label}  (auto)")
+        # Stash the auto-detected key for the plant panel to pick up
+        # on its next refresh. Separate key from the user's explicit
+        # choice so a manual override survives a pin move.
+        try:
+            from PyQt6.QtCore import QSettings
+            QSettings().setValue("plant_panel/ab_ecoregion_auto",
+                                 data.get("key") or "")
+        except Exception:
+            pass
+
+    def _on_climate(self, data):
+        """Update the GDD₅ + frost-window rows. ``data`` is the dict
+        returned by ``src.climate.get_climate_summary`` or ``None`` on
+        fetch failure."""
+        if not data:
+            self._lbl_gdd.setText("Unavailable (offline?)")
+            self._lbl_frost.setText("—")
+            return
+        from src.climate import doy_to_date_label
+        gdd = data.get("gdd5_mean")
+        if gdd is not None:
+            cached_marker = " (cached)" if data.get("cached") else ""
+            self._lbl_gdd.setText(
+                f"{int(round(gdd))}  ({data.get('years_used', 0)}-yr avg)"
+                + cached_marker
+            )
+        else:
+            self._lbl_gdd.setText("—")
+        last = data.get("last_spring_frost_doy")
+        first = data.get("first_fall_frost_doy")
+        free = data.get("frost_free_days")
+        if last is not None and first is not None:
+            self._lbl_frost.setText(
+                f"{doy_to_date_label(last)} → {doy_to_date_label(first)}"
+                + (f"  ({free} days)" if free is not None else "")
+            )
+        else:
+            self._lbl_frost.setText("—")
+
     def _on_elevation(self, data):
         if not data:
             self._lbl_elev.setText("Unavailable")
             return
         self._lbl_elev.setText(f"{data['elevation_m']:.1f} m")
-        self._lbl_slope.setText(
-            f"{data['slope_pct']:.2f} %  ({data['slope_deg']:.2f}°)"
-        )
+        # V1.37: slope_pct may be None when the pin sits on water — the
+        # DEM omits the neighbours we'd need for the gradient. Show "—"
+        # rather than throwing on the format call.
+        slope_pct = data.get("slope_pct")
+        slope_deg = data.get("slope_deg")
+        if slope_pct is not None and slope_deg is not None:
+            self._lbl_slope.setText(f"{slope_pct:.2f} %  ({slope_deg:.2f}°)")
+        else:
+            self._lbl_slope.setText("—")
         if data.get("aspect_deg") is not None:
             self._lbl_aspect.setText(
                 f"{data['aspect']}  ({data['aspect_deg']:.0f}°)"
@@ -690,8 +942,18 @@ class SitePanel(QWidget):
             self._lbl_soil_depth.setText(f"{depth} cm reported")
         self._lbl_soil_src.setText(data.get("source", ""))
 
-    def _on_finished(self, result: dict):
+    def _on_fast_ready(self):
+        """The non-climate fetches are in — flip the user-visible status
+        to ready immediately, even though the slower climate call is
+        still running in the worker. The climate row will update from
+        '—' when its signal arrives."""
         self._lbl_status.setText("Site data ready.")
+
+    def _on_finished(self, result: dict):
+        """The worker has finished every step including the slower
+        climate fetch. The status text is already 'ready' from
+        ``_on_fast_ready``; this signal just propagates the full
+        result dict to the rest of the app."""
         self.site_data_updated.emit(result)
 
     # ── Auto-generated slope analysis ───────────────────────────────────────
@@ -726,31 +988,334 @@ class SitePanel(QWidget):
         """Called from MainWindow with progress / queue / result info."""
         self._auto_status.setText(text)
 
-    # ── Manual contour drawing ─────────────────────────────────────────────
+    # ── Shade overlay (V1.51) ──────────────────────────────────────────────
+
+    def _build_shade_section(self, parent_layout):
+        """Show-shade button + opacity, plus season & time-of-day selectors that
+        drive the time-aware shade overlay (src/shade.py + ShadeWorker)."""
+        from src.solar import KEY_DATES
+        box = QGroupBox("Shade map")
+        box.setToolTip("Cast shade from existing trees/buildings and the "
+                       "design's own canopy, at a chosen season and time of day.")
+        v = QVBoxLayout(box)
+        v.setContentsMargins(6, 6, 6, 6)
+        v.setSpacing(4)
+
+        season_row = QHBoxLayout()
+        season_row.addWidget(QLabel("Season:"))
+        self._shade_season = QComboBox()
+        # data = (month, day). V1.58: the overlay always shows a crisp single
+        # instant (a real date + the time slider) so shadows track the sun and
+        # match each building's outline — no season-averaged "blob". Planting-zone
+        # classification still uses the season average internally (separate path).
+        for label, d in KEY_DATES.items():
+            self._shade_season.addItem(label, (d.month, d.day))
+        self._shade_season.setCurrentIndex(0)          # Summer Solstice
+        self._shade_season.currentIndexChanged.connect(self._on_shade_season_changed)
+        season_row.addWidget(self._shade_season)
+        v.addLayout(season_row)
+
+        time_row = QHBoxLayout()
+        time_row.addWidget(QLabel("Time:"))
+        self._shade_hour = QSlider(Qt.Orientation.Horizontal)
+        # Minutes since midnight in 15-min steps, so shadows sweep smoothly
+        # rather than jumping by whole hours. 5 AM – 9 PM local solar by default.
+        self._shade_hour.setRange(5 * 60, 21 * 60)
+        self._shade_hour.setSingleStep(15)
+        self._shade_hour.setPageStep(60)
+        self._shade_hour.setValue(15 * 60)      # mid-afternoon: long, clearly
+                                                # directional shadows by default
+        self._shade_hour_lbl = QLabel("15:00")
+        self._shade_hour.valueChanged.connect(
+            lambda v: self._shade_hour_lbl.setText(f"{v // 60:02d}:{v % 60:02d}"))
+        # Scrub the slider to sweep shadows across the day. A short debounce
+        # coalesces rapid drags into one recompute, and only a real day (not
+        # "Typical") drives a live overlay — the averaged view has no time.
+        self._shade_scrub = QTimer(self)
+        self._shade_scrub.setSingleShot(True)
+        self._shade_scrub.setInterval(180)
+        self._shade_scrub.timeout.connect(self._emit_shade_for_scrub)
+        self._shade_hour.valueChanged.connect(self._on_shade_hour_scrubbed)
+        time_row.addWidget(self._shade_hour)
+        time_row.addWidget(self._shade_hour_lbl)
+        v.addLayout(time_row)
+
+        opa_row = QHBoxLayout()
+        opa_row.addWidget(QLabel("Opacity:"))
+        self._shade_opacity = QSlider(Qt.Orientation.Horizontal)
+        self._shade_opacity.setRange(0, 100)
+        self._shade_opacity.setValue(50)
+        self._shade_opacity.valueChanged.connect(
+            lambda val: self.shade_opacity.emit(val / 100.0))
+        opa_row.addWidget(self._shade_opacity)
+        v.addLayout(opa_row)
+
+        btn_row = QHBoxLayout()
+        btn_show = QPushButton("Show shade")
+        btn_show.setStyleSheet(_BTN_PRIMARY)
+        btn_show.clicked.connect(self._on_show_shade)
+        btn_row.addWidget(btn_show)
+        btn_clear = QPushButton("Clear")
+        btn_clear.setStyleSheet(_BTN_SECONDARY)
+        btn_clear.clicked.connect(self.shade_cleared.emit)
+        btn_row.addWidget(btn_clear)
+        v.addLayout(btn_row)
+
+        # Classify each planting cell as full sun / partial / full shade from
+        # the season-average grid and cache the tags (src/db/shade_zones.py) so
+        # plant matching can read them without recomputing.
+        btn_classify = QPushButton("Classify planting zones")
+        btn_classify.setStyleSheet(_BTN_SECONDARY)
+        btn_classify.setToolTip(
+            "Tag every spot full sun / partial shade / full shade from the "
+            "season-average shade, and cache it for plant matching.")
+        btn_classify.clicked.connect(self.shade_zones_requested.emit)
+        v.addWidget(btn_classify)
+
+        # Show-on-map toggle + colour legend for the classified zones.
+        zrow = QHBoxLayout()
+        self._zones_show_cb = QCheckBox("Show on map")
+        self._zones_show_cb.setChecked(True)
+        self._zones_show_cb.setToolTip(
+            "Show/hide the classified planting zones on the map.")
+        self._zones_show_cb.toggled.connect(self.shade_zones_visible_changed.emit)
+        zrow.addWidget(self._zones_show_cb)
+        legend = QLabel(
+            '<span style="color:#ffd54f">■</span> Full sun&nbsp;&nbsp;'
+            '<span style="color:#fb8c00">■</span> Partial&nbsp;&nbsp;'
+            '<span style="color:#5c6bc0">■</span> Full shade')
+        legend.setStyleSheet("font-size: 11px;")
+        zrow.addWidget(legend)
+        zrow.addStretch()
+        v.addLayout(zrow)
+
+        self._shade_zone_status = QLabel("")
+        self._shade_zone_status.setWordWrap(True)
+        self._shade_zone_status.setStyleSheet("color: #a5d6a7; font-size: 11px;")
+        v.addWidget(self._shade_zone_status)
+
+        parent_layout.addWidget(box)
+
+    def mark_zones_shown(self):
+        """Re-check the 'Show on map' box (without re-emitting) after a classify
+        run draws the zones, so the toggle reflects what's on the map."""
+        self._zones_show_cb.blockSignals(True)
+        self._zones_show_cb.setChecked(True)
+        self._zones_show_cb.blockSignals(False)
+
+    def set_shade_zone_status(self, text: str):
+        """Show a short result line under the Classify button."""
+        if hasattr(self, "_shade_zone_status"):
+            self._shade_zone_status.setText(text)
+
+    def _on_show_shade(self):
+        season = self._shade_season.currentData()    # (month, day) or None
+        when = None
+        if season is not None:
+            v = self._shade_hour.value()             # minutes since midnight
+            when = (season[0], season[1], v // 60, v % 60)
+        self.shade_requested.emit({"when": when})
+
+    def _on_shade_season_changed(self, _idx):
+        """Clamp the time slider to the chosen day's sunrise→sunset so the user
+        scrubs only through real daylight, and label the ends. Falls back to the
+        generic 5 AM–9 PM range until a site location is known."""
+        season = self._shade_season.currentData()
+        if season is None or self._lat is None or self._lng is None:
+            self._shade_hour.setRange(5 * 60, 21 * 60)
+            return
+        try:
+            from datetime import date
+            from src.solar import sunrise_sunset
+            sr, ss = sunrise_sunset(self._lat, self._lng,
+                                    date(2025, season[0], season[1]))
+            lo = max(0, int(sr * 60))                  # floor sunrise (minutes)
+            hi = min(24 * 60 - 1, int(ss * 60) + 15)   # a touch past sunset
+            if hi <= lo:
+                lo, hi = 5 * 60, 21 * 60
+        except Exception:  # noqa: BLE001 — fall back to the generic window
+            lo, hi = 5 * 60, 21 * 60
+        cur = self._shade_hour.value()
+        self._shade_hour.setRange(lo, hi)
+        self._shade_hour.setValue(min(max(cur, lo), hi))
+
+    def _on_shade_hour_scrubbed(self, _h):
+        """Slider moved — debounce a live overlay recompute (real days only)."""
+        if self._shade_season.currentData() is None:
+            return                          # averaged view has no time-of-day
+        self._shade_scrub.start()           # (re)arm the debounce
+
+    def _emit_shade_for_scrub(self):
+        season = self._shade_season.currentData()
+        if season is None:
+            return
+        v = self._shade_hour.value()                 # minutes since midnight
+        self.shade_requested.emit(
+            {"when": (season[0], season[1], v // 60, v % 60)})
+
+    # ── Existing shade casters: mark/draw trees & buildings ────────────────
+    # Relocated from the Structures panel (V1.59) so all shade casters — drawn,
+    # marked, and OSM-imported — live together on the Shade sub-tab. Reuses the
+    # structure/shape placement pipeline via the panel's signals.
+
+    def _build_existing_features_section(self, layout):
+        from src.db.structures import EXISTING_TREE_ID, EXISTING_BUILDING_ID
+        box = QGroupBox("Existing features (trees & buildings)")
+        box.setStyleSheet(_GROUP_STYLE)
+        box.setToolTip(
+            "Mark trees and buildings already on your property so the design "
+            "generator places shade-loving plants in their cast shade."
+        )
+        vb = QVBoxLayout(box)
+        vb.setContentsMargins(6, 6, 6, 6)
+        vb.setSpacing(4)
+
+        hint = QLabel("Set height/size, click a button, then click the map.")
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        vb.addWidget(hint)
+
+        dims = QHBoxLayout()
+        dims.addWidget(QLabel("Height (m):"))
+        self._exist_height = QDoubleSpinBox()
+        self._exist_height.setRange(1.0, 60.0)
+        self._exist_height.setSingleStep(0.5)
+        self._exist_height.setValue(6.0)
+        dims.addWidget(self._exist_height)
+        dims.addWidget(QLabel("Size (m):"))
+        self._exist_size = QDoubleSpinBox()
+        self._exist_size.setRange(0.5, 40.0)
+        self._exist_size.setSingleStep(0.5)
+        self._exist_size.setValue(6.0)
+        self._exist_size.setToolTip("Canopy diameter (tree) or footprint width "
+                                    "(building).")
+        dims.addWidget(self._exist_size)
+        vb.addLayout(dims)
+
+        btns = QHBoxLayout()
+        btn_tree = QPushButton("🌳 Mark tree")
+        btn_tree.clicked.connect(lambda: self._on_mark_existing(EXISTING_TREE_ID))
+        btn_bldg = QPushButton("🏠 Mark building")
+        btn_bldg.clicked.connect(
+            lambda: self._on_mark_existing(EXISTING_BUILDING_ID))
+        btns.addWidget(btn_tree)
+        btns.addWidget(btn_bldg)
+        vb.addLayout(btns)
+
+        draw_btns = QHBoxLayout()
+        btn_tree_outline = QPushButton("🌲 Draw tree canopy")
+        btn_tree_outline.setToolTip(
+            "Draw a tree canopy outline (click points, double-click to finish). "
+            "Uses the height above; casts a tapering tree shadow.")
+        btn_tree_outline.clicked.connect(self._on_draw_tree_canopy)
+        draw_btns.addWidget(btn_tree_outline)
+
+        btn_outline = QPushButton("✏️ Draw building")
+        btn_outline.setToolTip(
+            "Draw the building's outline (click corners, double-click to "
+            "finish). Uses the height above; casts an accurate shadow.")
+        btn_outline.clicked.connect(self._on_draw_building_footprint)
+        draw_btns.addWidget(btn_outline)
+        vb.addLayout(draw_btns)
+
+        layout.addWidget(box)
+
+    def _on_mark_existing(self, feature_id: str):
+        """Emit a placement request for an existing tree/building, reusing the
+        structure placement pipeline (the controller routes the reserved id to
+        an existing_* feature)."""
+        from src.db.structures import existing_feature_def
+        payload = existing_feature_def(
+            feature_id, size_m=self._exist_size.value(),
+            height_m=self._exist_height.value())
+        self.place_structure_requested.emit(payload)
+
+    def _on_draw_building_footprint(self):
+        """Start shape-draw pre-set as a building footprint at the entered
+        height, so the finished polygon becomes a shade-casting canopy."""
+        self.place_shape_requested.emit({
+            "shape_type": "Building footprint",
+            "label": "Building",
+            "fill_color": "#8d6e63",
+            "stroke_color": "#5d4037",
+            "fill_opacity": 0.3,
+            "dash_array": "",
+            "height_m": self._exist_height.value(),
+        })
+
+    def _on_draw_tree_canopy(self):
+        """Start shape-draw pre-set as a tree canopy at the entered height; the
+        finished polygon becomes a tapering tree shade caster (shape_type
+        'Tree canopy' → caster_kind='tree' in the controller)."""
+        self.place_shape_requested.emit({
+            "shape_type": "Tree canopy",
+            "label": "Tree",
+            "fill_color": "#44cc00",
+            "stroke_color": "#2e7d32",
+            "fill_opacity": 0.3,
+            "dash_array": "",
+            "height_m": self._exist_height.value(),
+        })
+
+    # ── Existing features from OpenStreetMap (V1.51) ───────────────────────
+
+    def _build_osm_section(self, parent_layout):
+        box = QGroupBox("Existing features (OpenStreetMap)")
+        box.setToolTip("Import nearby buildings and mapped trees from "
+                       "OpenStreetMap so the design accounts for their shade "
+                       "and keeps plants off them. Anything missing can still "
+                       "be marked by hand in the Structures tab.")
+        v = QVBoxLayout(box)
+        v.setContentsMargins(6, 6, 6, 6)
+        btn = QPushButton("Import from OpenStreetMap")
+        btn.setStyleSheet(_BTN_SECONDARY)
+        btn.clicked.connect(self.osm_import_requested.emit)
+        v.addWidget(btn)
+
+        # Import shade-casting footprints from a height raster (nDSM GeoTIFF) —
+        # the whiteboxtools-style path. Only shown when a backend is available
+        # (numpy + shapely present), so a minimal install hides it.
+        from src.footprint_extract import extraction_available
+        if extraction_available():
+            btn_tiff = QPushButton("Import footprints (nDSM GeoTIFF)…")
+            btn_tiff.setStyleSheet(_BTN_SECONDARY)
+            btn_tiff.setToolTip(
+                "Vectorize building/canopy footprints (with heights) from a "
+                "normalized-DSM GeoTIFF (DSM minus DEM). They land as "
+                "shade-casting footprints you can edit or remove.")
+            btn_tiff.clicked.connect(self._on_pick_footprint_tiff)
+            v.addWidget(btn_tiff)
+
+        self._osm_status = QLabel("")
+        self._osm_status.setWordWrap(True)
+        self._osm_status.setStyleSheet("color: #ffcc80; font-size: 11px;")
+        v.addWidget(self._osm_status)
+        parent_layout.addWidget(box)
+
+    def _on_pick_footprint_tiff(self):
+        """Pick an nDSM GeoTIFF and emit the import request with its path."""
+        from PyQt6.QtWidgets import QFileDialog
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Import footprints from nDSM GeoTIFF", "",
+            "GeoTIFF (*.tif *.tiff);;All files (*)")
+        if path:
+            self.footprint_import_requested.emit(path)
+
+    def set_osm_status(self, text: str):
+        self._osm_status.setText(text)
+
+    # ── Manual contour drawing (UI removed V1.37) ──────────────────────────
+    # Helpers below are intentional no-ops kept as placeholders so any
+    # stray callsite — e.g. a saved JSON pulled from an older session —
+    # finds the method names and doesn't crash. To re-enable manual
+    # contour drawing, restore the QGroupBox section in `_build_ui`
+    # and revert these stubs to the pre-V1.37 implementation.
 
     def _pick_contour_color(self):
-        color = QColorDialog.getColor(
-            QColor(self._contour_color), self, "Contour color"
-        )
-        if color.isValid():
-            self._contour_color = color.name()
-            self._contour_color_btn.setStyleSheet(
-                f"background: {self._contour_color}; "
-                f"border: 1px solid #4a7a4a; border-radius: 4px;"
-            )
+        return
 
     def _on_draw_contour(self):
-        self.contour_requested.emit({
-            "elevation_m":       self._contour_elevation.value(),
-            "interval_m":        self._contour_interval.value(),
-            "color":             self._contour_color,
-            "show_labels":       self._contour_labels.isChecked(),
-            "show_slope_arrows": self._contour_slope_arrows.isChecked(),
-        })
-        # Auto-increment elevation for next contour line.
-        self._contour_elevation.setValue(
-            self._contour_elevation.value() + self._contour_interval.value()
-        )
+        return
 
     # ── Terrain Data section ───────────────────────────────────────────────
 
@@ -761,10 +1326,9 @@ class SitePanel(QWidget):
         vl.setSpacing(6)
 
         note = QLabel(
-            "Download the full City of Edmonton 0.5 m LiDAR contour\n"
-            "dataset for instant offline access. One-time download\n"
-            "(~50–300 MB). SRTM data outside Edmonton is cached\n"
-            "automatically as you use it."
+            "Download the full City of Edmonton 0.5 m LiDAR contour dataset "
+            "for instant offline access. One-time download (~1 GB unpacked). "
+            "SRTM data outside Edmonton is cached automatically as you use it."
         )
         note.setWordWrap(True)
         note.setStyleSheet("color: #90a4ae; font-size: 11px;")
@@ -875,18 +1439,31 @@ class SitePanel(QWidget):
     def _run_geocode(self, query: str):
         # Cancel any in-flight geocode before starting a new one.
         self._cancel_geocode()
-        self._geo_thread = QThread(self)
-        self._geo_worker = _GeocodeWorker(query)
-        self._geo_worker.moveToThread(self._geo_thread)
-        self._geo_thread.started.connect(self._geo_worker.run)
-        self._geo_worker.results.connect(self._on_geocode_results)
-        self._geo_worker.failed.connect(
+        # Bias the search against the map's current view centre when
+        # available. Falls through to the all-of-Alberta query when the
+        # panel hasn't been wired to a map widget yet (e.g. headless
+        # tests).
+        near = None
+        if self._map_widget is not None:
+            near = getattr(self._map_widget, "last_center", None)
+        thread = QThread(self)
+        worker = _GeocodeWorker(query, near=near)
+        worker.moveToThread(thread)
+        thread.started.connect(worker.run)
+        worker.results.connect(self._on_geocode_results)
+        worker.failed.connect(
             lambda msg: self._lbl_status.setText(f"Search failed: {msg}")
         )
-        self._geo_worker.results.connect(self._geo_thread.quit)
-        self._geo_worker.failed.connect(self._geo_thread.quit)
-        self._geo_thread.finished.connect(self._cleanup_geocode)
-        self._geo_thread.start()
+        # Auto-teardown chain — see _start_fetch for why we don't delete
+        # threads synchronously.
+        worker.results.connect(thread.quit)
+        worker.failed.connect(thread.quit)
+        worker.results.connect(worker.deleteLater)
+        worker.failed.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        self._geo_thread = thread
+        self._geo_worker = worker
+        thread.start()
 
     def _on_geocode_results(self, hits: list):
         self._addr_results.clear()
@@ -913,18 +1490,29 @@ class SitePanel(QWidget):
         self.address_resolved.emit(float(lat), float(lng), label)
 
     def _cancel_geocode(self):
-        if self._geo_thread is not None and self._geo_thread.isRunning():
-            self._geo_thread.quit()
-            self._geo_thread.wait(200)
-        self._cleanup_geocode()
+        """Detach the in-flight geocode worker without blocking — see
+        ``_cancel_thread`` for the rationale."""
+        worker = self._geo_worker
+        thread = self._geo_thread
+        self._geo_worker = None
+        self._geo_thread = None
+        if worker is not None:
+            for sig_name in ("results", "failed"):
+                try:
+                    getattr(worker, sig_name).disconnect()
+                except (TypeError, RuntimeError):
+                    pass
+        if _safe_is_running(thread):
+            try:
+                thread.quit()
+            except RuntimeError:
+                pass
 
     def _cleanup_geocode(self):
-        if self._geo_worker is not None:
-            self._geo_worker.deleteLater()
-            self._geo_worker = None
-        if self._geo_thread is not None:
-            self._geo_thread.deleteLater()
-            self._geo_thread = None
+        # Retained for backward-compat; teardown is now driven by the
+        # signal chain wired up in _run_geocode.
+        self._geo_worker = None
+        self._geo_thread = None
 
 
 # ── Styling ──────────────────────────────────────────────────────────────────

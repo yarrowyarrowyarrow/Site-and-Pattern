@@ -1,6 +1,33 @@
 # PermaDesign — Feature Roadmap
 
-A prioritized list of features requested by permaculture practitioners, drawn from community forums (Permies.com, Reddit r/Permaculture), existing tool reviews, and user feedback. Organized by effort/impact tiers.
+A prioritized list of features for the Alberta-focused **Native Habitat Designer** — turning lawns into native plant habitat. Organized by effort/impact tiers, with the active sprint at the top.
+
+---
+
+## Current Sprint (in progress)
+
+| Area | Item | Status |
+|------|------|--------|
+| Pivot | Reframe app from "Permaculture Landscape Designer" to "Native Habitat Designer"; add habitat-focused plant tags (keystone species, host plant, bird food, nesting material); swap permaculture-coded structures for native bee logs, brush piles, snags, rock xeriscape, native lawn patch, bee hotel | Done |
+| Cleanup | Drop deprecated "guilds" terminology in favour of "plant communities"; remove legacy/duplicate files | Done |
+| Cleanup | Trim README/ROADMAP to current state and current-sprint plan | Done |
+| Cleanup | Update Friend Setup Guide for the `.exe` one-click installer | Done |
+| UI | Address finder: partial-match-first; fix "Clear" button crash | Planned |
+| UI | Global Ctrl+Z / cancel across plants, structures, boundaries, contours | Planned |
+| UI | Site panel: pin-drop cursor + reverse-geocode to actual address | Planned |
+| Map | Remove zone circles entirely | Planned |
+| Map | Reorder View tab to Satellite, Boundary, Measurement, Grid, Plants, Canopy, Structures | Planned |
+| Map | Measurements: hide via toggle (don't delete); right-click to delete | Planned |
+| Map | Grid menu: 1×1 / 5×5 / 10×10 / 100×100 m, opacity + colour | Planned |
+| Plants | Plant panel: label or rainbow icon for the colour picker | Planned |
+| Plants | Overlap slider range −50% to +50% (0 = no gap, no overlap) | Planned |
+| Communities | Visual-grid plant community builder (5–8 plants), saved locally, AB-focused | Planned |
+| Communities | Drag-to-reposition placed items: individual plants and whole plant communities | Planned |
+| Data | Edmonton open-data parser fix or local bundling | Planned |
+| Data | Soil fallback when SoilGrids v2.0 (ISRIC) is unavailable | Planned |
+| Distribution | One-click `.exe` Windows installer | In progress |
+
+> **Out of scope for this sprint:** SQLite schema expansion and dataset growth. These are being handled separately on a local AI workflow.
 
 ---
 
@@ -10,7 +37,7 @@ Placeable landscape elements beyond plants.
 
 | ID | Feature | Description | Status |
 |----|---------|-------------|--------|
-| S1 | **Structures library** | Placeable icons/shapes for: pond, herb spiral, hugelkultur bed, swale, rain garden, compost bin, greenhouse, cold frame, chicken coop/tractor, shed, raised bed, keyhole bed, fire pit, beehive, rain barrel, fence/wall | Done |
+| S1 | **Structures library** | Placeable icons/shapes for: pond, bioswale, rain garden, rain barrel, compost bin, raised bed, shed, fire pit, fence/wall, plus native habitat elements — native bee habitat log, bee hotel, brush pile, snag, rock xeriscape, native lawn patch | Done |
 | S2 | **Hedgerow / fence line tool** | Draw a polyline that renders as a hedge or fence with selectable plant species along it | Done |
 | S3 | **Custom shape drawing** | Free-form polygon drawing for garden beds, pathways, patios — with fill color/pattern and labels | Done |
 
@@ -23,7 +50,7 @@ Tools that help designers understand their site.
 | ID | Feature | Description | Status |
 |----|---------|-------------|--------|
 | A1 | **Sun path / shadow overlay** | Given lat/lng + date, draw the sun arc and show shadow direction arrows for morning/noon/evening — helps place shade-sensitive crops | Done |
-| A2 | **Sector analysis layer** | Draw directional wedges on the map for sun, prevailing wind, frost flow, noise, views — standard permaculture sector map | Done |
+| A2 | **Sector analysis layer** | Draw directional wedges on the map for sun, prevailing wind, frost flow, noise, views — directional site analysis | Done |
 | A3 | **Slope / contour indicator** | Manual or imported contour lines to show terrain; helps place swales and ponds correctly | Done |
 | A4 | **Wind sector & windbreak effect** | Mark prevailing wind direction; windbreak structures/hedges show a "shelter zone" behind them (10x their height) | Done |
 
@@ -37,7 +64,7 @@ Features for long-term planning and tracking.
 |----|---------|-------------|--------|
 | P1 | **Succession / timeline planner** | A time slider showing how the design evolves: Year 1 (annuals), Year 3 (young shrubs), Year 10 (full canopy). Plants grow/appear based on their mature size over time | Planned |
 | P2 | **Maintenance / labor estimator** | Each element gets estimated hours/year. The app totals it up so you know if you're over-designing for your available time | Done |
-| P3 | **Harvest calendar** | Monthly view of what you'll be harvesting from placed plants — "August: Saskatoon berries, raspberries, chokecherries" | Done |
+| P3 | **Wildlife & Human Forage calendars** | Two expandable tree views — Wildlife Forage (pollinator nectar + bird food, nectar-gap flagging) and Human Forage (edible plants by harvest window). Each month expands to the individual plants providing forage. | Done |
 | P4 | **Crop rotation tracker** | For annual beds, track what was planted where each season to avoid repeating families | Planned |
 | P5 | **Input/output mapping** | Tag elements with inputs (water, fertilizer) and outputs (manure, mulch, food). Highlight "energy leaks" where outputs aren't connected to nearby inputs | Planned |
 | P6 | **Water budget calculator** | Estimate total water needs of placed plants vs. rainfall + any catchment (rain barrels, swales, pond) | Done |
@@ -48,7 +75,7 @@ Features for long-term planning and tracking.
 
 | ID | Feature | Description | Status |
 |----|---------|-------------|--------|
-| V1 | **Food forest layer indicators** | Visual markers for the 7 food forest layers (canopy, understory, shrub, herbaceous, groundcover, vine, root) with layer toggle | Planned |
+| V1 | **Vegetation layer indicators** | Visual markers for vegetation layers (overstory, understory, shrub layer, herbaceous, groundcover, vine, root) with layer toggle | Planned |
 | V2 | **Season view toggle** | Switch map appearance between spring/summer/fall/winter to see deciduous vs. evergreen coverage | Planned |
 | V3 | **Print / PDF export** | Export the current map view as a presentation-quality PDF with legend, title block, and plant list | Done |
 | V4 | **Design notes / journal** | Per-project text area for recording observations, soil test results, and design rationale | Done |
@@ -61,8 +88,8 @@ Features for long-term planning and tracking.
 | ID | Feature | Description | Status |
 |----|---------|-------------|--------|
 | X1 | **Google Earth integration** | Import KML/KMZ from Google Earth for property boundaries, elevations, and satellite imagery; export designs back to Google Earth for 3D fly-through visualization | Planned |
-| X2 | **3D view** | Basic 3D visualization using plant heights and canopy sizes | Planned |
-| X3 | **Elevation / LIDAR import** | Import terrain data for contour generation and water flow modeling | Planned |
+| X2 | **3D view** | View → 3D Preview (V1.62): built-in three.js viewer — instanced plant archetypes on the growth-year slider, extruded buildings/footprints, terrain mesh, sun-driven shadows matching the 2D shade engine. Scene contract in `src/scene_contract.py`. | Done (v1) |
+| X3 | **Elevation / LIDAR import** | Done (V1.63): File → Import Yard Scan… ingests phone-scan point clouds (PLY/XYZ/LAS), georeferences with click-click control-point pairs (scan preview ⟷ live map), and lands shade-casting footprints in the design; the raw scan renders as a point layer in the 3D Preview. Engine: `src/scan_import.py`; GUI: `src/scan_import_dialog.py`. | Done (v1) |
 | X4 | **Community design sharing** | Export/import complete designs with a shared online library | Planned |
 | X5 | **Sensor integration** | Connect soil moisture / temperature sensors for real-time data overlay | Planned |
 
@@ -74,29 +101,32 @@ Features for long-term planning and tracking.
 |---------|--------|
 | Interactive Leaflet map (street + satellite) | Done |
 | Property boundary drawing | Done |
-| Zone circles (Zone 0–4) | Done |
-| 118-plant Edmonton Zone 3-4 database | Done |
+| 433-plant Alberta master database (Zone 2–7) | Done |
 | Plant canopy circle visualization | Done |
-| Guild system (8 guilds + variations) | Done |
-| Guild canopy circle visualization | Done |
-| Visual offset editor for guild members | Done |
+| Plant community system (8 communities + variations) | Done |
+| Community canopy circle visualization | Done |
+| Visual offset editor for plant community members | Done |
 | Planting calendar | Done |
 | Snap-to-grid | Done |
 | Measurement tool | Done |
 | Annotations / notes | Done |
 | Labels toggle | Done |
 | Canopy preview overlay | Done |
-| Plant filters (Native AB, Edible, Medicinal, N-Fixer, Pollinator, Perennial) | Done |
+| Plant filters (Native AB, Edible, Medicinal, N-Fixer, Pollinator, Perennial, Keystone, Host Plant, Bird Food) | Done |
 | Plant count badges and right-click context menu | Done |
-| Guild search, tooltips, double-click to place | Done |
+| Plant community search, tooltips, double-click to place | Done |
+| Built-in plant communities (18 — original 8 + 10 habitat-focused: Keystone Pollinator Mound, Caterpillar Host Garden, Songbird Berry Patch, Continuous Bloom, Native Edible, Aspen Parkland Edge, Mixedgrass Prairie, Boreal Woodland Floor, Late-Season Pollinator Refuge, Riparian Willow Thicket) | Done |
+| Help → Check for Updates (git-pull fast-forward for source installs; releases-page link for .exe installs) | Done |
+| Establishment Effort estimator (Year 1 vs Year 3+ split, native plants drop ~70% post-establishment) | Done |
+| Establishment Water Budget (Year 1 vs Year 3+ split, native plants drop to ~20% baseline demand) | Done |
+| Reference Ecosystem picker (filter plants by AB ecoregion: aspen parkland, mixedgrass prairie, fescue foothills, boreal mixedwood, riparian, wet meadow, subalpine/montane) | Done |
 | Map legend (toggleable) | Done |
 | Keyboard shortcuts (P/G/B/M/Z/N/L/Esc) | Done |
 | Status bar seasonal tasks | Done |
 | Project save/load (GeoJSON) | Done |
-| Shopping list export | Done |
+| Native plant order list export (grouped by AB nursery source) | Done |
 | Undo/redo | Done |
-| Permapeople API integration | Done |
-| Structures library (16 placeable structures across 5 categories) | Done |
+| Structures library (placeable structures across 5 categories: Water, Habitat, Growing, Storage, Infrastructure) | Done |
 | Hedgerow / fence line tool (4 styles, plant spacing, species) | Done |
 | Custom shape drawing (7 presets, fill/stroke, labels, area calc) | Done |
 | Sun path / shadow overlay (6 key dates, shadow arrows) | Done |
@@ -104,7 +134,10 @@ Features for long-term planning and tracking.
 | Slope / contour indicator (manual contour lines, elevation labels, slope arrows) | Done |
 | Wind sector & windbreak effect (16 directions, shelter zones 10× height) | Done |
 | Maintenance / labour estimator (plants + structures, capacity check) | Done |
-| Harvest calendar (monthly table from DB + fruit_period parsing) | Done |
+| Wildlife Forage calendar (bloom_period + fruit_period; expandable monthly tree; nectar-gap detection) | Done |
+| Human Forage calendar (edible_parts gated; planting-calendar harvest months + fruit_period fallback) | Done |
+| Habitat Value Score (composite 0–100; tips suggest concrete plants/structures for low-scoring categories) | Done |
+| Alberta rainfall climate-normal fallback (Open-Meteo live → bundled AB station normals when offline) | Done |
 | Water budget calculator (demand vs rainfall + catchment) | Done |
 | Print / PDF export (map screenshot, plant list, notes, title block) | Done |
 | Design notes / journal (per-project, timestamps, saved in GeoJSON) | Done |
@@ -113,16 +146,14 @@ Features for long-term planning and tracking.
 
 ## Sources & Inspiration
 
-- [Permies: All-in-One Permaculture Design App](https://permies.com/w/240148/Permaculture-Design-App)
-- [Permies: Permaculture Design Software](https://permies.com/t/7924/permaculture/Permaculture-Design-Software)
-- [Permies: Digital Permaculture Design Tools](https://permies.com/t/157765/permaculture/digital-permaculutre-design-tools)
-- [EcoDesignHive: Landscape Design Apps for Permaculture](https://www.ecodesignhive.com/landscape-design-apps/)
-- [Permaculture Apprentice: 7 Smartphone Apps](https://permacultureapprentice.com/permaculture-apps/)
-- [Permaculture Practice: Sector Planning](https://permaculturepractice.com/permaculture-sector-planning/)
-- [Permalogica: Sector Analysis and Mapping](https://www.permalogica.com/post/permaculture-design-by-sectors-permaculture-sector-analysis-and-mapping)
-- [NC State: Appendix G Permaculture Design](https://content.ces.ncsu.edu/extension-gardener-handbook/appendix-g-permaculture-design)
-- [Tenth Acre Farm: 6 Maps for Permaculture Site Design](https://www.tenthacrefarm.com/6-maps-permaculture-farm-design/)
-- [Verge Permaculture: How to Design a Food Forest](https://vergepermaculture.ca/how-to-design-a-permaculture-food-forest/)
+### Native habitat & ecological restoration
+- [Doug Tallamy — Homegrown National Park](https://homegrownnationalpark.org/) — Lawn-to-habitat movement; keystone-species & host-plant concepts
+- [Xerces Society](https://xerces.org/) — Pollinator conservation and habitat design
+- [Audubon Native Plants Database](https://www.audubon.org/native-plants) — Plants that support local birds and ecosystems
+- [ALCLA Native Plants](https://alclanativeplants.com/) — Alberta-focused native nursery and resources
+- [Bow Valley Habitat Development](https://bowvalleyhabitat.com/) — Alberta riparian and grassland restoration
+- [Pollinator Partnership Canada](https://pollinator.ca/) — Regional pollinator planting guides
+
+### Site analysis & sun mapping
 - [Shadowmap.org](https://shadowmap.org/) — Sun path visualization
 - [ShadeMap.app](https://shademap.app/) — Shadow simulation
-- [Software Tools for Professional Permaculture Design](https://tiag.substack.com/p/software-tools-for-professional-permaculture)

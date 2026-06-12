@@ -10,7 +10,7 @@ When the app opens you'll see four areas:
 
 - **Map** (centre) — Edmonton by default; pan with click-and-drag, zoom with the mouse wheel.
 - **Toolbar** (top) — drawing tools, layer toggles, zoom-sensitivity combo.
-- **Side panel** (right) — five tabs: **Plants**, **Guilds**, **Structures**, **Analysis**, **Planning**.
+- **Side panel** (right) — five tabs: **Plants** (with Plant Communities), **Site**, **Structures**, **Analysis**, **Planning**.
 - **Status bar** (bottom) — coordinates, hardiness zone, current mode (e.g. "Placing: Yarrow — click map").
 
 ---
@@ -28,7 +28,8 @@ You can edit a boundary later by clicking it: drag white vertices to reshape, dr
 Open the **Plants** tab.
 
 - Type a name in **Search plants…**.
-- Narrow with the filter rows: **Type / Sun / Water / Use** combos, plus toggles for **Native AB**, **Edible**, **Medicinal**, **N-Fixer**, **Pollinator**, **Perennial**.
+- Narrow with the filter rows: **Type / Sun / Water / Use** combos, plus toggles for **Native AB**, **Edible**, **Medicinal**, **N-Fixer**, **Pollinator**, **Perennial**, and the habitat-focused trio **Keystone**, **Host Plant**, **Bird Food**.
+- Pick a target Alberta ecoregion in **Restoring toward:** to filter the plant list to species documented from that region — Aspen Parkland, Mixedgrass Prairie, Fescue/Foothills, Boreal Mixedwood, Riparian, Wet Meadow, or Subalpine/Montane. The choice persists across sessions.
 - Click the **▶ chevron** on any row to expand it inline. You'll see the full data block — sun, water, spacing, height, bloom, fruit, edible parts, uses — plus a **colour-coded 12-month planting calendar** and notes.
 
 Long names automatically wrap to two lines so nothing is hidden.
@@ -65,12 +66,12 @@ Tweakable parameters:
 
 ---
 
-## 6. Polyculture mix (multiple species in one bed)
+## 6. Plant community mix (multiple species in one bed)
 
 To plant multiple species mixed together in one Row / Grid / Circle:
 
-1. Right-click any plant in the results list → **Add to Polyculture Mix**. Add 2–8 species.
-2. The **Polyculture Mix** panel shows each species with three controls:
+1. Right-click any plant in the results list → **Add to Mix**. Add 2–8 species.
+2. The **Mix** panel shows each species with three controls:
    - A **clickable colour dot** — gives that species a unique marker colour just for this mix.
    - A **ratio spinner** (1–9) — `1:1:1` is even split; `3:1:1` gives that species 60%, others 20% each.
    - A **✕** button to remove the species.
@@ -79,6 +80,19 @@ To plant multiple species mixed together in one Row / Grid / Circle:
 Distribution is deterministic and spread-optimised: same-species plants are automatically pushed apart so the bed reads as mixed, not blocky.
 
 **Save / load mixes** with the **Save** button (above the species list) and the dropdown. **✕** deletes the saved mix.
+
+The **Plant Communities** library on the same tab ships with 18 pre-built communities. The original 8 are food-forest-flavoured (Apple, Saskatoon, Evans Cherry, Bur Oak, Prairie Pollinator Garden, Boreal Shade, Medicinal Herb Circle, Native Berry Hedge). The **10 newer communities** are tuned around Habitat Value Score and forage categories — drop them when the score / forage tabs flag a deficiency:
+
+- **Keystone Pollinator Mound** — lifts the keystone-species score
+- **Caterpillar Host Garden** — lifts the host-plant score
+- **Songbird Berry Patch** — lifts the bird-food score, staggered berries Jun–Sep
+- **Continuous Bloom Pollinator Strip** — closes nectar gaps across Apr–Oct in one drop
+- **Native Edible Garden** — Human Forage powerhouse, staggered native edibles Jun–Oct
+- **Aspen Parkland Edge** — hits all 5 vegetation layers at once
+- **Mixedgrass Prairie Patch** — grasses (nesting material) + native forbs
+- **Boreal Woodland Floor** — shade-tolerant bird food and edible berries
+- **Late-Season Pollinator Refuge** — fills the common Aug–Oct nectar gap
+- **Riparian Willow Thicket** — keystone + host + bird food in a single community (willows)
 
 ---
 
@@ -93,12 +107,11 @@ Distribution is deterministic and spread-optimised: same-species plants are auto
 
 ## 8. Other drawing tools
 
-- **◎ Zone Circles** — click once on the map to drop concentric permaculture zones (Zones 0–4).
-- **📏 Measure** — click two points to read the distance in metres.
+- **📏 Measure** — click two points to add a measurement; right-click any existing measurement to delete just that one. Use the View bar's Measurement toggle to hide them all without deleting.
 - **📝 Note** — click to drop a draggable text note. Right-click the note to remove it.
 - **Structures tab** — search a structure library, drag hedgerows (4 styles: Hedge / Fence / Living Fence / Windbreak), or draw shapes (Garden Bed, Pathway, Patio, Lawn, Mulch, Water Feature, Custom).
 
-Layer toggles in the toolbar (🛰 Satellite, ⬡ Boundary, ◎ Zones, ✿ Plants, **Aa** Labels, 🌳 Canopy, 🏗 Structures, **#** Grid) show/hide each layer without deleting anything.
+The View bar (🛰 Satellite, ⬡ Boundary, 📏 Measurement, **#** Grid, ✿ Plants, 🌳 Canopy, 🏗 Structures) toggles each layer's visibility without deleting anything. The Grid action's ▾ menu picks the base size (1×1, 5×5, 10×10, 100×100 m) plus opacity and colour.
 
 ---
 
@@ -114,9 +127,11 @@ Layer toggles in the toolbar (🛰 Satellite, ⬡ Boundary, ◎ Zones, ✿ Plant
 
 ## 10. Planning helpers (Planning tab)
 
-- **Maintenance estimator** — enter your available hrs/week, click *Calculate Maintenance* to compare the design against your time budget.
-- **Harvest calendar** — month-by-month table of what's ripening, derived from each plant's calendar.
-- **Water budget** — enter garden area, rain barrels, roof catchment, swales, ponds → *Calculate Water Budget* shows demand vs. supply and any deficit.
+- **Establishment Effort estimator** — splits maintenance hours into **Year 1** (heavy: watering-in, weeding bare zones, mulching, smother prep) and **Year 3+** (stewardship floor — established natives drop to ~30% of Y1 effort while cultivated plants stay closer to 100%). Enter your available hrs/week; the tool checks Year 1 against your capacity and reports the post-establishment drop-off.
+- **Wildlife Forage** — month-by-month expandable tree of pollinator blooms and bird food (berries / seeds) from your placed plants. Expand a month to see the individual plants. Apr–Oct months with no bloom source are flagged red as **nectar gaps**.
+- **Human Forage** — companion calendar for edible plants in your design. Shows what you can harvest each month with the edible part annotated (berries, leaves, roots, etc.).
+- **Habitat Value Score** (Analysis panel) — composite 0–100 score derived from native ratio, keystone species, host plants, bird-food species, vegetation-layer diversity, habitat structures, and bloom continuity. The panel also generates **Tips for raising your score**: concrete Alberta-native plant and habitat-structure suggestions targeted at your lowest-scoring categories (e.g., "Add host plants: …", "Fill nectar gaps in June: …"). Based on Doug Tallamy's keystone-species framework.
+- **Establishment Water Budget** — same garden / catchment inputs, but the demand splits into **Year 1** (1.5× baseline for establishment irrigation) and **Year 3+** (natives drop to ~0.2× baseline once rooted; cultivars stay at 1.0×). Shows both surpluses / deficits side-by-side, plus a suggested extra-barrel count for the Year-1 deficit.
 - **Succession timeline** — drag the year slider 0–20 to see how the design matures.
 - **Notes / journal** — free-form text editor with **Add Timestamp** and **+ Section** buttons.
 
@@ -127,8 +142,9 @@ Layer toggles in the toolbar (🛰 Satellite, ⬡ Boundary, ◎ Zones, ✿ Plant
 - **File → Save** (Ctrl+S) writes a `.perma.geojson` file — the whole design.
 - **File → Open** (Ctrl+O) loads one.
 - **File → Export PDF…** produces a printable booklet with the map screenshot, plant list, and notes.
-- **File → Export Shopping List…** dumps a CSV / text plant-quantity list you can take to the nursery.
+- **File → Export Plant Order List…** produces a text list grouped by Alberta nursery source (ALCLA, Bow Valley Habitat, Wild About Flowers, Bedrock Seed Bank), with native woody / native herbaceous / cultivated sections.
 - The app auto-saves every 5 minutes in the background.
+- **Help → Check for Updates…** — on source installs (git checkout), runs `git pull --ff-only` after a fetch + dirty-tree check; on `.exe` installs, opens the GitHub releases page in your browser. Restart the app after a successful pull for the new code to take effect.
 
 ---
 
@@ -151,9 +167,9 @@ Layer toggles in the toolbar (🛰 Satellite, ⬡ Boundary, ◎ Zones, ✿ Plant
 
 - **Click a boundary's area label** to cycle units (m² → ha → acres → km²).
 - The expanded plant calendar's colours map to life stages: **purple** = start indoors, **teal** = direct sow, **blue** = transplant, **green** = growing, **orange** = harvest, **brown** = pruning, **grey** = dormant. The current month gets a yellow ring.
-- **Polyculture stays armed** across pattern clicks until **Esc** — you can drop ten mixed beds in a row with one click each.
+- **Mix stays armed** across pattern clicks until **Esc** — you can drop ten mixed beds in a row with one click each.
 - **Fill (hex) circles** need a **Total** cap or they'll generate thousands of markers on big radii.
-- **Right-click a plant in the results list** for fast actions — *Place on Map*, *Place ×5*, *Add / Remove from Polyculture Mix*.
+- **Right-click a plant in the results list** for fast actions — *Place on Map*, *Place ×5*, *Add / Remove from Mix*.
 - The **▶ chevron** doubles as a quick way to compare plants — multiple rows can stay expanded at once.
 
 ---

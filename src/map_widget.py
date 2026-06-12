@@ -2,15 +2,52 @@
 map_widget.py — QtWebEngine wrapper around the Leaflet map.
 
 Exposes a MapBridge QObject whose slots are callable from JavaScript via
-QWebChannel. Python code calls self.map_widget.run_js(...) to invoke JS
-functions defined in map.html.
+QWebChannel. Python code crosses the boundary the other way through the
+MapWidget methods below, which build their JS via the typed builders in
+``src/map_js.py`` — never via inline f-strings. If you need a new entry
+point, add a builder there and a thin method here.
 """
 
 import os
-from PyQt6.QtCore import QObject, pyqtSlot, pyqtSignal, QUrl
+import sys
+from PyQt6.QtCore import QObject, pyqtSlot, pyqtSignal, QUrl, QTimer
 from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWebEngineCore import QWebEngineSettings
+from PyQt6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
 from PyQt6.QtWebChannel import QWebChannel
+
+from src import map_js
+from src.resources import resource_path
+from src.settings import get_mapbox_token
+
+
+def _dbg(msg: str) -> None:
+    """Append a diagnostic line to ~/permadesign-debug.log.
+
+    Used both for informational tracing AND as part of the load-bearing
+    resize machinery (see the block comment above MapWidget.invalidate_size):
+    the file write yields to the OS scheduler at exactly the moment we
+    need Chromium's renderer IPC to land. Stays file-only so it doesn't
+    spam the terminal; for messages users should actually see, use _err.
+    """
+    try:
+        import time
+        path = os.path.join(os.path.expanduser("~"), "permadesign-debug.log")
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(f"{time.strftime('%H:%M:%S')} {msg}\n")
+    except Exception:
+        pass
+
+
+def _err(msg: str) -> None:
+    """Like _dbg but also writes to stderr -- for genuine errors (JS
+    exceptions, renderer crashes) that should surface to anyone running
+    the app from a terminal."""
+    _dbg(msg)
+    try:
+        sys.stderr.write(msg + "\n")
+        sys.stderr.flush()
+    except Exception:
+        pass
 
 
 class MapBridge(QObject):
@@ -28,6 +65,11 @@ class MapBridge(QObject):
     # User clicked on the map (generic)
     map_clicked = pyqtSignal(float, float)         # lat, lng
 
+    # Map view changed (pan / zoom / programmatic setView). Carries the
+    # current view centre + zoom so consumers — most notably the address
+    # finder — can bias their queries against where the user is looking.
+    map_moved = pyqtSignal(float, float, int)      # lat, lng, zoom
+
     # A property boundary polygon was completed (id, points list, color name)
     boundary_complete = pyqtSignal(str, list, str)
 
@@ -43,14 +85,23 @@ class MapBridge(QObject):
     # A plant was placed on the map
     plant_placed = pyqtSignal(int, str, float, float)  # id, name, lat, lng
 
-    # The zone-centre point was placed
-    zone_center_placed = pyqtSignal(float, float)  # lat, lng
-
     # A plant marker was clicked
     plant_marker_clicked = pyqtSignal(str, int, float, float)  # markerId, plantId, lat, lng
 
     # A plant marker was right-click removed
     plant_removed = pyqtSignal(str, int, float, float)         # markerId, plantId, lat, lng
+    plants_removed_batch = pyqtSignal(str)                     # JSON [{plantId,lat,lng}] (R2 perf)
+
+    # A single placed plant was dragged to a new location
+    plant_moved = pyqtSignal(str, int, float, float, float, float)
+    # ^ markerId, plantId, oldLat, oldLng, newLat, newLng
+
+    # An entire placement group (polyculture etc.) was dragged
+    plant_group_moved = pyqtSignal(str, str, str)
+    selection_moved = pyqtSignal(str, str)   # originals_json, moved_json (G1)
+    fill_area_complete = pyqtSignal(str)     # points_json (F3 draw-then-fill)
+    # ^ groupId, originals_json, moved_json
+    # both JSON strings are arrays of {markerId, plantId, lat, lng}.
 
     # Annotation requests
     annotate_requested = pyqtSignal(float, float)              # lat, lng
@@ -65,12 +116,14 @@ class MapBridge(QObject):
     hedgerow_removed = pyqtSignal(str, str)                         # id, pointsJson
 
     # Shape signals
-    shape_complete = pyqtSignal(str, str, str, str, str, str, float, str, float)
-        # id, pointsJson, label, shapeType, fillColor, strokeColor, fillOpacity, dashArray, areaM2
+    shape_complete = pyqtSignal(str, str, str, str, str, str, float, str, float, float)
+        # id, pointsJson, label, shapeType, fillColor, strokeColor, fillOpacity, dashArray, areaM2, heightM
     shape_removed = pyqtSignal(str)                                 # id
+    shape_height_changed = pyqtSignal(str, float)                  # id, heightM
+    shape_geom_changed = pyqtSignal(str, list)                     # id, points [[lat,lng],…]
 
-    # Guild removal signal
-    guild_removed = pyqtSignal(str, float, float)                   # guildName, centerLat, centerLng
+    # Polyculture removal signal
+    polyculture_removed = pyqtSignal(str, float, float)                   # polycultureName, centerLat, centerLng
 
     # Contour signals
     contour_complete = pyqtSignal(str, float, str)                  # pointsJson, elevation, color
@@ -119,6 +172,10 @@ class MapBridge(QObject):
     @pyqtSlot(float, float)
     def onMapClick(self, lat: float, lng: float):
         self.map_clicked.emit(lat, lng)
+
+    @pyqtSlot(float, float, int)
+    def onMapMoved(self, lat: float, lng: float, zoom: int):
+        self.map_moved.emit(lat, lng, zoom)
 
     @pyqtSlot(float, float, str)
     def onSitePinPlaced(self, lat: float, lng: float, label: str):
@@ -199,10 +256,6 @@ class MapBridge(QObject):
             custom_color, positions_json, pattern_kind,
         )
 
-    @pyqtSlot(float, float)
-    def onZoneCenterPlaced(self, lat: float, lng: float):
-        self.zone_center_placed.emit(lat, lng)
-
     @pyqtSlot(str, int, float, float)
     def onPlantMarkerClick(self, marker_id: str, plant_id: int, lat: float, lng: float):
         self.plant_marker_clicked.emit(marker_id, plant_id, lat, lng)
@@ -210,6 +263,31 @@ class MapBridge(QObject):
     @pyqtSlot(str, int, float, float)
     def onPlantRemoved(self, marker_id: str, plant_id: int, lat: float, lng: float):
         self.plant_removed.emit(marker_id, plant_id, lat, lng)
+
+    @pyqtSlot(str)
+    def onPlantsRemovedBatch(self, batch_json: str):
+        self.plants_removed_batch.emit(batch_json)
+
+    @pyqtSlot(str, int, float, float, float, float)
+    def onPlantMoved(self, marker_id: str, plant_id: int,
+                     old_lat: float, old_lng: float,
+                     new_lat: float, new_lng: float):
+        self.plant_moved.emit(
+            marker_id, plant_id, old_lat, old_lng, new_lat, new_lng
+        )
+
+    @pyqtSlot(str, str, str)
+    def onPlantGroupMoved(self, group_id: str,
+                          originals_json: str, moved_json: str):
+        self.plant_group_moved.emit(group_id, originals_json, moved_json)
+
+    @pyqtSlot(str, str)
+    def onSelectionMoved(self, originals_json: str, moved_json: str):
+        self.selection_moved.emit(originals_json, moved_json)
+
+    @pyqtSlot(str)
+    def onFillAreaComplete(self, points_json: str):
+        self.fill_area_complete.emit(points_json)
 
     @pyqtSlot(float, float)
     def onAnnotateRequested(self, lat: float, lng: float):
@@ -242,16 +320,34 @@ class MapBridge(QObject):
 
     # ── Shape slots ───────────────────────────────────────────────────────────
 
-    @pyqtSlot(str, str, str, str, str, str, float, str, float)
+    @pyqtSlot(str, str, str, str, str, str, float, str, float, float)
     def onShapeComplete(self, shape_id: str, points_json: str, label: str,
                         shape_type: str, fill_color: str, stroke_color: str,
-                        fill_opacity: float, dash_array: str, area_m2: float):
+                        fill_opacity: float, dash_array: str, area_m2: float,
+                        height_m: float = 0.0):
         self.shape_complete.emit(shape_id, points_json, label, shape_type,
-                                 fill_color, stroke_color, fill_opacity, dash_array, area_m2)
+                                 fill_color, stroke_color, fill_opacity,
+                                 dash_array, area_m2, height_m)
 
     @pyqtSlot(str)
     def onShapeRemoved(self, shape_id: str):
         self.shape_removed.emit(shape_id)
+
+    @pyqtSlot(str, float)
+    def onShapeHeightChanged(self, shape_id: str, height_m: float):
+        self.shape_height_changed.emit(shape_id, height_m)
+
+    @pyqtSlot(str, str)
+    def onShapeGeomChanged(self, shape_id: str, points_json: str):
+        """A drawn/imported shape's outline was dragged in edit mode — relay the
+        new ring so the project geometry (and its shadow) can update. Mirrors
+        onBoundaryGeomChanged."""
+        import json
+        try:
+            points = json.loads(points_json)
+            self.shape_geom_changed.emit(shape_id, points)
+        except Exception:
+            pass
 
     # ── Contour slots ─────────────────────────────────────────────────────────
 
@@ -259,11 +355,11 @@ class MapBridge(QObject):
     def onContourComplete(self, points_json: str, elevation: float, color: str):
         self.contour_complete.emit(points_json, elevation, color)
 
-    # ── Guild slots ───────────────────────────────────────────────────────────
+    # ── Polyculture slots ───────────────────────────────────────────────────────────
 
     @pyqtSlot(str, float, float)
-    def onGuildRemoved(self, guild_name: str, center_lat: float, center_lng: float):
-        self.guild_removed.emit(guild_name, center_lat, center_lng)
+    def onPolycultureRemoved(self, polyculture_name: str, center_lat: float, center_lng: float):
+        self.polyculture_removed.emit(polyculture_name, center_lat, center_lng)
 
     # ── Contour removal slot ──────────────────────────────────────────────────
 
@@ -284,6 +380,28 @@ class MapBridge(QObject):
         self.terrain_bbox_cancelled.emit()
 
 
+class _LoggingPage(QWebEnginePage):
+    """QWebEnginePage that forwards every JS console.* + uncaught error to
+    Python stderr. Without this, anything Leaflet/our JS prints or throws
+    is silently swallowed inside the WebEngine sandbox — exactly the
+    "no terminal errors are reported" symptom users hit when the map
+    misbehaves."""
+
+    _LEVEL = {
+        QWebEnginePage.JavaScriptConsoleMessageLevel.InfoMessageLevel:    "info",
+        QWebEnginePage.JavaScriptConsoleMessageLevel.WarningMessageLevel: "warn",
+        QWebEnginePage.JavaScriptConsoleMessageLevel.ErrorMessageLevel:   "ERROR",
+    }
+
+    def javaScriptConsoleMessage(self, level, message, line, source_id):
+        tag = self._LEVEL.get(level, str(level))
+        src = (source_id or "").rsplit("/", 1)[-1] or "?"
+        # Errors go to stderr too; info/warn (and our load-bearing
+        # invalidate-reflow console.logs) stay file-only.
+        sink = _err if level == QWebEnginePage.JavaScriptConsoleMessageLevel.ErrorMessageLevel else _dbg
+        sink(f"[js:{tag}] {src}:{line}  {message}")
+
+
 class MapWidget(QWebEngineView):
     """
     QWebEngineView subclass that hosts the Leaflet map defined in
@@ -293,21 +411,61 @@ class MapWidget(QWebEngineView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        # Install the logging page BEFORE wiring the QWebChannel so any
+        # JS error / warning that fires during page load surfaces on
+        # stderr instead of disappearing into the sandbox.
+        self.setPage(_LoggingPage(self))
+        # Catch render-subprocess crashes. When QtWebEngine's renderer
+        # process dies (often during a canvas/GPU paint with bad input),
+        # JS halts mid-tick — no errors, no heartbeat, map goes blank.
+        # That's exactly the polyculture-placement symptom. Logging this
+        # signal turns an invisible crash into a single stderr line we
+        # can grep for.
+        self.page().renderProcessTerminated.connect(self._on_render_terminated)
         self.bridge = MapBridge()
         self._channel = QWebChannel(self.page())
         self._channel.registerObject("bridge", self.bridge)
         self.page().setWebChannel(self._channel)
+        # Cache the most recent map view centre + zoom (updated on every
+        # JS moveend). Consumers that need to bias work against "where
+        # the user is looking" — currently the address finder — can read
+        # last_center directly without going through an async readback.
+        self._last_center: tuple[float, float] | None = None
+        self._last_zoom:   int | None = None
+        self.bridge.map_moved.connect(self._on_map_moved)
+        self.bridge.map_ready.connect(self._on_map_ready)
 
         # Allow the local HTML file to load remote tile/CDN URLs (needed on Windows)
         s = self.page().settings()
         s.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
         s.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
 
-        html_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "html", "map.html"
-        )
+        html_path = resource_path("html", "map.html")
         self.load(QUrl.fromLocalFile(html_path))
+
+    def _on_map_moved(self, lat: float, lng: float, zoom: int):
+        self._last_center = (lat, lng)
+        self._last_zoom = zoom
+
+    def _on_map_ready(self):
+        token = get_mapbox_token()
+        if token:
+            self.set_mapbox_token(token)
+
+    def _on_render_terminated(self, status, exit_code):
+        # status is QWebEnginePage.RenderProcessTerminationStatus; print
+        # both raw and name so we can read it without consulting the docs.
+        name = getattr(status, "name", str(status))
+        _err(
+            f"[webengine] *** RENDER PROCESS TERMINATED *** status={name} "
+            f"exit_code={exit_code}"
+        )
+
+    @property
+    def last_center(self) -> "tuple[float, float] | None":
+        """Latest known (lat, lng) centre of the map view, or None
+        if the map hasn't reported a moveend yet."""
+        return self._last_center
 
     # ── JS helpers ────────────────────────────────────────────────────────────
 
@@ -317,7 +475,8 @@ class MapWidget(QWebEngineView):
     def set_mode(self, mode: str, plant_id: int = 0, common_name: str = "",
                  spacing_m: float = 1.0, plant_type: str = "herb",
                  quantity: int = 1, custom_color: str = "",
-                 pattern: dict | None = None):
+                 pattern: dict | None = None,
+                 mature_canopy_m: float | None = None):
         """Switch the map interaction mode.
 
         For plant mode, `pattern` may be:
@@ -329,7 +488,6 @@ class MapWidget(QWebEngineView):
                                          "fill": bool}}
         """
         if mode == 'plant' and plant_id:
-            import json as _json
             payload = {
                 "id": plant_id,
                 "common_name": common_name,
@@ -338,235 +496,384 @@ class MapWidget(QWebEngineView):
                 "quantity": quantity,
                 "custom_color": custom_color or "",
                 "pattern": pattern or {"kind": "single"},
+                # Mature canopy width — drawn as the outer ghost ring during
+                # row/burst/grid preview. Falls back to spacing × 1.5 JS-side
+                # when missing, mirroring the get_plant fallback.
+                "mature_canopy_m": mature_canopy_m or (spacing_m * 1.5),
             }
-            js = f"setMode('plant', JSON.parse({_json.dumps(_json.dumps(payload))}));"
+            self.run_js(map_js.set_mode_with_payload("plant", payload))
         else:
-            js = f"setMode({repr(mode)});"
-        self.run_js(js)
+            self.run_js(map_js.set_mode(mode))
 
     def cancel_draw(self):
-        self.run_js("cancelDraw();")
+        self.run_js(map_js.cancel_draw())
 
     def clear_measure(self):
-        self.run_js("clearMeasure();")
+        self.run_js(map_js.clear_measure())
 
     def clear_all(self):
-        self.run_js("clearAll();")
+        self.run_js(map_js.clear_all())
 
     def set_satellite_visible(self, visible: bool):
-        v = 'true' if visible else 'false'
-        self.run_js(f"setSatelliteVisible({v});")
+        self.run_js(map_js.set_satellite_visible(visible))
+
+    def set_mapbox_token(self, token: str):
+        self.run_js(map_js.init_mapbox_layer(token))
 
     def set_boundary_visible(self, visible: bool):
-        v = 'true' if visible else 'false'
-        self.run_js(f"setBoundaryVisible({v});")
+        self.run_js(map_js.set_boundary_visible(visible))
 
-    def set_zones_visible(self, visible: bool):
-        v = 'true' if visible else 'false'
-        self.run_js(f"setZonesVisible({v});")
+    def set_measurements_visible(self, visible: bool):
+        self.run_js(map_js.set_measure_visible(visible))
 
     def set_plants_visible(self, visible: bool):
-        v = 'true' if visible else 'false'
-        self.run_js(f"setPlantsVisible({v});")
+        self.run_js(map_js.set_plants_visible(visible))
 
     def load_boundary(self, boundary_data: dict):
         """Load a boundary from a saved project. boundary_data has id/points/color/showLengths/showArea."""
-        import json
-        self.run_js(f"loadBoundary({json.dumps(json.dumps(boundary_data))});")
+        self.run_js(map_js.load_boundary(boundary_data))
 
     def load_plant_marker(self, plant_id: int, common_name: str, lat: float, lng: float,
                           spacing_m: float = 1.0, plant_type: str = "herb",
-                          custom_color: str = "", group_id: str = ""):
-        color_arg = f", '{custom_color}'" if custom_color else ", null"
-        group_arg = f", {repr(group_id)}" if group_id else ", null"
-        self.run_js(
-            f"loadPlantMarker({plant_id}, {repr(common_name)}, {lat}, {lng}, "
-            f"{spacing_m}, {repr(plant_type)}{color_arg}{group_arg});"
-        )
-
-    def load_zone_center(self, lat: float, lng: float):
-        self.run_js(f"loadZoneCenter({lat}, {lng});")
+                          custom_color: str = "", group_id: str = "",
+                          community_id: str = ""):
+        self.run_js(map_js.load_plant_marker(
+            plant_id, common_name, lat, lng,
+            spacing_m=spacing_m, plant_type=plant_type,
+            custom_color=custom_color or None,
+            group_id=group_id or None,
+            community_id=community_id or None,
+        ))
 
     def set_view(self, lat: float, lng: float, zoom: int = 14):
-        self.run_js(f"setView({lat}, {lng}, {zoom});")
+        self.run_js(map_js.set_view(lat, lng, zoom))
+
+    # ── LOAD-BEARING RESIZE / INVALIDATE MACHINERY ───────────────────────
+    # The block below (invalidate_size + resizeEvent + _do_invalidate) is
+    # the result of a long debugging session against the Windows + LiDAR
+    # contours + maximise freeze. Several lines that LOOK like debug
+    # instrumentation are actually doing real work:
+    #
+    #   - The `console.log(... map.getContainer().clientWidth ...)` inside
+    #     invalidate_size forces Chromium to commit its pending viewport
+    #     update before Leaflet measures the container. `void(...)` and
+    #     other "I'm just reading clientWidth for the side effect"
+    #     idioms get elided by V8; passing the value to console.log keeps
+    #     the read live.
+    #
+    #   - The two console.log calls (one before, one after invalidateSize)
+    #     each force a layout reflow, which catches the viewport on either
+    #     side of Leaflet's own size update.
+    #
+    #   - The `_dbg(...)` calls inside resizeEvent / _do_invalidate write
+    #     to a file -- the resulting syscall yields to the OS scheduler,
+    #     which gives Chromium's separate renderer process time to deliver
+    #     pending IPC events between Qt's resize and our invalidate.
+    #
+    # All three together are what makes "maximise window with LiDAR
+    # contours visible" work on Windows. Removing any one of them tends
+    # to reintroduce the freeze or the half-painted map. Confirmed in
+    # commits 3dcc74b (cleanup) -> cea0c7f (revert).
+    # ─────────────────────────────────────────────────────────────────────
+
+    def invalidate_size(self):
+        """Force Leaflet to recompute the map container size.
+
+        Safe to call before the map is ready; the JS side feature-checks
+        `map` before invoking `invalidateSize`. Useful any time the host
+        QWidget reflows (sidebar collapse, splitter drag, window resize)
+        or after a synchronous burst of Python work that may have starved
+        the WebEngine paint queue — both scenarios can leave Leaflet's
+        canvas renderer cached at a stale size, which manifests as a blank
+        map with dead zoom/satellite controls.
+
+        The JS string itself lives in ``map_js.invalidate_size()`` —
+        *** do not "clean up" the console.log calls there. *** They
+        look like debug noise but each one reads clientWidth /
+        clientHeight, which forces a Chromium layout reflow as a
+        documented browser side effect. Without those reads, on Windows
+        the embedded viewport stays at the pre-resize size after a
+        maximise and the map paints only into the corner of the widget.
+        See the block comment above this method for the full context.
+        """
+        self.run_js(map_js.invalidate_size())
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        sz = event.size()
+        # _dbg() is load-bearing here: see the block comment above
+        # invalidate_size. The file I/O yields to the OS scheduler.
+        _dbg(f"[mapwidget] resizeEvent w={sz.width()} h={sz.height()}")
+        # Coalesce resize bursts (splitter drag, window restore, sidebar
+        # collapse) into one invalidateSize per event-loop tick so we don't
+        # spam runJavaScript dozens of times during a drag.
+        if not getattr(self, "_pending_invalidate", False):
+            self._pending_invalidate = True
+            QTimer.singleShot(0, self._do_invalidate)
+
+    def _do_invalidate(self):
+        self._pending_invalidate = False
+        # _dbg() is load-bearing -- see the block comment above invalidate_size.
+        _dbg(f"[mapwidget] _do_invalidate -> invalidate_size (size={self.width()}x{self.height()})")
+        self.invalidate_size()
 
     def place_site_pin(self, lat: float, lng: float, label: str = ""):
         """Place (or move) the property pin without going through the search box."""
-        import json as _json
-        self.run_js(
-            f"placeSitePin({lat}, {lng}, {_json.dumps(label or '')});"
-        )
+        self.run_js(map_js.place_site_pin(lat, lng, label or ""))
 
     def clear_site_pin(self):
-        self.run_js("clearSitePin(false);")
+        self.run_js(map_js.clear_site_pin())
+
+    def set_site_pin_drop_mode(self, active: bool):
+        """Toggle the crosshair cursor while the user is arming a pin drop."""
+        self.run_js(map_js.set_site_pin_drop_mode(active))
 
     def set_labels_visible(self, visible: bool):
-        v = 'true' if visible else 'false'
-        self.run_js(f"setLabelsVisible({v});")
+        self.run_js(map_js.set_labels_visible(visible))
+
+    def set_satellite_offset(self, east_m: float, north_m: float):
+        """Nudge the satellite imagery by (east, north) metres to line it up with
+        OSM/placements. Cosmetic only — does not move any data."""
+        self.run_js(map_js.set_satellite_offset(east_m, north_m))
 
     def update_marker_color(self, plant_id: int, color: str):
-        self.run_js(f"updateMarkerColor({plant_id}, '{color}');")
+        self.run_js(map_js.update_marker_color(plant_id, color))
 
     def place_annotation(self, ann_id: str, lat: float, lng: float, text: str):
-        self.run_js(
-            f"placeAnnotation({repr(ann_id)}, {lat}, {lng}, {repr(text)});"
-        )
+        self.run_js(map_js.place_annotation(ann_id, lat, lng, text))
 
     def set_canopy_visible(self, visible: bool):
-        v = 'true' if visible else 'false'
-        self.run_js(f"setCanopyVisible({v});")
+        self.run_js(map_js.set_canopy_visible(visible))
 
     def set_snap_enabled(self, enabled: bool, grid_size: float = 1.0):
-        e = 'true' if enabled else 'false'
-        self.run_js(f"setSnapEnabled({e}, {grid_size});")
+        self.run_js(map_js.set_snap_enabled(enabled, grid_size))
+
+    def set_grid_style(self, color: str, opacity: float):
+        """Update the on-map grid colour and opacity (0..1)."""
+        self.run_js(map_js.set_grid_style(color, opacity))
 
     # ── Structure helpers ─────────────────────────────────────────────────────
 
     def set_structure_mode(self, struct_def: dict):
         """Enter structure placement mode with a structure definition."""
-        import json
-        self.run_js(f"setMode('structure', JSON.parse({json.dumps(json.dumps(struct_def))}));")
+        self.run_js(map_js.set_mode_with_payload("structure", struct_def))
 
     def load_structure(self, struct_def: dict, lat: float, lng: float):
         """Load a structure from a saved project."""
-        import json
-        self.run_js(f"loadStructure(JSON.parse({json.dumps(json.dumps(struct_def))}), {lat}, {lng});")
+        self.run_js(map_js.load_structure(struct_def, lat, lng))
 
     # ── Hedgerow helpers ──────────────────────────────────────────────────────
 
     def set_hedgerow_mode(self, hedge_config: dict):
         """Enter hedgerow drawing mode."""
-        import json
-        self.run_js(f"setMode('hedgerow', JSON.parse({json.dumps(json.dumps(hedge_config))}));")
+        self.run_js(map_js.set_mode_with_payload("hedgerow", hedge_config))
 
     def load_hedgerow(self, hedge_def: dict):
         """Load a hedgerow from a saved project."""
-        import json
-        self.run_js(f"loadHedgerow(JSON.parse({json.dumps(json.dumps(hedge_def))}));")
+        self.run_js(map_js.load_hedgerow(hedge_def))
 
     # ── Shape helpers ─────────────────────────────────────────────────────────
 
     def set_shape_mode(self, shape_config: dict):
         """Enter custom shape drawing mode."""
-        import json
-        self.run_js(f"setMode('shape', JSON.parse({json.dumps(json.dumps(shape_config))}));")
+        self.run_js(map_js.set_mode_with_payload("shape", shape_config))
 
     def load_shape(self, shape_def: dict):
         """Load a custom shape from a saved project."""
-        import json
-        self.run_js(f"loadShape(JSON.parse({json.dumps(json.dumps(shape_def))}));")
+        self.run_js(map_js.load_shape(shape_def))
 
     def set_structures_visible(self, visible: bool):
-        v = 'true' if visible else 'false'
-        self.run_js(
-            f"Object.values(structureMarkers).forEach(function(g) {{"
-            f"  if ({v}) g.addTo(map); else map.removeLayer(g);"
-            f"}});"
-            f"Object.values(hedgerowLayers).forEach(function(g) {{"
-            f"  if ({v}) g.addTo(map); else map.removeLayer(g);"
-            f"}});"
-            f"Object.values(shapeLayers).forEach(function(g) {{"
-            f"  if ({v}) g.addTo(map); else map.removeLayer(g);"
-            f"}});"
-        )
+        self.run_js(map_js.set_structures_visible(visible))
 
     # ── Analysis overlay helpers (A1-A4) ──────────────────────────────────────
 
     def enter_sun_anchor_mode(self):
         """Enter sun-path anchor placement mode (user clicks map to place)."""
-        self.run_js("setMode('sun_anchor');")
+        self.run_js(map_js.set_mode("sun_anchor"))
 
     def enter_sector_anchor_mode(self):
         """Enter sector anchor placement mode."""
-        self.run_js("setMode('sector_anchor');")
+        self.run_js(map_js.set_mode("sector_anchor"))
 
     def draw_sun_path(self, data: dict, lat: float = None, lng: float = None):
         """Draw the sun path arc and shadow arrows on the map."""
-        import json
         if lat is not None and lng is not None:
-            self.run_js(
-                f"drawSunPath(JSON.parse({json.dumps(json.dumps(data))}), {lat}, {lng});"
-            )
+            self.run_js(map_js.draw_sun_path(data, lat, lng))
         else:
-            self.run_js(f"drawSunPath(JSON.parse({json.dumps(json.dumps(data))}));")
+            self.run_js(map_js.draw_sun_path(data))
 
     def clear_sun_path(self):
-        self.run_js("clearSunPath();")
+        self.run_js(map_js.clear_sun_path())
 
     def draw_sectors(self, data: dict, lat: float = None, lng: float = None):
         """Draw sector analysis wedges on the map at the given anchor."""
-        import json
         if lat is not None and lng is not None:
-            self.run_js(
-                f"drawSectors(JSON.parse({json.dumps(json.dumps(data))}), {lat}, {lng});"
-            )
+            self.run_js(map_js.draw_sectors(data, lat, lng))
         else:
-            self.run_js(f"drawSectors(JSON.parse({json.dumps(json.dumps(data))}));")
+            self.run_js(map_js.draw_sectors(data))
 
     def clear_sectors(self):
-        self.run_js("clearSectors();")
+        self.run_js(map_js.clear_sectors())
 
     def set_zoom_sensitivity(self, level: str):
         """Set zoom sensitivity: 'fine'|'normal'|'fast'|'coarse'."""
-        self.run_js(f"setZoomSensitivity({repr(level)});")
+        self.run_js(map_js.set_zoom_sensitivity(level))
 
     def set_contour_mode(self, config: dict):
         """Enter contour drawing mode."""
-        import json
-        self.run_js(f"setMode('contour', JSON.parse({json.dumps(json.dumps(config))}));")
+        self.run_js(map_js.set_mode_with_payload("contour", config))
 
     def clear_contours(self):
-        self.run_js("clearContours();")
+        self.run_js(map_js.clear_contours())
 
     # ── Auto terrain (slope contours / ramp) ──────────────────────────────────
 
     def request_terrain_viewport(self):
         """Ask JS for the current viewport bbox; signalled back via terrain_bbox_ready."""
-        self.run_js("emitTerrainBboxFromViewport();")
+        self.run_js(map_js.request_terrain_viewport())
 
     def request_terrain_boundary_bbox(self):
         """Ask JS to compute the bbox of the (single) drawn property boundary."""
-        self.run_js("emitTerrainBboxFromBoundary();")
+        self.run_js(map_js.request_terrain_boundary_bbox())
 
     def enter_terrain_draw_mode(self):
         """Enter free-draw rectangle mode for picking a terrain bbox."""
-        self.run_js("setMode('terrain_rect');")
+        self.run_js(map_js.set_mode("terrain_rect"))
 
     def draw_auto_contours(self, contours: list[dict], color: str, show_labels: bool):
         """Render generated contour lines on the map. Replaces existing auto layer."""
-        import json as _json
-        payload = {
-            "contours":    contours,
-            "color":       color,
-            "show_labels": bool(show_labels),
-        }
-        self.run_js(
-            f"drawAutoContours(JSON.parse({_json.dumps(_json.dumps(payload))}));"
-        )
+        self.run_js(map_js.draw_auto_contours(contours, color, show_labels))
 
     def draw_slope_overlay(self, png_data_url: str, bbox: dict, opacity: float):
         """Render the slope ramp PNG as an ImageOverlay. Replaces any existing one."""
-        import json as _json
-        payload = {
-            "image":   png_data_url,
-            "bbox":    bbox,
-            "opacity": float(opacity),
-        }
-        self.run_js(
-            f"drawSlopeOverlay(JSON.parse({_json.dumps(_json.dumps(payload))}));"
-        )
+        self.run_js(map_js.draw_slope_overlay(png_data_url, bbox, opacity))
 
     def set_slope_overlay_opacity(self, opacity: float):
-        self.run_js(f"setSlopeOverlayOpacity({float(opacity)});")
+        self.run_js(map_js.set_slope_overlay_opacity(opacity))
+
+    def draw_shade_overlay(self, png_data_url: str, bbox: dict, opacity: float):
+        """Render the shade-fraction PNG as a separate ImageOverlay (V1.51)."""
+        self.run_js(map_js.draw_shade_overlay(png_data_url, bbox, opacity))
+
+    def set_shade_overlay_opacity(self, opacity: float):
+        self.run_js(map_js.set_shade_overlay_opacity(opacity))
+
+    def clear_shade_overlay(self):
+        self.run_js(map_js.clear_shade_overlay())
+
+    def draw_shade_zones(self, cells: list, d_lat: float, d_lng: float,
+                         opacity: float = 0.45):
+        self.run_js(map_js.draw_shade_zones(cells, d_lat, d_lng, opacity))
+
+    def set_shade_zones_visible(self, visible: bool):
+        self.run_js(map_js.set_shade_zones_visible(visible))
+
+    def clear_shade_zones(self):
+        self.run_js(map_js.clear_shade_zones())
+
+    def draw_shadow_polygons(self, polygons: list, bbox: dict, opacity: float):
+        """Render true-shape shadows as vector polygons (V1.54)."""
+        self.run_js(map_js.draw_shadow_polygons(polygons, bbox, opacity))
+
+    def set_shadow_polygon_opacity(self, opacity: float):
+        self.run_js(map_js.set_shadow_polygon_opacity(opacity))
+
+    def clear_shadow_polygons(self):
+        self.run_js(map_js.clear_shadow_polygons())
 
     def clear_auto_terrain(self):
         """Remove auto-generated contours and slope overlay."""
-        self.run_js("clearAutoTerrain();")
+        self.run_js(map_js.clear_auto_terrain())
 
     def draw_wind_overlay(self, data: dict):
         """Draw wind direction arrows and shelter zones."""
-        import json
-        self.run_js(f"drawWindOverlay(JSON.parse({json.dumps(json.dumps(data))}));")
+        self.run_js(map_js.draw_wind_overlay(data))
 
     def clear_wind_overlay(self):
-        self.run_js("clearWindOverlay();")
+        self.run_js(map_js.clear_wind_overlay())
+
+    # ── New typed methods for the formerly-direct ``map_widget.run_js(...)``
+    # call sites in src/app.py. Each is a one-line wrapper around the
+    # matching builder in src.map_js. Keep this section in alphabetical
+    # order to make audit grep easy.
+
+    def apply_loaded_contour(self, contour: dict):
+        """Re-finish a saved contour on the map (re-uses the JS-side
+        in-progress drawing globals)."""
+        self.run_js(map_js.restore_contour(contour))
+
+    def clear_selection(self):
+        """Clear the current map selection (no delete)."""
+        self.run_js(map_js.clear_selection())
+
+    def delete_selected(self):
+        """Delete every currently-selected map item."""
+        self.run_js(map_js.delete_selected())
+
+    def place_plant_marker(self, plant_id: int, common_name: str,
+                            lat: float, lng: float,
+                            spacing_m: float = 1.0, plant_type: str = "herb",
+                            color: str | None = None,
+                            group_id: str | None = None,
+                            community_id: str | None = None):
+        """Place a plant marker as a fresh user action. Compare to
+        ``load_plant_marker`` which is the project-load variant."""
+        self.run_js(map_js.place_plant_marker(
+            plant_id, common_name, lat, lng,
+            spacing_m=spacing_m, plant_type=plant_type,
+            color=color, group_id=group_id, community_id=community_id,
+        ))
+
+    def revert_plant_position(self, plant_id: int,
+                                from_lat: float, from_lng: float,
+                                to_lat: float, to_lng: float):
+        """Used by undo/redo on a plant drag."""
+        self.run_js(map_js.revert_plant_position(
+            plant_id, from_lat, from_lng, to_lat, to_lng,
+        ))
+
+    def set_crosshair_cursor(self):
+        """Force a crosshair cursor on the map — used while arming a
+        plant-community click-to-place gesture."""
+        self.run_js(map_js.set_crosshair_cursor())
+
+    def set_plant_group_for_latest(self, plant_id: int, lat: float, lng: float,
+                                    group_id: str):
+        """Tell JS the freshest marker's group id so right-click →
+        Delete group works."""
+        self.run_js(map_js.set_plant_group_for_latest(
+            plant_id, lat, lng, group_id,
+        ))
+
+    def set_season_view(self, season: str, pid_visibility: dict):
+        """Highlight plants in/out of season for a given month name."""
+        self.run_js(map_js.set_season_view(season, pid_visibility))
+
+    def set_timeline_year_by_plant_id(self, year: int, pid_factors: dict,
+                                      pid_presence: dict | None = None):
+        """Drive the growth-timeline animation (size + succession fade)."""
+        self.run_js(map_js.set_timeline_year_by_plant_id(
+            year, pid_factors, pid_presence))
+
+    def toggle_legend(self):
+        """Toggle the on-map legend overlay."""
+        self.run_js(map_js.toggle_legend())
+
+    def undo_boundary(self, boundary_id: str):
+        self.run_js(map_js.undo_boundary(boundary_id))
+
+    def undo_custom_shape_by_id(self, shape_id: str):
+        self.run_js(map_js.undo_custom_shape_by_id(shape_id))
+
+    def undo_hedgerow_by_id(self, hedge_id: str):
+        self.run_js(map_js.undo_hedgerow_by_id(hedge_id))
+
+    def undo_last_contour(self, elevation_m: float):
+        self.run_js(map_js.undo_last_contour(elevation_m))
+
+    def undo_place_plant(self, plant_id: int, lat: float, lng: float):
+        """Remove the most-recent marker matching (plant_id, lat, lng)."""
+        self.run_js(map_js.undo_place_plant(plant_id, lat, lng))
+
+    def undo_structure_at(self, struct_id: str, lat: float, lng: float):
+        self.run_js(map_js.undo_structure_at(struct_id, lat, lng))

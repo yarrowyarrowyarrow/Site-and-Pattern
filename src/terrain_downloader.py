@@ -1,20 +1,97 @@
 """
 terrain_downloader.py — QThread worker that bulk-downloads the full
 City of Edmonton LiDAR contour dataset into the local SQLite store.
+
+If the live Socrata API can't be reached or its schema can't be
+sniffed (the historical "Could not detect field names" error), the
+worker falls back to importing a locally-bundled seed file at
+``data/edmonton_contours.geojson`` (gzipped variants ``.geojson.gz``
+and ``.json.gz`` also accepted). That seed is optional — when absent,
+the worker reports the network error with an actionable hint.
 """
 
+import gzip
+import json
+import os
+import sys
+import time
+import urllib.error
 import urllib.parse
+import urllib.request
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
+from src.resources import resource_path
 from src.terrain import (
     _EDM_RESOURCE,
+    _USER_AGENT,
     _edm_detect_fields,
     _coerce_float,
     _flatten_geojson_lines,
     _http_get_json,
 )
 from src.terrain_store import TerrainStore
+
+
+def _diag_fetch(url: str, timeout: float = 30.0) -> "tuple[bool, int | None, dict | list | None, str, str]":
+    """Diagnostic HTTP GET that surfaces the *real* failure reason.
+
+    Returns ``(ok, http_status, parsed_payload, error_text, raw_body)``
+    — the raw body is included so callers can dump the first few
+    hundred chars when the parsed view is suspect (e.g. when payload
+    parses but every interesting key is empty).
+    """
+    t0 = time.monotonic()
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            status = getattr(resp, "status", None)
+            body = resp.read().decode("utf-8", errors="replace")
+            try:
+                payload = json.loads(body)
+            except ValueError as exc:
+                dt = time.monotonic() - t0
+                return False, status, None, (
+                    f"JSON decode failed after {dt:.1f}s ({len(body)} bytes): {exc}"
+                ), body
+            dt = time.monotonic() - t0
+            return True, status, payload, "", body
+    except urllib.error.HTTPError as exc:
+        dt = time.monotonic() - t0
+        return False, exc.code, None, f"HTTPError {exc.code} after {dt:.1f}s: {exc.reason}", ""
+    except urllib.error.URLError as exc:
+        dt = time.monotonic() - t0
+        return False, None, None, f"URLError after {dt:.1f}s: {exc.reason}", ""
+    except Exception as exc:
+        dt = time.monotonic() - t0
+        return False, None, None, f"{type(exc).__name__} after {dt:.1f}s: {exc}", ""
+
+
+_SEED_CANDIDATES = (
+    resource_path("data", "edmonton_contours.geojson"),
+    resource_path("data", "edmonton_contours.geojson.gz"),
+    resource_path("data", "edmonton_contours.json"),
+    resource_path("data", "edmonton_contours.json.gz"),
+)
+
+
+def _find_local_seed() -> "str | None":
+    for path in _SEED_CANDIDATES:
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def _load_seed(path: str) -> "dict | None":
+    """Load a GeoJSON FeatureCollection from a (gzipped) local file."""
+    try:
+        if path.endswith(".gz"):
+            with gzip.open(path, "rb") as f:
+                return json.loads(f.read().decode("utf-8"))
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
 
 
 class EdmontonDownloadWorker(QObject):
@@ -39,15 +116,142 @@ class EdmontonDownloadWorker(QObject):
     def cancel(self) -> None:
         self._cancel = True
 
+    def _diag_log(self, msg: str) -> None:
+        """Print to stderr and surface via the progress signal so the
+        user sees diagnostic output both in the terminal and in the UI."""
+        try:
+            print(f"[edmonton-dl] {msg}", file=sys.stderr, flush=True)
+        except Exception:
+            pass
+        try:
+            self.progress.emit(0, 0, msg)
+        except Exception:
+            pass
+
     def run(self) -> None:
         store = TerrainStore()
         store.clear_edmonton()
 
+        # Phase 5 / Phase 2 diagnostic instrumentation — capture the
+        # actual network behaviour before guessing at a fix.
+        self._diag_log("Detecting Edmonton dataset fields…")
+        t_detect = time.monotonic()
         elev_field, geom_field = _edm_detect_fields()
+        self._diag_log(
+            f"Field detection took {time.monotonic() - t_detect:.1f}s "
+            f"→ elev={elev_field!r} geom={geom_field!r}"
+        )
         if not elev_field or not geom_field:
+            # Run the diagnostic fetch against the views-metadata URL so
+            # we can show the user *why* detection failed.
+            meta_url = (
+                f"https://data.edmonton.ca/api/views/"
+                f"{_EDM_RESOURCE.rsplit('/', 1)[-1].split('.')[0]}.json"
+            )
+            ok, status, payload, err, body = _diag_fetch(meta_url, timeout=15)
+            self._diag_log(
+                f"Probe metadata: ok={ok} status={status} err={err or '-'} "
+                f"bytes={len(body)}"
+            )
+            # Dump top-level keys so we can see what shape Socrata is
+            # serving (the `columns` key may have been moved or renamed
+            # in newer API versions).
+            if ok and isinstance(payload, dict):
+                self._diag_log(
+                    f"Metadata top-level keys: "
+                    f"{sorted(payload.keys())[:20]}"
+                )
+                cols = payload.get("columns")
+                if isinstance(cols, list):
+                    self._diag_log(f"Metadata columns ({len(cols)}):")
+                    for col in cols:
+                        if isinstance(col, dict):
+                            fname = col.get("fieldName") or col.get("name") or "?"
+                            dtype = col.get("dataTypeName") or "?"
+                            self._diag_log(f"  • {fname!r}  type={dtype!r}")
+            # Raw body — the parsed view above can hide things like
+            # the response actually being an error envelope, an HTML
+            # redirect page, or a SODA v3 wrapper we're not unpacking.
+            self._diag_log(f"Metadata raw (first 600 chars): {body[:600]!r}")
+
+            # Run *three* sample probes in parallel-ish to cover the
+            # most likely root causes in a single round-trip:
+            #   1. .geojson (current path)         — what we use today
+            #   2. .geojson?$select=*              — Socrata sometimes
+            #      returns geometry-only by default; $select=* forces
+            #      it to include every property.
+            #   3. .json (the row-based endpoint)  — completely
+            #      different code path; if .geojson is broken but .json
+            #      works, we have a workable alternative downloader.
+            for label, url in [
+                ("sample .geojson",            f"{_EDM_RESOURCE}?$limit=1"),
+                ("sample .geojson $select=*",  f"{_EDM_RESOURCE}?$limit=1&$select=*"),
+                ("sample .json",               f"{_EDM_RESOURCE.replace('.geojson', '.json')}?$limit=1"),
+            ]:
+                ok_s, status_s, payload_s, err_s, body_s = _diag_fetch(url, timeout=15)
+                self._diag_log(
+                    f"Probe {label}: ok={ok_s} status={status_s} "
+                    f"err={err_s or '-'} bytes={len(body_s)}"
+                )
+                self._diag_log(f"  raw (first 600 chars): {body_s[:600]!r}")
+
+            # Round 4 confirmed both 4hu9-9vq3 and 2aq6-x42w are
+            # Socrata MAP VIEWS (assetType=map, displayType=
+            # visualization_canvas_map), not data tables — that's
+            # why every row comes back empty. Probe the catalog API
+            # to find any actual dataset (assetType=dataset) whose
+            # name mentions "contour"; that should reveal the real
+            # underlying ID(s) we can swap in.
+            catalog_url = (
+                "https://api.us.socrata.com/api/catalog/v1"
+                "?domains=data.edmonton.ca&q=contour"
+                "&only=dataset&limit=20"
+            )
+            ok_c, status_c, payload_c, err_c, body_c = _diag_fetch(
+                catalog_url, timeout=15
+            )
+            self._diag_log(
+                f"Probe catalog (datasets matching 'contour'): "
+                f"ok={ok_c} status={status_c} err={err_c or '-'} "
+                f"bytes={len(body_c)}"
+            )
+            results = (
+                (payload_c or {}).get("results", [])
+                if isinstance(payload_c, dict) else []
+            )
+            self._diag_log(f"Catalog results ({len(results)}):")
+            for r in results:
+                if not isinstance(r, dict):
+                    continue
+                resource = r.get("resource") or {}
+                cls = resource.get("type") or "?"
+                rid = resource.get("id") or "?"
+                rname = resource.get("name") or "?"
+                self._diag_log(f"  • {rid}  [{cls}]  {rname}")
+
+            # Live API unavailable — fall back to a bundled seed file
+            # if the project ships one.
+            seed_path = _find_local_seed()
+            if seed_path is not None:
+                self.progress.emit(
+                    0, 0,
+                    f"Importing bundled seed: {os.path.basename(seed_path)}…"
+                )
+                if self._import_local_seed(store, seed_path):
+                    return
+                # Fall through to the error if the seed didn't parse.
             self.error.emit(
                 "Could not detect field names from the Edmonton dataset.\n"
-                "Please ensure you have an internet connection and try again."
+                "\n"
+                f"Metadata fetch: {err or 'ok'}\n"
+                "Sample-row sniffing: see [edmonton-dl] log lines above.\n"
+                "\n"
+                "Local seed at data/edmonton_contours.geojson(.gz)\n"
+                "is also accepted as a fallback.\n"
+                "\n"
+                "Check your internet connection, or drop a downloaded\n"
+                "GeoJSON of the Edmonton contour dataset at\n"
+                "data/edmonton_contours.geojson and retry."
             )
             return
 
@@ -63,6 +267,7 @@ class EdmontonDownloadWorker(QObject):
                 "$order":  ":id",
             })
             url = f"{_EDM_RESOURCE}?{qs}"
+            t_page = time.monotonic()
             page_data = _http_get_json(url, timeout=30)
 
             if page_data is None:
@@ -76,8 +281,19 @@ class EdmontonDownloadWorker(QObject):
 
             if not page_data or "features" not in page_data:
                 if page_num == 0:
+                    # Probe the same URL with the diagnostic helper so
+                    # the user (and us) can see the real failure mode
+                    # instead of just "no data".
+                    ok, status, payload, err = _diag_fetch(url, timeout=30)
+                    self._diag_log(
+                        f"Page-0 fetch: ok={ok} status={status} "
+                        f"err={err or '-'} "
+                        f"elapsed={time.monotonic() - t_page:.1f}s "
+                        f"url={url}"
+                    )
                     self.error.emit(
                         "No data received from the Edmonton Open Data API.\n"
+                        f"\nDiagnostic: status={status}, error={err or 'none'}.\n"
                         "Check your internet connection and try again."
                     )
                     return
@@ -113,6 +329,77 @@ class EdmontonDownloadWorker(QObject):
             return
 
         self.finished.emit(total_stored)
+
+    def _import_local_seed(self, store: TerrainStore, path: str) -> bool:
+        """Import a locally-bundled GeoJSON contour file in chunks.
+
+        Returns True if anything was stored (and emits ``finished``);
+        False if the file couldn't be parsed (caller falls back to the
+        regular network error). The seed is expected to be a GeoJSON
+        FeatureCollection with the same shape as the live Socrata API
+        response — properties carrying an elevation, geometry as
+        (Multi)LineString in [lng, lat] order.
+        """
+        data = _load_seed(path)
+        if not isinstance(data, dict):
+            return False
+        feats = data.get("features") or []
+        if not isinstance(feats, list) or not feats:
+            return False
+
+        # Sniff the elevation field from the first feature with a numeric
+        # property — same hint list as the API path.
+        from src.terrain import _EDM_ELEV_HINTS  # local import to avoid cycle
+        elev_field: "str | None" = None
+        for f in feats[:50]:
+            props = (f.get("properties") or {})
+            for k, v in props.items():
+                if any(h in k.lower() for h in _EDM_ELEV_HINTS):
+                    if _coerce_float(v) is not None:
+                        elev_field = k
+                        break
+            if elev_field:
+                break
+        if elev_field is None:
+            for f in feats[:50]:
+                for k, v in (f.get("properties") or {}).items():
+                    if _coerce_float(v) is not None:
+                        elev_field = k
+                        break
+                if elev_field:
+                    break
+        if elev_field is None:
+            return False
+
+        total_stored = 0
+        page_num = 0
+        page_size = 1000
+        for i in range(0, len(feats), page_size):
+            if self._cancel:
+                return False
+            chunk = feats[i:i + page_size]
+            converted = _convert_page(chunk, elev_field)
+            stored = store.store_edmonton_page(converted)
+            total_stored += stored
+            page_num += 1
+            self.progress.emit(
+                total_stored,
+                page_num,
+                f"Local seed: page {page_num} — {total_stored:,} features stored…",
+            )
+
+        if total_stored == 0:
+            return False
+        try:
+            self.progress.emit(
+                total_stored, page_num, "Merging tiles, please wait…"
+            )
+            store.mark_edmonton_complete(total_stored)
+        except Exception as exc:
+            self.error.emit(f"Failed to finalise local-seed import: {exc}")
+            return True   # we did emit error; tell caller not to re-error
+        self.finished.emit(total_stored)
+        return True
 
 
 # ── Internal helpers ─────────────────────────────────────────────────────────

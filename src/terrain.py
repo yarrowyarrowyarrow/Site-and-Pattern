@@ -4,9 +4,17 @@ terrain.py — Auto-generate slope contour lines and slope-ramp overlays.
 Two data paths, picked per location:
 
     Edmonton (urban LiDAR)
-        Contour Lines 3TM dataset (Socrata 4hu9-9vq3, 0.5 m interval).
-        Pre-baked vector contours; we just clip + filter by interval.
-        https://data.edmonton.ca/Elevation-Model/Contour-Lines-3TM/4hu9-9vq3
+        Contour Lines LL - WGS84 — the underlying *tabular dataset*,
+        Socrata id n6cj-24tp, 0.5 m interval. Pre-baked vector
+        contours in lat/lng so they map cleanly to Leaflet; we just
+        clip + filter by interval. The IDs that show up in the
+        Edmonton portal's URL bar (4hu9-9vq3, 2aq6-x42w) are *map
+        views* — visualisations whose .geojson endpoint always
+        returns one stub feature with `geometry:null` and
+        `properties:{}`. Use the catalog API
+        (`/api/catalog/v1?only=dataset&q=contour`) to discover the
+        actual data-bearing assets if Edmonton ever republishes.
+        https://data.edmonton.ca/dataset/Contour-Lines-LL-WGS84/n6cj-24tp
 
     Anywhere else
         Open-Meteo elevation API (Copernicus DEM 30 m), sampled on a regular
@@ -49,7 +57,8 @@ _TIMEOUT = 10.0
 _USER_AGENT = "PermaDesign/1.0 (https://github.com/yarrowyarrowyarrow/permadesign)"
 
 # Edmonton "Contour Lines 3TM" (0.5 m interval)
-_EDM_DATASET_ID = "4hu9-9vq3"
+_EDM_DATASET_ID = "n6cj-24tp"   # "Contour Lines LL - WGS84" — the underlying dataset
+                                # (sibling map view at 2aq6-x42w returns empty rows)
 _EDM_RESOURCE = f"https://data.edmonton.ca/resource/{_EDM_DATASET_ID}.geojson"
 _EDM_PAGE_SIZE = 1000
 _EDM_MAX_FEATURES = 5000
@@ -80,7 +89,7 @@ _CHAIKIN_ITERATIONS = 2
 # Edmonton bbox (loose) — used to pick the local data source.
 _EDM_BBOX = (53.39, 53.71, -113.71, -113.27)  # (south, north, west, east)
 
-# Slope ramp bins (% slope) → RGBA. Permaculture-friendly: green flat,
+# Slope ramp bins (% slope) → RGBA. Habitat-design friendly: green flat,
 # yellow/orange gentle, red steep, magenta hazardous.
 _SLOPE_RAMP = (
     (2.0,   (102, 187, 106, 140)),   # < 2%   flat → mid green
@@ -125,11 +134,15 @@ def _http_get_json_retry(url: str, attempts: int = _OPEN_METEO_RETRY_ATTEMPTS,
 # ── Bbox / projection helpers ───────────────────────────────────────────────
 
 def metres_per_deg(lat: float) -> tuple[float, float]:
-    """Approx (m_per_deg_lat, m_per_deg_lng) at this latitude."""
-    cos_lat = math.cos(math.radians(lat))
-    if abs(cos_lat) < 1e-9:
-        cos_lat = 1e-9
-    return 111320.0, 111320.0 * cos_lat
+    """Approx (m_per_deg_lat, m_per_deg_lng) at this latitude.
+
+    Delegates to src.projection (Chunk 8) so the cosLat ↔ UTM choice is
+    made in one place. The default backend is coslat, which returns the
+    exact legacy tuple, so terrain/bbox maths is unchanged unless a
+    project opts into UTM.
+    """
+    from src.projection import metres_per_deg as _mpd
+    return _mpd(lat)
 
 
 def bbox_size_m(bbox: dict) -> tuple[float, float]:
@@ -223,6 +236,136 @@ def _cache_save_json(key: str, data: dict) -> None:
 
 # ── Edmonton vector contour fetch ───────────────────────────────────────────
 
+# ── Offline at-point elevation lookup (V1.37) ───────────────────────────────
+#
+# When Open-Meteo's elevation endpoint is unreachable or returns null
+# at the property pin (e.g. river-valley pins where the Copernicus DEM
+# has gaps over water), fall back to the City of Edmonton's downloaded
+# 0.5 m LiDAR contours. This is local-only data, so it's both faster
+# (no network) and more accurate (0.5 m vs 30 m resolution) — when the
+# user has the offline pack.
+#
+# Result shape matches ``property_data._parse_elevation`` so the site
+# panel slot doesn't need to special-case it.
+
+def lookup_point_elevation_edmonton(
+    lat: float, lng: float, sample_m: float = 60.0,
+) -> Optional[dict]:
+    """Interpolate point elevation from the offline Edmonton LiDAR
+    contour dataset. Returns the same dict shape as
+    ``property_data._parse_elevation`` (elevation + slope + aspect) so
+    the site panel slot doesn't need to special-case it. Returns
+    ``None`` when offline data isn't present or the point falls
+    outside Edmonton's coverage."""
+    try:
+        from src.terrain_store import TerrainStore as _TerrainStore
+        ts = _TerrainStore()
+        if not ts.has_edmonton_data():
+            return None
+    except Exception:
+        return None
+
+    # Edmonton coverage envelope — fail fast on points clearly outside.
+    if not (53.30 <= lat <= 53.75 and -113.75 <= lng <= -113.20):
+        return None
+
+    # Pull contours in a small bbox around the pin — ~200 m radius is
+    # ample for IDW with the 0.5 m contour interval.
+    radius_m = max(200.0, 4.0 * sample_m)
+    mlat, mlng = metres_per_deg(lat)
+    dlat = radius_m / mlat
+    dlng = radius_m / mlng
+    bbox = {
+        "south": lat - dlat, "north": lat + dlat,
+        "west":  lng - dlng, "east":  lng + dlng,
+    }
+    try:
+        contours = ts.get_edmonton_contours(bbox, interval_m=0.5)
+    except Exception:
+        return None
+    if not contours:
+        return None
+
+    # Flatten to (lat, lng, elev) vertex list.
+    verts: list[tuple[float, float, float]] = []
+    for feat in contours:
+        elev = feat.get("elevation_m")
+        if elev is None:
+            continue
+        for coord in feat.get("coords") or []:
+            if len(coord) < 2:
+                continue
+            verts.append((coord[0], coord[1], float(elev)))
+    if not verts:
+        return None
+
+    # IDW the centre + 4 cardinal neighbours, then derive slope/aspect
+    # exactly like the Open-Meteo path so the result is interchangeable.
+    def _idw(plat: float, plng: float) -> Optional[float]:
+        sum_w = sum_we = 0.0
+        # Tight floor on d² so a sample exactly on a vertex doesn't
+        # blow up; ~0.25 m² matches the contour-vertex spacing.
+        for vlat, vlng, ve in verts:
+            dlat_m = (vlat - plat) * mlat
+            dlng_m = (vlng - plng) * mlng
+            d2 = max(dlat_m * dlat_m + dlng_m * dlng_m, 0.25)
+            w = 1.0 / d2
+            sum_w += w
+            sum_we += w * ve
+        return sum_we / sum_w if sum_w > 0 else None
+
+    centre = _idw(lat, lng)
+    if centre is None:
+        return None
+
+    # Sample N/E/S/W at sample_m offsets — same convention as
+    # property_data._slope_sample_points.
+    nlat = lat + sample_m / mlat
+    slat = lat - sample_m / mlat
+    elng = lng + sample_m / mlng
+    wlng = lng - sample_m / mlng
+    n = _idw(nlat, lng)
+    s = _idw(slat, lng)
+    e = _idw(lat,  elng)
+    w = _idw(lat,  wlng)
+
+    # All four neighbours come from the same contour cloud, so unlike
+    # the Open-Meteo path none of them will be None individually —
+    # but guard anyway.
+    if n is None or s is None or e is None or w is None:
+        return {
+            "elevation_m": round(centre, 1),
+            "slope_pct":   None, "slope_deg": None,
+            "aspect_deg":  None, "aspect":   "—",
+            "sample_m":    sample_m,
+            "source":      "City of Edmonton — 0.5 m LiDAR (offline IDW, centre only)",
+        }
+
+    dz_dx = (e - w) / (2.0 * sample_m)
+    dz_dy = (n - s) / (2.0 * sample_m)
+    grad = math.hypot(dz_dx, dz_dy)
+    slope_pct = round(grad * 100.0, 2)
+    slope_deg = round(math.degrees(math.atan(grad)), 2)
+    if slope_pct < 0.05:
+        aspect_deg, aspect = None, "Flat"
+    else:
+        ang = (math.degrees(math.atan2(-dz_dx, -dz_dy)) + 360.0) % 360.0
+        aspect_deg = round(ang, 1)
+        # Reuse the compass_label helper via local import to avoid a
+        # circular dependency (property_data already imports terrain).
+        from src.property_data import _compass_label as _compass
+        aspect = _compass(ang)
+    return {
+        "elevation_m": round(centre, 1),
+        "slope_pct":   slope_pct,
+        "slope_deg":   slope_deg,
+        "aspect_deg":  aspect_deg,
+        "aspect":      aspect,
+        "sample_m":    sample_m,
+        "source":      "City of Edmonton — 0.5 m LiDAR (offline IDW)",
+    }
+
+
 def fetch_edmonton_contours(bbox: dict, interval_m: float = 0.5) -> Optional[list[dict]]:
     """
     Fetch Edmonton 0.5 m contour lines intersecting ``bbox``.
@@ -296,43 +439,103 @@ def fetch_edmonton_contours(bbox: dict, interval_m: float = 0.5) -> Optional[lis
     return out
 
 
+_EDM_ELEV_HINTS = (
+    "elev", "elevation_m", "elev_m", "contour", "height", "value",
+    "z_value", "_z", "altitude", "dem",
+)
+_EDM_GEOM_TYPES = ("multiline", "line", "geometry", "point", "polygon")
+
+
 def _edm_detect_fields() -> tuple[Optional[str], Optional[str]]:
-    """Return (elevation_field, geometry_field) for the dataset, by sniffing."""
-    cache_key = _cache_key("edm_fields_v2")
+    """Return (elevation_field, geometry_field) for the dataset.
+
+    Detection runs in three layers, fastest-first:
+
+      1. Cache hit → use it.
+      2. Socrata "view metadata" (`/api/views/<id>.json`) — authoritative
+         column list with explicit data types. We pick the first column
+         whose type is a known geometry type, plus a numeric column whose
+         field name matches an elevation hint (or any numeric column as
+         a last resort). This is the robust path: it doesn't depend on
+         the .geojson endpoint returning a non-empty sample, which is
+         what was throwing the "Could not detect field names" error in
+         practice when the API briefly returned an empty page.
+      3. Row-sniffing on `?$limit=1` (the legacy heuristic) — kept as a
+         final fallback for the case where the metadata endpoint is
+         blocked / proxied / behind auth.
+    """
+    cache_key = _cache_key("edm_fields_v5")  # bumped: dataset ID 2aq6-x42w (map view) → n6cj-24tp (dataset)
     cached = _cache_load_json(cache_key)
-    if cached:
+    if cached and cached.get("elev") and cached.get("geom"):
         return cached.get("elev"), cached.get("geom")
 
-    sample = _http_get_json(f"{_EDM_RESOURCE}?$limit=1")
+    elev_field, geom_field = _edm_detect_via_metadata()
+    if not elev_field or not geom_field:
+        elev_field2, geom_field2 = _edm_detect_via_sample()
+        elev_field = elev_field or elev_field2
+        geom_field = geom_field or geom_field2
+
+    if elev_field and geom_field:
+        _cache_save_json(cache_key, {"elev": elev_field, "geom": geom_field})
+    return elev_field, geom_field
+
+
+def _edm_detect_via_metadata() -> tuple[Optional[str], Optional[str]]:
+    """Use the Socrata views API to pick fields by declared data type."""
+    meta_url = f"https://data.edmonton.ca/api/views/{_EDM_DATASET_ID}.json"
+    meta = _http_get_json(meta_url, timeout=_TIMEOUT)
+    if not isinstance(meta, dict):
+        return None, None
+    cols = meta.get("columns") or []
+    if not isinstance(cols, list):
+        return None, None
+
+    geom_field: Optional[str] = None
+    elev_candidates: list[tuple[int, str]] = []  # (priority, field)
+
+    for col in cols:
+        fname = (col.get("fieldName") or "").strip()
+        dtype = (col.get("dataTypeName") or "").strip().lower()
+        if not fname:
+            continue
+        if geom_field is None and dtype in _EDM_GEOM_TYPES:
+            geom_field = fname
+            continue
+        if dtype == "number":
+            fl = fname.lower()
+            for prio, hint in enumerate(_EDM_ELEV_HINTS):
+                if hint in fl:
+                    elev_candidates.append((prio, fname))
+                    break
+            else:
+                # Generic numeric column → very low priority fallback.
+                elev_candidates.append((len(_EDM_ELEV_HINTS) + 1, fname))
+
+    elev_candidates.sort(key=lambda t: t[0])
+    elev_field = elev_candidates[0][1] if elev_candidates else None
+    return elev_field, geom_field
+
+
+def _edm_detect_via_sample() -> tuple[Optional[str], Optional[str]]:
+    """Legacy fallback: sniff a single feature off the .geojson endpoint."""
+    sample = _http_get_json(f"{_EDM_RESOURCE}?$limit=1", timeout=_TIMEOUT)
     if not sample or "features" not in sample or not sample["features"]:
         return None, None
-    feat = sample["features"][0]
-    props = feat.get("properties") or {}
-
-    # GeoJSON spec — geometry sits at "geometry"; the *underlying* Socrata
-    # geometry column is whatever they named it. The .geojson endpoint
-    # always serialises geometry under "geometry" but $select needs the
-    # source column. Their default for spatial datasets is "the_geom"; if
-    # missing we fall back to "*" for $select (won't include geom but lets
-    # us still get properties) — though intersects() always needs the
-    # column name. In practice the column has been "the_geom" for years.
+    props = (sample["features"][0].get("properties") or {})
+    # Socrata's spatial column has been "the_geom" for years on this
+    # dataset; the metadata path above is what we trust to disagree.
     geom_field = "the_geom"
-
-    elev_field = None
+    elev_field: Optional[str] = None
     for k, v in props.items():
-        kl = k.lower()
-        if any(t in kl for t in ("elev", "contour", "height", "z_value", "_z", "elevation_m")):
+        if any(h in k.lower() for h in _EDM_ELEV_HINTS):
             if _coerce_float(v) is not None:
                 elev_field = k
                 break
     if elev_field is None:
-        # Last-ditch: any numeric property.
         for k, v in props.items():
             if _coerce_float(v) is not None:
                 elev_field = k
                 break
-
-    _cache_save_json(cache_key, {"elev": elev_field, "geom": geom_field})
     return elev_field, geom_field
 
 
@@ -728,6 +931,107 @@ _MS_CASES = {
 
 # ── Slope grid (central differences) ────────────────────────────────────────
 
+def _grid_from_contours(contours: list[dict], bbox: dict,
+                         resolution_m: float) -> Optional[dict]:
+    """Interpolate Edmonton LiDAR contour vertices onto a regular elevation
+    grid for the existing compute_slope_grid pipeline.
+
+    Avoids the Open-Meteo round-trip + 30 m grid downsample when the user
+    already has the much finer LiDAR data cached locally. Inverse-distance
+    weighted blend over vertices in the cell's 3x3 bucket neighbourhood —
+    contours at 0.5 m sampling are dense enough that this gives a smooth
+    field at typical 5-15 m output resolution. Returns None when contours
+    are too sparse to interpolate (caller falls back to Open-Meteo).
+    """
+    verts: list[tuple[float, float, float]] = []
+    for c in contours:
+        e = c.get("elevation_m")
+        if e is None:
+            continue
+        # generate_terrain reshapes raw {coords} into {segments: [coords]} —
+        # accept either shape so callers can pass either form.
+        if "segments" in c:
+            for seg in c["segments"]:
+                for ll in seg:
+                    if len(ll) >= 2:
+                        verts.append((ll[0], ll[1], e))
+        else:
+            for ll in c.get("coords", []):
+                if len(ll) >= 2:
+                    verts.append((ll[0], ll[1], e))
+    if len(verts) < 100:
+        return None
+
+    # Cap output dimensions so a city-scale bbox can't explode the work.
+    MAX_DIM = 512
+    cols, rows = grid_dims(bbox, resolution_m)
+    if cols > MAX_DIM or rows > MAX_DIM:
+        width_m, height_m = bbox_size_m(bbox)
+        new_res = max(width_m / (MAX_DIM - 1), height_m / (MAX_DIM - 1))
+        cols, rows = grid_dims(bbox, new_res)
+
+    width_m, height_m = bbox_size_m(bbox)
+    dx_m = width_m  / max(1, cols - 1)
+    dy_m = height_m / max(1, rows - 1)
+    bucket_m = max(dx_m, dy_m) * 4.0  # vertices ~within a 4-cell radius
+
+    mid_lat = 0.5 * (bbox["south"] + bbox["north"])
+    m_per_deg_lat, m_per_deg_lng = metres_per_deg(mid_lat)
+    deg_per_m_lat = 1.0 / m_per_deg_lat
+    deg_per_m_lng = 1.0 / m_per_deg_lng
+    buck_lat = bucket_m * deg_per_m_lat
+    buck_lng = bucket_m * deg_per_m_lng
+
+    south, north = bbox["south"], bbox["north"]
+    west,  east  = bbox["west"],  bbox["east"]
+
+    buckets: dict[tuple[int, int], list[tuple[float, float, float]]] = {}
+    for vlat, vlng, ve in verts:
+        bi = int((vlat - south) / buck_lat)
+        bj = int((vlng - west)  / buck_lng)
+        buckets.setdefault((bi, bj), []).append((vlat, vlng, ve))
+
+    fallback_mean = sum(v[2] for v in verts) / len(verts)
+    grid = [[fallback_mean] * cols for _ in range(rows)]
+
+    for r in range(rows):
+        lat = north - (north - south) * r / max(1, rows - 1)
+        bi = int((lat - south) / buck_lat)
+        for c in range(cols):
+            lng = west + (east - west) * c / max(1, cols - 1)
+            bj = int((lng - west) / buck_lng)
+
+            sum_w = 0.0
+            sum_we = 0.0
+            for dbi in (-1, 0, 1):
+                for dbj in (-1, 0, 1):
+                    bv = buckets.get((bi + dbi, bj + dbj))
+                    if not bv:
+                        continue
+                    for vlat, vlng, ve in bv:
+                        dlat_m = (vlat - lat) * m_per_deg_lat
+                        dlng_m = (vlng - lng) * m_per_deg_lng
+                        # Floor d² so a cell landing on a vertex doesn't
+                        # blow up the weight — half the contour-vertex
+                        # spacing (~0.25 m²) is small enough to dominate
+                        # but finite.
+                        d2 = max(dlat_m * dlat_m + dlng_m * dlng_m, 0.25)
+                        w = 1.0 / d2
+                        sum_w += w
+                        sum_we += w * ve
+            if sum_w > 0:
+                grid[r][c] = sum_we / sum_w
+
+    return {
+        "grid": grid,
+        "rows": rows,
+        "cols": cols,
+        "bbox": bbox,
+        "source": "City of Edmonton LiDAR contours",
+        "missing_pct": 0.0,
+    }
+
+
 def compute_slope_grid(elev: dict) -> list[list[float]]:
     """
     Slope (%) at each cell of an elevation grid (forward/back diffs at
@@ -759,6 +1063,126 @@ def compute_slope_grid(elev: dict) -> list[list[float]]:
             dz_dy = (grid[rN][c] - grid[rS][c]) / span_y
             out[r][c] = round(math.hypot(dz_dx, dz_dy) * 100.0, 3)
     return out
+
+
+# ── Aspect (compass direction the slope faces) ──────────────────────────────
+#
+# Aspect is the second microclimate driver after slope. A south-facing
+# slope in Alberta gets 30–40% more growing-season solar energy than a
+# north-facing one at the same address — functionally a hardiness zone
+# warmer. The single-point aspect at the property pin is already
+# computed in property_data.py:_parse_elevation; these helpers extend
+# the same formula to the full grid so the slope-analysis job can
+# report a dominant aspect for the chosen area.
+#
+# Convention: aspect is reported as a compass bearing in [0, 360) where
+# 0/360 = N, 90 = E, 180 = S, 270 = W. A flat cell (slope < threshold)
+# has no meaningful aspect and is excluded from the dominant-aspect
+# tally rather than being assigned an arbitrary direction.
+
+_ASPECT_COMPASS_8 = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+
+
+def compute_aspect_grid(elev: dict) -> list[list[float]]:
+    """
+    Aspect (compass degrees from north, clockwise) at each cell of an
+    elevation grid. Uses the same gradient sampling as
+    ``compute_slope_grid`` so the two grids align cell-for-cell. Flat
+    cells (zero gradient) return ``-1.0`` as a sentinel; callers should
+    filter on the matching slope grid rather than reading this value.
+    """
+    grid = elev["grid"]
+    rows = elev["rows"]
+    cols = elev["cols"]
+    bbox = elev["bbox"]
+    width_m, height_m = bbox_size_m(bbox)
+    dx = width_m  / max(1, cols - 1)
+    dy = height_m / max(1, rows - 1)
+
+    out = [[0.0] * cols for _ in range(rows)]
+    for r in range(rows):
+        rN = max(0, r - 1)
+        rS = min(rows - 1, r + 1)
+        span_y = (rS - rN) * dy
+        if span_y == 0:
+            span_y = dy
+        for c in range(cols):
+            cW = max(0, c - 1)
+            cE = min(cols - 1, c + 1)
+            span_x = (cE - cW) * dx
+            if span_x == 0:
+                span_x = dx
+            dz_dx = (grid[r][cE] - grid[r][cW]) / span_x
+            dz_dy = (grid[rN][c] - grid[rS][c]) / span_y
+            if dz_dx == 0 and dz_dy == 0:
+                out[r][c] = -1.0
+                continue
+            # Downhill direction as compass bearing from north, clockwise.
+            # Matches property_data._parse_elevation so the area readout
+            # is consistent with the single-point readout.
+            deg = math.degrees(math.atan2(-dz_dx, -dz_dy)) % 360.0
+            out[r][c] = round(deg, 2)
+    return out
+
+
+def classify_aspect_8way(degrees: float) -> str:
+    """
+    Bucket a compass bearing into one of N/NE/E/SE/S/SW/W/NW. Returns
+    ``"Flat"`` for the ``-1.0`` sentinel produced by
+    ``compute_aspect_grid`` on zero-gradient cells.
+
+    Buckets are 45° wide and centred on each cardinal/inter-cardinal
+    direction (N spans 337.5–22.5, NE spans 22.5–67.5, etc.) — the
+    standard convention used in QGIS, ArcGIS, and most ecology tooling.
+    """
+    if degrees < 0:
+        return "Flat"
+    # Shift so bucket 0 (N) is centred on 0°, then divide by 45°.
+    idx = int(((degrees + 22.5) % 360.0) // 45.0)
+    return _ASPECT_COMPASS_8[idx]
+
+
+def dominant_aspect_for_grid(
+    aspect_grid: list[list[float]],
+    slope_grid: list[list[float]],
+    slope_threshold_pct: float = 2.0,
+) -> dict:
+    """
+    Compute the dominant compass aspect across an aspect grid, weighted
+    by the matching slope grid so flat terrain doesn't dilute the answer.
+
+    Returns ``{"dominant": "S", "share": 0.42, "counts": {...},
+    "sampled_cells": N, "flat_cells": M}`` — ``share`` is the dominant
+    bucket's fraction of sampled (non-flat) cells. Returns
+    ``{"dominant": None, ...}`` when fewer than 4 cells meet the
+    threshold (too small to be meaningful).
+    """
+    counts: dict[str, int] = {b: 0 for b in _ASPECT_COMPASS_8}
+    sampled = 0
+    flat = 0
+    for r, row in enumerate(aspect_grid):
+        for c, deg in enumerate(row):
+            if deg < 0 or slope_grid[r][c] < slope_threshold_pct:
+                flat += 1
+                continue
+            counts[classify_aspect_8way(deg)] += 1
+            sampled += 1
+    if sampled < 4:
+        return {
+            "dominant": None,
+            "share": 0.0,
+            "counts": counts,
+            "sampled_cells": sampled,
+            "flat_cells": flat,
+        }
+    dominant = max(counts, key=lambda k: counts[k])
+    return {
+        "dominant": dominant,
+        "share": round(counts[dominant] / sampled, 3),
+        "counts": counts,
+        "sampled_cells": sampled,
+        "flat_cells": flat,
+    }
 
 
 # ── Slope ramp PNG ──────────────────────────────────────────────────────────
@@ -880,20 +1304,38 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
     elev = None
     need_grid = want_slope or (want_contours and not contours)
     if need_grid:
-        elev = fetch_openmeteo_grid(bbox, resolution_m)
+        # Prefer the local LiDAR contours when available — much faster
+        # than the Open-Meteo round-trip and finer than its 30 m grid.
+        slope_contours = contours
+        if use_edm and not slope_contours:
+            # Slope was requested but contour output wasn't — still try the
+            # local Edmonton fetch so the IDW path can run.
+            edm = fetch_edmonton_contours(bbox, interval_m=interval_m)
+            if edm:
+                slope_contours = [
+                    {"elevation_m": f["elevation_m"],
+                     "segments":   [f["coords"]]}
+                    for f in edm
+                ]
+        if slope_contours and use_edm:
+            elev = _grid_from_contours(slope_contours, bbox, resolution_m)
+            if elev is not None and not source:
+                source = "City of Edmonton — LiDAR contours (IDW grid)"
         if elev is None:
-            warnings.append(
-                "Open-Meteo elevation unreachable — try again, or pick a "
-                "smaller area."
-            )
-        else:
-            missing = elev.get("missing_pct") or 0.0
-            if missing > 5.0:
+            elev = fetch_openmeteo_grid(bbox, resolution_m)
+            if elev is None:
                 warnings.append(
-                    f"{missing:.0f}% of elevation samples were dropped "
-                    f"and median-imputed; results in those cells are "
-                    f"approximate."
+                    "Open-Meteo elevation unreachable — try again, or pick a "
+                    "smaller area."
                 )
+            else:
+                missing = elev.get("missing_pct") or 0.0
+                if missing > 5.0:
+                    warnings.append(
+                        f"{missing:.0f}% of elevation samples were dropped "
+                        f"and median-imputed; results in those cells are "
+                        f"approximate."
+                    )
 
     if want_contours and not contours and elev is not None:
         levels = _levels_for_grid(elev["grid"], interval_m)
@@ -909,6 +1351,14 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
         flat = [s for row in slope_grid for s in row]
         if flat:
             stats["max_slope_pct"] = round(max(flat), 2)
+        # Aspect rides along on the same DEM — same gradient sample as
+        # the slope grid, so it's effectively free. Surfaced via
+        # `stats["dominant_aspect"]` in the area status readout.
+        aspect_grid = compute_aspect_grid(elev)
+        asp = dominant_aspect_for_grid(aspect_grid, slope_grid)
+        if asp["dominant"]:
+            stats["dominant_aspect"] = asp["dominant"]
+            stats["dominant_aspect_share"] = asp["share"]
             stats["mean_slope_pct"] = round(sum(flat) / len(flat), 2)
 
     # Partial success counts: render whatever we have, surface warnings
@@ -958,8 +1408,7 @@ def _levels_for_grid(grid: list[list[float]], interval_m: float) -> list[float]:
 if _HAVE_QT:
     class TerrainWorker(QObject):
         """
-        Run terrain generation off the UI thread. Mirrors the pattern in
-        ``src/api/permapeople.py``.
+        Run terrain generation off the UI thread.
 
             worker = TerrainWorker(bbox, options)
             worker.moveToThread(thread)

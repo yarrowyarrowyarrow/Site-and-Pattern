@@ -1,0 +1,79 @@
+[
+  {
+    "region": "Boreal forest (northern Alberta)",
+    "centroid": [56.0, -114.0],
+    "ph_top": 5.2,
+    "sand_pct_top": 35,
+    "silt_pct_top": 40,
+    "clay_pct_top": 25,
+    "texture_class": "loam",
+    "max_reported_depth_cm": 100,
+    "notes": "Acidic forest soils; gray luvisols on uplands and gleysols in poorly-drained sites. Cool season; lower productivity than parkland."
+  },
+  {
+    "region": "Aspen parkland (central Alberta)",
+    "centroid": [53.5, -113.5],
+    "ph_top": 6.5,
+    "sand_pct_top": 30,
+    "silt_pct_top": 45,
+    "clay_pct_top": 25,
+    "texture_class": "loam",
+    "max_reported_depth_cm": 100,
+    "notes": "Black chernozems with high organic matter; the most productive zone for prairie gardening and food forestry."
+  },
+  {
+    "region": "Mixed-grass prairie (southern Alberta)",
+    "centroid": [50.5, -111.5],
+    "ph_top": 7.4,
+    "sand_pct_top": 35,
+    "silt_pct_top": 40,
+    "clay_pct_top": 25,
+    "texture_class": "loam",
+    "max_reported_depth_cm": 100,
+    "notes": "Brown to dark-brown chernozems; arid climate with calcium carbonate often near the surface. Drought-tolerant species recommended."
+  },
+  {
+    "region": "Foothills (central-western Alberta)",
+    "centroid": [52.5, -115.0],
+    "ph_top": 5.8,
+    "sand_pct_top": 40,
+    "silt_pct_top": 35,
+    "clay_pct_top": 25,
+    "texture_class": "loam",
+    "max_reported_depth_cm": 80,
+    "notes": "Gray luvisols developed on glacial till. Productive for hardy perennials despite shorter growing season."
+  },
+  {
+    "region": "Rocky Mountain montane / subalpine",
+    "centroid": [51.5, -116.5],
+    "ph_top": 5.5,
+    "sand_pct_top": 50,
+    "silt_pct_top": 30,
+    "clay_pct_top": 20,
+    "texture_class": "sandy_loam",
+    "max_reported_depth_cm": 50,
+    "notes": "Shallow, gravelly brunisols over bedrock. Best for alpine species and hardy native shrubs."
+  },
+  {
+    "region": "Peace River / lower boreal (northwestern Alberta)",
+    "centroid": [56.5, -118.0],
+    "ph_top": 6.2,
+    "sand_pct_top": 25,
+    "silt_pct_top": 50,
+    "clay_pct_top": 25,
+    "texture_class": "silt_loam",
+    "max_reported_depth_cm": 100,
+    "notes": "Dark gray luvisols and northern chernozems; surprisingly productive for hardy crops at high latitude."
+  },
+  {
+    "region": "Cypress Hills (southeastern Alberta highlands)",
+    "centroid": [49.65, -110.3],
+    "ph_top": 6.8,
+    "sand_pct_top": 38,
+    "silt_pct_top": 38,
+    "clay_pct_top": 24,
+    "texture_class": "loam",
+    "max_reported_depth_cm": 80,
+    "notes": "Cooler, moister island in the dry mixed-grass region; brown to dark-brown chernozems with forested patches."
+  }
+]
