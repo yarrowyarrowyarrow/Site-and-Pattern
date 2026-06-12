@@ -237,6 +237,8 @@ def build_server():
 
 def main() -> int:  # pragma: no cover - exercised by an MCP client
     """Run the MCP server over stdio."""
+    from src.ssl_bootstrap import ensure_ca_bundle
+    ensure_ca_bundle()   # headless fetches need certs too (macOS/frozen)
     server = build_server()
     server.run()
     return 0

@@ -11,6 +11,12 @@ import os
 # Allow importing from the project root
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Wire up a CA bundle before anything can open an https connection —
+# macOS Pythons and frozen builds ship no root certificates, which
+# silently breaks every network feature (see src/ssl_bootstrap.py).
+from src.ssl_bootstrap import ensure_ca_bundle
+ensure_ca_bundle()
+
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import Qt, QtMsgType, qInstallMessageHandler

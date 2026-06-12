@@ -7,6 +7,11 @@ PyQt6>=6.6.0,<6.8; sys_platform == "darwin"
 PyQt6-WebEngine>=6.6.0; sys_platform != "darwin"
 PyQt6-WebEngine>=6.6.0,<6.8; sys_platform == "darwin"
 python-docx>=1.1
+# CA bundle for https fetches (plant photos, elevation, OSM import).
+# Required on macOS and in frozen builds, where Python ships no root
+# certificates; harmless elsewhere (src/ssl_bootstrap.py only uses it
+# when the system bundle is missing).
+certifi>=2023.7.22
 # Footprint-polygon shadow casting (V1.53, src/shadow_geometry.py). Optional:
 # every import is guarded and src/shade.py falls back to its circle model when
 # shapely is absent, so a shapely-less install still runs (with coarser shade).

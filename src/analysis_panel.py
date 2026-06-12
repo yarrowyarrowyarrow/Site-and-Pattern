@@ -62,7 +62,12 @@ class AnalysisPanel(QWidget):
         self._tabs.setDocumentMode(True)
         self._tabs.tabBar().setUsesScrollButtons(False)
         self._tabs.tabBar().setExpanding(True)
-        self._tabs.setStyleSheet(inner_tab_stylesheet())
+        # Tighter horizontal padding than the stock sub-tab style: this strip
+        # holds five labels and has to fit the side panel's 260px minimum on
+        # macOS too, whose system font renders wider than Windows/Linux at the
+        # same 11px (same trick as the top-level strip in app.py).
+        self._tabs.setStyleSheet(inner_tab_stylesheet()
+                                 + "QTabBar::tab { padding: 4px 6px; }")
 
         self._build_sun_tab()
         self._build_sector_tab()
@@ -660,7 +665,9 @@ class AnalysisPanel(QWidget):
         ref.setStyleSheet("color: #607d8b; font-size: 10px; font-style: italic;")
         layout.addWidget(ref)
 
-        self._tabs.addTab(tab, "Habitat Value")
+        # Short tab label so all five fit the strip even with macOS's wider
+        # font; the page itself carries the full "Habitat Value" wording.
+        self._tabs.addTab(tab, "Habitat")
 
     def set_shade_breakdown(self, counts: dict | None):
         """Render the cached shade-tag mix (``{tag: n}`` from

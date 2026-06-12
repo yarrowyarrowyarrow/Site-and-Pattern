@@ -178,6 +178,15 @@ The script automatically falls back to creating a ZIP file. To enable true 1-cli
 2. Install to `C:\Program Files (x86)\NSIS\`
 3. Rebuild
 
+### Network features don't work (no plant photos / elevation / OSM import)
+Python needs root certificates to verify https connections. macOS Pythons
+and frozen builds ship none, so every web fetch fails silently while the
+map itself (Chromium, own cert store) keeps working. PermaDesign wires up
+`certifi`'s CA bundle automatically at startup (`src/ssl_bootstrap.py`);
+if network features fail on a source install, update dependencies so
+certifi is present: `pip install -r requirements.txt`, then rebuild if
+packaging.
+
 ### "Missing module" error
 Add the module to `permadesign.spec` under `hiddenimports`:
 

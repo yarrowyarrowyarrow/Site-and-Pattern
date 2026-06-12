@@ -23,6 +23,10 @@ a = Analysis(
         'PyQt6.QtWebEngineWidgets',
         'PyQt6.sip',
         'sqlite3',
+        # CA bundle for https fetches in frozen builds (the bundled
+        # Python has no system certificates; see src/ssl_bootstrap.py).
+        # PyInstaller's certifi hook packs cacert.pem alongside it.
+        'certifi',
     ],
     hookspath=[],
     hooksconfig={},
