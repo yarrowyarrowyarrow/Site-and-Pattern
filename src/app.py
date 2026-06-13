@@ -646,6 +646,9 @@ class MainWindow(QMainWindow):
         self.site_panel.download_edmonton_requested.connect(
             self._on_download_edmonton_requested
         )
+        # Straight to the controller (MainWindow at its method ceiling).
+        self.site_panel.download_soil_requested.connect(
+            self._map_events._on_download_soil_requested)
         # Shade overlay + OSM import (V1.51).
         self.site_panel.shade_requested.connect(self._on_shade_requested)
         self.site_panel.shade_cleared.connect(self._on_shade_cleared)

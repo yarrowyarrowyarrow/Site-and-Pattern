@@ -1356,6 +1356,11 @@ class MapEventRouter:
         from src import wind_flow
         wind_flow.fetch_wind_for_site(self._main)
 
+    def _on_download_soil_requested(self):
+        """Download the offline soil pack (V1.67). Orchestration in soil_flow."""
+        from src import soil_flow
+        soil_flow.start_soil_download(self._main)
+
     # ── Project notes ────────────────────────────────────────────────────────
 
     def _on_notes_changed(self, text: str):

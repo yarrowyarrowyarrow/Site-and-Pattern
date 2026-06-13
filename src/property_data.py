@@ -146,16 +146,26 @@ def fetch_soil(lat: float, lng: float) -> Optional[dict]:
     """
     Soil pH, sand/silt/clay %, and reported depth.
 
-    Tries SoilGrids v2.0 (ISRIC) first; if the live API is unavailable
-    or returns no usable data, falls back to a curated Alberta regional
-    approximation bundled with the app (see
-    ``data/soil_fallback_alberta.json``). The returned dict's
-    ``source`` field always reflects which path was used so the UI can
-    label the data appropriately.
+    Source order: the offline **Gridded Soil Landscapes of Canada** pack when
+    downloaded (real per-location data, no network — see ``src/soil_grid.py``),
+    then SoilGrids v2.0 (ISRIC) as an opportunistic online bonus, then a curated
+    Alberta regional approximation bundled with the app (see
+    ``data/soil_fallback_alberta.json``). The returned dict's ``source`` field
+    always reflects which path was used so the UI can label it appropriately.
 
     Top-layer values are surfaced in ``summary``; per-depth values are
     kept in ``properties`` for callers that want the full profile.
     """
+    # 1. Offline pack (Gridded SLC) — instant, real, no network.
+    try:
+        from src.soil_grid import sample_soil
+        local = sample_soil(lat, lng)
+    except Exception:  # noqa: BLE001 — pack/rasterio issues → try the next source
+        local = None
+    if local is not None:
+        return local
+
+    # 2. SoilGrids v2.0 (online; ISRIC has paused the service, so often skipped).
     qs = urllib.parse.urlencode([
         ("lat", f"{lat:.4f}"),
         ("lon", f"{lng:.4f}"),
