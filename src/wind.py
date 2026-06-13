@@ -241,6 +241,36 @@ def fetch_current_wind(lat: float, lng: float) -> Optional[dict]:
     }
 
 
+_AXIS_NAMES = ["N–S", "NE–SW", "E–W", "NW–SE"]
+
+
+def _axis_label(axis_deg: float) -> str:
+    """Nearest of the 4 windbreak axes for an axis bearing in [0, 180)."""
+    return _AXIS_NAMES[int((axis_deg + 22.5) // 45) % 4]
+
+
+def windbreak_advice(rose: Optional[dict], *, exposed_kmh: float = 18.0):
+    """Design hint from a rose: which way to run a windbreak (perpendicular to
+    the prevailing wind) and whether the site is exposed. Returns
+    ``{"orientation_axis_deg", "orientation_label", "exposed", "mean_speed",
+    "text"}`` or ``None`` when there's no prevailing direction."""
+    a = (rose or {}).get("annual") or {}
+    deg = a.get("prevailing_deg")
+    label = a.get("prevailing_label")
+    if deg is None:
+        return None
+    mean = float(a.get("mean_speed") or 0.0)
+    axis = (deg + 90.0) % 180.0          # barrier runs across the wind
+    axis_label = _axis_label(axis)
+    exposed = mean >= exposed_kmh
+    text = (f"Prevailing wind from {label} (~{mean:.0f} km/h). "
+            f"Run a windbreak/hedgerow {axis_label} (across the wind)")
+    text += (". Exposed site — shelter wind-sensitive plants such as fruit "
+             "trees and broadleaf evergreens." if exposed else ".")
+    return {"orientation_axis_deg": axis, "orientation_label": axis_label,
+            "exposed": exposed, "mean_speed": mean, "text": text}
+
+
 def wind_rose_geometry(block: dict, *, max_radius: float = 1.0) -> list:
     """Turn one rose block into stacked wedges for the UI to paint.
 

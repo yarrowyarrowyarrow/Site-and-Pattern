@@ -488,6 +488,12 @@ class AnalysisPanel(QWidget):
         self._wind_status_lbl.setStyleSheet("color: #90a4ae; font-size: 11px;")
         layout.addWidget(self._wind_status_lbl)
 
+        self._wind_advice_lbl = QLabel("")
+        self._wind_advice_lbl.setWordWrap(True)
+        self._wind_advice_lbl.setStyleSheet(
+            "color: #c5e1a5; font-size: 11px; font-style: italic;")
+        layout.addWidget(self._wind_advice_lbl)
+
         form = QFormLayout()
         form.setContentsMargins(0, 0, 0, 0)
 
@@ -559,6 +565,9 @@ class AnalysisPanel(QWidget):
 
     def set_wind_status(self, text: str):
         self._wind_status_lbl.setText(text)
+
+    def set_wind_advice(self, text: str):
+        self._wind_advice_lbl.setText(text or "")
 
     def set_wind_data(self, rose: dict, current: dict | None):
         """Populate the Wind tab from a fetched rose + current reading: draw the

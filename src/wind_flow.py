@@ -76,8 +76,24 @@ def fetch_wind_for_site(main) -> None:
     main._wind_worker = worker
 
     def _apply(result):
-        main.analysis_panel.set_wind_data(result.get("rose"),
-                                          result.get("current"))
+        rose = result.get("rose")
+        main.analysis_panel.set_wind_data(rose, result.get("current"))
+        # Persist prevailing wind to the project + surface a windbreak hint.
+        advice = wind.windbreak_advice(rose) if rose else None
+        if rose:
+            a = rose.get("annual") or {}
+            sc = (main._project.setdefault("properties", {})
+                  .setdefault("site_config", {}))
+            sc["wind_prevailing_deg"] = a.get("prevailing_deg")
+            sc["wind_mean_kmh"] = a.get("mean_speed")
+            sc["wind_exposure"] = ("exposed" if (advice and advice["exposed"])
+                                   else "moderate")
+            try:
+                main._mark_modified()
+            except Exception:  # noqa: BLE001
+                pass
+        if advice:
+            main.analysis_panel.set_wind_advice(advice["text"])
 
     def _done():
         worker.deleteLater()

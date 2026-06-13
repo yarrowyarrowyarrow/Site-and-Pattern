@@ -95,6 +95,25 @@ class TestWindRoseGeometry(unittest.TestCase):
         self.assertEqual(wind.wind_rose_geometry(wind._rose_block([])), [])
 
 
+class TestWindbreakAdvice(unittest.TestCase):
+    def test_perpendicular_axis_and_exposed(self):
+        rose = wind.compute_wind_rose(_rows(100, 7, 270.0, 25.0))  # strong W
+        adv = wind.windbreak_advice(rose)
+        # Wind from W (270) → barrier axis (270+90)%180 = 0 → N–S.
+        self.assertEqual(adv["orientation_label"], "N–S")
+        self.assertTrue(adv["exposed"])            # 25 km/h ≥ 18
+        self.assertIn("windbreak", adv["text"])
+
+    def test_calm_site_not_exposed(self):
+        rose = wind.compute_wind_rose(_rows(100, 7, 0.0, 8.0))      # light N
+        adv = wind.windbreak_advice(rose)
+        self.assertEqual(adv["orientation_label"], "E–W")          # N→axis 90
+        self.assertFalse(adv["exposed"])
+
+    def test_none_when_no_prevailing(self):
+        self.assertIsNone(wind.windbreak_advice(wind.compute_wind_rose([])))
+
+
 class TestFetchParsing(unittest.TestCase):
     def setUp(self):
         self._orig = wind._http_get_json
