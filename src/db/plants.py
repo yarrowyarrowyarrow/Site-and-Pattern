@@ -108,7 +108,9 @@ _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 # v25 (V1.61): no DDL — image data populated from iNaturalist (323 plants /
 # 58 fauna, CC0/CC-BY/CC-BY-SA only, with attribution). The bump reseeds so
 # existing installs pick the photo URLs up.
-_SCHEMA_VERSION = 25
+# v26 (V1.67): added `wind_cache` table for the seasonal wind rose. Per-location
+# user cache (not seeded); wiped on reseed like climate_cache so it recomputes.
+_SCHEMA_VERSION = 26
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -722,6 +724,9 @@ def init_db() -> None:
             # on reseed so the next launch refetches against any updated
             # source defaults rather than serving stale interpretations.
             conn.execute("DELETE FROM climate_cache")
+            # wind_cache is per-location user data, not seeded — wipe on reseed
+            # like climate_cache so the next launch refetches the wind rose.
+            conn.execute("DELETE FROM wind_cache")
             # shade_zone_cache is per-project derived output (not seeded) — wipe
             # on reseed like climate_cache so it recomputes against any updated
             # shade model rather than serving stale tags.
@@ -1304,6 +1309,48 @@ def store_cached_climate(lat: float, lng: float, summary: dict) -> None:
                 summary.get("years_used"),
                 summary.get("source"),
             ),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_cached_wind(lat: float, lng: float) -> Optional[dict]:
+    """Return the cached wind-rose dict for (lat, lng), or None on miss.
+    The rose is stored as JSON (nested annual/seasonal blocks)."""
+    import json as _json
+    lat_q, lng_q = _quantize_latlng(lat, lng)
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT rose_json, cached_at FROM wind_cache "
+            "WHERE lat_q = ? AND lng_q = ?",
+            (lat_q, lng_q),
+        ).fetchone()
+        if row is None:
+            return None
+        try:
+            rose = _json.loads(row["rose_json"])
+        except (ValueError, TypeError):
+            return None
+        rose["cached_at"] = row["cached_at"]
+        return rose
+    finally:
+        conn.close()
+
+
+def store_cached_wind(lat: float, lng: float, rose: dict) -> None:
+    """Persist a wind rose for (lat, lng). Overwrites any prior cached row at
+    the same quantized location."""
+    import json as _json
+    lat_q, lng_q = _quantize_latlng(lat, lng)
+    conn = get_connection()
+    try:
+        conn.execute(
+            "INSERT OR REPLACE INTO wind_cache "
+            "(lat_q, lng_q, rose_json, source, cached_at) "
+            "VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
+            (lat_q, lng_q, _json.dumps(rose), rose.get("source")),
         )
         conn.commit()
     finally:

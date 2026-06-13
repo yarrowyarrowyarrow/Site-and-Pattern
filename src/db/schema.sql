@@ -196,6 +196,19 @@ CREATE TABLE IF NOT EXISTS climate_cache (
     PRIMARY KEY (lat_q, lng_q)
 );
 
+-- Per-location seasonal wind rose (schema v26, V1.67). The rose is a nested
+-- dict (annual + seasonal blocks), so it's stored as a JSON blob rather than
+-- one-column-per-field. Per-location user cache, wiped on reseed like
+-- climate_cache (re-fetched on demand from Open-Meteo).
+CREATE TABLE IF NOT EXISTS wind_cache (
+    lat_q INTEGER NOT NULL,                    -- lat * 100, rounded
+    lng_q INTEGER NOT NULL,                    -- lng * 100, rounded
+    rose_json TEXT NOT NULL,                   -- compute_wind_rose() output
+    source    TEXT,
+    cached_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (lat_q, lng_q)
+);
+
 -- Shade-zone tag cache (schema v21, V1.53). DERIVED output only: caches the
 -- resulting shade classification (full_sun / partial_shade / full_shade) per
 -- planting zone, keyed by project + zone id, so the placement UI / analysis
