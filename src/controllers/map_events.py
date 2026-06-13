@@ -1175,6 +1175,12 @@ class MapEventRouter:
                 "Drop a pin or draw a boundary first.")
             return
 
+        # Prefer the offline building pack when this area has been downloaded
+        # (instant, no network) — same data, same canopy_footprint pipeline.
+        from src import building_flow
+        if building_flow.import_buildings_offline(self._main, bbox):
+            return
+
         self._main.site_panel.set_osm_status("Querying OpenStreetMap…")
         self._run_worker(OSMWorker(bbox), self._on_osm_ready, "osm")
 
@@ -1300,6 +1306,12 @@ class MapEventRouter:
                 and self._main._dl_thread is not None):
             self._main._dl_thread.deleteLater()
             self._main._dl_thread = None
+
+    def _on_download_buildings_requested(self):
+        # Orchestration lives in src/building_flow.py (keeps this controller
+        # under its line ceiling); state lands on MainWindow there.
+        from src import building_flow
+        building_flow.start_building_download(self._main)
 
     # ── Sun / sector / contour / wind analysis-overlay request slots ────────
 

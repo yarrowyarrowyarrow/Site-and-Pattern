@@ -654,6 +654,10 @@ class MainWindow(QMainWindow):
         self.site_panel.shade_zones_visible_changed.connect(
             self.map_widget.set_shade_zones_visible)
         self.site_panel.osm_import_requested.connect(self._on_osm_import_requested)
+        # Wired straight to the controller (MainWindow is at its method ceiling,
+        # so no shim) — the building-pack download lives in MapEventRouter.
+        self.site_panel.download_buildings_requested.connect(
+            self._map_events._on_download_buildings_requested)
         self.site_panel.footprint_import_requested.connect(
             self._on_footprint_import_requested)
         # Shade sub-tab: mark/draw existing trees & buildings (relocated from

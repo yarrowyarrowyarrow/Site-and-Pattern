@@ -213,6 +213,8 @@ class SitePanel(QWidget):
 
     # Import existing trees/buildings from OpenStreetMap (V1.51).
     osm_import_requested = pyqtSignal()
+    # Bulk-download a region's building footprints for offline reuse (V1.66).
+    download_buildings_requested = pyqtSignal()
 
     # Import shade-casting footprints from an nDSM GeoTIFF (V1.53).
     footprint_import_requested = pyqtSignal(str)   # tiff path
@@ -1272,6 +1274,24 @@ class SitePanel(QWidget):
         btn.clicked.connect(self.osm_import_requested.emit)
         v.addWidget(btn)
 
+        # One-time bulk download of nearby building footprints into a local
+        # cache (buildings.db), so future designs in this area import buildings
+        # instantly and offline — the contour-pack model, for buildings.
+        bld_row = QHBoxLayout()
+        self._bldg_dl_btn = QPushButton("Download buildings for this area")
+        self._bldg_dl_btn.setStyleSheet(_BTN_SECONDARY)
+        self._bldg_dl_btn.setToolTip(
+            "Bulk-download OpenStreetMap building footprints around this "
+            "property into a local cache so 'Import from OpenStreetMap' works "
+            "instantly and offline here afterwards.")
+        self._bldg_dl_btn.clicked.connect(self._on_download_buildings_clicked)
+        bld_row.addWidget(self._bldg_dl_btn)
+        self._bldg_cancel_btn = QPushButton("Cancel")
+        self._bldg_cancel_btn.setStyleSheet(_BTN_SECONDARY)
+        self._bldg_cancel_btn.setVisible(False)
+        bld_row.addWidget(self._bldg_cancel_btn)
+        v.addLayout(bld_row)
+
         # Import shade-casting footprints from a height raster (nDSM GeoTIFF) —
         # the whiteboxtools-style path. Only shown when a backend is available
         # (numpy + shapely present), so a minimal install hides it.
@@ -1303,6 +1323,22 @@ class SitePanel(QWidget):
 
     def set_osm_status(self, text: str):
         self._osm_status.setText(text)
+
+    # ── Offline building-pack download (V1.66) ─────────────────────────────
+
+    def _on_download_buildings_clicked(self):
+        self._bldg_dl_btn.setEnabled(False)
+        self._bldg_cancel_btn.setVisible(True)
+        self.set_osm_status("Starting building download…")
+        self.download_buildings_requested.emit()
+
+    def set_buildings_download_progress(self, total_new: int, done: int,
+                                        text: str):
+        self.set_osm_status(text)
+
+    def reset_buildings_download(self):
+        self._bldg_dl_btn.setEnabled(True)
+        self._bldg_cancel_btn.setVisible(False)
 
     # ── Manual contour drawing (UI removed V1.37) ──────────────────────────
     # Helpers below are intentional no-ops kept as placeholders so any
