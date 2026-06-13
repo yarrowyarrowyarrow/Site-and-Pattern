@@ -1,0 +1,37 @@
+[
+  {
+    "region": "Aspen parkland (central Alberta)",
+    "centroid": [53.5, -113.5],
+    "prevailing_deg": 292,
+    "mean_speed_kmh": 14,
+    "notes": "Prevailing WNW; westerlies year-round, more northwesterly in summer."
+  },
+  {
+    "region": "Boreal forest (northern Alberta)",
+    "centroid": [56.0, -114.0],
+    "prevailing_deg": 270,
+    "mean_speed_kmh": 11,
+    "notes": "Lighter winds under forest cover; prevailing W."
+  },
+  {
+    "region": "Mixed-grass prairie (southern Alberta)",
+    "centroid": [50.5, -111.5],
+    "prevailing_deg": 292,
+    "mean_speed_kmh": 19,
+    "notes": "Strong, persistent westerlies; among the windiest parts of Canada."
+  },
+  {
+    "region": "Foothills / chinook belt (SW Alberta)",
+    "centroid": [50.5, -114.0],
+    "prevailing_deg": 247,
+    "mean_speed_kmh": 22,
+    "notes": "WSW chinook winds; frequent strong gusts off the mountains."
+  },
+  {
+    "region": "Peace River (northwestern Alberta)",
+    "centroid": [56.5, -118.0],
+    "prevailing_deg": 270,
+    "mean_speed_kmh": 12,
+    "notes": "Prevailing W; sheltered river valleys vary locally."
+  }
+]

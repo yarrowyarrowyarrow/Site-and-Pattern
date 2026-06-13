@@ -670,6 +670,9 @@ class MainWindow(QMainWindow):
             self.map_widget.set_satellite_offset)
         self.analysis_panel.wind_requested.connect(self._on_wind_requested)
         self.analysis_panel.wind_cleared.connect(self.map_widget.clear_wind_overlay)
+        # Straight to the controller (MainWindow is at its method ceiling).
+        self.analysis_panel.wind_data_requested.connect(
+            self._map_events._on_fetch_wind_requested)
         self.analysis_panel.season_changed.connect(self._on_season_changed)
 
         # Map → polyculture removal

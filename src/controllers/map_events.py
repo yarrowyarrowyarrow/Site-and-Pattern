@@ -1350,6 +1350,12 @@ class MapEventRouter:
             f"({config.get('speed_label', '')})"
         )
 
+    def _on_fetch_wind_requested(self):
+        """Fetch real seasonal wind + current reading for the site (V1.67).
+        Orchestration lives in src/wind_flow.py to keep this controller thin."""
+        from src import wind_flow
+        wind_flow.fetch_wind_for_site(self._main)
+
     # ── Project notes ────────────────────────────────────────────────────────
 
     def _on_notes_changed(self, text: str):

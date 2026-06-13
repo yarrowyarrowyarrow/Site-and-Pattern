@@ -41,6 +41,7 @@ class AnalysisPanel(QWidget):
     # A4: Wind/windbreak
     wind_requested = pyqtSignal(dict)       # {direction, speed_label, show_shelter}
     wind_cleared = pyqtSignal()
+    wind_data_requested = pyqtSignal()      # fetch real wind data for the site
 
     # Season view
     season_changed = pyqtSignal(str)        # "Spring" | "Summer" | "Fall" | "Winter"
@@ -454,13 +455,38 @@ class AnalysisPanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Mark prevailing wind direction. Windbreak structures and hedges "
-            "show a shelter zone behind them (10× their height).\n\n"
-            "Edmonton prevailing: NW in summer, W in winter."
+            "Fetch real seasonal wind data (Open-Meteo, free) for this site, or "
+            "set the prevailing direction by hand. Windbreaks and hedges show a "
+            "shelter zone behind them (10× their height)."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
         layout.addWidget(info)
+
+        # ── Real wind data (seasonal rose + current reading) ───────────────
+        btn_fetch = QPushButton("Fetch wind data (Open-Meteo)")
+        btn_fetch.setStyleSheet(
+            "QPushButton { background: #00695c; color: #e0f2f1; "
+            "border: 1px solid #00897b; border-radius: 4px; padding: 6px; "
+            "font-weight: bold; } QPushButton:hover { background: #00897b; }")
+        btn_fetch.setToolTip(
+            "Download a seasonal wind rose + current reading for this location. "
+            "Cached for offline use after the first fetch.")
+        btn_fetch.clicked.connect(self.wind_data_requested.emit)
+        layout.addWidget(btn_fetch)
+
+        from src.wind_rose_widget import WindRoseWidget
+        self._wind_rose = WindRoseWidget()
+        layout.addWidget(self._wind_rose)
+
+        self._wind_current_lbl = QLabel("")
+        self._wind_current_lbl.setStyleSheet("color: #b3e5fc; font-size: 12px;")
+        layout.addWidget(self._wind_current_lbl)
+
+        self._wind_status_lbl = QLabel("")
+        self._wind_status_lbl.setWordWrap(True)
+        self._wind_status_lbl.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        layout.addWidget(self._wind_status_lbl)
 
         form = QFormLayout()
         form.setContentsMargins(0, 0, 0, 0)
@@ -528,6 +554,49 @@ class AnalysisPanel(QWidget):
             "show_shelter": self._wind_shelter.isChecked(),
             "show_arrows": self._wind_arrows.isChecked(),
         })
+
+    # ── Real wind data (V1.67) ──────────────────────────────────────────────
+
+    def set_wind_status(self, text: str):
+        self._wind_status_lbl.setText(text)
+
+    def set_wind_data(self, rose: dict, current: dict | None):
+        """Populate the Wind tab from a fetched rose + current reading: draw the
+        rose, set the prevailing-direction/speed controls to the data, and show
+        the live reading. Also surfaces a windbreak hint via the design hook in
+        the controller (which reads the same rose from the cache)."""
+        if not rose:
+            self.set_wind_status(
+                "Wind data unavailable (offline and nothing cached).")
+            self._wind_rose.set_block(None)
+            return
+        annual = rose.get("annual") or {}
+        self._wind_rose.set_block(annual)
+
+        from src.wind import dir_index, speed_category
+        prevailing = annual.get("prevailing_deg")
+        if prevailing is not None:
+            self._wind_dir.setCurrentIndex(dir_index(prevailing))
+        cat = speed_category(annual.get("mean_speed"))
+        idx = self._wind_speed.findText(cat)
+        if idx >= 0:
+            self._wind_speed.setCurrentIndex(idx)
+
+        if current:
+            self._wind_current_lbl.setText(
+                f"Now: {current['speed']:.0f} km/h from {current['dir_label']}"
+                + (f", gusts {current['gusts']:.0f}" if current.get("gusts")
+                   else ""))
+        else:
+            self._wind_current_lbl.setText("")
+
+        label = annual.get("prevailing_label") or "—"
+        mean = annual.get("mean_speed")
+        calm = annual.get("calm_pct")
+        src = rose.get("source", "")
+        self.set_wind_status(
+            f"Prevailing {label} · mean {mean:.0f} km/h · calm {calm:.0f}%  "
+            f"({src}). Click 'Show Wind Overlay' to apply.")
 
     # ═════════════════════════════════════════════════════════════════════════
     #  Season View
