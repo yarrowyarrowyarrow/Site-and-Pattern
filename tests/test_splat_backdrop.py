@@ -227,6 +227,39 @@ class TestFeatureRoundTrip(unittest.TestCase):
             "/tmp/b.ply")
 
 
+@unittest.skipUnless(_HAVE_NUMPY, "needs numpy")
+class TestAlignmentHelpers(unittest.TestCase):
+
+    def test_feature_from_alignment_builds_georeferenced_feature(self):
+        # A 2 m square scan, control points giving an identity-ish georef.
+        pts = np.array([[0.0, 0.0, 0.0], [2.0, 0.0, 1.0],
+                        [2.0, 2.0, 0.5], [0.0, 2.0, 0.2]])
+        scan_xy = [(0.0, 0.0), (2.0, 2.0)]
+        latlng = [(53.50, -113.50), (53.5001, -113.4999)]
+        feat = sb.feature_from_alignment(
+            pts, scan_xy, latlng, file_path="/tmp/yard.ply", up="z")
+        self.assertEqual(feat["properties"]["element_type"], sb.ELEMENT_TYPE)
+        b = feat["properties"]["bbox"]
+        self.assertLess(b["south"], b["north"])
+        self.assertLess(b["west"], b["east"])
+        # Origin is the control-point centroid.
+        self.assertAlmostEqual(feat["properties"]["origin"]["lat"],
+                               (53.50 + 53.5001) / 2, places=6)
+
+    def test_scene_rect_brackets_bbox(self):
+        feat = sb.build_feature(
+            file_path="/tmp/y.ply", origin={"lat": 53.5, "lng": -113.5},
+            transform=(1.0, 0.0, 0.0, 0.0), up="z",
+            bbox={"south": 53.49, "north": 53.51,
+                  "west": -113.51, "east": -113.49})
+        rect = sb.scene_rect(feat, 53.5, -113.5)
+        # Origin sits at the bbox centre → rectangle straddles 0 on both axes.
+        self.assertLess(rect["min_x"], 0.0)
+        self.assertGreater(rect["max_x"], 0.0)
+        self.assertLess(rect["min_y"], 0.0)
+        self.assertGreater(rect["max_y"], 0.0)
+
+
 class TestBuildSceneSplatField(unittest.TestCase):
     """build_scene auto-detects the splat feature and exposes scene['splat']."""
 

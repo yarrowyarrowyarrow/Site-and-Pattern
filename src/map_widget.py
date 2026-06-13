@@ -761,6 +761,21 @@ class MapWidget(QWebEngineView):
     def clear_shade_overlay(self):
         self.run_js(map_js.clear_shade_overlay())
 
+    def draw_splat_ortho_overlay(self, png_data_url: str, bbox: dict,
+                                 opacity: float = 1.0):
+        """Show the baked top-down Gaussian-splat "yard photo" as its own
+        ImageOverlay (V1.65) — a personal satellite layer of the user's yard."""
+        self.run_js(map_js.draw_splat_ortho_overlay(png_data_url, bbox, opacity))
+
+    def set_splat_ortho_visible(self, visible: bool):
+        self.run_js(map_js.set_splat_ortho_visible(visible))
+
+    def set_splat_ortho_opacity(self, opacity: float):
+        self.run_js(map_js.set_splat_ortho_opacity(opacity))
+
+    def clear_splat_ortho(self):
+        self.run_js(map_js.clear_splat_ortho())
+
     def draw_shade_zones(self, cells: list, d_lat: float, d_lng: float,
                          opacity: float = 0.45):
         self.run_js(map_js.draw_shade_zones(cells, d_lat, d_lng, opacity))

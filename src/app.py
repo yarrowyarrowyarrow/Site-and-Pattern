@@ -569,6 +569,8 @@ class MainWindow(QMainWindow):
         )
         self.toolbar.plants_toggled.connect(self.map_widget.set_plants_visible)
         self.toolbar.canopy_toggled.connect(self.map_widget.set_canopy_visible)
+        self.toolbar.yard_photo_toggled.connect(
+            self.map_widget.set_splat_ortho_visible)
         self.toolbar.grid_settings_changed.connect(self._on_grid_settings_changed)
 
         # Plant panel → map (plant placement + colour). Pattern mode info
@@ -1664,6 +1666,11 @@ class MainWindow(QMainWindow):
 
         name = proj.get("properties", {}).get("project_name", "Design")
         self.setWindowTitle(f"PermaDesign — {name}")
+
+        # Photoreal Gaussian-splat backdrop: redraw its baked "yard photo"
+        # map layer and sync the View toggle (no-op when the project has none).
+        from src import splat_flow
+        splat_flow.restore_splat_overlay(self)
 
         self._sync_planning_panel()
 

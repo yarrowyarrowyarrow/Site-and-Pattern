@@ -53,8 +53,9 @@ three.js couldn't be loaded (offline?). The 2D map is unaffected.</div></div>
 <script type="importmap">
 {
   "imports": {
-    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    "three": "https://unpkg.com/three@0.180.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.180.0/examples/jsm/",
+    "@sparkjsdev/spark": "https://sparkjs.dev/releases/spark/2.1.0/spark.module.js"
   }
 }
 </script>
@@ -86,12 +87,20 @@ three.js couldn't be loaded (offline?). The 2D map is unaffected.</div></div>
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+// Spark — 3D Gaussian Splatting for three.js (V1.65). Optional photoreal
+// yard backdrop: a phone-captured splat placed behind the design. The import
+// rides the same CDN-or-offline contract as three.js above; if it can't load,
+// the whole module throws and the offline notice shows (2D map unaffected).
+import { SplatMesh } from '@sparkjsdev/spark';
 
 const SKY = 0xcfe3f2, GROUND = 0x8aa86f;
 
 let renderer;
 try {
-  renderer = new THREE.WebGLRenderer({ antialias: true });
+  // preserveDrawingBuffer lets the yard-photo bake read the canvas back with
+  // toDataURL after an off-axis render (V1.65); negligible cost at this scale.
+  renderer = new THREE.WebGLRenderer({ antialias: true,
+                                       preserveDrawingBuffer: true });
 } catch (e) {
   window.permaBootError = '<b>3D needs WebGL</b><br>This system\'s graphics '
     + 'stack doesn\'t offer WebGL, so the 3D preview can\'t render here. '
@@ -328,6 +337,87 @@ function buildStructures(group, structures) {
   }
 }
 
+// ── Gaussian-splat backdrop (Spark) ─────────────────────────────────────────
+// The splat lives OUTSIDE designGroup so a year-slider scene rebuild never
+// reloads it (a yard splat is tens of MB). It is keyed by URL: ensureSplat
+// only re-fetches when the file changes, otherwise just refreshes its world
+// matrix + opacity from the latest scene push.
+
+let splatMesh = null;
+let splatUrl = null;
+
+function applySplatMatrix(mesh, mat16) {
+  // mat16 is column-major (three.js order) from src/splat_backdrop.world_matrix.
+  mesh.matrixAutoUpdate = false;
+  mesh.matrix.fromArray(mat16);
+}
+
+function ensureSplat(spec) {
+  if (!spec || !spec.url) { removeSplat(); return; }
+  if (spec.url !== splatUrl) {
+    removeSplat();
+    try {
+      splatMesh = new SplatMesh({ url: spec.url });
+    } catch (e) {
+      splatMesh = null; splatUrl = null;
+      return;   // bad splat — design still renders
+    }
+    splatUrl = spec.url;
+    scene.add(splatMesh);
+  }
+  if (splatMesh) {
+    applySplatMatrix(splatMesh, spec.matrix);
+    if (typeof spec.opacity === 'number' && 'opacity' in splatMesh) {
+      splatMesh.opacity = spec.opacity;
+    }
+  }
+}
+
+function removeSplat() {
+  if (splatMesh) { scene.remove(splatMesh); }
+  splatMesh = null; splatUrl = null;
+}
+
+window.permaClearSplat = function () { removeSplat(); };
+
+// Bake a north-up orthographic photo of the splat for the 2D "yard photo"
+// map layer. Returns a PNG data URL synchronously (the host calls this once
+// the splat has streamed in) — opts frames an exact scene-metre rectangle so
+// the image maps 1:1 onto the splat's lat/lng bbox. Returns '' if not ready.
+window.permaCaptureOrtho = function (opts) {
+  if (!splatMesh || !opts) return '';
+  const wx = Math.max(1e-3, opts.max_x - opts.min_x);
+  const dz = Math.max(1e-3, opts.max_y - opts.min_y);   // north span
+  const cx = (opts.min_x + opts.max_x) / 2;
+  const cz = -(opts.min_y + opts.max_y) / 2;            // north → −z centre
+  const cam = new THREE.OrthographicCamera(-wx / 2, wx / 2, dz / 2, -dz / 2,
+                                           0.1, 2000);
+  cam.position.set(cx, 800, cz);
+  cam.up.set(0, 0, -1);          // north (−z) points up in the image
+  cam.lookAt(cx, 0, cz);
+
+  // Splat-only frame: hide the design + sky so the layer is just the yard.
+  const designVis = designGroup ? designGroup.visible : false;
+  if (designGroup) designGroup.visible = false;
+  const bg = scene.background; scene.background = null;
+
+  const longest = Math.round(Math.max(1, Math.min(4096, opts.width || 2048)));
+  const px = wx >= dz ? longest : Math.round(longest * (wx / dz));
+  const py = wx >= dz ? Math.round(longest * (dz / wx)) : longest;
+  const prev = new THREE.Vector2(); renderer.getSize(prev);
+  renderer.setSize(px, py, false);
+  renderer.render(scene, cam);
+  let url = '';
+  try { url = renderer.domElement.toDataURL('image/png'); } catch (e) { url = ''; }
+
+  // Restore the live view.
+  renderer.setSize(prev.x, prev.y, false);
+  scene.background = bg;
+  if (designGroup) designGroup.visible = designVis;
+  renderer.render(scene, camera);
+  return url;
+};
+
 // ── hooks ───────────────────────────────────────────────────────────────────
 
 window.permaSetScene = function (sc) {
@@ -343,6 +433,7 @@ window.permaSetScene = function (sc) {
   buildPlants(designGroup, sc.plants);
   buildStructures(designGroup, sc.structures);
   buildScanPoints(designGroup, sc.scan_points);
+  ensureSplat(sc.splat);
   if (sc.sun) setSun(sc.sun.azimuth_deg, sc.sun.altitude_deg);
   fitShadowAndCamera(sc.bounds);
 

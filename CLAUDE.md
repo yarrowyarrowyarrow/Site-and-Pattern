@@ -92,7 +92,8 @@ only, doesn't affect real commits.
 | `src/placement_score.py` | Per-cell ecological scoring + aesthetic composition terms (V1.62). |
 | `src/scene_contract.py` | Versioned Scene JSON (`build_scene`) — the project→3D contract (V1.62). |
 | `src/scene3d_window.py` + `src/map3d_widget.py` + `html/scene3d.html` | View → 3D Preview: built-in three.js viewer (or the `web3d/dist` map3d fork build when present). |
-| `src/scan_import.py` + `src/scan_import_dialog.py` | Phone-scan import: point cloud → control-point georeference → nDSM → shade-casting footprints + 3D point layer (V1.62–63). |
+| `src/scan_import.py` + `src/scan_import_dialog.py` | Phone-scan import: point cloud → control-point georeference → nDSM → shade-casting footprints + 3D point layer (V1.62–63). Detects Gaussian-splat PLYs (V1.65). |
+| `src/splat_backdrop.py` + `src/splat_flow.py` | Gaussian-splat photoreal backdrop (V1.65): file→three.js world matrix, lat/lng footprint, `splat_backdrop` feature (Qt-free core) + the map-side "yard photo" overlay glue. Rendered by Spark in `html/scene3d.html`; baked top-down onto the 2D map. |
 | `src/permadesign_api.py` + `src/mcp_server.py` | Scripting facade + MCP tools (contract frozen by `test_architecture_guard.py`). |
 | `src/terrain.py` etc. | DEM fetch + slope grid + contour rendering. |
 | `data/*.json` | Shipped seed data (plants, fauna, plant↔fauna links). |

@@ -88,6 +88,17 @@ class Scene3DWindow(QWidget):
         refresh = QPushButton("Refresh from design")
         refresh.clicked.connect(self.refresh)
 
+        # Bake the loaded Gaussian-splat backdrop to a top-down "yard photo"
+        # for the 2D map (V1.65). Enabled only when the project has a splat.
+        self._bake_btn = QPushButton("📷 Bake yard photo")
+        self._bake_btn.setToolTip(
+            "Render the photoreal scan straight down and add it to the 2D map "
+            "as a personal satellite layer")
+        self._bake_btn.setEnabled(False)
+        self._bake_btn.clicked.connect(self._on_bake_yard_photo)
+
+        self._last_origin = None
+
         bar = QHBoxLayout()
         bar.addWidget(QLabel("Year:"))
         bar.addWidget(self._year, 2)
@@ -99,6 +110,7 @@ class Scene3DWindow(QWidget):
         bar.addWidget(self._sun_lbl)
         bar.addSpacing(12)
         bar.addWidget(refresh)
+        bar.addWidget(self._bake_btn)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(6, 6, 6, 6)
@@ -128,7 +140,33 @@ class Scene3DWindow(QWidget):
             # the scan's footprints are; the raw points are a preview aid).
             scan=getattr(self._main, "_scan_scene_sample", None),
         )
+        # Remember the origin so a yard-photo bake frames the splat correctly.
+        self._last_origin = scene.get("origin")
         self.viewer.apply_scene(scene)
+
+    def _on_bake_yard_photo(self):
+        """Render the loaded splat top-down and hand the PNG to the map layer."""
+        from src import splat_backdrop, splat_flow
+        feat = splat_backdrop.feature_from_project(self._main._project)
+        if feat is None or not self._last_origin:
+            self._main.statusBar().showMessage(
+                "No yard scan to bake — import one via File → Import Yard Scan.",
+                5000)
+            return
+        rect = splat_backdrop.scene_rect(
+            feat, self._last_origin["lat"], self._last_origin["lng"])
+
+        def _done(url):
+            if splat_flow.apply_baked_ortho(self._main, feat, url):
+                self._main.statusBar().showMessage(
+                    "Yard photo baked onto the map — toggle it under "
+                    "View → Yard photo.", 6000)
+            else:
+                self._main.statusBar().showMessage(
+                    "Bake produced no image — let the splat finish loading in "
+                    "3D, then try again.", 6000)
+
+        self.viewer.capture_ortho(rect, _done)
 
     def _on_controls_changed(self, *_):
         self._update_labels()
@@ -138,6 +176,9 @@ class Scene3DWindow(QWidget):
         """Re-read the live project (and kick a terrain fetch if we don't
         have a grid yet)."""
         self._push_scene()
+        from src.splat_backdrop import feature_from_project
+        self._bake_btn.setEnabled(
+            feature_from_project(self._main._project) is not None)
         if self._elevation is None and self._thread is None:
             self._start_terrain_fetch()
 

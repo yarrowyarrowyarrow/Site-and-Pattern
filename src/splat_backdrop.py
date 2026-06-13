@@ -221,6 +221,46 @@ def scene_field(feature: dict, scene_lat: float, scene_lng: float) -> dict:
     }
 
 
+def feature_from_alignment(points, control_scan_xy, control_latlng, *,
+                           file_path: str, up: str = "z",
+                           opacity: float = _DEFAULT_OPACITY,
+                           name: str = "Yard scan") -> dict:
+    """Build a ``splat_backdrop`` feature straight from a scan's control-point
+    pairs — the same 2D similarity the footprint import uses, captured as the
+    splat's stored transform. ``points`` is the (georeferenced-input) cloud
+    read from the splat PLY; ``control_scan_xy`` / ``control_latlng`` are the
+    matched pairs (see :class:`src.scan_import_dialog.ScanAlignSession`)."""
+    from src.projection import Projector
+    from src.scan_import import (apply_similarity_2d, similarity_transform_2d)
+    proj = Projector.for_positions([(la, ln) for (la, ln) in control_latlng])
+    dst = [proj.to_xy(la, ln) for (la, ln) in control_latlng]
+    transform = similarity_transform_2d(control_scan_xy, dst)
+    aligned = apply_similarity_2d(points, transform)
+    return build_feature(
+        file_path=file_path,
+        origin={"lat": proj.lat0, "lng": proj.lng0},
+        transform=transform, up=up,
+        bbox=latlng_bbox(aligned, proj), opacity=opacity, name=name)
+
+
+def scene_rect(feature: dict, scene_lat: float, scene_lng: float) -> dict:
+    """Scene-metre rectangle ``{min_x, max_x, min_y, max_y}`` (east / north)
+    covering the splat's lat/lng bbox at a given scene origin — the camera box
+    for :func:`src.map3d_js.capture_ortho` so the baked PNG maps 1:1 onto the
+    bbox the 2D overlay is placed at."""
+    from src.projection import Projector
+    bbox = (feature.get("properties", {}) or {}).get("bbox", {}) or {}
+    proj = Projector(scene_lat, scene_lng)
+    xs, ys = [], []
+    for la in (bbox["south"], bbox["north"]):
+        for ln in (bbox["west"], bbox["east"]):
+            x, y = proj.to_xy(la, ln)
+            xs.append(x)
+            ys.append(y)
+    return {"min_x": min(xs), "max_x": max(xs),
+            "min_y": min(ys), "max_y": max(ys)}
+
+
 def ortho_overlay_payload(feature: dict) -> Optional[dict]:
     """``{"image", "bbox", "opacity"}`` for the 2D map overlay, or ``None``
     when no baked PNG is stored yet."""

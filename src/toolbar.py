@@ -159,6 +159,7 @@ class MainToolbar(QToolBar):
     plants_toggled       = pyqtSignal(bool)
     canopy_toggled       = pyqtSignal(bool)
     structures_toggled   = pyqtSignal(bool)
+    yard_photo_toggled   = pyqtSignal(bool)
     grid_settings_changed = pyqtSignal(dict)
     # ^ payload: {"enabled": bool, "size_m": float, "opacity": float, "color": str}
 
@@ -336,6 +337,17 @@ class MainToolbar(QToolBar):
         self._act_structures_layer.toggled.connect(self.structures_toggled)
         bar.addAction(self._act_structures_layer)
 
+        # Yard photo — the baked top-down render of an imported Gaussian-splat
+        # scan (V1.65). Disabled until a project actually has one; enabled via
+        # set_yard_photo_available().
+        self._act_yard_photo = QAction("📷 Yard photo", self)
+        self._act_yard_photo.setCheckable(True)
+        self._act_yard_photo.setEnabled(False)
+        self._act_yard_photo.setStatusTip(
+            "Show the photoreal top-down scan of your yard (from Import Yard Scan)")
+        self._act_yard_photo.toggled.connect(self.yard_photo_toggled)
+        bar.addAction(self._act_yard_photo)
+
         bar.addSeparator()
 
         # ── Zoom sensitivity ───────────────────────────────────────
@@ -352,6 +364,18 @@ class MainToolbar(QToolBar):
         bar.addWidget(self._zoom_combo)
 
     # ── Helpers ───────────────────────────────────────────────────────────────
+
+    def set_yard_photo_available(self, available: bool, *, checked=None):
+        """Enable/disable the "Yard photo" View toggle (a project has a baked
+        Gaussian-splat overlay or not). Optionally set its checked state
+        without re-emitting ``yard_photo_toggled``."""
+        self._act_yard_photo.setEnabled(bool(available))
+        if not available:
+            checked = False
+        if checked is not None:
+            blocked = self._act_yard_photo.blockSignals(True)
+            self._act_yard_photo.setChecked(bool(checked))
+            self._act_yard_photo.blockSignals(blocked)
 
     def attach_to(self, main_window):
         """Add Draw on the top row, View on a second row below it."""

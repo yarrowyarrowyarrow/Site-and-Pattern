@@ -823,6 +823,44 @@
       }
     }
 
+    // ── Splat "yard photo" overlay (V1.65) — a top-down render of the
+    // imported Gaussian-splat backdrop, baked in the 3D viewer and shown
+    // here as a personal, fresher satellite layer. Its own image layer
+    // (like slope/shade) so it composes with everything; markers/boundary
+    // stay on top via the default overlay pane. Mirrors drawShadeOverlay.
+    var splatOrthoLayer = null;
+
+    function drawSplatOrthoOverlay(payload) {
+      // payload: {image: data-url, bbox: {south, north, west, east}, opacity}
+      clearSplatOrtho();
+      if (!payload || !payload.image || !payload.bbox) return;
+      var b = payload.bbox;
+      var bnds = L.latLngBounds([b.south, b.west], [b.north, b.east]);
+      splatOrthoLayer = L.imageOverlay(payload.image, bnds, {
+        opacity: typeof payload.opacity === 'number' ? payload.opacity : 1.0,
+        interactive: false
+      }).addTo(map);
+    }
+
+    function setSplatOrthoVisible(visible) {
+      if (!splatOrthoLayer) return;
+      if (visible) { splatOrthoLayer.addTo(map); }
+      else { map.removeLayer(splatOrthoLayer); }
+    }
+
+    function setSplatOrthoOpacity(opacity) {
+      if (splatOrthoLayer && splatOrthoLayer.setOpacity) {
+        splatOrthoLayer.setOpacity(opacity);
+      }
+    }
+
+    function clearSplatOrtho() {
+      if (splatOrthoLayer) {
+        map.removeLayer(splatOrthoLayer);
+        splatOrthoLayer = null;
+      }
+    }
+
     // ── Planting-zone shade map (discrete sun/partial/shade cells) ──────────
     // The "Classify planting zones" result drawn as a coloured grid so you can
     // see, at a glance, where full-sun / partial / full-shade planting spots

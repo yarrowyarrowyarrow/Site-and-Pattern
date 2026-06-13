@@ -24,6 +24,7 @@ import os
 from datetime import datetime
 
 from PyQt6.QtCore import QUrl
+from PyQt6.QtWebEngineCore import QWebEngineSettings
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
 from src import map3d_js
@@ -64,6 +65,16 @@ class Map3DWidget(QWebEngineView):
         self._pending_js: list[str] = []
         self._loaded = False
         self.loadFinished.connect(self._on_load_finished)
+
+        # The built-in viewer fetches three.js + Spark from a CDN and, for the
+        # Gaussian-splat backdrop, loads a local .ply via a file:// URL — both
+        # need these relaxations on the file:// page (mirrors MapWidget).
+        s = self.settings()
+        s.setAttribute(
+            QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
+        s.setAttribute(
+            QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
+
         page_path = dist or builtin
         if page_path:
             self.load(QUrl.fromLocalFile(page_path))
@@ -90,8 +101,33 @@ class Map3DWidget(QWebEngineView):
         self.page().runJavaScript(js)
 
     def apply_scene(self, scene: dict):
-        """Push a full Scene JSON (``src.scene_contract.build_scene``)."""
+        """Push a full Scene JSON (``src.scene_contract.build_scene``).
+
+        A ``scene["splat"]`` field carries a local file ``path`` for the
+        Gaussian-splat backdrop; turn it into a ``file://`` ``url`` Spark can
+        fetch (and drop it when the file is gone, so the design still renders).
+        """
+        splat = scene.get("splat")
+        if splat:
+            path = splat.get("path")
+            if path and os.path.exists(path):
+                splat = dict(splat)
+                splat["url"] = QUrl.fromLocalFile(path).toString()
+                scene = dict(scene, splat=splat)
+            else:
+                scene = dict(scene, splat=None)
         self.run_js(map3d_js.set_scene(scene))
+
+    def capture_ortho(self, rect: dict, callback, *, width: int = 2048):
+        """Bake a top-down PNG of the loaded splat backdrop (for the 2D map's
+        "yard photo" layer) and hand the data URL to ``callback``. ``rect`` is
+        the scene-metre frame ``{min_x, max_x, min_y, max_y}``. The splat must
+        already be loaded (call after the 3D view is open); a missing/loading
+        splat yields ``''``/``False`` to the callback."""
+        if not self._loaded:
+            callback("")
+            return
+        self.page().runJavaScript(map3d_js.capture_ortho(rect, width), callback)
 
     def set_sun_for(self, lat: float, lng: float, when: datetime):
         """Point the 3D sun for a place/time (reuses ``src/solar`` via map3d_js)."""
