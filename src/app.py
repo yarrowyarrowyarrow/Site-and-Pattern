@@ -1669,6 +1669,9 @@ class MainWindow(QMainWindow):
             ):
                 if sc.get(key):
                     slot(sc[key])
+            # Restore the soil-pH plant-matching constraint from cached site data.
+            if sc.get("soil_ph") is not None:
+                self.plant_panel.set_soil_ph(sc.get("soil_ph"))
 
         # Load notes
         notes = proj.get("properties", {}).get("notes", "")

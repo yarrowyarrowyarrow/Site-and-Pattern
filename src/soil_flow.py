@@ -10,6 +10,24 @@ download flows. State lives on ``main``: ``_soil_dl_thread`` / ``_soil_dl_worker
 from __future__ import annotations
 
 
+def apply_soil_site_fields(main, soil) -> None:
+    """Surface a fetched soil dict's pH + texture as flat ``site_config`` fields
+    and constrain the plant browser to species tolerant of that pH (V1.67) — the
+    step that finally makes soil affect plant matching, not just the readout."""
+    sc = (main._project.setdefault("properties", {})
+          .setdefault("site_config", {}))
+    summary = (soil or {}).get("summary") or {}
+    ph = summary.get("ph_top")
+    if ph is not None:
+        sc["soil_ph"] = ph
+        try:
+            main.plant_panel.set_soil_ph(ph)
+        except Exception:  # noqa: BLE001
+            pass
+    if summary.get("texture_class"):
+        sc["soil_texture"] = summary["texture_class"]
+
+
 def start_soil_download(main) -> None:
     from PyQt6.QtCore import QThread
     from src.soil_downloader import SoilDownloadWorker

@@ -112,6 +112,7 @@ class PlantPanel(QWidget):
         self._current_zone: Optional[int] = None
         self._selected_plant: Optional[dict] = None
         self._placed_counts: dict[int, int] = {}   # plant_id -> count
+        self._soil_ph: Optional[float] = None       # from site data (V1.67)
 
         # Polyculture mix — explicit list of species the user has added
         # via right-click → "Add to Polyculture Mix". When ≥2 species
@@ -547,6 +548,16 @@ class PlantPanel(QWidget):
     def _on_search_changed(self, _text: str):
         self._search_timer.start()
 
+    def set_soil_ph(self, ph):
+        """Set the site's soil pH (from site data) so the browser only shows
+        plants tolerant of it. ``None`` clears the constraint. Re-runs the
+        search so results reflect the change immediately (V1.67)."""
+        new = float(ph) if isinstance(ph, (int, float)) else None
+        if new == self._soil_ph:
+            return
+        self._soil_ph = new
+        self._run_search()
+
     def _run_search(self):
         try:
             from src.db.plants import search_plants
@@ -585,6 +596,7 @@ class PlantPanel(QWidget):
                 bird_food_only  = self._birdfood_btn.isChecked(),
                 has_image_only  = self._has_image_btn.isChecked(),
                 ab_ecoregion    = self._combo_value(self._ecoregion_combo),
+                soil_ph         = self._soil_ph,
             )
         except Exception as exc:
             self._result_count.setText(f"Error: {exc}")

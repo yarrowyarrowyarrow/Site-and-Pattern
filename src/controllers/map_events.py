@@ -1418,6 +1418,9 @@ class MapEventRouter:
         for key in ("rainfall", "soil", "elevation", "hardiness"):
             if result.get(key) is not None:
                 sc[key] = result[key]
+        # Make soil actionable: pH/texture → flat site_config + plant matching.
+        from src import soil_flow
+        soil_flow.apply_soil_site_fields(self._main, result.get("soil"))
         sc["data_fetched_at"] = _utc_now_iso()
 
         # Mirror the auto-filled hardiness zone into the existing
