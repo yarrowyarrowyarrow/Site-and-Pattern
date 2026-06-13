@@ -52,6 +52,31 @@ def set_scene(scene: dict) -> str:
             f"{json.dumps(scene or {})});")
 
 
+def capture_ortho(rect: dict, width: int = 2048) -> str:
+    """JS to bake a top-down orthographic render of the loaded Gaussian-splat
+    backdrop into a PNG, for the 2D map's "yard photo" overlay (V1.65).
+
+    ``rect`` frames the camera to an exact scene-metre rectangle
+    ``{min_x, max_x, min_y, max_y}`` (east/north) so the PNG maps 1:1 onto the
+    splat's lat/lng bbox; ``width`` is the longest output edge in pixels. The
+    result returns asynchronously via the widget's ``onOrthoBaked`` bridge
+    slot (the splat may still be streaming when this fires). Guarded with
+    ``&&`` so it's a no-op until the viewer registers ``permaCaptureOrtho``."""
+    opts = {
+        "min_x": float(rect["min_x"]), "max_x": float(rect["max_x"]),
+        "min_y": float(rect["min_y"]), "max_y": float(rect["max_y"]),
+        "width": int(width),
+    }
+    return ("window.permaCaptureOrtho && window.permaCaptureOrtho("
+            f"{json.dumps(opts)});")
+
+
+def clear_splat() -> str:
+    """JS to remove the Gaussian-splat backdrop from the scene. Guarded with
+    ``&&`` so it's a no-op until the viewer registers ``permaClearSplat``."""
+    return "window.permaClearSplat && window.permaClearSplat();"
+
+
 def set_plants(records: list) -> str:
     """JS to (re)populate the 3D scene with placed plants. ``records`` are the
     per-plant 3D-state dicts from ``src.scene3d.placed_plants_3d_state`` (lat /

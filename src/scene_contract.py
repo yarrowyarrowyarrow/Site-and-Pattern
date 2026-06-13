@@ -24,6 +24,7 @@ Scene schema (``SCENE_VERSION`` = 1)::
       "terrain": {rows, cols, min_x, min_y, max_x, max_y, base_m,
                   heights: [[m above base_m, row 0 = north], ...]} | None,
       "scan_points": [[x, y, z], ...] | None,   # imported yard scan (V1.63)
+      "splat": {path, matrix, opacity} | None,  # Gaussian-splat backdrop (V1.65)
       "sun": {"azimuth_deg": .., "altitude_deg": ..} | None,
     }
 
@@ -143,7 +144,8 @@ def build_scene(project: dict, *, year: int = 0,
                 get_plant: Optional[Callable] = None,
                 elevation: Optional[dict] = None,
                 when: Optional[datetime] = None,
-                scan: Optional[dict] = None) -> dict:
+                scan: Optional[dict] = None,
+                splat: Optional[dict] = None) -> dict:
     """Build the Scene JSON for ``project`` at growth-timeline ``year``.
 
     ``get_plant`` is injectable for tests (defaults to the DB);
@@ -152,6 +154,10 @@ def build_scene(project: dict, *, year: int = 0,
     ``scan`` is an optional ``scan_import.sample_for_scene`` result —
     its points are re-framed from the scan's projection origin into this
     scene's and exposed as ``scene["scan_points"]``.
+    ``splat`` optionally overrides the project's ``splat_backdrop`` feature
+    (a Gaussian-splat photoreal backdrop); when omitted it is auto-detected
+    from ``project`` and exposed as ``scene["splat"]`` ({path, matrix,
+    opacity}) so the 3D viewer can place it behind the design.
     """
     if get_plant is None:
         from src.db.plants import get_plant as _gp
@@ -289,6 +295,15 @@ def build_scene(project: dict, *, year: int = 0,
         scan_points = [[round(p[0] + dx, 2), round(p[1] + dy, 2), p[2]]
                        for p in scan["points"]]
 
+    splat_feature = splat
+    if splat_feature is None:
+        from src.splat_backdrop import feature_from_project
+        splat_feature = feature_from_project(project)
+    splat_field = None
+    if splat_feature:
+        from src.splat_backdrop import scene_field
+        splat_field = scene_field(splat_feature, lat0, lng0)
+
     return {
         "version": SCENE_VERSION,
         "year": int(year),
@@ -300,5 +315,6 @@ def build_scene(project: dict, *, year: int = 0,
         "structures": structures,
         "terrain": _terrain_block(elevation, proj),
         "scan_points": scan_points,
+        "splat": splat_field,
         "sun": _sun_for(lat0, lng0, when or _DEFAULT_WHEN),
     }

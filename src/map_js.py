@@ -470,6 +470,28 @@ def clear_shade_overlay() -> str:
     return "clearShadeOverlay();"
 
 
+def draw_splat_ortho_overlay(png_data_url: str, bbox: dict,
+                             opacity: float) -> str:
+    """Render the baked top-down splat photo as its own image overlay (V1.65)
+    — a personal, fresher "satellite" layer of the user's yard. Separate from
+    the slope/shade overlays so all can show at once; mirrors
+    ``draw_shade_overlay``."""
+    payload = {"image": png_data_url, "bbox": bbox, "opacity": float(opacity)}
+    return f"drawSplatOrthoOverlay({_jsobj(payload)});"
+
+
+def set_splat_ortho_visible(visible: bool) -> str:
+    return f"setSplatOrthoVisible({_jsbool(visible)});"
+
+
+def set_splat_ortho_opacity(opacity: float) -> str:
+    return f"setSplatOrthoOpacity({float(opacity)});"
+
+
+def clear_splat_ortho() -> str:
+    return "clearSplatOrtho();"
+
+
 def draw_shade_zones(cells: list, d_lat: float, d_lng: float,
                      opacity: float = 0.45) -> str:
     """Draw the classified planting zones as a coloured grid (V1.60). ``cells``

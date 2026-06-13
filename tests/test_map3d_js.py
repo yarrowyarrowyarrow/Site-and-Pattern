@@ -81,6 +81,21 @@ class TestSetScene(unittest.TestCase):
         self.assertEqual(json.loads(payload), scene)
 
 
+class TestSplatBuilders(unittest.TestCase):
+    def test_capture_ortho_emits_guarded_hook_with_rect(self):
+        js = m3.capture_ortho({"min_x": -5, "max_x": 5,
+                               "min_y": -10, "max_y": 10}, width=1024)
+        self.assertIn("window.permaCaptureOrtho && window.permaCaptureOrtho(",
+                      js)
+        self.assertIn('"width": 1024', js)
+        self.assertIn('"min_x": -5.0', js)
+        self.assertTrue(js.strip().endswith(");"))
+
+    def test_clear_splat_is_guarded(self):
+        js = m3.clear_splat()
+        self.assertIn("window.permaClearSplat && window.permaClearSplat()", js)
+
+
 class TestSetPlants(unittest.TestCase):
     def test_emits_guarded_hook_with_json(self):
         recs = [{"plant_id": 1, "lat": 53.5, "lng": -113.5,

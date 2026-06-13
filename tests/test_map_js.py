@@ -499,6 +499,30 @@ class TestContoursAndAutoTerrain(unittest.TestCase):
         self.assertEqual(mj.clear_auto_terrain(), "clearAutoTerrain();")
 
 
+class TestSplatOrthoOverlay(unittest.TestCase):
+
+    def test_draw_splat_ortho_overlay_payload(self):
+        out = mj.draw_splat_ortho_overlay(
+            "data:image/png;base64,iVBORw0KGgo=",
+            {"north": 53.6, "south": 53.5, "east": -113.4, "west": -113.5},
+            opacity=0.9,
+        )
+        self.assertTrue(out.startswith("drawSplatOrthoOverlay(JSON.parse("))
+
+    def test_set_splat_ortho_visible_is_json_bool(self):
+        self.assertEqual(mj.set_splat_ortho_visible(True),
+                         "setSplatOrthoVisible(true);")
+        self.assertEqual(mj.set_splat_ortho_visible(False),
+                         "setSplatOrthoVisible(false);")
+
+    def test_set_splat_ortho_opacity_coerces_float(self):
+        self.assertEqual(mj.set_splat_ortho_opacity(1),
+                         "setSplatOrthoOpacity(1.0);")
+
+    def test_clear_splat_ortho(self):
+        self.assertEqual(mj.clear_splat_ortho(), "clearSplatOrtho();")
+
+
 class TestInvalidateSize(unittest.TestCase):
     """The invalidate_size string is load-bearing — see the block comment
     in src/map_widget.py. Pin its essential parts."""
