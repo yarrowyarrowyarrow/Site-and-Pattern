@@ -776,6 +776,23 @@ class MapWidget(QWebEngineView):
     def clear_splat_ortho(self):
         self.run_js(map_js.clear_splat_ortho())
 
+    # ── Dynamic wind shadow (V1.68) ──────────────────────────────────────────
+
+    def set_wind_casters(self, casters: list):
+        self.run_js(map_js.set_wind_casters(casters))
+
+    def set_wind_angle_live(self, deg: float):
+        self.run_js(map_js.set_wind_angle_live(deg))
+
+    def draw_merged_wind_shelter(self, payload: dict):
+        self.run_js(map_js.draw_merged_wind_shelter(payload))
+
+    def set_wind_shadow_visible(self, visible: bool):
+        self.run_js(map_js.set_wind_shadow_visible(visible))
+
+    def clear_wind_shadow(self):
+        self.run_js(map_js.clear_wind_shadow())
+
     def draw_shade_zones(self, cells: list, d_lat: float, d_lng: float,
                          opacity: float = 0.45):
         self.run_js(map_js.draw_shade_zones(cells, d_lat, d_lng, opacity))

@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QComboBox, QDoubleSpinBox, QSpinBox,
     QFormLayout, QTabWidget, QSlider, QCheckBox, QColorDialog,
-    QGroupBox, QFrame, QTextEdit,
+    QGroupBox, QFrame, QTextEdit, QDial,
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor
@@ -42,6 +42,10 @@ class AnalysisPanel(QWidget):
     wind_requested = pyqtSignal(dict)       # {direction, speed_label, show_shelter}
     wind_cleared = pyqtSignal()
     wind_data_requested = pyqtSignal()      # fetch real wind data for the site
+    # Live wind-shadow overlay (V1.68).
+    wind_shadow_toggled = pyqtSignal(bool)
+    wind_angle_changed_live = pyqtSignal(int)   # dial scrub (JS-only redraw)
+    wind_shadow_commit = pyqtSignal(int)        # dial released (Python merge)
 
     # Season view
     season_changed = pyqtSignal(str)        # "Spring" | "Summer" | "Fall" | "Winter"
@@ -494,6 +498,32 @@ class AnalysisPanel(QWidget):
             "color: #c5e1a5; font-size: 11px; font-style: italic;")
         layout.addWidget(self._wind_advice_lbl)
 
+        # ── Live wind shadow (V1.68): per-plant sheltered zones that update as
+        # you turn the dial or drag a plant.
+        self._wind_shadow_chk = QCheckBox("Live wind shadow (sheltered zones)")
+        self._wind_shadow_chk.setToolTip(
+            "Show the leeward shelter of trees/shrubs, merged and porosity-aware. "
+            "Turn the dial or drag a plant to see it update live.")
+        self._wind_shadow_chk.toggled.connect(self.wind_shadow_toggled.emit)
+        layout.addWidget(self._wind_shadow_chk)
+
+        dial_row = QHBoxLayout()
+        self._wind_dial = QDial()
+        self._wind_dial.setRange(0, 359)
+        self._wind_dial.setWrapping(True)
+        self._wind_dial.setNotchesVisible(True)
+        self._wind_dial.setValue(270)
+        self._wind_dial.setFixedSize(90, 90)
+        self._wind_dial.valueChanged.connect(self._on_wind_dial)
+        self._wind_dial.sliderReleased.connect(
+            lambda: self.wind_shadow_commit.emit(self._wind_dial.value()))
+        dial_row.addWidget(self._wind_dial)
+        self._wind_dial_lbl = QLabel("Wind from 270°")
+        self._wind_dial_lbl.setStyleSheet("color: #b3e5fc; font-size: 11px;")
+        dial_row.addWidget(self._wind_dial_lbl)
+        dial_row.addStretch()
+        layout.addLayout(dial_row)
+
         form = QFormLayout()
         form.setContentsMargins(0, 0, 0, 0)
 
@@ -569,6 +599,10 @@ class AnalysisPanel(QWidget):
     def set_wind_advice(self, text: str):
         self._wind_advice_lbl.setText(text or "")
 
+    def _on_wind_dial(self, value: int):
+        self._wind_dial_lbl.setText(f"Wind from {value}°")
+        self.wind_angle_changed_live.emit(value)
+
     def set_wind_data(self, rose: dict, current: dict | None):
         """Populate the Wind tab from a fetched rose + current reading: draw the
         rose, set the prevailing-direction/speed controls to the data, and show
@@ -586,6 +620,10 @@ class AnalysisPanel(QWidget):
         prevailing = annual.get("prevailing_deg")
         if prevailing is not None:
             self._wind_dir.setCurrentIndex(dir_index(prevailing))
+            blocked = self._wind_dial.blockSignals(True)
+            self._wind_dial.setValue(int(prevailing) % 360)
+            self._wind_dial.blockSignals(blocked)
+            self._wind_dial_lbl.setText(f"Wind from {int(prevailing) % 360}°")
         cat = speed_category(annual.get("mean_speed"))
         idx = self._wind_speed.findText(cat)
         if idx >= 0:

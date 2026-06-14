@@ -470,6 +470,34 @@ def clear_shade_overlay() -> str:
     return "clearShadeOverlay();"
 
 
+# ── Dynamic wind shadow (V1.68) ──────────────────────────────────────────────
+
+def set_wind_casters(casters: list) -> str:
+    """Push the per-plant shelter casters (lat/lng/height/half_width/porosity) to
+    the JS live layer so it can redraw ghost wedges instantly as the dial turns
+    or a plant drags — no Python round-trip per frame."""
+    return f"setWindCasters({_jsobj(casters or [])});"
+
+
+def set_wind_angle_live(deg: float) -> str:
+    """Update only the wind angle and re-orient the live ghost wedges in JS."""
+    return f"setWindAngleLive({float(deg)});"
+
+
+def draw_merged_wind_shelter(payload: dict) -> str:
+    """Draw the authoritative merged, porosity-banded shelter (Python-computed,
+    on commit). ``payload`` = ``{bands:[{strength,rings}], wind_from_deg}``."""
+    return f"drawMergedWindShelter({_jsobj(payload or {})});"
+
+
+def set_wind_shadow_visible(visible: bool) -> str:
+    return f"setWindShadowVisible({_jsbool(visible)});"
+
+
+def clear_wind_shadow() -> str:
+    return "clearWindShadow();"
+
+
 def draw_splat_ortho_overlay(png_data_url: str, bbox: dict,
                              opacity: float) -> str:
     """Render the baked top-down splat photo as its own image overlay (V1.65)

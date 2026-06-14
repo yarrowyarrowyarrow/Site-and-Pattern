@@ -370,6 +370,10 @@
             lat: sm._pd.lat, lng: sm._pd.lng,
           });
         }
+        // Live wind-shadow: match casters to the members being dragged (V1.68).
+        if (typeof windShadowDragStart === 'function') {
+          windShadowDragStart(st.originals);
+        }
       }
       // Move every captured member by the same delta, anchored to the dragged
       // marker so it tracks the cursor exactly.
@@ -387,6 +391,15 @@
         var lbl = plantLabels[m._pd.markerId];
         if (lbl) lbl.setLatLng(newLL);
       }
+      // Live wind-shadow: stream the moved members' current positions (V1.68).
+      if (typeof windShadowApplyDrag === 'function' && st.originals) {
+        var cur = {};
+        st.originals.forEach(function (o) {
+          var mm = plantMarkers[o.markerId];
+          if (mm && mm._pd) cur[o.markerId] = { lat: mm._pd.lat, lng: mm._pd.lng };
+        });
+        windShadowApplyDrag(cur);
+      }
     }
 
     function _onPlantDragEnd(_e) {
@@ -397,6 +410,7 @@
       // _onPlantMouseDown for the whole gesture, so even a plain click
       // (never armed) must restore it here or the map would freeze.
       try { map.dragging.enable(); } catch (_) {}
+      if (typeof windShadowDragEnd === 'function') windShadowDragEnd();
       if (!st.armed) return;     // just a click, nothing to commit
       // A completed drag resets the scope cycle — the next fresh interaction
       // starts at the broadest scope again.

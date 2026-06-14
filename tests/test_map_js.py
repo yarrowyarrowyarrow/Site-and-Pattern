@@ -523,6 +523,26 @@ class TestSplatOrthoOverlay(unittest.TestCase):
         self.assertEqual(mj.clear_splat_ortho(), "clearSplatOrtho();")
 
 
+class TestWindShadowBuilders(unittest.TestCase):
+
+    def test_set_wind_casters_json(self):
+        out = mj.set_wind_casters([{"lat": 53.5, "lng": -113.5, "height_m": 6}])
+        self.assertTrue(out.startswith("setWindCasters(JSON.parse("))
+
+    def test_set_wind_angle_live_float(self):
+        self.assertEqual(mj.set_wind_angle_live(270), "setWindAngleLive(270.0);")
+
+    def test_draw_merged_wind_shelter_json(self):
+        out = mj.draw_merged_wind_shelter(
+            {"bands": [{"strength": "strong", "rings": []}], "wind_from_deg": 90})
+        self.assertTrue(out.startswith("drawMergedWindShelter(JSON.parse("))
+
+    def test_visibility_and_clear(self):
+        self.assertEqual(mj.set_wind_shadow_visible(True),
+                         "setWindShadowVisible(true);")
+        self.assertEqual(mj.clear_wind_shadow(), "clearWindShadow();")
+
+
 class TestInvalidateSize(unittest.TestCase):
     """The invalidate_size string is load-bearing — see the block comment
     in src/map_widget.py. Pin its essential parts."""

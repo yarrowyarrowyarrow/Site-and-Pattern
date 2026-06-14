@@ -676,6 +676,21 @@ class MainWindow(QMainWindow):
         # Straight to the controller (MainWindow is at its method ceiling).
         self.analysis_panel.wind_data_requested.connect(
             self._map_events._on_fetch_wind_requested)
+        # Live wind shadow (V1.68) — wired straight to the flow module (both
+        # MainWindow and the map-events controller are at their guard ceilings).
+        from src import wind_shadow_flow
+        self.analysis_panel.wind_shadow_toggled.connect(
+            lambda on: wind_shadow_flow.enable(self, on))
+        self.analysis_panel.wind_angle_changed_live.connect(
+            lambda d: wind_shadow_flow.on_angle_live(self, d))
+        self.analysis_panel.wind_shadow_commit.connect(
+            lambda d: wind_shadow_flow.on_angle_commit(self, d))
+        # Extra slot on the existing plant-move signals → rebuild the shelter.
+        b.plant_moved.connect(lambda *a: wind_shadow_flow.on_plants_changed(self))
+        b.plant_group_moved.connect(
+            lambda *a: wind_shadow_flow.on_plants_changed(self))
+        b.selection_moved.connect(
+            lambda *a: wind_shadow_flow.on_plants_changed(self))
         self.analysis_panel.season_changed.connect(self._on_season_changed)
 
         # Map → polyculture removal
