@@ -213,6 +213,11 @@ def _draw_summary(painter: QPainter, w: float, y: float,
             )
         except Exception:
             pass
+    if score is not None and cost is not None:
+        # Value vs. price framing (F11, P6): the price doesn't capture the value.
+        lines.append(
+            "Value vs. price: a one-time cost that creates lasting ecological value."
+        )
 
     for line in lines:
         painter.drawText(QRectF(20 * s, y, w - 40 * s, 14 * s),

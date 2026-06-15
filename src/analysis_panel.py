@@ -54,6 +54,7 @@ class AnalysisPanel(QWidget):
         super().__init__(parent)
         self._placed_plants: list[dict] = []
         self._structures: list[dict] = []
+        self._cost_breakdown: dict | None = None  # from sourcing.design_cost (F11)
         self._build_ui()
 
     def _build_ui(self):
@@ -727,6 +728,25 @@ class AnalysisPanel(QWidget):
         )
         layout.addWidget(self._habitat_score_label)
 
+        # Value vs. price (F11, P6) — what the spend *creates* beside what it
+        # *costs*, with the explicit note that price doesn't capture the value.
+        self._value_vs_price = QLabel("")
+        self._value_vs_price.setWordWrap(True)
+        self._value_vs_price.setVisible(False)
+        self._value_vs_price.setStyleSheet(
+            "color: #c8e6c9; font-size: 11px; padding: 8px; "
+            "background: #14241a; border: 1px solid #2e4a2e; border-radius: 4px; "
+            "font-family: 'Consolas', 'Courier New', monospace;"
+        )
+        layout.addWidget(self._value_vs_price)
+
+        self._value_vs_price_note = QLabel("")
+        self._value_vs_price_note.setWordWrap(True)
+        self._value_vs_price_note.setVisible(False)
+        self._value_vs_price_note.setStyleSheet(
+            "color: #80cbc4; font-size: 10px; font-style: italic; padding: 0 2px 4px 2px;")
+        layout.addWidget(self._value_vs_price_note)
+
         # Breakdown
         self._habitat_breakdown = QLabel("")
         self._habitat_breakdown.setWordWrap(True)
@@ -819,6 +839,13 @@ class AnalysisPanel(QWidget):
         """Update the list of placed structures (from app.py)."""
         self._structures = structures
 
+    def set_cost_breakdown(self, breakdown: dict | None):
+        """Store the whole-design cost breakdown (from ``sourcing.design_cost``,
+        the same dict the 'On this design' Stats tab gets) so the Value-vs-price
+        framing (F11) reflects plants + structures + mulch. Falls back to a
+        plants+structures estimate when this hasn't been set."""
+        self._cost_breakdown = breakdown
+
     def _calc_habitat_score(self):
         # Scoring maths moved to src/habitat_score.py (Chunk 6) so the
         # headless scripting API and this panel share one implementation.
@@ -853,6 +880,34 @@ class AnalysisPanel(QWidget):
             f"color: {color}; font-size: 32px; font-weight: bold; "
             "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px; padding: 12px;"
         )
+
+        # ── Value vs. price (F11, P6): what the spend creates beside what it ──
+        # costs, plus the note that price doesn't capture ecological value.
+        try:
+            from src.sourcing import (
+                design_cost, value_vs_price_lines, VALUE_VS_PRICE_NOTE,
+            )
+            bd = self._cost_breakdown
+            if not (bd and bd.get("total")):
+                bd = design_cost(self._placed_plants, self._structures)
+            cost_low, cost_high = bd["total"]
+            highlights = [f"{result.native_species}/{result.n_species} native"]
+            if getattr(result, "fauna_by_taxon", None):
+                n_wild = sum(result.fauna_by_taxon.values())
+                if n_wild:
+                    highlights.append(f"{n_wild} wildlife species supported")
+            if len(result.host_species):
+                highlights.append(
+                    f"{len(result.host_species)} caterpillar-host plants")
+            self._value_vs_price.setText("\n".join(value_vs_price_lines(
+                result.total, result.grade, cost_low, cost_high,
+                highlights=highlights[:3])))
+            self._value_vs_price.setVisible(True)
+            self._value_vs_price_note.setText(VALUE_VS_PRICE_NOTE)
+            self._value_vs_price_note.setVisible(True)
+        except Exception:  # noqa: BLE001 — framing is a nicety, never break the score
+            self._value_vs_price.setVisible(False)
+            self._value_vs_price_note.setVisible(False)
 
         # Breakdown text — layout unchanged from the pre-extraction code;
         # values now come off the HabitatScore result.

@@ -2022,6 +2022,8 @@ class MainWindow(QMainWindow):
             _cost = design_cost(enriched, structures=structs, mulch_area_m2=bed_area)
             _cost["type_costs"] = cost_by_type(enriched)
             self.on_this_design.set_cost_breakdown(_cost)
+            # Same breakdown feeds the Habitat tab's Value-vs-price framing (F11).
+            self.analysis_panel.set_cost_breakdown(_cost)
             # Lawn-to-habitat conversion tally (N2).
             from src.lawn_zones import conversion_summary
             self.on_this_design.set_lawn_conversion(

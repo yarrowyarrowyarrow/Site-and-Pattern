@@ -224,5 +224,31 @@ class TestSeededSourcingData(unittest.TestCase):
         self.assertTrue(common)
 
 
+class TestValueVsPrice(unittest.TestCase):
+    """F11 / P6 — the value-vs-price framing helper (pure, no DB)."""
+
+    def test_pairs_value_and_cost(self):
+        from src.sourcing import value_vs_price_lines
+        lines = value_vs_price_lines(
+            44, "Foundation laid", 320.0, 610.0,
+            highlights=["12 wildlife species", "5 caterpillar-host plants"])
+        text = "\n".join(lines)
+        self.assertIn("44/100", text)
+        self.assertIn("Foundation laid", text)
+        self.assertIn("12 wildlife species", text)
+        # The price appears, formatted as a range.
+        self.assertIn(format_cost(320.0, 610.0), text)
+
+    def test_omits_cost_line_when_unknown(self):
+        from src.sourcing import value_vs_price_lines
+        lines = value_vs_price_lines(10, "", 0.0, 0.0)
+        self.assertEqual(len(lines), 1)               # only the "Creates" line
+        self.assertNotIn("Costs", lines[0])
+
+    def test_note_makes_the_p6_point(self):
+        from src.sourcing import VALUE_VS_PRICE_NOTE
+        self.assertIn("price", VALUE_VS_PRICE_NOTE.lower())
+
+
 if __name__ == "__main__":
     unittest.main()
