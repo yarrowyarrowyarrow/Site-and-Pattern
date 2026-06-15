@@ -17,10 +17,10 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QComboBox, QDoubleSpinBox, QSpinBox,
     QFormLayout, QTabWidget, QSlider, QCheckBox, QColorDialog,
-    QGroupBox, QFrame, QTextEdit, QDial,
+    QGroupBox, QFrame, QTextEdit, QDial, QScrollArea,
 )
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor
+from PyQt6.QtCore import Qt, pyqtSignal, QThreadPool, QRunnable
+from PyQt6.QtGui import QColor, QPixmap
 
 
 class AnalysisPanel(QWidget):
@@ -50,11 +50,18 @@ class AnalysisPanel(QWidget):
     # Season view
     season_changed = pyqtSignal(str)        # "Spring" | "Summer" | "Fall" | "Winter"
 
+    # A cached species photo finished downloading off-thread — re-render the
+    # Habitat tab's species gallery (F11 / I1). Emitted from a worker thread;
+    # Qt delivers it to the GUI thread.
+    galleryImageReady = pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._placed_plants: list[dict] = []
         self._structures: list[dict] = []
         self._cost_breakdown: dict | None = None  # from sourcing.design_cost (F11)
+        self._last_habitat_result = None          # for the species gallery re-render
+        self._gallery_warmed: set[str] = set()    # image urls already fetched once
         self._build_ui()
 
     def _build_ui(self):
@@ -695,7 +702,14 @@ class AnalysisPanel(QWidget):
     # ═════════════════════════════════════════════════════════════════════════
 
     def _build_habitat_tab(self):
+        # Scrollable page: this tab is tall (score, value, species gallery,
+        # breakdown, tips, shade) and used to overlap when squeezed into a fixed
+        # height. A scroll area lets it grow instead (matches site_panel).
+        page = QScrollArea()
+        page.setWidgetResizable(True)
+        page.setFrameShape(QFrame.Shape.NoFrame)
         tab = QWidget()
+        page.setWidget(tab)
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(8)
@@ -746,6 +760,36 @@ class AnalysisPanel(QWidget):
             "color: #80cbc4; font-size: 10px; font-style: italic; padding: 0 2px 4px 2px;")
         layout.addWidget(self._value_vs_price_note)
 
+        # Species gallery (F11 / I1) — photos of the high-value species in the
+        # design (keystone / host / bird-food first) so the value is tangible,
+        # not just a number. Hidden until a scored design has species with
+        # cached photos; photos warm in the background and the strip re-renders.
+        self._species_gallery_label = QLabel("Species doing the work")
+        self._species_gallery_label.setStyleSheet(
+            "color: #a5d6a7; font-size: 12px; font-weight: bold; padding: 4px 0 2px 0;")
+        self._species_gallery_label.setVisible(False)
+        layout.addWidget(self._species_gallery_label)
+
+        self._species_gallery = QScrollArea()
+        self._species_gallery.setWidgetResizable(True)
+        self._species_gallery.setFrameShape(QFrame.Shape.NoFrame)
+        self._species_gallery.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._species_gallery.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._species_gallery.setFixedHeight(122)
+        self._species_gallery.setVisible(False)
+        self._species_gallery.setStyleSheet(
+            "background: #14241a; border: 1px solid #2e4a2e; border-radius: 4px;")
+        _gallery_inner = QWidget()
+        self._species_gallery_row = QHBoxLayout(_gallery_inner)
+        self._species_gallery_row.setContentsMargins(6, 6, 6, 6)
+        self._species_gallery_row.setSpacing(8)
+        self._species_gallery_row.addStretch()   # keep cards left-aligned
+        self._species_gallery.setWidget(_gallery_inner)
+        layout.addWidget(self._species_gallery)
+        self.galleryImageReady.connect(self._on_gallery_image_ready)
+
         # Breakdown
         self._habitat_breakdown = QLabel("")
         self._habitat_breakdown.setWordWrap(True)
@@ -756,7 +800,7 @@ class AnalysisPanel(QWidget):
         )
         self._habitat_breakdown.setAlignment(Qt.AlignmentFlag.AlignTop)
         self._habitat_breakdown.setMinimumHeight(220)
-        layout.addWidget(self._habitat_breakdown, 1)
+        layout.addWidget(self._habitat_breakdown)
 
         # Tips for raising your score
         tips_label = QLabel("Tips for raising your score")
@@ -771,7 +815,7 @@ class AnalysisPanel(QWidget):
             "font-size: 11px; }"
         )
         self._habitat_tips.setMinimumHeight(160)
-        layout.addWidget(self._habitat_tips, 1)
+        layout.addWidget(self._habitat_tips)
 
         # Shade-zone breakdown — read-only summary of the cached shade tags
         # (Site tab → "Classify planting zones"). Shown here so the light mix is
@@ -802,7 +846,7 @@ class AnalysisPanel(QWidget):
 
         # Short tab label so all five fit the strip even with macOS's wider
         # font; the page itself carries the full "Habitat Value" wording.
-        self._tabs.addTab(tab, "Habitat")
+        self._tabs.addTab(page, "Habitat")
 
     def set_shade_breakdown(self, counts: dict | None):
         """Render the cached shade-tag mix (``{tag: n}`` from
@@ -909,6 +953,14 @@ class AnalysisPanel(QWidget):
             self._value_vs_price.setVisible(False)
             self._value_vs_price_note.setVisible(False)
 
+        # Species photos that make the value tangible (F11 / I1).
+        self._last_habitat_result = result
+        try:
+            self._render_species_gallery(result)
+        except Exception:  # noqa: BLE001 — gallery is a nicety, never break the score
+            self._species_gallery_label.setVisible(False)
+            self._species_gallery.setVisible(False)
+
         # Breakdown text — layout unchanged from the pre-extraction code;
         # values now come off the HabitatScore result.
         lines = [
@@ -981,6 +1033,118 @@ class AnalysisPanel(QWidget):
             placed_ids=placed_ids,
         )
         self._habitat_tips.setHtml(tips_html)
+
+    # ── Species gallery (F11 / I1): photos of the design's high-value species ──
+
+    def _gallery_species(self, result) -> list:
+        """The design's species worth picturing, highest-value first (keystone →
+        host → bird-food → other natives), limited to those with an image URL.
+        Returns ``(name, cached_path_or_None, url, attribution, license)`` tuples."""
+        from src.db.plants import get_plant
+        from src.image_cache import get_cached_image
+        recs: dict = {}
+        for pid in getattr(result, "scored_plant_ids", None) or []:
+            try:
+                r = get_plant(pid)
+            except Exception:  # noqa: BLE001
+                r = None
+            if r and r.get("image_url") and r.get("common_name"):
+                recs.setdefault(r["common_name"], r)
+        priority = (list(result.keystone_species) + list(result.host_species)
+                    + list(result.bird_species))
+        out: list = []
+        seen: set = set()
+
+        def _add(r):
+            nm = r.get("common_name")
+            if not nm or nm in seen:
+                return
+            seen.add(nm)
+            url = r.get("image_url")
+            out.append((nm, get_cached_image(url), url,
+                        r.get("image_attribution", ""), r.get("image_license", "")))
+
+        for nm in priority:
+            if nm in recs:
+                _add(recs[nm])
+        for r in recs.values():
+            if r.get("native_to_alberta"):
+                _add(r)
+        return out[:12]
+
+    def _make_species_card(self, name: str, path: str) -> QWidget:
+        """A small thumbnail + caption card for one species."""
+        card = QWidget()
+        v = QVBoxLayout(card)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(2)
+        thumb = QLabel()
+        thumb.setFixedSize(96, 72)
+        thumb.setScaledContents(True)
+        pm = QPixmap(path)
+        if not pm.isNull():
+            thumb.setPixmap(pm)
+        thumb.setStyleSheet("border: 1px solid #2e4a2e; border-radius: 3px;")
+        cap = QLabel(name)
+        cap.setWordWrap(True)
+        cap.setFixedWidth(96)
+        cap.setStyleSheet("color: #c8e6c9; font-size: 9px;")
+        v.addWidget(thumb)
+        v.addWidget(cap)
+        return card
+
+    def _render_species_gallery(self, result):
+        """Fill the gallery strip with cached species photos; warm the rest in
+        the background. Shows the strip only when at least one photo is ready."""
+        row = self._species_gallery_row
+        while row.count() > 1:                      # keep the trailing stretch
+            item = row.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                w.deleteLater()
+        pending: list = []
+        shown = 0
+        for name, path, url, attr, lic in self._gallery_species(result):
+            if path:
+                row.insertWidget(row.count() - 1, self._make_species_card(name, path))
+                shown += 1
+            elif url and url not in self._gallery_warmed:
+                pending.append((url, attr, lic))
+        self._species_gallery_label.setVisible(shown > 0)
+        self._species_gallery.setVisible(shown > 0)
+        if pending:
+            for url, _attr, _lic in pending:
+                self._gallery_warmed.add(url)
+            self._warm_gallery_images(pending)
+
+    def _warm_gallery_images(self, pending: list):
+        """Fetch+cache the not-yet-cached species photos off the UI thread,
+        re-rendering the strip as each lands (mirrors plant_list_view's warm)."""
+        sig = self.galleryImageReady
+
+        class _FetchTask(QRunnable):
+            def __init__(self, url, attr, lic):
+                super().__init__()
+                self._url, self._attr, self._lic = url, attr, lic
+
+            def run(self):
+                try:
+                    from src.image_cache import resolve_image
+                    if resolve_image(self._url, self._attr, self._lic):
+                        sig.emit()
+                except Exception:  # noqa: BLE001 — a missing photo is not an error
+                    pass
+
+        for url, attr, lic in pending:
+            QThreadPool.globalInstance().start(_FetchTask(url, attr, lic))
+
+    def _on_gallery_image_ready(self):
+        res = self._last_habitat_result
+        if res is not None:
+            try:
+                self._render_species_gallery(res)
+            except Exception:  # noqa: BLE001
+                pass
 
     # Canonical layer names paired with the plant_types that fulfil them.
     _LAYER_TO_PLANT_TYPES = {
