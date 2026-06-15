@@ -58,6 +58,13 @@ class Map3DWidget(QWebEngineView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        # Route the viewer's JS console like the 2D map does (src/map_widget):
+        # genuine errors go to stderr, but info/warnings go to the debug log
+        # only — so benign three.js / ANGLE shader warnings (e.g. Windows'
+        # "warning X3203: signed/unsigned mismatch, unsigned assumed") don't
+        # clutter the terminal. Set before load() so early messages are caught.
+        from src.map_widget import _LoggingPage
+        self.setPage(_LoggingPage(self))
         dist = dist_index_path()
         builtin = builtin_viewer_path()
         self.has_scene = bool(dist)
