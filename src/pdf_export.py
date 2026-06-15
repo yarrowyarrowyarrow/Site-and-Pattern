@@ -17,6 +17,8 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtPrintSupport import QPrinter
 
+from src.branding import APP_NAME
+
 
 def _safe_size(n) -> int:
     """Clamp a computed font size to a minimum of 1.
@@ -147,7 +149,7 @@ def _draw_title_block(painter: QPainter, w: float, name: str,
     painter.setPen(QColor("#a5d6a7"))
     painter.setFont(QFont("Arial", _safe_size(18 * s), QFont.Weight.Bold))
     painter.drawText(QRectF(15 * s, 8 * s, w - 30 * s, 30 * s),
-                     Qt.AlignmentFlag.AlignLeft, f"PermaDesign — {name}")
+                     Qt.AlignmentFlag.AlignLeft, f"{APP_NAME} — {name}")
 
     # Subtitle
     painter.setFont(QFont("Arial", _safe_size(9 * s)))

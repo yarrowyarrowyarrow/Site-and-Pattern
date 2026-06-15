@@ -1,6 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
-# PyInstaller spec for PermaDesign (one-directory bundled mode)
+# PyInstaller spec for Site & Pattern (one-directory bundled mode)
 # Build with: pyinstaller permadesign.spec
+# Display name is "Site & Pattern"; the artifact base name is the script-safe
+# "SiteAndPattern" (no spaces/ampersand) so the build scripts and NSIS paths
+# stay quoting-safe. Shortcuts/Start-Menu/.app show the display name.
 
 import sys
 
@@ -45,7 +48,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='PermaDesign',
+    name='SiteAndPattern',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -68,7 +71,7 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='PermaDesign',
+    name='SiteAndPattern',
 )
 
 if sys.platform == 'darwin':
@@ -77,12 +80,12 @@ if sys.platform == 'darwin':
     # matches the Qt 6.7 cap in requirements.txt (Big Sur 11 onwards).
     app = BUNDLE(
         coll,
-        name='PermaDesign.app',
+        name='SiteAndPattern.app',
         icon=None,
-        bundle_identifier='com.permadesign.app',
+        bundle_identifier='com.siteandpattern.app',
         info_plist={
-            'CFBundleName': 'PermaDesign',
-            'CFBundleDisplayName': 'PermaDesign',
+            'CFBundleName': 'Site & Pattern',
+            'CFBundleDisplayName': 'Site & Pattern',
             'NSHighResolutionCapable': True,
             'LSMinimumSystemVersion': '11.0',
         },

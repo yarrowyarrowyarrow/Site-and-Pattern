@@ -1,7 +1,7 @@
-# PermaDesign — Session Handoff
+# Site & Pattern — Session Handoff
 
 **Branch:** `claude/build-step-1-v1-hTpZB`
-**Repo:** `yarrowyarrowyarrow/PermaDesign`
+**Repo:** `yarrowyarrowyarrow/Site & Pattern`
 **Last updated:** 2026-03-28
 **Stack:** Python 3.11+, PyQt6 + QtWebEngine, SQLite, Leaflet.js, GeoJSON
 
@@ -76,7 +76,7 @@
 ## File Structure
 
 ```
-PermaDesign/
+Site & Pattern/
 ├── main.py                     Entry point
 ├── requirements.txt            PyQt6>=6.6.0, PyQt6-WebEngine>=6.6.0
 ├── html/
@@ -149,11 +149,11 @@ Paste this at the start of your next Claude Code session:
 
 ---
 
-> I am continuing development of **PermaDesign**, a desktop permaculture
+> I am continuing development of **Site & Pattern**, a desktop permaculture
 > landscape design app for Windows built with Python 3.11+, PyQt6 +
 > QtWebEngine, SQLite, and Leaflet.js.
 >
-> **Repository:** yarrowyarrowyarrow/PermaDesign
+> **Repository:** yarrowyarrowyarrow/Site & Pattern
 > **Branch:** `claude/build-step-1-v1-hTpZB`
 >
 > Steps 1–4 (core app), Step A (expanded schema),

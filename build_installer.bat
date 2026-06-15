@@ -1,13 +1,13 @@
 @echo off
 setlocal enabledelayedexpansion
 
-echo === PermaDesign Installer Builder ===
+echo === Site ^& Pattern Installer Builder ===
 echo.
 
 REM Kill any lingering app processes that hold file locks on the old build.
 REM Without this, rmdir fails silently and PyInstaller produces a corrupt bundle.
-echo Stopping any running PermaDesign processes...
-taskkill /F /IM PermaDesign.exe >nul 2>&1
+echo Stopping any running Site ^& Pattern processes...
+taskkill /F /IM SiteAndPattern.exe >nul 2>&1
 taskkill /F /IM QtWebEngineProcess.exe >nul 2>&1
 
 REM Clean previous builds, and FAIL HARD if anything is locked.
@@ -16,7 +16,7 @@ if exist build (
     rmdir /s /q build
     if exist build (
         echo ERROR: could not delete build\ - a file is locked.
-        echo Close any open PermaDesign windows / Explorer windows in that folder and retry.
+        echo Close any open Site ^& Pattern windows / Explorer windows in that folder and retry.
         exit /b 1
     )
 )
@@ -24,11 +24,11 @@ if exist dist (
     rmdir /s /q dist
     if exist dist (
         echo ERROR: could not delete dist\ - a file is locked.
-        echo Close any open PermaDesign windows / Explorer windows in that folder and retry.
+        echo Close any open Site ^& Pattern windows / Explorer windows in that folder and retry.
         exit /b 1
     )
 )
-if exist PermaDesign-Windows.zip del /q PermaDesign-Windows.zip
+if exist SiteAndPattern-Windows.zip del /q SiteAndPattern-Windows.zip
 
 REM Activate virtual environment if it exists
 if exist venv (
@@ -54,8 +54,8 @@ if !ERRORLEVEL! neq 0 (
     echo ERROR: PyInstaller build failed. Aborting.
     exit /b 1
 )
-if not exist dist\PermaDesign\PermaDesign.exe (
-    echo ERROR: dist\PermaDesign\PermaDesign.exe was not produced. Aborting.
+if not exist dist\SiteAndPattern\SiteAndPattern.exe (
+    echo ERROR: dist\SiteAndPattern\SiteAndPattern.exe was not produced. Aborting.
     exit /b 1
 )
 
@@ -69,20 +69,20 @@ if exist "C:\Program Files (x86)\NSIS\makensis.exe" (
     "C:\Program Files (x86)\NSIS\makensis.exe" /V4 installer.nsi
 
     if !ERRORLEVEL! equ 0 (
-        echo ✓ Created PermaDesign-Installer.exe
+        echo Created SiteAndPattern-Installer.exe
     ) else (
         echo NSIS build failed. Creating zip archive instead...
         cd dist
-        powershell -command "Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory('PermaDesign', '..\PermaDesign-Windows.zip')"
+        powershell -command "Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory('SiteAndPattern', '..\SiteAndPattern-Windows.zip')"
         cd ..
-        echo ✓ Created PermaDesign-Windows.zip
+        echo Created SiteAndPattern-Windows.zip
     )
 ) else (
     echo NSIS not found. Creating zip archive...
     cd dist
-    powershell -command "Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory('PermaDesign', '..\PermaDesign-Windows.zip')"
+    powershell -command "Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory('SiteAndPattern', '..\SiteAndPattern-Windows.zip')"
     cd ..
-    echo ✓ Created PermaDesign-Windows.zip
+    echo Created SiteAndPattern-Windows.zip
 )
 
 echo.
@@ -91,6 +91,6 @@ echo.
 echo Installer location: %CD%\dist\
 echo.
 echo To run the application:
-echo   dist\PermaDesign\PermaDesign.exe
+echo   dist\SiteAndPattern\SiteAndPattern.exe
 echo.
 pause

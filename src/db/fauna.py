@@ -4,6 +4,9 @@ fauna.py — Query API for the fauna registry and plant ↔ fauna junction.
 Introduced in schema v13 (V1.31). Replaces the generic ``host_plant`` tag with
 real species-level relationships between plants and the lepidoptera, birds,
 and native bees they support.
+
+Design principle P3 (relationships matter more than components) and P10 (design
+for relationships, not objects) — see docs/DESIGN_PHILOSOPHY.md.
 """
 
 from __future__ import annotations

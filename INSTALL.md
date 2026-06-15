@@ -1,4 +1,4 @@
-# Installing PermaDesign
+# Installing Site & Pattern
 
 > This document is a work in progress. The one-click Windows installer is being prepared.
 

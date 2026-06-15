@@ -1,5 +1,8 @@
-# pyproject.toml — packaging metadata for PermaDesign's installable
-# surfaces (the `permadesign` CLI and the MCP server).
+# pyproject.toml — packaging metadata for Site & Pattern's installable
+# surfaces (the `permadesign` CLI and the MCP server). The pip project name and
+# the `permadesign` console command deliberately keep the legacy identifier:
+# they are part of the frozen headless scripting contract (alongside
+# src.permadesign_api / src.mcp_server), so scripts and agents don't break.
 #
 # This is ADDITIVE. The GUI app still runs from source (`python main.py`)
 # and installs its runtime deps from requirements.txt; the Windows build
@@ -13,7 +16,7 @@
 #
 # The core install pulls NO dependencies on purpose — src.permadesign_api
 # and src.cli are Qt-free and use only the stdlib + the repo's own code,
-# so an agent can drive PermaDesign headlessly with a minimal footprint.
+# so an agent can drive Site & Pattern headlessly with a minimal footprint.
 
 [build-system]
 requires = ["setuptools>=61"]

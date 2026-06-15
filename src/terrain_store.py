@@ -5,10 +5,11 @@ Stores the full City of Edmonton 0.5 m LiDAR contour dataset in
 0.01°×0.01° tiles so any bbox query is served instantly from disk.
 Also stores Open-Meteo/Copernicus DEM grid responses for durability.
 
-Database location:
-  Linux   : ~/.local/share/PermaDesign/terrain.db
-  macOS   : ~/Library/Application Support/PermaDesign/terrain.db
-  Windows : %APPDATA%\\PermaDesign\\terrain.db
+Database location (under the shared per-user data folder, V1.69-renamed from
+``PermaDesign`` to ``Site & Pattern`` — see ``src/user_paths.py``):
+  Linux   : ~/.local/share/Site & Pattern/terrain.db
+  macOS   : ~/Library/Application Support/Site & Pattern/terrain.db
+  Windows : %APPDATA%\\Site & Pattern\\terrain.db
 """
 
 import hashlib
@@ -25,17 +26,8 @@ from typing import Optional
 # ── DB path ─────────────────────────────────────────────────────────────────
 
 def _db_path() -> str:
-    if os.name == "nt":
-        base = os.environ.get("APPDATA", os.path.expanduser("~"))
-    elif sys.platform == "darwin":
-        base = os.path.join(os.path.expanduser("~"),
-                            "Library", "Application Support")
-    else:
-        base = os.environ.get("XDG_DATA_HOME",
-                              os.path.join(os.path.expanduser("~"), ".local", "share"))
-    app_dir = os.path.join(base, "PermaDesign")
-    os.makedirs(app_dir, exist_ok=True)
-    return os.path.join(app_dir, "terrain.db")
+    from src import user_paths
+    return os.path.join(str(user_paths.user_data_dir()), "terrain.db")
 
 
 # ── Tile key helpers ─────────────────────────────────────────────────────────

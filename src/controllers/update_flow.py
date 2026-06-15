@@ -30,6 +30,7 @@ from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import QInputDialog, QMessageBox
 
+from src.branding import APP_NAME
 from src.version_branch import (
     is_newer_version,
     newest_remote_version_branch,
@@ -113,8 +114,8 @@ class UpdateFlowController:
             "specific version to move to a release branch."
         )
         QMessageBox.information(
-            self._main, "About PermaDesign",
-            f"<b>PermaDesign</b><br>"
+            self._main, f"About {APP_NAME}",
+            f"<b>{APP_NAME}</b><br>"
             f"Branch: <b>{branch}</b><br>"
             f"Commit: {commit}<br>"
             f"Schema version: v{schema_v}<br><br>"
@@ -539,7 +540,7 @@ class UpdateFlowController:
 
         prompt = QMessageBox.question(
             self._main, "New version available",
-            f"A newer version of PermaDesign is on the server.\n\n"
+            f"A newer version of {APP_NAME} is on the server.\n\n"
             f"You're on:   {current}\n"
             f"Latest:      {target}\n\n"
             f"Recent changes in {target}:\n{recent}\n\n"

@@ -1,6 +1,9 @@
 """
 habitat_score.py — Qt-free Habitat Value Score computation.
 
+Design principle P6 (conventional value metrics miss ecological value) and P10
+(design for relationships, not objects) — see docs/DESIGN_PHILOSOPHY.md.
+
 Extracted from ``src/analysis_panel.py:AnalysisPanel._calc_habitat_score``
 in Chunk 6 of the strengthening roadmap (the "domain logic trapped in a
 widget" case of E1). The scoring is pure arithmetic over the placed-plant

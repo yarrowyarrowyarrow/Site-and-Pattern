@@ -1,13 +1,15 @@
-; PermaDesign Installer
+; Site & Pattern Installer
 ; Built with NSIS 3.x
+; Display name is "Site & Pattern"; the bundled artifact base name is the
+; script-safe "SiteAndPattern" (matches permadesign.spec).
 
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
 
 ; General
-Name "PermaDesign"
-OutFile "PermaDesign-Installer.exe"
-InstallDir "$PROGRAMFILES\PermaDesign"
+Name "Site & Pattern"
+OutFile "SiteAndPattern-Installer.exe"
+InstallDir "$PROGRAMFILES\Site & Pattern"
 
 RequestExecutionLevel admin
 
@@ -17,22 +19,22 @@ RequestExecutionLevel admin
 !insertmacro MUI_LANGUAGE "English"
 
 ; Installer sections
-Section "PermaDesign"
+Section "Site & Pattern"
   SetOutPath "$INSTDIR"
-  File /r "dist\PermaDesign\*.*"
+  File /r "dist\SiteAndPattern\*.*"
 
   ; Create desktop shortcut
-  CreateShortCut "$DESKTOP\PermaDesign.lnk" "$INSTDIR\PermaDesign.exe"
+  CreateShortCut "$DESKTOP\Site & Pattern.lnk" "$INSTDIR\SiteAndPattern.exe"
 
   ; Create start menu shortcut
-  CreateDirectory "$SMPROGRAMS\PermaDesign"
-  CreateShortCut "$SMPROGRAMS\PermaDesign\PermaDesign.lnk" "$INSTDIR\PermaDesign.exe"
-  CreateShortCut "$SMPROGRAMS\PermaDesign\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
+  CreateDirectory "$SMPROGRAMS\Site & Pattern"
+  CreateShortCut "$SMPROGRAMS\Site & Pattern\Site & Pattern.lnk" "$INSTDIR\SiteAndPattern.exe"
+  CreateShortCut "$SMPROGRAMS\Site & Pattern\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
 SectionEnd
 
 ; Create uninstaller
 Section "Uninstall"
   RMDir /r "$INSTDIR"
-  RMDir /r "$SMPROGRAMS\PermaDesign"
-  Delete "$DESKTOP\PermaDesign.lnk"
+  RMDir /r "$SMPROGRAMS\Site & Pattern"
+  Delete "$DESKTOP\Site & Pattern.lnk"
 SectionEnd

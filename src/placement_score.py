@@ -12,6 +12,10 @@ Also provides companion-proximity checking: after placement, warns when
 friend pairs land too far apart or enemy pairs too close.
 
 Qt-free; no circular imports (depends only on src.db.plants and stdlib).
+
+Design principle P1 (living systems self-organize from generative rules, not
+top-down blueprints) and P2 (the best designs disappear into their context) —
+see docs/DESIGN_PHILOSOPHY.md.
 """
 
 from __future__ import annotations

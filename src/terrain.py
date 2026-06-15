@@ -199,8 +199,10 @@ def validate_bbox(bbox: dict, resolution_m: float) -> Optional[str]:
 # ── Disk cache ──────────────────────────────────────────────────────────────
 
 def _cache_root() -> str:
-    base = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
-    path = os.path.join(base, "PermaDesign", "cache", "terrain")
+    # Under the shared per-user data folder (V1.69-renamed PermaDesign →
+    # Site & Pattern, with one-time migration) so this cache moves with the rest.
+    from src import user_paths
+    path = os.path.join(user_paths.user_data_dir(), "cache", "terrain")
     os.makedirs(path, exist_ok=True)
     return path
 

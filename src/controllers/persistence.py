@@ -26,6 +26,7 @@ from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 import src.project as project_io
+from src.branding import APP_NAME
 
 
 class PersistenceController:
@@ -58,7 +59,7 @@ class PersistenceController:
     def _on_save_as(self):
         path, _ = QFileDialog.getSaveFileName(
             self._main, "Save Design", "",
-            "PermaDesign Files (*.perma.geojson);;GeoJSON (*.geojson)"
+            "Site & Pattern Files (*.perma.geojson);;GeoJSON (*.geojson)"
         )
         if path:
             if not path.endswith('.perma.geojson') and not path.endswith('.geojson'):
@@ -71,7 +72,7 @@ class PersistenceController:
             self._main._project_path = path
             self._main._modified     = False
             name = self._main._project["properties"].get("project_name", "Design")
-            self._main.setWindowTitle(f"PermaDesign — {name}")
+            self._main.setWindowTitle(f"{APP_NAME} — {name}")
             self._main.statusBar().showMessage(f"Saved: {path}", 3000)
         except Exception as exc:
             QMessageBox.critical(self._main, "Save failed", str(exc))

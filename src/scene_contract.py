@@ -1,6 +1,9 @@
 """
 src/scene_contract.py — the versioned Scene JSON contract (V1.62).
 
+Design principle P4 (time is the most undervalued design variable — the scene is
+built for a chosen growth-timeline year) — see docs/DESIGN_PHILOSOPHY.md.
+
 One pure function, :func:`build_scene`, turns a project dict into a
 renderer-agnostic scene description in **local metres** (+x east, +y north,
 origin at the design centroid). The embedded 3D viewer consumes it via

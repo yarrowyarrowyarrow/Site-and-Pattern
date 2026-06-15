@@ -12,7 +12,7 @@ The 3D view fork is the MIT-licensed [cartesiancs/map3d](https://github.com/cart
 shadows** — its `<Canvas>` has no shadow renderer, its lights are fill-only, and
 there is no ground for shadows to land on.
 
-`map3d-sun-shadows.patch` adds sun-driven shadow casting, wired so PermaDesign's
+`map3d-sun-shadows.patch` adds sun-driven shadow casting, wired so Site & Pattern's
 own sun path (`src/solar.py`) drives it — the 3D shadows then track the same
 solar positions as the 2D shade engine (`src/shade.py`).
 
@@ -37,14 +37,14 @@ solar positions as the 2D shade engine (`src/shade.py`).
 
 ```bash
 # from the root of your map3d checkout
-git apply /path/to/PermaDesign/web3d/map3d-sun-shadows.patch
+git apply /path/to/Site & Pattern/web3d/map3d-sun-shadows.patch
 npm run build        # tsc -b && vite build  (verified clean against map3d@2c5d732)
 ```
 
 If you load the built `dist/` from `file://` inside a `QWebEngineView`, set
 `base: './'` in `vite.config.ts` first so the asset URLs resolve.
 
-## Drive the sun from PermaDesign
+## Drive the sun from Site & Pattern
 
 `src/map3d_js.py` builds the JS that calls the hook, reusing `src/solar.py`:
 

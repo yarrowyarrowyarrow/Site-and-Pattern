@@ -2,7 +2,7 @@
 
 set -e
 
-echo "=== PermaDesign Installer Builder ==="
+echo "=== Site & Pattern Installer Builder ==="
 echo ""
 
 # Colors for output
@@ -31,7 +31,7 @@ pyinstaller permadesign.spec --clean
 # Create platform-specific installer
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS: package the .app bundle into a drag-to-install DMG
-    APP="dist/PermaDesign.app"
+    APP="dist/SiteAndPattern.app"
     if [ ! -d "$APP" ]; then
         echo "ERROR: $APP not found — the darwin BUNDLE step in permadesign.spec did not run." >&2
         exit 1
@@ -50,43 +50,43 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     cp -R "$APP" "$STAGING/"
     ln -s /Applications "$STAGING/Applications"
     cat > "$STAGING/READ ME FIRST.txt" <<'EOF'
-Installing PermaDesign
-======================
+Installing Site & Pattern
+=========================
 
-1. Drag the PermaDesign icon onto the Applications folder in this window.
+1. Drag the Site & Pattern icon onto the Applications folder in this window.
 
 2. The FIRST time you open it, macOS will warn you because the app is not
    notarized by Apple. This is a one-time step:
 
    * macOS 11-14 (Big Sur through Sonoma):
-     In Applications, right-click (or Ctrl-click) PermaDesign, choose
+     In Applications, right-click (or Ctrl-click) Site & Pattern, choose
      "Open", then click "Open" in the dialog.
 
    * macOS 15 (Sequoia) or newer:
-     Double-click PermaDesign once (it will be blocked), then open
+     Double-click Site & Pattern once (it will be blocked), then open
      System Settings > Privacy & Security, scroll down, and click
-     "Open Anyway" next to PermaDesign.
+     "Open Anyway" next to Site & Pattern.
 
 3. Apple Silicon (M1/M2/M3/M4) Macs: if macOS offers to install Rosetta
    on first launch, click Install (one time only).
 
-After the first launch, PermaDesign opens normally like any other app.
+After the first launch, Site & Pattern opens normally like any other app.
 EOF
-    hdiutil create -volname "PermaDesign" -srcfolder "$STAGING" -ov -format UDZO dist/PermaDesign.dmg
+    hdiutil create -volname "Site & Pattern" -srcfolder "$STAGING" -ov -format UDZO dist/SiteAndPattern.dmg
     rm -rf "$STAGING"
-    echo -e "${GREEN}✓ Created dist/PermaDesign.dmg${NC}"
+    echo -e "${GREEN}✓ Created dist/SiteAndPattern.dmg${NC}"
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     # Linux: Create AppImage (requires appimagetool)
     if command -v appimagetool &> /dev/null; then
         echo -e "${YELLOW}Creating Linux AppImage installer...${NC}"
         # This requires setting up an AppDir structure
         # For now, just zip the directory
-        cd dist && zip -r -q ../PermaDesign-Linux.zip PermaDesign/ && cd ..
-        echo -e "${GREEN}✓ Created PermaDesign-Linux.zip${NC}"
+        cd dist && zip -r -q ../SiteAndPattern-Linux.zip SiteAndPattern/ && cd ..
+        echo -e "${GREEN}✓ Created SiteAndPattern-Linux.zip${NC}"
     else
         echo -e "${YELLOW}appimagetool not found. Creating zip archive instead...${NC}"
-        cd dist && zip -r -q ../PermaDesign-Linux.zip PermaDesign/ && cd ..
-        echo -e "${GREEN}✓ Created PermaDesign-Linux.zip${NC}"
+        cd dist && zip -r -q ../SiteAndPattern-Linux.zip SiteAndPattern/ && cd ..
+        echo -e "${GREEN}✓ Created SiteAndPattern-Linux.zip${NC}"
     fi
 else
     echo -e "${YELLOW}Unknown OS. Skipping platform-specific installer.${NC}"
@@ -99,10 +99,10 @@ echo "Installer location: $(pwd)/dist/"
 echo ""
 echo "To run the application:"
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    echo "  open dist/PermaDesign.app"
+    echo "  open dist/SiteAndPattern.app"
     echo ""
     echo "To share with other Macs (macOS 11 Big Sur or newer):"
-    echo "  send dist/PermaDesign.dmg"
+    echo "  send dist/SiteAndPattern.dmg"
 else
-    echo "  ./dist/PermaDesign/PermaDesign"
+    echo "  ./dist/SiteAndPattern/SiteAndPattern"
 fi

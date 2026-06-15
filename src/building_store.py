@@ -17,10 +17,12 @@ Stored items are the **OSM building item shape already used downstream**::
 so the store is source-agnostic: OSM today, NRCan/Microsoft footprints later
 all reduce to the same dict.
 
-Database location (separate from the design DB and the terrain cache):
-  Linux   : ~/.local/share/PermaDesign/buildings.db
-  macOS   : ~/Library/Application Support/PermaDesign/buildings.db
-  Windows : %APPDATA%\\PermaDesign\\buildings.db
+Database location (separate from the design DB and the terrain cache, under the
+shared per-user data folder, V1.69-renamed from ``PermaDesign`` to
+``Site & Pattern`` — see ``src/user_paths.py``):
+  Linux   : ~/.local/share/Site & Pattern/buildings.db
+  macOS   : ~/Library/Application Support/Site & Pattern/buildings.db
+  Windows : %APPDATA%\\Site & Pattern\\buildings.db
 """
 
 from __future__ import annotations
@@ -37,18 +39,8 @@ from src.terrain_store import _tile_key, _tiles_for_bbox, _tiles_touched_by_line
 
 
 def _db_path() -> str:
-    if os.name == "nt":
-        base = os.environ.get("APPDATA", os.path.expanduser("~"))
-    elif sys.platform == "darwin":
-        base = os.path.join(os.path.expanduser("~"),
-                            "Library", "Application Support")
-    else:
-        base = os.environ.get("XDG_DATA_HOME",
-                              os.path.join(os.path.expanduser("~"),
-                                           ".local", "share"))
-    app_dir = os.path.join(base, "PermaDesign")
-    os.makedirs(app_dir, exist_ok=True)
-    return os.path.join(app_dir, "buildings.db")
+    from src import user_paths
+    return os.path.join(str(user_paths.user_data_dir()), "buildings.db")
 
 
 _DDL = """

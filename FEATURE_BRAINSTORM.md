@@ -1,4 +1,4 @@
-# PermaDesign — Native Habitat Feature Brainstorm
+# Site & Pattern — Native Habitat Feature Brainstorm
 
 ## Context
 

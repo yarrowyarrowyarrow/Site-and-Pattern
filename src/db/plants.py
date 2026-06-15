@@ -2,12 +2,15 @@
 plants.py -- SQLite database access layer for the plant catalogue.
 
 The database file is stored in a user-writable location:
-  Windows : %APPDATA%/PermaDesign/permadesign.db
-  macOS   : ~/Library/Application Support/PermaDesign/permadesign.db
-  Linux   : $XDG_DATA_HOME/PermaDesign/permadesign.db  (default ~/.local/share/)
+  Windows : %APPDATA%/Site & Pattern/permadesign.db
+  macOS   : ~/Library/Application Support/Site & Pattern/permadesign.db
+  Linux   : $XDG_DATA_HOME/Site & Pattern/permadesign.db  (default ~/.local/share/)
 
 On first run the DB is created, schema applied, and seed data loaded.
-If an old DB exists next to the executable it is migrated automatically.
+If an old DB exists next to the executable it is migrated automatically. The
+per-user folder was named ``PermaDesign`` before the V1.69 rebrand; it is renamed
+to ``Site & Pattern`` once, in place, by ``src/user_paths.py`` (the DB *filename*
+stays ``permadesign.db`` — internal, never shown to the user).
 """
 
 import os
@@ -28,14 +31,14 @@ _SCHEMA_PATH = resource_path("src", "db", "schema.sql")
 
 
 def _user_data_dir() -> pathlib.Path:
-    """Return a writable per-user data directory regardless of install location."""
-    if sys.platform == "win32":
-        base = os.environ.get("APPDATA") or pathlib.Path.home()
-    elif sys.platform == "darwin":
-        base = pathlib.Path.home() / "Library" / "Application Support"
-    else:
-        base = os.environ.get("XDG_DATA_HOME") or (pathlib.Path.home() / ".local" / "share")
-    return pathlib.Path(base) / "PermaDesign"
+    """Return a writable per-user data directory regardless of install location.
+
+    Pure (no side effects) so the module-level path constants below can be built
+    at import time without creating or migrating anything. Delegates to
+    ``user_paths.data_dir_path`` — the single source of truth for the folder name
+    (kept here as a named function so tests can monkeypatch this exact symbol)."""
+    from src.user_paths import data_dir_path
+    return data_dir_path()
 
 
 _DATA_DIR = str(_user_data_dir())
@@ -147,6 +150,13 @@ _USE_DEFINITIONS: list[tuple[str, str, str, int]] = [
 
 
 def _ensure_data_dir():
+    # Rename a pre-rebrand "PermaDesign" folder to the new "Site & Pattern" name
+    # *before* creating the (possibly new) data dir — otherwise an empty new
+    # folder would make the migration's "already exists" guard skip and strand the
+    # old database. Driving the migration off _DATA_DIR keeps a test-overridden
+    # tempdir (which already exists) a correct no-op.
+    from src import user_paths
+    user_paths.migrate_legacy_into(_DATA_DIR)
     os.makedirs(_DATA_DIR, exist_ok=True)
 
 

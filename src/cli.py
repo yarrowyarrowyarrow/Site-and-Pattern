@@ -204,7 +204,7 @@ def _cmd_validate_data(args) -> int:
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="permadesign",
-        description="PermaDesign headless CLI (native-plant landscape design).",
+        description="Site & Pattern headless CLI (native-plant landscape design).",
     )
     sub = p.add_subparsers(dest="command", required=True)
 

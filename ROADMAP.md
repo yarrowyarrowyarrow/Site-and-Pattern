@@ -1,6 +1,8 @@
-# PermaDesign — Feature Roadmap
+# Site & Pattern — Feature Roadmap
 
 A prioritized list of features for the Alberta-focused **Native Habitat Designer** — turning lawns into native plant habitat. Organized by effort/impact tiers, with the active sprint at the top.
+
+> For the *philosophy-driven* feature exploration (organized by design principle, complementary to this ledger), see [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) and the design philosophy it derives from, [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md).
 
 ---
 

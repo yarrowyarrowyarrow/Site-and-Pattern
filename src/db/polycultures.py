@@ -1,3 +1,6 @@
+# Design principle P1 (a generative pattern language — communities as reusable,
+# site-responsive patterns) and P3 (relationships matter more than components) —
+# see docs/DESIGN_PHILOSOPHY.md.
 import json
 import math
 from .plants import get_connection, _role_to_layer_functions

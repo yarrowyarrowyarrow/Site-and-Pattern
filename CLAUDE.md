@@ -6,13 +6,20 @@ miss otherwise.
 
 ## Project at a glance
 
-**PermaDesign** is a PyQt6 desktop app (Python 3.10+) for designing
+**Site & Pattern** is a PyQt6 desktop app (Python 3.10+) for designing
 landscapes with native plants — focused on lawn-to-habitat conversion,
 pollinator gardens, and ecological restoration in Alberta and the
 Canadian prairies. Local SQLite storage; Leaflet inside QWebEngineView
 for the map; PyInstaller + NSIS for the Windows installer.
 
 Entry point: `python main.py` → `src.app.MainWindow`.
+
+The product was named **PermaDesign** before the V1.69 rebrand; user-facing surfaces
+now read **Site & Pattern** (`src/branding.py`), while several internal identifiers keep
+the legacy name on purpose (see the Database-path note below). The design philosophy that
+drives the app lives in `docs/DESIGN_PHILOSOPHY.md` — strongly-aligned modules carry a
+one-line `Design principle P#` anchor pointing back to it, guarded by
+`tests/test_philosophy.py`.
 
 ## Branch naming convention (READ FIRST)
 
@@ -62,7 +69,7 @@ python -m unittest discover -s tests
 
 There is no `pytest` configuration; the suite uses stdlib `unittest`.
 Each test module redirects the DB to a `tempfile.mkdtemp` directory so
-tests never touch the real user DB at `~/.local/share/PermaDesign/`.
+tests never touch the real user DB at `~/.local/share/Site & Pattern/`.
 
 Some tests create temporary git repos via subprocess and disable
 `commit.gpgsign` locally in those repos — this is test infrastructure
@@ -104,10 +111,17 @@ only, doesn't affect real commits.
 
 ## Architectural conventions worth knowing
 
-- **Database path:** `~/.local/share/PermaDesign/permadesign.db` (Linux),
-  `%APPDATA%/PermaDesign/` (Windows), `~/Library/Application Support/PermaDesign/` (macOS).
+- **Database path:** `~/.local/share/Site & Pattern/permadesign.db` (Linux),
+  `%APPDATA%/Site & Pattern/` (Windows), `~/Library/Application Support/Site & Pattern/` (macOS).
   Never put the DB inside the source tree — `tests/test_polycultures.py`
   has an assertion that enforces this.
+  - **The data folder was `PermaDesign` before the V1.69 rebrand** and is renamed
+    to `Site & Pattern` once, in place, on first launch — `src/user_paths.py` is the
+    single source of truth (`user_data_dir` / `data_dir_path` / `migrate_legacy_into`);
+    all stores (`plants`, `building_store`, `terrain_store`, `soil_grid`, `image_cache`)
+    go through it. The DB *filename* stays `permadesign.db` (internal). The display
+    name lives in `src/branding.py` (`APP_NAME`); the QSettings org/app name, the repo,
+    and the frozen `permadesign_api`/MCP symbols deliberately keep the legacy name.
 - **FK constraints are ON at runtime** (`plants.py:get_connection`) but
   disabled temporarily during the bulk reseed (Python 3.14 enforces FKs
   at statement time rather than transaction-commit time).

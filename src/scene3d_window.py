@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
 
 from src.map3d_widget import Map3DWidget
 from src.scene_contract import build_scene
+from src.branding import APP_NAME
 
 _MAX_YEAR = 25
 _MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -64,7 +65,7 @@ class Scene3DWindow(QWidget):
         self._elevation = None
         self._thread = None
         self._worker = None
-        self.setWindowTitle("PermaDesign — 3D Preview")
+        self.setWindowTitle(f"{APP_NAME} — 3D Preview")
         self.resize(960, 700)
 
         self.viewer = Map3DWidget(self)

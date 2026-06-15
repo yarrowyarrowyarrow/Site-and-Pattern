@@ -36,17 +36,12 @@ _TOPSOIL_HINTS = ("0-5", "0_5", "0to5", "0-30", "0_30", "sd1", "_05_", "topsoil"
 
 
 def soil_pack_dir() -> str:
-    """Directory holding the downloaded soil GeoTIFFs (sibling of the DB)."""
-    if os.name == "nt":
-        base = os.environ.get("APPDATA", os.path.expanduser("~"))
-    elif sys.platform == "darwin":
-        base = os.path.join(os.path.expanduser("~"),
-                            "Library", "Application Support")
-    else:
-        base = os.environ.get("XDG_DATA_HOME",
-                              os.path.join(os.path.expanduser("~"),
-                                           ".local", "share"))
-    d = os.path.join(base, "PermaDesign", "soil")
+    """Directory holding the downloaded soil GeoTIFFs (sibling of the DB).
+
+    Under the shared per-user data folder (V1.69-renamed from ``PermaDesign`` to
+    ``Site & Pattern`` — see ``src/user_paths.py``)."""
+    from src import user_paths
+    d = os.path.join(str(user_paths.user_data_dir()), "soil")
     os.makedirs(d, exist_ok=True)
     return d
 

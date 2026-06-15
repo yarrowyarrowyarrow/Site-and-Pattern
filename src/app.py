@@ -1,5 +1,5 @@
 """
-app.py — Main application window for PermaDesign.
+app.py — Main application window for Site & Pattern.
 
 Layout
 ------
@@ -50,6 +50,7 @@ from src.controllers.area_fill_controller import AreaFillController
 from src.project_store import ProjectStore
 from src.scan_import_dialog import start_scan_import as _start_scan_import
 from src.scene3d_window import open_3d_view as _open_3d_view
+from src.branding import APP_NAME, APP_TITLE
 
 
 # Marker colour tables for plant-community members — moved to the Qt-free
@@ -111,7 +112,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         _init_database()
-        self.setWindowTitle("PermaDesign — Native Habitat Designer")
+        self.setWindowTitle(APP_TITLE)
         self.resize(1400, 860)
         self.setMinimumSize(900, 600)
 
@@ -520,7 +521,7 @@ class MainWindow(QMainWindow):
         version_disp = current_branch if parse_version_branch(current_branch) else "dev"
         act_about = help_menu.addAction(f"&About / Version: {version_disp}")
         act_about.setStatusTip(
-            "Show the current PermaDesign version, schema version, and "
+            "Show the current Site & Pattern version, schema version, and "
             "git commit hash"
         )
         act_about.triggered.connect(self._on_about)
@@ -1570,13 +1571,13 @@ class MainWindow(QMainWindow):
         self.planning_panel.set_structures([])
         self.analysis_panel.set_placed_plants([])
         self.analysis_panel.set_structures([])
-        self.setWindowTitle(f"PermaDesign — {name}")
+        self.setWindowTitle(f"{APP_NAME} — {name}")
         self._set_mode_label("Ready")
 
     def _on_open(self):
         path, _ = QFileDialog.getOpenFileName(
             self, "Open Design", "",
-            "PermaDesign Files (*.perma.geojson);;GeoJSON (*.geojson);;All files (*)"
+            "Site & Pattern Files (*.perma.geojson);;GeoJSON (*.geojson);;All files (*)"
         )
         if not path:
             return
@@ -1693,7 +1694,7 @@ class MainWindow(QMainWindow):
         self.planning_panel.set_notes(notes)
 
         name = proj.get("properties", {}).get("project_name", "Design")
-        self.setWindowTitle(f"PermaDesign — {name}")
+        self.setWindowTitle(f"{APP_NAME} — {name}")
 
         # Photoreal Gaussian-splat backdrop: redraw its baked "yard photo"
         # map layer and sync the View toggle (no-op when the project has none).
@@ -1808,7 +1809,7 @@ class MainWindow(QMainWindow):
             return out
 
         lines = [
-            "PermaDesign — Native Plant Order List",
+            f"{APP_NAME} — Native Plant Order List",
             "=" * 44,
             "",
         ]

@@ -2,6 +2,10 @@
 src/design_critic.py — evaluate-and-repair intelligence for Generate Design
 (V1.62).
 
+Design principle P8 (repair is more sophisticated than creation) and P9
+(uncertainty is a feature — evaluate, critique, revise rather than assert a
+single perfect answer) — see docs/DESIGN_PHILOSOPHY.md.
+
 The generator's first pass produces a valid design; this module is what
 makes the result *good*. It closes the loop the pipeline already had all
 the parts for:

@@ -1,9 +1,9 @@
-# PermaDesign — Friend Setup Guide for Windows
+# Site & Pattern — Friend Setup Guide for Windows
 
-This guide walks you through getting PermaDesign running on a Windows laptop
+This guide walks you through getting Site & Pattern running on a Windows laptop
 from scratch. No coding experience needed — just follow each step in order.
 
-There are two ways to install PermaDesign:
+There are two ways to install Site & Pattern:
 
 1. **One-click installer (recommended)** — download a single `.exe` file and
    click through it. No Python, no command line.
@@ -18,15 +18,15 @@ If you just want to use the app, do **Option 1** below and skip the rest.
 
 ### Step 1: Download the installer
 
-1. Go to the project's **Releases** page (link from the PermaDesign GitHub
+1. Go to the project's **Releases** page (link from the Site & Pattern GitHub
    page → "Releases" on the right sidebar).
-2. Download **`PermaDesign-Installer.exe`** from the latest release.
-   - If the release only ships `PermaDesign-Windows.zip`, see the
+2. Download **`SiteAndPattern-Installer.exe`** from the latest release.
+   - If the release only ships `SiteAndPattern-Windows.zip`, see the
      "Zip-only fallback" section at the bottom of this option.
 
 ### Step 2: Run the installer
 
-1. Double-click **`PermaDesign-Installer.exe`** in your Downloads folder.
+1. Double-click **`SiteAndPattern-Installer.exe`** in your Downloads folder.
 2. Windows SmartScreen may show a blue warning ("Windows protected your PC").
    Click **More info** → **Run anyway**. This appears because the installer
    isn't code-signed; the file is safe.
@@ -38,19 +38,19 @@ If you just want to use the app, do **Option 1** below and skip the rest.
 
 ### Step 3: Launch the app
 
-- Double-click the **PermaDesign** icon on your desktop, **or**
-- Open the Start menu, type **PermaDesign**, and press Enter.
+- Double-click the **Site & Pattern** icon on your desktop, **or**
+- Open the Start menu, type **Site & Pattern**, and press Enter.
 
 The first launch may take 5–10 seconds while the plant database is set up.
 That's normal and only happens once.
 
 ### Zip-only fallback
 
-If the release only has `PermaDesign-Windows.zip`:
+If the release only has `SiteAndPattern-Windows.zip`:
 
 1. Right-click the zip → **Extract All...** → choose your Desktop.
-2. Open the extracted **PermaDesign** folder.
-3. Double-click **`PermaDesign.exe`** to run the app.
+2. Open the extracted **Site & Pattern** folder.
+3. Double-click **`SiteAndPattern.exe`** to run the app.
 
 No installation needed — keep the whole folder together.
 
@@ -93,9 +93,9 @@ You should see something like `Python 3.11.x`.
 
 ### Step 4: Run the app
 
-Every time you want to use PermaDesign:
+Every time you want to use Site & Pattern:
 
-1. Open File Explorer → **Desktop → PermaDesign**
+1. Open File Explorer → **Desktop → Site & Pattern**
 2. Click the address bar, type `cmd`, press Enter
 3. ```
    python main.py
@@ -106,12 +106,12 @@ Every time you want to use PermaDesign:
 
 ## Updating to the newest version
 
-PermaDesign updates often. There are three ways to pull the latest code,
+Site & Pattern updates often. There are three ways to pull the latest code,
 in order of "easiest" to "most-control."
 
 ### Easiest — use the in-app button
 
-Open PermaDesign and click **Help → Check for Updates…** in the menu bar.
+Open Site & Pattern and click **Help → Check for Updates…** in the menu bar.
 
 - **If you installed from source (Option 2)**, the app runs `git pull` for
   you behind the scenes. It will:
@@ -131,7 +131,7 @@ If you'd rather run the update from the command line (or the in-app
 button isn't behaving), open Command Prompt:
 
 ```
-cd %USERPROFILE%\Desktop\PermaDesign
+cd %USERPROFILE%\Desktop\Site & Pattern
 git pull
 pip install -r requirements.txt
 python main.py
@@ -159,7 +159,7 @@ communities. That's normal.
 There's no auto-updater for the installer build. To update:
 
 1. Go to the project's **Releases** page on GitHub.
-2. Download the newest **`PermaDesign-Installer.exe`**.
+2. Download the newest **`SiteAndPattern-Installer.exe`**.
 3. Run it. The installer detects the existing install and updates it in
    place — your designs and database are kept.
 
@@ -234,7 +234,7 @@ The same workflow applies whether you installed via the `.exe` or from source.
 - Uninstall Python and reinstall, making sure to check that box
 
 **The Command Prompt closes and the app disappears** (from-source only)
-- An error occurred — re-open Command Prompt, navigate to the PermaDesign
+- An error occurred — re-open Command Prompt, navigate to the Site & Pattern
   folder, run `python main.py` again, and read the error message shown
 
 ---
@@ -242,6 +242,6 @@ The same workflow applies whether you installed via the `.exe` or from source.
 ## Where files are stored
 
 - **Designs** save wherever you choose with **File → Save**.
-- **Plant database** lives at `%APPDATA%\PermaDesign\permadesign.db` — you
+- **Plant database** lives at `%APPDATA%\Site & Pattern\permadesign.db` — you
   rarely need to touch it. Deleting it forces a fresh seed on next launch.
 - **Settings (preferences)** live alongside the database.

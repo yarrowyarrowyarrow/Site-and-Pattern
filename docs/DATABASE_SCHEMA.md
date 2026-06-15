@@ -1,6 +1,6 @@
-# PermaDesign Database Schema
+# Site & Pattern Database Schema
 
-PermaDesign stores its plant catalogue and saved plant communities in a
+Site & Pattern stores its plant catalogue and saved plant communities in a
 local SQLite database. This is **not** the project file (see
 [`PROJECT_FILE_FORMAT.md`](PROJECT_FILE_FORMAT.md)) — it's the shared,
 seeded reference data every project draws from.
@@ -14,9 +14,9 @@ seeded reference data every project draws from.
   [`fauna.py`](../src/db/fauna.py)
 - **Current schema version:** `17` (`src/db/plants.py:_SCHEMA_VERSION`)
 - **Location:**
-  - Linux: `~/.local/share/PermaDesign/permadesign.db`
-  - Windows: `%APPDATA%/PermaDesign/`
-  - macOS: `~/Library/Application Support/PermaDesign/`
+  - Linux: `~/.local/share/Site & Pattern/permadesign.db`
+  - Windows: `%APPDATA%/Site & Pattern/`
+  - macOS: `~/Library/Application Support/Site & Pattern/`
 
   The DB is **never** stored inside the source tree — `tests/test_polycultures.py`
   asserts this.

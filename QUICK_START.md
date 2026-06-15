@@ -1,9 +1,9 @@
-# PermaDesign: Quick Start Guide
+# Site & Pattern: Quick Start Guide
 
 ## ⚡ Fastest Way to Run
 
 ```bash
-cd /home/user/PermaDesign
+cd /home/user/Site & Pattern
 python3 -m venv venv
 source venv/bin/activate              # macOS/Linux
 # venv\Scripts\activate.bat            # Windows
@@ -20,38 +20,38 @@ Done! The app opens immediately.
 
 ### Windows
 ```cmd
-cd C:\path\to\PermaDesign
+cd C:\path\to\Site & Pattern
 build_installer.bat
 ```
-**Output:** `PermaDesign-Installer.exe` (or ZIP if NSIS not installed)
+**Output:** `SiteAndPattern-Installer.exe` (or ZIP if NSIS not installed)
 
 ### macOS
 ```bash
-cd /path/to/PermaDesign
+cd /path/to/Site & Pattern
 bash build_installer.sh
 ```
-**Output:** `dist/PermaDesign.dmg` — drag to Applications
+**Output:** `dist/SiteAndPattern.dmg` — drag to Applications
 
 ### Linux
 ```bash
-cd /path/to/PermaDesign
+cd /path/to/Site & Pattern
 bash build_installer.sh
 ```
-**Output:** `PermaDesign-Linux.zip` — extract & run binary
+**Output:** `SiteAndPattern-Linux.zip` — extract & run binary
 
 ---
 
 ## 🎯 What's Next After Building?
 
 **For Windows users:**
-- Run `PermaDesign-Installer.exe` → installs to Program Files with Start Menu shortcut
+- Run `SiteAndPattern-Installer.exe` → installs to Program Files with Start Menu shortcut
 
 **For macOS users:**
-- Open `PermaDesign.dmg` → drag app to Applications folder
+- Open `SiteAndPattern.dmg` → drag app to Applications folder
 
 **For Linux users:**
-- Unzip `PermaDesign-Linux.zip`
-- Run: `./PermaDesign/PermaDesign`
+- Unzip `SiteAndPattern-Linux.zip`
+- Run: `./Site & Pattern/Site & Pattern`
 
 ---
 
