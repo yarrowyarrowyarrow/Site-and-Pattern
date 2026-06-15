@@ -113,6 +113,9 @@ class OnThisDesignPanel(QWidget):
         self._latest_enriched: list[dict] = []
         # Whole-design cost breakdown (C1) — set by app.py via set_cost_breakdown.
         self._cost_breakdown: dict | None = None
+        # Habitat Value Score (F11) — set by app.py via set_habitat_value, so the
+        # Stats tab shows what the design is worth, not only what it costs.
+        self._habitat_value = None
         # Lawn-conversion zone summary (N2) — set via set_lawn_conversion.
         self._lawn_conversion: dict | None = None
 
@@ -196,11 +199,46 @@ class OnThisDesignPanel(QWidget):
         self._cost_breakdown = breakdown or None
         self._refresh_stats(self._latest_enriched)
 
+    def set_habitat_value(self, score):
+        """Store the Habitat Value Score (from ``habitat_score.compute_habitat_score``)
+        and refresh the Stats tab. ``score`` is the HabitatScore result, or None
+        (e.g. nothing placed / DB unavailable) — the value block then hides."""
+        self._habitat_value = score
+        self._refresh_stats(self._latest_enriched)
+
     def set_lawn_conversion(self, summary: dict | None):
         """Store the lawn-conversion zone summary (from
         ``lawn_zones.conversion_summary``) and refresh the Stats tab."""
         self._lawn_conversion = summary or None
         self._refresh_stats(self._latest_enriched)
+
+    def _value_block_html(self) -> str:
+        """The habitat-value half of value-vs-price (F11, P6): what the design is
+        worth, shown directly above the cost so the two read together."""
+        sc = self._habitat_value
+        if not sc:
+            return ""
+        total = int(round(getattr(sc, "total", 0) or 0))
+        grade = getattr(sc, "grade", "") or ""
+        head = f"{total}/100" + (f" ({grade})" if grade else "")
+        bits = []
+        ns, n = getattr(sc, "native_species", 0), getattr(sc, "n_species", 0)
+        if n:
+            bits.append(f"{ns} of {n} plants native")
+        fbt = getattr(sc, "fauna_by_taxon", None)
+        if fbt:
+            n_wild = sum(fbt.values())
+            if n_wild:
+                bits.append(f"{n_wild} wildlife species supported")
+        host = getattr(sc, "host_species", None) or []
+        if host:
+            bits.append(f"{len(host)} caterpillar host plants")
+        parts = [f"<p><b>Habitat value</b><br>{head}"]
+        if bits:
+            parts.append("<br><span style='color:#90a4ae;font-size:10px;'>"
+                         + ", ".join(bits) + "</span>")
+        parts.append("</p>")
+        return "".join(parts)
 
     def _lawn_block_html(self) -> str:
         s = self._lawn_conversion
@@ -274,11 +312,12 @@ class OnThisDesignPanel(QWidget):
         return "".join(parts)
 
     def _refresh_stats(self, enriched: list[dict]):
+        value_html = self._value_block_html()
         cost_html = self._cost_block_html()
         lawn_html = self._lawn_block_html()
         if not enriched:
             body = "<i style='color:#78909c;'>Nothing placed yet.</i>"
-            self._stats_text.setHtml(body + lawn_html + cost_html)
+            self._stats_text.setHtml(body + lawn_html + value_html + cost_html)
             return
         from src.db.plants import get_plant
         total = len(enriched)
@@ -349,5 +388,6 @@ class OnThisDesignPanel(QWidget):
             )
             rows.append("</p>")
         rows.append(lawn_html)
+        rows.append(value_html)
         rows.append(cost_html)
         self._stats_text.setHtml("".join(rows))

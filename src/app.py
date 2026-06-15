@@ -2029,6 +2029,15 @@ class MainWindow(QMainWindow):
             self.on_this_design.set_lawn_conversion(
                 conversion_summary(self._project.get("features", []))
             )
+            # Habitat value on the Stats tab (F11) — what the design is worth,
+            # shown beside the cost. Computed here so it stays live with edits.
+            try:
+                from src.habitat_score import compute_habitat_score
+                self.on_this_design.set_habitat_value(
+                    compute_habitat_score(enriched, structs)
+                )
+            except Exception:  # noqa: BLE001 — value is a nicety, never break sync
+                self.on_this_design.set_habitat_value(None)
         except Exception:
             pass
 

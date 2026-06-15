@@ -734,9 +734,8 @@ class AnalysisPanel(QWidget):
         self._value_vs_price.setWordWrap(True)
         self._value_vs_price.setVisible(False)
         self._value_vs_price.setStyleSheet(
-            "color: #c8e6c9; font-size: 11px; padding: 8px; "
-            "background: #14241a; border: 1px solid #2e4a2e; border-radius: 4px; "
-            "font-family: 'Consolas', 'Courier New', monospace;"
+            "color: #c8e6c9; font-size: 12px; padding: 8px; "
+            "background: #14241a; border: 1px solid #2e4a2e; border-radius: 4px;"
         )
         layout.addWidget(self._value_vs_price)
 
@@ -891,14 +890,15 @@ class AnalysisPanel(QWidget):
             if not (bd and bd.get("total")):
                 bd = design_cost(self._placed_plants, self._structures)
             cost_low, cost_high = bd["total"]
-            highlights = [f"{result.native_species}/{result.n_species} native"]
+            highlights = [
+                f"{result.native_species} of {result.n_species} plants native"]
             if getattr(result, "fauna_by_taxon", None):
                 n_wild = sum(result.fauna_by_taxon.values())
                 if n_wild:
                     highlights.append(f"{n_wild} wildlife species supported")
             if len(result.host_species):
                 highlights.append(
-                    f"{len(result.host_species)} caterpillar-host plants")
+                    f"{len(result.host_species)} caterpillar host plants")
             self._value_vs_price.setText("\n".join(value_vs_price_lines(
                 result.total, result.grade, cost_low, cost_high,
                 highlights=highlights[:3])))

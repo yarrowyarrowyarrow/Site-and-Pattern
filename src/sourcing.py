@@ -243,9 +243,8 @@ def design_cost(plants, structures=None, mulch_area_m2: float = 0.0,
 # itself be a "conventional value metric."
 
 VALUE_VS_PRICE_NOTE = (
-    "A native design's ecological value — pollinators, bird food, cleaner water, "
-    "cooler air — isn't captured by its price. The same area as lawn costs less "
-    "and gives back almost none of it."
+    "The price tag misses most of what native habitat is worth. A lawn this size "
+    "would cost less and do almost nothing for wildlife."
 )
 
 
@@ -257,16 +256,15 @@ def value_vs_price_lines(habitat_total, habitat_grade, cost_low, cost_high,
     ``habitat_total`` is the 0–100 Habitat Value Score, ``habitat_grade`` its
     label (e.g. "Foundation laid"), ``cost_low``/``cost_high`` the design's cost
     range, and ``highlights`` an optional list of short ecological wins
-    (e.g. "12 wildlife species", "5 caterpillar-host plants"). Returns display
-    lines; the caller styles them and pairs them with ``VALUE_VS_PRICE_NOTE``."""
-    creates = f"Creates   Habitat Value {int(round(habitat_total))}/100"
-    if habitat_grade:
-        creates += f"  ·  {habitat_grade}"
-    lines = [creates]
-    if highlights:
-        lines.append("          " + "  ·  ".join(h for h in highlights if h))
+    (e.g. "54 wildlife species supported"). Returns plain display lines; the
+    caller styles them and pairs them with ``VALUE_VS_PRICE_NOTE``."""
+    grade = f" ({habitat_grade})" if habitat_grade else ""
+    lines = [f"Creates habitat value {int(round(habitat_total))}/100{grade}."]
+    detail = ", ".join(h for h in (highlights or []) if h)
+    if detail:
+        lines.append(detail + ".")
     if cost_high and cost_high > 0:
         lines.append(
-            f"Costs     {format_cost(cost_low, cost_high)}  ·  one-time "
-            f"(plants + structures, AB retail estimate)")
+            f"Costs {format_cost(cost_low, cost_high)} to plant, one-time "
+            f"(plants and structures).")
     return lines
