@@ -329,7 +329,7 @@ class ScanImportDialog(QDialog):
         if backdrop_feat is not None:
             m.statusBar().showMessage(
                 "Yard scan added as a photoreal 3D backdrop. Open View → 3D "
-                "Preview, then click “Bake yard photo” to add the map layer."
+                "Preview, then click “Add yard photo to map” to add the map layer."
                 + (f" ({n_foot} footprint(s) too.)" if n_foot else ""), 9000)
         else:
             m.statusBar().showMessage(

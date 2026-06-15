@@ -91,7 +91,7 @@ class Scene3DWindow(QWidget):
 
         # Bake the loaded Gaussian-splat backdrop to a top-down "yard photo"
         # for the 2D map (V1.65). Enabled only when the project has a splat.
-        self._bake_btn = QPushButton("📷 Bake yard photo")
+        self._bake_btn = QPushButton("📷 Add yard photo to map")
         self._bake_btn.setToolTip(
             "Render the photoreal scan straight down and add it to the 2D map "
             "as a personal satellite layer")
