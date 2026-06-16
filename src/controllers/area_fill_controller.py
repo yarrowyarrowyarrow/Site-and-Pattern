@@ -18,9 +18,6 @@ class AreaFillController:
     def __init__(self, main):
         self._main = main
 
-    # Ground-layer plant types that act as the connective matrix (F22, P2).
-    _GROUND_TYPES = frozenset({"groundcover", "grass", "sedge", "rush", "fern"})
-
     def fill(self, ring, member_specs, spacing_m: float,
              poly_name: str = "", jitter: float = 0.0, rng=None,
              matrix: bool = False) -> int:
@@ -49,26 +46,36 @@ class AreaFillController:
                 + ". Fine-tune by dragging or deleting.", 5000)
         return n
 
-    def _plant_type_for(self, pid) -> str:
+    def _typed_member(self, pid, weight=1.0, layer_bucket=None) -> dict:
+        """Build a planting_spacing record for a plant id (type + spread habit +
+        canopy), for the layered fill engine."""
+        rec = {}
         try:
-            return (self._main._plant_info(pid)[1] or "").lower()
+            from src.db.plants import get_plant
+            rec = get_plant(int(pid)) or {}
         except Exception:  # noqa: BLE001
-            return ""
+            rec = {}
+        tm = {
+            "plant_id": int(pid),
+            "plant_type": rec.get("plant_type") or "",
+            "spread_habit": rec.get("spread_habit") or "",
+            "mature_canopy_m": rec.get("mature_canopy_m"),
+            "weight": float(weight or 1.0),
+        }
+        if layer_bucket:
+            tm["layer_bucket"] = layer_bucket
+        return tm
 
     def _matrix_records(self, ring, member_specs, spacing_m, jitter, rng):
-        """Matrix-planting records from member specs: auto-pick the ground-layer
-        species as the matrix, the rest as features. Returns records, or None when
-        there's no usable matrix/feature split (caller falls back to even fill)."""
-        if len(member_specs) < 2:
+        """Per-type, spread-aware matrix fill from a plant mix: each layer at its
+        own spacing (trees widest … groundcover knitting the rest), driven by the
+        base spacing spinner (F22/F35). Returns records, or None when empty."""
+        if not member_specs:
             return None
-        matrix_keys, feature_keys = [], []
-        for pid, _w in member_specs:
-            (matrix_keys if self._plant_type_for(pid) in self._GROUND_TYPES
-             else feature_keys).append(pid)
-        if not matrix_keys or not feature_keys:
-            return None
-        return area_fill.plan_matrix_fill(ring, matrix_keys, feature_keys,
-                                          spacing_m, jitter=jitter, rng=rng)
+        from src import planting_spacing
+        typed = [self._typed_member(pid, w) for pid, w in member_specs]
+        return planting_spacing.layered_fill_plan(
+            ring, typed, spacing_m, rng=rng, jitter=jitter or 0.6)
 
     def _place_plant_records(self, records, *, poly_name: str = "") -> int:
         """Place ``(plant_id, lat, lng)`` records as plants through the single
@@ -114,52 +121,40 @@ class AreaFillController:
         main._sync_planning_panel()
         return len(batch)
 
-    def _is_ground_member(self, m) -> bool:
-        """A community member that belongs to the connective ground matrix —
-        its vegetation ``layer`` is groundcover, or its plant type is a ground
-        type (grass / sedge / groundcover / …)."""
-        if (m.get("layer") or "").lower() == "groundcover":
-            return True
-        try:
-            pid = int(m["plant_id"])
-        except Exception:  # noqa: BLE001
-            return False
-        return self._plant_type_for(pid) in self._GROUND_TYPES
-
     def _fill_community_matrix(self, ring, polyculture, spacing_m, rng):
-        """Matrix-plant a community: its groundcover-layer members knit the ground
-        while the taller members scatter through it as accents (instead of stamping
-        whole units). Returns the plant count, or None when the community has no
-        ground layer (the caller then falls back to unit stamping)."""
+        """Matrix-plant a community via the layered engine: each member placed by
+        its vegetation layer at the right spacing — groundcover knits the ground
+        while taller members stand distinct (instead of stamping whole units).
+        Returns the plant count, or None when the community has no ground layer to
+        knit with (the caller then falls back to unit stamping)."""
+        from src import planting_spacing
         members = (polyculture or {}).get("members") or []
-        matrix_keys, feature_keys, spacings = [], [], []
+        typed, ground_sps = [], []
         for m in members:
             try:
                 pid = int(m["plant_id"])
             except Exception:  # noqa: BLE001
                 continue
-            if self._is_ground_member(m):
-                matrix_keys.append(pid)
-                try:
-                    spacings.append(float(self._main._plant_info(pid)[0] or 0))
-                except Exception:  # noqa: BLE001
-                    pass
-            else:
-                feature_keys.append(pid)
-        if not matrix_keys or not feature_keys:
+            bucket = planting_spacing.bucket_for_member(m)
+            typed.append(self._typed_member(pid, m.get("weight") or 1.0,
+                                            layer_bucket=bucket))
+            if bucket == "ground":
+                ground_sps.append(float(m.get("spacing_m") or 0))
+        has_ground = any(t.get("layer_bucket") == "ground" for t in typed)
+        has_taller = any(t.get("layer_bucket") != "ground" for t in typed)
+        if not typed or not (has_ground and has_taller):
             return None
-        # Plant-level spacing from the matrix members (denser than the unit cell
+        # Base = the groundcover members' real spacing (denser than the unit cell
         # spacing the spinner provides), clamped to a sensible band.
-        sp_vals = [s for s in spacings if s > 0]
-        sp = max(0.4, min(2.5, min(sp_vals) if sp_vals else 1.2))
-        records = area_fill.plan_matrix_fill(ring, matrix_keys, feature_keys, sp,
-                                             rng=rng)
+        gsp = [s for s in ground_sps if s > 0]
+        base = max(0.3, min(1.5, min(gsp) if gsp else 0.6))
+        records = planting_spacing.layered_fill_plan(ring, typed, base, rng=rng)
         n = self._place_plant_records(records, poly_name=polyculture.get("name", ""))
         if n:
             self._main.statusBar().showMessage(
                 f"Filled area — matrix planting of “{polyculture.get('name', '')}” "
-                f"({n} plants): ground layer knit together, taller plants scattered "
-                "through it.", 5000)
+                f"({n} plants): ground layer knit together, taller plants spaced "
+                "by type.", 5000)
         return n
 
     def fill_communities(self, ring, polyculture: dict, spacing_m: float,

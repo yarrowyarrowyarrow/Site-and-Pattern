@@ -398,10 +398,16 @@ class PolycultureGridCanvas(QWidget):
         return (px - cx) / s, (cy - py) / s
 
     def _hit_test(self, px: float, py: float) -> int | None:
+        s = self._scale()
         for idx in range(len(self._members) - 1, -1, -1):
             m = self._members[idx]
             mx, my = self._world_to_pixel(m["offset_x"], m["offset_y"])
-            if (px - mx) ** 2 + (py - my) ** 2 <= 12 ** 2:
+            # Match the painted canopy disc so the whole visible plant is
+            # grabbable. A fixed 12px only covered the tiny centre pip, so
+            # clicks on the disc missed and fell through to the "add" path —
+            # popping the "Pick a plant" modal instead of starting a drag.
+            r_px = max(8.0, (float(m.get("spacing_m") or 1.0) / 2.0) * s)
+            if (px - mx) ** 2 + (py - my) ** 2 <= r_px * r_px:
                 return idx
         return None
 
@@ -705,6 +711,14 @@ class PolycultureBuilderDialog(QDialog):
         self.count_label = QLabel("0 plants placed")
         self.count_label.setStyleSheet("color: #90a4ae; font-size: 11px;")
         centre_col.addWidget(self.count_label, 0, Qt.AlignmentFlag.AlignHCenter)
+
+        arrange_btn = QPushButton("Auto-arrange by layer")
+        arrange_btn.setToolTip(
+            "Place members by vegetation layer: tree(s) centred, shrubs ringed "
+            "around them, perennials in the next band, groundcover filling the "
+            "rest. Replaces the current positions; drag to fine-tune afterward.")
+        arrange_btn.clicked.connect(self._on_auto_arrange)
+        centre_col.addWidget(arrange_btn, 0, Qt.AlignmentFlag.AlignHCenter)
         body.addLayout(centre_col, 0)
 
         # Right — current members
@@ -882,6 +896,27 @@ class PolycultureBuilderDialog(QDialog):
     def _on_zoom_changed(self, value: int):
         self.canvas.setRadius(float(value))
         self._zoom_label.setText(self._zoom_label_text(float(value)))
+
+    def _on_auto_arrange(self):
+        """Lay the members out concentrically by layer (trees centred, shrubs
+        ringed, perennials then groundcover filling) — F22. Non-destructive: only
+        runs on click; the user can still drag afterward."""
+        from src import planting_spacing
+        members = self.canvas.get_members()
+        if not members:
+            return
+        arranged, radius = planting_spacing.arrange_concentric(members)
+        # Grow the visible canvas + zoom slider so the arrangement fits.
+        need = max(3.0, radius + 1.0)
+        if need > self.canvas.radius_m():
+            r = min(30.0, need)
+            self.canvas.setRadius(r)
+            self._zoom_slider.blockSignals(True)
+            self._zoom_slider.setValue(int(round(r)))
+            self._zoom_slider.blockSignals(False)
+            self._zoom_label.setText(self._zoom_label_text(r))
+        self.canvas.set_members(arranged)
+        self._refresh_member_list()
 
     def _load_existing(self, polyculture_id: int):
         rec = polycultures.get_polyculture_by_id(polyculture_id)
