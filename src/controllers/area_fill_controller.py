@@ -18,23 +18,66 @@ class AreaFillController:
     def __init__(self, main):
         self._main = main
 
+    # Ground-layer plant types that act as the connective matrix (F22, P2).
+    _GROUND_TYPES = frozenset({"groundcover", "grass", "sedge", "rush", "fern"})
+
     def fill(self, ring, member_specs, spacing_m: float,
-             poly_name: str = "", jitter: float = 0.0, rng=None) -> int:
+             poly_name: str = "", jitter: float = 0.0, rng=None,
+             matrix: bool = False) -> int:
         """Fill a polygon ``ring`` (``[lng, lat]`` pairs) with plants.
 
         ``member_specs`` is ``[(plant_id, weight), ...]`` — one entry for a single
-        species, or a community's members (equal weights by default). Returns the
-        number of plants placed. All placements share one group id so the fill
-        deletes as a unit."""
-        records = area_fill.plan_fill(ring, member_specs, spacing_m, jitter, rng)
+        species, or a community's members (equal weights by default). With
+        ``matrix=True`` the ground-layer species (grasses / groundcovers) become a
+        connective matrix and the taller species scatter through it (Rainer/West,
+        P2); with no ground-layer species it falls back to an even fill. Returns
+        the number of plants placed. All share one group id so the fill deletes as
+        a unit."""
+        member_specs = [(int(pid), float(w)) for pid, w in (member_specs or [])
+                        if pid is not None]
+        records = None
+        if matrix:
+            records = self._matrix_records(ring, member_specs, spacing_m, jitter, rng)
+        if records is None:
+            records = area_fill.plan_fill(ring, member_specs, spacing_m, jitter, rng)
+        n = self._place_plant_records(records, poly_name=poly_name)
+        if n:
+            self._main.statusBar().showMessage(
+                f"Filled area — placed {n} plants"
+                + (" as a matrix" if matrix and records is not None else "")
+                + (f" from “{poly_name}”" if poly_name else "")
+                + ". Fine-tune by dragging or deleting.", 5000)
+        return n
+
+    def _plant_type_for(self, pid) -> str:
+        try:
+            return (self._main._plant_info(pid)[1] or "").lower()
+        except Exception:  # noqa: BLE001
+            return ""
+
+    def _matrix_records(self, ring, member_specs, spacing_m, jitter, rng):
+        """Matrix-planting records from member specs: auto-pick the ground-layer
+        species as the matrix, the rest as features. Returns records, or None when
+        there's no usable matrix/feature split (caller falls back to even fill)."""
+        if len(member_specs) < 2:
+            return None
+        matrix_keys, feature_keys = [], []
+        for pid, _w in member_specs:
+            (matrix_keys if self._plant_type_for(pid) in self._GROUND_TYPES
+             else feature_keys).append(pid)
+        if not matrix_keys or not feature_keys:
+            return None
+        return area_fill.plan_matrix_fill(ring, matrix_keys, feature_keys,
+                                          spacing_m, jitter=jitter, rng=rng)
+
+    def _place_plant_records(self, records, *, poly_name: str = "") -> int:
+        """Place ``(plant_id, lat, lng)`` records as plants through the single
+        write path, under one shared placement group. Returns the count."""
         if not records:
             return 0
-
         main = self._main
         import src.project as project_io
         group_id = project_io.new_placement_group_id()
-
-        # Resolve names once per distinct plant_id.
         name_cache: dict = {}
 
         def _name(pid):
@@ -53,7 +96,7 @@ class AreaFillController:
             try:
                 spacing, plant_type, _ = main._plant_info(pid)
             except Exception:
-                spacing, plant_type = spacing_m, None
+                spacing, plant_type = 1.0, None
             community_id = project_io.community_id_for(lat, lng)
             main.map_widget.place_plant_marker(
                 pid, name, lat, lng, spacing_m=spacing, plant_type=plant_type,
@@ -69,17 +112,66 @@ class AreaFillController:
             pass
         main._mark_modified()
         main._sync_planning_panel()
-        main.statusBar().showMessage(
-            f"Filled area — placed {len(batch)} plants"
-            + (f" from “{poly_name}”" if poly_name else "")
-            + ". Fine-tune by dragging or deleting.", 5000)
         return len(batch)
 
+    def _is_ground_member(self, m) -> bool:
+        """A community member that belongs to the connective ground matrix —
+        its vegetation ``layer`` is groundcover, or its plant type is a ground
+        type (grass / sedge / groundcover / …)."""
+        if (m.get("layer") or "").lower() == "groundcover":
+            return True
+        try:
+            pid = int(m["plant_id"])
+        except Exception:  # noqa: BLE001
+            return False
+        return self._plant_type_for(pid) in self._GROUND_TYPES
+
+    def _fill_community_matrix(self, ring, polyculture, spacing_m, rng):
+        """Matrix-plant a community: its groundcover-layer members knit the ground
+        while the taller members scatter through it as accents (instead of stamping
+        whole units). Returns the plant count, or None when the community has no
+        ground layer (the caller then falls back to unit stamping)."""
+        members = (polyculture or {}).get("members") or []
+        matrix_keys, feature_keys, spacings = [], [], []
+        for m in members:
+            try:
+                pid = int(m["plant_id"])
+            except Exception:  # noqa: BLE001
+                continue
+            if self._is_ground_member(m):
+                matrix_keys.append(pid)
+                try:
+                    spacings.append(float(self._main._plant_info(pid)[0] or 0))
+                except Exception:  # noqa: BLE001
+                    pass
+            else:
+                feature_keys.append(pid)
+        if not matrix_keys or not feature_keys:
+            return None
+        # Plant-level spacing from the matrix members (denser than the unit cell
+        # spacing the spinner provides), clamped to a sensible band.
+        sp_vals = [s for s in spacings if s > 0]
+        sp = max(0.4, min(2.5, min(sp_vals) if sp_vals else 1.2))
+        records = area_fill.plan_matrix_fill(ring, matrix_keys, feature_keys, sp,
+                                             rng=rng)
+        n = self._place_plant_records(records, poly_name=polyculture.get("name", ""))
+        if n:
+            self._main.statusBar().showMessage(
+                f"Filled area — matrix planting of “{polyculture.get('name', '')}” "
+                f"({n} plants): ground layer knit together, taller plants scattered "
+                "through it.", 5000)
+        return n
+
     def fill_communities(self, ring, polyculture: dict, spacing_m: float,
-                         rng=None) -> int:
+                         rng=None, matrix: bool = False) -> int:
         """Fill a polygon with whole community UNITS — each anchor expands every
         member at its designed ``offset_x``/``offset_y``, exactly like a single
         community placement — rather than scattering individual member plants.
+
+        With ``matrix=True`` the community is instead dissolved into matrix
+        planting (groundcover layer knits the ground, taller layers scatter), per
+        :meth:`_fill_community_matrix`; it falls back to unit stamping when the
+        community has no ground layer.
 
         Anchors sit on a hex grid stepped by the community's natural footprint
         diameter plus ``spacing_m`` (the Communities tab's cell spacing, here the
@@ -91,6 +183,11 @@ class AreaFillController:
         members = (polyculture or {}).get("members") or []
         if not members:
             return 0
+        if matrix:
+            n = self._fill_community_matrix(ring, polyculture, spacing_m, rng)
+            if n is not None:
+                return n
+            # No ground layer to knit with — fall through to unit stamping.
         radius = community_natural_radius(polyculture)
         step = 2.0 * radius + max(0.0, float(spacing_m or 0.0))
         anchors = area_fill.fill_points(ring, step, 0.0, rng)

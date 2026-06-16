@@ -525,8 +525,9 @@
 
       if (pat.kind === 'row' && _patternAnchors.length === 1 && cursorLatLng) {
         var a = _patternAnchors[0];
-        positions = _rowPositions(a[0], a[1], cursorLatLng.lat, cursorLatLng.lng,
-                                  ref, overlap, pp.count);
+        var _rowFn = pp.drift ? _driftRowPositions : _rowPositions;
+        positions = _rowFn(a[0], a[1], cursorLatLng.lat, cursorLatLng.lng,
+                           ref, overlap, pp.count);
         framing = L.polyline([a, [cursorLatLng.lat, cursorLatLng.lng]],
                               { color: '#fdd835', weight: 2, dashArray: '4 4', opacity: 0.7 });
       } else if (pat.kind === 'grid' && _patternAnchors.length === 1 && cursorLatLng) {
@@ -594,7 +595,8 @@
       var a = _patternAnchors[0], b = _patternAnchors[1];
       var positions = [];
       if (pat.kind === 'row') {
-        positions = _rowPositions(a[0], a[1], b[0], b[1], ref, overlap, pp.count);
+        positions = (pp.drift ? _driftRowPositions : _rowPositions)(
+          a[0], a[1], b[0], b[1], ref, overlap, pp.count);
       } else if (pat.kind === 'grid') {
         positions = _gridPositions(a[0], a[1], b[0], b[1], ref, overlap,
                                    pp.rows, pp.cols, pp.stagger);
@@ -648,6 +650,41 @@
         positions.push([aLat + (bLat - aLat) * t, aLng + (bLng - aLng) * t]);
       }
       return positions;
+    }
+
+    // Naturalistic "drift": the A→B line becomes the long axis of a flowing,
+    // two-lane, gently-waving, jittered band — an organic sweep (Rainer/West
+    // designed-communities look) rather than a rigid straight row. Respects the
+    // same count as _rowPositions. Jitter is index-hashed (no Math.random) so a
+    // given A→B always yields the same drift — the hover preview matches the
+    // committed placement exactly.
+    function _driftRowPositions(latA, lngA, latB, lngB, spacingM, overlapFactor, count) {
+      var base = _rowPositions(latA, lngA, latB, lngB, spacingM, overlapFactor, count);
+      var n = base.length;
+      if (n <= 1) return base;
+      var s = _effectiveSpacing(spacingM, overlapFactor);
+      // East/north components (m) of the A→B axis and its unit perpendicular.
+      var axisE = _haversineM([latA, lngA], [latA, lngB]) * (lngB >= lngA ? 1 : -1);
+      var axisN = _haversineM([latA, lngA], [latB, lngA]) * (latB >= latA ? 1 : -1);
+      var len = Math.sqrt(axisE * axisE + axisN * axisN) || 1;
+      var uAxisE = axisE / len, uAxisN = axisN / len;
+      var perpE = -uAxisN, perpN = uAxisE;
+      var width = s * 1.4;                       // band ~1.4× spacing wide
+      var out = [];
+      for (var i = 0; i < n; i++) {
+        var p = base[i];
+        var t = (n > 1) ? i / (n - 1) : 0;
+        var hp = Math.sin(i * 12.9898) * 43758.5453; hp -= Math.floor(hp);
+        var ha = Math.sin(i * 78.233) * 43758.5453; ha -= Math.floor(ha);
+        var lane = (i % 2) ? 0.5 : -0.5;         // two staggered lanes
+        var wave = 0.45 * Math.sin(t * Math.PI * 2.2);   // gentle S across band
+        var perp = width * (lane + wave) + width * 0.5 * (hp - 0.5);
+        var along = s * 0.45 * (ha - 0.5);       // small along-axis jitter
+        var east = perpE * perp + uAxisE * along;
+        var north = perpN * perp + uAxisN * along;
+        out.push([p[0] + _metersToLat(north), p[1] + _metersToLng(east, p[0])]);
+      }
+      return out;
     }
 
     // Grid filling the rectangle whose corners are (latA,lngA) and (latB,lngB).

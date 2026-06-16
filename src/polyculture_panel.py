@@ -926,7 +926,7 @@ class PolycultureBuilderDialog(QDialog):
 
 class PolyculturePanel(QWidget):
     placePolycultureRequested = pyqtSignal(dict)  # polyculture data with members
-    fillAreaRequested = pyqtSignal(int, float)    # polyculture_id, cell spacing (m)
+    fillAreaRequested = pyqtSignal(int, float, bool)  # polyculture_id, cell spacing (m), matrix (F22)
     fillCommunityMixRequested = pyqtSignal(object, float)  # [{id,weight,name,polyculture}], spacing
     # Emitted when the panel creates a brand-new community (e.g. via
     # "Save stack as Community" from the Plants tab), so external views
@@ -1841,9 +1841,12 @@ class PolyculturePanel(QWidget):
         kind = pattern["kind"]
         if kind == "fill":
             # Draw-an-area fill: whole community units scattered inside the
-            # polygon (app enters fill-draw mode on this signal).
-            self.fillAreaRequested.emit(int(polyculture_id),
-                                        self.placement_widget.fill_spacing())
+            # polygon (app enters fill-draw mode on this signal). With Matrix
+            # planting ticked, the community dissolves into a groundcover matrix
+            # with taller members scattered through it (F22).
+            self.fillAreaRequested.emit(
+                int(polyculture_id), self.placement_widget.fill_spacing(),
+                bool((pattern.get("params") or {}).get("matrix")))
             return
         if kind != "single":
             spacing = float(self.pattern_spacing.value() or 4.0)

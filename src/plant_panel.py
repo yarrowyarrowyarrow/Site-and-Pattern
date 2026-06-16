@@ -98,7 +98,7 @@ class PlantPanel(QWidget):
     # quantity spinner value (used when pattern["kind"]=="single"); the
     # fourth is the pattern descriptor — see MapWidget.set_mode docstring.
     place_plant_requested = pyqtSignal(int, str, int, dict)   # plant_id, common_name, quantity, pattern
-    fill_area_requested = pyqtSignal(object, float, str)       # members [(pid,weight)], spacing_m, name (F3)
+    fill_area_requested = pyqtSignal(object, float, str, bool)  # members [(pid,weight)], spacing_m, name, matrix (F3/F22)
     color_changed = pyqtSignal(int, str)                       # plant_id, hex_color
     # Emitted when "Save as Plant Community" creates a new community from
     # the stack, so the Communities tab can refresh its library list.
@@ -1191,7 +1191,8 @@ class PlantPanel(QWidget):
             if not members:
                 return
             self.fill_area_requested.emit(
-                members, self._placement.fill_spacing(), name)
+                members, self._placement.fill_spacing(), name,
+                bool((pattern.get("params") or {}).get("matrix")))
             return
         if not self._selected_plant:
             return

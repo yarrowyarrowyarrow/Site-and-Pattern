@@ -166,12 +166,14 @@ class PlacementControlsWidget(QWidget):
         sl.addWidget(single_hint)
         self._stack.addWidget(single_panel)
 
-        # Row — count input.
+        # Row — count input + optional naturalistic drift.
         row_panel = QWidget()
-        rl = QHBoxLayout(row_panel)
+        rl = QVBoxLayout(row_panel)
         rl.setContentsMargins(0, 0, 0, 0)
         rl.setSpacing(4)
-        rl.addWidget(_small_label("Count:"))
+        row_count_line = QHBoxLayout()
+        row_count_line.setSpacing(4)
+        row_count_line.addWidget(_small_label("Count:"))
         self._row_count = QSpinBox()
         self._row_count.setRange(0, 200)
         self._row_count.setValue(0)
@@ -179,8 +181,17 @@ class PlacementControlsWidget(QWidget):
         self._row_count.setToolTip("0 = auto from spacing; otherwise force this many items")
         self._row_count.setStyleSheet(_QTY_SPIN_STYLE)
         self._row_count.setFixedWidth(80)
-        rl.addWidget(self._row_count)
-        rl.addStretch()
+        row_count_line.addWidget(self._row_count)
+        row_count_line.addStretch()
+        rl.addLayout(row_count_line)
+        self._row_drift = QCheckBox("Drift — natural sweep, not a straight line")
+        self._row_drift.setToolTip(
+            "Lay the group out as a flowing, organic drift along the line you "
+            "draw (Rainer/West 'designed communities' style) rather than an even "
+            "straight row — the most natural look for grasses and forbs."
+        )
+        self._row_drift.setStyleSheet("color: #a5d6a7; font-size: 11px;")
+        rl.addWidget(self._row_drift)
         self._stack.addWidget(row_panel)
 
         # Grid — rows × cols + stagger.
@@ -237,12 +248,14 @@ class PlacementControlsWidget(QWidget):
         cl.addStretch()
         self._stack.addWidget(circle_panel)
 
-        # Fill Area — spacing of the scattered items (draw the polygon on the map).
+        # Fill Area — spacing of the scattered items + optional matrix planting.
         fill_panel = QWidget()
-        fl = QHBoxLayout(fill_panel)
+        fl = QVBoxLayout(fill_panel)
         fl.setContentsMargins(0, 0, 0, 0)
         fl.setSpacing(4)
-        fl.addWidget(_small_label("Spacing:"))
+        fill_spacing_line = QHBoxLayout()
+        fill_spacing_line.setSpacing(4)
+        fill_spacing_line.addWidget(_small_label("Spacing:"))
         self._fill_spacing = QDoubleSpinBox()
         self._fill_spacing.setRange(0.3, 20.0)
         self._fill_spacing.setSingleStep(0.5)
@@ -254,9 +267,21 @@ class PlacementControlsWidget(QWidget):
             "(or community mix) this is the gap between whole community units."
         )
         self._fill_spacing.setStyleSheet(_QTY_SPIN_STYLE)
-        fl.addWidget(self._fill_spacing)
-        fl.addWidget(_small_label("Click Place, then draw the area."))
-        fl.addStretch()
+        fill_spacing_line.addWidget(self._fill_spacing)
+        fill_spacing_line.addWidget(_small_label("Click Place, then draw the area."))
+        fill_spacing_line.addStretch()
+        fl.addLayout(fill_spacing_line)
+        self._fill_matrix = QCheckBox(
+            "Matrix planting — ground layer knits, taller plants stand out")
+        self._fill_matrix.setToolTip(
+            "Rainer/West matrix planting: the ground-layer species (grasses / "
+            "groundcovers) fill the area as a connective matrix while the taller "
+            "feature plants are scattered through it. For a community, its "
+            "groundcover-layer members are the matrix; for a plant mix the "
+            "ground-layer species are picked automatically."
+        )
+        self._fill_matrix.setStyleSheet("color: #a5d6a7; font-size: 11px;")
+        fl.addWidget(self._fill_matrix)
         self._stack.addWidget(fill_panel)
 
         # ── Overlap / gap slider (applies to all multi modes) ─────────
@@ -327,6 +352,7 @@ class PlacementControlsWidget(QWidget):
                 "count": self._row_count.value() or None,
                 "overlap": overlap,
                 "use_canopy": use_canopy,
+                "drift": self._row_drift.isChecked(),
             }
         elif kind == "grid":
             params = {
@@ -344,7 +370,10 @@ class PlacementControlsWidget(QWidget):
                 "use_canopy": use_canopy,
             }
         elif kind == "fill":
-            params = {"spacing": float(self._fill_spacing.value())}
+            params = {
+                "spacing": float(self._fill_spacing.value()),
+                "matrix": self._fill_matrix.isChecked(),
+            }
         else:
             return {"kind": "single", "params": {}}
         return {"kind": kind, "params": params}

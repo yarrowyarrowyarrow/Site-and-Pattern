@@ -1117,11 +1117,11 @@ class MainWindow(QMainWindow):
 
     # ── Draw-then-fill plant placement (F3) ──────────────────────────────────
 
-    def _start_fill(self, members, spacing_m, name):
+    def _start_fill(self, members, spacing_m, name, matrix=False):
         """Arm a draw-then-fill: stash the spec, then enter the map 'fill' mode so
         the user draws the polygon to scatter ``members`` (each ``(plant_id,
         weight)``) inside. Shared by the Plants tab (single plant / current mix)
-        and the Plant Communities tab."""
+        and the Plant Communities tab. ``matrix`` requests matrix planting (F22)."""
         members = [(int(pid), float(w)) for pid, w in (members or [])
                    if pid is not None]
         if not members:
@@ -1132,14 +1132,16 @@ class MainWindow(QMainWindow):
             return
         self._pending_fill = {"members": members,
                               "spacing": float(spacing_m or 4.0),
-                              "name": name or ""}
+                              "name": name or "",
+                              "matrix": bool(matrix)}
         self._mode._enter_fill_mode()
 
-    def _on_plants_fill_requested(self, members, spacing_m, name):
+    def _on_plants_fill_requested(self, members, spacing_m, name, matrix=False):
         """Plants tab → fill an area with the current mix or selected plant."""
-        self._start_fill(members, spacing_m, name)
+        self._start_fill(members, spacing_m, name, matrix)
 
-    def _on_community_fill_requested(self, poly_id: int, spacing_m: float):
+    def _on_community_fill_requested(self, poly_id: int, spacing_m: float,
+                                     matrix=False):
         """Plant Communities tab → fill an area with whole community UNITS (each
         anchor expands the members at their designed offsets), not a scatter of
         the individual member plants."""
@@ -1150,7 +1152,8 @@ class MainWindow(QMainWindow):
                                     "That community has no members to place.")
             return
         self._pending_fill = {"kind": "community", "polyculture": pc,
-                              "spacing": float(spacing_m or 0.0)}
+                              "spacing": float(spacing_m or 0.0),
+                              "matrix": bool(matrix)}
         self._mode._enter_fill_mode()
 
     def _on_community_mix_fill_requested(self, communities, spacing_m: float):
@@ -1179,9 +1182,10 @@ class MainWindow(QMainWindow):
         # JS sends [lat, lng] pairs; area_fill rings are [lng, lat] (GeoJSON).
         ring = [[p[1], p[0]] for p in pts]
         kind = spec.get("kind")
+        matrix = bool(spec.get("matrix"))
         if kind == "community":
             n = self._area_fill.fill_communities(ring, spec["polyculture"],
-                                                 spec["spacing"])
+                                                 spec["spacing"], matrix=matrix)
             what = "communities"
         elif kind == "community_mix":
             n = self._area_fill.fill_community_mix(ring, spec["communities"],
@@ -1189,7 +1193,7 @@ class MainWindow(QMainWindow):
             what = "community units"
         else:
             n = self._area_fill.fill(ring, spec["members"], spec["spacing"],
-                                     poly_name=spec["name"])
+                                     poly_name=spec["name"], matrix=matrix)
             what = "plants"
         if n == 0:
             QMessageBox.information(
