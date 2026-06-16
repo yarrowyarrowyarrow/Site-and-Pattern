@@ -12,7 +12,9 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.area_fill import fill_points, assign_members, plan_fill  # noqa: E402
+from src.area_fill import (  # noqa: E402
+    fill_points, assign_members, plan_fill, matrix_members, plan_matrix_fill,
+)
 
 # A ~30 m square near Edmonton, as a GeoJSON [lng, lat] ring (unclosed is fine
 # for the ray-cast). 30 m ≈ 0.00027° lat; lng scaled by cos(53.5°)≈0.595.
@@ -92,6 +94,32 @@ class TestPlanFill(unittest.TestCase):
         from collections import Counter
         c = Counter(k for k, _, _ in out)
         self.assertGreater(c["fescue"], c["oak"])
+
+
+class TestMatrix(unittest.TestCase):
+    def test_matrix_members_weighting(self):
+        m = matrix_members("fescue", ["aster", "bergamot"], matrix_share=0.6)
+        self.assertEqual(m[0], ("fescue", 0.6))
+        # features split the remaining 0.4 evenly
+        self.assertAlmostEqual(m[1][1], 0.2)
+        self.assertAlmostEqual(m[2][1], 0.2)
+        # the matrix key is never duplicated into the feature list
+        m2 = matrix_members("fescue", ["fescue", "aster"], matrix_share=0.7)
+        self.assertEqual([k for k, _ in m2], ["fescue", "aster"])
+
+    def test_matrix_share_clamped(self):
+        self.assertEqual(matrix_members("g", ["a"], matrix_share=5.0)[0][1], 0.95)
+        self.assertEqual(matrix_members("g", ["a"], matrix_share=0.0)[0][1], 0.1)
+
+    def test_matrix_fill_is_matrix_dominant(self):
+        out = plan_matrix_fill(_RING, "fescue", ["aster", "bergamot"],
+                               spacing_m=4.0, matrix_share=0.7)
+        self.assertGreater(len(out), 0)
+        from collections import Counter
+        c = Counter(k for k, _, _ in out)
+        # the matrix species covers more ground than any single feature
+        self.assertGreater(c["fescue"], c["aster"])
+        self.assertGreater(c["fescue"], c["bergamot"])
 
 
 class TestAreaFillController(unittest.TestCase):

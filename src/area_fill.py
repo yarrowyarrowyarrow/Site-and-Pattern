@@ -100,3 +100,33 @@ def plan_fill(ring, members, spacing_m: float, jitter: float = 0.0, rng=None) ->
     ``[(key, lat, lng), ...]``. ``members`` may be a single ``(key, weight)``
     list or, for a single species, ``[(plant_id, 1)]``."""
     return assign_members(fill_points(ring, spacing_m, jitter, rng), members)
+
+
+# ── Matrix planting (F22, P2) ────────────────────────────────────────────────
+#
+# Rainer/West "designed plant communities": rather than an even mix, one
+# ground-layer *matrix* species knits the planting together while the feature
+# species thread through it as scattered accents. Expressed here as a weighting
+# over the existing fill machinery, so the repulsion optimiser in assign_members
+# spreads each feature's individuals through the matrix instead of clumping them.
+
+def matrix_members(matrix_key, feature_keys, matrix_share: float = 0.65) -> list:
+    """Weight members for matrix planting: ``matrix_key`` covers ~``matrix_share``
+    of the area; the ``feature_keys`` split the remainder evenly. Returns
+    ``[(key, weight), …]`` ready for :func:`plan_fill` / :func:`assign_members`."""
+    share = min(max(float(matrix_share), 0.1), 0.95)
+    members = [(matrix_key, share)]
+    feats = [k for k in (feature_keys or []) if k != matrix_key]
+    if feats:
+        each = (1.0 - share) / len(feats)
+        members += [(k, each) for k in feats]
+    return members
+
+
+def plan_matrix_fill(ring, matrix_key, feature_keys, spacing_m: float, *,
+                     matrix_share: float = 0.65, jitter: float = 0.0,
+                     rng=None) -> list:
+    """Matrix-planting fill of a polygon (see :func:`matrix_members`). A
+    convenience wrapper over :func:`plan_fill`. Returns ``[(key, lat, lng), …]``."""
+    return plan_fill(ring, matrix_members(matrix_key, feature_keys, matrix_share),
+                     spacing_m, jitter, rng)
