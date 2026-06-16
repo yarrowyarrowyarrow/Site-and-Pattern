@@ -59,7 +59,6 @@ class AnalysisPanel(QWidget):
         super().__init__(parent)
         self._placed_plants: list[dict] = []
         self._structures: list[dict] = []
-        self._cost_breakdown: dict | None = None  # from sourcing.design_cost (F11)
         self._last_habitat_result = None          # for the species gallery re-render
         self._gallery_warmed: set[str] = set()    # image urls already fetched once
         self._build_ui()
@@ -742,52 +741,39 @@ class AnalysisPanel(QWidget):
         )
         layout.addWidget(self._habitat_score_label)
 
-        # Value vs. price (F11, P6) — what the spend *creates* beside what it
-        # *costs*, with the explicit note that price doesn't capture the value.
-        self._value_vs_price = QLabel("")
-        self._value_vs_price.setWordWrap(True)
-        self._value_vs_price.setVisible(False)
-        self._value_vs_price.setStyleSheet(
-            "color: #c8e6c9; font-size: 12px; padding: 8px; "
-            "background: #14241a; border: 1px solid #2e4a2e; border-radius: 4px;"
-        )
-        layout.addWidget(self._value_vs_price)
+        # Species galleries (F11 / I1) — photos that make the value tangible.
+        # "Species doing the work" = the plants (keystone / host / bird-food
+        # first); "Species supported" = the fauna those plants feed/host. Both
+        # show cached photos immediately and warm the rest in the background.
+        def _gallery_strip(title: str):
+            lbl = QLabel(title)
+            lbl.setStyleSheet(
+                "color: #a5d6a7; font-size: 12px; font-weight: bold; "
+                "padding: 4px 0 2px 0;")
+            lbl.setVisible(False)
+            area = QScrollArea()
+            area.setWidgetResizable(True)
+            area.setFrameShape(QFrame.Shape.NoFrame)
+            area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+            area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            area.setFixedHeight(122)
+            area.setVisible(False)
+            area.setStyleSheet(
+                "background: #14241a; border: 1px solid #2e4a2e; border-radius: 4px;")
+            inner = QWidget()
+            row = QHBoxLayout(inner)
+            row.setContentsMargins(6, 6, 6, 6)
+            row.setSpacing(8)
+            row.addStretch()   # keep cards left-aligned
+            area.setWidget(inner)
+            layout.addWidget(lbl)
+            layout.addWidget(area)
+            return lbl, area, row
 
-        self._value_vs_price_note = QLabel("")
-        self._value_vs_price_note.setWordWrap(True)
-        self._value_vs_price_note.setVisible(False)
-        self._value_vs_price_note.setStyleSheet(
-            "color: #80cbc4; font-size: 10px; font-style: italic; padding: 0 2px 4px 2px;")
-        layout.addWidget(self._value_vs_price_note)
-
-        # Species gallery (F11 / I1) — photos of the high-value species in the
-        # design (keystone / host / bird-food first) so the value is tangible,
-        # not just a number. Hidden until a scored design has species with
-        # cached photos; photos warm in the background and the strip re-renders.
-        self._species_gallery_label = QLabel("Species doing the work")
-        self._species_gallery_label.setStyleSheet(
-            "color: #a5d6a7; font-size: 12px; font-weight: bold; padding: 4px 0 2px 0;")
-        self._species_gallery_label.setVisible(False)
-        layout.addWidget(self._species_gallery_label)
-
-        self._species_gallery = QScrollArea()
-        self._species_gallery.setWidgetResizable(True)
-        self._species_gallery.setFrameShape(QFrame.Shape.NoFrame)
-        self._species_gallery.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self._species_gallery.setVerticalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._species_gallery.setFixedHeight(122)
-        self._species_gallery.setVisible(False)
-        self._species_gallery.setStyleSheet(
-            "background: #14241a; border: 1px solid #2e4a2e; border-radius: 4px;")
-        _gallery_inner = QWidget()
-        self._species_gallery_row = QHBoxLayout(_gallery_inner)
-        self._species_gallery_row.setContentsMargins(6, 6, 6, 6)
-        self._species_gallery_row.setSpacing(8)
-        self._species_gallery_row.addStretch()   # keep cards left-aligned
-        self._species_gallery.setWidget(_gallery_inner)
-        layout.addWidget(self._species_gallery)
+        (self._species_gallery_label, self._species_gallery,
+         self._species_gallery_row) = _gallery_strip("Species doing the work")
+        (self._fauna_gallery_label, self._fauna_gallery,
+         self._fauna_gallery_row) = _gallery_strip("Species supported")
         self.galleryImageReady.connect(self._on_gallery_image_ready)
 
         # Breakdown
@@ -882,13 +868,6 @@ class AnalysisPanel(QWidget):
         """Update the list of placed structures (from app.py)."""
         self._structures = structures
 
-    def set_cost_breakdown(self, breakdown: dict | None):
-        """Store the whole-design cost breakdown (from ``sourcing.design_cost``,
-        the same dict the 'On this design' Stats tab gets) so the Value-vs-price
-        framing (F11) reflects plants + structures + mulch. Falls back to a
-        plants+structures estimate when this hasn't been set."""
-        self._cost_breakdown = breakdown
-
     def _calc_habitat_score(self):
         # Scoring maths moved to src/habitat_score.py (Chunk 6) so the
         # headless scripting API and this panel share one implementation.
@@ -924,42 +903,15 @@ class AnalysisPanel(QWidget):
             "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px; padding: 12px;"
         )
 
-        # ── Value vs. price (F11, P6): what the spend creates beside what it ──
-        # costs, plus the note that price doesn't capture ecological value.
-        try:
-            from src.sourcing import (
-                design_cost, value_vs_price_lines, VALUE_VS_PRICE_NOTE,
-            )
-            bd = self._cost_breakdown
-            if not (bd and bd.get("total")):
-                bd = design_cost(self._placed_plants, self._structures)
-            cost_low, cost_high = bd["total"]
-            highlights = [
-                f"{result.native_species} of {result.n_species} plants native"]
-            if getattr(result, "fauna_by_taxon", None):
-                n_wild = sum(result.fauna_by_taxon.values())
-                if n_wild:
-                    highlights.append(f"{n_wild} wildlife species supported")
-            if len(result.host_species):
-                highlights.append(
-                    f"{len(result.host_species)} caterpillar host plants")
-            self._value_vs_price.setText("\n".join(value_vs_price_lines(
-                result.total, result.grade, cost_low, cost_high,
-                highlights=highlights[:3])))
-            self._value_vs_price.setVisible(True)
-            self._value_vs_price_note.setText(VALUE_VS_PRICE_NOTE)
-            self._value_vs_price_note.setVisible(True)
-        except Exception:  # noqa: BLE001 — framing is a nicety, never break the score
-            self._value_vs_price.setVisible(False)
-            self._value_vs_price_note.setVisible(False)
-
-        # Species photos that make the value tangible (F11 / I1).
+        # Species photos that make the value tangible (F11 / I1): the plants
+        # doing the work and the fauna they support.
         self._last_habitat_result = result
         try:
-            self._render_species_gallery(result)
-        except Exception:  # noqa: BLE001 — gallery is a nicety, never break the score
-            self._species_gallery_label.setVisible(False)
-            self._species_gallery.setVisible(False)
+            self._render_galleries(result)
+        except Exception:  # noqa: BLE001 — galleries are a nicety, never break the score
+            for w in (self._species_gallery_label, self._species_gallery,
+                      self._fauna_gallery_label, self._fauna_gallery):
+                w.setVisible(False)
 
         # Breakdown text — layout unchanged from the pre-extraction code;
         # values now come off the HabitatScore result.
@@ -1093,25 +1045,61 @@ class AnalysisPanel(QWidget):
         v.addWidget(cap)
         return card
 
-    def _render_species_gallery(self, result):
-        """Fill the gallery strip with cached species photos; warm the rest in
-        the background. Shows the strip only when at least one photo is ready."""
-        row = self._species_gallery_row
-        while row.count() > 1:                      # keep the trailing stretch
-            item = row.takeAt(0)
-            w = item.widget()
+    def _fauna_gallery_species(self, result) -> list:
+        """The fauna the design supports, deduped, limited to those with an image
+        URL. Returns ``(name, cached_path_or_None, url, attribution, license)``."""
+        from src.db.fauna import fauna_for_plants
+        from src.image_cache import get_cached_image
+        ids = list(getattr(result, "scored_plant_ids", None) or [])
+        if not ids:
+            return []
+        try:
+            rows = fauna_for_plants(ids)
+        except Exception:  # noqa: BLE001
+            return []
+        out: list = []
+        seen: set = set()
+        for f in rows:
+            nm = f.get("common_name")
+            url = f.get("image_url")
+            key = f.get("id") if f.get("id") is not None else nm
+            if not nm or not url or key in seen:
+                continue
+            seen.add(key)
+            out.append((nm, get_cached_image(url), url,
+                        f.get("image_attribution", ""), f.get("image_license", "")))
+        return out[:12]
+
+    def _fill_gallery(self, label, area, row, items) -> list:
+        """Fill one gallery strip: cached photos become cards now; the rest are
+        returned as ``(url, attr, lic)`` pending tuples to warm. Shows the strip
+        only when at least one photo is ready."""
+        while row.count() > 1:                       # keep the trailing stretch
+            it = row.takeAt(0)
+            w = it.widget()
             if w is not None:
                 w.deleteLater()
         pending: list = []
         shown = 0
-        for name, path, url, attr, lic in self._gallery_species(result):
+        for name, path, url, attr, lic in items:
             if path:
                 row.insertWidget(row.count() - 1, self._make_species_card(name, path))
                 shown += 1
             elif url and url not in self._gallery_warmed:
                 pending.append((url, attr, lic))
-        self._species_gallery_label.setVisible(shown > 0)
-        self._species_gallery.setVisible(shown > 0)
+        label.setVisible(shown > 0)
+        area.setVisible(shown > 0)
+        return pending
+
+    def _render_galleries(self, result):
+        """Render both photo strips (plants doing the work + fauna supported),
+        warming any not-yet-cached photos; the strips re-render as they land."""
+        pending = self._fill_gallery(
+            self._species_gallery_label, self._species_gallery,
+            self._species_gallery_row, self._gallery_species(result))
+        pending += self._fill_gallery(
+            self._fauna_gallery_label, self._fauna_gallery,
+            self._fauna_gallery_row, self._fauna_gallery_species(result))
         if pending:
             for url, _attr, _lic in pending:
                 self._gallery_warmed.add(url)
@@ -1142,7 +1130,7 @@ class AnalysisPanel(QWidget):
         res = self._last_habitat_result
         if res is not None:
             try:
-                self._render_species_gallery(res)
+                self._render_galleries(res)
             except Exception:  # noqa: BLE001
                 pass
 

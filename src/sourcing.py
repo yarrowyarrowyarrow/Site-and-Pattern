@@ -232,39 +232,3 @@ def design_cost(plants, structures=None, mulch_area_m2: float = 0.0,
     m = mulch_cost(mulch_area_m2)
     total = (round(p[0] + s[0] + m[0], 2), round(p[1] + s[1] + m[1], 2))
     return {"plants": p, "structures": s, "mulch": m, "total": total}
-
-
-# ── Value vs. price framing (F11) ────────────────────────────────────────────
-#
-# Design principle P6 (conventional value metrics miss ecological value) — see
-# docs/DESIGN_PHILOSOPHY.md. The point is to pair the *price* (a one-time cost
-# range) with the ecological *value* the spend creates, and to say plainly that
-# the value isn't captured by the price. Not an efficiency ratio — that would
-# itself be a "conventional value metric."
-
-VALUE_VS_PRICE_NOTE = (
-    "The price tag misses most of what native habitat is worth. A lawn this size "
-    "would cost less and do almost nothing for wildlife."
-)
-
-
-def value_vs_price_lines(habitat_total, habitat_grade, cost_low, cost_high,
-                         *, highlights=None) -> list[str]:
-    """Plain-text "what your spend creates" framing: the habitat value a design
-    creates set beside its one-time price (P6).
-
-    ``habitat_total`` is the 0–100 Habitat Value Score, ``habitat_grade`` its
-    label (e.g. "Foundation laid"), ``cost_low``/``cost_high`` the design's cost
-    range, and ``highlights`` an optional list of short ecological wins
-    (e.g. "54 wildlife species supported"). Returns plain display lines; the
-    caller styles them and pairs them with ``VALUE_VS_PRICE_NOTE``."""
-    grade = f" ({habitat_grade})" if habitat_grade else ""
-    lines = [f"Creates habitat value {int(round(habitat_total))}/100{grade}."]
-    detail = ", ".join(h for h in (highlights or []) if h)
-    if detail:
-        lines.append(detail + ".")
-    if cost_high and cost_high > 0:
-        lines.append(
-            f"Costs {format_cost(cost_low, cost_high)} to plant, one-time "
-            f"(plants and structures).")
-    return lines
