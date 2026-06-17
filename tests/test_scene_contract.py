@@ -121,8 +121,9 @@ class TestSceneBasics(unittest.TestCase):
         # year 0 = mature reference (full size); year 10 of 20 = half-grown.
         self.assertEqual(mature["scale_factor"], 1.0)
         self.assertEqual(young["scale_factor"], 0.5)
-        # No spread_habit on the fake plant → no colony widening.
+        # No spread_habit on the fake plant → no colony widening or spread.
         self.assertEqual(mature["spread_factor"], 1.0)
+        self.assertEqual(mature["spread_rate"], 0.0)
         self.assertEqual(mature["growth_curve"], "steady")
 
     def test_marker_color_wins_over_type_color(self):

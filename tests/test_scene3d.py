@@ -15,8 +15,8 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.scene3d import (  # noqa: E402
-    growth_scale_factor, spread_scale_factor, plant_3d_state,
-    placed_plants_3d_state,
+    growth_scale_factor, spread_scale_factor, spread_aggressiveness,
+    plant_3d_state, placed_plants_3d_state,
 )
 
 
@@ -91,6 +91,19 @@ class TestSpreadScaleFactor(unittest.TestCase):
         self.assertGreater(aggressive, slow)
 
 
+class TestSpreadAggressiveness(unittest.TestCase):
+    def test_year_independent_rate_by_habit(self):
+        # 0 for non-spreaders; rises with habit aggressiveness. The 3D viewer
+        # multiplies this by the year for continuous colony spread.
+        self.assertEqual(spread_aggressiveness(""), 0.0)
+        self.assertEqual(spread_aggressiveness("clumping"), 0.0)
+        self.assertGreater(spread_aggressiveness("slow_spreader"), 0.0)
+        self.assertGreater(spread_aggressiveness("self_seeding"),
+                           spread_aggressiveness("slow_spreader"))
+        self.assertGreater(spread_aggressiveness("aggressive_rhizomatous"),
+                           spread_aggressiveness("self_seeding"))
+
+
 class TestPlant3DState(unittest.TestCase):
     def test_spread_widens_canopy_not_height(self):
         # An aggressive spreader's footprint grows past its mature canopy over
@@ -106,6 +119,9 @@ class TestPlant3DState(unittest.TestCase):
         self.assertEqual(cl["spread_factor"], 1.0)
         self.assertGreater(sp["canopy_m"], cl["canopy_m"])
         self.assertAlmostEqual(sp["height_m"], cl["height_m"])  # spread ≠ height
+        # Year-independent aggressiveness rate for the 3D colony spread.
+        self.assertGreater(sp["spread_rate"], 0.0)
+        self.assertEqual(cl["spread_rate"], 0.0)
 
 
     def test_scales_height_and_canopy(self):

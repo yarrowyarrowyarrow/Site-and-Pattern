@@ -65,7 +65,7 @@ class Scene3DWindow(QWidget):
         self._elevation = None
         self._thread = None
         self._worker = None
-        self.setWindowTitle(f"{APP_NAME} — 3D Preview")
+        self.setWindowTitle(f"{APP_NAME}: 3D Preview")
         self.resize(960, 700)
 
         self.viewer = Map3DWidget(self)
@@ -86,8 +86,20 @@ class Scene3DWindow(QWidget):
         self._month.valueChanged.connect(self._on_controls_changed)
         self._hour.valueChanged.connect(self._on_controls_changed)
 
+        self._year.setToolTip("Watch the design grow — drag to a future year")
+        self._month.setToolTip("Season — shifts foliage colour and the sun")
+        self._hour.setToolTip("Time of day — drives the shadow-casting sun")
+
         refresh = QPushButton("Refresh from design")
+        refresh.setToolTip("Re-read the live project and rebuild the scene")
         refresh.clicked.connect(self.refresh)
+
+        # The camera now stays put while the sliders move; this re-centers it.
+        reset_view = QPushButton("Reset view")
+        reset_view.setToolTip("Re-center the camera on the design")
+        reset_view.clicked.connect(
+            lambda: self.viewer.run_js(
+                "window.permaResetView && window.permaResetView();"))
 
         # Bake the loaded Gaussian-splat backdrop to a top-down "yard photo"
         # for the 2D map (V1.65). Enabled only when the project has a splat.
@@ -104,12 +116,14 @@ class Scene3DWindow(QWidget):
         bar.addWidget(QLabel("Year:"))
         bar.addWidget(self._year, 2)
         bar.addWidget(self._year_lbl)
-        bar.addSpacing(12)
+        bar.addSpacing(16)
         bar.addWidget(QLabel("Time of year:"))
         bar.addWidget(self._month, 1)
+        bar.addWidget(QLabel("Time of day:"))
         bar.addWidget(self._hour, 1)
         bar.addWidget(self._sun_lbl)
-        bar.addSpacing(12)
+        bar.addSpacing(16)
+        bar.addWidget(reset_view)
         bar.addWidget(refresh)
         bar.addWidget(self._bake_btn)
 

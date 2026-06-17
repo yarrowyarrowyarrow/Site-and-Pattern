@@ -62,6 +62,19 @@ def spread_scale_factor(year: int, spread_habit: str, ytm: int) -> float:
     return 1.0 + (final - 1.0) * ratio
 
 
+def spread_aggressiveness(spread_habit: str) -> float:
+    """How aggressively a habit colonises, as a 0–1 rate independent of year.
+
+    Derived from the planting engine's ``SPREAD_FACTOR`` asymptote
+    (``final − 1``): 0.0 clumping/unassessed, 0.3 slow_spreader, 0.6
+    self_seeding, 1.0 aggressive_rhizomatous. The 3D viewer multiplies this by
+    the timeline year to keep a colony creeping outward continuously, rather
+    than freezing once ``spread_scale_factor`` plateaus at maturity."""
+    from src.planting_spacing import SPREAD_FACTOR
+    final = SPREAD_FACTOR.get((spread_habit or "").strip().lower(), 1.0)
+    return max(0.0, final - 1.0)
+
+
 # Fallback mature dimensions (metres) when a record lacks them — keeps a 3D
 # scene sane for sparsely-populated rows.
 _DEFAULT_HEIGHT_M = {"tree": 8.0, "shrub": 2.0, "herb": 0.5,
@@ -79,6 +92,7 @@ def plant_3d_state(plant: dict, lat: float, lng: float, year: int) -> dict:
     role = successional_role(plant)
     factor = growth_scale_factor(year, ytm, curve)
     spread = spread_scale_factor(year, plant.get("spread_habit") or "", ytm)
+    rate = spread_aggressiveness(plant.get("spread_habit") or "")
     mature_h = plant.get("mature_height_meters") or _DEFAULT_HEIGHT_M.get(ptype, 0.5)
     mature_c = plant.get("mature_canopy_m") or _DEFAULT_CANOPY_M.get(ptype, 0.4)
     return {
@@ -88,6 +102,10 @@ def plant_3d_state(plant: dict, lat: float, lng: float, year: int) -> dict:
         "foliage_type": (plant.get("deciduous_evergreen") or "herbaceous").lower(),
         "scale_factor": round(factor, 4),
         "spread_factor": round(spread, 4),
+        # Year-independent aggressiveness (0 none … 1 aggressive) so the 3D
+        # viewer can grow a colony continuously over the timeline rather than
+        # plateauing with spread_factor at maturity.
+        "spread_rate": round(rate, 4),
         # Growth scales the whole plant; spread additionally widens the ground
         # footprint (canopy) as the colony fills in — height is unaffected.
         "height_m": round(float(mature_h) * factor, 3),
