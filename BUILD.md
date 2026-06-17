@@ -86,6 +86,9 @@ The executable will be in `dist\SiteAndPattern\SiteAndPattern.exe`.
 
 ### macOS: Create App Bundle & DMG
 
+> See **`MAC_SETUP_GUIDE.md`** for the friend-facing install steps and the
+> full Mac build walkthrough (incl. Command Line Tools prerequisites).
+
 ```bash
 git clone https://github.com/yarrowyarrowyarrow/PermaDesign.git
 cd PermaDesign
@@ -102,6 +105,11 @@ bash build_installer.sh
 The DMG contains the app, an Applications shortcut for drag-to-install, and
 a `READ ME FIRST.txt` explaining the one-time unsigned-app launch step.
 
+**Build on the right architecture:** PyInstaller targets the arch of the
+build machine. An **Intel**-built `.dmg` runs on Intel *and* Apple Silicon
+(via Rosetta) — widest reach. An **Apple-Silicon**-built `.dmg` runs on Apple
+Silicon **only**. Build on Intel if any recipient might be on an Intel Mac.
+
 **Big Sur (macOS 11) compatibility notes:**
 - `requirements.txt` pins Qt to the 6.7 series on macOS — Qt 6.8+ requires
   macOS 12 and would silently break Big Sur support. Don't override the pin.
@@ -111,12 +119,22 @@ a `READ ME FIRST.txt` explaining the one-time unsigned-app launch step.
   offers a one-click Rosetta install on first launch if needed).
 
 **Unsigned-app warning (no Apple Developer account):**
-The build script applies an ad-hoc code signature, which prevents
-"app is damaged" errors, but recipients still see a one-time Gatekeeper
+The build script ad-hoc signs the bundle **inside-out** (nested
+dylibs/frameworks/helper apps first, then the outer `.app`) and then
+**verifies the seal with `codesign --verify --deep --strict`, aborting the
+build if it fails**. A valid seal is what keeps recipients on the bypassable
+"unidentified developer" path instead of the un-bypassable "app is damaged"
+error you get from a broken/partial signature (the classic failure when a
+re-downloaded DMG won't open). Recipients still clear a one-time Gatekeeper
 warning on first launch:
 - macOS 11–14: right-click the app → Open → Open (once).
 - macOS 15+: double-click once (blocked), then System Settings →
   Privacy & Security → "Open Anyway".
+
+> Why not `codesign --deep`? It's deprecated and routinely leaves nested
+> Qt/WebEngine binaries unsealed, producing exactly the "damaged" state that
+> can't be cleared without Terminal. The inside-out + verify approach is the
+> fix.
 
 Removing that warning entirely requires an Apple Developer account
 (US$99/yr): set `codesign_identity` (a "Developer ID Application"
@@ -156,10 +174,11 @@ Run via: `./dist/SiteAndPattern/SiteAndPattern`
 
 To avoid security warnings on macOS/Windows:
 
-**macOS:** `build_installer.sh` already applies an ad-hoc signature
-(`codesign --force --deep -s - dist/SiteAndPattern.app`). Fully removing the
-first-launch Gatekeeper warning requires an Apple Developer ID certificate
-plus notarization — see the macOS build section above.
+**macOS:** `build_installer.sh` already applies a **verified inside-out
+ad-hoc signature** (nested binaries first, then the bundle, then
+`codesign --verify --deep --strict`). Fully removing the first-launch
+Gatekeeper warning requires an Apple Developer ID certificate plus
+notarization — see the macOS build section above.
 
 **Windows:** Requires a code-signing certificate (paid or self-signed).
 

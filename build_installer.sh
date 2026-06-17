@@ -37,11 +37,39 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
         exit 1
     fi
 
-    # Re-apply an ad-hoc signature over the whole bundle. PyInstaller signs
-    # ad-hoc by default, but a final deep re-sign prevents Gatekeeper
-    # "app is damaged" errors on recipients' Macs.
-    echo -e "${YELLOW}Ad-hoc signing the app bundle...${NC}"
-    codesign --force --deep -s - "$APP"
+    # --- Ad-hoc code signing (inside-out) --------------------------------
+    # A *valid* signature is what lets a recipient clear Gatekeeper with a
+    # simple right-click -> Open. A broken/partial signature instead makes
+    # macOS report the app as "damaged and can't be opened", which CANNOT be
+    # cleared without Terminal — this is the failure mode where a re-downloaded
+    # DMG refuses to launch. `codesign --deep` is deprecated and routinely
+    # leaves nested Qt/WebEngine binaries unsealed, so we sign deepest-first
+    # by hand and then verify the seal, failing the build loudly if it is not
+    # valid (better a failed build than a "damaged" DMG on a friend's Mac).
+    echo -e "${YELLOW}Clearing stray extended attributes...${NC}"
+    xattr -cr "$APP"
+
+    echo -e "${YELLOW}Ad-hoc signing nested binaries (deepest first)...${NC}"
+    # 1. Plain Mach-O libraries (.dylib / .so)
+    find "$APP" -type f \( -name "*.dylib" -o -name "*.so" \) \
+        -exec codesign --force --timestamp=none -s - {} \;
+    # 2. Embedded frameworks (codesign handles their internal layout)
+    find "$APP" -type d -name "*.framework" \
+        -exec codesign --force --timestamp=none -s - {} \;
+    # 3. Embedded helper apps (e.g. QtWebEngineProcess.app)
+    find "$APP/Contents" -type d -name "*.app" \
+        -exec codesign --force --timestamp=none -s - {} \;
+    # 4. Finally seal the outer bundle (this also signs the main executable)
+    codesign --force --timestamp=none -s - "$APP"
+
+    echo -e "${YELLOW}Verifying the signature seal...${NC}"
+    if ! codesign --verify --deep --strict --verbose=2 "$APP"; then
+        echo "ERROR: the ad-hoc signature did not verify. A DMG built from this" >&2
+        echo "       bundle would be reported as 'damaged' on other Macs and" >&2
+        echo "       could not be opened without Terminal. Aborting the build." >&2
+        exit 1
+    fi
+    echo -e "${GREEN}✓ Signature verified (ad-hoc). Right-click -> Open will work.${NC}"
 
     echo -e "${YELLOW}Creating macOS DMG installer...${NC}"
     STAGING="dist/dmg-staging"
@@ -50,27 +78,57 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     cp -R "$APP" "$STAGING/"
     ln -s /Applications "$STAGING/Applications"
     cat > "$STAGING/READ ME FIRST.txt" <<'EOF'
-Installing Site & Pattern
-=========================
+=====================================================
+  Installing Site & Pattern  (please read — 2 minutes)
+=====================================================
 
-1. Drag the Site & Pattern icon onto the Applications folder in this window.
+STEP 1 — Install the app
+------------------------
+Drag the "Site & Pattern" icon onto the Applications folder shown in
+this window. That copies the app into your Applications. You can now
+eject this disk (drag it to the Trash / Eject).
 
-2. The FIRST time you open it, macOS will warn you because the app is not
-   notarized by Apple. This is a one-time step:
 
-   * macOS 11-14 (Big Sur through Sonoma):
-     In Applications, right-click (or Ctrl-click) Site & Pattern, choose
-     "Open", then click "Open" in the dialog.
+STEP 2 — Open it the FIRST time (one-time only)
+-----------------------------------------------
+This app is made by a small project and is not registered with Apple,
+so the very first time you open it macOS shows a security warning. This
+is normal and the app is safe. Just DOUBLE-CLICKING will NOT work the
+first time — follow the matching steps below ONCE:
 
-   * macOS 15 (Sequoia) or newer:
-     Double-click Site & Pattern once (it will be blocked), then open
-     System Settings > Privacy & Security, scroll down, and click
-     "Open Anyway" next to Site & Pattern.
+  >> If you are on macOS 11, 12, 13 or 14 (Big Sur / Monterey /
+     Ventura / Sonoma):
+       1. Open your Applications folder.
+       2. RIGHT-CLICK (or hold Control and click) "Site & Pattern".
+       3. Choose "Open" from the little menu.
+       4. A box appears with an "Open" button — click it.
 
-3. Apple Silicon (M1/M2/M3/M4) Macs: if macOS offers to install Rosetta
-   on first launch, click Install (one time only).
+  >> If you are on macOS 15 (Sequoia) or newer, OR the steps above
+     don't show an "Open" button:
+       1. Double-click "Site & Pattern" once. It gets blocked — that's
+          expected. Click "Done" / "Cancel".
+       2. Open the Apple menu  >  System Settings  >  Privacy & Security.
+       3. Scroll down to the Security section. You'll see a line that
+          says "Site & Pattern was blocked..." with an
+          "Open Anyway" button. Click it (enter your password if asked).
+       4. Click "Open Anyway" again in the confirmation box.
 
-After the first launch, Site & Pattern opens normally like any other app.
+  (Which macOS am I on? Apple menu > About This Mac.)
+
+
+STEP 3 — That's it
+------------------
+After this one time, "Site & Pattern" opens normally like any other app
+forever after — just double-click it.
+
+
+Apple Silicon Macs (M1 / M2 / M3 / M4):
+If macOS offers to install "Rosetta" on first launch, click Install
+(one time only). Let it finish, then open the app again.
+
+Trouble? It still says "damaged" or won't open:
+Re-download the .dmg (a half-finished download can corrupt it), then
+repeat Step 1 and Step 2.
 EOF
     hdiutil create -volname "Site & Pattern" -srcfolder "$STAGING" -ov -format UDZO dist/SiteAndPattern.dmg
     rm -rf "$STAGING"
