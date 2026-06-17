@@ -21,10 +21,15 @@
   the map already assumes network for tiles. Offline shows a notice
   instead of a scene.
 
-  Plants render as instanced archetype meshes (trunk+crown trees, shrub
-  domes, herb cones, groundcover discs) — hundreds of plants are two-digit
-  draw calls. presence_opacity is encoded by fading the instance colour
-  toward the sky tint (per-instance alpha isn't a thing for InstancedMesh).
+  Plants render as instanced procedural archetypes: trees are Da Vinci
+  branching skeletons (R^x = Σ r_i^x) merged into one BufferGeometry per
+  archetype — conifers conical/monopodial, deciduous rounded/sympodial —
+  with a vertex-colour canopy gradient and a GPU wind sway (the month drives
+  seasonal foliage colour, bare branches in winter). Shrubs are bushy merged
+  domes; herbs/vines are cones; groundcover flat discs; big plants get a soft
+  contact-shadow stamp. Hundreds of plants stay two-digit draw calls.
+  presence_opacity is encoded by fading the instance colour toward the sky
+  tint (per-instance alpha isn't a thing for InstancedMesh).
 -->
 <html>
 <head>
@@ -87,6 +92,7 @@ three.js couldn't be loaded (offline?). The 2D map is unaffected.</div></div>
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 // Spark — 3D Gaussian Splatting for three.js (V1.65). Optional photoreal
 // yard backdrop: a phone-captured splat placed behind the design. The import
 // rides the same CDN-or-offline contract as three.js above; if it can't load,
@@ -94,6 +100,51 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { SplatMesh, SparkRenderer } from '@sparkjsdev/spark';
 
 const SKY = 0xcfe3f2, GROUND = 0x8aa86f;
+
+// ── wind + time ─────────────────────────────────────────────────────────────
+const clock = new THREE.Clock();
+const windUniforms = { uTime: { value: 0 } };
+
+// ── seeded PRNG (mulberry32) ────────────────────────────────────────────────
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function hashPid(pid) {
+  if (pid == null) return 0;
+  if (typeof pid === 'number') return Math.abs(pid);
+  let h = 0; const s = String(pid);
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+// ── seasonal color modifier ─────────────────────────────────────────────────
+const _skyCol = new THREE.Color(SKY);
+
+function seasonalColor(hex, foliageType, month) {
+  const c = new THREE.Color(hex || '#66bb6a');
+  const ft = (foliageType || '').toLowerCase();
+  if (ft === 'evergreen') {
+    if (month >= 11 || month <= 2) c.multiplyScalar(0.85);
+    return c;
+  }
+  if (ft === 'deciduous' || ft === 'semi-evergreen') {
+    if (month >= 4 && month <= 5)
+      c.lerp(new THREE.Color('#c8e06a'), 0.3);
+    else if (month >= 9 && month <= 10)
+      c.lerp(new THREE.Color('#d4a030'), 0.55);
+    else if (month >= 11 || month <= 3)
+      c.set('#8b7355');
+    return c;
+  }
+  if (month >= 11 || month <= 3) c.lerp(new THREE.Color('#a09060'), 0.5);
+  return c;
+}
 
 let renderer;
 try {
@@ -145,6 +196,7 @@ scene.add(sun, sun.target);
 // Everything rebuilt per scene push lives under one group.
 let designGroup = null;
 let lastOrigin = null;      // {lat, lng} for the legacy permaSetPlants hook
+let lastMonth = 6;          // last scene month, for the legacy permaSetPlants hook
 let plantsGroup = null;     // sub-group holding plant instanced meshes
 
 function sunVector(azDeg, altDeg) {
@@ -245,10 +297,12 @@ function buildBuildings(group, buildings) {
   }
 }
 
-// ── plants (instanced archetypes) ──────────────────────────────────────────
+// ── plants (procedural instanced archetypes) ───────────────────────────────
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(),
       _s = new THREE.Vector3(), _v = new THREE.Vector3();
+const _yAxis = new THREE.Vector3(0, 1, 0);
+const _white = new THREE.Color(0xffffff);
 
 function instanced(geo, count, rough = 0.95) {
   const mesh = new THREE.InstancedMesh(
@@ -257,61 +311,389 @@ function instanced(geo, count, rough = 0.95) {
   return mesh;
 }
 
-function setInst(mesh, i, x, h0, z, sx, sy, sz, colorHex, opacity) {
-  _v.set(x, h0, z); _s.set(sx, sy, sz); _q.identity();
-  _m.compose(_v, _q, _s);
-  mesh.setMatrixAt(i, _m);
-  mesh.setColorAt(i, fadeToward(colorHex, opacity));
+function instancedMesh(geo, count, mat, shadow = true) {
+  const mesh = new THREE.InstancedMesh(geo, mat, count);
+  mesh.castShadow = mesh.receiveShadow = shadow;
+  return mesh;
 }
 
-// Unit geometries (height 1, radius 0.5) scaled per instance.
-const GEO = {
-  trunk: new THREE.CylinderGeometry(0.5, 0.6, 1, 6).translate(0, 0.5, 0),
-  crown: new THREE.SphereGeometry(0.5, 10, 8).translate(0, 0.5, 0),
-  dome:  new THREE.SphereGeometry(0.5, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2),
-  cone:  new THREE.ConeGeometry(0.5, 1, 7).translate(0, 0.5, 0),
-  disc:  new THREE.CylinderGeometry(0.5, 0.5, 1, 10).translate(0, 0.5, 0),
+// Compose a per-instance matrix with a Y rotation and set a pre-computed colour.
+function setInst2(mesh, i, x, h0, z, sx, sy, sz, rotY, color) {
+  _v.set(x, h0, z); _s.set(sx, sy, sz);
+  _q.setFromAxisAngle(_yAxis, rotY);
+  _m.compose(_v, _q, _s);
+  mesh.setMatrixAt(i, _m);
+  if (color) mesh.setColorAt(i, color);
+}
+
+function fadeColor(col, opacity) {
+  const o = Math.max(0, Math.min(1, opacity ?? 1));
+  return col.clone().lerp(_skyCol, 1 - o);
+}
+
+// MeshStandardMaterial with an optional GPU wind sway injected into the
+// vertex stage (the first custom shader work in the app). Lighting, shadows
+// and instancing all stay intact — we only nudge `transformed` in local space
+// (so the per-instance matrix scales the sway by canopy size) before three
+// applies the instance/model matrices in <project_vertex>.
+function plantMaterial(opts = {}) {
+  const mat = new THREE.MeshStandardMaterial({
+    roughness: opts.roughness ?? 0.9,
+    vertexColors: !!opts.vertexColors,
+  });
+  const strength = opts.wind || 0;
+  if (strength > 0) {
+    mat.onBeforeCompile = (shader) => {
+      shader.uniforms.uTime = windUniforms.uTime;
+      shader.vertexShader = 'uniform float uTime;\n' + shader.vertexShader;
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        [
+          '#include <begin_vertex>',
+          '{',
+          '  #ifdef USE_INSTANCING',
+          '  vec3 iPos = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);',
+          '  #else',
+          '  vec3 iPos = vec3(0.0);',
+          '  #endif',
+          '  float hf = clamp(transformed.y, 0.0, 1.2);',           // taller verts sway more
+          '  float ph = iPos.x * 0.35 + iPos.z * 0.35;',            // per-plant phase
+          '  float wv = sin(uTime * 1.3 + ph + position.x * 1.1 + position.z * 0.8) * 0.6',
+          '           + sin(uTime * 2.6 + ph * 1.7) * 0.4;',
+          '  float amp = ' + strength.toFixed(4) + ' * hf * hf;',
+          '  transformed.x += wv * amp;',
+          '  transformed.z += wv * 0.7 * amp;',
+          '}',
+        ].join('\n'));
+    };
+    mat.customProgramCacheKey = () =>
+      'windplant' + strength.toFixed(4) + (opts.vertexColors ? 'c' : '');
+  }
+  return mat;
+}
+
+// A soft radial "contact shadow" stamp — a dark blob under big plants that
+// grounds them without leaning on the directional shadow map's resolution.
+function makeShadowTexture() {
+  const s = 128, cv = document.createElement('canvas');
+  cv.width = cv.height = s;
+  const ctx = cv.getContext('2d');
+  const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  g.addColorStop(0, 'rgba(0,0,0,0.55)');
+  g.addColorStop(0.55, 'rgba(0,0,0,0.28)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, s, s);
+  return new THREE.CanvasTexture(cv);
+}
+
+// ── Da Vinci procedural trees ───────────────────────────────────────────────
+// Part 1 of the spec: a parent branch of radius R splitting into children
+// r_i obeys R^x = Σ r_i^x (area conservation; x is species-ish), and child
+// length scales as (r_child / R)^lengthScaling. We build an abstract skeleton
+// first, then turn it into one merged BufferGeometry — so a whole forest is a
+// handful of InstancedMesh draw calls.
+
+const DECID_CFG = {
+  davinciExponent: 2.0, lengthScaling: 0.7, branchAngleBase: 0.62,
+  maxDepth: 4, minRadiusCutoff: 0.022, conifer: false,
+};
+const CONIFER_CFG = {
+  davinciExponent: 2.4, lengthScaling: 0.82, branchAngleBase: 1.2,
+  maxDepth: 3, minRadiusCutoff: 0.03, conifer: true,
 };
 
-function buildPlants(group, plants) {
+function generateDaVinciTree(radius, length, depth, cfg, rng) {
+  if (depth >= cfg.maxDepth || radius < cfg.minRadiusCutoff) {
+    return { radiusBottom: radius, radiusTop: radius * 0.6, length, children: [] };
+  }
+  const node = { radiusBottom: radius, length, children: [] };
+  let numSplits;
+  if (cfg.conifer) numSplits = rng() > 0.5 ? 4 : 3;       // whorls
+  else numSplits = rng() > 0.8 ? 3 : 2;                   // forks
+
+  const cap = Math.pow(radius, cfg.davinciExponent);
+  let remaining = cap;
+  const childRadii = [];
+  for (let i = 0; i < numSplits; i++) {
+    if (i === numSplits - 1) {
+      childRadii.push(Math.pow(Math.max(0, remaining), 1 / cfg.davinciExponent));
+    } else if (cfg.conifer && i === 0) {
+      const a = remaining * 0.6;                          // strong central leader
+      childRadii.push(Math.pow(a, 1 / cfg.davinciExponent)); remaining -= a;
+    } else {
+      const share = cfg.conifer ? (0.15 + rng() * 0.1) : (0.3 + rng() * 0.25);
+      const a = remaining * share;
+      childRadii.push(Math.pow(a, 1 / cfg.davinciExponent)); remaining -= a;
+    }
+  }
+  node.radiusTop = Math.pow(
+    childRadii.reduce((s, r) => s + Math.pow(r, cfg.davinciExponent), 0),
+    1 / cfg.davinciExponent);
+
+  for (let i = 0; i < numSplits; i++) {
+    const cr = childRadii[i];
+    const cl = length * Math.pow(Math.max(0.05, cr / radius), cfg.lengthScaling);
+    const child = generateDaVinciTree(cr, cl, depth + 1, cfg, rng);
+    if (cfg.conifer && i === 0) {
+      child.angleSpread = cfg.branchAngleBase * 0.08 * (rng() - 0.5);
+      child.angleRotation = rng() * Math.PI * 2;
+    } else {
+      child.angleSpread = cfg.branchAngleBase * (0.8 + rng() * 0.4);
+      child.angleRotation = (i * (Math.PI * 2 / numSplits)) + rng() * 0.5;
+    }
+    node.children.push(child);
+  }
+  return node;
+}
+
+// Walk a skeleton into two merged geometries: woody branches and leaf clusters.
+function treeToGeometry(root, cfg, rng) {
+  const branchGeos = [], foliageGeos = [];
+
+  function addSeg(node, mat) {
+    const seg = new THREE.CylinderGeometry(
+      Math.max(0.004, node.radiusTop), Math.max(0.006, node.radiusBottom),
+      node.length, 5, 1);
+    seg.translate(0, node.length / 2, 0);
+    seg.applyMatrix4(mat);
+    branchGeos.push(seg);
+  }
+  function addFoliage(tipMat) {
+    let blob;
+    if (cfg.conifer) {
+      const r = 0.15 + rng() * 0.05;
+      blob = new THREE.ConeGeometry(r * 1.5, r * 3.4, 6, 1);
+      blob.translate(0, r * 1.1, 0);
+    } else {
+      const r = 0.14 + rng() * 0.1;
+      blob = new THREE.SphereGeometry(r, 5, 4);
+      blob.scale(1, 0.85, 1);
+      blob.translate(0, r * 0.6, 0);
+    }
+    blob.applyMatrix4(tipMat);
+    foliageGeos.push(blob);
+  }
+  function walk(node, mat) {
+    addSeg(node, mat);
+    const tip = mat.clone().multiply(new THREE.Matrix4().makeTranslation(0, node.length, 0));
+    if (!node.children.length) { addFoliage(tip); return; }
+    if (cfg.conifer) addFoliage(tip);          // foliage at every whorl for density
+    for (const child of node.children) {
+      const rot = new THREE.Matrix4().makeRotationY(child.angleRotation)
+        .multiply(new THREE.Matrix4().makeRotationX(child.angleSpread));
+      walk(child, tip.clone().multiply(rot));
+    }
+  }
+  walk(root, new THREE.Matrix4());
+
+  const branchGeo = branchGeos.length ? mergeGeometries(branchGeos, false) : null;
+  const foliageGeo = foliageGeos.length ? mergeGeometries(foliageGeos, false) : null;
+  normalizeUnit([branchGeo, foliageGeo]);
+  if (foliageGeo) applyFoliageGradient(foliageGeo);
+  return { branchGeo, foliageGeo };
+}
+
+// Rescale a set of geometries (in place, sharing one frame) to base y = 0,
+// height 1, horizontal half-width 0.5 — so per-instance scale is [canopy,
+// height, canopy], matching the rest of the plant pipeline.
+function normalizeUnit(geos) {
+  const box = new THREE.Box3();
+  for (const g of geos) {
+    if (!g) continue;
+    g.computeBoundingBox(); box.union(g.boundingBox);
+  }
+  const sizeY = Math.max(1e-3, box.max.y - box.min.y);
+  const halfXZ = Math.max(1e-3, Math.abs(box.min.x), Math.abs(box.max.x),
+                          Math.abs(box.min.z), Math.abs(box.max.z));
+  const sy = 1 / sizeY, sxz = 0.5 / halfXZ;
+  for (const g of geos) {
+    if (!g) continue;
+    g.translate(0, -box.min.y, 0);
+    g.scale(sxz, sy, sxz);
+    g.computeVertexNormals();
+  }
+}
+
+// Multi-tone canopy gradient (spec idea 8): brighter/warmer at the top,
+// darker/cooler underneath. Baked as a vertex-colour multiplier so the
+// per-instance seasonal colour still shows through.
+function applyFoliageGradient(geo) {
+  const pos = geo.attributes.position;
+  const col = new Float32Array(pos.count * 3);
+  const bot = [0.5, 0.6, 0.5], top = [1.0, 1.0, 0.92];
+  for (let i = 0; i < pos.count; i++) {
+    const t = Math.min(1, Math.max(0, pos.getY(i)));
+    col[i * 3] = bot[0] + (top[0] - bot[0]) * t;
+    col[i * 3 + 1] = bot[1] + (top[1] - bot[1]) * t;
+    col[i * 3 + 2] = bot[2] + (top[2] - bot[2]) * t;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+}
+
+// A bushy shrub: a few overlapping spheres merged, normalised, gradient-tinted.
+function buildShrubGeo(rng) {
+  const geos = [];
+  const n = 4 + Math.floor(rng() * 2);
+  for (let i = 0; i < n; i++) {
+    const r = 0.26 + rng() * 0.16;
+    const s = new THREE.SphereGeometry(r, 6, 5);
+    s.translate((rng() - 0.5) * 0.5, rng() * 0.35 + r * 0.5, (rng() - 0.5) * 0.5);
+    geos.push(s);
+  }
+  const g = mergeGeometries(geos, false);
+  normalizeUnit([g]);
+  applyFoliageGradient(g);
+  return g;
+}
+
+// Built once, reused across every scene rebuild (deterministic seeds).
+let ARCH = null;     // { deciduous: [{branchGeo,foliageGeo}], conifer: [...], shrub: [geo] }
+let MATS = null;     // shared plant materials (per-instance colour does the rest)
+let SHADOW_TEX = null;
+const TREE_VARIANTS = 3;
+
+function buildArchetypes() {
+  if (ARCH) return;
+  const decid = [], coni = [], shrub = [];
+  const seeds = [101, 269, 397];
+  for (const sd of seeds) {
+    decid.push(treeToGeometry(
+      generateDaVinciTree(0.06, 0.42, 0, DECID_CFG, mulberry32(sd)),
+      DECID_CFG, mulberry32(sd + 7)));
+    coni.push(treeToGeometry(
+      generateDaVinciTree(0.075, 0.5, 0, CONIFER_CFG, mulberry32(sd + 500)),
+      CONIFER_CFG, mulberry32(sd + 507)));
+  }
+  for (const sd of [11, 41]) shrub.push(buildShrubGeo(mulberry32(sd)));
+  ARCH = { deciduous: decid, conifer: coni, shrub };
+}
+
+function ensurePlantMats() {
+  if (MATS) return;
+  if (!SHADOW_TEX) SHADOW_TEX = makeShadowTexture();
+  MATS = {
+    branch:  plantMaterial({ roughness: 0.92, wind: 0.015 }),
+    foliage: plantMaterial({ roughness: 0.85, wind: 0.07, vertexColors: true }),
+    shrub:   plantMaterial({ roughness: 0.85, wind: 0.06, vertexColors: true }),
+    simple:  plantMaterial({ roughness: 0.9, wind: 0.06 }),
+    shadow:  new THREE.MeshBasicMaterial({ map: SHADOW_TEX, transparent: true,
+               depthWrite: false, color: 0x2b3a20, opacity: 0.85 }),
+  };
+}
+
+// Unit geometries (height 1, half-width 0.5) for the simpler layers.
+const GEO = {
+  cone:   new THREE.ConeGeometry(0.5, 1, 7).translate(0, 0.5, 0),
+  disc:   new THREE.CylinderGeometry(0.5, 0.5, 1, 10).translate(0, 0.5, 0),
+  shadow: new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+};
+
+const _isDecid = (ft) => ft !== 'evergreen';   // unknown ⇒ deciduous-ish
+const _bareMonth = (m) => (m >= 11 || m <= 3);
+
+function buildPlants(group, plants, month) {
   if (plantsGroup) { group.remove(plantsGroup); }
   plantsGroup = new THREE.Group();
   group.add(plantsGroup);
+  buildArchetypes();
+  ensurePlantMats();
+  month = month || 6;
+
   const byKind = { tree: [], shrub: [], vine: [], groundcover: [], herb: [] };
   for (const p of plants || []) {
     const k = byKind[p.plant_type] ? p.plant_type : 'herb';
     byKind[k].push(p);
   }
 
+  // Trees — bucketed by crown class (conifer vs deciduous) × archetype variant.
   if (byKind.tree.length) {
-    const trunks = instanced(GEO.trunk, byKind.tree.length);
-    const crowns = instanced(GEO.crown, byKind.tree.length);
-    byKind.tree.forEach((p, i) => {
-      const h = Math.max(0.3, p.height_m), c = Math.max(0.3, p.canopy_m);
-      const trunkH = h * 0.35;
-      setInst(trunks, i, p.x, 0, -p.y, c * 0.12, trunkH, c * 0.12,
-              '#6d4c41', p.opacity);
-      setInst(crowns, i, p.x, trunkH, -p.y, c, h - trunkH, c,
-              p.color, p.opacity);
-    });
-    plantsGroup.add(trunks, crowns);
+    const buckets = {};
+    for (const p of byKind.tree) {
+      const cls = p.foliage_type === 'evergreen' ? 'conifer' : 'deciduous';
+      const v = hashPid(p.plant_id) % TREE_VARIANTS;
+      const key = cls + v;
+      (buckets[key] = buckets[key] || { cls, v, items: [] }).items.push(p);
+    }
+    for (const key in buckets) {
+      const { cls, v, items } = buckets[key];
+      const arch = ARCH[cls][v];
+      const branch = instancedMesh(arch.branchGeo, items.length, MATS.branch);
+      const foliage = instancedMesh(arch.foliageGeo, items.length, MATS.foliage);
+      items.forEach((p, i) => {
+        const h = Math.max(0.4, p.height_m), c = Math.max(0.4, p.canopy_m);
+        const rotY = (hashPid(p.plant_id) % 628) / 100;
+        setInst2(branch, i, p.x, 0, -p.y, c, h, c, rotY,
+                 fadeToward('#5d4433', p.opacity));
+        const bare = _isDecid(p.foliage_type) && _bareMonth(month);
+        if (bare) {
+          setInst2(foliage, i, p.x, 0, -p.y, 0.001, 0.001, 0.001, rotY, _white);
+        } else {
+          setInst2(foliage, i, p.x, 0, -p.y, c, h, c, rotY,
+                   fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity));
+        }
+      });
+      plantsGroup.add(branch, foliage);
+    }
   }
+
+  // Shrubs — bushy gradient domes, one InstancedMesh per archetype variant.
+  if (byKind.shrub.length) {
+    const buckets = [[], []];
+    for (const p of byKind.shrub) buckets[hashPid(p.plant_id) % 2].push(p);
+    buckets.forEach((list, v) => {
+      if (!list.length) return;
+      const mesh = instancedMesh(ARCH.shrub[v], list.length, MATS.shrub);
+      list.forEach((p, i) => {
+        const h = Math.max(0.2, p.height_m), c = Math.max(0.25, p.canopy_m);
+        const rotY = (hashPid(p.plant_id) % 628) / 100;
+        setInst2(mesh, i, p.x, 0, -p.y, c, h, c, rotY,
+                 fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity));
+      });
+      plantsGroup.add(mesh);
+    });
+  }
+
+  // Herbs + vines — slim cones that sway; groundcover — flat discs, no wind.
   const simple = [
-    ['shrub', GEO.dome, (p, h, c) => [c, Math.max(0.2, h) * 2, c]],
-    ['vine', GEO.cone, (p, h, c) => [Math.max(0.25, c * 0.6), h, Math.max(0.25, c * 0.6)]],
-    ['herb', GEO.cone, (p, h, c) => [c, h, c]],
-    ['groundcover', GEO.disc, (p, h, c) => [c, Math.min(0.12, Math.max(0.04, h)), c]],
+    ['vine', GEO.cone, MATS.simple, (h, c) => [Math.max(0.25, c * 0.6), h, Math.max(0.25, c * 0.6)]],
+    ['herb', GEO.cone, MATS.simple, (h, c) => [c, h, c]],
   ];
-  for (const [kind, geo, scale] of simple) {
+  for (const [kind, geo, mat, scale] of simple) {
     const list = byKind[kind];
     if (!list.length) continue;
-    const mesh = instanced(geo, list.length);
+    const mesh = instancedMesh(geo, list.length, mat);
     list.forEach((p, i) => {
       const h = Math.max(0.08, p.height_m), c = Math.max(0.15, p.canopy_m);
-      const [sx, sy, sz] = scale(p, h, c);
-      setInst(mesh, i, p.x, 0, -p.y, sx, sy, sz, p.color, p.opacity);
+      const [sx, sy, sz] = scale(h, c);
+      setInst2(mesh, i, p.x, 0, -p.y, sx, sy, sz, (hashPid(p.plant_id) % 628) / 100,
+               fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity));
     });
     plantsGroup.add(mesh);
+  }
+  if (byKind.groundcover.length) {
+    const list = byKind.groundcover;
+    const mesh = instanced(GEO.disc, list.length);
+    list.forEach((p, i) => {
+      const h = Math.min(0.12, Math.max(0.04, p.height_m)), c = Math.max(0.15, p.canopy_m);
+      setInst2(mesh, i, p.x, 0, -p.y, c, h, c, 0,
+               fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity));
+    });
+    plantsGroup.add(mesh);
+  }
+
+  // Contact shadows under trees and tall shrubs (skip near-vanished plants).
+  const shadowed = byKind.tree
+    .concat(byKind.shrub.filter(p => (p.height_m || 0) > 1.2))
+    .filter(p => (p.opacity ?? 1) >= 0.2);
+  if (shadowed.length) {
+    const sh = instancedMesh(GEO.shadow, shadowed.length, MATS.shadow, false);
+    shadowed.forEach((p, i) => {
+      const c = Math.max(0.4, p.canopy_m) * 1.35;
+      _v.set(p.x, 0.03, -p.y); _s.set(c, 1, c); _q.identity();
+      _m.compose(_v, _q, _s);
+      sh.setMatrixAt(i, _m);
+    });
+    plantsGroup.add(sh);
   }
 }
 
@@ -437,11 +819,12 @@ window.permaSetScene = function (sc) {
   designGroup = new THREE.Group();
   scene.add(designGroup);
   lastOrigin = sc.origin || null;
+  lastMonth = sc.month || 6;
 
   buildGround(designGroup, sc);
   buildBoundary(designGroup, sc.boundary);
   buildBuildings(designGroup, sc.buildings);
-  buildPlants(designGroup, sc.plants);
+  buildPlants(designGroup, sc.plants, sc.month);
   buildStructures(designGroup, sc.structures);
   buildScanPoints(designGroup, sc.scan_points);
   ensureSplat(sc.splat);
@@ -467,9 +850,10 @@ window.permaSetPlants = function (records) {
     x: (r.lng - lastOrigin.lng) * mPerDegLat * cosLat,
     y: (r.lat - lastOrigin.lat) * mPerDegLat,
     height_m: r.height_m, canopy_m: r.canopy_m,
-    plant_type: r.plant_type, color: r.color, opacity: r.presence_opacity,
+    plant_type: r.plant_type, foliage_type: r.foliage_type,
+    color: r.color, opacity: r.presence_opacity,
   }));
-  buildPlants(designGroup, plants);
+  buildPlants(designGroup, plants, lastMonth);
 };
 
 addEventListener('resize', () => {
@@ -478,7 +862,11 @@ addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
 });
 
-renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+renderer.setAnimationLoop(() => {
+  windUniforms.uTime.value = clock.getElapsedTime();
+  controls.update();
+  renderer.render(scene, camera);
+});
 </script>
 </body>
 </html>

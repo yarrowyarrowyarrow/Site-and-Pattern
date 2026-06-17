@@ -16,11 +16,15 @@ Scene schema (``SCENE_VERSION`` = 1)::
     {
       "version": 1,
       "year": int,                     # growth-timeline year (0 = mature)
+      "month": int,                    # 1–12, drives 3D seasonal foliage colour
       "origin": {"lat": .., "lng": ..},# projection origin (WGS-84)
       "bounds": {"min_x","min_y","max_x","max_y"},   # metres, scene extent
       "boundary": [[x, y], ...] | None,              # property outline
       "plants": [{plant_id, x, y, height_m, canopy_m, plant_type,
-                  color, opacity, common_name, existing?}, ...],
+                  foliage_type, color, opacity, common_name, existing?}, ...],
+                                       # foliage_type: deciduous|evergreen|
+                                       #   herbaceous|semi-evergreen (3D crown
+                                       #   shape + seasonal colour)
       "buildings": [{ring: [[x, y], ...], height_m, kind}, ...],
                                        # kind: "building" | "canopy"
       "structures": [{x, y, struct_id, name, size_m, height_m}, ...],
@@ -196,6 +200,7 @@ def build_scene(project: dict, *, year: int = 0,
                 "x": round(x, 2), "y": round(y, 2),
                 "height_m": st["height_m"], "canopy_m": st["canopy_m"],
                 "plant_type": st["plant_type"] or "herb",
+                "foliage_type": st.get("foliage_type", "herbaceous"),
                 "color": (plant.get("marker_color")
                           or _TYPE_COLORS.get(st["plant_type"])
                           or _FALLBACK_PLANT_COLOR),
@@ -310,6 +315,7 @@ def build_scene(project: dict, *, year: int = 0,
     return {
         "version": SCENE_VERSION,
         "year": int(year),
+        "month": (when or _DEFAULT_WHEN).month,
         "origin": {"lat": lat0, "lng": lng0},
         "bounds": bounds,
         "boundary": boundary_xy,

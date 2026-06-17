@@ -85,6 +85,7 @@ def plant_3d_state(plant: dict, lat: float, lng: float, year: int) -> dict:
         "lat": lat,
         "lng": lng,
         "plant_type": ptype,
+        "foliage_type": (plant.get("deciduous_evergreen") or "herbaceous").lower(),
         "scale_factor": round(factor, 4),
         "spread_factor": round(spread, 4),
         # Growth scales the whole plant; spread additionally widens the ground

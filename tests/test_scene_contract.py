@@ -24,7 +24,8 @@ _LAT, _LNG = 53.5, -113.5
 
 _FAKE_PLANTS = {
     1: {"plant_type": "tree", "years_to_maturity": 20, "growth_curve": "steady",
-        "mature_height_meters": 10.0, "mature_canopy_m": 6.0},
+        "mature_height_meters": 10.0, "mature_canopy_m": 6.0,
+        "deciduous_evergreen": "evergreen"},
     2: {"plant_type": "shrub", "years_to_maturity": 5, "growth_curve": "steady",
         "mature_height_meters": 2.0, "mature_canopy_m": 1.5,
         "marker_color": "#123456"},
@@ -90,6 +91,23 @@ class TestSceneBasics(unittest.TestCase):
         self.assertEqual(young["height_m"], 5.0)    # linear, 10/20 years
         self.assertEqual(young["canopy_m"], 3.0)
         self.assertEqual(mature["plant_type"], "tree")
+
+    def test_foliage_type_and_month_for_3d_forms(self):
+        # The 3D viewer keys crown shape (conifer vs deciduous) and seasonal
+        # colour off these additive fields — see html/scene3d.html.
+        proj = _project([
+            plant_feature({"plant_id": 1, "common_name": "Tree",
+                           "lat": _LAT, "lng": _LNG}),
+            plant_feature({"plant_id": 2, "common_name": "Shrub",
+                           "lat": _LAT, "lng": _LNG}),
+        ])
+        scene = build_scene(proj, get_plant=_get_plant,
+                            when=datetime(2025, 10, 21, 13, 0))
+        self.assertEqual(scene["month"], 10)
+        by_id = {p["common_name"]: p for p in scene["plants"]}
+        self.assertEqual(by_id["Tree"]["foliage_type"], "evergreen")
+        # Plant 2 has no deciduous_evergreen → defaults to herbaceous.
+        self.assertEqual(by_id["Shrub"]["foliage_type"], "herbaceous")
 
     def test_marker_color_wins_over_type_color(self):
         proj = _project([
