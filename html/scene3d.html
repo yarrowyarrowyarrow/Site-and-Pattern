@@ -399,8 +399,10 @@ function makeShadowTexture() {
 // handful of InstancedMesh draw calls.
 
 const DECID_CFG = {
+  // Lower cutoff than the trunk start ⇒ branches recurse to finer twigs, so
+  // even narrow-crowned variants carry enough tips for a full canopy.
   davinciExponent: 2.0, lengthScaling: 0.7, branchAngleBase: 0.62,
-  maxDepth: 4, minRadiusCutoff: 0.022, conifer: false,
+  maxDepth: 4, minRadiusCutoff: 0.018, conifer: false,
 };
 const CONIFER_CFG = {
   davinciExponent: 2.4, lengthScaling: 0.82, branchAngleBase: 1.2,
@@ -410,11 +412,15 @@ const CONIFER_CFG = {
 // Per-variant config overrides (species differentiation): each tree species
 // hashes to one of these so a scene reads as a mix of crown forms rather than
 // one repeated procedural shape. Merged onto the base cfg in cfgFor().
+// Silhouette variety comes mainly from branch ANGLE and limb length — the
+// exponents stay in a tight, branch-dense range (≤2.0) so no variant renders
+// as a sparse stick (the difference between a full oak and a thin aspen was
+// the over-high exponent on the columnar form).
 const DECID_VARIANTS = [
   {},                                                  // 0 balanced rounded
   { branchAngleBase: 0.85, davinciExponent: 1.85 },    // 1 wide-spreading
-  { branchAngleBase: 0.42, davinciExponent: 2.2 },     // 2 columnar / upright
-  { branchAngleBase: 0.95, lengthScaling: 0.5 },       // 3 weeping (long droopy limbs)
+  { branchAngleBase: 0.46, davinciExponent: 1.95 },    // 2 columnar (narrow but full)
+  { branchAngleBase: 0.92, lengthScaling: 0.62 },      // 3 weeping (long limbs)
   { splitBias: 0.7 },                                  // 4 asymmetric (more 3-forks)
 ];
 const CONIFER_VARIANTS = [
@@ -501,7 +507,7 @@ function treeToGeometry(root, cfg, rng) {
   // Deciduous: a balloon of 3–5 overlapping flattened spheres at each twig tip
   // (and 1–2 smaller ones at interior junctions) → a full rounded crown.
   function addDeciduousCluster(tipMat, depth, terminal) {
-    const depthScale = Math.max(0.55, 1.0 - depth * 0.1);
+    const depthScale = Math.max(0.65, 1.0 - depth * 0.08);
     const n = terminal ? 3 + Math.floor(rng() * 3) : 1 + Math.floor(rng() * 2);
     const base = (terminal ? 0.20 : 0.15) * depthScale;
     const spread = (terminal ? 0.22 : 0.16);
@@ -680,13 +686,15 @@ function buildGroundcoverGeo(rng) {
 }
 
 // Built once, reused across every scene rebuild (deterministic seeds).
-// ARCH.deciduous[variant][tier] / ARCH.conifer[variant][tier] = {branchGeo,
-// foliageGeo}; shrub/peren/ground are flat variant arrays of one merged geo.
+// ARCH holds the cheap shrub/peren/ground variant arrays; trees are built
+// lazily and memoised by (class, variant, tier, sub) in TREE_CACHE.
 let ARCH = null;
 let MATS = null;     // shared plant materials (per-instance colour does the rest)
 let SHADOW_TEX = null;
-const TREE_VARIANTS = 5;   // distinct branching configs per crown class
+const TREE_VARIANTS = 5;   // species silhouette configs per crown class
 const TIERS = 3;           // sapling / young / mature structural complexity
+const TREE_SUBVARS = 3;    // distinct random branchings per species, so a stand
+                           // of one species reads as individuals, not clones
 
 // scale_factor (0.1–1.0 growth maturity) → structural tier.
 function tierFor(scaleFactor) {
@@ -694,27 +702,41 @@ function tierFor(scaleFactor) {
   return s < 0.35 ? 0 : (s < 0.7 ? 1 : 2);
 }
 
+// Per-individual sub-variation from position (+ species id): two trees of the
+// same species standing apart get different branchings, so a grove looks
+// natural rather than procedurally stamped.
+function indHash(p) {
+  const xi = Math.round((p.x || 0) * 10), zi = Math.round((p.y || 0) * 10);
+  return Math.abs(((xi * 73856093) ^ (zi * 19349663) ^ hashPid(p.plant_id)) | 0);
+}
+
+// Lazily build + cache one tree archetype. Only the (class, variant, tier, sub)
+// combinations a scene actually uses are generated — the full 2×5×3×3 space
+// never materialises at once.
+const TREE_CACHE = new Map();
+function getTreeArch(cls, variant, tier, sub) {
+  const key = cls + variant + '_' + tier + '_' + sub;
+  let a = TREE_CACHE.get(key);
+  if (a) return a;
+  const conifer = cls === 'conifer';
+  const cfg = cfgFor(conifer ? CONIFER_CFG : DECID_CFG,
+                     (conifer ? CONIFER_VARIANTS : DECID_VARIANTS)[variant],
+                     (conifer ? CONIFER_DEPTH : DECID_DEPTH)[tier]);
+  const r0 = conifer ? 0.075 : 0.06, l0 = conifer ? 0.5 : 0.42;
+  const seed = (conifer ? 5000 : 100) + variant * 53 + tier * 11 + sub * 191;
+  a = treeToGeometry(generateDaVinciTree(r0, l0, 0, cfg, mulberry32(seed)),
+                     cfg, mulberry32(seed + 7));
+  TREE_CACHE.set(key, a);
+  return a;
+}
+
 function buildArchetypes() {
   if (ARCH) return;
-  const decid = [], coni = [], shrub = [], peren = [], ground = [];
-  for (let v = 0; v < TREE_VARIANTS; v++) {
-    const dseed = 101 + v * 53, cseed = 5000 + v * 53;
-    decid.push([]); coni.push([]);
-    for (let t = 0; t < TIERS; t++) {
-      const dcfg = cfgFor(DECID_CFG, DECID_VARIANTS[v], DECID_DEPTH[t]);
-      decid[v].push(treeToGeometry(
-        generateDaVinciTree(0.06, 0.42, 0, dcfg, mulberry32(dseed + t)),
-        dcfg, mulberry32(dseed + t + 7)));
-      const ccfg = cfgFor(CONIFER_CFG, CONIFER_VARIANTS[v], CONIFER_DEPTH[t]);
-      coni[v].push(treeToGeometry(
-        generateDaVinciTree(0.075, 0.5, 0, ccfg, mulberry32(cseed + t)),
-        ccfg, mulberry32(cseed + t + 7)));
-    }
-  }
+  const shrub = [], peren = [], ground = [];
   for (const sd of [11, 41, 73, 97]) shrub.push(buildShrubGeo(mulberry32(sd)));
   for (const sd of [211, 251, 307]) peren.push(buildPerennialGeo(mulberry32(sd)));
   for (const sd of [331, 379]) ground.push(buildGroundcoverGeo(mulberry32(sd)));
-  ARCH = { deciduous: decid, conifer: coni, shrub, peren, ground };
+  ARCH = { shrub, peren, ground };
 }
 
 function ensurePlantMats() {
@@ -780,7 +802,7 @@ function buildLayer(list, variants, mat, archOf, scaleOf, month, noRot) {
     let idx = 0;
     items.forEach((p, ii) => {
       const [sx, sy, sz] = scaleOf(p);
-      const rotY0 = noRot ? 0 : (hashPid(p.plant_id) % 628) / 100;
+      const rotY0 = noRot ? 0 : (indHash(p) % 628) / 100;
       const col = fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity);
       places[ii].forEach((pl, k) => {
         const m = pl.mul;
@@ -808,20 +830,22 @@ function buildPlants(group, plants, month) {
     byKind[k].push(p);
   }
 
-  // Trees — bucketed by crown class (conifer vs deciduous) × archetype variant
-  // (species look) × maturity tier (young trees are structurally simpler).
+  // Trees — bucketed by crown class (conifer vs deciduous) × species variant
+  // (silhouette) × maturity tier (young trees are simpler) × per-individual
+  // sub-variation (so repeats of one species aren't identical clones).
   if (byKind.tree.length) {
     const buckets = {};
     for (const p of byKind.tree) {
       const cls = p.foliage_type === 'evergreen' ? 'conifer' : 'deciduous';
       const v = hashPid(p.plant_id) % TREE_VARIANTS;
       const t = tierFor(p.scale_factor);
-      const key = cls + v + '_' + t;
-      (buckets[key] = buckets[key] || { cls, v, t, items: [] }).items.push(p);
+      const sub = indHash(p) % TREE_SUBVARS;
+      const key = cls + v + '_' + t + '_' + sub;
+      (buckets[key] = buckets[key] || { cls, v, t, sub, items: [] }).items.push(p);
     }
     for (const key in buckets) {
-      const { cls, v, t, items } = buckets[key];
-      const arch = ARCH[cls][v][t];
+      const { cls, v, t, sub, items } = buckets[key];
+      const arch = getTreeArch(cls, v, t, sub);
       const places = items.map(spreadPlacements);
       const total = places.reduce((s, pl) => s + pl.length, 0);
       const branch = instancedMesh(arch.branchGeo, total, MATS.branch);
@@ -829,7 +853,7 @@ function buildPlants(group, plants, month) {
       let idx = 0;
       items.forEach((p, ii) => {
         const h = Math.max(0.4, p.height_m), c = Math.max(0.4, p.canopy_m);
-        const rotY0 = (hashPid(p.plant_id) % 628) / 100;
+        const rotY0 = (indHash(p) % 628) / 100;
         const bare = _isDecid(p.foliage_type) && _bareMonth(month);
         const bcol = fadeToward('#5d4433', p.opacity);
         const fcol = fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity);
