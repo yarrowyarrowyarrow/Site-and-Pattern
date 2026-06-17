@@ -109,6 +109,22 @@ class TestSceneBasics(unittest.TestCase):
         # Plant 2 has no deciduous_evergreen → defaults to herbaceous.
         self.assertEqual(by_id["Shrub"]["foliage_type"], "herbaceous")
 
+    def test_growth_and_spread_fields_for_3d_forms(self):
+        # The 3D viewer keys the structural maturity tier off scale_factor and
+        # the self-spread satellite scatter off spread_factor — see scene3d.html.
+        proj = _project([
+            plant_feature({"plant_id": 1, "common_name": "Tree",
+                           "lat": _LAT, "lng": _LNG}),
+        ])
+        mature = build_scene(proj, year=0, get_plant=_get_plant)["plants"][0]
+        young = build_scene(proj, year=10, get_plant=_get_plant)["plants"][0]
+        # year 0 = mature reference (full size); year 10 of 20 = half-grown.
+        self.assertEqual(mature["scale_factor"], 1.0)
+        self.assertEqual(young["scale_factor"], 0.5)
+        # No spread_habit on the fake plant → no colony widening.
+        self.assertEqual(mature["spread_factor"], 1.0)
+        self.assertEqual(mature["growth_curve"], "steady")
+
     def test_marker_color_wins_over_type_color(self):
         proj = _project([
             plant_feature({"plant_id": 2, "common_name": "Shrub",

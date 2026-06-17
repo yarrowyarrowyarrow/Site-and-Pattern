@@ -21,10 +21,15 @@ Scene schema (``SCENE_VERSION`` = 1)::
       "bounds": {"min_x","min_y","max_x","max_y"},   # metres, scene extent
       "boundary": [[x, y], ...] | None,              # property outline
       "plants": [{plant_id, x, y, height_m, canopy_m, plant_type,
-                  foliage_type, color, opacity, common_name, existing?}, ...],
+                  foliage_type, scale_factor, spread_factor, growth_curve,
+                  color, opacity, common_name, existing?}, ...],
                                        # foliage_type: deciduous|evergreen|
                                        #   herbaceous|semi-evergreen (3D crown
                                        #   shape + seasonal colour)
+                                       # scale_factor: 0.1–1.0 growth maturity
+                                       #   (3D branch-complexity tier)
+                                       # spread_factor: ≥1.0 colony widening
+                                       #   (3D self-spread satellite scatter)
       "buildings": [{ring: [[x, y], ...], height_m, kind}, ...],
                                        # kind: "building" | "canopy"
       "structures": [{x, y, struct_id, name, size_m, height_m}, ...],
@@ -201,6 +206,12 @@ def build_scene(project: dict, *, year: int = 0,
                 "height_m": st["height_m"], "canopy_m": st["canopy_m"],
                 "plant_type": st["plant_type"] or "herb",
                 "foliage_type": st.get("foliage_type", "herbaceous"),
+                # Growth maturity (0.1–1.0) drives the 3D viewer's structural
+                # tier (sapling/young/mature branch complexity); spread_factor
+                # (≥1.0) drives the visual colony scatter for self-spreaders.
+                "scale_factor": st["scale_factor"],
+                "spread_factor": st["spread_factor"],
+                "growth_curve": plant.get("growth_curve") or "steady",
                 "color": (plant.get("marker_color")
                           or _TYPE_COLORS.get(st["plant_type"])
                           or _FALLBACK_PLANT_COLOR),
@@ -220,6 +231,10 @@ def build_scene(project: dict, *, year: int = 0,
                 "height_m": float(props.get("height_m") or 6.0),
                 "canopy_m": canopy,
                 "plant_type": "tree",
+                # Existing trees are mature with no modelled colony spread.
+                "scale_factor": 1.0,
+                "spread_factor": 1.0,
+                "growth_curve": "steady",
                 "color": _EXISTING_TREE_COLOR,
                 "opacity": 1.0,
                 "existing": True,

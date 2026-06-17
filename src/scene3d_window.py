@@ -105,7 +105,7 @@ class Scene3DWindow(QWidget):
         bar.addWidget(self._year, 2)
         bar.addWidget(self._year_lbl)
         bar.addSpacing(12)
-        bar.addWidget(QLabel("Sun:"))
+        bar.addWidget(QLabel("Time of year:"))
         bar.addWidget(self._month, 1)
         bar.addWidget(self._hour, 1)
         bar.addWidget(self._sun_lbl)
