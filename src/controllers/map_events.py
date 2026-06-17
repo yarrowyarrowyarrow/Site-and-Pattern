@@ -1480,9 +1480,8 @@ class MapEventRouter:
 
     def _on_timeline_year_changed(self, year: int):
         """Compute per-plant scale factors for the timeline year and send to JS."""
-        import math
-
         from src.db.plants import get_plant
+        from src.scene3d import growth_scale_factor, spread_scale_factor
         from src.succession import (
             successional_role, presence_factor, restoration_stage,
         )
@@ -1495,11 +1494,12 @@ class MapEventRouter:
         # We need to iterate plantMarkers in JS, so we build scale data keyed by markerIds
         # Since we don't have JS markerIds in Python, we build per-plant-id scale factors
         # and let JS match by plantId
-        plant_cache = {}  # plant_id -> (ytm, curve, ptype, role)
+        plant_cache = {}  # plant_id -> (ytm, curve, ptype, role, spread_habit)
         summary_trees = 0
         summary_mature = 0
         summary_fading = 0
         summary_emerging = 0
+        summary_spreading = 0
         summary_total = len(self._main._placed_plants)
 
         for p in self._main._placed_plants:
@@ -1512,38 +1512,30 @@ class MapEventRouter:
                     curve = plant.get("growth_curve") or "steady"
                     ptype = plant.get("plant_type", "herb")
                     role = successional_role(plant)
+                    spread = plant.get("spread_habit") or ""
                 else:
                     ytm = 2
                     curve = "steady"
                     ptype = "herb"
                     role = "mid"
-                plant_cache[pid] = (ytm, curve, ptype, role)
+                    spread = ""
+                plant_cache[pid] = (ytm, curve, ptype, role, spread)
 
-            ytm, curve, ptype, role = plant_cache[pid]
+            ytm, curve, ptype, role, spread = plant_cache[pid]
             pres = presence_factor(role, year, ytm)
             if role == "pioneer" and pres < 0.9:
                 summary_fading += 1
             elif role == "climax" and pres < 0.9:
                 summary_emerging += 1
 
-            if year == 0:
-                factor = 1.0
-            elif year >= ytm:
-                factor = 1.0
-            else:
-                ratio = year / ytm
-                if curve == "fast_early":
-                    factor = math.sqrt(ratio)
-                elif curve == "slow_start":
-                    factor = ratio ** 1.5
-                else:  # steady
-                    factor = ratio
-            factor = max(0.1, min(1.0, factor))
+            factor = growth_scale_factor(year, ytm, curve)
 
             if ptype == "tree":
                 summary_trees += 1
             if factor >= 0.95:
                 summary_mature += 1
+            if spread_scale_factor(year, spread, ytm) > 1.01:
+                summary_spreading += 1
 
         # Build summary text
         if year == 0:
@@ -1564,20 +1556,18 @@ class MapEventRouter:
                 summary += (
                     f"\n{summary_emerging} climax species still coming up."
                 )
+            if summary_spreading:
+                summary += (
+                    f"\n{summary_spreading} spreading "
+                    f"species filling in the gaps."
+                )
             if summary_trees > 0:
-                # Find avg tree scale
-                tree_scales = []
-                for p in self._main._placed_plants:
-                    pid = p["plant_id"]
-                    ytm, curve, ptype, role = plant_cache[pid]
-                    if ptype == "tree":
-                        ratio = min(1.0, year / ytm)
-                        if curve == "fast_early":
-                            tree_scales.append(math.sqrt(ratio))
-                        elif curve == "slow_start":
-                            tree_scales.append(ratio ** 1.5)
-                        else:
-                            tree_scales.append(ratio)
+                # Average tree growth — same curve as the markers (scene3d).
+                tree_scales = [
+                    growth_scale_factor(year, *plant_cache[p["plant_id"]][:2])
+                    for p in self._main._placed_plants
+                    if plant_cache[p["plant_id"]][2] == "tree"
+                ]
                 avg_tree = sum(tree_scales) / len(tree_scales) if tree_scales else 0
                 summary += f"\nTrees: ~{int(avg_tree * 100)}% of mature canopy."
 
@@ -1586,17 +1576,19 @@ class MapEventRouter:
         # Send scale data to JS — we use a per-plantId approach
         # JS will iterate plantMarkers and look up scaleFactor by plantId.
         # pid_presence carries the succession fade (pioneers out, climax in).
-        from src.scene3d import growth_scale_factor
         pid_factors = {}
         pid_presence = {}
-        for pid, (ytm, curve, ptype, role) in plant_cache.items():
-            # Shared with the (future) 3D view via src.scene3d so the two never
-            # drift on the growth curve.
+        pid_spread = {}
+        for pid, (ytm, curve, ptype, role, spread) in plant_cache.items():
+            # Shared with the 3D view via src.scene3d so the two never drift on
+            # the growth/spread curves. Growth scales the whole marker; spread
+            # additionally widens self-spreaders' footprint as the colony fills in.
             pid_factors[pid] = growth_scale_factor(year, ytm, curve)
             pid_presence[pid] = presence_factor(role, year, ytm)
+            pid_spread[pid] = spread_scale_factor(year, spread, ytm)
 
         self._main.map_widget.set_timeline_year_by_plant_id(
-            year, pid_factors, pid_presence)
+            year, pid_factors, pid_presence, pid_spread)
 
     # ── Polyculture click placement ──────────────────────────────────────────
 

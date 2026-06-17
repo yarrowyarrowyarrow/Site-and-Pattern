@@ -1156,14 +1156,17 @@ class MainWindow(QMainWindow):
                               "matrix": bool(matrix)}
         self._mode._enter_fill_mode()
 
-    def _on_community_mix_fill_requested(self, communities, spacing_m: float):
-        """Plant Communities tab → fill an area with whole units drawn from a
-        community MIX (scattered evenly by weight)."""
+    def _on_community_mix_fill_requested(self, communities, spacing_m: float,
+                                         matrix=False):
+        """Plant Communities tab → fill an area from a community MIX. By default
+        whole community units are scattered evenly by weight; with ``matrix`` the
+        whole mix dissolves into one matrix planting (all members pooled)."""
         communities = list(communities or [])
         if len(communities) < 2:
             return
         self._pending_fill = {"kind": "community_mix", "communities": communities,
-                              "spacing": float(spacing_m or 0.0)}
+                              "spacing": float(spacing_m or 0.0),
+                              "matrix": bool(matrix)}
         self._mode._enter_fill_mode()
 
     def _on_fill_area_complete(self, points_json: str):
@@ -1189,7 +1192,7 @@ class MainWindow(QMainWindow):
             what = "communities"
         elif kind == "community_mix":
             n = self._area_fill.fill_community_mix(ring, spec["communities"],
-                                                   spec["spacing"])
+                                                   spec["spacing"], matrix=matrix)
             what = "community units"
         else:
             n = self._area_fill.fill(ring, spec["members"], spec["spacing"],

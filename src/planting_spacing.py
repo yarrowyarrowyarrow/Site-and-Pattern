@@ -134,11 +134,16 @@ def _ring_offsets(n: int, sp: float, base_r: float):
     return out, r - sp
 
 
-def arrange_concentric(members):
+def arrange_concentric(members, max_radius_m: float | None = None):
     """Lay community ``members`` out by layer: tree(s) centred, shrubs ringed
     around them, perennials in the next band, groundcover filling the outer band.
     Returns ``(members_with_offsets, radius_m)`` — ``radius_m`` is how far out the
-    arrangement reaches, so the builder can grow the canvas to fit."""
+    arrangement reaches, so the builder can grow the canvas to fit.
+
+    ``max_radius_m`` caps how far the arrangement spreads outward: when the
+    natural layout reaches past it, every offset is scaled in proportionally so
+    the whole community fits within the cap (the layer rings are preserved, just
+    drawn tighter). ``None`` leaves the natural radius untouched."""
     members = [dict(m) for m in members]
     buckets: dict[str, list] = {b: [] for b in LAYER_ORDER}
     for m in members:
@@ -160,6 +165,13 @@ def arrange_concentric(members):
             m["offset_y"] = round(y, 2)
             out.append(m)
         r_cursor = max(r_cursor, outer)
+
+    if max_radius_m and r_cursor > max_radius_m > 0:
+        scale = max_radius_m / r_cursor
+        for m in out:
+            m["offset_x"] = round(m["offset_x"] * scale, 2)
+            m["offset_y"] = round(m["offset_y"] * scale, 2)
+        r_cursor = max_radius_m
     return out, round(r_cursor, 2)
 
 

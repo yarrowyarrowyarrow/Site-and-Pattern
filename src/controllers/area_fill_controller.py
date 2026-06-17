@@ -157,6 +157,48 @@ class AreaFillController:
                 "by type.", 5000)
         return n
 
+    def _fill_community_mix_matrix(self, ring, communities, spacing_m, rng):
+        """Matrix-plant a MIX of communities via the layered engine: pool every
+        member of every community (weighted by the community's mix weight), then
+        place them by vegetation layer — groundcover knits the ground while taller
+        members stand distinct — over the whole area (instead of stamping each
+        community as a separate unit). Returns the plant count, or None when the
+        pooled members have no ground layer to knit with (caller falls back)."""
+        from src import planting_spacing
+        pooled: dict = {}   # (plant_id, bucket) -> typed member (weights summed)
+        ground_sps: list = []
+        for c in communities:
+            cw = max(0.0, float(c.get("weight") or 1.0))
+            for m in (c.get("polyculture") or {}).get("members") or []:
+                try:
+                    pid = int(m["plant_id"])
+                except Exception:  # noqa: BLE001
+                    continue
+                bucket = planting_spacing.bucket_for_member(m)
+                w = cw * float(m.get("weight") or 1.0)
+                key = (pid, bucket)
+                if key in pooled:
+                    pooled[key]["weight"] += w
+                else:
+                    pooled[key] = self._typed_member(pid, w, layer_bucket=bucket)
+                if bucket == "ground":
+                    ground_sps.append(float(m.get("spacing_m") or 0))
+        typed = list(pooled.values())
+        has_ground = any(t.get("layer_bucket") == "ground" for t in typed)
+        has_taller = any(t.get("layer_bucket") != "ground" for t in typed)
+        if not typed or not (has_ground and has_taller):
+            return None
+        gsp = [s for s in ground_sps if s > 0]
+        base = max(0.3, min(1.5, min(gsp) if gsp else 0.6))
+        records = planting_spacing.layered_fill_plan(ring, typed, base, rng=rng)
+        n = self._place_plant_records(records, poly_name="Community mix")
+        if n:
+            self._main.statusBar().showMessage(
+                f"Filled area — matrix planting of a {len(communities)}-community "
+                f"mix ({n} plants): ground layer knit together, taller plants "
+                "spaced by type.", 5000)
+        return n
+
     def fill_communities(self, ring, polyculture: dict, spacing_m: float,
                          rng=None, matrix: bool = False) -> int:
         """Fill a polygon with whole community UNITS — each anchor expands every
@@ -210,13 +252,19 @@ class AreaFillController:
         return len(anchors)
 
     def fill_community_mix(self, ring, communities: list, spacing_m: float,
-                           rng=None) -> int:
+                           rng=None, matrix: bool = False) -> int:
         """Fill a polygon with whole community units drawn from a MIX of
         communities (each ``{id, weight, name, polyculture}``). Units sit on a
         grid stepped by the largest community's footprint + ``spacing_m``; which
         community lands on each anchor is chosen by weight and then spread so the
         same community isn't clumped — the same even distribution as a Circle-fill
-        mix. Returns the number of community units placed (one shared group)."""
+        mix. Returns the number of community units placed (one shared group).
+
+        With ``matrix=True`` the whole mix instead dissolves into a single matrix
+        planting — every member of every community pooled (weighted by the
+        community's mix weight), the ground layer knitting the area while taller
+        plants scatter through it (:meth:`_fill_community_mix_matrix`); it falls
+        back to unit stamping when the pooled members have no ground layer."""
         import math
         from src.db.polycultures import community_natural_radius
 
@@ -224,6 +272,11 @@ class AreaFillController:
                        if (c.get("polyculture") or {}).get("members")]
         if not communities:
             return 0
+        if matrix:
+            n = self._fill_community_mix_matrix(ring, communities, spacing_m, rng)
+            if n is not None:
+                return n
+            # No ground layer to knit with — fall through to unit stamping.
         max_radius = max(community_natural_radius(c["polyculture"])
                          for c in communities)
         step = 2.0 * max_radius + max(0.0, float(spacing_m or 0.0))

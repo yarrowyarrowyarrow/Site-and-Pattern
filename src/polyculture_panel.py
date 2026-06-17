@@ -719,6 +719,25 @@ class PolycultureBuilderDialog(QDialog):
             "rest. Replaces the current positions; drag to fine-tune afterward.")
         arrange_btn.clicked.connect(self._on_auto_arrange)
         centre_col.addWidget(arrange_btn, 0, Qt.AlignmentFlag.AlignHCenter)
+
+        arrange_radius_row = QHBoxLayout()
+        arrange_radius_row.addWidget(QLabel("Max radius:"))
+        self._arrange_radius_slider = QSlider(Qt.Orientation.Horizontal)
+        # 2..30 m placement radius. 6 m matches the shipped communities.
+        self._arrange_radius_slider.setRange(2, 30)
+        self._arrange_radius_slider.setValue(6)
+        self._arrange_radius_slider.setToolTip(
+            "Cap how far Auto-arrange spreads the community outward. "
+            "6 m matches the built-in communities; raise it for larger plantings."
+        )
+        self._arrange_radius_label = QLabel("6 m")
+        self._arrange_radius_label.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self._arrange_radius_slider.valueChanged.connect(
+            lambda v: self._arrange_radius_label.setText(f"{v} m")
+        )
+        arrange_radius_row.addWidget(self._arrange_radius_slider, 1)
+        arrange_radius_row.addWidget(self._arrange_radius_label)
+        centre_col.addLayout(arrange_radius_row)
         body.addLayout(centre_col, 0)
 
         # Right — current members
@@ -905,7 +924,9 @@ class PolycultureBuilderDialog(QDialog):
         members = self.canvas.get_members()
         if not members:
             return
-        arranged, radius = planting_spacing.arrange_concentric(members)
+        max_radius = float(self._arrange_radius_slider.value())
+        arranged, radius = planting_spacing.arrange_concentric(
+            members, max_radius_m=max_radius)
         # Grow the visible canvas + zoom slider so the arrangement fits.
         need = max(3.0, radius + 1.0)
         if need > self.canvas.radius_m():
@@ -962,7 +983,7 @@ class PolycultureBuilderDialog(QDialog):
 class PolyculturePanel(QWidget):
     placePolycultureRequested = pyqtSignal(dict)  # polyculture data with members
     fillAreaRequested = pyqtSignal(int, float, bool)  # polyculture_id, cell spacing (m), matrix (F22)
-    fillCommunityMixRequested = pyqtSignal(object, float)  # [{id,weight,name,polyculture}], spacing
+    fillCommunityMixRequested = pyqtSignal(object, float, bool)  # [{id,weight,name,polyculture}], spacing, matrix (F22)
     # Emitted when the panel creates a brand-new community (e.g. via
     # "Save stack as Community" from the Plants tab), so external views
     # can refresh their library lists.
@@ -1392,14 +1413,18 @@ class PolyculturePanel(QWidget):
         pattern = self.placement_widget.current_pattern()
         kind = pattern["kind"]
         if kind == "fill":
-            # Fill an area with whole units drawn from the community mix.
+            # Fill an area with the community mix. With Matrix planting ticked the
+            # whole mix dissolves into one matrix (every member of every community
+            # pooled, ground layer knitting, taller plants scattered); otherwise
+            # whole community units are scattered.
             self.fillCommunityMixRequested.emit(
                 [
                     {"id": int(c["id"]), "weight": int(c["weight"]),
                      "name": c["name"], "polyculture": c["polyculture"]}
                     for c in self._mix_communities
                 ],
-                self.placement_widget.fill_spacing(),
+                float(self.pattern_spacing.value() or 4.0),
+                bool((pattern.get("params") or {}).get("matrix")),
             )
             return
         if kind == "single":
@@ -1440,20 +1465,27 @@ class PolyculturePanel(QWidget):
         multi-anchor placement: each click drops a row/grid/circle of
         the selected community."""
         from src.placement_controls import PlacementControlsWidget
+        # show_fill_spacing=False: a community/mix is placed as units (or a
+        # matrix), never as a scatter of single plants, so the only meaningful
+        # spacing is the gap *between* units — the single Cell spacing control
+        # below drives every multi mode (Fill Area + Row/Grid/Circle).
         self.placement_widget = PlacementControlsWidget(
             show_canopy_base=False,
+            show_fill_spacing=False,
             title="Placement Mode",
         )
+        self.placement_widget.patternKindChanged.connect(
+            self._on_placement_kind_changed)
         parent_layout.addWidget(self.placement_widget)
 
-        spacing_box = QGroupBox("Community spacing")
-        spacing_box.setStyleSheet(
+        self._spacing_box = QGroupBox("Community spacing")
+        self._spacing_box.setStyleSheet(
             "QGroupBox { color: #a5d6a7; font-size: 11px; "
             "border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 12px; }"
             "QGroupBox::title { subcontrol-origin: margin; left: 8px; "
             "padding: 0 4px; }"
         )
-        sl = QHBoxLayout(spacing_box)
+        sl = QHBoxLayout(self._spacing_box)
         sl.setContentsMargins(8, 12, 8, 6)
         sl.addWidget(QLabel("Cell spacing:"))
         self.pattern_spacing = QDoubleSpinBox()
@@ -1462,13 +1494,23 @@ class PolyculturePanel(QWidget):
         self.pattern_spacing.setValue(4.0)
         self.pattern_spacing.setSuffix(" m")
         self.pattern_spacing.setToolTip(
-            "Centre-to-centre spacing between community instances. "
+            "Centre-to-centre spacing between community units — the gap between "
+            "whole communities for Fill Area and Row/Grid/Circle alike. "
             "Defaults to 2× the selected community's natural radius "
             "(its widest member offset)."
         )
         sl.addWidget(self.pattern_spacing)
         sl.addStretch(1)
-        parent_layout.addWidget(spacing_box)
+        parent_layout.addWidget(self._spacing_box)
+        # Single mode places one community where you click — no inter-unit gap.
+        self._spacing_box.setVisible(False)
+
+    def _on_placement_kind_changed(self, kind: str):
+        """Show the Cell spacing control only when it applies — every multi mode
+        (Fill Area, Row, Grid, Circle); hidden for Single (one click, one
+        community, no inter-unit gap)."""
+        if hasattr(self, "_spacing_box"):
+            self._spacing_box.setVisible(kind != "single")
 
     def _refresh_polyculture_list(self, _filter_text=None):
         self.polyculture_tree.clear()
@@ -1880,7 +1922,8 @@ class PolyculturePanel(QWidget):
             # planting ticked, the community dissolves into a groundcover matrix
             # with taller members scattered through it (F22).
             self.fillAreaRequested.emit(
-                int(polyculture_id), self.placement_widget.fill_spacing(),
+                int(polyculture_id),
+                float(self.pattern_spacing.value() or 4.0),
                 bool((pattern.get("params") or {}).get("matrix")))
             return
         if kind != "single":

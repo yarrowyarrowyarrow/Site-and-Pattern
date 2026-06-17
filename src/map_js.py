@@ -388,11 +388,19 @@ def set_season_view(season: str, pid_visibility: dict) -> str:
 
 
 def set_timeline_year_by_plant_id(year: int, pid_factors: dict,
-                                  pid_presence: dict | None = None) -> str:
+                                  pid_presence: dict | None = None,
+                                  pid_spread: dict | None = None) -> str:
     """Drive the growth-timeline animation: each entry in ``pid_factors`` is
     plant_id → maturity-factor (0..1) for size. Optional ``pid_presence`` maps
     plant_id → presence-opacity (0..1) so pioneers fade out and climax species
-    fade in along the succession timeline (N5); omitted ⇒ all fully present."""
+    fade in along the succession timeline (N5); omitted ⇒ all fully present.
+    Optional ``pid_spread`` maps plant_id → footprint-expansion (≥1.0) so self-
+    spreaders widen their canopy as the colony fills in (F35)."""
+    pres = pid_presence or {}
+    spread = pid_spread or {}
+    if spread:
+        return (f"setTimelineYearByPlantId({int(year)}, {_jslit(pid_factors)}, "
+                f"{_jslit(pres)}, {_jslit(spread)});")
     if pid_presence:
         return (f"setTimelineYearByPlantId({int(year)}, {_jslit(pid_factors)}, "
                 f"{_jslit(pid_presence)});")

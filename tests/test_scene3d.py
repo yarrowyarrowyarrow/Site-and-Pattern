@@ -15,7 +15,8 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.scene3d import (  # noqa: E402
-    growth_scale_factor, plant_3d_state, placed_plants_3d_state,
+    growth_scale_factor, spread_scale_factor, plant_3d_state,
+    placed_plants_3d_state,
 )
 
 
@@ -59,7 +60,54 @@ class TestGrowthScaleFactor(unittest.TestCase):
                         msg=f"{year}/{ytm}/{curve}")
 
 
+class TestSpreadScaleFactor(unittest.TestCase):
+    def test_non_spreaders_never_expand(self):
+        for habit in ("", "clumping", "unknown_value"):
+            self.assertEqual(spread_scale_factor(10, habit, 20), 1.0)
+
+    def test_year_zero_is_one(self):
+        self.assertEqual(
+            spread_scale_factor(0, "aggressive_rhizomatous", 20), 1.0)
+
+    def test_spreaders_widen_over_time(self):
+        early = spread_scale_factor(5, "aggressive_rhizomatous", 20)
+        late = spread_scale_factor(20, "aggressive_rhizomatous", 20)
+        self.assertGreater(early, 1.0)
+        self.assertGreater(late, early)
+
+    def test_asymptote_matches_planting_factor(self):
+        from src.planting_spacing import SPREAD_FACTOR
+        # At/after maturity the footprint reaches the planting-engine factor.
+        self.assertAlmostEqual(
+            spread_scale_factor(20, "aggressive_rhizomatous", 20),
+            SPREAD_FACTOR["aggressive_rhizomatous"])
+        self.assertAlmostEqual(
+            spread_scale_factor(99, "self_seeding", 10),
+            SPREAD_FACTOR["self_seeding"])
+
+    def test_more_aggressive_spreads_wider(self):
+        slow = spread_scale_factor(10, "slow_spreader", 20)
+        aggressive = spread_scale_factor(10, "aggressive_rhizomatous", 20)
+        self.assertGreater(aggressive, slow)
+
+
 class TestPlant3DState(unittest.TestCase):
+    def test_spread_widens_canopy_not_height(self):
+        # An aggressive spreader's footprint grows past its mature canopy over
+        # the years while a clumper's does not; height tracks growth only.
+        common = {"plant_type": "herb", "years_to_maturity": 10,
+                  "growth_curve": "steady", "mature_height_meters": 0.6,
+                  "mature_canopy_m": 1.0}
+        spreader = dict(common, spread_habit="aggressive_rhizomatous")
+        clumper = dict(common, spread_habit="clumping")
+        sp = plant_3d_state(spreader, 0, 0, 100)   # mature
+        cl = plant_3d_state(clumper, 0, 0, 100)
+        self.assertGreater(sp["spread_factor"], 1.0)
+        self.assertEqual(cl["spread_factor"], 1.0)
+        self.assertGreater(sp["canopy_m"], cl["canopy_m"])
+        self.assertAlmostEqual(sp["height_m"], cl["height_m"])  # spread ≠ height
+
+
     def test_scales_height_and_canopy(self):
         tree = {"plant_type": "tree", "years_to_maturity": 20,
                 "growth_curve": "steady", "mature_height_meters": 10.0,

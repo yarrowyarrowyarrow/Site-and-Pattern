@@ -882,10 +882,12 @@ class MapWidget(QWebEngineView):
         self.run_js(map_js.set_season_view(season, pid_visibility))
 
     def set_timeline_year_by_plant_id(self, year: int, pid_factors: dict,
-                                      pid_presence: dict | None = None):
-        """Drive the growth-timeline animation (size + succession fade)."""
+                                      pid_presence: dict | None = None,
+                                      pid_spread: dict | None = None):
+        """Drive the growth-timeline animation (size + succession fade +
+        self-spreader footprint widening)."""
         self.run_js(map_js.set_timeline_year_by_plant_id(
-            year, pid_factors, pid_presence))
+            year, pid_factors, pid_presence, pid_spread))
 
     def toggle_legend(self):
         """Toggle the on-map legend overlay."""

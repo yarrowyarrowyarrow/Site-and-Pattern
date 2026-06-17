@@ -93,6 +93,24 @@ class TestArrangeConcentric(unittest.TestCase):
         self.assertAlmostEqual(dist(1), 0.0, places=6)
         self.assertGreater(dist(6), dist(2))
 
+    def test_max_radius_caps_the_arrangement(self):
+        # Without a cap the arrangement reaches some natural radius; capping it
+        # tighter must pull every member inside the cap and report that radius.
+        _arranged, natural = ps.arrange_concentric(self._members())
+        cap = max(0.5, natural / 2.0)
+        arranged, radius = ps.arrange_concentric(self._members(), max_radius_m=cap)
+        self.assertLessEqual(radius, cap + 1e-6)
+        for m in arranged:
+            self.assertLessEqual(
+                math.hypot(m["offset_x"], m["offset_y"]), cap + 0.05)
+
+    def test_max_radius_leaves_small_arrangements_alone(self):
+        # A generous cap above the natural radius changes nothing.
+        base, _ = ps.arrange_concentric(self._members())
+        capped, _ = ps.arrange_concentric(self._members(), max_radius_m=1000.0)
+        self.assertEqual([(m["offset_x"], m["offset_y"]) for m in base],
+                         [(m["offset_x"], m["offset_y"]) for m in capped])
+
 
 class TestLayeredFill(unittest.TestCase):
     def test_groundcover_denser_than_trees(self):

@@ -109,6 +109,7 @@ class PlacementControlsWidget(QWidget):
         parent: QWidget | None = None,
         *,
         show_canopy_base: bool = True,
+        show_fill_spacing: bool = True,
         title: str = "Placement Mode",
     ):
         super().__init__(parent)
@@ -253,7 +254,12 @@ class PlacementControlsWidget(QWidget):
         fl = QVBoxLayout(fill_panel)
         fl.setContentsMargins(0, 0, 0, 0)
         fl.setSpacing(4)
-        fill_spacing_line = QHBoxLayout()
+        # Spacing label + spinner live in their own row so embedders that supply
+        # their own spacing control (the Communities tab's Cell spacing) can hide
+        # it via show_fill_spacing=False without losing the matrix toggle / hint.
+        self._fill_spacing_row = QWidget()
+        fill_spacing_line = QHBoxLayout(self._fill_spacing_row)
+        fill_spacing_line.setContentsMargins(0, 0, 0, 0)
         fill_spacing_line.setSpacing(4)
         fill_spacing_line.addWidget(_small_label("Spacing:"))
         self._fill_spacing = QDoubleSpinBox()
@@ -263,14 +269,16 @@ class PlacementControlsWidget(QWidget):
         self._fill_spacing.setSuffix(" m")
         self._fill_spacing.setFixedWidth(85)
         self._fill_spacing.setToolTip(
-            "Centre-to-centre spacing of the scattered items. For a community "
-            "(or community mix) this is the gap between whole community units."
+            "Centre-to-centre spacing of the scattered items."
         )
         self._fill_spacing.setStyleSheet(_QTY_SPIN_STYLE)
         fill_spacing_line.addWidget(self._fill_spacing)
-        fill_spacing_line.addWidget(_small_label("Click Place, then draw the area."))
         fill_spacing_line.addStretch()
-        fl.addLayout(fill_spacing_line)
+        fl.addWidget(self._fill_spacing_row)
+        if not show_fill_spacing:
+            self._fill_spacing_row.hide()
+        fill_hint = _small_label("Click Place, then draw the area.")
+        fl.addWidget(fill_hint)
         self._fill_matrix = QCheckBox(
             "Matrix planting — ground layer knits, taller plants stand out")
         self._fill_matrix.setToolTip(
