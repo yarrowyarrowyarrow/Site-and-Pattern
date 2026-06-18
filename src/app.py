@@ -517,7 +517,9 @@ class MainWindow(QMainWindow):
         # opens an About dialog with more detail (commit hash, schema
         # version, etc).
         from src.version_branch import parse_version_branch
-        current_branch = self._current_branch_name() or ""
+        from src.app_version import build_version
+        # Frozen builds have no git; the version is baked in at build time.
+        current_branch = build_version() or self._current_branch_name() or ""
         version_disp = current_branch if parse_version_branch(current_branch) else "dev"
         act_about = help_menu.addAction(f"&About / Version: {version_disp}")
         act_about.setStatusTip(
@@ -527,15 +529,16 @@ class MainWindow(QMainWindow):
         act_about.triggered.connect(self._on_about)
 
         act_update = help_menu.addAction("Check for &Updates…")
-        act_update.setStatusTip("Pull the latest version from GitHub (source installs) "
-                                "or open the releases page (packaged installs)")
+        act_update.setStatusTip("Get the latest version: pulls via git on source "
+                                "installs, or downloads and installs the newest "
+                                "release in-app on packaged (.dmg/.exe) installs")
         act_update.triggered.connect(self._on_check_for_updates)
 
         act_pick = help_menu.addAction("&Switch to a specific version…")
         act_pick.setStatusTip(
-            "Pick any published V<major>.<minor> branch and switch the "
-            "checkout to it. Handy for rolling back to an older release "
-            "or jumping ahead to one the auto-detector doesn't surface."
+            "Pick any published V<major>.<minor> version. Source installs "
+            "check out that branch; packaged installs download and install "
+            "that version's installer."
         )
         act_pick.triggered.connect(self._on_pick_version)
 

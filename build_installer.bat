@@ -47,6 +47,16 @@ if !ERRORLEVEL! neq 0 (
 )
 pip install -q pyinstaller
 
+REM Bake the version into the bundle so the frozen app knows which
+REM V<major>.<minor> it is for the in-app updater (src\app_version.py). CI
+REM passes APP_BUILD_VERSION (the branch/tag); locally we read the git branch.
+set "BUILD_VERSION=%APP_BUILD_VERSION%"
+if not defined BUILD_VERSION (
+    for /f "delims=" %%b in ('git rev-parse --abbrev-ref HEAD 2^>nul') do set "BUILD_VERSION=%%b"
+)
+echo %BUILD_VERSION%> version.txt
+echo Baking version: %BUILD_VERSION%
+
 REM Build with PyInstaller — bail if it fails so we don't ship a broken bundle.
 echo Building application bundle with PyInstaller...
 pyinstaller permadesign.spec --clean

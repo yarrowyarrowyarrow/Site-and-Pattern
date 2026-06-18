@@ -44,6 +44,17 @@ projects. **Double-clicking will NOT work the first time.** Do this instead:
 After that one time, Site & Pattern opens normally forever — just
 double-click it.
 
+### Getting new versions later (easy!)
+Open Site & Pattern and choose **Help → Check for Updates…**. If a newer
+version exists, the app downloads it for you and opens the installer — just
+drag the new Site & Pattern onto Applications (choose **Replace**), then
+reopen it. You can also pick any specific version under
+**Help → Switch to a specific version…**.
+
+> Nice bonus: because the app downloads the update itself, macOS does **not**
+> show the security warning from Step 2 — updates install cleanly with no
+> right-click needed.
+
 **Apple Silicon Macs (M1/M2/M3/M4):** if macOS offers to install **Rosetta**
 on first launch, click **Install** (one time), let it finish, and open the app
 again.
@@ -105,6 +116,15 @@ source venv/bin/activate
 pip install -r requirements.txt   # usually a no-op
 bash build_installer.sh
 ```
+
+### Automatic publishing (so friends' apps can self-update)
+A GitHub Actions workflow (`.github/workflows/release-macos.yml`) builds the
+DMG on a cloud Mac and attaches it to a **GitHub Release** named after the
+branch (e.g. `V1.73`) **every time you push a `V*` branch**. That published
+DMG is what the in-app **Help → Check for Updates…** finds and installs, so
+once you push a new `V` version your friends can update from inside the app —
+you don't have to send them a new file. (You can still build locally with the
+steps above for testing.)
 
 ### Which Mac should I build on? (important for compatibility)
 PyInstaller builds for the **architecture of the Mac you build on**:

@@ -21,6 +21,10 @@ plants.db
 # USDA download artifact (created by import_usda.py)
 data/usda_plants_raw.txt
 
+# Build-time version stamp (written by build_installer.sh/.bat for the
+# frozen app's in-app updater; regenerated on every build)
+version.txt
+
 # Editor / OS
 .idea/
 .vscode/

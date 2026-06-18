@@ -5,19 +5,29 @@
 # "SiteAndPattern" (no spaces/ampersand) so the build scripts and NSIS paths
 # stay quoting-safe. Shortcuts/Start-Menu/.app show the display name.
 
+import os
 import sys
 
 block_cipher = None
+
+# Runtime data files, preserving their relative layout under the bundle root.
+_datas = [
+    ('data', 'data'),
+    ('html', 'html'),
+    ('src/db/schema.sql', 'src/db'),
+]
+# version.txt is written by build_installer.sh / .bat (or the release
+# workflow) just before this spec runs; it lets the frozen app know which
+# V<major>.<minor> it is for the in-app updater (src/app_version.py). It is
+# absent in a plain source checkout, so only bundle it when present.
+if os.path.exists('version.txt'):
+    _datas.append(('version.txt', '.'))
 
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[
-        ('data', 'data'),
-        ('html', 'html'),
-        ('src/db/schema.sql', 'src/db'),
-    ],
+    datas=_datas,
     hiddenimports=[
         'PyQt6',
         'PyQt6.QtCore',

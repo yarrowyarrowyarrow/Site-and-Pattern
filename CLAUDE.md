@@ -90,6 +90,9 @@ only, doesn't affect real commits.
 | `src/db/recipes.py` | Ratio-only polyculture recipes (separate from spatial polycultures). |
 | `src/db/structures.py` | Hard-coded list of habitat structures (bee hotels, brush piles, etc.). |
 | `src/version_branch.py` | Helpers for the V-branch convention (V1.32+). |
+| `src/github_releases.py` | Qt-free GitHub Releases lookup + installer download for the frozen-build in-app updater (V1.73). |
+| `src/app_version.py` | Reads the build's `version.txt` so a frozen `.dmg`/`.exe` knows its own V-version (V1.73). |
+| `.github/workflows/release-macos.yml` | Builds the macOS DMG on a cloud Mac and publishes it to a GitHub Release on every `V*` push, feeding the in-app updater (V1.73). |
 | `src/plant_panel.py` | Right-side plant browser + custom delegate. |
 | `src/polyculture_panel.py` | Polyculture/community builder UI. |
 | `src/analysis_panel.py` | Site analysis + Habitat Value Score breakdown. |

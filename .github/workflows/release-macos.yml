@@ -1,0 +1,61 @@
+name: Build & publish macOS DMG
+
+# Builds the Site & Pattern .dmg on a real macOS runner and attaches it to a
+# GitHub Release tagged with the branch name (e.g. V1.73). The in-app updater
+# (src/github_releases.py + src/controllers/update_flow.py) lists these
+# releases by tag and downloads the .dmg, so publishing here is what lets the
+# packaged Mac app "find the latest version".
+#
+# Runs on every push to a V<major>.<minor> branch (the release-branch
+# convention from CLAUDE.md) and can also be triggered by hand.
+
+on:
+  push:
+    branches:
+      - 'V[0-9]*.[0-9]*'
+  workflow_dispatch:
+
+# Needed to create/update the GitHub Release and upload the asset.
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    name: Build DMG (Intel, Big Sur 11+ compatible)
+    # macos-13 is the Intel runner: an Intel-built app runs on Intel *and*
+    # Apple Silicon (via Rosetta), giving one DMG that works everywhere.
+    # Building on Apple Silicon would produce an arm64-only app that won't
+    # run on Intel Macs.
+    runs-on: macos-13
+
+    steps:
+      - name: Check out the branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build the signed, verified DMG
+        env:
+          # Baked into version.txt so the frozen app knows its own version.
+          APP_BUILD_VERSION: ${{ github.ref_name }}
+        run: bash build_installer.sh
+
+      - name: Name the DMG after the version
+        run: |
+          mv "dist/SiteAndPattern.dmg" "dist/SiteAndPattern-${{ github.ref_name }}.dmg"
+
+      - name: Publish to a GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: dist/SiteAndPattern-${{ github.ref_name }}.dmg

@@ -265,28 +265,35 @@ pyinstaller permadesign.spec --onefile
 
 ---
 
-## Continuous Build (CI/CD)
+## Automatic macOS release + in-app updates
 
-For automated builds on each commit, add GitHub Actions to `.github/workflows/build.yml`:
+`.github/workflows/release-macos.yml` builds the DMG on a cloud **Intel**
+macOS runner and attaches it to a **GitHub Release** tagged with the branch
+name **on every push to a `V<major>.<minor>` branch** (or via the Actions
+"Run workflow" button). It passes `APP_BUILD_VERSION=<branch>` so the bundle's
+`version.txt` records its own version.
 
-```yaml
-name: Build Installers
-on: [push, pull_request]
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.11'
-      - run: pip install -r requirements.txt pyinstaller
-      - run: pyinstaller permadesign.spec --clean
-      - uses: actions/upload-artifact@v2
-        with:
-          name: builds
-          path: dist/
-```
+This is what powers **in-app updates**:
+
+- **Source installs** (`python main.py`): Help → Check for Updates still uses
+  `git fetch`/`git pull` and the V-branch auto-switch (unchanged).
+- **Frozen installs** (`.dmg`/`.exe`): there's no git, so the updater asks the
+  GitHub Releases API for published versions (`src/github_releases.py`),
+  compares against the baked-in `version.txt` (`src/app_version.py`), and
+  **downloads + opens the matching installer in-app** — listing real version
+  names (V1.72, V1.73, …) for both "Check for Updates" and "Switch to a
+  specific version". The Qt download/progress glue lives in
+  `src/controllers/update_flow.py`.
+  - macOS bonus: an app-initiated download isn't quarantined, so the update
+    installs with **no Gatekeeper warning**.
+
+So the publish loop is: push `V1.73` → Actions builds + publishes the DMG →
+every installed Mac app offers V1.73 under Help → Check for Updates.
+
+> **Windows** isn't auto-published here (the user builds the `.exe` and
+> uploads it to the release manually). The in-app updater still handles it: it
+> downloads any `.exe`/`.zip` asset attached to the newest release. Add a
+> `windows`-runner job to the workflow to automate that too.
 
 ---
 

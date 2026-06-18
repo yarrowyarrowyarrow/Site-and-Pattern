@@ -24,6 +24,13 @@ fi
 echo -e "${YELLOW}Installing build dependencies...${NC}"
 pip install -q pyinstaller
 
+# Bake the version into the bundle so the frozen app knows which
+# V<major>.<minor> it is for the in-app updater (src/app_version.py). CI
+# passes APP_BUILD_VERSION (the branch/tag); locally we read the git branch.
+BUILD_VERSION="${APP_BUILD_VERSION:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")}"
+echo "${BUILD_VERSION}" > version.txt
+echo -e "${YELLOW}Baking version: ${BUILD_VERSION:-<unknown>}${NC}"
+
 # Build with PyInstaller
 echo -e "${YELLOW}Building application bundle with PyInstaller...${NC}"
 pyinstaller permadesign.spec --clean
