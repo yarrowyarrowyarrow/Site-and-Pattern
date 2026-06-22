@@ -103,4 +103,6 @@ echo.
 echo To run the application:
 echo   dist\SiteAndPattern\SiteAndPattern.exe
 echo.
-pause
+REM Don't wait for a keypress on a non-interactive CI runner (GitHub Actions
+REM sets CI=true) — a `pause` there would hang the release job forever.
+if not defined CI pause

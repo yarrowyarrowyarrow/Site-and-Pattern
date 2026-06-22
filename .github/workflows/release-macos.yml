@@ -91,8 +91,18 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
+          # Keep this body IDENTICAL to release-windows.yml: both workflows
+          # publish to the same release, so whichever finishes last sets the
+          # final notes — a shared combined body keeps them correct either way.
           body: |
             **Site & Pattern** — a native-plant landscape designer for Alberta and the Canadian prairies.
+
+            ### Install on Windows
+            1. Download **`SiteAndPattern-${{ github.ref_name }}-Setup.exe`** below and run it.
+            2. **First run (one time only):** Windows SmartScreen may say *"Windows protected your PC"* because the app isn't code-signed yet — it's safe. Click **More info → Run anyway**.
+            3. Follow the installer; it adds Desktop and Start-Menu shortcuts.
+
+            To get future versions, use **Help → Check for Updates** inside the app — it downloads and runs the next installer for you.
 
             ### Install on macOS (Big Sur 11 or newer)
             1. Download **`SiteAndPattern-${{ github.ref_name }}.dmg`** below and open it.
