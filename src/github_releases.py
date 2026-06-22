@@ -84,7 +84,7 @@ class Release:
 
     def asset_for_extensions(self, extensions: Sequence[str]) -> Optional[Asset]:
         """First asset whose filename ends with one of ``extensions`` (case-
-        insensitive), preferring the order given (so ``(\".exe\", \".zip\")``
+        insensitive), preferring the order given (so ``(".exe", ".zip")``
         picks the installer over the zip fallback)."""
         lowered = [e.lower() for e in extensions]
         for ext in lowered:
