@@ -65,6 +65,18 @@ jobs:
           arch -x86_64 "$PY_BIN" -m pip install --upgrade pip
           arch -x86_64 "$PY_BIN" -m pip install -r requirements.txt pyinstaller
 
+      - name: Shim pip/pyinstaller to the x86_64 framework Python
+        # The python.org framework ships `pip3`, not a bare `pip`, and we need
+        # both `pip` and `pyinstaller` (called by build_installer.sh) to run as
+        # x86_64. These shims route to the framework Python under Rosetta.
+        run: |
+          set -eux
+          mkdir -p "$HOME/shim"
+          printf '#!/bin/bash\nexec arch -x86_64 "%s" -m pip "$@"\n' "$PY_BIN" > "$HOME/shim/pip"
+          printf '#!/bin/bash\nexec arch -x86_64 "%s" -m PyInstaller "$@"\n' "$PY_BIN" > "$HOME/shim/pyinstaller"
+          chmod +x "$HOME/shim/pip" "$HOME/shim/pyinstaller"
+          echo "$HOME/shim" >> "$GITHUB_PATH"
+
       - name: Build the signed, verified x86_64 DMG
         env:
           APP_BUILD_VERSION: ${{ github.ref_name }}   # baked into version.txt
