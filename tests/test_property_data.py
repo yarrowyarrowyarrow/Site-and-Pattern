@@ -152,6 +152,65 @@ def test_parse_rainfall_empty():
     assert pd._parse_rainfall({"daily": {"time": [], "precipitation_sum": []}}) is None
 
 
+# ── fetch_rainfall: EC normal primary, ERA5-Land secondary ──────────────────
+
+def test_fetch_rainfall_prefers_ec_normal_offline():
+    """An Edmonton pin must return the bundled EC 1981–2010 normal (~455.7 mm)
+    and must NOT touch the network, even when a (high) live value is available."""
+    calls = []
+    real = pd._http_get_json
+    pd._http_get_json = lambda url, timeout=8.0: calls.append(url) or {
+        "daily": {"time": ["2023-01-01"], "precipitation_sum": [9999.0]}
+    }
+    try:
+        out = pd.fetch_rainfall(53.4890, -113.5440)  # Lansdowne, Edmonton
+    finally:
+        pd._http_get_json = real
+    assert out is not None
+    assert out["annual_mm"] == 455.7
+    assert out["years_used"] == 30
+    assert out["source"].startswith("Environment Canada")
+    # Primary path is fully offline — the live endpoint was never consulted.
+    assert calls == []
+
+
+def test_fetch_rainfall_uses_era5_land_out_of_coverage():
+    """A pin far outside the bundled prairie coverage falls back to live
+    ERA5-Land, requested with the 9 km model + local timezone, and labelled
+    as a reanalysis mean rather than a climate normal."""
+    seen = {}
+
+    def fake_get(url, timeout=8.0):
+        seen["url"] = url
+        return {"daily": {
+            "time":              ["2020-07-15", "2021-07-15"],
+            "precipitation_sum": [30.0,         40.0],
+        }}
+
+    real = pd._http_get_json
+    pd._http_get_json = fake_get
+    try:
+        out = pd.fetch_rainfall(49.25, -123.10)  # Vancouver — no bundled normal
+    finally:
+        pd._http_get_json = real
+    assert out is not None
+    assert "models=era5_land" in seen["url"]
+    assert "timezone=auto" in seen["url"]
+    assert "reanalysis" in out["source"]
+    assert out["annual_mm"] == 35.0  # (30 + 40) / 2
+
+
+def test_climate_normal_rainfall_distance_gate():
+    # In coverage → returns the normal.
+    near = pd._climate_normal_rainfall(53.4890, -113.5440, max_km=150.0)
+    assert near is not None and near["annual_mm"] == 455.7
+    # Out of coverage → None so the caller falls back to live data.
+    assert pd._climate_normal_rainfall(49.25, -123.10, max_km=150.0) is None
+    # No gate → nearest station regardless of distance (offline last resort).
+    far = pd._climate_normal_rainfall(49.25, -123.10, max_km=None)
+    assert far is not None and "(nearest station)" in far["source"]
+
+
 # ── _parse_soilgrids ────────────────────────────────────────────────────────
 
 def _sg_layer(name, values_per_depth):
