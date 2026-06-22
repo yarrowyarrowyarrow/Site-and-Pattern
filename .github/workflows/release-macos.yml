@@ -1,13 +1,21 @@
 name: Build & publish macOS DMG
 
-# Builds the Site & Pattern .dmg on a real macOS runner and attaches it to a
+# Builds the Site & Pattern .dmg on a GitHub-hosted Mac and attaches it to a
 # GitHub Release tagged with the branch name (e.g. V1.73). The in-app updater
 # (src/github_releases.py + src/controllers/update_flow.py) lists these
 # releases by tag and downloads the .dmg, so publishing here is what lets the
 # packaged Mac app "find the latest version".
 #
-# Runs on every push to a V<major>.<minor> branch (the release-branch
-# convention from CLAUDE.md) and can also be triggered by hand.
+# Why this looks more complicated than "runs-on: macos-13":
+# GitHub RETIRED its Intel macOS runners, so a `runs-on: macos-13` job now
+# queues forever and is auto-cancelled after 24h ("awaiting a runner"). The
+# only GitHub-hosted Macs left are Apple Silicon (arm64). To still ship ONE
+# DMG that runs on BOTH Intel and Apple Silicon Macs (Big Sur 11+), we build
+# an x86_64 (Intel) app on the arm64 runner via Rosetta 2 + a python.org
+# universal2 Python. An x86_64 app runs natively on Intel and under Rosetta on
+# Apple Silicon. (A native arm64 build would NOT run on Intel Macs at all.)
+#
+# Runs on every push to a V<major>.<minor> branch, or via "Run workflow".
 
 on:
   push:
@@ -21,36 +29,50 @@ permissions:
 
 jobs:
   build-macos:
-    name: Build DMG (Intel, Big Sur 11+ compatible)
-    # macos-13 is the Intel runner: an Intel-built app runs on Intel *and*
-    # Apple Silicon (via Rosetta), giving one DMG that works everywhere.
-    # Building on Apple Silicon would produce an arm64-only app that won't
-    # run on Intel Macs.
-    runs-on: macos-13
+    name: Build x86_64 DMG on Apple Silicon (Big Sur 11+ compatible)
+    runs-on: macos-14            # Apple Silicon (Intel runners are gone)
+    timeout-minutes: 45
+    env:
+      PY_VERSION: "3.11.9"
+      PY_BIN: /Library/Frameworks/Python.framework/Versions/3.11/bin/python3
 
     steps:
       - name: Check out the branch
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Ensure Rosetta 2 (to run the x86_64 toolchain)
+        # Pre-installed on most arm64 runner images; idempotent if so.
+        run: softwareupdate --install-rosetta --agree-to-license || true
 
-      - name: Install dependencies
+      - name: Install an x86_64-capable Python (python.org universal2 build)
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          set -eux
+          curl -fL -o /tmp/python.pkg \
+            "https://www.python.org/ftp/python/${PY_VERSION}/python-${PY_VERSION}-macos11.pkg"
+          sudo installer -pkg /tmp/python.pkg -target /
+          # Put it first on PATH for the build script's `pip`/`pyinstaller`.
+          echo "/Library/Frameworks/Python.framework/Versions/3.11/bin" >> "$GITHUB_PATH"
 
-      - name: Build the signed, verified DMG
+      - name: Confirm the toolchain runs as x86_64
+        run: |
+          set -eux
+          arch -x86_64 "$PY_BIN" -c "import platform; print('python arch =', platform.machine())"
+          test "$(arch -x86_64 "$PY_BIN" -c 'import platform;print(platform.machine())')" = "x86_64"
+
+      - name: Install dependencies (x86_64 wheels, under Rosetta)
+        run: |
+          set -eux
+          arch -x86_64 "$PY_BIN" -m pip install --upgrade pip
+          arch -x86_64 "$PY_BIN" -m pip install -r requirements.txt pyinstaller
+
+      - name: Build the signed, verified x86_64 DMG
         env:
-          # Baked into version.txt so the frozen app knows its own version.
-          APP_BUILD_VERSION: ${{ github.ref_name }}
-        run: bash build_installer.sh
+          APP_BUILD_VERSION: ${{ github.ref_name }}   # baked into version.txt
+          PYI_TARGET_ARCH: x86_64                      # spec → EXE(target_arch=…)
+        run: arch -x86_64 bash build_installer.sh
 
       - name: Name the DMG after the version
-        run: |
-          mv "dist/SiteAndPattern.dmg" "dist/SiteAndPattern-${{ github.ref_name }}.dmg"
+        run: mv "dist/SiteAndPattern.dmg" "dist/SiteAndPattern-${{ github.ref_name }}.dmg"
 
       - name: Publish to a GitHub Release
         uses: softprops/action-gh-release@v2
@@ -58,4 +80,5 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           generate_release_notes: true
+          fail_on_unmatched_files: true
           files: dist/SiteAndPattern-${{ github.ref_name }}.dmg
