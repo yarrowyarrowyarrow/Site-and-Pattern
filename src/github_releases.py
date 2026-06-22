@@ -36,9 +36,10 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Sequence, Tuple
 
-# The canonical repo. Kept here (not in branding) because the repo slug
-# deliberately retains the legacy name — see src/branding.py.
-DEFAULT_REPO = "yarrowyarrowyarrow/PermaDesign"
+# The canonical repo slug for the Releases API. The repo was renamed from
+# "PermaDesign" to "Site-and-Pattern"; GitHub redirects the old name, but we
+# target the current name directly so the updater never depends on a redirect.
+DEFAULT_REPO = "yarrowyarrowyarrow/Site-and-Pattern"
 
 _API_BASE = "https://api.github.com"
 _USER_AGENT = "SiteAndPattern-Updater"
@@ -83,7 +84,7 @@ class Release:
 
     def asset_for_extensions(self, extensions: Sequence[str]) -> Optional[Asset]:
         """First asset whose filename ends with one of ``extensions`` (case-
-        insensitive), preferring the order given (so ``(".exe", ".zip")``
+        insensitive), preferring the order given (so ``(\".exe\", \".zip\")``
         picks the installer over the zip fallback)."""
         lowered = [e.lower() for e in extensions]
         for ext in lowered:

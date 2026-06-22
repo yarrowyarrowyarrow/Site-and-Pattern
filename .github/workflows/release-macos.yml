@@ -91,6 +91,21 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
+          body: |
+            **Site & Pattern** — a native-plant landscape designer for Alberta and the Canadian prairies.
+
+            ### Install on macOS (Big Sur 11 or newer)
+            1. Download **`SiteAndPattern-${{ github.ref_name }}.dmg`** below and open it.
+            2. Drag **Site & Pattern** onto the **Applications** folder.
+            3. **First launch (one time only):** macOS will warn that the developer can't be verified — the app is safe, this is just because it isn't registered with Apple.
+               - **macOS 11–14:** right-click (or Control-click) the app in Applications → **Open** → **Open**.
+               - **macOS 15+:** double-click once (it gets blocked), then Apple menu → System Settings → Privacy & Security → **Open Anyway**.
+
+            After that first time it opens normally. To get future versions, use **Help → Check for Updates** inside the app — those install with no security warning.
+
+            *Apple Silicon (M1–M4): if macOS offers to install **Rosetta** on first launch, click Install (one time).*
+
+            ---
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: dist/SiteAndPattern-${{ github.ref_name }}.dmg
