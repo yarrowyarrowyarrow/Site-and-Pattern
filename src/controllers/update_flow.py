@@ -569,13 +569,18 @@ class UpdateFlowController:
             self._maybe_restore_stash(git_runner, stash_to_restore)
             return
 
-        # If a local branch with this name already exists, plain ``checkout``
-        # it; otherwise create it tracking origin/<target>.
-        rev_check = git_runner("rev-parse", "--verify", "--quiet", target)
-        if rev_check.returncode == 0:
-            checkout = git_runner("checkout", target)
-        else:
-            checkout = git_runner("checkout", "-b", target, f"origin/{target}")
+        # Attach HEAD to a local branch tracking origin/<target>, creating or
+        # resetting it to the remote tip in one step. The explicit
+        # origin/<target> start-point is critical: the release process
+        # publishes a git TAG with the same name as the branch (e.g. tag V1.77
+        # next to branch V1.77), so a bare ``git checkout V1.77`` can resolve to
+        # the TAG and land in DETACHED HEAD — after which ``git pull`` fails with
+        # "you are not currently on a branch" and the switch only half-completes
+        # (the exact symptom users hit switching to a version for the first
+        # time, when no local branch exists yet). ``checkout -B`` from the
+        # remote-tracking ref always lands on a real, tracking branch, even from
+        # a detached HEAD.
+        checkout = git_runner("checkout", "-B", target, f"origin/{target}")
 
         if checkout.returncode != 0:
             self._maybe_restore_stash(git_runner, stash_to_restore)
@@ -586,17 +591,9 @@ class UpdateFlowController:
             )
             return
 
-        # Fast-forward in case the local branch already existed and was
-        # behind origin/<target>. Non-fatal if it fails — we've already
-        # switched, the user can re-run "Check for Updates" on the new
-        # branch.
-        pull = git_runner("pull", "--ff-only")
+        # ``checkout -B`` reset the local branch to origin/<target>, so we're
+        # already at the remote tip — there is nothing to fast-forward.
         pull_warning = ""
-        if pull.returncode != 0:
-            pull_warning = (
-                "\n\nNote: couldn't fast-forward after the switch:\n"
-                + (pull.stderr.strip() or pull.stdout.strip())
-            )
 
         # Restore any stash we set aside on the source branch.
         stash_note = ""
