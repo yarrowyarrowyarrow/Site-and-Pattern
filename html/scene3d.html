@@ -17,10 +17,10 @@
   Axis mapping (scene → three.js, Y-up): x_east → +x, y_north → −z,
   height → +y.
 
-  three.js + Spark are vendored under html/vendor/ and served from the
-  app:// scheme (src/web_assets.py), so the 3D view loads offline and is
-  immune to CDN outages and bundled-Chromium module-loading changes. The
-  offline/error notice now only appears if WebGL itself is unavailable or
+  three.js + Spark are vendored under html/vendor/ and served over a
+  localhost http:// origin (src/web_assets.py), so the 3D view loads offline
+  and is immune to CDN outages and bundled-Chromium module-loading changes.
+  The offline/error notice now only appears if WebGL itself is unavailable or
   the bundled assets are missing.
 
   Plants render as instanced procedural archetypes: trees are Da Vinci

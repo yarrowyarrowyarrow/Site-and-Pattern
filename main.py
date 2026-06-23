@@ -24,13 +24,6 @@ from PyQt6.QtCore import Qt, QtMsgType, qInstallMessageHandler
 # QtWebEngine must be initialised before QApplication on some platforms
 from PyQt6.QtWebEngineWidgets import QWebEngineView  # noqa: F401
 
-# The built-in 3D viewer is served from a custom "app://" scheme so its ES
-# modules load reliably (see src/web_assets.py). The scheme MUST be registered
-# before the QApplication is created — do it at import time, right after the
-# WebEngine import above and before QApplication is ever constructed.
-from src.web_assets import register_scheme, install_handler
-register_scheme()
-
 from src.app import MainWindow
 
 
@@ -59,9 +52,6 @@ def main():
     )
 
     app = QApplication(sys.argv)
-    # Now that a QApplication (and its default WebEngine profile) exists, install
-    # the handler that answers app:// requests for the bundled 3D viewer assets.
-    install_handler()
     # The user-facing name is "Site & Pattern" (see src/branding.py and the
     # window title), but the Qt application/organization name deliberately keeps
     # the legacy "PermaDesign" identifier: it keys QSettings (window geometry +

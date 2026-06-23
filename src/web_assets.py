@@ -1,170 +1,142 @@
 """
-src/web_assets.py — an internal ``app://`` URL scheme that serves the bundled
-web assets from a real, secure origin (V1.77).
+src/web_assets.py — a localhost HTTP server for the built-in 3D viewer (V1.77).
 
-The built-in 3D viewer (``html/scene3d.html``) is an ES-module app: it imports
-three.js + Spark via ``<script type="module">`` + an importmap. Loaded over a
-``file://`` URL (as it was through V1.76) those module imports are at the mercy
-of the bundled Chromium's ``file://`` module rules — which a newer Chromium
-(pulled by the first CI-built Windows installer in V1.76) tightened, breaking
-the viewer with a misleading "needs the network once" notice even when online.
+The 3D viewer (``html/scene3d.html``) is an ES-module app: it imports three.js +
+Spark via ``<script type="module">`` + an importmap. Served over ``file://`` —
+or a custom URL scheme — ES-module loading is at the mercy of the bundled
+Chromium's local-origin rules, which a newer Chromium (pulled by the first
+CI-built Windows installer) tightened, breaking the viewer with a "needs the
+network" notice even online.
 
-Serving the page and its vendored modules from a registered custom scheme gives
-them a normal **same-origin secure context**, so module loading no longer
-depends on ``file://`` quirks, CDNs, or the Chromium version. The 2D map keeps
-using ``file://`` — it loads Leaflet with classic ``<script src>`` tags, which
-were never affected.
+Serving it over a real ``http://127.0.0.1`` origin sidesteps all of that:
+localhost is a normal, *secure* browsing context where ES modules, importmaps,
+``fetch`` and MIME types behave exactly like any ordinary web page. The 2D map
+is untouched — it loads Leaflet via classic ``<script>`` tags over ``file://``
+and was never affected.
 
-Two routes under one scheme:
+The server binds to ``127.0.0.1`` on an ephemeral port, serves the bundled
+``html/`` tree read-only, plus a ``/__localfile`` route for a single imported
+Gaussian-splat ``.ply`` (which lives outside ``html/``). It runs in a daemon
+thread for the app's lifetime and starts lazily on first use.
 
-* ``app://assets/<path>``      → ``<repo>/html/<path>`` (bundled viewer + vendor)
-* ``app://localfile/<abspath>``→ an arbitrary local file (the Gaussian-splat
-  ``.ply`` the user imported), so Spark fetches it same-origin instead of
-  cross-scheme from ``file://``.
-
-Usage (see ``main.py``)::
-
-    register_scheme()          # MUST run before the QApplication is created
-    app = QApplication(...)
-    install_handler()          # installs on the default profile
-
-``src/map3d_widget.py`` then loads :func:`builtin_viewer_url` and turns splat
-paths into :func:`local_file_url`.
+Public API (used by ``src/map3d_widget.py``):
+    builtin_viewer_url()  -> "http://127.0.0.1:<port>/scene3d.html"
+    local_file_url(path)  -> "http://127.0.0.1:<port>/__localfile?path=..."
 """
 
 from __future__ import annotations
 
+import mimetypes
 import os
-import sys
-
-from PyQt6.QtCore import QBuffer, QIODevice, QUrl
-from PyQt6.QtWebEngineCore import (
-    QWebEngineProfile,
-    QWebEngineUrlRequestJob,
-    QWebEngineUrlScheme,
-    QWebEngineUrlSchemeHandler,
-)
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs, quote, urlparse
 
 from src.resources import resource_path
 
-SCHEME = b"app"
-_ASSETS_HOST = "assets"
-_LOCALFILE_HOST = "localfile"
+_server: "ThreadingHTTPServer | None" = None
+_base_url: "str | None" = None
+_lock = threading.Lock()
 
-# Keep a module-level reference so the installed handler isn't garbage-collected
-# while the profile still routes requests to it.
-_handler: "_AppSchemeHandler | None" = None
-
+# Explicit JS MIME for module scripts — Chromium refuses to execute a
+# `<script type="module">` whose response isn't a JavaScript MIME type.
 _MIME = {
-    ".html": b"text/html",
-    ".htm": b"text/html",
-    ".js": b"text/javascript",
-    ".mjs": b"text/javascript",
-    ".css": b"text/css",
-    ".json": b"application/json",
-    ".wasm": b"application/wasm",
-    ".png": b"image/png",
-    ".jpg": b"image/jpeg",
-    ".jpeg": b"image/jpeg",
-    ".gif": b"image/gif",
-    ".svg": b"image/svg+xml",
-    ".ply": b"application/octet-stream",
+    ".html": "text/html; charset=utf-8",
+    ".htm": "text/html; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".mjs": "text/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".map": "application/json; charset=utf-8",
+    ".wasm": "application/wasm",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".svg": "image/svg+xml",
+    ".ply": "application/octet-stream",
 }
 
 
-def _mime_for(path: str) -> bytes:
-    return _MIME.get(os.path.splitext(path)[1].lower(), b"application/octet-stream")
+def _mime_for(path: str) -> str:
+    ext = os.path.splitext(path)[1].lower()
+    return (_MIME.get(ext)
+            or mimetypes.guess_type(path)[0]
+            or "application/octet-stream")
 
 
-def register_scheme() -> None:
-    """Register the ``app`` scheme. Must be called *before* the ``QApplication``
-    is constructed (a hard Qt requirement) and is a no-op if already registered."""
-    if QWebEngineUrlScheme.schemeByName(SCHEME).name():
-        return  # already registered (e.g. a second window/profile)
-    scheme = QWebEngineUrlScheme(SCHEME)
-    scheme.setSyntax(QWebEngineUrlScheme.Syntax.Host)
-    scheme.setFlags(
-        QWebEngineUrlScheme.Flag.SecureScheme        # secure context for modules
-        | QWebEngineUrlScheme.Flag.LocalScheme       # local app content
-        | QWebEngineUrlScheme.Flag.LocalAccessAllowed
-        | QWebEngineUrlScheme.Flag.CorsEnabled       # allow fetch/XHR/module loads
-    )
-    QWebEngineUrlScheme.registerScheme(scheme)
+def _html_root() -> str:
+    return os.path.realpath(resource_path("html"))
 
 
-def install_handler(profile: "QWebEngineProfile | None" = None) -> None:
-    """Install the asset handler on ``profile`` (the default profile if omitted).
-    Call once, after the ``QApplication`` exists."""
-    global _handler
-    if profile is None:
-        profile = QWebEngineProfile.defaultProfile()
-    if _handler is None:
-        _handler = _AppSchemeHandler()
-    profile.installUrlSchemeHandler(SCHEME, _handler)
+class _Handler(BaseHTTPRequestHandler):
+    # Silence the default per-request stderr logging.
+    def log_message(self, *args):  # noqa: D401
+        pass
 
-
-def builtin_viewer_url() -> str:
-    """URL for the built-in three.js viewer served from the ``app`` scheme."""
-    return f"app://{_ASSETS_HOST}/scene3d.html"
-
-
-def local_file_url(path: str) -> str:
-    """``app://localfile`` URL for a local file (the imported splat ``.ply``), so
-    the viewer fetches it same-origin instead of cross-scheme from ``file://``."""
-    # QUrl.fromLocalFile gives a leading-'/' , forward-slashed path on every OS
-    # ("/home/u/x.ply" or "/C:/Users/u/x.ply"); reuse it under our scheme/host.
-    local = QUrl.fromLocalFile(os.path.abspath(path))
-    out = QUrl()
-    out.setScheme("app")
-    out.setHost(_LOCALFILE_HOST)
-    out.setPath(local.path())
-    return out.toString()
-
-
-class _AppSchemeHandler(QWebEngineUrlSchemeHandler):
-    """Serves bundled assets (``app://assets/``) and whitelisted local files
-    (``app://localfile/``) as in-memory replies."""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        # Resolve the html/ root the same frozen-aware way as everything else.
-        self._html_root = os.path.realpath(resource_path("html"))
-
-    def requestStarted(self, job: QWebEngineUrlRequestJob) -> None:  # noqa: N802 (Qt)
-        url = job.requestUrl()
-        host = url.host()
-        if host == _ASSETS_HOST:
-            target = self._resolve_asset(url.path())
-        elif host == _LOCALFILE_HOST:
-            target = self._resolve_localfile(url.path())
-        else:
-            target = None
-
-        if not target or not os.path.isfile(target):
-            job.fail(QWebEngineUrlRequestJob.Error.UrlNotFound)
+    def do_GET(self):  # noqa: N802 (http.server API)
+        parsed = urlparse(self.path)
+        if parsed.path == "/__localfile":
+            qs = parse_qs(parsed.query)
+            raw = (qs.get("path") or [""])[0]
+            target = os.path.normpath(raw) if raw else None
+            # Only ever hand out the imported splat point cloud, never an
+            # arbitrary file, even though we're bound to loopback.
+            if (target and target.lower().endswith(".ply")
+                    and os.path.isfile(target)):
+                self._serve(target)
+            else:
+                self.send_error(404)
             return
 
+        root = _html_root()
+        target = os.path.realpath(os.path.join(root, parsed.path.lstrip("/")))
+        # Containment: never serve anything outside the bundled html/ tree.
+        if target == root or target.startswith(root + os.sep):
+            self._serve(target)
+        else:
+            self.send_error(404)
+
+    def _serve(self, target: str):
+        if not target or not os.path.isfile(target):
+            self.send_error(404)
+            return
         try:
             with open(target, "rb") as fh:
                 data = fh.read()
         except OSError:
-            job.fail(QWebEngineUrlRequestJob.Error.RequestFailed)
+            self.send_error(404)
             return
+        self.send_response(200)
+        self.send_header("Content-Type", _mime_for(target))
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
 
-        buf = QBuffer(job)            # parented to the job so it outlives the read
-        buf.setData(data)
-        buf.open(QIODevice.OpenModeFlag.ReadOnly)
-        job.reply(_mime_for(target), buf)
 
-    def _resolve_asset(self, path: str) -> "str | None":
-        rel = path.lstrip("/")
-        target = os.path.realpath(os.path.join(self._html_root, rel))
-        # Containment check: never serve anything outside html/ (no ../ escape).
-        if target == self._html_root or target.startswith(self._html_root + os.sep):
-            return target
-        return None
+def _ensure_server() -> str:
+    """Start the loopback server once (idempotent) and return its base URL."""
+    global _server, _base_url
+    with _lock:
+        if _server is not None:
+            return _base_url  # type: ignore[return-value]
+        srv = ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
+        srv.daemon_threads = True
+        port = srv.server_address[1]
+        threading.Thread(
+            target=srv.serve_forever, name="web-assets-server", daemon=True
+        ).start()
+        _server = srv
+        _base_url = f"http://127.0.0.1:{port}"
+        return _base_url
 
-    def _resolve_localfile(self, path: str) -> "str | None":
-        # QUrl path is "/abs/..." on POSIX and "/C:/abs/..." on Windows.
-        local = path.lstrip("/") if sys.platform.startswith("win") else path
-        return os.path.normpath(local)
+
+def builtin_viewer_url() -> str:
+    """URL for the built-in three.js viewer (starts the server on first call)."""
+    return _ensure_server() + "/scene3d.html"
+
+
+def local_file_url(path: str) -> str:
+    """Same-origin URL for a local splat ``.ply`` so the viewer can fetch it."""
+    return _ensure_server() + "/__localfile?path=" + quote(os.path.abspath(path))

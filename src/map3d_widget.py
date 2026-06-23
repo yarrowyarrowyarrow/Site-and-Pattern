@@ -88,8 +88,9 @@ class Map3DWidget(QWebEngineView):
             self.load(QUrl.fromLocalFile(dist))
         elif builtin:
             # The built-in viewer is an ES-module app; serve it (and its vendored
-            # three.js + Spark) from the app:// scheme so module loading doesn't
-            # depend on file:// origin rules or the bundled Chromium version.
+            # three.js + Spark) over a localhost http:// origin so module loading
+            # behaves like a normal web page — not subject to file:// origin
+            # rules or the bundled Chromium version (see src/web_assets.py).
             from src.web_assets import builtin_viewer_url
             self.load(QUrl(builtin_viewer_url()))
         else:   # neither shipped (broken bundle) — don't crash the window
@@ -126,9 +127,9 @@ class Map3DWidget(QWebEngineView):
             path = splat.get("path")
             if path and os.path.exists(path):
                 splat = dict(splat)
-                # Serve the .ply through the app:// scheme too, so Spark fetches
-                # it same-origin from the app:// page (a file:// URL would be a
-                # cross-scheme fetch the page's origin may refuse).
+                # Serve the .ply from the same localhost origin as the viewer so
+                # Spark fetches it same-origin (a file:// URL would be a
+                # cross-origin fetch the http:// page would refuse).
                 from src.web_assets import local_file_url
                 splat["url"] = local_file_url(path)
                 scene = dict(scene, splat=splat)
