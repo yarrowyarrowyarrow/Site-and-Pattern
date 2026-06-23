@@ -82,12 +82,31 @@ The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
         'The bundled 3D engine failed to load. The 2D map is unaffected.');
     }
   }, 8000);
-  // Users can't see the devtools console — surface uncaught errors.
-  window.addEventListener('error', function (e) {
+  // Users can't see the devtools console — surface uncaught errors. Until the
+  // viewer has booted (permaSetScene registered), show the REAL error in the
+  // full-screen overlay instead of the generic "couldn't start" notice, so a
+  // boot failure tells us exactly what broke.
+  function _showViewerError(detail) {
+    detail = String(detail);
+    console.error('[scene3d] ' + detail);   // → stderr via the host's log page
     var hud = document.getElementById('hud');
-    if (hud && e && e.message) {
-      hud.innerHTML = '3D viewer error: ' + String(e.message).slice(0, 160);
+    if (hud) hud.innerHTML = '3D viewer error: ' + detail.slice(0, 200);
+    if (!window.permaSetScene) {
+      window.permaFatal('<b>3D viewer error</b><br>' + detail.slice(0, 400)
+        + '<br><br>The 2D map is unaffected.');
     }
+  }
+  // capture = true so module/resource load failures (which don't bubble) are
+  // caught too, not just thrown exceptions.
+  window.addEventListener('error', function (e) {
+    var d = (e && (e.message || (e.error && e.error.message)))
+      || (e && e.target && (e.target.src || e.target.href)
+          ? 'failed to load ' + (e.target.src || e.target.href) : 'unknown error');
+    _showViewerError(d);
+  }, true);
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e && e.reason;
+    _showViewerError((r && (r.message || r.stack)) || r || 'unhandled rejection');
   });
 </script>
 
@@ -95,17 +114,18 @@ The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-// Spark — 3D Gaussian Splatting for three.js (V1.65). Optional photoreal yard
-// backdrop: a phone-captured splat placed behind the design. Loaded with a
-// guarded dynamic import so a Spark failure can NEVER take down the core 3D
-// view: on failure SplatMesh/SparkRenderer stay null and the splat code (each
-// usage is already try/guarded) is simply skipped — the design still renders.
+// Spark — the OPTIONAL photoreal yard-scan backdrop (V1.65). Load it WITHOUT
+// blocking module evaluation: a top-level `await` here would stall the entire
+// viewer — window.permaSetScene is registered far below, so nothing past this
+// point runs until the import settles, and if Spark were slow or hung the whole
+// 3D view would silently never start. Fire-and-forget instead; SplatMesh /
+// SparkRenderer fill in when ready and the splat code (all guarded, and the
+// SparkRenderer is created lazily) simply no-ops until then. The core 3D view
+// never waits on Spark.
 let SplatMesh = null, SparkRenderer = null;
-try {
-  ({ SplatMesh, SparkRenderer } = await import('@sparkjsdev/spark'));
-} catch (err) {
-  console.warn('Spark splat backdrop unavailable; continuing without it.', err);
-}
+import('@sparkjsdev/spark')
+  .then((m) => { SplatMesh = m.SplatMesh; SparkRenderer = m.SparkRenderer; })
+  .catch((err) => console.warn('Spark splat backdrop unavailable:', err));
 
 const SKY = 0xcfe3f2, GROUND = 0x8aa86f;
 
@@ -180,14 +200,20 @@ scene.background = new THREE.Color(SKY);
 scene.fog = new THREE.Fog(SKY, 400, 1400);
 
 // Spark needs a SparkRenderer in the scene to draw splats with the normal
-// THREE.WebGLRenderer (V1.65). Construct defensively: if it fails, the design
-// still renders — only the photoreal backdrop is unavailable.
+// THREE.WebGLRenderer (V1.65). Created LAZILY — only once Spark has loaded
+// (background import above) AND a splat is actually added — so the core view
+// never depends on Spark. Constructed defensively: if it fails, the design
+// still renders, only the photoreal backdrop is unavailable.
 let sparkRenderer = null;
-try {
-  sparkRenderer = new SparkRenderer({ renderer });
-  scene.add(sparkRenderer);
-} catch (e) {
-  sparkRenderer = null;
+function ensureSparkRenderer() {
+  if (sparkRenderer || !SparkRenderer) return sparkRenderer;
+  try {
+    sparkRenderer = new SparkRenderer({ renderer });
+    scene.add(sparkRenderer);
+  } catch (e) {
+    sparkRenderer = null;
+  }
+  return sparkRenderer;
 }
 
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 4000);
@@ -1040,6 +1066,8 @@ function applySplatMatrix(mesh, mat16) {
 
 function ensureSplat(spec) {
   if (!spec || !spec.url) { removeSplat(); return; }
+  if (!SplatMesh) return;          // Spark not loaded (yet) — skip silently
+  ensureSparkRenderer();
   if (spec.url !== splatUrl) {
     removeSplat();
     try {
