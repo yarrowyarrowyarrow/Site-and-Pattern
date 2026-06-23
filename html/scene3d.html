@@ -68,6 +68,13 @@ The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
 </script>
 
 <script>
+  // Diagnostic checkpoint ping → the host logs it to ~/permadesign-debug.log,
+  // so we can trace how far this page got even when the JS console never
+  // reaches Python. Best-effort, never throws.
+  window._pinglog = function (m) {
+    try { fetch('/__log?m=' + encodeURIComponent(m)); } catch (e) {}
+  };
+  window._pinglog('page-script-running');
   // Fail loudly, not with a stuck "loading…": if the module graph didn't
   // initialise within 8s (a WebGL failure sets permaBootError; otherwise the
   // vendored three.js module failed to load/parse), say which.
@@ -77,6 +84,7 @@ The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
   };
   setTimeout(function () {
     if (!window.permaSetScene) {
+      window._pinglog('TIMEOUT: permaSetScene never registered after 8s');
       window.permaFatal(window.permaBootError ||
         '<b>3D viewer couldn\'t start</b><br>' +
         'The bundled 3D engine failed to load. The 2D map is unaffected.');
@@ -88,6 +96,7 @@ The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
   // boot failure tells us exactly what broke.
   function _showViewerError(detail) {
     detail = String(detail);
+    window._pinglog('error: ' + detail.slice(0, 300));
     console.error('[scene3d] ' + detail);   // → stderr via the host's log page
     var hud = document.getElementById('hud');
     if (hud) hud.innerHTML = '3D viewer error: ' + detail.slice(0, 200);
@@ -114,6 +123,9 @@ The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+// If we got here, the static three.js imports resolved & executed. (If they
+// hadn't, NO module code would run and this ping would be absent from the log.)
+window._pinglog && window._pinglog('module-eval-start (three OK)');
 // Spark — the OPTIONAL photoreal yard-scan backdrop (V1.65). Load it WITHOUT
 // blocking module evaluation: a top-level `await` here would stall the entire
 // viewer — window.permaSetScene is registered far below, so nothing past this
@@ -1157,6 +1169,12 @@ function disposeDesignGroup(group) {
       if (mm && !sharedMat.has(mm)) mm.dispose();
   });
 }
+
+// Reaching here means the whole module body executed without throwing — the
+// hooks are about to register and the 8s "couldn't start" timeout will be
+// cancelled. If the log shows 'module-eval-start' but not this line, something
+// between the two threw (and should have surfaced via the error handler).
+window._pinglog && window._pinglog('registering hooks (boot OK)');
 
 window.permaSetScene = function (sc) {
   if (!sc || !sc.bounds) return;

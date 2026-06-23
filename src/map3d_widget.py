@@ -82,9 +82,12 @@ class Map3DWidget(QWebEngineView):
         s.setAttribute(
             QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
 
+        from src.web_assets import _log as _wlog
+        _wlog(f"Map3DWidget: dist={dist!r} builtin={builtin!r} mode={self.mode}")
         if dist:
             # The map3d fork build (web3d/dist) is a separate, self-contained app
             # with relative assets — keep loading it from file:// as before.
+            _wlog(f"loading fork dist via file://: {dist}")
             self.load(QUrl.fromLocalFile(dist))
         elif builtin:
             # The built-in viewer is an ES-module app; serve it (and its vendored
@@ -92,7 +95,9 @@ class Map3DWidget(QWebEngineView):
             # behaves like a normal web page — not subject to file:// origin
             # rules or the bundled Chromium version (see src/web_assets.py).
             from src.web_assets import builtin_viewer_url
-            self.load(QUrl(builtin_viewer_url()))
+            url = builtin_viewer_url()
+            _wlog(f"loading built-in viewer via {url}")
+            self.load(QUrl(url))
         else:   # neither shipped (broken bundle) — don't crash the window
             self.setHtml("<html><body style='background:#16201a;color:#90a4ae;"
                          "font-family:sans-serif'><p style='padding:2em'>"
@@ -100,6 +105,11 @@ class Map3DWidget(QWebEngineView):
                          "</p></body></html>")
 
     def _on_load_finished(self, ok: bool):
+        try:
+            from src.web_assets import _log as _wlog
+            _wlog(f"loadFinished(ok={ok}) url={self.url().toString()}")
+        except Exception:
+            pass
         self._loaded = True
         for js in self._pending_js:
             self.page().runJavaScript(js)

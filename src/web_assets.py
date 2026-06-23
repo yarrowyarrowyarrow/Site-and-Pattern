@@ -38,6 +38,26 @@ _server: "ThreadingHTTPServer | None" = None
 _base_url: "str | None" = None
 _lock = threading.Lock()
 
+
+def _log(msg: str) -> None:
+    """Append a 3D-viewer diagnostic line to ~/permadesign-debug.log (opened and
+    closed per call, so it survives even while the app is still running) and echo
+    to stderr. This is how we trace why the viewer won't start on a user's box."""
+    import sys
+    import time
+    line = f"[web_assets {time.strftime('%H:%M:%S')}] {msg}"
+    try:
+        with open(os.path.join(os.path.expanduser("~"),
+                               "permadesign-debug.log"), "a",
+                  encoding="utf-8") as fh:
+            fh.write(line + "\n")
+    except OSError:
+        pass
+    try:
+        print(line, file=sys.stderr, flush=True)
+    except Exception:
+        pass
+
 # Explicit JS MIME for module scripts — Chromium refuses to execute a
 # `<script type="module">` whose response isn't a JavaScript MIME type.
 _MIME = {
@@ -76,6 +96,18 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):  # noqa: N802 (http.server API)
         parsed = urlparse(self.path)
+
+        # Diagnostic checkpoint endpoint: the viewer page pings this so we can
+        # see how far its script got (independent of the JS console, which on
+        # some boxes never reaches Python). Returns 204.
+        if parsed.path == "/__log":
+            qs = parse_qs(parsed.query)
+            _log("page: " + (qs.get("m") or [""])[0])
+            self.send_response(204)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
         if parsed.path == "/__localfile":
             qs = parse_qs(parsed.query)
             raw = (qs.get("path") or [""])[0]
@@ -86,6 +118,7 @@ class _Handler(BaseHTTPRequestHandler):
                     and os.path.isfile(target)):
                 self._serve(target)
             else:
+                _log(f"404 {parsed.path}")
                 self.send_error(404)
             return
 
@@ -93,26 +126,34 @@ class _Handler(BaseHTTPRequestHandler):
         target = os.path.realpath(os.path.join(root, parsed.path.lstrip("/")))
         # Containment: never serve anything outside the bundled html/ tree.
         if target == root or target.startswith(root + os.sep):
-            self._serve(target)
+            self._serve(target, parsed.path)
         else:
+            _log(f"404 (outside root) {parsed.path}")
             self.send_error(404)
 
-    def _serve(self, target: str):
+    def _serve(self, target: str, url_path: str = ""):
         if not target or not os.path.isfile(target):
+            _log(f"404 (missing) {url_path or target}")
             self.send_error(404)
             return
         try:
             with open(target, "rb") as fh:
                 data = fh.read()
         except OSError:
+            _log(f"500 (read failed) {url_path or target}")
             self.send_error(404)
             return
+        mime = _mime_for(target)
+        _log(f"200 {url_path or os.path.basename(target)}  [{mime}]  {len(data)}B")
         self.send_response(200)
-        self.send_header("Content-Type", _mime_for(target))
+        self.send_header("Content-Type", mime)
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        self.wfile.write(data)
+        try:
+            self.wfile.write(data)
+        except OSError as e:
+            _log(f"write failed for {url_path}: {e}")
 
 
 def _ensure_server() -> str:
@@ -129,6 +170,7 @@ def _ensure_server() -> str:
         ).start()
         _server = srv
         _base_url = f"http://127.0.0.1:{port}"
+        _log(f"server started at {_base_url}  (html root: {_html_root()})")
         return _base_url
 
 
