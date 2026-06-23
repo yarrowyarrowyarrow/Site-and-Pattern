@@ -17,9 +17,11 @@
   Axis mapping (scene → three.js, Y-up): x_east → +x, y_north → −z,
   height → +y.
 
-  three.js loads from unpkg, matching how html/map.html loads Leaflet —
-  the map already assumes network for tiles. Offline shows a notice
-  instead of a scene.
+  three.js + Spark are vendored under html/vendor/ and served from the
+  app:// scheme (src/web_assets.py), so the 3D view loads offline and is
+  immune to CDN outages and bundled-Chromium module-loading changes. The
+  offline/error notice now only appears if WebGL itself is unavailable or
+  the bundled assets are missing.
 
   Plants render as instanced procedural archetypes: trees are Da Vinci
   branching skeletons (R^x = Σ r_i^x) merged into one BufferGeometry per
@@ -52,23 +54,23 @@
 </head>
 <body>
 <div id="hud">3D view — loading…</div>
-<div id="offline"><div id="offline-msg"><b>3D viewer needs the network once</b><br>
-three.js couldn't be loaded (offline?). The 2D map is unaffected.</div></div>
+<div id="offline"><div id="offline-msg"><b>3D viewer couldn't start</b><br>
+The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
 
 <script type="importmap">
 {
   "imports": {
-    "three": "https://unpkg.com/three@0.180.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.180.0/examples/jsm/",
-    "@sparkjsdev/spark": "https://sparkjs.dev/releases/spark/2.1.0/spark.module.js"
+    "three": "./vendor/three/three.module.js",
+    "three/addons/": "./vendor/three/addons/",
+    "@sparkjsdev/spark": "./vendor/spark/spark.module.js"
   }
 }
 </script>
 
 <script>
   // Fail loudly, not with a stuck "loading…": if the module graph didn't
-  // initialise within 8s (offline → three.js unfetchable, or WebGL
-  // unavailable → renderer construction threw), say which.
+  // initialise within 8s (a WebGL failure sets permaBootError; otherwise the
+  // vendored three.js module failed to load/parse), say which.
   window.permaFatal = function (msg) {
     document.getElementById('offline-msg').innerHTML = msg;
     document.getElementById('offline').style.display = 'flex';
@@ -76,8 +78,8 @@ three.js couldn't be loaded (offline?). The 2D map is unaffected.</div></div>
   setTimeout(function () {
     if (!window.permaSetScene) {
       window.permaFatal(window.permaBootError ||
-        '<b>3D viewer needs the network once</b><br>' +
-        'three.js couldn\'t be loaded (offline?). The 2D map is unaffected.');
+        '<b>3D viewer couldn\'t start</b><br>' +
+        'The bundled 3D engine failed to load. The 2D map is unaffected.');
     }
   }, 8000);
   // Users can't see the devtools console — surface uncaught errors.
@@ -93,11 +95,17 @@ three.js couldn't be loaded (offline?). The 2D map is unaffected.</div></div>
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-// Spark — 3D Gaussian Splatting for three.js (V1.65). Optional photoreal
-// yard backdrop: a phone-captured splat placed behind the design. The import
-// rides the same CDN-or-offline contract as three.js above; if it can't load,
-// the whole module throws and the offline notice shows (2D map unaffected).
-import { SplatMesh, SparkRenderer } from '@sparkjsdev/spark';
+// Spark — 3D Gaussian Splatting for three.js (V1.65). Optional photoreal yard
+// backdrop: a phone-captured splat placed behind the design. Loaded with a
+// guarded dynamic import so a Spark failure can NEVER take down the core 3D
+// view: on failure SplatMesh/SparkRenderer stay null and the splat code (each
+// usage is already try/guarded) is simply skipped — the design still renders.
+let SplatMesh = null, SparkRenderer = null;
+try {
+  ({ SplatMesh, SparkRenderer } = await import('@sparkjsdev/spark'));
+} catch (err) {
+  console.warn('Spark splat backdrop unavailable; continuing without it.', err);
+}
 
 const SKY = 0xcfe3f2, GROUND = 0x8aa86f;
 

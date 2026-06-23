@@ -101,9 +101,10 @@ class TestMap3DWidget(unittest.TestCase):
         self.assertTrue(all(c is None for c in captured))
         w.deleteLater()
 
-    def test_apply_scene_injects_splat_file_url(self):
-        # A splat field with an existing file → its path becomes a file:// URL
-        # Spark can fetch (V1.65).
+    def test_apply_scene_injects_splat_app_url(self):
+        # A splat field with an existing file → its path becomes an
+        # app://localfile URL Spark fetches same-origin from the app:// page
+        # (V1.77; was a file:// URL through V1.76).
         import tempfile
         from src.map3d_widget import Map3DWidget
         w = Map3DWidget()
@@ -117,7 +118,7 @@ class TestMap3DWidget(unittest.TestCase):
                  "splat": {"path": p, "matrix": [0.0] * 16, "opacity": 1.0}}
         w.apply_scene(scene)
         self.assertEqual(len(captured), 1)
-        self.assertIn("file://", captured[0])
+        self.assertIn("app://localfile", captured[0])
         self.assertIn('"url"', captured[0])
         # Original scene dict is not mutated (a copy is pushed).
         self.assertNotIn("url", scene["splat"])
