@@ -66,9 +66,11 @@ class SceneViewerAssetsTest(unittest.TestCase):
                                 f"vendored file missing for '{key}': {path}")
 
     def test_required_vendor_files_present(self):
-        # Including Pass.js, which Spark imports via 'three/addons/...'.
+        # Including Pass.js, which Spark imports via 'three/addons/...', and
+        # three.core.js, which three.module.js re-exports from (V1.77 bug).
         required = [
             ("three", "three.module.js"),
+            ("three", "three.core.js"),
             ("three", "addons", "controls", "OrbitControls.js"),
             ("three", "addons", "utils", "BufferGeometryUtils.js"),
             ("three", "addons", "postprocessing", "Pass.js"),
@@ -77,6 +79,53 @@ class SceneViewerAssetsTest(unittest.TestCase):
         for parts in required:
             path = os.path.join(_VENDOR, *parts)
             self.assertTrue(os.path.isfile(path), f"missing vendored asset: {path}")
+
+    def test_vendored_imports_resolve(self):
+        """Every import inside every vendored module must resolve to a file that
+        EXISTS — relative siblings (e.g. three.module.js → ./three.core.js, the
+        V1.77 bug) and bare specifiers via the importmap alike. A serving test
+        can't catch this because it never executes the JS; this static walk does.
+        """
+        import_map = self._importmap()
+        html_dir = os.path.join(_ROOT, "html")
+
+        def resolve(spec, from_path):
+            if spec.startswith("."):                         # relative sibling
+                return os.path.normpath(
+                    os.path.join(os.path.dirname(from_path), spec))
+            if spec in import_map:                           # exact importmap key
+                return os.path.normpath(
+                    os.path.join(html_dir, import_map[spec].lstrip("./")))
+            for key, tgt in import_map.items():              # prefix importmap key
+                if key.endswith("/") and spec.startswith(key):
+                    return os.path.normpath(os.path.join(
+                        html_dir, tgt.lstrip("./"), spec[len(key):]))
+            return None
+
+        # Line-anchored so import-like text inside bundled string literals
+        # (e.g. Spark's inline workers) and JSDoc comment examples don't match.
+        spec_re = re.compile(
+            r"^\s*(?:import|export)\b[^\n]*?\bfrom\s*['\"]([^'\"]+)['\"]"
+            r"|^\s*import\s*\(\s*['\"]([^'\"]+)['\"]", re.M)
+
+        js_files = []
+        for root, _dirs, files in os.walk(_VENDOR):
+            js_files += [os.path.join(root, f) for f in files if f.endswith(".js")]
+        self.assertTrue(js_files, "no vendored .js files found")
+
+        for path in js_files:
+            for m in spec_re.finditer(_read(path)):
+                spec = m.group(1) or m.group(2)
+                resolved = resolve(spec, path)
+                rel = os.path.relpath(path, _ROOT)
+                self.assertIsNotNone(
+                    resolved,
+                    f"{rel} imports {spec!r} — resolves via neither a relative "
+                    f"path nor the importmap")
+                self.assertTrue(
+                    os.path.isfile(resolved),
+                    f"{rel} imports {spec!r} → MISSING file "
+                    f"{os.path.relpath(resolved, _ROOT)}")
 
     def test_no_cdn_references_anywhere_in_html(self):
         self.assertNotIn("unpkg.com", self.html)

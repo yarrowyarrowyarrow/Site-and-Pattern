@@ -13,6 +13,7 @@ network once" notice even online. Vendoring removes that whole class of failure.
 | File | Source | Version |
 |------|--------|---------|
 | `three/three.module.js` | npm `three` → `build/three.module.js` | 0.180.0 (MIT) |
+| `three/three.core.js` | npm `three` → `build/three.core.js` (three.module.js re-exports from it — **required sibling**) | 0.180.0 (MIT) |
 | `three/addons/controls/OrbitControls.js` | npm `three` → `examples/jsm/controls/` | 0.180.0 (MIT) |
 | `three/addons/utils/BufferGeometryUtils.js` | npm `three` → `examples/jsm/utils/` | 0.180.0 (MIT) |
 | `three/addons/postprocessing/Pass.js` | npm `three` → `examples/jsm/postprocessing/` (Spark needs it) | 0.180.0 (MIT) |
