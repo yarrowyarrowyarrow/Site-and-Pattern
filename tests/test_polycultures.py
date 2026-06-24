@@ -240,5 +240,56 @@ class TestStarterCommunities(unittest.TestCase):
             conn.close()
 
 
+class TestPatternLanguageColumns(unittest.TestCase):
+    """F4 — the Alexander pattern-language columns (schema v27) seed with
+    authored text and round-trip through create/export/import."""
+
+    @classmethod
+    def setUpClass(cls):
+        _setup_db()
+        conn = get_connection()
+        conn.execute("DELETE FROM polyculture_members")
+        conn.execute("DELETE FROM polycultures")
+        conn.commit()
+        conn.close()
+        polycultures.seed_example_polycultures()
+
+    def test_schema_version_bumped(self):
+        from src.db.plants import _get_schema_version, _SCHEMA_VERSION
+        conn = get_connection()
+        try:
+            self.assertEqual(_get_schema_version(conn), _SCHEMA_VERSION)
+            self.assertGreaterEqual(_SCHEMA_VERSION, 27)
+        finally:
+            conn.close()
+
+    def test_seeded_community_has_authored_pattern(self):
+        pc = polycultures.get_polyculture_by_name("Apple Tree Community")
+        self.assertIsNotNone(pc)
+        for field in ("problem", "context", "forces", "solution"):
+            self.assertTrue((pc.get(field) or "").strip(),
+                            f"seeded community missing authored {field}")
+
+    def test_create_with_authored_fields_roundtrips(self):
+        pid = polycultures.create_polyculture(
+            "Authored Test", "desc", None,
+            problem="P", context="C", forces="F", solution="S")
+        rec = polycultures.get_polyculture_by_id(pid)
+        self.assertEqual((rec["problem"], rec["context"],
+                          rec["forces"], rec["solution"]),
+                         ("P", "C", "F", "S"))
+
+    def test_export_import_roundtrips_authored_fields(self):
+        src_id = polycultures.get_polyculture_by_name("Apple Tree Community")["id"]
+        data = polycultures.export_polyculture(src_id)
+        for field in ("problem", "context", "forces", "solution"):
+            self.assertTrue(data.get(field), f"export dropped {field}")
+        data["name"] = "Apple Tree Community (imported)"
+        new_id, _warn = polycultures.import_polyculture(data)
+        rec = polycultures.get_polyculture_by_id(new_id)
+        self.assertEqual(rec["problem"], data["problem"])
+        self.assertEqual(rec["solution"], data["solution"])
+
+
 if __name__ == "__main__":
     unittest.main()
