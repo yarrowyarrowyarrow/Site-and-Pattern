@@ -50,6 +50,7 @@ from src.controllers.area_fill_controller import AreaFillController
 from src.project_store import ProjectStore
 from src.scan_import_dialog import start_scan_import as _start_scan_import
 from src.scene3d_window import open_3d_view as _open_3d_view
+from src.snapshot_window import open_snapshot_view as _open_snapshot_view
 from src.branding import APP_NAME, APP_TITLE
 
 
@@ -501,6 +502,15 @@ class MainWindow(QMainWindow):
         # itself in src/scene3d_window.py and the architecture guard's
         # method ceiling stays meaningful.
         act_3d.triggered.connect(lambda: _open_3d_view(self))
+
+        act_snapshots = view_menu.addAction("&Growth Snapshots…")
+        act_snapshots.setStatusTip(
+            "See this design at years 1 / 5 / 15 / 30 side by side — watch "
+            "the plants grow and fill in over time"
+        )
+        # Lambda for the same reason as 3D Preview: the window lives in
+        # src/snapshot_window.py, off MainWindow's method ledger.
+        act_snapshots.triggered.connect(lambda: _open_snapshot_view(self))
 
         view_menu.addSeparator()
         act_map_settings = view_menu.addAction("&Map Settings…")
