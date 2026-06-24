@@ -161,6 +161,68 @@ class TestComputeHabitatScoreSeeded(unittest.TestCase):
         self.assertEqual(d["components"]["native"]["max"], 20)
         self.assertEqual(d["components"]["bloom"]["max"], 20)
         self.assertIn("lepidoptera_supported", d)
+        # F3: food-web completeness is a top-level informational key, not a
+        # scored component (no "max").
+        self.assertIn("food_web", d)
+        self.assertNotIn("food_web", d["components"])
+
+    # ── F3: food-web completeness (informational, un-summed) ───────────
+
+    def _pid(self, name):
+        conn = get_connection()
+        try:
+            row = conn.execute(
+                "SELECT id FROM plants WHERE common_name = ?", (name,)
+            ).fetchone()
+            return row["id"] if row else None
+        finally:
+            conn.close()
+
+    def test_food_web_shape_and_consistency(self):
+        placed = [{"plant_id": pid} for pid in self.some_ids]
+        fw = compute_habitat_score(placed, []).food_web
+        self.assertIsInstance(fw, dict)
+        for k in ("caterpillars", "n_caterpillars", "birds", "n_birds",
+                  "complete", "status"):
+            self.assertIn(k, fw)
+        # complete is exactly the conjunction of the two links…
+        self.assertEqual(fw["complete"], fw["caterpillars"] and fw["birds"])
+        # …and the status string agrees with the two booleans.
+        expected = {(True, True): "complete", (True, False): "no_birds",
+                    (False, True): "no_hosts", (False, False): "empty"}
+        self.assertEqual(fw["status"],
+                         expected[(fw["caterpillars"], fw["birds"])])
+
+    def test_food_web_is_informational_not_summed(self):
+        # The food-web signal must never move the headline (like the fauna
+        # counts) — the total stays the sum of the seven scored components.
+        placed = [{"plant_id": pid} for pid in self.some_ids]
+        r = compute_habitat_score(placed, [])
+        component_sum = (r.score_native + r.score_keystone + r.score_host
+                         + r.score_bird + r.score_layers + r.score_structs
+                         + r.score_bloom)
+        self.assertEqual(r.total, int(round(component_sum)))
+
+    def test_milkweed_only_food_web_broken_no_birds(self):
+        # Milkweed hosts the Monarch caterpillar but nothing here feeds the
+        # birds that would eat it → a broken chain.
+        pid = self._pid("Showy Milkweed")
+        self.assertIsNotNone(pid)
+        fw = compute_habitat_score([{"plant_id": pid}], []).food_web
+        self.assertTrue(fw["caterpillars"])
+        self.assertFalse(fw["birds"])
+        self.assertFalse(fw["complete"])
+        self.assertEqual(fw["status"], "no_birds")
+
+    def test_aspen_food_web_complete(self):
+        # Aspen hosts many lepidoptera and supports birds → the chain closes.
+        pid = self._pid("Trembling Aspen")
+        self.assertIsNotNone(pid)
+        fw = compute_habitat_score([{"plant_id": pid}], []).food_web
+        self.assertTrue(fw["caterpillars"])
+        self.assertTrue(fw["birds"])
+        self.assertTrue(fw["complete"])
+        self.assertEqual(fw["status"], "complete")
 
     def test_accepts_injected_connection(self):
         # Passing a connection avoids opening/closing one internally.

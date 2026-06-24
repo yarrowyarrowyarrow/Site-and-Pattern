@@ -949,6 +949,23 @@ class AnalysisPanel(QWidget):
             parts = [f"{n} {_taxon_label.get(t, t)}"
                      for t, n in result.fauna_by_taxon.items()]
             lines.append("Wildlife supported   " + ", ".join(parts))
+        # Food-web completeness (F3): does the design close the Tallamy chain
+        # (host plants → caterpillars → the birds that eat them)? Informational,
+        # never summed into the headline.
+        food_web = getattr(result, "food_web", None)
+        if food_web:
+            _food_web_msg = {
+                "complete": "Food web   supports caterpillars and the "
+                            "birds that eat them",
+                "no_birds": "Food web   caterpillars, but no bird support "
+                            "yet — add berry/seed plants",
+                "no_hosts": "Food web   birds, but no host plants yet "
+                            "— add caterpillar hosts",
+                "empty":    "Food web   no host plants or bird support yet",
+            }
+            _fw_line = _food_web_msg.get(food_web.get("status"))
+            if _fw_line:
+                lines.append(_fw_line)
         if result.gap_months:
             month_names = ["Jan","Feb","Mar","Apr","May","Jun",
                            "Jul","Aug","Sep","Oct","Nov","Dec"]

@@ -82,6 +82,19 @@ def critique_lines(habitat: dict) -> list[str]:
     if (comp.get("bird_food", {}).get("score") or 0) == 0:
         out.append("Nothing provides bird food (berries/seeds).")
 
+    # Food-web completeness (F3): flag a *broken* Tallamy chain — one link
+    # present without the other. (When both links are missing the separate
+    # host / bird-food lines above already say so, so stay quiet there.)
+    food_web = (habitat or {}).get("food_web") or {}
+    if food_web.get("status") == "no_birds":
+        out.append(
+            "Host plants feed caterpillars, but nothing supports the birds "
+            "that should eat them — add berry/seed producers or bird habitat.")
+    elif food_web.get("status") == "no_hosts":
+        out.append(
+            "You're feeding birds, but without host plants there are no "
+            "caterpillars — the protein nestlings need; add host plants.")
+
     layers = comp.get("layers", {}).get("present") or []
     if len(layers) <= 2:
         out.append(

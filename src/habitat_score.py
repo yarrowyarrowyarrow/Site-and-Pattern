@@ -27,7 +27,12 @@ Score components (100 pts total):
 
 Lepidoptera-supported is reported alongside the score (informational),
 not summed into the headline — so existing scores don't drift as the
-fauna data grows.
+fauna data grows. Food-web completeness (F3) — whether the design closes
+the Tallamy chain (host plants → caterpillars → the birds that eat them)
+— is reported the same way: informational, never summed.
+
+Design principle P3 (relationships matter more than components — the chain
+has to connect) — see docs/DESIGN_PHILOSOPHY.md.
 """
 
 from __future__ import annotations
@@ -151,6 +156,15 @@ class HabitatScore:
     # existing designs' scores stay stable as the fauna dataset grows.
     fauna_by_taxon: dict = field(default_factory=dict)
 
+    # Food-web completeness (F3) — does the design close the Tallamy chain
+    # (host plants → caterpillars → the birds that eat them)? Informational
+    # and un-summed, exactly like the fauna lines above, so it never moves the
+    # headline. Shape:
+    #   {"caterpillars": bool, "n_caterpillars": int,
+    #    "birds": bool, "n_birds": int, "complete": bool, "status": str}
+    # status ∈ {"complete", "no_birds", "no_hosts", "empty"}.
+    food_web: dict = field(default_factory=dict)
+
     def as_dict(self) -> dict:
         """JSON-serialisable view, used by the scripting API."""
         return {
@@ -178,6 +192,7 @@ class HabitatScore:
             },
             "lepidoptera_supported": self.n_lepidoptera_supported,
             "fauna_by_taxon": dict(self.fauna_by_taxon),
+            "food_web": dict(self.food_web),
         }
 
 
@@ -329,6 +344,33 @@ def compute_habitat_score(
              + score_layers + score_structs + score_bloom)
     total_int = int(round(total))
 
+    # ── Food-web completeness (informational, un-summed; F3) ──────────
+    # The Tallamy chain: host plants make caterpillars, and ~96% of land
+    # birds feed those caterpillars to their nestlings. Presence of species
+    # isn't enough — the *links* have to connect. Reuse the counts already
+    # gathered: caterpillars come from larval-host lepidoptera (relationship
+    # data) or the host_plant tag; birds from the bird fauna they support or
+    # the bird_food tag. Reported beside the score, never added to it.
+    n_birds = fauna_by_taxon.get("bird", 0)
+    has_caterpillars = n_lepidoptera_supported > 0 or bool(host_species)
+    has_birds = n_birds > 0 or bool(bird_species)
+    if has_caterpillars and has_birds:
+        food_web_status = "complete"
+    elif has_caterpillars:
+        food_web_status = "no_birds"
+    elif has_birds:
+        food_web_status = "no_hosts"
+    else:
+        food_web_status = "empty"
+    food_web = {
+        "caterpillars": has_caterpillars,
+        "n_caterpillars": n_lepidoptera_supported,
+        "birds": has_birds,
+        "n_birds": n_birds,
+        "complete": has_caterpillars and has_birds,
+        "status": food_web_status,
+    }
+
     return HabitatScore(
         total=total_int,
         grade=_grade_for(total_int),
@@ -353,4 +395,5 @@ def compute_habitat_score(
         score_bloom=score_bloom,
         n_lepidoptera_supported=n_lepidoptera_supported,
         fauna_by_taxon=fauna_by_taxon,
+        food_web=food_web,
     )
