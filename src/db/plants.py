@@ -113,7 +113,10 @@ _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 # existing installs pick the photo URLs up.
 # v26 (V1.67): added `wind_cache` table for the seasonal wind rose. Per-location
 # user cache (not seeded); wiped on reseed like climate_cache so it recomputes.
-_SCHEMA_VERSION = 26
+# v27 (V1.79, F4): added problem/context/forces/solution columns to `polycultures`
+# for the Alexander pattern-language framing. The bump reseeds so existing installs
+# pick up the authored pattern text seeded in src/db/polycultures.py.
+_SCHEMA_VERSION = 27
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -374,6 +377,23 @@ def _migrate_polyculture_member_layer_functions(conn: sqlite3.Connection):
                 "UPDATE polyculture_members SET layer = ?, functions = ? WHERE id = ?",
                 (layer, _json.dumps(functions), r["id"])
             )
+    conn.commit()
+
+
+def _migrate_polyculture_pattern_columns(conn: sqlite3.Connection):
+    """Add the Alexander pattern-language columns (problem/context/forces/
+    solution) to `polycultures` for existing installs (schema v27, F4).
+
+    Idempotent: each ALTER is wrapped so re-running once the column exists is a
+    no-op. No backfill is needed — the v27 version bump triggers a reseed that
+    repopulates the seeded communities (and their authored text) wholesale; the
+    columns just have to exist before that reseed writes into them."""
+    for col_def in ("problem TEXT", "context TEXT",
+                    "forces TEXT", "solution TEXT"):
+        try:
+            conn.execute(f"ALTER TABLE polycultures ADD COLUMN {col_def}")
+        except sqlite3.OperationalError:
+            pass  # column already present
     conn.commit()
 
 
@@ -706,6 +726,11 @@ def init_db() -> None:
         # Kept outside the version-bump reseed path so user-created
         # plant communities are preserved.
         _migrate_polyculture_member_layer_functions(conn)
+
+        # Idempotent additive migration — adds the pattern-language columns to
+        # polycultures so the v27 reseed below can write authored problem/
+        # context/forces/solution text into them (F4).
+        _migrate_polyculture_pattern_columns(conn)
 
         count = conn.execute("SELECT COUNT(*) FROM plants").fetchone()[0]
 

@@ -86,6 +86,14 @@ CREATE TABLE IF NOT EXISTS polycultures (
     description TEXT,
     center_plant_id INTEGER REFERENCES plants(id),
     parent_id INTEGER REFERENCES polycultures(id) ON DELETE SET NULL,
+    -- Alexander pattern-language framing (schema v27, F4). Authored editorial
+    -- text; `description` stays as the short summary / fallback. The data-derived
+    -- parts of the pattern (site envelope, ecological forces, related patterns)
+    -- are computed at display time in src/pattern_language.py, not stored.
+    problem TEXT,                   -- the need / conflict the community resolves
+    context TEXT,                   -- where & when to use it (the larger situation)
+    forces TEXT,                    -- the competing considerations it balances
+    solution TEXT,                  -- the instruction ("Therefore: …")
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
