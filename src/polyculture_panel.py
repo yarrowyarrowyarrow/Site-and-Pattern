@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
     QSlider,
     QSpinBox,
     QSplitter,
-    QTextEdit,
+    QTextBrowser,
     QToolButton,
     QTreeWidget,
     QTreeWidgetItem,
@@ -1090,8 +1090,8 @@ class PolyculturePanel(QWidget):
             "plant_communities/show_description", True, type=bool
         )
         self.description_toggle_btn = QPushButton(
-            "▾ Hide description" if self._show_description
-            else "▸ Show description"
+            "▾ Hide pattern" if self._show_description
+            else "▸ Show pattern"
         )
         self.description_toggle_btn.setStyleSheet(
             "QPushButton { background: transparent; color: #90a4ae; "
@@ -1100,8 +1100,8 @@ class PolyculturePanel(QWidget):
             "QPushButton:hover { color: #c8e6c9; border-color: #4a7a4a; }"
         )
         self.description_toggle_btn.setToolTip(
-            "Show or hide the community description to make room for "
-            "more members in the list below."
+            "Show or hide the pattern card (problem / context / forces / "
+            "solution) to make room for more members in the list below."
         )
         self.description_toggle_btn.clicked.connect(self._on_toggle_description)
         toggle_row = QHBoxLayout()
@@ -1109,11 +1109,15 @@ class PolyculturePanel(QWidget):
         toggle_row.addWidget(self.description_toggle_btn)
         layout.addLayout(toggle_row)
 
-        # Detail area
-        self.detail_text = QTextEdit()
-        self.detail_text.setReadOnly(True)
-        self.detail_text.setMaximumHeight(150)
+        # Detail area — the Alexander pattern card (F4). A QTextBrowser so the
+        # "Related patterns" links are clickable (they navigate the tree); the
+        # card scrolls internally rather than capping at a fixed blurb height.
+        self.detail_text = QTextBrowser()
+        self.detail_text.setOpenLinks(False)   # we handle community: links ourselves
+        self.detail_text.setMinimumHeight(150)
+        self.detail_text.setMaximumHeight(360)
         self.detail_text.setVisible(self._show_description)
+        self.detail_text.anchorClicked.connect(self._on_pattern_link)
         layout.addWidget(self.detail_text)
 
         # Members list — compact rows with inline triangle expand. Each
@@ -1597,10 +1601,39 @@ class PolyculturePanel(QWidget):
             "plant_communities/show_description", self._show_description
         )
         self.description_toggle_btn.setText(
-            "▾ Hide description" if self._show_description
-            else "▸ Show description"
+            "▾ Hide pattern" if self._show_description
+            else "▸ Show pattern"
         )
         self.detail_text.setVisible(self._show_description)
+
+    def _select_polyculture_in_tree(self, polyculture_id) -> bool:
+        """Make the tree row for ``polyculture_id`` current (walks parents +
+        children). Returns True if found. Setting it current drives
+        ``_on_polyculture_selected`` so the card refreshes."""
+        root = self.polyculture_tree.invisibleRootItem()
+        for i in range(root.childCount()):
+            top = root.child(i)
+            if top.data(0, Qt.ItemDataRole.UserRole) == polyculture_id:
+                self.polyculture_tree.setCurrentItem(top)
+                return True
+            for j in range(top.childCount()):
+                child = top.child(j)
+                if child.data(0, Qt.ItemDataRole.UserRole) == polyculture_id:
+                    top.setExpanded(True)
+                    self.polyculture_tree.setCurrentItem(child)
+                    return True
+        return False
+
+    def _on_pattern_link(self, url):
+        """Follow a ``community:{id}`` related-pattern link to that community."""
+        text = url.toString()
+        if not text.startswith("community:"):
+            return
+        try:
+            target = int(text.split(":", 1)[1])
+        except (ValueError, IndexError):
+            return
+        self._select_polyculture_in_tree(target)
 
     def _on_double_click_place(self, item, column):
         """Double-click a polyculture to immediately enter placement mode."""
@@ -1632,18 +1665,21 @@ class PolyculturePanel(QWidget):
         if not polyculture:
             return
 
-        lines = [
-            f"<b>{polyculture['name']}</b>",
-            f"Center: {polyculture.get('center_plant_name', 'None')}",
-        ]
-        if polyculture.get("description"):
-            lines.append(polyculture["description"])
-        lines.append(f"Members: {len(polyculture.get('members', []))}")
-        # Show variation count for top-level
-        children = polycultures.get_polyculture_children(polyculture_id)
-        if children:
-            lines.append(f"Variations: {len(children)}")
-        self.detail_text.setHtml("<br>".join(lines))
+        # Render the community as an Alexander pattern (F4): authored problem/
+        # context/forces/solution plus the live, derived site envelope and
+        # ecological forces, with clickable related-pattern links.
+        try:
+            from src import pattern_language
+            pattern = pattern_language.build_pattern(
+                polyculture,
+                all_communities=polycultures.get_all_polycultures(
+                    top_level_only=False),
+            )
+            self.detail_text.setHtml(pattern_language.pattern_card_html(pattern))
+        except Exception:  # noqa: BLE001 — never let the card break selection
+            self.detail_text.setHtml(
+                f"<b>{polyculture['name']}</b><br>"
+                f"{polyculture.get('description') or ''}")
 
         self._render_member_rows(polyculture.get("members", []))
 
