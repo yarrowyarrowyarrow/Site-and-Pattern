@@ -10,7 +10,7 @@ from typing import Optional
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QComboBox, QListWidget, QFrame,
-    QPushButton, QSizePolicy, QScrollArea, QSplitter,
+    QPushButton, QSizePolicy, QScrollArea,
     QGroupBox, QSpinBox, QDoubleSpinBox,
     QColorDialog, QMenu, QListView,
 )
@@ -204,24 +204,14 @@ class PlantPanel(QWidget):
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
+        self._root_layout = root
 
-        # Main split: browser (top) vs placement controls + placed list
-        # (bottom). The browser pane is prioritised — when a row in the
-        # plant list is expanded the splitter gives extra space to the
-        # top while the placement controls become scrollable below
-        # (Phase 3).
-        splitter = QSplitter(Qt.Orientation.Vertical)
-        splitter.setChildrenCollapsible(False)
-        # Make the splitter handle obvious so the user notices it can
-        # be dragged to claim more room for the placement controls.
-        splitter.setHandleWidth(6)
-        splitter.setStyleSheet(
-            "QSplitter::handle:vertical { background: #2e4a2e; "
-            "height: 6px; margin: 1px 0; border-radius: 2px; }"
-            "QSplitter::handle:vertical:hover { background: #4a7a4a; }"
-        )
-        root.addWidget(splitter, 1)
-        self._main_splitter = splitter
+        # Browser (top, stretches to fill) + placement controls (bottom,
+        # collapses to just its header). A plain layout — NOT a QSplitter —
+        # because QSplitter ignores a collapsed child's maximum height and
+        # leaves an empty gap above the header; a QVBoxLayout honours the
+        # CollapsiblePanel's collapsed sizeHint so the browser fills the space.
+        # Both panes are added to `root` once built (see below).
 
         # ── Top pane: search + filters + results list ─────────────────────
         local_tab = QWidget()
@@ -427,7 +417,7 @@ class PlantPanel(QWidget):
             "Plant Browser", panel_id="plant_panel_browser", expanded=True
         )
         self._browser_panel.set_content(local_tab)
-        splitter.addWidget(self._browser_panel)
+        root.addWidget(self._browser_panel, 1)   # stretches to fill the sidebar
 
         # ── Bottom: placement controls + placed plants ────────────────────
         bottom = QWidget()
@@ -523,6 +513,9 @@ class PlantPanel(QWidget):
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
         self._bottom_scroll.setMinimumHeight(140)
+        # Cap the expanded height so a big plant-mix scrolls inside the pane
+        # rather than pushing the browser off-screen.
+        self._bottom_scroll.setMaximumHeight(360)
 
         # Wrap the placement pane in a CollapsiblePanel so it can shrink to just
         # a header (mirroring the Plant Browser panel above), freeing the whole
@@ -532,12 +525,11 @@ class PlantPanel(QWidget):
             "Placement", panel_id="plant_panel_placement", expanded=False
         )
         self._placement_panel.set_content(self._bottom_scroll)
-        self._placement_panel.toggled.connect(self._on_placement_toggled)
 
-        splitter.addWidget(self._placement_panel)
-        splitter.setSizes([700, 200])
-        splitter.setStretchFactor(0, 5)
-        splitter.setStretchFactor(1, 0)
+        # stretch 0: the placement panel takes its content height when expanded
+        # and collapses to a bare header at the bottom; the browser above keeps
+        # the rest of the column.
+        root.addWidget(self._placement_panel)
 
     # ── Filter helpers ────────────────────────────────────────────────────────
 
@@ -939,43 +931,12 @@ class PlantPanel(QWidget):
         QTimer.singleShot(0, self._refit_bottom_pane)
 
     def _refit_bottom_pane(self):
-        """Resize `_main_splitter` so the bottom pane fits the placement
-        controls + Plant Community Mix + Place Mix button without scrolling.
-        Eats into the plant browser, but keeps `_MIN_BROWSER_PX` visible
-        so the user always has a few result rows. Manual splitter drags
-        are overridden on the next mix mutation — that's intentional.
-        """
-        splitter = getattr(self, "_main_splitter", None)
-        scroll = getattr(self, "_bottom_scroll", None)
-        bottom = getattr(self, "_bottom_widget", None)
-        if splitter is None or scroll is None or bottom is None:
-            return
-        # Don't fight the user's collapse — a collapsed placement pane stays a
-        # bare header until they expand it again.
-        panel = getattr(self, "_placement_panel", None)
-        if panel is not None and not panel.expanded():
-            return
-        sizes = splitter.sizes()
-        if len(sizes) != 2:
-            return
-        total = sum(sizes)
-        if total <= 0:
-            # Splitter hasn't been laid out yet — retry on the next tick.
-            QTimer.singleShot(0, self._refit_bottom_pane)
-            return
-        # `+ 6` is a small fudge so the bottom scroll-area never shows a
-        # vertical scrollbar at the snug fit (frame + spacing rounding).
-        desired = max(scroll.minimumHeight(), bottom.sizeHint().height() + 6)
-        max_bottom = max(total - _MIN_BROWSER_PX, scroll.minimumHeight())
-        new_bottom = min(desired, max_bottom)
-        splitter.setSizes([total - new_bottom, new_bottom])
-
-    def _on_placement_toggled(self, expanded: bool):
-        """Expand re-fits the pane to its controls; collapse needs no work —
-        CollapsiblePanel clamps its own height to the header, so the splitter
-        hands the freed space to the browser automatically."""
-        if expanded:
-            self._refit_bottom_pane()
+        """No-op since V1.79: the placement pane is no longer in a QSplitter, so
+        there is nothing to resize. The CollapsiblePanel sizes itself to its
+        content when expanded (capped by `_bottom_scroll`'s max height) and to a
+        bare header when collapsed, with the browser above taking the rest.
+        Kept (rather than deleted) so existing call sites stay harmless."""
+        return
 
     def _build_mix_row(self, idx: int, species: dict) -> QFrame:
         """One species line: clickable colour dot + name + ratio spinner + ×.

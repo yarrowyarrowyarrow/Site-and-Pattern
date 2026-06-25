@@ -305,18 +305,25 @@ def _section_html(heading: str, body: str, facts_html: str = "") -> str:
     return "".join(parts)
 
 
-def pattern_card_html(pattern: dict) -> str:
+def pattern_card_html(pattern: dict, *, include_header: bool = True) -> str:
     """Render a :func:`build_pattern` result as the panel's pattern card.
 
     Related patterns are ``<a href="community:{id}">`` links so the panel can
-    navigate to them (educational cross-linking between patterns)."""
-    name = html.escape(pattern.get("name") or "—")
-    out = [f'<h3 style="margin:2px 0 2px 0; color:#a5d6a7;">{name}</h3>']
-    center = pattern.get("center")
-    if center:
-        out.append(f'<p style="margin:0 0 4px 0; color:#9e9e9e; '
-                   f'font-size:11px;">Anchored on {html.escape(center)} · '
-                   f'{pattern.get("n_members", 0)} plants</p>')
+    navigate to them (educational cross-linking between patterns).
+
+    ``include_header`` controls the leading name + "Anchored on …" line. The GUI
+    shows those separately above the members list and passes ``False`` so the
+    card starts at Problem; the default ``True`` keeps the standalone card (e.g.
+    a future PDF export) and the existing tests intact."""
+    out: list[str] = []
+    if include_header:
+        name = html.escape(pattern.get("name") or "—")
+        out.append(f'<h3 style="margin:2px 0 2px 0; color:#a5d6a7;">{name}</h3>')
+        center = pattern.get("center")
+        if center:
+            out.append(f'<p style="margin:0 0 4px 0; color:#9e9e9e; '
+                       f'font-size:11px;">Anchored on {html.escape(center)} · '
+                       f'{pattern.get("n_members", 0)} plants</p>')
 
     out.append(_section_html("Problem", pattern.get("problem", "")))
     out.append(_section_html("Context (Where & When to Plant)",

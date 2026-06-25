@@ -1048,10 +1048,10 @@ class PolyculturePanel(QWidget):
         self.polyculture_tree.customContextMenuRequested.connect(
             self._on_tree_context_menu
         )
-        # Share the flexible space with the description card below (tree 2 :
-        # card 3) so the list shows ~half the rows and the pattern card gets the
-        # taller share — the rest of the communities scroll.
-        layout.addWidget(self.polyculture_tree, 2)
+        # Capped to ~7 rows so the selected-community detail below (header +
+        # full members list + description) gets the room; the rest scroll.
+        self.polyculture_tree.setMaximumHeight(170)
+        layout.addWidget(self.polyculture_tree)
 
         # Community-mix stack — populated by right-click → "Add to Mix".
         # When ≥2 communities are in the mix, Row/Grid/Circle placement
@@ -1086,9 +1086,62 @@ class PolyculturePanel(QWidget):
         btn_row1.addWidget(self.variation_btn)
         layout.addLayout(btn_row1)
 
-        # Toggle to reveal/hide the description block. Hiding it frees
-        # vertical space so more members are visible at once. Persisted
-        # in QSettings; default shown (matches the prior behaviour).
+        # Second button row: Edit / Export / Import grouped with the library
+        # actions above (Place on Map lives in the Placement panel instead).
+        btn_row2 = QHBoxLayout()
+        self.edit_btn = QPushButton("Edit")
+        self.edit_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self.edit_btn.setEnabled(False)
+        self.edit_btn.setToolTip("Open the visual builder for this plant community")
+        self.edit_btn.clicked.connect(self._on_edit_polyculture)
+        btn_row2.addWidget(self.edit_btn)
+
+        self.export_btn = QPushButton("Export")
+        self.export_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self.export_btn.setEnabled(False)
+        self.export_btn.setToolTip("Export this community to a .plant-community.json file")
+        self.export_btn.clicked.connect(self._on_export)
+        btn_row2.addWidget(self.export_btn)
+
+        self.import_btn = QPushButton("Import")
+        self.import_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self.import_btn.setToolTip("Import a community from a .plant-community.json or .polyculture.json file")
+        self.import_btn.clicked.connect(self._on_import)
+        btn_row2.addWidget(self.import_btn)
+        layout.addLayout(btn_row2)
+
+        # ── Selected community: name + "Anchored on X · N plants" header ──
+        # Shown above the members so the list sits directly under the title
+        # (the long Problem/Context description follows below).
+        self._community_header = QLabel("")
+        self._community_header.setTextFormat(Qt.TextFormat.RichText)
+        self._community_header.setWordWrap(True)
+        self._community_header.setVisible(False)
+        layout.addWidget(self._community_header)
+
+        # ── Members (full compact list, auto-sized to its content) ───────
+        self._members_label = QLabel("<b>Members</b>")
+        self._members_label.setVisible(False)
+        layout.addWidget(self._members_label)
+
+        self._members_scroll = QScrollArea()
+        self._members_scroll.setWidgetResizable(True)
+        self._members_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        # Height set to fit every row (up to a ceiling) in _render_member_rows,
+        # so the whole members list is visible without scrolling for normal
+        # community sizes.
+        self._members_scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.members_container = QWidget()
+        self._members_layout = QVBoxLayout(self.members_container)
+        self._members_layout.setContentsMargins(0, 0, 0, 0)
+        self._members_layout.setSpacing(1)
+        self._members_layout.addStretch(1)
+        self._members_scroll.setWidget(self.members_container)
+        layout.addWidget(self._members_scroll)
+
+        # ── Pattern description (toggle + card) ──────────────────────────
         self._show_description = QSettings().value(
             "plant_communities/show_description", True, type=bool
         )
@@ -1104,7 +1157,7 @@ class PolyculturePanel(QWidget):
         )
         self.description_toggle_btn.setToolTip(
             "Show or hide the pattern card (problem / context / forces / "
-            "solution) to make room for more members in the list below."
+            "solution) to make more room for the members list above."
         )
         self.description_toggle_btn.clicked.connect(self._on_toggle_description)
         toggle_row = QHBoxLayout()
@@ -1112,83 +1165,16 @@ class PolyculturePanel(QWidget):
         toggle_row.addWidget(self.description_toggle_btn)
         layout.addLayout(toggle_row)
 
-        # Detail area — the Alexander pattern card (F4). A QTextBrowser so the
-        # "Related patterns" links are clickable (they navigate the tree); the
-        # card scrolls internally rather than capping at a fixed blurb height.
+        # The Alexander pattern card (F4): Problem / Context / Forces / Solution
+        # / Related, rendered with include_header=False (the name + "Anchored
+        # on …" line is shown above in self._community_header). QTextBrowser →
+        # clickable related-pattern links. stretch=1: fills the remaining space.
         self.detail_text = QTextBrowser()
         self.detail_text.setOpenLinks(False)   # we handle community: links ourselves
-        self.detail_text.setMinimumHeight(150)
+        self.detail_text.setMinimumHeight(120)
         self.detail_text.setVisible(self._show_description)
         self.detail_text.anchorClicked.connect(self._on_pattern_link)
-        # stretch=3 (vs the tree's 2): the description card gets the taller
-        # share of the column. No max height — it grows to fill its share.
-        layout.addWidget(self.detail_text, 3)
-
-        # Members list — compact rows with inline triangle expand. Each
-        # row is a custom QFrame (see _build_member_row); detail content
-        # (layer/functions + offset) is hidden by default to keep density
-        # tight, matching the Plants browser's expand-on-click pattern.
-        members_label = QLabel("<b>Members</b>")
-        layout.addWidget(members_label)
-
-        self._members_scroll = QScrollArea()
-        self._members_scroll.setWidgetResizable(True)
-        self._members_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self._members_scroll.setMaximumHeight(180)
-        self._members_scroll.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        )
-        self.members_container = QWidget()
-        self._members_layout = QVBoxLayout(self.members_container)
-        self._members_layout.setContentsMargins(0, 0, 0, 0)
-        self._members_layout.setSpacing(1)
-        self._members_layout.addStretch(1)
-        self._members_scroll.setWidget(self.members_container)
-        layout.addWidget(self._members_scroll)
-
-        # Single action row: Place on Map gets visual priority (stretch=2),
-        # Edit shares the row at a smaller weight, Export/Import are
-        # compact fixed-width buttons so they don't crowd the primary.
-        action_row = QHBoxLayout()
-        action_row.setSpacing(4)
-
-        self.place_btn = QPushButton("Place on Map")
-        self.place_btn.setStyleSheet(_POLY_BTN_STYLE)
-        self.place_btn.setEnabled(False)
-        self.place_btn.setMinimumWidth(110)
-        self.place_btn.clicked.connect(self._on_place)
-        action_row.addWidget(self.place_btn, 2)
-
-        # Fill Area moved into the Placement Mode selector (choose "Fill Area",
-        # set spacing, click Place, then draw the polygon) — see _on_place +
-        # PlacementControlsWidget. A community fill drops whole units; a
-        # community-mix fill scatters units from the mix.
-
-        self.edit_btn = QPushButton("Edit")
-        self.edit_btn.setStyleSheet(_POLY_BTN_STYLE)
-        self.edit_btn.setEnabled(False)
-        self.edit_btn.setToolTip(
-            "Open the visual builder for this plant community"
-        )
-        self.edit_btn.clicked.connect(self._on_edit_polyculture)
-        action_row.addWidget(self.edit_btn, 1)
-
-        self.export_btn = QPushButton("Export")
-        self.export_btn.setStyleSheet(_POLY_BTN_STYLE)
-        self.export_btn.setEnabled(False)
-        self.export_btn.setFixedWidth(64)
-        self.export_btn.setToolTip("Export this community to a .plant-community.json file")
-        self.export_btn.clicked.connect(self._on_export)
-        action_row.addWidget(self.export_btn)
-
-        self.import_btn = QPushButton("Import")
-        self.import_btn.setStyleSheet(_POLY_BTN_STYLE)
-        self.import_btn.setFixedWidth(64)
-        self.import_btn.setToolTip("Import a community from a .plant-community.json or .polyculture.json file")
-        self.import_btn.clicked.connect(self._on_import)
-        action_row.addWidget(self.import_btn)
-
-        layout.addLayout(action_row)
+        layout.addWidget(self.detail_text, 1)
 
         # ── Placement controls (collapsible) ─────────────────────────────
         # The placement-mode selector + community spacing + community mix eat a
@@ -1485,6 +1471,15 @@ class PolyculturePanel(QWidget):
         multi-anchor placement: each click drops a row/grid/circle of
         the selected community."""
         from src.placement_controls import PlacementControlsWidget
+
+        # Place on Map is the placement action, so it heads the Placement panel
+        # (above the mode selector). Enabled only when a community is selected.
+        self.place_btn = QPushButton("Place on Map")
+        self.place_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self.place_btn.setEnabled(False)
+        self.place_btn.clicked.connect(self._on_place)
+        parent_layout.addWidget(self.place_btn)
+
         # show_fill_spacing=False: a community/mix is placed as units (or a
         # matrix), never as a scatter of single plants, so the only meaningful
         # spacing is the gap *between* units — the single Cell spacing control
@@ -1672,6 +1667,8 @@ class PolyculturePanel(QWidget):
         self.variation_btn.setEnabled(is_top_level)
 
         if not has_selection:
+            self._community_header.setVisible(False)
+            self._members_label.setVisible(False)
             self.detail_text.clear()
             self._render_member_rows([])
             return
@@ -1681,9 +1678,25 @@ class PolyculturePanel(QWidget):
         if not polyculture:
             return
 
-        # Render the community as an Alexander pattern (F4): authored problem/
-        # context/forces/solution plus the live, derived site envelope and
-        # ecological forces, with clickable related-pattern links.
+        members = polyculture.get("members", [])
+
+        # Header: community name + "Anchored on X · N plants", shown directly
+        # above the members list.
+        center = polyculture.get("center_plant_name") or "—"
+        name = polyculture.get("name") or "—"
+        self._community_header.setText(
+            f"<b style='color:#a5d6a7;'>{name}</b><br>"
+            f"<span style='color:#9e9e9e; font-size:11px;'>Anchored on "
+            f"{center} · {len(members)} plants</span>"
+        )
+        self._community_header.setVisible(True)
+        self._members_label.setVisible(True)
+        self._render_member_rows(members)
+
+        # Description: the Alexander pattern (F4) — authored problem/context/
+        # forces/solution plus the live derived facts, with clickable related
+        # links. include_header=False since the name/anchored line is shown
+        # above in the header label.
         try:
             from src import pattern_language
             pattern = pattern_language.build_pattern(
@@ -1691,13 +1704,10 @@ class PolyculturePanel(QWidget):
                 all_communities=polycultures.get_all_polycultures(
                     top_level_only=False),
             )
-            self.detail_text.setHtml(pattern_language.pattern_card_html(pattern))
-        except Exception:  # noqa: BLE001 — never let the card break selection
             self.detail_text.setHtml(
-                f"<b>{polyculture['name']}</b><br>"
-                f"{polyculture.get('description') or ''}")
-
-        self._render_member_rows(polyculture.get("members", []))
+                pattern_language.pattern_card_html(pattern, include_header=False))
+        except Exception:  # noqa: BLE001 — never let the card break selection
+            self.detail_text.setHtml(polyculture.get("description") or "")
 
         # Pre-fill the cell-spacing field with the community's natural diameter.
         try:
@@ -1724,6 +1734,14 @@ class PolyculturePanel(QWidget):
         for m in members:
             row = self._build_member_row(m)
             layout.insertWidget(layout.count() - 1, row)
+
+        # Size the scroll area to show the whole (collapsed) members list up to
+        # a ceiling — beyond that it scrolls. ~26 px per compact row + padding.
+        n = len(members)
+        ceiling = 300
+        desired = min(ceiling, n * 26 + 6) if n else 0
+        self._members_scroll.setMaximumHeight(desired)
+        self._members_scroll.setMinimumHeight(desired)
 
     def _build_member_row(self, member: dict) -> QFrame:
         row = QFrame()
