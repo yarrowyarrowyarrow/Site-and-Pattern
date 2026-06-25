@@ -1048,9 +1048,10 @@ class PolyculturePanel(QWidget):
         self.polyculture_tree.customContextMenuRequested.connect(
             self._on_tree_context_menu
         )
-        # stretch=1 so the community list claims the space freed when the
-        # placement section below is collapsed (see _placement_panel).
-        layout.addWidget(self.polyculture_tree, 1)
+        # Share the flexible space with the description card below (tree 2 :
+        # card 3) so the list shows ~half the rows and the pattern card gets the
+        # taller share — the rest of the communities scroll.
+        layout.addWidget(self.polyculture_tree, 2)
 
         # Community-mix stack — populated by right-click → "Add to Mix".
         # When ≥2 communities are in the mix, Row/Grid/Circle placement
@@ -1117,10 +1118,11 @@ class PolyculturePanel(QWidget):
         self.detail_text = QTextBrowser()
         self.detail_text.setOpenLinks(False)   # we handle community: links ourselves
         self.detail_text.setMinimumHeight(150)
-        self.detail_text.setMaximumHeight(360)
         self.detail_text.setVisible(self._show_description)
         self.detail_text.anchorClicked.connect(self._on_pattern_link)
-        layout.addWidget(self.detail_text)
+        # stretch=3 (vs the tree's 2): the description card gets the taller
+        # share of the column. No max height — it grows to fill its share.
+        layout.addWidget(self.detail_text, 3)
 
         # Members list — compact rows with inline triangle expand. Each
         # row is a custom QFrame (see _build_member_row); detail content

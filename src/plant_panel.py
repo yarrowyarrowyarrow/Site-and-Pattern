@@ -526,9 +526,10 @@ class PlantPanel(QWidget):
 
         # Wrap the placement pane in a CollapsiblePanel so it can shrink to just
         # a header (mirroring the Plant Browser panel above), freeing the whole
-        # sidebar for the results list when the user isn't placing.
+        # sidebar for the results list when the user isn't placing. Minimised by
+        # default so the tab opens with the results list filling the sidebar.
         self._placement_panel = CollapsiblePanel(
-            "Placement", panel_id="plant_panel_placement", expanded=True
+            "Placement", panel_id="plant_panel_placement", expanded=False
         )
         self._placement_panel.set_content(self._bottom_scroll)
         self._placement_panel.toggled.connect(self._on_placement_toggled)
@@ -970,21 +971,11 @@ class PlantPanel(QWidget):
         splitter.setSizes([total - new_bottom, new_bottom])
 
     def _on_placement_toggled(self, expanded: bool):
-        """Collapse hands the placement pane's space to the browser; expand
-        re-fits it to the controls."""
+        """Expand re-fits the pane to its controls; collapse needs no work —
+        CollapsiblePanel clamps its own height to the header, so the splitter
+        hands the freed space to the browser automatically."""
         if expanded:
             self._refit_bottom_pane()
-            return
-        splitter = getattr(self, "_main_splitter", None)
-        panel = getattr(self, "_placement_panel", None)
-        if splitter is None or panel is None:
-            return
-        sizes = splitter.sizes()
-        if len(sizes) != 2 or sum(sizes) <= 0:
-            return
-        total = sum(sizes)
-        header = max(panel.minimumSizeHint().height(), 24)
-        splitter.setSizes([total - header, header])
 
     def _build_mix_row(self, idx: int, species: dict) -> QFrame:
         """One species line: clickable colour dot + name + ratio spinner + ×.

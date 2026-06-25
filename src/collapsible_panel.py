@@ -120,8 +120,19 @@ class CollapsiblePanel(QWidget):
         root.addLayout(self._content_holder)
 
         self._title = title
+        # Collapsed panels clamp their own height to the header so they shrink
+        # to a bare chevron even inside a QSplitter (which otherwise keeps the
+        # pane's allocated size and leaves an empty gap above the header).
+        self._apply_height_clamp()
 
     # ── Public API ────────────────────────────────────────────────────────
+
+    def _apply_height_clamp(self) -> None:
+        """Cap height to the header when collapsed; lift the cap when expanded."""
+        if self._expanded:
+            self.setMaximumHeight(16777215)   # QWIDGETSIZE_MAX
+        else:
+            self.setMaximumHeight(self._toggle_btn.sizeHint().height())
 
     def set_content(self, widget: QWidget) -> None:
         """Embed `widget` as the collapsible body. Existing widget is removed."""
@@ -132,6 +143,7 @@ class CollapsiblePanel(QWidget):
         widget.setParent(self)
         self._content_holder.addWidget(widget)
         widget.setVisible(self._expanded)
+        self._apply_height_clamp()
 
     def expanded(self) -> bool:
         return self._expanded
@@ -143,6 +155,7 @@ class CollapsiblePanel(QWidget):
         if self._content is not None:
             self._content.setVisible(expanded)
         self._toggle_btn.setText(("▼ " if expanded else "▶ ") + self._title)
+        self._apply_height_clamp()
         if persist:
             _save_collapsed_state(self._panel_id, not expanded)
         self.toggled.emit(expanded)
