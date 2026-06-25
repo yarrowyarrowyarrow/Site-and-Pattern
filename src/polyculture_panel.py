@@ -38,6 +38,14 @@ from src.db import plants as plants_db
 from src.placement_controls import _QTY_SPIN_STYLE
 
 
+# Community-tree height bounds. With nothing selected the tree fills the panel
+# (uncapped) so the user sees as many communities as fit; once a community is
+# selected it shrinks to ~7 rows and hands the room to the members list +
+# description card below. _TREE_EXPANDED_MAX is Qt's QWIDGETSIZE_MAX.
+_TREE_EXPANDED_MAX = 16_777_215
+_TREE_COLLAPSED_MAX = 170
+
+
 # Vegetation layer (single-select) — the physical position of a plant in
 # the community's vertical structure. Each member sits in exactly one
 # layer.
@@ -1048,10 +1056,12 @@ class PolyculturePanel(QWidget):
         self.polyculture_tree.customContextMenuRequested.connect(
             self._on_tree_context_menu
         )
-        # Capped to ~7 rows so the selected-community detail below (header +
-        # full members list + description) gets the room; the rest scroll.
-        self.polyculture_tree.setMaximumHeight(170)
-        layout.addWidget(self.polyculture_tree)
+        # Height is dynamic (see _on_polyculture_selected): with nothing
+        # selected the tree fills the panel (stretch 1, uncapped) so the user
+        # sees as many communities as fit; once a community is selected it
+        # shrinks to ~7 rows and the members list + description card take over.
+        self.polyculture_tree.setMaximumHeight(_TREE_EXPANDED_MAX)
+        layout.addWidget(self.polyculture_tree, 1)
 
         # Community-mix stack — populated by right-click → "Add to Mix".
         # When ≥2 communities are in the mix, Row/Grid/Circle placement
@@ -1120,9 +1130,19 @@ class PolyculturePanel(QWidget):
         layout.addWidget(self._community_header)
 
         # ── Members (full compact list, auto-sized to its content) ───────
+        # The pattern toggle rides on the right of this label row (rather than
+        # in its own band) so there's no empty strip above the description.
+        self._show_description = QSettings().value(
+            "plant_communities/show_description", True, type=bool
+        )
         self._members_label = QLabel("<b>Members</b>")
         self._members_label.setVisible(False)
-        layout.addWidget(self._members_label)
+        members_header = QHBoxLayout()
+        members_header.addWidget(self._members_label)
+        members_header.addStretch(1)
+        self.description_toggle_btn = self._build_description_toggle_btn()
+        members_header.addWidget(self.description_toggle_btn)
+        layout.addLayout(members_header)
 
         self._members_scroll = QScrollArea()
         self._members_scroll.setWidgetResizable(True)
@@ -1141,30 +1161,9 @@ class PolyculturePanel(QWidget):
         self._members_scroll.setWidget(self.members_container)
         layout.addWidget(self._members_scroll)
 
-        # ── Pattern description (toggle + card) ──────────────────────────
-        self._show_description = QSettings().value(
-            "plant_communities/show_description", True, type=bool
-        )
-        self.description_toggle_btn = QPushButton(
-            "▾ Hide pattern" if self._show_description
-            else "▸ Show pattern"
-        )
-        self.description_toggle_btn.setStyleSheet(
-            "QPushButton { background: transparent; color: #90a4ae; "
-            "border: 1px solid #2e4a2e; border-radius: 3px; "
-            "padding: 1px 8px; font-size: 10px; }"
-            "QPushButton:hover { color: #c8e6c9; border-color: #4a7a4a; }"
-        )
-        self.description_toggle_btn.setToolTip(
-            "Show or hide the pattern card (problem / context / forces / "
-            "solution) to make more room for the members list above."
-        )
-        self.description_toggle_btn.clicked.connect(self._on_toggle_description)
-        toggle_row = QHBoxLayout()
-        toggle_row.addStretch(1)
-        toggle_row.addWidget(self.description_toggle_btn)
-        layout.addLayout(toggle_row)
-
+        # ── Pattern description card ─────────────────────────────────────
+        # (The show/hide toggle lives on the Members label row above; the
+        # _show_description preference was read there.)
         # The Alexander pattern card (F4): Problem / Context / Forces / Solution
         # / Related, rendered with include_header=False (the name + "Anchored
         # on …" line is shown above in self._community_header). QTextBrowser →
@@ -1604,9 +1603,32 @@ class PolyculturePanel(QWidget):
         )
         self._refresh_polyculture_list()
 
+    def _build_description_toggle_btn(self) -> QPushButton:
+        """The "▾ Hide pattern / ▸ Show pattern" toggle that rides on the right
+        of the Members label row. Reads ``self._show_description`` (set just
+        before this is called in ``_build_ui``)."""
+        btn = QPushButton(
+            "▾ Hide pattern" if self._show_description
+            else "▸ Show pattern"
+        )
+        btn.setStyleSheet(
+            "QPushButton { background: transparent; color: #90a4ae; "
+            "border: 1px solid #2e4a2e; border-radius: 3px; "
+            "padding: 1px 8px; font-size: 10px; }"
+            "QPushButton:hover { color: #c8e6c9; border-color: #4a7a4a; }"
+        )
+        btn.setToolTip(
+            "Show or hide the pattern card (problem / context / forces / "
+            "solution) to make more room for the members list above."
+        )
+        btn.setVisible(False)  # shown once a community is selected
+        btn.clicked.connect(self._on_toggle_description)
+        return btn
+
     def _on_toggle_description(self):
-        """Flip the show-description preference. Hiding frees ~150 px
-        for the members list below."""
+        """Flip the show-description preference. Hiding frees room for the
+        members list below. No-op with nothing selected (the toggle is hidden
+        then, but guard anyway so a stray call can't reveal an empty card)."""
         self._show_description = not self._show_description
         QSettings().setValue(
             "plant_communities/show_description", self._show_description
@@ -1615,7 +1637,8 @@ class PolyculturePanel(QWidget):
             "▾ Hide pattern" if self._show_description
             else "▸ Show pattern"
         )
-        self.detail_text.setVisible(self._show_description)
+        if self.polyculture_tree.currentItem() is not None:
+            self.detail_text.setVisible(self._show_description)
 
     def _select_polyculture_in_tree(self, polyculture_id) -> bool:
         """Make the tree row for ``polyculture_id`` current (walks parents +
@@ -1667,11 +1690,20 @@ class PolyculturePanel(QWidget):
         self.variation_btn.setEnabled(is_top_level)
 
         if not has_selection:
+            # Let the community list reclaim the whole panel: uncap the tree
+            # and hide the (empty) description card so it doesn't hold space.
+            self.polyculture_tree.setMaximumHeight(_TREE_EXPANDED_MAX)
             self._community_header.setVisible(False)
             self._members_label.setVisible(False)
+            self.description_toggle_btn.setVisible(False)
             self.detail_text.clear()
+            self.detail_text.setVisible(False)
             self._render_member_rows([])
             return
+
+        # A community is selected: shrink the tree to ~7 rows so the members
+        # list + description card get the room.
+        self.polyculture_tree.setMaximumHeight(_TREE_COLLAPSED_MAX)
 
         polyculture_id = current.data(0, Qt.ItemDataRole.UserRole)
         polyculture = polycultures.get_polyculture_by_id(polyculture_id)
@@ -1691,6 +1723,8 @@ class PolyculturePanel(QWidget):
         )
         self._community_header.setVisible(True)
         self._members_label.setVisible(True)
+        self.description_toggle_btn.setVisible(True)
+        self.detail_text.setVisible(self._show_description)
         self._render_member_rows(members)
 
         # Description: the Alexander pattern (F4) — authored problem/context/
@@ -1735,11 +1769,13 @@ class PolyculturePanel(QWidget):
             row = self._build_member_row(m)
             layout.insertWidget(layout.count() - 1, row)
 
-        # Size the scroll area to show the whole (collapsed) members list up to
-        # a ceiling — beyond that it scrolls. ~26 px per compact row + padding.
+        # Size the scroll area to its exact stacked-rows height (up to a ceiling
+        # — beyond that it scrolls). Using the container's sizeHint instead of a
+        # per-row estimate leaves no slack below the last row and no cutoff;
+        # the trailing addStretch contributes 0 to sizeHint.
         n = len(members)
         ceiling = 300
-        desired = min(ceiling, n * 26 + 6) if n else 0
+        desired = min(ceiling, self.members_container.sizeHint().height()) if n else 0
         self._members_scroll.setMaximumHeight(desired)
         self._members_scroll.setMinimumHeight(desired)
 
