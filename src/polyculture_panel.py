@@ -41,9 +41,10 @@ from src.placement_controls import _QTY_SPIN_STYLE
 # Community-tree height bounds. With nothing selected the tree fills the panel
 # (uncapped) so the user sees as many communities as fit; once a community is
 # selected it shrinks to ~7 rows and hands the room to the members list +
-# description card below. _TREE_EXPANDED_MAX is Qt's QWIDGETSIZE_MAX.
+# description card below. _TREE_EXPANDED_MAX is Qt's QWIDGETSIZE_MAX; the
+# collapsed height is computed from the live row height × _TREE_COLLAPSED_ROWS.
 _TREE_EXPANDED_MAX = 16_777_215
-_TREE_COLLAPSED_MAX = 170
+_TREE_COLLAPSED_ROWS = 7
 
 
 # Vegetation layer (single-select) — the physical position of a plant in
@@ -1072,24 +1073,24 @@ class PolyculturePanel(QWidget):
         # Buttons row 1
         btn_row1 = QHBoxLayout()
         self.new_btn = QPushButton("New Community")
-        self.new_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self.new_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
         self.new_btn.clicked.connect(self._on_new_polyculture)
         btn_row1.addWidget(self.new_btn)
 
         self.delete_btn = QPushButton("Delete")
-        self.delete_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self.delete_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
         self.delete_btn.setEnabled(False)
         self.delete_btn.clicked.connect(self._on_delete_polyculture)
         btn_row1.addWidget(self.delete_btn)
 
         self.dup_btn = QPushButton("Duplicate")
-        self.dup_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self.dup_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
         self.dup_btn.setEnabled(False)
         self.dup_btn.clicked.connect(self._on_duplicate_polyculture)
         btn_row1.addWidget(self.dup_btn)
 
         self.variation_btn = QPushButton("+ Variation")
-        self.variation_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self.variation_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
         self.variation_btn.setEnabled(False)
         self.variation_btn.setToolTip("Create a variation of this plant community")
         self.variation_btn.clicked.connect(self._on_add_variation)
@@ -1100,21 +1101,21 @@ class PolyculturePanel(QWidget):
         # actions above (Place on Map lives in the Placement panel instead).
         btn_row2 = QHBoxLayout()
         self.edit_btn = QPushButton("Edit")
-        self.edit_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self.edit_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
         self.edit_btn.setEnabled(False)
         self.edit_btn.setToolTip("Open the visual builder for this plant community")
         self.edit_btn.clicked.connect(self._on_edit_polyculture)
         btn_row2.addWidget(self.edit_btn)
 
         self.export_btn = QPushButton("Export")
-        self.export_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self.export_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
         self.export_btn.setEnabled(False)
         self.export_btn.setToolTip("Export this community to a .plant-community.json file")
         self.export_btn.clicked.connect(self._on_export)
         btn_row2.addWidget(self.export_btn)
 
         self.import_btn = QPushButton("Import")
-        self.import_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self.import_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
         self.import_btn.setToolTip("Import a community from a .plant-community.json or .polyculture.json file")
         self.import_btn.clicked.connect(self._on_import)
         btn_row2.addWidget(self.import_btn)
@@ -1171,7 +1172,10 @@ class PolyculturePanel(QWidget):
         self.detail_text = QTextBrowser()
         self.detail_text.setOpenLinks(False)   # we handle community: links ourselves
         self.detail_text.setMinimumHeight(120)
-        self.detail_text.setVisible(self._show_description)
+        # Hidden until a community is selected — otherwise the empty card (also
+        # stretch 1) competes with the tree for space and the list can't fill
+        # the panel on open. The selection handler shows/hides it from here.
+        self.detail_text.setVisible(False)
         self.detail_text.anchorClicked.connect(self._on_pattern_link)
         layout.addWidget(self.detail_text, 1)
 
@@ -1701,9 +1705,14 @@ class PolyculturePanel(QWidget):
             self._render_member_rows([])
             return
 
-        # A community is selected: shrink the tree to ~7 rows so the members
-        # list + description card get the room.
-        self.polyculture_tree.setMaximumHeight(_TREE_COLLAPSED_MAX)
+        # A community is selected: shrink the tree to _TREE_COLLAPSED_ROWS so
+        # the members list + description card get the room. Derive the height
+        # from the live row height (+4 for the frame) rather than a fixed px so
+        # it tracks the actual row metrics.
+        row_h = self.polyculture_tree.sizeHintForRow(0)
+        if row_h <= 0:
+            row_h = 19  # fallback before first layout
+        self.polyculture_tree.setMaximumHeight(row_h * _TREE_COLLAPSED_ROWS + 4)
 
         polyculture_id = current.data(0, Qt.ItemDataRole.UserRole)
         polyculture = polycultures.get_polyculture_by_id(polyculture_id)
@@ -1769,13 +1778,13 @@ class PolyculturePanel(QWidget):
             row = self._build_member_row(m)
             layout.insertWidget(layout.count() - 1, row)
 
-        # Size the scroll area to its exact stacked-rows height (up to a ceiling
-        # — beyond that it scrolls). Using the container's sizeHint instead of a
-        # per-row estimate leaves no slack below the last row and no cutoff;
-        # the trailing addStretch contributes 0 to sizeHint.
+        # Size the scroll area to show the whole (collapsed) members list up to
+        # a ceiling — beyond that it scrolls. A deterministic per-row estimate
+        # (~26 px/row + padding); sizeHint() is unreliable here because the
+        # container layout isn't activated yet right after insertWidget.
         n = len(members)
         ceiling = 300
-        desired = min(ceiling, self.members_container.sizeHint().height()) if n else 0
+        desired = min(ceiling, n * 26 + 6) if n else 0
         self._members_scroll.setMaximumHeight(desired)
         self._members_scroll.setMinimumHeight(desired)
 
@@ -2105,4 +2114,23 @@ QPushButton {
 QPushButton:hover    { background: #388e3c; }
 QPushButton:pressed  { background: #1b5e20; }
 QPushButton:disabled { background: #2a3a2a; color: #4a6a4a; }
+"""
+
+# Compact, low-prominence style for the library management buttons (New /
+# Delete / Duplicate / Variation / Edit / Export / Import) — mirrors the
+# placement-mode segmented buttons (placement_controls._PATTERN_SEG_STYLE) so
+# they read as secondary controls, not primary CTAs. The prominent green
+# _POLY_BTN_STYLE stays on the "Place on Map" / "Place Mix on Map" actions.
+_POLY_MGMT_BTN_STYLE = """
+QPushButton {
+    background: #1e2e1e;
+    color: #c8e6c9;
+    border: 1px solid #2e4a2e;
+    border-radius: 3px;
+    padding: 4px 6px;
+    font-size: 11px;
+}
+QPushButton:hover    { border-color: #4a7a4a; background: #243824; }
+QPushButton:pressed  { background: #2e5a2e; }
+QPushButton:disabled { color: #4a6a4a; border-color: #243824; }
 """
