@@ -41,8 +41,14 @@ _lock = threading.Lock()
 
 def _log(msg: str) -> None:
     """Append a 3D-viewer diagnostic line to ~/permadesign-debug.log (opened and
-    closed per call, so it survives even while the app is still running) and echo
-    to stderr. This is how we trace why the viewer won't start on a user's box."""
+    closed per call, so it survives even while the app is still running). This
+    file is the durable trace we use to diagnose why the viewer won't start on a
+    user's box.
+
+    The same line is echoed to stderr only when ``PERMADESIGN_DEBUG`` is set, so
+    a normal ``python main.py`` run keeps a clean terminal — every 3D-view open
+    otherwise prints a dozen benign 200/checkpoint lines. Set the env var (e.g.
+    ``PERMADESIGN_DEBUG=1``) to get the live terminal trace back."""
     import sys
     import time
     line = f"[web_assets {time.strftime('%H:%M:%S')}] {msg}"
@@ -53,10 +59,11 @@ def _log(msg: str) -> None:
             fh.write(line + "\n")
     except OSError:
         pass
-    try:
-        print(line, file=sys.stderr, flush=True)
-    except Exception:
-        pass
+    if os.environ.get("PERMADESIGN_DEBUG"):
+        try:
+            print(line, file=sys.stderr, flush=True)
+        except Exception:
+            pass
 
 # Explicit JS MIME for module scripts — Chromium refuses to execute a
 # `<script type="module">` whose response isn't a JavaScript MIME type.
