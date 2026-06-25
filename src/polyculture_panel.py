@@ -1048,7 +1048,9 @@ class PolyculturePanel(QWidget):
         self.polyculture_tree.customContextMenuRequested.connect(
             self._on_tree_context_menu
         )
-        layout.addWidget(self.polyculture_tree)
+        # stretch=1 so the community list claims the space freed when the
+        # placement section below is collapsed (see _placement_panel).
+        layout.addWidget(self.polyculture_tree, 1)
 
         # Community-mix stack — populated by right-click → "Add to Mix".
         # When ≥2 communities are in the mix, Row/Grid/Circle placement
@@ -1186,11 +1188,23 @@ class PolyculturePanel(QWidget):
 
         layout.addLayout(action_row)
 
-        # ── Pattern controls for community placement ─────────────────────
-        self._build_community_pattern_controls(layout)
-
-        # ── Community Mix inline panel ──────────────────────────────────
-        self._build_community_mix_controls(layout)
+        # ── Placement controls (collapsible) ─────────────────────────────
+        # The placement-mode selector + community spacing + community mix eat a
+        # lot of vertical room even when the user is just browsing communities,
+        # so wrap them in a CollapsiblePanel (collapsed by default, state
+        # remembered) and let the community tree above reclaim the space.
+        from src.collapsible_panel import CollapsiblePanel
+        placement_body = QWidget()
+        placement_layout = QVBoxLayout(placement_body)
+        placement_layout.setContentsMargins(0, 0, 0, 0)
+        placement_layout.setSpacing(0)
+        self._build_community_pattern_controls(placement_layout)
+        self._build_community_mix_controls(placement_layout)
+        self._placement_panel = CollapsiblePanel(
+            "Placement", panel_id="poly_placement", expanded=False
+        )
+        self._placement_panel.set_content(placement_body)
+        layout.addWidget(self._placement_panel)
 
     def _build_community_mix_controls(self, parent_layout):
         """Inline ratio-mix builder for placing several plant communities

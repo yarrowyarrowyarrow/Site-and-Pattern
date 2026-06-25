@@ -524,7 +524,16 @@ class PlantPanel(QWidget):
         )
         self._bottom_scroll.setMinimumHeight(140)
 
-        splitter.addWidget(self._bottom_scroll)
+        # Wrap the placement pane in a CollapsiblePanel so it can shrink to just
+        # a header (mirroring the Plant Browser panel above), freeing the whole
+        # sidebar for the results list when the user isn't placing.
+        self._placement_panel = CollapsiblePanel(
+            "Placement", panel_id="plant_panel_placement", expanded=True
+        )
+        self._placement_panel.set_content(self._bottom_scroll)
+        self._placement_panel.toggled.connect(self._on_placement_toggled)
+
+        splitter.addWidget(self._placement_panel)
         splitter.setSizes([700, 200])
         splitter.setStretchFactor(0, 5)
         splitter.setStretchFactor(1, 0)
@@ -940,6 +949,11 @@ class PlantPanel(QWidget):
         bottom = getattr(self, "_bottom_widget", None)
         if splitter is None or scroll is None or bottom is None:
             return
+        # Don't fight the user's collapse — a collapsed placement pane stays a
+        # bare header until they expand it again.
+        panel = getattr(self, "_placement_panel", None)
+        if panel is not None and not panel.expanded():
+            return
         sizes = splitter.sizes()
         if len(sizes) != 2:
             return
@@ -954,6 +968,23 @@ class PlantPanel(QWidget):
         max_bottom = max(total - _MIN_BROWSER_PX, scroll.minimumHeight())
         new_bottom = min(desired, max_bottom)
         splitter.setSizes([total - new_bottom, new_bottom])
+
+    def _on_placement_toggled(self, expanded: bool):
+        """Collapse hands the placement pane's space to the browser; expand
+        re-fits it to the controls."""
+        if expanded:
+            self._refit_bottom_pane()
+            return
+        splitter = getattr(self, "_main_splitter", None)
+        panel = getattr(self, "_placement_panel", None)
+        if splitter is None or panel is None:
+            return
+        sizes = splitter.sizes()
+        if len(sizes) != 2 or sum(sizes) <= 0:
+            return
+        total = sum(sizes)
+        header = max(panel.minimumSizeHint().height(), 24)
+        splitter.setSizes([total - header, header])
 
     def _build_mix_row(self, idx: int, species: dict) -> QFrame:
         """One species line: clickable colour dot + name + ratio spinner + ×.
