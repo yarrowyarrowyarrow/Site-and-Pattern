@@ -135,7 +135,7 @@ class SnapshotWindow(QWidget):
 
         root = QVBoxLayout(self)
         intro = QLabel(
-            "Watch your design mature — the same plan at years 1, 5, 15 and 30. "
+            "Watch your design mature: the same plan at years 1, 5, 15 and 30. "
             "Plants grow and self-seeders spread; faint plants are pioneers "
             "fading as the community matures.")
         intro.setWordWrap(True)
@@ -176,7 +176,7 @@ class SnapshotWindow(QWidget):
         has_plants = bool(snaps and snaps[0]["scene"].get("plants"))
         self._status.setText(
             "" if has_plants
-            else "No plants placed yet — add some to watch them grow.")
+            else "No plants placed yet. Add some to watch them grow.")
 
 
 def open_snapshot_view(main) -> SnapshotWindow:

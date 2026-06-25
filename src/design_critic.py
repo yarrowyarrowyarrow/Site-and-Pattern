@@ -89,11 +89,11 @@ def critique_lines(habitat: dict) -> list[str]:
     if food_web.get("status") == "no_birds":
         out.append(
             "Host plants feed caterpillars, but nothing supports the birds "
-            "that should eat them — add berry/seed producers or bird habitat.")
+            "that should eat them; add berry/seed producers or bird habitat.")
     elif food_web.get("status") == "no_hosts":
         out.append(
             "You're feeding birds, but without host plants there are no "
-            "caterpillars — the protein nestlings need; add host plants.")
+            "caterpillars (the protein nestlings need); add host plants.")
 
     layers = comp.get("layers", {}).get("present") or []
     if len(layers) <= 2:

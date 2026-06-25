@@ -319,10 +319,10 @@ def pattern_card_html(pattern: dict) -> str:
                    f'{pattern.get("n_members", 0)} plants</p>')
 
     out.append(_section_html("Problem", pattern.get("problem", "")))
-    out.append(_section_html("Context — where & when",
+    out.append(_section_html("Context (Where & When to Plant)",
                              pattern.get("context", ""),
                              _facts_html(pattern.get("context_facts") or [])))
-    out.append(_section_html("Forces — why these plants work together",
+    out.append(_section_html("Forces (Why These Plants Work Together)",
                              pattern.get("forces", ""),
                              _facts_html(pattern.get("forces_facts") or [])))
     out.append(_section_html("Solution", pattern.get("solution", "")))

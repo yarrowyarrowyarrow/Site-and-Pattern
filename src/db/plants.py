@@ -116,7 +116,9 @@ _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 # v27 (V1.79, F4): added problem/context/forces/solution columns to `polycultures`
 # for the Alexander pattern-language framing. The bump reseeds so existing installs
 # pick up the authored pattern text seeded in src/db/polycultures.py.
-_SCHEMA_VERSION = 27
+# v28 (V1.79): no DDL — reseed so the de-dashed authored pattern text replaces the
+# v27 text on installs that already seeded it.
+_SCHEMA_VERSION = 28
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────

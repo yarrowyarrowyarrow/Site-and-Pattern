@@ -507,7 +507,7 @@ _PATTERN_TEXT = {
                   "weeds, while the right companions feed the soil and the bees "
                   "instead.",
         "solution": "Therefore: plant the apple at the centre and ring it with a "
-                    "working guild — a nutrient accumulator and nitrogen fixer to "
+                    "working guild. Add a nutrient accumulator and nitrogen fixer to "
                     "feed the soil, alliums and aromatic herbs to deter pests, a "
                     "pollinator magnet for fruit set, and a living groundcover to "
                     "hold moisture and shade out weeds.",
@@ -521,7 +521,7 @@ _PATTERN_TEXT = {
                   "need full sun; choosing shade-adapted natives keeps the guild "
                   "functioning where light is limited.",
         "solution": "Therefore: keep the apple but swap the understory for "
-                    "shade-tolerant natives — woodland-edge shrubs, shade-happy mint, "
+                    "shade-tolerant natives: woodland-edge shrubs, shade-happy mint, "
                     "and a creeping evergreen groundcover that thrives out of full sun.",
     },
     "Saskatoon Berry Community": {
@@ -569,11 +569,11 @@ _PATTERN_TEXT = {
         "context": "An Evans cherry guild for purists restoring local biodiversity, "
                    "or sites where only Alberta natives are wanted.",
         "forces": "Native-only narrows the palette, but Alberta's prairie flora "
-                  "covers every guild role — nutrient accumulation, pest deterrence, "
+                  "covers every guild role: nutrient accumulation, pest deterrence, "
                   "nitrogen fixing, and pollination.",
         "solution": "Therefore: keep the cherry and fill every support role with "
-                    "natives — yarrow, nodding onion, silvery lupine, and wild "
-                    "bergamot — for a guild that is functional and fully local.",
+                    "natives (yarrow, nodding onion, silvery lupine, and wild "
+                    "bergamot) for a guild that is functional and fully local.",
     },
     "Bur Oak Community": {
         "problem": "A big shade tree planted into lawn is decades of slow growth over "
@@ -584,7 +584,7 @@ _PATTERN_TEXT = {
                   "and acorn-eaters; the dappled light beneath it can grow a rich, "
                   "layered community instead of grass.",
         "solution": "Therefore: plant bur oak as the canopy and build the savanna "
-                    "beneath it — a nut-bearing hazelnut understory, nitrogen-fixing "
+                    "beneath it: a nut-bearing hazelnut understory, nitrogen-fixing "
                     "clovers in the dappled light, a nutrient accumulator, a "
                     "blazingstar pollinator, and an evergreen groundcover under the "
                     "spread.",
@@ -594,9 +594,9 @@ _PATTERN_TEXT = {
                    "for the kitchen as well as for wildlife.",
         "context": "A bur oak savanna on a site where you want acorns plus berries "
                    "and a long pollinator season.",
-        "forces": "Food production and habitat value usually reinforce each other — "
-                  "native fruit shrubs feed both people and birds — so the trade-off "
-                  "is gentle.",
+        "forces": "Food production and habitat value usually reinforce each other, "
+                  "since native fruit shrubs feed both people and birds, so the "
+                  "trade-off is gentle.",
         "solution": "Therefore: keep the oak and nitrogen fixer but swap in saskatoon "
                     "and gooseberry for fruit and a late goldenrod for end-of-season "
                     "nectar.",
@@ -610,9 +610,9 @@ _PATTERN_TEXT = {
         "forces": "Different bees and butterflies fly at different times; bloom has to "
                   "be spread across spring, summer, and fall, and bees need bare ground "
                   "and grass stems to overwinter, not bare mulch.",
-        "solution": "Therefore: choose species that hand the baton along the season — "
+        "solution": "Therefore: choose species that hand the baton along the season: "
                     "crocus first, bergamot and blanketflower in summer, goldenrod and "
-                    "aster into fall — add a nitrogen-fixing clover, and leave a "
+                    "aster into fall. Add a nitrogen-fixing clover, and leave a "
                     "bunchgrass for nesting. Plant in clumps of 3–8.",
     },
     "Tall Prairie Meadow": {
@@ -636,12 +636,12 @@ _PATTERN_TEXT = {
                   "Hardy native perennials give both and come back every year, "
                   "tolerating dry summers once rooted.",
         "solution": "Therefore: ring a wild-bergamot centre with yarrow, mint, hyssop, "
-                    "valerian, and self-heal — a circle of aromatic Zone-3 perennials "
+                    "valerian, and self-heal, a circle of aromatic Zone-3 perennials "
                     "that feeds bees and the teapot alike.",
     },
     "Native Prairie Aromatics": {
         "problem": "An all-native aromatic planting needs species that are fragrant, "
-                   "bee-friendly, and genuinely local — not garden-centre herbs.",
+                   "bee-friendly, and genuinely local, not garden-centre herbs.",
         "context": "A sunny prairie-restoration bed where strong scent and a long "
                    "bloom window are wanted from Alberta natives only.",
         "forces": "The native aromatic palette is narrower but drought-tough; chosen "
@@ -654,25 +654,25 @@ _PATTERN_TEXT = {
         "problem": "Most plantings spread effort across many average species when a "
                    "few keystone plants would do far more ecological work.",
         "context": "Any sunny spot where you want the biggest habitat return from a "
-                   "single placement — the 80/20 of native gardening.",
+                   "single placement: the 80/20 of native gardening.",
         "forces": "A handful of Tallamy keystone genera (willow, aspen, goldenrod, "
                   "aster) host the lion's share of caterpillars and anchor the food "
                   "web; concentrating on them beats scattering generalists.",
-        "solution": "Therefore: build the planting almost entirely from keystones — an "
+        "solution": "Therefore: build the planting almost entirely from keystones: an "
                     "aspen and willows for caterpillar diversity, goldenrods, asters, "
                     "and sunflower for late pollen and bird seed.",
     },
     "Caterpillar Host Garden": {
         "problem": "Nectar gardens feed adult butterflies but starve their "
-                   "caterpillars — and without caterpillars there are almost no baby "
+                   "caterpillars, and without caterpillars there are almost no baby "
                    "birds.",
         "context": "A sunny bed for gardeners who want to breed butterflies and feed "
                    "nesting songbirds, not just host visiting adults.",
         "forces": "Specialist caterpillars can only eat specific host plants "
                   "(monarchs need milkweed, fritillaries need violets); a real "
                   "butterfly garden has to grow the leaves, not only the flowers.",
-        "solution": "Therefore: plant documented Alberta host plants together — "
-                    "willows, milkweeds, violets, columbine, and aster — so the whole "
+        "solution": "Therefore: plant documented Alberta host plants together "
+                    "(willows, milkweeds, violets, columbine, and aster) so the whole "
                     "life cycle, caterpillar to bird, has what it needs.",
     },
     "Songbird Berry Patch": {
@@ -683,20 +683,20 @@ _PATTERN_TEXT = {
         "forces": "Fruiting windows are short and species-specific; staggering "
                   "early, mid, and winter-persistent berries keeps the buffet open, "
                   "and a nitrogen fixer keeps the shrubs productive.",
-        "solution": "Therefore: stack the harvest — strawberry and saskatoon for early "
+        "solution": "Therefore: stack the harvest: strawberry and saskatoon for early "
                     "summer, raspberry and chokecherry for late summer, and "
                     "cranberry, snowberry, and rose hips that cling through winter, "
                     "with a buffaloberry to feed the soil.",
     },
     "Continuous Bloom Pollinator Strip": {
-        "problem": "The Wildlife Forage calendar keeps flagging nectar gaps — weeks "
+        "problem": "The Wildlife Forage calendar keeps flagging nectar gaps: weeks "
                    "in the season when nothing in the yard is flowering.",
         "context": "Any sunny strip dropped in specifically to close bloom gaps the "
                    "analysis shows across the Apr–Oct growing season.",
         "forces": "Pollinators need uninterrupted nectar; one missing month can break "
                   "the chain. The fix is deliberate bloom hand-off, not more of the "
                   "same flower.",
-        "solution": "Therefore: line up bloom from first to last frost — pussy willow "
+        "solution": "Therefore: line up bloom from first to last frost: pussy willow "
                     "and crocus in early spring, golden bean and strawberry into June, "
                     "bergamot in July, blazingstar in late summer, goldenrod and aster "
                     "to frost.",
@@ -709,8 +709,8 @@ _PATTERN_TEXT = {
         "forces": "Most gardens peak in midsummer and fade; the insects that overwinter "
                   "or migrate depend on the last flowers standing, many of which are "
                   "also keystones.",
-        "solution": "Therefore: mass late bloomers — goldenrods, asters, blazingstars, "
-                    "Maximilian sunflower, fireweed, and a late milkweed — for a fall "
+        "solution": "Therefore: mass late bloomers (goldenrods, asters, blazingstars, "
+                    "Maximilian sunflower, fireweed, and a late milkweed) for a fall "
                     "refuelling station that doubles your keystone count.",
     },
     # ── Habitat-structure & ecoregion communities ────────────────────────────
@@ -722,7 +722,7 @@ _PATTERN_TEXT = {
         "forces": "Birds and insects nest and feed at every height; a design that fills "
                   "canopy, understory, shrub, herb, and ground layers offers far more "
                   "homes than any single layer.",
-        "solution": "Therefore: stack every canonical layer — aspen overstory, "
+        "solution": "Therefore: stack every canonical layer: aspen overstory, "
                     "chokecherry understory, saskatoon shrub layer, goldenrod and aster "
                     "herbs, and a strawberry groundcover.",
     },
@@ -746,12 +746,12 @@ _PATTERN_TEXT = {
         "forces": "Sun-loving plants fail in deep shade and acid soil, but a specific "
                   "boreal-floor community evolved for exactly these conditions and "
                   "knits together where little else will grow.",
-        "solution": "Therefore: plant the classic boreal companions — sarsaparilla, "
-                    "bunchberry, twinflower, and a shade-tolerant highbush cranberry — "
+        "solution": "Therefore: plant the classic boreal companions (sarsaparilla, "
+                    "bunchberry, twinflower, and a shade-tolerant highbush cranberry) "
                     "that naturally grow together in Alberta woodlands.",
     },
     "Edible Boreal Understory": {
-        "problem": "A shady forest-floor planting can do more than look natural — it "
+        "problem": "A shady forest-floor planting can do more than look natural; it "
                    "can also feed you.",
         "context": "The same boreal understory, on a site where edible and useful "
                    "plants are preferred.",
@@ -770,19 +770,19 @@ _PATTERN_TEXT = {
         "forces": "Few fruiting plants tolerate deep shade; the boreal-floor mosaic is "
                   "one of the only communities that delivers berries and groundcover "
                   "in low light.",
-        "solution": "Therefore: combine a bunchberry–twinflower–lily-of-the-valley "
-                    "mosaic with hazelnut, bog cranberry, and strawberry so even the "
-                    "shadiest corner feeds birds.",
+        "solution": "Therefore: combine a bunchberry, twinflower, and "
+                    "lily-of-the-valley mosaic with hazelnut, bog cranberry, and "
+                    "strawberry so even the shadiest corner feeds birds.",
     },
     "Riparian Willow Thicket": {
         "problem": "Wet, low, or streamside ground waterlogs ordinary plants and is "
                    "often left as a soggy, weedy gap.",
         "context": "A pond edge, swale, ditch, or any spot that stays damp, where you "
                    "want a thicket that thrives on wet feet.",
-        "forces": "Most plants drown in saturated soil, but the willow guild loves it — "
+        "forces": "Most plants drown in saturated soil, but the willow guild loves it, "
                   "and willows happen to be keystone, host, and bird-food plants all "
                   "at once, so a wet problem becomes a habitat jackpot.",
-        "solution": "Therefore: build a willow thicket on the wet edge — pussy and "
+        "solution": "Therefore: build a willow thicket on the wet edge: pussy and "
                     "sandbar willow with red osier dogwood and highbush cranberry, "
                     "underplanted with milkweed and fireweed for summer bloom.",
     },
@@ -795,7 +795,7 @@ _PATTERN_TEXT = {
         "forces": "A hedge must screen and shelter, but a single-species row is "
                   "vulnerable and dull; mixing berry shrubs, a nitrogen fixer, and "
                   "thorny security builds a resilient, productive barrier.",
-        "solution": "Therefore: plant a layered line — saskatoon and chokecherry for "
+        "solution": "Therefore: plant a layered line: saskatoon and chokecherry for "
                     "the tall backbone, haskap in the mid layer, thorny rose and "
                     "raspberry at the base, and lupine to feed the soil between.",
     },
@@ -819,10 +819,10 @@ _PATTERN_TEXT = {
                    "plants must stay low for sightlines and shrug off salt and "
                    "drought.",
         "forces": "The strip has to look kept and keep sightlines open, yet survive "
-                  "with no watering and feed pollinators — which rules out tall or "
+                  "with no watering and feed pollinators, which rules out tall or "
                   "thirsty plants and rules in a tough, low native matrix.",
         "solution": "Therefore: lay a fine warm-season grass matrix (blue grama) and "
-                    "scatter drought-tough forbs through it — blanketflower, "
+                    "scatter drought-tough forbs through it: blanketflower, "
                     "black-eyed Susan, and bergamot for summer, prairie clover for "
                     "nitrogen, prairie goldenrod for fall nectar. Mow once in spring; "
                     "never water once established.",
@@ -841,13 +841,13 @@ _PATTERN_TEXT = {
     },
     "Hedgerow Shelterbelt": {
         "problem": "An exposed property edge offers no shelter from prairie wind and "
-                   "no habitat — just a line on a map.",
+                   "no habitat, just a line on a map.",
         "context": "A windward property edge or acreage boundary where you want a "
                    "fast, layered native windbreak that also feeds birds.",
         "forces": "A shelterbelt needs quick height and density to break wind, but "
                   "should earn its space with fruit and habitat rather than being a "
                   "single-species screen.",
-        "solution": "Therefore: plant a row that climbs in layers — aspen for fast "
+        "solution": "Therefore: plant a row that climbs in layers: aspen for fast "
                     "height, chokecherry and saskatoon for fruit, buffaloberry to fix "
                     "nitrogen and feed waxwings, cranberry for winter fruit, and "
                     "snowberry filling the low layer.",
@@ -861,9 +861,9 @@ _PATTERN_TEXT = {
         "forces": "Harvest windows are short and species-specific; spreading them "
                   "across the season keeps fresh food coming, and most native fruit "
                   "doubles as bird food and habitat.",
-        "solution": "Therefore: stagger the harvest from June to October — strawberry, "
+        "solution": "Therefore: stagger the harvest from June to October: strawberry, "
                     "saskatoon, raspberry, pin and chokecherry, highbush cranberry, "
-                    "and hazelnut — most of which feed birds too.",
+                    "and hazelnut, most of which feed birds too.",
     },
 }
 

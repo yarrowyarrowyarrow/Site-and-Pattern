@@ -958,9 +958,9 @@ class AnalysisPanel(QWidget):
                 "complete": "Food web   supports caterpillars and the "
                             "birds that eat them",
                 "no_birds": "Food web   caterpillars, but no bird support "
-                            "yet — add berry/seed plants",
-                "no_hosts": "Food web   birds, but no host plants yet "
-                            "— add caterpillar hosts",
+                            "yet; add berry/seed plants",
+                "no_hosts": "Food web   birds, but no host plants yet; "
+                            "add caterpillar hosts",
                 "empty":    "Food web   no host plants or bird support yet",
             }
             _fw_line = _food_web_msg.get(food_web.get("status"))
