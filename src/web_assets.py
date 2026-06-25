@@ -97,6 +97,15 @@ class _Handler(BaseHTTPRequestHandler):
     def do_GET(self):  # noqa: N802 (http.server API)
         parsed = urlparse(self.path)
 
+        # Chromium auto-requests /favicon.ico for any loaded page; the embedded
+        # viewer has no tab and ships no icon, so answer a quiet 204 instead of
+        # letting it fall through to a (harmless but noisy) logged 404.
+        if parsed.path == "/favicon.ico":
+            self.send_response(204)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
         # Diagnostic checkpoint endpoint: the viewer page pings this so we can
         # see how far its script got (independent of the JS console, which on
         # some boxes never reaches Python). Returns 204.
