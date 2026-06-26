@@ -513,15 +513,21 @@
       // modifier click (shift/ctrl/cmd) toggles selection instead, matching
       // plants/boundaries/structures.
       polygon.on('click', function(e) {
-        L.DomEvent.stop(e);
         var oe = e.originalEvent;
         if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) {
+          L.DomEvent.stop(e);
           if (typeof toggleSelection === 'function') {
             toggleSelection({ kind: 'shape', shapeId: id });
           }
           return;
         }
-        if (currentMode === 'none') enterShapeEditMode(id);
+        if (currentMode === 'none') {
+          L.DomEvent.stop(e);
+          enterShapeEditMode(id);
+          return;
+        }
+        // Placement mode → let the click propagate to onMapClick so the user
+        // can place on top of a visible shape / shade footprint.
       });
 
       shapeLayers[id] = group;
@@ -626,7 +632,9 @@
           break;
         case 'plant':
           currentPlant = data || null;
-          map.getContainer().style.cursor = 'cell';
+          // 'crosshair' (not 'cell') — 'cell' degrades to a small green box on
+          // some QtWebEngine/Chromium builds; matches every other tool's cursor.
+          map.getContainer().style.cursor = 'crosshair';
           _resetPatternState();
           break;
         case 'measure':

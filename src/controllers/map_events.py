@@ -195,10 +195,17 @@ class MapEventRouter:
             "geometry": {"type": "Point", "coordinates": [lng, lat]},
             "properties": props,
         })
+        # Carry the FULL render def (green circle / building rect) on the undo
+        # entry — the same one the reload path rebuilds — so redo draws it
+        # identically. A bare {id,name,size_m} would render as the default box.
+        from src.db.structures import existing_feature_def
+        full_def = existing_feature_def(
+            struct_id, size_m=size_m, height_m=props["height_m"])
+        full_def["name"] = name
         self._main._push_undo({
             "action": "place_structure", "struct_id": struct_id,
             "name": name, "lat": lat, "lng": lng, "size_m": size_m,
-            "struct_def": {"id": struct_id, "name": name, "size_m": size_m},
+            "struct_def": full_def,
         })
         self._main._mark_modified()
         self._main.statusBar().showMessage(f"Marked {name}", 2000)

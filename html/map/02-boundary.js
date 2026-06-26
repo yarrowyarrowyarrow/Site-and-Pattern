@@ -161,15 +161,19 @@
       };
       boundaries.push(entry);
 
-      // Click → enter edit mode (or toggle selection on shift/cmd+click)
+      // Click → enter edit mode (or toggle selection on shift/cmd+click).
+      // In a placement mode we DON'T stop the event, so the click falls
+      // through to onMapClick and the user can place on top of a visible
+      // boundary (otherwise the polygon swallows every click).
       layer.on('click', function(e) {
-        L.DomEvent.stop(e);
         var oe = e.originalEvent;
         if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) {
+          L.DomEvent.stop(e);
           toggleSelection({ kind: 'boundary', boundaryId: id });
           return;
         }
         if (currentMode === 'none') {
+          L.DomEvent.stop(e);
           enterBoundaryEditMode(id);
         }
       });

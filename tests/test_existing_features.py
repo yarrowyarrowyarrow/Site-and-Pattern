@@ -96,6 +96,28 @@ class TestControllerRouting(unittest.TestCase):
         self.assertEqual(p["canopy_radius_m"], 4.0)   # size 8 → radius 4
         self.assertTrue(main._modified)
 
+    def test_existing_tree_undo_entry_carries_full_render_def(self):
+        # Regression (V1.82): redo must redraw the GREEN CIRCLE, not the
+        # default box — so the undo entry carries the full existing_feature_def
+        # (shape + colours), not a bare {id,name,size_m} stub.
+        main = _FakeMain()
+        main._existing_feature_height_m = 10.0
+        _router(main)._on_structure_placed(
+            EXISTING_TREE_ID, "Existing tree", 53.5, -113.5, 8.0)
+        self.assertTrue(main._undo)
+        sd = main._undo[-1]["struct_def"]
+        self.assertEqual(sd["shape"], "circle")
+        self.assertEqual(sd["fill_color"], "#7cb342")
+        self.assertEqual(sd["name"], "Existing tree")
+        self.assertEqual(sd["height_m"], 10.0)
+
+    def test_existing_building_undo_entry_is_rectangle(self):
+        main = _FakeMain()
+        _router(main)._on_structure_placed(
+            EXISTING_BUILDING_ID, "Existing building", 53.5, -113.5, 6.0)
+        sd = main._undo[-1]["struct_def"]
+        self.assertEqual(sd["shape"], "rectangle")
+
     def test_building_default_height_when_unstashed(self):
         main = _FakeMain()  # height stash left at None
         _router(main)._on_structure_placed(
