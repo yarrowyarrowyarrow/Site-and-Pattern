@@ -1247,11 +1247,12 @@ class MainWindow(QMainWindow):
 
         self._current_mode = 'polyculture'
         self._pending_polyculture = polyculture_data
-        # Clear any prior JS placement mode (e.g. a still-armed "Mark tree"
-        # structure mode) so a community click doesn't ALSO drop a tree/plant —
-        # only the bridge map_clicked → _on_polyculture_click should fire.
-        self.map_widget.set_mode('none')
-        self.map_widget.set_crosshair_cursor()
+        # Enter the dedicated JS 'polyculture' mode: it sets the crosshair and
+        # clears any still-armed "Mark tree" structure mode (so a community
+        # click doesn't ALSO drop a tree), while being a real placement mode —
+        # NOT 'none' — so a click on a visible boundary/shape forwards to
+        # onMapClick → bridge map_clicked → _on_polyculture_click.
+        self.map_widget.set_mode('polyculture')
         self._set_mode_label(
             f"Placing plant community: {polyculture_data.get('name', '?')} — click map to place centre"
         )

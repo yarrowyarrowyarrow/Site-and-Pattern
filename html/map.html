@@ -159,6 +159,12 @@
       color: #1a1a2e;
       font-size: 12px;
     }
+
+    /* While a placement tool is armed (setMode adds .placing), keep the
+       crosshair over interactive layers — boundaries, shapes, markers —
+       instead of Leaflet's default pointer, so hovering a boundary still
+       reads as "click to place here". Idle mode keeps the pointer. */
+    .leaflet-container.placing .leaflet-interactive { cursor: crosshair !important; }
   </style>
 </head>
 <body>

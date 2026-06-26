@@ -656,6 +656,14 @@
           currentStructure = data || null;
           map.getContainer().style.cursor = 'crosshair';
           break;
+        case 'polyculture':
+          // Single plant-community drop. No JS-side placement — the bridge
+          // map_clicked → _on_polyculture_click does it. A real mode (NOT
+          // 'none') so a click on a boundary/shape forwards to onMapClick
+          // instead of entering edit mode. setMode already cleared
+          // currentStructure/currentPlant above, so no stray tree is dropped.
+          map.getContainer().style.cursor = 'crosshair';
+          break;
         case 'hedgerow':
           currentHedgerow = data || null;
           hedgerowPoints = [];
@@ -713,6 +721,13 @@
           _resetPatternState();
           drawnItems.clearLayers();
       }
+      // Keep the placement crosshair over interactive layers (boundaries,
+      // shapes, …) instead of Leaflet's default pointer, so hovering a
+      // boundary while placing still reads as "click to place here". Idle
+      // mode (no crosshair) keeps the pointer as an edit affordance.
+      var _container = map.getContainer();
+      if (_container.style.cursor === 'crosshair') _container.classList.add('placing');
+      else _container.classList.remove('placing');
     }
 
     // ── Satellite imagery alignment nudge ──────────────────────────────────
