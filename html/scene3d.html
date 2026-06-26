@@ -248,6 +248,7 @@ let designGroup = null;
 let lastOrigin = null;      // {lat, lng} for the legacy permaSetPlants hook
 let lastMonth = 6;          // last scene month, for the legacy permaSetPlants hook
 let lastYear = 0;           // last scene year, for the legacy permaSetPlants hook
+let lastTerrain = null;     // last scene terrain, for the legacy permaSetPlants hook
 let plantsGroup = null;     // sub-group holding plant instanced meshes
 let framedOrigin = null;    // origin the camera was last auto-framed on
 let lastBounds = null;      // last scene bounds, for permaResetView()
@@ -384,6 +385,22 @@ function instancedMesh(geo, count, mat, shadow = true) {
   const mesh = new THREE.InstancedMesh(geo, mat, count);
   mesh.castShadow = mesh.receiveShadow = shadow;
   return mesh;
+}
+
+// Sample terrain height (world Y) at a plant's scene position (sceneX, sceneY).
+// Uses bilinear interpolation over the terrain grid; returns 0 when no terrain.
+// terrain.heights[r][c]: r=0 is north edge (max sceneY), r=rows-1 is south (min sceneY).
+function terrainHeightAt(sceneX, sceneY, terrain) {
+  if (!terrain || terrain.rows < 2 || terrain.cols < 2) return 0;
+  const t = terrain;
+  const col = (sceneX - t.min_x) / (t.max_x - t.min_x) * (t.cols - 1);
+  const row = (t.max_y - sceneY) / (t.max_y - t.min_y) * (t.rows - 1);
+  const c0 = Math.max(0, Math.min(t.cols - 2, Math.floor(col)));
+  const r0 = Math.max(0, Math.min(t.rows - 2, Math.floor(row)));
+  const fc = col - c0, fr = row - r0;
+  const h00 = t.heights[r0][c0],     h01 = t.heights[r0][c0 + 1];
+  const h10 = t.heights[r0 + 1][c0], h11 = t.heights[r0 + 1][c0 + 1];
+  return (h00 * (1 - fc) + h01 * fc) * (1 - fr) + (h10 * (1 - fc) + h11 * fc) * fr;
 }
 
 // Compose a per-instance matrix with a Y rotation and set a pre-computed colour.
@@ -896,7 +913,7 @@ function spreadPlacements(p, year) {
 // Build one simple plant layer: bucket items across `variants` archetypes,
 // instance each bucket (including spread offspring), scale per item via
 // scaleOf(p) → [sx, sy, sz]. `noRot` keeps groundcover flat with no Y spin.
-function buildLayer(list, variants, mat, archOf, scaleOf, month, year, noRot) {
+function buildLayer(list, variants, mat, archOf, scaleOf, month, year, noRot, terrain) {
   if (!list || !list.length) return;
   const buckets = Array.from({ length: variants }, () => []);
   for (const p of list) buckets[hashPid(p.plant_id) % variants].push(p);
@@ -912,8 +929,10 @@ function buildLayer(list, variants, mat, archOf, scaleOf, month, year, noRot) {
       const col = fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity);
       places[ii].forEach((pl, k) => {
         const m = pl.mul;
+        const wx = p.x + pl.dx, wy = p.y + pl.dz;
         const rotY = noRot ? 0 : rotY0 + (k ? pl.dx : 0);
-        setInst2(mesh, idx, p.x + pl.dx, 0, -(p.y + pl.dz),
+        const gy = terrainHeightAt(wx, wy, terrain);
+        setInst2(mesh, idx, wx, gy, -wy,
                  sx * m, sy * (noRot ? 1 : m), sz * m, rotY, col);
         idx++;
       });
@@ -922,7 +941,7 @@ function buildLayer(list, variants, mat, archOf, scaleOf, month, year, noRot) {
   });
 }
 
-function buildPlants(group, plants, month, year) {
+function buildPlants(group, plants, month, year, terrain) {
   if (plantsGroup) { disposeDesignGroup(plantsGroup); group.remove(plantsGroup); }
   plantsGroup = new THREE.Group();
   group.add(plantsGroup);
@@ -966,11 +985,12 @@ function buildPlants(group, plants, month, year) {
         const bcol = fadeToward('#5d4433', p.opacity);
         const fcol = fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity);
         places[ii].forEach((pl, k) => {
-          const m = pl.mul, x = p.x + pl.dx, z = -(p.y + pl.dz);
+          const m = pl.mul, x = p.x + pl.dx, wy = p.y + pl.dz, z = -wy;
           const rotY = rotY0 + (k ? pl.dx + pl.dz : 0);
-          setInst2(branch, idx, x, 0, z, c * m, h * m, c * m, rotY, bcol);
-          if (bare) setInst2(foliage, idx, x, 0, z, 0.001, 0.001, 0.001, rotY, _white);
-          else setInst2(foliage, idx, x, 0, z, c * m, h * m, c * m, rotY, fcol);
+          const gy = terrainHeightAt(x, wy, terrain);
+          setInst2(branch, idx, x, gy, z, c * m, h * m, c * m, rotY, bcol);
+          if (bare) setInst2(foliage, idx, x, gy, z, 0.001, 0.001, 0.001, rotY, _white);
+          else setInst2(foliage, idx, x, gy, z, c * m, h * m, c * m, rotY, fcol);
           idx++;
         });
       });
@@ -981,12 +1001,12 @@ function buildPlants(group, plants, month, year) {
   // Shrubs — bushy gradient domes, one InstancedMesh per archetype variant.
   buildLayer(byKind.shrub, 4, MATS.shrub, (v) => ARCH.shrub[v],
              (p) => [Math.max(0.25, p.canopy_m), Math.max(0.2, p.height_m),
-                     Math.max(0.25, p.canopy_m)], month, year);
+                     Math.max(0.25, p.canopy_m)], month, year, false, terrain);
 
   // Perennials/herbs — multi-stem clumps; vines — slim swaying cones.
   buildLayer(byKind.herb, 3, MATS.shrub, (v) => ARCH.peren[v],
              (p) => [Math.max(0.15, p.canopy_m), Math.max(0.08, p.height_m),
-                     Math.max(0.15, p.canopy_m)], month, year);
+                     Math.max(0.15, p.canopy_m)], month, year, false, terrain);
   if (byKind.vine.length) {
     const list = byKind.vine;
     const places = list.map(p => spreadPlacements(p, year));
@@ -999,7 +1019,9 @@ function buildPlants(group, plants, month, year) {
       const col = fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity);
       places[ii].forEach((pl) => {
         const m = pl.mul, cc = Math.max(0.2, c * m);
-        setInst2(mesh, idx, p.x + pl.dx, 0, -(p.y + pl.dz), cc, h * m, cc, rotY, col);
+        const wx = p.x + pl.dx, wy = p.y + pl.dz;
+        const gy = terrainHeightAt(wx, wy, terrain);
+        setInst2(mesh, idx, wx, gy, -wy, cc, h * m, cc, rotY, col);
         idx++;
       });
     });
@@ -1010,7 +1032,7 @@ function buildPlants(group, plants, month, year) {
   buildLayer(byKind.groundcover, 2, MATS.ground, (v) => ARCH.ground[v],
              (p) => [Math.max(0.18, p.canopy_m),
                      Math.min(0.18, Math.max(0.05, p.height_m)),
-                     Math.max(0.18, p.canopy_m)], month, year, true);
+                     Math.max(0.18, p.canopy_m)], month, year, true, terrain);
 
   // Contact shadows under trees and tall shrubs (skip near-vanished plants).
   const shadowed = byKind.tree
@@ -1185,11 +1207,12 @@ window.permaSetScene = function (sc) {
   lastMonth = sc.month || 6;
   lastYear = sc.year || 0;
   lastBounds = sc.bounds;
+  lastTerrain = sc.terrain || null;
 
   buildGround(designGroup, sc);
   buildBoundary(designGroup, sc.boundary);
   buildBuildings(designGroup, sc.buildings);
-  buildPlants(designGroup, sc.plants, sc.month, sc.year);
+  buildPlants(designGroup, sc.plants, sc.month, sc.year, sc.terrain);
   buildStructures(designGroup, sc.structures);
   buildScanPoints(designGroup, sc.scan_points);
   ensureSplat(sc.splat);
@@ -1236,7 +1259,7 @@ window.permaSetPlants = function (records) {
     spread_rate: r.spread_rate,
     color: r.color, opacity: r.presence_opacity,
   }));
-  buildPlants(designGroup, plants, lastMonth, lastYear);
+  buildPlants(designGroup, plants, lastMonth, lastYear, lastTerrain);
 };
 
 addEventListener('resize', () => {
