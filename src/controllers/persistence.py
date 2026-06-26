@@ -47,6 +47,10 @@ class PersistenceController:
         # helper that is itself decorated) push exactly one undo entry.
         self._cp_depth = 0
         self._cp_before = None
+        # Shade overlay turns on via a worker callback (async), so its
+        # turn-on undo step is opened here (begin_shade_undo) and pushed from
+        # the ready callback (commit_shade_undo) — see Part 3.
+        self._shade_pending_before = None
 
     # ── Modified flag + window title ─────────────────────────────────────────
 
@@ -115,8 +119,7 @@ class PersistenceController:
         if len(self._main._undo_stack) > self._main._max_undo:
             self._main._undo_stack.pop(0)
         self._main._redo_stack.clear()
-        self._main._act_undo.setEnabled(True)
-        self._main._act_redo.setEnabled(False)
+        self._sync_undo_actions()
 
     def _do_undo(self):
         m = self._main
@@ -141,10 +144,19 @@ class PersistenceController:
         self._refresh_actions()
 
     def _refresh_actions(self):
-        m = self._main
-        m._act_undo.setEnabled(bool(m._undo_stack))
-        m._act_redo.setEnabled(bool(m._redo_stack))
+        self._sync_undo_actions()
         self._mark_modified()
+
+    def _sync_undo_actions(self):
+        """Reflect the undo/redo stacks on both the Edit-menu actions and the
+        toolbar buttons, so each greys out when its stack is empty."""
+        m = self._main
+        has_undo, has_redo = bool(m._undo_stack), bool(m._redo_stack)
+        m._act_undo.setEnabled(has_undo)
+        m._act_redo.setEnabled(has_redo)
+        tb = getattr(m, "toolbar", None)
+        if tb is not None:
+            tb.set_undo_redo_enabled(has_undo, has_redo)
 
     # ── feature stash helpers ────────────────────────────────────────────────
 
@@ -191,15 +203,14 @@ class PersistenceController:
 
     @contextmanager
     def checkpoint(self, label: str = ""):
-        """Record a snapshot undo step around a block that mutates
-        ``project["features"]``. Re-entrant: only the outermost checkpoint
-        snapshots and pushes, so a decorated helper called from a decorated
-        entry point yields a single undo entry. Records nothing when the
-        block raises or leaves the features unchanged."""
-        m = self._main
+        """Record a snapshot undo step around a block that mutates the
+        project's features and/or an analysis-overlay toggle. Re-entrant: only
+        the outermost checkpoint snapshots and pushes, so a decorated helper
+        called from a decorated entry point yields a single undo entry. Records
+        nothing when the block raises or leaves the captured state unchanged."""
         outer = self._cp_depth == 0
         if outer:
-            self._cp_before = copy.deepcopy(m._project.get("features", []))
+            self._cp_before = self._capture_state()
         self._cp_depth += 1
         ok = False
         try:
@@ -210,32 +221,146 @@ class PersistenceController:
             if outer:
                 before, self._cp_before = self._cp_before, None
                 if ok:
-                    after = m._project.get("features", [])
+                    after = self._capture_state()
                     if before != after:
-                        self._push_undo({
-                            "action": "snapshot",
-                            "label": label,
-                            "before": before,
-                            "after": copy.deepcopy(after),
-                        })
+                        self._push_undo({"action": "snapshot",
+                                         "label": label,
+                                         "before": before, "after": after})
+
+    # ── captured state = features + a compact analysis-overlay view-state ─────
+
+    def _capture_state(self) -> dict:
+        return {
+            "features": copy.deepcopy(self._main._project.get("features", [])),
+            "view": self._capture_view_state(),
+        }
+
+    def _capture_view_state(self) -> dict:
+        """The transient analysis overlays that aren't part of project features
+        (shade, live wind-shadow, sun path, sun sectors, site pin). Scalars are
+        read fresh; the shade payload is held by reference (never mutated in
+        place), so this is cheap to call on every checkpoint."""
+        m = self._main
+        sc = (m._project.get("properties", {}) or {}).get("site_config", {}) or {}
+        return {
+            "shade": {
+                "active": bool(getattr(m, "_shade_overlay_active", False)),
+                "payload": getattr(m, "_last_shade_payload", None),
+                "opacity": getattr(m, "_shade_opacity", 0.5),
+            },
+            "wind": {
+                "on": bool(getattr(m, "_wind_shadow_on", False)),
+                "angle": getattr(m, "_wind_shadow_angle", None),
+            },
+            "sun": getattr(m, "_active_sun_state", None),
+            "sectors": getattr(m, "_active_sector_state", None),
+            "pin": {"lat": sc.get("latitude"), "lng": sc.get("longitude"),
+                    "label": sc.get("pin_label")},
+        }
+
+    # ── shade turn-on bridges the async worker callback ──────────────────────
+
+    def begin_shade_undo(self):
+        """Stash pre-toggle state when a shade request starts; the matching
+        commit (from the worker's ready callback) pushes the undo step iff the
+        overlay actually turned ON (so recomputes / time-scrubs don't spam)."""
+        self._shade_pending_before = self._capture_state()
+
+    def commit_shade_undo(self):
+        before, self._shade_pending_before = self._shade_pending_before, None
+        if before is None:
+            return
+        was_on = before["view"]["shade"]["active"]
+        now_on = bool(getattr(self._main, "_shade_overlay_active", False))
+        if not was_on and now_on:                 # off → on only
+            after = self._capture_state()
+            if before != after:
+                self._push_undo({"action": "snapshot", "label": "show shade",
+                                 "before": before, "after": after})
 
     def _undo_snapshot(self, entry: dict):
-        self._apply_features_snapshot(entry["before"])
+        self._apply_snapshot(entry["before"])
         self._main.statusBar().showMessage(
             f"Undo: {entry.get('label') or 'change'}", 2000)
 
     def _redo_snapshot(self, entry: dict):
-        self._apply_features_snapshot(entry["after"])
+        self._apply_snapshot(entry["after"])
         self._main.statusBar().showMessage(
             f"Redo: {entry.get('label') or 'change'}", 2000)
 
-    def _apply_features_snapshot(self, features: list):
-        """Swap the project's whole feature list to a stored snapshot, rebuild
-        the placed-plants index from it, and redraw the map from scratch."""
+    def _apply_snapshot(self, side: dict):
+        """Restore one side of a snapshot: features + the site pin (via
+        site_config, re-placed by the re-render) + the transient overlays."""
         m = self._main
-        m._project["features"] = copy.deepcopy(features)
+        view = side.get("view") or {}
+        pin = view.get("pin") or {}
+        sc = m._project.setdefault("properties", {}).setdefault("site_config", {})
+        for state_key, sc_key in (("lat", "latitude"), ("lng", "longitude"),
+                                  ("label", "pin_label")):
+            val = pin.get(state_key)
+            if val is None:
+                sc.pop(sc_key, None)
+            else:
+                sc[sc_key] = val
+        m._project["features"] = copy.deepcopy(side["features"])
         m._store.rebuild_index()
         self.render_project_to_map(fit_view=False)
+        self._apply_view_state(view)
+
+    def _apply_view_state(self, target: dict):
+        """Re-apply the transient overlays to ``target``. Called right after
+        render_project_to_map, which (via clear_all) has just wiped most JS
+        overlays — so each overlay is set unconditionally (draw or clear)
+        rather than diffed against now-stale Python flags."""
+        m = self._main
+
+        tw = target.get("wind") or {}
+        import src.wind_shadow_flow as wind_shadow_flow
+        if tw.get("angle") is not None:            # None → keep the flow default
+            m._wind_shadow_angle = tw.get("angle")
+        wind_shadow_flow.enable(m, bool(tw.get("on")))
+
+        ts = target.get("shade") or {}
+        m._shade_overlay_active = bool(ts.get("active"))
+        m._shade_opacity = ts.get("opacity", getattr(m, "_shade_opacity", 0.5))
+        m._last_shade_payload = ts.get("payload")
+        if ts.get("active"):
+            self._redraw_shade(ts.get("payload"), m._shade_opacity)
+        else:
+            m.map_widget.clear_shade_overlay()
+            m.map_widget.clear_shadow_polygons()
+
+        tsun = target.get("sun")
+        if tsun:
+            m._render_sun_path(tsun[0], tsun[1], tsun[2])
+        else:
+            m.map_widget.clear_sun_path()
+            m._active_sun_state = None
+
+        tsec = target.get("sectors")
+        if tsec:
+            m.map_widget.draw_sectors(tsec[0], tsec[1], tsec[2])
+            m._active_sector_state = tsec
+        else:
+            m.map_widget.clear_sectors()
+            m._active_sector_state = None
+
+    def _redraw_shade(self, payload, opacity):
+        """Redraw a cached shade overlay synchronously (no worker) — raster or
+        true-shape vector, matching how it was first drawn."""
+        m = self._main
+        if not payload:
+            m.map_widget.clear_shade_overlay()
+            m.map_widget.clear_shadow_polygons()
+            return
+        if payload.get("kind") == "vector":
+            m.map_widget.clear_shade_overlay()
+            m.map_widget.draw_shadow_polygons(
+                payload["polygons"], payload.get("bbox"), opacity)
+        else:
+            m.map_widget.clear_shadow_polygons()
+            m.map_widget.draw_shade_overlay(
+                payload["data_url"], payload.get("bbox"), opacity)
 
     # ── whole-project map re-render (shared by File→Open and undo/redo) ───────
 

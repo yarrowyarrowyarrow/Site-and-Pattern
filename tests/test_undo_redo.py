@@ -287,6 +287,23 @@ class TestSnapshotUndoExhaustive(unittest.TestCase):
         self._assert_snapshot_top()
         self._reversal_round_trip(n, n + 3)
 
+    def test_community_click_round_trip(self):
+        # A single click in polyculture mode drops a whole community; undo must
+        # remove ALL members, not just the central one (the reported bug).
+        self.w._current_mode = 'polyculture'
+        self.w._pending_polyculture = {
+            "name": "Pollinator Mound",
+            "members": [
+                {"plant_id": 1, "common_name": "A", "offset_x": 0, "offset_y": 0},
+                {"plant_id": 2, "common_name": "B", "offset_x": 2, "offset_y": 0},
+                {"plant_id": 3, "common_name": "C", "offset_x": 0, "offset_y": 2},
+            ],
+        }
+        n = len(self._features())
+        self.w._map_events._on_polyculture_click(53.5, -113.5)
+        self._assert_snapshot_top()
+        self._reversal_round_trip(n, n + 3)
+
     # ── removals ─────────────────────────────────────────────────────────
 
     def test_plant_removal_round_trip(self):
@@ -457,6 +474,85 @@ class TestSnapshotUndoExhaustive(unittest.TestCase):
         n = len(self._features())
         self.w._map_events._on_annotation_removed("ann_1")
         self._reversal_round_trip(n, n - 1)
+
+    # ── analysis-overlay toggles (Part 3) ────────────────────────────────
+
+    def test_wind_shadow_toggle_round_trip(self):
+        self.w._clear_undo()
+        self.assertFalse(getattr(self.w, "_wind_shadow_on", False))
+        self.w._map_events._on_wind_shadow_toggled(True)
+        self.assertTrue(self.w._wind_shadow_on)
+        self._assert_snapshot_top()
+        self.w._do_undo()
+        self.assertFalse(self.w._wind_shadow_on)
+        self.w._do_redo()
+        self.assertTrue(self.w._wind_shadow_on)
+        self.w._do_undo()
+        self.assertFalse(self.w._wind_shadow_on)
+
+    def test_sun_path_round_trip(self):
+        self.w._clear_undo()
+        self.w._pending_sun_config = {"date": "2026-06-21", "date_label": "Jun 21"}
+        self.w._map_events._on_sun_anchor_placed(53.5, -113.5)
+        self.assertIsNotNone(self.w._active_sun_state)
+        self._assert_snapshot_top()
+        self.w._do_undo()
+        self.assertIsNone(self.w._active_sun_state)
+        self.w._do_redo()
+        self.assertIsNotNone(self.w._active_sun_state)
+
+    def test_sectors_round_trip(self):
+        self.w._clear_undo()
+        self.w._pending_sector_config = {"sectors": [{"name": "Morning"}]}
+        self.w._map_events._on_sector_anchor_placed(53.5, -113.5)
+        self.assertIsNotNone(self.w._active_sector_state)
+        self._assert_snapshot_top()
+        self.w._do_undo()
+        self.assertIsNone(self.w._active_sector_state)
+        self.w._do_redo()
+        self.assertIsNotNone(self.w._active_sector_state)
+
+    def test_site_pin_round_trip(self):
+        self.w._clear_undo()
+
+        def _pin_lat():
+            return (self.w._project["properties"]
+                    .get("site_config", {}).get("latitude"))
+        self.w._map_events._on_site_pin_placed(53.5, -113.5, "Home")
+        self.assertEqual(_pin_lat(), 53.5)
+        self._assert_snapshot_top()
+        self.w._do_undo()
+        self.assertIsNone(_pin_lat())
+        self.w._do_redo()
+        self.assertEqual(_pin_lat(), 53.5)
+
+    def test_shade_toggle_round_trip(self):
+        # Drive the worker's ready callback directly (no elevation fetch).
+        self.w._clear_undo()
+        self.w._shade_overlay_active = False
+        self.w._persistence.begin_shade_undo()
+        self.w._map_events._on_shade_ready(
+            {"data_url": "data:image/png;base64,iVBORw0KGgo=",
+             "bbox": {"north": 53.6, "south": 53.5,
+                      "east": -113.4, "west": -113.5}})
+        self.assertTrue(self.w._shade_overlay_active)
+        self._assert_snapshot_top()
+        self.w._do_undo()
+        self.assertFalse(self.w._shade_overlay_active)
+        self.w._do_redo()
+        self.assertTrue(self.w._shade_overlay_active)
+
+    def test_redo_toolbar_button_enabled_state(self):
+        # The toolbar Redo button greys out unless the redo stack is non-empty.
+        self.w._clear_undo()
+        self.assertFalse(self.w.toolbar._act_redo.isEnabled())
+        self.w._on_plant_placed(1, "Saskatoon", 53.5, -113.5)
+        self.assertTrue(self.w.toolbar._act_undo.isEnabled())
+        self.assertFalse(self.w.toolbar._act_redo.isEnabled())
+        self.w._do_undo()
+        self.assertTrue(self.w.toolbar._act_redo.isEnabled())
+        self.w._do_redo()
+        self.assertFalse(self.w.toolbar._act_redo.isEnabled())
 
     # ── engine semantics ─────────────────────────────────────────────────
 

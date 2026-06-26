@@ -594,12 +594,14 @@ class MapEventRouter:
 
     # ── Sun-path / sector anchor handlers ───────────────────────────────────
 
+    @undoable("sun path")
     def _on_sun_anchor_placed(self, lat: float, lng: float):
         """User placed sun-path anchor; now compute and draw."""
         self._main._pending_sun_anchor = (lat, lng)
         if self._main._pending_sun_config:
             self._main._render_sun_path(self._main._pending_sun_config, lat, lng)
 
+    @undoable("sun sectors")
     def _on_sector_anchor_placed(self, lat: float, lng: float):
         """User placed sector anchor; now draw."""
         if self._main._pending_sector_config:
@@ -609,10 +611,21 @@ class MapEventRouter:
             names = [s["name"] for s in
                      self._main._pending_sector_config.get("sectors", [])]
             self._main._set_mode_label(f"Sectors: {', '.join(names)}")
+            # Remember the rendered overlay so undo/redo can reproduce it.
+            self._main._active_sector_state = (
+                self._main._pending_sector_config, lat, lng)
             self._main._pending_sector_config = None
 
+    @undoable("remove sun path")
     def _on_sun_path_removed(self):
+        self._main.map_widget.clear_sun_path()
+        self._main._active_sun_state = None
         self._main._set_mode_label("Sun path removed")
+
+    @undoable("clear sun sectors")
+    def _on_sectors_cleared(self):
+        self._main.map_widget.clear_sectors()
+        self._main._active_sector_state = None
 
     def _on_anchor_cancelled(self, mode: str):
         self._main.toolbar.reset_draw_buttons()
@@ -636,6 +649,7 @@ class MapEventRouter:
 
     # ── Site pin handlers ───────────────────────────────────────────────────
 
+    @undoable("place pin")
     def _on_site_pin_placed(self, lat: float, lng: float, label: str):
         """User dropped a property pin (via search or manual click)."""
         self._main._site_pin_mode = False
@@ -657,6 +671,7 @@ class MapEventRouter:
         self._main._mark_modified()
         self._main._set_mode_label("Property pin set — fetching site data")
 
+    @undoable("remove pin")
     def _on_site_pin_removed(self):
         self._main.site_panel.clear_pin()
         sc = self._main._project["properties"].setdefault("site_config", {})
@@ -1046,6 +1061,9 @@ class MapEventRouter:
         self._main._last_shade_config = dict(config or {})
         self._main._shade_opacity = (
             self._main.site_panel._shade_opacity.value() / 100.0)
+        # Open the shade undo step now; the worker's ready callback commits it
+        # (and only records when the overlay actually turns ON).
+        self._main._persistence.begin_shade_undo()
         self._main.statusBar().showMessage("Computing shade…")
         if _HAVE_SHAPELY:
             from src.shade import ShadowPolygonWorker
@@ -1065,6 +1083,8 @@ class MapEventRouter:
             # them out instead of freezing the last frame on screen.
             self._main.map_widget.clear_shadow_polygons()
             self._main._shade_overlay_active = False
+            self._main._last_shade_payload = None
+            self._main._persistence.commit_shade_undo()
             self._main.statusBar().showMessage(
                 "No shade to show — mark or import some trees/buildings, or add "
                 "trees to the design first.", 5000)
@@ -1073,6 +1093,12 @@ class MapEventRouter:
             payload["polygons"], payload.get("bbox"),
             getattr(self._main, "_shade_opacity", 0.5))
         self._main._shade_overlay_active = True
+        # Cache the rendered overlay so undo/redo can redraw it without re-running
+        # the worker (see PersistenceController._redraw_shade).
+        self._main._last_shade_payload = {
+            "kind": "vector", "polygons": payload["polygons"],
+            "bbox": payload.get("bbox")}
+        self._main._persistence.commit_shade_undo()
         self._main.statusBar().showMessage("Shade overlay updated.", 3000)
 
     def _on_shade_ready(self, payload):
@@ -1080,6 +1106,8 @@ class MapEventRouter:
         if not payload:
             self._main.map_widget.clear_shade_overlay()   # fade out past sunset
             self._main._shade_overlay_active = False
+            self._main._last_shade_payload = None
+            self._main._persistence.commit_shade_undo()
             self._main.statusBar().showMessage(
                 "No shade to show — mark or import some trees/buildings, or add "
                 "trees to the design first.", 5000)
@@ -1088,8 +1116,13 @@ class MapEventRouter:
             payload["data_url"], payload["bbox"],
             getattr(self._main, "_shade_opacity", 0.5))
         self._main._shade_overlay_active = True
+        self._main._last_shade_payload = {
+            "kind": "raster", "data_url": payload["data_url"],
+            "bbox": payload["bbox"]}
+        self._main._persistence.commit_shade_undo()
         self._main.statusBar().showMessage("Shade overlay updated.", 3000)
 
+    @undoable("hide shade")
     def _on_shade_cleared(self):
         """Clear both shade overlays (raster + vector)."""
         self._main._shade_overlay_active = False
@@ -1377,6 +1410,19 @@ class MapEventRouter:
         from src import wind_flow
         wind_flow.fetch_wind_for_site(self._main)
 
+    @undoable("wind shadow")
+    def _on_wind_shadow_toggled(self, on: bool):
+        """Live wind-shadow on/off — recorded as one undo step (sync)."""
+        from src import wind_shadow_flow
+        wind_shadow_flow.enable(self._main, bool(on))
+
+    @undoable("wind direction")
+    def _on_wind_angle_commit(self, deg: float):
+        """Wind dial released — recompute + record (the live scrub is not
+        undoable, only the committed angle)."""
+        from src import wind_shadow_flow
+        wind_shadow_flow.on_angle_commit(self._main, deg)
+
     def _on_download_soil_requested(self):
         """Download the offline soil pack (V1.67). Orchestration in soil_flow."""
         from src import soil_flow
@@ -1613,6 +1659,7 @@ class MapEventRouter:
 
     # ── Polyculture click placement ──────────────────────────────────────────
 
+    @undoable("place community")
     def _on_polyculture_click(self, lat: float, lng: float):
         """Drop a polyculture by issuing one placePlantMarker per member.
 

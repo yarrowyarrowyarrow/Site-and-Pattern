@@ -151,6 +151,7 @@ class MainToolbar(QToolBar):
     select_requested          = pyqtSignal()
     cancel_draw_requested     = pyqtSignal()
     undo_requested            = pyqtSignal()
+    redo_requested            = pyqtSignal()
 
     # View visibility signals
     satellite_toggled    = pyqtSignal(bool)
@@ -230,18 +231,30 @@ class MainToolbar(QToolBar):
 
         self.addSeparator()
 
-        # Undo (Ctrl+Z) — reverses the last placement / drawing action.
-        # Distinct from Cancel, which only aborts the *current* in-progress
-        # drawing operation (e.g. mid-boundary).
-        act_undo = QAction("⤺ Undo", self)
-        act_undo.setShortcut("Ctrl+Z")
-        act_undo.setStatusTip("Undo the last action (Ctrl+Z)")
-        act_undo.setToolTip(
-            "Undo the last placement or drawing action across plants,\n"
-            "structures, boundaries, contours, hedgerows and shapes."
+        # Undo (Ctrl+Z) / Redo (Ctrl+Shift+Z) — reverse / re-apply the last
+        # action. Distinct from Cancel, which only aborts the *current*
+        # in-progress drawing operation (e.g. mid-boundary). Held as
+        # attributes + disabled initially so set_undo_redo_enabled() can grey
+        # them out when the matching stack is empty.
+        # Shortcuts live on the Edit-menu actions (Ctrl+Z / Ctrl+Shift+Z) to
+        # avoid an ambiguous-shortcut clash; these toolbar buttons are
+        # click-only, with the key shown in the status tip.
+        self._act_undo = QAction("⤺ Undo", self)
+        self._act_undo.setStatusTip("Undo the last action (Ctrl+Z)")
+        self._act_undo.setToolTip(
+            "Undo the last action — placements, removals, edits, imports and\n"
+            "overlay toggles (Ctrl+Z)."
         )
-        act_undo.triggered.connect(self.undo_requested)
-        self.addAction(act_undo)
+        self._act_undo.setEnabled(False)
+        self._act_undo.triggered.connect(self.undo_requested)
+        self.addAction(self._act_undo)
+
+        self._act_redo = QAction("⤻ Redo", self)
+        self._act_redo.setStatusTip("Redo the last undone action (Ctrl+Shift+Z)")
+        self._act_redo.setToolTip("Re-apply the action you just undid (Ctrl+Shift+Z).")
+        self._act_redo.setEnabled(False)
+        self._act_redo.triggered.connect(self.redo_requested)
+        self.addAction(self._act_redo)
 
         act_cancel = QAction("✕ Cancel", self)
         act_cancel.setStatusTip("Cancel the current in-progress drawing")
@@ -252,6 +265,13 @@ class MainToolbar(QToolBar):
         )
         act_cancel.triggered.connect(self._on_cancel)
         self.addAction(act_cancel)
+
+    def set_undo_redo_enabled(self, undo: bool, redo: bool):
+        """Grey out the toolbar Undo / Redo buttons when their stack is empty.
+        Driven by PersistenceController._refresh_actions alongside the Edit-menu
+        actions."""
+        self._act_undo.setEnabled(bool(undo))
+        self._act_redo.setEnabled(bool(redo))
 
     def _build_view(self):
         # NOTE: ordering is fixed by spec — Satellite, Boundary,

@@ -575,6 +575,7 @@ class MainWindow(QMainWindow):
         self.toolbar.select_requested.connect(self._enter_select_mode)
         self.toolbar.cancel_draw_requested.connect(self._cancel_draw)
         self.toolbar.undo_requested.connect(self._do_undo)
+        self.toolbar.redo_requested.connect(self._do_redo)
 
         self.toolbar.satellite_toggled.connect(self.map_widget.set_satellite_visible)
         self.toolbar.boundary_toggled.connect(self.map_widget.set_boundary_visible)
@@ -645,9 +646,13 @@ class MainWindow(QMainWindow):
 
         # Analysis panel → map (A1-A4)
         self.analysis_panel.sun_path_requested.connect(self._on_sun_path_requested)
-        self.analysis_panel.sun_path_cleared.connect(self.map_widget.clear_sun_path)
+        # Clears routed through the controller so they reset the active-overlay
+        # state and record an undo step (not straight to the map widget).
+        self.analysis_panel.sun_path_cleared.connect(
+            self._map_events._on_sun_path_removed)
         self.analysis_panel.sector_requested.connect(self._on_sector_requested)
-        self.analysis_panel.sector_cleared.connect(self.map_widget.clear_sectors)
+        self.analysis_panel.sector_cleared.connect(
+            self._map_events._on_sectors_cleared)
         # (Manual contour drawing moved to Site panel — wired below.)
         # Auto-terrain controls live on the Site panel now (alongside the
         # single-point Elevation/slope readout) — the request / clear /
@@ -693,12 +698,14 @@ class MainWindow(QMainWindow):
         # Live wind shadow (V1.68) — wired straight to the flow module (both
         # MainWindow and the map-events controller are at their guard ceilings).
         from src import wind_shadow_flow
+        # Toggle + committed-angle go through checkpointed controller handlers
+        # so they're undoable; the live scrub stays a direct (non-undoable) call.
         self.analysis_panel.wind_shadow_toggled.connect(
-            lambda on: wind_shadow_flow.enable(self, on))
+            self._map_events._on_wind_shadow_toggled)
         self.analysis_panel.wind_angle_changed_live.connect(
             lambda d: wind_shadow_flow.on_angle_live(self, d))
         self.analysis_panel.wind_shadow_commit.connect(
-            lambda d: wind_shadow_flow.on_angle_commit(self, d))
+            self._map_events._on_wind_angle_commit)
         # Extra slot on the existing plant-move signals → rebuild the shelter.
         b.plant_moved.connect(lambda *a: wind_shadow_flow.on_plants_changed(self))
         b.plant_group_moved.connect(
@@ -1020,6 +1027,8 @@ class MainWindow(QMainWindow):
         )
         self._set_mode_label(f"Sun path: {config.get('date_label', d.isoformat())}")
         self._pending_sun_config = None
+        # Remember the rendered overlay so undo/redo can reproduce it.
+        self._active_sun_state = (config, lat, lng)
 
     def _on_sector_requested(self, config: dict):
         # Shim → MapEventRouter; see src/controllers/map_events.py.
@@ -2098,8 +2107,7 @@ class MainWindow(QMainWindow):
         """Clear undo/redo stacks (e.g. on New/Open project)."""
         self._undo_stack.clear()
         self._redo_stack.clear()
-        self._act_undo.setEnabled(False)
-        self._act_redo.setEnabled(False)
+        self._persistence._sync_undo_actions()
 
 
 # ── Helper widgets ────────────────────────────────────────────────────────────
