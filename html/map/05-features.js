@@ -526,8 +526,10 @@
           enterShapeEditMode(id);
           return;
         }
-        // Placement mode → let the click propagate to onMapClick so the user
-        // can place on top of a visible shape / shade footprint.
+        // Placement mode → forward to onMapClick (Leaflet won't fire the map's
+        // click for a layer target) so the user can place on top of a visible
+        // shape / shade footprint.
+        onMapClick(e);
       });
 
       shapeLayers[id] = group;
