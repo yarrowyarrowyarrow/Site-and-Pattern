@@ -233,6 +233,27 @@ class TestConsistencySession(unittest.TestCase):
         self.assertEqual(s.placed_plants, [rec])
         self.assertEqual(s.check_consistency(), [])
 
+    def test_rebuild_index_after_feature_swap(self):
+        # Undo/redo snapshot restore swaps project["features"] wholesale
+        # (bypassing the per-plant mutators), then calls rebuild_index to
+        # bring the placed-plants index back into agreement.
+        s = _store()
+        s.add_plant(1, "Saskatoon", 53.5, -113.5)
+        self.assertEqual(len(s.placed_plants), 1)
+        # Swap in a different feature list, as a snapshot restore does.
+        rec = {"plant_id": 9, "common_name": "Yarrow",
+               "lat": 53.6, "lng": -113.6, "placement_group_id": "pg_y"}
+        s.project["features"] = [plant_feature(rec)]
+        # The index is now stale until rebuilt.
+        s.rebuild_index()
+        self.assertEqual(s.placed_plants, [rec])
+        self.assertEqual(s.check_consistency(), [])
+        # Restoring an empty feature list empties the index too.
+        s.project["features"] = []
+        s.rebuild_index()
+        self.assertEqual(s.placed_plants, [])
+        self.assertEqual(s.check_consistency(), [])
+
 
 class TestStoreFor(unittest.TestCase):
 

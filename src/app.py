@@ -38,7 +38,7 @@ from src.analysis_panel   import AnalysisPanel
 from src.planning_panel   import PlanningPanel
 from src.site_panel       import SitePanel
 from src.toolbar          import MainToolbar
-from src.climate          import get_zone, zone_label
+from src.climate          import zone_label
 from src.collapsible_panel import CollapsibleSidebar
 import src.project as project_io
 from src.controllers.update_flow import UpdateFlowController
@@ -1613,90 +1613,21 @@ class MainWindow(QMainWindow):
         self._modified     = False
         self._clear_undo()
 
-        self.map_widget.clear_all()
-        data = project_io.project_to_map_data(proj)
+        # Redraw the whole map from the project's features (boundaries,
+        # plants, structures, hedgerows, shapes, contours, annotations,
+        # auto-terrain, site pin, splat backdrop). Shared with undo/redo's
+        # snapshot restore — see PersistenceController.render_project_to_map.
+        self._persistence.render_project_to_map(fit_view=True)
 
-        for bd in data.get("boundaries", []):
-            self.map_widget.load_boundary(bd)
-        if data.get("boundaries"):
-            first = data["boundaries"][0]
-            lats = [p[0] for p in first["points"]]
-            lngs = [p[1] for p in first["points"]]
-            self._set_zone_display(
-                get_zone(sum(lats)/len(lats), sum(lngs)/len(lngs))
-            )
-
-        # Backfill placement_group_id onto legacy project features so that a
-        # subsequent save persists them. project_to_map_data already minted
-        # singleton groups for any feature that lacked one.
-        plant_idx = 0
-        for f in proj.get("features", []):
-            if f.get("properties", {}).get("element_type") == "plant":
-                if not f["properties"].get("placement_group_id") and plant_idx < len(data["plants"]):
-                    f["properties"]["placement_group_id"] = (
-                        data["plants"][plant_idx]["placement_group_id"]
-                    )
-                plant_idx += 1
-
-        for p in data["plants"]:
-            spacing_m, plant_type, custom_color = self._plant_info(p["plant_id"])
-            community_id = project_io.community_id_for(
-                p.get("polyculture_center_lat"), p.get("polyculture_center_lng")
-            )
-            self.map_widget.load_plant_marker(
-                p["plant_id"], p["common_name"], p["lat"], p["lng"],
-                spacing_m, plant_type, custom_color,
-                p.get("placement_group_id", ""),
-                community_id or "",
-            )
-        # Adopt project_to_map_data's records wholesale — they carry the
-        # group ids minted for legacy features (backfilled above), which a
-        # bare feature rebuild wouldn't know about.
-        self._store.replace_placed_plants(data["plants"])
-
-        self.plant_panel.load_placed(data["plants"])
-
-        for s in data.get("structures", []):
-            self.map_widget.load_structure(s["struct_def"], s["lat"], s["lng"])
-
-        for h in data.get("hedgerows", []):
-            self.map_widget.load_hedgerow(h)
-
-        for sh in data.get("shapes", []):
-            self.map_widget.load_shape(sh)
-
-        # Contour lines are loaded via JS (finishContour re-uses the drawing logic)
-        # We redraw them directly as polylines
-        for ctr in data.get("contours", []):
-            self.map_widget.apply_loaded_contour(ctr)
-
-        # Auto-generated contours (MultiLineString features) are restored
-        # directly as a single layer group. Slope ramp PNG isn't persisted —
-        # the user re-runs Generate to recompute it on demand.
-        auto_contours = data.get("auto_contours") or []
-        if auto_contours:
-            color = auto_contours[0].get("color", "#44cc00")
-            self.map_widget.draw_auto_contours(
-                [{"elevation_m": c["elevation_m"], "segments": c["segments"]}
-                 for c in auto_contours],
-                color=color,
-                show_labels=True,
-            )
-        if data.get("slope_overlay"):
-            self.site_panel.set_auto_terrain_status(
-                "Slope ramp not loaded from file — click Generate to recompute."
-            )
-
-        # Restore property pin + cached site data, if any.
+        # Replay the panel's cached site data (the map pin itself is placed by
+        # the re-render above). No network hit when the cache is present.
         sc = proj.get("properties", {}).get("site_config") or {}
         plat, plng = sc.get("latitude"), sc.get("longitude")
         if plat is not None and plng is not None:
             label = sc.get("pin_label", "")
-            self.map_widget.place_site_pin(plat, plng, label)
             has_cache = any(sc.get(k) for k in
                             ("rainfall", "soil", "elevation", "hardiness"))
             self.site_panel.set_pin(plat, plng, label, fetch=not has_cache)
-            # Replay any cached results without hitting the network again.
             for key, slot in (
                 ("hardiness", self.site_panel._on_hardiness),
                 ("elevation", self.site_panel._on_elevation),
@@ -1715,11 +1646,6 @@ class MainWindow(QMainWindow):
 
         name = proj.get("properties", {}).get("project_name", "Design")
         self.setWindowTitle(f"{APP_NAME} — {name}")
-
-        # Photoreal Gaussian-splat backdrop: redraw its baked "yard photo"
-        # map layer and sync the View toggle (no-op when the project has none).
-        from src import splat_flow
-        splat_flow.restore_splat_overlay(self)
 
         self._sync_planning_panel()
 

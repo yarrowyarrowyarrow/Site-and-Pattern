@@ -182,6 +182,7 @@ def project_to_map_data(project: dict) -> dict:
         "contours": [],
         "auto_contours": [],   # auto-generated contour features (MultiLineString)
         "slope_overlay": None, # cached slope-overlay metadata (PNG regenerated on demand)
+        "annotations": [],     # text notes pinned to the map (V1.81)
     }
     for feature in project.get("features", []):
         props = feature.get("properties", {})
@@ -297,5 +298,14 @@ def project_to_map_data(project: dict) -> dict:
                 "resolution_m": props.get("resolution_m"),
                 "source":       props.get("source", ""),
             }
+
+        elif etype == "annotation" and geom.get("type") == "Point":
+            lng, lat = geom["coordinates"]
+            result["annotations"].append({
+                "annotation_id": props.get("annotation_id", ""),
+                "lat": lat,
+                "lng": lng,
+                "text": props.get("text", ""),
+            })
 
     return result

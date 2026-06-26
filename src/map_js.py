@@ -174,10 +174,13 @@ def set_crosshair_cursor() -> str:
 
 # ── Boundaries ──────────────────────────────────────────────────────────────
 
-def load_boundary(boundary_data: dict) -> str:
+def load_boundary(boundary_data: dict, fit: bool = True) -> str:
     """The JS side expects a JSON string (not an object) for this entry
-    point, hence the single-encoded payload."""
-    return f"loadBoundary({_jslit(json.dumps(boundary_data))});"
+    point, hence the single-encoded payload. ``fit`` controls whether the
+    map recenters on the boundary — File → Open fits, undo/redo re-renders
+    pass ``fit=False`` so the camera stays put."""
+    fit_lit = "true" if fit else "false"
+    return f"loadBoundary({_jslit(json.dumps(boundary_data))}, {fit_lit});"
 
 
 def undo_boundary(boundary_id: str) -> str:
@@ -257,6 +260,12 @@ def place_annotation(ann_id: str, lat: float, lng: float, text: str) -> str:
     return (
         f"placeAnnotation({_jsstr(ann_id)}, {lat}, {lng}, {_jsstr(text)});"
     )
+
+
+def clear_annotations() -> str:
+    """Remove every annotation marker. clearAll() leaves annotations alone,
+    so the whole-project re-render clears them explicitly before redrawing."""
+    return "clearAnnotations();"
 
 
 def undo_place_plant(plant_id: int, lat: float, lng: float) -> str:

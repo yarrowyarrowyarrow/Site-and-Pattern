@@ -29,6 +29,7 @@ Why one-domain-at-a-time:
 from __future__ import annotations
 
 from src.climate import get_zone, zone_label
+from src.controllers.undo_support import undoable
 from src.project_store import store_for
 
 
@@ -90,6 +91,7 @@ class MapEventRouter:
             f"Boundary added ({color}) — " + zone_label(self._main._current_zone)
         )
 
+    @undoable("edit boundary")
     def _on_boundary_geom_changed(self, bid: str, coords: list):
         """Update geometry of an existing boundary after vertex/move/scale drag."""
         ring = [[pt[1], pt[0]] for pt in coords] + [[coords[0][1], coords[0][0]]]
@@ -100,6 +102,7 @@ class MapEventRouter:
                 break
         self._main._mark_modified()
 
+    @undoable("edit boundary")
     def _on_boundary_props_changed(self, bid: str, color: str,
                                     show_lengths: bool, show_area: bool):
         """Update color/label toggles for an existing boundary."""
@@ -112,6 +115,7 @@ class MapEventRouter:
                 break
         self._main._mark_modified()
 
+    @undoable("remove boundary")
     def _on_boundary_removed(self, bid: str):
         """Remove a boundary from the project."""
         self._main._project["features"] = [
@@ -199,6 +203,7 @@ class MapEventRouter:
         self._main._mark_modified()
         self._main.statusBar().showMessage(f"Marked {name}", 2000)
 
+    @undoable("remove structure")
     def _on_structure_removed(self, marker_id: str, struct_id: str,
                                lat: float, lng: float):
         kept = []
@@ -256,6 +261,7 @@ class MapEventRouter:
             f"Hedgerow placed: {length_m:.1f}m, ~{num_plants} plants", 3000
         )
 
+    @undoable("remove hedgerow")
     def _on_hedgerow_removed(self, hedge_id: str, points_json: str):
         self._main._project["features"] = [
             f for f in self._main._project["features"]
@@ -333,6 +339,7 @@ class MapEventRouter:
         if casts_shade:
             self._refresh_shade_if_active()   # new caster updates a live overlay
 
+    @undoable("remove shape")
     def _on_shape_removed(self, shape_id: str):
         feats = self._main._project["features"]
         removed_caster = any(
@@ -348,6 +355,7 @@ class MapEventRouter:
         if removed_caster:
             self._refresh_shade_if_active()   # shadow must follow its caster
 
+    @undoable("edit shape height")
     def _on_shape_height_changed(self, shape_id: str, height_m: float):
         """Update a drawn shape's height in place (map right-click 'edit
         height'). A positive height makes it a shade-casting canopy_footprint;
@@ -371,6 +379,7 @@ class MapEventRouter:
             break
         self._refresh_shade_if_active()
 
+    @undoable("edit shape")
     def _on_shape_geom_changed(self, shape_id: str, points: list):
         """A drawn/imported shape's outline was dragged in edit mode — update the
         project geometry and refresh a live shade overlay so the shadow follows
@@ -409,6 +418,7 @@ class MapEventRouter:
             f"Contour line at {elevation:.1f}m placed", 2000
         )
 
+    @undoable("remove contour")
     def _on_contour_removed(self, points_json: str, elevation: float,
                              color: str):
         """Remove a single contour line from project state."""
@@ -428,6 +438,7 @@ class MapEventRouter:
             f"Contour line at {elevation:.1f}m removed", 2000
         )
 
+    @undoable("clear contours")
     def _on_contour_cleared(self):
         """Clear all contours from map and project."""
         self._main.map_widget.clear_contours()
@@ -439,6 +450,7 @@ class MapEventRouter:
 
     # ── Annotation handlers ──────────────────────────────────────────────────
 
+    @undoable("add note")
     def _on_annotate_requested(self, lat: float, lng: float):
         from PyQt6.QtWidgets import QInputDialog
         text, ok = QInputDialog.getText(
@@ -460,6 +472,7 @@ class MapEventRouter:
         })
         self._main._mark_modified()
 
+    @undoable("remove note")
     def _on_annotation_removed(self, ann_id: str):
         self._main._project["features"] = [
             f for f in self._main._project["features"]
@@ -675,6 +688,7 @@ class MapEventRouter:
         self._main._mark_modified()
         self._main._sync_planning_panel()
 
+    @undoable("remove plant")
     def _on_plant_removed(self, marker_id: str, plant_id: int,
                            lat: float, lng: float):
         store_for(self._main).remove_plant(plant_id, lat, lng)
@@ -682,6 +696,7 @@ class MapEventRouter:
         self._main._mark_modified()
         self._main._sync_planning_panel()
 
+    @undoable("remove plants")
     def _on_plants_removed_batch(self, batch_json: str):
         """Remove many plants in one pass — one feature rebuild + one planning
         re-sync for the whole selection, instead of the per-plant round-trip
@@ -705,6 +720,7 @@ class MapEventRouter:
         main._mark_modified()
         main._sync_planning_panel()
 
+    @undoable("remove community")
     def _on_polyculture_removed(self, polyculture_name: str,
                                   center_lat: float, center_lng: float):
         """Remove all polyculture member plant features from project state.
@@ -855,6 +871,7 @@ class MapEventRouter:
         # Defer the next start so deleteLater settles cleanly.
         QTimer.singleShot(0, self._maybe_start_next_terrain_job)
 
+    @undoable("generate terrain")
     def _on_terrain_ready(self, result: dict):
         """Render the worker's output and persist features in the project."""
         prefs = getattr(self._main, "_terrain_render_prefs", {}) or {}
@@ -962,6 +979,7 @@ class MapEventRouter:
         if queued == 0:
             QMessageBox.warning(self._main, "Terrain Generation", message)
 
+    @undoable("clear terrain")
     def _on_auto_terrain_cleared(self):
         self._main.map_widget.clear_auto_terrain()
         self._main._project["features"] = [
@@ -1161,6 +1179,7 @@ class MapEventRouter:
 
     # ── Existing features from OpenStreetMap (V1.51) ─────────────────────────
 
+    @undoable("import buildings")
     def _on_osm_import_requested(self):
         """Fetch buildings/trees from OSM for the boundary/pin area off-thread,
         then add them as existing_* features (deduped). Degrades gracefully."""
@@ -1191,6 +1210,7 @@ class MapEventRouter:
         self._run_worker(FootprintExtractWorker(tiff_path),
                          self._on_footprint_import_ready, "footprint")
 
+    @undoable("import footprints")
     def _on_footprint_import_ready(self, payload):
         if payload.get("error"):
             self._main.site_panel.set_osm_status(
@@ -1208,6 +1228,7 @@ class MapEventRouter:
             f"Imported {len(new_feats)} footprint(s) from the GeoTIFF."
             if new_feats else "No raised footprints found in that GeoTIFF.")
 
+    @undoable("import buildings")
     def _on_osm_ready(self, res):
         if not res:
             self._main.site_panel.set_osm_status(
@@ -1660,6 +1681,7 @@ class MapEventRouter:
     # ── Pattern placement (Burst / Row / Grid / Circle, including mixes
     #    and community-as-pattern variants) ───────────────────────────────────
 
+    @undoable("place plants")
     def _on_pattern_placed(self, plant_id: int, common_name: str,
                             spacing_m: float, plant_type: str,
                             custom_color: str, positions_json: str,

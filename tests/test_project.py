@@ -306,6 +306,25 @@ class TestProjectToMapData(unittest.TestCase):
         self.assertEqual(meta["source"], "lidar")
         self.assertEqual(meta["interval_m"], 0.5)
 
+    def test_annotation_extracted(self):
+        # V1.81: annotations must survive project_to_map_data so the
+        # whole-project re-render (File→Open + undo/redo) redraws them.
+        p = self._make({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [-113.5, 53.5]},
+            "properties": {
+                "element_type": "annotation",
+                "annotation_id": "ann_1",
+                "text": "Wet corner — sedges here",
+            },
+        })
+        anns = project_to_map_data(p)["annotations"]
+        self.assertEqual(len(anns), 1)
+        self.assertEqual(anns[0]["annotation_id"], "ann_1")
+        self.assertEqual(anns[0]["text"], "Wet corner — sedges here")
+        self.assertEqual(anns[0]["lat"], 53.5)
+        self.assertEqual(anns[0]["lng"], -113.5)
+
 
 class TestUpdateShapeGeometry(unittest.TestCase):
     """V1.58 — editing a footprint's outline updates the project geometry and

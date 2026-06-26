@@ -529,9 +529,11 @@ class MapWidget(QWebEngineView):
     def set_plants_visible(self, visible: bool):
         self.run_js(map_js.set_plants_visible(visible))
 
-    def load_boundary(self, boundary_data: dict):
-        """Load a boundary from a saved project. boundary_data has id/points/color/showLengths/showArea."""
-        self.run_js(map_js.load_boundary(boundary_data))
+    def load_boundary(self, boundary_data: dict, fit: bool = True):
+        """Load a boundary from a saved project. boundary_data has id/points/color/showLengths/showArea.
+        ``fit`` recenters the map on the boundary (File → Open); undo/redo
+        re-renders pass ``fit=False`` to leave the camera where it is."""
+        self.run_js(map_js.load_boundary(boundary_data, fit))
 
     def load_plant_marker(self, plant_id: int, common_name: str, lat: float, lng: float,
                           spacing_m: float = 1.0, plant_type: str = "herb",
@@ -641,6 +643,11 @@ class MapWidget(QWebEngineView):
 
     def place_annotation(self, ann_id: str, lat: float, lng: float, text: str):
         self.run_js(map_js.place_annotation(ann_id, lat, lng, text))
+
+    def clear_annotations(self):
+        """Remove all annotation markers (the whole-project re-render clears
+        them explicitly — clearAll() leaves annotations alone)."""
+        self.run_js(map_js.clear_annotations())
 
     def set_canopy_visible(self, visible: bool):
         self.run_js(map_js.set_canopy_visible(visible))

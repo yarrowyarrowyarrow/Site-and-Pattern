@@ -920,9 +920,11 @@
       drawnItems.clearLayers();
     }
 
-    function loadBoundary(dataJson) {
+    function loadBoundary(dataJson, fit) {
       // dataJson: JSON string of {id, points, color, showLengths, showArea}
       // or legacy: JSON string of [[lat,lng],...] (old single-boundary format)
+      // fit (default true): recenter the map on the boundary. Undo/redo
+      // re-renders pass false so the camera doesn't jump on every Ctrl+Z.
       var data = JSON.parse(dataJson);
       var pts, bid, color, showLengths, showArea;
       if (Array.isArray(data)) {
@@ -936,7 +938,7 @@
         showArea    = data.showArea !== false;
       }
       var entry = _addBoundaryToMap(bid, pts, color, showLengths, showArea);
-      map.fitBounds(entry.layer.getBounds());
+      if (fit !== false) map.fitBounds(entry.layer.getBounds());
     }
 
     function loadPlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor, groupId, communityId) {

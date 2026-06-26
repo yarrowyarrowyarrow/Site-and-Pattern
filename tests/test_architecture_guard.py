@@ -68,7 +68,8 @@ class TestStructuralCeilings(unittest.TestCase):
     LINE_CEILINGS = [
         (_SRC / "app.py", 2600),                       # ~2251 now
         (_SRC / "plant_panel.py", 1600),               # ~1390 now
-        (_SRC / "controllers" / "map_events.py", 1850),# ~1732 now
+        # V1.81: +1 @undoable line per gap handler made undo exhaustive.
+        (_SRC / "controllers" / "map_events.py", 1900),# ~1862 now
         # V1.64: the former 4,900-line map.html monolith — keep the shell
         # thin and the split files from regrowing into a new monolith.
         (_HTML / "map.html", 400),                     # ~230 now

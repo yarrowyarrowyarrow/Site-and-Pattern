@@ -31,6 +31,8 @@ from PyQt6.QtWidgets import (
     QListWidget, QMessageBox, QPushButton, QVBoxLayout,
 )
 
+from src.controllers.undo_support import undoable
+
 _PREVIEW_MAX_PX = 420       # longest preview edge
 _MIN_PAIRS = 2
 
@@ -280,6 +282,7 @@ class ScanImportDialog(QDialog):
                 "Ready — add more pairs for accuracy, or Import.")
         self._import_btn.setEnabled(self.session.ready)
 
+    @undoable("import scan")
     def _on_import(self):
         m = self._main
         want_backdrop = (self._backdrop_chk is not None

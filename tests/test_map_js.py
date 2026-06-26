@@ -103,7 +103,7 @@ class TestJsEntryPointsExist(unittest.TestCase):
         "setView", "setZoomSensitivity", "setGridStyle", "setSnapEnabled",
         "loadBoundary",
         "loadPlantMarker", "placePlantMarker", "setPlantGroupForLatest",
-        "updateMarkerColor", "placeAnnotation",
+        "updateMarkerColor", "placeAnnotation", "clearAnnotations",
         "placeSitePin", "clearSitePin", "setSitePinDropMode",
         "loadStructure", "undoStructureAt",
         "loadHedgerow", "undoHedgerowById",
@@ -258,17 +258,24 @@ class TestBoundaries(unittest.TestCase):
 
     def test_load_boundary_double_encodes(self):
         out = mj.load_boundary({"id": "b_1", "points": [[53.5, -113.5]]})
-        # loadBoundary takes a JSON *string* (it parses it itself), so
-        # the payload appears once-encoded as a JS string literal.
+        # loadBoundary takes a JSON *string* (it parses it itself) plus a
+        # trailing fit flag (default true → recenter on the boundary), so the
+        # payload appears once-encoded as a JS string literal, then ", true".
         self.assertTrue(out.startswith("loadBoundary("))
-        # Find the literal, peel one layer.
-        m = re.match(r'loadBoundary\((.*)\);$', out)
+        m = re.match(r'loadBoundary\((.*), (true|false)\);$', out)
         self.assertIsNotNone(m)
         inner = m.group(1)
         # `inner` is a JSON string whose value is a JSON-encoded dict.
         parsed_once = json.loads(inner)
         parsed_twice = json.loads(parsed_once)
         self.assertEqual(parsed_twice["id"], "b_1")
+        self.assertEqual(m.group(2), "true")          # default recenters
+
+    def test_load_boundary_fit_false(self):
+        # Undo/redo re-renders pass fit=False so the camera doesn't jump.
+        out = mj.load_boundary({"id": "b_1", "points": [[53.5, -113.5]]},
+                               fit=False)
+        self.assertTrue(out.rstrip().endswith(", false);"))
 
     def test_undo_boundary_quotes_id(self):
         out = mj.undo_boundary("b_42")

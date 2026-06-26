@@ -20,7 +20,9 @@ parent, status bar messages, the undo/redo QAction widgets created in
 
 from __future__ import annotations
 
+import copy
 import os
+from contextlib import contextmanager
 
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
@@ -40,6 +42,11 @@ class PersistenceController:
 
     def __init__(self, main_window):
         self._main = main_window
+        # Snapshot-checkpoint re-entrancy state (V1.81). A depth counter so
+        # nested checkpoints (e.g. a community fill that calls a placement
+        # helper that is itself decorated) push exactly one undo entry.
+        self._cp_depth = 0
+        self._cp_before = None
 
     # ── Modified flag + window title ─────────────────────────────────────────
 
@@ -169,6 +176,151 @@ class PersistenceController:
         feats = entry.get("_removed_features") or []
         self._main._project["features"].extend(feats)
         return feats
+
+    # ── snapshot checkpoint (V1.81 — the exhaustive catch-all) ───────────────
+    # The surgical handlers above cover the high-frequency single-item
+    # gestures (place/move one plant, one boundary, …). Everything else —
+    # bulk placements (pattern, generate, area fill, community), every
+    # removal, every geometry/property edit, and every import (OSM, footprint,
+    # scan, terrain) — is wrapped in a checkpoint instead. A checkpoint
+    # deep-copies project["features"] before the action and, if it changed,
+    # pushes one "snapshot" entry carrying the before/after lists. Undo/redo
+    # swap the whole list back in and re-render the map. This makes undo
+    # exhaustive by construction: any feature change is reversible, and new
+    # feature types need no bespoke handler pair.
+
+    @contextmanager
+    def checkpoint(self, label: str = ""):
+        """Record a snapshot undo step around a block that mutates
+        ``project["features"]``. Re-entrant: only the outermost checkpoint
+        snapshots and pushes, so a decorated helper called from a decorated
+        entry point yields a single undo entry. Records nothing when the
+        block raises or leaves the features unchanged."""
+        m = self._main
+        outer = self._cp_depth == 0
+        if outer:
+            self._cp_before = copy.deepcopy(m._project.get("features", []))
+        self._cp_depth += 1
+        ok = False
+        try:
+            yield
+            ok = True
+        finally:
+            self._cp_depth -= 1
+            if outer:
+                before, self._cp_before = self._cp_before, None
+                if ok:
+                    after = m._project.get("features", [])
+                    if before != after:
+                        self._push_undo({
+                            "action": "snapshot",
+                            "label": label,
+                            "before": before,
+                            "after": copy.deepcopy(after),
+                        })
+
+    def _undo_snapshot(self, entry: dict):
+        self._apply_features_snapshot(entry["before"])
+        self._main.statusBar().showMessage(
+            f"Undo: {entry.get('label') or 'change'}", 2000)
+
+    def _redo_snapshot(self, entry: dict):
+        self._apply_features_snapshot(entry["after"])
+        self._main.statusBar().showMessage(
+            f"Redo: {entry.get('label') or 'change'}", 2000)
+
+    def _apply_features_snapshot(self, features: list):
+        """Swap the project's whole feature list to a stored snapshot, rebuild
+        the placed-plants index from it, and redraw the map from scratch."""
+        m = self._main
+        m._project["features"] = copy.deepcopy(features)
+        m._store.rebuild_index()
+        self.render_project_to_map(fit_view=False)
+
+    # ── whole-project map re-render (shared by File→Open and undo/redo) ───────
+
+    def render_project_to_map(self, *, fit_view: bool = False):
+        """Clear the map and redraw every feature-derived layer from the
+        current project. File → Open passes ``fit_view=True`` (recenter on the
+        site); snapshot undo/redo pass ``False`` so the camera stays put.
+
+        Lives on the controller (not as a fat MainWindow method) so the
+        architecture-guard method ceiling stays meaningful; ``_load_from_path``
+        and the snapshot handlers both call it."""
+        from src.climate import get_zone
+        m = self._main
+        proj = m._project
+
+        m.map_widget.clear_all()
+        # clearAll() leaves these alone, so wipe them explicitly before redraw.
+        m.map_widget.clear_annotations()
+        m.map_widget.clear_shade_overlay()
+
+        data = project_io.project_to_map_data(proj)
+
+        for bd in data.get("boundaries", []):
+            m.map_widget.load_boundary(bd, fit=fit_view)
+        if data.get("boundaries"):
+            first = data["boundaries"][0]
+            lats = [p[0] for p in first["points"]]
+            lngs = [p[1] for p in first["points"]]
+            m._set_zone_display(
+                get_zone(sum(lats) / len(lats), sum(lngs) / len(lngs)))
+
+        # Backfill placement_group_id onto legacy plant features so a later
+        # save persists the singleton groups project_to_map_data minted.
+        plant_idx = 0
+        for f in proj.get("features", []):
+            if f.get("properties", {}).get("element_type") == "plant":
+                if (not f["properties"].get("placement_group_id")
+                        and plant_idx < len(data["plants"])):
+                    f["properties"]["placement_group_id"] = (
+                        data["plants"][plant_idx]["placement_group_id"])
+                plant_idx += 1
+
+        for p in data["plants"]:
+            spacing_m, plant_type, custom_color = m._plant_info(p["plant_id"])
+            community_id = project_io.community_id_for(
+                p.get("polyculture_center_lat"),
+                p.get("polyculture_center_lng"))
+            m.map_widget.load_plant_marker(
+                p["plant_id"], p["common_name"], p["lat"], p["lng"],
+                spacing_m, plant_type, custom_color,
+                p.get("placement_group_id", ""), community_id or "")
+        m._store.replace_placed_plants(data["plants"])
+        m.plant_panel.load_placed(data["plants"])
+
+        for s in data.get("structures", []):
+            m.map_widget.load_structure(s["struct_def"], s["lat"], s["lng"])
+        for h in data.get("hedgerows", []):
+            m.map_widget.load_hedgerow(h)
+        for sh in data.get("shapes", []):
+            m.map_widget.load_shape(sh)
+        for ctr in data.get("contours", []):
+            m.map_widget.apply_loaded_contour(ctr)
+        for ann in data.get("annotations", []):
+            m.map_widget.place_annotation(
+                ann["annotation_id"], ann["lat"], ann["lng"], ann["text"])
+
+        auto_contours = data.get("auto_contours") or []
+        if auto_contours:
+            m.map_widget.draw_auto_contours(
+                [{"elevation_m": c["elevation_m"], "segments": c["segments"]}
+                 for c in auto_contours],
+                color=auto_contours[0].get("color", "#44cc00"),
+                show_labels=True)
+        if data.get("slope_overlay"):
+            m.site_panel.set_auto_terrain_status(
+                "Slope ramp not loaded — click Generate to recompute.")
+
+        # Site pin (clearAll wiped it) + photoreal splat backdrop, both read
+        # from the project so undo of an import that removed them clears them.
+        sc = proj.get("properties", {}).get("site_config") or {}
+        plat, plng = sc.get("latitude"), sc.get("longitude")
+        if plat is not None and plng is not None:
+            m.map_widget.place_site_pin(plat, plng, sc.get("pin_label", ""))
+        from src import splat_flow
+        splat_flow.restore_splat_overlay(m)
 
     # ── per-action handlers ──────────────────────────────────────────────────
 
@@ -400,4 +552,5 @@ class PersistenceController:
         "move_plant": (_undo_move_plant, _redo_move_plant),
         "move_plant_group": (_undo_move_plant_group, _redo_move_plant_group),
         "move_selection": (_undo_move_selection, _redo_move_selection),
+        "snapshot": (_undo_snapshot, _redo_snapshot),
     }

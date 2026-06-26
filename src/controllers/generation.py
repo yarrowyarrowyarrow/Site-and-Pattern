@@ -16,6 +16,7 @@ from PyQt6.QtCore import QThread
 from PyQt6.QtWidgets import QDialog, QMessageBox
 
 import src.project as project_io
+from src.controllers.undo_support import undoable
 from src.project_store import store_for
 
 
@@ -161,6 +162,7 @@ class GenerationController:
                 return [(float(p[0]), float(p[1])) for p in pts]
         return None
 
+    @undoable("generate design")
     def _render(self, project):
         """Place every plant from the generated project onto the map and into
         the live project, under one shared placement group so the whole design

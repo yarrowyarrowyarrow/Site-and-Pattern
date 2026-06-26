@@ -11,6 +11,7 @@ hand-placed design.
 from __future__ import annotations
 
 from src import area_fill
+from src.controllers.undo_support import undoable
 from src.project_store import store_for
 
 
@@ -18,6 +19,7 @@ class AreaFillController:
     def __init__(self, main):
         self._main = main
 
+    @undoable("fill area")
     def fill(self, ring, member_specs, spacing_m: float,
              poly_name: str = "", jitter: float = 0.0, rng=None,
              matrix: bool = False) -> int:
@@ -199,6 +201,7 @@ class AreaFillController:
                 "spaced by type.", 5000)
         return n
 
+    @undoable("fill area")
     def fill_communities(self, ring, polyculture: dict, spacing_m: float,
                          rng=None, matrix: bool = False) -> int:
         """Fill a polygon with whole community UNITS — each anchor expands every
@@ -251,6 +254,7 @@ class AreaFillController:
             5000)
         return len(anchors)
 
+    @undoable("fill area")
     def fill_community_mix(self, ring, communities: list, spacing_m: float,
                            rng=None, matrix: bool = False) -> int:
         """Fill a polygon with whole community units drawn from a MIX of
