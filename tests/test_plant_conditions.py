@@ -129,5 +129,49 @@ class TestSearchMultiValueAndRarity(unittest.TestCase):
                          len(search_plants()))
 
 
+class TestMultiSelectFilters(unittest.TestCase):
+    """V1.85: facet dropdowns pass lists; ANY within type/sun, ALL within use."""
+
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+
+    def test_plant_type_list_is_any_of(self):
+        ts = search_plants(plant_type=["tree", "shrub"])
+        self.assertTrue(ts)
+        self.assertTrue(all(p["plant_type"] in ("tree", "shrub") for p in ts))
+        kinds = {p["plant_type"] for p in ts}
+        self.assertEqual(kinds, {"tree", "shrub"})  # both present
+        # union equals the two single-type queries combined
+        self.assertEqual(
+            len(ts),
+            len(search_plants(plant_type="tree")) + len(search_plants(plant_type="shrub")))
+
+    def test_sun_list_is_any_of(self):
+        rows = search_plants(sun_req=["full_sun", "full_shade"])
+        self.assertTrue(rows)
+        for r in rows:
+            toks = condition_tokens(r["sun_requirement"])
+            self.assertTrue("full_sun" in toks or "full_shade" in toks)
+
+    def test_perm_use_list_is_all_of(self):
+        poll = search_plants(perm_use="pollinator")
+        both = search_plants(perm_use=["pollinator", "host_plant"])
+        self.assertTrue(both)
+        self.assertLessEqual(len(both), len(poll))   # AND narrows
+        both_ids = {p["id"] for p in both}
+        self.assertTrue(both_ids <= {p["id"] for p in poll})  # subset
+
+    def test_string_backward_compat(self):
+        # A bare string still behaves as a single-value filter.
+        self.assertEqual(len(search_plants(plant_type="tree")),
+                         len(search_plants(plant_type=["tree"])))
+
+    def test_empty_list_no_restriction(self):
+        everything = len(search_plants())
+        self.assertEqual(everything, len(search_plants(plant_type=[], sun_req=[],
+                                                       water_needs=[], perm_use=[])))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -309,152 +309,77 @@ class PlantPanel(QWidget):
         self._search_box.textChanged.connect(self._on_search_changed)
         top_layout.addWidget(self._search_box)
 
-        # Filter row 1: Type + Sun
-        row1 = QHBoxLayout()
-        row1.setSpacing(4)
-        self._type_combo = self._make_combo(
-            [("All types", "")]
-            + [(lbl, key) for key, lbl in _TYPE_LABELS.items()]
+        # ── Filter dropdowns (multi-select facets, V1.85) ─────────────────
+        # Type / Sun / Water / Use / Availability are all multi-select so the
+        # user can combine values within a facet (e.g. Tree + Shrub, or Full
+        # Sun + Partial Shade). They share one dark-green style that blends the
+        # plain combo shape with the toggle-button palette below.
+        _combo_style = (
+            "QComboBox { background: #1e2e1e; color: #a5d6a7; border: 1px solid #2e4a2e; "
+            "border-radius: 3px; padding: 2px 6px; font-size: 11px; }"
+            "QComboBox:hover { border-color: #4a7a4a; }"
+            "QComboBox::drop-down { border: none; width: 16px; }"
+            "QComboBox QLineEdit { background: transparent; color: #a5d6a7; border: none; }"
+            "QComboBox QAbstractItemView { background: #1e2e1e; color: #cfd8dc; "
+            "border: 1px solid #2e4a2e; outline: none; "
+            "selection-background-color: #2e5a2e; selection-color: #a5d6a7; }"
         )
-        self._sun_combo = self._make_combo(
-            [("Any sun", "")]
-            + [(lbl, key) for key, lbl in _SUN_LABELS.items()]
-        )
-        row1.addWidget(self._type_combo)
-        row1.addWidget(self._sun_combo)
-        top_layout.addLayout(row1)
-
-        # Filter row 2: Water + Use
-        row2 = QHBoxLayout()
-        row2.setSpacing(4)
-        self._water_combo = self._make_combo(
-            [("Any water", "")]
-            + [(lbl, key) for key, lbl in _WATER_LABELS.items()]
-        )
-        self._use_combo = self._make_combo(
-            [("Any use", "")]
-            + [(lbl, key) for key, lbl in _USE_LABELS.items()]
-        )
-        row2.addWidget(self._water_combo)
-        row2.addWidget(self._use_combo)
-        top_layout.addLayout(row2)
-
-        # Toggle filter row: Native AB + Edible + Medicinal + N-Fixer +
-        # Pollinator + Perennial. The legacy "Filter by zone" / Zone label
-        # row was removed (low value, took vertical space). Hardiness-zone
-        # detection still runs in the background and tags placements via
-        # `_current_zone`; users can read it from the status bar.
         _toggle_style = (
             "QPushButton { background: #1e2e1e; color: #78909c; border: 1px solid #2e4a2e; "
             "border-radius: 3px; padding: 2px 6px; font-size: 11px; }"
             "QPushButton:checked { background: #2e5a2e; color: #a5d6a7; border-color: #66bb6a; }"
             "QPushButton:hover { border-color: #4a7a4a; }"
         )
-        extra_row = QHBoxLayout()
-        extra_row.setSpacing(3)
 
-        self._native_filter_btn = QPushButton("Native AB")
-        self._native_filter_btn.setCheckable(True)
-        self._native_filter_btn.setToolTip("Only show plants native to Alberta")
-        self._native_filter_btn.setStyleSheet(_toggle_style)
-        self._native_filter_btn.toggled.connect(self._run_search)
-        extra_row.addWidget(self._native_filter_btn)
+        # Row 1: Type + Sun
+        row1 = QHBoxLayout()
+        row1.setSpacing(4)
+        self._type_combo = self._make_multi_combo("Any type", _TYPE_LABELS, _combo_style)
+        self._sun_combo = self._make_multi_combo("Any sun", _SUN_LABELS, _combo_style)
+        row1.addWidget(self._type_combo)
+        row1.addWidget(self._sun_combo)
+        top_layout.addLayout(row1)
 
-        self._edible_btn = QPushButton("Edible")
-        self._edible_btn.setCheckable(True)
-        self._edible_btn.setToolTip("Only show plants with edible parts")
-        self._edible_btn.setStyleSheet(_toggle_style)
-        self._edible_btn.toggled.connect(self._run_search)
-        extra_row.addWidget(self._edible_btn)
-
-        self._medicinal_btn = QPushButton("Medicinal")
-        self._medicinal_btn.setCheckable(True)
-        self._medicinal_btn.setToolTip("Only show plants with medicinal uses")
-        self._medicinal_btn.setStyleSheet(_toggle_style)
-        self._medicinal_btn.toggled.connect(self._run_search)
-        extra_row.addWidget(self._medicinal_btn)
-
-        self._nfixer_btn = QPushButton("N-Fixer")
-        self._nfixer_btn.setCheckable(True)
-        self._nfixer_btn.setToolTip("Only show nitrogen-fixing plants")
-        self._nfixer_btn.setStyleSheet(_toggle_style)
-        self._nfixer_btn.toggled.connect(self._run_search)
-        extra_row.addWidget(self._nfixer_btn)
-
-        self._pollinator_btn = QPushButton("Pollinator")
-        self._pollinator_btn.setCheckable(True)
-        self._pollinator_btn.setToolTip("Only show pollinator-friendly plants")
-        self._pollinator_btn.setStyleSheet(_toggle_style)
-        self._pollinator_btn.toggled.connect(self._run_search)
-        extra_row.addWidget(self._pollinator_btn)
-
-        self._perennial_btn = QPushButton("Perennial")
-        self._perennial_btn.setCheckable(True)
-        self._perennial_btn.setToolTip("Only show perennial plants")
-        self._perennial_btn.setStyleSheet(_toggle_style)
-        self._perennial_btn.toggled.connect(self._run_search)
-        extra_row.addWidget(self._perennial_btn)
-
-        top_layout.addLayout(extra_row)
-
-        # Habitat-focused filter row: keystone species, larval host plants,
-        # and bird-food producers. These three drive most of the value of
-        # the "lawn-to-habitat" reframe — they let users surface the high-
-        # impact natives (à la Doug Tallamy) rather than ornamental fluff.
-        habitat_row = QHBoxLayout()
-        habitat_row.setSpacing(3)
-
-        self._keystone_btn = QPushButton("Keystone")
-        self._keystone_btn.setCheckable(True)
-        self._keystone_btn.setToolTip(
-            "Keystone species — natives that support the most "
-            "specialist insects and food webs"
+        # Row 2: Water + Use
+        row2 = QHBoxLayout()
+        row2.setSpacing(4)
+        self._water_combo = self._make_multi_combo("Any water", _WATER_LABELS, _combo_style)
+        self._use_combo = self._make_multi_combo("Any use", _USE_LABELS, _combo_style)
+        self._use_combo.setToolTip(
+            "Pick one or more uses; only plants that have ALL of them are shown."
         )
-        self._keystone_btn.setStyleSheet(_toggle_style)
-        self._keystone_btn.toggled.connect(self._run_search)
-        habitat_row.addWidget(self._keystone_btn)
+        row2.addWidget(self._water_combo)
+        row2.addWidget(self._use_combo)
+        top_layout.addLayout(row2)
 
-        self._host_btn = QPushButton("Host Plant")
-        self._host_btn.setCheckable(True)
-        self._host_btn.setToolTip(
-            "Larval host plant for native butterflies / moths "
-            "(e.g. milkweed for monarchs)"
+        # Row 3: Availability (where to buy) — lives with the other dropdowns.
+        # Multi-select so the user can show several sourcing tiers at once
+        # (e.g. big-box + garden-centre + native-nursery) and skip the long
+        # tail of seed-only / rare species to avoid being overwhelmed.
+        row3 = QHBoxLayout()
+        row3.setSpacing(4)
+        self._rarity_combo = self._make_multi_combo(
+            "Any availability", _AVAILABILITY_LABELS, _combo_style)
+        self._rarity_combo.setToolTip(
+            "Show only plants you can source from the checked tiers.\n"
+            "Leave all unchecked to see everything."
         )
-        self._host_btn.setStyleSheet(_toggle_style)
-        self._host_btn.toggled.connect(self._run_search)
-        habitat_row.addWidget(self._host_btn)
-
-        self._birdfood_btn = QPushButton("Bird Food")
-        self._birdfood_btn.setCheckable(True)
-        self._birdfood_btn.setToolTip(
-            "Produces seeds or berries eaten by native birds"
-        )
-        self._birdfood_btn.setStyleSheet(_toggle_style)
-        self._birdfood_btn.toggled.connect(self._run_search)
-        habitat_row.addWidget(self._birdfood_btn)
-
-        self._has_image_btn = QPushButton("Photo")
-        self._has_image_btn.setCheckable(True)
-        self._has_image_btn.setToolTip(
-            "Only show plants that have a photo (openly licensed, from iNaturalist)"
-        )
-        self._has_image_btn.setStyleSheet(_toggle_style)
-        self._has_image_btn.toggled.connect(self._run_search)
-        habitat_row.addWidget(self._has_image_btn)
-
-        habitat_row.addStretch(1)
-        top_layout.addLayout(habitat_row)
+        row3.addWidget(self._rarity_combo)
+        top_layout.addLayout(row3)
 
         # ── Reference ecosystem picker (N1) ──────────────────────────────
         # Drives a server-side filter on plants.ab_ecoregion.  Each label is
         # an Alberta ecoregion; selecting one narrows the result list to
         # plants documented from that ecoregion.  Persisted across sessions
         # via QSettings so the user's "I'm restoring toward X" choice
-        # survives a restart.
+        # survives a restart. Single-select (one reference target at a time).
         ecoregion_row = QHBoxLayout()
         ecoregion_row.setSpacing(4)
-        ecoregion_row.addWidget(QLabel("Restoring toward:"))
+        _eco_label = QLabel("Restoring toward:")
+        _eco_label.setStyleSheet("color: #78909c; font-size: 11px;")
+        ecoregion_row.addWidget(_eco_label)
         self._ecoregion_combo = self._make_combo(_AB_ECOREGION_CHOICES)
+        self._ecoregion_combo.setStyleSheet(_combo_style)
         self._ecoregion_combo.setToolTip(
             "Filter the plant list to species documented from a specific\n"
             "Alberta ecoregion. Use 'Any ecoregion' to see everything."
@@ -463,23 +388,45 @@ class PlantPanel(QWidget):
         ecoregion_row.addWidget(self._ecoregion_combo, 1)
         top_layout.addLayout(ecoregion_row)
 
-        # ── Rarity / where-to-buy filter (V1.84) ─────────────────────────
-        # Multi-select so the user can show several sourcing tiers at once
-        # (e.g. big-box + garden-centre + native-nursery) and skip the long
-        # tail of seed-only / rare species to avoid being overwhelmed.
-        rarity_row = QHBoxLayout()
-        rarity_row.setSpacing(4)
-        rarity_row.addWidget(QLabel("Availability:"))
-        self._rarity_combo = CheckableComboBox(placeholder="Any availability")
-        for key, lbl in _AVAILABILITY_LABELS.items():
-            self._rarity_combo.add_check_item(lbl, key)
-        self._rarity_combo.setToolTip(
-            "Show only plants you can source from the checked tiers.\n"
-            "Leave all unchecked to see everything."
+        # ── Toggle filters (non-dropdown extras only, V1.85) ─────────────
+        # The use-based toggles (Medicinal / N-Fixer / Pollinator / Keystone /
+        # Host Plant / Bird Food) moved into the multi-select Use dropdown
+        # above; only the filters with no dropdown equivalent remain here.
+        toggle_row = QHBoxLayout()
+        toggle_row.setSpacing(3)
+
+        self._native_filter_btn = QPushButton("Native AB")
+        self._native_filter_btn.setCheckable(True)
+        self._native_filter_btn.setToolTip("Only show plants native to Alberta")
+        self._native_filter_btn.setStyleSheet(_toggle_style)
+        self._native_filter_btn.toggled.connect(self._run_search)
+        toggle_row.addWidget(self._native_filter_btn)
+
+        self._edible_btn = QPushButton("Edible")
+        self._edible_btn.setCheckable(True)
+        self._edible_btn.setToolTip("Only show plants with edible parts")
+        self._edible_btn.setStyleSheet(_toggle_style)
+        self._edible_btn.toggled.connect(self._run_search)
+        toggle_row.addWidget(self._edible_btn)
+
+        self._perennial_btn = QPushButton("Perennial")
+        self._perennial_btn.setCheckable(True)
+        self._perennial_btn.setToolTip("Only show perennial plants")
+        self._perennial_btn.setStyleSheet(_toggle_style)
+        self._perennial_btn.toggled.connect(self._run_search)
+        toggle_row.addWidget(self._perennial_btn)
+
+        self._has_image_btn = QPushButton("Photo")
+        self._has_image_btn.setCheckable(True)
+        self._has_image_btn.setToolTip(
+            "Only show plants that have a photo (openly licensed, from iNaturalist)"
         )
-        self._rarity_combo.selectionChanged.connect(self._run_search)
-        rarity_row.addWidget(self._rarity_combo, 1)
-        top_layout.addLayout(rarity_row)
+        self._has_image_btn.setStyleSheet(_toggle_style)
+        self._has_image_btn.toggled.connect(self._run_search)
+        toggle_row.addWidget(self._has_image_btn)
+
+        toggle_row.addStretch(1)
+        top_layout.addLayout(toggle_row)
 
         # Result count label
         self._result_count = QLabel("Results: —")
@@ -642,6 +589,19 @@ class PlantPanel(QWidget):
         cb.currentIndexChanged.connect(lambda _: None)  # placeholder
         return cb
 
+    def _make_multi_combo(self, placeholder: str, labels: dict,
+                          style: str) -> "CheckableComboBox":
+        """Build a styled multi-select facet dropdown (V1.85).
+
+        ``labels`` is a key→label dict; selecting items re-runs the search.
+        """
+        combo = CheckableComboBox(placeholder=placeholder)
+        for key, lbl in labels.items():
+            combo.add_check_item(lbl, key)
+        combo.setStyleSheet(style)
+        combo.selectionChanged.connect(self._run_search)
+        return combo
+
     def _combo_value(self, combo: QComboBox) -> str:
         data = combo.currentData()
         return data if data else ""
@@ -667,36 +627,26 @@ class PlantPanel(QWidget):
         except Exception:
             return
 
-        # Wire filter combo signals on first run
-        if not hasattr(self, "_filters_wired"):
-            self._type_combo.currentIndexChanged.connect(lambda _: self._run_search())
-            self._sun_combo.currentIndexChanged.connect(lambda _: self._run_search())
-            self._water_combo.currentIndexChanged.connect(lambda _: self._run_search())
-            self._use_combo.currentIndexChanged.connect(lambda _: self._run_search())
-            self._filters_wired = True
-
         # The dedicated zone-filter toggle was removed; results are
         # never zone-restricted now. `_current_zone` is still tracked
         # for status-bar display elsewhere.
         zone = None
 
+        # Facet dropdowns are multi-select (V1.85): each returns a list of
+        # checked keys. The use-based toggles moved into the Use dropdown; only
+        # the column-based toggles (Native AB / Edible / Perennial / Photo)
+        # remain as buttons.
         try:
             plants = search_plants(
                 query       = self._search_box.text().strip(),
-                plant_type  = self._combo_value(self._type_combo),
-                sun_req     = self._combo_value(self._sun_combo),
-                water_needs = self._combo_value(self._water_combo),
-                perm_use    = self._combo_value(self._use_combo),
+                plant_type  = self._type_combo.checked_keys(),
+                sun_req     = self._sun_combo.checked_keys(),
+                water_needs = self._water_combo.checked_keys(),
+                perm_use    = self._use_combo.checked_keys(),
                 zone        = zone,
                 native_only = self._native_filter_btn.isChecked(),
                 edible_only = self._edible_btn.isChecked(),
-                medicinal_only = self._medicinal_btn.isChecked(),
-                nfixer_only = self._nfixer_btn.isChecked(),
-                pollinator_only = self._pollinator_btn.isChecked(),
                 perennial_only = self._perennial_btn.isChecked(),
-                host_plant_only = self._host_btn.isChecked(),
-                keystone_only   = self._keystone_btn.isChecked(),
-                bird_food_only  = self._birdfood_btn.isChecked(),
                 has_image_only  = self._has_image_btn.isChecked(),
                 ab_ecoregion    = self._combo_value(self._ecoregion_combo),
                 availability_in = self._rarity_combo.checked_keys(),

@@ -183,6 +183,49 @@ class TestPlantPanelSmoke(unittest.TestCase):
         self.assertEqual(self._panel._placed_counts.get(1), 2)
         self.assertEqual(self._panel._placed_counts.get(2), 1)
 
+    # ── V1.85: unified multi-select filter dropdowns ─────────────────────────
+
+    def test_use_based_toggle_buttons_removed(self):
+        # The six use-overlapping toggles folded into the Use dropdown.
+        for attr in ("_medicinal_btn", "_nfixer_btn", "_pollinator_btn",
+                     "_keystone_btn", "_host_btn", "_birdfood_btn"):
+            self.assertFalse(hasattr(self._panel, attr), attr)
+        # The non-use extras stay as buttons.
+        for attr in ("_native_filter_btn", "_edible_btn", "_perennial_btn",
+                     "_has_image_btn"):
+            self.assertTrue(hasattr(self._panel, attr), attr)
+
+    def test_facet_combos_are_multiselect(self):
+        from src.plant_panel import CheckableComboBox
+        for attr in ("_type_combo", "_sun_combo", "_water_combo",
+                     "_use_combo", "_rarity_combo"):
+            self.assertIsInstance(getattr(self._panel, attr), CheckableComboBox)
+        # Ecoregion stays single-select.
+        from PyQt6.QtWidgets import QComboBox
+        self.assertNotIsInstance(self._panel._ecoregion_combo, CheckableComboBox)
+        self.assertIsInstance(self._panel._ecoregion_combo, QComboBox)
+
+    def _set_checked(self, combo, keys):
+        """Check exactly ``keys`` in ``combo`` (clearing others) — order-safe."""
+        from PyQt6.QtCore import Qt
+        for i in range(combo.model().rowCount()):
+            it = combo.model().item(i)
+            want = it.data(Qt.ItemDataRole.UserRole) in keys
+            it.setCheckState(Qt.CheckState.Checked if want
+                             else Qt.CheckState.Unchecked)
+
+    def test_multiselect_filter_matches_query(self):
+        from src.db.plants import search_plants
+        p = self._panel
+        self._set_checked(p._type_combo, {"tree", "shrub"})
+        self._set_checked(p._use_combo, {"pollinator", "host_plant"})
+        p._run_search()
+        expected = len(search_plants(plant_type=["tree", "shrub"],
+                                     perm_use=["pollinator", "host_plant"]))
+        self.assertEqual(p._result_count.text(), f"Results: {expected}")
+        # AND semantics on uses → strictly fewer than pollinator alone
+        self.assertLess(expected, len(search_plants(perm_use="pollinator")))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -930,26 +930,42 @@ def search_plants(
     sql    = "SELECT * FROM plants WHERE 1=1"
     params: list = []
 
+    # plant_type / sun_req / water_needs / perm_use accept a single string
+    # (legacy) or a list of values for multi-select filters (V1.85). Coerce to a
+    # clean list so callers passing either shape work unchanged.
+    def _as_filter_list(v) -> list:
+        if not v:
+            return []
+        if isinstance(v, str):
+            return [v]
+        return [str(x) for x in v if x]
+
     if query:
         sql += " AND (LOWER(common_name) LIKE ? OR LOWER(scientific_name) LIKE ? OR LOWER(permaculture_uses) LIKE ?)"
         q = f"%{query.lower()}%"
         params += [q, q, q]
 
-    if plant_type:
-        sql += " AND plant_type = ?"
-        params.append(plant_type)
+    # Type is a single column value; a multi-select matches ANY chosen type.
+    types = _as_filter_list(plant_type)
+    if types:
+        sql += " AND plant_type IN (%s)" % ",".join("?" for _ in types)
+        params += types
 
-    # sun_requirement / water_needs may hold a comma-delimited list when a
-    # plant tolerates a range of conditions (V1.84). Match membership the same
-    # way the ab_ecoregion filter below does, so a single-value row and a
-    # "full_sun,partial_shade" row both match a "partial_shade" query.
-    if sun_req:
-        sql += " AND (',' || COALESCE(sun_requirement,'') || ',') LIKE ?"
-        params.append(f"%,{sun_req},%")
+    # sun_requirement / water_needs may hold a comma-delimited list when a plant
+    # tolerates a range (V1.84). A multi-select filter matches if ANY chosen
+    # value is among the plant's tokens — OR of the membership test used by the
+    # ab_ecoregion filter below.
+    suns = _as_filter_list(sun_req)
+    if suns:
+        sql += " AND (" + " OR ".join(
+            "(',' || COALESCE(sun_requirement,'') || ',') LIKE ?" for _ in suns) + ")"
+        params += [f"%,{s},%" for s in suns]
 
-    if water_needs:
-        sql += " AND (',' || COALESCE(water_needs,'') || ',') LIKE ?"
-        params.append(f"%,{water_needs},%")
+    waters = _as_filter_list(water_needs)
+    if waters:
+        sql += " AND (" + " OR ".join(
+            "(',' || COALESCE(water_needs,'') || ',') LIKE ?" for _ in waters) + ")"
+        params += [f"%,{w},%" for w in waters]
 
     # Schema v13: tag filters now run through the plant_uses junction table
     # via a single EXISTS sub-select per tag. ``_use_filter`` keeps the SQL
@@ -961,9 +977,11 @@ def search_plants(
             "             WHERE pu.plant_id = plants.id AND u.key = ?)"
         )
 
-    if perm_use:
-        sql += _use_filter(perm_use)
-        params.append(perm_use)
+    # Use is AND-of-tags: a multi-select keeps only plants that have EVERY chosen
+    # use (one EXISTS sub-select per tag), mirroring the old stacked toggles.
+    for use_key in _as_filter_list(perm_use):
+        sql += _use_filter(use_key)
+        params.append(use_key)
 
     if zone is not None:
         sql += " AND hardiness_zone_min <= ? AND hardiness_zone_max >= ?"
