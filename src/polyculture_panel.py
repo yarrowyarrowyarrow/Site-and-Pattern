@@ -1,9 +1,12 @@
 import json
 import re
 
-from PyQt6.QtCore import Qt, pyqtSignal, QPointF, QRectF, QSettings
+from PyQt6.QtCore import (
+    Qt, pyqtSignal, QPointF, QRectF, QSettings, QMimeData, QByteArray,
+)
 from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont
 from PyQt6.QtWidgets import (
+    QAbstractItemView,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -34,6 +37,63 @@ from PyQt6.QtWidgets import (
 )
 
 from src.db import polycultures
+
+
+# Drag a community from the library tree → drop on the "Plant Communities Mix"
+# (V1.87, mirrors the plant drag-to-mix on the Plant Library tab).
+_COMMUNITY_MIME = "application/x-sap-community-id"
+
+
+class _CommunityTree(QTreeWidget):
+    """Library tree whose rows can be dragged (carrying the community id)."""
+
+    def mimeTypes(self):
+        return [_COMMUNITY_MIME]
+
+    def supportedDragActions(self):
+        return Qt.DropAction.CopyAction
+
+    def mimeData(self, items):
+        md = QMimeData()
+        for it in items:
+            pid = it.data(0, Qt.ItemDataRole.UserRole)
+            if pid:
+                md.setData(_COMMUNITY_MIME, QByteArray(str(int(pid)).encode()))
+                break
+        return md
+
+
+class _CommunityMixDropGroupBox(QGroupBox):
+    """The 'Plant Communities Mix' box, made a drop target so a community can be
+    dragged from the library straight in. ``on_drop`` receives the community id."""
+
+    def __init__(self, title: str, on_drop, parent=None):
+        super().__init__(title, parent)
+        self._on_drop = on_drop
+        self.setAcceptDrops(True)
+
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasFormat(_COMMUNITY_MIME):
+            e.acceptProposedAction()
+        else:
+            super().dragEnterEvent(e)
+
+    def dragMoveEvent(self, e):
+        if e.mimeData().hasFormat(_COMMUNITY_MIME):
+            e.acceptProposedAction()
+        else:
+            super().dragMoveEvent(e)
+
+    def dropEvent(self, e):
+        if e.mimeData().hasFormat(_COMMUNITY_MIME):
+            try:
+                pid = int(bytes(e.mimeData().data(_COMMUNITY_MIME)).decode())
+            except (ValueError, TypeError):
+                return
+            self._on_drop(pid)
+            e.acceptProposedAction()
+        else:
+            super().dropEvent(e)
 from src.db import plants as plants_db
 from src.placement_controls import _QTY_SPIN_STYLE
 from src.plant_conditions import condition_matches, condition_tokens
@@ -1046,10 +1106,15 @@ class PolyculturePanel(QWidget):
         layout.addWidget(self._search_box)
 
         # Polyculture tree (parent polycultures + variations as children)
-        self.polyculture_tree = QTreeWidget()
+        self.polyculture_tree = _CommunityTree()
         self.polyculture_tree.setHeaderHidden(True)
         self.polyculture_tree.setIndentation(16)
         self.polyculture_tree.setMouseTracking(True)
+        # Drag a community out of the library onto the "Plant Communities Mix"
+        # box (V1.87).
+        self.polyculture_tree.setDragEnabled(True)
+        self.polyculture_tree.setDragDropMode(
+            QAbstractItemView.DragDropMode.DragOnly)
         self.polyculture_tree.currentItemChanged.connect(self._on_polyculture_selected)
         self.polyculture_tree.itemDoubleClicked.connect(self._on_double_click_place)
         self.polyculture_tree.setContextMenuPolicy(
@@ -1202,7 +1267,8 @@ class PolyculturePanel(QWidget):
         """Inline ratio-mix builder for placing several plant communities
         in a row/grid/circle at user-set ratios. Right-click a community
         in the tree → 'Add to Community Mix'."""
-        mix_box = QGroupBox("Plant Communities Mix")
+        mix_box = _CommunityMixDropGroupBox(
+            "Plant Communities Mix", self._add_to_community_mix)
         mix_box.setStyleSheet(
             "QGroupBox { color: #a5d6a7; font-size: 11px; "
             "border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 8px; }"
@@ -1214,9 +1280,7 @@ class PolyculturePanel(QWidget):
         ml.setSpacing(3)
 
         self._mix_community_status = QLabel(
-            "Mix off — right-click a community in the list to add it.\n"
-            "With ≥2 communities, Row/Grid/Circle will distribute them in "
-            "the chosen ratios."
+            "Drag or right-click communities here to build a mix."
         )
         self._mix_community_status.setWordWrap(True)
         self._mix_community_status.setStyleSheet(
@@ -1309,6 +1373,10 @@ class PolyculturePanel(QWidget):
             "weight": 1,
             "polyculture": polyculture,
         })
+        # Reveal the mix: expand the placement pane so the growing mix stays
+        # visible (transient — not a saved preference). (V1.87)
+        if hasattr(self, "_placement_panel"):
+            self._placement_panel.set_expanded(True, persist=False)
         self._refresh_community_mix()
 
     def _remove_from_community_mix(self, polyculture_id: int):
@@ -1336,9 +1404,7 @@ class PolyculturePanel(QWidget):
         n = len(self._mix_communities)
         if n == 0:
             self._mix_community_status.setText(
-                "Mix off — right-click a community in the list to add it.\n"
-                "With ≥2 communities, Row/Grid/Circle will distribute them "
-                "in the chosen ratios."
+                "Drag or right-click communities here to build a mix."
             )
             self._mix_community_rows.setVisible(False)
             self._mix_community_place_btn.setEnabled(False)
@@ -1346,8 +1412,7 @@ class PolyculturePanel(QWidget):
             return
         if n == 1:
             self._mix_community_status.setText(
-                "Mix: 1 community (need ≥2 to activate).\n"
-                "Add at least one more, then choose Row/Grid/Circle."
+                "1 community — add ≥1 more to activate."
             )
         else:
             ratios = ":".join(str(int(c["weight"])) for c in self._mix_communities)
