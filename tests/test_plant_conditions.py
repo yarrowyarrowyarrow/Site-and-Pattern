@@ -167,6 +167,21 @@ class TestMultiSelectFilters(unittest.TestCase):
         self.assertEqual(len(search_plants(plant_type="tree")),
                          len(search_plants(plant_type=["tree"])))
 
+    def test_ab_ecoregion_list_is_any_of(self):
+        # Multi-select "restoring toward": match plants from ANY chosen region.
+        a = search_plants(ab_ecoregion="aspen_parkland")
+        b = search_plants(ab_ecoregion="boreal_mixedwood")
+        both = search_plants(ab_ecoregion=["aspen_parkland", "boreal_mixedwood"])
+        self.assertTrue(both)
+        # union: every single-region result is in the combined result
+        ids = {p["id"] for p in both}
+        self.assertTrue({p["id"] for p in a} <= ids)
+        self.assertTrue({p["id"] for p in b} <= ids)
+        # each result is documented from at least one of the two regions
+        for p in both:
+            tags = (p.get("ab_ecoregion") or "").split(",")
+            self.assertTrue("aspen_parkland" in tags or "boreal_mixedwood" in tags)
+
     def test_empty_list_no_restriction(self):
         everything = len(search_plants())
         self.assertEqual(everything, len(search_plants(plant_type=[], sun_req=[],

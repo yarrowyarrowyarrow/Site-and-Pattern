@@ -1023,11 +1023,15 @@ def search_plants(
     if has_image_only:
         sql += " AND image_url IS NOT NULL AND image_url != ''"
 
-    if ab_ecoregion:
-        # ab_ecoregion column is a comma-separated list of region ids;
-        # match against any one of them with a substring-safe pattern.
-        sql += " AND (',' || ab_ecoregion || ',') LIKE ?"
-        params.append(f"%,{ab_ecoregion},%")
+    # ab_ecoregion column is a comma-separated list of region ids. A
+    # multi-select "restoring toward" filter matches a plant documented from
+    # ANY of the chosen ecoregions (OR of substring-safe patterns). Accepts a
+    # single string (legacy) or a list (V1.85).
+    ecoregions = _as_filter_list(ab_ecoregion)
+    if ecoregions:
+        sql += " AND (" + " OR ".join(
+            "(',' || COALESCE(ab_ecoregion,'') || ',') LIKE ?" for _ in ecoregions) + ")"
+        params += [f"%,{e},%" for e in ecoregions]
 
     # Safety filters (schema v18) use a DENYLIST: exclude only plants we have
     # classified as toxic. Unassessed ('') and explicit 'none' both pass, so

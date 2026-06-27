@@ -197,13 +197,17 @@ class TestPlantPanelSmoke(unittest.TestCase):
 
     def test_facet_combos_are_multiselect(self):
         from src.plant_panel import CheckableComboBox
+        # All facet dropdowns — including ecoregion (V1.85 follow-up) — are
+        # multi-select.
         for attr in ("_type_combo", "_sun_combo", "_water_combo",
-                     "_use_combo", "_rarity_combo"):
+                     "_use_combo", "_rarity_combo", "_ecoregion_combo"):
             self.assertIsInstance(getattr(self._panel, attr), CheckableComboBox)
-        # Ecoregion stays single-select.
-        from PyQt6.QtWidgets import QComboBox
-        self.assertNotIsInstance(self._panel._ecoregion_combo, CheckableComboBox)
-        self.assertIsInstance(self._panel._ecoregion_combo, QComboBox)
+        # The ecoregion combo drops the "Any ecoregion" sentinel — it has one
+        # row per real region, driven by its placeholder for "any".
+        from src.plant_panel import _AB_ECOREGION_CHOICES
+        n_regions = sum(1 for _lbl, key in _AB_ECOREGION_CHOICES if key)
+        self.assertEqual(self._panel._ecoregion_combo.model().rowCount(),
+                         n_regions)
 
     def _set_checked(self, combo, keys):
         """Check exactly ``keys`` in ``combo`` (clearing others) — order-safe."""

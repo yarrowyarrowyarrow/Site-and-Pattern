@@ -138,6 +138,27 @@ class CheckableComboBox(QComboBox):
                 out.append(it.data(Qt.ItemDataRole.UserRole))
         return out
 
+    def set_checked_keys(self, keys, *, emit: bool = False):
+        """Check exactly the items whose key is in ``keys`` (others unchecked).
+
+        Silent by default so callers can restore saved state without triggering
+        a search; pass ``emit=True`` to fire ``selectionChanged`` once after.
+        ``model().blockSignals`` is needed because ``setCheckState`` emits
+        ``itemChanged`` (not covered by ``QComboBox.blockSignals``).
+        """
+        keyset = set(keys)
+        self.model().blockSignals(True)
+        for i in range(self.model().rowCount()):
+            it = self.model().item(i)
+            it.setCheckState(
+                Qt.CheckState.Checked
+                if it.data(Qt.ItemDataRole.UserRole) in keyset
+                else Qt.CheckState.Unchecked)
+        self.model().blockSignals(False)
+        self._refresh_text()
+        if emit:
+            self.selectionChanged.emit()
+
     def _event_point(self, event):
         # QMouseEvent.pos() is deprecated in PyQt6; prefer position().
         if hasattr(event, "position"):
@@ -247,7 +268,7 @@ class PlantPanel(QWidget):
     _SETTINGS_ECOREGION_AUTO_KEY = "plant_panel/ab_ecoregion_auto"
 
     def _restore_ecoregion_preference(self):
-        """Pre-select the ecoregion combo. Priority:
+        """Pre-check the ecoregion combo. Priority:
 
           1. The user's explicit saved choice (set every time they
              touch the combo via ``_on_ecoregion_changed``).
@@ -255,29 +276,28 @@ class PlantPanel(QWidget):
              by ``site_panel._on_ecoregion`` after a property pin
              auto-detection).
 
-        Auto-detect never overrides an explicit choice. Users who
-        manually picked a region keep their preference forever; users
-        who never touched the combo get the right default once they
-        drop a property pin."""
+        Auto-detect never overrides an explicit choice. The combo is
+        multi-select (V1.85): the explicit value is a comma-joined list of
+        region keys (a single legacy key still restores fine), autodetect is
+        one key."""
         settings = QSettings()
         explicit = settings.value(self._SETTINGS_ECOREGION_KEY, "", type=str)
         autodetect = settings.value(
             self._SETTINGS_ECOREGION_AUTO_KEY, "", type=str
         )
         preferred = explicit or autodetect
-        if not preferred:
+        wanted = {k.strip() for k in preferred.split(",") if k.strip()}
+        if not wanted:
             return
-        for i in range(self._ecoregion_combo.count()):
-            if self._ecoregion_combo.itemData(i) == preferred:
-                self._ecoregion_combo.blockSignals(True)
-                self._ecoregion_combo.setCurrentIndex(i)
-                self._ecoregion_combo.blockSignals(False)
-                return
+        # Restore silently — the explicit self._run_search() in __init__ picks
+        # up the checked regions, and we don't want to re-write QSettings here.
+        self._ecoregion_combo.set_checked_keys(wanted)
 
-    def _on_ecoregion_changed(self, _idx: int):
+    def _on_ecoregion_changed(self):
+        # Persist the full multi-select as a comma-joined list of region keys.
         QSettings().setValue(
             self._SETTINGS_ECOREGION_KEY,
-            self._combo_value(self._ecoregion_combo),
+            ",".join(self._ecoregion_combo.checked_keys()),
         )
         self._run_search()
 
@@ -352,10 +372,12 @@ class PlantPanel(QWidget):
         row2.addWidget(self._use_combo)
         top_layout.addLayout(row2)
 
-        # Row 3: Availability (where to buy) — lives with the other dropdowns.
-        # Multi-select so the user can show several sourcing tiers at once
-        # (e.g. big-box + garden-centre + native-nursery) and skip the long
-        # tail of seed-only / rare species to avoid being overwhelmed.
+        # Row 3: Availability (where to buy) + Reference ecosystem (N1), paired
+        # side-by-side with the other dropdowns (V1.85). Both multi-select:
+        #  * Availability — show several sourcing tiers at once (e.g. big-box +
+        #    garden-centre + native-nursery) and skip the seed-only / rare tail.
+        #  * Restoring toward — plants documented from ANY of the chosen Alberta
+        #    ecoregions. The choice is persisted across sessions via QSettings.
         row3 = QHBoxLayout()
         row3.setSpacing(4)
         self._rarity_combo = self._make_multi_combo(
@@ -364,29 +386,22 @@ class PlantPanel(QWidget):
             "Show only plants you can source from the checked tiers.\n"
             "Leave all unchecked to see everything."
         )
-        row3.addWidget(self._rarity_combo)
-        top_layout.addLayout(row3)
-
-        # ── Reference ecosystem picker (N1) ──────────────────────────────
-        # Drives a server-side filter on plants.ab_ecoregion.  Each label is
-        # an Alberta ecoregion; selecting one narrows the result list to
-        # plants documented from that ecoregion.  Persisted across sessions
-        # via QSettings so the user's "I'm restoring toward X" choice
-        # survives a restart. Single-select (one reference target at a time).
-        ecoregion_row = QHBoxLayout()
-        ecoregion_row.setSpacing(4)
-        _eco_label = QLabel("Restoring toward:")
-        _eco_label.setStyleSheet("color: #78909c; font-size: 11px;")
-        ecoregion_row.addWidget(_eco_label)
-        self._ecoregion_combo = self._make_combo(_AB_ECOREGION_CHOICES)
+        # Ecoregion choices are (label, key) tuples with a leading "Any" sentinel
+        # (empty key); the multi-select combo uses its placeholder for "any", so
+        # drop the sentinel and feed the real regions in display order.
+        _eco_labels = {key: lbl for lbl, key in _AB_ECOREGION_CHOICES if key}
+        self._ecoregion_combo = CheckableComboBox(placeholder="Restoring toward…")
+        for key, lbl in _eco_labels.items():
+            self._ecoregion_combo.add_check_item(lbl, key)
         self._ecoregion_combo.setStyleSheet(_combo_style)
         self._ecoregion_combo.setToolTip(
-            "Filter the plant list to species documented from a specific\n"
-            "Alberta ecoregion. Use 'Any ecoregion' to see everything."
+            "Restore toward one or more Alberta ecoregions — shows plants\n"
+            "documented from any of them. Leave unchecked to see everything."
         )
-        self._ecoregion_combo.currentIndexChanged.connect(self._on_ecoregion_changed)
-        ecoregion_row.addWidget(self._ecoregion_combo, 1)
-        top_layout.addLayout(ecoregion_row)
+        self._ecoregion_combo.selectionChanged.connect(self._on_ecoregion_changed)
+        row3.addWidget(self._rarity_combo)
+        row3.addWidget(self._ecoregion_combo)
+        top_layout.addLayout(row3)
 
         # ── Toggle filters (non-dropdown extras only, V1.85) ─────────────
         # The use-based toggles (Medicinal / N-Fixer / Pollinator / Keystone /
@@ -581,14 +596,6 @@ class PlantPanel(QWidget):
 
     # ── Filter helpers ────────────────────────────────────────────────────────
 
-    @staticmethod
-    def _make_combo(items: list[tuple[str, str]]) -> QComboBox:
-        cb = QComboBox()
-        for label, data in items:
-            cb.addItem(label, userData=data)
-        cb.currentIndexChanged.connect(lambda _: None)  # placeholder
-        return cb
-
     def _make_multi_combo(self, placeholder: str, labels: dict,
                           style: str) -> "CheckableComboBox":
         """Build a styled multi-select facet dropdown (V1.85).
@@ -601,10 +608,6 @@ class PlantPanel(QWidget):
         combo.setStyleSheet(style)
         combo.selectionChanged.connect(self._run_search)
         return combo
-
-    def _combo_value(self, combo: QComboBox) -> str:
-        data = combo.currentData()
-        return data if data else ""
 
     # ── Search / filter ───────────────────────────────────────────────────────
 
@@ -648,7 +651,7 @@ class PlantPanel(QWidget):
                 edible_only = self._edible_btn.isChecked(),
                 perennial_only = self._perennial_btn.isChecked(),
                 has_image_only  = self._has_image_btn.isChecked(),
-                ab_ecoregion    = self._combo_value(self._ecoregion_combo),
+                ab_ecoregion    = self._ecoregion_combo.checked_keys(),
                 availability_in = self._rarity_combo.checked_keys(),
                 soil_ph         = self._soil_ph,
             )
