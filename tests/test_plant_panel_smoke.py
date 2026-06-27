@@ -237,6 +237,24 @@ class TestPlantPanelSmoke(unittest.TestCase):
             self._panel._ecoregion_combo.lineEdit().placeholderText(),
             "Restoring toward…")
 
+    def test_live_pin_sets_and_clears_ecoregion(self):
+        # A dropped pin's region drives the picker live; clearing removes it.
+        p = self._panel
+        p.set_autodetected_ecoregion("aspen_parkland")
+        self.assertEqual(p._ecoregion_combo.checked_keys(), ["aspen_parkland"])
+        p.set_autodetected_ecoregion("")
+        self.assertEqual(p._ecoregion_combo.checked_keys(), [])
+
+    def test_type_filter_has_full_taxonomy(self):
+        # V1.87: full botanical types, dead "root" retired, all colourable.
+        from src.plant_panel import _TYPE_LABELS
+        from src.member_colors import TYPE_COLORS
+        self.assertNotIn("root", _TYPE_LABELS)
+        for key in ("wildflower", "grass", "sedge", "rush", "fern", "aquatic"):
+            self.assertIn(key, _TYPE_LABELS)
+        for key in _TYPE_LABELS:
+            self.assertIn(key, TYPE_COLORS)
+
     def test_multiselect_filter_matches_query(self):
         from src.db.plants import search_plants
         p = self._panel

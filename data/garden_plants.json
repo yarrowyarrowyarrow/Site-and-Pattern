@@ -172,7 +172,7 @@
   {
     "common_name": "Bee Balm (Wild Bergamot)",
     "scientific_name": "Monarda fistulosa",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "9",
     "sun_requirement": "full_sun,partial_shade",

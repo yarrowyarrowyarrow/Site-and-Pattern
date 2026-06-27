@@ -183,6 +183,7 @@ class SitePanel(QWidget):
     pin_drop_requested = pyqtSignal()             # user wants to click the map
     pin_clear_requested = pyqtSignal()
     site_data_updated  = pyqtSignal(dict)         # full result dict
+    ecoregion_detected = pyqtSignal(object)       # AB ecoregion key (str) or "" (V1.87)
 
     # Address search (geocode + place pin). Emitted when the user has
     # selected a result; MainWindow places the pin on the map and the
@@ -875,24 +876,20 @@ class SitePanel(QWidget):
         self._lbl_hard_src.setText(data.get("source", ""))
 
     def _on_ecoregion(self, data):
-        """Surface the auto-detected ecoregion in the readout and write
-        it to the QSettings key the plant panel checks so its filter
-        dropdown pre-populates. Only writes the auto key — the user's
-        explicit choice (``plant_panel/ab_ecoregion``) is untouched."""
+        """Surface the auto-detected ecoregion in the readout and push it to the
+        plant panel live (V1.87).
+
+        Emits ``ecoregion_detected`` with the region key so the plant library's
+        "Restoring toward…" filter updates for *this* session only — no longer
+        persisted to QSettings, so a region never sticks across unrelated
+        sessions. An empty string clears it (pin outside known regions)."""
         if not data:
             self._lbl_ecoregion.setText("Outside known regions")
+            self.ecoregion_detected.emit("")
             return
         label = data.get("label") or data.get("key") or "—"
         self._lbl_ecoregion.setText(f"{label}  (auto)")
-        # Stash the auto-detected key for the plant panel to pick up
-        # on its next refresh. Separate key from the user's explicit
-        # choice so a manual override survives a pin move.
-        try:
-            from PyQt6.QtCore import QSettings
-            QSettings().setValue("plant_panel/ab_ecoregion_auto",
-                                 data.get("key") or "")
-        except Exception:
-            pass
+        self.ecoregion_detected.emit(data.get("key") or "")
 
     def _on_climate(self, data):
         """Update the GDD₅ + frost-window rows. ``data`` is the dict

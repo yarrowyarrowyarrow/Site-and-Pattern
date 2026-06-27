@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
     QColorDialog, QMenu, QListView,
 )
 from PyQt6.QtCore import (
-    Qt, QTimer, pyqtSignal, QModelIndex, QSettings, QEvent,
+    Qt, QTimer, pyqtSignal, QModelIndex, QEvent,
 )
 from PyQt6.QtGui import QColor, QStandardItem, QStandardItemModel
 
@@ -38,13 +38,24 @@ from src.plant_list_view import (
 )
 
 # ── PlantPanel-only vocabulary labels ────────────────────────────────────────
+# V1.87: full botanical split. "herb" was a 231-plant catch-all; it's now split
+# into Wildflower (flowering forbs) and Herb / Foliage (foliage / medicinal),
+# grasses/sedges/rushes/ferns/aquatics get their own colours + filter entries,
+# and the dead "Root / Bulb" (0 plants) is retired. Order: woody → forbs →
+# graminoids → ground/fern/water. Each key matches a plant_type colour swatch
+# (the dropdown doubles as the map legend).
 _TYPE_LABELS: dict[str, str] = {
     "tree":        "Tree",
     "shrub":       "Shrub",
-    "herb":        "Herb / Perennial",
-    "groundcover": "Groundcover",
     "vine":        "Vine",
-    "root":        "Root / Bulb",
+    "wildflower":  "Wildflower",
+    "herb":        "Herb / Foliage",
+    "groundcover": "Groundcover",
+    "grass":       "Grass",
+    "sedge":       "Sedge",
+    "rush":        "Rush",
+    "fern":        "Fern",
+    "aquatic":     "Aquatic / Wetland",
 }
 
 _DECIDUOUS_LABELS: dict[str, str] = {
@@ -257,11 +268,11 @@ class PlantPanel(QWidget):
 
         self._build_ui()
 
-        # Restore the user's last "Restoring toward X" ecoregion choice so
-        # it survives a restart. _on_ecoregion_changed is wired in
-        # _build_ui, so guard against an infinite save-during-load loop by
-        # setting via index without triggering an extra save.
-        self._restore_ecoregion_preference()
+        # The ecoregion picker starts on its "Restoring toward…" placeholder
+        # (V1.87): nothing is pre-selected, and it's no longer restored from a
+        # sticky cross-session QSettings value. A property pin dropped *this
+        # session* drives it live via set_autodetected_ecoregion (wired in
+        # app.py from SitePanel.ecoregion_detected).
 
         self._run_search()   # populate on startup
         # Snap the splitter to its auto-fit baseline on launch so the
@@ -279,38 +290,23 @@ class PlantPanel(QWidget):
             self._did_initial_refit = True
             QTimer.singleShot(0, self._refit_bottom_pane)
 
-    _SETTINGS_ECOREGION_KEY      = "plant_panel/ab_ecoregion"
-    _SETTINGS_ECOREGION_AUTO_KEY = "plant_panel/ab_ecoregion_auto"
+    def set_autodetected_ecoregion(self, key):
+        """Live update from a property pin dropped this session (V1.87).
 
-    def _restore_ecoregion_preference(self):
-        """Pre-check the ecoregion combo only when a property pin has been
-        dropped (V1.86).
-
-        By default the combo shows its "Restoring toward…" placeholder with
-        nothing selected — we don't pre-filter the whole library toward a
-        region the user never asked for. The one exception is the auto-detected
-        ecoregion written by ``site_panel._on_ecoregion`` after a pin drop, so
-        a located property still seeds a sensible reference target.
-
-        (The user's manual multi-select is still saved to QSettings by
-        ``_on_ecoregion_changed`` for the running session, but is not
-        re-applied as a startup default.)"""
-        autodetect = QSettings().value(
-            self._SETTINGS_ECOREGION_AUTO_KEY, "", type=str
-        )
-        wanted = {k.strip() for k in autodetect.split(",") if k.strip()}
-        if not wanted:
+        ``key`` is the detected AB ecoregion id (or ``""``/``None`` when the pin
+        is cleared or sits outside known regions). Selecting it is session-only
+        — nothing is persisted, so a region never carries over to an unrelated
+        later session. Setting it silently (no ``_on_ecoregion_changed``) then
+        re-running the search keeps the list in sync without a double query."""
+        keys = [key] if key else []
+        if self._ecoregion_combo.checked_keys() == keys:
             return
-        # Restore silently — the explicit self._run_search() in __init__ picks
-        # up the checked regions, and we don't want to re-write QSettings here.
-        self._ecoregion_combo.set_checked_keys(wanted)
+        self._ecoregion_combo.set_checked_keys(keys)
+        self._run_search()
 
     def _on_ecoregion_changed(self):
-        # Persist the full multi-select as a comma-joined list of region keys.
-        QSettings().setValue(
-            self._SETTINGS_ECOREGION_KEY,
-            ",".join(self._ecoregion_combo.checked_keys()),
-        )
+        # User changed the picker — just refresh results (session-only; the
+        # choice is not persisted across launches, by design).
         self._run_search()
 
     # ── Build ─────────────────────────────────────────────────────────────────
@@ -403,7 +399,7 @@ class PlantPanel(QWidget):
         #  * Availability — show several sourcing tiers at once (e.g. big-box +
         #    garden-centre + native-nursery) and skip the seed-only / rare tail.
         #  * Restoring toward — plants documented from ANY of the chosen Alberta
-        #    ecoregions. The choice is persisted across sessions via QSettings.
+        #    ecoregions. Session-only; a dropped property pin sets it live.
         row3 = QHBoxLayout()
         row3.setSpacing(4)
         self._rarity_combo = self._make_multi_combo(

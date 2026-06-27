@@ -19,12 +19,19 @@
     }
 
     // ── Plant type colours ───────────────────────────────────────────────────
+    // Mirror of src/member_colors.py TYPE_COLORS — keep in sync (V1.87).
     var TYPE_COLORS = {
       'tree':        '#2e7d32',
       'shrub':       '#558b2f',
-      'herb':        '#7cb342',
+      'wildflower':  '#ab47bc',
+      'herb':        '#9ccc65',
       'groundcover': '#c6a817',
+      'grass':       '#cddc39',
+      'sedge':       '#8d6e63',
+      'rush':        '#5d4037',
       'vine':        '#00838f',
+      'fern':        '#33691e',
+      'aquatic':     '#29b6f6',
       'root':        '#6d4c41'
     };
 

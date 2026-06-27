@@ -188,5 +188,29 @@ class TestMultiSelectFilters(unittest.TestCase):
                                                        water_needs=[], perm_use=[])))
 
 
+class TestTypeTaxonomy(unittest.TestCase):
+    """V1.87: every plant_type has a colour (no grey) and the new categories
+    (wildflower, grass, sedge, rush, aquatic, fern) are filterable."""
+
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+
+    def test_every_seeded_type_has_a_colour(self):
+        from src.member_colors import TYPE_COLORS
+        types = {p["plant_type"] for p in search_plants()}
+        missing = sorted(t for t in types if t not in TYPE_COLORS)
+        self.assertEqual(missing, [], f"plant types without a colour: {missing}")
+
+    def test_new_categories_are_filterable(self):
+        for t in ("wildflower", "grass", "sedge", "rush", "aquatic", "fern"):
+            self.assertTrue(search_plants(plant_type=t),
+                            f"no plants for type {t!r}")
+
+    def test_no_root_typed_plants(self):
+        # The "root" category was always empty; confirm nothing is tagged it.
+        self.assertEqual(search_plants(plant_type="root"), [])
+
+
 if __name__ == "__main__":
     unittest.main()

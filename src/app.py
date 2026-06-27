@@ -750,6 +750,10 @@ class MainWindow(QMainWindow):
         self.site_panel.pin_drop_requested.connect(self._enter_site_pin_mode)
         self.site_panel.pin_clear_requested.connect(self._on_site_pin_clear_clicked)
         self.site_panel.site_data_updated.connect(self._on_site_data_updated)
+        # A dropped pin's auto-detected ecoregion drives the plant library's
+        # "Restoring toward…" filter live, for this session only (V1.87).
+        self.site_panel.ecoregion_detected.connect(
+            self.plant_panel.set_autodetected_ecoregion)
         # Address search → drop pin on map (the bridge then notifies us
         # back via site_pin_placed and the usual fetch flow runs).
         self.site_panel.address_resolved.connect(self._on_address_resolved)
@@ -1600,6 +1604,7 @@ class MainWindow(QMainWindow):
         self.site_panel.clear_pin()
         self.plant_panel.clear_placed()
         self.plant_panel.set_zone(None)
+        self.plant_panel.set_autodetected_ecoregion("")   # drop the pin's region
         self.planning_panel.set_notes("")
         self.planning_panel.set_placed_plants([])
         self.planning_panel.set_structures([])

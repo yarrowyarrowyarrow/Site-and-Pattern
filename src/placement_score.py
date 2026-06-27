@@ -212,7 +212,8 @@ def _moisture_match(water_needs: str, cell: CellEnv) -> float:
 
 def _slope_suitability(plant_type: str, slope: float) -> float:
     """0–1 fitness based on slope steepness vs plant type."""
-    if plant_type in ("groundcover", "herb", "grass", "sedge"):
+    if plant_type in ("groundcover", "herb", "wildflower", "grass",
+                      "sedge", "rush", "fern"):
         return 1.0
     if plant_type == "aquatic":
         return max(0.0, 1.0 - slope / 2.0)

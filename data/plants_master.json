@@ -2,7 +2,7 @@
   {
     "common_name": "Alaska Harebell",
     "scientific_name": "Campanula lasiocarpa",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "5",
     "sun_requirement": "full_sun,partial_shade",
@@ -47,7 +47,7 @@
   {
     "common_name": "Alberta Penstemon",
     "scientific_name": "Penstemon albertinus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -221,7 +221,7 @@
   {
     "common_name": "Alpine Aster",
     "scientific_name": "Aster alpinus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun,partial_shade",
@@ -356,7 +356,7 @@
   {
     "common_name": "Alpine Forget-me-not",
     "scientific_name": "Myosotis asiatica",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "partial_shade,full_shade",
@@ -401,7 +401,7 @@
   {
     "common_name": "Alpine Hedysarum (Bear Root)",
     "scientific_name": "Hedysarum americanum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun",
@@ -443,7 +443,7 @@
   {
     "common_name": "Alpine Rock Jasmine",
     "scientific_name": "Androsace chamaejasme",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "5",
     "sun_requirement": "full_sun,partial_shade",
@@ -533,7 +533,7 @@
   {
     "common_name": "Arctic Aster",
     "scientific_name": "Eurybia sibirica",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun,partial_shade",
@@ -620,7 +620,7 @@
   {
     "common_name": "Ascending Milkvetch",
     "scientific_name": "Astragalus laxmannii",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "5",
     "sun_requirement": "full_sun",
@@ -713,7 +713,7 @@
   {
     "common_name": "Ball Cactus",
     "scientific_name": "Escobaria vivipara",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "9",
     "sun_requirement": "full_sun",
@@ -845,7 +845,7 @@
   {
     "common_name": "Balsamroot",
     "scientific_name": "Balsamorhiza sagittata",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "9",
     "sun_requirement": "full_sun",
@@ -1465,7 +1465,7 @@
   {
     "common_name": "Black-eyed Susan",
     "scientific_name": "Rudbeckia hirta",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -1511,7 +1511,7 @@
   {
     "common_name": "Blanketflower",
     "scientific_name": "Gaillardia aristata",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun",
@@ -1596,7 +1596,7 @@
   {
     "common_name": "Blue Columbine",
     "scientific_name": "Aquilegia brevistyla",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -1641,7 +1641,7 @@
   {
     "common_name": "Blue Grama Grass",
     "scientific_name": "Bouteloua gracilis",
-    "plant_type": "herb",
+    "plant_type": "grass",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -1686,7 +1686,7 @@
   {
     "common_name": "Blue-eyed Grass",
     "scientific_name": "Sisyrinchium montanum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -1911,7 +1911,7 @@
   {
     "common_name": "Boreal Yarrow",
     "scientific_name": "Achillea borealis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -1959,7 +1959,7 @@
   {
     "common_name": "Boreale Oxytropis",
     "scientific_name": "Oxytropis borealis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun",
@@ -2231,7 +2231,7 @@
   {
     "common_name": "Bronze Bells",
     "scientific_name": "Anticlea occidentalis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -2324,7 +2324,7 @@
   {
     "common_name": "Buckbean",
     "scientific_name": "Menyanthes trifoliata",
-    "plant_type": "herb",
+    "plant_type": "aquatic",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -2457,7 +2457,7 @@
   {
     "common_name": "Butte Primrose",
     "scientific_name": "Oenothera caespitosa",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun",
@@ -2590,7 +2590,7 @@
   {
     "common_name": "Canada Goldenrod",
     "scientific_name": "Solidago canadensis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -2637,7 +2637,7 @@
   {
     "common_name": "Canada Milk Vetch",
     "scientific_name": "Astragalus canadensis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -2772,7 +2772,7 @@
   {
     "common_name": "Canada Wild Rye",
     "scientific_name": "Elymus canadensis",
-    "plant_type": "herb",
+    "plant_type": "grass",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -2817,7 +2817,7 @@
   {
     "common_name": "Cattail",
     "scientific_name": "Typha latifolia",
-    "plant_type": "herb",
+    "plant_type": "aquatic",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "9",
     "sun_requirement": "full_sun,partial_shade",
@@ -2910,7 +2910,7 @@
   {
     "common_name": "Common Alumroot",
     "scientific_name": "Heuchera richardsonii",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -3225,7 +3225,7 @@
   {
     "common_name": "Common Sunflower",
     "scientific_name": "Helianthus annuus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "9",
     "sun_requirement": "full_sun,partial_shade",
@@ -3315,7 +3315,7 @@
   {
     "common_name": "Common Twinpod",
     "scientific_name": "Physaria didymocarpa",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -3586,7 +3586,7 @@
   {
     "common_name": "Crowfoot Violet",
     "scientific_name": "Viola pedatifida",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -3631,7 +3631,7 @@
   {
     "common_name": "Cushion Umbrella Plant",
     "scientific_name": "Eriogonum androsaceum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -3676,7 +3676,7 @@
   {
     "common_name": "Cut-leaved Anemone",
     "scientific_name": "Anemone multifida",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -3812,7 +3812,7 @@
   {
     "common_name": "Desert Shooting Star",
     "scientific_name": "Primula conjugens",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -3903,7 +3903,7 @@
   {
     "common_name": "Dotted Blazingstar",
     "scientific_name": "Liatris punctata",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -4083,7 +4083,7 @@
   {
     "common_name": "Drummond's Milkvetch",
     "scientific_name": "Astragalus drummondii",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -4312,7 +4312,7 @@
   {
     "common_name": "Early Yellow Oxytropis",
     "scientific_name": "Oxytropis sericea",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "4",
     "sun_requirement": "full_sun",
@@ -4357,7 +4357,7 @@
   {
     "common_name": "Eastern Red Columbine",
     "scientific_name": "Aquilegia canadensis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -4405,7 +4405,7 @@
   {
     "common_name": "Elegant Goldenrod",
     "scientific_name": "Solidago lepida",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "5",
     "sun_requirement": "full_sun,partial_shade",
@@ -4447,7 +4447,7 @@
   {
     "common_name": "Evening Primrose",
     "scientific_name": "Oenothera biennis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "9",
     "sun_requirement": "full_sun,partial_shade",
@@ -4539,7 +4539,7 @@
   {
     "common_name": "False Dragonhead",
     "scientific_name": "Physostegia ledinghamii",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "4",
     "sun_requirement": "full_sun,partial_shade",
@@ -4581,7 +4581,7 @@
   {
     "common_name": "False Dragonhead (Western Obedient Plant)",
     "scientific_name": "Physostegia parviflora",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -4624,7 +4624,7 @@
   {
     "common_name": "False Solomon's Seal",
     "scientific_name": "Maianthemum racemosum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "partial_shade,full_shade",
@@ -4762,7 +4762,7 @@
   {
     "common_name": "Fireweed",
     "scientific_name": "Chamaenerion angustifolium",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -4807,7 +4807,7 @@
   {
     "common_name": "Flat-topped Goldenrod",
     "scientific_name": "Euthamia graminifolia",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -4852,7 +4852,7 @@
   {
     "common_name": "Flat-topped White Aster",
     "scientific_name": "Doellingeria umbellata",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -5126,7 +5126,7 @@
   {
     "common_name": "Fringed Loosestrife",
     "scientific_name": "Lysimachia ciliata",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "9",
     "sun_requirement": "full_sun,partial_shade",
@@ -5171,7 +5171,7 @@
   {
     "common_name": "Fuzzy-tongue Penstemon",
     "scientific_name": "Penstemon eriantherus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun",
@@ -5255,7 +5255,7 @@
   {
     "common_name": "Giant Hyssop",
     "scientific_name": "Agastache foeniculum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -5300,7 +5300,7 @@
   {
     "common_name": "Giant Sunflower",
     "scientific_name": "Helianthus giganteus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -5390,7 +5390,7 @@
   {
     "common_name": "Glacier Lily",
     "scientific_name": "Erythronium grandiflorum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "partial_shade,full_shade",
@@ -5432,7 +5432,7 @@
   {
     "common_name": "Golden Bean",
     "scientific_name": "Thermopsis rhombifolia",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -5526,7 +5526,7 @@
   {
     "common_name": "Golden Draba",
     "scientific_name": "Draba aurea",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -5616,7 +5616,7 @@
   {
     "common_name": "Golden Tickseed",
     "scientific_name": "Coreopsis tinctoria",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "9",
     "sun_requirement": "full_sun",
@@ -5661,7 +5661,7 @@
   {
     "common_name": "Gray Goldenrod",
     "scientific_name": "Solidago nemoralis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -5751,7 +5751,7 @@
   {
     "common_name": "Greater Northern Aster",
     "scientific_name": "Canadanthus modestus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "partial_shade,full_shade",
@@ -5836,7 +5836,7 @@
   {
     "common_name": "Green Milkweed",
     "scientific_name": "Asclepias ovalifolia",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun",
@@ -5930,7 +5930,7 @@
   {
     "common_name": "Ground Plum",
     "scientific_name": "Astragalus crassicarpus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -5978,7 +5978,7 @@
   {
     "common_name": "Gumweed",
     "scientific_name": "Grindelia squarrosa",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun",
@@ -6020,7 +6020,7 @@
   {
     "common_name": "Hairy Arnica",
     "scientific_name": "Arnica mollis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -6065,7 +6065,7 @@
   {
     "common_name": "Hairy Golden Aster",
     "scientific_name": "Heterotheca villosa",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -6155,7 +6155,7 @@
   {
     "common_name": "Harebell",
     "scientific_name": "Campanula alaskana",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -6197,7 +6197,7 @@
   {
     "common_name": "Heart-leaved Alexanders (Golden Alexanders)",
     "scientific_name": "Zizia aptera",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -6243,7 +6243,7 @@
   {
     "common_name": "Heart-leaved Arnica",
     "scientific_name": "Arnica cordifolia",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -6330,7 +6330,7 @@
   {
     "common_name": "Hoary Aster",
     "scientific_name": "Dieteria canescens",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -6375,7 +6375,7 @@
   {
     "common_name": "Hooded Ladies' Tresses",
     "scientific_name": "Spiranthes romanzoffiana",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -6595,7 +6595,7 @@
   {
     "common_name": "Jerusalem Artichoke",
     "scientific_name": "Helianthus tuberosus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -6640,7 +6640,7 @@
   {
     "common_name": "Joe-Pye Weed",
     "scientific_name": "Eutrochium maculatum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -6906,7 +6906,7 @@
   {
     "common_name": "Large-leaved Avens",
     "scientific_name": "Geum macrophyllum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -6952,7 +6952,7 @@
   {
     "common_name": "Late Goldenrod",
     "scientific_name": "Solidago gigantea",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -6997,7 +6997,7 @@
   {
     "common_name": "Late Yellow Oxytropis",
     "scientific_name": "Oxytropis monticola",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "4",
     "sun_requirement": "full_sun",
@@ -7042,7 +7042,7 @@
   {
     "common_name": "Leafy Arnica",
     "scientific_name": "Arnica chamissonis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -7088,7 +7088,7 @@
   {
     "common_name": "Leafy Aster",
     "scientific_name": "Symphyotrichum foliaceum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -7133,7 +7133,7 @@
   {
     "common_name": "Lilac Penstemon",
     "scientific_name": "Penstemon gracilis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -7178,7 +7178,7 @@
   {
     "common_name": "Lindley's Aster",
     "scientific_name": "Symphyotrichum ciliolatum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -7269,7 +7269,7 @@
   {
     "common_name": "Little-leaved Alumroot",
     "scientific_name": "Heuchera parvifolia",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -7359,7 +7359,7 @@
   {
     "common_name": "Long-fruited Anemone",
     "scientific_name": "Anemone cylindrica",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -7453,7 +7453,7 @@
   {
     "common_name": "Low Townsendia",
     "scientific_name": "Townsendia exscapa",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun",
@@ -7543,7 +7543,7 @@
   {
     "common_name": "Lyalls Penstemon",
     "scientific_name": "Penstemon lyallii",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun,partial_shade",
@@ -7627,7 +7627,7 @@
   {
     "common_name": "Many-flowered Aster (Tufted White Prairie Aster)",
     "scientific_name": "Symphyotrichum ericoides",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun",
@@ -7670,7 +7670,7 @@
   {
     "common_name": "Marsh Aster",
     "scientific_name": "Symphyotrichum boreale",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "5",
     "sun_requirement": "full_sun,partial_shade",
@@ -7715,7 +7715,7 @@
   {
     "common_name": "Marsh Cinquefoil",
     "scientific_name": "Comarum palustre",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -7761,7 +7761,7 @@
   {
     "common_name": "Marsh Hedge Nettle",
     "scientific_name": "Stachys pilosa",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun,partial_shade",
@@ -7806,7 +7806,7 @@
   {
     "common_name": "Marsh Hedge Nettle (Marsh Woundwort)",
     "scientific_name": "Stachys palustris",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -7852,7 +7852,7 @@
   {
     "common_name": "Marsh Marigold",
     "scientific_name": "Caltha palustris",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -7900,7 +7900,7 @@
   {
     "common_name": "Marsh Skullcap",
     "scientific_name": "Scutellaria galericulata",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -7988,7 +7988,7 @@
   {
     "common_name": "Maximilian Sunflower",
     "scientific_name": "Helianthus maximiliani",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -8030,7 +8030,7 @@
   {
     "common_name": "Meadow Arnica",
     "scientific_name": "Arnica fulgens",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -8076,7 +8076,7 @@
   {
     "common_name": "Meadow Blazingstar",
     "scientific_name": "Liatris ligulistylis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -8212,7 +8212,7 @@
   {
     "common_name": "Missouri Milkvetch",
     "scientific_name": "Astragalus missouriensis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -8260,7 +8260,7 @@
   {
     "common_name": "Moss Campion",
     "scientific_name": "Silene acaulis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun",
@@ -8392,7 +8392,7 @@
   {
     "common_name": "Mountain Gentian",
     "scientific_name": "Gentiana calycosa",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -8437,7 +8437,7 @@
   {
     "common_name": "Mountain Hollyhock",
     "scientific_name": "Iliamna rivularis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -8569,7 +8569,7 @@
   {
     "common_name": "Narrow-leaved Hawkweed",
     "scientific_name": "Hieracium umbellatum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -8740,7 +8740,7 @@
   {
     "common_name": "Nodding Onion",
     "scientific_name": "Allium cernuum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -8788,7 +8788,7 @@
   {
     "common_name": "Northern Bedstraw",
     "scientific_name": "Galium boreale",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -8875,7 +8875,7 @@
   {
     "common_name": "Northern Gentian",
     "scientific_name": "Gentianella amarella",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -8921,7 +8921,7 @@
   {
     "common_name": "Northern Hedysarum",
     "scientific_name": "Hedysarum boreale",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun",
@@ -9011,7 +9011,7 @@
   {
     "common_name": "Nuttall's Sunflower",
     "scientific_name": "Helianthus nuttallii",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -9057,7 +9057,7 @@
   {
     "common_name": "Old Man's Whiskers (Prairie Smoke)",
     "scientific_name": "Geum triflorum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -9148,7 +9148,7 @@
   {
     "common_name": "Pale Agoseris",
     "scientific_name": "Agoseris glauca",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -9330,7 +9330,7 @@
   {
     "common_name": "Parry's Townsendia",
     "scientific_name": "Townsendia parryi",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -9372,7 +9372,7 @@
   {
     "common_name": "Pearly Everlasting",
     "scientific_name": "Anaphalis margaritacea",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -9418,7 +9418,7 @@
   {
     "common_name": "Philadelphia Fleabane",
     "scientific_name": "Erigeron philadelphicus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -9512,7 +9512,7 @@
   {
     "common_name": "Pink Corydalis",
     "scientific_name": "Capnoides sempervirens",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "partial_shade,full_shade",
@@ -9554,7 +9554,7 @@
   {
     "common_name": "Pink Monkey Flower",
     "scientific_name": "Erythranthe lewisii",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -9868,7 +9868,7 @@
   {
     "common_name": "Plains Wormwood",
     "scientific_name": "Artemisia campestris",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -10048,7 +10048,7 @@
   {
     "common_name": "Prairie Buttercup",
     "scientific_name": "Ranunculus rhomboideus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun",
@@ -10097,7 +10097,7 @@
   {
     "common_name": "Prairie Cinquefoil",
     "scientific_name": "Potentilla pensylvanica",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -10142,7 +10142,7 @@
   {
     "common_name": "Prairie Cinquefoil (Tall Cinquefoil)",
     "scientific_name": "Drymocallis arguta",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -10188,7 +10188,7 @@
   {
     "common_name": "Prairie Coneflower",
     "scientific_name": "Ratibida columnifera",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun",
@@ -10275,7 +10275,7 @@
   {
     "common_name": "Prairie Crocus",
     "scientific_name": "Pulsatilla nuttalliana",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "5",
     "sun_requirement": "full_sun",
@@ -10368,7 +10368,7 @@
   {
     "common_name": "Prairie Gentian",
     "scientific_name": "Gentiana affinis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -10413,7 +10413,7 @@
   {
     "common_name": "Prairie Goldenrod",
     "scientific_name": "Solidago missouriensis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "9",
     "sun_requirement": "full_sun",
@@ -10455,7 +10455,7 @@
   {
     "common_name": "Prairie Onion (Textile Onion)",
     "scientific_name": "Allium textile",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -10595,7 +10595,7 @@
   {
     "common_name": "Prairie Sagewort",
     "scientific_name": "Artemisia frigida",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -10637,7 +10637,7 @@
   {
     "common_name": "Prairie Smoke",
     "scientific_name": "Geum triflorum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -10683,7 +10683,7 @@
   {
     "common_name": "Prairie Thistle",
     "scientific_name": "Cirsium flodmanii",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun",
@@ -10726,7 +10726,7 @@
   {
     "common_name": "Prairie Turnip",
     "scientific_name": "Pediomelum esculentum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -10859,7 +10859,7 @@
   {
     "common_name": "Purple Avens (Water Avens)",
     "scientific_name": "Geum rivale",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -10905,7 +10905,7 @@
   {
     "common_name": "Purple Coneflower",
     "scientific_name": "Echinacea angustifolia",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun",
@@ -11034,7 +11034,7 @@
   {
     "common_name": "Purple Prairie Clover",
     "scientific_name": "Dalea purpurea",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun",
@@ -11118,7 +11118,7 @@
   {
     "common_name": "Purple-stemmed Tall Aster (Swamp Aster)",
     "scientific_name": "Symphyotrichum puniceum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -11254,7 +11254,7 @@
   {
     "common_name": "Rat Root",
     "scientific_name": "Acorus americanus",
-    "plant_type": "herb",
+    "plant_type": "aquatic",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -11341,7 +11341,7 @@
   {
     "common_name": "Red Baneberry",
     "scientific_name": "Actaea rubra",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -11389,7 +11389,7 @@
   {
     "common_name": "Red Columbine",
     "scientific_name": "Aquilegia formosa",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "partial_shade,full_shade",
@@ -11437,7 +11437,7 @@
   {
     "common_name": "Common Paintbrush",
     "scientific_name": "Castilleja miniata",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -11570,7 +11570,7 @@
   {
     "common_name": "River Beauty",
     "scientific_name": "Chamaenerion latifolium",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -11660,7 +11660,7 @@
   {
     "common_name": "Roadside Agrimony (Woodland Agrimony)",
     "scientific_name": "Agrimonia striata",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -11706,7 +11706,7 @@
   {
     "common_name": "Rocky Mountain Beeplant",
     "scientific_name": "Peritoma serrulata",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "9",
     "sun_requirement": "full_sun",
@@ -11793,7 +11793,7 @@
   {
     "common_name": "Rocky-Ledge Beardtongue",
     "scientific_name": "Penstemon ellipticus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -11838,7 +11838,7 @@
   {
     "common_name": "Roseroot",
     "scientific_name": "Rhodiola integrifolia",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -11929,7 +11929,7 @@
   {
     "common_name": "Rough Fescue",
     "scientific_name": "Festuca hallii",
-    "plant_type": "herb",
+    "plant_type": "grass",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun",
@@ -12017,7 +12017,7 @@
   {
     "common_name": "Round-leaved Alumroot",
     "scientific_name": "Heuchera cylindrica",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -12106,7 +12106,7 @@
   {
     "common_name": "Round-leaved Yellow Violet",
     "scientific_name": "Viola orbiculata",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -12193,7 +12193,7 @@
   {
     "common_name": "Saline Shooting Star",
     "scientific_name": "Primula pauciflora",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -12502,7 +12502,7 @@
   {
     "common_name": "Scarlet Butterfly Plant",
     "scientific_name": "Oenothera suffrutescens",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -12547,7 +12547,7 @@
   {
     "common_name": "Scorpion Weed",
     "scientific_name": "Phacelia sericea",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -12589,7 +12589,7 @@
   {
     "common_name": "Self-heal",
     "scientific_name": "Prunella vulgaris",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -12721,7 +12721,7 @@
   {
     "common_name": "Shooting Star",
     "scientific_name": "Dodecatheon pulchellum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -12763,7 +12763,7 @@
   {
     "common_name": "Short-beaked Agoseris",
     "scientific_name": "Agoseris parviflora",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun",
@@ -12850,7 +12850,7 @@
   {
     "common_name": "Showy Aster",
     "scientific_name": "Eurybia conspicua",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -12892,7 +12892,7 @@
   {
     "common_name": "Showy Fleabane",
     "scientific_name": "Erigeron speciosus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -12937,7 +12937,7 @@
   {
     "common_name": "Showy Jacob's-ladder",
     "scientific_name": "Polemonium pulcherrimum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -12982,7 +12982,7 @@
   {
     "common_name": "Showy Locoweed",
     "scientific_name": "Oxytropis splendens",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun",
@@ -13027,7 +13027,7 @@
   {
     "common_name": "Showy Milkweed",
     "scientific_name": "Asclepias speciosa",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -13075,7 +13075,7 @@
   {
     "common_name": "Showy Pussytoes",
     "scientific_name": "Antennaria pulcherrima",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "5",
     "sun_requirement": "full_sun",
@@ -13207,7 +13207,7 @@
   {
     "common_name": "Silky Lupine",
     "scientific_name": "Lupinus sericeus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -13434,7 +13434,7 @@
   {
     "common_name": "Silvery Lupine",
     "scientific_name": "Lupinus argenteus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun",
@@ -13482,7 +13482,7 @@
   {
     "common_name": "Sitka Valerian",
     "scientific_name": "Valeriana sitchensis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -13569,7 +13569,7 @@
   {
     "common_name": "Slender Blue Beardtongue",
     "scientific_name": "Penstemon procerus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun",
@@ -13614,7 +13614,7 @@
   {
     "common_name": "Slender Cinquefoil (Graceful Cinquefoil)",
     "scientific_name": "Potentilla gracilis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -13703,7 +13703,7 @@
   {
     "common_name": "Slender Wheatgrass",
     "scientific_name": "Elymus trachycaulus",
-    "plant_type": "herb",
+    "plant_type": "grass",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -13923,7 +13923,7 @@
   {
     "common_name": "Smooth Aster",
     "scientific_name": "Symphyotrichum laeve",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -13968,7 +13968,7 @@
   {
     "common_name": "Smooth Blue Beardtongue",
     "scientific_name": "Penstemon nitidus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -14013,7 +14013,7 @@
   {
     "common_name": "Smooth Fleabane (Streamside Fleabane)",
     "scientific_name": "Erigeron glabellus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun,partial_shade",
@@ -14056,7 +14056,7 @@
   {
     "common_name": "Smooth Sweet Cicely",
     "scientific_name": "Osmorhiza longistylis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "partial_shade,full_shade",
@@ -14146,7 +14146,7 @@
   {
     "common_name": "Sneezeweed",
     "scientific_name": "Helenium autumnale",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "9",
     "sun_requirement": "full_sun,partial_shade",
@@ -14233,7 +14233,7 @@
   {
     "common_name": "Spear-leaved Arnica",
     "scientific_name": "Arnica lonchophylla",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "partial_shade,full_shade",
@@ -14365,7 +14365,7 @@
   {
     "common_name": "Spreading Dogbane",
     "scientific_name": "Apocynum androsaemifolium",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -14504,7 +14504,7 @@
   {
     "common_name": "Square-stem Monkeyflower",
     "scientific_name": "Mimulus ringens",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -14597,7 +14597,7 @@
   {
     "common_name": "Sticky Goldenrod",
     "scientific_name": "Solidago glutinosa",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun,partial_shade",
@@ -14639,7 +14639,7 @@
   {
     "common_name": "Sticky Goldenrod (Mount Albert Goldenrod)",
     "scientific_name": "Solidago simplex",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -14685,7 +14685,7 @@
   {
     "common_name": "Sticky Purple Geranium",
     "scientific_name": "Geranium viscosissimum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -14730,7 +14730,7 @@
   {
     "common_name": "Stiff Goldenrod",
     "scientific_name": "Solidago rigida",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -14775,7 +14775,7 @@
   {
     "common_name": "Stiff Sunflower (Rhombic-leaved Sunflower)",
     "scientific_name": "Helianthus pauciflorus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun",
@@ -14909,7 +14909,7 @@
   {
     "common_name": "Sulphur Hedysarum",
     "scientific_name": "Hedysarum sulphurescens",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun",
@@ -15000,7 +15000,7 @@
   {
     "common_name": "Sweet Broom (Alpine Sweetvetch)",
     "scientific_name": "Hedysarum alpinum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "1",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun",
@@ -15133,7 +15133,7 @@
   {
     "common_name": "Switchgrass",
     "scientific_name": "Panicum virgatum",
-    "plant_type": "herb",
+    "plant_type": "grass",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -15178,7 +15178,7 @@
   {
     "common_name": "Tall Anemone (Thimbleweed)",
     "scientific_name": "Anemone virginiana",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -15227,7 +15227,7 @@
   {
     "common_name": "Tall Goldenrod",
     "scientific_name": "Solidago altissima",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "9",
     "sun_requirement": "full_sun",
@@ -15272,7 +15272,7 @@
   {
     "common_name": "Tall Jacob's Ladder",
     "scientific_name": "Polemonium acutiflorum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "partial_shade,full_shade",
@@ -15318,7 +15318,7 @@
   {
     "common_name": "Tall Larkspur",
     "scientific_name": "Delphinium glaucum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -15366,7 +15366,7 @@
   {
     "common_name": "Tall Lungwort (Blue Bells)",
     "scientific_name": "Mertensia paniculata",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "partial_shade,full_shade",
@@ -15412,7 +15412,7 @@
   {
     "common_name": "Tall Meadow Rue",
     "scientific_name": "Thalictrum dasycarpum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -15457,7 +15457,7 @@
   {
     "common_name": "Tall Showy Yarrow",
     "scientific_name": "Achillea alpina",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -15993,7 +15993,7 @@
   {
     "common_name": "Twin Arnica",
     "scientific_name": "Arnica sororia",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun",
@@ -16129,7 +16129,7 @@
   {
     "common_name": "Umbrella Buckwheat",
     "scientific_name": "Eriogonum umbellatum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun",
@@ -16171,7 +16171,7 @@
   {
     "common_name": "Valerian",
     "scientific_name": "Valeriana sitchensis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -16262,7 +16262,7 @@
   {
     "common_name": "Veiny Meadow-Rue",
     "scientific_name": "Thalictrum venulosum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun,partial_shade",
@@ -16353,7 +16353,7 @@
   {
     "common_name": "Water Arum (Wild Calla)",
     "scientific_name": "Calla palustris",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -16531,7 +16531,7 @@
   {
     "common_name": "Water Smartweed",
     "scientific_name": "Persicaria amphibia",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "9",
     "sun_requirement": "full_sun,partial_shade",
@@ -16577,7 +16577,7 @@
   {
     "common_name": "Western Blue Iris",
     "scientific_name": "Iris missouriensis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "9",
     "sun_requirement": "full_sun,partial_shade",
@@ -16625,7 +16625,7 @@
   {
     "common_name": "Western Canada Violet",
     "scientific_name": "Viola canadensis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -16715,7 +16715,7 @@
   {
     "common_name": "Western Meadow Aster",
     "scientific_name": "Symphyotrichum campestre",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun",
@@ -16760,7 +16760,7 @@
   {
     "common_name": "Western Meadowrue",
     "scientific_name": "Thalictrum occidentale",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -16983,7 +16983,7 @@
   {
     "common_name": "Western Willow Aster",
     "scientific_name": "Symphyotrichum hesperium",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -17026,7 +17026,7 @@
   {
     "common_name": "Western Wood Lily",
     "scientific_name": "Lilium philadelphicum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -17068,7 +17068,7 @@
   {
     "common_name": "White Camas",
     "scientific_name": "Anticlea elegans",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -17116,7 +17116,7 @@
   {
     "common_name": "White Evening Primrose",
     "scientific_name": "Oenothera nuttallii",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -17158,7 +17158,7 @@
   {
     "common_name": "White Geranium",
     "scientific_name": "Geranium richardsonii",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -17249,7 +17249,7 @@
   {
     "common_name": "White Prairie Clover",
     "scientific_name": "Dalea candida",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun",
@@ -17381,7 +17381,7 @@
   {
     "common_name": "Wild Bergamot",
     "scientific_name": "Monarda fistulosa",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -17469,7 +17469,7 @@
   {
     "common_name": "Wild Blue Flax",
     "scientific_name": "Linum lewisii",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun",
@@ -17514,7 +17514,7 @@
   {
     "common_name": "Wild Chives",
     "scientific_name": "Allium schoenoprasum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -17650,7 +17650,7 @@
   {
     "common_name": "Wild Licorice",
     "scientific_name": "Glycyrrhiza lepidota",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -17745,7 +17745,7 @@
   {
     "common_name": "Wild Mint",
     "scientific_name": "Mentha arvensis",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -18018,7 +18018,7 @@
   {
     "common_name": "Willow Aster",
     "scientific_name": "Symphyotrichum lanceolatum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -18153,7 +18153,7 @@
   {
     "common_name": "Wood Betony (Bracted Lousewort)",
     "scientific_name": "Pedicularis bracteosa",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "partial_shade,full_shade",
@@ -18291,7 +18291,7 @@
   {
     "common_name": "Woolly Cinquefoil",
     "scientific_name": "Potentilla hippiana",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -18381,7 +18381,7 @@
   {
     "common_name": "Yarrow",
     "scientific_name": "Achillea millefolium",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -18430,7 +18430,7 @@
   {
     "common_name": "Yellow Angelica",
     "scientific_name": "Angelica dawsonii",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -18472,7 +18472,7 @@
   {
     "common_name": "Yellow Avens",
     "scientific_name": "Geum aleppicum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -18518,7 +18518,7 @@
   {
     "common_name": "Yellow Beardtongue",
     "scientific_name": "Penstemon confertus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -18563,7 +18563,7 @@
   {
     "common_name": "Yellow Buckwheat",
     "scientific_name": "Eriogonum flavum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -18608,7 +18608,7 @@
   {
     "common_name": "Yellow Columbine",
     "scientific_name": "Aquilegia flavescens",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
     "sun_requirement": "partial_shade,full_shade",
@@ -18657,7 +18657,7 @@
   {
     "common_name": "Yellow Flax",
     "scientific_name": "Linum rigidum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -18702,7 +18702,7 @@
   {
     "common_name": "Yellow Lady's Slipper",
     "scientific_name": "Cypripedium parviflorum",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "partial_shade,full_shade",
@@ -18747,7 +18747,7 @@
   {
     "common_name": "Yellow Monkey Flower",
     "scientific_name": "Erythranthe guttata",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "8",
     "sun_requirement": "full_sun,partial_shade",
@@ -18837,7 +18837,7 @@
   {
     "common_name": "Yellow Owl Clover",
     "scientific_name": "Orthocarpus luteus",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "5",
     "sun_requirement": "full_sun",
@@ -18882,7 +18882,7 @@
   {
     "common_name": "Yellow Paintbrush",
     "scientific_name": "Castilleja lutescens",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "5",
     "sun_requirement": "full_sun",
@@ -18969,7 +18969,7 @@
   {
     "common_name": "Yellow Pucoon",
     "scientific_name": "Lithospermum ruderale",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun",
@@ -19014,7 +19014,7 @@
   {
     "common_name": "Yellow Rattle",
     "scientific_name": "Rhinanthus minor",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun,partial_shade",
@@ -19060,7 +19060,7 @@
   {
     "common_name": "Yellow-flowered Locoweed",
     "scientific_name": "Oxytropis campestris",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "1",
     "hardiness_zone_max": "6",
     "sun_requirement": "full_sun",
@@ -19109,7 +19109,7 @@
   {
     "common_name": "Yellowbells",
     "scientific_name": "Fritillaria pudica",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
     "sun_requirement": "full_sun",
@@ -19154,7 +19154,7 @@
   {
     "common_name": "Yellowstone Draba",
     "scientific_name": "Draba incerta",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "4",
     "sun_requirement": "full_sun,partial_shade",

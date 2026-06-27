@@ -75,8 +75,8 @@ DATA_DIR     = PROJECT_ROOT / "data"
 
 SUN_REQUIREMENTS  = {"full_sun", "partial_shade", "full_shade"}
 WATER_NEEDS       = {"low", "medium", "high", "moderate"}
-PLANT_TYPES       = {"tree", "shrub", "herb", "groundcover", "vine",
-                     "grass", "sedge", "rush", "fern", "aquatic"}
+PLANT_TYPES       = {"tree", "shrub", "herb", "wildflower", "groundcover",
+                     "vine", "grass", "sedge", "rush", "fern", "aquatic"}
 LIFE_CYCLES       = {"perennial", "annual", "biennial"}
 DECIDUOUSNESS     = {"deciduous", "evergreen", "herbaceous", "semi-evergreen"}
 GROWTH_RATES      = {"slow", "moderate", "fast"}

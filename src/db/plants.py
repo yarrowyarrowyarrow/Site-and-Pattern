@@ -120,7 +120,9 @@ _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 # v27 text on installs that already seeded it.
 # v29 (V1.84): no DDL — reseed to pick up the curated availability_class tiers and
 # the multi-value (comma-delimited) sun_requirement / water_needs values.
-_SCHEMA_VERSION = 29
+# v30 (V1.87): no DDL — reseed for the type re-tag (herb split into
+# wildflower / herb-foliage; graminoids/aquatics fixed by genus).
+_SCHEMA_VERSION = 30
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
