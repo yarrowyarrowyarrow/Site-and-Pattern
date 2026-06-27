@@ -291,5 +291,42 @@ class TestPatternLanguageColumns(unittest.TestCase):
         self.assertEqual(rec["solution"], data["solution"])
 
 
+class TestCommunityFacets(unittest.TestCase):
+    """V1.88 — Group By lenses: derive habitat/structure/sun/moisture per
+    top-level community from member plants."""
+
+    @classmethod
+    def setUpClass(cls):
+        _setup_db()
+        conn = get_connection()
+        conn.execute("DELETE FROM polyculture_members")
+        conn.execute("DELETE FROM polycultures")
+        conn.commit()
+        conn.close()
+        polycultures.seed_example_polycultures()
+
+    def test_facets_cover_top_level_communities(self):
+        facets = polycultures.get_community_facets()
+        tops = polycultures.get_all_polycultures(top_level_only=True)
+        # every community with members has a facet entry
+        with_members = [g for g in tops
+                        if polycultures.get_polyculture_by_id(g["id"]).get("members")]
+        for g in with_members:
+            self.assertIn(g["id"], facets, g["name"])
+
+    def test_each_facet_has_all_lenses(self):
+        for cid, f in polycultures.get_community_facets().items():
+            for lens in ("habitat", "structure", "sun", "moisture"):
+                self.assertIn(lens, f)
+                self.assertTrue(str(f[lens]).strip())
+
+    def test_structure_uses_tallest_layer(self):
+        # A tree-anchored community groups under "Canopy".
+        apple = polycultures.get_polyculture_by_name("Apple Tree Community")
+        self.assertEqual(
+            polycultures.get_community_facets()[apple["id"]]["structure"],
+            "Canopy")
+
+
 if __name__ == "__main__":
     unittest.main()

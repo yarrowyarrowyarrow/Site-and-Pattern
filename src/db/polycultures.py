@@ -1,6 +1,7 @@
 # Design principle P1 (a generative pattern language — communities as reusable,
 # site-responsive patterns) and P3 (relationships matter more than components) —
 # see docs/DESIGN_PHILOSOPHY.md.
+import collections
 import json
 import math
 from .plants import get_connection, _role_to_layer_functions
@@ -110,6 +111,121 @@ def get_all_polycultures(top_level_only=True):
         return [dict(r) for r in rows]
     finally:
         conn.close()
+
+
+# ── Group By facets (community library lenses, V1.88) ────────────────────────
+# Derive a single grouping label per top-level community along several
+# ecological lenses, computed from its member plants. Used by the Plant
+# Communities tab's "Group By" dropdown to bucket the library under category
+# folders. Pure data — no Qt.
+
+# Tallest layer wins (a community with an overstory member is a "Canopy" one).
+_GROUP_LAYER_ORDER = [
+    ("overstory",   "Canopy"),
+    ("understory",  "Understory"),
+    ("shrub_layer", "Shrub"),
+    ("vine",        "Vine"),
+    ("herbaceous",  "Herbaceous"),
+    ("groundcover", "Groundcover"),
+    ("root",        "Root layer"),
+]
+_GROUP_ECOREGION = {
+    "aspen_parkland":     "Aspen Parkland",
+    "mixedgrass_prairie": "Mixedgrass Prairie",
+    "fescue_foothills":   "Fescue / Foothills",
+    "boreal_mixedwood":   "Boreal Mixedwood",
+    "riparian":           "Riparian",
+    "wet_meadow":         "Wet Meadow / Marsh",
+    "subalpine_montane":  "Subalpine / Montane",
+}
+_GROUP_SUN = {
+    "full_sun":      "Full Sun",
+    "partial_shade": "Partial Shade",
+    "full_shade":    "Shade",
+}
+
+
+def _dominant_token(values):
+    counts = collections.Counter(v for v in values if v)
+    return counts.most_common(1)[0][0] if counts else None
+
+
+def _csv_tokens(raw):
+    return [t.strip() for t in (raw or "").split(",") if t.strip()]
+
+
+def _community_structure(members) -> str:
+    layers = set()
+    for m in members:
+        layer, _ = _resolve_layer_functions(dict(m))
+        if layer:
+            layers.add(layer)
+    for key, label in _GROUP_LAYER_ORDER:
+        if key in layers:
+            return label
+    return "Unsorted"
+
+
+def _community_habitat(members) -> str:
+    ecos = []
+    for m in members:
+        ecos += _csv_tokens(m.get("eco"))
+    dom = _dominant_token(ecos)
+    return _GROUP_ECOREGION.get(dom, "Generalist") if dom else "Generalist"
+
+
+def _community_sun(members) -> str:
+    suns = []
+    for m in members:
+        suns += _csv_tokens(m.get("sun"))
+    dom = _dominant_token(suns)
+    return _GROUP_SUN.get(dom, "Mixed") if dom else "Unknown"
+
+
+def _community_moisture(members) -> str:
+    waters = []
+    for m in members:
+        waters += _csv_tokens(m.get("water"))
+    dom = _dominant_token(waters)
+    if dom == "low":
+        return "Dry"
+    if dom in ("medium", "moderate"):
+        return "Mesic"
+    if dom == "high":
+        return "Wet"
+    return "Unknown"
+
+
+def get_community_facets() -> dict:
+    """Return ``{community_id: {"habitat","structure","sun","moisture"}}`` for
+    every top-level community, derived from its member plants in one batch
+    query. Communities with no members are simply absent (the caller buckets
+    them under an "Other" group)."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT gm.polyculture_id AS cid, gm.layer AS layer, gm.role AS role, "
+            "gm.functions AS functions, p.ab_ecoregion AS eco, "
+            "p.sun_requirement AS sun, p.water_needs AS water "
+            "FROM polyculture_members gm "
+            "JOIN plants p ON gm.plant_id = p.id "
+            "JOIN polycultures g ON g.id = gm.polyculture_id "
+            "WHERE g.parent_id IS NULL"
+        ).fetchall()
+    finally:
+        conn.close()
+    by_cid: dict = {}
+    for r in rows:
+        by_cid.setdefault(r["cid"], []).append(dict(r))
+    return {
+        cid: {
+            "structure": _community_structure(members),
+            "habitat":   _community_habitat(members),
+            "sun":       _community_sun(members),
+            "moisture":  _community_moisture(members),
+        }
+        for cid, members in by_cid.items()
+    }
 
 
 def get_polyculture_by_name(name: str):

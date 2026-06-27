@@ -107,6 +107,24 @@ from src.plant_conditions import condition_matches, condition_tokens
 _TREE_EXPANDED_MAX = 16_777_215
 _TREE_COLLAPSED_ROWS = 7
 
+# "Group By" lenses for the community library (V1.88). Each key (other than
+# "none") matches a facet from polycultures.get_community_facets(); the panel
+# buckets communities under bold, unselectable category nodes.
+_GROUP_BY_OPTIONS = [
+    ("none",      "No grouping"),
+    ("habitat",   "By Habitat"),
+    ("structure", "By Structure"),
+    ("sun",       "By Sun"),
+    ("moisture",  "By Moisture"),
+]
+_GROUP_COMBO_STYLE = (
+    "QComboBox { background: #1e2e1e; color: #c8e6c9; border: 1px solid #2e4a2e; "
+    "border-radius: 3px; padding: 1px 6px; font-size: 11px; }"
+    "QComboBox:hover { border-color: #4a7a4a; }"
+    "QComboBox QAbstractItemView { background: #1e2e1e; color: #c8e6c9; "
+    "border: 1px solid #2e4a2e; selection-background-color: #2e5a2e; }"
+)
+
 
 # Vegetation layer (single-select) — the physical position of a plant in
 # the community's vertical structure. Each member sits in exactly one
@@ -1098,12 +1116,35 @@ class PolyculturePanel(QWidget):
         title_row.addWidget(self.variations_toggle_btn)
         layout.addLayout(title_row)
 
-        # Search/filter box
+        # Search box + a compact "Group By" lens dropdown beside it: pivot the
+        # library between a flat list and category folders along an ecological
+        # lens (Habitat / Structure / Sun / Moisture) without losing vertical
+        # space (V1.88).
+        self._group_by = settings.value(
+            "plant_communities/group_by", "none", type=str)
+        search_row = QHBoxLayout()
+        search_row.setSpacing(4)
         self._search_box = QLineEdit()
         self._search_box.setPlaceholderText("Search communities...")
         self._search_box.setClearButtonEnabled(True)
         self._search_box.textChanged.connect(self._refresh_polyculture_list)
-        layout.addWidget(self._search_box)
+        search_row.addWidget(self._search_box, 1)
+
+        self._group_combo = QComboBox()
+        self._group_combo.setToolTip(
+            "Group the library by an ecological lens — pivot between\n"
+            "environmental views (Habitat / Sun / Moisture) and spatial\n"
+            "structure (Canopy / Understory / …)."
+        )
+        self._group_combo.setStyleSheet(_GROUP_COMBO_STYLE)
+        for key, label in _GROUP_BY_OPTIONS:
+            self._group_combo.addItem(label, key)
+        _gi = self._group_combo.findData(self._group_by)
+        if _gi >= 0:
+            self._group_combo.setCurrentIndex(_gi)   # before connecting → no early refresh
+        self._group_combo.currentIndexChanged.connect(self._on_group_by_changed)
+        search_row.addWidget(self._group_combo)
+        layout.addLayout(search_row)
 
         # Polyculture tree (parent polycultures + variations as children)
         self.polyculture_tree = _CommunityTree()
@@ -1600,66 +1641,104 @@ class PolyculturePanel(QWidget):
         self.polyculture_tree.clear()
         search = (self._search_box.text().strip().lower()
                   if hasattr(self, '_search_box') else "")
+        group_by = getattr(self, "_group_by", "none")
 
+        # Build the (community, item) list once; the item already has its
+        # variations nested + expansion applied.
+        built = []
         for g in polycultures.get_all_polycultures(top_level_only=True):
-            polyculture_detail = polycultures.get_polyculture_by_id(g["id"])
-            members = polyculture_detail.get("members", []) if polyculture_detail else []
-            member_names = [m["common_name"] for m in members]
+            item = self._make_community_item(g, search)
+            if item is not None:
+                built.append((g, item))
 
-            # Search filter: match polyculture name, description, or member names
-            children = polycultures.get_polyculture_children(g["id"])
-            child_match = False
-            if search:
-                polyculture_match = (
-                    search in g["name"].lower()
-                    or search in (g.get("description") or "").lower()
-                    or any(search in n.lower() for n in member_names)
-                )
-                for child in children:
-                    cd = polycultures.get_polyculture_by_id(child["id"])
-                    cm = [m["common_name"] for m in (cd.get("members", []) if cd else [])]
-                    if (search in child["name"].lower()
-                            or any(search in n.lower() for n in cm)):
-                        child_match = True
-                if not polyculture_match and not child_match:
-                    continue
+        if group_by == "none":
+            for _g, item in built:
+                self.polyculture_tree.addTopLevelItem(item)
+            return
 
-            # Build tooltip: member summary
-            roles_summary = ", ".join(
-                f"{m['common_name']} ({(m.get('role') or '').replace('_',' ')})"
-                for m in members[:5]
+        # Grouped: bucket communities under bold, unselectable category nodes.
+        facets = polycultures.get_community_facets()
+        buckets: dict[str, list] = {}
+        for g, item in built:
+            label = facets.get(g["id"], {}).get(group_by) or "Other"
+            buckets.setdefault(label, []).append(item)
+        for label in sorted(buckets):
+            group_node = QTreeWidgetItem([f"{label}  ({len(buckets[label])})"])
+            font = group_node.font(0)
+            font.setBold(True)
+            group_node.setFont(0, font)
+            group_node.setForeground(0, QColor("#a5d6a7"))
+            # Enabled (so it expands) but NOT selectable or draggable — a pure
+            # category folder.
+            group_node.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            self.polyculture_tree.addTopLevelItem(group_node)
+            for item in buckets[label]:
+                group_node.addChild(item)
+            group_node.setExpanded(True)
+
+    def _make_community_item(self, g, search):
+        """Build the tree item for one top-level community — variations nested as
+        children, expansion applied. Returns ``None`` when a search is active and
+        neither the community nor its variations match."""
+        detail = polycultures.get_polyculture_by_id(g["id"])
+        members = detail.get("members", []) if detail else []
+        member_names = [m["common_name"] for m in members]
+        children = polycultures.get_polyculture_children(g["id"])
+
+        child_match = False
+        child_details = []
+        for child in children:
+            cd = polycultures.get_polyculture_by_id(child["id"])
+            cm = [m["common_name"] for m in (cd.get("members", []) if cd else [])]
+            child_details.append((child, cd, cm))
+            if search and (search in child["name"].lower()
+                           or any(search in n.lower() for n in cm)):
+                child_match = True
+        if search:
+            parent_match = (
+                search in g["name"].lower()
+                or search in (g.get("description") or "").lower()
+                or any(search in n.lower() for n in member_names)
             )
-            if len(members) > 5:
-                roles_summary += f", +{len(members)-5} more"
-            tooltip = f"{g['name']}\n{g.get('description', '')[:120]}\n\nMembers: {roles_summary}"
+            if not parent_match and not child_match:
+                return None
 
-            item = QTreeWidgetItem([g["name"]])
-            item.setData(0, Qt.ItemDataRole.UserRole, g["id"])
-            item.setToolTip(0, tooltip)
-            self.polyculture_tree.addTopLevelItem(item)
+        roles_summary = ", ".join(
+            f"{m['common_name']} ({(m.get('role') or '').replace('_',' ')})"
+            for m in members[:5]
+        )
+        if len(members) > 5:
+            roles_summary += f", +{len(members)-5} more"
+        tooltip = (f"{g['name']}\n{g.get('description', '')[:120]}"
+                   f"\n\nMembers: {roles_summary}")
 
-            for child in children:
-                cd = polycultures.get_polyculture_by_id(child["id"])
-                cm = cd.get("members", []) if cd else []
-                child_roles = ", ".join(
-                    f"{m['common_name']} ({(m.get('role') or '').replace('_',' ')})"
-                    for m in cm[:5]
-                )
-                child_tooltip = f"{child['name']}\n{child.get('description','')[:120]}\n\nMembers: {child_roles}"
+        item = QTreeWidgetItem([g["name"]])
+        item.setData(0, Qt.ItemDataRole.UserRole, g["id"])
+        item.setToolTip(0, tooltip)
 
-                child_item = QTreeWidgetItem([child["name"]])
-                child_item.setData(0, Qt.ItemDataRole.UserRole, child["id"])
-                child_item.setToolTip(0, child_tooltip)
-                item.addChild(child_item)
-            if children:
-                # Expand when (a) the user has globally enabled variation
-                # display, or (b) the active search hit a variation under
-                # this parent — in the search case, show only the matching
-                # parents expanded.
-                if self._show_variations or (search and child_match):
-                    item.setExpanded(True)
-                else:
-                    item.setExpanded(False)
+        for child, cd, _cm in child_details:
+            cm = cd.get("members", []) if cd else []
+            child_roles = ", ".join(
+                f"{m['common_name']} ({(m.get('role') or '').replace('_',' ')})"
+                for m in cm[:5]
+            )
+            child_tooltip = (f"{child['name']}\n{child.get('description','')[:120]}"
+                             f"\n\nMembers: {child_roles}")
+            child_item = QTreeWidgetItem([child["name"]])
+            child_item.setData(0, Qt.ItemDataRole.UserRole, child["id"])
+            child_item.setToolTip(0, child_tooltip)
+            item.addChild(child_item)
+        if children:
+            # Expand when the user has globally enabled variation display, or the
+            # active search hit a variation under this parent.
+            item.setExpanded(bool(self._show_variations or (search and child_match)))
+        return item
+
+    def _on_group_by_changed(self, _idx=0):
+        """Pivot the library to a new grouping lens and rebuild the tree."""
+        self._group_by = self._group_combo.currentData() or "none"
+        QSettings().setValue("plant_communities/group_by", self._group_by)
+        self._refresh_polyculture_list()
 
     def _on_toggle_variations(self):
         """Flip the show-variations preference and re-render the tree."""
@@ -1749,14 +1828,25 @@ class PolyculturePanel(QWidget):
             self.placePolycultureRequested.emit(polyculture)
 
     def _on_polyculture_selected(self, current, previous):
-        has_selection = current is not None
+        # A "Group By" category node carries no id — treat it as no selection
+        # (it can become the *current* item via keyboard nav even though it
+        # isn't selectable).
+        current_id = (current.data(0, Qt.ItemDataRole.UserRole)
+                      if current is not None else None)
+        has_selection = current_id is not None
         self.delete_btn.setEnabled(has_selection)
         self.dup_btn.setEnabled(has_selection)
         self.place_btn.setEnabled(has_selection)
         self.export_btn.setEnabled(has_selection)
         self.edit_btn.setEnabled(has_selection)
-        # Only allow adding variations to top-level polycultures
-        is_top_level = has_selection and (current.parent() is None)
+        # Variations are only addable to top-level communities. A top-level
+        # community's tree parent is either nothing (flat view) or a group
+        # folder (grouped view, no id) — never another community.
+        parent_item = current.parent() if current is not None else None
+        parent_is_community = (
+            parent_item is not None
+            and parent_item.data(0, Qt.ItemDataRole.UserRole) is not None)
+        is_top_level = has_selection and not parent_is_community
         self.variation_btn.setEnabled(is_top_level)
 
         if not has_selection:
@@ -1780,8 +1870,7 @@ class PolyculturePanel(QWidget):
             row_h = 19  # fallback before first layout
         self.polyculture_tree.setMaximumHeight(row_h * _TREE_COLLAPSED_ROWS + 4)
 
-        polyculture_id = current.data(0, Qt.ItemDataRole.UserRole)
-        polyculture = polycultures.get_polyculture_by_id(polyculture_id)
+        polyculture = polycultures.get_polyculture_by_id(current_id)
         if not polyculture:
             return
 
