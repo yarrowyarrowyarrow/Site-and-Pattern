@@ -620,37 +620,23 @@ class PlantPanel(QWidget):
 
         # Bottom pane: just placement controls now. (On This Design lives
         # in a sibling inner tab at the same level as Plants and Plant
-        # Communities — see app.py's inner QTabWidget.) The widget+scroll
-        # area pair is kept as instance attrs so `_refit_bottom_pane` can
-        # auto-size the splitter when the mix grows/shrinks.
+        # Communities — see app.py's inner QTabWidget.)
         self._bottom_widget = bottom
         bottom.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
         )
-        self._bottom_scroll = QScrollArea()
-        self._bottom_scroll.setWidget(bottom)
-        self._bottom_scroll.setWidgetResizable(True)
-        self._bottom_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self._bottom_scroll.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        )
-        self._bottom_scroll.setMinimumHeight(140)
-        # Cap the expanded height so a big plant-mix scrolls inside the pane
-        # rather than pushing the browser off-screen. Raised in V1.87 (after the
-        # placement section was compacted) so the whole section + a few mix rows
-        # are visible without scrolling.
-        self._bottom_scroll.setMaximumHeight(440)
 
-        # Wrap the placement pane in a CollapsiblePanel so it can shrink to just
-        # a header, freeing the whole sidebar for the results list when the user
-        # isn't placing. (Placement collapsing IS useful — unlike the old
-        # browser-pane collapse — so it stays.) Minimised by default so the tab
-        # opens with the results list filling the sidebar.
+        # Placement pane (collapsible). The content goes in *directly* — no inner
+        # height-capped scroll area — so the pane grows to fit the whole "Plant
+        # current mix" as species are added (the plant list above gives up the
+        # space). This matches the grow-to-fit the Plant Communities tab uses
+        # (V1.87). Collapsing the pane still frees the sidebar for the list when
+        # the user isn't placing; minimised by default.
         from src.collapsible_panel import CollapsiblePanel
         self._placement_panel = CollapsiblePanel(
             "Placement", panel_id="plant_panel_placement", expanded=False
         )
-        self._placement_panel.set_content(self._bottom_scroll)
+        self._placement_panel.set_content(bottom)
 
         # stretch 0: the placement panel takes its content height when expanded
         # and collapses to a bare header at the bottom; the browser above keeps
@@ -1072,12 +1058,14 @@ class PlantPanel(QWidget):
         QTimer.singleShot(0, self._refit_bottom_pane)
 
     def _refit_bottom_pane(self):
-        """No-op since V1.79: the placement pane is no longer in a QSplitter, so
-        there is nothing to resize. The CollapsiblePanel sizes itself to its
-        content when expanded (capped by `_bottom_scroll`'s max height) and to a
-        bare header when collapsed, with the browser above taking the rest.
-        Kept (rather than deleted) so existing call sites stay harmless."""
-        return
+        """Nudge the layout so the placement pane re-sizes to its content after
+        the mix grows/shrinks (V1.87). The pane holds its content directly (no
+        capped scroll area), so it grows to fit the whole mix automatically; this
+        just asks Qt to recompute the geometry promptly."""
+        if hasattr(self, "_bottom_widget"):
+            self._bottom_widget.updateGeometry()
+        if hasattr(self, "_placement_panel"):
+            self._placement_panel.updateGeometry()
 
     def _build_mix_row(self, idx: int, species: dict) -> QFrame:
         """One species line: clickable colour dot + name + ratio spinner + ×.
