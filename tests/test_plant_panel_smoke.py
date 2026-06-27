@@ -218,6 +218,25 @@ class TestPlantPanelSmoke(unittest.TestCase):
             it.setCheckState(Qt.CheckState.Checked if want
                              else Qt.CheckState.Unchecked)
 
+    def test_type_combo_has_colour_icons(self):
+        # The Type dropdown items carry the plant-type colour swatch (legend).
+        tc = self._panel._type_combo
+        self.assertTrue(tc.model().rowCount() > 0)
+        for i in range(tc.model().rowCount()):
+            self.assertFalse(tc.model().item(i).icon().isNull())
+
+    def test_browser_pane_not_collapsible(self):
+        # V1.86: the Plant Browser pane is no longer wrapped in a CollapsiblePanel.
+        self.assertFalse(hasattr(self._panel, "_browser_panel"))
+
+    def test_ecoregion_default_is_empty(self):
+        # With no auto-detected pin, the ecoregion picker starts unselected and
+        # shows its placeholder (V1.86).
+        self.assertEqual(self._panel._ecoregion_combo.checked_keys(), [])
+        self.assertEqual(
+            self._panel._ecoregion_combo.lineEdit().placeholderText(),
+            "Restoring toward…")
+
     def test_multiselect_filter_matches_query(self):
         from src.db.plants import search_plants
         p = self._panel

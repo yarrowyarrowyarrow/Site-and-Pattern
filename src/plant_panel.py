@@ -34,6 +34,7 @@ from src.plant_list_view import (
     _PLANT_OBJ_ROLE,
     _PLANT_EXPANDED_ROLE,
     _RESULTS_LIST_STYLE,
+    _type_icon,
 )
 
 # ── PlantPanel-only vocabulary labels ────────────────────────────────────────
@@ -119,15 +120,29 @@ class CheckableComboBox(QComboBox):
         # An editable combo otherwise echoes the current item's text; keep the
         # display under our control so it shows the checked labels (or nothing).
         self.currentIndexChanged.connect(lambda _=0: self._refresh_text())
+        # Stay flexible, not rigid: expand to share the row evenly and base the
+        # size hint on a short minimum (not the longest item) so two combos in a
+        # row split 50/50 at any window width — same layout on a 22" or 27"
+        # monitor, windowed or full-screen (V1.86).
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.setMinimumContentsLength(6)
 
-    def add_check_item(self, label: str, key: str):
+    def add_check_item(self, label: str, key: str, icon=None):
         item = QStandardItem(label)
         item.setData(key, Qt.ItemDataRole.UserRole)
+        if icon is not None:
+            item.setIcon(icon)
         item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsUserCheckable)
         # Set the check state before the item joins the model so the initial
         # state doesn't spuriously fire itemChanged during construction.
         item.setData(Qt.CheckState.Unchecked, Qt.ItemDataRole.CheckStateRole)
         self.model().appendRow(item)
+        # Keep no "current" item: an editable combo otherwise paints the current
+        # row's icon (e.g. the first Type's colour swatch) in the line edit,
+        # which reads as a stray dot next to the placeholder.
+        self.setCurrentIndex(-1)
         self._refresh_text()
 
     def checked_keys(self) -> list[str]:
@@ -268,25 +283,22 @@ class PlantPanel(QWidget):
     _SETTINGS_ECOREGION_AUTO_KEY = "plant_panel/ab_ecoregion_auto"
 
     def _restore_ecoregion_preference(self):
-        """Pre-check the ecoregion combo. Priority:
+        """Pre-check the ecoregion combo only when a property pin has been
+        dropped (V1.86).
 
-          1. The user's explicit saved choice (set every time they
-             touch the combo via ``_on_ecoregion_changed``).
-          2. The most recent auto-detected ecoregion (V1.36 — written
-             by ``site_panel._on_ecoregion`` after a property pin
-             auto-detection).
+        By default the combo shows its "Restoring toward…" placeholder with
+        nothing selected — we don't pre-filter the whole library toward a
+        region the user never asked for. The one exception is the auto-detected
+        ecoregion written by ``site_panel._on_ecoregion`` after a pin drop, so
+        a located property still seeds a sensible reference target.
 
-        Auto-detect never overrides an explicit choice. The combo is
-        multi-select (V1.85): the explicit value is a comma-joined list of
-        region keys (a single legacy key still restores fine), autodetect is
-        one key."""
-        settings = QSettings()
-        explicit = settings.value(self._SETTINGS_ECOREGION_KEY, "", type=str)
-        autodetect = settings.value(
+        (The user's manual multi-select is still saved to QSettings by
+        ``_on_ecoregion_changed`` for the running session, but is not
+        re-applied as a startup default.)"""
+        autodetect = QSettings().value(
             self._SETTINGS_ECOREGION_AUTO_KEY, "", type=str
         )
-        preferred = explicit or autodetect
-        wanted = {k.strip() for k in preferred.split(",") if k.strip()}
+        wanted = {k.strip() for k in autodetect.split(",") if k.strip()}
         if not wanted:
             return
         # Restore silently — the explicit self._run_search() in __init__ picks
@@ -316,11 +328,21 @@ class PlantPanel(QWidget):
         # CollapsiblePanel's collapsed sizeHint so the browser fills the space.
         # Both panes are added to `root` once built (see below).
 
-        # ── Top pane: search + filters + results list ─────────────────────
+        # ── Top pane: header + search + filters + results list ────────────
         local_tab = QWidget()
         top_layout = QVBoxLayout(local_tab)
         top_layout.setContentsMargins(8, 8, 8, 4)
         top_layout.setSpacing(4)
+
+        # Page header (V1.86) — a plain, non-collapsible title that mirrors the
+        # Plant Community Library page. The old collapsible "Plant Browser"
+        # header hid nothing useful when collapsed, so it's gone.
+        title_label = QLabel(
+            "<b>Plant Library</b>  "
+            "<span style='color:#90a4ae;font-weight:normal;'>(browse &amp; place)</span>"
+        )
+        title_label.setStyleSheet("font-size: 13px;")
+        top_layout.addWidget(title_label)
 
         # Search box
         self._search_box = QLineEdit()
@@ -351,13 +373,17 @@ class PlantPanel(QWidget):
             "QPushButton:hover { border-color: #4a7a4a; }"
         )
 
-        # Row 1: Type + Sun
+        # Row 1: Type + Sun. The Type items carry the plant-type colour swatch
+        # (same colours as the map markers / list dots), so the dropdown doubles
+        # as the legend for the coloured circles. Equal stretch keeps the two
+        # columns 50/50 at any width.
         row1 = QHBoxLayout()
         row1.setSpacing(4)
-        self._type_combo = self._make_multi_combo("Any type", _TYPE_LABELS, _combo_style)
+        self._type_combo = self._make_multi_combo(
+            "Any type", _TYPE_LABELS, _combo_style, icon_for=_type_icon)
         self._sun_combo = self._make_multi_combo("Any sun", _SUN_LABELS, _combo_style)
-        row1.addWidget(self._type_combo)
-        row1.addWidget(self._sun_combo)
+        row1.addWidget(self._type_combo, 1)
+        row1.addWidget(self._sun_combo, 1)
         top_layout.addLayout(row1)
 
         # Row 2: Water + Use
@@ -368,8 +394,8 @@ class PlantPanel(QWidget):
         self._use_combo.setToolTip(
             "Pick one or more uses; only plants that have ALL of them are shown."
         )
-        row2.addWidget(self._water_combo)
-        row2.addWidget(self._use_combo)
+        row2.addWidget(self._water_combo, 1)
+        row2.addWidget(self._use_combo, 1)
         top_layout.addLayout(row2)
 
         # Row 3: Availability (where to buy) + Reference ecosystem (N1), paired
@@ -399,8 +425,8 @@ class PlantPanel(QWidget):
             "documented from any of them. Leave unchecked to see everything."
         )
         self._ecoregion_combo.selectionChanged.connect(self._on_ecoregion_changed)
-        row3.addWidget(self._rarity_combo)
-        row3.addWidget(self._ecoregion_combo)
+        row3.addWidget(self._rarity_combo, 1)
+        row3.addWidget(self._ecoregion_combo, 1)
         top_layout.addLayout(row3)
 
         # ── Toggle filters (non-dropdown extras only, V1.85) ─────────────
@@ -440,13 +466,13 @@ class PlantPanel(QWidget):
         self._has_image_btn.toggled.connect(self._run_search)
         toggle_row.addWidget(self._has_image_btn)
 
+        # Result count rides at the end of the toggle row (right-aligned) to
+        # save a vertical line (V1.86).
         toggle_row.addStretch(1)
-        top_layout.addLayout(toggle_row)
-
-        # Result count label
         self._result_count = QLabel("Results: —")
         self._result_count.setStyleSheet("color: #78909c; font-size: 11px;")
-        top_layout.addWidget(self._result_count)
+        toggle_row.addWidget(self._result_count)
+        top_layout.addLayout(toggle_row)
 
         # ── Compact results list (QListView + custom delegate) ─────────
         # Built on PlantListModel + PlantRowDelegate so each plant lives on
@@ -475,12 +501,10 @@ class PlantPanel(QWidget):
         self._results_list.customContextMenuRequested.connect(self._on_plant_context_menu)
         top_layout.addWidget(self._results_list)
 
-        from src.collapsible_panel import CollapsiblePanel
-        self._browser_panel = CollapsiblePanel(
-            "Plant Browser", panel_id="plant_panel_browser", expanded=True
-        )
-        self._browser_panel.set_content(local_tab)
-        root.addWidget(self._browser_panel, 1)   # stretches to fill the sidebar
+        # The browser pane is no longer collapsible (V1.86): collapsing it
+        # revealed nothing useful and only confused users. The "Plant Library"
+        # header sits inline at the top of the pane (added above).
+        root.addWidget(local_tab, 1)   # stretches to fill the sidebar
 
         # ── Bottom: placement controls + placed plants ────────────────────
         bottom = QWidget()
@@ -581,9 +605,11 @@ class PlantPanel(QWidget):
         self._bottom_scroll.setMaximumHeight(360)
 
         # Wrap the placement pane in a CollapsiblePanel so it can shrink to just
-        # a header (mirroring the Plant Browser panel above), freeing the whole
-        # sidebar for the results list when the user isn't placing. Minimised by
-        # default so the tab opens with the results list filling the sidebar.
+        # a header, freeing the whole sidebar for the results list when the user
+        # isn't placing. (Placement collapsing IS useful — unlike the old
+        # browser-pane collapse — so it stays.) Minimised by default so the tab
+        # opens with the results list filling the sidebar.
+        from src.collapsible_panel import CollapsiblePanel
         self._placement_panel = CollapsiblePanel(
             "Placement", panel_id="plant_panel_placement", expanded=False
         )
@@ -597,14 +623,17 @@ class PlantPanel(QWidget):
     # ── Filter helpers ────────────────────────────────────────────────────────
 
     def _make_multi_combo(self, placeholder: str, labels: dict,
-                          style: str) -> "CheckableComboBox":
+                          style: str, icon_for=None) -> "CheckableComboBox":
         """Build a styled multi-select facet dropdown (V1.85).
 
         ``labels`` is a key→label dict; selecting items re-runs the search.
+        ``icon_for(key)`` (optional) returns a per-item QIcon — used to put the
+        plant-type colour swatch beside each Type, doubling as the map legend.
         """
         combo = CheckableComboBox(placeholder=placeholder)
         for key, lbl in labels.items():
-            combo.add_check_item(lbl, key)
+            combo.add_check_item(lbl, key,
+                                 icon=icon_for(key) if icon_for else None)
         combo.setStyleSheet(style)
         combo.selectionChanged.connect(self._run_search)
         return combo
