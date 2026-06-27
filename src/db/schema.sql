@@ -49,6 +49,10 @@ CREATE TABLE IF NOT EXISTS plants (
     price_high_cad REAL,                -- est. high retail price (CAD)
     availability_class TEXT DEFAULT '', -- '' | big_box | garden_centre | native_specialist | seed_or_plug | rare
     sourcing_notes TEXT DEFAULT '',     -- form sold / example AB nurseries / as-of year
+    -- Flower colour + form (schema v31, V1.90) — drives real-coloured flowers in
+    -- the 3D viewer, shown when in bloom. Empty / 'none' = no showy flower.
+    flower_color TEXT DEFAULT '',       -- hex like '#f2c11e' or '' (no showy flower)
+    flower_form TEXT DEFAULT 'none',    -- daisy | spike | umbel | cluster | bell | none
     -- Imagery (schema v24, V1.60). An OPENLY-licensed photo + its citation;
     -- NULL/empty until the dataset workflow fills them. The app caches the URL
     -- locally and shows the attribution beside the photo (src/image_cache.py).

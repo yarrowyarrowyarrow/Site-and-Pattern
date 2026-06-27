@@ -122,7 +122,9 @@ _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 # the multi-value (comma-delimited) sun_requirement / water_needs values.
 # v30 (V1.87): no DDL — reseed for the type re-tag (herb split into
 # wildflower / herb-foliage; graminoids/aquatics fixed by genus).
-_SCHEMA_VERSION = 30
+# v31 (V1.90): add flower_color + flower_form columns (3D flowers) and reseed
+# to fill them from the curated seed JSON.
+_SCHEMA_VERSION = 31
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -298,6 +300,22 @@ def _migrate_to_v19(conn: sqlite3.Connection):
         ("price_high_cad",     "REAL"),
         ("availability_class", "TEXT DEFAULT ''"),
         ("sourcing_notes",     "TEXT DEFAULT ''"),
+    ]
+    for col_name, col_def in new_columns:
+        try:
+            conn.execute(f"ALTER TABLE plants ADD COLUMN {col_name} {col_def}")
+        except sqlite3.OperationalError:
+            pass  # column already present
+    conn.commit()
+
+
+def _migrate_to_v31(conn: sqlite3.Connection):
+    """Add the flower colour + form columns (V1.90) used by the 3D viewer to
+    render real-coloured flowers. The version bump triggers a reseed that fills
+    the values from the seed JSON."""
+    new_columns = [
+        ("flower_color", "TEXT DEFAULT ''"),
+        ("flower_form",  "TEXT DEFAULT 'none'"),
     ]
     for col_name, col_def in new_columns:
         try:
@@ -611,6 +629,8 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("price_high_cad"),
             p.get("availability_class", ""),
             p.get("sourcing_notes", ""),
+            p.get("flower_color", ""),
+            p.get("flower_form", "none"),
             p.get("image_url", ""),
             p.get("image_attribution", ""),
             p.get("image_license", ""),
@@ -631,9 +651,9 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             toxicity_pets, toxicity_humans, has_thorns,
             spread_habit, safety_source,
             price_low_cad, price_high_cad, availability_class,
-            sourcing_notes,
+            sourcing_notes, flower_color, flower_form,
             image_url, image_attribution, image_license)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -719,6 +739,9 @@ def init_db() -> None:
 
         if current_version < 24:
             _migrate_to_v24(conn)
+
+        if current_version < 31:
+            _migrate_to_v31(conn)
 
         # Add parent_id to polycultures if missing
         try:

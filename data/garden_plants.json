@@ -38,7 +38,9 @@
     "price_low_cad": 45,
     "price_high_cad": 120,
     "availability_class": "big_box",
-    "sourcing_notes": "Estimate (tree default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (tree default); AB retail as of 2026",
+    "flower_color": "#f2f2ea",
+    "flower_form": "cluster"
   },
   {
     "common_name": "Norland Apple",
@@ -79,7 +81,9 @@
     "price_low_cad": 45,
     "price_high_cad": 120,
     "availability_class": "big_box",
-    "sourcing_notes": "Estimate (tree default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (tree default); AB retail as of 2026",
+    "flower_color": "#f2f2ea",
+    "flower_form": "cluster"
   },
   {
     "common_name": "Evans Cherry",
@@ -123,7 +127,9 @@
     "price_low_cad": 45,
     "price_high_cad": 120,
     "availability_class": "big_box",
-    "sourcing_notes": "Estimate (tree default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (tree default); AB retail as of 2026",
+    "flower_color": "#f2f2ea",
+    "flower_form": "cluster"
   },
   {
     "common_name": "Nanking Cherry",
@@ -167,7 +173,9 @@
     "price_low_cad": 25,
     "price_high_cad": 50,
     "availability_class": "big_box",
-    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026",
+    "flower_color": "#f2f2ea",
+    "flower_form": "cluster"
   },
   {
     "common_name": "Bee Balm (Wild Bergamot)",
@@ -209,6 +217,8 @@
     "price_low_cad": 8,
     "price_high_cad": 16,
     "availability_class": "big_box",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "flower_color": "#b07fc0",
+    "flower_form": "cluster"
   }
 ]

@@ -29,6 +29,10 @@ _FAKE_PLANTS = {
     2: {"plant_type": "shrub", "years_to_maturity": 5, "growth_curve": "steady",
         "mature_height_meters": 2.0, "mature_canopy_m": 1.5,
         "marker_color": "#123456"},
+    3: {"plant_type": "wildflower", "years_to_maturity": 2, "growth_curve": "steady",
+        "mature_height_meters": 0.5, "mature_canopy_m": 0.4,
+        "scientific_name": "Solidago canadensis", "bloom_period": "Aug-Sep",
+        "flower_color": "#f2c11e", "flower_form": "spike"},
 }
 
 
@@ -108,6 +112,29 @@ class TestSceneBasics(unittest.TestCase):
         self.assertEqual(by_id["Tree"]["foliage_type"], "evergreen")
         # Plant 2 has no deciduous_evergreen → defaults to herbaceous.
         self.assertEqual(by_id["Shrub"]["foliage_type"], "herbaceous")
+
+    def test_flower_and_foliage_fields_for_3d(self):
+        # V1.90: the 3D viewer colours the body with a natural foliage colour and
+        # draws real-coloured flowers (form + colour + bloom window).
+        proj = _project([
+            plant_feature({"plant_id": 3, "common_name": "Goldenrod",
+                           "lat": _LAT, "lng": _LNG}),
+        ])
+        p = build_scene(proj, get_plant=_get_plant)["plants"][0]
+        # Body colour is a natural green, NOT the wildflower type colour (purple).
+        self.assertNotEqual(p["color"].lower(), "#ab47bc")
+        self.assertEqual(p["flower_color"], "#f2c11e")
+        self.assertEqual(p["flower_form"], "spike")
+        self.assertEqual((p["bloom_start"], p["bloom_end"]), (8, 9))
+
+    def test_marker_color_overrides_foliage(self):
+        # An explicit user marker colour still wins for the body.
+        proj = _project([
+            plant_feature({"plant_id": 2, "common_name": "Shrub",
+                           "lat": _LAT, "lng": _LNG}),
+        ])
+        p = build_scene(proj, get_plant=_get_plant)["plants"][0]
+        self.assertEqual(p["color"], "#123456")
 
     def test_growth_and_spread_fields_for_3d_forms(self):
         # The 3D viewer keys the structural maturity tier off scale_factor and

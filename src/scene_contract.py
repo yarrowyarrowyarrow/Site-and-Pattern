@@ -72,6 +72,65 @@ _FALLBACK_PLANT_COLOR = "#66bb6a"   # map.html's marker fallback
 # stand out against what's already there.
 _EXISTING_TREE_COLOR = "#4e6e52"
 
+# ── Natural foliage + bloom (V1.90) ──────────────────────────────────────────
+# The 3D viewer used to colour plants by their map-marker (plant-type) colour —
+# which since the V1.87 taxonomy turned wildflowers purple. Instead send a
+# natural foliage green per type (with a silver set for sages etc.), and pass
+# the curated flower_color / flower_form + bloom window so the viewer can render
+# real-coloured flowers when a plant is in bloom for the scene's month.
+_FOLIAGE_BY_TYPE = {
+    "tree":        "#4a7a3e",
+    "shrub":       "#4f7a3a",
+    "wildflower":  "#6a9a4a",
+    "herb":        "#6a9a4a",
+    "groundcover": "#5b8a4a",
+    "grass":       "#8aa256",
+    "sedge":       "#7e9a55",
+    "rush":        "#6f9a5a",
+    "fern":        "#3f6b46",
+    "vine":        "#5a8a3c",
+    "aquatic":     "#4a8a64",
+}
+_SILVER_FOLIAGE_GENERA = {
+    "artemisia", "antennaria", "anaphalis", "elaeagnus", "shepherdia",
+    "krascheninnikovia", "eurotia",
+}
+_DEFAULT_FOLIAGE = "#5b8a4a"
+
+_MONTHS = {
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6, "jul": 7,
+    "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+}
+
+
+def _foliage_color(plant: dict) -> str:
+    """Natural foliage colour for the 3D body — a green by plant type, silvery
+    for sage-type genera, or the user's explicit marker colour if they set one."""
+    marker = plant.get("marker_color")
+    if marker:
+        return marker
+    genus = (plant.get("scientific_name") or "").split(" ")[0].lower()
+    if genus in _SILVER_FOLIAGE_GENERA:
+        return "#9aa890"
+    if (plant.get("plant_type") == "tree"
+            and plant.get("deciduous_evergreen") == "evergreen"):
+        return "#355e3b"   # conifers — darker
+    return _FOLIAGE_BY_TYPE.get(plant.get("plant_type"), _DEFAULT_FOLIAGE)
+
+
+def _bloom_months(bloom_period: str):
+    """Parse a ``bloom_period`` like 'May-Jul', 'June-August', or 'Aug' into
+    ``(start_month, end_month)`` (1–12), or ``(0, 0)`` when unknown. The 3D
+    viewer shows flowers only when the scene's month falls in this window."""
+    s = (bloom_period or "").strip().lower()
+    if not s:
+        return 0, 0
+    parts = [p.strip()[:3] for p in s.replace("–", "-").split("-")]
+    nums = [_MONTHS[p] for p in parts if p in _MONTHS]
+    if not nums:
+        return 0, 0
+    return nums[0], nums[-1]
+
 
 def _boundary_ring(project: dict) -> Optional[list]:
     """First property_boundary ring as ``[[lat, lng], ...]`` (open)."""
@@ -215,9 +274,13 @@ def build_scene(project: dict, *, year: int = 0,
                 "spread_factor": st["spread_factor"],
                 "spread_rate": st["spread_rate"],
                 "growth_curve": plant.get("growth_curve") or "steady",
-                "color": (plant.get("marker_color")
-                          or _TYPE_COLORS.get(st["plant_type"])
-                          or _FALLBACK_PLANT_COLOR),
+                # 3D body = natural foliage colour (V1.90); flowers carry their
+                # own real colour + form, shown when in bloom for the month.
+                "color": _foliage_color(plant),
+                "flower_color": plant.get("flower_color") or "",
+                "flower_form": plant.get("flower_form") or "none",
+                "bloom_start": _bloom_months(plant.get("bloom_period"))[0],
+                "bloom_end": _bloom_months(plant.get("bloom_period"))[1],
                 "opacity": st["presence_opacity"],
             })
             continue
@@ -240,6 +303,10 @@ def build_scene(project: dict, *, year: int = 0,
                 "spread_rate": 0.0,
                 "growth_curve": "steady",
                 "color": _EXISTING_TREE_COLOR,
+                "flower_color": "",
+                "flower_form": "none",
+                "bloom_start": 0,
+                "bloom_end": 0,
                 "opacity": 1.0,
                 "existing": True,
             })

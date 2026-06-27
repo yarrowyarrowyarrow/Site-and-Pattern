@@ -1048,6 +1048,107 @@ function buildPlants(group, plants, month, year, terrain) {
     });
     plantsGroup.add(sh);
   }
+
+  // Flowers — real-coloured blooms on plants in flower for this month (V1.90).
+  buildFlowers(plants, month, terrain);
+}
+
+// ── Flowers (V1.90) ──────────────────────────────────────────────────────────
+// Camera-facing point sprites in each plant's real flower colour, shaped by a
+// per-form canvas texture so different flowers read differently. Shown only when
+// the scene's month falls inside the plant's bloom window.
+const FLOWER_FORMS = ['daisy', 'spike', 'umbel', 'cluster', 'bell'];
+let FLOWER_TEX = null;
+
+function makeFlowerTexture(form) {
+  const s = 64, cv = document.createElement('canvas');
+  cv.width = cv.height = s;
+  const g = cv.getContext('2d');
+  g.clearRect(0, 0, s, s);
+  g.fillStyle = '#ffffff';
+  const cx = s / 2, cy = s / 2;
+  const dot = (x, y, r) => { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); };
+  if (form === 'daisy') {
+    const petals = 8, R = s * 0.30;
+    for (let i = 0; i < petals; i++) {
+      const a = i / petals * Math.PI * 2;
+      g.save(); g.translate(cx + Math.cos(a) * R * 0.6, cy + Math.sin(a) * R * 0.6);
+      g.rotate(a); g.beginPath();
+      g.ellipse(0, 0, s * 0.20, s * 0.085, 0, 0, Math.PI * 2); g.fill(); g.restore();
+    }
+    g.fillStyle = 'rgba(255,255,255,0.95)'; dot(cx, cy, s * 0.13);
+  } else if (form === 'umbel') {
+    for (let i = 0; i < 16; i++) {
+      const a = i * 2.39996, rr = Math.sqrt(i / 16) * s * 0.40;
+      dot(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.55, s * 0.055);
+    }
+  } else if (form === 'spike') {
+    for (let i = 0; i < 7; i++) {
+      const yy = s * 0.12 + i * s * 0.115;
+      const w = s * (0.16 - 0.012 * i);
+      g.beginPath(); g.ellipse(cx, yy, w, s * 0.075, 0, 0, Math.PI * 2); g.fill();
+    }
+  } else if (form === 'bell') {
+    g.beginPath();
+    g.moveTo(cx - s * 0.20, cy - s * 0.18);
+    g.bezierCurveTo(cx - s * 0.24, cy + s * 0.30, cx + s * 0.24, cy + s * 0.30,
+                    cx + s * 0.20, cy - s * 0.18);
+    g.closePath(); g.fill();
+    for (let i = 0; i < 3; i++) dot(cx - s * 0.12 + i * s * 0.12, cy + s * 0.24, s * 0.05);
+  } else { // cluster
+    for (let i = 0; i < 11; i++) {
+      const a = i * 2.39996, rr = Math.sqrt(i / 11) * s * 0.34;
+      dot(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, s * 0.10);
+    }
+  }
+  const t = new THREE.CanvasTexture(cv);
+  t.needsUpdate = true;
+  return t;
+}
+
+function buildFlowers(plants, month, terrain) {
+  if (!FLOWER_TEX) {
+    FLOWER_TEX = {};
+    for (const f of FLOWER_FORMS) FLOWER_TEX[f] = makeFlowerTexture(f);
+  }
+  const byForm = {}; FLOWER_FORMS.forEach(f => byForm[f] = []);
+  for (const p of plants || []) {
+    if (!p.flower_color || !byForm[p.flower_form]) continue;
+    if ((p.opacity ?? 1) < 0.25) continue;            // not-yet-present plants
+    const bs = p.bloom_start || 0, be = p.bloom_end || 0;
+    if (!bs || month < bs || month > be) continue;     // out of bloom this month
+    byForm[p.flower_form].push(p);
+  }
+  const _fc = new THREE.Color();
+  for (const form of FLOWER_FORMS) {
+    const list = byForm[form];
+    if (!list.length) continue;
+    const pos = [], col = [];
+    for (const p of list) {
+      const gy = terrainHeightAt(p.x, p.y, terrain);
+      const top = gy + Math.max(0.1, p.height_m) * 0.9;
+      const rad = Math.max(0.1, p.canopy_m * 0.5);
+      _fc.set(p.flower_color);
+      const n = p.plant_type === 'tree' ? 7 : (p.plant_type === 'shrub' ? 6 : 4);
+      const seed = hashPid(p.plant_id || 1);
+      for (let k = 0; k < n; k++) {
+        const a = ((seed + k * 97) % 628) / 100;
+        const rr = rad * (0.25 + 0.7 * (((seed + k * 53) % 100) / 100));
+        const dy = ((k % 3) - 1) * rad * 0.18;
+        pos.push(p.x + Math.cos(a) * rr, top + dy, -(p.y + Math.sin(a) * rr));
+        col.push(_fc.r, _fc.g, _fc.b);
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    const mat = new THREE.PointsMaterial({
+      map: FLOWER_TEX[form], vertexColors: true, transparent: true,
+      alphaTest: 0.35, depthWrite: false, sizeAttenuation: true,
+      size: form === 'spike' ? 0.36 : (form === 'umbel' ? 0.26 : 0.22),
+    });
+    plantsGroup.add(new THREE.Points(geo, mat));
+  }
 }
 
 function buildScanPoints(group, pts) {
@@ -1253,11 +1354,14 @@ window.permaSetPlants = function (records) {
   const plants = (records || []).map(r => ({
     x: (r.lng - lastOrigin.lng) * mPerDegLat * cosLat,
     y: (r.lat - lastOrigin.lat) * mPerDegLat,
+    plant_id: r.plant_id,
     height_m: r.height_m, canopy_m: r.canopy_m,
     plant_type: r.plant_type, foliage_type: r.foliage_type,
     scale_factor: r.scale_factor, spread_factor: r.spread_factor,
     spread_rate: r.spread_rate,
     color: r.color, opacity: r.presence_opacity,
+    flower_color: r.flower_color, flower_form: r.flower_form,
+    bloom_start: r.bloom_start, bloom_end: r.bloom_end,
   }));
   buildPlants(designGroup, plants, lastMonth, lastYear, lastTerrain);
 };

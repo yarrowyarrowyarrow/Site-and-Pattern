@@ -87,6 +87,9 @@ SPREAD_HABITS     = {"clumping", "slow_spreader",
 # Sourcing (schema v19). Empty string = unassessed, always allowed.
 AVAILABILITY_CLASSES = {"big_box", "garden_centre", "native_specialist",
                         "seed_or_plug", "rare"}
+# Flower form (schema v31) — drives the 3D viewer's flower sprite. 'none' = no
+# showy flower; empty string is also tolerated (treated as 'none').
+FLOWER_FORMS      = {"daisy", "spike", "umbel", "cluster", "bell", "none"}
 
 # ── Soft enum allowlists (drift here is a WARNING) ──────────────────────────
 
@@ -242,6 +245,7 @@ def validate_plant(
         ("toxicity_humans",     TOXICITY_LEVELS),
         ("spread_habit",        SPREAD_HABITS),
         ("availability_class",  AVAILABILITY_CLASSES),
+        ("flower_form",         FLOWER_FORMS),
     ):
         if field in _MULTI_VALUE_ENUM_FIELDS:
             for tok in condition_tokens(record.get(field)):
@@ -251,6 +255,11 @@ def validate_plant(
         val = (record.get(field) or "").strip()
         if val and val not in allowed:
             err(f"{field}={val!r} not in {sorted(allowed)}")
+
+    # flower_color: empty (no showy flower) or a #rrggbb hex (schema v31).
+    fc = (record.get("flower_color") or "").strip()
+    if fc and not re.fullmatch(r"#[0-9a-fA-F]{6}", fc):
+        err(f"flower_color={fc!r} is not a #rrggbb hex")
 
     # ── Soft enums (deviations = warning) ────────────────────────────────
     val = (record.get("growth_curve") or "").strip()
