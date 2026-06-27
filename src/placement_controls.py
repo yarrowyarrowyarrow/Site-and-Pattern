@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSizePolicy,
     QSlider,
     QSpinBox,
     QStackedWidget,
@@ -127,8 +128,8 @@ class PlacementControlsWidget(QWidget):
         root.addWidget(wrap)
 
         outer = QVBoxLayout(wrap)
-        outer.setContentsMargins(6, 6, 6, 6)
-        outer.setSpacing(4)
+        outer.setContentsMargins(6, 4, 6, 4)
+        outer.setSpacing(3)
 
         # ── Mode segmented buttons ────────────────────────────────────
         seg = QHBoxLayout()
@@ -158,13 +159,10 @@ class PlacementControlsWidget(QWidget):
         self._stack = QStackedWidget()
         outer.addWidget(self._stack)
 
-        # Single — no parameters (parent panel may provide a burst Qty spinner).
+        # Single — no parameters and no hint (the Single button's tooltip already
+        # explains it); an empty page keeps the section compact (V1.87).
         single_panel = QWidget()
-        sl = QVBoxLayout(single_panel)
-        sl.setContentsMargins(0, 0, 0, 0)
-        single_hint = QLabel("Click on the map to place one at a time.")
-        single_hint.setStyleSheet("color: #78909c; font-size: 11px;")
-        sl.addWidget(single_hint)
+        QVBoxLayout(single_panel).setContentsMargins(0, 0, 0, 0)
         self._stack.addWidget(single_panel)
 
         # Row — count input + optional naturalistic drift.
@@ -335,6 +333,14 @@ class PlacementControlsWidget(QWidget):
         if not show_canopy_base:
             self._canopy_base_checkbox.hide()
 
+        # Apply the size-to-current-page policy for the initial Single mode so
+        # the empty Single page doesn't reserve the tallest page's height.
+        for i in range(self._stack.count()):
+            self._stack.widget(i).setSizePolicy(
+                QSizePolicy.Policy.Preferred,
+                QSizePolicy.Policy.Preferred if i == 0
+                else QSizePolicy.Policy.Ignored)
+
     # ── Public API ────────────────────────────────────────────────────
 
     @property
@@ -397,4 +403,13 @@ class PlacementControlsWidget(QWidget):
         self._kind = kind
         idx = {"single": 0, "row": 1, "grid": 2, "circle": 3, "fill": 4}.get(kind, 0)
         self._stack.setCurrentIndex(idx)
+        # Size the stack to the *current* page only (a QStackedWidget otherwise
+        # reserves the tallest page's height — a big empty gap under Single).
+        for i in range(self._stack.count()):
+            page = self._stack.widget(i)
+            page.setSizePolicy(
+                QSizePolicy.Policy.Preferred,
+                QSizePolicy.Policy.Preferred if i == idx
+                else QSizePolicy.Policy.Ignored)
+        self._stack.adjustSize()
         self.patternKindChanged.emit(kind)

@@ -20,7 +20,7 @@ from typing import Optional
 
 from PyQt6.QtCore import (
     Qt, QAbstractListModel, QModelIndex, QRect, QSize, QEvent,
-    QRunnable, QThreadPool, pyqtSignal,
+    QRunnable, QThreadPool, pyqtSignal, QMimeData, QByteArray,
 )
 from PyQt6.QtGui import (
     QColor, QIcon, QPixmap, QPainter, QFont, QBrush, QPen, QFontMetrics,
@@ -179,6 +179,10 @@ _PLANT_OBJ_ROLE = Qt.ItemDataRole.UserRole + 1
 _PLANT_PLACED_COUNT_ROLE = Qt.ItemDataRole.UserRole + 2
 _PLANT_EXPANDED_ROLE     = Qt.ItemDataRole.UserRole + 3
 
+# MIME type carrying a dragged plant's id (drag from the results list → drop on
+# the Plant Community mix, V1.87).
+_PLANT_MIME = "application/x-sap-plant-id"
+
 
 # ── Compact results model + delegate ──────────────────────────────────────────
 #
@@ -289,6 +293,30 @@ class PlantListModel(QAbstractListModel):
         if role == Qt.ItemDataRole.ToolTipRole:
             return f"{plant.get('common_name','')} ({plant.get('scientific_name','—')})"
         return None
+
+    # Drag support (drag a plant onto the mix, V1.87) --------------------
+
+    def flags(self, index: QModelIndex):
+        base = super().flags(index)
+        if index.isValid():
+            return base | Qt.ItemFlag.ItemIsDragEnabled
+        return base
+
+    def mimeTypes(self) -> list[str]:
+        return [_PLANT_MIME]
+
+    def supportedDragActions(self):
+        return Qt.DropAction.CopyAction
+
+    def mimeData(self, indexes):
+        md = QMimeData()
+        for idx in indexes:
+            if idx.isValid():
+                pid = self._plants[idx.row()].get("id")
+                if pid is not None:
+                    md.setData(_PLANT_MIME, QByteArray(str(int(pid)).encode()))
+                    break
+        return md
 
     # Public API ---------------------------------------------------------
 

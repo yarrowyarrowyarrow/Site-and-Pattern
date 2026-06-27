@@ -255,6 +255,32 @@ class TestPlantPanelSmoke(unittest.TestCase):
         for key in _TYPE_LABELS:
             self.assertIn(key, TYPE_COLORS)
 
+    def test_results_list_is_draggable(self):
+        from src.plant_list_view import _PLANT_MIME
+        from PyQt6.QtCore import Qt
+        p = self._panel
+        self.assertTrue(p._results_list.dragEnabled())
+        m = p._results_model
+        if m.rowCount() == 0:
+            self.skipTest("no plants seeded")
+        idx = m.index(0)
+        self.assertTrue(bool(m.flags(idx) & Qt.ItemFlag.ItemIsDragEnabled))
+        md = m.mimeData([idx])
+        self.assertTrue(md.hasFormat(_PLANT_MIME))
+
+    def test_drop_adds_to_mix_and_expands(self):
+        from src.plant_list_view import _PLANT_OBJ_ROLE
+        p = self._panel
+        p._mix_species = []
+        p._placement_panel.set_expanded(False)
+        m = p._results_model
+        if m.rowCount() == 0:
+            self.skipTest("no plants seeded")
+        pid = m.data(m.index(0), _PLANT_OBJ_ROLE)["id"]
+        p._add_to_mix_by_id(pid)             # what the drop handler calls
+        self.assertEqual(len(p._mix_species), 1)
+        self.assertTrue(p._placement_panel.expanded())
+
     def test_multiselect_filter_matches_query(self):
         from src.db.plants import search_plants
         p = self._panel

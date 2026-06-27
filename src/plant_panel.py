@@ -34,6 +34,7 @@ from src.plant_list_view import (
     _PLANT_OBJ_ROLE,
     _PLANT_EXPANDED_ROLE,
     _RESULTS_LIST_STYLE,
+    _PLANT_MIME,
     _type_icon,
 )
 
@@ -217,6 +218,40 @@ class CheckableComboBox(QComboBox):
     def _on_item_changed(self, _item):
         self._refresh_text()
         self.selectionChanged.emit()
+
+
+class _MixDropGroupBox(QGroupBox):
+    """The 'Plant current mix' box, made a drop target so plants can be dragged
+    from the results list straight into the mix (V1.87). ``on_drop`` receives
+    the dropped plant's id."""
+
+    def __init__(self, title: str, on_drop, parent=None):
+        super().__init__(title, parent)
+        self._on_drop = on_drop
+        self.setAcceptDrops(True)
+
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasFormat(_PLANT_MIME):
+            e.acceptProposedAction()
+        else:
+            super().dragEnterEvent(e)
+
+    def dragMoveEvent(self, e):
+        if e.mimeData().hasFormat(_PLANT_MIME):
+            e.acceptProposedAction()
+        else:
+            super().dragMoveEvent(e)
+
+    def dropEvent(self, e):
+        if e.mimeData().hasFormat(_PLANT_MIME):
+            try:
+                pid = int(bytes(e.mimeData().data(_PLANT_MIME)).decode())
+            except (ValueError, TypeError):
+                return
+            self._on_drop(pid)
+            e.acceptProposedAction()
+        else:
+            super().dropEvent(e)
 
 
 # ── Main widget ───────────────────────────────────────────────────────────────
@@ -483,6 +518,10 @@ class PlantPanel(QWidget):
         self._results_list.setSelectionMode(
             self._results_list.SelectionMode.SingleSelection
         )
+        # Drag a plant out of the list onto the "Plant current mix" box (V1.87).
+        self._results_list.setDragEnabled(True)
+        self._results_list.setDragDropMode(QListView.DragDropMode.DragOnly)
+        self._results_list.setDefaultDropAction(Qt.DropAction.CopyAction)
         self._results_list.setUniformItemSizes(False)
         self._results_list.setStyleSheet(_RESULTS_LIST_STYLE)
         self._results_list.setVerticalScrollMode(
@@ -597,8 +636,10 @@ class PlantPanel(QWidget):
         )
         self._bottom_scroll.setMinimumHeight(140)
         # Cap the expanded height so a big plant-mix scrolls inside the pane
-        # rather than pushing the browser off-screen.
-        self._bottom_scroll.setMaximumHeight(360)
+        # rather than pushing the browser off-screen. Raised in V1.87 (after the
+        # placement section was compacted) so the whole section + a few mix rows
+        # are visible without scrolling.
+        self._bottom_scroll.setMaximumHeight(440)
 
         # Wrap the placement pane in a CollapsiblePanel so it can shrink to just
         # a header, freeing the whole sidebar for the results list when the user
@@ -745,7 +786,7 @@ class PlantPanel(QWidget):
 
     def _build_polyculture_controls(self, outer: QVBoxLayout):
         """Build the inline stack-mix UI inside the placement group."""
-        mix_box = QGroupBox("Plant current mix")
+        mix_box = _MixDropGroupBox("Plant current mix", self._add_to_mix_by_id)
         mix_box.setStyleSheet(
             "QGroupBox { color: #a5d6a7; font-size: 11px; "
             "border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 8px; }"
@@ -756,10 +797,7 @@ class PlantPanel(QWidget):
         ml.setContentsMargins(6, 6, 6, 6)
         ml.setSpacing(3)
 
-        self._mix_status = QLabel(
-            "Mix off — right-click a plant in the list to add it.\n"
-            "With ≥2 species, Row/Grid/Circle will mix them across the placement."
-        )
+        self._mix_status = QLabel("Drag or right-click plants here to build a mix.")
         self._mix_status.setWordWrap(True)
         self._mix_status.setStyleSheet("color: #78909c; font-size: 10px;")
         ml.addWidget(self._mix_status)
@@ -922,7 +960,36 @@ class PlantPanel(QWidget):
         entry = dict(plant)
         entry["_weight"] = 1
         self._mix_species.append(entry)
+        # Reveal the mix: expand the placement pane (the plant list above gives
+        # up the space) so the whole growing mix stays visible (V1.87). Transient
+        # (persist=False) — it's a response to this add, not a saved preference.
+        if hasattr(self, "_placement_panel"):
+            self._placement_panel.set_expanded(True, persist=False)
         self._refresh_mix_list()
+
+    def _add_to_mix_by_id(self, plant_id: int):
+        """Add a plant to the mix by id — used by the drag-and-drop drop target.
+
+        Looks the plant up in the current results first (cheap, already loaded);
+        falls back to the catalogue so a drag still works after the list has
+        been re-filtered."""
+        try:
+            pid = int(plant_id)
+        except (TypeError, ValueError):
+            return
+        m = self._results_model
+        for i in range(m.rowCount()):
+            p = m.data(m.index(i), _PLANT_OBJ_ROLE)
+            if p and p.get("id") == pid:
+                self._add_to_mix(p)
+                return
+        try:
+            from src.db.plants import get_plant
+            p = get_plant(pid)
+        except Exception:
+            p = None
+        if p:
+            self._add_to_mix(p)
 
     def _remove_from_mix(self, plant_id: int):
         before = len(self._mix_species)
@@ -968,9 +1035,7 @@ class PlantPanel(QWidget):
 
         if n == 0:
             self._mix_status.setText(
-                "Mix off — right-click a plant in the list to add it.\n"
-                "With ≥2 species, Row/Grid/Circle will mix them in equal "
-                "ratios (adjust per-row to skew)."
+                "Drag or right-click plants here to build a mix."
             )
             self._mix_rows_container.setVisible(False)
             self._mix_clear_btn.setEnabled(False)
@@ -982,16 +1047,12 @@ class PlantPanel(QWidget):
         all_sp = [float(s.get("spacing_meters") or 1.0) for s in self._mix_species]
         eff = max(all_sp) if all_sp else 1.0
         if n == 1:
-            self._mix_status.setText(
-                f"Mix: 1 species (need ≥2 to activate).\n"
-                f"Add at least one more, then choose Row/Grid/Circle."
-            )
+            self._mix_status.setText("1 species — add ≥1 more to activate.")
         else:
             ratios = ":".join(str(int(s.get("_weight", 1) or 1))
                               for s in self._mix_species)
             self._mix_status.setText(
-                f"Plant community: {n} species at {ratios} — spacing "
-                f"{eff:.2f} m (max). Click Place Mix on Map."
+                f"{n} species · {ratios} · ~{eff:.1f} m spacing"
             )
         self._mix_rows_container.setVisible(True)
         self._mix_clear_btn.setEnabled(True)
