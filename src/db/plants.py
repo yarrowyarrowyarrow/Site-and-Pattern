@@ -118,7 +118,9 @@ _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 # pick up the authored pattern text seeded in src/db/polycultures.py.
 # v28 (V1.79): no DDL — reseed so the de-dashed authored pattern text replaces the
 # v27 text on installs that already seeded it.
-_SCHEMA_VERSION = 28
+# v29 (V1.84): no DDL — reseed to pick up the curated availability_class tiers and
+# the multi-value (comma-delimited) sun_requirement / water_needs values.
+_SCHEMA_VERSION = 29
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -914,6 +916,7 @@ def search_plants(
     well_behaved_only: bool = False,
     max_unit_price: Optional[float] = None,
     common_only: bool = False,
+    availability_in: Optional[list] = None,
     host_for_fauna_id: Optional[int] = None,
     supports_fauna_id: Optional[int] = None,
     supports_specialist: bool = False,
@@ -936,13 +939,17 @@ def search_plants(
         sql += " AND plant_type = ?"
         params.append(plant_type)
 
+    # sun_requirement / water_needs may hold a comma-delimited list when a
+    # plant tolerates a range of conditions (V1.84). Match membership the same
+    # way the ab_ecoregion filter below does, so a single-value row and a
+    # "full_sun,partial_shade" row both match a "partial_shade" query.
     if sun_req:
-        sql += " AND sun_requirement = ?"
-        params.append(sun_req)
+        sql += " AND (',' || COALESCE(sun_requirement,'') || ',') LIKE ?"
+        params.append(f"%,{sun_req},%")
 
     if water_needs:
-        sql += " AND water_needs = ?"
-        params.append(water_needs)
+        sql += " AND (',' || COALESCE(water_needs,'') || ',') LIKE ?"
+        params.append(f"%,{water_needs},%")
 
     # Schema v13: tag filters now run through the plant_uses junction table
     # via a single EXISTS sub-select per tag. ``_use_filter`` keeps the SQL
@@ -1034,6 +1041,13 @@ def search_plants(
         sql += (" AND COALESCE(availability_class,'') NOT IN "
                 "('seed_or_plug','rare')")
 
+    # Allowlist (V1.84): keep only the chosen sourcing tiers. Drives the plant
+    # browser's multi-select rarity dropdown — empty/None means "no restriction".
+    if availability_in:
+        placeholders = ",".join("?" for _ in availability_in)
+        sql += f" AND COALESCE(availability_class,'') IN ({placeholders})"
+        params += [str(v) for v in availability_in]
+
     # Fauna-support filters (schema v20) via the plant_fauna junction. Reuse the
     # EXISTS-subquery style used by the use-tag filters above.
     if host_for_fauna_id is not None:
@@ -1060,17 +1074,24 @@ def search_plants(
                 " AND (soil_ph_max IS NULL OR soil_ph_max >= ?)")
         params += [float(soil_ph), float(soil_ph)]
 
+    # water_needs may be comma-delimited (V1.84), so test membership with LIKE
+    # rather than `=`/`IN` on the whole field.
+    def _water_like(*values: str) -> str:
+        return "(" + " OR ".join(
+            "(',' || COALESCE(water_needs,'') || ',') LIKE '%," + v + ",%'"
+            for v in values) + ")"
+
     if moisture == "wet":
         # Wet/low ground: high- or moderate-water plants, true aquatics, or
         # species tagged to a wet ecoregion (wet_meadow / riparian).
-        sql += (" AND (water_needs IN ('high','moderate')"
+        sql += (" AND (" + _water_like("high", "moderate") +
                 " OR plant_type = 'aquatic'"
                 " OR (',' || COALESCE(ab_ecoregion,'') || ',') LIKE '%,wet_meadow,%'"
                 " OR (',' || COALESCE(ab_ecoregion,'') || ',') LIKE '%,riparian,%')")
     elif moisture == "dry":
-        sql += " AND water_needs = 'low'"
+        sql += " AND " + _water_like("low")
     elif moisture == "mesic":
-        sql += " AND water_needs IN ('medium','moderate')"
+        sql += " AND " + _water_like("medium", "moderate")
 
     sql += " ORDER BY plant_type, common_name"
 

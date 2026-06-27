@@ -21,6 +21,8 @@ from __future__ import annotations
 import math
 from typing import Optional
 
+from src.plant_conditions import condition_tokens
+
 # Zone labels (module-level constants so callers compare symbolically).
 WET = "wet"
 DRY = "dry"
@@ -192,15 +194,17 @@ def preferred_zone_for_plant(plant: dict) -> str:
     e.g. a shade-loving bog plant — WET wins, since moisture is the harder
     constraint.)"""
     ptype = (plant.get("plant_type") or "").lower()
-    water = (plant.get("water_needs") or "").lower()
     eco = (plant.get("ab_ecoregion") or "").lower()
-    sun = (plant.get("sun_requirement") or "").lower()
-    if (ptype == "aquatic" or water == "high"
+    # water_needs / sun_requirement may list several tolerances (V1.84); treat
+    # each as a set and match on membership.
+    water = set(condition_tokens(plant.get("water_needs")))
+    sun = set(condition_tokens(plant.get("sun_requirement")))
+    if (ptype == "aquatic" or "high" in water
             or "wet_meadow" in eco or "riparian" in eco):
         return WET
-    if sun in ("full_shade", "partial_shade"):
+    if sun & {"full_shade", "partial_shade"}:
         return SHADED
-    if water == "low":
+    if "low" in water:
         return DRY
     return NEUTRAL
 

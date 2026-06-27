@@ -36,6 +36,7 @@ from PyQt6.QtWidgets import (
 from src.db import polycultures
 from src.db import plants as plants_db
 from src.placement_controls import _QTY_SPIN_STYLE
+from src.plant_conditions import condition_matches, condition_tokens
 
 
 # Community-tree height bounds. With nothing selected the tree fills the panel
@@ -801,9 +802,9 @@ class PolycultureBuilderDialog(QDialog):
                 continue
             if type_f and (p.get("plant_type") or "") != type_f:
                 continue
-            if sun_f and (p.get("sun_requirement") or "") != sun_f:
+            if not condition_matches(p.get("sun_requirement"), sun_f):
                 continue
-            if water_f and (p.get("water_needs") or "") != water_f:
+            if not condition_matches(p.get("water_needs"), water_f):
                 continue
             if use_f:
                 uses_raw = (p.get("permaculture_uses") or "").lower()
@@ -1840,6 +1841,7 @@ class PolyculturePanel(QWidget):
             from src.plant_panel import (
                 _SUN_LABELS, _WATER_LABELS, _USE_LABELS,
             )
+            from src.plant_list_view import labels_csv
             zmin = plant.get("hardiness_zone_min")
             zmax = plant.get("hardiness_zone_max")
             if zmin and zmax:
@@ -1848,8 +1850,8 @@ class PolyculturePanel(QWidget):
                 zones = f"Z{zmin}+"
             else:
                 zones = "—"
-            sun = _SUN_LABELS.get(plant.get("sun_requirement", ""), "—")
-            water = _WATER_LABELS.get(plant.get("water_needs", ""), "—")
+            sun = labels_csv(plant.get("sun_requirement"), _SUN_LABELS)
+            water = labels_csv(plant.get("water_needs"), _WATER_LABELS)
             spacing = plant.get("spacing_meters")
             height = plant.get("mature_height_meters")
             bloom = plant.get("bloom_period") or "—"

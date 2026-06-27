@@ -24,6 +24,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QColor, QFont
 
+from src.plant_conditions import condition_tokens
+
 
 # ── Maintenance hours estimates for plant types ──────────────────────────────
 
@@ -828,7 +830,10 @@ class PlanningPanel(QWidget):
         for p in self._placed_plants:
             ptype       = p.get("plant_type", "herb")
             native      = bool(p.get("native_to_alberta"))
-            water_needs = p.get("water_needs") or "medium"
+            # water_needs may list several tolerances (V1.84); the first/primary
+            # value drives the irrigation estimate.
+            water_tokens = condition_tokens(p.get("water_needs"))
+            water_needs = water_tokens[0] if water_tokens else "medium"
             base = _PLANT_WATER_NEEDS_L_WEEK.get(ptype, 8.0)
             mult = _WATER_MULTIPLIER.get(water_needs, 1.0)
             weekly = base * mult

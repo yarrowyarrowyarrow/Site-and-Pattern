@@ -37,6 +37,13 @@ import sys
 from pathlib import Path
 from typing import Iterable
 
+from src.plant_conditions import condition_tokens
+
+# Condition fields that may hold a comma-delimited list of enum values when a
+# plant tolerates a range of conditions (V1.84). Each token is validated
+# against the enum independently.
+_MULTI_VALUE_ENUM_FIELDS = {"sun_requirement", "water_needs"}
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR     = PROJECT_ROOT / "data"
 
@@ -236,6 +243,11 @@ def validate_plant(
         ("spread_habit",        SPREAD_HABITS),
         ("availability_class",  AVAILABILITY_CLASSES),
     ):
+        if field in _MULTI_VALUE_ENUM_FIELDS:
+            for tok in condition_tokens(record.get(field)):
+                if tok not in allowed:
+                    err(f"{field} value {tok!r} not in {sorted(allowed)}")
+            continue
         val = (record.get(field) or "").strip()
         if val and val not in allowed:
             err(f"{field}={val!r} not in {sorted(allowed)}")

@@ -284,10 +284,13 @@ def _draw_plant_list(painter: QPainter, w: float, h: float,
         name = names.get(pid, "?")
         sci = (plant or {}).get("scientific_name", "") or ""
         ptype = (plant or {}).get("plant_type", types.get(pid, "")) or ""
-        water = (plant or {}).get("water_needs", "") or ""
+        # water_needs may be comma-delimited (V1.84); render each value titled.
+        from src.plant_conditions import condition_tokens
+        water = ", ".join(t.replace("_", " ").title()
+                          for t in condition_tokens((plant or {}).get("water_needs")))
         qty = str(counts[pid])
 
-        values = [name, sci, ptype.title(), qty, water.title()]
+        values = [name, sci, ptype.title(), qty, water]
         for i, val in enumerate(values):
             if i < len(col_x):
                 painter.drawText(QRectF(col_x[i], y, 180 * s, 14 * s),

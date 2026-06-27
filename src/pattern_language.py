@@ -29,6 +29,8 @@ from __future__ import annotations
 import html
 from typing import Callable, Optional
 
+from src.plant_conditions import condition_tokens
+
 # Member-data → human language ---------------------------------------------------
 
 _SUN_ORDER = ["full_sun", "partial_shade", "full_shade"]
@@ -82,8 +84,10 @@ def _month_span(months: list) -> str:
 def _context_facts(plant_rows: list, footprint_m: float) -> list[str]:
     """Derived site-envelope bullets from the member plant rows."""
     facts: list[str] = []
-    suns = {(r.get("sun_requirement") or "").strip() for r in plant_rows}
-    waters = {(r.get("water_needs") or "").strip() for r in plant_rows}
+    # Fields may be comma-delimited (V1.84), so a plant tolerant of a range
+    # contributes each of its values to the community envelope.
+    suns = {t for r in plant_rows for t in condition_tokens(r.get("sun_requirement"))}
+    waters = {t for r in plant_rows for t in condition_tokens(r.get("water_needs"))}
 
     sun = _range_phrase(suns, _SUN_ORDER, _SUN_LABEL)
     if sun:

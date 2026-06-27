@@ -214,7 +214,10 @@ class TestSiteFitFilters(unittest.TestCase):
         wet = search_plants(moisture="wet")
         dry = search_plants(moisture="dry")
         self.assertTrue(any(p["plant_type"] == "aquatic" for p in wet))
-        self.assertTrue(all(p["water_needs"] == "low" for p in dry))
+        # water_needs may be comma-delimited (V1.84): a dry-ground plant tolerates
+        # low water if "low" is among its values (e.g. "low" or "low,medium").
+        self.assertTrue(all("low" in (p["water_needs"] or "").split(",")
+                            for p in dry))
 
     def test_filters_in_allowlist(self):
         self.assertIn("soil_ph", llm._ALLOWED_FILTERS)

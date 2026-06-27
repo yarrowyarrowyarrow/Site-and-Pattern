@@ -15,9 +15,9 @@ from PyQt6.QtWidgets import (
     QColorDialog, QMenu, QListView,
 )
 from PyQt6.QtCore import (
-    Qt, QTimer, pyqtSignal, QModelIndex, QSettings,
+    Qt, QTimer, pyqtSignal, QModelIndex, QSettings, QEvent,
 )
-from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QColor, QStandardItem, QStandardItemModel
 
 # Model, delegate, vocabulary constants, and the shared QListWidget
 # stylesheet now live in src/plant_list_view.py (Chunk 4 of the
@@ -30,6 +30,7 @@ from src.plant_list_view import (
     _SUN_LABELS,
     _USE_LABELS,
     _WATER_LABELS,
+    _AVAILABILITY_LABELS,
     _PLANT_OBJ_ROLE,
     _PLANT_EXPANDED_ROLE,
     _RESULTS_LIST_STYLE,
@@ -87,6 +88,88 @@ _AB_ECOREGION_CHOICES: list[tuple[str, str]] = [
 
 # OnThisDesignPanel moved to src/on_this_design_panel.py (Chunk 4).
 
+
+
+# ── Multi-select dropdown (V1.84) ─────────────────────────────────────────────
+
+class CheckableComboBox(QComboBox):
+    """A QComboBox whose items carry checkboxes, for "pick several" filters.
+
+    The line-edit area shows the checked labels (or a placeholder when none are
+    checked); the popup stays open while toggling so the user can select more
+    than one tier in a single trip. ``selectionChanged`` fires on every toggle.
+    Used by the rarity/availability filter so the user can show, say, big-box +
+    garden-centre + native-nursery plants at once.
+    """
+
+    selectionChanged = pyqtSignal()
+
+    def __init__(self, placeholder: str = "Any", parent=None):
+        super().__init__(parent)
+        self._placeholder = placeholder
+        self.setModel(QStandardItemModel(self))
+        self.setEditable(True)
+        self.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        le = self.lineEdit()
+        le.setReadOnly(True)
+        le.setPlaceholderText(placeholder)
+        le.installEventFilter(self)
+        self.view().viewport().installEventFilter(self)
+        self.model().itemChanged.connect(self._on_item_changed)
+        # An editable combo otherwise echoes the current item's text; keep the
+        # display under our control so it shows the checked labels (or nothing).
+        self.currentIndexChanged.connect(lambda _=0: self._refresh_text())
+
+    def add_check_item(self, label: str, key: str):
+        item = QStandardItem(label)
+        item.setData(key, Qt.ItemDataRole.UserRole)
+        item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsUserCheckable)
+        # Set the check state before the item joins the model so the initial
+        # state doesn't spuriously fire itemChanged during construction.
+        item.setData(Qt.CheckState.Unchecked, Qt.ItemDataRole.CheckStateRole)
+        self.model().appendRow(item)
+        self._refresh_text()
+
+    def checked_keys(self) -> list[str]:
+        out: list[str] = []
+        for i in range(self.model().rowCount()):
+            it = self.model().item(i)
+            if it.checkState() == Qt.CheckState.Checked:
+                out.append(it.data(Qt.ItemDataRole.UserRole))
+        return out
+
+    def _event_point(self, event):
+        # QMouseEvent.pos() is deprecated in PyQt6; prefer position().
+        if hasattr(event, "position"):
+            return event.position().toPoint()
+        return event.pos()
+
+    def eventFilter(self, obj, event):  # noqa: N802 (Qt override)
+        if (obj is self.lineEdit()
+                and event.type() == QEvent.Type.MouseButtonRelease):
+            self.showPopup()
+            return True
+        if (obj is self.view().viewport()
+                and event.type() == QEvent.Type.MouseButtonRelease):
+            idx = self.view().indexAt(self._event_point(event))
+            if idx.isValid():
+                it = self.model().itemFromIndex(idx)
+                it.setCheckState(
+                    Qt.CheckState.Unchecked
+                    if it.checkState() == Qt.CheckState.Checked
+                    else Qt.CheckState.Checked)
+            return True  # keep the popup open for further toggles
+        return super().eventFilter(obj, event)
+
+    def _refresh_text(self):
+        labels = [self.model().item(i).text()
+                  for i in range(self.model().rowCount())
+                  if self.model().item(i).checkState() == Qt.CheckState.Checked]
+        self.lineEdit().setText(", ".join(labels))
+
+    def _on_item_changed(self, _item):
+        self._refresh_text()
+        self.selectionChanged.emit()
 
 
 # ── Main widget ───────────────────────────────────────────────────────────────
@@ -380,6 +463,24 @@ class PlantPanel(QWidget):
         ecoregion_row.addWidget(self._ecoregion_combo, 1)
         top_layout.addLayout(ecoregion_row)
 
+        # ── Rarity / where-to-buy filter (V1.84) ─────────────────────────
+        # Multi-select so the user can show several sourcing tiers at once
+        # (e.g. big-box + garden-centre + native-nursery) and skip the long
+        # tail of seed-only / rare species to avoid being overwhelmed.
+        rarity_row = QHBoxLayout()
+        rarity_row.setSpacing(4)
+        rarity_row.addWidget(QLabel("Availability:"))
+        self._rarity_combo = CheckableComboBox(placeholder="Any availability")
+        for key, lbl in _AVAILABILITY_LABELS.items():
+            self._rarity_combo.add_check_item(lbl, key)
+        self._rarity_combo.setToolTip(
+            "Show only plants you can source from the checked tiers.\n"
+            "Leave all unchecked to see everything."
+        )
+        self._rarity_combo.selectionChanged.connect(self._run_search)
+        rarity_row.addWidget(self._rarity_combo, 1)
+        top_layout.addLayout(rarity_row)
+
         # Result count label
         self._result_count = QLabel("Results: —")
         self._result_count.setStyleSheet("color: #78909c; font-size: 11px;")
@@ -598,6 +699,7 @@ class PlantPanel(QWidget):
                 bird_food_only  = self._birdfood_btn.isChecked(),
                 has_image_only  = self._has_image_btn.isChecked(),
                 ab_ecoregion    = self._combo_value(self._ecoregion_combo),
+                availability_in = self._rarity_combo.checked_keys(),
                 soil_ph         = self._soil_ph,
             )
         except Exception as exc:

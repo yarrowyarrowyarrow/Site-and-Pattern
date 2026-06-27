@@ -48,6 +48,29 @@ _WATER_LABELS: dict[str, str] = {
     "high":   "High",
 }
 
+# Sourcing tiers (schema availability_class). Also imported by plant_panel.py
+# for the rarity filter dropdown (V1.84).
+_AVAILABILITY_LABELS: dict[str, str] = {
+    "big_box":           "Big-box store",
+    "garden_centre":     "Garden centre",
+    "native_specialist": "Native nursery",
+    "seed_or_plug":      "Seed / plug only",
+    "rare":              "Rare / hard to find",
+}
+
+
+def labels_csv(value, label_map: dict[str, str]) -> str:
+    """Render a (possibly comma-delimited) condition field as human labels.
+
+    "full_sun,partial_shade" → "Full Sun, Partial Shade". Unknown tokens fall
+    back to a title-cased form so the row never shows a raw snake_case key.
+    Empty/None → "—". (V1.84)
+    """
+    from src.plant_conditions import condition_tokens
+    parts = [label_map.get(t, t.replace("_", " ").title())
+             for t in condition_tokens(value)]
+    return ", ".join(parts) or "—"
+
 # V1.37: vocabulary refined toward "native habitat" + "functional
 # landscape design" framing. Dropped permaculture-flavored tags
 # (biomass = chop-and-drop, pest_deterrent = companion-planting,
@@ -598,11 +621,11 @@ class PlantRowDelegate(QStyledItemDelegate):
         image_h = 0
         if _detail_image_path(plant):
             image_h = _IMG_MAX_H + 2 * fm.lineSpacing() + 6
-        # Detail rows: 5 single-line + 3 double-line (Uses, Wildlife,
-        # Companions) = 11 lineSpacing units; round up to 12 for the
-        # gap before the calendar block. V1.37 made the three list
-        # rows wrap so Bur Oak's full companion + uses lists fit.
-        detail_h = 12 * fm.lineSpacing() + cal_h + notes_h + image_h + 8
+        # Detail rows: 6 single-line (Zones, Sun·Water, Spacing, Height,
+        # Bloom·Fruit, Edible, Availability) + 3 double-line (Uses,
+        # Wildlife, Companions) = 12 lineSpacing units; round up to 13 for
+        # the gap before the calendar block (V1.84 added the Availability row).
+        detail_h = 13 * fm.lineSpacing() + cal_h + notes_h + image_h + 8
         return QSize(0, compact_h + detail_h)
 
     # Painting -----------------------------------------------------------
@@ -849,8 +872,10 @@ class PlantRowDelegate(QStyledItemDelegate):
 
             spacing = plant.get("spacing_meters")
             height  = plant.get("mature_height_meters")
-            sun     = _SUN_LABELS.get(plant.get("sun_requirement", ""), "—")
-            water   = _WATER_LABELS.get(plant.get("water_needs", ""), "—")
+            sun     = labels_csv(plant.get("sun_requirement"), _SUN_LABELS)
+            water   = labels_csv(plant.get("water_needs"), _WATER_LABELS)
+            avail   = _AVAILABILITY_LABELS.get(
+                (plant.get("availability_class") or ""), "—")
             bloom   = plant.get("bloom_period") or "—"
             fruit   = plant.get("fruit_period") or "—"
             edible  = plant.get("edible_parts") or "—"
@@ -887,17 +912,18 @@ class PlantRowDelegate(QStyledItemDelegate):
             # Layout: short single-line rows stack at 1 * line_h each,
             # then Uses + Wildlife + Companions get 2 * line_h each so
             # their long comma-separated lists wrap instead of clipping
-            # at the right edge. Total detail rows below: 5 single +
-            # 3 double = 5 + 6 = 11 line_h.
+            # at the right edge. Total detail rows below: 6 single +
+            # 3 double = 6 + 6 = 12 line_h (the calendar starts at 13).
             _row("Zones:",         zones_str, 0)
             _row("Sun · Water:",   f"{sun}  ·  {water}", line_h)
             _row("Spacing:",       (f"{spacing} m" if spacing else "—"), 2 * line_h)
             _row("Height:",        (f"{height} m" if height else "—"), 3 * line_h)
             _row("Bloom · Fruit:", f"{bloom}  ·  {fruit}", 4 * line_h)
             _row("Edible:",        edible, 5 * line_h)
-            _row("Uses:",          uses, 6 * line_h, max_lines=2)
-            _row("Wildlife:",      hosts_text, 8 * line_h, max_lines=2)
-            _row("Companions:",    companions_text, 10 * line_h, max_lines=2)
+            _row("Availability:",  avail, 6 * line_h)
+            _row("Uses:",          uses, 7 * line_h, max_lines=2)
+            _row("Wildlife:",      hosts_text, 9 * line_h, max_lines=2)
+            _row("Companions:",    companions_text, 11 * line_h, max_lines=2)
 
             # ── Colour-coded planting calendar strip ──────────────
             # 12 cells across the detail width, one per month, coloured by
@@ -905,7 +931,7 @@ class PlantRowDelegate(QStyledItemDelegate):
             # the at-a-glance "what is this plant doing in July?" visual
             # that lived in the legacy detail panel before the compact
             # list landed.
-            cal_block_top = detail.top() + 12 * line_h
+            cal_block_top = detail.top() + 13 * line_h
             model = index.model()
             cal: list[dict] = []
             if isinstance(model, PlantListModel):
@@ -916,11 +942,11 @@ class PlantRowDelegate(QStyledItemDelegate):
                 # the legend actually wrapped onto so the notes start
                 # below it instead of underneath it.
                 extra_rows = self._legend_rows_for_width(detail.width()) - 1
-                notes_top_offset = (12 * line_h + _CAL_BLOCK_H
+                notes_top_offset = (13 * line_h + _CAL_BLOCK_H
                                     + extra_rows * (_CAL_LEGEND_H + 2)
                                     + _CAL_NOTES_GAP)
             else:
-                notes_top_offset = 12 * line_h + 4
+                notes_top_offset = 13 * line_h + 4
 
             notes = plant.get("notes") or ""
             if notes:
