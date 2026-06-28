@@ -427,6 +427,7 @@ function plantMaterial(opts = {}) {
     roughness: opts.roughness ?? 0.9,
     vertexColors: !!opts.vertexColors,
     side: opts.doubleSide ? THREE.DoubleSide : THREE.FrontSide,
+    flatShading: !!opts.flatShading,
   });
   const strength = opts.wind || 0;
   if (strength > 0) {
@@ -560,24 +561,56 @@ const CONIFER_KINDS = {
 };
 const _CK_SEED = { standard: 0, spruce: 3, fir: 7, pine: 11, larch: 17 };
 
-// Keystone/host shrub cues (V1.94): red-osier dogwood's red stems, willow's pale
-// upright multi-stem, finer twiggy currants/roses. Foliage colour comes from the
-// genus (scene_contract _foliage_color), so a profile only shapes geometry.
-const _SPROF = {
-  cornus:      { id: 'cornus', redStems: true, upright: true },   // red-osier dogwood
-  salix:       { id: 'salix', upright: true, narrow: true },      // shrub willow
-  amelanchier: { id: 'amel', upright: true, fine: true },         // saskatoon
-  viburnum:    { id: 'vibur' },                                   // highbush cranberry
-  ribes:       { id: 'ribes', fine: true },                       // currant / gooseberry
-  rosa:        { id: 'rosa', fine: true },                        // wild rose
-  def:         { id: 'sdef' },
+// Shrub growth-form silhouettes (V1.96): instead of one blobby dome, a shrub is
+// a multi-stem woody clump whose foliage is distributed along ascending stems —
+// and the *shape* of that clump differs by species. Each form sets stem count /
+// splay / length, how many foliage masses each stem carries and where they start
+// (a clear-stemmed "vase" vs foliage to the ground), the mass radius + ellipsoid
+// shape (flattened spreading vs upright vs round), and whether a basal mound
+// fills the bottom. `q(n)` quality-scales the counts.
+//   vase      — upright, clean-based, fountain crown (saskatoon, willow, alder, hazel)
+//   spreading — broad, wide flattened masses (dogwood, viburnum)
+//   mound     — low dense rounded thicket to the ground (rose, spirea, snowberry)
+//   thicket   — many fine canes, airy (currant, raspberry)
+//   irregular — sparse asymmetric woody (sage, buffaloberry)
+const SHRUB_FORMS = {
+  vase:      { stems: [4, 6], splay: 0.26, stemH: [0.78, 1.0], masses: [2, 3],
+               start: 0.45, massR: [0.16, 0.24], shape: [0.92, 1.05, 0.92], basal: false },
+  spreading: { stems: [4, 6], splay: 0.62, stemH: [0.6, 0.85], masses: [2, 3],
+               start: 0.38, massR: [0.18, 0.27], shape: [1.25, 0.7, 1.25], basal: true },
+  mound:     { stems: [5, 8], splay: 0.52, stemH: [0.42, 0.66], masses: [2, 3],
+               start: 0.18, massR: [0.16, 0.22], shape: [1.06, 0.86, 1.06], basal: true },
+  thicket:   { stems: [7, 11], splay: 0.42, stemH: [0.55, 0.92], masses: [1, 2],
+               start: 0.34, massR: [0.11, 0.17], shape: [0.9, 1.0, 0.9], basal: true },
+  irregular: { stems: [3, 6], splay: 0.5, stemH: [0.5, 0.98], masses: [1, 3],
+               start: 0.3, massR: [0.12, 0.2], shape: [1.0, 0.9, 1.0], basal: false },
 };
-const SHRUB_PROFILES = {
-  cornus: _SPROF.cornus, salix: _SPROF.salix, amelanchier: _SPROF.amelanchier,
-  viburnum: _SPROF.viburnum, ribes: _SPROF.ribes, rosa: _SPROF.rosa,
+
+// Genus → shrub profile. `form` picks a silhouette; `redStems` paints the woody
+// stems red (red-osier dogwood); `fine` slims the masses. Foliage colour comes
+// from the genus (scene_contract _foliage_color) — sages/buffaloberry already go
+// silver there. Unknown genera fall back to a generic spreading bush.
+const _SPROF = {
+  cornus:         { id: 'cornus', form: 'spreading', redStems: true },  // red-osier dogwood
+  salix:          { id: 'salix', form: 'vase' },                        // shrub willow
+  amelanchier:    { id: 'amel', form: 'vase', fine: true },             // saskatoon
+  prunus:         { id: 'choke', form: 'vase' },                        // chokecherry / pin cherry shrub
+  corylus:        { id: 'hazel', form: 'vase' },                        // beaked hazelnut
+  alnus:          { id: 'alder', form: 'vase' },                        // alder
+  crataegus:      { id: 'haw', form: 'vase' },                          // hawthorn
+  viburnum:       { id: 'vibur', form: 'spreading' },                   // highbush cranberry
+  rosa:           { id: 'rosa', form: 'mound', fine: true },            // wild rose
+  spiraea:        { id: 'spir', form: 'mound', fine: true },            // meadowsweet
+  symphoricarpos: { id: 'snow', form: 'mound' },                        // snowberry
+  vaccinium:      { id: 'vacc', form: 'mound', fine: true },            // blueberry / cranberry
+  ribes:          { id: 'ribes', form: 'thicket', fine: true },         // currant / gooseberry
+  rubus:          { id: 'rubus', form: 'thicket' },                     // raspberry / bramble
+  artemisia:      { id: 'sage', form: 'irregular', fine: true },        // sagebrush (silver)
+  shepherdia:     { id: 'shep', form: 'irregular' },                    // buffaloberry (silver)
+  def:            { id: 'sdef', form: 'spreading' },
 };
 function shrubProfileFor(p) {
-  return SHRUB_PROFILES[(p.genus || '').toLowerCase()] || _SPROF.def;
+  return _SPROF[(p.genus || '').toLowerCase()] || _SPROF.def;
 }
 
 // Crown form from the (already-scaled) height/canopy aspect ratio.
@@ -902,47 +935,68 @@ function qn(n) {                      // scale + round a count, never below 1
   return Math.max(1, Math.round(n * f));
 }
 
-// A bushy shrub: several overlapping spheres merged, normalised, gradient-tinted.
-// `profile` adds genus cues (V1.94): red-osier dogwood's red stems, willow's pale
-// upright droop. Unknown genus → the plain bushy dome.
+// One low-poly foliage mass — a faceted icosahedron (not a smooth sphere)
+// squashed to an ellipsoid by `shape`, so a clump reads as angular leaf masses
+// rather than blobs while staying very cheap (20 faces).
+function makeFoliageMass(rng, r, shape) {
+  const m = new THREE.IcosahedronGeometry(r, 0);
+  m.scale(shape[0] * (0.85 + rng() * 0.3),
+          shape[1] * (0.85 + rng() * 0.3),
+          shape[2] * (0.85 + rng() * 0.3));
+  m.rotateY(rng() * Math.PI);
+  return m;
+}
+
+// A shrub as a multi-stem woody clump (V1.96): a few ascending stems splayed
+// from a shared base, each clothed with faceted foliage masses along its upper
+// length, the whole silhouette set by the species' growth form (vase / spreading
+// / mound / thicket / irregular). Returns {foliageGeo, stemGeo} so the woody
+// stems carry their own bark (or red-osier) colour — no more generic dome.
 function buildShrubGeo(rng, profile) {
   const prof = profile || {};
-  const geos = [], stems = [];
-  const n = qn(3 + Math.floor(rng() * 5));   // 3–7 sub-domes for visual variety
-  const spread = (0.4 + rng() * 0.3) * (prof.narrow ? 0.7 : 1);
-  for (let i = 0; i < n; i++) {
-    const r = (0.24 + rng() * 0.18) * (prof.fine ? 0.82 : 1);
-    const s = new THREE.SphereGeometry(r, 6, 5);
-    const yb = prof.upright ? 0.15 + rng() * 0.55 : rng() * 0.35;
-    s.translate((rng() - 0.5) * spread, yb + r * 0.5, (rng() - 0.5) * spread);
-    geos.push(s);
-  }
-  const g = mergeGeometries(geos, false);
-  normalizeUnit([g]);
-  applyFoliageGradient(g);
-  // Red-osier dogwood: a few bare red stems poking up through the foliage — the
-  // single most recognizable winter/edge cue. Built as a SECOND geometry so it
-  // can carry its own red colour (returned as {foliageGeo, stemGeo}).
-  let stemGeo = null;
-  if (prof.redStems) {
-    const ns = qn(5);
-    for (let i = 0; i < ns; i++) {
-      const h = 0.7 + rng() * 0.3, r = 0.012;
-      const az = rng() * Math.PI * 2, tilt = 0.05 + rng() * 0.22;
-      const st = new THREE.CylinderGeometry(r * 0.5, r, h, 4, 1);
-      st.translate(0, h / 2, 0);
-      st.applyMatrix4(new THREE.Matrix4().makeRotationY(az)
-        .multiply(new THREE.Matrix4().makeRotationZ(tilt)));
-      stems.push(st);
+  const F = SHRUB_FORMS[prof.form] || SHRUB_FORMS.spreading;
+  const fineMul = prof.fine ? 0.82 : 1;
+  const stemGeos = [], foliageGeos = [];
+
+  const nStems = qn(F.stems[0] + Math.floor(rng() * (F.stems[1] - F.stems[0] + 1)));
+  for (let i = 0; i < nStems; i++) {
+    const az = (i / nStems) * Math.PI * 2 + rng() * 0.7;
+    const splay = F.splay * (0.6 + rng() * 0.8);            // lean from vertical
+    const h = F.stemH[0] + rng() * (F.stemH[1] - F.stemH[0]);
+    const rad = 0.016 + rng() * 0.012;
+    const rot = new THREE.Matrix4().makeRotationY(az)
+      .multiply(new THREE.Matrix4().makeRotationZ(splay));
+    const stem = new THREE.CylinderGeometry(rad * 0.4, rad, h, 4, 1);
+    stem.translate(0, h / 2, 0);
+    stem.applyMatrix4(rot);
+    stemGeos.push(stem);
+    // foliage masses spaced along the upper portion of the stem (start..tip)
+    const nMass = qn(F.masses[0] + Math.floor(rng() * (F.masses[1] - F.masses[0] + 1)));
+    for (let j = 0; j < nMass; j++) {
+      const t = F.start + (1 - F.start) * (nMass === 1 ? 0.7 : j / (nMass - 1));
+      const at = new THREE.Vector3(0, h * t, 0).applyMatrix4(rot);
+      const r = (F.massR[0] + rng() * (F.massR[1] - F.massR[0])) * fineMul;
+      const mass = makeFoliageMass(rng, r, F.shape);
+      mass.translate(at.x + (rng() - 0.5) * 0.08, at.y, at.z + (rng() - 0.5) * 0.08);
+      foliageGeos.push(mass);
     }
-    stemGeo = mergeGeometries(stems, false);
-    // share the foliage's 0..1 vertical frame
-    stemGeo.computeBoundingBox();
-    const sy = 1 / Math.max(1e-3, stemGeo.boundingBox.max.y - stemGeo.boundingBox.min.y);
-    stemGeo.translate(0, -stemGeo.boundingBox.min.y, 0);
-    stemGeo.scale(0.5, sy, 0.5);
   }
-  return stemGeo ? { foliageGeo: g, stemGeo } : g;
+  // A low basal mound fills the bottom of dense forms (mound/spreading/thicket).
+  if (F.basal) {
+    const nb = qn(2 + Math.floor(rng() * 2));
+    for (let i = 0; i < nb; i++) {
+      const r = (0.15 + rng() * 0.08) * fineMul;
+      const mass = makeFoliageMass(rng, r, F.shape);
+      mass.translate((rng() - 0.5) * 0.34, 0.1 + rng() * 0.12, (rng() - 0.5) * 0.34);
+      foliageGeos.push(mass);
+    }
+  }
+
+  const foliageGeo = mergeGeometries(foliageGeos, false);
+  const stemGeo = mergeGeometries(stemGeos, false);
+  normalizeUnit([foliageGeo, stemGeo]);     // shared 0..1 frame
+  applyFoliageGradient(foliageGeo);
+  return { foliageGeo, stemGeo };
 }
 
 // A perennial clump: several thin stems fanning out from a base, each topped
@@ -1109,6 +1163,10 @@ function ensurePlantMats() {
     branch:  plantMaterial({ roughness: 0.92, wind: 0.015 }),
     foliage: plantMaterial({ roughness: 0.85, wind: 0.07, vertexColors: true }),
     shrub:   plantMaterial({ roughness: 0.85, wind: 0.06, vertexColors: true }),
+    // Flat-shaded so the faceted shrub leaf masses read as crisp low-poly
+    // clumps, not smooth blobs (V1.96).
+    shrubFoliage: plantMaterial({ roughness: 0.82, wind: 0.06, vertexColors: true,
+                    flatShading: true }),
     // Flat grass/reed blades read from both sides and catch top light via
     // lifted normals (V1.92) — lush tufts rather than thin spindly stalks.
     blade:   plantMaterial({ roughness: 0.72, wind: 0.11, vertexColors: true,
@@ -1194,18 +1252,17 @@ function buildLayer(list, variants, mat, archOf, scaleOf, month, year, noRot, te
   });
 }
 
-// Shrub archetypes are profile-specific (red-stem dogwood, upright willow…), so
+// Shrub archetypes are profile-specific (growth form, red-stem dogwood…), so
 // they're cached by (profile × variant × quality) like trees rather than the
-// flat ARCH.shrub array. buildShrubGeo returns {foliageGeo, stemGeo} for a
-// red-stemmed profile, else a single foliage geometry.
+// flat ARCH.shrub array. buildShrubGeo returns {foliageGeo, stemGeo} — the
+// faceted leaf masses and the woody stems, each shaded/coloured separately.
 const SHRUB_VARIANTS = 3;
 const SHRUB_CACHE = new Map();
 function getShrubArch(prof, v) {
   const key = prof.id + '_' + v + '_q' + QUALITY;
   let a = SHRUB_CACHE.get(key);
   if (a) return a;
-  const out = buildShrubGeo(mulberry32(13 + v * 97 + prof.id.charCodeAt(0) * 7), prof);
-  a = out.foliageGeo ? out : { foliageGeo: out, stemGeo: null };
+  a = buildShrubGeo(mulberry32(13 + v * 97 + prof.id.charCodeAt(0) * 7), prof);
   SHRUB_CACHE.set(key, a);
   return a;
 }
@@ -1224,14 +1281,16 @@ function buildShrubLayer(list, month, year, terrain) {
     const arch = getShrubArch(prof, v);
     const places = items.map(p => spreadPlacements(p, year));
     const total = places.reduce((s, pl) => s + pl.length, 0);
-    const foliage = instancedMesh(arch.foliageGeo, total, MATS.shrub);
+    const foliage = instancedMesh(arch.foliageGeo, total, MATS.shrubFoliage);
     const stems = arch.stemGeo ? instancedMesh(arch.stemGeo, total, MATS.branch) : null;
+    // Woody stems are bark-brown, except red-osier dogwood's signature red.
+    const stemHex = prof.redStems ? '#b5402e' : '#6b5236';
     let idx = 0;
     items.forEach((p, ii) => {
       const c = Math.max(0.25, p.canopy_m), h = Math.max(0.2, p.height_m);
       const rotY0 = (indHash(p) % 628) / 100;
       const col = fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity);
-      const scol = fadeToward('#b5402e', p.opacity);   // red-osier stem colour
+      const scol = fadeToward(stemHex, p.opacity);
       places[ii].forEach((pl, k) => {
         const m = pl.mul, x = p.x + pl.dx, wy = p.y + pl.dz;
         const rotY = rotY0 + (k ? pl.dx : 0);

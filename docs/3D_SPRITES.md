@@ -72,8 +72,19 @@ doesn't list falls back to the generic look.
 | **Oak** (Quercus) | `generateDaVinciTree` | broad gnarled spreading, dark | Bur Oak |
 | **Willow** (Salix) | `generateDaVinciTree` | pale grey bark, weeping fringe | Bebb's Willow |
 | Other tree | `generateDaVinciTree` | generic branch crown + foliage | cherry, apple, etc. |
-| **Dogwood** (Cornus) | `buildShrubGeo` (red-stem) | bushy dome with bare **red** stems | Red-osier Dogwood |
-| Shrub | `buildShrubGeo` | bushy dome (willow upright, others generic) | any shrub |
+| **Shrubs** (multi-stem clumps) | `buildShrubGeo` | a few ascending woody stems clothed with faceted low-poly leaf masses, silhouette by growth form *(V1.96)* | see below |
+
+Shrubs are no longer a single dome — they're a multi-stem woody clump whose
+**growth form** (`SHRUB_FORMS`) differs by genus, with crisp flat-shaded faceted
+foliage masses:
+
+| Form | Looks like | Genera |
+|------|-----------|--------|
+| `vase` | upright, clean base, fountain crown | Saskatoon, willow, hazelnut, alder, hawthorn, cherry |
+| `spreading` | broad low clump (dogwood adds **red** stems) | Dogwood (Cornus), Viburnum |
+| `mound` | low dense rounded thicket to the ground | Rose, spirea, snowberry, blueberry |
+| `thicket` | many fine arching canes, airy | Currant (Ribes), raspberry |
+| `irregular` | sparse asymmetric woody (often silvery) | Sagebrush, buffaloberry |
 | Perennial / herb clump | `buildPerennialGeo` | thin stems + leaf rosettes over a mound | a wildflower, herb, or **fern** |
 | Grass / sedge / rush tuft | `buildGrassGeo` | dense fan of flat arching blades *(V1.92)* | a grass, sedge, or rush |
 | Aquatic / emergent clump | `buildAquaticGeo` | tall erect strap leaves *(V1.92)* | an aquatic (Cattail, Great Bulrush) |
