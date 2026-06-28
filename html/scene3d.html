@@ -1683,7 +1683,16 @@ function disposeDesignGroup(group) {
     if (a.branchGeo) sharedGeo.add(a.branchGeo);
     if (a.foliageGeo) sharedGeo.add(a.foliageGeo);
   }
-  if (ARCH) [...ARCH.shrub, ...ARCH.peren, ...ARCH.ground].forEach(g => sharedGeo.add(g));
+  // Every shared archetype is reused across rebuilds and must NOT be disposed:
+  // all ARCH variant arrays (peren/ground/grass/aquatic — iterate so adding or
+  // removing a category never breaks this), and the per-genus shrub cache
+  // (V1.94: shrubs moved out of ARCH into SHRUB_CACHE).
+  if (ARCH) for (const arr of Object.values(ARCH))
+    for (const g of arr) sharedGeo.add(g);
+  for (const a of SHRUB_CACHE.values()) {
+    if (a.foliageGeo) sharedGeo.add(a.foliageGeo);
+    if (a.stemGeo) sharedGeo.add(a.stemGeo);
+  }
   for (const k in GEO) sharedGeo.add(GEO[k]);
   const sharedMat = new Set(MATS ? Object.values(MATS) : []);
   group.traverse(obj => {
