@@ -181,8 +181,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/12320174/medium.jpg",
     "image_attribution": "(c) W. Terry Hunefeld, some rights reserved (CC BY), uploaded by W. Terry Hunefeld",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Alkali Cord Grass",
@@ -225,8 +225,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Alpine Aster",
@@ -366,8 +366,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/1035535/medium.jpg",
     "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Alpine Forget-me-not",
@@ -739,8 +739,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/42831601/medium.jpeg",
     "image_attribution": "no rights reserved, uploaded by Reuven Martin",
     "image_license": "cc0",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Ball Cactus",
@@ -925,7 +925,7 @@
     "image_attribution": "(c) Leslie Seaton, some rights reserved (CC BY)",
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
-    "flower_form": "daisy"
+    "flower_form": "rays"
   },
   {
     "common_name": "Basket Willow",
@@ -1065,8 +1065,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/42349408/medium.jpeg",
     "image_attribution": "(c) Sigitas Juzėnas, some rights reserved (CC BY), uploaded by Sigitas Juzėnas",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Bearberry",
@@ -1156,8 +1156,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (sedge default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Bebb's Willow",
@@ -1244,8 +1244,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Big Sagebrush",
@@ -1338,8 +1338,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/298736570/medium.jpg",
     "image_attribution": "(c) Owen Strickland, some rights reserved (CC BY), uploaded by Owen Strickland",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Birch-leaved Spirea",
@@ -1574,7 +1574,7 @@
     "image_attribution": "no rights reserved, uploaded by Brady Reed",
     "image_license": "cc0",
     "flower_color": "#f2c11e",
-    "flower_form": "daisy"
+    "flower_form": "rays"
   },
   {
     "common_name": "Blanketflower",
@@ -1619,7 +1619,7 @@
     "availability_class": "garden_centre",
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#e07020",
-    "flower_form": "daisy"
+    "flower_form": "rays"
   },
   {
     "common_name": "Blue Clematis",
@@ -1710,7 +1710,7 @@
     "availability_class": "garden_centre",
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#d6453a",
-    "flower_form": "bell"
+    "flower_form": "trumpet"
   },
   {
     "common_name": "Blue Grama Grass",
@@ -1756,8 +1756,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/79232001/medium.jpg",
     "image_attribution": "(c) Matt Berger, some rights reserved (CC BY), uploaded by Matt Berger",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Blue-eyed Grass",
@@ -1850,8 +1850,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/15395/medium.jpg",
     "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Bluejoint Reed Grass",
@@ -1897,8 +1897,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/156257543/medium.jpg",
     "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY)",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Bog Blueberry",
@@ -2140,7 +2140,7 @@
     "image_attribution": "(c) Laura Gaudette, some rights reserved (CC BY), uploaded by Laura Gaudette",
     "image_license": "cc-by",
     "flower_color": "#f0a818",
-    "flower_form": "spike"
+    "flower_form": "trumpet"
   },
   {
     "common_name": "Bristly Black Currant",
@@ -2750,7 +2750,7 @@
     "image_attribution": "(c) Douglas Goldman, some rights reserved (CC BY-SA), uploaded by Douglas Goldman",
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
-    "flower_form": "spike"
+    "flower_form": "plume"
   },
   {
     "common_name": "Canada Milk Vetch",
@@ -2843,8 +2843,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Canada Waterweed",
@@ -2937,8 +2937,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/53028467/medium.jpg",
     "image_attribution": "no rights reserved, uploaded by Robbie Hannawacker",
     "image_license": "cc0",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Cattail",
@@ -3313,8 +3313,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (rush default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Common Snowberry",
@@ -3411,7 +3411,7 @@
     "image_attribution": "(c) \nKENPEI, some rights reserved (CC BY)",
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
-    "flower_form": "daisy"
+    "flower_form": "rays"
   },
   {
     "common_name": "Common Tall Manna Grass",
@@ -3457,8 +3457,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/24258314/medium.jpg",
     "image_attribution": "(c) aarongunnar, some rights reserved (CC BY), uploaded by aarongunnar",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Common Twinpod",
@@ -3740,8 +3740,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/169132999/medium.jpg",
     "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY)",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Crowfoot Violet",
@@ -3976,8 +3976,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (sedge default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Desert Shooting Star",
@@ -4259,8 +4259,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/183561/medium.jpg",
     "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Drummond's Milkvetch",
@@ -4356,8 +4356,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/410298/medium.jpg",
     "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Dwarf Birch",
@@ -4596,7 +4596,7 @@
     "image_attribution": "(c) Nick Block, some rights reserved (CC BY), uploaded by Nick Block",
     "image_license": "cc-by",
     "flower_color": "#d6453a",
-    "flower_form": "bell"
+    "flower_form": "trumpet"
   },
   {
     "common_name": "Elegant Goldenrod",
@@ -4640,7 +4640,7 @@
     "availability_class": "garden_centre",
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
-    "flower_form": "spike"
+    "flower_form": "plume"
   },
   {
     "common_name": "Evening Primrose",
@@ -5063,7 +5063,7 @@
     "image_attribution": "(c) Douglas Goldman, some rights reserved (CC BY-SA), uploaded by Douglas Goldman",
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
-    "flower_form": "spike"
+    "flower_form": "plume"
   },
   {
     "common_name": "Flat-topped White Aster",
@@ -5207,8 +5207,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/149261197/medium.jpeg",
     "image_attribution": "(c) Matt Berger, some rights reserved (CC BY), uploaded by Matt Berger",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Fowl Manna Grass",
@@ -5254,8 +5254,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/129824/medium.jpg",
     "image_attribution": "(c) Jason Hollinger, some rights reserved (CC BY)",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Fragrant Sumac",
@@ -5348,8 +5348,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/174919/medium.jpg",
     "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Fringed Loosestrife",
@@ -5578,7 +5578,7 @@
     "image_attribution": "(c) Homer Edward Price, some rights reserved (CC BY)",
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
-    "flower_form": "daisy"
+    "flower_form": "rays"
   },
   {
     "common_name": "Giant Wild Rye",
@@ -5624,8 +5624,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/220501149/medium.jpg",
     "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY)",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Glacier Lily",
@@ -5860,8 +5860,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/220887117/medium.jpeg",
     "image_attribution": "(c) Matt Berger, some rights reserved (CC BY), uploaded by Matt Berger",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Golden Tickseed",
@@ -5908,7 +5908,7 @@
     "image_attribution": "(c) Thayne Tuason, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
-    "flower_form": "daisy"
+    "flower_form": "rays"
   },
   {
     "common_name": "Gray Goldenrod",
@@ -5955,7 +5955,7 @@
     "image_attribution": "(c) Douglas Goldman, some rights reserved (CC BY-SA), uploaded by Douglas Goldman",
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
-    "flower_form": "spike"
+    "flower_form": "plume"
   },
   {
     "common_name": "Great Bulrush",
@@ -6141,7 +6141,7 @@
     "image_attribution": "(c) Mary Krieger, some rights reserved (CC BY), uploaded by Mary Krieger",
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
-    "flower_form": "umbel"
+    "flower_form": "globe"
   },
   {
     "common_name": "Green Needle Grass",
@@ -6423,8 +6423,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/163954125/medium.jpeg",
     "image_attribution": "no rights reserved, uploaded by Ellyne Geurts",
     "image_license": "cc0",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Harebell",
@@ -6745,8 +6745,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Indigenous Ricegrass",
@@ -6792,8 +6792,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/417497758/medium.jpeg",
     "image_attribution": "no rights reserved, uploaded by Kallum McDonald",
     "image_license": "cc0",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Ivy-leaved Duckweed",
@@ -6931,7 +6931,7 @@
     "image_attribution": "(c) Tero Laakso, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
-    "flower_form": "daisy"
+    "flower_form": "rays"
   },
   {
     "common_name": "Joe-Pye Weed",
@@ -7069,8 +7069,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (rush default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Labrador Tea",
@@ -7160,8 +7160,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/11398286/medium.jpg",
     "image_attribution": "(c) aarongunnar, some rights reserved (CC BY), uploaded by aarongunnar",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Lance-leaved Stonecrop",
@@ -7304,7 +7304,7 @@
     "image_attribution": "(c) Andreas Stiller, some rights reserved (CC BY), uploaded by Andreas Stiller",
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
-    "flower_form": "spike"
+    "flower_form": "plume"
   },
   {
     "common_name": "Late Yellow Oxytropis",
@@ -7587,8 +7587,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/5279594/medium.jpeg",
     "image_attribution": "(c) Colin Meurk, some rights reserved (CC BY-SA), uploaded by Colin Meurk",
     "image_license": "cc-by-sa",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Little-leaved Alumroot",
@@ -8383,7 +8383,7 @@
     "availability_class": "native_specialist",
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
-    "flower_form": "daisy"
+    "flower_form": "rays"
   },
   {
     "common_name": "Meadow Arnica",
@@ -8525,8 +8525,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/4351654/medium.jpg",
     "image_attribution": "(c) Jason Grant, some rights reserved (CC BY), uploaded by Jason Grant",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Meadowsweet",
@@ -8760,8 +8760,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/220320554/medium.jpg",
     "image_attribution": "(c) crothfels, some rights reserved (CC BY)",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Mountain Gentian",
@@ -9033,8 +9033,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (sedge default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Needle and Thread Grass",
@@ -9080,8 +9080,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/205959218/medium.jpg",
     "image_attribution": "(c) Trevor Van Loon, some rights reserved (CC BY), uploaded by Trevor Van Loon",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Needle Spike-rush",
@@ -9124,8 +9124,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (rush default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Nodding Onion",
@@ -9175,7 +9175,7 @@
     "image_attribution": "(c) Jason Sturner, some rights reserved (CC BY)",
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
-    "flower_form": "umbel"
+    "flower_form": "globe"
   },
   {
     "common_name": "Northern Bedstraw",
@@ -9407,8 +9407,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/466711052/medium.jpeg",
     "image_attribution": "(c) Bob Miller, some rights reserved (CC BY), uploaded by Bob Miller",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Nuttall's Sunflower",
@@ -9456,7 +9456,7 @@
     "image_attribution": "(c) Bob Nieman, some rights reserved (CC BY), uploaded by Bob Nieman",
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
-    "flower_form": "daisy"
+    "flower_form": "rays"
   },
   {
     "common_name": "Old Man's Whiskers (Prairie Smoke)",
@@ -9740,8 +9740,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/444569936/medium.jpeg",
     "image_attribution": "(c) Matt Berger, some rights reserved (CC BY), uploaded by Matt Berger",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Parry's Townsendia",
@@ -10022,7 +10022,7 @@
     "image_attribution": "(c) Bob Walker, some rights reserved (CC BY), uploaded by Bob Walker",
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
-    "flower_form": "spike"
+    "flower_form": "trumpet"
   },
   {
     "common_name": "Pink Pussytoes",
@@ -10255,8 +10255,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/230580747/medium.jpg",
     "image_attribution": "(c) Matt Berger, some rights reserved (CC BY), uploaded by Matt Berger",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Plains Prickly Pear Cactus",
@@ -10396,8 +10396,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/2944483/medium.jpg",
     "image_attribution": "(c) USFWS Mountain-Prairie, some rights reserved (CC BY)",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Porcupine Sedge",
@@ -10443,8 +10443,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/19901726/medium.jpg",
     "image_attribution": "(c) aarongunnar, some rights reserved (CC BY), uploaded by aarongunnar",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Poverty Oat Grass",
@@ -10490,8 +10490,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/311749/medium.jpg",
     "image_attribution": "(c) naturalist charlie, some rights reserved (CC BY), uploaded by naturalist charlie",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Prairie Buttercup",
@@ -10684,7 +10684,7 @@
     "image_attribution": "(c) Meghan Cassidy, some rights reserved (CC BY-SA), uploaded by Meghan Cassidy",
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
-    "flower_form": "daisy"
+    "flower_form": "rays"
   },
   {
     "common_name": "Prairie Cord Grass",
@@ -10727,8 +10727,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Prairie Crocus",
@@ -10824,8 +10824,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/80116612/medium.jpg",
     "image_attribution": "(c) Douglas Goldman, some rights reserved (CC BY-SA), uploaded by Douglas Goldman",
     "image_license": "cc-by-sa",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Prairie Gentian",
@@ -10916,7 +10916,7 @@
     "availability_class": "garden_centre",
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
-    "flower_form": "spike"
+    "flower_form": "plume"
   },
   {
     "common_name": "Prairie Onion (Textile Onion)",
@@ -10967,7 +10967,7 @@
     "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
     "flower_color": "#e58fb0",
-    "flower_form": "umbel"
+    "flower_form": "globe"
   },
   {
     "common_name": "Prairie Rose",
@@ -11289,8 +11289,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/72208985/medium.jpeg",
     "image_attribution": "no rights reserved, uploaded by AlexandraU",
     "image_license": "cc0",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Prickly Wild Rose",
@@ -11430,7 +11430,7 @@
     "availability_class": "garden_centre",
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#e58fb0",
-    "flower_form": "daisy"
+    "flower_form": "rays"
   },
   {
     "common_name": "Purple Oat Grass",
@@ -11473,8 +11473,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Purple Peavine",
@@ -11565,7 +11565,7 @@
     "availability_class": "native_specialist",
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
-    "flower_form": "spike"
+    "flower_form": "globe"
   },
   {
     "common_name": "Purple Reed Grass",
@@ -11608,8 +11608,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Purple-stemmed Tall Aster (Swamp Aster)",
@@ -11841,8 +11841,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (sedge default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Red Baneberry",
@@ -11942,7 +11942,7 @@
     "image_attribution": "(c) Alan Rockefeller, some rights reserved (CC BY), uploaded by Alan Rockefeller",
     "image_license": "cc-by",
     "flower_color": "#d6453a",
-    "flower_form": "bell"
+    "flower_form": "trumpet"
   },
   {
     "common_name": "Common Paintbrush",
@@ -12080,8 +12080,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "River Beauty",
@@ -12174,8 +12174,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/290073020/medium.jpeg",
     "image_attribution": "(c) Jeremy Atherton, some rights reserved (CC BY), uploaded by Jeremy Atherton",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Roadside Agrimony (Woodland Agrimony)",
@@ -12313,8 +12313,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/14391815/medium.jpg",
     "image_attribution": "(c) Jim Morefield, some rights reserved (CC BY)",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Rocky-Ledge Beardtongue",
@@ -12499,8 +12499,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Rough-fruited Fairy Bells",
@@ -12825,8 +12825,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/441429856/medium.jpeg",
     "image_attribution": "(c) Roberto Daniel Avila, some rights reserved (CC BY), uploaded by Roberto Daniel Avila",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Sand Grass",
@@ -12869,8 +12869,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Sandbar Willow",
@@ -12963,8 +12963,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/27723700/medium.jpg",
     "image_attribution": "no rights reserved, uploaded by Laura Holloway",
     "image_license": "cc0",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Sartwell's Sedge",
@@ -13007,8 +13007,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (sedge default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Saskatoon Berry",
@@ -13283,8 +13283,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/23685353/medium.jpg",
     "image_attribution": "(c) Cheng-Tao Lin, some rights reserved (CC BY), uploaded by Cheng-Tao Lin",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Shooting Star",
@@ -13328,7 +13328,7 @@
     "availability_class": "native_specialist",
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#d6457e",
-    "flower_form": "spike"
+    "flower_form": "trumpet"
   },
   {
     "common_name": "Short-beaked Agoseris",
@@ -13654,7 +13654,7 @@
     "image_attribution": "(c) Douglas Goldman, some rights reserved (CC BY-SA), uploaded by Douglas Goldman",
     "image_license": "cc-by-sa",
     "flower_color": "#e58fb0",
-    "flower_form": "umbel"
+    "flower_form": "globe"
   },
   {
     "common_name": "Showy Pussytoes",
@@ -13791,8 +13791,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/5329132/medium.jpeg",
     "image_attribution": "(c) psweet, some rights reserved (CC BY-SA), uploaded by psweet",
     "image_license": "cc-by-sa",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Silky Lupine",
@@ -14356,8 +14356,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/152701898/medium.jpg",
     "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY)",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Slough Grass",
@@ -14403,8 +14403,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/8041561/medium.jpeg",
     "image_attribution": "(c) Nolan Exe, some rights reserved (CC BY), uploaded by Nolan Exe",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Small Bottle Sedge",
@@ -14494,8 +14494,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/12835/medium.jpg",
     "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Small-leaved Everlasting (Small-leaved Pussytoes)",
@@ -14772,8 +14772,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/26976206/medium.jpg",
     "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Sneezeweed",
@@ -14817,7 +14817,7 @@
     "availability_class": "native_specialist",
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f0a818",
-    "flower_form": "daisy"
+    "flower_form": "rays"
   },
   {
     "common_name": "Soapweed Yucca",
@@ -14954,8 +14954,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/14190852/medium.jpg",
     "image_attribution": "(c) Jim Morefield, some rights reserved (CC BY)",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Spiked Water-milfoil",
@@ -15099,8 +15099,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/2063546/medium.jpg",
     "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Spring Beauty",
@@ -15194,7 +15194,7 @@
     "image_attribution": "no rights reserved, uploaded by Brandon Wheeler",
     "image_license": "cc0",
     "flower_color": "#f2c11e",
-    "flower_form": "spike"
+    "flower_form": "trumpet"
   },
   {
     "common_name": "Star-flowered Solomon's Seal",
@@ -15288,7 +15288,7 @@
     "availability_class": "garden_centre",
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
-    "flower_form": "spike"
+    "flower_form": "plume"
   },
   {
     "common_name": "Sticky Goldenrod (Mount Albert Goldenrod)",
@@ -15336,7 +15336,7 @@
     "image_attribution": "(c) Andrey Zharkikh, some rights reserved (CC BY)",
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
-    "flower_form": "spike"
+    "flower_form": "plume"
   },
   {
     "common_name": "Sticky Purple Geranium",
@@ -15430,7 +15430,7 @@
     "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
-    "flower_form": "spike"
+    "flower_form": "plume"
   },
   {
     "common_name": "Stiff Sunflower (Rhombic-leaved Sunflower)",
@@ -15475,7 +15475,7 @@
     "availability_class": "native_specialist",
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
-    "flower_form": "daisy"
+    "flower_form": "rays"
   },
   {
     "common_name": "Stinging Nettle",
@@ -15803,8 +15803,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/7629418/medium.jpg",
     "image_attribution": "(c) aarongunnar, some rights reserved (CC BY), uploaded by aarongunnar",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Switchgrass",
@@ -15850,8 +15850,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/9682082/medium.jpg",
     "image_attribution": "(c) aarongunnar, some rights reserved (CC BY), uploaded by aarongunnar",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Tall Anemone (Thimbleweed)",
@@ -15949,7 +15949,7 @@
     "image_attribution": "(c) Sandy Wolkenberg, some rights reserved (CC BY), uploaded by Sandy Wolkenberg",
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
-    "flower_form": "spike"
+    "flower_form": "plume"
   },
   {
     "common_name": "Tall Jacob's Ladder",
@@ -16380,8 +16380,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/54109049/medium.jpeg",
     "image_attribution": "(c) Douglas Goldman, some rights reserved (CC BY-SA), uploaded by Douglas Goldman",
     "image_license": "cc-by-sa",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Ticklegrass",
@@ -16427,8 +16427,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/237115191/medium.jpeg",
     "image_attribution": "(c) Michael J. Papay, some rights reserved (CC BY), uploaded by Michael J. Papay",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Torrey's Rush",
@@ -16474,8 +16474,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/22906474/medium.jpg",
     "image_attribution": "(c) aarongunnar, some rights reserved (CC BY), uploaded by aarongunnar",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Trailing Raspberry",
@@ -16610,8 +16610,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Tufted Tall Manna Grass",
@@ -16657,8 +16657,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/237283589/medium.jpg",
     "image_attribution": "no rights reserved, uploaded by Tom Erler",
     "image_license": "cc0",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Turned Sedge",
@@ -16701,8 +16701,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (sedge default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Twin Arnica",
@@ -16844,7 +16844,7 @@
     "image_attribution": "(c) Rob Routledge, Sault College, Bugwood.org, some rights reserved (CC BY)",
     "image_license": "cc-by",
     "flower_color": "#f0a818",
-    "flower_form": "spike"
+    "flower_form": "trumpet"
   },
   {
     "common_name": "Umbrella Buckwheat",
@@ -16982,8 +16982,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/212696762/medium.jpeg",
     "image_attribution": "(c) Юлия, some rights reserved (CC BY), uploaded by Юлия",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Veiny Meadow-Rue",
@@ -17263,8 +17263,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/299538384/medium.jpg",
     "image_attribution": "(c) mark-groeneveld, some rights reserved (CC BY), uploaded by mark-groeneveld",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Water Smartweed",
@@ -17455,8 +17455,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/1708018/medium.jpg",
     "image_attribution": "(c) Dean Wm. Taylor, some rights reserved (CC BY)",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Western Meadow Aster",
@@ -17641,8 +17641,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Western Snowberry",
@@ -17735,8 +17735,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Western Willow Aster",
@@ -18061,7 +18061,7 @@
     "image_attribution": "(c) Esben Kjaer, some rights reserved (CC BY), uploaded by Esben Kjaer",
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
-    "flower_form": "spike"
+    "flower_form": "globe"
   },
   {
     "common_name": "White Spruce",
@@ -18151,8 +18151,8 @@
     "price_high_cad": 16,
     "availability_class": "seed_or_plug",
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Wild Bergamot",
@@ -18341,7 +18341,7 @@
     "image_attribution": "(c) Pohled 111, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
     "flower_color": "#e58fb0",
-    "flower_form": "umbel"
+    "flower_form": "globe"
   },
   {
     "common_name": "Wild Clematis",
@@ -18957,8 +18957,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/46339870/medium.jpg",
     "image_attribution": "(c) aarongunnar, some rights reserved (CC BY), uploaded by aarongunnar",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Wood Betony (Bracted Lousewort)",
@@ -19195,8 +19195,8 @@
     "image_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/79790450/medium.jpg",
     "image_attribution": "(c) aarongunnar, some rights reserved (CC BY), uploaded by aarongunnar",
     "image_license": "cc-by",
-    "flower_color": "",
-    "flower_form": "none"
+    "flower_color": "#cbbd80",
+    "flower_form": "plume"
   },
   {
     "common_name": "Yarrow",
@@ -19484,7 +19484,7 @@
     "image_attribution": "(c) Alex Abair, some rights reserved (CC BY), uploaded by Alex Abair",
     "image_license": "cc-by",
     "flower_color": "#d6453a",
-    "flower_form": "bell"
+    "flower_form": "trumpet"
   },
   {
     "common_name": "Yellow Flax",
@@ -19625,7 +19625,7 @@
     "image_attribution": "(c) Matt Berger, some rights reserved (CC BY), uploaded by Matt Berger",
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
-    "flower_form": "spike"
+    "flower_form": "trumpet"
   },
   {
     "common_name": "Yellow Mountain Avens",

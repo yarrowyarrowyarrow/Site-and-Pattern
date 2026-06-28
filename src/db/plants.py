@@ -124,7 +124,9 @@ _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 # wildflower / herb-foliage; graminoids/aquatics fixed by genus).
 # v31 (V1.90): add flower_color + flower_form columns (3D flowers) and reseed
 # to fill them from the curated seed JSON.
-_SCHEMA_VERSION = 31
+# v32 (V1.91): no DDL — reseed for the expanded flower forms (rays / plume /
+# globe / trumpet) and straw seed-head plumes on grasses.
+_SCHEMA_VERSION = 32
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────

@@ -89,7 +89,8 @@ AVAILABILITY_CLASSES = {"big_box", "garden_centre", "native_specialist",
                         "seed_or_plug", "rare"}
 # Flower form (schema v31) — drives the 3D viewer's flower sprite. 'none' = no
 # showy flower; empty string is also tolerated (treated as 'none').
-FLOWER_FORMS      = {"daisy", "spike", "umbel", "cluster", "bell", "none"}
+FLOWER_FORMS      = {"daisy", "rays", "spike", "plume", "umbel", "globe",
+                     "cluster", "bell", "trumpet", "none"}
 
 # ── Soft enum allowlists (drift here is a WARNING) ──────────────────────────
 

@@ -132,6 +132,16 @@ def _bloom_months(bloom_period: str):
     return nums[0], nums[-1]
 
 
+def _bloom_window(plant: dict) -> dict:
+    """``{bloom_start, bloom_end}`` for the 3D flower layer. A flowering plant
+    with no recorded ``bloom_period`` (e.g. grasses, whose 'flower' is a seed
+    head) falls back to a generic summer window so its sprite still appears."""
+    bs, be = _bloom_months(plant.get("bloom_period"))
+    if not bs and (plant.get("flower_form") or "none") != "none":
+        bs, be = 6, 9
+    return {"bloom_start": bs, "bloom_end": be}
+
+
 def _boundary_ring(project: dict) -> Optional[list]:
     """First property_boundary ring as ``[[lat, lng], ...]`` (open)."""
     for f in project.get("features", []):
@@ -279,8 +289,7 @@ def build_scene(project: dict, *, year: int = 0,
                 "color": _foliage_color(plant),
                 "flower_color": plant.get("flower_color") or "",
                 "flower_form": plant.get("flower_form") or "none",
-                "bloom_start": _bloom_months(plant.get("bloom_period"))[0],
-                "bloom_end": _bloom_months(plant.get("bloom_period"))[1],
+                **_bloom_window(plant),
                 "opacity": st["presence_opacity"],
             })
             continue

@@ -800,6 +800,29 @@ function buildGroundcoverGeo(rng) {
   return g;
 }
 
+// A grass / sedge / rush tuft: many thin blades fanning out and arching from a
+// shared base — reads as grass rather than the generic perennial clump (V1.91).
+function buildGrassGeo(rng) {
+  const geos = [];
+  const blades = 10 + Math.floor(rng() * 7);   // 10–16 blades
+  for (let i = 0; i < blades; i++) {
+    const h = 0.7 + rng() * 0.45;
+    const w = 0.010 + rng() * 0.012;
+    const arch = 0.12 + rng() * 0.55;           // lean from vertical
+    const az = rng() * Math.PI * 2;
+    const blade = new THREE.CylinderGeometry(0.0015, w, h, 3, 1);
+    blade.translate(0, h / 2, 0);
+    const m = new THREE.Matrix4().makeRotationY(az)
+      .multiply(new THREE.Matrix4().makeRotationZ(arch));
+    blade.applyMatrix4(m);
+    geos.push(blade);
+  }
+  const g = mergeGeometries(geos, false);
+  normalizeUnit([g]);
+  applyFoliageGradient(g);
+  return g;
+}
+
 // Built once, reused across every scene rebuild (deterministic seeds).
 // ARCH holds the cheap shrub/peren/ground variant arrays; trees are built
 // lazily and memoised by (class, form, tier, sub) in TREE_CACHE.
@@ -846,11 +869,12 @@ function getTreeArch(cls, form, tier, sub) {
 
 function buildArchetypes() {
   if (ARCH) return;
-  const shrub = [], peren = [], ground = [];
+  const shrub = [], peren = [], ground = [], grass = [];
   for (const sd of [11, 41, 73, 97]) shrub.push(buildShrubGeo(mulberry32(sd)));
   for (const sd of [211, 251, 307]) peren.push(buildPerennialGeo(mulberry32(sd)));
   for (const sd of [331, 379]) ground.push(buildGroundcoverGeo(mulberry32(sd)));
-  ARCH = { shrub, peren, ground };
+  for (const sd of [421, 457, 503]) grass.push(buildGrassGeo(mulberry32(sd)));
+  ARCH = { shrub, peren, ground, grass };
 }
 
 function ensurePlantMats() {
@@ -950,9 +974,11 @@ function buildPlants(group, plants, month, year, terrain) {
   month = month || 6;
   year = year || 0;
 
-  const byKind = { tree: [], shrub: [], vine: [], groundcover: [], herb: [] };
+  const byKind = { tree: [], shrub: [], vine: [], groundcover: [], grass: [], herb: [] };
   for (const p of plants || []) {
-    const k = byKind[p.plant_type] ? p.plant_type : 'herb';
+    let t = p.plant_type;
+    if (t === 'sedge' || t === 'rush') t = 'grass';   // graminoids share blades
+    const k = byKind[t] ? t : 'herb';
     byKind[k].push(p);
   }
 
@@ -1007,6 +1033,11 @@ function buildPlants(group, plants, month, year, terrain) {
   buildLayer(byKind.herb, 3, MATS.shrub, (v) => ARCH.peren[v],
              (p) => [Math.max(0.15, p.canopy_m), Math.max(0.08, p.height_m),
                      Math.max(0.15, p.canopy_m)], month, year, false, terrain);
+
+  // Grasses / sedges / rushes — arching blade tufts (V1.91).
+  buildLayer(byKind.grass, 3, MATS.shrub, (v) => ARCH.grass[v],
+             (p) => [Math.max(0.12, p.canopy_m), Math.max(0.3, p.height_m),
+                     Math.max(0.12, p.canopy_m)], month, year, false, terrain);
   if (byKind.vine.length) {
     const list = byKind.vine;
     const places = list.map(p => spreadPlacements(p, year));
@@ -1057,7 +1088,8 @@ function buildPlants(group, plants, month, year, terrain) {
 // Camera-facing point sprites in each plant's real flower colour, shaped by a
 // per-form canvas texture so different flowers read differently. Shown only when
 // the scene's month falls inside the plant's bloom window.
-const FLOWER_FORMS = ['daisy', 'spike', 'umbel', 'cluster', 'bell'];
+const FLOWER_FORMS = ['daisy', 'rays', 'spike', 'plume', 'umbel', 'globe',
+                      'cluster', 'bell', 'trumpet'];
 let FLOWER_TEX = null;
 
 function makeFlowerTexture(form) {
@@ -1095,6 +1127,36 @@ function makeFlowerTexture(form) {
                     cx + s * 0.20, cy - s * 0.18);
     g.closePath(); g.fill();
     for (let i = 0; i < 3; i++) dot(cx - s * 0.12 + i * s * 0.12, cy + s * 0.24, s * 0.05);
+  } else if (form === 'rays') {            // big sunflower-style composite
+    const petals = 13, R = s * 0.40;
+    for (let i = 0; i < petals; i++) {
+      const a = i / petals * Math.PI * 2;
+      g.save(); g.translate(cx + Math.cos(a) * R * 0.5, cy + Math.sin(a) * R * 0.5);
+      g.rotate(a); g.beginPath();
+      g.ellipse(0, 0, s * 0.24, s * 0.075, 0, 0, Math.PI * 2); g.fill(); g.restore();
+    }
+    g.fillStyle = 'rgba(255,255,255,0.85)'; dot(cx, cy, s * 0.18);
+  } else if (form === 'plume') {           // feathery tapering spray (goldenrod, grass)
+    for (let i = 0; i < 26; i++) {
+      const t = i / 26, yy = s * 0.08 + t * s * 0.84;
+      const spread = s * 0.22 * (1 - t) + s * 0.03;
+      dot(cx + Math.sin(i * 1.7) * spread, yy, s * 0.045 * (1 - 0.4 * t));
+    }
+  } else if (form === 'globe') {           // dense spherical head (allium)
+    for (let i = 0; i < 22; i++) {
+      const a = i * 2.39996, rr = Math.sqrt(i / 22) * s * 0.36;
+      dot(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, s * 0.055);
+    }
+  } else if (form === 'trumpet') {         // 5-point tubular star (columbine, honeysuckle)
+    const pts = 5, Ro = s * 0.40, Ri = s * 0.16;
+    g.beginPath();
+    for (let i = 0; i < pts * 2; i++) {
+      const a = -Math.PI / 2 + i * Math.PI / pts, r = (i % 2 ? Ri : Ro);
+      const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+      i ? g.lineTo(x, y) : g.moveTo(x, y);
+    }
+    g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.7)'; dot(cx, cy, s * 0.10);
   } else { // cluster
     for (let i = 0; i < 11; i++) {
       const a = i * 2.39996, rr = Math.sqrt(i / 11) * s * 0.34;
@@ -1102,9 +1164,16 @@ function makeFlowerTexture(form) {
     }
   }
   const t = new THREE.CanvasTexture(cv);
+  if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace;
   t.needsUpdate = true;
   return t;
 }
+
+// Per-form bloom size + how many sprites to scatter per plant (denser = the
+// plant reads as its flower colour when in bloom).
+const _FLOWER_SIZE = { rays: 0.42, plume: 0.34, spike: 0.34, umbel: 0.30,
+                       globe: 0.32, trumpet: 0.30, bell: 0.24, daisy: 0.24,
+                       cluster: 0.26 };
 
 function buildFlowers(plants, month, terrain) {
   if (!FLOWER_TEX) {
@@ -1129,12 +1198,15 @@ function buildFlowers(plants, month, terrain) {
       const top = gy + Math.max(0.1, p.height_m) * 0.9;
       const rad = Math.max(0.1, p.canopy_m * 0.5);
       _fc.set(p.flower_color);
-      const n = p.plant_type === 'tree' ? 7 : (p.plant_type === 'shrub' ? 6 : 4);
+      // Dense enough that a blooming plant reads as its flower colour.
+      const n = p.plant_type === 'tree' ? 14
+              : p.plant_type === 'shrub' ? 11
+              : p.plant_type === 'grass' ? 6 : 9;
       const seed = hashPid(p.plant_id || 1);
       for (let k = 0; k < n; k++) {
         const a = ((seed + k * 97) % 628) / 100;
-        const rr = rad * (0.25 + 0.7 * (((seed + k * 53) % 100) / 100));
-        const dy = ((k % 3) - 1) * rad * 0.18;
+        const rr = rad * (0.18 + 0.78 * (((seed + k * 53) % 100) / 100));
+        const dy = ((k % 3) - 1) * rad * 0.2;
         pos.push(p.x + Math.cos(a) * rr, top + dy, -(p.y + Math.sin(a) * rr));
         col.push(_fc.r, _fc.g, _fc.b);
       }
@@ -1143,9 +1215,9 @@ function buildFlowers(plants, month, terrain) {
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
     const mat = new THREE.PointsMaterial({
-      map: FLOWER_TEX[form], vertexColors: true, transparent: true,
-      alphaTest: 0.35, depthWrite: false, sizeAttenuation: true,
-      size: form === 'spike' ? 0.36 : (form === 'umbel' ? 0.26 : 0.22),
+      map: FLOWER_TEX[form], color: 0xffffff, vertexColors: true,
+      transparent: true, alphaTest: 0.4, depthWrite: false,
+      sizeAttenuation: true, size: _FLOWER_SIZE[form] || 0.24,
     });
     plantsGroup.add(new THREE.Points(geo, mat));
   }

@@ -127,6 +127,18 @@ class TestSceneBasics(unittest.TestCase):
         self.assertEqual(p["flower_form"], "spike")
         self.assertEqual((p["bloom_start"], p["bloom_end"]), (8, 9))
 
+    def test_grass_seedhead_default_bloom(self):
+        # A flowering plant with no bloom_period (e.g. a grass seed-head plume)
+        # falls back to a generic summer window so its sprite still appears.
+        from src.scene_contract import _bloom_window
+        self.assertEqual(
+            _bloom_window({"flower_form": "plume", "bloom_period": ""}),
+            {"bloom_start": 6, "bloom_end": 9})
+        # A non-flowering plant stays at (0, 0) — no sprite.
+        self.assertEqual(
+            _bloom_window({"flower_form": "none", "bloom_period": ""}),
+            {"bloom_start": 0, "bloom_end": 0})
+
     def test_marker_color_overrides_foliage(self):
         # An explicit user marker colour still wins for the body.
         proj = _project([
