@@ -33,6 +33,10 @@ _FAKE_PLANTS = {
         "mature_height_meters": 0.5, "mature_canopy_m": 0.4,
         "scientific_name": "Solidago canadensis", "bloom_period": "Aug-Sep",
         "flower_color": "#f2c11e", "flower_form": "spike"},
+    4: {"plant_type": "aquatic", "years_to_maturity": 3, "growth_curve": "steady",
+        "mature_height_meters": 1.6, "mature_canopy_m": 0.5,
+        "scientific_name": "Typha latifolia", "bloom_period": "June–September",
+        "flower_color": "#7a5230", "flower_form": "cattail"},
 }
 
 
@@ -126,6 +130,19 @@ class TestSceneBasics(unittest.TestCase):
         self.assertEqual(p["flower_color"], "#f2c11e")
         self.assertEqual(p["flower_form"], "spike")
         self.assertEqual((p["bloom_start"], p["bloom_end"]), (8, 9))
+
+    def test_cattail_aquatic_flower_passthrough(self):
+        # V1.92: a marsh cattail carries the brown "cattail" spike form + colour
+        # and its bloom window through to the 3D viewer's aquatic geometry.
+        proj = _project([
+            plant_feature({"plant_id": 4, "common_name": "Cattail",
+                           "lat": _LAT, "lng": _LNG}),
+        ])
+        p = build_scene(proj, get_plant=_get_plant)["plants"][0]
+        self.assertEqual(p["plant_type"], "aquatic")
+        self.assertEqual(p["flower_form"], "cattail")
+        self.assertEqual(p["flower_color"], "#7a5230")
+        self.assertEqual((p["bloom_start"], p["bloom_end"]), (6, 9))
 
     def test_grass_seedhead_default_bloom(self):
         # A flowering plant with no bloom_period (e.g. a grass seed-head plume)

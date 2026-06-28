@@ -426,6 +426,7 @@ function plantMaterial(opts = {}) {
   const mat = new THREE.MeshStandardMaterial({
     roughness: opts.roughness ?? 0.9,
     vertexColors: !!opts.vertexColors,
+    side: opts.doubleSide ? THREE.DoubleSide : THREE.FrontSide,
   });
   const strength = opts.wind || 0;
   if (strength > 0) {
@@ -725,6 +726,52 @@ function applyFoliageGradient(geo) {
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
 }
 
+// Blade lighting trick (V1.92): a flat, near-vertical grass blade has a
+// horizontal face normal, so an overhead sun grazes it and the tuft reads dark
+// and metallic. Bending every normal toward +Y lets the whole clump catch the
+// sky/sun as one soft mass — the standard way real-time grass is shaded.
+function liftNormals(geo, amount) {
+  const nrm = geo.attributes.normal;
+  if (!nrm) return;
+  const a = amount ?? 0.7;
+  for (let i = 0; i < nrm.count; i++) {
+    let x = nrm.getX(i), y = nrm.getY(i) + a, z = nrm.getZ(i);
+    const len = Math.hypot(x, y, z) || 1;
+    nrm.setXYZ(i, x / len, y / len, z / len);
+  }
+  nrm.needsUpdate = true;
+}
+
+// One arched, tapered grass/reed blade as a flat ribbon (a few quad segments).
+// `lean` is the horizontal sweep of the tip; `wb` the base half-width; `erect`
+// pushes the bend higher up the blade so reeds stand stiffer than meadow grass.
+function makeBlade(rng, h, wb, lean, erect) {
+  const segs = 5;
+  const dir = rng() * Math.PI * 2;
+  const dx = Math.cos(dir), dz = Math.sin(dir);
+  const px = -dz, pz = dx;                       // ribbon width axis (horizontal)
+  const twist = (rng() - 0.5) * 0.5;             // slight per-blade roll
+  const pos = [], idx = [];
+  for (let s = 0; s <= segs; s++) {
+    const t = s / segs;
+    const y = h * t;
+    const off = lean * Math.pow(t, erect);       // arch: more sweep near the tip
+    const wHalf = wb * (1 - t * 0.92) + 0.0015;  // taper toward a fine point
+    const cx = dx * off, cz = dz * off;
+    const wpx = px * Math.cos(twist * t) , wpz = pz * Math.cos(twist * t);
+    pos.push(cx - wpx * wHalf, y, cz - wpz * wHalf);
+    pos.push(cx + wpx * wHalf, y, cz + wpz * wHalf);
+  }
+  for (let s = 0; s < segs; s++) {
+    const a = s * 2, b = s * 2 + 1, c = s * 2 + 2, d = s * 2 + 3;
+    idx.push(a, b, c, b, d, c);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  return g;
+}
+
 // A bushy shrub: several overlapping spheres merged, normalised, gradient-tinted.
 function buildShrubGeo(rng) {
   const geos = [];
@@ -800,26 +847,43 @@ function buildGroundcoverGeo(rng) {
   return g;
 }
 
-// A grass / sedge / rush tuft: many thin blades fanning out and arching from a
-// shared base — reads as grass rather than the generic perennial clump (V1.91).
+// A grass / sedge / rush tuft: a dense fan of flat, arching blades from a shared
+// base — full and lush rather than a few thin spindly stalks (V1.92). Flat
+// ribbons (double-sided material) read as real blades with width; lifted
+// normals let the whole tuft catch top light as one soft mound.
 function buildGrassGeo(rng) {
   const geos = [];
-  const blades = 10 + Math.floor(rng() * 7);   // 10–16 blades
+  const blades = 26 + Math.floor(rng() * 16);   // 26–41 blades — a thick clump
   for (let i = 0; i < blades; i++) {
-    const h = 0.7 + rng() * 0.45;
-    const w = 0.010 + rng() * 0.012;
-    const arch = 0.12 + rng() * 0.55;           // lean from vertical
-    const az = rng() * Math.PI * 2;
-    const blade = new THREE.CylinderGeometry(0.0015, w, h, 3, 1);
-    blade.translate(0, h / 2, 0);
-    const m = new THREE.Matrix4().makeRotationY(az)
-      .multiply(new THREE.Matrix4().makeRotationZ(arch));
-    blade.applyMatrix4(m);
-    geos.push(blade);
+    const h = 0.62 + rng() * 0.5;
+    const wb = 0.016 + rng() * 0.018;            // base half-width (real blade)
+    const lean = 0.22 + rng() * 0.7;             // arching meadow sweep
+    geos.push(makeBlade(rng, h, wb, lean, 1.5));
   }
   const g = mergeGeometries(geos, false);
   normalizeUnit([g]);
   applyFoliageGradient(g);
+  liftNormals(g, 0.8);
+  return g;
+}
+
+// An aquatic / emergent tuft (cattail, bulrush, reed leaves): taller, stiffer,
+// broader, more erect blades than meadow grass — so marsh plants stop rendering
+// as the round-leaf perennial clump (V1.92). The brown cattail spike itself is
+// drawn by the flower layer (the "cattail" form).
+function buildAquaticGeo(rng) {
+  const geos = [];
+  const blades = 16 + Math.floor(rng() * 12);   // 16–27 broad upright leaves
+  for (let i = 0; i < blades; i++) {
+    const h = 0.85 + rng() * 0.35;
+    const wb = 0.03 + rng() * 0.028;             // wide strap leaves
+    const lean = 0.06 + rng() * 0.32;            // mostly vertical, slight nod
+    geos.push(makeBlade(rng, h, wb, lean, 2.4)); // bend held high → stiff reed
+  }
+  const g = mergeGeometries(geos, false);
+  normalizeUnit([g]);
+  applyFoliageGradient(g);
+  liftNormals(g, 0.85);
   return g;
 }
 
@@ -869,12 +933,13 @@ function getTreeArch(cls, form, tier, sub) {
 
 function buildArchetypes() {
   if (ARCH) return;
-  const shrub = [], peren = [], ground = [], grass = [];
+  const shrub = [], peren = [], ground = [], grass = [], aquatic = [];
   for (const sd of [11, 41, 73, 97]) shrub.push(buildShrubGeo(mulberry32(sd)));
   for (const sd of [211, 251, 307]) peren.push(buildPerennialGeo(mulberry32(sd)));
   for (const sd of [331, 379]) ground.push(buildGroundcoverGeo(mulberry32(sd)));
   for (const sd of [421, 457, 503]) grass.push(buildGrassGeo(mulberry32(sd)));
-  ARCH = { shrub, peren, ground, grass };
+  for (const sd of [541, 587, 631]) aquatic.push(buildAquaticGeo(mulberry32(sd)));
+  ARCH = { shrub, peren, ground, grass, aquatic };
 }
 
 function ensurePlantMats() {
@@ -884,6 +949,10 @@ function ensurePlantMats() {
     branch:  plantMaterial({ roughness: 0.92, wind: 0.015 }),
     foliage: plantMaterial({ roughness: 0.85, wind: 0.07, vertexColors: true }),
     shrub:   plantMaterial({ roughness: 0.85, wind: 0.06, vertexColors: true }),
+    // Flat grass/reed blades read from both sides and catch top light via
+    // lifted normals (V1.92) — lush tufts rather than thin spindly stalks.
+    blade:   plantMaterial({ roughness: 0.72, wind: 0.11, vertexColors: true,
+               doubleSide: true }),
     simple:  plantMaterial({ roughness: 0.9, wind: 0.06 }),
     ground:  plantMaterial({ roughness: 0.95, wind: 0.02, vertexColors: true }),
     shadow:  new THREE.MeshBasicMaterial({ map: SHADOW_TEX, transparent: true,
@@ -974,7 +1043,8 @@ function buildPlants(group, plants, month, year, terrain) {
   month = month || 6;
   year = year || 0;
 
-  const byKind = { tree: [], shrub: [], vine: [], groundcover: [], grass: [], herb: [] };
+  const byKind = { tree: [], shrub: [], vine: [], groundcover: [], grass: [],
+                   aquatic: [], herb: [] };
   for (const p of plants || []) {
     let t = p.plant_type;
     if (t === 'sedge' || t === 'rush') t = 'grass';   // graminoids share blades
@@ -1034,10 +1104,16 @@ function buildPlants(group, plants, month, year, terrain) {
              (p) => [Math.max(0.15, p.canopy_m), Math.max(0.08, p.height_m),
                      Math.max(0.15, p.canopy_m)], month, year, false, terrain);
 
-  // Grasses / sedges / rushes — arching blade tufts (V1.91).
-  buildLayer(byKind.grass, 3, MATS.shrub, (v) => ARCH.grass[v],
-             (p) => [Math.max(0.12, p.canopy_m), Math.max(0.3, p.height_m),
-                     Math.max(0.12, p.canopy_m)], month, year, false, terrain);
+  // Grasses / sedges / rushes — dense flat-blade tufts (V1.92).
+  buildLayer(byKind.grass, 3, MATS.blade, (v) => ARCH.grass[v],
+             (p) => [Math.max(0.16, p.canopy_m), Math.max(0.3, p.height_m),
+                     Math.max(0.16, p.canopy_m)], month, year, false, terrain);
+
+  // Aquatic / emergent marsh plants — tall erect reed/strap-leaf clumps; the
+  // cattail's brown spike comes from the flower layer (V1.92).
+  buildLayer(byKind.aquatic, 3, MATS.blade, (v) => ARCH.aquatic[v],
+             (p) => [Math.max(0.18, p.canopy_m), Math.max(0.5, p.height_m),
+                     Math.max(0.18, p.canopy_m)], month, year, false, terrain);
   if (byKind.vine.length) {
     const list = byKind.vine;
     const places = list.map(p => spreadPlacements(p, year));
@@ -1089,7 +1165,7 @@ function buildPlants(group, plants, month, year, terrain) {
 // per-form canvas texture so different flowers read differently. Shown only when
 // the scene's month falls inside the plant's bloom window.
 const FLOWER_FORMS = ['daisy', 'rays', 'spike', 'plume', 'umbel', 'globe',
-                      'cluster', 'bell', 'trumpet'];
+                      'cluster', 'bell', 'trumpet', 'cattail'];
 let FLOWER_TEX = null;
 
 function makeFlowerTexture(form) {
@@ -1157,6 +1233,21 @@ function makeFlowerTexture(form) {
     }
     g.closePath(); g.fill();
     g.fillStyle = 'rgba(255,255,255,0.7)'; dot(cx, cy, s * 0.10);
+  } else if (form === 'cattail') {         // brown emergent spike (Typha)
+    // slim upper male spike tapering to a point
+    g.beginPath();
+    g.moveTo(cx - s * 0.035, s * 0.30);
+    g.lineTo(cx + s * 0.035, s * 0.30);
+    g.lineTo(cx + s * 0.016, s * 0.07);
+    g.lineTo(cx - s * 0.016, s * 0.07);
+    g.closePath(); g.fill();
+    // fat female sausage with rounded ends
+    const x0 = cx - s * 0.085;
+    g.fillRect(x0, s * 0.34, s * 0.17, s * 0.50);
+    dot(cx, s * 0.34, s * 0.085);
+    dot(cx, s * 0.84, s * 0.085);
+    // thin supporting stalk below
+    g.fillRect(cx - s * 0.012, s * 0.84, s * 0.024, s * 0.15);
   } else { // cluster
     for (let i = 0; i < 11; i++) {
       const a = i * 2.39996, rr = Math.sqrt(i / 11) * s * 0.34;
@@ -1173,7 +1264,7 @@ function makeFlowerTexture(form) {
 // plant reads as its flower colour when in bloom).
 const _FLOWER_SIZE = { rays: 0.42, plume: 0.34, spike: 0.34, umbel: 0.30,
                        globe: 0.32, trumpet: 0.30, bell: 0.24, daisy: 0.24,
-                       cluster: 0.26 };
+                       cluster: 0.26, cattail: 0.7 };
 
 function buildFlowers(plants, month, terrain) {
   if (!FLOWER_TEX) {
@@ -1192,21 +1283,26 @@ function buildFlowers(plants, month, terrain) {
   for (const form of FLOWER_FORMS) {
     const list = byForm[form];
     if (!list.length) continue;
+    const isCattail = form === 'cattail';
     const pos = [], col = [];
     for (const p of list) {
       const gy = terrainHeightAt(p.x, p.y, terrain);
-      const top = gy + Math.max(0.1, p.height_m) * 0.9;
+      const h = Math.max(0.1, p.height_m);
+      const top = gy + h * (isCattail ? 0.96 : 0.9);
       const rad = Math.max(0.1, p.canopy_m * 0.5);
       _fc.set(p.flower_color);
-      // Dense enough that a blooming plant reads as its flower colour.
-      const n = p.plant_type === 'tree' ? 14
+      const seed = hashPid(p.plant_id || 1);
+      // Cattails: a couple of tall brown spikes near the clump centre. Other
+      // forms: dense enough that a blooming plant reads as its flower colour.
+      const n = isCattail ? 1 + (seed % 3)
+              : p.plant_type === 'tree' ? 14
               : p.plant_type === 'shrub' ? 11
               : p.plant_type === 'grass' ? 6 : 9;
-      const seed = hashPid(p.plant_id || 1);
       for (let k = 0; k < n; k++) {
         const a = ((seed + k * 97) % 628) / 100;
-        const rr = rad * (0.18 + 0.78 * (((seed + k * 53) % 100) / 100));
-        const dy = ((k % 3) - 1) * rad * 0.2;
+        const rr = isCattail ? rad * 0.22 * (((seed + k * 53) % 100) / 100)
+                             : rad * (0.18 + 0.78 * (((seed + k * 53) % 100) / 100));
+        const dy = isCattail ? 0 : ((k % 3) - 1) * rad * 0.2;
         pos.push(p.x + Math.cos(a) * rr, top + dy, -(p.y + Math.sin(a) * rr));
         col.push(_fc.r, _fc.g, _fc.b);
       }

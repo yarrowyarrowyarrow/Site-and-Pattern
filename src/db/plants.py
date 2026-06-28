@@ -126,7 +126,9 @@ _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 # to fill them from the curated seed JSON.
 # v32 (V1.91): no DDL — reseed for the expanded flower forms (rays / plume /
 # globe / trumpet) and straw seed-head plumes on grasses.
-_SCHEMA_VERSION = 32
+# v33 (V1.92): no DDL — reseed for curated marsh aquatics (cattail brown spike,
+# bulrush, yellow pond-lily) feeding the new 3D aquatic/cattail geometry.
+_SCHEMA_VERSION = 33
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
