@@ -158,6 +158,10 @@ class Map3DWidget(QWebEngineView):
             return
         self.page().runJavaScript(map3d_js.capture_ortho(rect, width), callback)
 
+    def set_quality(self, level: int):
+        """Set the viewer's geometry detail (0 Low · 1 Medium · 2 High)."""
+        self.run_js(map3d_js.set_quality(level))
+
     def set_sun_for(self, lat: float, lng: float, when: datetime):
         """Point the 3D sun for a place/time (reuses ``src/solar`` via map3d_js)."""
         self.run_js(map3d_js.set_sun_for(lat, lng, when))

@@ -23,9 +23,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from PyQt6.QtCore import Qt, QObject, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QObject, QThread, QSettings, pyqtSignal
 from PyQt6.QtWidgets import (
-    QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget,
+    QComboBox, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget,
 )
 
 from src.map3d_widget import Map3DWidget
@@ -35,6 +35,8 @@ from src.branding import APP_NAME
 _MAX_YEAR = 25
 _MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+_DETAIL_KEY = "viewer3d/detail"            # 0 Low · 1 Medium · 2 High (shared w/ gallery)
+_DETAIL_LABELS = ["Low", "Medium", "High"]
 
 
 class _TerrainWorker(QObject):
@@ -90,6 +92,16 @@ class Scene3DWindow(QWidget):
         self._month.setToolTip("Season — shifts foliage colour and the sun")
         self._hour.setToolTip("Time of day — drives the shadow-casting sun")
 
+        # Detail / quality — lower it if the 3D view is sluggish on this machine
+        # (drives window.permaSetQuality in the viewer). Shared with the gallery.
+        self._detail = QComboBox()
+        self._detail.addItems(_DETAIL_LABELS)
+        self._detail.setToolTip(
+            "Geometry detail — lower it if the 3D view is sluggish on this machine")
+        self._detail.setCurrentIndex(
+            max(0, min(2, int(QSettings().value(_DETAIL_KEY, 1)))))
+        self._detail.currentIndexChanged.connect(self._on_detail)
+
         refresh = QPushButton("Refresh from design")
         refresh.setToolTip("Re-read the live project and rebuild the scene")
         refresh.clicked.connect(self.refresh)
@@ -123,6 +135,8 @@ class Scene3DWindow(QWidget):
         bar.addWidget(self._hour, 1)
         bar.addWidget(self._sun_lbl)
         bar.addSpacing(16)
+        bar.addWidget(QLabel("Detail:"))
+        bar.addWidget(self._detail)
         bar.addWidget(reset_view)
         bar.addWidget(refresh)
         bar.addWidget(self._bake_btn)
@@ -187,9 +201,18 @@ class Scene3DWindow(QWidget):
         self._update_labels()
         self._push_scene()
 
+    def _on_detail(self, level: int):
+        """Detail combo → viewer quality. The viewer re-renders the current
+        scene at the new density itself (build-time only)."""
+        QSettings().setValue(_DETAIL_KEY, int(level))
+        self.viewer.set_quality(level)
+
     def refresh(self):
         """Re-read the live project (and kick a terrain fetch if we don't
         have a grid yet)."""
+        # Apply the saved detail level before the first scene push so the
+        # initial build honours it (queued until the viewer's JS is ready).
+        self.viewer.set_quality(self._detail.currentIndex())
         self._push_scene()
         from src.splat_backdrop import feature_from_project
         self._bake_btn.setEnabled(

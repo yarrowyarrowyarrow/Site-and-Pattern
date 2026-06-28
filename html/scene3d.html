@@ -520,6 +520,66 @@ const CONIFER_TIERS = [3, 5, 8];   // skirt count by maturity tier
 
 const _FORM_SEED = { slender: 0, oval: 17, spreading: 31 };
 
+// ── Species (genus) profiles (V1.94) ────────────────────────────────────────
+// The most impactful keystone/host trees get genus-specific geometry so a
+// spruce, pine and fir read apart and aspen/birch show pale bark. A profile is a
+// tiny param bag; unknown genera fall to `def` (today's generic look). `conifer`
+// selects a needle-crown kind (overriding the decid/conifer split for larch,
+// which keeps deciduous needle-drop); `formBias` forces the crown form so a
+// species reads right even when its dimensions are ambiguous; `bark` colours the
+// trunk; `droopOuter`/`foliageScale` shape the broadleaf crown.
+const _PROF = {
+  spruce: { id: 'spruce', conifer: 'spruce', bark: '#4b3a2a' },   // Picea
+  fir:    { id: 'fir',    conifer: 'fir',    bark: '#3f3022' },   // Abies / Pseudotsuga
+  pine:   { id: 'pine',   conifer: 'pine',   bark: '#6b4a2e' },   // Pinus
+  larch:  { id: 'larch',  conifer: 'larch',  bark: '#5a4632' },   // Larix (deciduous needles)
+  aspen:  { id: 'aspen',  bark: '#cfcab4', formBias: 'slender', foliageScale: 0.9 },  // Populus
+  birch:  { id: 'birch',  bark: '#e8e6df', formBias: 'oval', droopOuter: 0.55, foliageScale: 0.82 }, // Betula
+  oak:    { id: 'oak',    bark: '#463524', formBias: 'spreading', foliageScale: 1.06 }, // Quercus
+  willow: { id: 'willow', bark: '#8a8a6a', formBias: 'slender', droopOuter: 0.7, foliageScale: 0.85 }, // Salix
+  cherry: { id: 'cherry', bark: '#5a4636', formBias: 'oval' },    // Prunus
+  apple:  { id: 'apple',  bark: '#6a5238', formBias: 'spreading' }, // Malus
+  def:    { id: 'def',    bark: '#5d4433' },
+};
+const TREE_PROFILES = {
+  picea: _PROF.spruce, abies: _PROF.fir, pseudotsuga: _PROF.fir, pinus: _PROF.pine,
+  larix: _PROF.larch, populus: _PROF.aspen, betula: _PROF.birch, quercus: _PROF.oak,
+  salix: _PROF.willow, prunus: _PROF.cherry, malus: _PROF.apple,
+};
+function profileFor(p) {
+  return TREE_PROFILES[(p.genus || '').toLowerCase()] || _PROF.def;
+}
+// Needle-crown kinds layered on top of the form's CONIFER_FORMS params: spruce =
+// narrow dense bluish spire; fir = narrower, very dense, sharp tall summit; larch
+// = sparse soft cone. (Pine has its own open builder, buildPineGeo.)
+const CONIFER_KINDS = {
+  standard: { baseRMul: 1.0,  tiersAdd: 0,  droopAdd: 0.0,  spire: 1.0, segMul: 1.0 },
+  spruce:   { baseRMul: 0.82, tiersAdd: 1,  droopAdd: 0.03, spire: 1.15, segMul: 1.0 },
+  fir:      { baseRMul: 0.72, tiersAdd: 2,  droopAdd: -0.04, spire: 1.4, segMul: 1.0 },
+  larch:    { baseRMul: 0.92, tiersAdd: -1, droopAdd: 0.0,  spire: 0.7, segMul: 0.7 },
+};
+const _CK_SEED = { standard: 0, spruce: 3, fir: 7, pine: 11, larch: 17 };
+
+// Keystone/host shrub cues (V1.94): red-osier dogwood's red stems, willow's pale
+// upright multi-stem, finer twiggy currants/roses. Foliage colour comes from the
+// genus (scene_contract _foliage_color), so a profile only shapes geometry.
+const _SPROF = {
+  cornus:      { id: 'cornus', redStems: true, upright: true },   // red-osier dogwood
+  salix:       { id: 'salix', upright: true, narrow: true },      // shrub willow
+  amelanchier: { id: 'amel', upright: true, fine: true },         // saskatoon
+  viburnum:    { id: 'vibur' },                                   // highbush cranberry
+  ribes:       { id: 'ribes', fine: true },                       // currant / gooseberry
+  rosa:        { id: 'rosa', fine: true },                        // wild rose
+  def:         { id: 'sdef' },
+};
+const SHRUB_PROFILES = {
+  cornus: _SPROF.cornus, salix: _SPROF.salix, amelanchier: _SPROF.amelanchier,
+  viburnum: _SPROF.viburnum, ribes: _SPROF.ribes, rosa: _SPROF.rosa,
+};
+function shrubProfileFor(p) {
+  return SHRUB_PROFILES[(p.genus || '').toLowerCase()] || _SPROF.def;
+}
+
 // Crown form from the (already-scaled) height/canopy aspect ratio.
 function formOf(p) {
   const c = Math.max(0.1, p.canopy_m || 1), h = Math.max(0.1, p.height_m || 1);
@@ -527,8 +587,13 @@ function formOf(p) {
   return aspect >= 2.0 ? 'slender' : (aspect <= 1.1 ? 'spreading' : 'oval');
 }
 
-function decidCfg(form, tier) {
-  return Object.assign({}, DECID_CFG, DECID_FORMS[form], { maxDepth: DECID_DEPTH[tier] });
+function decidCfg(form, tier, prof) {
+  const cfg = Object.assign({}, DECID_CFG, DECID_FORMS[form], { maxDepth: DECID_DEPTH[tier] });
+  if (prof) {
+    if (prof.foliageScale != null) cfg.foliageScale = (cfg.foliageScale || 1) * prof.foliageScale;
+    if (prof.droopOuter != null) cfg.droopOuter = prof.droopOuter;
+  }
+  return cfg;
 }
 
 function generateDaVinciTree(radius, length, depth, cfg, rng) {
@@ -602,18 +667,24 @@ function treeToGeometry(root, cfg, rng) {
   // (and 1–2 smaller ones at interior junctions) → a full rounded crown. Each
   // blob is tagged with its world Y so the clear-bole pass can strip foliage
   // off the lower trunk after the crown height is known.
+  const droopOuter = cfg.droopOuter || 0;     // weeping terminal fringe (birch/willow)
   function addDeciduousCluster(tipMat, depth, terminal) {
     const tipY = tipMat.elements[13];
     const depthScale = Math.max(0.65, 1.0 - depth * 0.08);
-    const n = terminal ? 3 + Math.floor(rng() * 3) : 1 + Math.floor(rng() * 2);
+    const n = terminal ? qn(3 + Math.floor(rng() * 3)) : qn(1 + Math.floor(rng() * 2));
     const base = (terminal ? 0.20 : 0.15) * depthScale * fScale;
     const spread = (terminal ? 0.22 : 0.16) * fScale;
+    // Weeping species hang their outer leaf clusters below the twig and widen
+    // them slightly — a cheap, recognizable droop without re-bending branches.
+    const dy = terminal ? -droopOuter * 0.13 : 0;
+    const dspread = 1 + droopOuter * 0.4;
     for (let i = 0; i < n; i++) {
       const r = base + rng() * 0.14 * depthScale * fScale;
       const s = new THREE.SphereGeometry(r, 5, 4);
       s.scale(1, 0.72 + rng() * 0.2, 1);
-      s.translate((rng() - 0.5) * spread, r * 0.4 + (rng() - 0.2) * 0.1,
-                  (rng() - 0.5) * spread);
+      s.translate((rng() - 0.5) * spread * dspread,
+                  dy + r * 0.4 + (rng() - 0.2) * 0.1,
+                  (rng() - 0.5) * spread * dspread);
       s.applyMatrix4(tipMat);
       blobs.push({ geo: s, y: tipY });
     }
@@ -655,9 +726,13 @@ function treeToGeometry(root, cfg, rng) {
 // with cones at every whorl. Reads as a natural cone, not a spiky star, and is
 // markedly lower-poly. Form sets base radius / tier count / droop; tier sets
 // the maturity skirt count.
-function buildConiferGeo(form, tier, rng) {
+function buildConiferGeo(form, tier, rng, kind) {
   const fp = CONIFER_FORMS[form] || CONIFER_FORMS.oval;
-  const M = Math.max(2, CONIFER_TIERS[tier] + fp.tiersAdd);
+  const kp = CONIFER_KINDS[kind] || CONIFER_KINDS.standard;
+  const M = Math.max(2, qn(CONIFER_TIERS[tier] + fp.tiersAdd + kp.tiersAdd));
+  const baseR = fp.baseR * kp.baseRMul;
+  const droop = fp.droop + kp.droopAdd;
+  const segs = Math.max(5, Math.round(8 * kp.segMul));
   const branchGeos = [], foliageGeos = [];
   const H = 1.0, y0 = 0.05, yTop = 0.93;
 
@@ -668,16 +743,59 @@ function buildConiferGeo(form, tier, rng) {
   for (let i = 0; i < M; i++) {
     const f = M === 1 ? 0 : i / (M - 1);            // 0 base … 1 top
     const y = y0 + (yTop - y0) * f;
-    const r = (fp.baseR * Math.pow(1 - f, 0.85) + 0.03) * (0.9 + rng() * 0.2);
-    const hh = (0.20 + 0.12 * (1 - f)) * (1 + fp.droop);
-    const skirt = new THREE.ConeGeometry(r, hh, 8, 1);
-    skirt.translate(0, y - hh * (0.5 - fp.droop), 0);  // flare base down (droop)
+    const r = (baseR * Math.pow(1 - f, 0.85) + 0.03) * (0.9 + rng() * 0.2);
+    const hh = (0.20 + 0.12 * (1 - f)) * (1 + droop);
+    const skirt = new THREE.ConeGeometry(r, hh, segs, 1);
+    skirt.translate(0, y - hh * (0.5 - droop), 0);  // flare base down (droop)
     skirt.rotateY(rng() * Math.PI);
     foliageGeos.push(skirt);
   }
-  const spire = new THREE.ConeGeometry(0.045, 0.15, 6, 1);
+  const spire = new THREE.ConeGeometry(0.045, 0.15 * kp.spire, 6, 1);
   spire.translate(0, yTop + 0.05, 0);
   foliageGeos.push(spire);
+
+  const branchGeo = mergeGeometries(branchGeos, false);
+  const foliageGeo = mergeGeometries(foliageGeos, false);
+  normalizeUnit([branchGeo, foliageGeo]);
+  applyFoliageGradient(foliageGeo);
+  return { branchGeo, foliageGeo };
+}
+
+// Pine (Pinus) reads nothing like a spruce/fir cone: a clear lower trunk, then a
+// few irregular tufted needle clumps high in the crown with a flattish, open
+// top — the scraggly look of jack/lodgepole pine (V1.94). Built as branch +
+// foliage geometries like the others so it shares the tree instance pipeline.
+function buildPineGeo(form, tier, rng) {
+  const branchGeos = [], foliageGeos = [];
+  const H = 1.0;
+  const trunk = new THREE.CylinderGeometry(0.016, 0.055, H, 6, 1);
+  trunk.translate(0, H / 2, 0);
+  branchGeos.push(trunk);
+
+  const clumps = Math.max(3, qn(3 + tier));   // more tufts as it matures
+  const yBase = 0.48;                          // clear lower trunk
+  for (let i = 0; i < clumps; i++) {
+    const f = clumps === 1 ? 1 : i / (clumps - 1);
+    const y = yBase + (0.9 - yBase) * f + (rng() - 0.5) * 0.05;
+    const ang = rng() * Math.PI * 2;
+    const reach = (0.17 + rng() * 0.12) * (1 - f * 0.45);   // tighter near the top → flat crown
+    const bx = Math.cos(ang) * reach, bz = Math.sin(ang) * reach;
+    const r = (0.13 + rng() * 0.07) * (1 - f * 0.25);
+    const tuft = new THREE.SphereGeometry(r, 6, 5);
+    tuft.scale(1.25, 0.62, 1.25);                            // flattened needle pad
+    tuft.translate(bx, y, bz);
+    foliageGeos.push(tuft);
+    const blen = reach + 0.04;                               // short branch out to the tuft
+    const seg = new THREE.CylinderGeometry(0.006, 0.013, blen, 4, 1);
+    seg.translate(0, blen / 2, 0);
+    seg.applyMatrix4(new THREE.Matrix4().makeRotationY(ang)
+      .multiply(new THREE.Matrix4().makeRotationZ(1.05)));
+    seg.translate(0, y - 0.02, 0);
+    branchGeos.push(seg);
+  }
+  const top = new THREE.SphereGeometry(0.12, 6, 5);
+  top.scale(1.1, 0.7, 1.1); top.translate(0, 0.93, 0);
+  foliageGeos.push(top);
 
   const branchGeo = mergeGeometries(branchGeos, false);
   const foliageGeo = mergeGeometries(foliageGeos, false);
@@ -772,21 +890,59 @@ function makeBlade(rng, h, wb, lean, erect) {
   return g;
 }
 
+// ── Detail / quality (V1.94) ────────────────────────────────────────────────
+// One global knob scales BUILD-TIME geometry density only (blade/blob/tier/tuft
+// counts) — never per-frame work, which stays instanced. Default 1 (Medium) ≈
+// the historical look; Low thins geometry for weak machines, High enriches it.
+// permaSetQuality() flips it and clears the archetype caches so the next scene
+// rebuilds at the new density.
+let QUALITY = 1;                      // 0 Low · 1 Medium · 2 High
+function qn(n) {                      // scale + round a count, never below 1
+  const f = QUALITY === 0 ? 0.6 : (QUALITY === 2 ? 1.35 : 1.0);
+  return Math.max(1, Math.round(n * f));
+}
+
 // A bushy shrub: several overlapping spheres merged, normalised, gradient-tinted.
-function buildShrubGeo(rng) {
-  const geos = [];
-  const n = 3 + Math.floor(rng() * 5);   // 3–7 sub-domes for visual variety
-  const spread = 0.4 + rng() * 0.3;
+// `profile` adds genus cues (V1.94): red-osier dogwood's red stems, willow's pale
+// upright droop. Unknown genus → the plain bushy dome.
+function buildShrubGeo(rng, profile) {
+  const prof = profile || {};
+  const geos = [], stems = [];
+  const n = qn(3 + Math.floor(rng() * 5));   // 3–7 sub-domes for visual variety
+  const spread = (0.4 + rng() * 0.3) * (prof.narrow ? 0.7 : 1);
   for (let i = 0; i < n; i++) {
-    const r = 0.24 + rng() * 0.18;
+    const r = (0.24 + rng() * 0.18) * (prof.fine ? 0.82 : 1);
     const s = new THREE.SphereGeometry(r, 6, 5);
-    s.translate((rng() - 0.5) * spread, rng() * 0.35 + r * 0.5, (rng() - 0.5) * spread);
+    const yb = prof.upright ? 0.15 + rng() * 0.55 : rng() * 0.35;
+    s.translate((rng() - 0.5) * spread, yb + r * 0.5, (rng() - 0.5) * spread);
     geos.push(s);
   }
   const g = mergeGeometries(geos, false);
   normalizeUnit([g]);
   applyFoliageGradient(g);
-  return g;
+  // Red-osier dogwood: a few bare red stems poking up through the foliage — the
+  // single most recognizable winter/edge cue. Built as a SECOND geometry so it
+  // can carry its own red colour (returned as {foliageGeo, stemGeo}).
+  let stemGeo = null;
+  if (prof.redStems) {
+    const ns = qn(5);
+    for (let i = 0; i < ns; i++) {
+      const h = 0.7 + rng() * 0.3, r = 0.012;
+      const az = rng() * Math.PI * 2, tilt = 0.05 + rng() * 0.22;
+      const st = new THREE.CylinderGeometry(r * 0.5, r, h, 4, 1);
+      st.translate(0, h / 2, 0);
+      st.applyMatrix4(new THREE.Matrix4().makeRotationY(az)
+        .multiply(new THREE.Matrix4().makeRotationZ(tilt)));
+      stems.push(st);
+    }
+    stemGeo = mergeGeometries(stems, false);
+    // share the foliage's 0..1 vertical frame
+    stemGeo.computeBoundingBox();
+    const sy = 1 / Math.max(1e-3, stemGeo.boundingBox.max.y - stemGeo.boundingBox.min.y);
+    stemGeo.translate(0, -stemGeo.boundingBox.min.y, 0);
+    stemGeo.scale(0.5, sy, 0.5);
+  }
+  return stemGeo ? { foliageGeo: g, stemGeo } : g;
 }
 
 // A perennial clump: several thin stems fanning out from a base, each topped
@@ -794,7 +950,7 @@ function buildShrubGeo(rng) {
 // several stems" look that a single cone can't convey.
 function buildPerennialGeo(rng) {
   const geos = [];
-  const stems = 4 + Math.floor(rng() * 4);   // 4–7 stems
+  const stems = qn(4 + Math.floor(rng() * 4));   // 4–7 stems
   for (let i = 0; i < stems; i++) {
     const h = 0.6 + rng() * 0.4;
     const r = 0.012 + rng() * 0.01;
@@ -831,7 +987,7 @@ function buildPerennialGeo(rng) {
 // textured plant carpet rather than a flat disc.
 function buildGroundcoverGeo(rng) {
   const geos = [];
-  const n = 5 + Math.floor(rng() * 4);   // 5–8 tufts
+  const n = qn(5 + Math.floor(rng() * 4));   // 5–8 tufts
   for (let i = 0; i < n; i++) {
     const r = 0.08 + rng() * 0.07;
     const ang = rng() * Math.PI * 2, rad = rng() * 0.42;
@@ -853,7 +1009,7 @@ function buildGroundcoverGeo(rng) {
 // normals let the whole tuft catch top light as one soft mound.
 function buildGrassGeo(rng) {
   const geos = [];
-  const blades = 26 + Math.floor(rng() * 16);   // 26–41 blades — a thick clump
+  const blades = qn(26 + Math.floor(rng() * 16));   // 26–41 blades — a thick clump
   for (let i = 0; i < blades; i++) {
     const h = 0.62 + rng() * 0.5;
     const wb = 0.016 + rng() * 0.018;            // base half-width (real blade)
@@ -873,7 +1029,7 @@ function buildGrassGeo(rng) {
 // drawn by the flower layer (the "cattail" form).
 function buildAquaticGeo(rng) {
   const geos = [];
-  const blades = 16 + Math.floor(rng() * 12);   // 16–27 broad upright leaves
+  const blades = qn(16 + Math.floor(rng() * 12));   // 16–27 broad upright leaves
   for (let i = 0; i < blades; i++) {
     const h = 0.85 + rng() * 0.35;
     const wb = 0.03 + rng() * 0.028;             // wide strap leaves
@@ -914,16 +1070,19 @@ function indHash(p) {
 // Only the combinations a scene actually uses are generated. Conifers are
 // clean cone stacks; deciduous are Da Vinci crowns shaped by their form.
 const TREE_CACHE = new Map();
-function getTreeArch(cls, form, tier, sub) {
-  const key = cls + '_' + form + '_' + tier + '_' + sub;
+function getTreeArch(cls, prof, form, tier, sub) {
+  const ck = cls === 'conifer' ? (prof.conifer || 'standard') : 'd';
+  // QUALITY is in the key so Low/Med/High keep distinct cached archetypes.
+  const key = cls + '_' + ck + '_' + prof.id + '_' + form + '_' + tier + '_' + sub + '_q' + QUALITY;
   let a = TREE_CACHE.get(key);
   if (a) return a;
   if (cls === 'conifer') {
-    const seed = 5000 + (_FORM_SEED[form] || 0) + tier * 11 + sub * 191;
-    a = buildConiferGeo(form, tier, mulberry32(seed));
+    const seed = 5000 + (_FORM_SEED[form] || 0) + tier * 11 + sub * 191 + (_CK_SEED[ck] || 0);
+    a = ck === 'pine' ? buildPineGeo(form, tier, mulberry32(seed))
+                      : buildConiferGeo(form, tier, mulberry32(seed), ck);
   } else {
-    const cfg = decidCfg(form, tier);
-    const seed = 100 + (_FORM_SEED[form] || 0) + tier * 11 + sub * 191;
+    const cfg = decidCfg(form, tier, prof);
+    const seed = 100 + (_FORM_SEED[form] || 0) + tier * 11 + sub * 191 + prof.id.charCodeAt(0);
     a = treeToGeometry(generateDaVinciTree(0.06, 0.42, 0, cfg, mulberry32(seed)),
                        cfg, mulberry32(seed + 7));
   }
@@ -933,13 +1092,14 @@ function getTreeArch(cls, form, tier, sub) {
 
 function buildArchetypes() {
   if (ARCH) return;
-  const shrub = [], peren = [], ground = [], grass = [], aquatic = [];
-  for (const sd of [11, 41, 73, 97]) shrub.push(buildShrubGeo(mulberry32(sd)));
+  // Shrubs are built per-genus on demand (SHRUB_CACHE); the rest are the cheap
+  // shared variant arrays.
+  const peren = [], ground = [], grass = [], aquatic = [];
   for (const sd of [211, 251, 307]) peren.push(buildPerennialGeo(mulberry32(sd)));
   for (const sd of [331, 379]) ground.push(buildGroundcoverGeo(mulberry32(sd)));
   for (const sd of [421, 457, 503]) grass.push(buildGrassGeo(mulberry32(sd)));
   for (const sd of [541, 587, 631]) aquatic.push(buildAquaticGeo(mulberry32(sd)));
-  ARCH = { shrub, peren, ground, grass, aquatic };
+  ARCH = { peren, ground, grass, aquatic };
 }
 
 function ensurePlantMats() {
@@ -1034,6 +1194,58 @@ function buildLayer(list, variants, mat, archOf, scaleOf, month, year, noRot, te
   });
 }
 
+// Shrub archetypes are profile-specific (red-stem dogwood, upright willow…), so
+// they're cached by (profile × variant × quality) like trees rather than the
+// flat ARCH.shrub array. buildShrubGeo returns {foliageGeo, stemGeo} for a
+// red-stemmed profile, else a single foliage geometry.
+const SHRUB_VARIANTS = 3;
+const SHRUB_CACHE = new Map();
+function getShrubArch(prof, v) {
+  const key = prof.id + '_' + v + '_q' + QUALITY;
+  let a = SHRUB_CACHE.get(key);
+  if (a) return a;
+  const out = buildShrubGeo(mulberry32(13 + v * 97 + prof.id.charCodeAt(0) * 7), prof);
+  a = out.foliageGeo ? out : { foliageGeo: out, stemGeo: null };
+  SHRUB_CACHE.set(key, a);
+  return a;
+}
+
+function buildShrubLayer(list, month, year, terrain) {
+  if (!list || !list.length) return;
+  const buckets = {};
+  for (const p of list) {
+    const prof = shrubProfileFor(p);
+    const v = hashPid(p.plant_id) % SHRUB_VARIANTS;
+    (buckets[prof.id + '_' + v] = buckets[prof.id + '_' + v]
+      || { prof, v, items: [] }).items.push(p);
+  }
+  for (const key in buckets) {
+    const { prof, v, items } = buckets[key];
+    const arch = getShrubArch(prof, v);
+    const places = items.map(p => spreadPlacements(p, year));
+    const total = places.reduce((s, pl) => s + pl.length, 0);
+    const foliage = instancedMesh(arch.foliageGeo, total, MATS.shrub);
+    const stems = arch.stemGeo ? instancedMesh(arch.stemGeo, total, MATS.branch) : null;
+    let idx = 0;
+    items.forEach((p, ii) => {
+      const c = Math.max(0.25, p.canopy_m), h = Math.max(0.2, p.height_m);
+      const rotY0 = (indHash(p) % 628) / 100;
+      const col = fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity);
+      const scol = fadeToward('#b5402e', p.opacity);   // red-osier stem colour
+      places[ii].forEach((pl, k) => {
+        const m = pl.mul, x = p.x + pl.dx, wy = p.y + pl.dz;
+        const rotY = rotY0 + (k ? pl.dx : 0);
+        const gy = terrainHeightAt(x, wy, terrain);
+        setInst2(foliage, idx, x, gy, -wy, c * m, h * m, c * m, rotY, col);
+        if (stems) setInst2(stems, idx, x, gy, -wy, c * m, h * m, c * m, rotY, scol);
+        idx++;
+      });
+    });
+    plantsGroup.add(foliage);
+    if (stems) plantsGroup.add(stems);
+  }
+}
+
 function buildPlants(group, plants, month, year, terrain) {
   if (plantsGroup) { disposeDesignGroup(plantsGroup); group.remove(plantsGroup); }
   plantsGroup = new THREE.Group();
@@ -1059,16 +1271,20 @@ function buildPlants(group, plants, month, year, terrain) {
   if (byKind.tree.length) {
     const buckets = {};
     for (const p of byKind.tree) {
-      const cls = p.foliage_type === 'evergreen' ? 'conifer' : 'deciduous';
-      const form = formOf(p);
+      const prof = profileFor(p);
+      // A genus profile may force a needle crown (larch keeps deciduous needle-
+      // drop) or a crown form, so a species reads right regardless of dimensions.
+      const cls = (p.foliage_type === 'evergreen' || prof.conifer) ? 'conifer' : 'deciduous';
+      const form = prof.formBias || formOf(p);
       const t = tierFor(p.scale_factor);
       const sub = indHash(p) % TREE_SUBVARS;
-      const key = cls + '_' + form + '_' + t + '_' + sub;
-      (buckets[key] = buckets[key] || { cls, form, t, sub, items: [] }).items.push(p);
+      const ck = cls === 'conifer' ? (prof.conifer || 'standard') : 'd';
+      const key = cls + '_' + ck + '_' + prof.id + '_' + form + '_' + t + '_' + sub;
+      (buckets[key] = buckets[key] || { cls, prof, form, t, sub, items: [] }).items.push(p);
     }
     for (const key in buckets) {
-      const { cls, form, t, sub, items } = buckets[key];
-      const arch = getTreeArch(cls, form, t, sub);
+      const { cls, prof, form, t, sub, items } = buckets[key];
+      const arch = getTreeArch(cls, prof, form, t, sub);
       const places = items.map(p => spreadPlacements(p, year));
       const total = places.reduce((s, pl) => s + pl.length, 0);
       const branch = instancedMesh(arch.branchGeo, total, MATS.branch);
@@ -1078,7 +1294,7 @@ function buildPlants(group, plants, month, year, terrain) {
         const h = Math.max(0.4, p.height_m), c = Math.max(0.4, p.canopy_m);
         const rotY0 = (indHash(p) % 628) / 100;
         const bare = _isDecid(p.foliage_type) && _bareMonth(month);
-        const bcol = fadeToward('#5d4433', p.opacity);
+        const bcol = fadeToward(prof.bark || '#5d4433', p.opacity);
         const fcol = fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity);
         places[ii].forEach((pl, k) => {
           const m = pl.mul, x = p.x + pl.dx, wy = p.y + pl.dz, z = -wy;
@@ -1094,10 +1310,9 @@ function buildPlants(group, plants, month, year, terrain) {
     }
   }
 
-  // Shrubs — bushy gradient domes, one InstancedMesh per archetype variant.
-  buildLayer(byKind.shrub, 4, MATS.shrub, (v) => ARCH.shrub[v],
-             (p) => [Math.max(0.25, p.canopy_m), Math.max(0.2, p.height_m),
-                     Math.max(0.25, p.canopy_m)], month, year, false, terrain);
+  // Shrubs — bucketed by genus profile so dogwood shows red stems, willow stands
+  // upright, etc. (V1.94). One InstancedMesh per (profile × variant).
+  buildShrubLayer(byKind.shrub, month, year, terrain);
 
   // Perennials/herbs — multi-stem clumps; vines — slim swaying cones.
   buildLayer(byKind.herb, 3, MATS.shrub, (v) => ARCH.peren[v],
@@ -1165,7 +1380,7 @@ function buildPlants(group, plants, month, year, terrain) {
 // per-form canvas texture so different flowers read differently. Shown only when
 // the scene's month falls inside the plant's bloom window.
 const FLOWER_FORMS = ['daisy', 'rays', 'spike', 'plume', 'umbel', 'globe',
-                      'cluster', 'bell', 'trumpet', 'cattail'];
+                      'cluster', 'bell', 'trumpet', 'cattail', 'pea', 'whorl'];
 let FLOWER_TEX = null;
 
 function makeFlowerTexture(form) {
@@ -1177,14 +1392,14 @@ function makeFlowerTexture(form) {
   const cx = s / 2, cy = s / 2;
   const dot = (x, y, r) => { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); };
   if (form === 'daisy') {
-    const petals = 8, R = s * 0.30;
+    const petals = 10, R = s * 0.30;          // aster ray florets
     for (let i = 0; i < petals; i++) {
       const a = i / petals * Math.PI * 2;
       g.save(); g.translate(cx + Math.cos(a) * R * 0.6, cy + Math.sin(a) * R * 0.6);
       g.rotate(a); g.beginPath();
-      g.ellipse(0, 0, s * 0.20, s * 0.085, 0, 0, Math.PI * 2); g.fill(); g.restore();
+      g.ellipse(0, 0, s * 0.20, s * 0.075, 0, 0, Math.PI * 2); g.fill(); g.restore();
     }
-    g.fillStyle = 'rgba(255,255,255,0.95)'; dot(cx, cy, s * 0.13);
+    g.fillStyle = 'rgba(255,255,255,0.7)'; dot(cx, cy, s * 0.12);   // dim eye
   } else if (form === 'umbel') {
     for (let i = 0; i < 16; i++) {
       const a = i * 2.39996, rr = Math.sqrt(i / 16) * s * 0.40;
@@ -1204,14 +1419,14 @@ function makeFlowerTexture(form) {
     g.closePath(); g.fill();
     for (let i = 0; i < 3; i++) dot(cx - s * 0.12 + i * s * 0.12, cy + s * 0.24, s * 0.05);
   } else if (form === 'rays') {            // big sunflower-style composite
-    const petals = 13, R = s * 0.40;
+    const petals = 16, R = s * 0.40;
     for (let i = 0; i < petals; i++) {
       const a = i / petals * Math.PI * 2;
       g.save(); g.translate(cx + Math.cos(a) * R * 0.5, cy + Math.sin(a) * R * 0.5);
       g.rotate(a); g.beginPath();
-      g.ellipse(0, 0, s * 0.24, s * 0.075, 0, 0, Math.PI * 2); g.fill(); g.restore();
+      g.ellipse(0, 0, s * 0.24, s * 0.07, 0, 0, Math.PI * 2); g.fill(); g.restore();
     }
-    g.fillStyle = 'rgba(255,255,255,0.85)'; dot(cx, cy, s * 0.18);
+    g.fillStyle = 'rgba(255,255,255,0.6)'; dot(cx, cy, s * 0.19);   // dark disc hint
   } else if (form === 'plume') {           // feathery tapering spray (goldenrod, grass)
     for (let i = 0; i < 26; i++) {
       const t = i / 26, yy = s * 0.08 + t * s * 0.84;
@@ -1248,6 +1463,25 @@ function makeFlowerTexture(form) {
     dot(cx, s * 0.84, s * 0.085);
     // thin supporting stalk below
     g.fillRect(cx - s * 0.012, s * 0.84, s * 0.024, s * 0.15);
+  } else if (form === 'pea') {             // legume raceme (lupine, vetch, milkvetch)
+    const rows = 6;
+    for (let i = 0; i < rows; i++) {
+      const t = i / (rows - 1);
+      const yy = s * 0.15 + t * s * 0.70;
+      const w = s * (0.17 - 0.05 * t);     // wider toward the base
+      g.beginPath(); g.ellipse(cx, yy - s * 0.03, w, s * 0.065, 0, 0, Math.PI * 2); g.fill();
+      dot(cx - w * 0.5, yy + s * 0.03, s * 0.042);   // wings / keel
+      dot(cx + w * 0.5, yy + s * 0.03, s * 0.042);
+    }
+  } else if (form === 'whorl') {           // tubular whorl (bee balm / Monarda)
+    const florets = 14;
+    for (let i = 0; i < florets; i++) {
+      const a = i / florets * Math.PI * 2 + 0.2;
+      const rr = s * 0.30 * (0.72 + 0.28 * (((i * 7) % 5) / 5));
+      g.save(); g.translate(cx, cy); g.rotate(a); g.beginPath();
+      g.ellipse(rr * 0.5, 0, s * 0.17, s * 0.032, 0, 0, Math.PI * 2); g.fill(); g.restore();
+    }
+    g.fillStyle = 'rgba(255,255,255,0.85)'; dot(cx, cy, s * 0.09);
   } else { // cluster
     for (let i = 0; i < 11; i++) {
       const a = i * 2.39996, rr = Math.sqrt(i / 11) * s * 0.34;
@@ -1264,7 +1498,7 @@ function makeFlowerTexture(form) {
 // plant reads as its flower colour when in bloom).
 const _FLOWER_SIZE = { rays: 0.42, plume: 0.34, spike: 0.34, umbel: 0.30,
                        globe: 0.32, trumpet: 0.30, bell: 0.24, daisy: 0.24,
-                       cluster: 0.26, cattail: 0.7 };
+                       cluster: 0.26, cattail: 0.7, pea: 0.34, whorl: 0.30 };
 
 function buildFlowers(plants, month, terrain) {
   if (!FLOWER_TEX) {
@@ -1295,9 +1529,9 @@ function buildFlowers(plants, month, terrain) {
       // Cattails: a couple of tall brown spikes near the clump centre. Other
       // forms: dense enough that a blooming plant reads as its flower colour.
       const n = isCattail ? 1 + (seed % 3)
-              : p.plant_type === 'tree' ? 14
-              : p.plant_type === 'shrub' ? 11
-              : p.plant_type === 'grass' ? 6 : 9;
+              : qn(p.plant_type === 'tree' ? 14
+                 : p.plant_type === 'shrub' ? 11
+                 : p.plant_type === 'grass' ? 6 : 9);
       for (let k = 0; k < n; k++) {
         const a = ((seed + k * 97) % 628) / 100;
         const rr = isCattail ? rad * 0.22 * (((seed + k * 53) % 100) / 100)
@@ -1467,8 +1701,10 @@ function disposeDesignGroup(group) {
 // between the two threw (and should have surfaced via the error handler).
 window._pinglog && window._pinglog('registering hooks (boot OK)');
 
+let lastSceneObj = null;     // last full scene, so a quality change can re-render
 window.permaSetScene = function (sc) {
   if (!sc || !sc.bounds) return;
+  lastSceneObj = sc;
   if (designGroup) { disposeDesignGroup(designGroup); scene.remove(designGroup); }
   designGroup = new THREE.Group();
   scene.add(designGroup);
@@ -1509,9 +1745,18 @@ window.permaSetScene = function (sc) {
 
 window.permaSetSun = function (azDeg, altDeg) { setSun(azDeg, altDeg); };
 
-// Re-center the camera on the design on demand (the "Reset view" button) —
-// the counterpart to keeping the view fixed across slider moves.
-window.permaResetView = function () { frameCamera(lastBounds); };
+// Detail / quality knob (V1.94): 0 Low · 1 Medium · 2 High. Drops the cached
+// archetypes (their density depends on QUALITY) and re-renders the current scene
+// at the new detail. Build-time only — per-frame cost is unchanged.
+window.permaSetQuality = function (level) {
+  const q = Math.max(0, Math.min(2, level | 0));
+  if (q === QUALITY) return;
+  QUALITY = q;
+  TREE_CACHE.clear();
+  SHRUB_CACHE.clear();
+  ARCH = null;
+  if (lastSceneObj) permaSetScene(lastSceneObj);   // same origin → camera stays put
+};
 
 // Legacy hook: scene3d.placed_plants_3d_state records carry lat/lng — project
 // them with the cosLat metric about the last scene origin.

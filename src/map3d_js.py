@@ -85,3 +85,12 @@ def set_plants(records: list) -> str:
     ``window.permaSetPlants`` hook."""
     return ("window.permaSetPlants && window.permaSetPlants("
             f"{json.dumps(records or [])});")
+
+
+def set_quality(level: int) -> str:
+    """JS to set the viewer's geometry detail (0 Low · 1 Medium · 2 High). The
+    viewer drops its archetype caches and re-renders the current scene at the new
+    density (build-time only). Guarded with ``&&`` so it's a no-op until the scene
+    registers ``window.permaSetQuality``."""
+    return ("window.permaSetQuality && window.permaSetQuality("
+            f"{int(level)});")

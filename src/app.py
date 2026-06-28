@@ -51,6 +51,7 @@ from src.project_store import ProjectStore
 from src.scan_import_dialog import start_scan_import as _start_scan_import
 from src.scene3d_window import open_3d_view as _open_3d_view
 from src.snapshot_window import open_snapshot_view as _open_snapshot_view
+from src.sprite_gallery_window import open_sprite_gallery as _open_sprite_gallery
 from src.branding import APP_NAME, APP_TITLE
 
 
@@ -511,6 +512,15 @@ class MainWindow(QMainWindow):
         # Lambda for the same reason as 3D Preview: the window lives in
         # src/snapshot_window.py, off MainWindow's method ledger.
         act_snapshots.triggered.connect(lambda: _open_snapshot_view(self))
+
+        act_gallery = view_menu.addAction("3D &Sprite Gallery…")
+        act_gallery.setStatusTip(
+            "Browse every 3D plant archetype + flower sprite — compare species "
+            "(spruce vs pine vs fir, etc.) and pick a detail level"
+        )
+        # Lambda for the same reason: the window self-manages in
+        # src/sprite_gallery_window.py, off MainWindow's method ledger.
+        act_gallery.triggered.connect(lambda: _open_sprite_gallery(self))
 
         view_menu.addSeparator()
         act_map_settings = view_menu.addAction("&Map Settings…")

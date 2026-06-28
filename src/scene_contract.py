@@ -97,6 +97,30 @@ _SILVER_FOLIAGE_GENERA = {
 }
 _DEFAULT_FOLIAGE = "#5b8a4a"
 
+# Per-genus foliage greens for the most impactful keystone/host trees (V1.94) —
+# the cheapest way to make a spruce read bluish, a pine yellow-green, an aspen
+# bright and an oak deep, on top of the genus-specific geometry the 3D viewer
+# builds. Only genera that visibly differ from their type's default are listed;
+# everything else falls through to _FOLIAGE_BY_TYPE.
+_GENUS_FOLIAGE = {
+    "picea":       "#46685a",   # spruce — blue-green
+    "abies":       "#2f5740",   # fir — dark
+    "pseudotsuga": "#33604a",   # douglas-fir — dark green
+    "pinus":       "#5d7e44",   # pine — yellow-green
+    "larix":       "#7fa258",   # tamarack — soft light green
+    "populus":     "#7caa4e",   # aspen / poplar — bright light
+    "betula":      "#79a64f",   # birch — light airy
+    "quercus":     "#46702f",   # oak — deep
+    "salix":       "#8aa46a",   # willow — pale grey-green
+    "cornus":      "#5a8246",   # dogwood
+}
+
+
+def _genus_of(plant: dict) -> str:
+    """First token of the scientific name, lowercased — the 3D viewer's key for
+    species-specific geometry/colour. Empty when unknown."""
+    return (plant.get("scientific_name") or "").split(" ")[0].lower()
+
 _MONTHS = {
     "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6, "jul": 7,
     "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
@@ -109,9 +133,11 @@ def _foliage_color(plant: dict) -> str:
     marker = plant.get("marker_color")
     if marker:
         return marker
-    genus = (plant.get("scientific_name") or "").split(" ")[0].lower()
+    genus = _genus_of(plant)
     if genus in _SILVER_FOLIAGE_GENERA:
         return "#9aa890"
+    if genus in _GENUS_FOLIAGE:
+        return _GENUS_FOLIAGE[genus]
     if (plant.get("plant_type") == "tree"
             and plant.get("deciduous_evergreen") == "evergreen"):
         return "#355e3b"   # conifers — darker
@@ -275,6 +301,9 @@ def build_scene(project: dict, *, year: int = 0,
                 "x": round(x, 2), "y": round(y, 2),
                 "height_m": st["height_m"], "canopy_m": st["canopy_m"],
                 "plant_type": st["plant_type"] or "herb",
+                # Genus drives the 3D viewer's species-specific geometry (spruce
+                # vs pine vs fir, white-barked aspen/birch, red-stemmed dogwood…).
+                "genus": _genus_of(plant),
                 "foliage_type": st.get("foliage_type", "herbaceous"),
                 # Growth maturity (0.1–1.0) drives the 3D viewer's structural
                 # tier (sapling/young/mature branch complexity); spread_factor
@@ -306,6 +335,7 @@ def build_scene(project: dict, *, year: int = 0,
                 "height_m": float(props.get("height_m") or 6.0),
                 "canopy_m": canopy,
                 "plant_type": "tree",
+                "genus": "",
                 # Existing trees are mature with no modelled colony spread.
                 "scale_factor": 1.0,
                 "spread_factor": 1.0,

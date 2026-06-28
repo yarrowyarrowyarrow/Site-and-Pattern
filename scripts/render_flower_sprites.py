@@ -96,10 +96,19 @@ def main():
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
 
+    # Size the sheet to the number of forms (5 per row, 232 px tiles + header).
+    n_forms = forms_lit.count(",") + 1
+    cols, tile, y0 = 5, 232, 52
+    rows = (n_forms + cols - 1) // cols
+    width = 24 + cols * tile
+    height = y0 + rows * tile + 8
+
     harness = _HARNESS_TMPL.format(
         make_tex=make_tex,
         forms=forms_lit,
         colors=json.dumps(colors),
+        width=width,
+        height=height,
     )
 
     with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False,
@@ -111,7 +120,7 @@ def main():
         cmd = [
             _chrome(), "--headless", "--no-sandbox", "--disable-gpu",
             "--hide-scrollbars", "--force-device-scale-factor=2",
-            "--window-size=1180,560",
+            f"--window-size={width},{height}",
             f"--screenshot={OUT}",
             f"--virtual-time-budget=3000",
             harness_path.as_uri(),
@@ -129,7 +138,7 @@ def main():
 
 _HARNESS_TMPL = """<!doctype html><html><head><meta charset="utf-8">
 <style>html,body{{margin:0;background:#16221a}}</style></head><body>
-<canvas id="sheet" width="1180" height="560"></canvas>
+<canvas id="sheet" width="{width}" height="{height}"></canvas>
 <script>
 // Minimal stubs — makeFlowerTexture only needs CanvasTexture + SRGBColorSpace.
 const THREE = {{ CanvasTexture: function(c){{ this.image = c; }}, SRGBColorSpace: 'srgb' }};

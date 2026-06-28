@@ -7,8 +7,12 @@ the **live gallery** below lets you rotate and inspect each one.
 
 ## See them live
 
-The gallery embeds the real viewer and renders one specimen per sprite — drag to
-orbit, scroll to zoom, pick any item from the sidebar.
+**In the app:** **View → 3D Sprite Gallery…** — a native window that drives the
+real viewer; pick any sprite from the sidebar, and set a **Detail** level
+(Low / Medium / High) if the view is sluggish on your machine.
+
+**Standalone (browser):** the same gallery as a web page — drag to orbit, scroll
+to zoom, pick any item from the sidebar.
 
 ```bash
 # from the repo root
@@ -18,7 +22,7 @@ python -m http.server 8000
 ```
 
 Deep-link a single sprite with `?sprite=KEY`, e.g.
-`…/sprite_gallery.html?sprite=flower_cattail` or `?sprite=tree_spreading`.
+`…/sprite_gallery.html?sprite=conifer_pine` or `?sprite=shrub_dogwood`.
 
 ![All archetypes in the gallery](3d/sprite_gallery_overview.png)
 
@@ -43,24 +47,42 @@ The image below is the **actual** `makeFlowerTexture` output (extracted from
 | `bell` | hanging bell | Alaska Harebell |
 | `trumpet` | 5-point tubular star | Blue Columbine |
 | `cattail` | brown emergent spike *(V1.92)* | Cattail (Typha) |
+| `pea` | legume raceme (banner + wings) *(V1.94)* | Silky Lupine, vetches, milkvetches |
+| `whorl` | tubular whorl / shaggy head *(V1.94)* | Wild Bergamot (Monarda) |
 
 ## Plant-body geometry archetypes
 
-Procedural meshes, bucketed by `plant_type` in `buildPlants()` → `byKind`. Trees
-are built per **crown class** (conifer vs deciduous) × **crown form** (slender /
-oval / spreading, chosen from the plant's height-to-canopy aspect) × maturity
-tier × per-individual sub-variation.
+Procedural meshes, bucketed by `plant_type` in `buildPlants()` → `byKind`.
+
+**Species geometry (V1.94):** the most impactful keystone/host trees and shrubs
+are differentiated by **genus** (from `scientific_name`) so they read as
+themselves — see `TREE_PROFILES` / `_SPROF` in `scene3d.html`. Trees are still
+built per crown form (slender / oval / spreading, forced per genus where it
+matters) × maturity tier × per-individual sub-variation; a genus a profile
+doesn't list falls back to the generic look.
 
 | Archetype | Builder | Looks like | Place to test |
 |-----------|---------|-----------|---------------|
-| Conifer tree | `buildConiferGeo` | stacked drooping cones | a tree marked evergreen (White Spruce, Balsam Fir) |
-| Deciduous tree | `generateDaVinciTree` | branch skeleton + foliage crown | any deciduous tree (Aspen = slender, Bur Oak = spreading) |
-| Shrub | `buildShrubGeo` | bushy cluster of merged domes | any shrub (Beaked Hazelnut) |
-| Perennial / herb clump | `buildPerennialGeo` | thin stems + leaf rosettes over a mound | a wildflower, herb, or **fern** (shares this) |
-| Grass / sedge / rush tuft | `buildGrassGeo` | dense fan of flat arching blades *(V1.92)* | a grass, sedge, or rush (Big Bluestem) |
+| **Spruce** (Picea) | `buildConiferGeo` (spruce) | dense narrow bluish spire | White Spruce, Black Spruce |
+| **Pine** (Pinus) | `buildPineGeo` | open, scraggly; clear trunk + tufted upper crown, yellow-green | Jack Pine, Lodgepole Pine |
+| **Fir** (Abies/Pseudotsuga) | `buildConiferGeo` (fir) | narrow dark conic, sharp thin summit | Balsam Fir, Douglas Fir |
+| **Larch / Tamarack** (Larix) | `buildConiferGeo` (larch) | soft sparse cone; deciduous needles (gold→bare) | Tamarack |
+| **Aspen / Poplar** (Populus) | `generateDaVinciTree` | slender, pale bark, open round crown | Trembling Aspen, Balsam Poplar |
+| **Birch** (Betula) | `generateDaVinciTree` | white bark, finer pendulous twigs | Paper Birch, Water Birch |
+| **Oak** (Quercus) | `generateDaVinciTree` | broad gnarled spreading, dark | Bur Oak |
+| **Willow** (Salix) | `generateDaVinciTree` | pale grey bark, weeping fringe | Bebb's Willow |
+| Other tree | `generateDaVinciTree` | generic branch crown + foliage | cherry, apple, etc. |
+| **Dogwood** (Cornus) | `buildShrubGeo` (red-stem) | bushy dome with bare **red** stems | Red-osier Dogwood |
+| Shrub | `buildShrubGeo` | bushy dome (willow upright, others generic) | any shrub |
+| Perennial / herb clump | `buildPerennialGeo` | thin stems + leaf rosettes over a mound | a wildflower, herb, or **fern** |
+| Grass / sedge / rush tuft | `buildGrassGeo` | dense fan of flat arching blades *(V1.92)* | a grass, sedge, or rush |
 | Aquatic / emergent clump | `buildAquaticGeo` | tall erect strap leaves *(V1.92)* | an aquatic (Cattail, Great Bulrush) |
-| Groundcover mat | `buildGroundcoverGeo` | low scatter of textured domes | a groundcover (Bearberry) |
-| Vine | `GEO.cone` | slim swaying cone | a vine (Blue Clematis) |
+| Groundcover mat | `buildGroundcoverGeo` | low scatter of textured domes | Bearberry |
+| Vine | `GEO.cone` | slim swaying cone | Blue Clematis |
+
+Everything stays procedural + instanced + archetype-cached; genus changes
+silhouette and colour, not per-frame cost. The **Detail** toggle scales build-time
+density (blade / blob / tier counts) for weak hardware.
 
 ## Regenerating the gallery & images
 

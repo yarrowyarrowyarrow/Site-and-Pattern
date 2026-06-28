@@ -37,6 +37,9 @@ _FAKE_PLANTS = {
         "mature_height_meters": 1.6, "mature_canopy_m": 0.5,
         "scientific_name": "Typha latifolia", "bloom_period": "June–September",
         "flower_color": "#7a5230", "flower_form": "cattail"},
+    5: {"plant_type": "tree", "years_to_maturity": 20, "growth_curve": "steady",
+        "mature_height_meters": 18.0, "mature_canopy_m": 6.0,
+        "deciduous_evergreen": "evergreen", "scientific_name": "Picea glauca"},
 }
 
 
@@ -143,6 +146,19 @@ class TestSceneBasics(unittest.TestCase):
         self.assertEqual(p["flower_form"], "cattail")
         self.assertEqual(p["flower_color"], "#7a5230")
         self.assertEqual((p["bloom_start"], p["bloom_end"]), (6, 9))
+
+    def test_genus_drives_species_geometry_and_colour(self):
+        # V1.94: the scene plant carries `genus` (so the viewer can pick spruce vs
+        # pine vs fir geometry) and a genus-specific foliage green (spruce blue-
+        # green), not the generic dark-conifer colour.
+        proj = _project([
+            plant_feature({"plant_id": 5, "common_name": "White Spruce",
+                           "lat": _LAT, "lng": _LNG}),
+        ])
+        p = build_scene(proj, get_plant=_get_plant)["plants"][0]
+        self.assertEqual(p["genus"], "picea")
+        self.assertEqual(p["color"].lower(), "#46685a")   # spruce blue-green
+        self.assertNotEqual(p["color"].lower(), "#355e3b")  # not the generic conifer
 
     def test_grass_seedhead_default_bloom(self):
         # A flowering plant with no bloom_period (e.g. a grass seed-head plume)

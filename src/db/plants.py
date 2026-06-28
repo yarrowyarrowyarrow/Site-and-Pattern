@@ -128,7 +128,10 @@ _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 # globe / trumpet) and straw seed-head plumes on grasses.
 # v33 (V1.92): no DDL — reseed for curated marsh aquatics (cattail brown spike,
 # bulrush, yellow pond-lily) feeding the new 3D aquatic/cattail geometry.
-_SCHEMA_VERSION = 33
+# v34 (V1.94): no DDL — reseed for the legume "pea" + bee-balm "whorl" flower
+# forms (lupines / vetches / milkvetches / Monarda) feeding the expanded 3D
+# flower sprite library + the genus-specific tree/shrub geometry.
+_SCHEMA_VERSION = 34
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
