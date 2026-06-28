@@ -135,8 +135,10 @@ FORMS = ["daisy", "rays", "spike", "plume", "umbel", "globe",
 
 
 def _seed_rows():
-    rows = json.loads((_ROOT / "data" / "plants_master.json").read_text())
-    rows += json.loads((_ROOT / "data" / "garden_plants.json").read_text())
+    # encoding="utf-8" is required: the seed JSON has en-dashes / accented names,
+    # and read_text() defaults to the locale codec (cp1252 on Windows → crash).
+    rows = json.loads((_ROOT / "data" / "plants_master.json").read_text(encoding="utf-8"))
+    rows += json.loads((_ROOT / "data" / "garden_plants.json").read_text(encoding="utf-8"))
     return rows
 
 

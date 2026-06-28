@@ -26,7 +26,7 @@ OUT = ROOT / "html" / "sprite_gallery_scenes.json"
 
 def main():
     scenes = gallery_scenes()
-    OUT.write_text(json.dumps(scenes, separators=(",", ":")))
+    OUT.write_text(json.dumps(scenes, separators=(",", ":")), encoding="utf-8")
     n_flw = sum(1 for k in scenes if k.startswith("flower_"))
     n_geo = len(scenes) - n_flw - 1
     print(f"Wrote {OUT.relative_to(ROOT)}: {len(scenes)} entries "

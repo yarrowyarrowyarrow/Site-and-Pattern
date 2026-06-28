@@ -69,7 +69,7 @@ def _real_flower_colors() -> dict:
     sheet shows each sprite as it actually appears in the app)."""
     colors = {}
     if SCENES_JSON.exists():
-        data = json.loads(SCENES_JSON.read_text())
+        data = json.loads(SCENES_JSON.read_text(encoding="utf-8"))
         for key, entry in data.items():
             if key.startswith("flower_"):
                 form = key[len("flower_"):]
@@ -80,7 +80,7 @@ def _real_flower_colors() -> dict:
 
 
 def main():
-    src = SCENE3D.read_text()
+    src = SCENE3D.read_text(encoding="utf-8")
     make_tex = _grab_function(src, "function makeFlowerTexture")
     forms_lit = re.search(r"const FLOWER_FORMS = (\[[\s\S]*?\]);", src).group(1)
 
@@ -112,7 +112,7 @@ def main():
     )
 
     with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False,
-                                     dir=str(OUT.parent)) as fh:
+                                     dir=str(OUT.parent), encoding="utf-8") as fh:
         fh.write(harness)
         harness_path = Path(fh.name)
 

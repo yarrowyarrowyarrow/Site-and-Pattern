@@ -7,8 +7,11 @@ genus archetype + flower form and emit valid, serialisable Scene JSON.
 """
 
 import json
+import re
 import unittest
+from pathlib import Path
 
+import src.sprite_gallery as sprite_gallery
 from src.sprite_gallery import gallery_scenes, GEOMETRY, FORMS
 
 
@@ -54,6 +57,16 @@ class TestGalleryScenes(unittest.TestCase):
         self.assertEqual(pea["flower_form"], "pea")
         whorl = self.scenes["flower_whorl"]["scene"]["plants"][0]
         self.assertEqual(whorl["flower_form"], "whorl")
+
+    def test_seed_reads_pin_utf8_encoding(self):
+        # Regression (V1.95): bare read_text()/write_text() use the locale codec
+        # (cp1252 on Windows) and crash on the seed JSON's en-dashes / accented
+        # names. Every file read/write in the gallery module must pin an encoding.
+        text = Path(sprite_gallery.__file__).read_text(encoding="utf-8")
+        for m in re.finditer(r"\.(?:read|write)_text\(([^)]*)\)", text):
+            self.assertIn("encoding", m.group(1),
+                          "read_text()/write_text() without encoding= "
+                          "in sprite_gallery.py (cp1252 crash on Windows)")
 
 
 if __name__ == "__main__":
