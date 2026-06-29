@@ -26,6 +26,8 @@ _plants_mod._DB_PATH  = os.path.join(_TMP_DIR, "permadesign_test.db")
 from src.db.plants import (  # noqa: E402
     init_db,
     get_connection,
+    get_plant,
+    get_all_plants,
     get_plant_uses,
     plants_with_use,
     plant_uses_for_ids,
@@ -73,32 +75,51 @@ class TestUsesJunction(unittest.TestCase):
         # Conservative lower bound: at least one tag per plant on average.
         self.assertGreater(n, 400)
 
-    def test_plant_uses_matches_legacy_column(self):
-        """For every plant, the junction tag set must match the tokens in
-        the legacy ``permaculture_uses`` string (filtered to canonical
-        tokens that exist in the ``uses`` lookup)."""
+    def test_plant_uses_matches_seed_json(self):
+        """For every seeded plant, the junction tag set must match the canonical
+        tokens in the source JSON ``permaculture_uses`` field. The denormalized
+        DB column was dropped in schema v37, so the JSON file is now the seed
+        source the junction is populated from — this is the safety-net parity
+        invariant."""
+        import json
+        project_root = os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__))
+        )
+        name_to_tokens: dict[str, set] = {}
+        for fname in ("plants_master.json", "garden_plants.json"):
+            with open(os.path.join(project_root, "data", fname),
+                      encoding="utf-8") as f:
+                for rec in json.load(f):
+                    raw = rec.get("permaculture_uses") or ""
+                    if isinstance(raw, list):
+                        raw = ",".join(raw)
+                    name_to_tokens[(rec.get("common_name") or "").lower()] = {
+                        t.strip() for t in raw.split(",") if t.strip()
+                    }
         conn = get_connection()
         try:
             uses_keys = {
                 r[0] for r in conn.execute("SELECT key FROM uses").fetchall()
             }
             rows = conn.execute(
-                "SELECT id, permaculture_uses FROM plants "
-                "WHERE permaculture_uses IS NOT NULL "
-                "  AND permaculture_uses != '' LIMIT 50"
+                "SELECT id, common_name FROM plants ORDER BY id LIMIT 80"
             ).fetchall()
         finally:
             conn.close()
-        for pid, blob in rows:
-            legacy_tokens = {
-                t.strip() for t in (blob or "").split(",") if t.strip()
-            }
-            legacy_canonical = legacy_tokens & uses_keys
+        checked = 0
+        for pid, name in rows:
+            tokens = name_to_tokens.get((name or "").lower())
+            if tokens is None:
+                continue  # inserted by another test module, not from seed JSON
+            json_canonical = tokens & uses_keys
             junction = set(get_plant_uses(pid))
             self.assertEqual(
-                legacy_canonical, junction,
-                f"plant_id={pid}: legacy={legacy_canonical} junction={junction}",
+                json_canonical, junction,
+                f"plant_id={pid} {name!r}: json={json_canonical} "
+                f"junction={junction}",
             )
+            checked += 1
+        self.assertGreater(checked, 0, "no JSON-seeded plants found to compare")
 
     # ── Query helpers ───────────────────────────────────────────────────
 
@@ -134,36 +155,56 @@ class TestUsesJunction(unittest.TestCase):
         result_ids = {r["id"] for r in results}
         self.assertEqual(result_ids, keystone_ids)
 
-    def test_search_host_plant_only_matches_legacy_set(self):
-        """Reading via the junction must yield the same plant set as the
-        legacy substring filter (because we still populate both during
-        seed). This is the safety-net invariant."""
+    def test_search_host_plant_only_uses_junction(self):
+        """The host_plant filter must yield exactly the junction's tagged set."""
         new_results = {r["id"] for r in search_plants(host_plant_only=True)}
-        conn = get_connection()
-        try:
-            legacy = {
-                r[0] for r in conn.execute(
-                    "SELECT id FROM plants "
-                    "WHERE LOWER(permaculture_uses) LIKE '%host_plant%'"
-                ).fetchall()
-            }
-        finally:
-            conn.close()
-        self.assertEqual(new_results, legacy)
+        self.assertEqual(new_results, plants_with_use("host_plant"))
 
-    def test_search_bird_food_matches_legacy_set(self):
+    def test_search_bird_food_uses_junction(self):
         new_results = {r["id"] for r in search_plants(bird_food_only=True)}
+        self.assertEqual(new_results, plants_with_use("bird_food"))
+
+    # ── schema v37: column dropped, blob synthesized on read ─────────────
+
+    def test_permaculture_uses_column_dropped(self):
         conn = get_connection()
         try:
-            legacy = {
-                r[0] for r in conn.execute(
-                    "SELECT id FROM plants "
-                    "WHERE LOWER(permaculture_uses) LIKE '%bird_food%'"
-                ).fetchall()
+            cols = {
+                r[1] for r in conn.execute(
+                    "PRAGMA table_info(plants)").fetchall()
             }
         finally:
             conn.close()
-        self.assertEqual(new_results, legacy)
+        self.assertNotIn("permaculture_uses", cols)
+
+    def test_get_plant_synthesizes_uses_from_junction(self):
+        conn = get_connection()
+        try:
+            pid = conn.execute(
+                "SELECT plant_id FROM plant_uses LIMIT 1").fetchone()[0]
+        finally:
+            conn.close()
+        plant = get_plant(pid)
+        self.assertIn("permaculture_uses", plant)
+        derived = {t for t in plant["permaculture_uses"].split(",") if t}
+        self.assertEqual(derived, set(get_plant_uses(pid)))
+        self.assertGreater(len(derived), 0)
+
+    def test_get_all_plants_synthesizes_uses(self):
+        with_uses = [p for p in get_all_plants()
+                     if (p.get("permaculture_uses") or "")]
+        self.assertGreater(len(with_uses), 0)
+        sample = with_uses[0]
+        derived = {t for t in sample["permaculture_uses"].split(",") if t}
+        self.assertEqual(derived, set(get_plant_uses(sample["id"])))
+
+    def test_keyword_search_matches_use_tag_via_junction(self):
+        """A keyword equal to a use key resolves through the EXISTS-on-junction
+        clause, so every plant carrying that tag is returned."""
+        by_keyword = {r["id"] for r in search_plants(query="nitrogen_fixer")}
+        by_tag = plants_with_use("nitrogen_fixer")
+        self.assertGreater(len(by_tag), 0)
+        self.assertTrue(by_tag.issubset(by_keyword))
 
 
 class TestUsesVocabularyRefresh(unittest.TestCase):

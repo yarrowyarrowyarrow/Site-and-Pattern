@@ -1,6 +1,9 @@
 """
 src/scene_contract.py — the versioned Scene JSON contract (V1.62).
 
+Design principle P4 (time is the most undervalued design variable — the scene is
+built for a chosen growth-timeline year) — see docs/DESIGN_PHILOSOPHY.md.
+
 One pure function, :func:`build_scene`, turns a project dict into a
 renderer-agnostic scene description in **local metres** (+x east, +y north,
 origin at the design centroid). The embedded 3D viewer consumes it via
@@ -13,17 +16,28 @@ Scene schema (``SCENE_VERSION`` = 1)::
     {
       "version": 1,
       "year": int,                     # growth-timeline year (0 = mature)
+      "month": int,                    # 1–12, drives 3D seasonal foliage colour
       "origin": {"lat": .., "lng": ..},# projection origin (WGS-84)
       "bounds": {"min_x","min_y","max_x","max_y"},   # metres, scene extent
       "boundary": [[x, y], ...] | None,              # property outline
       "plants": [{plant_id, x, y, height_m, canopy_m, plant_type,
-                  color, opacity, common_name, existing?}, ...],
+                  foliage_type, scale_factor, spread_factor, spread_rate,
+                  growth_curve, color, opacity, common_name, existing?}, ...],
+                                       # foliage_type: deciduous|evergreen|
+                                       #   herbaceous|semi-evergreen (3D crown
+                                       #   shape + seasonal colour)
+                                       # scale_factor: 0.1–1.0 growth maturity
+                                       #   (3D branch-complexity tier)
+                                       # spread_factor: ≥1.0 colony widening
+                                       # spread_rate: 0–1 aggressiveness (3D
+                                       #   continuous year-by-year spread)
       "buildings": [{ring: [[x, y], ...], height_m, kind}, ...],
                                        # kind: "building" | "canopy"
       "structures": [{x, y, struct_id, name, size_m, height_m}, ...],
       "terrain": {rows, cols, min_x, min_y, max_x, max_y, base_m,
                   heights: [[m above base_m, row 0 = north], ...]} | None,
       "scan_points": [[x, y, z], ...] | None,   # imported yard scan (V1.63)
+      "splat": {path, matrix, opacity} | None,  # Gaussian-splat backdrop (V1.65)
       "sun": {"azimuth_deg": .., "altitude_deg": ..} | None,
     }
 
@@ -57,6 +71,109 @@ _FALLBACK_PLANT_COLOR = "#66bb6a"   # map.html's marker fallback
 # Existing trees marked on the map get a muted colour so proposed plants
 # stand out against what's already there.
 _EXISTING_TREE_COLOR = "#4e6e52"
+
+# ── Natural foliage + bloom (V1.90) ──────────────────────────────────────────
+# The 3D viewer used to colour plants by their map-marker (plant-type) colour —
+# which since the V1.87 taxonomy turned wildflowers purple. Instead send a
+# natural foliage green per type (with a silver set for sages etc.), and pass
+# the curated flower_color / flower_form + bloom window so the viewer can render
+# real-coloured flowers when a plant is in bloom for the scene's month.
+_FOLIAGE_BY_TYPE = {
+    "tree":        "#4a7a3e",
+    "shrub":       "#4f7a3a",
+    "wildflower":  "#6a9a4a",
+    "herb":        "#6a9a4a",
+    "groundcover": "#5b8a4a",
+    "grass":       "#8aa256",
+    "sedge":       "#7e9a55",
+    "rush":        "#6f9a5a",
+    "fern":        "#3f6b46",
+    "vine":        "#5a8a3c",
+    "aquatic":     "#4a8a64",
+}
+_SILVER_FOLIAGE_GENERA = {
+    "artemisia", "antennaria", "anaphalis", "elaeagnus", "shepherdia",
+    "krascheninnikovia", "eurotia",
+}
+_DEFAULT_FOLIAGE = "#5b8a4a"
+
+# Per-genus foliage greens for the most impactful keystone/host trees (V1.94) —
+# the cheapest way to make a spruce read bluish, a pine yellow-green, an aspen
+# bright and an oak deep, on top of the genus-specific geometry the 3D viewer
+# builds. Only genera that visibly differ from their type's default are listed;
+# everything else falls through to _FOLIAGE_BY_TYPE.
+_GENUS_FOLIAGE = {
+    "picea":       "#46685a",   # spruce — blue-green
+    "abies":       "#2f5740",   # fir — dark
+    "pseudotsuga": "#33604a",   # douglas-fir — dark green
+    "pinus":       "#5d7e44",   # pine — yellow-green
+    "larix":       "#7fa258",   # tamarack — soft light green
+    "populus":     "#7caa4e",   # aspen / poplar — bright light
+    "betula":      "#79a64f",   # birch — light airy
+    "quercus":     "#46702f",   # oak — deep
+    "salix":       "#8aa46a",   # willow — pale grey-green
+    "cornus":      "#5a8246",   # dogwood
+}
+
+
+def _genus_of(plant: dict) -> str:
+    """First token of the scientific name, lowercased — the 3D viewer's key for
+    species-specific geometry/colour. Empty when unknown."""
+    return (plant.get("scientific_name") or "").split(" ")[0].lower()
+
+_MONTHS = {
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6, "jul": 7,
+    "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+}
+
+
+def _foliage_color(plant: dict) -> str:
+    """Natural foliage colour for the 3D body — a green by plant type, silvery
+    for sage-type genera, or the user's explicit marker colour if they set one."""
+    marker = plant.get("marker_color")
+    if marker:
+        return marker
+    genus = _genus_of(plant)
+    if genus in _SILVER_FOLIAGE_GENERA:
+        return "#9aa890"
+    if genus in _GENUS_FOLIAGE:
+        return _GENUS_FOLIAGE[genus]
+    if (plant.get("plant_type") == "tree"
+            and plant.get("deciduous_evergreen") == "evergreen"):
+        return "#355e3b"   # conifers — darker
+    return _FOLIAGE_BY_TYPE.get(plant.get("plant_type"), _DEFAULT_FOLIAGE)
+
+
+def _bloom_months(bloom_period: str):
+    """Parse a ``bloom_period`` like 'May-Jul', 'June-August', or 'Aug' into
+    ``(start_month, end_month)`` (1–12), or ``(0, 0)`` when unknown. The 3D
+    viewer shows flowers only when the scene's month falls in this window."""
+    s = (bloom_period or "").strip().lower()
+    if not s:
+        return 0, 0
+    parts = [p.strip()[:3] for p in s.replace("–", "-").split("-")]
+    nums = [_MONTHS[p] for p in parts if p in _MONTHS]
+    if not nums:
+        return 0, 0
+    return nums[0], nums[-1]
+
+
+def _bloom_window(plant: dict) -> dict:
+    """``{bloom_start, bloom_end}`` for the 3D flower layer. A flowering plant
+    with no recorded ``bloom_period`` (e.g. grasses, whose 'flower' is a seed
+    head) falls back to a generic summer window so its sprite still appears."""
+    bs, be = _bloom_months(plant.get("bloom_period"))
+    if not bs and (plant.get("flower_form") or "none") != "none":
+        bs, be = 6, 9
+    return {"bloom_start": bs, "bloom_end": be}
+
+
+def _fruit_window(plant: dict) -> dict:
+    """``{fruit_start, fruit_end}`` for the 3D berry layer, from ``fruit_period``.
+    Only fleshy-fruited species carry a ``fruit_color`` (curated), so dry-fruited
+    plants (acorns, cones, catkins) never grow berries even if they 'fruit'."""
+    fs, fe = _bloom_months(plant.get("fruit_period"))
+    return {"fruit_start": fs, "fruit_end": fe}
 
 
 def _boundary_ring(project: dict) -> Optional[list]:
@@ -143,7 +260,8 @@ def build_scene(project: dict, *, year: int = 0,
                 get_plant: Optional[Callable] = None,
                 elevation: Optional[dict] = None,
                 when: Optional[datetime] = None,
-                scan: Optional[dict] = None) -> dict:
+                scan: Optional[dict] = None,
+                splat: Optional[dict] = None) -> dict:
     """Build the Scene JSON for ``project`` at growth-timeline ``year``.
 
     ``get_plant`` is injectable for tests (defaults to the DB);
@@ -152,6 +270,10 @@ def build_scene(project: dict, *, year: int = 0,
     ``scan`` is an optional ``scan_import.sample_for_scene`` result —
     its points are re-framed from the scan's projection origin into this
     scene's and exposed as ``scene["scan_points"]``.
+    ``splat`` optionally overrides the project's ``splat_backdrop`` feature
+    (a Gaussian-splat photoreal backdrop); when omitted it is auto-detected
+    from ``project`` and exposed as ``scene["splat"]`` ({path, matrix,
+    opacity}) so the 3D viewer can place it behind the design.
     """
     if get_plant is None:
         from src.db.plants import get_plant as _gp
@@ -187,9 +309,28 @@ def build_scene(project: dict, *, year: int = 0,
                 "x": round(x, 2), "y": round(y, 2),
                 "height_m": st["height_m"], "canopy_m": st["canopy_m"],
                 "plant_type": st["plant_type"] or "herb",
-                "color": (plant.get("marker_color")
-                          or _TYPE_COLORS.get(st["plant_type"])
-                          or _FALLBACK_PLANT_COLOR),
+                # Genus drives the 3D viewer's species-specific geometry (spruce
+                # vs pine vs fir, white-barked aspen/birch, red-stemmed dogwood…).
+                "genus": _genus_of(plant),
+                "foliage_type": st.get("foliage_type", "herbaceous"),
+                # Growth maturity (0.1–1.0) drives the 3D viewer's structural
+                # tier (sapling/young/mature branch complexity); spread_factor
+                # (≥1.0) widens the footprint; spread_rate (0–1) drives the
+                # continuous, year-by-year colony scatter for self-spreaders.
+                "scale_factor": st["scale_factor"],
+                "spread_factor": st["spread_factor"],
+                "spread_rate": st["spread_rate"],
+                "growth_curve": plant.get("growth_curve") or "steady",
+                # 3D body = natural foliage colour (V1.90); flowers carry their
+                # own real colour + form, shown when in bloom for the month.
+                "color": _foliage_color(plant),
+                "flower_color": plant.get("flower_color") or "",
+                "flower_form": plant.get("flower_form") or "none",
+                **_bloom_window(plant),
+                # Fleshy fruit (V2.0): a curated berry colour shown in the fruit
+                # season. Empty for dry-fruited / non-fruiting plants.
+                "fruit_color": plant.get("fruit_color") or "",
+                **_fruit_window(plant),
                 "opacity": st["presence_opacity"],
             })
             continue
@@ -206,7 +347,17 @@ def build_scene(project: dict, *, year: int = 0,
                 "height_m": float(props.get("height_m") or 6.0),
                 "canopy_m": canopy,
                 "plant_type": "tree",
+                "genus": "",
+                # Existing trees are mature with no modelled colony spread.
+                "scale_factor": 1.0,
+                "spread_factor": 1.0,
+                "spread_rate": 0.0,
+                "growth_curve": "steady",
                 "color": _EXISTING_TREE_COLOR,
+                "flower_color": "",
+                "flower_form": "none",
+                "bloom_start": 0,
+                "bloom_end": 0,
                 "opacity": 1.0,
                 "existing": True,
             })
@@ -289,9 +440,19 @@ def build_scene(project: dict, *, year: int = 0,
         scan_points = [[round(p[0] + dx, 2), round(p[1] + dy, 2), p[2]]
                        for p in scan["points"]]
 
+    splat_feature = splat
+    if splat_feature is None:
+        from src.splat_backdrop import feature_from_project
+        splat_feature = feature_from_project(project)
+    splat_field = None
+    if splat_feature:
+        from src.splat_backdrop import scene_field
+        splat_field = scene_field(splat_feature, lat0, lng0)
+
     return {
         "version": SCENE_VERSION,
         "year": int(year),
+        "month": (when or _DEFAULT_WHEN).month,
         "origin": {"lat": lat0, "lng": lng0},
         "bounds": bounds,
         "boundary": boundary_xy,
@@ -300,5 +461,6 @@ def build_scene(project: dict, *, year: int = 0,
         "structures": structures,
         "terrain": _terrain_block(elevation, proj),
         "scan_points": scan_points,
+        "splat": splat_field,
         "sun": _sun_for(lat0, lng0, when or _DEFAULT_WHEN),
     }

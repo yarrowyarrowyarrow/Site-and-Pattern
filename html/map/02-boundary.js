@@ -161,17 +161,24 @@
       };
       boundaries.push(entry);
 
-      // Click → enter edit mode (or toggle selection on shift/cmd+click)
+      // Click → enter edit mode (or toggle selection on shift/cmd+click).
+      // In a placement mode, forward to onMapClick so the user can place on
+      // top of a visible boundary. Leaflet 1.9.4 makes the polygon the event
+      // target and does NOT fire the map's own click for it, so we have to
+      // run onMapClick ourselves (the layer event carries e.latlng).
       layer.on('click', function(e) {
-        L.DomEvent.stop(e);
         var oe = e.originalEvent;
         if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) {
+          L.DomEvent.stop(e);
           toggleSelection({ kind: 'boundary', boundaryId: id });
           return;
         }
         if (currentMode === 'none') {
+          L.DomEvent.stop(e);
           enterBoundaryEditMode(id);
+          return;
         }
+        onMapClick(e);   // placement/draw mode → place on top of the boundary
       });
 
       // Right-click → context menu

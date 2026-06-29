@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  html/scene3d.html — PermaDesign's built-in 3D design viewer (V1.62).
+  html/scene3d.html — Site & Pattern's built-in 3D design viewer (V1.62).
 
   Self-contained three.js scene driven entirely by the desktop host through
   three guarded hooks (all registered at module init):
@@ -17,19 +17,26 @@
   Axis mapping (scene → three.js, Y-up): x_east → +x, y_north → −z,
   height → +y.
 
-  three.js loads from unpkg, matching how html/map.html loads Leaflet —
-  the map already assumes network for tiles. Offline shows a notice
-  instead of a scene.
+  three.js + Spark are vendored under html/vendor/ and served over a
+  localhost http:// origin (src/web_assets.py), so the 3D view loads offline
+  and is immune to CDN outages and bundled-Chromium module-loading changes.
+  The offline/error notice now only appears if WebGL itself is unavailable or
+  the bundled assets are missing.
 
-  Plants render as instanced archetype meshes (trunk+crown trees, shrub
-  domes, herb cones, groundcover discs) — hundreds of plants are two-digit
-  draw calls. presence_opacity is encoded by fading the instance colour
-  toward the sky tint (per-instance alpha isn't a thing for InstancedMesh).
+  Plants render as instanced procedural archetypes: trees are Da Vinci
+  branching skeletons (R^x = Σ r_i^x) merged into one BufferGeometry per
+  archetype — conifers conical/monopodial, deciduous rounded/sympodial —
+  with a vertex-colour canopy gradient and a GPU wind sway (the month drives
+  seasonal foliage colour, bare branches in winter). Shrubs are bushy merged
+  domes; herbs/vines are cones; groundcover flat discs; big plants get a soft
+  contact-shadow stamp. Hundreds of plants stay two-digit draw calls.
+  presence_opacity is encoded by fading the instance colour toward the sky
+  tint (per-instance alpha isn't a thing for InstancedMesh).
 -->
 <html>
 <head>
 <meta charset="utf-8">
-<title>PermaDesign 3D</title>
+<title>Site &amp; Pattern 3D</title>
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #cfe3f2; }
   #hud {
@@ -43,55 +50,156 @@
     align-items: center; justify-content: center; text-align: center;
     font-family: system-ui, sans-serif; color: #5d4037; background: #efebe9;
   }
+  #plant-tip {
+    position: absolute; z-index: 6; display: none; pointer-events: none;
+    font-family: system-ui, sans-serif; font-size: 12.5px; color: #eafaea;
+    background: rgba(20,32,24,.92); border: 1px solid #3a5a3a;
+    border-radius: 6px; padding: 3px 8px; white-space: nowrap;
+    transform: translate(12px, 12px);
+  }
 </style>
 </head>
 <body>
 <div id="hud">3D view — loading…</div>
-<div id="offline"><div id="offline-msg"><b>3D viewer needs the network once</b><br>
-three.js couldn't be loaded (offline?). The 2D map is unaffected.</div></div>
+<div id="plant-tip"></div>
+<div id="offline"><div id="offline-msg"><b>3D viewer couldn't start</b><br>
+The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
 
 <script type="importmap">
 {
   "imports": {
-    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    "three": "./vendor/three/three.module.js",
+    "three/addons/": "./vendor/three/addons/",
+    "@sparkjsdev/spark": "./vendor/spark/spark.module.js"
   }
 }
 </script>
 
 <script>
+  // Diagnostic checkpoint ping → the host logs it to ~/permadesign-debug.log,
+  // so we can trace how far this page got even when the JS console never
+  // reaches Python. Best-effort, never throws.
+  window._pinglog = function (m) {
+    try { fetch('/__log?m=' + encodeURIComponent(m)); } catch (e) {}
+  };
+  window._pinglog('page-script-running');
   // Fail loudly, not with a stuck "loading…": if the module graph didn't
-  // initialise within 8s (offline → three.js unfetchable, or WebGL
-  // unavailable → renderer construction threw), say which.
+  // initialise within 8s (a WebGL failure sets permaBootError; otherwise the
+  // vendored three.js module failed to load/parse), say which.
   window.permaFatal = function (msg) {
     document.getElementById('offline-msg').innerHTML = msg;
     document.getElementById('offline').style.display = 'flex';
   };
   setTimeout(function () {
     if (!window.permaSetScene) {
+      window._pinglog('TIMEOUT: permaSetScene never registered after 8s');
       window.permaFatal(window.permaBootError ||
-        '<b>3D viewer needs the network once</b><br>' +
-        'three.js couldn\'t be loaded (offline?). The 2D map is unaffected.');
+        '<b>3D viewer couldn\'t start</b><br>' +
+        'The bundled 3D engine failed to load. The 2D map is unaffected.');
     }
   }, 8000);
-  // Users can't see the devtools console — surface uncaught errors.
-  window.addEventListener('error', function (e) {
+  // Users can't see the devtools console — surface uncaught errors. Until the
+  // viewer has booted (permaSetScene registered), show the REAL error in the
+  // full-screen overlay instead of the generic "couldn't start" notice, so a
+  // boot failure tells us exactly what broke.
+  function _showViewerError(detail) {
+    detail = String(detail);
+    window._pinglog('error: ' + detail.slice(0, 300));
+    console.error('[scene3d] ' + detail);   // → stderr via the host's log page
     var hud = document.getElementById('hud');
-    if (hud && e && e.message) {
-      hud.innerHTML = '3D viewer error: ' + String(e.message).slice(0, 160);
+    if (hud) hud.innerHTML = '3D viewer error: ' + detail.slice(0, 200);
+    if (!window.permaSetScene) {
+      window.permaFatal('<b>3D viewer error</b><br>' + detail.slice(0, 400)
+        + '<br><br>The 2D map is unaffected.');
     }
+  }
+  // capture = true so module/resource load failures (which don't bubble) are
+  // caught too, not just thrown exceptions.
+  window.addEventListener('error', function (e) {
+    var d = (e && (e.message || (e.error && e.error.message)))
+      || (e && e.target && (e.target.src || e.target.href)
+          ? 'failed to load ' + (e.target.src || e.target.href) : 'unknown error');
+    _showViewerError(d);
+  }, true);
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e && e.reason;
+    _showViewerError((r && (r.message || r.stack)) || r || 'unhandled rejection');
   });
 </script>
 
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+// If we got here, the static three.js imports resolved & executed. (If they
+// hadn't, NO module code would run and this ping would be absent from the log.)
+window._pinglog && window._pinglog('module-eval-start (three OK)');
+// Spark — the OPTIONAL photoreal yard-scan backdrop (V1.65). Load it WITHOUT
+// blocking module evaluation: a top-level `await` here would stall the entire
+// viewer — window.permaSetScene is registered far below, so nothing past this
+// point runs until the import settles, and if Spark were slow or hung the whole
+// 3D view would silently never start. Fire-and-forget instead; SplatMesh /
+// SparkRenderer fill in when ready and the splat code (all guarded, and the
+// SparkRenderer is created lazily) simply no-ops until then. The core 3D view
+// never waits on Spark.
+let SplatMesh = null, SparkRenderer = null;
+import('@sparkjsdev/spark')
+  .then((m) => { SplatMesh = m.SplatMesh; SparkRenderer = m.SparkRenderer; })
+  .catch((err) => console.warn('Spark splat backdrop unavailable:', err));
 
 const SKY = 0xcfe3f2, GROUND = 0x8aa86f;
 
+// ── wind + time ─────────────────────────────────────────────────────────────
+const clock = new THREE.Clock();
+const windUniforms = { uTime: { value: 0 } };
+
+// ── seeded PRNG (mulberry32) ────────────────────────────────────────────────
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function hashPid(pid) {
+  if (pid == null) return 0;
+  if (typeof pid === 'number') return Math.abs(pid);
+  let h = 0; const s = String(pid);
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+// ── seasonal color modifier ─────────────────────────────────────────────────
+const _skyCol = new THREE.Color(SKY);
+
+function seasonalColor(hex, foliageType, month) {
+  const c = new THREE.Color(hex || '#66bb6a');
+  const ft = (foliageType || '').toLowerCase();
+  if (ft === 'evergreen') {
+    if (month >= 11 || month <= 2) c.multiplyScalar(0.85);
+    return c;
+  }
+  if (ft === 'deciduous' || ft === 'semi-evergreen') {
+    if (month >= 4 && month <= 5)
+      c.lerp(new THREE.Color('#c8e06a'), 0.3);
+    else if (month >= 9 && month <= 10)
+      c.lerp(new THREE.Color('#d4a030'), 0.55);
+    else if (month >= 11 || month <= 3)
+      c.set('#8b7355');
+    return c;
+  }
+  if (month >= 11 || month <= 3) c.lerp(new THREE.Color('#a09060'), 0.5);
+  return c;
+}
+
 let renderer;
 try {
-  renderer = new THREE.WebGLRenderer({ antialias: true });
+  // preserveDrawingBuffer lets the yard-photo bake read the canvas back with
+  // toDataURL after an off-axis render (V1.65); negligible cost at this scale.
+  renderer = new THREE.WebGLRenderer({ antialias: true,
+                                       preserveDrawingBuffer: true });
 } catch (e) {
   window.permaBootError = '<b>3D needs WebGL</b><br>This system\'s graphics '
     + 'stack doesn\'t offer WebGL, so the 3D preview can\'t render here. '
@@ -99,7 +207,9 @@ try {
   window.permaFatal(window.permaBootError);
   throw e;
 }
-renderer.setPixelRatio(window.devicePixelRatio);
+// Cap the pixel ratio so 4K / Retina panels don't render 4× the fragments on
+// modest GPUs (the visual gain past ~1.5× is negligible here).
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -109,6 +219,23 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(SKY);
 scene.fog = new THREE.Fog(SKY, 400, 1400);
 
+// Spark needs a SparkRenderer in the scene to draw splats with the normal
+// THREE.WebGLRenderer (V1.65). Created LAZILY — only once Spark has loaded
+// (background import above) AND a splat is actually added — so the core view
+// never depends on Spark. Constructed defensively: if it fails, the design
+// still renders, only the photoreal backdrop is unavailable.
+let sparkRenderer = null;
+function ensureSparkRenderer() {
+  if (sparkRenderer || !SparkRenderer) return sparkRenderer;
+  try {
+    sparkRenderer = new SparkRenderer({ renderer });
+    scene.add(sparkRenderer);
+  } catch (e) {
+    sparkRenderer = null;
+  }
+  return sparkRenderer;
+}
+
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 4000);
 camera.position.set(45, 38, 55);
 
@@ -116,16 +243,57 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.maxPolarAngle = Math.PI / 2 - 0.02;   // never go underground
 controls.target.set(0, 0, 0);
 
+// Hover → plant name (V1.99): raycast the instanced plant meshes and show the
+// common name of the instance under the cursor. Throttled; flower point-sprites
+// aren't pickable. Each plant mesh carries userData.pick = [name per instance].
+const _ray = new THREE.Raycaster();
+const _ptr = new THREE.Vector2();
+let _lastPick = 0;
+renderer.domElement.addEventListener('pointermove', (ev) => {
+  const tip = document.getElementById('plant-tip');
+  if (!tip) return;
+  tip.style.left = ev.clientX + 'px'; tip.style.top = ev.clientY + 'px';
+  const now = performance.now();
+  if (now - _lastPick < 45) return;             // throttle the raycast
+  _lastPick = now;
+  if (!plantsGroup) { tip.style.display = 'none'; return; }
+  const r = renderer.domElement.getBoundingClientRect();
+  _ptr.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
+  _ptr.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
+  _ray.setFromCamera(_ptr, camera);
+  const meshes = [];
+  plantsGroup.traverse(o => { if (o.isInstancedMesh && o.userData.pick) meshes.push(o); });
+  const hits = _ray.intersectObjects(meshes, false);
+  let name = '';
+  for (const h of hits) {
+    const nm = h.object.userData.pick[h.instanceId];
+    if (nm) { name = nm; break; }
+  }
+  tip.textContent = name;
+  tip.style.display = name ? 'block' : 'none';
+});
+renderer.domElement.addEventListener('pointerleave', () => {
+  const tip = document.getElementById('plant-tip');
+  if (tip) tip.style.display = 'none';
+});
+
 scene.add(new THREE.HemisphereLight(0xdfeefc, 0x5d6e51, 0.75));
 const sun = new THREE.DirectionalLight(0xfff4d6, 2.1);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+// 1024 is plenty: the crisp per-plant grounding comes from the cheap contact-
+// shadow discs, not this map — halving it lightens the shadow pass for weak GPUs.
+sun.shadow.mapSize.set(1024, 1024);
 scene.add(sun, sun.target);
 
 // Everything rebuilt per scene push lives under one group.
 let designGroup = null;
 let lastOrigin = null;      // {lat, lng} for the legacy permaSetPlants hook
+let lastMonth = 6;          // last scene month, for the legacy permaSetPlants hook
+let lastYear = 0;           // last scene year, for the legacy permaSetPlants hook
+let lastTerrain = null;     // last scene terrain, for the legacy permaSetPlants hook
 let plantsGroup = null;     // sub-group holding plant instanced meshes
+let framedOrigin = null;    // origin the camera was last auto-framed on
+let lastBounds = null;      // last scene bounds, for permaResetView()
 
 function sunVector(azDeg, altDeg) {
   // azimuth CW from north; scene: north = -z, east = +x.
@@ -144,17 +312,28 @@ function setSun(azDeg, altDeg) {
 }
 setSun(180, 55);   // sane default until the host pushes the real sun
 
-function fitShadowAndCamera(bounds) {
+// Resize the sun's shadow frustum to the scene — always safe to re-run.
+function fitShadow(bounds) {
   const w = bounds.max_x - bounds.min_x, d = bounds.max_y - bounds.min_y;
   const r = Math.max(w, d) * 0.75;
   const cam = sun.shadow.camera;
   cam.left = -r; cam.right = r; cam.top = r; cam.bottom = -r;
   cam.near = 1; cam.far = 900;
   cam.updateProjectionMatrix();
+}
+
+// Point the camera + orbit target at the design. Only called on the first
+// scene or when a different design is opened — never on a slider re-push — so
+// the user's own orbit/zoom is preserved across Year/season changes.
+function frameCamera(bounds) {
+  if (!bounds) return;
+  const w = bounds.max_x - bounds.min_x, d = bounds.max_y - bounds.min_y;
+  const r = Math.max(w, d) * 0.75;
   const cx = (bounds.min_x + bounds.max_x) / 2;
   const cz = -(bounds.min_y + bounds.max_y) / 2;
   controls.target.set(cx, 0, cz);
   camera.position.set(cx + r * 0.9, r * 0.85, cz + r * 1.1);
+  controls.update();
 }
 
 function fadeToward(hex, opacity) {
@@ -207,92 +386,1582 @@ function buildBoundary(group, ring) {
 
 // ── buildings / footprints ─────────────────────────────────────────────────
 
+// Static footprints (spec idea 2): extrude each ring, then merge all same-kind
+// geometries into one mesh so N buildings cost ≤2 draw calls. The −90° rotation
+// is baked into each geometry (so merged parts share orientation) rather than
+// set on the mesh: shape (x,y) → (x, −z), extrude depth → +y.
 function buildBuildings(group, buildings) {
+  const byKind = { building: [], canopy: [] };
   for (const bld of buildings || []) {
     const ring = bld.ring || [];
     if (ring.length < 3) continue;
     const shape = new THREE.Shape(ring.map(p => new THREE.Vector2(p[0], p[1])));
     const geo = new THREE.ExtrudeGeometry(shape, {
       depth: Math.max(0.3, bld.height_m || 3), bevelEnabled: false });
-    const mat = bld.kind === 'canopy'
-      ? new THREE.MeshStandardMaterial({ color: 0x4e6e52, roughness: 1,
-                                         transparent: true, opacity: 0.85 })
-      : new THREE.MeshStandardMaterial({ color: 0xb0a18c, roughness: 0.9 });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.rotation.x = -Math.PI / 2;     // shape (x,y) → (x, -z); depth → +y
+    geo.rotateX(-Math.PI / 2);
+    byKind[bld.kind === 'canopy' ? 'canopy' : 'building'].push(geo);
+  }
+  const mats = {
+    building: new THREE.MeshStandardMaterial({ color: 0xb0a18c, roughness: 0.9 }),
+    canopy: new THREE.MeshStandardMaterial({ color: 0x4e6e52, roughness: 1,
+                                             transparent: true, opacity: 0.85 }),
+  };
+  for (const kind of ['building', 'canopy']) {
+    const geos = byKind[kind];
+    if (!geos.length) continue;
+    const merged = geos.length === 1 ? geos[0] : mergeGeometries(geos, false);
+    const mesh = new THREE.Mesh(merged, mats[kind]);
     mesh.castShadow = mesh.receiveShadow = true;
     group.add(mesh);
   }
 }
 
-// ── plants (instanced archetypes) ──────────────────────────────────────────
+// ── plants (procedural instanced archetypes) ───────────────────────────────
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(),
       _s = new THREE.Vector3(), _v = new THREE.Vector3();
+const _yAxis = new THREE.Vector3(0, 1, 0);
+const _white = new THREE.Color(0xffffff);
 
-function instanced(geo, count, rough = 0.95) {
-  const mesh = new THREE.InstancedMesh(
-    geo, new THREE.MeshStandardMaterial({ roughness: rough }), count);
-  mesh.castShadow = mesh.receiveShadow = true;
+function instancedMesh(geo, count, mat, shadow = true) {
+  const mesh = new THREE.InstancedMesh(geo, mat, count);
+  mesh.castShadow = mesh.receiveShadow = shadow;
   return mesh;
 }
 
-function setInst(mesh, i, x, h0, z, sx, sy, sz, colorHex, opacity) {
-  _v.set(x, h0, z); _s.set(sx, sy, sz); _q.identity();
-  _m.compose(_v, _q, _s);
-  mesh.setMatrixAt(i, _m);
-  mesh.setColorAt(i, fadeToward(colorHex, opacity));
+// Sample terrain height (world Y) at a plant's scene position (sceneX, sceneY).
+// Uses bilinear interpolation over the terrain grid; returns 0 when no terrain.
+// terrain.heights[r][c]: r=0 is north edge (max sceneY), r=rows-1 is south (min sceneY).
+function terrainHeightAt(sceneX, sceneY, terrain) {
+  if (!terrain || terrain.rows < 2 || terrain.cols < 2) return 0;
+  const t = terrain;
+  const col = (sceneX - t.min_x) / (t.max_x - t.min_x) * (t.cols - 1);
+  const row = (t.max_y - sceneY) / (t.max_y - t.min_y) * (t.rows - 1);
+  const c0 = Math.max(0, Math.min(t.cols - 2, Math.floor(col)));
+  const r0 = Math.max(0, Math.min(t.rows - 2, Math.floor(row)));
+  const fc = col - c0, fr = row - r0;
+  const h00 = t.heights[r0][c0],     h01 = t.heights[r0][c0 + 1];
+  const h10 = t.heights[r0 + 1][c0], h11 = t.heights[r0 + 1][c0 + 1];
+  return (h00 * (1 - fc) + h01 * fc) * (1 - fr) + (h10 * (1 - fc) + h11 * fc) * fr;
 }
 
-// Unit geometries (height 1, radius 0.5) scaled per instance.
-const GEO = {
-  trunk: new THREE.CylinderGeometry(0.5, 0.6, 1, 6).translate(0, 0.5, 0),
-  crown: new THREE.SphereGeometry(0.5, 10, 8).translate(0, 0.5, 0),
-  dome:  new THREE.SphereGeometry(0.5, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2),
-  cone:  new THREE.ConeGeometry(0.5, 1, 7).translate(0, 0.5, 0),
-  disc:  new THREE.CylinderGeometry(0.5, 0.5, 1, 10).translate(0, 0.5, 0),
+// Compose a per-instance matrix with a Y rotation and set a pre-computed colour.
+function setInst2(mesh, i, x, h0, z, sx, sy, sz, rotY, color) {
+  _v.set(x, h0, z); _s.set(sx, sy, sz);
+  _q.setFromAxisAngle(_yAxis, rotY);
+  _m.compose(_v, _q, _s);
+  mesh.setMatrixAt(i, _m);
+  if (color) mesh.setColorAt(i, color);
+}
+
+function fadeColor(col, opacity) {
+  const o = Math.max(0, Math.min(1, opacity ?? 1));
+  return col.clone().lerp(_skyCol, 1 - o);
+}
+
+// MeshStandardMaterial with an optional GPU wind sway injected into the
+// vertex stage (the first custom shader work in the app). Lighting, shadows
+// and instancing all stay intact — we only nudge `transformed` in local space
+// (so the per-instance matrix scales the sway by canopy size) before three
+// applies the instance/model matrices in <project_vertex>.
+function plantMaterial(opts = {}) {
+  const mat = new THREE.MeshStandardMaterial({
+    roughness: opts.roughness ?? 0.9,
+    vertexColors: !!opts.vertexColors,
+    side: opts.doubleSide ? THREE.DoubleSide : THREE.FrontSide,
+    flatShading: !!opts.flatShading,
+  });
+  const strength = opts.wind || 0;
+  if (strength > 0) {
+    mat.onBeforeCompile = (shader) => {
+      shader.uniforms.uTime = windUniforms.uTime;
+      shader.vertexShader = 'uniform float uTime;\n' + shader.vertexShader;
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        [
+          '#include <begin_vertex>',
+          '{',
+          '  #ifdef USE_INSTANCING',
+          '  vec3 iPos = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);',
+          '  #else',
+          '  vec3 iPos = vec3(0.0);',
+          '  #endif',
+          '  float hf = clamp(transformed.y, 0.0, 1.2);',           // taller verts sway more
+          '  float ph = iPos.x * 0.35 + iPos.z * 0.35;',            // per-plant phase
+          '  float wv = sin(uTime * 1.3 + ph + position.x * 1.1 + position.z * 0.8) * 0.6',
+          '           + sin(uTime * 2.6 + ph * 1.7) * 0.4;',
+          '  float amp = ' + strength.toFixed(4) + ' * hf * hf;',
+          '  transformed.x += wv * amp;',
+          '  transformed.z += wv * 0.7 * amp;',
+          '}',
+        ].join('\n'));
+    };
+    mat.customProgramCacheKey = () =>
+      'windplant' + strength.toFixed(4) + (opts.vertexColors ? 'c' : '');
+  }
+  return mat;
+}
+
+// A soft radial "contact shadow" stamp — a dark blob under big plants that
+// grounds them without leaning on the directional shadow map's resolution.
+function makeShadowTexture() {
+  const s = 128, cv = document.createElement('canvas');
+  cv.width = cv.height = s;
+  const ctx = cv.getContext('2d');
+  const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  g.addColorStop(0, 'rgba(0,0,0,0.55)');
+  g.addColorStop(0.55, 'rgba(0,0,0,0.28)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, s, s);
+  return new THREE.CanvasTexture(cv);
+}
+
+// ── Da Vinci procedural trees ───────────────────────────────────────────────
+// Part 1 of the spec: a parent branch of radius R splitting into children
+// r_i obeys R^x = Σ r_i^x (area conservation; x is species-ish), and child
+// length scales as (r_child / R)^lengthScaling. We build an abstract skeleton
+// first, then turn it into one merged BufferGeometry — so a whole forest is a
+// handful of InstancedMesh draw calls.
+
+const DECID_CFG = {
+  // Lower cutoff than the trunk start ⇒ branches recurse to finer twigs, so
+  // even narrow-crowned forms carry enough tips for a full canopy.
+  davinciExponent: 2.0, lengthScaling: 0.7, branchAngleBase: 0.62,
+  maxDepth: 4, minRadiusCutoff: 0.018, conifer: false,
 };
 
-function buildPlants(group, plants) {
-  if (plantsGroup) { group.remove(plantsGroup); }
+// Crown form is chosen from the plant's real height/canopy aspect ratio rather
+// than an arbitrary id hash, so a tall-narrow species (aspen/poplar/birch)
+// renders slender and a broad one (oak/maple) renders spreading — the trees
+// look the way their own dimensions say they should.
+//   slender  : narrow upright crown, short side limbs, high clear bole
+//   oval     : balanced upright
+//   spreading: broad rounded crown (the look the user already liked on oak)
+// `clearBole` is the fraction of crown height kept leaf-free at the bottom
+// (a real tree's clean trunk); `foliageScale` shrinks slender trees' leaf
+// clusters so a fine-leaved aspen crown doesn't read as heavy blobs.
+const DECID_FORMS = {
+  slender:   { branchAngleBase: 0.46, lengthScaling: 0.84, davinciExponent: 2.0,
+               clearBole: 0.52, foliageScale: 0.72 },
+  oval:      { branchAngleBase: 0.62, lengthScaling: 0.70, davinciExponent: 2.0,
+               clearBole: 0.38, foliageScale: 0.9 },
+  spreading: { branchAngleBase: 0.85, lengthScaling: 0.64, davinciExponent: 1.85,
+               clearBole: 0.28, foliageScale: 1.0 },
+};
+// Conifer skirt profiles (Phase 1): conifers are clean stacked cones, not
+// branch skeletons. `tiersAdd` shifts the tier count off the maturity base,
+// `baseR` the bottom-tier radius, `droop` how far each shelf sweeps down.
+const CONIFER_FORMS = {
+  slender:   { baseR: 0.38, tiersAdd: 2, droop: 0.10 },   // spire (spruce)
+  oval:      { baseR: 0.46, tiersAdd: 1, droop: 0.14 },   // standard
+  spreading: { baseR: 0.55, tiersAdd: -1, droop: 0.20 },  // broad / open fir
+};
+// Maturity-tier branch depth [sapling, young, mature] — a young tree renders
+// with fewer structural forks (spec idea 4: maturity drives recursive depth).
+const DECID_DEPTH = [2, 3, 4];
+const CONIFER_TIERS = [3, 5, 8];   // skirt count by maturity tier
+
+const _FORM_SEED = { slender: 0, oval: 17, spreading: 31 };
+
+// ── Species (genus) profiles (V1.94) ────────────────────────────────────────
+// The most impactful keystone/host trees get genus-specific geometry so a
+// spruce, pine and fir read apart and aspen/birch show pale bark. A profile is a
+// tiny param bag; unknown genera fall to `def` (today's generic look). `conifer`
+// selects a needle-crown kind (overriding the decid/conifer split for larch,
+// which keeps deciduous needle-drop); `formBias` forces the crown form so a
+// species reads right even when its dimensions are ambiguous; `bark` colours the
+// trunk; `droopOuter`/`foliageScale` shape the broadleaf crown.
+const _PROF = {
+  spruce: { id: 'spruce', conifer: 'spruce', bark: '#4b3a2a' },   // Picea
+  fir:    { id: 'fir',    conifer: 'fir',    bark: '#3f3022' },   // Abies / Pseudotsuga
+  pine:   { id: 'pine',   conifer: 'pine',   bark: '#6b4a2e' },   // Pinus
+  larch:  { id: 'larch',  conifer: 'larch',  bark: '#5a4632' },   // Larix (deciduous needles)
+  aspen:  { id: 'aspen',  bark: '#cfcab4', formBias: 'slender', foliageScale: 0.9 },  // Populus
+  birch:  { id: 'birch',  bark: '#e8e6df', formBias: 'oval', droopOuter: 0.55, foliageScale: 0.82 }, // Betula
+  oak:    { id: 'oak',    bark: '#463524', formBias: 'spreading', foliageScale: 1.06 }, // Quercus
+  willow: { id: 'willow', bark: '#8a8a6a', formBias: 'slender', droopOuter: 0.7, foliageScale: 0.85 }, // Salix
+  cherry: { id: 'cherry', bark: '#5a4636', formBias: 'oval' },    // Prunus
+  apple:  { id: 'apple',  bark: '#6a5238', formBias: 'spreading' }, // Malus
+  def:    { id: 'def',    bark: '#5d4433' },
+};
+const TREE_PROFILES = {
+  picea: _PROF.spruce, abies: _PROF.fir, pseudotsuga: _PROF.fir, pinus: _PROF.pine,
+  larix: _PROF.larch, populus: _PROF.aspen, betula: _PROF.birch, quercus: _PROF.oak,
+  salix: _PROF.willow, prunus: _PROF.cherry, malus: _PROF.apple,
+};
+function profileFor(p) {
+  return TREE_PROFILES[(p.genus || '').toLowerCase()] || _PROF.def;
+}
+// Needle-crown kinds layered on top of the form's CONIFER_FORMS params: spruce =
+// narrow dense bluish spire; fir = narrower, very dense, sharp tall summit; larch
+// = sparse soft cone. (Pine has its own open builder, buildPineGeo.)
+const CONIFER_KINDS = {
+  standard: { baseRMul: 1.0,  tiersAdd: 0,  droopAdd: 0.0,  spire: 1.0, segMul: 1.0 },
+  spruce:   { baseRMul: 0.82, tiersAdd: 1,  droopAdd: 0.03, spire: 1.15, segMul: 1.0 },
+  fir:      { baseRMul: 0.72, tiersAdd: 2,  droopAdd: -0.04, spire: 1.4, segMul: 1.0 },
+  larch:    { baseRMul: 0.92, tiersAdd: -1, droopAdd: 0.0,  spire: 0.7, segMul: 0.7 },
+};
+const _CK_SEED = { standard: 0, spruce: 3, fir: 7, pine: 11, larch: 17 };
+
+// Shrub growth-form silhouettes (V1.96): instead of one blobby dome, a shrub is
+// a multi-stem woody clump whose foliage is distributed along ascending stems —
+// and the *shape* of that clump differs by species. Each form sets stem count /
+// splay / length, how many foliage masses each stem carries and where they start
+// (a clear-stemmed "vase" vs foliage to the ground), the mass radius + ellipsoid
+// shape (flattened spreading vs upright vs round), and whether a basal mound
+// fills the bottom. `q(n)` quality-scales the counts.
+//   vase      — upright, clean-based, fountain crown (saskatoon, willow, alder, hazel)
+//   spreading — broad, wide flattened masses (dogwood, viburnum)
+//   mound     — low dense rounded thicket to the ground (rose, spirea, snowberry)
+//   thicket   — many fine canes, airy (currant, raspberry)
+//   irregular — sparse asymmetric woody (sage, buffaloberry)
+const SHRUB_FORMS = {
+  vase:      { stems: [4, 6], splay: 0.26, stemH: [0.78, 1.0], masses: [2, 3],
+               start: 0.45, massR: [0.16, 0.24], shape: [0.92, 1.05, 0.92], basal: false },
+  spreading: { stems: [4, 6], splay: 0.62, stemH: [0.6, 0.85], masses: [2, 3],
+               start: 0.38, massR: [0.18, 0.27], shape: [1.25, 0.7, 1.25], basal: true },
+  mound:     { stems: [5, 8], splay: 0.52, stemH: [0.42, 0.66], masses: [2, 3],
+               start: 0.18, massR: [0.16, 0.22], shape: [1.06, 0.86, 1.06], basal: true },
+  thicket:   { stems: [7, 11], splay: 0.42, stemH: [0.55, 0.92], masses: [1, 2],
+               start: 0.34, massR: [0.11, 0.17], shape: [0.9, 1.0, 0.9], basal: true },
+  irregular: { stems: [3, 6], splay: 0.5, stemH: [0.5, 0.98], masses: [1, 3],
+               start: 0.3, massR: [0.12, 0.2], shape: [1.0, 0.9, 1.0], basal: false },
+};
+
+// Genus → shrub profile. `form` picks a silhouette; `redStems` paints the woody
+// stems red (red-osier dogwood); `fine` slims the masses. Foliage colour comes
+// from the genus (scene_contract _foliage_color) — sages/buffaloberry already go
+// silver there. Unknown genera fall back to a generic spreading bush.
+const _SPROF = {
+  cornus:         { id: 'cornus', form: 'spreading', redStems: true },  // red-osier dogwood
+  salix:          { id: 'salix', form: 'vase' },                        // shrub willow
+  amelanchier:    { id: 'amel', form: 'vase', fine: true },             // saskatoon
+  prunus:         { id: 'choke', form: 'vase' },                        // chokecherry / pin cherry shrub
+  corylus:        { id: 'hazel', form: 'vase' },                        // beaked hazelnut
+  alnus:          { id: 'alder', form: 'vase' },                        // alder
+  crataegus:      { id: 'haw', form: 'vase' },                          // hawthorn
+  viburnum:       { id: 'vibur', form: 'spreading' },                   // highbush cranberry
+  rosa:           { id: 'rosa', form: 'mound', fine: true },            // wild rose
+  spiraea:        { id: 'spir', form: 'mound', fine: true },            // meadowsweet
+  symphoricarpos: { id: 'snow', form: 'mound' },                        // snowberry
+  vaccinium:      { id: 'vacc', form: 'mound', fine: true },            // blueberry / cranberry
+  ribes:          { id: 'ribes', form: 'thicket', fine: true },         // currant / gooseberry
+  rubus:          { id: 'rubus', form: 'thicket' },                     // raspberry / bramble
+  artemisia:      { id: 'sage', form: 'irregular', fine: true },        // sagebrush (silver)
+  shepherdia:     { id: 'shep', form: 'irregular' },                    // buffaloberry (silver)
+  def:            { id: 'sdef', form: 'spreading' },
+};
+function shrubProfileFor(p) {
+  return _SPROF[(p.genus || '').toLowerCase()] || _SPROF.def;
+}
+
+// ── Herbaceous growth forms (V1.98) ─────────────────────────────────────────
+// The foliage of a wildflower/herb is built to match its real growth habit, not
+// one generic stem-clump: fireweed is a tall erect leafy stem, yarrow a low
+// ferny mound, fleabane a basal rosette of leaves under wiry flower stalks. A
+// form sets how many leafy stems there are and how upright, where the leaves sit
+// (up the stem / basal rosette / low mound), the leaf size + width (lance vs
+// broad vs fine), and how many bare flower stalks rise above (the flower sprite
+// lands on top). `q(n)` quality-scales the counts.
+const HERB_FORMS = {
+  // erect leafy stem(s), narrow lance leaves spiralling up — fireweed, goldenrod,
+  // penstemon, blazingstar, lupine, paintbrush, loosestrife.
+  erect:   { stems: [1, 3], splay: 0.1,  leafFrom: 0.22, leaf: [0.2, 0.04],
+             shape: 'lance', perStem: [6, 10], leafTilt: 1.1, stalks: 0, basal: 0, fine: 0 },
+  // low ferny mound of fine divided foliage + thin flower stalks — yarrow,
+  // tansy, meadow rue, columbine, cinquefoil, sweet cicely.
+  ferny:   { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.13, 0.02],
+             shape: 'lance', perStem: 0, leafTilt: 1.3, stalks: [3, 5], basal: [20, 34], fine: 1 },
+  // basal leaf rosette of broad spoon leaves under wiry flower stalks — fleabane,
+  // arnica, evening primrose, avens, alumroot, agoseris, shooting star.
+  rosette: { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.26, 0.085],
+             shape: 'ovate', perStem: 0, leafTilt: 1.32, stalks: [3, 6], basal: [8, 13], fine: 0 },
+  // bushy upright leafy clump, broad ovate leaves — asters, sunflower, milkweed,
+  // bee balm, monkeyflower.
+  clump:   { stems: [3, 6], splay: 0.42, leafFrom: 0.12, leaf: [0.22, 0.1],
+             shape: 'ovate', perStem: [4, 7], leafTilt: 0.95, stalks: 0, basal: [2, 3], fine: 0 },
+  // upright strap / linear basal leaves — onion, harebell, blue-eyed grass, lily, camas.
+  grassy:  { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.9, 0.035],
+             shape: 'strap', perStem: 0, leafTilt: 0.16, stalks: [2, 4], basal: [6, 9], fine: 0 },
+  // low cushion / mat of small spoon leaves — umbrella-plant, moss campion, violets.
+  mat:     { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.14, 0.075],
+             shape: 'ovate', perStem: 0, leafTilt: 1.45, stalks: [2, 4], basal: [14, 22], fine: 0, low: 1 },
+  // arching divided fronds from a crown — ferns.
+  fern:    { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.95, 0.11],
+             shape: 'lance', perStem: 0, leafTilt: 0.5, stalks: 0, basal: [6, 9], fine: 0 },
+};
+
+// Genus → herb growth form for the common prairie/Alberta forbs. Foliage colour
+// still comes from the genus (silver sages etc.) via scene_contract.
+const _HPROF = {
+  chamaenerion: 'erect', epilobium: 'erect', solidago: 'erect', euthamia: 'erect',
+  penstemon: 'erect', liatris: 'erect', lupinus: 'erect', castilleja: 'erect',
+  physostegia: 'erect', stachys: 'erect', dalea: 'erect', lythrum: 'erect',
+  verbena: 'erect', gentiana: 'erect', maianthemum: 'erect', anticlea: 'grassy',
+  hedysarum: 'erect', astragalus: 'erect', oxytropis: 'rosette', vicia: 'erect',
+  lathyrus: 'erect', heuchera: 'rosette', mertensia: 'clump',
+  achillea: 'ferny', tanacetum: 'ferny', thalictrum: 'ferny', aquilegia: 'ferny',
+  potentilla: 'ferny', osmorhiza: 'ferny', polemonium: 'ferny', anemone: 'ferny',
+  erigeron: 'rosette', arnica: 'rosette', oenothera: 'rosette', geum: 'rosette',
+  agoseris: 'rosette', primula: 'rosette', draba: 'rosette', townsendia: 'rosette',
+  balsamorhiza: 'rosette', taraxacum: 'rosette', antennaria: 'mat',
+  symphyotrichum: 'clump', eurybia: 'clump', canadanthus: 'clump', doellingeria: 'clump',
+  dieteria: 'clump', heterotheca: 'clump', helianthus: 'clump', asclepias: 'clump',
+  erythranthe: 'clump', echinacea: 'rosette', ratibida: 'rosette', monarda: 'clump',
+  allium: 'grassy', campanula: 'grassy', sisyrinchium: 'grassy', iris: 'grassy',
+  lilium: 'grassy', zigadenus: 'grassy', viola: 'mat', eriogonum: 'mat',
+  fragaria: 'mat', silene: 'mat', phlox: 'mat',
+};
+function herbFormFor(p) {
+  if (p.plant_type === 'fern') return 'fern';
+  const named = _HPROF[(p.genus || '').toLowerCase()];
+  if (named) return named;
+  // Fall back from the flower form + aspect (height/canopy).
+  const ff = p.flower_form, h = p.height_m || 0.5, c = p.canopy_m || 0.4;
+  const tall = h / Math.max(0.05, c) >= 1.6;
+  if (ff === 'umbel') return 'ferny';
+  if (ff === 'daisy') return tall ? 'clump' : 'rosette';
+  if (ff === 'rays' || ff === 'spike' || ff === 'plume' || ff === 'pea')
+    return tall ? 'erect' : 'clump';
+  if (ff === 'globe' || ff === 'whorl') return 'clump';
+  return tall ? 'erect' : 'clump';
+}
+
+// A flat leaf with a real width profile (V1.99) so foliage reads as leaves, not
+// threads: `lance` widest near the base tapering to a point (fireweed/willow),
+// `ovate` widest in the middle (aster/milkweed), `strap` near-constant (onion/
+// iris). Position-only indexed geometry so it merges with the (stripped) stems.
+function _leafWidth(shape, t) {
+  if (shape === 'ovate') return Math.pow(Math.sin(Math.PI * Math.min(0.96, Math.max(0.06, t))), 0.7);
+  if (shape === 'strap') return t < 0.9 ? 1 : Math.max(0.15, (1 - t) / 0.1);
+  return Math.max(0.05, 1 - 0.9 * t);          // lance / default
+}
+function makeLeafBlade(rng, len, wid, shape) {
+  const segs = 4, dir = rng() * Math.PI * 2;
+  const dx = Math.cos(dir), dz = Math.sin(dir), px = -dz, pz = dx;
+  const lean = (shape === 'strap' ? 0.05 : 0.12) + rng() * 0.18;
+  const pos = [], idx = [];
+  for (let s = 0; s <= segs; s++) {
+    const t = s / segs, y = len * t;
+    const off = lean * Math.pow(t, 1.4);
+    const wHalf = wid * 0.5 * _leafWidth(shape, t) + 0.0008;
+    const cx = dx * off, cz = dz * off;
+    pos.push(cx - px * wHalf, y, cz - pz * wHalf);
+    pos.push(cx + px * wHalf, y, cz + pz * wHalf);
+  }
+  for (let s = 0; s < segs; s++) {
+    const a = s * 2, b = s * 2 + 1, c = s * 2 + 2, d = s * 2 + 3;
+    idx.push(a, b, c, b, d, c);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  return g;
+}
+
+// Place one leaf: build it, tilt `tilt` from vertical at azimuth `az`, translate
+// to attachment point `at`. The building block for herbaceous + vine foliage.
+function makeLeaf(rng, len, wid, tilt, az, at, shape) {
+  const blade = makeLeafBlade(rng, len * (0.8 + rng() * 0.4), wid, shape || 'lance');
+  blade.applyMatrix4(new THREE.Matrix4().makeRotationY(az)
+    .multiply(new THREE.Matrix4().makeRotationZ(tilt)));
+  if (at) blade.translate(at.x, at.y, at.z);
+  return blade;
+}
+
+// Crown form from the (already-scaled) height/canopy aspect ratio.
+function formOf(p) {
+  const c = Math.max(0.1, p.canopy_m || 1), h = Math.max(0.1, p.height_m || 1);
+  const aspect = h / c;
+  return aspect >= 2.0 ? 'slender' : (aspect <= 1.1 ? 'spreading' : 'oval');
+}
+
+function decidCfg(form, tier, prof) {
+  const cfg = Object.assign({}, DECID_CFG, DECID_FORMS[form], { maxDepth: DECID_DEPTH[tier] });
+  if (prof) {
+    if (prof.foliageScale != null) cfg.foliageScale = (cfg.foliageScale || 1) * prof.foliageScale;
+    if (prof.droopOuter != null) cfg.droopOuter = prof.droopOuter;
+  }
+  return cfg;
+}
+
+function generateDaVinciTree(radius, length, depth, cfg, rng) {
+  if (depth >= cfg.maxDepth || radius < cfg.minRadiusCutoff) {
+    return { radiusBottom: radius, radiusTop: radius * 0.6, length, depth, children: [] };
+  }
+  const node = { radiusBottom: radius, length, depth, children: [] };
+  let numSplits;
+  if (cfg.conifer) {
+    const lo = cfg.splitMin ?? 3, hi = cfg.splitMax ?? 4;  // whorls
+    numSplits = lo + Math.floor(rng() * (hi - lo + 1));
+  } else {
+    numSplits = rng() < (cfg.splitBias ?? 0.2) ? 3 : 2;    // forks
+  }
+  const leaderShare = cfg.leaderShare ?? 0.6;
+
+  const cap = Math.pow(radius, cfg.davinciExponent);
+  let remaining = cap;
+  const childRadii = [];
+  for (let i = 0; i < numSplits; i++) {
+    if (i === numSplits - 1) {
+      childRadii.push(Math.pow(Math.max(0, remaining), 1 / cfg.davinciExponent));
+    } else if (cfg.conifer && i === 0) {
+      const a = remaining * leaderShare;                  // central leader (monopodial)
+      childRadii.push(Math.pow(a, 1 / cfg.davinciExponent)); remaining -= a;
+    } else {
+      const share = cfg.conifer ? (0.15 + rng() * 0.1) : (0.3 + rng() * 0.25);
+      const a = remaining * share;
+      childRadii.push(Math.pow(a, 1 / cfg.davinciExponent)); remaining -= a;
+    }
+  }
+  node.radiusTop = Math.pow(
+    childRadii.reduce((s, r) => s + Math.pow(r, cfg.davinciExponent), 0),
+    1 / cfg.davinciExponent);
+
+  for (let i = 0; i < numSplits; i++) {
+    const cr = childRadii[i];
+    const cl = length * Math.pow(Math.max(0.05, cr / radius), cfg.lengthScaling);
+    const child = generateDaVinciTree(cr, cl, depth + 1, cfg, rng);
+    if (cfg.conifer && i === 0) {
+      child.angleSpread = cfg.branchAngleBase * 0.08 * (rng() - 0.5);
+      child.angleRotation = rng() * Math.PI * 2;
+    } else {
+      child.angleSpread = cfg.branchAngleBase * (0.8 + rng() * 0.4);
+      child.angleRotation = (i * (Math.PI * 2 / numSplits)) + rng() * 0.5;
+    }
+    node.children.push(child);
+  }
+  return node;
+}
+
+// Walk a skeleton into two merged geometries: woody branches and leaf clusters.
+// The canopy is built from many overlapping blobs (rather than one blob per
+// tip) so the merged foliage reads as a continuous leaf mass — denser near the
+// structural scaffold, finer toward the outer twigs (blob size tapers with
+// branch depth).
+function treeToGeometry(root, cfg, rng) {
+  const branchGeos = [];
+  const blobs = [];        // {geo, y} foliage candidates, gated by clear-bole
+  const fScale = cfg.foliageScale ?? 1.0;
+
+  function addSeg(node, mat) {
+    const seg = new THREE.CylinderGeometry(
+      Math.max(0.004, node.radiusTop), Math.max(0.006, node.radiusBottom),
+      node.length, 5, 1);
+    seg.translate(0, node.length / 2, 0);
+    seg.applyMatrix4(mat);
+    branchGeos.push(seg);
+  }
+  // Deciduous: a balloon of 3–5 overlapping flattened spheres at each twig tip
+  // (and 1–2 smaller ones at interior junctions) → a full rounded crown. Each
+  // blob is tagged with its world Y so the clear-bole pass can strip foliage
+  // off the lower trunk after the crown height is known.
+  const droopOuter = cfg.droopOuter || 0;     // weeping terminal fringe (birch/willow)
+  function addDeciduousCluster(tipMat, depth, terminal) {
+    const tipY = tipMat.elements[13];
+    const depthScale = Math.max(0.65, 1.0 - depth * 0.08);
+    const n = terminal ? qn(3 + Math.floor(rng() * 3)) : qn(1 + Math.floor(rng() * 2));
+    const base = (terminal ? 0.20 : 0.15) * depthScale * fScale;
+    const spread = (terminal ? 0.22 : 0.16) * fScale;
+    // Weeping species hang their outer leaf clusters below the twig and widen
+    // them slightly — a cheap, recognizable droop without re-bending branches.
+    const dy = terminal ? -droopOuter * 0.13 : 0;
+    const dspread = 1 + droopOuter * 0.4;
+    for (let i = 0; i < n; i++) {
+      const r = base + rng() * 0.14 * depthScale * fScale;
+      const s = new THREE.SphereGeometry(r, 5, 4);
+      s.scale(1, 0.72 + rng() * 0.2, 1);
+      s.translate((rng() - 0.5) * spread * dspread,
+                  dy + r * 0.4 + (rng() - 0.2) * 0.1,
+                  (rng() - 0.5) * spread * dspread);
+      s.applyMatrix4(tipMat);
+      blobs.push({ geo: s, y: tipY });
+    }
+  }
+  function walk(node, mat) {
+    addSeg(node, mat);
+    const tip = mat.clone().multiply(new THREE.Matrix4().makeTranslation(0, node.length, 0));
+    const terminal = !node.children.length;
+    if (terminal) addDeciduousCluster(tip, node.depth, true);
+    else if (node.depth >= 2) addDeciduousCluster(tip, node.depth, false);  // interior fill
+    if (terminal) return;
+    for (const child of node.children) {
+      const rot = new THREE.Matrix4().makeRotationY(child.angleRotation)
+        .multiply(new THREE.Matrix4().makeRotationX(child.angleSpread));
+      walk(child, tip.clone().multiply(rot));
+    }
+  }
+  walk(root, new THREE.Matrix4());
+
+  // Clear bole: drop leaf clusters below clearBole × crown height so the trunk
+  // shows (strongest on slender/aspen forms) — disposing the rejects' buffers.
+  const maxY = blobs.reduce((m, b) => Math.max(m, b.y), 0);
+  const gate = (cfg.clearBole ?? 0) * maxY;
+  const foliageGeos = [];
+  for (const b of blobs) {
+    if (b.y >= gate) foliageGeos.push(b.geo);
+    else b.geo.dispose();
+  }
+
+  const branchGeo = branchGeos.length ? mergeGeometries(branchGeos, false) : null;
+  const foliageGeo = foliageGeos.length ? mergeGeometries(foliageGeos, false) : null;
+  normalizeUnit([branchGeo, foliageGeo]);
+  if (foliageGeo) applyFoliageGradient(foliageGeo);
+  return { branchGeo, foliageGeo };
+}
+
+// Conifer crown (Phase 1): a clean stack of apex-up cone "skirts" up a thin
+// central trunk — radius tapering to a spire — instead of a branch skeleton
+// with cones at every whorl. Reads as a natural cone, not a spiky star, and is
+// markedly lower-poly. Form sets base radius / tier count / droop; tier sets
+// the maturity skirt count.
+function buildConiferGeo(form, tier, rng, kind) {
+  const fp = CONIFER_FORMS[form] || CONIFER_FORMS.oval;
+  const kp = CONIFER_KINDS[kind] || CONIFER_KINDS.standard;
+  const M = Math.max(2, qn(CONIFER_TIERS[tier] + fp.tiersAdd + kp.tiersAdd));
+  const baseR = fp.baseR * kp.baseRMul;
+  const droop = fp.droop + kp.droopAdd;
+  const segs = Math.max(5, Math.round(8 * kp.segMul));
+  const branchGeos = [], foliageGeos = [];
+  const H = 1.0, y0 = 0.05, yTop = 0.93;
+
+  const trunk = new THREE.CylinderGeometry(0.012, 0.05, H, 5, 1);
+  trunk.translate(0, H / 2, 0);
+  branchGeos.push(trunk);
+
+  for (let i = 0; i < M; i++) {
+    const f = M === 1 ? 0 : i / (M - 1);            // 0 base … 1 top
+    const y = y0 + (yTop - y0) * f;
+    const r = (baseR * Math.pow(1 - f, 0.85) + 0.03) * (0.9 + rng() * 0.2);
+    const hh = (0.20 + 0.12 * (1 - f)) * (1 + droop);
+    const skirt = new THREE.ConeGeometry(r, hh, segs, 1);
+    skirt.translate(0, y - hh * (0.5 - droop), 0);  // flare base down (droop)
+    skirt.rotateY(rng() * Math.PI);
+    foliageGeos.push(skirt);
+  }
+  const spire = new THREE.ConeGeometry(0.045, 0.15 * kp.spire, 6, 1);
+  spire.translate(0, yTop + 0.05, 0);
+  foliageGeos.push(spire);
+
+  const branchGeo = mergeGeometries(branchGeos, false);
+  const foliageGeo = mergeGeometries(foliageGeos, false);
+  normalizeUnit([branchGeo, foliageGeo]);
+  applyFoliageGradient(foliageGeo);
+  return { branchGeo, foliageGeo };
+}
+
+// Pine (Pinus) reads nothing like a spruce/fir cone: a clear lower trunk, then a
+// few irregular tufted needle clumps high in the crown with a flattish, open
+// top — the scraggly look of jack/lodgepole pine (V1.94). Built as branch +
+// foliage geometries like the others so it shares the tree instance pipeline.
+function buildPineGeo(form, tier, rng) {
+  const branchGeos = [], foliageGeos = [];
+  const H = 1.0;
+  const trunk = new THREE.CylinderGeometry(0.016, 0.055, H, 6, 1);
+  trunk.translate(0, H / 2, 0);
+  branchGeos.push(trunk);
+
+  const clumps = Math.max(3, qn(3 + tier));   // more tufts as it matures
+  const yBase = 0.48;                          // clear lower trunk
+  for (let i = 0; i < clumps; i++) {
+    const f = clumps === 1 ? 1 : i / (clumps - 1);
+    const y = yBase + (0.9 - yBase) * f + (rng() - 0.5) * 0.05;
+    const ang = rng() * Math.PI * 2;
+    const reach = (0.17 + rng() * 0.12) * (1 - f * 0.45);   // tighter near the top → flat crown
+    const bx = Math.cos(ang) * reach, bz = Math.sin(ang) * reach;
+    const r = (0.13 + rng() * 0.07) * (1 - f * 0.25);
+    const tuft = new THREE.SphereGeometry(r, 6, 5);
+    tuft.scale(1.25, 0.62, 1.25);                            // flattened needle pad
+    tuft.translate(bx, y, bz);
+    foliageGeos.push(tuft);
+    const blen = reach + 0.04;                               // short branch out to the tuft
+    const seg = new THREE.CylinderGeometry(0.006, 0.013, blen, 4, 1);
+    seg.translate(0, blen / 2, 0);
+    seg.applyMatrix4(new THREE.Matrix4().makeRotationY(ang)
+      .multiply(new THREE.Matrix4().makeRotationZ(1.05)));
+    seg.translate(0, y - 0.02, 0);
+    branchGeos.push(seg);
+  }
+  const top = new THREE.SphereGeometry(0.12, 6, 5);
+  top.scale(1.1, 0.7, 1.1); top.translate(0, 0.93, 0);
+  foliageGeos.push(top);
+
+  const branchGeo = mergeGeometries(branchGeos, false);
+  const foliageGeo = mergeGeometries(foliageGeos, false);
+  normalizeUnit([branchGeo, foliageGeo]);
+  applyFoliageGradient(foliageGeo);
+  return { branchGeo, foliageGeo };
+}
+
+// Rescale a set of geometries (in place, sharing one frame) to base y = 0,
+// height 1, horizontal half-width 0.5 — so per-instance scale is [canopy,
+// height, canopy], matching the rest of the plant pipeline.
+function normalizeUnit(geos) {
+  const box = new THREE.Box3();
+  for (const g of geos) {
+    if (!g) continue;
+    g.computeBoundingBox(); box.union(g.boundingBox);
+  }
+  const sizeY = Math.max(1e-3, box.max.y - box.min.y);
+  const halfXZ = Math.max(1e-3, Math.abs(box.min.x), Math.abs(box.max.x),
+                          Math.abs(box.min.z), Math.abs(box.max.z));
+  const sy = 1 / sizeY, sxz = 0.5 / halfXZ;
+  for (const g of geos) {
+    if (!g) continue;
+    g.translate(0, -box.min.y, 0);
+    g.scale(sxz, sy, sxz);
+    g.computeVertexNormals();
+  }
+}
+
+// Multi-tone canopy gradient (spec idea 8): a warm, brighter sunlit crown up
+// top fading to a cool, desaturated self-shadowed interior below. Baked as a
+// vertex-colour multiplier (values >1 push the sunlit highlight) so the
+// per-instance seasonal colour still shows through. A smoothstep curve gives
+// more contrast than a flat lerp.
+function applyFoliageGradient(geo) {
+  const pos = geo.attributes.position;
+  const col = new Float32Array(pos.count * 3);
+  const bot = [0.40, 0.50, 0.46], top = [1.10, 1.04, 0.80];
+  for (let i = 0; i < pos.count; i++) {
+    const t = Math.min(1, Math.max(0, pos.getY(i)));
+    const tt = t * t * (3 - 2 * t);   // smoothstep → deeper shadow low, hotter top
+    col[i * 3] = bot[0] + (top[0] - bot[0]) * tt;
+    col[i * 3 + 1] = bot[1] + (top[1] - bot[1]) * tt;
+    col[i * 3 + 2] = bot[2] + (top[2] - bot[2]) * tt;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+}
+
+// Blade lighting trick (V1.92): a flat, near-vertical grass blade has a
+// horizontal face normal, so an overhead sun grazes it and the tuft reads dark
+// and metallic. Bending every normal toward +Y lets the whole clump catch the
+// sky/sun as one soft mass — the standard way real-time grass is shaded.
+function liftNormals(geo, amount) {
+  const nrm = geo.attributes.normal;
+  if (!nrm) return;
+  const a = amount ?? 0.7;
+  for (let i = 0; i < nrm.count; i++) {
+    let x = nrm.getX(i), y = nrm.getY(i) + a, z = nrm.getZ(i);
+    const len = Math.hypot(x, y, z) || 1;
+    nrm.setXYZ(i, x / len, y / len, z / len);
+  }
+  nrm.needsUpdate = true;
+}
+
+// One arched, tapered grass/reed blade as a flat ribbon (a few quad segments).
+// `lean` is the horizontal sweep of the tip; `wb` the base half-width; `erect`
+// pushes the bend higher up the blade so reeds stand stiffer than meadow grass.
+function makeBlade(rng, h, wb, lean, erect) {
+  const segs = 5;
+  const dir = rng() * Math.PI * 2;
+  const dx = Math.cos(dir), dz = Math.sin(dir);
+  const px = -dz, pz = dx;                       // ribbon width axis (horizontal)
+  const twist = (rng() - 0.5) * 0.5;             // slight per-blade roll
+  const pos = [], idx = [];
+  for (let s = 0; s <= segs; s++) {
+    const t = s / segs;
+    const y = h * t;
+    const off = lean * Math.pow(t, erect);       // arch: more sweep near the tip
+    const wHalf = wb * (1 - t * 0.92) + 0.0015;  // taper toward a fine point
+    const cx = dx * off, cz = dz * off;
+    const wpx = px * Math.cos(twist * t) , wpz = pz * Math.cos(twist * t);
+    pos.push(cx - wpx * wHalf, y, cz - wpz * wHalf);
+    pos.push(cx + wpx * wHalf, y, cz + wpz * wHalf);
+  }
+  for (let s = 0; s < segs; s++) {
+    const a = s * 2, b = s * 2 + 1, c = s * 2 + 2, d = s * 2 + 3;
+    idx.push(a, b, c, b, d, c);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  return g;
+}
+
+// ── Detail / quality (V1.94) ────────────────────────────────────────────────
+// One global knob scales BUILD-TIME geometry density only (blade/blob/tier/tuft
+// counts) — never per-frame work, which stays instanced. Default 1 (Medium) ≈
+// the historical look; Low thins geometry for weak machines, High enriches it.
+// permaSetQuality() flips it and clears the archetype caches so the next scene
+// rebuilds at the new density.
+let QUALITY = 1;                      // 0 Low · 1 Medium · 2 High
+function qn(n) {                      // scale + round a count, never below 1
+  const f = QUALITY === 0 ? 0.6 : (QUALITY === 2 ? 1.35 : 1.0);
+  return Math.max(1, Math.round(n * f));
+}
+
+// One low-poly foliage mass — a faceted icosahedron (not a smooth sphere)
+// squashed to an ellipsoid by `shape`, so a clump reads as angular leaf masses
+// rather than blobs while staying very cheap (20 faces).
+function makeFoliageMass(rng, r, shape) {
+  const m = new THREE.IcosahedronGeometry(r, 0);
+  m.scale(shape[0] * (0.85 + rng() * 0.3),
+          shape[1] * (0.85 + rng() * 0.3),
+          shape[2] * (0.85 + rng() * 0.3));
+  m.rotateY(rng() * Math.PI);
+  return m;
+}
+
+// A shrub as a multi-stem woody clump (V1.96): a few ascending stems splayed
+// from a shared base, each clothed with faceted foliage masses along its upper
+// length, the whole silhouette set by the species' growth form (vase / spreading
+// / mound / thicket / irregular). Returns {foliageGeo, stemGeo} so the woody
+// stems carry their own bark (or red-osier) colour — no more generic dome.
+function buildShrubGeo(rng, profile) {
+  const prof = profile || {};
+  const F = SHRUB_FORMS[prof.form] || SHRUB_FORMS.spreading;
+  const fineMul = prof.fine ? 0.82 : 1;
+  const stemGeos = [], foliageGeos = [];
+
+  const nStems = qn(F.stems[0] + Math.floor(rng() * (F.stems[1] - F.stems[0] + 1)));
+  for (let i = 0; i < nStems; i++) {
+    const az = (i / nStems) * Math.PI * 2 + rng() * 0.7;
+    const splay = F.splay * (0.6 + rng() * 0.8);            // lean from vertical
+    const h = F.stemH[0] + rng() * (F.stemH[1] - F.stemH[0]);
+    const rad = 0.016 + rng() * 0.012;
+    const rot = new THREE.Matrix4().makeRotationY(az)
+      .multiply(new THREE.Matrix4().makeRotationZ(splay));
+    const stem = new THREE.CylinderGeometry(rad * 0.4, rad, h, 4, 1);
+    stem.translate(0, h / 2, 0);
+    stem.applyMatrix4(rot);
+    stemGeos.push(stem);
+    // foliage masses spaced along the upper portion of the stem (start..tip)
+    const nMass = qn(F.masses[0] + Math.floor(rng() * (F.masses[1] - F.masses[0] + 1)));
+    for (let j = 0; j < nMass; j++) {
+      const t = F.start + (1 - F.start) * (nMass === 1 ? 0.7 : j / (nMass - 1));
+      const at = new THREE.Vector3(0, h * t, 0).applyMatrix4(rot);
+      const r = (F.massR[0] + rng() * (F.massR[1] - F.massR[0])) * fineMul;
+      const mass = makeFoliageMass(rng, r, F.shape);
+      mass.translate(at.x + (rng() - 0.5) * 0.08, at.y, at.z + (rng() - 0.5) * 0.08);
+      foliageGeos.push(mass);
+    }
+  }
+  // A low basal mound fills the bottom of dense forms (mound/spreading/thicket).
+  if (F.basal) {
+    const nb = qn(2 + Math.floor(rng() * 2));
+    for (let i = 0; i < nb; i++) {
+      const r = (0.15 + rng() * 0.08) * fineMul;
+      const mass = makeFoliageMass(rng, r, F.shape);
+      mass.translate((rng() - 0.5) * 0.34, 0.1 + rng() * 0.12, (rng() - 0.5) * 0.34);
+      foliageGeos.push(mass);
+    }
+  }
+
+  const foliageGeo = mergeGeometries(foliageGeos, false);
+  const stemGeo = mergeGeometries(stemGeos, false);
+  normalizeUnit([foliageGeo, stemGeo]);     // shared 0..1 frame
+  applyFoliageGradient(foliageGeo);
+  return { foliageGeo, stemGeo };
+}
+
+// A herbaceous plant built to its growth form (V1.98): leafy erect stems
+// (fireweed), a low ferny mound (yarrow), a basal leaf rosette under wiry stalks
+// (fleabane), a bushy clump, a strappy grassy tuft, a low mat, or arching fern
+// fronds. `form` is a HERB_FORMS entry. Returns ONE green geometry — herb stems
+// are green, so no separate woody-stem colour is needed.
+const _rint = (rng, lo, hi) => lo + Math.floor(rng() * (hi - lo + 1));
+// makeBlade leaves carry only a position attribute, so a stem cylinder must be
+// stripped to match before mergeGeometries (which requires identical attribute
+// sets); normalizeUnit recomputes normals on the merged result.
+function _stem(rBot, rTop, h, rot) {
+  const s = new THREE.CylinderGeometry(rTop, rBot, h, 4, 1);
+  s.translate(0, h / 2, 0); s.applyMatrix4(rot);
+  s.deleteAttribute('normal'); s.deleteAttribute('uv');
+  return s;
+}
+function buildPerennialGeo(rng, form) {
+  const F = form || HERB_FORMS.clump;
+  const geos = [];
+  const lL = F.leaf[0], lW = F.leaf[1];
+
+  // Leafy stems: a stem cylinder with leaves spaced up its upper length.
+  const nStems = F.stems[1] ? qn(_rint(rng, F.stems[0], F.stems[1])) : 0;
+  for (let i = 0; i < nStems; i++) {
+    const az0 = (i / Math.max(1, nStems)) * Math.PI * 2 + rng() * 0.7;
+    const splay = F.splay * (0.5 + rng());
+    const h = 0.7 + rng() * 0.3;
+    const rot = new THREE.Matrix4().makeRotationY(az0)
+      .multiply(new THREE.Matrix4().makeRotationZ(splay));
+    geos.push(_stem(0.012, 0.006, h, rot));
+    const nLeaf = qn(_rint(rng, F.perStem[0], F.perStem[1]));
+    for (let j = 0; j < nLeaf; j++) {
+      const t = F.leafFrom + (1 - F.leafFrom) * (j / Math.max(1, nLeaf - 1));
+      const at = new THREE.Vector3(0, h * t, 0).applyMatrix4(rot);
+      geos.push(makeLeaf(rng, lL, lW, F.leafTilt, j * 2.39996 + az0, at, F.shape));
+    }
+  }
+
+  // Basal leaves: a rosette / ferny mound / strap tuft / mat at the ground.
+  if (F.basal) {
+    const nb = qn(_rint(rng, F.basal[0], F.basal[1]));
+    for (let i = 0; i < nb; i++) {
+      const az = rng() * Math.PI * 2;
+      const len = lL * (F.fine ? 0.6 + rng() * 0.5 : 1);
+      const lf = makeLeaf(rng, len, lW, F.leafTilt * (0.8 + rng() * 0.4), az, null, F.shape);
+      const rr = (F.low ? 0.18 : 0.1) * rng();
+      lf.translate(Math.cos(az) * rr, (F.low ? 0.01 : 0.02), Math.sin(az) * rr);
+      geos.push(lf);
+    }
+  }
+
+  // Bare flower stalks rising above the foliage (the flower sprite lands on top).
+  if (F.stalks) {
+    const ns = qn(_rint(rng, F.stalks[0], F.stalks[1]));
+    for (let i = 0; i < ns; i++) {
+      const h = 0.75 + rng() * 0.25;
+      const lean = 0.05 + rng() * 0.18;
+      const rot = new THREE.Matrix4().makeRotationY(rng() * Math.PI * 2)
+        .multiply(new THREE.Matrix4().makeRotationZ(lean));
+      geos.push(_stem(0.008, 0.005, h, rot));
+    }
+  }
+
+  const g = mergeGeometries(geos, false);
+  normalizeUnit([g]);
+  applyFoliageGradient(g);
+  return g;
+}
+
+// A groundcover mat: a scatter of small low domes filling a unit circle — a
+// textured plant carpet rather than a flat disc.
+function buildGroundcoverGeo(rng) {
+  const geos = [];
+  const n = qn(5 + Math.floor(rng() * 4));   // 5–8 tufts
+  for (let i = 0; i < n; i++) {
+    const r = 0.08 + rng() * 0.07;
+    const ang = rng() * Math.PI * 2, rad = rng() * 0.42;
+    const ys = 0.5 + rng() * 0.5;
+    const s = new THREE.SphereGeometry(r, 5, 3);
+    s.scale(1, ys, 1);
+    s.translate(Math.cos(ang) * rad, r * ys * 0.5, Math.sin(ang) * rad);
+    geos.push(s);
+  }
+  const g = mergeGeometries(geos, false);
+  normalizeUnit([g]);
+  applyFoliageGradient(g);
+  return g;
+}
+
+// A grass / sedge / rush tuft: a dense fan of flat, arching blades from a shared
+// base — full and lush rather than a few thin spindly stalks (V1.92). Flat
+// ribbons (double-sided material) read as real blades with width; lifted
+// normals let the whole tuft catch top light as one soft mound.
+function buildGrassGeo(rng) {
+  const geos = [];
+  const blades = qn(26 + Math.floor(rng() * 16));   // 26–41 blades — a thick clump
+  for (let i = 0; i < blades; i++) {
+    const h = 0.62 + rng() * 0.5;
+    const wb = 0.016 + rng() * 0.018;            // base half-width (real blade)
+    const lean = 0.22 + rng() * 0.7;             // arching meadow sweep
+    geos.push(makeBlade(rng, h, wb, lean, 1.5));
+  }
+  const g = mergeGeometries(geos, false);
+  normalizeUnit([g]);
+  applyFoliageGradient(g);
+  liftNormals(g, 0.8);
+  return g;
+}
+
+// An aquatic / emergent tuft (cattail, bulrush, reed leaves): taller, stiffer,
+// broader, more erect blades than meadow grass — so marsh plants stop rendering
+// as the round-leaf perennial clump (V1.92). The brown cattail spike itself is
+// drawn by the flower layer (the "cattail" form).
+function buildAquaticGeo(rng) {
+  const geos = [];
+  const blades = qn(16 + Math.floor(rng() * 12));   // 16–27 broad upright leaves
+  for (let i = 0; i < blades; i++) {
+    const h = 0.85 + rng() * 0.35;
+    const wb = 0.03 + rng() * 0.028;             // wide strap leaves
+    const lean = 0.06 + rng() * 0.32;            // mostly vertical, slight nod
+    geos.push(makeBlade(rng, h, wb, lean, 2.4)); // bend held high → stiff reed
+  }
+  const g = mergeGeometries(geos, false);
+  normalizeUnit([g]);
+  applyFoliageGradient(g);
+  liftNormals(g, 0.85);
+  return g;
+}
+
+// A vine (V1.99): several slender stems sprawling/twining out and up from a low
+// base, clothed with broad leaves — a leafy tangle, not a cone. Reads as a
+// climbing/trailing plant (clematis, vetch, peavine, hops).
+function buildVineGeo(rng) {
+  const geos = [];
+  const stems = qn(4 + Math.floor(rng() * 3));   // 4–6 trailing/twining stems
+  for (let i = 0; i < stems; i++) {
+    const az = (i / stems) * Math.PI * 2 + rng() * 0.8;
+    const splay = 0.6 + rng() * 0.55;            // lean far out — sprawling
+    const h = 0.7 + rng() * 0.35;
+    const rot = new THREE.Matrix4().makeRotationY(az)
+      .multiply(new THREE.Matrix4().makeRotationZ(splay));
+    geos.push(_stem(0.013, 0.007, h, rot));
+    const nL = qn(4 + Math.floor(rng() * 3));
+    for (let j = 0; j < nL; j++) {
+      const t = 0.3 + 0.65 * (j / Math.max(1, nL - 1));
+      const at = new THREE.Vector3(0, h * t, 0).applyMatrix4(rot);
+      geos.push(makeLeaf(rng, 0.16, 0.1, 1.05, j * 2.39996 + az, at, 'ovate'));
+    }
+  }
+  const g = mergeGeometries(geos, false);
+  normalizeUnit([g]);
+  applyFoliageGradient(g);
+  return g;
+}
+
+// Built once, reused across every scene rebuild (deterministic seeds).
+// ARCH holds the cheap shrub/peren/ground variant arrays; trees are built
+// lazily and memoised by (class, form, tier, sub) in TREE_CACHE.
+let ARCH = null;
+let MATS = null;     // shared plant materials (per-instance colour does the rest)
+let SHADOW_TEX = null;
+const TREE_SUBVARS = 3;    // distinct random branchings per species, so a stand
+                           // of one species reads as individuals, not clones
+
+// scale_factor (0.1–1.0 growth maturity) → structural tier.
+function tierFor(scaleFactor) {
+  const s = scaleFactor == null ? 1 : scaleFactor;
+  return s < 0.35 ? 0 : (s < 0.7 ? 1 : 2);
+}
+
+// Per-individual sub-variation from position (+ species id): two trees of the
+// same species standing apart get different branchings, so a grove looks
+// natural rather than procedurally stamped.
+function indHash(p) {
+  const xi = Math.round((p.x || 0) * 10), zi = Math.round((p.y || 0) * 10);
+  return Math.abs(((xi * 73856093) ^ (zi * 19349663) ^ hashPid(p.plant_id)) | 0);
+}
+
+// Lazily build + cache one tree archetype, keyed by (class, form, tier, sub).
+// Only the combinations a scene actually uses are generated. Conifers are
+// clean cone stacks; deciduous are Da Vinci crowns shaped by their form.
+const TREE_CACHE = new Map();
+function getTreeArch(cls, prof, form, tier, sub) {
+  const ck = cls === 'conifer' ? (prof.conifer || 'standard') : 'd';
+  // QUALITY is in the key so Low/Med/High keep distinct cached archetypes.
+  const key = cls + '_' + ck + '_' + prof.id + '_' + form + '_' + tier + '_' + sub + '_q' + QUALITY;
+  let a = TREE_CACHE.get(key);
+  if (a) return a;
+  if (cls === 'conifer') {
+    const seed = 5000 + (_FORM_SEED[form] || 0) + tier * 11 + sub * 191 + (_CK_SEED[ck] || 0);
+    a = ck === 'pine' ? buildPineGeo(form, tier, mulberry32(seed))
+                      : buildConiferGeo(form, tier, mulberry32(seed), ck);
+  } else {
+    const cfg = decidCfg(form, tier, prof);
+    const seed = 100 + (_FORM_SEED[form] || 0) + tier * 11 + sub * 191 + prof.id.charCodeAt(0);
+    a = treeToGeometry(generateDaVinciTree(0.06, 0.42, 0, cfg, mulberry32(seed)),
+                       cfg, mulberry32(seed + 7));
+  }
+  TREE_CACHE.set(key, a);
+  return a;
+}
+
+function buildArchetypes() {
+  if (ARCH) return;
+  // Shrubs (SHRUB_CACHE) and herbs (HERB_CACHE) are built per-profile on demand;
+  // the rest are the cheap shared variant arrays.
+  const ground = [], grass = [], aquatic = [], vine = [];
+  for (const sd of [331, 379]) ground.push(buildGroundcoverGeo(mulberry32(sd)));
+  for (const sd of [421, 457, 503]) grass.push(buildGrassGeo(mulberry32(sd)));
+  for (const sd of [541, 587, 631]) aquatic.push(buildAquaticGeo(mulberry32(sd)));
+  for (const sd of [661, 707, 743]) vine.push(buildVineGeo(mulberry32(sd)));
+  ARCH = { ground, grass, aquatic, vine };
+}
+
+function ensurePlantMats() {
+  if (MATS) return;
+  if (!SHADOW_TEX) SHADOW_TEX = makeShadowTexture();
+  MATS = {
+    branch:  plantMaterial({ roughness: 0.92, wind: 0.015 }),
+    foliage: plantMaterial({ roughness: 0.85, wind: 0.07, vertexColors: true }),
+    shrub:   plantMaterial({ roughness: 0.85, wind: 0.06, vertexColors: true }),
+    // Flat-shaded so the faceted shrub leaf masses read as crisp low-poly
+    // clumps, not smooth blobs (V1.96).
+    shrubFoliage: plantMaterial({ roughness: 0.82, wind: 0.06, vertexColors: true,
+                    flatShading: true }),
+    // Flat leaf blades for herbaceous plants (V1.98) — double-sided so a leaf
+    // shows from both faces, gentle sway.
+    leaf:    plantMaterial({ roughness: 0.8, wind: 0.09, vertexColors: true,
+               doubleSide: true }),
+    // Flat grass/reed blades read from both sides and catch top light via
+    // lifted normals (V1.92) — lush tufts rather than thin spindly stalks.
+    blade:   plantMaterial({ roughness: 0.72, wind: 0.11, vertexColors: true,
+               doubleSide: true }),
+    simple:  plantMaterial({ roughness: 0.9, wind: 0.06 }),
+    ground:  plantMaterial({ roughness: 0.95, wind: 0.02, vertexColors: true }),
+    shadow:  new THREE.MeshBasicMaterial({ map: SHADOW_TEX, transparent: true,
+               depthWrite: false, color: 0x2b3a20, opacity: 0.85 }),
+  };
+}
+
+// Unit geometries (height 1, half-width 0.5) for the simpler layers.
+const GEO = {
+  cone:   new THREE.ConeGeometry(0.5, 1, 7).translate(0, 0.5, 0),
+  shadow: new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+};
+
+const _isDecid = (ft) => ft !== 'evergreen';   // unknown ⇒ deciduous-ish
+const _bareMonth = (m) => (m >= 11 || m <= 3);
+
+// Spread visualisation (F35): a self-sowing / rhizomatous plant scatters
+// offspring around the parent that keep accumulating as the years advance — a
+// colony creeping outward, not a one-time burst. Offspring positions are
+// deterministic per (plant, k) — a golden-angle spiral with sqrt-spaced radii
+// for even areal density — so as `year` reveals more of them (K below), the
+// ones already shown stay put and new ones appear at the growing frontier.
+// Returns {dx, dz (scene metres from the plant), mul (archetype scale)} per
+// instance; non-spreaders get a single full-size placement.
+const _NO_SPREAD = [{ dx: 0, dz: 0, mul: 1 }];
+const _GOLDEN = Math.PI * (3 - Math.sqrt(5));   // golden angle ≈ 137.5°
+function spreadPlacements(p, year) {
+  const rate = p.spread_rate || 0;              // 0 none · 0.3 slow · 0.6 self-seed · 1 aggressive
+  if (rate <= 0.01) return _NO_SPREAD;
+  const cap = p.plant_type === 'groundcover' ? 14 : 10;   // bound instance count
+  // ~one new offspring every (3 / rate) years → continuous, year-driven spread.
+  const K = Math.min(cap, Math.round(rate * (year || 0) / 3));
+  if (K <= 0) return _NO_SPREAD;
+  const c = Math.max(0.3, p.canopy_m);
+  const reach = c * (1.4 + rate * 2.2);         // frontier grows with aggressiveness
+  const base = hashPid(p.plant_id) % 97;
+  const phase = (hashPid(p.plant_id) % 360) * Math.PI / 180;
+  const out = [{ dx: 0, dz: 0, mul: 1 }];
+  for (let k = 1; k <= K; k++) {
+    const f = k / cap;                          // 0 near … 1 frontier (stable per k)
+    const j = Math.sin((k + base) * 12.9898) * 43758.5453;
+    const jr = 0.78 + 0.22 * (j - Math.floor(j));   // deterministic radial jitter
+    const rr = reach * Math.sqrt(f) * jr;
+    const ang = phase + k * _GOLDEN;
+    out.push({ dx: Math.cos(ang) * rr, dz: Math.sin(ang) * rr,
+               mul: 0.72 - 0.34 * f });          // newer/outer offspring are smaller
+  }
+  return out;
+}
+
+// Build one simple plant layer: bucket items across `variants` archetypes,
+// instance each bucket (including spread offspring), scale per item via
+// scaleOf(p) → [sx, sy, sz]. `noRot` keeps groundcover flat with no Y spin.
+function buildLayer(list, variants, mat, archOf, scaleOf, month, year, noRot, terrain) {
+  if (!list || !list.length) return;
+  const buckets = Array.from({ length: variants }, () => []);
+  for (const p of list) buckets[hashPid(p.plant_id) % variants].push(p);
+  buckets.forEach((items, v) => {
+    if (!items.length) return;
+    const places = items.map(p => spreadPlacements(p, year));
+    const total = places.reduce((s, pl) => s + pl.length, 0);
+    const mesh = instancedMesh(archOf(v), total, mat);
+    const names = new Array(total);
+    let idx = 0;
+    items.forEach((p, ii) => {
+      const [sx, sy, sz] = scaleOf(p);
+      const rotY0 = noRot ? 0 : (indHash(p) % 628) / 100;
+      const col = fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity);
+      places[ii].forEach((pl, k) => {
+        const m = pl.mul;
+        const wx = p.x + pl.dx, wy = p.y + pl.dz;
+        const rotY = noRot ? 0 : rotY0 + (k ? pl.dx : 0);
+        const gy = terrainHeightAt(wx, wy, terrain);
+        setInst2(mesh, idx, wx, gy, -wy,
+                 sx * m, sy * (noRot ? 1 : m), sz * m, rotY, col);
+        names[idx] = p.common_name || '';
+        idx++;
+      });
+    });
+    mesh.userData.pick = names;
+    plantsGroup.add(mesh);
+  });
+}
+
+// Shrub archetypes are profile-specific (growth form, red-stem dogwood…), so
+// they're cached by (profile × variant × quality) like trees rather than the
+// flat ARCH.shrub array. buildShrubGeo returns {foliageGeo, stemGeo} — the
+// faceted leaf masses and the woody stems, each shaded/coloured separately.
+const SHRUB_VARIANTS = 3;
+const SHRUB_CACHE = new Map();
+function getShrubArch(prof, v) {
+  const key = prof.id + '_' + v + '_q' + QUALITY;
+  let a = SHRUB_CACHE.get(key);
+  if (a) return a;
+  a = buildShrubGeo(mulberry32(13 + v * 97 + prof.id.charCodeAt(0) * 7), prof);
+  SHRUB_CACHE.set(key, a);
+  return a;
+}
+
+// Herb archetypes are growth-form specific (HERB_CACHE), cached by
+// (form × variant × quality). One green geometry per form (leaves + stems +
+// stalks are all herbaceous).
+const HERB_VARIANTS = 3;
+const HERB_CACHE = new Map();
+function getHerbArch(formName, v) {
+  const key = formName + '_' + v + '_q' + QUALITY;
+  let a = HERB_CACHE.get(key);
+  if (a) return a;
+  a = buildPerennialGeo(mulberry32(29 + v * 89 + formName.charCodeAt(0) * 7),
+                        HERB_FORMS[formName]);
+  HERB_CACHE.set(key, a);
+  return a;
+}
+
+function buildHerbLayer(list, month, year, terrain) {
+  if (!list || !list.length) return;
+  const buckets = {};
+  for (const p of list) {
+    const formName = herbFormFor(p);
+    const v = hashPid(p.plant_id) % HERB_VARIANTS;
+    (buckets[formName + '_' + v] = buckets[formName + '_' + v]
+      || { formName, v, items: [] }).items.push(p);
+  }
+  for (const key in buckets) {
+    const { formName, v, items } = buckets[key];
+    const arch = getHerbArch(formName, v);
+    const places = items.map(p => spreadPlacements(p, year));
+    const total = places.reduce((s, pl) => s + pl.length, 0);
+    const mesh = instancedMesh(arch, total, MATS.leaf);
+    const names = new Array(total);
+    let idx = 0;
+    items.forEach((p, ii) => {
+      const c = Math.max(0.15, p.canopy_m), h = Math.max(0.08, p.height_m);
+      const rotY0 = (indHash(p) % 628) / 100;
+      const col = fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity);
+      places[ii].forEach((pl, k) => {
+        const m = pl.mul, x = p.x + pl.dx, wy = p.y + pl.dz;
+        const rotY = rotY0 + (k ? pl.dx : 0);
+        const gy = terrainHeightAt(x, wy, terrain);
+        setInst2(mesh, idx, x, gy, -wy, c * m, h * m, c * m, rotY, col);
+        names[idx] = p.common_name || '';
+        idx++;
+      });
+    });
+    mesh.userData.pick = names;
+    plantsGroup.add(mesh);
+  }
+}
+
+function buildShrubLayer(list, month, year, terrain) {
+  if (!list || !list.length) return;
+  const buckets = {};
+  for (const p of list) {
+    const prof = shrubProfileFor(p);
+    const v = hashPid(p.plant_id) % SHRUB_VARIANTS;
+    (buckets[prof.id + '_' + v] = buckets[prof.id + '_' + v]
+      || { prof, v, items: [] }).items.push(p);
+  }
+  for (const key in buckets) {
+    const { prof, v, items } = buckets[key];
+    const arch = getShrubArch(prof, v);
+    const places = items.map(p => spreadPlacements(p, year));
+    const total = places.reduce((s, pl) => s + pl.length, 0);
+    const foliage = instancedMesh(arch.foliageGeo, total, MATS.shrubFoliage);
+    const stems = arch.stemGeo ? instancedMesh(arch.stemGeo, total, MATS.branch) : null;
+    // Woody stems are bark-brown, except red-osier dogwood's signature red.
+    const stemHex = prof.redStems ? '#b5402e' : '#6b5236';
+    const names = new Array(total);
+    let idx = 0;
+    items.forEach((p, ii) => {
+      const c = Math.max(0.25, p.canopy_m), h = Math.max(0.2, p.height_m);
+      const rotY0 = (indHash(p) % 628) / 100;
+      const col = fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity);
+      const scol = fadeToward(stemHex, p.opacity);
+      places[ii].forEach((pl, k) => {
+        const m = pl.mul, x = p.x + pl.dx, wy = p.y + pl.dz;
+        const rotY = rotY0 + (k ? pl.dx : 0);
+        const gy = terrainHeightAt(x, wy, terrain);
+        setInst2(foliage, idx, x, gy, -wy, c * m, h * m, c * m, rotY, col);
+        if (stems) setInst2(stems, idx, x, gy, -wy, c * m, h * m, c * m, rotY, scol);
+        names[idx] = p.common_name || '';
+        idx++;
+      });
+    });
+    foliage.userData.pick = names;
+    plantsGroup.add(foliage);
+    if (stems) plantsGroup.add(stems);
+  }
+}
+
+function buildPlants(group, plants, month, year, terrain) {
+  if (plantsGroup) { disposeDesignGroup(plantsGroup); group.remove(plantsGroup); }
   plantsGroup = new THREE.Group();
   group.add(plantsGroup);
-  const byKind = { tree: [], shrub: [], vine: [], groundcover: [], herb: [] };
+  buildArchetypes();
+  ensurePlantMats();
+  month = month || 6;
+  year = year || 0;
+
+  const byKind = { tree: [], shrub: [], vine: [], groundcover: [], grass: [],
+                   aquatic: [], herb: [] };
   for (const p of plants || []) {
-    const k = byKind[p.plant_type] ? p.plant_type : 'herb';
+    let t = p.plant_type;
+    if (t === 'sedge' || t === 'rush') t = 'grass';   // graminoids share blades
+    const k = byKind[t] ? t : 'herb';
     byKind[k].push(p);
   }
 
+  // Trees — bucketed by crown class (conifer vs deciduous) × crown form (from
+  // the plant's aspect ratio: slender/oval/spreading) × maturity tier (young
+  // trees are simpler) × per-individual sub-variation (so repeats of one
+  // species aren't identical clones).
   if (byKind.tree.length) {
-    const trunks = instanced(GEO.trunk, byKind.tree.length);
-    const crowns = instanced(GEO.crown, byKind.tree.length);
-    byKind.tree.forEach((p, i) => {
-      const h = Math.max(0.3, p.height_m), c = Math.max(0.3, p.canopy_m);
-      const trunkH = h * 0.35;
-      setInst(trunks, i, p.x, 0, -p.y, c * 0.12, trunkH, c * 0.12,
-              '#6d4c41', p.opacity);
-      setInst(crowns, i, p.x, trunkH, -p.y, c, h - trunkH, c,
-              p.color, p.opacity);
-    });
-    plantsGroup.add(trunks, crowns);
+    const buckets = {};
+    for (const p of byKind.tree) {
+      const prof = profileFor(p);
+      // A genus profile may force a needle crown (larch keeps deciduous needle-
+      // drop) or a crown form, so a species reads right regardless of dimensions.
+      const cls = (p.foliage_type === 'evergreen' || prof.conifer) ? 'conifer' : 'deciduous';
+      const form = prof.formBias || formOf(p);
+      const t = tierFor(p.scale_factor);
+      const sub = indHash(p) % TREE_SUBVARS;
+      const ck = cls === 'conifer' ? (prof.conifer || 'standard') : 'd';
+      const key = cls + '_' + ck + '_' + prof.id + '_' + form + '_' + t + '_' + sub;
+      (buckets[key] = buckets[key] || { cls, prof, form, t, sub, items: [] }).items.push(p);
+    }
+    for (const key in buckets) {
+      const { cls, prof, form, t, sub, items } = buckets[key];
+      const arch = getTreeArch(cls, prof, form, t, sub);
+      const places = items.map(p => spreadPlacements(p, year));
+      const total = places.reduce((s, pl) => s + pl.length, 0);
+      const branch = instancedMesh(arch.branchGeo, total, MATS.branch);
+      const foliage = instancedMesh(arch.foliageGeo, total, MATS.foliage);
+      const names = new Array(total);
+      let idx = 0;
+      items.forEach((p, ii) => {
+        const h = Math.max(0.4, p.height_m), c = Math.max(0.4, p.canopy_m);
+        const rotY0 = (indHash(p) % 628) / 100;
+        const bare = _isDecid(p.foliage_type) && _bareMonth(month);
+        const bcol = fadeToward(prof.bark || '#5d4433', p.opacity);
+        const fcol = fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity);
+        places[ii].forEach((pl, k) => {
+          const m = pl.mul, x = p.x + pl.dx, wy = p.y + pl.dz, z = -wy;
+          const rotY = rotY0 + (k ? pl.dx + pl.dz : 0);
+          const gy = terrainHeightAt(x, wy, terrain);
+          setInst2(branch, idx, x, gy, z, c * m, h * m, c * m, rotY, bcol);
+          if (bare) setInst2(foliage, idx, x, gy, z, 0.001, 0.001, 0.001, rotY, _white);
+          else setInst2(foliage, idx, x, gy, z, c * m, h * m, c * m, rotY, fcol);
+          names[idx] = p.common_name || '';
+          idx++;
+        });
+      });
+      // Pick from the trunk too, so a bare-winter tree still names on hover.
+      branch.userData.pick = names; foliage.userData.pick = names;
+      plantsGroup.add(branch, foliage);
+    }
   }
-  const simple = [
-    ['shrub', GEO.dome, (p, h, c) => [c, Math.max(0.2, h) * 2, c]],
-    ['vine', GEO.cone, (p, h, c) => [Math.max(0.25, c * 0.6), h, Math.max(0.25, c * 0.6)]],
-    ['herb', GEO.cone, (p, h, c) => [c, h, c]],
-    ['groundcover', GEO.disc, (p, h, c) => [c, Math.min(0.12, Math.max(0.04, h)), c]],
-  ];
-  for (const [kind, geo, scale] of simple) {
-    const list = byKind[kind];
+
+  // Shrubs — bucketed by genus profile so dogwood shows red stems, willow stands
+  // upright, etc. (V1.94). One InstancedMesh per (profile × variant).
+  buildShrubLayer(byKind.shrub, month, year, terrain);
+
+  // Herbaceous plants (wildflower / herb / fern) — built to each species' growth
+  // form (V1.98): fireweed erect, yarrow ferny, fleabane rosette, etc.
+  buildHerbLayer(byKind.herb, month, year, terrain);
+
+  // Grasses / sedges / rushes — dense flat-blade tufts (V1.92).
+  buildLayer(byKind.grass, 3, MATS.blade, (v) => ARCH.grass[v],
+             (p) => [Math.max(0.16, p.canopy_m), Math.max(0.3, p.height_m),
+                     Math.max(0.16, p.canopy_m)], month, year, false, terrain);
+
+  // Aquatic / emergent marsh plants — tall erect reed/strap-leaf clumps; the
+  // cattail's brown spike comes from the flower layer (V1.92).
+  buildLayer(byKind.aquatic, 3, MATS.blade, (v) => ARCH.aquatic[v],
+             (p) => [Math.max(0.18, p.canopy_m), Math.max(0.5, p.height_m),
+                     Math.max(0.18, p.canopy_m)], month, year, false, terrain);
+  // Vines — sprawling/twining leafy stems (V1.99), not a cone.
+  buildLayer(byKind.vine, 3, MATS.leaf, (v) => ARCH.vine[v],
+             (p) => [Math.max(0.25, p.canopy_m), Math.max(0.2, p.height_m),
+                     Math.max(0.25, p.canopy_m)], month, year, false, terrain);
+
+  // Groundcover — low textured dome mats (no flat discs), gentle sway.
+  buildLayer(byKind.groundcover, 2, MATS.ground, (v) => ARCH.ground[v],
+             (p) => [Math.max(0.18, p.canopy_m),
+                     Math.min(0.18, Math.max(0.05, p.height_m)),
+                     Math.max(0.18, p.canopy_m)], month, year, true, terrain);
+
+  // Contact shadows under trees and tall shrubs (skip near-vanished plants).
+  const shadowed = byKind.tree
+    .concat(byKind.shrub.filter(p => (p.height_m || 0) > 1.2))
+    .filter(p => (p.opacity ?? 1) >= 0.2);
+  if (shadowed.length) {
+    const sh = instancedMesh(GEO.shadow, shadowed.length, MATS.shadow, false);
+    shadowed.forEach((p, i) => {
+      const c = Math.max(0.4, p.canopy_m) * 1.35;
+      _v.set(p.x, 0.03, -p.y); _s.set(c, 1, c); _q.identity();
+      _m.compose(_v, _q, _s);
+      sh.setMatrixAt(i, _m);
+    });
+    plantsGroup.add(sh);
+  }
+
+  // Flowers — real-coloured blooms on plants in flower for this month (V1.90).
+  buildFlowers(plants, month, terrain);
+  // Fruit — berries on fleshy-fruited plants in their fruit season (V2.0).
+  buildFruit(plants, month, terrain);
+}
+
+// ── Flowers (V1.90) ──────────────────────────────────────────────────────────
+// Camera-facing point sprites in each plant's real flower colour, shaped by a
+// per-form canvas texture so different flowers read differently. Shown only when
+// the scene's month falls inside the plant's bloom window.
+const FLOWER_FORMS = ['daisy', 'rays', 'spike', 'plume', 'umbel', 'globe',
+                      'cluster', 'bell', 'trumpet', 'cattail', 'pea', 'whorl',
+                      'star', 'cross', 'lily'];
+let FLOWER_TEX = null;
+
+function makeFlowerTexture(form) {
+  const s = 64, cv = document.createElement('canvas');
+  cv.width = cv.height = s;
+  const g = cv.getContext('2d');
+  g.clearRect(0, 0, s, s);
+  g.fillStyle = '#ffffff';
+  const cx = s / 2, cy = s / 2;
+  const dot = (x, y, r) => { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); };
+  if (form === 'daisy') {
+    const petals = 10, R = s * 0.30;          // aster ray florets
+    for (let i = 0; i < petals; i++) {
+      const a = i / petals * Math.PI * 2;
+      g.save(); g.translate(cx + Math.cos(a) * R * 0.6, cy + Math.sin(a) * R * 0.6);
+      g.rotate(a); g.beginPath();
+      g.ellipse(0, 0, s * 0.20, s * 0.075, 0, 0, Math.PI * 2); g.fill(); g.restore();
+    }
+    g.fillStyle = 'rgba(255,255,255,0.7)'; dot(cx, cy, s * 0.12);   // dim eye
+  } else if (form === 'umbel') {
+    for (let i = 0; i < 16; i++) {
+      const a = i * 2.39996, rr = Math.sqrt(i / 16) * s * 0.40;
+      dot(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.55, s * 0.055);
+    }
+  } else if (form === 'spike') {
+    for (let i = 0; i < 7; i++) {
+      const yy = s * 0.12 + i * s * 0.115;
+      const w = s * (0.16 - 0.012 * i);
+      g.beginPath(); g.ellipse(cx, yy, w, s * 0.075, 0, 0, Math.PI * 2); g.fill();
+    }
+  } else if (form === 'bell') {
+    g.beginPath();
+    g.moveTo(cx - s * 0.20, cy - s * 0.18);
+    g.bezierCurveTo(cx - s * 0.24, cy + s * 0.30, cx + s * 0.24, cy + s * 0.30,
+                    cx + s * 0.20, cy - s * 0.18);
+    g.closePath(); g.fill();
+    for (let i = 0; i < 3; i++) dot(cx - s * 0.12 + i * s * 0.12, cy + s * 0.24, s * 0.05);
+  } else if (form === 'rays') {            // big sunflower-style composite
+    const petals = 16, R = s * 0.40;
+    for (let i = 0; i < petals; i++) {
+      const a = i / petals * Math.PI * 2;
+      g.save(); g.translate(cx + Math.cos(a) * R * 0.5, cy + Math.sin(a) * R * 0.5);
+      g.rotate(a); g.beginPath();
+      g.ellipse(0, 0, s * 0.24, s * 0.07, 0, 0, Math.PI * 2); g.fill(); g.restore();
+    }
+    g.fillStyle = 'rgba(255,255,255,0.6)'; dot(cx, cy, s * 0.19);   // dark disc hint
+  } else if (form === 'plume') {           // feathery tapering spray (goldenrod, grass)
+    for (let i = 0; i < 26; i++) {
+      const t = i / 26, yy = s * 0.08 + t * s * 0.84;
+      const spread = s * 0.22 * (1 - t) + s * 0.03;
+      dot(cx + Math.sin(i * 1.7) * spread, yy, s * 0.045 * (1 - 0.4 * t));
+    }
+  } else if (form === 'globe') {           // dense spherical head (allium)
+    for (let i = 0; i < 22; i++) {
+      const a = i * 2.39996, rr = Math.sqrt(i / 22) * s * 0.36;
+      dot(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, s * 0.055);
+    }
+  } else if (form === 'trumpet') {         // 5-point tubular star (columbine, honeysuckle)
+    const pts = 5, Ro = s * 0.40, Ri = s * 0.16;
+    g.beginPath();
+    for (let i = 0; i < pts * 2; i++) {
+      const a = -Math.PI / 2 + i * Math.PI / pts, r = (i % 2 ? Ri : Ro);
+      const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+      i ? g.lineTo(x, y) : g.moveTo(x, y);
+    }
+    g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.7)'; dot(cx, cy, s * 0.10);
+  } else if (form === 'cattail') {         // brown emergent spike (Typha)
+    // slim upper male spike tapering to a point
+    g.beginPath();
+    g.moveTo(cx - s * 0.035, s * 0.30);
+    g.lineTo(cx + s * 0.035, s * 0.30);
+    g.lineTo(cx + s * 0.016, s * 0.07);
+    g.lineTo(cx - s * 0.016, s * 0.07);
+    g.closePath(); g.fill();
+    // fat female sausage with rounded ends
+    const x0 = cx - s * 0.085;
+    g.fillRect(x0, s * 0.34, s * 0.17, s * 0.50);
+    dot(cx, s * 0.34, s * 0.085);
+    dot(cx, s * 0.84, s * 0.085);
+    // thin supporting stalk below
+    g.fillRect(cx - s * 0.012, s * 0.84, s * 0.024, s * 0.15);
+  } else if (form === 'pea') {             // legume raceme (lupine, vetch, milkvetch)
+    const rows = 6;
+    for (let i = 0; i < rows; i++) {
+      const t = i / (rows - 1);
+      const yy = s * 0.15 + t * s * 0.70;
+      const w = s * (0.17 - 0.05 * t);     // wider toward the base
+      g.beginPath(); g.ellipse(cx, yy - s * 0.03, w, s * 0.065, 0, 0, Math.PI * 2); g.fill();
+      dot(cx - w * 0.5, yy + s * 0.03, s * 0.042);   // wings / keel
+      dot(cx + w * 0.5, yy + s * 0.03, s * 0.042);
+    }
+  } else if (form === 'whorl') {           // tubular whorl (bee balm / Monarda)
+    const florets = 14;
+    for (let i = 0; i < florets; i++) {
+      const a = i / florets * Math.PI * 2 + 0.2;
+      const rr = s * 0.30 * (0.72 + 0.28 * (((i * 7) % 5) / 5));
+      g.save(); g.translate(cx, cy); g.rotate(a); g.beginPath();
+      g.ellipse(rr * 0.5, 0, s * 0.17, s * 0.032, 0, 0, Math.PI * 2); g.fill(); g.restore();
+    }
+    g.fillStyle = 'rgba(255,255,255,0.85)'; dot(cx, cy, s * 0.09);
+  } else if (form === 'star') {            // 5 broad rounded petals (flax, geranium, phlox)
+    const petals = 5, R = s * 0.34;
+    for (let i = 0; i < petals; i++) {
+      const a = -Math.PI / 2 + i / petals * Math.PI * 2;
+      g.save(); g.translate(cx + Math.cos(a) * R * 0.52, cy + Math.sin(a) * R * 0.52);
+      g.rotate(a + Math.PI / 2); g.beginPath();
+      g.ellipse(0, 0, s * 0.135, s * 0.2, 0, 0, Math.PI * 2); g.fill(); g.restore();
+    }
+    g.fillStyle = 'rgba(255,255,255,0.6)'; dot(cx, cy, s * 0.085);
+  } else if (form === 'cross') {           // 4 petals (mustard family — draba)
+    const petals = 4, R = s * 0.3;
+    for (let i = 0; i < petals; i++) {
+      const a = i / petals * Math.PI * 2;
+      g.save(); g.translate(cx + Math.cos(a) * R * 0.55, cy + Math.sin(a) * R * 0.55);
+      g.rotate(a); g.beginPath();
+      g.ellipse(0, 0, s * 0.17, s * 0.115, 0, 0, Math.PI * 2); g.fill(); g.restore();
+    }
+    dot(cx, cy, s * 0.06);
+  } else if (form === 'lily') {            // 6 pointed tepals (lily, blue-eyed grass, camas)
+    const tepals = 6, R = s * 0.44;
+    for (let i = 0; i < tepals; i++) {
+      const a = -Math.PI / 2 + i / tepals * Math.PI * 2;
+      g.save(); g.translate(cx, cy); g.rotate(a);
+      g.beginPath();
+      g.moveTo(0, 0); g.lineTo(s * 0.07, -s * 0.13);
+      g.lineTo(0, -R); g.lineTo(-s * 0.07, -s * 0.13);
+      g.closePath(); g.fill(); g.restore();
+    }
+    g.fillStyle = 'rgba(255,255,255,0.55)'; dot(cx, cy, s * 0.08);
+  } else { // cluster
+    for (let i = 0; i < 11; i++) {
+      const a = i * 2.39996, rr = Math.sqrt(i / 11) * s * 0.34;
+      dot(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, s * 0.10);
+    }
+  }
+  const t = new THREE.CanvasTexture(cv);
+  if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace;
+  t.needsUpdate = true;
+  return t;
+}
+
+// Per-form bloom size + how many sprites to scatter per plant (denser = the
+// plant reads as its flower colour when in bloom).
+const _FLOWER_SIZE = { rays: 0.42, plume: 0.34, spike: 0.34, umbel: 0.30,
+                       globe: 0.32, trumpet: 0.30, bell: 0.24, daisy: 0.24,
+                       cluster: 0.26, cattail: 0.7, pea: 0.34, whorl: 0.30,
+                       star: 0.28, cross: 0.22, lily: 0.34 };
+
+function buildFlowers(plants, month, terrain) {
+  if (!FLOWER_TEX) {
+    FLOWER_TEX = {};
+    for (const f of FLOWER_FORMS) FLOWER_TEX[f] = makeFlowerTexture(f);
+  }
+  const byForm = {}; FLOWER_FORMS.forEach(f => byForm[f] = []);
+  for (const p of plants || []) {
+    if (!p.flower_color || !byForm[p.flower_form]) continue;
+    if ((p.opacity ?? 1) < 0.25) continue;            // not-yet-present plants
+    const bs = p.bloom_start || 0, be = p.bloom_end || 0;
+    if (!bs || month < bs || month > be) continue;     // out of bloom this month
+    byForm[p.flower_form].push(p);
+  }
+  const _fc = new THREE.Color();
+  for (const form of FLOWER_FORMS) {
+    const list = byForm[form];
     if (!list.length) continue;
-    const mesh = instanced(geo, list.length);
-    list.forEach((p, i) => {
-      const h = Math.max(0.08, p.height_m), c = Math.max(0.15, p.canopy_m);
-      const [sx, sy, sz] = scale(p, h, c);
-      setInst(mesh, i, p.x, 0, -p.y, sx, sy, sz, p.color, p.opacity);
+    const isCattail = form === 'cattail';
+    const pos = [], col = [];
+    for (const p of list) {
+      const gy = terrainHeightAt(p.x, p.y, terrain);
+      const h = Math.max(0.1, p.height_m);
+      const top = gy + h * (isCattail ? 0.96 : 0.9);
+      const rad = Math.max(0.1, p.canopy_m * 0.5);
+      _fc.set(p.flower_color);
+      const seed = hashPid(p.plant_id || 1);
+      // Cattails: a couple of tall brown spikes near the clump centre. Other
+      // forms: dense enough that a blooming plant reads as its flower colour.
+      const n = isCattail ? 1 + (seed % 3)
+              : qn(p.plant_type === 'tree' ? 14
+                 : p.plant_type === 'shrub' ? 11
+                 : p.plant_type === 'grass' ? 6 : 9);
+      for (let k = 0; k < n; k++) {
+        const a = ((seed + k * 97) % 628) / 100;
+        const rr = isCattail ? rad * 0.22 * (((seed + k * 53) % 100) / 100)
+                             : rad * (0.18 + 0.78 * (((seed + k * 53) % 100) / 100));
+        const dy = isCattail ? 0 : ((k % 3) - 1) * rad * 0.2;
+        pos.push(p.x + Math.cos(a) * rr, top + dy, -(p.y + Math.sin(a) * rr));
+        col.push(_fc.r, _fc.g, _fc.b);
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    const mat = new THREE.PointsMaterial({
+      map: FLOWER_TEX[form], color: 0xffffff, vertexColors: true,
+      transparent: true, alphaTest: 0.4, depthWrite: false,
+      sizeAttenuation: true, size: _FLOWER_SIZE[form] || 0.24,
     });
-    plantsGroup.add(mesh);
+    plantsGroup.add(new THREE.Points(geo, mat));
   }
+}
+
+// ── Fruit / berries (V2.0) ───────────────────────────────────────────────────
+// Fleshy-fruited plants (curated fruit_color) show clusters of berries through
+// their canopy during the fruit season. A radial-gradient sprite gives each
+// berry a highlit, shaded-sphere look once tinted by the real fruit colour.
+let BERRY_TEX = null;
+function makeBerryTexture() {
+  const s = 48, cv = document.createElement('canvas');
+  cv.width = cv.height = s;
+  const g = cv.getContext('2d');
+  const grd = g.createRadialGradient(s * 0.38, s * 0.36, s * 0.04,
+                                     s * 0.5, s * 0.5, s * 0.5);
+  grd.addColorStop(0, '#ffffff');
+  grd.addColorStop(0.4, '#d2d2d2');
+  grd.addColorStop(1, '#7e7e7e');
+  g.fillStyle = grd;
+  g.beginPath(); g.arc(s / 2, s / 2, s * 0.46, 0, Math.PI * 2); g.fill();
+  const t = new THREE.CanvasTexture(cv);
+  if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace;
+  t.needsUpdate = true;
+  return t;
+}
+
+function buildFruit(plants, month, terrain) {
+  const list = [];
+  for (const p of plants || []) {
+    if (!p.fruit_color) continue;
+    if ((p.opacity ?? 1) < 0.25) continue;
+    const fs = p.fruit_start || 0, fe = p.fruit_end || 0;
+    if (!fs || month < fs || month > fe) continue;     // not in fruit this month
+    list.push(p);
+  }
+  if (!list.length) return;
+  if (!BERRY_TEX) BERRY_TEX = makeBerryTexture();
+  const _c = new THREE.Color();
+  const pos = [], col = [];
+  for (const p of list) {
+    const gy = terrainHeightAt(p.x, p.y, terrain);
+    const h = Math.max(0.1, p.height_m), rad = Math.max(0.1, p.canopy_m * 0.5);
+    _c.set(p.fruit_color);
+    const seed = hashPid(p.plant_id || 1);
+    const n = qn(p.plant_type === 'tree' ? 18 : p.plant_type === 'shrub' ? 15 : 8);
+    for (let k = 0; k < n; k++) {
+      const a = ((seed + k * 97) % 628) / 100;
+      const rr = rad * (0.2 + 0.7 * (((seed + k * 61) % 100) / 100));
+      const yy = gy + h * (0.4 + 0.45 * (((seed + k * 37) % 100) / 100));   // through the canopy
+      pos.push(p.x + Math.cos(a) * rr, yy, -(p.y + Math.sin(a) * rr));
+      col.push(_c.r, _c.g, _c.b);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  const mat = new THREE.PointsMaterial({
+    map: BERRY_TEX, color: 0xffffff, vertexColors: true,
+    transparent: true, alphaTest: 0.5, depthWrite: false,
+    sizeAttenuation: true, size: 0.19,
+  });
+  plantsGroup.add(new THREE.Points(geo, mat));
 }
 
 function buildScanPoints(group, pts) {
@@ -328,23 +1997,165 @@ function buildStructures(group, structures) {
   }
 }
 
+// ── Gaussian-splat backdrop (Spark) ─────────────────────────────────────────
+// The splat lives OUTSIDE designGroup so a year-slider scene rebuild never
+// reloads it (a yard splat is tens of MB). It is keyed by URL: ensureSplat
+// only re-fetches when the file changes, otherwise just refreshes its world
+// matrix + opacity from the latest scene push.
+
+let splatMesh = null;
+let splatUrl = null;
+
+function applySplatMatrix(mesh, mat16) {
+  // mat16 is column-major (three.js order) from src/splat_backdrop.world_matrix.
+  mesh.matrixAutoUpdate = false;
+  mesh.matrix.fromArray(mat16);
+}
+
+function ensureSplat(spec) {
+  if (!spec || !spec.url) { removeSplat(); return; }
+  if (!SplatMesh) return;          // Spark not loaded (yet) — skip silently
+  ensureSparkRenderer();
+  if (spec.url !== splatUrl) {
+    removeSplat();
+    try {
+      splatMesh = new SplatMesh({ url: spec.url });
+    } catch (e) {
+      splatMesh = null; splatUrl = null;
+      return;   // bad splat — design still renders
+    }
+    splatUrl = spec.url;
+    scene.add(splatMesh);
+  }
+  if (splatMesh) {
+    applySplatMatrix(splatMesh, spec.matrix);
+    if (typeof spec.opacity === 'number' && 'opacity' in splatMesh) {
+      splatMesh.opacity = spec.opacity;
+    }
+  }
+}
+
+function removeSplat() {
+  if (splatMesh) { scene.remove(splatMesh); }
+  splatMesh = null; splatUrl = null;
+}
+
+window.permaClearSplat = function () { removeSplat(); };
+
+// Bake a north-up orthographic photo of the splat for the 2D "yard photo"
+// map layer. Returns a PNG data URL synchronously (the host calls this once
+// the splat has streamed in) — opts frames an exact scene-metre rectangle so
+// the image maps 1:1 onto the splat's lat/lng bbox. Returns '' if not ready.
+window.permaCaptureOrtho = function (opts) {
+  if (!splatMesh || !opts) return '';
+  const wx = Math.max(1e-3, opts.max_x - opts.min_x);
+  const dz = Math.max(1e-3, opts.max_y - opts.min_y);   // north span
+  const cx = (opts.min_x + opts.max_x) / 2;
+  const cz = -(opts.min_y + opts.max_y) / 2;            // north → −z centre
+  const cam = new THREE.OrthographicCamera(-wx / 2, wx / 2, dz / 2, -dz / 2,
+                                           0.1, 2000);
+  cam.position.set(cx, 800, cz);
+  cam.up.set(0, 0, -1);          // north (−z) points up in the image
+  cam.lookAt(cx, 0, cz);
+
+  // Splat-only frame: hide the design + sky so the layer is just the yard.
+  const designVis = designGroup ? designGroup.visible : false;
+  if (designGroup) designGroup.visible = false;
+  const bg = scene.background; scene.background = null;
+
+  const longest = Math.round(Math.max(1, Math.min(4096, opts.width || 2048)));
+  const px = wx >= dz ? longest : Math.round(longest * (wx / dz));
+  const py = wx >= dz ? Math.round(longest * (dz / wx)) : longest;
+  const prev = new THREE.Vector2(); renderer.getSize(prev);
+  renderer.setSize(px, py, false);
+  renderer.render(scene, cam);
+  let url = '';
+  try { url = renderer.domElement.toDataURL('image/png'); } catch (e) { url = ''; }
+
+  // Restore the live view.
+  renderer.setSize(prev.x, prev.y, false);
+  scene.background = bg;
+  if (designGroup) designGroup.visible = designVis;
+  renderer.render(scene, camera);
+  return url;
+};
+
 // ── hooks ───────────────────────────────────────────────────────────────────
 
+// Free the GPU resources a scene rebuild leaves behind. Without this the
+// per-rebuild instance buffers and fresh ground/boundary/building geometries
+// pile up in VRAM on every slider move until a weak GPU runs out and crashes.
+// Shared archetype geometry (TREE_CACHE/ARCH/GEO) and materials (MATS) are
+// reused across rebuilds, so they are skipped.
+function disposeDesignGroup(group) {
+  if (!group) return;
+  const sharedGeo = new Set();
+  for (const a of TREE_CACHE.values()) {
+    if (a.branchGeo) sharedGeo.add(a.branchGeo);
+    if (a.foliageGeo) sharedGeo.add(a.foliageGeo);
+  }
+  // Every shared archetype is reused across rebuilds and must NOT be disposed:
+  // all ARCH variant arrays (peren/ground/grass/aquatic — iterate so adding or
+  // removing a category never breaks this), and the per-genus shrub cache
+  // (V1.94: shrubs moved out of ARCH into SHRUB_CACHE).
+  if (ARCH) for (const arr of Object.values(ARCH))
+    for (const g of arr) sharedGeo.add(g);
+  for (const a of SHRUB_CACHE.values()) {
+    if (a.foliageGeo) sharedGeo.add(a.foliageGeo);
+    if (a.stemGeo) sharedGeo.add(a.stemGeo);
+  }
+  for (const g of HERB_CACHE.values()) sharedGeo.add(g);
+  for (const k in GEO) sharedGeo.add(GEO[k]);
+  const sharedMat = new Set(MATS ? Object.values(MATS) : []);
+  group.traverse(obj => {
+    if (obj.isInstancedMesh) obj.dispose();             // frees instance buffers only
+    if (obj.geometry && !sharedGeo.has(obj.geometry)) obj.geometry.dispose();
+    const m = obj.material;
+    if (m) for (const mm of (Array.isArray(m) ? m : [m]))
+      if (mm && !sharedMat.has(mm)) mm.dispose();
+  });
+}
+
+// Reaching here means the whole module body executed without throwing — the
+// hooks are about to register and the 8s "couldn't start" timeout will be
+// cancelled. If the log shows 'module-eval-start' but not this line, something
+// between the two threw (and should have surfaced via the error handler).
+window._pinglog && window._pinglog('registering hooks (boot OK)');
+
+let lastSceneObj = null;     // last full scene, so a quality change can re-render
 window.permaSetScene = function (sc) {
   if (!sc || !sc.bounds) return;
-  if (designGroup) scene.remove(designGroup);
+  lastSceneObj = sc;
+  if (designGroup) { disposeDesignGroup(designGroup); scene.remove(designGroup); }
   designGroup = new THREE.Group();
   scene.add(designGroup);
   lastOrigin = sc.origin || null;
+  lastMonth = sc.month || 6;
+  lastYear = sc.year || 0;
+  lastBounds = sc.bounds;
+  lastTerrain = sc.terrain || null;
 
   buildGround(designGroup, sc);
   buildBoundary(designGroup, sc.boundary);
   buildBuildings(designGroup, sc.buildings);
-  buildPlants(designGroup, sc.plants);
+  buildPlants(designGroup, sc.plants, sc.month, sc.year, sc.terrain);
   buildStructures(designGroup, sc.structures);
   buildScanPoints(designGroup, sc.scan_points);
+  ensureSplat(sc.splat);
   if (sc.sun) setSun(sc.sun.azimuth_deg, sc.sun.altitude_deg);
-  fitShadowAndCamera(sc.bounds);
+  fitShadow(sc.bounds);
+
+  // Frame the camera only on first load or when a genuinely different design is
+  // opened (origin moved) — a slider re-push of the same design keeps the
+  // user's current orbit/zoom.
+  const o = sc.origin;
+  const moved = !framedOrigin ||
+    (o && (Math.abs(o.lat - framedOrigin.lat) > 1e-6 ||
+           Math.abs(o.lng - framedOrigin.lng) > 1e-6));
+  if (moved) {
+    frameCamera(sc.bounds);
+    framedOrigin = o ? { lat: o.lat, lng: o.lng } : { lat: 0, lng: 0 };
+  }
 
   const n = (sc.plants || []).length;
   document.getElementById('hud').innerHTML =
@@ -355,6 +2166,20 @@ window.permaSetScene = function (sc) {
 
 window.permaSetSun = function (azDeg, altDeg) { setSun(azDeg, altDeg); };
 
+// Detail / quality knob (V1.94): 0 Low · 1 Medium · 2 High. Drops the cached
+// archetypes (their density depends on QUALITY) and re-renders the current scene
+// at the new detail. Build-time only — per-frame cost is unchanged.
+window.permaSetQuality = function (level) {
+  const q = Math.max(0, Math.min(2, level | 0));
+  if (q === QUALITY) return;
+  QUALITY = q;
+  TREE_CACHE.clear();
+  SHRUB_CACHE.clear();
+  HERB_CACHE.clear();
+  ARCH = null;
+  if (lastSceneObj) permaSetScene(lastSceneObj);   // same origin → camera stays put
+};
+
 // Legacy hook: scene3d.placed_plants_3d_state records carry lat/lng — project
 // them with the cosLat metric about the last scene origin.
 window.permaSetPlants = function (records) {
@@ -364,10 +2189,16 @@ window.permaSetPlants = function (records) {
   const plants = (records || []).map(r => ({
     x: (r.lng - lastOrigin.lng) * mPerDegLat * cosLat,
     y: (r.lat - lastOrigin.lat) * mPerDegLat,
+    plant_id: r.plant_id,
     height_m: r.height_m, canopy_m: r.canopy_m,
-    plant_type: r.plant_type, color: r.color, opacity: r.presence_opacity,
+    plant_type: r.plant_type, foliage_type: r.foliage_type,
+    scale_factor: r.scale_factor, spread_factor: r.spread_factor,
+    spread_rate: r.spread_rate,
+    color: r.color, opacity: r.presence_opacity,
+    flower_color: r.flower_color, flower_form: r.flower_form,
+    bloom_start: r.bloom_start, bloom_end: r.bloom_end,
   }));
-  buildPlants(designGroup, plants);
+  buildPlants(designGroup, plants, lastMonth, lastYear, lastTerrain);
 };
 
 addEventListener('resize', () => {
@@ -376,7 +2207,17 @@ addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
 });
 
-renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+// Cap rendering at ~30 fps and skip entirely while the tab/window is hidden, so
+// the always-on wind sway doesn't peg a weak GPU or drain a laptop battery.
+let _lastFrame = 0;
+const _FRAME_MS = 1000 / 30;
+renderer.setAnimationLoop((t) => {
+  if (document.hidden || (t - _lastFrame) < _FRAME_MS) return;
+  _lastFrame = t;
+  windUniforms.uTime.value = clock.getElapsedTime();
+  controls.update();
+  renderer.render(scene, camera);
+});
 </script>
 </body>
 </html>

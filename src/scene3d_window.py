@@ -23,17 +23,22 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from PyQt6.QtCore import Qt, QObject, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QObject, QThread, QSettings, pyqtSignal
 from PyQt6.QtWidgets import (
-    QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget,
+    QComboBox, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget,
 )
 
 from src.map3d_widget import Map3DWidget
 from src.scene_contract import build_scene
+from src.branding import APP_NAME
 
 _MAX_YEAR = 25
 _MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+_MONTH_FULL = ["January", "February", "March", "April", "May", "June",
+               "July", "August", "September", "October", "November", "December"]
+_DETAIL_KEY = "viewer3d/detail"            # 0 Low · 1 Medium · 2 High (shared w/ gallery)
+_DETAIL_LABELS = ["Low", "Medium", "High"]
 
 
 class _TerrainWorker(QObject):
@@ -64,7 +69,7 @@ class Scene3DWindow(QWidget):
         self._elevation = None
         self._thread = None
         self._worker = None
-        self.setWindowTitle("PermaDesign — 3D Preview")
+        self.setWindowTitle(f"{APP_NAME}: 3D Preview")
         self.resize(960, 700)
 
         self.viewer = Map3DWidget(self)
@@ -78,6 +83,7 @@ class Scene3DWindow(QWidget):
         self._month = QSlider(Qt.Orientation.Horizontal)
         self._month.setRange(1, 12)
         self._month.setValue(6)
+        self._month_lbl = QLabel()          # shows the current month name
         self._hour = QSlider(Qt.Orientation.Horizontal)
         self._hour.setRange(5, 21)
         self._hour.setValue(13)
@@ -85,20 +91,59 @@ class Scene3DWindow(QWidget):
         self._month.valueChanged.connect(self._on_controls_changed)
         self._hour.valueChanged.connect(self._on_controls_changed)
 
+        self._year.setToolTip("Watch the design grow — drag to a future year")
+        self._month.setToolTip("Season — shifts foliage colour and the sun")
+        self._hour.setToolTip("Time of day — drives the shadow-casting sun")
+
+        # Detail / quality — lower it if the 3D view is sluggish on this machine
+        # (drives window.permaSetQuality in the viewer). Shared with the gallery.
+        self._detail = QComboBox()
+        self._detail.addItems(_DETAIL_LABELS)
+        self._detail.setToolTip(
+            "Geometry detail — lower it if the 3D view is sluggish on this machine")
+        self._detail.setCurrentIndex(
+            max(0, min(2, int(QSettings().value(_DETAIL_KEY, 1)))))
+        self._detail.currentIndexChanged.connect(self._on_detail)
+
         refresh = QPushButton("Refresh from design")
+        refresh.setToolTip("Re-read the live project and rebuild the scene")
         refresh.clicked.connect(self.refresh)
+
+        # The camera now stays put while the sliders move; this re-centers it.
+        reset_view = QPushButton("Reset view")
+        reset_view.setToolTip("Re-center the camera on the design")
+        reset_view.clicked.connect(
+            lambda: self.viewer.run_js(
+                "window.permaResetView && window.permaResetView();"))
+
+        # Bake the loaded Gaussian-splat backdrop to a top-down "yard photo"
+        # for the 2D map (V1.65). Enabled only when the project has a splat.
+        self._bake_btn = QPushButton("📷 Add yard photo to map")
+        self._bake_btn.setToolTip(
+            "Render the photoreal scan straight down and add it to the 2D map "
+            "as a personal satellite layer")
+        self._bake_btn.setEnabled(False)
+        self._bake_btn.clicked.connect(self._on_bake_yard_photo)
+
+        self._last_origin = None
 
         bar = QHBoxLayout()
         bar.addWidget(QLabel("Year:"))
         bar.addWidget(self._year, 2)
         bar.addWidget(self._year_lbl)
-        bar.addSpacing(12)
-        bar.addWidget(QLabel("Sun:"))
+        bar.addSpacing(16)
+        bar.addWidget(QLabel("Time of year:"))
         bar.addWidget(self._month, 1)
+        bar.addWidget(self._month_lbl)
+        bar.addWidget(QLabel("Time of day:"))
         bar.addWidget(self._hour, 1)
         bar.addWidget(self._sun_lbl)
-        bar.addSpacing(12)
+        bar.addSpacing(16)
+        bar.addWidget(QLabel("Detail:"))
+        bar.addWidget(self._detail)
+        bar.addWidget(reset_view)
         bar.addWidget(refresh)
+        bar.addWidget(self._bake_btn)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(6, 6, 6, 6)
@@ -115,8 +160,8 @@ class Scene3DWindow(QWidget):
     def _update_labels(self):
         y = self._year.value()
         self._year_lbl.setText("mature" if y == 0 else f"year {y}")
-        self._sun_lbl.setText(
-            f"{_MONTH_NAMES[self._month.value() - 1]} {self._hour.value()}:00")
+        self._month_lbl.setText(_MONTH_FULL[self._month.value() - 1])
+        self._sun_lbl.setText(f"{self._hour.value()}:00")
 
     def _push_scene(self):
         scene = build_scene(
@@ -128,16 +173,54 @@ class Scene3DWindow(QWidget):
             # the scan's footprints are; the raw points are a preview aid).
             scan=getattr(self._main, "_scan_scene_sample", None),
         )
+        # Remember the origin so a yard-photo bake frames the splat correctly.
+        self._last_origin = scene.get("origin")
         self.viewer.apply_scene(scene)
+
+    def _on_bake_yard_photo(self):
+        """Render the loaded splat top-down and hand the PNG to the map layer."""
+        from src import splat_backdrop, splat_flow
+        feat = splat_backdrop.feature_from_project(self._main._project)
+        if feat is None or not self._last_origin:
+            self._main.statusBar().showMessage(
+                "No yard scan to bake — import one via File → Import Yard Scan.",
+                5000)
+            return
+        rect = splat_backdrop.scene_rect(
+            feat, self._last_origin["lat"], self._last_origin["lng"])
+
+        def _done(url):
+            if splat_flow.apply_baked_ortho(self._main, feat, url):
+                self._main.statusBar().showMessage(
+                    "Yard photo baked onto the map — toggle it under "
+                    "View → Yard photo.", 6000)
+            else:
+                self._main.statusBar().showMessage(
+                    "Bake produced no image — let the splat finish loading in "
+                    "3D, then try again.", 6000)
+
+        self.viewer.capture_ortho(rect, _done)
 
     def _on_controls_changed(self, *_):
         self._update_labels()
         self._push_scene()
 
+    def _on_detail(self, level: int):
+        """Detail combo → viewer quality. The viewer re-renders the current
+        scene at the new density itself (build-time only)."""
+        QSettings().setValue(_DETAIL_KEY, int(level))
+        self.viewer.set_quality(level)
+
     def refresh(self):
         """Re-read the live project (and kick a terrain fetch if we don't
         have a grid yet)."""
+        # Apply the saved detail level before the first scene push so the
+        # initial build honours it (queued until the viewer's JS is ready).
+        self.viewer.set_quality(self._detail.currentIndex())
         self._push_scene()
+        from src.splat_backdrop import feature_from_project
+        self._bake_btn.setEnabled(
+            feature_from_project(self._main._project) is not None)
         if self._elevation is None and self._thread is None:
             self._start_terrain_fetch()
 

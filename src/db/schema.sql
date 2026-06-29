@@ -8,7 +8,10 @@ CREATE TABLE IF NOT EXISTS plants (
     sun_requirement TEXT,           -- full_sun, partial_shade, full_shade
     water_needs TEXT,               -- low, medium, high
     native_region TEXT,
-    permaculture_uses TEXT,         -- comma-separated tags
+    -- permaculture_uses dropped in schema v37: the normalized plant_uses
+    -- junction (below) is the single source of truth. Read-side consumers get
+    -- a derived comma-joined `permaculture_uses` synthesized in get_plant /
+    -- search_plants / get_all_plants.
     spacing_meters REAL,
     mature_height_meters REAL,
     mature_canopy_m REAL,           -- horizontal spread at maturity (NULL ⇒ heuristic in get_plant)
@@ -49,6 +52,11 @@ CREATE TABLE IF NOT EXISTS plants (
     price_high_cad REAL,                -- est. high retail price (CAD)
     availability_class TEXT DEFAULT '', -- '' | big_box | garden_centre | native_specialist | seed_or_plug | rare
     sourcing_notes TEXT DEFAULT '',     -- form sold / example AB nurseries / as-of year
+    -- Flower colour + form (schema v31, V1.90) — drives real-coloured flowers in
+    -- the 3D viewer, shown when in bloom. Empty / 'none' = no showy flower.
+    flower_color TEXT DEFAULT '',       -- hex like '#f2c11e' or '' (no showy flower)
+    flower_form TEXT DEFAULT 'none',    -- daisy | spike | umbel | cluster | bell | none
+    fruit_color TEXT DEFAULT '',        -- berry hex (v35, V2.0); '' = dry/non-fruiting
     -- Imagery (schema v24, V1.60). An OPENLY-licensed photo + its citation;
     -- NULL/empty until the dataset workflow fills them. The app caches the URL
     -- locally and shows the attribution beside the photo (src/image_cache.py).
@@ -86,6 +94,14 @@ CREATE TABLE IF NOT EXISTS polycultures (
     description TEXT,
     center_plant_id INTEGER REFERENCES plants(id),
     parent_id INTEGER REFERENCES polycultures(id) ON DELETE SET NULL,
+    -- Alexander pattern-language framing (schema v27, F4). Authored editorial
+    -- text; `description` stays as the short summary / fallback. The data-derived
+    -- parts of the pattern (site envelope, ecological forces, related patterns)
+    -- are computed at display time in src/pattern_language.py, not stored.
+    problem TEXT,                   -- the need / conflict the community resolves
+    context TEXT,                   -- where & when to use it (the larger situation)
+    forces TEXT,                    -- the competing considerations it balances
+    solution TEXT,                  -- the instruction ("Therefore: …")
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -193,6 +209,19 @@ CREATE TABLE IF NOT EXISTS climate_cache (
     years_used  INTEGER,
     source      TEXT,
     cached_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (lat_q, lng_q)
+);
+
+-- Per-location seasonal wind rose (schema v26, V1.67). The rose is a nested
+-- dict (annual + seasonal blocks), so it's stored as a JSON blob rather than
+-- one-column-per-field. Per-location user cache, wiped on reseed like
+-- climate_cache (re-fetched on demand from Open-Meteo).
+CREATE TABLE IF NOT EXISTS wind_cache (
+    lat_q INTEGER NOT NULL,                    -- lat * 100, rounded
+    lng_q INTEGER NOT NULL,                    -- lng * 100, rounded
+    rose_json TEXT NOT NULL,                   -- compute_wind_rose() output
+    source    TEXT,
+    cached_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (lat_q, lng_q)
 );
 

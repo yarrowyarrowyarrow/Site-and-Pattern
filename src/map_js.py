@@ -174,10 +174,13 @@ def set_crosshair_cursor() -> str:
 
 # ── Boundaries ──────────────────────────────────────────────────────────────
 
-def load_boundary(boundary_data: dict) -> str:
+def load_boundary(boundary_data: dict, fit: bool = True) -> str:
     """The JS side expects a JSON string (not an object) for this entry
-    point, hence the single-encoded payload."""
-    return f"loadBoundary({_jslit(json.dumps(boundary_data))});"
+    point, hence the single-encoded payload. ``fit`` controls whether the
+    map recenters on the boundary — File → Open fits, undo/redo re-renders
+    pass ``fit=False`` so the camera stays put."""
+    fit_lit = "true" if fit else "false"
+    return f"loadBoundary({_jslit(json.dumps(boundary_data))}, {fit_lit});"
 
 
 def undo_boundary(boundary_id: str) -> str:
@@ -257,6 +260,12 @@ def place_annotation(ann_id: str, lat: float, lng: float, text: str) -> str:
     return (
         f"placeAnnotation({_jsstr(ann_id)}, {lat}, {lng}, {_jsstr(text)});"
     )
+
+
+def clear_annotations() -> str:
+    """Remove every annotation marker. clearAll() leaves annotations alone,
+    so the whole-project re-render clears them explicitly before redrawing."""
+    return "clearAnnotations();"
 
 
 def undo_place_plant(plant_id: int, lat: float, lng: float) -> str:
@@ -388,11 +397,19 @@ def set_season_view(season: str, pid_visibility: dict) -> str:
 
 
 def set_timeline_year_by_plant_id(year: int, pid_factors: dict,
-                                  pid_presence: dict | None = None) -> str:
+                                  pid_presence: dict | None = None,
+                                  pid_spread: dict | None = None) -> str:
     """Drive the growth-timeline animation: each entry in ``pid_factors`` is
     plant_id → maturity-factor (0..1) for size. Optional ``pid_presence`` maps
     plant_id → presence-opacity (0..1) so pioneers fade out and climax species
-    fade in along the succession timeline (N5); omitted ⇒ all fully present."""
+    fade in along the succession timeline (N5); omitted ⇒ all fully present.
+    Optional ``pid_spread`` maps plant_id → footprint-expansion (≥1.0) so self-
+    spreaders widen their canopy as the colony fills in (F35)."""
+    pres = pid_presence or {}
+    spread = pid_spread or {}
+    if spread:
+        return (f"setTimelineYearByPlantId({int(year)}, {_jslit(pid_factors)}, "
+                f"{_jslit(pres)}, {_jslit(spread)});")
     if pid_presence:
         return (f"setTimelineYearByPlantId({int(year)}, {_jslit(pid_factors)}, "
                 f"{_jslit(pid_presence)});")
@@ -468,6 +485,56 @@ def set_shade_overlay_opacity(opacity: float) -> str:
 
 def clear_shade_overlay() -> str:
     return "clearShadeOverlay();"
+
+
+# ── Dynamic wind shadow (V1.68) ──────────────────────────────────────────────
+
+def set_wind_casters(casters: list) -> str:
+    """Push the per-plant shelter casters (lat/lng/height/half_width/porosity) to
+    the JS live layer so it can redraw ghost wedges instantly as the dial turns
+    or a plant drags — no Python round-trip per frame."""
+    return f"setWindCasters({_jsobj(casters or [])});"
+
+
+def set_wind_angle_live(deg: float) -> str:
+    """Update only the wind angle and re-orient the live ghost wedges in JS."""
+    return f"setWindAngleLive({float(deg)});"
+
+
+def draw_merged_wind_shelter(payload: dict) -> str:
+    """Draw the authoritative merged, porosity-banded shelter (Python-computed,
+    on commit). ``payload`` = ``{bands:[{strength,rings}], wind_from_deg}``."""
+    return f"drawMergedWindShelter({_jsobj(payload or {})});"
+
+
+def set_wind_shadow_visible(visible: bool) -> str:
+    return f"setWindShadowVisible({_jsbool(visible)});"
+
+
+def clear_wind_shadow() -> str:
+    return "clearWindShadow();"
+
+
+def draw_splat_ortho_overlay(png_data_url: str, bbox: dict,
+                             opacity: float) -> str:
+    """Render the baked top-down splat photo as its own image overlay (V1.65)
+    — a personal, fresher "satellite" layer of the user's yard. Separate from
+    the slope/shade overlays so all can show at once; mirrors
+    ``draw_shade_overlay``."""
+    payload = {"image": png_data_url, "bbox": bbox, "opacity": float(opacity)}
+    return f"drawSplatOrthoOverlay({_jsobj(payload)});"
+
+
+def set_splat_ortho_visible(visible: bool) -> str:
+    return f"setSplatOrthoVisible({_jsbool(visible)});"
+
+
+def set_splat_ortho_opacity(opacity: float) -> str:
+    return f"setSplatOrthoOpacity({float(opacity)});"
+
+
+def clear_splat_ortho() -> str:
+    return "clearSplatOrtho();"
 
 
 def draw_shade_zones(cells: list, d_lat: float, d_lng: float,

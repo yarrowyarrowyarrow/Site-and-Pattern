@@ -136,11 +136,14 @@
     var timelineActive = false;
     var originalRadii = {};  // markerId -> original radius (for reset)
 
-    function setTimelineYearByPlantId(year, pidFactors, pidPresence) {
+    function setTimelineYearByPlantId(year, pidFactors, pidPresence, pidSpread) {
       // pidFactors: {plantId: scaleFactor} where scaleFactor is 0.1 to 1.0
       // pidPresence (optional): {plantId: 0..1} succession opacity — pioneers
       //   fade out, climax species fade in. Absent ⇒ all fully present.
+      // pidSpread (optional): {plantId: >=1.0} footprint expansion — self-
+      //   spreaders widen their canopy as the colony fills in. Absent ⇒ 1.0.
       pidPresence = pidPresence || {};
+      pidSpread = pidSpread || {};
       if (year === 0) {
         // Reset all markers to original size
         timelineActive = false;
@@ -169,8 +172,12 @@
           originalRadii[mid] = m.getRadius();
         }
 
+        var spread = pidSpread[m._pd.plantId];
+        if (spread === undefined) spread = 1.0;
         var matureRadius = originalRadii[mid];
-        var currentRadius = matureRadius * factor;
+        // Growth scales the marker; spread additionally widens self-spreaders'
+        // footprint (radius only) as the colony fills the gaps over time.
+        var currentRadius = matureRadius * factor * spread;
         m.setRadius(Math.max(currentRadius, 0.3));
 
         // Young plants more transparent; succession presence dims pioneers as

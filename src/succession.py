@@ -15,6 +15,9 @@ tests all share one definition of:
     species *in* as the design matures;
   * the dynamic **time horizon** — the slider extends to the longest
     ``years_to_maturity`` in the design so slow trees actually reach full size.
+
+Design principle P4 (time is the most undervalued design variable) — see
+docs/DESIGN_PHILOSOPHY.md.
 """
 
 from __future__ import annotations

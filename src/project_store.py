@@ -174,6 +174,13 @@ class ProjectStore:
         building richer records than the bare feature rebuild gives)."""
         self._placed[:] = list(records)
 
+    def rebuild_index(self) -> None:
+        """Rebuild the placed-plants index in place from the current
+        features. Used by undo/redo snapshot restore, which swaps the whole
+        ``features`` list at once (bypassing the per-plant mutators) and then
+        needs the index brought back into agreement with it."""
+        self._placed[:] = self.records_from_features()
+
     # ── mutations ─────────────────────────────────────────────────────────
 
     def add_plant(self, plant_id: int, common_name: str,

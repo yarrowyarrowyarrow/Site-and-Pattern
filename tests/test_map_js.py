@@ -103,7 +103,7 @@ class TestJsEntryPointsExist(unittest.TestCase):
         "setView", "setZoomSensitivity", "setGridStyle", "setSnapEnabled",
         "loadBoundary",
         "loadPlantMarker", "placePlantMarker", "setPlantGroupForLatest",
-        "updateMarkerColor", "placeAnnotation",
+        "updateMarkerColor", "placeAnnotation", "clearAnnotations",
         "placeSitePin", "clearSitePin", "setSitePinDropMode",
         "loadStructure", "undoStructureAt",
         "loadHedgerow", "undoHedgerowById",
@@ -258,17 +258,24 @@ class TestBoundaries(unittest.TestCase):
 
     def test_load_boundary_double_encodes(self):
         out = mj.load_boundary({"id": "b_1", "points": [[53.5, -113.5]]})
-        # loadBoundary takes a JSON *string* (it parses it itself), so
-        # the payload appears once-encoded as a JS string literal.
+        # loadBoundary takes a JSON *string* (it parses it itself) plus a
+        # trailing fit flag (default true → recenter on the boundary), so the
+        # payload appears once-encoded as a JS string literal, then ", true".
         self.assertTrue(out.startswith("loadBoundary("))
-        # Find the literal, peel one layer.
-        m = re.match(r'loadBoundary\((.*)\);$', out)
+        m = re.match(r'loadBoundary\((.*), (true|false)\);$', out)
         self.assertIsNotNone(m)
         inner = m.group(1)
         # `inner` is a JSON string whose value is a JSON-encoded dict.
         parsed_once = json.loads(inner)
         parsed_twice = json.loads(parsed_once)
         self.assertEqual(parsed_twice["id"], "b_1")
+        self.assertEqual(m.group(2), "true")          # default recenters
+
+    def test_load_boundary_fit_false(self):
+        # Undo/redo re-renders pass fit=False so the camera doesn't jump.
+        out = mj.load_boundary({"id": "b_1", "points": [[53.5, -113.5]]},
+                               fit=False)
+        self.assertTrue(out.rstrip().endswith(", false);"))
 
     def test_undo_boundary_quotes_id(self):
         out = mj.undo_boundary("b_42")
@@ -497,6 +504,50 @@ class TestContoursAndAutoTerrain(unittest.TestCase):
 
     def test_clear_auto_terrain(self):
         self.assertEqual(mj.clear_auto_terrain(), "clearAutoTerrain();")
+
+
+class TestSplatOrthoOverlay(unittest.TestCase):
+
+    def test_draw_splat_ortho_overlay_payload(self):
+        out = mj.draw_splat_ortho_overlay(
+            "data:image/png;base64,iVBORw0KGgo=",
+            {"north": 53.6, "south": 53.5, "east": -113.4, "west": -113.5},
+            opacity=0.9,
+        )
+        self.assertTrue(out.startswith("drawSplatOrthoOverlay(JSON.parse("))
+
+    def test_set_splat_ortho_visible_is_json_bool(self):
+        self.assertEqual(mj.set_splat_ortho_visible(True),
+                         "setSplatOrthoVisible(true);")
+        self.assertEqual(mj.set_splat_ortho_visible(False),
+                         "setSplatOrthoVisible(false);")
+
+    def test_set_splat_ortho_opacity_coerces_float(self):
+        self.assertEqual(mj.set_splat_ortho_opacity(1),
+                         "setSplatOrthoOpacity(1.0);")
+
+    def test_clear_splat_ortho(self):
+        self.assertEqual(mj.clear_splat_ortho(), "clearSplatOrtho();")
+
+
+class TestWindShadowBuilders(unittest.TestCase):
+
+    def test_set_wind_casters_json(self):
+        out = mj.set_wind_casters([{"lat": 53.5, "lng": -113.5, "height_m": 6}])
+        self.assertTrue(out.startswith("setWindCasters(JSON.parse("))
+
+    def test_set_wind_angle_live_float(self):
+        self.assertEqual(mj.set_wind_angle_live(270), "setWindAngleLive(270.0);")
+
+    def test_draw_merged_wind_shelter_json(self):
+        out = mj.draw_merged_wind_shelter(
+            {"bands": [{"strength": "strong", "rings": []}], "wind_from_deg": 90})
+        self.assertTrue(out.startswith("drawMergedWindShelter(JSON.parse("))
+
+    def test_visibility_and_clear(self):
+        self.assertEqual(mj.set_wind_shadow_visible(True),
+                         "setWindShadowVisible(true);")
+        self.assertEqual(mj.clear_wind_shadow(), "clearWindShadow();")
 
 
 class TestInvalidateSize(unittest.TestCase):

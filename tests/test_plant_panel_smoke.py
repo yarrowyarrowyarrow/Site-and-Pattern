@@ -183,6 +183,116 @@ class TestPlantPanelSmoke(unittest.TestCase):
         self.assertEqual(self._panel._placed_counts.get(1), 2)
         self.assertEqual(self._panel._placed_counts.get(2), 1)
 
+    # ── V1.85: unified multi-select filter dropdowns ─────────────────────────
+
+    def test_use_based_toggle_buttons_removed(self):
+        # The six use-overlapping toggles folded into the Use dropdown.
+        for attr in ("_medicinal_btn", "_nfixer_btn", "_pollinator_btn",
+                     "_keystone_btn", "_host_btn", "_birdfood_btn"):
+            self.assertFalse(hasattr(self._panel, attr), attr)
+        # The non-use extras stay as buttons.
+        for attr in ("_native_filter_btn", "_edible_btn", "_perennial_btn",
+                     "_has_image_btn"):
+            self.assertTrue(hasattr(self._panel, attr), attr)
+
+    def test_facet_combos_are_multiselect(self):
+        from src.plant_panel import CheckableComboBox
+        # All facet dropdowns — including ecoregion (V1.85 follow-up) — are
+        # multi-select.
+        for attr in ("_type_combo", "_sun_combo", "_water_combo",
+                     "_use_combo", "_rarity_combo", "_ecoregion_combo"):
+            self.assertIsInstance(getattr(self._panel, attr), CheckableComboBox)
+        # The ecoregion combo drops the "Any ecoregion" sentinel — it has one
+        # row per real region, driven by its placeholder for "any".
+        from src.plant_panel import _AB_ECOREGION_CHOICES
+        n_regions = sum(1 for _lbl, key in _AB_ECOREGION_CHOICES if key)
+        self.assertEqual(self._panel._ecoregion_combo.model().rowCount(),
+                         n_regions)
+
+    def _set_checked(self, combo, keys):
+        """Check exactly ``keys`` in ``combo`` (clearing others) — order-safe."""
+        from PyQt6.QtCore import Qt
+        for i in range(combo.model().rowCount()):
+            it = combo.model().item(i)
+            want = it.data(Qt.ItemDataRole.UserRole) in keys
+            it.setCheckState(Qt.CheckState.Checked if want
+                             else Qt.CheckState.Unchecked)
+
+    def test_type_combo_has_colour_icons(self):
+        # The Type dropdown items carry the plant-type colour swatch (legend).
+        tc = self._panel._type_combo
+        self.assertTrue(tc.model().rowCount() > 0)
+        for i in range(tc.model().rowCount()):
+            self.assertFalse(tc.model().item(i).icon().isNull())
+
+    def test_browser_pane_not_collapsible(self):
+        # V1.86: the Plant Browser pane is no longer wrapped in a CollapsiblePanel.
+        self.assertFalse(hasattr(self._panel, "_browser_panel"))
+
+    def test_ecoregion_default_is_empty(self):
+        # With no auto-detected pin, the ecoregion picker starts unselected and
+        # shows its placeholder (V1.86).
+        self.assertEqual(self._panel._ecoregion_combo.checked_keys(), [])
+        self.assertEqual(
+            self._panel._ecoregion_combo.lineEdit().placeholderText(),
+            "Restoring toward…")
+
+    def test_live_pin_sets_and_clears_ecoregion(self):
+        # A dropped pin's region drives the picker live; clearing removes it.
+        p = self._panel
+        p.set_autodetected_ecoregion("aspen_parkland")
+        self.assertEqual(p._ecoregion_combo.checked_keys(), ["aspen_parkland"])
+        p.set_autodetected_ecoregion("")
+        self.assertEqual(p._ecoregion_combo.checked_keys(), [])
+
+    def test_type_filter_has_full_taxonomy(self):
+        # V1.87: full botanical types, dead "root" retired, all colourable.
+        from src.plant_panel import _TYPE_LABELS
+        from src.member_colors import TYPE_COLORS
+        self.assertNotIn("root", _TYPE_LABELS)
+        for key in ("wildflower", "grass", "sedge", "rush", "fern", "aquatic"):
+            self.assertIn(key, _TYPE_LABELS)
+        for key in _TYPE_LABELS:
+            self.assertIn(key, TYPE_COLORS)
+
+    def test_results_list_is_draggable(self):
+        from src.plant_list_view import _PLANT_MIME
+        from PyQt6.QtCore import Qt
+        p = self._panel
+        self.assertTrue(p._results_list.dragEnabled())
+        m = p._results_model
+        if m.rowCount() == 0:
+            self.skipTest("no plants seeded")
+        idx = m.index(0)
+        self.assertTrue(bool(m.flags(idx) & Qt.ItemFlag.ItemIsDragEnabled))
+        md = m.mimeData([idx])
+        self.assertTrue(md.hasFormat(_PLANT_MIME))
+
+    def test_drop_adds_to_mix_and_expands(self):
+        from src.plant_list_view import _PLANT_OBJ_ROLE
+        p = self._panel
+        p._mix_species = []
+        p._placement_panel.set_expanded(False)
+        m = p._results_model
+        if m.rowCount() == 0:
+            self.skipTest("no plants seeded")
+        pid = m.data(m.index(0), _PLANT_OBJ_ROLE)["id"]
+        p._add_to_mix_by_id(pid)             # what the drop handler calls
+        self.assertEqual(len(p._mix_species), 1)
+        self.assertTrue(p._placement_panel.expanded())
+
+    def test_multiselect_filter_matches_query(self):
+        from src.db.plants import search_plants
+        p = self._panel
+        self._set_checked(p._type_combo, {"tree", "shrub"})
+        self._set_checked(p._use_combo, {"pollinator", "host_plant"})
+        p._run_search()
+        expected = len(search_plants(plant_type=["tree", "shrub"],
+                                     perm_use=["pollinator", "host_plant"]))
+        self.assertEqual(p._result_count.text(), f"Results: {expected}")
+        # AND semantics on uses → strictly fewer than pollinator alone
+        self.assertLess(expected, len(search_plants(perm_use="pollinator")))
+
 
 if __name__ == "__main__":
     unittest.main()

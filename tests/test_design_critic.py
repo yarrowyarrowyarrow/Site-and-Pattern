@@ -95,6 +95,29 @@ class TestCritiqueLines(unittest.TestCase):
         self.assertTrue(any("layer" in ln.lower()
                             for ln in critique_lines(h)))
 
+    # ── F3: food-web completeness (a broken Tallamy chain) ─────────────
+
+    def test_food_web_no_birds_flagged(self):
+        h = _habitat()
+        h["food_web"] = {"status": "no_birds", "complete": False,
+                         "caterpillars": True, "birds": False}
+        self.assertTrue(any("birds that should eat them" in ln
+                            for ln in critique_lines(h)))
+
+    def test_food_web_no_hosts_flagged(self):
+        h = _habitat()
+        h["food_web"] = {"status": "no_hosts", "complete": False,
+                         "caterpillars": False, "birds": True}
+        self.assertTrue(any("without host plants" in ln
+                            for ln in critique_lines(h)))
+
+    def test_food_web_complete_not_flagged(self):
+        # A closed chain on an otherwise-healthy design → nothing to flag.
+        h = _habitat()
+        h["food_web"] = {"status": "complete", "complete": True,
+                         "caterpillars": True, "birds": True}
+        self.assertEqual(critique_lines(h), [])
+
 
 class TestEvaluateAndRepair(unittest.TestCase):
 

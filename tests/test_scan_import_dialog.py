@@ -89,6 +89,22 @@ class TestScanAlignSession(unittest.TestCase):
         with self.assertRaises(ValueError):
             s.run_import({"features": []})
 
+    def test_backdrop_feature_from_splat_session(self):
+        from src.scan_import_dialog import ScanAlignSession
+        s = ScanAlignSession(_yard(), file_path="/tmp/yard.ply",
+                             is_splat=True, up="z")
+        with self.assertRaises(ValueError):
+            s.backdrop_feature()                       # no pairs yet
+        for (x, y) in [(-10.0, -10.0), (10.0, 10.0)]:
+            s.click_scan((x, y))
+            s.click_map(*_latlng(x, y))
+        feat = s.backdrop_feature()
+        props = feat["properties"]
+        self.assertEqual(props["element_type"], "splat_backdrop")
+        self.assertEqual(props["file_path"], "/tmp/yard.ply")
+        self.assertEqual(props["up_axis"], "z")
+        self.assertLess(props["bbox"]["south"], props["bbox"]["north"])
+
     @unittest.skipUnless(_HAVE_SHAPELY, "shapely not installed")
     def test_run_import_lands_footprints(self):
         s = self._session()
@@ -138,9 +154,24 @@ class TestScanImportDialog(unittest.TestCase):
             def __init__(self):
                 self.bridge = _Bridge()
                 self.shapes = []
+                self.ortho = None
+                self.cleared = 0
 
             def load_shape(self, sh):
                 self.shapes.append(sh)
+
+            def draw_splat_ortho_overlay(self, image, bbox, opacity):
+                self.ortho = {"image": image, "bbox": bbox, "opacity": opacity}
+
+            def clear_splat_ortho(self):
+                self.cleared += 1
+
+        class _Toolbar:
+            def __init__(self):
+                self.available = None
+
+            def set_yard_photo_available(self, available, *, checked=None):
+                self.available = available
 
         class _StatusBar:
             def showMessage(self, *_a, **_k):
@@ -148,6 +179,7 @@ class TestScanImportDialog(unittest.TestCase):
 
         main = QWidget()
         main.map_widget = _MapWidget()
+        main.toolbar = _Toolbar()
         main._project = {"type": "FeatureCollection", "properties": {},
                          "features": []}
         main._mark_modified = lambda: None
@@ -184,6 +216,34 @@ class TestScanImportDialog(unittest.TestCase):
             dlg._on_import()
             self.assertTrue(main.map_widget.shapes)
             self.assertTrue(hasattr(main, "_scan_scene_sample"))
+        dlg.deleteLater()
+
+    def test_splat_dialog_offers_backdrop_and_imports(self):
+        # A Gaussian-splat session shows the backdrop options and, on import,
+        # appends a splat_backdrop feature and enables the View toggle —
+        # footprints stay off (unchecked) so no shapely is needed here.
+        from src.scan_import_dialog import ScanAlignSession, ScanImportDialog
+        from src.splat_backdrop import feature_from_project
+        main = self._fake_main()
+        session = ScanAlignSession(_yard(), file_path="/tmp/yard.ply",
+                                   is_splat=True, up="z")
+        dlg = ScanImportDialog(main, session)
+        self.assertIsNotNone(dlg._backdrop_chk)
+        self.assertTrue(dlg._backdrop_chk.isChecked())
+        self.assertIsNotNone(dlg._footprints_chk)
+        self.assertFalse(dlg._footprints_chk.isChecked())
+
+        for (x, y) in [(-10.0, -10.0), (10.0, 10.0)]:
+            session.click_scan((x, y))
+            session.click_map(*_latlng(x, y))
+        dlg._on_import()
+
+        feat = feature_from_project(main._project)
+        self.assertIsNotNone(feat)
+        self.assertEqual(feat["properties"]["file_path"], "/tmp/yard.ply")
+        # No footprints were added (only the splat feature is present).
+        self.assertEqual(len(main._project["features"]), 1)
+        self.assertTrue(main.toolbar.available)
         dlg.deleteLater()
 
 

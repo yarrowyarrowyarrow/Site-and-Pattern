@@ -172,7 +172,7 @@ class Project:
             raise ProjectError(f"Couldn't read project {path}: {exc}") from exc
         if not isinstance(data, dict) or data.get("type") != "FeatureCollection":
             raise ProjectError(
-                f"{path} is not a PermaDesign project (missing FeatureCollection)."
+                f"{path} is not a Site & Pattern project (missing FeatureCollection)."
             )
         gen = DesignGenerator()
         gen.project = data

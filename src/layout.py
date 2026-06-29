@@ -13,15 +13,22 @@ Qt-free, no deps. Metre→degree uses the same local cos-lat projection as the
 rest of the app (``/111320`` lat, ``/(111320·cosLat)`` lng) so positions line up
 with ``llm_design`` placement and ``geometry.point_in_polygon`` clipping.
 
-The four patterns the LLM can request (see ``llm_design._SYSTEM_PROMPT``):
+The patterns the LLM can request (see ``llm_design._SYSTEM_PROMPT``):
 
   * ``row``     — a straight line, good for hedges and bed edges.
-  * ``grid``    — a rectangular block (mass planting / meadow drift).
+  * ``grid``    — a rectangular block (mass planting / formal block).
   * ``circle``  — a hex-packed disc (a feature specimen or herb circle).
   * ``scatter`` — a natural-looking jittered cluster (accents).
+  * ``drift``   — an elongated, flowing patch of one species, the Rainer/West
+                  "designed plant communities" / Oudolf look (design principle P2:
+                  the best designs look like they grew there). The naturalistic
+                  default for grasses and forbs.
 
-All are deterministic (``scatter`` uses a seeded RNG) so a given group lays out
-the same way every run — important for tests and reproducibility.
+All are deterministic (``scatter`` / ``drift`` use a seeded RNG) so a given group
+lays out the same way every run — important for tests and reproducibility.
+
+Design principle P2 (the best designs disappear into their context) — see
+docs/DESIGN_PHILOSOPHY.md.
 """
 
 from __future__ import annotations
@@ -36,7 +43,8 @@ ROW = "row"
 GRID = "grid"
 CIRCLE = "circle"
 SCATTER = "scatter"
-LAYOUTS = frozenset({ROW, GRID, CIRCLE, SCATTER})
+DRIFT = "drift"
+LAYOUTS = frozenset({ROW, GRID, CIRCLE, SCATTER, DRIFT})
 
 
 def _cos_lat(lat: float) -> float:
@@ -177,6 +185,57 @@ def scatter_positions(center_lat: float, center_lng: float, count: int,
     return out
 
 
+def drift_positions(center_lat: float, center_lng: float, count: int,
+                    spacing_m: float, *, seed: int = 0,
+                    bearing_deg: float | None = None,
+                    aspect: float = 2.6) -> list[tuple[float, float]]:
+    """``count`` points in an elongated, organic *drift* — the Rainer/West
+    "designed plant communities" / Oudolf look: a flowing, overlapping patch of
+    one species that reads as if it seeded itself, rather than a grid or an even
+    scatter. Points hex-pack inside an ellipse whose long axis runs along
+    ``bearing_deg`` (seeded-random when ``None``), elongated by ``aspect``
+    (long/short), then get a light jitter. Deterministic for a given ``seed``."""
+    count = max(1, int(count))
+    if count == 1:
+        return [(center_lat, center_lng)]
+    rng = random.Random(seed)
+    if bearing_deg is None:
+        bearing_deg = rng.uniform(0.0, 180.0)
+    aspect = max(1.0, float(aspect))
+    s = max(spacing_m, 0.01)
+    # Ellipse sized to hold ~count points: area π·a·b ≈ count·s², a/b = aspect.
+    # Oversize a touch so the hex-pack yields at least `count` before trimming.
+    a = max(s, s * math.sqrt(count * aspect / math.pi)) * 1.12
+    b = a / aspect
+    row_spacing = s * math.sqrt(3) / 2.0
+    max_row = math.ceil(a / row_spacing) + 1
+    max_col = math.ceil(a / s) + 1
+    local: list[tuple[float, float]] = []
+    for ri in range(-max_row, max_row + 1):
+        y = ri * row_spacing
+        row_off = (s / 2.0) if (ri & 1) else 0.0
+        for ci in range(-max_col, max_col + 1):
+            x = ci * s + row_off
+            if (x * x) / (a * a) + (y * y) / (b * b) <= 1.0 + 1e-9:
+                local.append((x, y))
+    # Keep the `count` points closest to the centre (a filled drift, not a ring).
+    local.sort(key=lambda p: p[0] * p[0] + p[1] * p[1])
+    local = local[:count]
+    rad = math.radians(bearing_deg)
+    sin_r, cos_r = math.sin(rad), math.cos(rad)
+    j = s * 0.30
+    out: list[tuple[float, float]] = []
+    for (x, y) in local:
+        jx = x + rng.uniform(-j, j)
+        jy = y + rng.uniform(-j, j)
+        # Rotate so the major axis (local x) runs along the bearing (0° = north):
+        # east = x·sinθ + y·cosθ, north = x·cosθ − y·sinθ.
+        east = jx * sin_r + jy * cos_r
+        north = jx * cos_r - jy * sin_r
+        out.append(_offset(center_lat, center_lng, east, north))
+    return out
+
+
 def positions_for_layout(layout: str, center_lat: float, center_lng: float,
                          count: int, spacing_m: float
                          ) -> list[tuple[float, float]]:
@@ -189,20 +248,22 @@ def positions_for_layout(layout: str, center_lat: float, center_lng: float,
         return grid_positions(center_lat, center_lng, count, spacing_m)
     if layout == CIRCLE:
         return circle_positions(center_lat, center_lng, count, spacing_m)
+    if layout == DRIFT:
+        return drift_positions(center_lat, center_lng, count, spacing_m)
     return scatter_positions(center_lat, center_lng, count, spacing_m)
 
 
 def default_layout_for(plant_type: str) -> str:
     """Deterministic pattern when the LLM doesn't specify one — by habit:
-    trees space out on a grid, shrubs cluster in circles, grasses/forbs drift
-    (scatter), edges/groundcover run in rows."""
+    trees space out on a grid, shrubs cluster in circles, grasses/forbs lay out
+    as naturalistic drifts, edges/groundcover run in rows."""
     pt = (plant_type or "").lower()
     if pt == "tree":
         return GRID
     if pt == "shrub":
         return CIRCLE
     if pt in ("grass", "sedge", "rush", "herb", "root", "fern"):
-        return SCATTER
+        return DRIFT
     if pt in ("groundcover", "vine"):
         return ROW
-    return SCATTER
+    return DRIFT

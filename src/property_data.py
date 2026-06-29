@@ -3,8 +3,9 @@ property_data.py — Auto-fill site data for a property pin.
 
 Pulls four datasets for a (lat, lng):
 
-  * rainfall   — Open-Meteo / ERA5-Land daily precipitation, averaged
-                 into annual + monthly means.
+  * rainfall   — Environment Canada 1981–2010 climate normal (bundled,
+                 gauge-based) for prairie pins, falling back to Open-Meteo
+                 ERA5-Land reanalysis outside the bundled coverage.
   * soil       — SoilGrids v2.0 (ISRIC): pH, sand/silt/clay %, depth.
   * elevation  — Copernicus DEM 30m via Open-Meteo's elevation endpoint;
                  slope (% and degrees) and aspect computed by sampling
@@ -28,36 +29,57 @@ from datetime import date, timedelta
 from typing import Optional
 
 from src.climate import get_zone
+from src.http_utils import http_get_json
+from src.projection import M_PER_DEG_LAT
 from src.resources import resource_path
 
 
 _TIMEOUT = 8.0
-_USER_AGENT = "PermaDesign/1.0 (https://github.com/yarrowyarrowyarrow/permadesign)"
 
 
 def _http_get_json(url: str, timeout: float = _TIMEOUT) -> Optional[dict]:
-    """GET a URL, return parsed JSON, or None on any failure."""
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except Exception:
-        return None
+    """Module-local alias for :func:`src.http_utils.http_get_json`, kept so
+    tests can monkeypatch ``property_data._http_get_json``."""
+    return http_get_json(url, timeout=timeout)
 
 
 # ── Rainfall ────────────────────────────────────────────────────────────────
 
+# Distance (km) within which a bundled Environment Canada climate normal is
+# treated as authoritative for a pin. ~150 km comfortably covers settled
+# Alberta and the Edmonton–Red Deer–Calgary corridor; beyond it we fall back
+# to live ERA5-Land rather than snapping to a distant station.
+_NORMAL_MAX_KM = 150.0
+# Within this radius the pin is effectively "in" the station's locality, so
+# the source line names the normal without a "nearest station" caveat.
+_NORMAL_LOCAL_KM = 60.0
+
+
 def fetch_rainfall(lat: float, lng: float, years: int = 10) -> Optional[dict]:
     """
-    Annual + monthly mean precipitation (mm) from ERA5-Land via Open-Meteo.
-    Falls back to a bundled Alberta climate-normal dataset
-    (``data/rainfall_fallback_alberta.json``) when the live API is
-    unreachable or returns no usable data, so the UI never has to show
-    a bare "unavailable" in an offline / firewalled / API-down session.
+    Annual + monthly mean precipitation (mm) for a pin.
+
+    Primary source is the bundled Environment Canada 1981–2010 climate
+    normal (``data/rainfall_fallback_alberta.json``): gauge-based ground
+    truth, a genuine *climate normal* (matching the panel header), and
+    fully offline. Open-Meteo's ERA5-Land reanalysis is only used as a
+    secondary source for pins outside the bundled prairie coverage — it
+    is known to over-predict precipitation over land and averages over a
+    coarse grid box, so it is labelled honestly rather than presented as a
+    climate normal.
 
     Returns ``{"annual_mm", "monthly_mm" (12), "years_used", "source"}``
-    or ``None`` if both the live fetch and the fallback fail.
+    or ``None`` if every source fails.
     """
+    # 1. Primary — bundled EC climate normal when the pin is in coverage.
+    normal = _climate_normal_rainfall(lat, lng, max_km=_NORMAL_MAX_KM)
+    if normal is not None:
+        return normal
+
+    # 2. Secondary — live ERA5-Land reanalysis for out-of-coverage pins.
+    #    Request the 9 km ERA5-Land model explicitly (the archive default is
+    #    the coarser ~25 km ERA5) and let the API derive local day
+    #    boundaries so daily totals are not split across the UTC midnight.
     today = date.today()
     end_d = date(today.year - 1, 12, 31)
     start = date(end_d.year - years + 1, 1, 1)
@@ -65,7 +87,7 @@ def fetch_rainfall(lat: float, lng: float, years: int = 10) -> Optional[dict]:
         "https://archive-api.open-meteo.com/v1/archive?"
         f"latitude={lat:.4f}&longitude={lng:.4f}"
         f"&start_date={start.isoformat()}&end_date={end_d.isoformat()}"
-        "&daily=precipitation_sum&timezone=UTC"
+        "&daily=precipitation_sum&models=era5_land&timezone=auto"
     )
     # The archive API ships ~10 years of daily data per call; the
     # default 8 s timeout is borderline on slower connections, so give
@@ -73,18 +95,35 @@ def fetch_rainfall(lat: float, lng: float, years: int = 10) -> Optional[dict]:
     data = _http_get_json(url, timeout=20.0)
     parsed = _parse_rainfall(data) if data and "daily" in data else None
     if parsed is not None:
+        # A multi-year reanalysis mean is not a climate normal — say so.
+        parsed["source"] = "Open-Meteo ERA5-Land (10-yr reanalysis mean)"
         return parsed
-    return _alberta_rainfall_fallback(lat, lng)
+
+    # 3. Last resort — nearest EC normal regardless of distance, so an
+    #    offline session out of coverage still shows an approximation.
+    return _climate_normal_rainfall(lat, lng, max_km=None)
 
 
-def _alberta_rainfall_fallback(lat: float, lng: float) -> Optional[dict]:
-    """Return the closest bundled Alberta climate-normal rainfall, or None.
+def _dist2(p, q) -> float:
+    """Squared cosLat-corrected angular distance (deg²) between two
+    (lat, lng) points — cheap nearest-neighbour metric, no projection."""
+    dlat = p[0] - q[0]
+    dlng = (p[1] - q[1]) * math.cos(math.radians((p[0] + q[0]) / 2))
+    return dlat * dlat + dlng * dlng
 
-    Mirrors the soil-fallback pattern so the UI can render it without a
-    special case. ``source`` makes the approximation explicit.
+
+def _climate_normal_rainfall(
+    lat: float, lng: float, max_km: Optional[float] = None
+) -> Optional[dict]:
+    """Return the nearest bundled Environment Canada climate-normal rainfall.
+
+    Picks the closest of the bundled station centroids. When ``max_km`` is
+    set and the nearest station is farther than that, the pin is considered
+    outside coverage and ``None`` is returned so the caller can fall back to
+    live data. Mirrors the soil-fallback pattern so the UI renders it with
+    no special case.
     """
     import json as _json
-    import math as _math
 
     path = resource_path("data", "rainfall_fallback_alberta.json")
     try:
@@ -95,23 +134,27 @@ def _alberta_rainfall_fallback(lat: float, lng: float) -> Optional[dict]:
     if not isinstance(entries, list) or not entries:
         return None
 
-    def _dist2(p, q):
-        dlat = p[0] - q[0]
-        dlng = (p[1] - q[1]) * _math.cos(_math.radians((p[0] + q[0]) / 2))
-        return dlat * dlat + dlng * dlng
-
     best = min(
         entries,
         key=lambda e: _dist2((lat, lng), tuple(e.get("centroid") or (0, 0))),
     )
+    # deg → km via the latitude scale (~111 km per degree).
+    dist_km = math.sqrt(_dist2((lat, lng), tuple(best.get("centroid") or (0, 0)))) * 111.0
+    if max_km is not None and dist_km > max_km:
+        return None
+
     monthly = best.get("monthly_mm") or []
     if len(monthly) != 12:
         return None
+    region = best.get("region", "nearest station")
+    source = f"Environment Canada 1981–2010 normal — {region}"
+    if dist_km > _NORMAL_LOCAL_KM:
+        source += " (nearest station)"
     return {
         "annual_mm":   round(float(best.get("annual_mm") or sum(monthly)), 1),
         "monthly_mm":  [round(float(m), 1) for m in monthly],
         "years_used":  30,
-        "source":      f"AB climate normal — {best.get('region', 'nearest station')} (live API unavailable)",
+        "source":      source,
     }
 
 
@@ -146,16 +189,26 @@ def fetch_soil(lat: float, lng: float) -> Optional[dict]:
     """
     Soil pH, sand/silt/clay %, and reported depth.
 
-    Tries SoilGrids v2.0 (ISRIC) first; if the live API is unavailable
-    or returns no usable data, falls back to a curated Alberta regional
-    approximation bundled with the app (see
-    ``data/soil_fallback_alberta.json``). The returned dict's
-    ``source`` field always reflects which path was used so the UI can
-    label the data appropriately.
+    Source order: the offline **Gridded Soil Landscapes of Canada** pack when
+    downloaded (real per-location data, no network — see ``src/soil_grid.py``),
+    then SoilGrids v2.0 (ISRIC) as an opportunistic online bonus, then a curated
+    Alberta regional approximation bundled with the app (see
+    ``data/soil_fallback_alberta.json``). The returned dict's ``source`` field
+    always reflects which path was used so the UI can label it appropriately.
 
     Top-layer values are surfaced in ``summary``; per-depth values are
     kept in ``properties`` for callers that want the full profile.
     """
+    # 1. Offline pack (Gridded SLC) — instant, real, no network.
+    try:
+        from src.soil_grid import sample_soil
+        local = sample_soil(lat, lng)
+    except Exception:  # noqa: BLE001 — pack/rasterio issues → try the next source
+        local = None
+    if local is not None:
+        return local
+
+    # 2. SoilGrids v2.0 (online; ISRIC has paused the service, so often skipped).
     qs = urllib.parse.urlencode([
         ("lat", f"{lat:.4f}"),
         ("lon", f"{lng:.4f}"),
@@ -367,11 +420,11 @@ def fetch_elevation(lat: float, lng: float, sample_m: float = 60.0) -> Optional[
 
 def _slope_sample_points(lat: float, lng: float, m: float):
     """[centre, N, E, S, W] in degrees, offset by ``m`` metres."""
-    dlat = m / 111320.0
+    dlat = m / M_PER_DEG_LAT
     cos_lat = math.cos(math.radians(lat))
     if abs(cos_lat) < 1e-9:
         cos_lat = 1e-9
-    dlng = m / (111320.0 * cos_lat)
+    dlng = m / (M_PER_DEG_LAT * cos_lat)
     return [
         (lat,        lng),
         (lat + dlat, lng),

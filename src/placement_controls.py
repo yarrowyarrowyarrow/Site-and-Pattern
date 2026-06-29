@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSizePolicy,
     QSlider,
     QSpinBox,
     QStackedWidget,
@@ -109,6 +110,7 @@ class PlacementControlsWidget(QWidget):
         parent: QWidget | None = None,
         *,
         show_canopy_base: bool = True,
+        show_fill_spacing: bool = True,
         title: str = "Placement Mode",
     ):
         super().__init__(parent)
@@ -126,8 +128,8 @@ class PlacementControlsWidget(QWidget):
         root.addWidget(wrap)
 
         outer = QVBoxLayout(wrap)
-        outer.setContentsMargins(6, 6, 6, 6)
-        outer.setSpacing(4)
+        outer.setContentsMargins(6, 4, 6, 4)
+        outer.setSpacing(3)
 
         # ── Mode segmented buttons ────────────────────────────────────
         seg = QHBoxLayout()
@@ -157,21 +159,20 @@ class PlacementControlsWidget(QWidget):
         self._stack = QStackedWidget()
         outer.addWidget(self._stack)
 
-        # Single — no parameters (parent panel may provide a burst Qty spinner).
+        # Single — no parameters and no hint (the Single button's tooltip already
+        # explains it); an empty page keeps the section compact (V1.87).
         single_panel = QWidget()
-        sl = QVBoxLayout(single_panel)
-        sl.setContentsMargins(0, 0, 0, 0)
-        single_hint = QLabel("Click on the map to place one at a time.")
-        single_hint.setStyleSheet("color: #78909c; font-size: 11px;")
-        sl.addWidget(single_hint)
+        QVBoxLayout(single_panel).setContentsMargins(0, 0, 0, 0)
         self._stack.addWidget(single_panel)
 
-        # Row — count input.
+        # Row — count input + optional naturalistic drift.
         row_panel = QWidget()
-        rl = QHBoxLayout(row_panel)
+        rl = QVBoxLayout(row_panel)
         rl.setContentsMargins(0, 0, 0, 0)
         rl.setSpacing(4)
-        rl.addWidget(_small_label("Count:"))
+        row_count_line = QHBoxLayout()
+        row_count_line.setSpacing(4)
+        row_count_line.addWidget(_small_label("Count:"))
         self._row_count = QSpinBox()
         self._row_count.setRange(0, 200)
         self._row_count.setValue(0)
@@ -179,8 +180,17 @@ class PlacementControlsWidget(QWidget):
         self._row_count.setToolTip("0 = auto from spacing; otherwise force this many items")
         self._row_count.setStyleSheet(_QTY_SPIN_STYLE)
         self._row_count.setFixedWidth(80)
-        rl.addWidget(self._row_count)
-        rl.addStretch()
+        row_count_line.addWidget(self._row_count)
+        row_count_line.addStretch()
+        rl.addLayout(row_count_line)
+        self._row_drift = QCheckBox("Drift — natural sweep, not a straight line")
+        self._row_drift.setToolTip(
+            "Lay the group out as a flowing, organic drift along the line you "
+            "draw (Rainer/West 'designed communities' style) rather than an even "
+            "straight row — the most natural look for grasses and forbs."
+        )
+        self._row_drift.setStyleSheet("color: #a5d6a7; font-size: 11px;")
+        rl.addWidget(self._row_drift)
         self._stack.addWidget(row_panel)
 
         # Grid — rows × cols + stagger.
@@ -237,12 +247,19 @@ class PlacementControlsWidget(QWidget):
         cl.addStretch()
         self._stack.addWidget(circle_panel)
 
-        # Fill Area — spacing of the scattered items (draw the polygon on the map).
+        # Fill Area — spacing of the scattered items + optional matrix planting.
         fill_panel = QWidget()
-        fl = QHBoxLayout(fill_panel)
+        fl = QVBoxLayout(fill_panel)
         fl.setContentsMargins(0, 0, 0, 0)
         fl.setSpacing(4)
-        fl.addWidget(_small_label("Spacing:"))
+        # Spacing label + spinner live in their own row so embedders that supply
+        # their own spacing control (the Communities tab's Cell spacing) can hide
+        # it via show_fill_spacing=False without losing the matrix toggle / hint.
+        self._fill_spacing_row = QWidget()
+        fill_spacing_line = QHBoxLayout(self._fill_spacing_row)
+        fill_spacing_line.setContentsMargins(0, 0, 0, 0)
+        fill_spacing_line.setSpacing(4)
+        fill_spacing_line.addWidget(_small_label("Spacing:"))
         self._fill_spacing = QDoubleSpinBox()
         self._fill_spacing.setRange(0.3, 20.0)
         self._fill_spacing.setSingleStep(0.5)
@@ -250,13 +267,27 @@ class PlacementControlsWidget(QWidget):
         self._fill_spacing.setSuffix(" m")
         self._fill_spacing.setFixedWidth(85)
         self._fill_spacing.setToolTip(
-            "Centre-to-centre spacing of the scattered items. For a community "
-            "(or community mix) this is the gap between whole community units."
+            "Centre-to-centre spacing of the scattered items."
         )
         self._fill_spacing.setStyleSheet(_QTY_SPIN_STYLE)
-        fl.addWidget(self._fill_spacing)
-        fl.addWidget(_small_label("Click Place, then draw the area."))
-        fl.addStretch()
+        fill_spacing_line.addWidget(self._fill_spacing)
+        fill_spacing_line.addStretch()
+        fl.addWidget(self._fill_spacing_row)
+        if not show_fill_spacing:
+            self._fill_spacing_row.hide()
+        fill_hint = _small_label("Click Place, then draw the area.")
+        fl.addWidget(fill_hint)
+        self._fill_matrix = QCheckBox(
+            "Matrix planting — ground layer knits, taller plants stand out")
+        self._fill_matrix.setToolTip(
+            "Rainer/West matrix planting: the ground-layer species (grasses / "
+            "groundcovers) fill the area as a connective matrix while the taller "
+            "feature plants are scattered through it. For a community, its "
+            "groundcover-layer members are the matrix; for a plant mix the "
+            "ground-layer species are picked automatically."
+        )
+        self._fill_matrix.setStyleSheet("color: #a5d6a7; font-size: 11px;")
+        fl.addWidget(self._fill_matrix)
         self._stack.addWidget(fill_panel)
 
         # ── Overlap / gap slider (applies to all multi modes) ─────────
@@ -302,6 +333,14 @@ class PlacementControlsWidget(QWidget):
         if not show_canopy_base:
             self._canopy_base_checkbox.hide()
 
+        # Apply the size-to-current-page policy for the initial Single mode so
+        # the empty Single page doesn't reserve the tallest page's height.
+        for i in range(self._stack.count()):
+            self._stack.widget(i).setSizePolicy(
+                QSizePolicy.Policy.Preferred,
+                QSizePolicy.Policy.Preferred if i == 0
+                else QSizePolicy.Policy.Ignored)
+
     # ── Public API ────────────────────────────────────────────────────
 
     @property
@@ -327,6 +366,7 @@ class PlacementControlsWidget(QWidget):
                 "count": self._row_count.value() or None,
                 "overlap": overlap,
                 "use_canopy": use_canopy,
+                "drift": self._row_drift.isChecked(),
             }
         elif kind == "grid":
             params = {
@@ -344,7 +384,10 @@ class PlacementControlsWidget(QWidget):
                 "use_canopy": use_canopy,
             }
         elif kind == "fill":
-            params = {"spacing": float(self._fill_spacing.value())}
+            params = {
+                "spacing": float(self._fill_spacing.value()),
+                "matrix": self._fill_matrix.isChecked(),
+            }
         else:
             return {"kind": "single", "params": {}}
         return {"kind": kind, "params": params}
@@ -360,4 +403,13 @@ class PlacementControlsWidget(QWidget):
         self._kind = kind
         idx = {"single": 0, "row": 1, "grid": 2, "circle": 3, "fill": 4}.get(kind, 0)
         self._stack.setCurrentIndex(idx)
+        # Size the stack to the *current* page only (a QStackedWidget otherwise
+        # reserves the tallest page's height — a big empty gap under Single).
+        for i in range(self._stack.count()):
+            page = self._stack.widget(i)
+            page.setSizePolicy(
+                QSizePolicy.Policy.Preferred,
+                QSizePolicy.Policy.Preferred if i == idx
+                else QSizePolicy.Policy.Ignored)
+        self._stack.adjustSize()
         self.patternKindChanged.emit(kind)

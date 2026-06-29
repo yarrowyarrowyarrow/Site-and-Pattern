@@ -5,8 +5,8 @@
     "plant_type": "tree",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
-    "sun_requirement": "full_sun",
-    "water_needs": "moderate",
+    "sun_requirement": "full_sun,partial_shade",
+    "water_needs": "low,medium",
     "spacing_m": "5.0",
     "mature_height_m": "4.5",
     "native_region": "Cultivated variety bred at Morden Research Station, Manitoba",
@@ -38,7 +38,9 @@
     "price_low_cad": 45,
     "price_high_cad": 120,
     "availability_class": "big_box",
-    "sourcing_notes": "Estimate (tree default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (tree default); AB retail as of 2026",
+    "flower_color": "#f2f2ea",
+    "flower_form": "cluster"
   },
   {
     "common_name": "Norland Apple",
@@ -46,8 +48,8 @@
     "plant_type": "tree",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
-    "sun_requirement": "full_sun",
-    "water_needs": "moderate",
+    "sun_requirement": "full_sun,partial_shade",
+    "water_needs": "low,medium",
     "spacing_m": "5.0",
     "mature_height_m": "4.5",
     "native_region": "Cultivated variety, Morden Research Station, Manitoba",
@@ -79,7 +81,9 @@
     "price_low_cad": 45,
     "price_high_cad": 120,
     "availability_class": "big_box",
-    "sourcing_notes": "Estimate (tree default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (tree default); AB retail as of 2026",
+    "flower_color": "#f2f2ea",
+    "flower_form": "cluster"
   },
   {
     "common_name": "Evans Cherry",
@@ -87,8 +91,8 @@
     "plant_type": "tree",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "7",
-    "sun_requirement": "full_sun",
-    "water_needs": "moderate",
+    "sun_requirement": "full_sun,partial_shade",
+    "water_needs": "low,medium",
     "spacing_m": "4.0",
     "mature_height_m": "4.0",
     "native_region": "Cultivated sour cherry variety, discovered in Alberta",
@@ -123,7 +127,10 @@
     "price_low_cad": 45,
     "price_high_cad": 120,
     "availability_class": "big_box",
-    "sourcing_notes": "Estimate (tree default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (tree default); AB retail as of 2026",
+    "flower_color": "#f2f2ea",
+    "flower_form": "cluster",
+    "fruit_color": "#3a1426"
   },
   {
     "common_name": "Nanking Cherry",
@@ -131,7 +138,7 @@
     "plant_type": "shrub",
     "hardiness_zone_min": "2",
     "hardiness_zone_max": "6",
-    "sun_requirement": "full_sun",
+    "sun_requirement": "full_sun,partial_shade",
     "water_needs": "low",
     "spacing_m": "2.5",
     "mature_height_m": "2.5",
@@ -167,16 +174,19 @@
     "price_low_cad": 25,
     "price_high_cad": 50,
     "availability_class": "big_box",
-    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026"
+    "sourcing_notes": "Estimate (shrub default); AB retail as of 2026",
+    "flower_color": "#f2f2ea",
+    "flower_form": "cluster",
+    "fruit_color": "#3a1426"
   },
   {
     "common_name": "Bee Balm (Wild Bergamot)",
     "scientific_name": "Monarda fistulosa",
-    "plant_type": "herb",
+    "plant_type": "wildflower",
     "hardiness_zone_min": "3",
     "hardiness_zone_max": "9",
-    "sun_requirement": "full_sun",
-    "water_needs": "low",
+    "sun_requirement": "full_sun,partial_shade",
+    "water_needs": "low,medium",
     "spacing_m": "0.6",
     "mature_height_m": "0.9",
     "native_region": "Native to North America including Canadian prairies",
@@ -208,7 +218,9 @@
     "spread_habit": "slow_spreader",
     "price_low_cad": 8,
     "price_high_cad": 16,
-    "availability_class": "garden_centre",
-    "sourcing_notes": "Estimate (herb default); AB retail as of 2026"
+    "availability_class": "big_box",
+    "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
+    "flower_color": "#b07fc0",
+    "flower_form": "whorl"
   }
 ]

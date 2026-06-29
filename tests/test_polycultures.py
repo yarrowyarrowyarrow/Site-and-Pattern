@@ -240,5 +240,93 @@ class TestStarterCommunities(unittest.TestCase):
             conn.close()
 
 
+class TestPatternLanguageColumns(unittest.TestCase):
+    """F4 — the Alexander pattern-language columns (schema v27) seed with
+    authored text and round-trip through create/export/import."""
+
+    @classmethod
+    def setUpClass(cls):
+        _setup_db()
+        conn = get_connection()
+        conn.execute("DELETE FROM polyculture_members")
+        conn.execute("DELETE FROM polycultures")
+        conn.commit()
+        conn.close()
+        polycultures.seed_example_polycultures()
+
+    def test_schema_version_bumped(self):
+        from src.db.plants import _get_schema_version, _SCHEMA_VERSION
+        conn = get_connection()
+        try:
+            self.assertEqual(_get_schema_version(conn), _SCHEMA_VERSION)
+            self.assertGreaterEqual(_SCHEMA_VERSION, 27)
+        finally:
+            conn.close()
+
+    def test_seeded_community_has_authored_pattern(self):
+        pc = polycultures.get_polyculture_by_name("Apple Tree Community")
+        self.assertIsNotNone(pc)
+        for field in ("problem", "context", "forces", "solution"):
+            self.assertTrue((pc.get(field) or "").strip(),
+                            f"seeded community missing authored {field}")
+
+    def test_create_with_authored_fields_roundtrips(self):
+        pid = polycultures.create_polyculture(
+            "Authored Test", "desc", None,
+            problem="P", context="C", forces="F", solution="S")
+        rec = polycultures.get_polyculture_by_id(pid)
+        self.assertEqual((rec["problem"], rec["context"],
+                          rec["forces"], rec["solution"]),
+                         ("P", "C", "F", "S"))
+
+    def test_export_import_roundtrips_authored_fields(self):
+        src_id = polycultures.get_polyculture_by_name("Apple Tree Community")["id"]
+        data = polycultures.export_polyculture(src_id)
+        for field in ("problem", "context", "forces", "solution"):
+            self.assertTrue(data.get(field), f"export dropped {field}")
+        data["name"] = "Apple Tree Community (imported)"
+        new_id, _warn = polycultures.import_polyculture(data)
+        rec = polycultures.get_polyculture_by_id(new_id)
+        self.assertEqual(rec["problem"], data["problem"])
+        self.assertEqual(rec["solution"], data["solution"])
+
+
+class TestCommunityFacets(unittest.TestCase):
+    """V1.88 — Group By lenses: derive habitat/structure/sun/moisture per
+    top-level community from member plants."""
+
+    @classmethod
+    def setUpClass(cls):
+        _setup_db()
+        conn = get_connection()
+        conn.execute("DELETE FROM polyculture_members")
+        conn.execute("DELETE FROM polycultures")
+        conn.commit()
+        conn.close()
+        polycultures.seed_example_polycultures()
+
+    def test_facets_cover_top_level_communities(self):
+        facets = polycultures.get_community_facets()
+        tops = polycultures.get_all_polycultures(top_level_only=True)
+        # every community with members has a facet entry
+        with_members = [g for g in tops
+                        if polycultures.get_polyculture_by_id(g["id"]).get("members")]
+        for g in with_members:
+            self.assertIn(g["id"], facets, g["name"])
+
+    def test_each_facet_has_all_lenses(self):
+        for cid, f in polycultures.get_community_facets().items():
+            for lens in ("habitat", "structure", "sun", "moisture"):
+                self.assertIn(lens, f)
+                self.assertTrue(str(f[lens]).strip())
+
+    def test_structure_uses_tallest_layer(self):
+        # A tree-anchored community groups under "Canopy".
+        apple = polycultures.get_polyculture_by_name("Apple Tree Community")
+        self.assertEqual(
+            polycultures.get_community_facets()[apple["id"]]["structure"],
+            "Canopy")
+
+
 if __name__ == "__main__":
     unittest.main()

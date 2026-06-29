@@ -186,5 +186,84 @@ class TestNewestRemoteVersionBranch(unittest.TestCase):
         self.assertEqual(newest_remote_version_branch(gr), "V1.100")
 
 
+class TestVersionBranchSwitchCheckout(unittest.TestCase):
+    """Regression for the V1.77 detached-HEAD switch bug.
+
+    The release workflow publishes a git TAG with the same name as the
+    V-branch (tag ``V1.77`` next to branch ``V1.77``). With that tag present
+    and no local branch yet, a bare ``git checkout V1.77`` resolves to the TAG
+    and lands in DETACHED HEAD — the follow-up ``git pull`` then fails with
+    "you are not currently on a branch" and the switch only half-completes.
+    The updater (``_offer_branch_switch``) must instead use
+    ``git checkout -B <v> origin/<v>`` so it always attaches to a real,
+    tracking branch. Pure git — no Qt."""
+
+    def setUp(self):
+        self._tmp = tempfile.mkdtemp(prefix="permadesign_switchtest_")
+        self.addCleanup(lambda: shutil.rmtree(self._tmp, ignore_errors=True))
+        self._upstream = os.path.join(self._tmp, "upstream")
+        os.makedirs(self._upstream)
+        self._u("init", "-q", "-b", "main")
+        self._u("config", "user.email", "t@t")
+        self._u("config", "user.name", "T")
+        self._u("config", "commit.gpgsign", "false")
+        self._u("config", "tag.gpgsign", "false")
+        self._write_commit("f", "hi", "init")
+        # A release V-branch plus a TAG of the same name at its tip — exactly
+        # the collision the GitHub release workflow produces.
+        self._u("checkout", "-q", "-b", "V1.77")
+        self._write_commit("v177.txt", "V1.77", "V1.77 work")
+        self._u("tag", "V1.77")
+        self._u("checkout", "-q", "main")
+        self._downstream = os.path.join(self._tmp, "downstream")
+        subprocess.run(["git", "clone", "-q", self._upstream, self._downstream],
+                       check=True)
+        self._d("fetch", "--quiet", "--tags", "origin")
+        # Reproduce the user's broken state: detached HEAD on the initial commit
+        # (no local V1.77 branch — this is a first-time switch to the version).
+        init_sha = self._d("rev-parse", "HEAD").stdout.strip()
+        self._d("checkout", "-q", init_sha)
+        self.assertNotEqual(self._symbolic_ref().returncode, 0,
+                            "test setup should start from a detached HEAD")
+
+    def _u(self, *args):
+        return subprocess.run(["git", "-C", self._upstream, *args],
+                              capture_output=True, text=True, check=False)
+
+    def _d(self, *args):
+        return subprocess.run(["git", "-C", self._downstream, *args],
+                              capture_output=True, text=True, check=False)
+
+    def _write_commit(self, name, body, msg):
+        with open(os.path.join(self._upstream, name), "w") as f:
+            f.write(body + "\n")
+        self._u("add", ".")
+        self._u("commit", "-q", "-m", msg)
+
+    def _symbolic_ref(self):
+        # rc 0 + "refs/heads/<branch>" when attached; rc != 0 when detached.
+        return self._d("symbolic-ref", "-q", "HEAD")
+
+    def test_checkout_dash_B_attaches_to_branch_despite_tag(self):
+        # The fix: explicit origin/<target> start-point → real tracking branch.
+        r = self._d("checkout", "-B", "V1.77", "origin/V1.77")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        sym = self._symbolic_ref()
+        self.assertEqual(sym.returncode, 0, "HEAD is detached after the switch")
+        self.assertEqual(sym.stdout.strip(), "refs/heads/V1.77")
+        # The symptom was the follow-up pull failing; now it's a clean no-op.
+        pull = self._d("pull", "--ff-only")
+        self.assertEqual(pull.returncode, 0, pull.stderr)
+
+    def test_bare_checkout_detaches_because_of_same_named_tag(self):
+        # Documents the bug the fix avoids: with the tag present and no local
+        # branch, a bare checkout lands on the tag in detached HEAD.
+        r = self._d("checkout", "V1.77")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotEqual(
+            self._symbolic_ref().returncode, 0,
+            "bare `git checkout V1.77` should detach onto the same-named tag")
+
+
 if __name__ == "__main__":
     unittest.main()

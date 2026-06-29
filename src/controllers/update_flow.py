@@ -24,12 +24,16 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import tempfile
+import threading
 import time
 
-from PyQt6.QtCore import QUrl
+from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QDesktopServices
-from PyQt6.QtWidgets import QInputDialog, QMessageBox
+from PyQt6.QtWidgets import QInputDialog, QMessageBox, QProgressDialog
 
+from src.app_version import build_version
+from src.branding import APP_NAME
 from src.version_branch import (
     is_newer_version,
     newest_remote_version_branch,
@@ -37,7 +41,17 @@ from src.version_branch import (
 )
 
 
-_REPO_RELEASES_URL = "https://github.com/yarrowyarrowyarrow/PermaDesign/releases"
+_REPO_RELEASES_URL = "https://github.com/yarrowyarrowyarrow/Site-and-Pattern/releases"
+
+
+def _human_size(num_bytes) -> str:
+    """Human-readable byte count, e.g. ``"243.1 MB"``."""
+    size = float(num_bytes or 0)
+    for unit in ("B", "KB", "MB", "GB"):
+        if size < 1024.0 or unit == "GB":
+            return f"{int(size)} {unit}" if unit == "B" else f"{size:.1f} {unit}"
+        size /= 1024.0
+    return f"{size:.1f} GB"
 
 
 class UpdateFlowController:
@@ -90,7 +104,9 @@ class UpdateFlowController:
         """Show a small About dialog: current V<major>.<minor>, git
         commit, schema version, and a link to the releases page."""
         repo = self._repo_path()
-        branch = self._current_branch_name() or "?"
+        # Frozen builds have no git; fall back to the version baked in at
+        # build time (version.txt). Source checkouts use the live branch.
+        branch = build_version() or self._current_branch_name() or "?"
         commit = "?"
         if repo:
             try:
@@ -113,8 +129,8 @@ class UpdateFlowController:
             "specific version to move to a release branch."
         )
         QMessageBox.information(
-            self._main, "About PermaDesign",
-            f"<b>PermaDesign</b><br>"
+            self._main, f"About {APP_NAME}",
+            f"<b>{APP_NAME}</b><br>"
             f"Branch: <b>{branch}</b><br>"
             f"Commit: {commit}<br>"
             f"Schema version: v{schema_v}<br><br>"
@@ -126,11 +142,12 @@ class UpdateFlowController:
     def _on_pick_version(self):
         """Let the user pick any published V<major>.<minor> branch and
         switch the checkout to it. Useful for rolling back to an older
-        release or jumping ahead. Frozen installs get redirected to
-        the releases page."""
-        # Frozen / non-git install — no checkout to switch.
+        release or jumping ahead. Frozen installs download the chosen
+        version's installer from GitHub Releases instead."""
+        # Frozen / non-git install — there's no checkout to switch, so offer
+        # the published installers (download + install) instead.
         if getattr(sys, "frozen", False):
-            self._open_releases_page()
+            self._frozen_pick_version()
             return
         repo = self._repo_path()
         if not repo:
@@ -261,9 +278,10 @@ class UpdateFlowController:
     #     browser and let the user download the next installer.
 
     def _on_check_for_updates(self):
-        # Frozen build: no git, just open releases page.
+        # Frozen build: no git — check GitHub Releases and offer to
+        # download + install the newest published installer in-app.
         if getattr(sys, "frozen", False):
-            self._open_releases_page()
+            self._frozen_check_for_updates()
             return
 
         # Detect git root by walking up from this file
@@ -539,7 +557,7 @@ class UpdateFlowController:
 
         prompt = QMessageBox.question(
             self._main, "New version available",
-            f"A newer version of PermaDesign is on the server.\n\n"
+            f"A newer version of {APP_NAME} is on the server.\n\n"
             f"You're on:   {current}\n"
             f"Latest:      {target}\n\n"
             f"Recent changes in {target}:\n{recent}\n\n"
@@ -551,13 +569,18 @@ class UpdateFlowController:
             self._maybe_restore_stash(git_runner, stash_to_restore)
             return
 
-        # If a local branch with this name already exists, plain ``checkout``
-        # it; otherwise create it tracking origin/<target>.
-        rev_check = git_runner("rev-parse", "--verify", "--quiet", target)
-        if rev_check.returncode == 0:
-            checkout = git_runner("checkout", target)
-        else:
-            checkout = git_runner("checkout", "-b", target, f"origin/{target}")
+        # Attach HEAD to a local branch tracking origin/<target>, creating or
+        # resetting it to the remote tip in one step. The explicit
+        # origin/<target> start-point is critical: the release process
+        # publishes a git TAG with the same name as the branch (e.g. tag V1.77
+        # next to branch V1.77), so a bare ``git checkout V1.77`` can resolve to
+        # the TAG and land in DETACHED HEAD — after which ``git pull`` fails with
+        # "you are not currently on a branch" and the switch only half-completes
+        # (the exact symptom users hit switching to a version for the first
+        # time, when no local branch exists yet). ``checkout -B`` from the
+        # remote-tracking ref always lands on a real, tracking branch, even from
+        # a detached HEAD.
+        checkout = git_runner("checkout", "-B", target, f"origin/{target}")
 
         if checkout.returncode != 0:
             self._maybe_restore_stash(git_runner, stash_to_restore)
@@ -568,17 +591,9 @@ class UpdateFlowController:
             )
             return
 
-        # Fast-forward in case the local branch already existed and was
-        # behind origin/<target>. Non-fatal if it fails — we've already
-        # switched, the user can re-run "Check for Updates" on the new
-        # branch.
-        pull = git_runner("pull", "--ff-only")
+        # ``checkout -B`` reset the local branch to origin/<target>, so we're
+        # already at the remote tip — there is nothing to fast-forward.
         pull_warning = ""
-        if pull.returncode != 0:
-            pull_warning = (
-                "\n\nNote: couldn't fast-forward after the switch:\n"
-                + (pull.stderr.strip() or pull.stdout.strip())
-            )
 
         # Restore any stash we set aside on the source branch.
         stash_note = ""
@@ -603,6 +618,237 @@ class UpdateFlowController:
             f"You're now on {target}.{pull_warning}{stash_note}\n\n"
             "Close and relaunch the app to load the new version."
         )
+
+    # ── Frozen-build updater (GitHub Releases) ────────────────────────────────
+    #
+    # A packaged .dmg/.exe isn't a git checkout, so "update" means: ask the
+    # GitHub Releases API which versions ship an installer, compare against the
+    # version baked into this build (version.txt), and download + open the
+    # matching installer. The release tag is the V<major>.<minor> branch name,
+    # so the user sees the same version labels as a source install.
+    #
+    # The release artifacts are produced and published automatically by
+    # .github/workflows/release-macos.yml on every push to a V* branch.
+
+    def _frozen_fetch_releases(self):
+        """Fetch the published releases (newest first), or show an error
+        dialog and return ``None``. Synchronous — the releases JSON is tiny;
+        only the installer download (below) is threaded."""
+        from src import github_releases as ghr
+
+        self._main.statusBar().showMessage("Checking GitHub for updates…", 2000)
+        try:
+            releases = ghr.list_releases()
+        except Exception as exc:
+            QMessageBox.warning(
+                self._main, "Check for Updates",
+                "Couldn't reach GitHub to check for updates — check your "
+                "internet connection and try again.\n\n"
+                f"{type(exc).__name__}: {exc}"
+            )
+            return None
+        if not releases:
+            QMessageBox.information(
+                self._main, "Check for Updates",
+                "No published versions were found on GitHub yet."
+            )
+            return None
+        return releases
+
+    def _frozen_check_for_updates(self):
+        from src import github_releases as ghr
+
+        releases = self._frozen_fetch_releases()
+        if releases is None:
+            return
+        latest = releases[0]
+        current = build_version()
+        current_ver = ghr.parse_release_version(current) if current else None
+
+        if current_ver is not None and latest.version <= current_ver:
+            QMessageBox.information(
+                self._main, "Check for Updates",
+                f"You're up to date.\n\n"
+                f"Installed: {current}\nLatest available: {latest.tag}"
+            )
+            return
+        self._offer_frozen_download(latest, current)
+
+    def _frozen_pick_version(self):
+        releases = self._frozen_fetch_releases()
+        if releases is None:
+            return
+        current = build_version()
+        labels = [
+            f"{r.tag}  (current)" if current and r.tag == current else r.tag
+            for r in releases
+        ]
+        preselect = 0
+        if current:
+            for i, r in enumerate(releases):
+                if r.tag == current:
+                    preselect = i
+                    break
+        choice, ok = QInputDialog.getItem(
+            self._main, "Switch to a specific version",
+            "Pick a published version to download and install. The current "
+            "version stays until you install the one you pick.",
+            labels, current=preselect, editable=False,
+        )
+        if not ok or not choice:
+            return
+        chosen = releases[labels.index(choice)]
+        if current and chosen.tag == current:
+            QMessageBox.information(
+                self._main, "Switch version",
+                f"You're already on {chosen.tag}."
+            )
+            return
+        self._offer_frozen_download(chosen, current)
+
+    def _offer_frozen_download(self, release, current):
+        """Confirm, then download + open the installer asset for this
+        platform. Falls back to the release page if no matching asset is
+        attached."""
+        from src import github_releases as ghr
+
+        asset = release.asset_for_extensions(ghr.platform_asset_extensions())
+        if asset is None:
+            QMessageBox.information(
+                self._main, "Update available",
+                f"Version {release.tag} is published, but it has no installer "
+                f"for your system attached yet. Opening the download page so "
+                f"you can grab it manually."
+            )
+            QDesktopServices.openUrl(QUrl(release.html_url or _REPO_RELEASES_URL))
+            return
+
+        notes = (release.body or "").strip()
+        if len(notes) > 700:
+            notes = notes[:700].rstrip() + "\n…"
+        notes_block = f"\n\nWhat's new:\n{notes}" if notes else ""
+        prompt = QMessageBox.question(
+            self._main, "Update available",
+            f"A newer version of {APP_NAME} is available.\n\n"
+            f"Installed: {current or 'your current version'}\n"
+            f"Latest:      {release.tag}   (~{_human_size(asset.size)})"
+            f"{notes_block}\n\n"
+            "Download and install it now?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if prompt != QMessageBox.StandardButton.Yes:
+            return
+        self._download_and_open(asset, release.tag)
+
+    def _download_and_open(self, asset, tag):
+        """Threaded download with a Qt progress dialog, then open the
+        installer. Keeps the UI responsive during the ~200-300 MB download."""
+        from src import github_releases as ghr
+
+        downloads = os.path.join(os.path.expanduser("~"), "Downloads")
+        if not os.path.isdir(downloads):
+            downloads = tempfile.gettempdir()
+        dest = os.path.join(downloads, asset.name or f"SiteAndPattern-{tag}")
+
+        progress = QProgressDialog(
+            f"Downloading {tag}…", "Cancel", 0, 100, self._main
+        )
+        progress.setWindowTitle("Downloading update")
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setAutoClose(False)
+        progress.setAutoReset(False)
+        progress.setValue(0)
+
+        # The worker thread only mutates `state`; the GUI-thread QTimer reads
+        # it. `progress.wasCanceled()` is the GUI→worker cancel signal.
+        state = {"done": 0, "total": int(asset.size or 0),
+                 "finished": False, "error": None, "cancelled": False}
+
+        def _on_progress(done, total):
+            state["done"], state["total"] = done, total
+            return not state["cancelled"]
+
+        def _worker():
+            try:
+                ghr.download_asset(asset, dest, progress=_on_progress)
+            except ghr.DownloadCancelled:
+                state["cancelled"] = True
+            except Exception as exc:  # noqa: BLE001 — surfaced in the dialog
+                state["error"] = f"{type(exc).__name__}: {exc}"
+            finally:
+                state["finished"] = True
+
+        worker = threading.Thread(target=_worker, daemon=True)
+        worker.start()
+
+        timer = QTimer(self._main)
+
+        def _tick():
+            if progress.wasCanceled():
+                state["cancelled"] = True
+            total, done = state["total"], state["done"]
+            if total > 0:
+                progress.setValue(min(100, int(done * 100 / total)))
+                progress.setLabelText(
+                    f"Downloading {tag}…\n"
+                    f"{_human_size(done)} of {_human_size(total)}"
+                )
+            if state["finished"]:
+                timer.stop()
+                progress.close()
+                self._after_download(state, dest, tag)
+
+        timer.timeout.connect(_tick)
+        timer.start(120)
+
+    def _after_download(self, state, dest, tag):
+        if state.get("cancelled"):
+            return
+        if state.get("error"):
+            QMessageBox.warning(
+                self._main, "Download failed",
+                "Couldn't download the update:\n\n"
+                f"{state['error']}\n\n"
+                "You can try again, or download it manually from the "
+                "releases page."
+            )
+            return
+        self._open_installer(dest, tag)
+
+    def _open_installer(self, path, tag):
+        """Open the downloaded installer with the OS handler and tell the
+        user how to finish."""
+        try:
+            if sys.platform == "darwin":
+                subprocess.Popen(["open", path])
+                message = (
+                    "The new version has been downloaded and its installer "
+                    "window opened.\n\n"
+                    "To finish:\n"
+                    "  1. Drag Site & Pattern onto the Applications folder and "
+                    "choose Replace.\n"
+                    "  2. Quit this older copy, then open Site & Pattern again.\n\n"
+                    "Because the app downloaded the update itself, macOS won't "
+                    "show the usual “unverified developer” warning."
+                )
+            elif sys.platform.startswith("win"):
+                os.startfile(path)  # type: ignore[attr-defined]
+                message = (
+                    "The installer has been downloaded and opened.\n\n"
+                    "Click through it to update in place (your designs and "
+                    "database are kept), then reopen Site & Pattern. You can "
+                    "close this older copy now."
+                )
+            else:
+                subprocess.Popen(["xdg-open", os.path.dirname(path) or "."])
+                message = f"The update was downloaded to:\n{path}"
+        except Exception as exc:  # noqa: BLE001
+            message = (
+                f"The update was downloaded to:\n{path}\n\n"
+                f"(Couldn't open it automatically: {exc})"
+            )
+        QMessageBox.information(self._main, f"Update {tag} downloaded", message)
 
     def _open_releases_page(self):
         QDesktopServices.openUrl(QUrl(_REPO_RELEASES_URL))

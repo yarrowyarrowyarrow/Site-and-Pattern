@@ -12,6 +12,10 @@ Also provides companion-proximity checking: after placement, warns when
 friend pairs land too far apart or enemy pairs too close.
 
 Qt-free; no circular imports (depends only on src.db.plants and stdlib).
+
+Design principle P1 (living systems self-organize from generative rules, not
+top-down blueprints) and P2 (the best designs disappear into their context) —
+see docs/DESIGN_PHILOSOPHY.md.
 """
 
 from __future__ import annotations
@@ -19,6 +23,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from typing import Optional
+
+from src.plant_conditions import condition_tokens
 
 _SPACING_M = 6.0  # matches llm_design._SPACING_M
 
@@ -206,7 +212,8 @@ def _moisture_match(water_needs: str, cell: CellEnv) -> float:
 
 def _slope_suitability(plant_type: str, slope: float) -> float:
     """0–1 fitness based on slope steepness vs plant type."""
-    if plant_type in ("groundcover", "herb", "grass", "sedge"):
+    if plant_type in ("groundcover", "herb", "wildflower", "grass",
+                      "sedge", "rush", "fern"):
         return 1.0
     if plant_type == "aquatic":
         return max(0.0, 1.0 - slope / 2.0)
@@ -246,13 +253,17 @@ def score_cell_for_plant(plant: dict, cell: CellEnv) -> float:
     The caller should pre-fetch use tags and embed them as ``plant["_uses"]``
     (a set of use-key strings, e.g. ``{"windbreak", "nitrogen_fixer"}``)
     before calling.  If absent, edge preference is neutral."""
-    sun_req = (plant.get("sun_requirement") or "").lower()
-    water_needs = (plant.get("water_needs") or "").lower()
     plant_type = (plant.get("plant_type") or "").lower()
     uses = plant.get("_uses") or set()
 
-    shade_s = _shade_match(sun_req, cell.shade_fraction)
-    moist_s = _moisture_match(water_needs, cell)
+    # sun_requirement / water_needs may each list several tolerances (V1.84).
+    # A plant thrives in the cell if its BEST-fitting tolerance does, so score
+    # every token and take the max. Empty → one "" token → neutral 0.5.
+    sun_tokens = condition_tokens(plant.get("sun_requirement")) or [""]
+    water_tokens = condition_tokens(plant.get("water_needs")) or [""]
+
+    shade_s = max(_shade_match(s, cell.shade_fraction) for s in sun_tokens)
+    moist_s = max(_moisture_match(w, cell) for w in water_tokens)
     slope_s = _slope_suitability(plant_type, cell.slope_pct)
     edge_s = _edge_preference(uses, cell.is_edge)
 
@@ -386,12 +397,14 @@ _TAG_LABEL = {
 
 def shade_tag_matches_plant(sun_req: str, tag: str) -> bool:
     """True when a plant's ``sun_requirement`` is compatible with a spot's
-    cached shade ``tag``. Unknown requirements are treated as tolerant (True)
-    so we never warn on incomplete catalogue data."""
-    sun_req = (sun_req or "").lower()
-    if sun_req not in _SUN_REQ_OK_TAGS:
+    cached shade ``tag``. ``sun_req`` may list several tolerances (V1.84);
+    the plant is compatible if ANY of them accepts the tag. Unknown/empty
+    requirements are treated as tolerant (True) so we never warn on
+    incomplete catalogue data."""
+    tokens = [t for t in condition_tokens(sun_req) if t in _SUN_REQ_OK_TAGS]
+    if not tokens:
         return True
-    return tag in _SUN_REQ_OK_TAGS[sun_req]
+    return any(tag in _SUN_REQ_OK_TAGS[t] for t in tokens)
 
 
 def check_shade_matches(placed_plants: list, project_key: str) -> list:

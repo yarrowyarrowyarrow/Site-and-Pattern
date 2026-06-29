@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Site &amp; Pattern — 3D Sprite Gallery</title>
+<!--
+  A developer/inspection gallery for the 3D viewer's plant-body archetypes and
+  flower sprites. It embeds the REAL viewer (scene3d.html) in an iframe and feeds
+  it pre-generated scenes (one specimen per sprite) via window.permaSetScene —
+  so every archetype renders exactly as it does in the app, with zero builder
+  duplication.
+
+  Scenes come from html/sprite_gallery_scenes.json, produced by
+  scripts/make_gallery_scene.py. Serve over http and open this file, e.g.:
+      python -m http.server 8000     (from the repo root)
+      → http://localhost:8000/html/sprite_gallery.html
+-->
+<style>
+  :root {
+    --bg: #16221a; --panel: #1e2e22; --border: #2e4a36;
+    --dim: #8fae97; --green: #a5d6a7; --hot: #2e5a36;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    display: flex; height: 100vh; background: var(--bg);
+    color: var(--green); font: 14px/1.45 system-ui, -apple-system, Segoe UI, sans-serif;
+  }
+  #sidebar {
+    width: 270px; flex: 0 0 270px; height: 100%; overflow-y: auto;
+    background: var(--panel); border-right: 1px solid var(--border); padding: 14px 12px;
+  }
+  #sidebar h1 { font-size: 15px; margin: 2px 4px 2px; color: var(--green); }
+  #sidebar .sub { font-size: 11px; color: var(--dim); margin: 0 4px 12px; }
+  .group-label {
+    font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--dim); margin: 14px 4px 6px; border-bottom: 1px solid var(--border);
+    padding-bottom: 3px;
+  }
+  .item {
+    display: block; width: 100%; text-align: left; cursor: pointer;
+    background: transparent; color: var(--green); border: 1px solid transparent;
+    border-radius: 6px; padding: 6px 9px; margin: 2px 0; font-size: 13px;
+  }
+  .item:hover { background: #243a2b; }
+  .item.active { background: var(--hot); border-color: var(--border); color: #eafaea; }
+  #stage { position: relative; flex: 1 1 auto; height: 100%; }
+  #viewer { width: 100%; height: 100%; border: 0; display: block; background: #0e1611; }
+  #caption {
+    position: absolute; left: 16px; bottom: 16px; max-width: 60%;
+    background: rgba(20,32,24,.86); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 13px; backdrop-filter: blur(3px);
+  }
+  #caption .name { font-size: 15px; font-weight: 600; color: #eafaea; }
+  #caption .desc { font-size: 12.5px; color: var(--green); margin-top: 3px; }
+  #caption .ex { font-size: 12px; color: var(--dim); margin-top: 4px; }
+  #toolbar { position: absolute; right: 14px; top: 12px; display: flex; gap: 8px; }
+  #toolbar button {
+    background: var(--panel); color: var(--green); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 12px;
+  }
+  #toolbar button:hover { background: #243a2b; }
+  #status {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; color: var(--dim); font-size: 14px;
+    pointer-events: none; text-align: center; padding: 0 20px;
+  }
+</style>
+</head>
+<body>
+  <div id="sidebar">
+    <h1>3D Sprite Gallery</h1>
+    <div class="sub">Every plant-body archetype &amp; flower sprite the viewer can render. Drag to orbit · scroll to zoom.</div>
+    <div id="menu"></div>
+  </div>
+  <div id="stage">
+    <iframe id="viewer" src="scene3d.html" title="3D viewer"></iframe>
+    <div id="toolbar">
+      <button id="reset">Reset view</button>
+    </div>
+    <div id="caption" style="display:none">
+      <div class="name"></div><div class="desc"></div><div class="ex"></div>
+    </div>
+    <div id="status">Loading 3D viewer…</div>
+  </div>
+
+<script>
+const viewer = document.getElementById('viewer');
+const statusEl = document.getElementById('status');
+const captionEl = document.getElementById('caption');
+let SCENES = null, currentKey = null, viewerReady = false;
+
+function vwin() { try { return viewer.contentWindow; } catch (e) { return null; } }
+function ready() { const w = vwin(); return !!(w && typeof w.permaSetScene === 'function'); }
+
+async function init() {
+  try {
+    SCENES = await (await fetch('sprite_gallery_scenes.json', { cache: 'no-store' })).json();
+  } catch (e) {
+    statusEl.textContent = 'Could not load sprite_gallery_scenes.json — run '
+      + 'scripts/make_gallery_scene.py and serve over http.';
+    return;
+  }
+  buildMenu();
+  waitForViewer();
+}
+
+function buildMenu() {
+  const menu = document.getElementById('menu');
+  const keys = Object.keys(SCENES);
+  const geom = keys.filter(k => k !== 'all' && !k.startsWith('flower_'));
+  const flowers = keys.filter(k => k.startsWith('flower_'));
+
+  const addItem = (k) => {
+    const b = document.createElement('button');
+    b.className = 'item'; b.dataset.key = k; b.textContent = SCENES[k].name || k;
+    b.onclick = () => show(k);
+    menu.appendChild(b);
+  };
+  const addGroup = (label) => {
+    const d = document.createElement('div'); d.className = 'group-label';
+    d.textContent = label; menu.appendChild(d);
+  };
+
+  if (SCENES.all) addItem('all');
+  addGroup('Plant-body geometry');
+  geom.forEach(addItem);
+  addGroup('Flower sprites');
+  flowers.forEach(addItem);
+}
+
+function waitForViewer() {
+  let waited = 0;
+  const tick = () => {
+    if (ready()) {
+      viewerReady = true;
+      statusEl.style.display = 'none';
+      // ?sprite=KEY deep-links a specimen (used by the screenshot tool); else
+      // open the full grid.
+      const want = new URLSearchParams(location.search).get('sprite');
+      const start = (want && SCENES[want]) ? want
+        : (currentKey || (SCENES.all ? 'all' : Object.keys(SCENES)[0]));
+      show(start);
+      return;
+    }
+    waited += 200;
+    if (waited > 12000) {
+      statusEl.textContent = '3D viewer did not start (WebGL unavailable in this browser?). '
+        + 'The viewer iframe shows the underlying error.';
+      return;
+    }
+    setTimeout(tick, 200);
+  };
+  tick();
+}
+
+function show(key) {
+  if (!key || !SCENES[key]) return;
+  currentKey = key;
+  document.querySelectorAll('.item').forEach(el =>
+    el.classList.toggle('active', el.dataset.key === key));
+  const entry = SCENES[key];
+  captionEl.style.display = 'block';
+  captionEl.querySelector('.name').textContent = entry.name || key;
+  captionEl.querySelector('.desc').textContent = entry.desc || '';
+  captionEl.querySelector('.ex').textContent =
+    entry.example ? ('Example plant: ' + entry.example) : '';
+  if (viewerReady && ready()) vwin().permaSetScene(entry.scene);
+}
+
+document.getElementById('reset').onclick = () => {
+  const w = vwin();
+  if (w && typeof w.permaResetView === 'function') w.permaResetView();
+};
+
+init();
+</script>
+</body>
+</html>

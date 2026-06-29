@@ -5,37 +5,27 @@ Stores the full City of Edmonton 0.5 m LiDAR contour dataset in
 0.01°×0.01° tiles so any bbox query is served instantly from disk.
 Also stores Open-Meteo/Copernicus DEM grid responses for durability.
 
-Database location:
-  Linux   : ~/.local/share/PermaDesign/terrain.db
-  macOS   : ~/Library/Application Support/PermaDesign/terrain.db
-  Windows : %APPDATA%\\PermaDesign\\terrain.db
+Database location (under the shared per-user data folder, V1.69-renamed from
+``PermaDesign`` to ``Site & Pattern`` — see ``src/user_paths.py``):
+  Linux   : ~/.local/share/Site & Pattern/terrain.db
+  macOS   : ~/Library/Application Support/Site & Pattern/terrain.db
+  Windows : %APPDATA%\\Site & Pattern\\terrain.db
 """
 
-import hashlib
-import json
 import math
 import os
 import sqlite3
-import sys
-import zlib
 from datetime import datetime, timezone
 from typing import Optional
+
+from src.tile_store import connect, ensure_schema, pack, sha1_json, unpack
 
 
 # ── DB path ─────────────────────────────────────────────────────────────────
 
 def _db_path() -> str:
-    if os.name == "nt":
-        base = os.environ.get("APPDATA", os.path.expanduser("~"))
-    elif sys.platform == "darwin":
-        base = os.path.join(os.path.expanduser("~"),
-                            "Library", "Application Support")
-    else:
-        base = os.environ.get("XDG_DATA_HOME",
-                              os.path.join(os.path.expanduser("~"), ".local", "share"))
-    app_dir = os.path.join(base, "PermaDesign")
-    os.makedirs(app_dir, exist_ok=True)
-    return os.path.join(app_dir, "terrain.db")
+    from src import user_paths
+    return os.path.join(str(user_paths.user_data_dir()), "terrain.db")
 
 
 # ── Tile key helpers ─────────────────────────────────────────────────────────
@@ -108,18 +98,11 @@ CREATE TABLE IF NOT EXISTS metadata (
 
 
 def _connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(_db_path(), timeout=30)
-    conn.execute("PRAGMA journal_mode = WAL")
-    conn.execute("PRAGMA synchronous = NORMAL")
-    return conn
+    return connect(_db_path())
 
 
 def _ensure_schema(conn: sqlite3.Connection) -> None:
-    for stmt in _DDL.strip().split(";"):
-        stmt = stmt.strip()
-        if stmt:
-            conn.execute(stmt)
-    conn.commit()
+    ensure_schema(conn, _DDL)
 
 
 # ── TerrainStore ─────────────────────────────────────────────────────────────
@@ -177,13 +160,13 @@ class TerrainStore:
                 ).fetchall()
 
             for (blob,) in rows:
-                features = json.loads(zlib.decompress(blob))
+                features = unpack(blob)
                 for feat in features:
                     elev = feat.get("elevation_m", 0.0)
                     if interval_m > 0 and abs(round(elev / interval_m) * interval_m - elev) > 0.01:
                         continue
                     coords = feat.get("coords", [])
-                    h = hashlib.sha1(json.dumps(coords, separators=(",", ":")).encode()).hexdigest()
+                    h = sha1_json(coords)
                     if h in seen_hashes:
                         continue
                     seen_hashes.add(h)
@@ -218,7 +201,7 @@ class TerrainStore:
                 rows = []
                 for tk, feats in tile_buckets.items():
                     elevations = [f.get("elevation_m", 0.0) for f in feats]
-                    blob = zlib.compress(json.dumps(feats, separators=(",", ":")).encode(), level=6)
+                    blob = pack(feats)
                     rows.append((
                         tk,
                         blob,
@@ -251,7 +234,7 @@ class TerrainStore:
 
                 tile_data: dict[str, dict] = {}
                 for tile_key, blob, elev_min, elev_max in rows:
-                    page_feats = json.loads(zlib.decompress(blob))
+                    page_feats = unpack(blob)
                     if tile_key not in tile_data:
                         tile_data[tile_key] = {
                             "features": [],
@@ -268,15 +251,11 @@ class TerrainStore:
                     seen: set[str] = set()
                     deduped = []
                     for feat in td["features"]:
-                        h = hashlib.sha1(
-                            json.dumps(feat.get("coords", []), separators=(",", ":")).encode()
-                        ).hexdigest()
+                        h = sha1_json(feat.get("coords", []))
                         if h not in seen:
                             seen.add(h)
                             deduped.append(feat)
-                    blob = zlib.compress(
-                        json.dumps(deduped, separators=(",", ":")).encode(), level=6
-                    )
+                    blob = pack(deduped)
                     insert_rows.append((tk, blob, td["elev_min"], td["elev_max"], len(deduped)))
 
                 conn.execute("DELETE FROM edmonton_tiles")
@@ -326,13 +305,13 @@ class TerrainStore:
                 ).fetchone()
                 if row is None:
                     return None
-                return json.loads(zlib.decompress(row[0]))
+                return unpack(row[0])
         except Exception:
             return None
 
     def store_srtm_grid(self, cache_key: str, data: dict) -> None:
         try:
-            blob = zlib.compress(json.dumps(data, separators=(",", ":")).encode(), level=6)
+            blob = pack(data)
             now  = datetime.now(timezone.utc).isoformat()
             with _connect() as conn:
                 _ensure_schema(conn)

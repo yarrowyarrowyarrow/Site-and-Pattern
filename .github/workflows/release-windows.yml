@@ -1,0 +1,105 @@
+name: Build & publish Windows installer
+
+# Builds the Site & Pattern Windows installer (.exe) on a GitHub-hosted
+# Windows runner and attaches it to the GitHub Release tagged with the branch
+# name (e.g. V1.76). This is the Windows twin of release-macos.yml: the in-app
+# updater (src/github_releases.py + src/controllers/update_flow.py) lists these
+# releases by tag and, on Windows, downloads the asset ending in `.exe`
+# (platform_asset_extensions() → (".exe", ".zip")), so publishing here is what
+# lets the packaged Windows app "find the latest version".
+#
+# Both this workflow and release-macos.yml publish to the SAME release (the tag
+# is the V<major>.<minor> branch name). softprops/action-gh-release creates the
+# release if it doesn't exist yet and otherwise just adds/updates this
+# platform's asset — it never deletes the other platform's file. Both
+# workflows write the SAME combined release body so the published notes are
+# correct no matter which job finishes last.
+#
+# Runs on every push to a V<major>.<minor> branch, or via "Run workflow".
+
+on:
+  push:
+    branches:
+      - 'V[0-9]*.[0-9]*'
+  workflow_dispatch:
+
+# Needed to create/update the GitHub Release and upload the asset.
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Windows installer (.exe) and publish to the release
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out the branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        # 3.11 matches the macOS build (release-macos.yml) and satisfies the
+        # uncapped Windows PyQt6 pins in requirements.txt.
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install NSIS (builds the .exe installer)
+        # Chocolatey is preinstalled on windows-latest and drops makensis at
+        # C:\Program Files (x86)\NSIS\makensis.exe — exactly the path
+        # build_installer.bat probes before choosing NSIS over the zip fallback.
+        run: choco install nsis -y --no-progress
+
+      - name: Build the installer (PyInstaller + NSIS)
+        env:
+          APP_BUILD_VERSION: ${{ github.ref_name }}   # baked into version.txt
+        # build_installer.bat installs requirements, bakes version.txt from
+        # APP_BUILD_VERSION, runs PyInstaller, then NSIS → SiteAndPattern-Installer.exe
+        # in the repo root. It exits non-zero on any failure so a broken bundle
+        # fails the job instead of shipping.
+        run: .\scripts\packaging\build_installer.bat
+        shell: cmd
+
+      - name: Name the installer after the version
+        # NSIS writes SiteAndPattern-Installer.exe to the repo root (installer.nsi
+        # OutFile). Fail loudly if it's missing (e.g. NSIS silently produced the
+        # zip fallback instead), then rename it into dist/ for upload.
+        run: |
+          if (-not (Test-Path "SiteAndPattern-Installer.exe")) {
+            Write-Error "SiteAndPattern-Installer.exe was not produced — the NSIS step failed."
+            exit 1
+          }
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Move-Item -Force "SiteAndPattern-Installer.exe" "dist/SiteAndPattern-${{ github.ref_name }}-Setup.exe"
+        shell: pwsh
+
+      - name: Publish to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: |
+            **Site & Pattern** — a native-plant landscape designer for Alberta and the Canadian prairies.
+
+            ### Install on Windows
+            1. Download **`SiteAndPattern-${{ github.ref_name }}-Setup.exe`** below and run it.
+            2. **First run (one time only):** Windows SmartScreen may say *"Windows protected your PC"* because the app isn't code-signed yet — it's safe. Click **More info → Run anyway**.
+            3. Follow the installer; it adds Desktop and Start-Menu shortcuts.
+
+            To get future versions, use **Help → Check for Updates** inside the app — it downloads and runs the next installer for you.
+
+            ### Install on macOS (Big Sur 11 or newer)
+            1. Download **`SiteAndPattern-${{ github.ref_name }}.dmg`** below and open it.
+            2. Drag **Site & Pattern** onto the **Applications** folder.
+            3. **First launch (one time only):** macOS will warn that the developer can't be verified — the app is safe, this is just because it isn't registered with Apple.
+               - **macOS 11–14:** right-click (or Control-click) the app in Applications → **Open** → **Open**.
+               - **macOS 15+:** double-click once (it gets blocked), then Apple menu → System Settings → Privacy & Security → **Open Anyway**.
+
+            After that first time it opens normally. To get future versions, use **Help → Check for Updates** inside the app — those install with no security warning.
+
+            *Apple Silicon (M1–M4): if macOS offers to install **Rosetta** on first launch, click Install (one time).*
+
+            ---
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: dist/SiteAndPattern-${{ github.ref_name }}-Setup.exe

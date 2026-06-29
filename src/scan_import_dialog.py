@@ -27,9 +27,11 @@ from typing import Optional
 from PyQt6.QtCore import Qt, QObject, QThread, pyqtSignal
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import (
-    QDialog, QFileDialog, QHBoxLayout, QLabel, QListWidget, QMessageBox,
-    QPushButton, QVBoxLayout,
+    QCheckBox, QDialog, QFileDialog, QHBoxLayout, QInputDialog, QLabel,
+    QListWidget, QMessageBox, QPushButton, QVBoxLayout,
 )
+
+from src.controllers.undo_support import undoable
 
 _PREVIEW_MAX_PX = 420       # longest preview edge
 _MIN_PAIRS = 2
@@ -38,8 +40,12 @@ _MIN_PAIRS = 2
 class ScanAlignSession:
     """Pairing state + preview raster + engine invocation (Qt-free)."""
 
-    def __init__(self, points):
+    def __init__(self, points, *, file_path: Optional[str] = None,
+                 is_splat: bool = False, up: str = "z"):
         self.points = points                  # (N, 3) aligned-input cloud
+        self.file_path = file_path            # source file (splat backdrop path)
+        self.is_splat = bool(is_splat)        # a Gaussian-splat PLY?
+        self.up = up                          # vertical axis the points were read with
         self.pairs: list = []                 # [{"scan": (x, y), "map": (lat, lng)}]
         self.pending_scan: Optional[tuple] = None
         self._preview = None                  # cached (heights, extent, cell)
@@ -116,6 +122,20 @@ class ScanAlignSession:
             "scan_sample": sample_for_scene(aligned, proj),
         }
 
+    def backdrop_feature(self) -> dict:
+        """Build the ``splat_backdrop`` GeoJSON feature for a Gaussian-splat
+        scan from the collected control points — the same georeference the
+        footprint path uses, stored as the splat's 3D placement transform."""
+        from src import splat_backdrop
+        if not self.ready:
+            raise ValueError(f"need at least {_MIN_PAIRS} control-point "
+                             f"pairs ({len(self.pairs)} so far)")
+        return splat_backdrop.feature_from_alignment(
+            self.points,
+            [p["scan"] for p in self.pairs],
+            [p["map"] for p in self.pairs],
+            file_path=self.file_path, up=self.up)
+
 
 def preview_qimage(session: ScanAlignSession) -> QImage:
     """Height-tinted top-down QImage of the scan (dark ground → pale
@@ -142,14 +162,15 @@ class _LoadWorker(QObject):
     """Read a (possibly huge) cloud file off the UI thread."""
     done = pyqtSignal(object)    # ndarray or str error
 
-    def __init__(self, path):
+    def __init__(self, path, up="z"):
         super().__init__()
         self._path = path
+        self._up = up
 
     def run(self):
         try:
             from src.scan_import import read_points
-            self.done.emit(read_points(self._path))
+            self.done.emit(read_points(self._path, up=self._up))
         except Exception as exc:  # noqa: BLE001 — report, never crash
             self.done.emit(str(exc))
 
@@ -190,6 +211,19 @@ class ScanImportDialog(QDialog):
         self._pairs = QListWidget()
         remove = QPushButton("Remove selected pair")
         remove.clicked.connect(self._on_remove_pair)
+
+        # A Gaussian-splat scan can become a photoreal 3D backdrop (+ a baked
+        # top-down "yard photo" map layer). Crude shade footprints are then
+        # optional and off by default — the photoreal splat is the point.
+        self._backdrop_chk = None
+        self._footprints_chk = None
+        if session.is_splat:
+            self._backdrop_chk = QCheckBox(
+                "Use as photoreal 3D backdrop + map photo")
+            self._backdrop_chk.setChecked(True)
+            self._footprints_chk = QCheckBox("Also extract shade footprints")
+            self._footprints_chk.setChecked(False)
+
         self._import_btn = QPushButton("Import scan")
         self._import_btn.clicked.connect(self._on_import)
 
@@ -197,6 +231,9 @@ class ScanImportDialog(QDialog):
         right.addWidget(self._hint)
         right.addWidget(self._pairs, 1)
         right.addWidget(remove)
+        if self._backdrop_chk is not None:
+            right.addWidget(self._backdrop_chk)
+            right.addWidget(self._footprints_chk)
         right.addWidget(self._import_btn)
         root = QHBoxLayout(self)
         root.addWidget(self._preview)
@@ -245,25 +282,62 @@ class ScanImportDialog(QDialog):
                 "Ready — add more pairs for accuracy, or Import.")
         self._import_btn.setEnabled(self.session.ready)
 
+    @undoable("import scan")
     def _on_import(self):
         m = self._main
-        try:
-            result = self.session.run_import(m._project)
-        except Exception as exc:  # noqa: BLE001 — surface, don't crash
-            QMessageBox.critical(self, "Scan import failed", str(exc))
-            return
-        from src.project import feature_to_shape
-        for f in result["features"]:
-            sh = feature_to_shape(f)
-            if sh:
-                m.map_widget.load_shape(sh)
-        m._scan_scene_sample = result["scan_sample"]
-        if result["features"]:
+        want_backdrop = (self._backdrop_chk is not None
+                         and self._backdrop_chk.isChecked())
+        # Splat scans default to backdrop-only; plain clouds always do footprints.
+        want_footprints = (not self.session.is_splat
+                           or (self._footprints_chk is not None
+                               and self._footprints_chk.isChecked()))
+
+        backdrop_feat = None
+        if want_backdrop:
+            try:
+                backdrop_feat = self.session.backdrop_feature()
+            except Exception as exc:  # noqa: BLE001 — surface, don't crash
+                QMessageBox.critical(self, "Scan import failed", str(exc))
+                return
+
+        result = None
+        if want_footprints:
+            try:
+                result = self.session.run_import(m._project)
+            except Exception as exc:  # noqa: BLE001 — surface, don't crash
+                QMessageBox.critical(self, "Scan import failed", str(exc))
+                return
+
+        n_foot = 0
+        if result:
+            from src.project import feature_to_shape
+            for f in result["features"]:
+                sh = feature_to_shape(f)
+                if sh:
+                    m.map_widget.load_shape(sh)
+            m._scan_scene_sample = result["scan_sample"]
+            n_foot = len(result["features"])
+
+        if backdrop_feat is not None:
+            m._project.setdefault("features", []).append(backdrop_feat)
+            from src import splat_flow
+            splat_flow.restore_splat_overlay(m)   # enables the View toggle
+            win = getattr(m, "_scene3d_window", None)
+            if win is not None:
+                win.refresh()                     # show the backdrop now if open
+
+        if n_foot or backdrop_feat is not None:
             m._mark_modified()
-        n = len(result["features"])
-        m.statusBar().showMessage(
-            f"Scan imported — {n} shade-casting footprint(s) added. "
-            "See them in 3D via View → 3D Preview.", 6000)
+
+        if backdrop_feat is not None:
+            m.statusBar().showMessage(
+                "Yard scan added as a photoreal 3D backdrop. Open View → 3D "
+                "Preview, then click “Add yard photo to map” to add the map layer."
+                + (f" ({n_foot} footprint(s) too.)" if n_foot else ""), 9000)
+        else:
+            m.statusBar().showMessage(
+                f"Scan imported — {n_foot} shade-casting footprint(s) added. "
+                "See them in 3D via View → 3D Preview.", 6000)
         self.accept()
 
     def closeEvent(self, event):
@@ -291,10 +365,28 @@ def start_scan_import(main) -> None:
         "Point clouds (*.ply *.xyz *.las *.laz *.txt *.csv);;All files (*)")
     if not path:
         return
+
+    # A Gaussian-splat PLY (Scaniverse / Polycam / Luma) can be a photoreal 3D
+    # backdrop, not just a footprint source — and its vertical axis varies by
+    # capture app, so ask up front (it must match how we read the points).
+    from src.scan_import import is_gaussian_splat_ply
+    is_splat = is_gaussian_splat_ply(path)
+    up = "z"
+    if is_splat:
+        choice, ok = QInputDialog.getItem(
+            main, "Yard scan orientation",
+            "Which way is up in this capture?\n"
+            "(LiDAR scans are usually Z-up; photogrammetry / Luma are often "
+            "Y-up. Pick wrong and the yard will look tipped over.)",
+            ["Z-up (LiDAR / most scanners)", "Y-up (photogrammetry / Luma)"],
+            0, False)
+        if not ok:
+            return
+        up = "y" if choice.startswith("Y") else "z"
     main.statusBar().showMessage("Reading scan…")
 
     thread = QThread(main)
-    worker = _LoadWorker(path)
+    worker = _LoadWorker(path, up=up)
     worker.moveToThread(thread)
 
     def _loaded(result):
@@ -305,7 +397,9 @@ def start_scan_import(main) -> None:
             return
         main.statusBar().showMessage(
             f"Scan loaded — {len(result):,} points.", 4000)
-        dlg = ScanImportDialog(main, ScanAlignSession(result))
+        session = ScanAlignSession(result, file_path=path,
+                                   is_splat=is_splat, up=up)
+        dlg = ScanImportDialog(main, session)
         main._scan_import_dialog = dlg     # keep a reference
         dlg.show()
 

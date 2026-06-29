@@ -2,7 +2,7 @@
 src/scan_import.py — phone-scan (point cloud) import → nDSM → footprints
 (V1.62).
 
-The "scan your yard" path. PermaDesign doesn't capture scans — phones do
+The "scan your yard" path. Site & Pattern doesn't capture scans — phones do
 that far better (Polycam, Scaniverse, any LiDAR/photogrammetry app). This
 module turns their *exports* into design data:
 
@@ -54,40 +54,85 @@ _PLY_TYPES = {
     "uint": ("I", 4), "uint32": ("I", 4),
 }
 
+# struct char → little-endian numpy dtype, for the fast binary path.
+_PLY_NP_DTYPE = {
+    "f": "<f4", "d": "<f8", "b": "i1", "B": "u1",
+    "h": "<i2", "H": "<u2", "i": "<i4", "I": "<u4",
+}
+
+# Vertex properties that betray a 3D Gaussian-splat PLY (Scaniverse /
+# Polycam / Luma / INRIA export): spherical-harmonic DC term, per-gaussian
+# scale, and rotation quaternion. The x/y/z of such a file are the gaussian
+# centres, so the same georeference flow aligns them like any point cloud.
+_SPLAT_MARKER_PROPS = ("f_dc_0", "scale_0", "rot_0")
+
+
+def _parse_ply_header(f) -> tuple:
+    """Read a PLY header from an open binary file positioned at the start.
+    Returns ``(fmt, n_vertex, props)`` where ``props`` is the list of
+    ``(name, struct_char, size)`` for the vertex element. Leaves ``f`` at
+    the first byte of the body."""
+    if f.readline().strip() != b"ply":
+        raise ValueError("not a PLY file")
+    fmt = None
+    n_vertex = 0
+    props: list = []          # (name, struct_char, size) of element vertex
+    in_vertex = False
+    while True:
+        line = f.readline()
+        if not line:
+            raise ValueError("PLY header never ended")
+        parts = line.decode("ascii", "replace").strip().split()
+        if not parts:
+            continue
+        if parts[0] == "format":
+            fmt = parts[1]
+        elif parts[0] == "element":
+            in_vertex = parts[1] == "vertex"
+            if in_vertex:
+                n_vertex = int(parts[2])
+        elif parts[0] == "property" and in_vertex:
+            if parts[1] == "list":
+                raise ValueError("list property on vertex element is "
+                                 "unsupported")
+            ch, size = _PLY_TYPES.get(parts[1], (None, 0))
+            if ch is None:
+                raise ValueError(f"unknown PLY type {parts[1]}")
+            props.append((parts[2], ch, size))
+        elif parts[0] == "end_header":
+            break
+    return fmt, n_vertex, props
+
+
+def is_gaussian_splat_ply(path: str) -> bool:
+    """True if ``path`` is a PLY whose vertex element carries 3D Gaussian
+    splat attributes (``f_dc_*`` / ``scale_*`` / ``rot_*``) — i.e. a
+    photoreal capture, not a plain point cloud. Header-only; never reads the
+    (large) body. Returns False for non-PLY or unreadable files."""
+    if os.path.splitext(path)[1].lower() != ".ply":
+        return False
+    try:
+        with open(path, "rb") as f:
+            _fmt, _n, props = _parse_ply_header(f)
+    except (OSError, ValueError):
+        return False
+    names = {p[0] for p in props}
+    return all(m in names for m in _SPLAT_MARKER_PROPS)
+
 
 def _read_ply(path: str) -> "np.ndarray":
     """Parse a PLY file's vertex x/y/z. Supports ``format ascii`` and
-    ``format binary_little_endian`` (what phone-scan apps export)."""
+    ``format binary_little_endian`` (what phone-scan apps export).
+
+    Splat PLYs carry 50+ float properties per vertex over millions of
+    vertices, so the binary path reads the whole body in one
+    ``np.frombuffer`` against a structured dtype (a per-vertex Python loop
+    would take minutes); only x/y/z are kept."""
     with open(path, "rb") as f:
-        if f.readline().strip() != b"ply":
-            raise ValueError(f"{path}: not a PLY file")
-        fmt = None
-        n_vertex = 0
-        props: list = []          # (name, struct_char, size) of element vertex
-        in_vertex = False
-        while True:
-            line = f.readline()
-            if not line:
-                raise ValueError(f"{path}: PLY header never ended")
-            parts = line.decode("ascii", "replace").strip().split()
-            if not parts:
-                continue
-            if parts[0] == "format":
-                fmt = parts[1]
-            elif parts[0] == "element":
-                in_vertex = parts[1] == "vertex"
-                if in_vertex:
-                    n_vertex = int(parts[2])
-            elif parts[0] == "property" and in_vertex:
-                if parts[1] == "list":
-                    raise ValueError(f"{path}: list property on vertex "
-                                     "element is unsupported")
-                ch, size = _PLY_TYPES.get(parts[1], (None, 0))
-                if ch is None:
-                    raise ValueError(f"{path}: unknown PLY type {parts[1]}")
-                props.append((parts[2], ch, size))
-            elif parts[0] == "end_header":
-                break
+        try:
+            fmt, n_vertex, props = _parse_ply_header(f)
+        except ValueError as exc:
+            raise ValueError(f"{path}: {exc}") from None
 
         names = [p[0] for p in props]
         for need in ("x", "y", "z"):
@@ -106,11 +151,14 @@ def _read_ply(path: str) -> "np.ndarray":
             raw = f.read(rec.size * n_vertex)
             if len(raw) < rec.size * n_vertex:
                 raise ValueError(f"{path}: truncated PLY body")
-            pts = np.empty((n_vertex, 3), dtype="float64")
-            for i in range(n_vertex):
-                vals = rec.unpack_from(raw, i * rec.size)
-                pts[i] = (vals[ix], vals[iy], vals[iz])
-            return pts
+            # One structured read for the whole body, then slice x/y/z — orders
+            # of magnitude faster than per-vertex unpack on million-point splats.
+            dt = np.dtype([(p[0], _PLY_NP_DTYPE[p[1]]) for p in props])
+            arr = np.frombuffer(raw, dtype=dt, count=n_vertex)
+            return np.column_stack([
+                arr["x"].astype("float64"),
+                arr["y"].astype("float64"),
+                arr["z"].astype("float64")]).copy()
         raise ValueError(f"{path}: unsupported PLY format {fmt!r} "
                          "(use ascii or binary_little_endian)")
 

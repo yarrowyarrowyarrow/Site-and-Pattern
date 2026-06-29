@@ -6,13 +6,20 @@ miss otherwise.
 
 ## Project at a glance
 
-**PermaDesign** is a PyQt6 desktop app (Python 3.10+) for designing
+**Site & Pattern** is a PyQt6 desktop app (Python 3.10+) for designing
 landscapes with native plants — focused on lawn-to-habitat conversion,
 pollinator gardens, and ecological restoration in Alberta and the
 Canadian prairies. Local SQLite storage; Leaflet inside QWebEngineView
 for the map; PyInstaller + NSIS for the Windows installer.
 
 Entry point: `python main.py` → `src.app.MainWindow`.
+
+The product was named **PermaDesign** before the V1.69 rebrand; user-facing surfaces
+now read **Site & Pattern** (`src/branding.py`), while several internal identifiers keep
+the legacy name on purpose (see the Database-path note below). The design philosophy that
+drives the app lives in `docs/DESIGN_PHILOSOPHY.md` — strongly-aligned modules carry a
+one-line `Design principle P#` anchor pointing back to it, guarded by
+`tests/test_philosophy.py`.
 
 ## Branch naming convention (READ FIRST)
 
@@ -62,7 +69,7 @@ python -m unittest discover -s tests
 
 There is no `pytest` configuration; the suite uses stdlib `unittest`.
 Each test module redirects the DB to a `tempfile.mkdtemp` directory so
-tests never touch the real user DB at `~/.local/share/PermaDesign/`.
+tests never touch the real user DB at `~/.local/share/Site & Pattern/`.
 
 Some tests create temporary git repos via subprocess and disable
 `commit.gpgsign` locally in those repos — this is test infrastructure
@@ -83,6 +90,9 @@ only, doesn't affect real commits.
 | `src/db/recipes.py` | Ratio-only polyculture recipes (separate from spatial polycultures). |
 | `src/db/structures.py` | Hard-coded list of habitat structures (bee hotels, brush piles, etc.). |
 | `src/version_branch.py` | Helpers for the V-branch convention (V1.32+). |
+| `src/github_releases.py` | Qt-free GitHub Releases lookup + installer download for the frozen-build in-app updater (V1.73). |
+| `src/app_version.py` | Reads the build's `version.txt` so a frozen `.dmg`/`.exe` knows its own V-version (V1.73). |
+| `.github/workflows/release-macos.yml` | Builds the macOS DMG on a cloud Mac and publishes it to a GitHub Release on every `V*` push, feeding the in-app updater (V1.73). |
 | `src/plant_panel.py` | Right-side plant browser + custom delegate. |
 | `src/polyculture_panel.py` | Polyculture/community builder UI. |
 | `src/analysis_panel.py` | Site analysis + Habitat Value Score breakdown. |
@@ -92,24 +102,42 @@ only, doesn't affect real commits.
 | `src/placement_score.py` | Per-cell ecological scoring + aesthetic composition terms (V1.62). |
 | `src/scene_contract.py` | Versioned Scene JSON (`build_scene`) — the project→3D contract (V1.62). |
 | `src/scene3d_window.py` + `src/map3d_widget.py` + `html/scene3d.html` | View → 3D Preview: built-in three.js viewer (or the `web3d/dist` map3d fork build when present). |
-| `src/scan_import.py` + `src/scan_import_dialog.py` | Phone-scan import: point cloud → control-point georeference → nDSM → shade-casting footprints + 3D point layer (V1.62–63). |
+| `src/scan_import.py` + `src/scan_import_dialog.py` | Phone-scan import: point cloud → control-point georeference → nDSM → shade-casting footprints + 3D point layer (V1.62–63). Detects Gaussian-splat PLYs (V1.65). |
+| `src/splat_backdrop.py` + `src/splat_flow.py` | Gaussian-splat photoreal backdrop (V1.65): file→three.js world matrix, lat/lng footprint, `splat_backdrop` feature (Qt-free core) + the map-side "yard photo" overlay glue. Rendered by Spark in `html/scene3d.html`; baked top-down onto the 2D map. |
+| `src/building_store.py` + `src/building_downloader.py` + `src/building_flow.py` | Offline building-footprint pack (V1.66): SQLite `buildings.db` tile store + region bulk-downloader (OSM-sourced, mirrors the contour pack) + the import/download orchestration. Feeds the existing `osm_features.add_features_to_project` → `canopy_footprint` → shade + 3D. |
+| `src/wind.py` + `src/wind_flow.py` + `src/wind_rose_widget.py` | Wind data (V1.67): Open-Meteo seasonal wind rose (DB-cached in `wind_cache` → offline) + live current reading + windbreak-orientation hint (Qt-free core in `wind.py`); off-thread fetch + QPainter rose in the Analysis → Wind tab. |
+| `src/wind_shadow.py` + `src/wind_shadow_flow.py` | Dynamic wind shadow (V1.68): porosity-aware per-plant shelter merged via shapely (Qt-free core, reuses `shadow_geometry`); a 0–360 dial + "Live wind shadow" toggle drive a JS ghost (`06-overlays.js`, redrawn live on dial/drag) with Python computing the authoritative merged bands on commit. Wired from `app.py` (controllers at their ceilings). |
+| `src/soil_grid.py` + `src/soil_downloader.py` + `src/soil_flow.py` | Offline soil pack (V1.67): download-once Gridded Soil Landscapes of Canada GeoTIFFs sampled by lat/lng (rasterio+pyproj). `property_data.fetch_soil` order = pack → SoilGrids → regional. `soil_flow.apply_soil_site_fields` wires soil pH into plant matching. |
 | `src/permadesign_api.py` + `src/mcp_server.py` | Scripting facade + MCP tools (contract frozen by `test_architecture_guard.py`). |
 | `src/terrain.py` etc. | DEM fetch + slope grid + contour rendering. |
 | `data/*.json` | Shipped seed data (plants, fauna, plant↔fauna links). |
 
 ## Architectural conventions worth knowing
 
-- **Database path:** `~/.local/share/PermaDesign/permadesign.db` (Linux),
-  `%APPDATA%/PermaDesign/` (Windows), `~/Library/Application Support/PermaDesign/` (macOS).
+- **Database path:** `~/.local/share/Site & Pattern/permadesign.db` (Linux),
+  `%APPDATA%/Site & Pattern/` (Windows), `~/Library/Application Support/Site & Pattern/` (macOS).
   Never put the DB inside the source tree — `tests/test_polycultures.py`
   has an assertion that enforces this.
+  - **The data folder was `PermaDesign` before the V1.69 rebrand** and is renamed
+    to `Site & Pattern` once, in place, on first launch — `src/user_paths.py` is the
+    single source of truth (`user_data_dir` / `data_dir_path` / `migrate_legacy_into`);
+    all stores (`plants`, `building_store`, `terrain_store`, `soil_grid`, `image_cache`)
+    go through it. The DB *filename* stays `permadesign.db` (internal). The display
+    name lives in `src/branding.py` (`APP_NAME`); the QSettings org/app name, the repo,
+    and the frozen `permadesign_api`/MCP symbols deliberately keep the legacy name.
 - **FK constraints are ON at runtime** (`plants.py:get_connection`) but
   disabled temporarily during the bulk reseed (Python 3.14 enforces FKs
   at statement time rather than transaction-commit time).
-- **`permaculture_uses` is in transition:** the comma-delimited blob on
-  `plants` is kept populated for one release cycle while filter queries
-  migrate to the `plant_uses` junction (V1.31). When safe, the column
-  can be dropped — but only after every read site is checked.
+- **`permaculture_uses` is junction-backed (schema v37, V2.2):** the
+  denormalized comma-blob column was dropped from `plants`; the
+  `plant_uses` junction (seeded from the JSON `permaculture_uses` field)
+  is the single source of truth. Read-side consumers still see a
+  `permaculture_uses` comma-string, but it is *synthesized on read* from
+  the junction in `get_plant` / `get_all_plants` / `search_plants` /
+  `get_companions` (via `_attach_permaculture_uses`). The keyword filter
+  in `search_plants` matches use tags through an EXISTS-on-`plant_uses`
+  subquery. The JSON seed field stays — it feeds both the junction and
+  `data_quality` validation.
 - **The map only stores `(lat, lon)`.** Distance/area math goes through
   `src/projection.py` — default backend is the legacy cosLat metric
   (~1% error at <2 km); an optional UTM backend (pyproj) exists behind

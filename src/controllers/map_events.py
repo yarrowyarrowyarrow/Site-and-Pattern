@@ -29,6 +29,7 @@ Why one-domain-at-a-time:
 from __future__ import annotations
 
 from src.climate import get_zone, zone_label
+from src.controllers.undo_support import undoable
 from src.project_store import store_for
 
 
@@ -90,6 +91,7 @@ class MapEventRouter:
             f"Boundary added ({color}) — " + zone_label(self._main._current_zone)
         )
 
+    @undoable("edit boundary")
     def _on_boundary_geom_changed(self, bid: str, coords: list):
         """Update geometry of an existing boundary after vertex/move/scale drag."""
         ring = [[pt[1], pt[0]] for pt in coords] + [[coords[0][1], coords[0][0]]]
@@ -100,6 +102,7 @@ class MapEventRouter:
                 break
         self._main._mark_modified()
 
+    @undoable("edit boundary")
     def _on_boundary_props_changed(self, bid: str, color: str,
                                     show_lengths: bool, show_area: bool):
         """Update color/label toggles for an existing boundary."""
@@ -112,6 +115,7 @@ class MapEventRouter:
                 break
         self._main._mark_modified()
 
+    @undoable("remove boundary")
     def _on_boundary_removed(self, bid: str):
         """Remove a boundary from the project."""
         self._main._project["features"] = [
@@ -191,14 +195,22 @@ class MapEventRouter:
             "geometry": {"type": "Point", "coordinates": [lng, lat]},
             "properties": props,
         })
+        # Carry the FULL render def (green circle / building rect) on the undo
+        # entry — the same one the reload path rebuilds — so redo draws it
+        # identically. A bare {id,name,size_m} would render as the default box.
+        from src.db.structures import existing_feature_def
+        full_def = existing_feature_def(
+            struct_id, size_m=size_m, height_m=props["height_m"])
+        full_def["name"] = name
         self._main._push_undo({
             "action": "place_structure", "struct_id": struct_id,
             "name": name, "lat": lat, "lng": lng, "size_m": size_m,
-            "struct_def": {"id": struct_id, "name": name, "size_m": size_m},
+            "struct_def": full_def,
         })
         self._main._mark_modified()
         self._main.statusBar().showMessage(f"Marked {name}", 2000)
 
+    @undoable("remove structure")
     def _on_structure_removed(self, marker_id: str, struct_id: str,
                                lat: float, lng: float):
         kept = []
@@ -256,6 +268,7 @@ class MapEventRouter:
             f"Hedgerow placed: {length_m:.1f}m, ~{num_plants} plants", 3000
         )
 
+    @undoable("remove hedgerow")
     def _on_hedgerow_removed(self, hedge_id: str, points_json: str):
         self._main._project["features"] = [
             f for f in self._main._project["features"]
@@ -333,6 +346,7 @@ class MapEventRouter:
         if casts_shade:
             self._refresh_shade_if_active()   # new caster updates a live overlay
 
+    @undoable("remove shape")
     def _on_shape_removed(self, shape_id: str):
         feats = self._main._project["features"]
         removed_caster = any(
@@ -348,6 +362,7 @@ class MapEventRouter:
         if removed_caster:
             self._refresh_shade_if_active()   # shadow must follow its caster
 
+    @undoable("edit shape height")
     def _on_shape_height_changed(self, shape_id: str, height_m: float):
         """Update a drawn shape's height in place (map right-click 'edit
         height'). A positive height makes it a shade-casting canopy_footprint;
@@ -371,6 +386,7 @@ class MapEventRouter:
             break
         self._refresh_shade_if_active()
 
+    @undoable("edit shape")
     def _on_shape_geom_changed(self, shape_id: str, points: list):
         """A drawn/imported shape's outline was dragged in edit mode — update the
         project geometry and refresh a live shade overlay so the shadow follows
@@ -409,6 +425,7 @@ class MapEventRouter:
             f"Contour line at {elevation:.1f}m placed", 2000
         )
 
+    @undoable("remove contour")
     def _on_contour_removed(self, points_json: str, elevation: float,
                              color: str):
         """Remove a single contour line from project state."""
@@ -428,6 +445,7 @@ class MapEventRouter:
             f"Contour line at {elevation:.1f}m removed", 2000
         )
 
+    @undoable("clear contours")
     def _on_contour_cleared(self):
         """Clear all contours from map and project."""
         self._main.map_widget.clear_contours()
@@ -439,6 +457,7 @@ class MapEventRouter:
 
     # ── Annotation handlers ──────────────────────────────────────────────────
 
+    @undoable("add note")
     def _on_annotate_requested(self, lat: float, lng: float):
         from PyQt6.QtWidgets import QInputDialog
         text, ok = QInputDialog.getText(
@@ -460,6 +479,7 @@ class MapEventRouter:
         })
         self._main._mark_modified()
 
+    @undoable("remove note")
     def _on_annotation_removed(self, ann_id: str):
         self._main._project["features"] = [
             f for f in self._main._project["features"]
@@ -581,12 +601,14 @@ class MapEventRouter:
 
     # ── Sun-path / sector anchor handlers ───────────────────────────────────
 
+    @undoable("sun path")
     def _on_sun_anchor_placed(self, lat: float, lng: float):
         """User placed sun-path anchor; now compute and draw."""
         self._main._pending_sun_anchor = (lat, lng)
         if self._main._pending_sun_config:
             self._main._render_sun_path(self._main._pending_sun_config, lat, lng)
 
+    @undoable("sun sectors")
     def _on_sector_anchor_placed(self, lat: float, lng: float):
         """User placed sector anchor; now draw."""
         if self._main._pending_sector_config:
@@ -596,10 +618,21 @@ class MapEventRouter:
             names = [s["name"] for s in
                      self._main._pending_sector_config.get("sectors", [])]
             self._main._set_mode_label(f"Sectors: {', '.join(names)}")
+            # Remember the rendered overlay so undo/redo can reproduce it.
+            self._main._active_sector_state = (
+                self._main._pending_sector_config, lat, lng)
             self._main._pending_sector_config = None
 
+    @undoable("remove sun path")
     def _on_sun_path_removed(self):
+        self._main.map_widget.clear_sun_path()
+        self._main._active_sun_state = None
         self._main._set_mode_label("Sun path removed")
+
+    @undoable("clear sun sectors")
+    def _on_sectors_cleared(self):
+        self._main.map_widget.clear_sectors()
+        self._main._active_sector_state = None
 
     def _on_anchor_cancelled(self, mode: str):
         self._main.toolbar.reset_draw_buttons()
@@ -623,6 +656,7 @@ class MapEventRouter:
 
     # ── Site pin handlers ───────────────────────────────────────────────────
 
+    @undoable("place pin")
     def _on_site_pin_placed(self, lat: float, lng: float, label: str):
         """User dropped a property pin (via search or manual click)."""
         self._main._site_pin_mode = False
@@ -644,6 +678,7 @@ class MapEventRouter:
         self._main._mark_modified()
         self._main._set_mode_label("Property pin set — fetching site data")
 
+    @undoable("remove pin")
     def _on_site_pin_removed(self):
         self._main.site_panel.clear_pin()
         sc = self._main._project["properties"].setdefault("site_config", {})
@@ -675,6 +710,7 @@ class MapEventRouter:
         self._main._mark_modified()
         self._main._sync_planning_panel()
 
+    @undoable("remove plant")
     def _on_plant_removed(self, marker_id: str, plant_id: int,
                            lat: float, lng: float):
         store_for(self._main).remove_plant(plant_id, lat, lng)
@@ -682,6 +718,7 @@ class MapEventRouter:
         self._main._mark_modified()
         self._main._sync_planning_panel()
 
+    @undoable("remove plants")
     def _on_plants_removed_batch(self, batch_json: str):
         """Remove many plants in one pass — one feature rebuild + one planning
         re-sync for the whole selection, instead of the per-plant round-trip
@@ -705,6 +742,7 @@ class MapEventRouter:
         main._mark_modified()
         main._sync_planning_panel()
 
+    @undoable("remove community")
     def _on_polyculture_removed(self, polyculture_name: str,
                                   center_lat: float, center_lng: float):
         """Remove all polyculture member plant features from project state.
@@ -855,6 +893,7 @@ class MapEventRouter:
         # Defer the next start so deleteLater settles cleanly.
         QTimer.singleShot(0, self._maybe_start_next_terrain_job)
 
+    @undoable("generate terrain")
     def _on_terrain_ready(self, result: dict):
         """Render the worker's output and persist features in the project."""
         prefs = getattr(self._main, "_terrain_render_prefs", {}) or {}
@@ -962,6 +1001,7 @@ class MapEventRouter:
         if queued == 0:
             QMessageBox.warning(self._main, "Terrain Generation", message)
 
+    @undoable("clear terrain")
     def _on_auto_terrain_cleared(self):
         self._main.map_widget.clear_auto_terrain()
         self._main._project["features"] = [
@@ -1028,6 +1068,9 @@ class MapEventRouter:
         self._main._last_shade_config = dict(config or {})
         self._main._shade_opacity = (
             self._main.site_panel._shade_opacity.value() / 100.0)
+        # Open the shade undo step now; the worker's ready callback commits it
+        # (and only records when the overlay actually turns ON).
+        self._main._persistence.begin_shade_undo()
         self._main.statusBar().showMessage("Computing shade…")
         if _HAVE_SHAPELY:
             from src.shade import ShadowPolygonWorker
@@ -1047,6 +1090,8 @@ class MapEventRouter:
             # them out instead of freezing the last frame on screen.
             self._main.map_widget.clear_shadow_polygons()
             self._main._shade_overlay_active = False
+            self._main._last_shade_payload = None
+            self._main._persistence.commit_shade_undo()
             self._main.statusBar().showMessage(
                 "No shade to show — mark or import some trees/buildings, or add "
                 "trees to the design first.", 5000)
@@ -1055,6 +1100,12 @@ class MapEventRouter:
             payload["polygons"], payload.get("bbox"),
             getattr(self._main, "_shade_opacity", 0.5))
         self._main._shade_overlay_active = True
+        # Cache the rendered overlay so undo/redo can redraw it without re-running
+        # the worker (see PersistenceController._redraw_shade).
+        self._main._last_shade_payload = {
+            "kind": "vector", "polygons": payload["polygons"],
+            "bbox": payload.get("bbox")}
+        self._main._persistence.commit_shade_undo()
         self._main.statusBar().showMessage("Shade overlay updated.", 3000)
 
     def _on_shade_ready(self, payload):
@@ -1062,6 +1113,8 @@ class MapEventRouter:
         if not payload:
             self._main.map_widget.clear_shade_overlay()   # fade out past sunset
             self._main._shade_overlay_active = False
+            self._main._last_shade_payload = None
+            self._main._persistence.commit_shade_undo()
             self._main.statusBar().showMessage(
                 "No shade to show — mark or import some trees/buildings, or add "
                 "trees to the design first.", 5000)
@@ -1070,8 +1123,13 @@ class MapEventRouter:
             payload["data_url"], payload["bbox"],
             getattr(self._main, "_shade_opacity", 0.5))
         self._main._shade_overlay_active = True
+        self._main._last_shade_payload = {
+            "kind": "raster", "data_url": payload["data_url"],
+            "bbox": payload["bbox"]}
+        self._main._persistence.commit_shade_undo()
         self._main.statusBar().showMessage("Shade overlay updated.", 3000)
 
+    @undoable("hide shade")
     def _on_shade_cleared(self):
         """Clear both shade overlays (raster + vector)."""
         self._main._shade_overlay_active = False
@@ -1161,6 +1219,7 @@ class MapEventRouter:
 
     # ── Existing features from OpenStreetMap (V1.51) ─────────────────────────
 
+    @undoable("import buildings")
     def _on_osm_import_requested(self):
         """Fetch buildings/trees from OSM for the boundary/pin area off-thread,
         then add them as existing_* features (deduped). Degrades gracefully."""
@@ -1175,6 +1234,12 @@ class MapEventRouter:
                 "Drop a pin or draw a boundary first.")
             return
 
+        # Prefer the offline building pack when this area has been downloaded
+        # (instant, no network) — same data, same canopy_footprint pipeline.
+        from src import building_flow
+        if building_flow.import_buildings_offline(self._main, bbox):
+            return
+
         self._main.site_panel.set_osm_status("Querying OpenStreetMap…")
         self._run_worker(OSMWorker(bbox), self._on_osm_ready, "osm")
 
@@ -1185,6 +1250,7 @@ class MapEventRouter:
         self._run_worker(FootprintExtractWorker(tiff_path),
                          self._on_footprint_import_ready, "footprint")
 
+    @undoable("import footprints")
     def _on_footprint_import_ready(self, payload):
         if payload.get("error"):
             self._main.site_panel.set_osm_status(
@@ -1202,6 +1268,7 @@ class MapEventRouter:
             f"Imported {len(new_feats)} footprint(s) from the GeoTIFF."
             if new_feats else "No raised footprints found in that GeoTIFF.")
 
+    @undoable("import buildings")
     def _on_osm_ready(self, res):
         if not res:
             self._main.site_panel.set_osm_status(
@@ -1301,6 +1368,12 @@ class MapEventRouter:
             self._main._dl_thread.deleteLater()
             self._main._dl_thread = None
 
+    def _on_download_buildings_requested(self):
+        # Orchestration lives in src/building_flow.py (keeps this controller
+        # under its line ceiling); state lands on MainWindow there.
+        from src import building_flow
+        building_flow.start_building_download(self._main)
+
     # ── Sun / sector / contour / wind analysis-overlay request slots ────────
 
     def _on_sun_path_requested(self, config: dict):
@@ -1337,6 +1410,30 @@ class MapEventRouter:
             f"Wind from {config.get('direction_from', '?')}° "
             f"({config.get('speed_label', '')})"
         )
+
+    def _on_fetch_wind_requested(self):
+        """Fetch real seasonal wind + current reading for the site (V1.67).
+        Orchestration lives in src/wind_flow.py to keep this controller thin."""
+        from src import wind_flow
+        wind_flow.fetch_wind_for_site(self._main)
+
+    @undoable("wind shadow")
+    def _on_wind_shadow_toggled(self, on: bool):
+        """Live wind-shadow on/off — recorded as one undo step (sync)."""
+        from src import wind_shadow_flow
+        wind_shadow_flow.enable(self._main, bool(on))
+
+    @undoable("wind direction")
+    def _on_wind_angle_commit(self, deg: float):
+        """Wind dial released — recompute + record (the live scrub is not
+        undoable, only the committed angle)."""
+        from src import wind_shadow_flow
+        wind_shadow_flow.on_angle_commit(self._main, deg)
+
+    def _on_download_soil_requested(self):
+        """Download the offline soil pack (V1.67). Orchestration in soil_flow."""
+        from src import soil_flow
+        soil_flow.start_soil_download(self._main)
 
     # ── Project notes ────────────────────────────────────────────────────────
 
@@ -1395,6 +1492,9 @@ class MapEventRouter:
         for key in ("rainfall", "soil", "elevation", "hardiness"):
             if result.get(key) is not None:
                 sc[key] = result[key]
+        # Make soil actionable: pH/texture → flat site_config + plant matching.
+        from src import soil_flow
+        soil_flow.apply_soil_site_fields(self._main, result.get("soil"))
         sc["data_fetched_at"] = _utc_now_iso()
 
         # Mirror the auto-filled hardiness zone into the existing
@@ -1454,9 +1554,8 @@ class MapEventRouter:
 
     def _on_timeline_year_changed(self, year: int):
         """Compute per-plant scale factors for the timeline year and send to JS."""
-        import math
-
         from src.db.plants import get_plant
+        from src.scene3d import growth_scale_factor, spread_scale_factor
         from src.succession import (
             successional_role, presence_factor, restoration_stage,
         )
@@ -1469,11 +1568,12 @@ class MapEventRouter:
         # We need to iterate plantMarkers in JS, so we build scale data keyed by markerIds
         # Since we don't have JS markerIds in Python, we build per-plant-id scale factors
         # and let JS match by plantId
-        plant_cache = {}  # plant_id -> (ytm, curve, ptype, role)
+        plant_cache = {}  # plant_id -> (ytm, curve, ptype, role, spread_habit)
         summary_trees = 0
         summary_mature = 0
         summary_fading = 0
         summary_emerging = 0
+        summary_spreading = 0
         summary_total = len(self._main._placed_plants)
 
         for p in self._main._placed_plants:
@@ -1486,38 +1586,30 @@ class MapEventRouter:
                     curve = plant.get("growth_curve") or "steady"
                     ptype = plant.get("plant_type", "herb")
                     role = successional_role(plant)
+                    spread = plant.get("spread_habit") or ""
                 else:
                     ytm = 2
                     curve = "steady"
                     ptype = "herb"
                     role = "mid"
-                plant_cache[pid] = (ytm, curve, ptype, role)
+                    spread = ""
+                plant_cache[pid] = (ytm, curve, ptype, role, spread)
 
-            ytm, curve, ptype, role = plant_cache[pid]
+            ytm, curve, ptype, role, spread = plant_cache[pid]
             pres = presence_factor(role, year, ytm)
             if role == "pioneer" and pres < 0.9:
                 summary_fading += 1
             elif role == "climax" and pres < 0.9:
                 summary_emerging += 1
 
-            if year == 0:
-                factor = 1.0
-            elif year >= ytm:
-                factor = 1.0
-            else:
-                ratio = year / ytm
-                if curve == "fast_early":
-                    factor = math.sqrt(ratio)
-                elif curve == "slow_start":
-                    factor = ratio ** 1.5
-                else:  # steady
-                    factor = ratio
-            factor = max(0.1, min(1.0, factor))
+            factor = growth_scale_factor(year, ytm, curve)
 
             if ptype == "tree":
                 summary_trees += 1
             if factor >= 0.95:
                 summary_mature += 1
+            if spread_scale_factor(year, spread, ytm) > 1.01:
+                summary_spreading += 1
 
         # Build summary text
         if year == 0:
@@ -1538,20 +1630,18 @@ class MapEventRouter:
                 summary += (
                     f"\n{summary_emerging} climax species still coming up."
                 )
+            if summary_spreading:
+                summary += (
+                    f"\n{summary_spreading} spreading "
+                    f"species filling in the gaps."
+                )
             if summary_trees > 0:
-                # Find avg tree scale
-                tree_scales = []
-                for p in self._main._placed_plants:
-                    pid = p["plant_id"]
-                    ytm, curve, ptype, role = plant_cache[pid]
-                    if ptype == "tree":
-                        ratio = min(1.0, year / ytm)
-                        if curve == "fast_early":
-                            tree_scales.append(math.sqrt(ratio))
-                        elif curve == "slow_start":
-                            tree_scales.append(ratio ** 1.5)
-                        else:
-                            tree_scales.append(ratio)
+                # Average tree growth — same curve as the markers (scene3d).
+                tree_scales = [
+                    growth_scale_factor(year, *plant_cache[p["plant_id"]][:2])
+                    for p in self._main._placed_plants
+                    if plant_cache[p["plant_id"]][2] == "tree"
+                ]
                 avg_tree = sum(tree_scales) / len(tree_scales) if tree_scales else 0
                 summary += f"\nTrees: ~{int(avg_tree * 100)}% of mature canopy."
 
@@ -1560,20 +1650,23 @@ class MapEventRouter:
         # Send scale data to JS — we use a per-plantId approach
         # JS will iterate plantMarkers and look up scaleFactor by plantId.
         # pid_presence carries the succession fade (pioneers out, climax in).
-        from src.scene3d import growth_scale_factor
         pid_factors = {}
         pid_presence = {}
-        for pid, (ytm, curve, ptype, role) in plant_cache.items():
-            # Shared with the (future) 3D view via src.scene3d so the two never
-            # drift on the growth curve.
+        pid_spread = {}
+        for pid, (ytm, curve, ptype, role, spread) in plant_cache.items():
+            # Shared with the 3D view via src.scene3d so the two never drift on
+            # the growth/spread curves. Growth scales the whole marker; spread
+            # additionally widens self-spreaders' footprint as the colony fills in.
             pid_factors[pid] = growth_scale_factor(year, ytm, curve)
             pid_presence[pid] = presence_factor(role, year, ytm)
+            pid_spread[pid] = spread_scale_factor(year, spread, ytm)
 
         self._main.map_widget.set_timeline_year_by_plant_id(
-            year, pid_factors, pid_presence)
+            year, pid_factors, pid_presence, pid_spread)
 
     # ── Polyculture click placement ──────────────────────────────────────────
 
+    @undoable("place community")
     def _on_polyculture_click(self, lat: float, lng: float):
         """Drop a polyculture by issuing one placePlantMarker per member.
 
@@ -1642,6 +1735,7 @@ class MapEventRouter:
     # ── Pattern placement (Burst / Row / Grid / Circle, including mixes
     #    and community-as-pattern variants) ───────────────────────────────────
 
+    @undoable("place plants")
     def _on_pattern_placed(self, plant_id: int, common_name: str,
                             spacing_m: float, plant_type: str,
                             custom_color: str, positions_json: str,

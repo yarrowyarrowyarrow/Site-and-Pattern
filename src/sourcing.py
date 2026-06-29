@@ -1,12 +1,15 @@
 """
 src/sourcing.py — cost / sourcing helpers for generated designs (V1.45).
 
-Plant prices in PermaDesign are deliberately modelled as a **range** per single
+Plant prices in Site & Pattern are deliberately modelled as a **range** per single
 nursery plant, not an exact figure: Alberta retail prices vary by nursery,
 region and year. A plant carries an explicit ``price_low_cad`` / ``price_high_cad``
 when we have one; otherwise a per-``plant_type`` default (below) is used so a
 design can always be costed. Everything here is an *estimate* and is surfaced
 in the UI with that disclaimer.
+
+Design principle P9 (uncertainty is a feature, not a bug — communicate ranges,
+not false precision) — see docs/DESIGN_PHILOSOPHY.md.
 
 This module is the single source of truth for the default ranges — the seeding
 script (``scripts/apply_sourcing_data.py``) imports them so the seeded data and

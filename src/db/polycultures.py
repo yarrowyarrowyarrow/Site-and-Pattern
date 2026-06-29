@@ -1,3 +1,7 @@
+# Design principle P1 (a generative pattern language — communities as reusable,
+# site-responsive patterns) and P3 (relationships matter more than components) —
+# see docs/DESIGN_PHILOSOPHY.md.
+import collections
 import json
 import math
 from .plants import get_connection, _role_to_layer_functions
@@ -109,6 +113,121 @@ def get_all_polycultures(top_level_only=True):
         conn.close()
 
 
+# ── Group By facets (community library lenses, V1.88) ────────────────────────
+# Derive a single grouping label per top-level community along several
+# ecological lenses, computed from its member plants. Used by the Plant
+# Communities tab's "Group By" dropdown to bucket the library under category
+# folders. Pure data — no Qt.
+
+# Tallest layer wins (a community with an overstory member is a "Canopy" one).
+_GROUP_LAYER_ORDER = [
+    ("overstory",   "Canopy"),
+    ("understory",  "Understory"),
+    ("shrub_layer", "Shrub"),
+    ("vine",        "Vine"),
+    ("herbaceous",  "Herbaceous"),
+    ("groundcover", "Groundcover"),
+    ("root",        "Root layer"),
+]
+_GROUP_ECOREGION = {
+    "aspen_parkland":     "Aspen Parkland",
+    "mixedgrass_prairie": "Mixedgrass Prairie",
+    "fescue_foothills":   "Fescue / Foothills",
+    "boreal_mixedwood":   "Boreal Mixedwood",
+    "riparian":           "Riparian",
+    "wet_meadow":         "Wet Meadow / Marsh",
+    "subalpine_montane":  "Subalpine / Montane",
+}
+_GROUP_SUN = {
+    "full_sun":      "Full Sun",
+    "partial_shade": "Partial Shade",
+    "full_shade":    "Shade",
+}
+
+
+def _dominant_token(values):
+    counts = collections.Counter(v for v in values if v)
+    return counts.most_common(1)[0][0] if counts else None
+
+
+def _csv_tokens(raw):
+    return [t.strip() for t in (raw or "").split(",") if t.strip()]
+
+
+def _community_structure(members) -> str:
+    layers = set()
+    for m in members:
+        layer, _ = _resolve_layer_functions(dict(m))
+        if layer:
+            layers.add(layer)
+    for key, label in _GROUP_LAYER_ORDER:
+        if key in layers:
+            return label
+    return "Unsorted"
+
+
+def _community_habitat(members) -> str:
+    ecos = []
+    for m in members:
+        ecos += _csv_tokens(m.get("eco"))
+    dom = _dominant_token(ecos)
+    return _GROUP_ECOREGION.get(dom, "Generalist") if dom else "Generalist"
+
+
+def _community_sun(members) -> str:
+    suns = []
+    for m in members:
+        suns += _csv_tokens(m.get("sun"))
+    dom = _dominant_token(suns)
+    return _GROUP_SUN.get(dom, "Mixed") if dom else "Unknown"
+
+
+def _community_moisture(members) -> str:
+    waters = []
+    for m in members:
+        waters += _csv_tokens(m.get("water"))
+    dom = _dominant_token(waters)
+    if dom == "low":
+        return "Dry"
+    if dom in ("medium", "moderate"):
+        return "Mesic"
+    if dom == "high":
+        return "Wet"
+    return "Unknown"
+
+
+def get_community_facets() -> dict:
+    """Return ``{community_id: {"habitat","structure","sun","moisture"}}`` for
+    every top-level community, derived from its member plants in one batch
+    query. Communities with no members are simply absent (the caller buckets
+    them under an "Other" group)."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT gm.polyculture_id AS cid, gm.layer AS layer, gm.role AS role, "
+            "gm.functions AS functions, p.ab_ecoregion AS eco, "
+            "p.sun_requirement AS sun, p.water_needs AS water "
+            "FROM polyculture_members gm "
+            "JOIN plants p ON gm.plant_id = p.id "
+            "JOIN polycultures g ON g.id = gm.polyculture_id "
+            "WHERE g.parent_id IS NULL"
+        ).fetchall()
+    finally:
+        conn.close()
+    by_cid: dict = {}
+    for r in rows:
+        by_cid.setdefault(r["cid"], []).append(dict(r))
+    return {
+        cid: {
+            "structure": _community_structure(members),
+            "habitat":   _community_habitat(members),
+            "sun":       _community_sun(members),
+            "moisture":  _community_moisture(members),
+        }
+        for cid, members in by_cid.items()
+    }
+
+
 def get_polyculture_by_name(name: str):
     """Look up a top-level or variation polyculture by exact name. Returns
     the raw row dict (no members) or ``None`` if no match. Used by the
@@ -159,12 +278,23 @@ def get_polyculture_by_id(polyculture_id):
         conn.close()
 
 
-def create_polyculture(name, description, center_plant_id, parent_id=None):
+def create_polyculture(name, description, center_plant_id, parent_id=None, *,
+                        problem=None, context=None, forces=None, solution=None):
+    """Create a polyculture row.
+
+    ``problem`` / ``context`` / ``forces`` / ``solution`` are the authored
+    Alexander pattern-language fields (schema v27, F4); they are optional so
+    user-created communities (which only fill name + description) keep working.
+    """
     conn = get_connection()
     try:
         cur = conn.execute(
-            "INSERT INTO polycultures (name, description, center_plant_id, parent_id) VALUES (?, ?, ?, ?)",
-            (name, description, center_plant_id, parent_id),
+            "INSERT INTO polycultures "
+            "(name, description, center_plant_id, parent_id, "
+            " problem, context, forces, solution) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (name, description, center_plant_id, parent_id,
+             problem, context, forces, solution),
         )
         polyculture_id = cur.lastrowid
         conn.commit()
@@ -310,15 +440,24 @@ def delete_polyculture(polyculture_id):
         conn.close()
 
 
-def update_polyculture(polyculture_id, name=None, description=None):
+def update_polyculture(polyculture_id, name=None, description=None, *,
+                       problem=None, context=None, forces=None, solution=None):
+    """Update editable polyculture fields. Any argument left ``None`` is
+    untouched; pass the pattern-language fields (problem/context/forces/
+    solution) to edit the authored Alexander framing (schema v27, F4)."""
     conn = get_connection()
     try:
-        if name is not None:
-            conn.execute("UPDATE polycultures SET name = ? WHERE id = ?", (name, polyculture_id))
-        if description is not None:
-            conn.execute(
-                "UPDATE polycultures SET description = ? WHERE id = ?", (description, polyculture_id)
-            )
+        updates = {
+            "name": name, "description": description,
+            "problem": problem, "context": context,
+            "forces": forces, "solution": solution,
+        }
+        for col, val in updates.items():
+            if val is not None:
+                conn.execute(
+                    f"UPDATE polycultures SET {col} = ? WHERE id = ?",
+                    (val, polyculture_id),
+                )
         conn.execute(
             "UPDATE polycultures SET modified = datetime('now') WHERE id = ?", (polyculture_id,)
         )
@@ -392,6 +531,12 @@ def export_polyculture(polyculture_id):
     data = {
         "name": polyculture["name"],
         "description": polyculture["description"] or "",
+        # Authored pattern-language fields (schema v27, F4) — round-tripped so a
+        # shared community keeps its problem/context/forces/solution framing.
+        "problem": polyculture.get("problem") or "",
+        "context": polyculture.get("context") or "",
+        "forces": polyculture.get("forces") or "",
+        "solution": polyculture.get("solution") or "",
         "members": [],
     }
     for m in polyculture.get("members", []):
@@ -424,6 +569,10 @@ def import_polyculture(data):
         data.get("name", "Imported Polyculture"),
         data.get("description", ""),
         center_plant_id,
+        problem=data.get("problem") or None,
+        context=data.get("context") or None,
+        forces=data.get("forces") or None,
+        solution=data.get("solution") or None,
     )
 
     for m in data.get("members", []):
@@ -446,6 +595,393 @@ def import_polyculture(data):
             warnings.append(f"Plant not found: {m['common_name']}")
 
     return polyculture_id, warnings
+
+
+# ── Alexander pattern-language text (F4) ────────────────────────────────────────────
+# Authored problem / context / forces / solution for each seeded community, keyed by
+# name. Kept separate from the spatial member layout in EXAMPLE_POLYCULTURES so the
+# editorial voice is easy to read and edit. The *measured* parts of each pattern
+# (site envelope, ecological forces, related patterns) are NOT stored here — they are
+# derived live from member data in src/pattern_language.py and appended at display
+# time, so they never drift as the catalogue grows.
+#
+#   problem  — the need / conflict the community resolves (Alexander's bold headline)
+#   context  — where & when to reach for it (the larger situation it serves)
+#   forces   — the competing considerations it balances
+#   solution — the instruction ("Therefore: …")
+_PATTERN_TEXT = {
+    # ── Fruit & nut tree guilds ──────────────────────────────────────────────
+    "Apple Tree Community": {
+        "problem": "A lone fruit tree on mown grass competes with turf for water "
+                   "and nutrients, feeds little wildlife, and leans on you for "
+                   "fertiliser and pest control.",
+        "context": "A sunny spot with room for a small tree, where you want fruit "
+                   "for the kitchen and a self-supporting guild rather than a "
+                   "specimen in a lawn.",
+        "forces": "The tree wants nutrients, pollination, and fewer pests; you want "
+                  "low maintenance and a harvest. Bare ground under a tree invites "
+                  "weeds, while the right companions feed the soil and the bees "
+                  "instead.",
+        "solution": "Therefore: plant the apple at the centre and ring it with a "
+                    "working guild. Add a nutrient accumulator and nitrogen fixer to "
+                    "feed the soil, alliums and aromatic herbs to deter pests, a "
+                    "pollinator magnet for fruit set, and a living groundcover to "
+                    "hold moisture and shade out weeds.",
+    },
+    "Shade-Tolerant": {
+        "problem": "North-facing or partly shaded yards still want a fruit guild, "
+                   "but sun-loving prairie companions sulk and fail there.",
+        "context": "The same apple guild, sited where buildings, fences, or taller "
+                   "trees cast shade for part of the day.",
+        "forces": "Fruit trees tolerate some shade, but most understory companions "
+                  "need full sun; choosing shade-adapted natives keeps the guild "
+                  "functioning where light is limited.",
+        "solution": "Therefore: keep the apple but swap the understory for "
+                    "shade-tolerant natives: woodland-edge shrubs, shade-happy mint, "
+                    "and a creeping evergreen groundcover that thrives out of full sun.",
+    },
+    "Saskatoon Berry Community": {
+        "problem": "Saskatoon is the prairie's most reliable berry, but planted "
+                   "alone it asks for weeding and watering and gives nothing back to "
+                   "the soil.",
+        "context": "An open, prairie-adapted yard (Zone 2–4) where you want a tough, "
+                   "fruiting shrub guild that shrugs off cold and drought.",
+        "forces": "The shrub wants pollinators and fertile soil; you want fruit with "
+                  "little fuss. Prairie companions can fix nitrogen and draw bees "
+                  "without needing pampering.",
+        "solution": "Therefore: anchor with saskatoon and surround it with a "
+                    "nitrogen-fixing lupine, a nutrient-accumulating yarrow, an "
+                    "allium pest-deterrent, a pollinator forb, and a strawberry "
+                    "groundcover for a second, ground-level harvest.",
+    },
+    "Berry Focus": {
+        "problem": "When the goal is a serious berry harvest, ornamental companions "
+                   "earn their space only if they also produce.",
+        "context": "A saskatoon guild on a productive site where you are willing to "
+                   "trade a little pollinator flash for more fruit.",
+        "forces": "Every slot in a small guild is a choice; replacing flowers with "
+                  "fruiting shrubs raises yield but must not starve the bees that "
+                  "set that fruit.",
+        "solution": "Therefore: keep the nitrogen fixer and one pollinator, but fill "
+                    "the rest with extra berry shrubs (gooseberry, currant) for a "
+                    "layered, fruit-forward planting.",
+    },
+    "Evans Cherry Community": {
+        "problem": "Sour cherries set heavily on the prairies but draw aphids and "
+                   "borers, and a cherry in turf competes for everything it needs.",
+        "context": "A Zone 3–4 yard with room for a small fruit tree, where you want "
+                   "pie cherries and a guild that manages its own pests.",
+        "forces": "The tree needs pollination and protection; you want fruit without "
+                  "spraying. Aromatic and allium companions confuse pests while "
+                  "natives feed the soil and the bees.",
+        "solution": "Therefore: centre the cherry and ring it with chop-and-drop "
+                    "nettle, aphid-deterring chives and sage, a nitrogen-fixing "
+                    "clover, a bee-balm pollinator, and a weed-suppressing strawberry "
+                    "groundcover.",
+    },
+    "Native Understory": {
+        "problem": "Gardeners who want a strictly native planting need a cherry guild "
+                   "with no introduced companions.",
+        "context": "An Evans cherry guild for purists restoring local biodiversity, "
+                   "or sites where only Alberta natives are wanted.",
+        "forces": "Native-only narrows the palette, but Alberta's prairie flora "
+                  "covers every guild role: nutrient accumulation, pest deterrence, "
+                  "nitrogen fixing, and pollination.",
+        "solution": "Therefore: keep the cherry and fill every support role with "
+                    "natives (yarrow, nodding onion, silvery lupine, and wild "
+                    "bergamot) for a guild that is functional and fully local.",
+    },
+    "Bur Oak Community": {
+        "problem": "A big shade tree planted into lawn is decades of slow growth over "
+                   "sterile turf, when it could be the spine of a whole habitat.",
+        "context": "A large yard or acreage with space for a long-lived canopy tree, "
+                   "modelled on the aspen parkland's natural oak savanna.",
+        "forces": "An oak is a 200-year investment and a keystone for caterpillars "
+                  "and acorn-eaters; the dappled light beneath it can grow a rich, "
+                  "layered community instead of grass.",
+        "solution": "Therefore: plant bur oak as the canopy and build the savanna "
+                    "beneath it: a nut-bearing hazelnut understory, nitrogen-fixing "
+                    "clovers in the dappled light, a nutrient accumulator, a "
+                    "blazingstar pollinator, and an evergreen groundcover under the "
+                    "spread.",
+    },
+    "Edible Savanna": {
+        "problem": "An oak guild can lean harder into food if the understory is chosen "
+                   "for the kitchen as well as for wildlife.",
+        "context": "A bur oak savanna on a site where you want acorns plus berries "
+                   "and a long pollinator season.",
+        "forces": "Food production and habitat value usually reinforce each other, "
+                  "since native fruit shrubs feed both people and birds, so the "
+                  "trade-off is gentle.",
+        "solution": "Therefore: keep the oak and nitrogen fixer but swap in saskatoon "
+                    "and gooseberry for fruit and a late goldenrod for end-of-season "
+                    "nectar.",
+    },
+    # ── Pollinator & wildflower communities ──────────────────────────────────
+    "Prairie Pollinator Garden": {
+        "problem": "A flowerbed that blooms all at once leaves pollinators hungry for "
+                   "the rest of the season.",
+        "context": "A sunny bed or border where you want colour and a continuous "
+                   "nectar supply built on aspen-parkland wildflowers.",
+        "forces": "Different bees and butterflies fly at different times; bloom has to "
+                  "be spread across spring, summer, and fall, and bees need bare ground "
+                  "and grass stems to overwinter, not bare mulch.",
+        "solution": "Therefore: choose species that hand the baton along the season: "
+                    "crocus first, bergamot and blanketflower in summer, goldenrod and "
+                    "aster into fall. Add a nitrogen-fixing clover, and leave a "
+                    "bunchgrass for nesting. Plant in clumps of 3–8.",
+    },
+    "Tall Prairie Meadow": {
+        "problem": "Short pollinator beds can read as tidy plantings; sometimes you "
+                   "want the drama and bird-seed of a tall-grass prairie.",
+        "context": "An open, sunny area with room for waist-to-shoulder-high forbs and "
+                   "grasses that won't shade out a path.",
+        "forces": "Height brings presence and seed for birds but can flop or crowd "
+                  "neighbours; sunflowers and tall grasses need full sun and space.",
+        "solution": "Therefore: anchor with a giant sunflower for birds, layer in "
+                    "Maximilian sunflower, black-eyed Susan, and beardtongue for a "
+                    "mid-to-late display, add early flax for mason bees, and let a tall "
+                    "grass hold it together.",
+    },
+    "Aromatic Herb Circle": {
+        "problem": "Herb gardens are often a tidy row of single plants that do little "
+                   "for wildlife and need replanting each year.",
+        "context": "A sunny, well-drained spot near the kitchen or path where scent, "
+                   "tea, and bees are all welcome.",
+        "forces": "You want fragrance and useful leaves; pollinators want nectar. "
+                  "Hardy native perennials give both and come back every year, "
+                  "tolerating dry summers once rooted.",
+        "solution": "Therefore: ring a wild-bergamot centre with yarrow, mint, hyssop, "
+                    "valerian, and self-heal, a circle of aromatic Zone-3 perennials "
+                    "that feeds bees and the teapot alike.",
+    },
+    "Native Prairie Aromatics": {
+        "problem": "An all-native aromatic planting needs species that are fragrant, "
+                   "bee-friendly, and genuinely local, not garden-centre herbs.",
+        "context": "A sunny prairie-restoration bed where strong scent and a long "
+                   "bloom window are wanted from Alberta natives only.",
+        "forces": "The native aromatic palette is narrower but drought-tough; chosen "
+                  "well it covers June into September with nectar and scent.",
+        "solution": "Therefore: combine wild bergamot, sweetgrass, prairie sage, rat "
+                    "root, wild licorice, seneca snakeroot, and yarrow for a fragrant, "
+                    "fully native, low-water circle.",
+    },
+    "Keystone Pollinator Mound": {
+        "problem": "Most plantings spread effort across many average species when a "
+                   "few keystone plants would do far more ecological work.",
+        "context": "Any sunny spot where you want the biggest habitat return from a "
+                   "single placement: the 80/20 of native gardening.",
+        "forces": "A handful of Tallamy keystone genera (willow, aspen, goldenrod, "
+                  "aster) host the lion's share of caterpillars and anchor the food "
+                  "web; concentrating on them beats scattering generalists.",
+        "solution": "Therefore: build the planting almost entirely from keystones: an "
+                    "aspen and willows for caterpillar diversity, goldenrods, asters, "
+                    "and sunflower for late pollen and bird seed.",
+    },
+    "Caterpillar Host Garden": {
+        "problem": "Nectar gardens feed adult butterflies but starve their "
+                   "caterpillars, and without caterpillars there are almost no baby "
+                   "birds.",
+        "context": "A sunny bed for gardeners who want to breed butterflies and feed "
+                   "nesting songbirds, not just host visiting adults.",
+        "forces": "Specialist caterpillars can only eat specific host plants "
+                  "(monarchs need milkweed, fritillaries need violets); a real "
+                  "butterfly garden has to grow the leaves, not only the flowers.",
+        "solution": "Therefore: plant documented Alberta host plants together "
+                    "(willows, milkweeds, violets, columbine, and aster) so the whole "
+                    "life cycle, caterpillar to bird, has what it needs.",
+    },
+    "Songbird Berry Patch": {
+        "problem": "Birds need fruit across many months, but a single berry shrub "
+                   "gives one short glut and then nothing.",
+        "context": "A yard corner or border where you want to feed songbirds from "
+                   "early summer straight through winter.",
+        "forces": "Fruiting windows are short and species-specific; staggering "
+                  "early, mid, and winter-persistent berries keeps the buffet open, "
+                  "and a nitrogen fixer keeps the shrubs productive.",
+        "solution": "Therefore: stack the harvest: strawberry and saskatoon for early "
+                    "summer, raspberry and chokecherry for late summer, and "
+                    "cranberry, snowberry, and rose hips that cling through winter, "
+                    "with a buffaloberry to feed the soil.",
+    },
+    "Continuous Bloom Pollinator Strip": {
+        "problem": "The Wildlife Forage calendar keeps flagging nectar gaps: weeks "
+                   "in the season when nothing in the yard is flowering.",
+        "context": "Any sunny strip dropped in specifically to close bloom gaps the "
+                   "analysis shows across the Apr–Oct growing season.",
+        "forces": "Pollinators need uninterrupted nectar; one missing month can break "
+                  "the chain. The fix is deliberate bloom hand-off, not more of the "
+                  "same flower.",
+        "solution": "Therefore: line up bloom from first to last frost: pussy willow "
+                    "and crocus in early spring, golden bean and strawberry into June, "
+                    "bergamot in July, blazingstar in late summer, goldenrod and aster "
+                    "to frost.",
+    },
+    "Late-Season Pollinator Refuge": {
+        "problem": "Late summer and fall are when nectar runs out, right when migrating "
+                   "monarchs and queen bumble bees need fuel the most.",
+        "context": "A sunny area added to cover the Aug–Oct gap the forage calendar "
+                   "most often shows red.",
+        "forces": "Most gardens peak in midsummer and fade; the insects that overwinter "
+                  "or migrate depend on the last flowers standing, many of which are "
+                  "also keystones.",
+        "solution": "Therefore: mass late bloomers (goldenrods, asters, blazingstars, "
+                    "Maximilian sunflower, fireweed, and a late milkweed) for a fall "
+                    "refuelling station that doubles your keystone count.",
+    },
+    # ── Habitat-structure & ecoregion communities ────────────────────────────
+    "Aspen Parkland Edge": {
+        "problem": "Single-layer plantings (just shrubs, or just flowers) leave most "
+                   "wildlife niches empty.",
+        "context": "A yard edge or open bed with room for a small tree, mirroring the "
+                   "layered structure of central Alberta's richest ecoregion.",
+        "forces": "Birds and insects nest and feed at every height; a design that fills "
+                  "canopy, understory, shrub, herb, and ground layers offers far more "
+                  "homes than any single layer.",
+        "solution": "Therefore: stack every canonical layer: aspen overstory, "
+                    "chokecherry understory, saskatoon shrub layer, goldenrod and aster "
+                    "herbs, and a strawberry groundcover.",
+    },
+    "Mixedgrass Prairie Patch": {
+        "problem": "Dry, open, sun-baked ground defeats most ornamental plantings and "
+                   "bakes lawns brown by July.",
+        "context": "A hot, dry, low-water site in southern or central Alberta where "
+                   "you want resilient native cover and habitat.",
+        "forces": "These sites punish thirsty plants; native bunchgrasses and prairie "
+                  "forbs thrive on neglect, hold soil, and give ground-nesting bees "
+                  "and birds the stems and bare earth they need.",
+        "solution": "Therefore: weave native bunchgrasses (fescue, June grass, little "
+                    "bluestem) through succession-blooming forbs from crocus to "
+                    "blazingstar, with a clover for nitrogen and yarrow to bind it.",
+    },
+    "Boreal Shade Community": {
+        "problem": "The ground beneath existing spruce, poplar, or birch is dry, "
+                   "shaded, acidic, and usually written off as a dead zone.",
+        "context": "Under or north of an established conifer or aspen canopy, modelled "
+                   "on the natural boreal forest floor.",
+        "forces": "Sun-loving plants fail in deep shade and acid soil, but a specific "
+                  "boreal-floor community evolved for exactly these conditions and "
+                  "knits together where little else will grow.",
+        "solution": "Therefore: plant the classic boreal companions (sarsaparilla, "
+                    "bunchberry, twinflower, and a shade-tolerant highbush cranberry) "
+                    "that naturally grow together in Alberta woodlands.",
+    },
+    "Edible Boreal Understory": {
+        "problem": "A shady forest-floor planting can do more than look natural; it "
+                   "can also feed you.",
+        "context": "The same boreal understory, on a site where edible and useful "
+                   "plants are preferred.",
+        "forces": "Shade limits the edible palette, but several boreal natives "
+                  "(cranberries, Labrador tea, mint) are both shade-tolerant and "
+                  "useful.",
+        "solution": "Therefore: keep the spruce frame and swap in low-bush and bog "
+                    "cranberry, Labrador tea, and moisture-loving mint for an edible, "
+                    "aromatic shade carpet.",
+    },
+    "Boreal Woodland Floor": {
+        "problem": "Shaded northern yards are the hardest niche to plant for bird "
+                   "food, so they usually offer none.",
+        "context": "A north-facing site or established conifer/aspen understory where "
+                   "you still want to feed wildlife.",
+        "forces": "Few fruiting plants tolerate deep shade; the boreal-floor mosaic is "
+                  "one of the only communities that delivers berries and groundcover "
+                  "in low light.",
+        "solution": "Therefore: combine a bunchberry, twinflower, and "
+                    "lily-of-the-valley mosaic with hazelnut, bog cranberry, and "
+                    "strawberry so even the shadiest corner feeds birds.",
+    },
+    "Riparian Willow Thicket": {
+        "problem": "Wet, low, or streamside ground waterlogs ordinary plants and is "
+                   "often left as a soggy, weedy gap.",
+        "context": "A pond edge, swale, ditch, or any spot that stays damp, where you "
+                   "want a thicket that thrives on wet feet.",
+        "forces": "Most plants drown in saturated soil, but the willow guild loves it, "
+                  "and willows happen to be keystone, host, and bird-food plants all "
+                  "at once, so a wet problem becomes a habitat jackpot.",
+        "solution": "Therefore: build a willow thicket on the wet edge: pussy and "
+                    "sandbar willow with red osier dogwood and highbush cranberry, "
+                    "underplanted with milkweed and fireweed for summer bloom.",
+    },
+    # ── Lawn-to-habitat starter communities ──────────────────────────────────
+    "Native Berry Hedge": {
+        "problem": "A bare property line or fence does nothing but mark a boundary, "
+                   "while a living hedge could screen, shelter, and feed you.",
+        "context": "A property edge or windbreak line where you want a productive, "
+                   "layered living fence instead of cedar boards or chain-link.",
+        "forces": "A hedge must screen and shelter, but a single-species row is "
+                  "vulnerable and dull; mixing berry shrubs, a nitrogen fixer, and "
+                  "thorny security builds a resilient, productive barrier.",
+        "solution": "Therefore: plant a layered line: saskatoon and chokecherry for "
+                    "the tall backbone, haskap in the mid layer, thorny rose and "
+                    "raspberry at the base, and lupine to feed the soil between.",
+    },
+    "Wildlife Corridor Hedge": {
+        "problem": "When a hedge's job is habitat connection rather than the kitchen, "
+                   "its species should be chosen for birds first.",
+        "context": "A boundary planting meant to link your yard to nearby green space "
+                   "as a wildlife corridor.",
+        "forces": "Bird and pollinator value rises with winter-persistent fruit and "
+                  "dense cover; choosing for wildlife slightly lowers the human "
+                  "harvest but raises the habitat payoff.",
+        "solution": "Therefore: build the hedge from highbush cranberry, elderberry, "
+                    "snowberry, and buffaloberry for fall-and-winter bird food, with a "
+                    "silver-leaved wolf willow windbreak at the base.",
+    },
+    "Boulevard Pollinator Strip": {
+        "problem": "A sun-baked boulevard or hellstrip is the hardest scrap of a "
+                   "yard: salt, drought, and mowing leave it a sterile green "
+                   "rectangle that feeds nothing.",
+        "context": "A narrow curb strip, hellstrip, or boulevard in full sun where "
+                   "plants must stay low for sightlines and shrug off salt and "
+                   "drought.",
+        "forces": "The strip has to look kept and keep sightlines open, yet survive "
+                  "with no watering and feed pollinators, which rules out tall or "
+                  "thirsty plants and rules in a tough, low native matrix.",
+        "solution": "Therefore: lay a fine warm-season grass matrix (blue grama) and "
+                    "scatter drought-tough forbs through it: blanketflower, "
+                    "black-eyed Susan, and bergamot for summer, prairie clover for "
+                    "nitrogen, prairie goldenrod for fall nectar. Mow once in spring; "
+                    "never water once established.",
+    },
+    "Backyard Meadow Patch": {
+        "problem": "A back corner of mown lawn is weekly work for zero habitat and a "
+                   "monoculture of grass.",
+        "context": "A sunny residential-scale corner you're ready to convert from turf "
+                   "to a low-care native meadow.",
+        "forces": "A meadow must read as intentional, not neglected; a grass matrix "
+                  "with scattered forbs gives structure and bloom while cutting mowing "
+                  "to once a year.",
+        "solution": "Therefore: set a fine fescue and little-bluestem matrix and weave "
+                    "in coneflower, blanketflower, and bergamot for layered bloom, a "
+                    "lupine for nitrogen, and a strawberry to knit the ground.",
+    },
+    "Hedgerow Shelterbelt": {
+        "problem": "An exposed property edge offers no shelter from prairie wind and "
+                   "no habitat, just a line on a map.",
+        "context": "A windward property edge or acreage boundary where you want a "
+                   "fast, layered native windbreak that also feeds birds.",
+        "forces": "A shelterbelt needs quick height and density to break wind, but "
+                  "should earn its space with fruit and habitat rather than being a "
+                  "single-species screen.",
+        "solution": "Therefore: plant a row that climbs in layers: aspen for fast "
+                    "height, chokecherry and saskatoon for fruit, buffaloberry to fix "
+                    "nitrogen and feed waxwings, cranberry for winter fruit, and "
+                    "snowberry filling the low layer.",
+    },
+    "Native Edible Garden": {
+        "problem": "A vegetable patch is annual work and bare soil; a native food "
+                   "garden could feed you and the wildlife with perennials that "
+                   "return on their own.",
+        "context": "A sunny bed for gardeners who want a staggered, low-input harvest "
+                   "of native fruits and nuts.",
+        "forces": "Harvest windows are short and species-specific; spreading them "
+                  "across the season keeps fresh food coming, and most native fruit "
+                  "doubles as bird food and habitat.",
+        "solution": "Therefore: stagger the harvest from June to October: strawberry, "
+                    "saskatoon, raspberry, pin and chokecherry, highbush cranberry, "
+                    "and hazelnut, most of which feed birds too.",
+    },
+}
 
 
 # ── Example polyculture presets ────────────────────────────────────────────────────
@@ -982,33 +1518,30 @@ def seed_example_polycultures():
     finally:
         conn.close()
 
-    for polyculture_def in EXAMPLE_POLYCULTURES:
-        # Find center plant
-        center_name = polyculture_def["members"][0][0]
+    def _seed_one(poly_def, parent_id=None):
+        center_name = poly_def["members"][0][0]
         center_plant = _get_plant_by_name(center_name)
         center_id = center_plant["id"] if center_plant else None
-
-        polyculture_id = create_polyculture(
-            polyculture_def["name"], polyculture_def["description"], center_id
+        # Authored Alexander pattern text lives in _PATTERN_TEXT keyed by name
+        # (kept separate from the spatial member layout above); an inline key on
+        # the community dict, if present, wins.
+        text = _PATTERN_TEXT.get(poly_def["name"], {})
+        poly_id = create_polyculture(
+            poly_def["name"], poly_def["description"], center_id,
+            parent_id=parent_id,
+            problem=poly_def.get("problem") or text.get("problem"),
+            context=poly_def.get("context") or text.get("context"),
+            forces=poly_def.get("forces") or text.get("forces"),
+            solution=poly_def.get("solution") or text.get("solution"),
         )
-
-        for common_name, role, ox, oy in polyculture_def["members"]:
+        for common_name, role, ox, oy in poly_def["members"]:
             plant = _get_plant_by_name(common_name)
             if plant:
-                add_polyculture_member(polyculture_id, plant["id"], role, ox, oy)
+                add_polyculture_member(poly_id, plant["id"], role, ox, oy)
+        return poly_id
 
+    for polyculture_def in EXAMPLE_POLYCULTURES:
+        polyculture_id = _seed_one(polyculture_def)
         # Create variations as child polycultures
         for var_def in polyculture_def.get("variations", []):
-            var_center_name = var_def["members"][0][0]
-            var_center = _get_plant_by_name(var_center_name)
-            var_center_id = var_center["id"] if var_center else None
-
-            var_id = create_polyculture(
-                var_def["name"], var_def["description"],
-                var_center_id, parent_id=polyculture_id
-            )
-
-            for common_name, role, ox, oy in var_def["members"]:
-                plant = _get_plant_by_name(common_name)
-                if plant:
-                    add_polyculture_member(var_id, plant["id"], role, ox, oy)
+            _seed_one(var_def, parent_id=polyculture_id)

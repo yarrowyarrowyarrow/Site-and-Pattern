@@ -24,12 +24,11 @@ graceful-degradation pattern). Results are cached in the
 import json
 import math
 import os
-import urllib.error
-import urllib.request
 from datetime import date
 from functools import lru_cache
 from typing import Optional
 
+from src.http_utils import http_get_json
 from src.resources import resource_path
 
 _DATA_FILE = resource_path("data", "hardiness_zones.json")
@@ -224,16 +223,9 @@ def frost_window(daily_rows: list[dict]) -> dict:
 
 
 def _http_get_json(url: str, timeout: float = 20.0) -> Optional[dict]:
-    """Minimal stdlib JSON fetch. Mirrors the pattern in property_data so
-    we don't drag in `requests` for one endpoint. Returns None on any
-    network/parse failure — caller renders 'unavailable' rather than
-    crashing."""
-    try:
-        with urllib.request.urlopen(url, timeout=timeout) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except (urllib.error.URLError, urllib.error.HTTPError,
-            json.JSONDecodeError, TimeoutError, OSError):
-        return None
+    """Module-local alias for :func:`src.http_utils.http_get_json`, kept so
+    tests can monkeypatch ``climate._http_get_json``."""
+    return http_get_json(url, timeout=timeout)
 
 
 def fetch_historical_temps(

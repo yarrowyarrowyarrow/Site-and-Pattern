@@ -1,10 +1,12 @@
-# PermaDesign — Native Habitat Designer
+# Site & Pattern — Native Habitat Designer
 
 **Turn your lawn into native habitat.** A landscape design tool for native plants, ecological restoration, and pollinator/wildlife habitat in Alberta and the Canadian prairies.
 
-PermaDesign is a desktop application for designing landscapes with native plants — focused on lawn-to-habitat conversion, pollinator gardens, and ecological restoration projects. It combines site analysis, plant community planning, plant companion relationships, native habitat structures, and a 433-plant database focused on Alberta and the Canadian prairies. Search and filter by habitat value (keystone species, larval host plants, bird food) to prioritize the natives that do the most for local food webs.
+Site & Pattern is a desktop application for designing landscapes with native plants — focused on lawn-to-habitat conversion, pollinator gardens, and ecological restoration projects. It combines site analysis, plant community planning, plant companion relationships, native habitat structures, and a 433-plant database focused on Alberta and the Canadian prairies. Search and filter by habitat value (keystone species, larval host plants, bird food) to prioritize the natives that do the most for local food webs.
 
-> **Status:** PermaDesign is in active development. The current focus is on UI polish, the in-app polyculture builder, map interaction (drag-to-reposition, global undo), terrain/soil data integration, and packaging as a one-click Windows installer. See [Going Forward](#going-forward) for the live development plan.
+> **Status:** Site & Pattern is in active development. The current focus is on UI polish, the in-app polyculture builder, map interaction (drag-to-reposition, global undo), terrain/soil data integration, and packaging as a one-click Windows installer. See [Going Forward](#going-forward) for the live development plan.
+
+> **Why it's built this way:** [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md) lays out the design philosophy — eleven principles (relationships over components, time as a design variable, ecological value made legible, …) mapped to where each one lives in the code. See also [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) and [`docs/REFERENCES.md`](docs/REFERENCES.md).
 
 ---
 
@@ -40,8 +42,8 @@ PermaDesign is a desktop application for designing landscapes with native plants
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/yarrowyarrowyarrow/PermaDesign.git
-   cd PermaDesign
+   git clone https://github.com/yarrowyarrowyarrow/Site-and-Pattern.git
+   cd Site-and-Pattern
    ```
 
 2. Create a virtual environment and install dependencies:
@@ -59,13 +61,13 @@ PermaDesign is a desktop application for designing landscapes with native plants
    python main.py
    ```
 
-On first run, the database is seeded automatically with the included plant data. The database lives at `~/.local/share/PermaDesign/permadesign.db`.
+On first run, the database is seeded automatically with the included plant data. The database lives at `~/.local/share/Site & Pattern/permadesign.db`.
 
 ---
 
 ## Plant Database
 
-PermaDesign V1 ships with a master database of 433 plants suitable for Alberta and the Canadian prairies. The data covers:
+Site & Pattern V1 ships with a master database of 433 plants suitable for Alberta and the Canadian prairies. The data covers:
 
 - Common and scientific names, plant type
 - Hardiness zone range, sun and water requirements, soil pH range
@@ -80,7 +82,7 @@ Plant data loads from `data/plants_master.json` on first run. The hardiness zone
 
 ## AI agent usage (headless scripting, CLI, MCP)
 
-PermaDesign can be driven entirely without the GUI through a Qt-free
+Site & Pattern can be driven entirely without the GUI through a Qt-free
 scripting surface — useful for automation, batch design, and AI agents.
 None of the surfaces below need a display, PyQt6, or a `QApplication`.
 
@@ -150,7 +152,7 @@ claude mcp add permadesign -- python -m src.mcp_server
 
 ## Project Status and Known Limitations
 
-PermaDesign is in active development. Known limitations being worked on in the current sprint:
+Site & Pattern is in active development. Known limitations being worked on in the current sprint:
 
 - **Plant names with apostrophes** may cause issues in JavaScript-rendered components due to string escaping. Most plant names are unaffected.
 - **Undo/redo** is being expanded from plant-only to a global undo across plants, structures, boundaries, and contours.
@@ -178,17 +180,17 @@ The longer-term direction (cross-platform rewrite, ecoregion-aware nativity, exp
 
 ## Project History
 
-PermaDesign was built as a personal tool by Marci while studying ecological design in Alberta, with the goal of bringing native plant communities into landscape design more easily. The codebase has grown to include plant communities, site analysis, native habitat structures, planning tools, PDF export, and a headless scripting API (with CLI and MCP surfaces for AI agents), and now centres on lawn-to-habitat conversion for Alberta and prairie ecosystems.
+Site & Pattern was built as a personal tool by Marci while studying ecological design in Alberta, with the goal of bringing native plant communities into landscape design more easily. The codebase has grown to include plant communities, site analysis, native habitat structures, planning tools, PDF export, and a headless scripting API (with CLI and MCP surfaces for AI agents), and now centres on lawn-to-habitat conversion for Alberta and prairie ecosystems.
 
 ---
 
 ## Documentation
 
-- [`INSTALL.md`](INSTALL.md) — Installation instructions, including the one-click `.exe` installer for friends and testers
-- [`FRIEND_SETUP_GUIDE.md`](FRIEND_SETUP_GUIDE.md) — Plain-English setup guide for non-technical users
-- [`ROADMAP.md`](ROADMAP.md) — Feature roadmap with shipped vs. planned items
-- [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) — Developer-facing notes for active development sessions
-- [`USER_GUIDE.md`](USER_GUIDE.md) — In-app feature reference
+- [`INSTALL.md`](INSTALL.md) — Installation guide for all platforms (one-click installers + from source), plus updating and troubleshooting
+- [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — In-app feature reference
+- [`docs/BUILD.md`](docs/BUILD.md) — Building the installers (Windows `.exe`, macOS `.dmg`, Linux zip) and the release/packaging internals
+- [`docs/ROADMAP.md`](docs/ROADMAP.md) — Feature roadmap with shipped vs. planned items
+- [`docs/archive/SESSION_HANDOFF.md`](docs/archive/SESSION_HANDOFF.md) — Archived developer session notes
 - [`docs/AGENT_API.md`](docs/AGENT_API.md) — Headless scripting API, CLI, and MCP tool reference for automation & AI agents
 - [`docs/PROJECT_FILE_FORMAT.md`](docs/PROJECT_FILE_FORMAT.md) — The `.perma.geojson` project file format
 - [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) — SQLite schema, seeding, and the version-bump checklist
@@ -199,7 +201,7 @@ PermaDesign was built as a personal tool by Marci while studying ecological desi
 
 ## License
 
-PermaDesign is licensed under the **[PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/)**.
+Site & Pattern is licensed under the **[PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/)**.
 
 In plain English, this means:
 
@@ -207,9 +209,9 @@ In plain English, this means:
 - **Free for non-profit use** — community gardens, educational settings, non-profit ecological work
 - **Free to modify and redistribute** for non-commercial purposes
 - **Free for research and academic use**
-- **Not free for commercial use** — you may not sell PermaDesign or services built on PermaDesign, or use it as part of a commercial product or service, without separate permission
+- **Not free for commercial use** — you may not sell Site & Pattern or services built on Site & Pattern, or use it as part of a commercial product or service, without separate permission
 
-If you'd like to use PermaDesign commercially, please open an issue to discuss a separate licensing arrangement.
+If you'd like to use Site & Pattern commercially, please open an issue to discuss a separate licensing arrangement.
 
 ---
 
@@ -219,7 +221,7 @@ Plant data draws on:
 - Native plant references for Alberta and the Canadian prairies
 - Hardiness zone data from Natural Resources Canada
 
-PermaDesign was developed with significant assistance from AI coding tools.
+Site & Pattern was developed with significant assistance from AI coding tools.
 
 ---
 

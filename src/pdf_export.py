@@ -17,6 +17,8 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtPrintSupport import QPrinter
 
+from src.branding import APP_NAME
+
 
 def _safe_size(n) -> int:
     """Clamp a computed font size to a minimum of 1.
@@ -147,7 +149,7 @@ def _draw_title_block(painter: QPainter, w: float, name: str,
     painter.setPen(QColor("#a5d6a7"))
     painter.setFont(QFont("Arial", _safe_size(18 * s), QFont.Weight.Bold))
     painter.drawText(QRectF(15 * s, 8 * s, w - 30 * s, 30 * s),
-                     Qt.AlignmentFlag.AlignLeft, f"PermaDesign — {name}")
+                     Qt.AlignmentFlag.AlignLeft, f"{APP_NAME} — {name}")
 
     # Subtitle
     painter.setFont(QFont("Arial", _safe_size(9 * s)))
@@ -211,6 +213,11 @@ def _draw_summary(painter: QPainter, w: float, y: float,
             )
         except Exception:
             pass
+    if score is not None and cost is not None:
+        # Value vs. price framing (F11, P6): the price doesn't capture the value.
+        lines.append(
+            "Value vs. price: a one-time cost that creates lasting ecological value."
+        )
 
     for line in lines:
         painter.drawText(QRectF(20 * s, y, w - 40 * s, 14 * s),
@@ -277,10 +284,13 @@ def _draw_plant_list(painter: QPainter, w: float, h: float,
         name = names.get(pid, "?")
         sci = (plant or {}).get("scientific_name", "") or ""
         ptype = (plant or {}).get("plant_type", types.get(pid, "")) or ""
-        water = (plant or {}).get("water_needs", "") or ""
+        # water_needs may be comma-delimited (V1.84); render each value titled.
+        from src.plant_conditions import condition_tokens
+        water = ", ".join(t.replace("_", " ").title()
+                          for t in condition_tokens((plant or {}).get("water_needs")))
         qty = str(counts[pid])
 
-        values = [name, sci, ptype.title(), qty, water.title()]
+        values = [name, sci, ptype.title(), qty, water]
         for i, val in enumerate(values):
             if i < len(col_x):
                 painter.drawText(QRectF(col_x[i], y, 180 * s, 14 * s),

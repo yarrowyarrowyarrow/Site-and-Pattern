@@ -16,6 +16,7 @@ from PyQt6.QtCore import QThread
 from PyQt6.QtWidgets import QDialog, QMessageBox
 
 import src.project as project_io
+from src.controllers.undo_support import undoable
 from src.project_store import store_for
 
 
@@ -37,7 +38,7 @@ class GenerationController:
         from src.generate_design_dialog import GenerateDesignDialog
         main = self._main
 
-        boundary = self._current_boundary()
+        boundary = self._main._map_events._project_boundary_latlng()
         site_config = dict(
             main._project.get("properties", {}).get("site_config", {}) or {})
         has_pin = (site_config.get("latitude") is not None
@@ -148,19 +149,7 @@ class GenerationController:
             return []
         return out
 
-    def _current_boundary(self):
-        """Return the first drawn boundary as a list of ``(lat, lng)``, else
-        ``None``. Used to anchor + (later) clip placement."""
-        try:
-            data = project_io.project_to_map_data(self._main._project)
-        except Exception:  # noqa: BLE001
-            return None
-        for b in data.get("boundaries", []):
-            pts = b.get("points") or []
-            if len(pts) >= 3:
-                return [(float(p[0]), float(p[1])) for p in pts]
-        return None
-
+    @undoable("generate design")
     def _render(self, project):
         """Place every plant from the generated project onto the map and into
         the live project, under one shared placement group so the whole design

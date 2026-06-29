@@ -6,7 +6,7 @@ The footprint shade model in ``src/shade.py`` projects building / tree
 ridge to the south-west that blocks the low afternoon sun, or a valley floor a
 hillside keeps in shadow for half the day. This module supplies that missing
 piece — the classic DEM cast-shadow ("hill-shadow" / horizon) test over the
-elevation grid PermaDesign already fetches (``src/terrain.py``).
+elevation grid Site & Pattern already fetches (``src/terrain.py``).
 
 For one sun moment (azimuth + altitude from ``src/solar.py``) we, for every
 grid cell, march along the ground **toward the sun** and ask whether any upwind

@@ -1,8 +1,8 @@
-# PermaDesign Project File Format
+# Site & Pattern Project File Format
 
-A PermaDesign project is a single JSON file, conventionally named
+A Site & Pattern project is a single JSON file, conventionally named
 `*.perma.geojson`. It is a [GeoJSON](https://geojson.org/)
-`FeatureCollection` with PermaDesign-specific properties on the
+`FeatureCollection` with Site & Pattern-specific properties on the
 collection and on each feature.
 
 Files written by the GUI, the scripting API
@@ -56,7 +56,7 @@ schema version (`17`) documented in
 ## Coordinate convention
 
 **GeoJSON geometry stores `[longitude, latitude]`** (X, Y order) — the
-spec's order, and the order on disk. PermaDesign's internal map model and
+spec's order, and the order on disk. Site & Pattern's internal map model and
 the scripting API use `[latitude, longitude]`; `project_to_map_data`
 does the swap. When hand-writing geometry, use `[lng, lat]`.
 

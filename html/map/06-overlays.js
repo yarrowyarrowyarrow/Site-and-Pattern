@@ -823,6 +823,44 @@
       }
     }
 
+    // ── Splat "yard photo" overlay (V1.65) — a top-down render of the
+    // imported Gaussian-splat backdrop, baked in the 3D viewer and shown
+    // here as a personal, fresher satellite layer. Its own image layer
+    // (like slope/shade) so it composes with everything; markers/boundary
+    // stay on top via the default overlay pane. Mirrors drawShadeOverlay.
+    var splatOrthoLayer = null;
+
+    function drawSplatOrthoOverlay(payload) {
+      // payload: {image: data-url, bbox: {south, north, west, east}, opacity}
+      clearSplatOrtho();
+      if (!payload || !payload.image || !payload.bbox) return;
+      var b = payload.bbox;
+      var bnds = L.latLngBounds([b.south, b.west], [b.north, b.east]);
+      splatOrthoLayer = L.imageOverlay(payload.image, bnds, {
+        opacity: typeof payload.opacity === 'number' ? payload.opacity : 1.0,
+        interactive: false
+      }).addTo(map);
+    }
+
+    function setSplatOrthoVisible(visible) {
+      if (!splatOrthoLayer) return;
+      if (visible) { splatOrthoLayer.addTo(map); }
+      else { map.removeLayer(splatOrthoLayer); }
+    }
+
+    function setSplatOrthoOpacity(opacity) {
+      if (splatOrthoLayer && splatOrthoLayer.setOpacity) {
+        splatOrthoLayer.setOpacity(opacity);
+      }
+    }
+
+    function clearSplatOrtho() {
+      if (splatOrthoLayer) {
+        map.removeLayer(splatOrthoLayer);
+        splatOrthoLayer = null;
+      }
+    }
+
     // ── Planting-zone shade map (discrete sun/partial/shade cells) ──────────
     // The "Classify planting zones" result drawn as a coloured grid so you can
     // see, at a glance, where full-sun / partial / full-shade planting spots
@@ -1081,6 +1119,147 @@
     function clearWindOverlay() {
       if (windLayer) { map.removeLayer(windLayer); windLayer = null; }
     }
+
+    // ── Dynamic wind shadow (V1.68) ─────────────────────────────────────────
+    // Two layers: a per-plant ghost (JS-computed, redrawn live as the dial turns
+    // / a plant drags — zero Python round-trips) and the authoritative merged,
+    // porosity-banded shelter that Python pushes on commit. Matches the sector
+    // live-drag pattern. Geometry mirrors src/wind_shadow.py.
+    var windShadowLayer = null;   // merged (idle view)
+    var windGhostLayer  = null;   // per-plant wedges (during interaction)
+    var _windCasters = [];        // [{id,lat,lng,height_m,half_width_m,porosity}]
+    var _windAngle   = 270;       // wind FROM, degrees
+    var _windShadowOn = false;
+    var _WIND_BANDS = [[0.70, 1.00, 'weak'], [0.40, 0.70, 'moderate'],
+                       [0.0, 0.40, 'strong']];
+    var _WIND_STYLE = {
+      strong:   { color: '#0277bd', weight: 0, fillColor: '#0277bd', fillOpacity: 0.34 },
+      moderate: { color: '#0288d1', weight: 0, fillColor: '#0288d1', fillOpacity: 0.20 },
+      weak:     { color: '#4fc3f7', weight: 0, fillColor: '#4fc3f7', fillOpacity: 0.11 }
+    };
+
+    function _windReachH(p) {
+      p = Math.max(0, Math.min(1, p));
+      return 15.0 - 14.0 * Math.abs(p - 0.5);
+    }
+
+    function _windWedges(c) {
+      // Per-band trapezoids for one caster at the current angle, leeward.
+      var out = [];
+      var reach = Math.min(250, _windReachH(c.porosity) * c.height_m);
+      var hw = Math.max(0.3, c.half_width_m);
+      var th = (_windAngle + 180) * Math.PI / 180;     // downwind bearing
+      var cosLat = Math.cos(c.lat * Math.PI / 180) || 1e-9;
+      var nLat = Math.cos(th) / 111320, nLng = Math.sin(th) / (111320 * cosLat);
+      var pTh = th + Math.PI / 2;
+      var pLat = Math.cos(pTh) / 111320, pLng = Math.sin(pTh) / (111320 * cosLat);
+      _WIND_BANDS.forEach(function (b) {
+        var r0 = b[0] * reach, r1 = b[1] * reach;
+        if (r1 - r0 < 0.1) return;
+        var w0 = hw * (1 - 0.6 * b[0]), w1 = hw * Math.max(0.4, 1 - 0.6 * b[1]);
+        var n0Lat = c.lat + nLat * r0, n0Lng = c.lng + nLng * r0;
+        var n1Lat = c.lat + nLat * r1, n1Lng = c.lng + nLng * r1;
+        out.push({ strength: b[2], poly: [
+          [n0Lat + pLat * w0, n0Lng + pLng * w0],
+          [n0Lat - pLat * w0, n0Lng - pLng * w0],
+          [n1Lat - pLat * w1, n1Lng - pLng * w1],
+          [n1Lat + pLat * w1, n1Lng + pLng * w1]
+        ]});
+      });
+      return out;
+    }
+
+    function _drawWindGhost() {
+      if (!windGhostLayer) windGhostLayer = L.layerGroup();
+      windGhostLayer.clearLayers();
+      // Weak first so strong paints on top (matches merged draw order).
+      ['weak', 'moderate', 'strong'].forEach(function (strength) {
+        _windCasters.forEach(function (c) {
+          _windWedges(c).forEach(function (w) {
+            if (w.strength !== strength) return;
+            L.polygon(w.poly, Object.assign({ interactive: false },
+                      _WIND_STYLE[strength])).addTo(windGhostLayer);
+          });
+        });
+      });
+      if (_windShadowOn && !map.hasLayer(windGhostLayer)) windGhostLayer.addTo(map);
+    }
+
+    function setWindCasters(list) {
+      _windCasters = list || [];
+      if (_windShadowOn) _drawWindGhost();
+    }
+
+    function setWindAngleLive(deg) {
+      _windAngle = deg;
+      if (!_windShadowOn) return;
+      // Live: show the fast ghost, hide the now-stale merged shape.
+      if (windShadowLayer && map.hasLayer(windShadowLayer)) map.removeLayer(windShadowLayer);
+      _drawWindGhost();
+    }
+
+    function drawMergedWindShelter(payload) {
+      if (!windShadowLayer) windShadowLayer = L.layerGroup();
+      windShadowLayer.clearLayers();
+      (payload && payload.bands || []).forEach(function (band) {
+        (band.rings || []).forEach(function (polyRings) {
+          L.polygon(polyRings, Object.assign({ interactive: false },
+                    _WIND_STYLE[band.strength] || _WIND_STYLE.moderate))
+            .addTo(windShadowLayer);
+        });
+      });
+      if (typeof payload.wind_from_deg === 'number') _windAngle = payload.wind_from_deg;
+      // Authoritative result in — drop the ghost, show the clean merged layer.
+      if (windGhostLayer) windGhostLayer.clearLayers();
+      if (_windShadowOn && !map.hasLayer(windShadowLayer)) windShadowLayer.addTo(map);
+    }
+
+    function setWindShadowVisible(v) {
+      _windShadowOn = !!v;
+      if (_windShadowOn) {
+        if (windShadowLayer && windShadowLayer.getLayers().length) windShadowLayer.addTo(map);
+        else _drawWindGhost();
+      } else {
+        if (windShadowLayer) map.removeLayer(windShadowLayer);
+        if (windGhostLayer) map.removeLayer(windGhostLayer);
+      }
+    }
+
+    function clearWindShadow() {
+      if (windShadowLayer) windShadowLayer.clearLayers();
+      if (windGhostLayer) windGhostLayer.clearLayers();
+    }
+
+    // Called from the plant drag handler (03-plants.js) so dragged plants'
+    // shelter follows live. Match casters→markers ONCE at drag start (positions
+    // drift each frame), then update by markerId per frame.
+    var _windDrag = null;   // [{c: caster, markerId}]
+
+    function windShadowDragStart(origins) {
+      _windDrag = null;
+      if (!_windShadowOn || !_windCasters.length || !origins) return;
+      _windDrag = [];
+      origins.forEach(function (o) {
+        var best = null, bd = Infinity;
+        _windCasters.forEach(function (c) {
+          var d = (c.lat - o.lat) * (c.lat - o.lat) + (c.lng - o.lng) * (c.lng - o.lng);
+          if (d < bd) { bd = d; best = c; }
+        });
+        if (best) _windDrag.push({ c: best, markerId: o.markerId });
+      });
+      if (windShadowLayer && map.hasLayer(windShadowLayer)) map.removeLayer(windShadowLayer);
+    }
+
+    function windShadowApplyDrag(currentByMarkerId) {
+      if (!_windDrag) return;
+      _windDrag.forEach(function (e) {
+        var cur = currentByMarkerId[e.markerId];
+        if (cur) { e.c.lat = cur.lat; e.c.lng = cur.lng; }
+      });
+      _drawWindGhost();
+    }
+
+    function windShadowDragEnd() { _windDrag = null; }
 
     // ── Legend toggle ──────────────────────────────────────────────────────
     function toggleLegend() {

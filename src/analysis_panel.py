@@ -17,10 +17,10 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QComboBox, QDoubleSpinBox, QSpinBox,
     QFormLayout, QTabWidget, QSlider, QCheckBox, QColorDialog,
-    QGroupBox, QFrame, QTextEdit,
+    QGroupBox, QFrame, QTextEdit, QDial, QScrollArea,
 )
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor
+from PyQt6.QtCore import Qt, pyqtSignal, QThreadPool, QRunnable
+from PyQt6.QtGui import QColor, QPixmap
 
 
 class AnalysisPanel(QWidget):
@@ -41,14 +41,26 @@ class AnalysisPanel(QWidget):
     # A4: Wind/windbreak
     wind_requested = pyqtSignal(dict)       # {direction, speed_label, show_shelter}
     wind_cleared = pyqtSignal()
+    wind_data_requested = pyqtSignal()      # fetch real wind data for the site
+    # Live wind-shadow overlay (V1.68).
+    wind_shadow_toggled = pyqtSignal(bool)
+    wind_angle_changed_live = pyqtSignal(int)   # dial scrub (JS-only redraw)
+    wind_shadow_commit = pyqtSignal(int)        # dial released (Python merge)
 
     # Season view
     season_changed = pyqtSignal(str)        # "Spring" | "Summer" | "Fall" | "Winter"
+
+    # A cached species photo finished downloading off-thread — re-render the
+    # Habitat tab's species gallery (F11 / I1). Emitted from a worker thread;
+    # Qt delivers it to the GUI thread.
+    galleryImageReady = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._placed_plants: list[dict] = []
         self._structures: list[dict] = []
+        self._last_habitat_result = None          # for the species gallery re-render
+        self._gallery_warmed: set[str] = set()    # image urls already fetched once
         self._build_ui()
 
     def _build_ui(self):
@@ -454,13 +466,70 @@ class AnalysisPanel(QWidget):
         layout.setSpacing(8)
 
         info = QLabel(
-            "Mark prevailing wind direction. Windbreak structures and hedges "
-            "show a shelter zone behind them (10× their height).\n\n"
-            "Edmonton prevailing: NW in summer, W in winter."
+            "Fetch real seasonal wind data (Open-Meteo, free) for this site, or "
+            "set the prevailing direction by hand. Windbreaks and hedges show a "
+            "shelter zone behind them (10× their height)."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
         layout.addWidget(info)
+
+        # ── Real wind data (seasonal rose + current reading) ───────────────
+        btn_fetch = QPushButton("Fetch wind data (Open-Meteo)")
+        btn_fetch.setStyleSheet(
+            "QPushButton { background: #00695c; color: #e0f2f1; "
+            "border: 1px solid #00897b; border-radius: 4px; padding: 6px; "
+            "font-weight: bold; } QPushButton:hover { background: #00897b; }")
+        btn_fetch.setToolTip(
+            "Download a seasonal wind rose + current reading for this location. "
+            "Cached for offline use after the first fetch.")
+        btn_fetch.clicked.connect(self.wind_data_requested.emit)
+        layout.addWidget(btn_fetch)
+
+        from src.wind_rose_widget import WindRoseWidget
+        self._wind_rose = WindRoseWidget()
+        layout.addWidget(self._wind_rose)
+
+        self._wind_current_lbl = QLabel("")
+        self._wind_current_lbl.setStyleSheet("color: #b3e5fc; font-size: 12px;")
+        layout.addWidget(self._wind_current_lbl)
+
+        self._wind_status_lbl = QLabel("")
+        self._wind_status_lbl.setWordWrap(True)
+        self._wind_status_lbl.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        layout.addWidget(self._wind_status_lbl)
+
+        self._wind_advice_lbl = QLabel("")
+        self._wind_advice_lbl.setWordWrap(True)
+        self._wind_advice_lbl.setStyleSheet(
+            "color: #c5e1a5; font-size: 11px; font-style: italic;")
+        layout.addWidget(self._wind_advice_lbl)
+
+        # ── Live wind shadow (V1.68): per-plant sheltered zones that update as
+        # you turn the dial or drag a plant.
+        self._wind_shadow_chk = QCheckBox("Live wind shadow (sheltered zones)")
+        self._wind_shadow_chk.setToolTip(
+            "Show the leeward shelter of trees/shrubs, merged and porosity-aware. "
+            "Turn the dial or drag a plant to see it update live.")
+        self._wind_shadow_chk.toggled.connect(self.wind_shadow_toggled.emit)
+        layout.addWidget(self._wind_shadow_chk)
+
+        dial_row = QHBoxLayout()
+        self._wind_dial = QDial()
+        self._wind_dial.setRange(0, 359)
+        self._wind_dial.setWrapping(True)
+        self._wind_dial.setNotchesVisible(True)
+        self._wind_dial.setValue(270)
+        self._wind_dial.setFixedSize(90, 90)
+        self._wind_dial.valueChanged.connect(self._on_wind_dial)
+        self._wind_dial.sliderReleased.connect(
+            lambda: self.wind_shadow_commit.emit(self._wind_dial.value()))
+        dial_row.addWidget(self._wind_dial)
+        self._wind_dial_lbl = QLabel("Wind from 270°")
+        self._wind_dial_lbl.setStyleSheet("color: #b3e5fc; font-size: 11px;")
+        dial_row.addWidget(self._wind_dial_lbl)
+        dial_row.addStretch()
+        layout.addLayout(dial_row)
 
         form = QFormLayout()
         form.setContentsMargins(0, 0, 0, 0)
@@ -529,6 +598,60 @@ class AnalysisPanel(QWidget):
             "show_arrows": self._wind_arrows.isChecked(),
         })
 
+    # ── Real wind data (V1.67) ──────────────────────────────────────────────
+
+    def set_wind_status(self, text: str):
+        self._wind_status_lbl.setText(text)
+
+    def set_wind_advice(self, text: str):
+        self._wind_advice_lbl.setText(text or "")
+
+    def _on_wind_dial(self, value: int):
+        self._wind_dial_lbl.setText(f"Wind from {value}°")
+        self.wind_angle_changed_live.emit(value)
+
+    def set_wind_data(self, rose: dict, current: dict | None):
+        """Populate the Wind tab from a fetched rose + current reading: draw the
+        rose, set the prevailing-direction/speed controls to the data, and show
+        the live reading. Also surfaces a windbreak hint via the design hook in
+        the controller (which reads the same rose from the cache)."""
+        if not rose:
+            self.set_wind_status(
+                "Wind data unavailable (offline and nothing cached).")
+            self._wind_rose.set_block(None)
+            return
+        annual = rose.get("annual") or {}
+        self._wind_rose.set_block(annual)
+
+        from src.wind import dir_index, speed_category
+        prevailing = annual.get("prevailing_deg")
+        if prevailing is not None:
+            self._wind_dir.setCurrentIndex(dir_index(prevailing))
+            blocked = self._wind_dial.blockSignals(True)
+            self._wind_dial.setValue(int(prevailing) % 360)
+            self._wind_dial.blockSignals(blocked)
+            self._wind_dial_lbl.setText(f"Wind from {int(prevailing) % 360}°")
+        cat = speed_category(annual.get("mean_speed"))
+        idx = self._wind_speed.findText(cat)
+        if idx >= 0:
+            self._wind_speed.setCurrentIndex(idx)
+
+        if current:
+            self._wind_current_lbl.setText(
+                f"Now: {current['speed']:.0f} km/h from {current['dir_label']}"
+                + (f", gusts {current['gusts']:.0f}" if current.get("gusts")
+                   else ""))
+        else:
+            self._wind_current_lbl.setText("")
+
+        label = annual.get("prevailing_label") or "—"
+        mean = annual.get("mean_speed")
+        calm = annual.get("calm_pct")
+        src = rose.get("source", "")
+        self.set_wind_status(
+            f"Prevailing {label} · mean {mean:.0f} km/h · calm {calm:.0f}%  "
+            f"({src}). Click 'Show Wind Overlay' to apply.")
+
     # ═════════════════════════════════════════════════════════════════════════
     #  Season View
     # ═════════════════════════════════════════════════════════════════════════
@@ -578,7 +701,14 @@ class AnalysisPanel(QWidget):
     # ═════════════════════════════════════════════════════════════════════════
 
     def _build_habitat_tab(self):
+        # Scrollable page: this tab is tall (score, value, species gallery,
+        # breakdown, tips, shade) and used to overlap when squeezed into a fixed
+        # height. A scroll area lets it grow instead (matches site_panel).
+        page = QScrollArea()
+        page.setWidgetResizable(True)
+        page.setFrameShape(QFrame.Shape.NoFrame)
         tab = QWidget()
+        page.setWidget(tab)
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(8)
@@ -611,6 +741,41 @@ class AnalysisPanel(QWidget):
         )
         layout.addWidget(self._habitat_score_label)
 
+        # Species galleries (F11 / I1) — photos that make the value tangible.
+        # "Species doing the work" = the plants (keystone / host / bird-food
+        # first); "Species supported" = the fauna those plants feed/host. Both
+        # show cached photos immediately and warm the rest in the background.
+        def _gallery_strip(title: str):
+            lbl = QLabel(title)
+            lbl.setStyleSheet(
+                "color: #a5d6a7; font-size: 12px; font-weight: bold; "
+                "padding: 4px 0 2px 0;")
+            lbl.setVisible(False)
+            area = QScrollArea()
+            area.setWidgetResizable(True)
+            area.setFrameShape(QFrame.Shape.NoFrame)
+            area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+            area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            area.setFixedHeight(122)
+            area.setVisible(False)
+            area.setStyleSheet(
+                "background: #14241a; border: 1px solid #2e4a2e; border-radius: 4px;")
+            inner = QWidget()
+            row = QHBoxLayout(inner)
+            row.setContentsMargins(6, 6, 6, 6)
+            row.setSpacing(8)
+            row.addStretch()   # keep cards left-aligned
+            area.setWidget(inner)
+            layout.addWidget(lbl)
+            layout.addWidget(area)
+            return lbl, area, row
+
+        (self._species_gallery_label, self._species_gallery,
+         self._species_gallery_row) = _gallery_strip("Species doing the work")
+        (self._fauna_gallery_label, self._fauna_gallery,
+         self._fauna_gallery_row) = _gallery_strip("Species supported")
+        self.galleryImageReady.connect(self._on_gallery_image_ready)
+
         # Breakdown
         self._habitat_breakdown = QLabel("")
         self._habitat_breakdown.setWordWrap(True)
@@ -621,7 +786,7 @@ class AnalysisPanel(QWidget):
         )
         self._habitat_breakdown.setAlignment(Qt.AlignmentFlag.AlignTop)
         self._habitat_breakdown.setMinimumHeight(220)
-        layout.addWidget(self._habitat_breakdown, 1)
+        layout.addWidget(self._habitat_breakdown)
 
         # Tips for raising your score
         tips_label = QLabel("Tips for raising your score")
@@ -636,7 +801,7 @@ class AnalysisPanel(QWidget):
             "font-size: 11px; }"
         )
         self._habitat_tips.setMinimumHeight(160)
-        layout.addWidget(self._habitat_tips, 1)
+        layout.addWidget(self._habitat_tips)
 
         # Shade-zone breakdown — read-only summary of the cached shade tags
         # (Site tab → "Classify planting zones"). Shown here so the light mix is
@@ -667,7 +832,7 @@ class AnalysisPanel(QWidget):
 
         # Short tab label so all five fit the strip even with macOS's wider
         # font; the page itself carries the full "Habitat Value" wording.
-        self._tabs.addTab(tab, "Habitat")
+        self._tabs.addTab(page, "Habitat")
 
     def set_shade_breakdown(self, counts: dict | None):
         """Render the cached shade-tag mix (``{tag: n}`` from
@@ -738,6 +903,16 @@ class AnalysisPanel(QWidget):
             "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px; padding: 12px;"
         )
 
+        # Species photos that make the value tangible (F11 / I1): the plants
+        # doing the work and the fauna they support.
+        self._last_habitat_result = result
+        try:
+            self._render_galleries(result)
+        except Exception:  # noqa: BLE001 — galleries are a nicety, never break the score
+            for w in (self._species_gallery_label, self._species_gallery,
+                      self._fauna_gallery_label, self._fauna_gallery):
+                w.setVisible(False)
+
         # Breakdown text — layout unchanged from the pre-extraction code;
         # values now come off the HabitatScore result.
         lines = [
@@ -774,6 +949,23 @@ class AnalysisPanel(QWidget):
             parts = [f"{n} {_taxon_label.get(t, t)}"
                      for t, n in result.fauna_by_taxon.items()]
             lines.append("Wildlife supported   " + ", ".join(parts))
+        # Food-web completeness (F3): does the design close the Tallamy chain
+        # (host plants → caterpillars → the birds that eat them)? Informational,
+        # never summed into the headline.
+        food_web = getattr(result, "food_web", None)
+        if food_web:
+            _food_web_msg = {
+                "complete": "Food web   supports caterpillars and the "
+                            "birds that eat them",
+                "no_birds": "Food web   caterpillars, but no bird support "
+                            "yet; add berry/seed plants",
+                "no_hosts": "Food web   birds, but no host plants yet; "
+                            "add caterpillar hosts",
+                "empty":    "Food web   no host plants or bird support yet",
+            }
+            _fw_line = _food_web_msg.get(food_web.get("status"))
+            if _fw_line:
+                lines.append(_fw_line)
         if result.gap_months:
             month_names = ["Jan","Feb","Mar","Apr","May","Jun",
                            "Jul","Aug","Sep","Oct","Nov","Dec"]
@@ -810,6 +1002,154 @@ class AnalysisPanel(QWidget):
             placed_ids=placed_ids,
         )
         self._habitat_tips.setHtml(tips_html)
+
+    # ── Species gallery (F11 / I1): photos of the design's high-value species ──
+
+    def _gallery_species(self, result) -> list:
+        """The design's species worth picturing, highest-value first (keystone →
+        host → bird-food → other natives), limited to those with an image URL.
+        Returns ``(name, cached_path_or_None, url, attribution, license)`` tuples."""
+        from src.db.plants import get_plant
+        from src.image_cache import get_cached_image
+        recs: dict = {}
+        for pid in getattr(result, "scored_plant_ids", None) or []:
+            try:
+                r = get_plant(pid)
+            except Exception:  # noqa: BLE001
+                r = None
+            if r and r.get("image_url") and r.get("common_name"):
+                recs.setdefault(r["common_name"], r)
+        priority = (list(result.keystone_species) + list(result.host_species)
+                    + list(result.bird_species))
+        out: list = []
+        seen: set = set()
+
+        def _add(r):
+            nm = r.get("common_name")
+            if not nm or nm in seen:
+                return
+            seen.add(nm)
+            url = r.get("image_url")
+            out.append((nm, get_cached_image(url), url,
+                        r.get("image_attribution", ""), r.get("image_license", "")))
+
+        for nm in priority:
+            if nm in recs:
+                _add(recs[nm])
+        for r in recs.values():
+            if r.get("native_to_alberta"):
+                _add(r)
+        return out[:12]
+
+    def _make_species_card(self, name: str, path: str) -> QWidget:
+        """A small thumbnail + caption card for one species."""
+        card = QWidget()
+        v = QVBoxLayout(card)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(2)
+        thumb = QLabel()
+        thumb.setFixedSize(96, 72)
+        thumb.setScaledContents(True)
+        pm = QPixmap(path)
+        if not pm.isNull():
+            thumb.setPixmap(pm)
+        thumb.setStyleSheet("border: 1px solid #2e4a2e; border-radius: 3px;")
+        cap = QLabel(name)
+        cap.setWordWrap(True)
+        cap.setFixedWidth(96)
+        cap.setStyleSheet("color: #c8e6c9; font-size: 9px;")
+        v.addWidget(thumb)
+        v.addWidget(cap)
+        return card
+
+    def _fauna_gallery_species(self, result) -> list:
+        """The fauna the design supports, deduped, limited to those with an image
+        URL. Returns ``(name, cached_path_or_None, url, attribution, license)``."""
+        from src.db.fauna import fauna_for_plants
+        from src.image_cache import get_cached_image
+        ids = list(getattr(result, "scored_plant_ids", None) or [])
+        if not ids:
+            return []
+        try:
+            rows = fauna_for_plants(ids)
+        except Exception:  # noqa: BLE001
+            return []
+        out: list = []
+        seen: set = set()
+        for f in rows:
+            nm = f.get("common_name")
+            url = f.get("image_url")
+            key = f.get("id") if f.get("id") is not None else nm
+            if not nm or not url or key in seen:
+                continue
+            seen.add(key)
+            out.append((nm, get_cached_image(url), url,
+                        f.get("image_attribution", ""), f.get("image_license", "")))
+        return out[:12]
+
+    def _fill_gallery(self, label, area, row, items) -> list:
+        """Fill one gallery strip: cached photos become cards now; the rest are
+        returned as ``(url, attr, lic)`` pending tuples to warm. Shows the strip
+        only when at least one photo is ready."""
+        while row.count() > 1:                       # keep the trailing stretch
+            it = row.takeAt(0)
+            w = it.widget()
+            if w is not None:
+                w.deleteLater()
+        pending: list = []
+        shown = 0
+        for name, path, url, attr, lic in items:
+            if path:
+                row.insertWidget(row.count() - 1, self._make_species_card(name, path))
+                shown += 1
+            elif url and url not in self._gallery_warmed:
+                pending.append((url, attr, lic))
+        label.setVisible(shown > 0)
+        area.setVisible(shown > 0)
+        return pending
+
+    def _render_galleries(self, result):
+        """Render both photo strips (plants doing the work + fauna supported),
+        warming any not-yet-cached photos; the strips re-render as they land."""
+        pending = self._fill_gallery(
+            self._species_gallery_label, self._species_gallery,
+            self._species_gallery_row, self._gallery_species(result))
+        pending += self._fill_gallery(
+            self._fauna_gallery_label, self._fauna_gallery,
+            self._fauna_gallery_row, self._fauna_gallery_species(result))
+        if pending:
+            for url, _attr, _lic in pending:
+                self._gallery_warmed.add(url)
+            self._warm_gallery_images(pending)
+
+    def _warm_gallery_images(self, pending: list):
+        """Fetch+cache the not-yet-cached species photos off the UI thread,
+        re-rendering the strip as each lands (mirrors plant_list_view's warm)."""
+        sig = self.galleryImageReady
+
+        class _FetchTask(QRunnable):
+            def __init__(self, url, attr, lic):
+                super().__init__()
+                self._url, self._attr, self._lic = url, attr, lic
+
+            def run(self):
+                try:
+                    from src.image_cache import resolve_image
+                    if resolve_image(self._url, self._attr, self._lic):
+                        sig.emit()
+                except Exception:  # noqa: BLE001 — a missing photo is not an error
+                    pass
+
+        for url, attr, lic in pending:
+            QThreadPool.globalInstance().start(_FetchTask(url, attr, lic))
+
+    def _on_gallery_image_ready(self):
+        res = self._last_habitat_result
+        if res is not None:
+            try:
+                self._render_galleries(res)
+            except Exception:  # noqa: BLE001
+                pass
 
     # Canonical layer names paired with the plant_types that fulfil them.
     _LAYER_TO_PLANT_TYPES = {

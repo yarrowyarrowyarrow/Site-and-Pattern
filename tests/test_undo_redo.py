@@ -225,5 +225,375 @@ class TestUndoRedoRoundTrips(unittest.TestCase):
         self.assertEqual(self.w._store.check_consistency(), [])
 
 
+@unittest.skipUnless(_HAVE_WINDOW, _SKIP_REASON)
+class TestSnapshotUndoExhaustive(unittest.TestCase):
+    """V1.81: the snapshot catch-all that makes undo exhaustive. Each gap
+    action (bulk placement, removal, edit, clear) records one "snapshot"
+    undo step; undo reverses it and redo reapplies it, with the ProjectStore
+    staying consistent throughout."""
+
+    def setUp(self):
+        self._app, self.w = _make_window()
+
+    def tearDown(self):
+        self.w._modified = False
+        self.w.close()
+        self.w.deleteLater()
+        for _ in range(5):
+            self._app.processEvents()
+
+    # ── helpers ──────────────────────────────────────────────────────────
+
+    def _features(self):
+        return [f for f in self.w._project["features"]]
+
+    def _assert_snapshot_top(self):
+        self.assertTrue(self.w._undo_stack)
+        self.assertEqual(self.w._undo_stack[-1]["action"], "snapshot")
+
+    def _reversal_round_trip(self, n_before, n_after):
+        """A decorated action took features n_before → n_after. Undo restores
+        n_before; redo reapplies n_after; leave it undone + consistent."""
+        self.assertEqual(len(self._features()), n_after)
+        self._assert_snapshot_top()
+        self.w._do_undo()
+        self.assertEqual(len(self._features()), n_before)
+        self.w._do_redo()
+        self.assertEqual(len(self._features()), n_after)
+        self.w._do_undo()
+        self.assertEqual(len(self._features()), n_before)
+        self.assertEqual(self.w._store.check_consistency(), [])
+
+    def _place_plant_community(self):
+        """Two plants tagged as one community instance (precondition for the
+        polyculture-removal test) placed through the store, undo cleared."""
+        from src.project_store import store_for
+        s = store_for(self.w)
+        for pid, name, lat in ((1, "A", 53.50), (2, "B", 53.501)):
+            s.add_plant(pid, name, lat, -113.5, placement_group_id="pg1",
+                        polyculture_name="Mound",
+                        polyculture_center_lat=53.5,
+                        polyculture_center_lng=-113.5)
+        self.w._clear_undo()
+
+    # ── bulk placement ───────────────────────────────────────────────────
+
+    def test_pattern_placement_round_trip(self):
+        n = len(self._features())
+        self.w._map_events._on_pattern_placed(
+            1, "Saskatoon", 1.0, "shrub", "",
+            json.dumps([[53.5, -113.5], [53.501, -113.5], [53.502, -113.5]]),
+            "row")
+        self._assert_snapshot_top()
+        self._reversal_round_trip(n, n + 3)
+
+    def test_community_click_round_trip(self):
+        # A single click in polyculture mode drops a whole community; undo must
+        # remove ALL members, not just the central one (the reported bug).
+        self.w._current_mode = 'polyculture'
+        self.w._pending_polyculture = {
+            "name": "Pollinator Mound",
+            "members": [
+                {"plant_id": 1, "common_name": "A", "offset_x": 0, "offset_y": 0},
+                {"plant_id": 2, "common_name": "B", "offset_x": 2, "offset_y": 0},
+                {"plant_id": 3, "common_name": "C", "offset_x": 0, "offset_y": 2},
+            ],
+        }
+        n = len(self._features())
+        self.w._map_events._on_polyculture_click(53.5, -113.5)
+        self._assert_snapshot_top()
+        self._reversal_round_trip(n, n + 3)
+
+    # ── removals ─────────────────────────────────────────────────────────
+
+    def test_plant_removal_round_trip(self):
+        self.w._on_plant_placed(1, "Saskatoon", 53.5, -113.5)
+        self.w._clear_undo()
+        n = len(self._features())
+        self.w._map_events._on_plant_removed("m1", 1, 53.5, -113.5)
+        self._reversal_round_trip(n, n - 1)
+
+    def test_batch_removal_round_trip(self):
+        self.w._on_plant_placed(1, "A", 53.5, -113.5)
+        self.w._on_plant_placed(2, "B", 53.51, -113.51)
+        self.w._clear_undo()
+        n = len(self._features())
+        self.w._map_events._on_plants_removed_batch(json.dumps([
+            {"plantId": 1, "lat": 53.5, "lng": -113.5},
+            {"plantId": 2, "lat": 53.51, "lng": -113.51}]))
+        self._reversal_round_trip(n, n - 2)
+
+    def test_polyculture_removal_round_trip(self):
+        self._place_plant_community()
+        n = len(self._features())
+        self.w._map_events._on_polyculture_removed("Mound", 53.5, -113.5)
+        self._reversal_round_trip(n, n - 2)
+
+    def test_structure_removal_round_trip(self):
+        self.w._map_events._on_structure_placed(
+            "bee_hotel", "Bee hotel", 53.5005, -113.4995, 0.5)
+        self.w._clear_undo()
+        n = len(self._features())
+        self.w._map_events._on_structure_removed(
+            "m1", "bee_hotel", 53.5005, -113.4995)
+        self._reversal_round_trip(n, n - 1)
+
+    def test_boundary_removal_round_trip(self):
+        self.w.map_widget.load_boundary = lambda *a, **k: None
+        self.w._map_events._on_boundary_complete(
+            "b1", [[53.5, -113.5], [53.501, -113.5], [53.501, -113.499]],
+            "green")
+        self.w._clear_undo()
+        n = len(self._features())
+        self.w._map_events._on_boundary_removed("b1")
+        self._reversal_round_trip(n, n - 1)
+
+    def test_contour_removal_round_trip(self):
+        pts = json.dumps([[53.5, -113.5], [53.5002, -113.4998]])
+        self.w._map_events._on_contour_complete(pts, 660.0, "#795548")
+        self.w._clear_undo()
+        n = len(self._features())
+        self.w._map_events._on_contour_removed(pts, 660.0, "#795548")
+        self._reversal_round_trip(n, n - 1)
+
+    def test_contour_clear_round_trip(self):
+        self.w._map_events._on_contour_complete(
+            json.dumps([[53.5, -113.5], [53.5002, -113.4998]]), 660.0,
+            "#795548")
+        self.w._map_events._on_contour_complete(
+            json.dumps([[53.5, -113.4], [53.5002, -113.398]]), 661.0,
+            "#795548")
+        self.w._clear_undo()
+        n = len(self._features())
+        self.w._map_events._on_contour_cleared()
+        self._reversal_round_trip(n, n - 2)
+
+    def test_hedgerow_removal_round_trip(self):
+        self.w._map_events._on_hedgerow_complete(
+            "h1", json.dumps([[53.5, -113.5], [53.5003, -113.5]]),
+            "willow", "hedge", 30.0, 10)
+        self.w._clear_undo()
+        n = len(self._features())
+        self.w._map_events._on_hedgerow_removed(
+            "h1", json.dumps([[53.5, -113.5], [53.5003, -113.5]]))
+        self._reversal_round_trip(n, n - 1)
+
+    def test_shape_removal_round_trip(self):
+        self.w._map_events._on_shape_complete(
+            "s1", json.dumps([[53.5, -113.5], [53.5002, -113.5],
+                              [53.5002, -113.4998]]),
+            "Bed", "Custom", "#4caf50", "#2e7d32", 0.25, "", 25.0, 0.0)
+        self.w._clear_undo()
+        n = len(self._features())
+        self.w._map_events._on_shape_removed("s1")
+        self._reversal_round_trip(n, n - 1)
+
+    def test_auto_terrain_clear_round_trip(self):
+        self.w._project["features"].append({
+            "type": "Feature",
+            "geometry": {"type": "MultiLineString",
+                         "coordinates": [[[-113.5, 53.5], [-113.4, 53.5]]]},
+            "properties": {"element_type": "auto_contour", "elevation_m": 675},
+        })
+        self.w._store.rebuild_index()
+        self.w._clear_undo()
+        n = len(self._features())
+        self.w._map_events._on_auto_terrain_cleared()
+        self._reversal_round_trip(n, n - 1)
+
+    # ── edits (feature count unchanged; content changes) ─────────────────
+
+    def test_boundary_props_edit_round_trip(self):
+        self.w.map_widget.load_boundary = lambda *a, **k: None
+        self.w._map_events._on_boundary_complete(
+            "b1", [[53.5, -113.5], [53.501, -113.5], [53.501, -113.499]],
+            "green")
+        self.w._clear_undo()
+
+        def _color():
+            for f in self._features():
+                if f["properties"].get("boundary_id") == "b1":
+                    return f["properties"].get("color")
+            return None
+        self.assertEqual(_color(), "green")
+        self.w._map_events._on_boundary_props_changed("b1", "blue", False, False)
+        self.assertEqual(_color(), "blue")
+        self._assert_snapshot_top()
+        self.w._do_undo()
+        self.assertEqual(_color(), "green")
+        self.w._do_redo()
+        self.assertEqual(_color(), "blue")
+        self.w._do_undo()
+        self.assertEqual(self.w._store.check_consistency(), [])
+
+    def test_shape_height_edit_round_trip(self):
+        self.w._map_events._on_shape_complete(
+            "s1", json.dumps([[53.5, -113.5], [53.5002, -113.5],
+                              [53.5002, -113.4998]]),
+            "Bed", "Custom", "#4caf50", "#2e7d32", 0.25, "", 25.0, 0.0)
+        self.w._clear_undo()
+
+        def _etype():
+            for f in self._features():
+                if f["properties"].get("shape_id") == "s1":
+                    return f["properties"].get("element_type")
+            return None
+        self.assertEqual(_etype(), "custom_shape")
+        self.w._map_events._on_shape_height_changed("s1", 3.0)
+        self.assertEqual(_etype(), "canopy_footprint")   # now casts shade
+        self._assert_snapshot_top()
+        self.w._do_undo()
+        self.assertEqual(_etype(), "custom_shape")
+        self.w._do_redo()
+        self.assertEqual(_etype(), "canopy_footprint")
+        self.w._do_undo()
+        self.assertEqual(self.w._store.check_consistency(), [])
+
+    # ── annotations ──────────────────────────────────────────────────────
+
+    def test_annotation_add_round_trip(self):
+        from PyQt6 import QtWidgets
+        orig = QtWidgets.QInputDialog.getText
+        QtWidgets.QInputDialog.getText = staticmethod(
+            lambda *a, **k: ("Wet corner", True))
+        try:
+            n = len(self._features())
+            self.w._map_events._on_annotate_requested(53.5, -113.5)
+        finally:
+            QtWidgets.QInputDialog.getText = orig
+        self._reversal_round_trip(n, n + 1)
+
+    def test_annotation_remove_round_trip(self):
+        self.w._project["features"].append({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [-113.5, 53.5]},
+            "properties": {"element_type": "annotation",
+                           "annotation_id": "ann_1", "text": "note"},
+        })
+        self.w._clear_undo()
+        n = len(self._features())
+        self.w._map_events._on_annotation_removed("ann_1")
+        self._reversal_round_trip(n, n - 1)
+
+    # ── analysis-overlay toggles (Part 3) ────────────────────────────────
+
+    def test_wind_shadow_toggle_round_trip(self):
+        self.w._clear_undo()
+        self.assertFalse(getattr(self.w, "_wind_shadow_on", False))
+        self.w._map_events._on_wind_shadow_toggled(True)
+        self.assertTrue(self.w._wind_shadow_on)
+        self._assert_snapshot_top()
+        self.w._do_undo()
+        self.assertFalse(self.w._wind_shadow_on)
+        self.w._do_redo()
+        self.assertTrue(self.w._wind_shadow_on)
+        self.w._do_undo()
+        self.assertFalse(self.w._wind_shadow_on)
+
+    def test_sun_path_round_trip(self):
+        self.w._clear_undo()
+        self.w._pending_sun_config = {"date": "2026-06-21", "date_label": "Jun 21"}
+        self.w._map_events._on_sun_anchor_placed(53.5, -113.5)
+        self.assertIsNotNone(self.w._active_sun_state)
+        self._assert_snapshot_top()
+        self.w._do_undo()
+        self.assertIsNone(self.w._active_sun_state)
+        self.w._do_redo()
+        self.assertIsNotNone(self.w._active_sun_state)
+
+    def test_sectors_round_trip(self):
+        self.w._clear_undo()
+        self.w._pending_sector_config = {"sectors": [{"name": "Morning"}]}
+        self.w._map_events._on_sector_anchor_placed(53.5, -113.5)
+        self.assertIsNotNone(self.w._active_sector_state)
+        self._assert_snapshot_top()
+        self.w._do_undo()
+        self.assertIsNone(self.w._active_sector_state)
+        self.w._do_redo()
+        self.assertIsNotNone(self.w._active_sector_state)
+
+    def test_site_pin_round_trip(self):
+        self.w._clear_undo()
+
+        def _pin_lat():
+            return (self.w._project["properties"]
+                    .get("site_config", {}).get("latitude"))
+        self.w._map_events._on_site_pin_placed(53.5, -113.5, "Home")
+        self.assertEqual(_pin_lat(), 53.5)
+        self._assert_snapshot_top()
+        self.w._do_undo()
+        self.assertIsNone(_pin_lat())
+        self.w._do_redo()
+        self.assertEqual(_pin_lat(), 53.5)
+
+    def test_shade_toggle_round_trip(self):
+        # Drive the worker's ready callback directly (no elevation fetch).
+        self.w._clear_undo()
+        self.w._shade_overlay_active = False
+        self.w._persistence.begin_shade_undo()
+        self.w._map_events._on_shade_ready(
+            {"data_url": "data:image/png;base64,iVBORw0KGgo=",
+             "bbox": {"north": 53.6, "south": 53.5,
+                      "east": -113.4, "west": -113.5}})
+        self.assertTrue(self.w._shade_overlay_active)
+        self._assert_snapshot_top()
+        self.w._do_undo()
+        self.assertFalse(self.w._shade_overlay_active)
+        self.w._do_redo()
+        self.assertTrue(self.w._shade_overlay_active)
+
+    def test_redo_toolbar_button_enabled_state(self):
+        # The toolbar Redo button greys out unless the redo stack is non-empty.
+        self.w._clear_undo()
+        self.assertFalse(self.w.toolbar._act_redo.isEnabled())
+        self.w._on_plant_placed(1, "Saskatoon", 53.5, -113.5)
+        self.assertTrue(self.w.toolbar._act_undo.isEnabled())
+        self.assertFalse(self.w.toolbar._act_redo.isEnabled())
+        self.w._do_undo()
+        self.assertTrue(self.w.toolbar._act_redo.isEnabled())
+        self.w._do_redo()
+        self.assertFalse(self.w.toolbar._act_redo.isEnabled())
+
+    # ── engine semantics ─────────────────────────────────────────────────
+
+    def test_checkpoint_noop_records_nothing(self):
+        self.w._clear_undo()
+        with self.w._persistence.checkpoint("nothing"):
+            pass
+        self.assertEqual(self.w._undo_stack, [])
+
+    def test_checkpoint_reentrant_single_entry(self):
+        self.w._clear_undo()
+        p = self.w._persistence
+        with p.checkpoint("outer"):
+            with p.checkpoint("inner"):
+                self.w._project["features"].append({
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [-113.5, 53.5]},
+                    "properties": {"element_type": "annotation",
+                                   "annotation_id": "a", "text": "t"}})
+        self.assertEqual(len(self.w._undo_stack), 1)
+        self.assertEqual(self.w._undo_stack[-1]["action"], "snapshot")
+
+    def test_snapshot_new_action_clears_redo(self):
+        self.w._clear_undo()
+        self.w._map_events._on_annotate_requested  # noqa: B018 (keep ref)
+        with self.w._persistence.checkpoint("add a"):
+            self.w._project["features"].append({
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [-113.5, 53.5]},
+                "properties": {"element_type": "annotation",
+                               "annotation_id": "a", "text": "t"}})
+        self.w._do_undo()
+        self.assertTrue(self.w._redo_stack)
+        with self.w._persistence.checkpoint("add b"):
+            self.w._project["features"].append({
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [-113.4, 53.6]},
+                "properties": {"element_type": "annotation",
+                               "annotation_id": "b", "text": "t"}})
+        self.assertFalse(self.w._redo_stack)
+
+
 if __name__ == "__main__":
     unittest.main()

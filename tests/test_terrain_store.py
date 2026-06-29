@@ -130,7 +130,7 @@ class TestDbPathPlatforms(unittest.TestCase):
              mock.patch.dict(os.environ, {"APPDATA": appdata}), \
              mock.patch.object(os, "makedirs"):
             path = ts._db_path()
-        self.assertEqual(path, os.path.join(appdata, "PermaDesign", "terrain.db"))
+        self.assertEqual(path, os.path.join(appdata, "Site & Pattern", "terrain.db"))
 
     def test_macos_uses_application_support(self):
         with mock.patch.object(os, "name", "posix"), \
@@ -139,7 +139,7 @@ class TestDbPathPlatforms(unittest.TestCase):
             path = ts._db_path()
         expected = os.path.join(os.path.expanduser("~"),
                                 "Library", "Application Support",
-                                "PermaDesign", "terrain.db")
+                                "Site & Pattern", "terrain.db")
         self.assertEqual(path, expected)
 
     def test_linux_uses_xdg_data_home(self):
@@ -149,7 +149,7 @@ class TestDbPathPlatforms(unittest.TestCase):
              mock.patch.object(os, "makedirs"):
             path = ts._db_path()
         self.assertEqual(path, os.path.join("/tmp/xdg-test",
-                                            "PermaDesign", "terrain.db"))
+                                            "Site & Pattern", "terrain.db"))
 
 
 if __name__ == "__main__":

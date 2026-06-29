@@ -47,12 +47,18 @@ OTHER_COLOR = '#81c784'
 # (html/map.html mirrors it as TYPE_COLORS), and the 3D scene contract
 # (src/scene_contract) — lives here because this module is Qt-free.
 TYPE_COLORS: dict[str, str] = {
-    "tree":        "#2e7d32",
-    "shrub":       "#558b2f",
-    "herb":        "#7cb342",
-    "groundcover": "#c6a817",
-    "vine":        "#00838f",
-    "root":        "#6d4c41",
+    "tree":        "#2e7d32",   # dark green
+    "shrub":       "#558b2f",   # olive green
+    "wildflower":  "#ab47bc",   # purple — flowering forbs (V1.87)
+    "herb":        "#9ccc65",   # light green — foliage / medicinal herbs
+    "groundcover": "#c6a817",   # gold
+    "grass":       "#cddc39",   # lime — true grasses
+    "sedge":       "#8d6e63",   # taupe — sedges
+    "rush":        "#5d4037",   # brown — rushes
+    "vine":        "#00838f",   # teal
+    "fern":        "#33691e",   # deep olive
+    "aquatic":     "#29b6f6",   # blue — aquatic / wetland
+    "root":        "#6d4c41",   # legacy (no plants currently tagged 'root')
 }
 
 

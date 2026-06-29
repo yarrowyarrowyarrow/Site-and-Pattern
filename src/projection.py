@@ -1,7 +1,7 @@
 """
 projection.py — Lat/lng ↔ local-metre projection with a UTM upgrade path.
 
-PermaDesign's distance and area maths historically used an ad-hoc
+Site & Pattern's distance and area maths historically used an ad-hoc
 equirectangular ("cosLat") approximation: one degree of latitude is
 ~111,320 m everywhere, and one degree of longitude is that scaled by
 cos(latitude). That's accurate to ~1% over spans under a couple of km
@@ -30,8 +30,11 @@ from __future__ import annotations
 import math
 from typing import Optional
 
-# Metres per degree of latitude (WGS-84 mean) — the legacy constant.
-_M_PER_DEG_LAT = 111320.0
+# Metres per degree of latitude (WGS-84 mean) — the legacy constant. Public so
+# other modules (shade, property_data) share one source of truth instead of
+# re-inlining the literal.
+M_PER_DEG_LAT = 111320.0
+_M_PER_DEG_LAT = M_PER_DEG_LAT  # internal alias kept for existing references
 
 _BACKENDS = ("coslat", "utm")
 _default_backend = "coslat"

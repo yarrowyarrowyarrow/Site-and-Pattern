@@ -21,6 +21,14 @@ plants.db
 # USDA download artifact (created by import_usda.py)
 data/usda_plants_raw.txt
 
+# Generated plant catalogue (regenerate from plants_master.json via
+# scripts/export_plant_docx.py — not tracked)
+/plant_data.docx
+
+# Build-time version stamp (written by build_installer.sh/.bat for the
+# frozen app's in-app updater; regenerated on every build)
+version.txt
+
 # Editor / OS
 .idea/
 .vscode/

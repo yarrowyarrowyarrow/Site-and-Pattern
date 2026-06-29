@@ -1,5 +1,5 @@
 """
-app.py — Main application window for PermaDesign.
+app.py — Main application window for Site & Pattern.
 
 Layout
 ------
@@ -38,7 +38,7 @@ from src.analysis_panel   import AnalysisPanel
 from src.planning_panel   import PlanningPanel
 from src.site_panel       import SitePanel
 from src.toolbar          import MainToolbar
-from src.climate          import get_zone, zone_label
+from src.climate          import zone_label
 from src.collapsible_panel import CollapsibleSidebar
 import src.project as project_io
 from src.controllers.update_flow import UpdateFlowController
@@ -50,6 +50,9 @@ from src.controllers.area_fill_controller import AreaFillController
 from src.project_store import ProjectStore
 from src.scan_import_dialog import start_scan_import as _start_scan_import
 from src.scene3d_window import open_3d_view as _open_3d_view
+from src.snapshot_window import open_snapshot_view as _open_snapshot_view
+from src.sprite_gallery_window import open_sprite_gallery as _open_sprite_gallery
+from src.branding import APP_NAME, APP_TITLE
 
 
 # Marker colour tables for plant-community members — moved to the Qt-free
@@ -111,7 +114,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         _init_database()
-        self.setWindowTitle("PermaDesign — Native Habitat Designer")
+        self.setWindowTitle(APP_TITLE)
         self.resize(1400, 860)
         self.setMinimumSize(900, 600)
 
@@ -501,6 +504,24 @@ class MainWindow(QMainWindow):
         # method ceiling stays meaningful.
         act_3d.triggered.connect(lambda: _open_3d_view(self))
 
+        act_snapshots = view_menu.addAction("&Growth Snapshots…")
+        act_snapshots.setStatusTip(
+            "See this design at years 1 / 5 / 15 / 30 side by side — watch "
+            "the plants grow and fill in over time"
+        )
+        # Lambda for the same reason as 3D Preview: the window lives in
+        # src/snapshot_window.py, off MainWindow's method ledger.
+        act_snapshots.triggered.connect(lambda: _open_snapshot_view(self))
+
+        act_gallery = view_menu.addAction("3D &Sprite Gallery…")
+        act_gallery.setStatusTip(
+            "Browse every 3D plant archetype + flower sprite — compare species "
+            "(spruce vs pine vs fir, etc.) and pick a detail level"
+        )
+        # Lambda for the same reason: the window self-manages in
+        # src/sprite_gallery_window.py, off MainWindow's method ledger.
+        act_gallery.triggered.connect(lambda: _open_sprite_gallery(self))
+
         view_menu.addSeparator()
         act_map_settings = view_menu.addAction("&Map Settings…")
         act_map_settings.setStatusTip(
@@ -516,25 +537,28 @@ class MainWindow(QMainWindow):
         # opens an About dialog with more detail (commit hash, schema
         # version, etc).
         from src.version_branch import parse_version_branch
-        current_branch = self._current_branch_name() or ""
+        from src.app_version import build_version
+        # Frozen builds have no git; the version is baked in at build time.
+        current_branch = build_version() or self._current_branch_name() or ""
         version_disp = current_branch if parse_version_branch(current_branch) else "dev"
         act_about = help_menu.addAction(f"&About / Version: {version_disp}")
         act_about.setStatusTip(
-            "Show the current PermaDesign version, schema version, and "
+            "Show the current Site & Pattern version, schema version, and "
             "git commit hash"
         )
         act_about.triggered.connect(self._on_about)
 
         act_update = help_menu.addAction("Check for &Updates…")
-        act_update.setStatusTip("Pull the latest version from GitHub (source installs) "
-                                "or open the releases page (packaged installs)")
+        act_update.setStatusTip("Get the latest version: pulls via git on source "
+                                "installs, or downloads and installs the newest "
+                                "release in-app on packaged (.dmg/.exe) installs")
         act_update.triggered.connect(self._on_check_for_updates)
 
         act_pick = help_menu.addAction("&Switch to a specific version…")
         act_pick.setStatusTip(
-            "Pick any published V<major>.<minor> branch and switch the "
-            "checkout to it. Handy for rolling back to an older release "
-            "or jumping ahead to one the auto-detector doesn't surface."
+            "Pick any published V<major>.<minor> version. Source installs "
+            "check out that branch; packaged installs download and install "
+            "that version's installer."
         )
         act_pick.triggered.connect(self._on_pick_version)
 
@@ -561,6 +585,7 @@ class MainWindow(QMainWindow):
         self.toolbar.select_requested.connect(self._enter_select_mode)
         self.toolbar.cancel_draw_requested.connect(self._cancel_draw)
         self.toolbar.undo_requested.connect(self._do_undo)
+        self.toolbar.redo_requested.connect(self._do_redo)
 
         self.toolbar.satellite_toggled.connect(self.map_widget.set_satellite_visible)
         self.toolbar.boundary_toggled.connect(self.map_widget.set_boundary_visible)
@@ -569,6 +594,8 @@ class MainWindow(QMainWindow):
         )
         self.toolbar.plants_toggled.connect(self.map_widget.set_plants_visible)
         self.toolbar.canopy_toggled.connect(self.map_widget.set_canopy_visible)
+        self.toolbar.yard_photo_toggled.connect(
+            self.map_widget.set_splat_ortho_visible)
         self.toolbar.grid_settings_changed.connect(self._on_grid_settings_changed)
 
         # Plant panel → map (plant placement + colour). Pattern mode info
@@ -629,9 +656,13 @@ class MainWindow(QMainWindow):
 
         # Analysis panel → map (A1-A4)
         self.analysis_panel.sun_path_requested.connect(self._on_sun_path_requested)
-        self.analysis_panel.sun_path_cleared.connect(self.map_widget.clear_sun_path)
+        # Clears routed through the controller so they reset the active-overlay
+        # state and record an undo step (not straight to the map widget).
+        self.analysis_panel.sun_path_cleared.connect(
+            self._map_events._on_sun_path_removed)
         self.analysis_panel.sector_requested.connect(self._on_sector_requested)
-        self.analysis_panel.sector_cleared.connect(self.map_widget.clear_sectors)
+        self.analysis_panel.sector_cleared.connect(
+            self._map_events._on_sectors_cleared)
         # (Manual contour drawing moved to Site panel — wired below.)
         # Auto-terrain controls live on the Site panel now (alongside the
         # single-point Elevation/slope readout) — the request / clear /
@@ -644,6 +675,9 @@ class MainWindow(QMainWindow):
         self.site_panel.download_edmonton_requested.connect(
             self._on_download_edmonton_requested
         )
+        # Straight to the controller (MainWindow at its method ceiling).
+        self.site_panel.download_soil_requested.connect(
+            self._map_events._on_download_soil_requested)
         # Shade overlay + OSM import (V1.51).
         self.site_panel.shade_requested.connect(self._on_shade_requested)
         self.site_panel.shade_cleared.connect(self._on_shade_cleared)
@@ -652,6 +686,10 @@ class MainWindow(QMainWindow):
         self.site_panel.shade_zones_visible_changed.connect(
             self.map_widget.set_shade_zones_visible)
         self.site_panel.osm_import_requested.connect(self._on_osm_import_requested)
+        # Wired straight to the controller (MainWindow is at its method ceiling,
+        # so no shim) — the building-pack download lives in MapEventRouter.
+        self.site_panel.download_buildings_requested.connect(
+            self._map_events._on_download_buildings_requested)
         self.site_panel.footprint_import_requested.connect(
             self._on_footprint_import_requested)
         # Shade sub-tab: mark/draw existing trees & buildings (relocated from
@@ -664,6 +702,26 @@ class MainWindow(QMainWindow):
             self.map_widget.set_satellite_offset)
         self.analysis_panel.wind_requested.connect(self._on_wind_requested)
         self.analysis_panel.wind_cleared.connect(self.map_widget.clear_wind_overlay)
+        # Straight to the controller (MainWindow is at its method ceiling).
+        self.analysis_panel.wind_data_requested.connect(
+            self._map_events._on_fetch_wind_requested)
+        # Live wind shadow (V1.68) — wired straight to the flow module (both
+        # MainWindow and the map-events controller are at their guard ceilings).
+        from src import wind_shadow_flow
+        # Toggle + committed-angle go through checkpointed controller handlers
+        # so they're undoable; the live scrub stays a direct (non-undoable) call.
+        self.analysis_panel.wind_shadow_toggled.connect(
+            self._map_events._on_wind_shadow_toggled)
+        self.analysis_panel.wind_angle_changed_live.connect(
+            lambda d: wind_shadow_flow.on_angle_live(self, d))
+        self.analysis_panel.wind_shadow_commit.connect(
+            self._map_events._on_wind_angle_commit)
+        # Extra slot on the existing plant-move signals → rebuild the shelter.
+        b.plant_moved.connect(lambda *a: wind_shadow_flow.on_plants_changed(self))
+        b.plant_group_moved.connect(
+            lambda *a: wind_shadow_flow.on_plants_changed(self))
+        b.selection_moved.connect(
+            lambda *a: wind_shadow_flow.on_plants_changed(self))
         self.analysis_panel.season_changed.connect(self._on_season_changed)
 
         # Map → polyculture removal
@@ -702,6 +760,10 @@ class MainWindow(QMainWindow):
         self.site_panel.pin_drop_requested.connect(self._enter_site_pin_mode)
         self.site_panel.pin_clear_requested.connect(self._on_site_pin_clear_clicked)
         self.site_panel.site_data_updated.connect(self._on_site_data_updated)
+        # A dropped pin's auto-detected ecoregion drives the plant library's
+        # "Restoring toward…" filter live, for this session only (V1.87).
+        self.site_panel.ecoregion_detected.connect(
+            self.plant_panel.set_autodetected_ecoregion)
         # Address search → drop pin on map (the bridge then notifies us
         # back via site_pin_placed and the usual fetch flow runs).
         self.site_panel.address_resolved.connect(self._on_address_resolved)
@@ -979,6 +1041,8 @@ class MainWindow(QMainWindow):
         )
         self._set_mode_label(f"Sun path: {config.get('date_label', d.isoformat())}")
         self._pending_sun_config = None
+        # Remember the rendered overlay so undo/redo can reproduce it.
+        self._active_sun_state = (config, lat, lng)
 
     def _on_sector_requested(self, config: dict):
         # Shim → MapEventRouter; see src/controllers/map_events.py.
@@ -1089,11 +1153,11 @@ class MainWindow(QMainWindow):
 
     # ── Draw-then-fill plant placement (F3) ──────────────────────────────────
 
-    def _start_fill(self, members, spacing_m, name):
+    def _start_fill(self, members, spacing_m, name, matrix=False):
         """Arm a draw-then-fill: stash the spec, then enter the map 'fill' mode so
         the user draws the polygon to scatter ``members`` (each ``(plant_id,
         weight)``) inside. Shared by the Plants tab (single plant / current mix)
-        and the Plant Communities tab."""
+        and the Plant Communities tab. ``matrix`` requests matrix planting (F22)."""
         members = [(int(pid), float(w)) for pid, w in (members or [])
                    if pid is not None]
         if not members:
@@ -1104,14 +1168,16 @@ class MainWindow(QMainWindow):
             return
         self._pending_fill = {"members": members,
                               "spacing": float(spacing_m or 4.0),
-                              "name": name or ""}
+                              "name": name or "",
+                              "matrix": bool(matrix)}
         self._mode._enter_fill_mode()
 
-    def _on_plants_fill_requested(self, members, spacing_m, name):
+    def _on_plants_fill_requested(self, members, spacing_m, name, matrix=False):
         """Plants tab → fill an area with the current mix or selected plant."""
-        self._start_fill(members, spacing_m, name)
+        self._start_fill(members, spacing_m, name, matrix)
 
-    def _on_community_fill_requested(self, poly_id: int, spacing_m: float):
+    def _on_community_fill_requested(self, poly_id: int, spacing_m: float,
+                                     matrix=False):
         """Plant Communities tab → fill an area with whole community UNITS (each
         anchor expands the members at their designed offsets), not a scatter of
         the individual member plants."""
@@ -1122,17 +1188,21 @@ class MainWindow(QMainWindow):
                                     "That community has no members to place.")
             return
         self._pending_fill = {"kind": "community", "polyculture": pc,
-                              "spacing": float(spacing_m or 0.0)}
+                              "spacing": float(spacing_m or 0.0),
+                              "matrix": bool(matrix)}
         self._mode._enter_fill_mode()
 
-    def _on_community_mix_fill_requested(self, communities, spacing_m: float):
-        """Plant Communities tab → fill an area with whole units drawn from a
-        community MIX (scattered evenly by weight)."""
+    def _on_community_mix_fill_requested(self, communities, spacing_m: float,
+                                         matrix=False):
+        """Plant Communities tab → fill an area from a community MIX. By default
+        whole community units are scattered evenly by weight; with ``matrix`` the
+        whole mix dissolves into one matrix planting (all members pooled)."""
         communities = list(communities or [])
         if len(communities) < 2:
             return
         self._pending_fill = {"kind": "community_mix", "communities": communities,
-                              "spacing": float(spacing_m or 0.0)}
+                              "spacing": float(spacing_m or 0.0),
+                              "matrix": bool(matrix)}
         self._mode._enter_fill_mode()
 
     def _on_fill_area_complete(self, points_json: str):
@@ -1151,17 +1221,18 @@ class MainWindow(QMainWindow):
         # JS sends [lat, lng] pairs; area_fill rings are [lng, lat] (GeoJSON).
         ring = [[p[1], p[0]] for p in pts]
         kind = spec.get("kind")
+        matrix = bool(spec.get("matrix"))
         if kind == "community":
             n = self._area_fill.fill_communities(ring, spec["polyculture"],
-                                                 spec["spacing"])
+                                                 spec["spacing"], matrix=matrix)
             what = "communities"
         elif kind == "community_mix":
             n = self._area_fill.fill_community_mix(ring, spec["communities"],
-                                                   spec["spacing"])
+                                                   spec["spacing"], matrix=matrix)
             what = "community units"
         else:
             n = self._area_fill.fill(ring, spec["members"], spec["spacing"],
-                                     poly_name=spec["name"])
+                                     poly_name=spec["name"], matrix=matrix)
             what = "plants"
         if n == 0:
             QMessageBox.information(
@@ -1190,7 +1261,12 @@ class MainWindow(QMainWindow):
 
         self._current_mode = 'polyculture'
         self._pending_polyculture = polyculture_data
-        self.map_widget.set_crosshair_cursor()
+        # Enter the dedicated JS 'polyculture' mode: it sets the crosshair and
+        # clears any still-armed "Mark tree" structure mode (so a community
+        # click doesn't ALSO drop a tree), while being a real placement mode —
+        # NOT 'none' — so a click on a visible boundary/shape forwards to
+        # onMapClick → bridge map_clicked → _on_polyculture_click.
+        self.map_widget.set_mode('polyculture')
         self._set_mode_label(
             f"Placing plant community: {polyculture_data.get('name', '?')} — click map to place centre"
         )
@@ -1538,18 +1614,19 @@ class MainWindow(QMainWindow):
         self.site_panel.clear_pin()
         self.plant_panel.clear_placed()
         self.plant_panel.set_zone(None)
+        self.plant_panel.set_autodetected_ecoregion("")   # drop the pin's region
         self.planning_panel.set_notes("")
         self.planning_panel.set_placed_plants([])
         self.planning_panel.set_structures([])
         self.analysis_panel.set_placed_plants([])
         self.analysis_panel.set_structures([])
-        self.setWindowTitle(f"PermaDesign — {name}")
+        self.setWindowTitle(f"{APP_NAME} — {name}")
         self._set_mode_label("Ready")
 
     def _on_open(self):
         path, _ = QFileDialog.getOpenFileName(
             self, "Open Design", "",
-            "PermaDesign Files (*.perma.geojson);;GeoJSON (*.geojson);;All files (*)"
+            "Site & Pattern Files (*.perma.geojson);;GeoJSON (*.geojson);;All files (*)"
         )
         if not path:
             return
@@ -1565,90 +1642,21 @@ class MainWindow(QMainWindow):
         self._modified     = False
         self._clear_undo()
 
-        self.map_widget.clear_all()
-        data = project_io.project_to_map_data(proj)
+        # Redraw the whole map from the project's features (boundaries,
+        # plants, structures, hedgerows, shapes, contours, annotations,
+        # auto-terrain, site pin, splat backdrop). Shared with undo/redo's
+        # snapshot restore — see PersistenceController.render_project_to_map.
+        self._persistence.render_project_to_map(fit_view=True)
 
-        for bd in data.get("boundaries", []):
-            self.map_widget.load_boundary(bd)
-        if data.get("boundaries"):
-            first = data["boundaries"][0]
-            lats = [p[0] for p in first["points"]]
-            lngs = [p[1] for p in first["points"]]
-            self._set_zone_display(
-                get_zone(sum(lats)/len(lats), sum(lngs)/len(lngs))
-            )
-
-        # Backfill placement_group_id onto legacy project features so that a
-        # subsequent save persists them. project_to_map_data already minted
-        # singleton groups for any feature that lacked one.
-        plant_idx = 0
-        for f in proj.get("features", []):
-            if f.get("properties", {}).get("element_type") == "plant":
-                if not f["properties"].get("placement_group_id") and plant_idx < len(data["plants"]):
-                    f["properties"]["placement_group_id"] = (
-                        data["plants"][plant_idx]["placement_group_id"]
-                    )
-                plant_idx += 1
-
-        for p in data["plants"]:
-            spacing_m, plant_type, custom_color = self._plant_info(p["plant_id"])
-            community_id = project_io.community_id_for(
-                p.get("polyculture_center_lat"), p.get("polyculture_center_lng")
-            )
-            self.map_widget.load_plant_marker(
-                p["plant_id"], p["common_name"], p["lat"], p["lng"],
-                spacing_m, plant_type, custom_color,
-                p.get("placement_group_id", ""),
-                community_id or "",
-            )
-        # Adopt project_to_map_data's records wholesale — they carry the
-        # group ids minted for legacy features (backfilled above), which a
-        # bare feature rebuild wouldn't know about.
-        self._store.replace_placed_plants(data["plants"])
-
-        self.plant_panel.load_placed(data["plants"])
-
-        for s in data.get("structures", []):
-            self.map_widget.load_structure(s["struct_def"], s["lat"], s["lng"])
-
-        for h in data.get("hedgerows", []):
-            self.map_widget.load_hedgerow(h)
-
-        for sh in data.get("shapes", []):
-            self.map_widget.load_shape(sh)
-
-        # Contour lines are loaded via JS (finishContour re-uses the drawing logic)
-        # We redraw them directly as polylines
-        for ctr in data.get("contours", []):
-            self.map_widget.apply_loaded_contour(ctr)
-
-        # Auto-generated contours (MultiLineString features) are restored
-        # directly as a single layer group. Slope ramp PNG isn't persisted —
-        # the user re-runs Generate to recompute it on demand.
-        auto_contours = data.get("auto_contours") or []
-        if auto_contours:
-            color = auto_contours[0].get("color", "#44cc00")
-            self.map_widget.draw_auto_contours(
-                [{"elevation_m": c["elevation_m"], "segments": c["segments"]}
-                 for c in auto_contours],
-                color=color,
-                show_labels=True,
-            )
-        if data.get("slope_overlay"):
-            self.site_panel.set_auto_terrain_status(
-                "Slope ramp not loaded from file — click Generate to recompute."
-            )
-
-        # Restore property pin + cached site data, if any.
+        # Replay the panel's cached site data (the map pin itself is placed by
+        # the re-render above). No network hit when the cache is present.
         sc = proj.get("properties", {}).get("site_config") or {}
         plat, plng = sc.get("latitude"), sc.get("longitude")
         if plat is not None and plng is not None:
             label = sc.get("pin_label", "")
-            self.map_widget.place_site_pin(plat, plng, label)
             has_cache = any(sc.get(k) for k in
                             ("rainfall", "soil", "elevation", "hardiness"))
             self.site_panel.set_pin(plat, plng, label, fetch=not has_cache)
-            # Replay any cached results without hitting the network again.
             for key, slot in (
                 ("hardiness", self.site_panel._on_hardiness),
                 ("elevation", self.site_panel._on_elevation),
@@ -1657,13 +1665,16 @@ class MainWindow(QMainWindow):
             ):
                 if sc.get(key):
                     slot(sc[key])
+            # Restore the soil-pH plant-matching constraint from cached site data.
+            if sc.get("soil_ph") is not None:
+                self.plant_panel.set_soil_ph(sc.get("soil_ph"))
 
         # Load notes
         notes = proj.get("properties", {}).get("notes", "")
         self.planning_panel.set_notes(notes)
 
         name = proj.get("properties", {}).get("project_name", "Design")
-        self.setWindowTitle(f"PermaDesign — {name}")
+        self.setWindowTitle(f"{APP_NAME} — {name}")
 
         self._sync_planning_panel()
 
@@ -1773,7 +1784,7 @@ class MainWindow(QMainWindow):
             return out
 
         lines = [
-            "PermaDesign — Native Plant Order List",
+            f"{APP_NAME} — Native Plant Order List",
             "=" * 44,
             "",
         ]
@@ -1991,6 +2002,15 @@ class MainWindow(QMainWindow):
             self.on_this_design.set_lawn_conversion(
                 conversion_summary(self._project.get("features", []))
             )
+            # Habitat value on the Stats tab (F11) — what the design is worth,
+            # shown beside the cost. Computed here so it stays live with edits.
+            try:
+                from src.habitat_score import compute_habitat_score
+                self.on_this_design.set_habitat_value(
+                    compute_habitat_score(enriched, structs)
+                )
+            except Exception:  # noqa: BLE001 — value is a nicety, never break sync
+                self.on_this_design.set_habitat_value(None)
         except Exception:
             pass
 
@@ -2107,8 +2127,7 @@ class MainWindow(QMainWindow):
         """Clear undo/redo stacks (e.g. on New/Open project)."""
         self._undo_stack.clear()
         self._redo_stack.clear()
-        self._act_undo.setEnabled(False)
-        self._act_redo.setEnabled(False)
+        self._persistence._sync_undo_actions()
 
 
 # ── Helper widgets ────────────────────────────────────────────────────────────

@@ -37,6 +37,13 @@ import sys
 from pathlib import Path
 from typing import Iterable
 
+from src.plant_conditions import condition_tokens
+
+# Condition fields that may hold a comma-delimited list of enum values when a
+# plant tolerates a range of conditions (V1.84). Each token is validated
+# against the enum independently.
+_MULTI_VALUE_ENUM_FIELDS = {"sun_requirement", "water_needs"}
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR     = PROJECT_ROOT / "data"
 
@@ -68,8 +75,8 @@ DATA_DIR     = PROJECT_ROOT / "data"
 
 SUN_REQUIREMENTS  = {"full_sun", "partial_shade", "full_shade"}
 WATER_NEEDS       = {"low", "medium", "high", "moderate"}
-PLANT_TYPES       = {"tree", "shrub", "herb", "groundcover", "vine",
-                     "grass", "sedge", "rush", "fern", "aquatic"}
+PLANT_TYPES       = {"tree", "shrub", "herb", "wildflower", "groundcover",
+                     "vine", "grass", "sedge", "rush", "fern", "aquatic"}
 LIFE_CYCLES       = {"perennial", "annual", "biennial"}
 DECIDUOUSNESS     = {"deciduous", "evergreen", "herbaceous", "semi-evergreen"}
 GROWTH_RATES      = {"slow", "moderate", "fast"}
@@ -80,6 +87,11 @@ SPREAD_HABITS     = {"clumping", "slow_spreader",
 # Sourcing (schema v19). Empty string = unassessed, always allowed.
 AVAILABILITY_CLASSES = {"big_box", "garden_centre", "native_specialist",
                         "seed_or_plug", "rare"}
+# Flower form (schema v31) — drives the 3D viewer's flower sprite. 'none' = no
+# showy flower; empty string is also tolerated (treated as 'none').
+FLOWER_FORMS      = {"daisy", "rays", "spike", "plume", "umbel", "globe",
+                     "cluster", "bell", "trumpet", "cattail", "pea", "whorl",
+                     "star", "cross", "lily", "none"}
 
 # ── Soft enum allowlists (drift here is a WARNING) ──────────────────────────
 
@@ -235,10 +247,26 @@ def validate_plant(
         ("toxicity_humans",     TOXICITY_LEVELS),
         ("spread_habit",        SPREAD_HABITS),
         ("availability_class",  AVAILABILITY_CLASSES),
+        ("flower_form",         FLOWER_FORMS),
     ):
+        if field in _MULTI_VALUE_ENUM_FIELDS:
+            for tok in condition_tokens(record.get(field)):
+                if tok not in allowed:
+                    err(f"{field} value {tok!r} not in {sorted(allowed)}")
+            continue
         val = (record.get(field) or "").strip()
         if val and val not in allowed:
             err(f"{field}={val!r} not in {sorted(allowed)}")
+
+    # flower_color: empty (no showy flower) or a #rrggbb hex (schema v31).
+    fc = (record.get("flower_color") or "").strip()
+    if fc and not re.fullmatch(r"#[0-9a-fA-F]{6}", fc):
+        err(f"flower_color={fc!r} is not a #rrggbb hex")
+
+    # fruit_color: empty (dry-fruited / non-fruiting) or a #rrggbb hex (v35).
+    frc = (record.get("fruit_color") or "").strip()
+    if frc and not re.fullmatch(r"#[0-9a-fA-F]{6}", frc):
+        err(f"fruit_color={frc!r} is not a #rrggbb hex")
 
     # ── Soft enums (deviations = warning) ────────────────────────────────
     val = (record.get("growth_curve") or "").strip()

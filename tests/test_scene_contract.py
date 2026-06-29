@@ -24,10 +24,26 @@ _LAT, _LNG = 53.5, -113.5
 
 _FAKE_PLANTS = {
     1: {"plant_type": "tree", "years_to_maturity": 20, "growth_curve": "steady",
-        "mature_height_meters": 10.0, "mature_canopy_m": 6.0},
+        "mature_height_meters": 10.0, "mature_canopy_m": 6.0,
+        "deciduous_evergreen": "evergreen"},
     2: {"plant_type": "shrub", "years_to_maturity": 5, "growth_curve": "steady",
         "mature_height_meters": 2.0, "mature_canopy_m": 1.5,
         "marker_color": "#123456"},
+    3: {"plant_type": "wildflower", "years_to_maturity": 2, "growth_curve": "steady",
+        "mature_height_meters": 0.5, "mature_canopy_m": 0.4,
+        "scientific_name": "Solidago canadensis", "bloom_period": "Aug-Sep",
+        "flower_color": "#f2c11e", "flower_form": "spike"},
+    4: {"plant_type": "aquatic", "years_to_maturity": 3, "growth_curve": "steady",
+        "mature_height_meters": 1.6, "mature_canopy_m": 0.5,
+        "scientific_name": "Typha latifolia", "bloom_period": "June–September",
+        "flower_color": "#7a5230", "flower_form": "cattail"},
+    5: {"plant_type": "tree", "years_to_maturity": 20, "growth_curve": "steady",
+        "mature_height_meters": 18.0, "mature_canopy_m": 6.0,
+        "deciduous_evergreen": "evergreen", "scientific_name": "Picea glauca"},
+    6: {"plant_type": "shrub", "years_to_maturity": 4, "growth_curve": "steady",
+        "mature_height_meters": 3.0, "mature_canopy_m": 2.0,
+        "scientific_name": "Amelanchier alnifolia", "fruit_period": "July–August",
+        "fruit_color": "#46295e"},
 }
 
 
@@ -90,6 +106,118 @@ class TestSceneBasics(unittest.TestCase):
         self.assertEqual(young["height_m"], 5.0)    # linear, 10/20 years
         self.assertEqual(young["canopy_m"], 3.0)
         self.assertEqual(mature["plant_type"], "tree")
+
+    def test_foliage_type_and_month_for_3d_forms(self):
+        # The 3D viewer keys crown shape (conifer vs deciduous) and seasonal
+        # colour off these additive fields — see html/scene3d.html.
+        proj = _project([
+            plant_feature({"plant_id": 1, "common_name": "Tree",
+                           "lat": _LAT, "lng": _LNG}),
+            plant_feature({"plant_id": 2, "common_name": "Shrub",
+                           "lat": _LAT, "lng": _LNG}),
+        ])
+        scene = build_scene(proj, get_plant=_get_plant,
+                            when=datetime(2025, 10, 21, 13, 0))
+        self.assertEqual(scene["month"], 10)
+        by_id = {p["common_name"]: p for p in scene["plants"]}
+        self.assertEqual(by_id["Tree"]["foliage_type"], "evergreen")
+        # Plant 2 has no deciduous_evergreen → defaults to herbaceous.
+        self.assertEqual(by_id["Shrub"]["foliage_type"], "herbaceous")
+
+    def test_flower_and_foliage_fields_for_3d(self):
+        # V1.90: the 3D viewer colours the body with a natural foliage colour and
+        # draws real-coloured flowers (form + colour + bloom window).
+        proj = _project([
+            plant_feature({"plant_id": 3, "common_name": "Goldenrod",
+                           "lat": _LAT, "lng": _LNG}),
+        ])
+        p = build_scene(proj, get_plant=_get_plant)["plants"][0]
+        # Body colour is a natural green, NOT the wildflower type colour (purple).
+        self.assertNotEqual(p["color"].lower(), "#ab47bc")
+        self.assertEqual(p["flower_color"], "#f2c11e")
+        self.assertEqual(p["flower_form"], "spike")
+        self.assertEqual((p["bloom_start"], p["bloom_end"]), (8, 9))
+
+    def test_cattail_aquatic_flower_passthrough(self):
+        # V1.92: a marsh cattail carries the brown "cattail" spike form + colour
+        # and its bloom window through to the 3D viewer's aquatic geometry.
+        proj = _project([
+            plant_feature({"plant_id": 4, "common_name": "Cattail",
+                           "lat": _LAT, "lng": _LNG}),
+        ])
+        p = build_scene(proj, get_plant=_get_plant)["plants"][0]
+        self.assertEqual(p["plant_type"], "aquatic")
+        self.assertEqual(p["flower_form"], "cattail")
+        self.assertEqual(p["flower_color"], "#7a5230")
+        self.assertEqual((p["bloom_start"], p["bloom_end"]), (6, 9))
+
+    def test_genus_drives_species_geometry_and_colour(self):
+        # V1.94: the scene plant carries `genus` (so the viewer can pick spruce vs
+        # pine vs fir geometry) and a genus-specific foliage green (spruce blue-
+        # green), not the generic dark-conifer colour.
+        proj = _project([
+            plant_feature({"plant_id": 5, "common_name": "White Spruce",
+                           "lat": _LAT, "lng": _LNG}),
+        ])
+        p = build_scene(proj, get_plant=_get_plant)["plants"][0]
+        self.assertEqual(p["genus"], "picea")
+        self.assertEqual(p["color"].lower(), "#46685a")   # spruce blue-green
+        self.assertNotEqual(p["color"].lower(), "#355e3b")  # not the generic conifer
+
+    def test_fruit_color_and_window_for_fleshy_fruit(self):
+        # V2.0: a fleshy-fruited plant carries its berry colour + fruit window so
+        # the 3D viewer can show berries in season; dry/non-fruiting plants don't.
+        proj = _project([
+            plant_feature({"plant_id": 6, "common_name": "Saskatoon Berry",
+                           "lat": _LAT, "lng": _LNG}),
+        ])
+        p = build_scene(proj, get_plant=_get_plant)["plants"][0]
+        self.assertEqual(p["fruit_color"], "#46295e")
+        self.assertEqual((p["fruit_start"], p["fruit_end"]), (7, 8))
+        # A non-fruiting plant (the spruce) carries no berry colour.
+        spruce = build_scene(_project([
+            plant_feature({"plant_id": 5, "common_name": "White Spruce",
+                           "lat": _LAT, "lng": _LNG}),
+        ]), get_plant=_get_plant)["plants"][0]
+        self.assertEqual(spruce["fruit_color"], "")
+
+    def test_grass_seedhead_default_bloom(self):
+        # A flowering plant with no bloom_period (e.g. a grass seed-head plume)
+        # falls back to a generic summer window so its sprite still appears.
+        from src.scene_contract import _bloom_window
+        self.assertEqual(
+            _bloom_window({"flower_form": "plume", "bloom_period": ""}),
+            {"bloom_start": 6, "bloom_end": 9})
+        # A non-flowering plant stays at (0, 0) — no sprite.
+        self.assertEqual(
+            _bloom_window({"flower_form": "none", "bloom_period": ""}),
+            {"bloom_start": 0, "bloom_end": 0})
+
+    def test_marker_color_overrides_foliage(self):
+        # An explicit user marker colour still wins for the body.
+        proj = _project([
+            plant_feature({"plant_id": 2, "common_name": "Shrub",
+                           "lat": _LAT, "lng": _LNG}),
+        ])
+        p = build_scene(proj, get_plant=_get_plant)["plants"][0]
+        self.assertEqual(p["color"], "#123456")
+
+    def test_growth_and_spread_fields_for_3d_forms(self):
+        # The 3D viewer keys the structural maturity tier off scale_factor and
+        # the self-spread satellite scatter off spread_factor — see scene3d.html.
+        proj = _project([
+            plant_feature({"plant_id": 1, "common_name": "Tree",
+                           "lat": _LAT, "lng": _LNG}),
+        ])
+        mature = build_scene(proj, year=0, get_plant=_get_plant)["plants"][0]
+        young = build_scene(proj, year=10, get_plant=_get_plant)["plants"][0]
+        # year 0 = mature reference (full size); year 10 of 20 = half-grown.
+        self.assertEqual(mature["scale_factor"], 1.0)
+        self.assertEqual(young["scale_factor"], 0.5)
+        # No spread_habit on the fake plant → no colony widening or spread.
+        self.assertEqual(mature["spread_factor"], 1.0)
+        self.assertEqual(mature["spread_rate"], 0.0)
+        self.assertEqual(mature["growth_curve"], "steady")
 
     def test_marker_color_wins_over_type_color(self):
         proj = _project([

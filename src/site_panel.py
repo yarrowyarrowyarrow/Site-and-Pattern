@@ -183,6 +183,7 @@ class SitePanel(QWidget):
     pin_drop_requested = pyqtSignal()             # user wants to click the map
     pin_clear_requested = pyqtSignal()
     site_data_updated  = pyqtSignal(dict)         # full result dict
+    ecoregion_detected = pyqtSignal(object)       # AB ecoregion key (str) or "" (V1.87)
 
     # Address search (geocode + place pin). Emitted when the user has
     # selected a result; MainWindow places the pin on the map and the
@@ -202,6 +203,8 @@ class SitePanel(QWidget):
 
     # Offline Edmonton terrain dataset download.
     download_edmonton_requested = pyqtSignal()
+    # One-time offline soil-pack download (Gridded SLC, V1.67).
+    download_soil_requested = pyqtSignal()
 
     # Shade overlay (V1.51): show/clear, live opacity, and a (month, day, hour)
     # time selection for the time-of-day / season view.
@@ -213,6 +216,8 @@ class SitePanel(QWidget):
 
     # Import existing trees/buildings from OpenStreetMap (V1.51).
     osm_import_requested = pyqtSignal()
+    # Bulk-download a region's building footprints for offline reuse (V1.66).
+    download_buildings_requested = pyqtSignal()
 
     # Import shade-casting footprints from an nDSM GeoTIFF (V1.53).
     footprint_import_requested = pyqtSignal(str)   # tiff path
@@ -453,9 +458,43 @@ class SitePanel(QWidget):
         sl.addRow("Sand/Silt/Clay:", self._lbl_soil_mix)
         sl.addRow("Reported depth:", self._lbl_soil_depth)
         sl.addRow("Source:",        self._lbl_soil_src)
+
+        # One-time offline soil pack (Gridded Soil Landscapes of Canada): real
+        # per-location soil offline, instead of the regional approximation that
+        # the paused SoilGrids API otherwise forces.
+        soil_btn_row = QHBoxLayout()
+        self._soil_dl_btn = QPushButton("Download soil data (offline)")
+        self._soil_dl_btn.setStyleSheet(_BTN_SECONDARY)
+        self._soil_dl_btn.setToolTip(
+            "One-time download of Canadian gridded soil data so soil pH and "
+            "texture are sampled per-location offline (and feed plant matching).")
+        self._soil_dl_btn.clicked.connect(self._on_download_soil_clicked)
+        soil_btn_row.addWidget(self._soil_dl_btn)
+        self._soil_cancel_btn = QPushButton("Cancel")
+        self._soil_cancel_btn.setStyleSheet(_BTN_SECONDARY)
+        self._soil_cancel_btn.setVisible(False)
+        soil_btn_row.addWidget(self._soil_cancel_btn)
+        sl.addRow(soil_btn_row)
+        self._soil_dl_status = QLabel("")
+        self._soil_dl_status.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._soil_dl_status.setWordWrap(True)
+        sl.addRow(self._soil_dl_status)
         layout.addWidget(self._soil_box)
 
         layout.addStretch()
+
+    def _on_download_soil_clicked(self):
+        self._soil_dl_btn.setEnabled(False)
+        self._soil_cancel_btn.setVisible(True)
+        self.download_soil_requested.emit()
+
+    def set_soil_download_status(self, text, *, busy: bool):
+        """Update the soil-download status line and button state. ``text=None``
+        just resets the buttons (used on thread teardown)."""
+        if text is not None:
+            self._soil_dl_status.setText(text)
+        self._soil_dl_btn.setEnabled(not busy)
+        self._soil_cancel_btn.setVisible(busy)
 
     def _build_slope_page(self, layout):
         """Slope sub-tab: single-point elevation/slope, auto contours + slope
@@ -837,24 +876,20 @@ class SitePanel(QWidget):
         self._lbl_hard_src.setText(data.get("source", ""))
 
     def _on_ecoregion(self, data):
-        """Surface the auto-detected ecoregion in the readout and write
-        it to the QSettings key the plant panel checks so its filter
-        dropdown pre-populates. Only writes the auto key — the user's
-        explicit choice (``plant_panel/ab_ecoregion``) is untouched."""
+        """Surface the auto-detected ecoregion in the readout and push it to the
+        plant panel live (V1.87).
+
+        Emits ``ecoregion_detected`` with the region key so the plant library's
+        "Restoring toward…" filter updates for *this* session only — no longer
+        persisted to QSettings, so a region never sticks across unrelated
+        sessions. An empty string clears it (pin outside known regions)."""
         if not data:
             self._lbl_ecoregion.setText("Outside known regions")
+            self.ecoregion_detected.emit("")
             return
         label = data.get("label") or data.get("key") or "—"
         self._lbl_ecoregion.setText(f"{label}  (auto)")
-        # Stash the auto-detected key for the plant panel to pick up
-        # on its next refresh. Separate key from the user's explicit
-        # choice so a manual override survives a pin move.
-        try:
-            from PyQt6.QtCore import QSettings
-            QSettings().setValue("plant_panel/ab_ecoregion_auto",
-                                 data.get("key") or "")
-        except Exception:
-            pass
+        self.ecoregion_detected.emit(data.get("key") or "")
 
     def _on_climate(self, data):
         """Update the GDD₅ + frost-window rows. ``data`` is the dict
@@ -1272,6 +1307,24 @@ class SitePanel(QWidget):
         btn.clicked.connect(self.osm_import_requested.emit)
         v.addWidget(btn)
 
+        # One-time bulk download of nearby building footprints into a local
+        # cache (buildings.db), so future designs in this area import buildings
+        # instantly and offline — the contour-pack model, for buildings.
+        bld_row = QHBoxLayout()
+        self._bldg_dl_btn = QPushButton("Download buildings for this area")
+        self._bldg_dl_btn.setStyleSheet(_BTN_SECONDARY)
+        self._bldg_dl_btn.setToolTip(
+            "Bulk-download OpenStreetMap building footprints around this "
+            "property into a local cache so 'Import from OpenStreetMap' works "
+            "instantly and offline here afterwards.")
+        self._bldg_dl_btn.clicked.connect(self._on_download_buildings_clicked)
+        bld_row.addWidget(self._bldg_dl_btn)
+        self._bldg_cancel_btn = QPushButton("Cancel")
+        self._bldg_cancel_btn.setStyleSheet(_BTN_SECONDARY)
+        self._bldg_cancel_btn.setVisible(False)
+        bld_row.addWidget(self._bldg_cancel_btn)
+        v.addLayout(bld_row)
+
         # Import shade-casting footprints from a height raster (nDSM GeoTIFF) —
         # the whiteboxtools-style path. Only shown when a backend is available
         # (numpy + shapely present), so a minimal install hides it.
@@ -1303,6 +1356,22 @@ class SitePanel(QWidget):
 
     def set_osm_status(self, text: str):
         self._osm_status.setText(text)
+
+    # ── Offline building-pack download (V1.66) ─────────────────────────────
+
+    def _on_download_buildings_clicked(self):
+        self._bldg_dl_btn.setEnabled(False)
+        self._bldg_cancel_btn.setVisible(True)
+        self.set_osm_status("Starting building download…")
+        self.download_buildings_requested.emit()
+
+    def set_buildings_download_progress(self, total_new: int, done: int,
+                                        text: str):
+        self.set_osm_status(text)
+
+    def reset_buildings_download(self):
+        self._bldg_dl_btn.setEnabled(True)
+        self._bldg_cancel_btn.setVisible(False)
 
     # ── Manual contour drawing (UI removed V1.37) ──────────────────────────
     # Helpers below are intentional no-ops kept as placeholders so any

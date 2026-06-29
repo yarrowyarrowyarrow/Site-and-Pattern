@@ -1,5 +1,5 @@
 """
-cli.py — Command-line interface for PermaDesign's headless operations.
+cli.py — Command-line interface for Site & Pattern's headless operations.
 
 A thin argparse shell over the Qt-free scripting facade
 (:mod:`src.permadesign_api`). Every subcommand is a few lines around an
@@ -204,7 +204,7 @@ def _cmd_validate_data(args) -> int:
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="permadesign",
-        description="PermaDesign headless CLI (native-plant landscape design).",
+        description="Site & Pattern headless CLI (native-plant landscape design).",
     )
     sub = p.add_subparsers(dest="command", required=True)
 

@@ -513,15 +513,23 @@
       // modifier click (shift/ctrl/cmd) toggles selection instead, matching
       // plants/boundaries/structures.
       polygon.on('click', function(e) {
-        L.DomEvent.stop(e);
         var oe = e.originalEvent;
         if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) {
+          L.DomEvent.stop(e);
           if (typeof toggleSelection === 'function') {
             toggleSelection({ kind: 'shape', shapeId: id });
           }
           return;
         }
-        if (currentMode === 'none') enterShapeEditMode(id);
+        if (currentMode === 'none') {
+          L.DomEvent.stop(e);
+          enterShapeEditMode(id);
+          return;
+        }
+        // Placement mode → forward to onMapClick (Leaflet won't fire the map's
+        // click for a layer target) so the user can place on top of a visible
+        // shape / shade footprint.
+        onMapClick(e);
       });
 
       shapeLayers[id] = group;
@@ -626,7 +634,9 @@
           break;
         case 'plant':
           currentPlant = data || null;
-          map.getContainer().style.cursor = 'cell';
+          // 'crosshair' (not 'cell') — 'cell' degrades to a small green box on
+          // some QtWebEngine/Chromium builds; matches every other tool's cursor.
+          map.getContainer().style.cursor = 'crosshair';
           _resetPatternState();
           break;
         case 'measure':
@@ -644,6 +654,14 @@
           break;
         case 'structure':
           currentStructure = data || null;
+          map.getContainer().style.cursor = 'crosshair';
+          break;
+        case 'polyculture':
+          // Single plant-community drop. No JS-side placement — the bridge
+          // map_clicked → _on_polyculture_click does it. A real mode (NOT
+          // 'none') so a click on a boundary/shape forwards to onMapClick
+          // instead of entering edit mode. setMode already cleared
+          // currentStructure/currentPlant above, so no stray tree is dropped.
           map.getContainer().style.cursor = 'crosshair';
           break;
         case 'hedgerow':
@@ -703,6 +721,13 @@
           _resetPatternState();
           drawnItems.clearLayers();
       }
+      // Keep the placement crosshair over interactive layers (boundaries,
+      // shapes, …) instead of Leaflet's default pointer, so hovering a
+      // boundary while placing still reads as "click to place here". Idle
+      // mode (no crosshair) keeps the pointer as an edit affordance.
+      var _container = map.getContainer();
+      if (_container.style.cursor === 'crosshair') _container.classList.add('placing');
+      else _container.classList.remove('placing');
     }
 
     // ── Satellite imagery alignment nudge ──────────────────────────────────
@@ -920,9 +945,11 @@
       drawnItems.clearLayers();
     }
 
-    function loadBoundary(dataJson) {
+    function loadBoundary(dataJson, fit) {
       // dataJson: JSON string of {id, points, color, showLengths, showArea}
       // or legacy: JSON string of [[lat,lng],...] (old single-boundary format)
+      // fit (default true): recenter the map on the boundary. Undo/redo
+      // re-renders pass false so the camera doesn't jump on every Ctrl+Z.
       var data = JSON.parse(dataJson);
       var pts, bid, color, showLengths, showArea;
       if (Array.isArray(data)) {
@@ -936,7 +963,7 @@
         showArea    = data.showArea !== false;
       }
       var entry = _addBoundaryToMap(bid, pts, color, showLengths, showArea);
-      map.fitBounds(entry.layer.getBounds());
+      if (fit !== false) map.fitBounds(entry.layer.getBounds());
     }
 
     function loadPlantMarker(plantId, commonName, lat, lng, spacingM, plantType, customColor, groupId, communityId) {

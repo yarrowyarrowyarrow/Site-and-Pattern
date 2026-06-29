@@ -2,12 +2,15 @@
 plants.py -- SQLite database access layer for the plant catalogue.
 
 The database file is stored in a user-writable location:
-  Windows : %APPDATA%/PermaDesign/permadesign.db
-  macOS   : ~/Library/Application Support/PermaDesign/permadesign.db
-  Linux   : $XDG_DATA_HOME/PermaDesign/permadesign.db  (default ~/.local/share/)
+  Windows : %APPDATA%/Site & Pattern/permadesign.db
+  macOS   : ~/Library/Application Support/Site & Pattern/permadesign.db
+  Linux   : $XDG_DATA_HOME/Site & Pattern/permadesign.db  (default ~/.local/share/)
 
 On first run the DB is created, schema applied, and seed data loaded.
-If an old DB exists next to the executable it is migrated automatically.
+If an old DB exists next to the executable it is migrated automatically. The
+per-user folder was named ``PermaDesign`` before the V1.69 rebrand; it is renamed
+to ``Site & Pattern`` once, in place, by ``src/user_paths.py`` (the DB *filename*
+stays ``permadesign.db`` — internal, never shown to the user).
 """
 
 import os
@@ -28,14 +31,14 @@ _SCHEMA_PATH = resource_path("src", "db", "schema.sql")
 
 
 def _user_data_dir() -> pathlib.Path:
-    """Return a writable per-user data directory regardless of install location."""
-    if sys.platform == "win32":
-        base = os.environ.get("APPDATA") or pathlib.Path.home()
-    elif sys.platform == "darwin":
-        base = pathlib.Path.home() / "Library" / "Application Support"
-    else:
-        base = os.environ.get("XDG_DATA_HOME") or (pathlib.Path.home() / ".local" / "share")
-    return pathlib.Path(base) / "PermaDesign"
+    """Return a writable per-user data directory regardless of install location.
+
+    Pure (no side effects) so the module-level path constants below can be built
+    at import time without creating or migrating anything. Delegates to
+    ``user_paths.data_dir_path`` — the single source of truth for the folder name
+    (kept here as a named function so tests can monkeypatch this exact symbol)."""
+    from src.user_paths import data_dir_path
+    return data_dir_path()
 
 
 _DATA_DIR = str(_user_data_dir())
@@ -108,7 +111,35 @@ _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 # v25 (V1.61): no DDL — image data populated from iNaturalist (323 plants /
 # 58 fauna, CC0/CC-BY/CC-BY-SA only, with attribution). The bump reseeds so
 # existing installs pick the photo URLs up.
-_SCHEMA_VERSION = 25
+# v26 (V1.67): added `wind_cache` table for the seasonal wind rose. Per-location
+# user cache (not seeded); wiped on reseed like climate_cache so it recomputes.
+# v27 (V1.79, F4): added problem/context/forces/solution columns to `polycultures`
+# for the Alexander pattern-language framing. The bump reseeds so existing installs
+# pick up the authored pattern text seeded in src/db/polycultures.py.
+# v28 (V1.79): no DDL — reseed so the de-dashed authored pattern text replaces the
+# v27 text on installs that already seeded it.
+# v29 (V1.84): no DDL — reseed to pick up the curated availability_class tiers and
+# the multi-value (comma-delimited) sun_requirement / water_needs values.
+# v30 (V1.87): no DDL — reseed for the type re-tag (herb split into
+# wildflower / herb-foliage; graminoids/aquatics fixed by genus).
+# v31 (V1.90): add flower_color + flower_form columns (3D flowers) and reseed
+# to fill them from the curated seed JSON.
+# v32 (V1.91): no DDL — reseed for the expanded flower forms (rays / plume /
+# globe / trumpet) and straw seed-head plumes on grasses.
+# v33 (V1.92): no DDL — reseed for curated marsh aquatics (cattail brown spike,
+# bulrush, yellow pond-lily) feeding the new 3D aquatic/cattail geometry.
+# v34 (V1.94): no DDL — reseed for the legume "pea" + bee-balm "whorl" flower
+# forms (lupines / vetches / milkvetches / Monarda) feeding the expanded 3D
+# flower sprite library + the genus-specific tree/shrub geometry.
+# v35 (V2.0): no DDL — reseed for curated fruit_color on fleshy-fruited species
+# (saskatoon, chokecherry, currants, viburnum, rose hips…) feeding the new 3D
+# berry layer shown in each plant's fruit season.
+# v36 (V2.1): no DDL — reseed for the new star / cross / lily flower forms
+# (flax, geranium, phlox, draba, blue-eyed grass, wood lily, camas…).
+# v37 (V2.2): dropped the denormalized plants.permaculture_uses column; the
+# plant_uses junction is now the single source of truth and the legacy
+# comma-blob field is synthesized on read. Reseed rebuilds plant_uses.
+_SCHEMA_VERSION = 37
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -145,6 +176,13 @@ _USE_DEFINITIONS: list[tuple[str, str, str, int]] = [
 
 
 def _ensure_data_dir():
+    # Rename a pre-rebrand "PermaDesign" folder to the new "Site & Pattern" name
+    # *before* creating the (possibly new) data dir — otherwise an empty new
+    # folder would make the migration's "already exists" guard skip and strand the
+    # old database. Driving the migration off _DATA_DIR keeps a test-overridden
+    # tempdir (which already exists) a correct no-op.
+    from src import user_paths
+    user_paths.migrate_legacy_into(_DATA_DIR)
     os.makedirs(_DATA_DIR, exist_ok=True)
 
 
@@ -286,6 +324,33 @@ def _migrate_to_v19(conn: sqlite3.Connection):
     conn.commit()
 
 
+def _migrate_to_v31(conn: sqlite3.Connection):
+    """Add the flower colour + form columns (V1.90) used by the 3D viewer to
+    render real-coloured flowers. The version bump triggers a reseed that fills
+    the values from the seed JSON."""
+    new_columns = [
+        ("flower_color", "TEXT DEFAULT ''"),
+        ("flower_form",  "TEXT DEFAULT 'none'"),
+    ]
+    for col_name, col_def in new_columns:
+        try:
+            conn.execute(f"ALTER TABLE plants ADD COLUMN {col_name} {col_def}")
+        except sqlite3.OperationalError:
+            pass  # column already present
+    conn.commit()
+
+
+def _migrate_to_v35(conn: sqlite3.Connection):
+    """Add the fruit colour column (V2.0) used by the 3D viewer to render berries
+    on fleshy-fruited plants in their fruit season. The bump triggers a reseed
+    that fills it from the curated seed JSON."""
+    try:
+        conn.execute("ALTER TABLE plants ADD COLUMN fruit_color TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass  # column already present
+    conn.commit()
+
+
 def _migrate_to_v24(conn: sqlite3.Connection):
     """Add the imagery columns (V1.60) to plants and fauna. The version bump
     triggers a reseed that fills any values present in the seed JSON; existing
@@ -362,6 +427,23 @@ def _migrate_polyculture_member_layer_functions(conn: sqlite3.Connection):
                 "UPDATE polyculture_members SET layer = ?, functions = ? WHERE id = ?",
                 (layer, _json.dumps(functions), r["id"])
             )
+    conn.commit()
+
+
+def _migrate_polyculture_pattern_columns(conn: sqlite3.Connection):
+    """Add the Alexander pattern-language columns (problem/context/forces/
+    solution) to `polycultures` for existing installs (schema v27, F4).
+
+    Idempotent: each ALTER is wrapped so re-running once the column exists is a
+    no-op. No backfill is needed — the v27 version bump triggers a reseed that
+    repopulates the seeded communities (and their authored text) wholesale; the
+    columns just have to exist before that reseed writes into them."""
+    for col_def in ("problem TEXT", "context TEXT",
+                    "forces TEXT", "solution TEXT"):
+        try:
+            conn.execute(f"ALTER TABLE polycultures ADD COLUMN {col_def}")
+        except sqlite3.OperationalError:
+            pass  # column already present
     conn.commit()
 
 
@@ -533,9 +615,6 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
 
     plant_rows = []
     for p in entries:
-        uses = p.get("permaculture_uses", "")
-        if isinstance(uses, list):
-            uses = ", ".join(uses)
         ecoregion = p.get("ab_ecoregion", "")
         if isinstance(ecoregion, list):
             ecoregion = ",".join(ecoregion)
@@ -548,7 +627,6 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("sun_requirement", ""),
             p.get("water_needs", ""),
             p.get("native_region", ""),
-            uses,
             p.get("spacing_m") or p.get("spacing_meters"),
             p.get("mature_height_m") or p.get("mature_height_meters"),
             p.get("notes", ""),
@@ -573,6 +651,9 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("price_high_cad"),
             p.get("availability_class", ""),
             p.get("sourcing_notes", ""),
+            p.get("flower_color", ""),
+            p.get("flower_form", "none"),
+            p.get("fruit_color", ""),
             p.get("image_url", ""),
             p.get("image_attribution", ""),
             p.get("image_license", ""),
@@ -583,7 +664,7 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
            (common_name, scientific_name, plant_type,
             hardiness_zone_min, hardiness_zone_max,
             sun_requirement, water_needs,
-            native_region, permaculture_uses,
+            native_region,
             spacing_meters, mature_height_meters, notes,
             bloom_period, fruit_period, native_to_alberta,
             edible_parts, deciduous_evergreen,
@@ -593,9 +674,9 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             toxicity_pets, toxicity_humans, has_thorns,
             spread_habit, safety_source,
             price_low_cad, price_high_cad, availability_class,
-            sourcing_notes,
+            sourcing_notes, flower_color, flower_form, fruit_color,
             image_url, image_attribution, image_license)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -682,6 +763,11 @@ def init_db() -> None:
         if current_version < 24:
             _migrate_to_v24(conn)
 
+        if current_version < 31:
+            _migrate_to_v31(conn)
+        if current_version < 35:
+            _migrate_to_v35(conn)
+
         # Add parent_id to polycultures if missing
         try:
             conn.execute("ALTER TABLE polycultures ADD COLUMN parent_id INTEGER REFERENCES polycultures(id) ON DELETE SET NULL")
@@ -694,6 +780,11 @@ def init_db() -> None:
         # Kept outside the version-bump reseed path so user-created
         # plant communities are preserved.
         _migrate_polyculture_member_layer_functions(conn)
+
+        # Idempotent additive migration — adds the pattern-language columns to
+        # polycultures so the v27 reseed below can write authored problem/
+        # context/forces/solution text into them (F4).
+        _migrate_polyculture_pattern_columns(conn)
 
         count = conn.execute("SELECT COUNT(*) FROM plants").fetchone()[0]
 
@@ -722,6 +813,9 @@ def init_db() -> None:
             # on reseed so the next launch refetches against any updated
             # source defaults rather than serving stale interpretations.
             conn.execute("DELETE FROM climate_cache")
+            # wind_cache is per-location user data, not seeded — wipe on reseed
+            # like climate_cache so the next launch refetches the wind rose.
+            conn.execute("DELETE FROM wind_cache")
             # shade_zone_cache is per-project derived output (not seeded) — wipe
             # on reseed like climate_cache so it recomputes against any updated
             # shade model rather than serving stale tags.
@@ -759,23 +853,6 @@ def init_db() -> None:
         migrate_qsettings_recipes()
     except Exception:
         pass  # Non-critical; user can recreate recipes from the new tab
-
-
-def _insert_plants(conn: sqlite3.Connection, plants: list[tuple]) -> None:
-    conn.executemany(
-        """INSERT INTO plants
-           (common_name, scientific_name, plant_type,
-            hardiness_zone_min, hardiness_zone_max,
-            sun_requirement, water_needs,
-            native_region, permaculture_uses,
-            spacing_meters, mature_height_meters, notes,
-            bloom_period, fruit_period, native_to_alberta,
-            edible_parts, deciduous_evergreen,
-            soil_ph_min, soil_ph_max, perennial_or_annual)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-        plants
-    )
-    conn.commit()
 
 
 def _insert_companions(conn: sqlite3.Connection,
@@ -827,13 +904,29 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
     return d
 
 
+def _attach_permaculture_uses(plants: list[dict]) -> None:
+    """Populate each dict's derived ``permaculture_uses`` (comma-joined, sorted)
+    from the plant_uses junction. The denormalized column was dropped in schema
+    v37; this keeps the legacy blob-shaped field available to read-side consumers
+    (succession, the plant browser, the polyculture panel) while the junction is
+    the single source of truth. One batched query for the whole list."""
+    ids = [p["id"] for p in plants if p.get("id") is not None]
+    if not ids:
+        return
+    uses_map = plant_uses_for_ids(ids)
+    for p in plants:
+        p["permaculture_uses"] = ",".join(sorted(uses_map.get(p["id"], ())))
+
+
 def get_all_plants() -> list[dict]:
     conn = get_connection()
     try:
         rows = conn.execute(
             "SELECT * FROM plants ORDER BY plant_type, common_name"
         ).fetchall()
-        return [_row_to_dict(r) for r in rows]
+        result = [_row_to_dict(r) for r in rows]
+        _attach_permaculture_uses(result)
+        return result
     finally:
         conn.close()
 
@@ -844,7 +937,11 @@ def get_plant(plant_id: int) -> Optional[dict]:
         row = conn.execute(
             "SELECT * FROM plants WHERE id = ?", (plant_id,)
         ).fetchone()
-        return _row_to_dict(row) if row else None
+        if not row:
+            return None
+        d = _row_to_dict(row)
+        _attach_permaculture_uses([d])
+        return d
     finally:
         conn.close()
 
@@ -872,6 +969,7 @@ def search_plants(
     well_behaved_only: bool = False,
     max_unit_price: Optional[float] = None,
     common_only: bool = False,
+    availability_in: Optional[list] = None,
     host_for_fauna_id: Optional[int] = None,
     supports_fauna_id: Optional[int] = None,
     supports_specialist: bool = False,
@@ -885,22 +983,45 @@ def search_plants(
     sql    = "SELECT * FROM plants WHERE 1=1"
     params: list = []
 
+    # plant_type / sun_req / water_needs / perm_use accept a single string
+    # (legacy) or a list of values for multi-select filters (V1.85). Coerce to a
+    # clean list so callers passing either shape work unchanged.
+    def _as_filter_list(v) -> list:
+        if not v:
+            return []
+        if isinstance(v, str):
+            return [v]
+        return [str(x) for x in v if x]
+
     if query:
-        sql += " AND (LOWER(common_name) LIKE ? OR LOWER(scientific_name) LIKE ? OR LOWER(permaculture_uses) LIKE ?)"
+        sql += (" AND (LOWER(common_name) LIKE ? OR LOWER(scientific_name) LIKE ?"
+                " OR EXISTS (SELECT 1 FROM plant_uses pu JOIN uses u"
+                " ON u.id = pu.use_id WHERE pu.plant_id = plants.id"
+                " AND LOWER(u.key) LIKE ?))")
         q = f"%{query.lower()}%"
         params += [q, q, q]
 
-    if plant_type:
-        sql += " AND plant_type = ?"
-        params.append(plant_type)
+    # Type is a single column value; a multi-select matches ANY chosen type.
+    types = _as_filter_list(plant_type)
+    if types:
+        sql += " AND plant_type IN (%s)" % ",".join("?" for _ in types)
+        params += types
 
-    if sun_req:
-        sql += " AND sun_requirement = ?"
-        params.append(sun_req)
+    # sun_requirement / water_needs may hold a comma-delimited list when a plant
+    # tolerates a range (V1.84). A multi-select filter matches if ANY chosen
+    # value is among the plant's tokens — OR of the membership test used by the
+    # ab_ecoregion filter below.
+    suns = _as_filter_list(sun_req)
+    if suns:
+        sql += " AND (" + " OR ".join(
+            "(',' || COALESCE(sun_requirement,'') || ',') LIKE ?" for _ in suns) + ")"
+        params += [f"%,{s},%" for s in suns]
 
-    if water_needs:
-        sql += " AND water_needs = ?"
-        params.append(water_needs)
+    waters = _as_filter_list(water_needs)
+    if waters:
+        sql += " AND (" + " OR ".join(
+            "(',' || COALESCE(water_needs,'') || ',') LIKE ?" for _ in waters) + ")"
+        params += [f"%,{w},%" for w in waters]
 
     # Schema v13: tag filters now run through the plant_uses junction table
     # via a single EXISTS sub-select per tag. ``_use_filter`` keeps the SQL
@@ -912,9 +1033,11 @@ def search_plants(
             "             WHERE pu.plant_id = plants.id AND u.key = ?)"
         )
 
-    if perm_use:
-        sql += _use_filter(perm_use)
-        params.append(perm_use)
+    # Use is AND-of-tags: a multi-select keeps only plants that have EVERY chosen
+    # use (one EXISTS sub-select per tag), mirroring the old stacked toggles.
+    for use_key in _as_filter_list(perm_use):
+        sql += _use_filter(use_key)
+        params.append(use_key)
 
     if zone is not None:
         sql += " AND hardiness_zone_min <= ? AND hardiness_zone_max >= ?"
@@ -956,11 +1079,15 @@ def search_plants(
     if has_image_only:
         sql += " AND image_url IS NOT NULL AND image_url != ''"
 
-    if ab_ecoregion:
-        # ab_ecoregion column is a comma-separated list of region ids;
-        # match against any one of them with a substring-safe pattern.
-        sql += " AND (',' || ab_ecoregion || ',') LIKE ?"
-        params.append(f"%,{ab_ecoregion},%")
+    # ab_ecoregion column is a comma-separated list of region ids. A
+    # multi-select "restoring toward" filter matches a plant documented from
+    # ANY of the chosen ecoregions (OR of substring-safe patterns). Accepts a
+    # single string (legacy) or a list (V1.85).
+    ecoregions = _as_filter_list(ab_ecoregion)
+    if ecoregions:
+        sql += " AND (" + " OR ".join(
+            "(',' || COALESCE(ab_ecoregion,'') || ',') LIKE ?" for _ in ecoregions) + ")"
+        params += [f"%,{e},%" for e in ecoregions]
 
     # Safety filters (schema v18) use a DENYLIST: exclude only plants we have
     # classified as toxic. Unassessed ('') and explicit 'none' both pass, so
@@ -992,6 +1119,13 @@ def search_plants(
         sql += (" AND COALESCE(availability_class,'') NOT IN "
                 "('seed_or_plug','rare')")
 
+    # Allowlist (V1.84): keep only the chosen sourcing tiers. Drives the plant
+    # browser's multi-select rarity dropdown — empty/None means "no restriction".
+    if availability_in:
+        placeholders = ",".join("?" for _ in availability_in)
+        sql += f" AND COALESCE(availability_class,'') IN ({placeholders})"
+        params += [str(v) for v in availability_in]
+
     # Fauna-support filters (schema v20) via the plant_fauna junction. Reuse the
     # EXISTS-subquery style used by the use-tag filters above.
     if host_for_fauna_id is not None:
@@ -1018,24 +1152,33 @@ def search_plants(
                 " AND (soil_ph_max IS NULL OR soil_ph_max >= ?)")
         params += [float(soil_ph), float(soil_ph)]
 
+    # water_needs may be comma-delimited (V1.84), so test membership with LIKE
+    # rather than `=`/`IN` on the whole field.
+    def _water_like(*values: str) -> str:
+        return "(" + " OR ".join(
+            "(',' || COALESCE(water_needs,'') || ',') LIKE '%," + v + ",%'"
+            for v in values) + ")"
+
     if moisture == "wet":
         # Wet/low ground: high- or moderate-water plants, true aquatics, or
         # species tagged to a wet ecoregion (wet_meadow / riparian).
-        sql += (" AND (water_needs IN ('high','moderate')"
+        sql += (" AND (" + _water_like("high", "moderate") +
                 " OR plant_type = 'aquatic'"
                 " OR (',' || COALESCE(ab_ecoregion,'') || ',') LIKE '%,wet_meadow,%'"
                 " OR (',' || COALESCE(ab_ecoregion,'') || ',') LIKE '%,riparian,%')")
     elif moisture == "dry":
-        sql += " AND water_needs = 'low'"
+        sql += " AND " + _water_like("low")
     elif moisture == "mesic":
-        sql += " AND water_needs IN ('medium','moderate')"
+        sql += " AND " + _water_like("medium", "moderate")
 
     sql += " ORDER BY plant_type, common_name"
 
     conn = get_connection()
     try:
         rows = conn.execute(sql, params).fetchall()
-        return [_row_to_dict(r) for r in rows]
+        result = [_row_to_dict(r) for r in rows]
+        _attach_permaculture_uses(result)
+        return result
     finally:
         conn.close()
 
@@ -1057,7 +1200,9 @@ def get_companions(plant_id: int) -> dict[str, list[dict]]:
                     ORDER BY p.common_name""",
                 (plant_id, plant_id)
             ).fetchall()
-            return [_row_to_dict(r) for r in rows]
+            result = [_row_to_dict(r) for r in rows]
+            _attach_permaculture_uses(result)
+            return result
 
         return {
             "friends": _fetch("companion_friends"),
@@ -1076,25 +1221,6 @@ def get_distinct_types() -> list[str]:
         return [r[0] for r in rows]
     finally:
         conn.close()
-
-
-def get_distinct_permaculture_uses() -> list[str]:
-    """Return a sorted list of every unique permaculture use tag."""
-    conn = get_connection()
-    try:
-        rows = conn.execute(
-            "SELECT permaculture_uses FROM plants WHERE permaculture_uses IS NOT NULL"
-        ).fetchall()
-    finally:
-        conn.close()
-
-    uses: set[str] = set()
-    for row in rows:
-        for tag in row[0].split(","):
-            tag = tag.strip()
-            if tag:
-                uses.add(tag)
-    return sorted(uses)
 
 
 # ── plant_uses junction helpers (schema v13) ──────────────────────────────────
@@ -1304,6 +1430,48 @@ def store_cached_climate(lat: float, lng: float, summary: dict) -> None:
                 summary.get("years_used"),
                 summary.get("source"),
             ),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_cached_wind(lat: float, lng: float) -> Optional[dict]:
+    """Return the cached wind-rose dict for (lat, lng), or None on miss.
+    The rose is stored as JSON (nested annual/seasonal blocks)."""
+    import json as _json
+    lat_q, lng_q = _quantize_latlng(lat, lng)
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT rose_json, cached_at FROM wind_cache "
+            "WHERE lat_q = ? AND lng_q = ?",
+            (lat_q, lng_q),
+        ).fetchone()
+        if row is None:
+            return None
+        try:
+            rose = _json.loads(row["rose_json"])
+        except (ValueError, TypeError):
+            return None
+        rose["cached_at"] = row["cached_at"]
+        return rose
+    finally:
+        conn.close()
+
+
+def store_cached_wind(lat: float, lng: float, rose: dict) -> None:
+    """Persist a wind rose for (lat, lng). Overwrites any prior cached row at
+    the same quantized location."""
+    import json as _json
+    lat_q, lng_q = _quantize_latlng(lat, lng)
+    conn = get_connection()
+    try:
+        conn.execute(
+            "INSERT OR REPLACE INTO wind_cache "
+            "(lat_q, lng_q, rose_json, source, cached_at) "
+            "VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
+            (lat_q, lng_q, _json.dumps(rose), rose.get("source")),
         )
         conn.commit()
     finally:

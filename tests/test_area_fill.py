@@ -12,7 +12,9 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.area_fill import fill_points, assign_members, plan_fill  # noqa: E402
+from src.area_fill import (  # noqa: E402
+    fill_points, assign_members, plan_fill, matrix_members, plan_matrix_fill,
+)
 
 # A ~30 m square near Edmonton, as a GeoJSON [lng, lat] ring (unclosed is fine
 # for the ray-cast). 30 m ≈ 0.00027° lat; lng scaled by cos(53.5°)≈0.595.
@@ -92,6 +94,32 @@ class TestPlanFill(unittest.TestCase):
         from collections import Counter
         c = Counter(k for k, _, _ in out)
         self.assertGreater(c["fescue"], c["oak"])
+
+
+class TestMatrix(unittest.TestCase):
+    def test_matrix_members_weighting(self):
+        m = matrix_members("fescue", ["aster", "bergamot"], matrix_share=0.6)
+        self.assertEqual(m[0], ("fescue", 0.6))
+        # features split the remaining 0.4 evenly
+        self.assertAlmostEqual(m[1][1], 0.2)
+        self.assertAlmostEqual(m[2][1], 0.2)
+        # the matrix key is never duplicated into the feature list
+        m2 = matrix_members("fescue", ["fescue", "aster"], matrix_share=0.7)
+        self.assertEqual([k for k, _ in m2], ["fescue", "aster"])
+
+    def test_matrix_share_clamped(self):
+        self.assertEqual(matrix_members("g", ["a"], matrix_share=5.0)[0][1], 0.95)
+        self.assertEqual(matrix_members("g", ["a"], matrix_share=0.0)[0][1], 0.1)
+
+    def test_matrix_fill_is_matrix_dominant(self):
+        out = plan_matrix_fill(_RING, "fescue", ["aster", "bergamot"],
+                               spacing_m=4.0, matrix_share=0.7)
+        self.assertGreater(len(out), 0)
+        from collections import Counter
+        c = Counter(k for k, _, _ in out)
+        # the matrix species covers more ground than any single feature
+        self.assertGreater(c["fescue"], c["aster"])
+        self.assertGreater(c["fescue"], c["bergamot"])
 
 
 class TestAreaFillController(unittest.TestCase):
@@ -243,6 +271,57 @@ class TestAreaFillController(unittest.TestCase):
         main, _ = self._stub_main()
         self.assertEqual(
             AreaFillController(main).fill_community_mix(_RING, [], 2.0), 0)
+
+    def _layered_community(self, name, ground, tall):
+        """A community with a real ground layer + a taller layer, so matrix
+        planting has something to knit and something to stand out."""
+        return {"id": abs(hash(name)) % 100000, "name": name, "members": [
+            {"plant_id": ground, "common_name": "G", "layer": "groundcover",
+             "spacing_m": 0.4, "offset_x": 0.0, "offset_y": 0.0},
+            {"plant_id": tall, "common_name": "T", "layer": "shrub_layer",
+             "spacing_m": 1.5, "offset_x": 1.5, "offset_y": 0.0},
+        ]}
+
+    def test_fill_community_mix_matrix_pools_all_members(self):
+        from src.controllers.area_fill_controller import AreaFillController
+        main, _ = self._stub_main()
+        mix = [
+            {"id": 1, "weight": 1, "name": "Guild A",
+             "polyculture": self._layered_community("Guild A", self._a, self._b)},
+            {"id": 2, "weight": 1, "name": "Guild B",
+             "polyculture": self._layered_community("Guild B", self._b, self._a)},
+        ]
+        n = AreaFillController(main).fill_community_mix(
+            _RING, mix, spacing_m=2.0, matrix=True)
+        self.assertGreater(n, 0)
+        # Matrix dissolves the mix into individual plants (not stamped units):
+        # tagged "Community mix", and members from BOTH communities are pooled.
+        names = {p["polyculture_name"] for p in main._placed_plants}
+        self.assertEqual(names, {"Community mix"})
+        self.assertEqual({p["plant_id"] for p in main._placed_plants},
+                         {self._a, self._b})
+        # one plant per record (a scatter, not 2-member units) + one group.
+        self.assertEqual(len(main._placed_plants), n)
+        self.assertEqual(
+            len({p["placement_group_id"] for p in main._placed_plants}), 1)
+
+    def test_fill_community_mix_matrix_falls_back_without_ground(self):
+        from src.controllers.area_fill_controller import AreaFillController
+        main, _ = self._stub_main()
+        # _community members carry no vegetation layer → all bucket to perennial,
+        # so there is no ground layer to knit: matrix falls back to unit stamping.
+        mix = [
+            {"id": 1, "weight": 1, "name": "Guild A",
+             "polyculture": self._community("Guild A", self._a, self._b)},
+            {"id": 2, "weight": 1, "name": "Guild B",
+             "polyculture": self._community("Guild B", self._b, self._a)},
+        ]
+        n = AreaFillController(main).fill_community_mix(
+            _RING, mix, spacing_m=2.0, matrix=True)
+        self.assertGreater(n, 0)
+        names = {p["polyculture_name"] for p in main._placed_plants}
+        self.assertEqual(names, {"Guild A", "Guild B"})   # whole units stamped
+        self.assertEqual(len(main._placed_plants), n * 2)
 
 
 if __name__ == "__main__":

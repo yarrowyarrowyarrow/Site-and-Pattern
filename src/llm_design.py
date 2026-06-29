@@ -51,7 +51,7 @@ _ALLOWED_FILTERS = {
 }
 
 _SYSTEM_PROMPT = """\
-You are a landscape design assistant for PermaDesign, a tool for native-plant
+You are a landscape design assistant for Site & Pattern, a tool for native-plant
 habitat gardens in Alberta and the Canadian prairies. Given a design brief,
 respond with ONLY a single JSON object (no prose, no markdown fences) of this
 shape:
@@ -77,9 +77,10 @@ Rules:
   real, in-stock, site-appropriate species.
 - "plants[].layout" (optional) is how that GROUP is arranged on the ground:
   "row" for hedges, screens and bed edges; "grid" for evenly-spaced trees or a
-  formal block; "circle" for a feature specimen or herb circle; "scatter" for a
-  natural drift of forbs/grasses/accents. Choose the layout that suits the
-  plant's role; omit it to let the app pick by growth habit.
+  formal block; "circle" for a feature specimen or herb circle; "drift" for a
+  flowing, naturalistic sweep of grasses/forbs (the preferred look for a meadow);
+  "scatter" for loosely-spread accents. Choose the layout that suits the plant's
+  role; omit it to let the app pick by growth habit.
 - Use generous quantities and several groups so the planting FILLS the
   available space (see the planting target below) rather than leaving the lot
   mostly bare.

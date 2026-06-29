@@ -1,9 +1,12 @@
 import json
 import re
 
-from PyQt6.QtCore import Qt, pyqtSignal, QPointF, QRectF, QSettings
+from PyQt6.QtCore import (
+    Qt, pyqtSignal, QPointF, QRectF, QSettings, QMimeData, QByteArray,
+)
 from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont
 from PyQt6.QtWidgets import (
+    QAbstractItemView,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -25,7 +28,7 @@ from PyQt6.QtWidgets import (
     QSlider,
     QSpinBox,
     QSplitter,
-    QTextEdit,
+    QTextBrowser,
     QToolButton,
     QTreeWidget,
     QTreeWidgetItem,
@@ -34,8 +37,93 @@ from PyQt6.QtWidgets import (
 )
 
 from src.db import polycultures
+
+
+# Drag a community from the library tree → drop on the "Plant Communities Mix"
+# (V1.87, mirrors the plant drag-to-mix on the Plant Library tab).
+_COMMUNITY_MIME = "application/x-sap-community-id"
+
+
+class _CommunityTree(QTreeWidget):
+    """Library tree whose rows can be dragged (carrying the community id)."""
+
+    def mimeTypes(self):
+        return [_COMMUNITY_MIME]
+
+    def supportedDragActions(self):
+        return Qt.DropAction.CopyAction
+
+    def mimeData(self, items):
+        md = QMimeData()
+        for it in items:
+            pid = it.data(0, Qt.ItemDataRole.UserRole)
+            if pid:
+                md.setData(_COMMUNITY_MIME, QByteArray(str(int(pid)).encode()))
+                break
+        return md
+
+
+class _CommunityMixDropGroupBox(QGroupBox):
+    """The 'Plant Communities Mix' box, made a drop target so a community can be
+    dragged from the library straight in. ``on_drop`` receives the community id."""
+
+    def __init__(self, title: str, on_drop, parent=None):
+        super().__init__(title, parent)
+        self._on_drop = on_drop
+        self.setAcceptDrops(True)
+
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasFormat(_COMMUNITY_MIME):
+            e.acceptProposedAction()
+        else:
+            super().dragEnterEvent(e)
+
+    def dragMoveEvent(self, e):
+        if e.mimeData().hasFormat(_COMMUNITY_MIME):
+            e.acceptProposedAction()
+        else:
+            super().dragMoveEvent(e)
+
+    def dropEvent(self, e):
+        if e.mimeData().hasFormat(_COMMUNITY_MIME):
+            try:
+                pid = int(bytes(e.mimeData().data(_COMMUNITY_MIME)).decode())
+            except (ValueError, TypeError):
+                return
+            self._on_drop(pid)
+            e.acceptProposedAction()
+        else:
+            super().dropEvent(e)
 from src.db import plants as plants_db
 from src.placement_controls import _QTY_SPIN_STYLE
+from src.plant_conditions import condition_matches
+
+
+# Community-tree height bounds. With nothing selected the tree fills the panel
+# (uncapped) so the user sees as many communities as fit; once a community is
+# selected it shrinks to ~7 rows and hands the room to the members list +
+# description card below. _TREE_EXPANDED_MAX is Qt's QWIDGETSIZE_MAX; the
+# collapsed height is computed from the live row height × _TREE_COLLAPSED_ROWS.
+_TREE_EXPANDED_MAX = 16_777_215
+_TREE_COLLAPSED_ROWS = 7
+
+# "Group By" lenses for the community library (V1.88). Each key (other than
+# "none") matches a facet from polycultures.get_community_facets(); the panel
+# buckets communities under bold, unselectable category nodes.
+_GROUP_BY_OPTIONS = [
+    ("none",      "No grouping"),
+    ("habitat",   "By Habitat"),
+    ("structure", "By Structure"),
+    ("sun",       "By Sun"),
+    ("moisture",  "By Moisture"),
+]
+_GROUP_COMBO_STYLE = (
+    "QComboBox { background: #1e2e1e; color: #c8e6c9; border: 1px solid #2e4a2e; "
+    "border-radius: 3px; padding: 1px 6px; font-size: 11px; }"
+    "QComboBox:hover { border-color: #4a7a4a; }"
+    "QComboBox QAbstractItemView { background: #1e2e1e; color: #c8e6c9; "
+    "border: 1px solid #2e4a2e; selection-background-color: #2e5a2e; }"
+)
 
 
 # Vegetation layer (single-select) — the physical position of a plant in
@@ -398,10 +486,16 @@ class PolycultureGridCanvas(QWidget):
         return (px - cx) / s, (cy - py) / s
 
     def _hit_test(self, px: float, py: float) -> int | None:
+        s = self._scale()
         for idx in range(len(self._members) - 1, -1, -1):
             m = self._members[idx]
             mx, my = self._world_to_pixel(m["offset_x"], m["offset_y"])
-            if (px - mx) ** 2 + (py - my) ** 2 <= 12 ** 2:
+            # Match the painted canopy disc so the whole visible plant is
+            # grabbable. A fixed 12px only covered the tiny centre pip, so
+            # clicks on the disc missed and fell through to the "add" path —
+            # popping the "Pick a plant" modal instead of starting a drag.
+            r_px = max(8.0, (float(m.get("spacing_m") or 1.0) / 2.0) * s)
+            if (px - mx) ** 2 + (py - my) ** 2 <= r_px * r_px:
                 return idx
         return None
 
@@ -705,6 +799,33 @@ class PolycultureBuilderDialog(QDialog):
         self.count_label = QLabel("0 plants placed")
         self.count_label.setStyleSheet("color: #90a4ae; font-size: 11px;")
         centre_col.addWidget(self.count_label, 0, Qt.AlignmentFlag.AlignHCenter)
+
+        arrange_btn = QPushButton("Auto-arrange by layer")
+        arrange_btn.setToolTip(
+            "Place members by vegetation layer: tree(s) centred, shrubs ringed "
+            "around them, perennials in the next band, groundcover filling the "
+            "rest. Replaces the current positions; drag to fine-tune afterward.")
+        arrange_btn.clicked.connect(self._on_auto_arrange)
+        centre_col.addWidget(arrange_btn, 0, Qt.AlignmentFlag.AlignHCenter)
+
+        arrange_radius_row = QHBoxLayout()
+        arrange_radius_row.addWidget(QLabel("Max radius:"))
+        self._arrange_radius_slider = QSlider(Qt.Orientation.Horizontal)
+        # 2..30 m placement radius. 6 m matches the shipped communities.
+        self._arrange_radius_slider.setRange(2, 30)
+        self._arrange_radius_slider.setValue(6)
+        self._arrange_radius_slider.setToolTip(
+            "Cap how far Auto-arrange spreads the community outward. "
+            "6 m matches the built-in communities; raise it for larger plantings."
+        )
+        self._arrange_radius_label = QLabel("6 m")
+        self._arrange_radius_label.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self._arrange_radius_slider.valueChanged.connect(
+            lambda v: self._arrange_radius_label.setText(f"{v} m")
+        )
+        arrange_radius_row.addWidget(self._arrange_radius_slider, 1)
+        arrange_radius_row.addWidget(self._arrange_radius_label)
+        centre_col.addLayout(arrange_radius_row)
         body.addLayout(centre_col, 0)
 
         # Right — current members
@@ -759,9 +880,9 @@ class PolycultureBuilderDialog(QDialog):
                 continue
             if type_f and (p.get("plant_type") or "") != type_f:
                 continue
-            if sun_f and (p.get("sun_requirement") or "") != sun_f:
+            if not condition_matches(p.get("sun_requirement"), sun_f):
                 continue
-            if water_f and (p.get("water_needs") or "") != water_f:
+            if not condition_matches(p.get("water_needs"), water_f):
                 continue
             if use_f:
                 uses_raw = (p.get("permaculture_uses") or "").lower()
@@ -883,6 +1004,29 @@ class PolycultureBuilderDialog(QDialog):
         self.canvas.setRadius(float(value))
         self._zoom_label.setText(self._zoom_label_text(float(value)))
 
+    def _on_auto_arrange(self):
+        """Lay the members out concentrically by layer (trees centred, shrubs
+        ringed, perennials then groundcover filling) — F22. Non-destructive: only
+        runs on click; the user can still drag afterward."""
+        from src import planting_spacing
+        members = self.canvas.get_members()
+        if not members:
+            return
+        max_radius = float(self._arrange_radius_slider.value())
+        arranged, radius = planting_spacing.arrange_concentric(
+            members, max_radius_m=max_radius)
+        # Grow the visible canvas + zoom slider so the arrangement fits.
+        need = max(3.0, radius + 1.0)
+        if need > self.canvas.radius_m():
+            r = min(30.0, need)
+            self.canvas.setRadius(r)
+            self._zoom_slider.blockSignals(True)
+            self._zoom_slider.setValue(int(round(r)))
+            self._zoom_slider.blockSignals(False)
+            self._zoom_label.setText(self._zoom_label_text(r))
+        self.canvas.set_members(arranged)
+        self._refresh_member_list()
+
     def _load_existing(self, polyculture_id: int):
         rec = polycultures.get_polyculture_by_id(polyculture_id)
         if not rec:
@@ -926,8 +1070,8 @@ class PolycultureBuilderDialog(QDialog):
 
 class PolyculturePanel(QWidget):
     placePolycultureRequested = pyqtSignal(dict)  # polyculture data with members
-    fillAreaRequested = pyqtSignal(int, float)    # polyculture_id, cell spacing (m)
-    fillCommunityMixRequested = pyqtSignal(object, float)  # [{id,weight,name,polyculture}], spacing
+    fillAreaRequested = pyqtSignal(int, float, bool)  # polyculture_id, cell spacing (m), matrix (F22)
+    fillCommunityMixRequested = pyqtSignal(object, float, bool)  # [{id,weight,name,polyculture}], spacing, matrix (F22)
     # Emitted when the panel creates a brand-new community (e.g. via
     # "Save stack as Community" from the Plants tab), so external views
     # can refresh their library lists.
@@ -972,18 +1116,46 @@ class PolyculturePanel(QWidget):
         title_row.addWidget(self.variations_toggle_btn)
         layout.addLayout(title_row)
 
-        # Search/filter box
+        # Search box + a compact "Group By" lens dropdown beside it: pivot the
+        # library between a flat list and category folders along an ecological
+        # lens (Habitat / Structure / Sun / Moisture) without losing vertical
+        # space (V1.88).
+        self._group_by = settings.value(
+            "plant_communities/group_by", "none", type=str)
+        search_row = QHBoxLayout()
+        search_row.setSpacing(4)
         self._search_box = QLineEdit()
         self._search_box.setPlaceholderText("Search communities...")
         self._search_box.setClearButtonEnabled(True)
         self._search_box.textChanged.connect(self._refresh_polyculture_list)
-        layout.addWidget(self._search_box)
+        search_row.addWidget(self._search_box, 1)
+
+        self._group_combo = QComboBox()
+        self._group_combo.setToolTip(
+            "Group the library by an ecological lens — pivot between\n"
+            "environmental views (Habitat / Sun / Moisture) and spatial\n"
+            "structure (Canopy / Understory / …)."
+        )
+        self._group_combo.setStyleSheet(_GROUP_COMBO_STYLE)
+        for key, label in _GROUP_BY_OPTIONS:
+            self._group_combo.addItem(label, key)
+        _gi = self._group_combo.findData(self._group_by)
+        if _gi >= 0:
+            self._group_combo.setCurrentIndex(_gi)   # before connecting → no early refresh
+        self._group_combo.currentIndexChanged.connect(self._on_group_by_changed)
+        search_row.addWidget(self._group_combo)
+        layout.addLayout(search_row)
 
         # Polyculture tree (parent polycultures + variations as children)
-        self.polyculture_tree = QTreeWidget()
+        self.polyculture_tree = _CommunityTree()
         self.polyculture_tree.setHeaderHidden(True)
         self.polyculture_tree.setIndentation(16)
         self.polyculture_tree.setMouseTracking(True)
+        # Drag a community out of the library onto the "Plant Communities Mix"
+        # box (V1.87).
+        self.polyculture_tree.setDragEnabled(True)
+        self.polyculture_tree.setDragDropMode(
+            QAbstractItemView.DragDropMode.DragOnly)
         self.polyculture_tree.currentItemChanged.connect(self._on_polyculture_selected)
         self.polyculture_tree.itemDoubleClicked.connect(self._on_double_click_place)
         self.polyculture_tree.setContextMenuPolicy(
@@ -992,7 +1164,12 @@ class PolyculturePanel(QWidget):
         self.polyculture_tree.customContextMenuRequested.connect(
             self._on_tree_context_menu
         )
-        layout.addWidget(self.polyculture_tree)
+        # Height is dynamic (see _on_polyculture_selected): with nothing
+        # selected the tree fills the panel (stretch 1, uncapped) so the user
+        # sees as many communities as fit; once a community is selected it
+        # shrinks to ~7 rows and the members list + description card take over.
+        self.polyculture_tree.setMaximumHeight(_TREE_EXPANDED_MAX)
+        layout.addWidget(self.polyculture_tree, 1)
 
         # Community-mix stack — populated by right-click → "Add to Mix".
         # When ≥2 communities are in the mix, Row/Grid/Circle placement
@@ -1003,74 +1180,84 @@ class PolyculturePanel(QWidget):
         # Buttons row 1
         btn_row1 = QHBoxLayout()
         self.new_btn = QPushButton("New Community")
-        self.new_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self.new_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
         self.new_btn.clicked.connect(self._on_new_polyculture)
         btn_row1.addWidget(self.new_btn)
 
         self.delete_btn = QPushButton("Delete")
-        self.delete_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self.delete_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
         self.delete_btn.setEnabled(False)
         self.delete_btn.clicked.connect(self._on_delete_polyculture)
         btn_row1.addWidget(self.delete_btn)
 
         self.dup_btn = QPushButton("Duplicate")
-        self.dup_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self.dup_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
         self.dup_btn.setEnabled(False)
         self.dup_btn.clicked.connect(self._on_duplicate_polyculture)
         btn_row1.addWidget(self.dup_btn)
 
         self.variation_btn = QPushButton("+ Variation")
-        self.variation_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self.variation_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
         self.variation_btn.setEnabled(False)
         self.variation_btn.setToolTip("Create a variation of this plant community")
         self.variation_btn.clicked.connect(self._on_add_variation)
         btn_row1.addWidget(self.variation_btn)
         layout.addLayout(btn_row1)
 
-        # Toggle to reveal/hide the description block. Hiding it frees
-        # vertical space so more members are visible at once. Persisted
-        # in QSettings; default shown (matches the prior behaviour).
+        # Second button row: Edit / Export / Import grouped with the library
+        # actions above (Place on Map lives in the Placement panel instead).
+        btn_row2 = QHBoxLayout()
+        self.edit_btn = QPushButton("Edit")
+        self.edit_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
+        self.edit_btn.setEnabled(False)
+        self.edit_btn.setToolTip("Open the visual builder for this plant community")
+        self.edit_btn.clicked.connect(self._on_edit_polyculture)
+        btn_row2.addWidget(self.edit_btn)
+
+        self.export_btn = QPushButton("Export")
+        self.export_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
+        self.export_btn.setEnabled(False)
+        self.export_btn.setToolTip("Export this community to a .plant-community.json file")
+        self.export_btn.clicked.connect(self._on_export)
+        btn_row2.addWidget(self.export_btn)
+
+        self.import_btn = QPushButton("Import")
+        self.import_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
+        self.import_btn.setToolTip("Import a community from a .plant-community.json or .polyculture.json file")
+        self.import_btn.clicked.connect(self._on_import)
+        btn_row2.addWidget(self.import_btn)
+        layout.addLayout(btn_row2)
+
+        # ── Selected community: name + "Anchored on X · N plants" header ──
+        # Shown above the members so the list sits directly under the title
+        # (the long Problem/Context description follows below).
+        self._community_header = QLabel("")
+        self._community_header.setTextFormat(Qt.TextFormat.RichText)
+        self._community_header.setWordWrap(True)
+        self._community_header.setVisible(False)
+        layout.addWidget(self._community_header)
+
+        # ── Members (full compact list, auto-sized to its content) ───────
+        # The pattern toggle rides on the right of this label row (rather than
+        # in its own band) so there's no empty strip above the description.
         self._show_description = QSettings().value(
             "plant_communities/show_description", True, type=bool
         )
-        self.description_toggle_btn = QPushButton(
-            "▾ Hide description" if self._show_description
-            else "▸ Show description"
-        )
-        self.description_toggle_btn.setStyleSheet(
-            "QPushButton { background: transparent; color: #90a4ae; "
-            "border: 1px solid #2e4a2e; border-radius: 3px; "
-            "padding: 1px 8px; font-size: 10px; }"
-            "QPushButton:hover { color: #c8e6c9; border-color: #4a7a4a; }"
-        )
-        self.description_toggle_btn.setToolTip(
-            "Show or hide the community description to make room for "
-            "more members in the list below."
-        )
-        self.description_toggle_btn.clicked.connect(self._on_toggle_description)
-        toggle_row = QHBoxLayout()
-        toggle_row.addStretch(1)
-        toggle_row.addWidget(self.description_toggle_btn)
-        layout.addLayout(toggle_row)
-
-        # Detail area
-        self.detail_text = QTextEdit()
-        self.detail_text.setReadOnly(True)
-        self.detail_text.setMaximumHeight(150)
-        self.detail_text.setVisible(self._show_description)
-        layout.addWidget(self.detail_text)
-
-        # Members list — compact rows with inline triangle expand. Each
-        # row is a custom QFrame (see _build_member_row); detail content
-        # (layer/functions + offset) is hidden by default to keep density
-        # tight, matching the Plants browser's expand-on-click pattern.
-        members_label = QLabel("<b>Members</b>")
-        layout.addWidget(members_label)
+        self._members_label = QLabel("<b>Members</b>")
+        self._members_label.setVisible(False)
+        members_header = QHBoxLayout()
+        members_header.addWidget(self._members_label)
+        members_header.addStretch(1)
+        self.description_toggle_btn = self._build_description_toggle_btn()
+        members_header.addWidget(self.description_toggle_btn)
+        layout.addLayout(members_header)
 
         self._members_scroll = QScrollArea()
         self._members_scroll.setWidgetResizable(True)
         self._members_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self._members_scroll.setMaximumHeight(180)
+        # Height set to fit every row (up to a ceiling) in _render_member_rows,
+        # so the whole members list is visible without scrolling for normal
+        # community sizes.
         self._members_scroll.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
@@ -1082,61 +1269,47 @@ class PolyculturePanel(QWidget):
         self._members_scroll.setWidget(self.members_container)
         layout.addWidget(self._members_scroll)
 
-        # Single action row: Place on Map gets visual priority (stretch=2),
-        # Edit shares the row at a smaller weight, Export/Import are
-        # compact fixed-width buttons so they don't crowd the primary.
-        action_row = QHBoxLayout()
-        action_row.setSpacing(4)
+        # ── Pattern description card ─────────────────────────────────────
+        # (The show/hide toggle lives on the Members label row above; the
+        # _show_description preference was read there.)
+        # The Alexander pattern card (F4): Problem / Context / Forces / Solution
+        # / Related, rendered with include_header=False (the name + "Anchored
+        # on …" line is shown above in self._community_header). QTextBrowser →
+        # clickable related-pattern links. stretch=1: fills the remaining space.
+        self.detail_text = QTextBrowser()
+        self.detail_text.setOpenLinks(False)   # we handle community: links ourselves
+        self.detail_text.setMinimumHeight(120)
+        # Hidden until a community is selected — otherwise the empty card (also
+        # stretch 1) competes with the tree for space and the list can't fill
+        # the panel on open. The selection handler shows/hides it from here.
+        self.detail_text.setVisible(False)
+        self.detail_text.anchorClicked.connect(self._on_pattern_link)
+        layout.addWidget(self.detail_text, 1)
 
-        self.place_btn = QPushButton("Place on Map")
-        self.place_btn.setStyleSheet(_POLY_BTN_STYLE)
-        self.place_btn.setEnabled(False)
-        self.place_btn.setMinimumWidth(110)
-        self.place_btn.clicked.connect(self._on_place)
-        action_row.addWidget(self.place_btn, 2)
-
-        # Fill Area moved into the Placement Mode selector (choose "Fill Area",
-        # set spacing, click Place, then draw the polygon) — see _on_place +
-        # PlacementControlsWidget. A community fill drops whole units; a
-        # community-mix fill scatters units from the mix.
-
-        self.edit_btn = QPushButton("Edit")
-        self.edit_btn.setStyleSheet(_POLY_BTN_STYLE)
-        self.edit_btn.setEnabled(False)
-        self.edit_btn.setToolTip(
-            "Open the visual builder for this plant community"
+        # ── Placement controls (collapsible) ─────────────────────────────
+        # The placement-mode selector + community spacing + community mix eat a
+        # lot of vertical room even when the user is just browsing communities,
+        # so wrap them in a CollapsiblePanel (collapsed by default, state
+        # remembered) and let the community tree above reclaim the space.
+        from src.collapsible_panel import CollapsiblePanel
+        placement_body = QWidget()
+        placement_layout = QVBoxLayout(placement_body)
+        placement_layout.setContentsMargins(0, 0, 0, 0)
+        placement_layout.setSpacing(0)
+        self._build_community_pattern_controls(placement_layout)
+        self._build_community_mix_controls(placement_layout)
+        self._placement_panel = CollapsiblePanel(
+            "Placement", panel_id="poly_placement", expanded=False
         )
-        self.edit_btn.clicked.connect(self._on_edit_polyculture)
-        action_row.addWidget(self.edit_btn, 1)
-
-        self.export_btn = QPushButton("Export")
-        self.export_btn.setStyleSheet(_POLY_BTN_STYLE)
-        self.export_btn.setEnabled(False)
-        self.export_btn.setFixedWidth(64)
-        self.export_btn.setToolTip("Export this community to a .plant-community.json file")
-        self.export_btn.clicked.connect(self._on_export)
-        action_row.addWidget(self.export_btn)
-
-        self.import_btn = QPushButton("Import")
-        self.import_btn.setStyleSheet(_POLY_BTN_STYLE)
-        self.import_btn.setFixedWidth(64)
-        self.import_btn.setToolTip("Import a community from a .plant-community.json or .polyculture.json file")
-        self.import_btn.clicked.connect(self._on_import)
-        action_row.addWidget(self.import_btn)
-
-        layout.addLayout(action_row)
-
-        # ── Pattern controls for community placement ─────────────────────
-        self._build_community_pattern_controls(layout)
-
-        # ── Community Mix inline panel ──────────────────────────────────
-        self._build_community_mix_controls(layout)
+        self._placement_panel.set_content(placement_body)
+        layout.addWidget(self._placement_panel)
 
     def _build_community_mix_controls(self, parent_layout):
         """Inline ratio-mix builder for placing several plant communities
         in a row/grid/circle at user-set ratios. Right-click a community
         in the tree → 'Add to Community Mix'."""
-        mix_box = QGroupBox("Plant Communities Mix")
+        mix_box = _CommunityMixDropGroupBox(
+            "Plant Communities Mix", self._add_to_community_mix)
         mix_box.setStyleSheet(
             "QGroupBox { color: #a5d6a7; font-size: 11px; "
             "border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 8px; }"
@@ -1148,9 +1321,7 @@ class PolyculturePanel(QWidget):
         ml.setSpacing(3)
 
         self._mix_community_status = QLabel(
-            "Mix off — right-click a community in the list to add it.\n"
-            "With ≥2 communities, Row/Grid/Circle will distribute them in "
-            "the chosen ratios."
+            "Drag or right-click communities here to build a mix."
         )
         self._mix_community_status.setWordWrap(True)
         self._mix_community_status.setStyleSheet(
@@ -1243,6 +1414,10 @@ class PolyculturePanel(QWidget):
             "weight": 1,
             "polyculture": polyculture,
         })
+        # Reveal the mix: expand the placement pane so the growing mix stays
+        # visible (transient — not a saved preference). (V1.87)
+        if hasattr(self, "_placement_panel"):
+            self._placement_panel.set_expanded(True, persist=False)
         self._refresh_community_mix()
 
     def _remove_from_community_mix(self, polyculture_id: int):
@@ -1270,9 +1445,7 @@ class PolyculturePanel(QWidget):
         n = len(self._mix_communities)
         if n == 0:
             self._mix_community_status.setText(
-                "Mix off — right-click a community in the list to add it.\n"
-                "With ≥2 communities, Row/Grid/Circle will distribute them "
-                "in the chosen ratios."
+                "Drag or right-click communities here to build a mix."
             )
             self._mix_community_rows.setVisible(False)
             self._mix_community_place_btn.setEnabled(False)
@@ -1280,8 +1453,7 @@ class PolyculturePanel(QWidget):
             return
         if n == 1:
             self._mix_community_status.setText(
-                "Mix: 1 community (need ≥2 to activate).\n"
-                "Add at least one more, then choose Row/Grid/Circle."
+                "1 community — add ≥1 more to activate."
             )
         else:
             ratios = ":".join(str(int(c["weight"])) for c in self._mix_communities)
@@ -1357,14 +1529,18 @@ class PolyculturePanel(QWidget):
         pattern = self.placement_widget.current_pattern()
         kind = pattern["kind"]
         if kind == "fill":
-            # Fill an area with whole units drawn from the community mix.
+            # Fill an area with the community mix. With Matrix planting ticked the
+            # whole mix dissolves into one matrix (every member of every community
+            # pooled, ground layer knitting, taller plants scattered); otherwise
+            # whole community units are scattered.
             self.fillCommunityMixRequested.emit(
                 [
                     {"id": int(c["id"]), "weight": int(c["weight"]),
                      "name": c["name"], "polyculture": c["polyculture"]}
                     for c in self._mix_communities
                 ],
-                self.placement_widget.fill_spacing(),
+                float(self.pattern_spacing.value() or 4.0),
+                bool((pattern.get("params") or {}).get("matrix")),
             )
             return
         if kind == "single":
@@ -1405,20 +1581,36 @@ class PolyculturePanel(QWidget):
         multi-anchor placement: each click drops a row/grid/circle of
         the selected community."""
         from src.placement_controls import PlacementControlsWidget
+
+        # Place on Map is the placement action, so it heads the Placement panel
+        # (above the mode selector). Enabled only when a community is selected.
+        self.place_btn = QPushButton("Place on Map")
+        self.place_btn.setStyleSheet(_POLY_BTN_STYLE)
+        self.place_btn.setEnabled(False)
+        self.place_btn.clicked.connect(self._on_place)
+        parent_layout.addWidget(self.place_btn)
+
+        # show_fill_spacing=False: a community/mix is placed as units (or a
+        # matrix), never as a scatter of single plants, so the only meaningful
+        # spacing is the gap *between* units — the single Cell spacing control
+        # below drives every multi mode (Fill Area + Row/Grid/Circle).
         self.placement_widget = PlacementControlsWidget(
             show_canopy_base=False,
+            show_fill_spacing=False,
             title="Placement Mode",
         )
+        self.placement_widget.patternKindChanged.connect(
+            self._on_placement_kind_changed)
         parent_layout.addWidget(self.placement_widget)
 
-        spacing_box = QGroupBox("Community spacing")
-        spacing_box.setStyleSheet(
+        self._spacing_box = QGroupBox("Community spacing")
+        self._spacing_box.setStyleSheet(
             "QGroupBox { color: #a5d6a7; font-size: 11px; "
             "border: 1px solid #2e4a2e; border-radius: 4px; margin-top: 12px; }"
             "QGroupBox::title { subcontrol-origin: margin; left: 8px; "
             "padding: 0 4px; }"
         )
-        sl = QHBoxLayout(spacing_box)
+        sl = QHBoxLayout(self._spacing_box)
         sl.setContentsMargins(8, 12, 8, 6)
         sl.addWidget(QLabel("Cell spacing:"))
         self.pattern_spacing = QDoubleSpinBox()
@@ -1427,78 +1619,126 @@ class PolyculturePanel(QWidget):
         self.pattern_spacing.setValue(4.0)
         self.pattern_spacing.setSuffix(" m")
         self.pattern_spacing.setToolTip(
-            "Centre-to-centre spacing between community instances. "
+            "Centre-to-centre spacing between community units — the gap between "
+            "whole communities for Fill Area and Row/Grid/Circle alike. "
             "Defaults to 2× the selected community's natural radius "
             "(its widest member offset)."
         )
         sl.addWidget(self.pattern_spacing)
         sl.addStretch(1)
-        parent_layout.addWidget(spacing_box)
+        parent_layout.addWidget(self._spacing_box)
+        # Single mode places one community where you click — no inter-unit gap.
+        self._spacing_box.setVisible(False)
+
+    def _on_placement_kind_changed(self, kind: str):
+        """Show the Cell spacing control only when it applies — every multi mode
+        (Fill Area, Row, Grid, Circle); hidden for Single (one click, one
+        community, no inter-unit gap)."""
+        if hasattr(self, "_spacing_box"):
+            self._spacing_box.setVisible(kind != "single")
 
     def _refresh_polyculture_list(self, _filter_text=None):
         self.polyculture_tree.clear()
         search = (self._search_box.text().strip().lower()
                   if hasattr(self, '_search_box') else "")
+        group_by = getattr(self, "_group_by", "none")
 
+        # Build the (community, item) list once; the item already has its
+        # variations nested + expansion applied.
+        built = []
         for g in polycultures.get_all_polycultures(top_level_only=True):
-            polyculture_detail = polycultures.get_polyculture_by_id(g["id"])
-            members = polyculture_detail.get("members", []) if polyculture_detail else []
-            member_names = [m["common_name"] for m in members]
+            item = self._make_community_item(g, search)
+            if item is not None:
+                built.append((g, item))
 
-            # Search filter: match polyculture name, description, or member names
-            children = polycultures.get_polyculture_children(g["id"])
-            child_match = False
-            if search:
-                polyculture_match = (
-                    search in g["name"].lower()
-                    or search in (g.get("description") or "").lower()
-                    or any(search in n.lower() for n in member_names)
-                )
-                for child in children:
-                    cd = polycultures.get_polyculture_by_id(child["id"])
-                    cm = [m["common_name"] for m in (cd.get("members", []) if cd else [])]
-                    if (search in child["name"].lower()
-                            or any(search in n.lower() for n in cm)):
-                        child_match = True
-                if not polyculture_match and not child_match:
-                    continue
+        if group_by == "none":
+            for _g, item in built:
+                self.polyculture_tree.addTopLevelItem(item)
+            return
 
-            # Build tooltip: member summary
-            roles_summary = ", ".join(
-                f"{m['common_name']} ({(m.get('role') or '').replace('_',' ')})"
-                for m in members[:5]
+        # Grouped: bucket communities under bold, unselectable category nodes.
+        facets = polycultures.get_community_facets()
+        buckets: dict[str, list] = {}
+        for g, item in built:
+            label = facets.get(g["id"], {}).get(group_by) or "Other"
+            buckets.setdefault(label, []).append(item)
+        for label in sorted(buckets):
+            group_node = QTreeWidgetItem([f"{label}  ({len(buckets[label])})"])
+            font = group_node.font(0)
+            font.setBold(True)
+            group_node.setFont(0, font)
+            group_node.setForeground(0, QColor("#a5d6a7"))
+            # Enabled (so it expands) but NOT selectable or draggable — a pure
+            # category folder.
+            group_node.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            self.polyculture_tree.addTopLevelItem(group_node)
+            for item in buckets[label]:
+                group_node.addChild(item)
+            group_node.setExpanded(True)
+
+    def _make_community_item(self, g, search):
+        """Build the tree item for one top-level community — variations nested as
+        children, expansion applied. Returns ``None`` when a search is active and
+        neither the community nor its variations match."""
+        detail = polycultures.get_polyculture_by_id(g["id"])
+        members = detail.get("members", []) if detail else []
+        member_names = [m["common_name"] for m in members]
+        children = polycultures.get_polyculture_children(g["id"])
+
+        child_match = False
+        child_details = []
+        for child in children:
+            cd = polycultures.get_polyculture_by_id(child["id"])
+            cm = [m["common_name"] for m in (cd.get("members", []) if cd else [])]
+            child_details.append((child, cd, cm))
+            if search and (search in child["name"].lower()
+                           or any(search in n.lower() for n in cm)):
+                child_match = True
+        if search:
+            parent_match = (
+                search in g["name"].lower()
+                or search in (g.get("description") or "").lower()
+                or any(search in n.lower() for n in member_names)
             )
-            if len(members) > 5:
-                roles_summary += f", +{len(members)-5} more"
-            tooltip = f"{g['name']}\n{g.get('description', '')[:120]}\n\nMembers: {roles_summary}"
+            if not parent_match and not child_match:
+                return None
 
-            item = QTreeWidgetItem([g["name"]])
-            item.setData(0, Qt.ItemDataRole.UserRole, g["id"])
-            item.setToolTip(0, tooltip)
-            self.polyculture_tree.addTopLevelItem(item)
+        roles_summary = ", ".join(
+            f"{m['common_name']} ({(m.get('role') or '').replace('_',' ')})"
+            for m in members[:5]
+        )
+        if len(members) > 5:
+            roles_summary += f", +{len(members)-5} more"
+        tooltip = (f"{g['name']}\n{g.get('description', '')[:120]}"
+                   f"\n\nMembers: {roles_summary}")
 
-            for child in children:
-                cd = polycultures.get_polyculture_by_id(child["id"])
-                cm = cd.get("members", []) if cd else []
-                child_roles = ", ".join(
-                    f"{m['common_name']} ({(m.get('role') or '').replace('_',' ')})"
-                    for m in cm[:5]
-                )
-                child_tooltip = f"{child['name']}\n{child.get('description','')[:120]}\n\nMembers: {child_roles}"
+        item = QTreeWidgetItem([g["name"]])
+        item.setData(0, Qt.ItemDataRole.UserRole, g["id"])
+        item.setToolTip(0, tooltip)
 
-                child_item = QTreeWidgetItem([child["name"]])
-                child_item.setData(0, Qt.ItemDataRole.UserRole, child["id"])
-                child_item.setToolTip(0, child_tooltip)
-                item.addChild(child_item)
-            if children:
-                # Expand when (a) the user has globally enabled variation
-                # display, or (b) the active search hit a variation under
-                # this parent — in the search case, show only the matching
-                # parents expanded.
-                if self._show_variations or (search and child_match):
-                    item.setExpanded(True)
-                else:
-                    item.setExpanded(False)
+        for child, cd, _cm in child_details:
+            cm = cd.get("members", []) if cd else []
+            child_roles = ", ".join(
+                f"{m['common_name']} ({(m.get('role') or '').replace('_',' ')})"
+                for m in cm[:5]
+            )
+            child_tooltip = (f"{child['name']}\n{child.get('description','')[:120]}"
+                             f"\n\nMembers: {child_roles}")
+            child_item = QTreeWidgetItem([child["name"]])
+            child_item.setData(0, Qt.ItemDataRole.UserRole, child["id"])
+            child_item.setToolTip(0, child_tooltip)
+            item.addChild(child_item)
+        if children:
+            # Expand when the user has globally enabled variation display, or the
+            # active search hit a variation under this parent.
+            item.setExpanded(bool(self._show_variations or (search and child_match)))
+        return item
+
+    def _on_group_by_changed(self, _idx=0):
+        """Pivot the library to a new grouping lens and rebuild the tree."""
+        self._group_by = self._group_combo.currentData() or "none"
+        QSettings().setValue("plant_communities/group_by", self._group_by)
+        self._refresh_polyculture_list()
 
     def _on_toggle_variations(self):
         """Flip the show-variations preference and re-render the tree."""
@@ -1512,18 +1752,71 @@ class PolyculturePanel(QWidget):
         )
         self._refresh_polyculture_list()
 
+    def _build_description_toggle_btn(self) -> QPushButton:
+        """The "▾ Hide pattern / ▸ Show pattern" toggle that rides on the right
+        of the Members label row. Reads ``self._show_description`` (set just
+        before this is called in ``_build_ui``)."""
+        btn = QPushButton(
+            "▾ Hide pattern" if self._show_description
+            else "▸ Show pattern"
+        )
+        btn.setStyleSheet(
+            "QPushButton { background: transparent; color: #90a4ae; "
+            "border: 1px solid #2e4a2e; border-radius: 3px; "
+            "padding: 1px 8px; font-size: 10px; }"
+            "QPushButton:hover { color: #c8e6c9; border-color: #4a7a4a; }"
+        )
+        btn.setToolTip(
+            "Show or hide the pattern card (problem / context / forces / "
+            "solution) to make more room for the members list above."
+        )
+        btn.setVisible(False)  # shown once a community is selected
+        btn.clicked.connect(self._on_toggle_description)
+        return btn
+
     def _on_toggle_description(self):
-        """Flip the show-description preference. Hiding frees ~150 px
-        for the members list below."""
+        """Flip the show-description preference. Hiding frees room for the
+        members list below. No-op with nothing selected (the toggle is hidden
+        then, but guard anyway so a stray call can't reveal an empty card)."""
         self._show_description = not self._show_description
         QSettings().setValue(
             "plant_communities/show_description", self._show_description
         )
         self.description_toggle_btn.setText(
-            "▾ Hide description" if self._show_description
-            else "▸ Show description"
+            "▾ Hide pattern" if self._show_description
+            else "▸ Show pattern"
         )
-        self.detail_text.setVisible(self._show_description)
+        if self.polyculture_tree.currentItem() is not None:
+            self.detail_text.setVisible(self._show_description)
+
+    def _select_polyculture_in_tree(self, polyculture_id) -> bool:
+        """Make the tree row for ``polyculture_id`` current (walks parents +
+        children). Returns True if found. Setting it current drives
+        ``_on_polyculture_selected`` so the card refreshes."""
+        root = self.polyculture_tree.invisibleRootItem()
+        for i in range(root.childCount()):
+            top = root.child(i)
+            if top.data(0, Qt.ItemDataRole.UserRole) == polyculture_id:
+                self.polyculture_tree.setCurrentItem(top)
+                return True
+            for j in range(top.childCount()):
+                child = top.child(j)
+                if child.data(0, Qt.ItemDataRole.UserRole) == polyculture_id:
+                    top.setExpanded(True)
+                    self.polyculture_tree.setCurrentItem(child)
+                    return True
+        return False
+
+    def _on_pattern_link(self, url):
+        """Follow a ``community:{id}`` related-pattern link to that community."""
+        text = url.toString()
+        if not text.startswith("community:"):
+            return
+        try:
+            target = int(text.split(":", 1)[1])
+        except (ValueError, IndexError):
+            return
+        self._select_polyculture_in_tree(target)
 
     def _on_double_click_place(self, item, column):
         """Double-click a polyculture to immediately enter placement mode."""
@@ -1535,40 +1828,84 @@ class PolyculturePanel(QWidget):
             self.placePolycultureRequested.emit(polyculture)
 
     def _on_polyculture_selected(self, current, previous):
-        has_selection = current is not None
+        # A "Group By" category node carries no id — treat it as no selection
+        # (it can become the *current* item via keyboard nav even though it
+        # isn't selectable).
+        current_id = (current.data(0, Qt.ItemDataRole.UserRole)
+                      if current is not None else None)
+        has_selection = current_id is not None
         self.delete_btn.setEnabled(has_selection)
         self.dup_btn.setEnabled(has_selection)
         self.place_btn.setEnabled(has_selection)
         self.export_btn.setEnabled(has_selection)
         self.edit_btn.setEnabled(has_selection)
-        # Only allow adding variations to top-level polycultures
-        is_top_level = has_selection and (current.parent() is None)
+        # Variations are only addable to top-level communities. A top-level
+        # community's tree parent is either nothing (flat view) or a group
+        # folder (grouped view, no id) — never another community.
+        parent_item = current.parent() if current is not None else None
+        parent_is_community = (
+            parent_item is not None
+            and parent_item.data(0, Qt.ItemDataRole.UserRole) is not None)
+        is_top_level = has_selection and not parent_is_community
         self.variation_btn.setEnabled(is_top_level)
 
         if not has_selection:
+            # Let the community list reclaim the whole panel: uncap the tree
+            # and hide the (empty) description card so it doesn't hold space.
+            self.polyculture_tree.setMaximumHeight(_TREE_EXPANDED_MAX)
+            self._community_header.setVisible(False)
+            self._members_label.setVisible(False)
+            self.description_toggle_btn.setVisible(False)
             self.detail_text.clear()
+            self.detail_text.setVisible(False)
             self._render_member_rows([])
             return
 
-        polyculture_id = current.data(0, Qt.ItemDataRole.UserRole)
-        polyculture = polycultures.get_polyculture_by_id(polyculture_id)
+        # A community is selected: shrink the tree to _TREE_COLLAPSED_ROWS so
+        # the members list + description card get the room. Derive the height
+        # from the live row height (+4 for the frame) rather than a fixed px so
+        # it tracks the actual row metrics.
+        row_h = self.polyculture_tree.sizeHintForRow(0)
+        if row_h <= 0:
+            row_h = 19  # fallback before first layout
+        self.polyculture_tree.setMaximumHeight(row_h * _TREE_COLLAPSED_ROWS + 4)
+
+        polyculture = polycultures.get_polyculture_by_id(current_id)
         if not polyculture:
             return
 
-        lines = [
-            f"<b>{polyculture['name']}</b>",
-            f"Center: {polyculture.get('center_plant_name', 'None')}",
-        ]
-        if polyculture.get("description"):
-            lines.append(polyculture["description"])
-        lines.append(f"Members: {len(polyculture.get('members', []))}")
-        # Show variation count for top-level
-        children = polycultures.get_polyculture_children(polyculture_id)
-        if children:
-            lines.append(f"Variations: {len(children)}")
-        self.detail_text.setHtml("<br>".join(lines))
+        members = polyculture.get("members", [])
 
-        self._render_member_rows(polyculture.get("members", []))
+        # Header: community name + "Anchored on X · N plants", shown directly
+        # above the members list.
+        center = polyculture.get("center_plant_name") or "—"
+        name = polyculture.get("name") or "—"
+        self._community_header.setText(
+            f"<b style='color:#a5d6a7;'>{name}</b><br>"
+            f"<span style='color:#9e9e9e; font-size:11px;'>Anchored on "
+            f"{center} · {len(members)} plants</span>"
+        )
+        self._community_header.setVisible(True)
+        self._members_label.setVisible(True)
+        self.description_toggle_btn.setVisible(True)
+        self.detail_text.setVisible(self._show_description)
+        self._render_member_rows(members)
+
+        # Description: the Alexander pattern (F4) — authored problem/context/
+        # forces/solution plus the live derived facts, with clickable related
+        # links. include_header=False since the name/anchored line is shown
+        # above in the header label.
+        try:
+            from src import pattern_language
+            pattern = pattern_language.build_pattern(
+                polyculture,
+                all_communities=polycultures.get_all_polycultures(
+                    top_level_only=False),
+            )
+            self.detail_text.setHtml(
+                pattern_language.pattern_card_html(pattern, include_header=False))
+        except Exception:  # noqa: BLE001 — never let the card break selection
+            self.detail_text.setHtml(polyculture.get("description") or "")
 
         # Pre-fill the cell-spacing field with the community's natural diameter.
         try:
@@ -1595,6 +1932,16 @@ class PolyculturePanel(QWidget):
         for m in members:
             row = self._build_member_row(m)
             layout.insertWidget(layout.count() - 1, row)
+
+        # Size the scroll area to show the whole (collapsed) members list up to
+        # a ceiling — beyond that it scrolls. A deterministic per-row estimate
+        # (~26 px/row + padding); sizeHint() is unreliable here because the
+        # container layout isn't activated yet right after insertWidget.
+        n = len(members)
+        ceiling = 300
+        desired = min(ceiling, n * 26 + 6) if n else 0
+        self._members_scroll.setMaximumHeight(desired)
+        self._members_scroll.setMinimumHeight(desired)
 
     def _build_member_row(self, member: dict) -> QFrame:
         row = QFrame()
@@ -1648,6 +1995,7 @@ class PolyculturePanel(QWidget):
             from src.plant_panel import (
                 _SUN_LABELS, _WATER_LABELS, _USE_LABELS,
             )
+            from src.plant_list_view import labels_csv
             zmin = plant.get("hardiness_zone_min")
             zmax = plant.get("hardiness_zone_max")
             if zmin and zmax:
@@ -1656,8 +2004,8 @@ class PolyculturePanel(QWidget):
                 zones = f"Z{zmin}+"
             else:
                 zones = "—"
-            sun = _SUN_LABELS.get(plant.get("sun_requirement", ""), "—")
-            water = _WATER_LABELS.get(plant.get("water_needs", ""), "—")
+            sun = labels_csv(plant.get("sun_requirement"), _SUN_LABELS)
+            water = labels_csv(plant.get("water_needs"), _WATER_LABELS)
             spacing = plant.get("spacing_meters")
             height = plant.get("mature_height_meters")
             bloom = plant.get("bloom_period") or "—"
@@ -1841,9 +2189,13 @@ class PolyculturePanel(QWidget):
         kind = pattern["kind"]
         if kind == "fill":
             # Draw-an-area fill: whole community units scattered inside the
-            # polygon (app enters fill-draw mode on this signal).
-            self.fillAreaRequested.emit(int(polyculture_id),
-                                        self.placement_widget.fill_spacing())
+            # polygon (app enters fill-draw mode on this signal). With Matrix
+            # planting ticked, the community dissolves into a groundcover matrix
+            # with taller members scattered through it (F22).
+            self.fillAreaRequested.emit(
+                int(polyculture_id),
+                float(self.pattern_spacing.value() or 4.0),
+                bool((pattern.get("params") or {}).get("matrix")))
             return
         if kind != "single":
             spacing = float(self.pattern_spacing.value() or 4.0)
@@ -1918,4 +2270,23 @@ QPushButton {
 QPushButton:hover    { background: #388e3c; }
 QPushButton:pressed  { background: #1b5e20; }
 QPushButton:disabled { background: #2a3a2a; color: #4a6a4a; }
+"""
+
+# Compact, low-prominence style for the library management buttons (New /
+# Delete / Duplicate / Variation / Edit / Export / Import) — mirrors the
+# placement-mode segmented buttons (placement_controls._PATTERN_SEG_STYLE) so
+# they read as secondary controls, not primary CTAs. The prominent green
+# _POLY_BTN_STYLE stays on the "Place on Map" / "Place Mix on Map" actions.
+_POLY_MGMT_BTN_STYLE = """
+QPushButton {
+    background: #1e2e1e;
+    color: #c8e6c9;
+    border: 1px solid #2e4a2e;
+    border-radius: 3px;
+    padding: 4px 6px;
+    font-size: 11px;
+}
+QPushButton:hover    { border-color: #4a7a4a; background: #243824; }
+QPushButton:pressed  { background: #2e5a2e; }
+QPushButton:disabled { color: #4a6a4a; border-color: #243824; }
 """

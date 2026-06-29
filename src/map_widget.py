@@ -21,7 +21,7 @@ from src.settings import get_mapbox_token
 
 
 def _dbg(msg: str) -> None:
-    """Append a diagnostic line to ~/permadesign-debug.log.
+    """Append a diagnostic line to ~/site-and-pattern-debug.log.
 
     Used both for informational tracing AND as part of the load-bearing
     resize machinery (see the block comment above MapWidget.invalidate_size):
@@ -31,7 +31,7 @@ def _dbg(msg: str) -> None:
     """
     try:
         import time
-        path = os.path.join(os.path.expanduser("~"), "permadesign-debug.log")
+        path = os.path.join(os.path.expanduser("~"), "site-and-pattern-debug.log")
         with open(path, "a", encoding="utf-8") as f:
             f.write(f"{time.strftime('%H:%M:%S')} {msg}\n")
     except Exception:
@@ -529,9 +529,11 @@ class MapWidget(QWebEngineView):
     def set_plants_visible(self, visible: bool):
         self.run_js(map_js.set_plants_visible(visible))
 
-    def load_boundary(self, boundary_data: dict):
-        """Load a boundary from a saved project. boundary_data has id/points/color/showLengths/showArea."""
-        self.run_js(map_js.load_boundary(boundary_data))
+    def load_boundary(self, boundary_data: dict, fit: bool = True):
+        """Load a boundary from a saved project. boundary_data has id/points/color/showLengths/showArea.
+        ``fit`` recenters the map on the boundary (File → Open); undo/redo
+        re-renders pass ``fit=False`` to leave the camera where it is."""
+        self.run_js(map_js.load_boundary(boundary_data, fit))
 
     def load_plant_marker(self, plant_id: int, common_name: str, lat: float, lng: float,
                           spacing_m: float = 1.0, plant_type: str = "herb",
@@ -641,6 +643,11 @@ class MapWidget(QWebEngineView):
 
     def place_annotation(self, ann_id: str, lat: float, lng: float, text: str):
         self.run_js(map_js.place_annotation(ann_id, lat, lng, text))
+
+    def clear_annotations(self):
+        """Remove all annotation markers (the whole-project re-render clears
+        them explicitly — clearAll() leaves annotations alone)."""
+        self.run_js(map_js.clear_annotations())
 
     def set_canopy_visible(self, visible: bool):
         self.run_js(map_js.set_canopy_visible(visible))
@@ -761,6 +768,38 @@ class MapWidget(QWebEngineView):
     def clear_shade_overlay(self):
         self.run_js(map_js.clear_shade_overlay())
 
+    def draw_splat_ortho_overlay(self, png_data_url: str, bbox: dict,
+                                 opacity: float = 1.0):
+        """Show the baked top-down Gaussian-splat "yard photo" as its own
+        ImageOverlay (V1.65) — a personal satellite layer of the user's yard."""
+        self.run_js(map_js.draw_splat_ortho_overlay(png_data_url, bbox, opacity))
+
+    def set_splat_ortho_visible(self, visible: bool):
+        self.run_js(map_js.set_splat_ortho_visible(visible))
+
+    def set_splat_ortho_opacity(self, opacity: float):
+        self.run_js(map_js.set_splat_ortho_opacity(opacity))
+
+    def clear_splat_ortho(self):
+        self.run_js(map_js.clear_splat_ortho())
+
+    # ── Dynamic wind shadow (V1.68) ──────────────────────────────────────────
+
+    def set_wind_casters(self, casters: list):
+        self.run_js(map_js.set_wind_casters(casters))
+
+    def set_wind_angle_live(self, deg: float):
+        self.run_js(map_js.set_wind_angle_live(deg))
+
+    def draw_merged_wind_shelter(self, payload: dict):
+        self.run_js(map_js.draw_merged_wind_shelter(payload))
+
+    def set_wind_shadow_visible(self, visible: bool):
+        self.run_js(map_js.set_wind_shadow_visible(visible))
+
+    def clear_wind_shadow(self):
+        self.run_js(map_js.clear_wind_shadow())
+
     def draw_shade_zones(self, cells: list, d_lat: float, d_lng: float,
                          opacity: float = 0.45):
         self.run_js(map_js.draw_shade_zones(cells, d_lat, d_lng, opacity))
@@ -850,10 +889,12 @@ class MapWidget(QWebEngineView):
         self.run_js(map_js.set_season_view(season, pid_visibility))
 
     def set_timeline_year_by_plant_id(self, year: int, pid_factors: dict,
-                                      pid_presence: dict | None = None):
-        """Drive the growth-timeline animation (size + succession fade)."""
+                                      pid_presence: dict | None = None,
+                                      pid_spread: dict | None = None):
+        """Drive the growth-timeline animation (size + succession fade +
+        self-spreader footprint widening)."""
         self.run_js(map_js.set_timeline_year_by_plant_id(
-            year, pid_factors, pid_presence))
+            year, pid_factors, pid_presence, pid_spread))
 
     def toggle_legend(self):
         """Toggle the on-map legend overlay."""
