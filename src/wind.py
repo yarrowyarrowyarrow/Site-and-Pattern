@@ -24,12 +24,11 @@ Qt-free, network-graceful (every fetch returns ``None`` on failure).
 
 from __future__ import annotations
 
-import json
 import math
-import urllib.error
-import urllib.request
 from datetime import date
 from typing import Optional
+
+from src.http_utils import http_get_json
 
 _ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 _FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
@@ -75,14 +74,9 @@ def _speed_bin(kmh: float) -> int:
 
 
 def _http_get_json(url: str, timeout: float = 20.0) -> Optional[dict]:
-    """Minimal stdlib JSON GET (mirrors climate._http_get_json). None on any
-    network/parse failure — caller renders 'unavailable' rather than crashing."""
-    try:
-        with urllib.request.urlopen(url, timeout=timeout) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except (urllib.error.URLError, urllib.error.HTTPError,
-            json.JSONDecodeError, TimeoutError, OSError):
-        return None
+    """Module-local alias for :func:`src.http_utils.http_get_json`, kept so
+    tests can monkeypatch ``wind._http_get_json``."""
+    return http_get_json(url, timeout=timeout)
 
 
 def fetch_historical_wind(lat: float, lng: float,

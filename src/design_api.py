@@ -16,8 +16,8 @@ import math
 from datetime import datetime
 from typing import Optional
 
-from src.project import new_project, SCHEMA_VERSION
-from src.db.plants import get_plant, search_plants
+from src.project import new_project
+from src.db.plants import get_plant
 from src.db.polycultures import get_polyculture_by_id
 
 

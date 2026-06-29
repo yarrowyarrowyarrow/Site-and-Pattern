@@ -1214,25 +1214,6 @@ def get_distinct_types() -> list[str]:
         conn.close()
 
 
-def get_distinct_permaculture_uses() -> list[str]:
-    """Return a sorted list of every unique permaculture use tag."""
-    conn = get_connection()
-    try:
-        rows = conn.execute(
-            "SELECT permaculture_uses FROM plants WHERE permaculture_uses IS NOT NULL"
-        ).fetchall()
-    finally:
-        conn.close()
-
-    uses: set[str] = set()
-    for row in rows:
-        for tag in row[0].split(","):
-            tag = tag.strip()
-            if tag:
-                uses.add(tag)
-    return sorted(uses)
-
-
 # ── plant_uses junction helpers (schema v13) ──────────────────────────────────
 
 def get_plant_uses(plant_id: int) -> list[str]:

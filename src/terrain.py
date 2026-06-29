@@ -41,6 +41,8 @@ import urllib.request
 import zlib
 from typing import Iterable, Optional
 
+from src.http_utils import http_get_json
+
 # PyQt6 is optional at import time so the pure-Python helpers (and tests)
 # can run in any environment. The TerrainWorker class is only defined when
 # Qt is available.
@@ -54,7 +56,6 @@ except ImportError:
 # ── Constants ───────────────────────────────────────────────────────────────
 
 _TIMEOUT = 10.0
-_USER_AGENT = "PermaDesign/1.0 (https://github.com/yarrowyarrowyarrow/permadesign)"
 
 # Edmonton "Contour Lines 3TM" (0.5 m interval)
 _EDM_DATASET_ID = "n6cj-24tp"   # "Contour Lines LL - WGS84" — the underlying dataset
@@ -101,15 +102,12 @@ _SLOPE_RAMP = (
 )
 
 
-# ── HTTP helper (mirrors property_data._http_get_json) ──────────────────────
+# ── HTTP helper ─────────────────────────────────────────────────────────────
 
 def _http_get_json(url: str, timeout: float = _TIMEOUT) -> Optional[dict]:
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except Exception:
-        return None
+    """Module-local alias for :func:`src.http_utils.http_get_json`, kept so
+    tests can monkeypatch ``terrain._http_get_json``."""
+    return http_get_json(url, timeout=timeout)
 
 
 def _http_get_json_retry(url: str, attempts: int = _OPEN_METEO_RETRY_ATTEMPTS,

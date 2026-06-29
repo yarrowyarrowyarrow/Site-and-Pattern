@@ -29,21 +29,17 @@ from datetime import date, timedelta
 from typing import Optional
 
 from src.climate import get_zone
+from src.http_utils import http_get_json
 from src.resources import resource_path
 
 
 _TIMEOUT = 8.0
-_USER_AGENT = "PermaDesign/1.0 (https://github.com/yarrowyarrowyarrow/permadesign)"
 
 
 def _http_get_json(url: str, timeout: float = _TIMEOUT) -> Optional[dict]:
-    """GET a URL, return parsed JSON, or None on any failure."""
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except Exception:
-        return None
+    """Module-local alias for :func:`src.http_utils.http_get_json`, kept so
+    tests can monkeypatch ``property_data._http_get_json``."""
+    return http_get_json(url, timeout=timeout)
 
 
 # ── Rainfall ────────────────────────────────────────────────────────────────

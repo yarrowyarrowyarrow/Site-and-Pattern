@@ -253,7 +253,7 @@ def compute_habitat_score(
         plant_ids = list({p["plant_id"] for p in placed_plants})
         for pid in plant_ids:
             row = connection.execute(
-                "SELECT id, common_name, plant_type, permaculture_uses, "
+                "SELECT id, common_name, plant_type, "
                 "       native_to_alberta, bloom_period "
                 "FROM plants WHERE id = ?",
                 (pid,)

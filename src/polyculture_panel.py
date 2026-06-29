@@ -96,7 +96,7 @@ class _CommunityMixDropGroupBox(QGroupBox):
             super().dropEvent(e)
 from src.db import plants as plants_db
 from src.placement_controls import _QTY_SPIN_STYLE
-from src.plant_conditions import condition_matches, condition_tokens
+from src.plant_conditions import condition_matches
 
 
 # Community-tree height bounds. With nothing selected the tree fills the panel
