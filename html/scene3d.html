@@ -613,6 +613,88 @@ function shrubProfileFor(p) {
   return _SPROF[(p.genus || '').toLowerCase()] || _SPROF.def;
 }
 
+// ── Herbaceous growth forms (V1.98) ─────────────────────────────────────────
+// The foliage of a wildflower/herb is built to match its real growth habit, not
+// one generic stem-clump: fireweed is a tall erect leafy stem, yarrow a low
+// ferny mound, fleabane a basal rosette of leaves under wiry flower stalks. A
+// form sets how many leafy stems there are and how upright, where the leaves sit
+// (up the stem / basal rosette / low mound), the leaf size + width (lance vs
+// broad vs fine), and how many bare flower stalks rise above (the flower sprite
+// lands on top). `q(n)` quality-scales the counts.
+const HERB_FORMS = {
+  // erect leafy stem(s), leaves spiralling up — fireweed, goldenrod, penstemon,
+  // blazingstar, lupine, paintbrush, loosestrife.
+  erect:   { stems: [1, 3], splay: 0.1,  leafFrom: 0.25, leaf: [0.16, 0.012],
+             perStem: [5, 9], leafTilt: 1.15, stalks: 0, basal: 0, fine: 0 },
+  // low ferny mound of fine divided foliage + thin flower stalks — yarrow,
+  // tansy, meadow rue, columbine, cinquefoil, sweet cicely.
+  ferny:   { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.1, 0.008],
+             perStem: 0, leafTilt: 1.3, stalks: [3, 5], basal: [18, 30], fine: 1 },
+  // basal leaf rosette under a few wiry, nearly bare flower stalks — fleabane,
+  // arnica, evening primrose, avens, alumroot, agoseris, shooting star.
+  rosette: { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.22, 0.03],
+             perStem: 0, leafTilt: 1.35, stalks: [3, 6], basal: [7, 12], fine: 0 },
+  // bushy upright leafy clump — asters, sunflower, milkweed, bee balm, monkeyflower.
+  clump:   { stems: [3, 6], splay: 0.42, leafFrom: 0.15, leaf: [0.18, 0.05],
+             perStem: [4, 6], leafTilt: 1.0, stalks: 0, basal: [2, 3], fine: 0 },
+  // upright strap / linear basal leaves — onion, harebell, blue-eyed grass, lily, camas.
+  grassy:  { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.9, 0.02],
+             perStem: 0, leafTilt: 0.18, stalks: [2, 4], basal: [5, 8], fine: 0, blades: 1 },
+  // low cushion / mat — umbrella-plant, moss campion, violets, creeping forbs.
+  mat:     { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.12, 0.05],
+             perStem: 0, leafTilt: 1.45, stalks: [2, 4], basal: [12, 20], fine: 0, low: 1 },
+  // arching divided fronds from a crown — ferns.
+  fern:    { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.95, 0.06],
+             perStem: 0, leafTilt: 0.5, stalks: 0, basal: [5, 8], fine: 0, blades: 1, arch: 1 },
+};
+
+// Genus → herb growth form for the common prairie/Alberta forbs. Foliage colour
+// still comes from the genus (silver sages etc.) via scene_contract.
+const _HPROF = {
+  chamaenerion: 'erect', epilobium: 'erect', solidago: 'erect', euthamia: 'erect',
+  penstemon: 'erect', liatris: 'erect', lupinus: 'erect', castilleja: 'erect',
+  physostegia: 'erect', stachys: 'erect', dalea: 'erect', lythrum: 'erect',
+  verbena: 'erect', gentiana: 'erect', maianthemum: 'erect', anticlea: 'grassy',
+  hedysarum: 'erect', astragalus: 'erect', oxytropis: 'rosette', vicia: 'erect',
+  lathyrus: 'erect', heuchera: 'rosette', mertensia: 'clump',
+  achillea: 'ferny', tanacetum: 'ferny', thalictrum: 'ferny', aquilegia: 'ferny',
+  potentilla: 'ferny', osmorhiza: 'ferny', polemonium: 'ferny', anemone: 'ferny',
+  erigeron: 'rosette', arnica: 'rosette', oenothera: 'rosette', geum: 'rosette',
+  agoseris: 'rosette', primula: 'rosette', draba: 'rosette', townsendia: 'rosette',
+  balsamorhiza: 'rosette', taraxacum: 'rosette', antennaria: 'mat',
+  symphyotrichum: 'clump', eurybia: 'clump', canadanthus: 'clump', doellingeria: 'clump',
+  dieteria: 'clump', heterotheca: 'clump', helianthus: 'clump', asclepias: 'clump',
+  erythranthe: 'clump', echinacea: 'rosette', ratibida: 'rosette', monarda: 'clump',
+  allium: 'grassy', campanula: 'grassy', sisyrinchium: 'grassy', iris: 'grassy',
+  lilium: 'grassy', zigadenus: 'grassy', viola: 'mat', eriogonum: 'mat',
+  fragaria: 'mat', silene: 'mat', phlox: 'mat',
+};
+function herbFormFor(p) {
+  if (p.plant_type === 'fern') return 'fern';
+  const named = _HPROF[(p.genus || '').toLowerCase()];
+  if (named) return named;
+  // Fall back from the flower form + aspect (height/canopy).
+  const ff = p.flower_form, h = p.height_m || 0.5, c = p.canopy_m || 0.4;
+  const tall = h / Math.max(0.05, c) >= 1.6;
+  if (ff === 'umbel') return 'ferny';
+  if (ff === 'daisy') return tall ? 'clump' : 'rosette';
+  if (ff === 'rays' || ff === 'spike' || ff === 'plume' || ff === 'pea')
+    return tall ? 'erect' : 'clump';
+  if (ff === 'globe' || ff === 'whorl') return 'clump';
+  return tall ? 'erect' : 'clump';
+}
+
+// One small leaf blade (a flat tapered ribbon) tilted `tilt` from vertical at
+// azimuth `az` and translated to an attachment point — the building block for
+// herbaceous foliage. Reuses makeBlade so a leaf shares the blade pipeline.
+function makeLeaf(rng, len, wid, tilt, az, at) {
+  const blade = makeBlade(rng, len * (0.8 + rng() * 0.4), wid, 0.12 + rng() * 0.18, 1.2);
+  blade.applyMatrix4(new THREE.Matrix4().makeRotationY(az)
+    .multiply(new THREE.Matrix4().makeRotationZ(tilt)));
+  if (at) blade.translate(at.x, at.y, at.z);
+  return blade;
+}
+
 // Crown form from the (already-scaled) height/canopy aspect ratio.
 function formOf(p) {
   const c = Math.max(0.1, p.canopy_m || 1), h = Math.max(0.1, p.height_m || 1);
@@ -999,38 +1081,68 @@ function buildShrubGeo(rng, profile) {
   return { foliageGeo, stemGeo };
 }
 
-// A perennial clump: several thin stems fanning out from a base, each topped
-// with a small leaf rosette, over a low basal foliage mound — the "clump with
-// several stems" look that a single cone can't convey.
-function buildPerennialGeo(rng) {
+// A herbaceous plant built to its growth form (V1.98): leafy erect stems
+// (fireweed), a low ferny mound (yarrow), a basal leaf rosette under wiry stalks
+// (fleabane), a bushy clump, a strappy grassy tuft, a low mat, or arching fern
+// fronds. `form` is a HERB_FORMS entry. Returns ONE green geometry — herb stems
+// are green, so no separate woody-stem colour is needed.
+const _rint = (rng, lo, hi) => lo + Math.floor(rng() * (hi - lo + 1));
+// makeBlade leaves carry only a position attribute, so a stem cylinder must be
+// stripped to match before mergeGeometries (which requires identical attribute
+// sets); normalizeUnit recomputes normals on the merged result.
+function _stem(rBot, rTop, h, rot) {
+  const s = new THREE.CylinderGeometry(rTop, rBot, h, 4, 1);
+  s.translate(0, h / 2, 0); s.applyMatrix4(rot);
+  s.deleteAttribute('normal'); s.deleteAttribute('uv');
+  return s;
+}
+function buildPerennialGeo(rng, form) {
+  const F = form || HERB_FORMS.clump;
   const geos = [];
-  const stems = qn(4 + Math.floor(rng() * 4));   // 4–7 stems
-  for (let i = 0; i < stems; i++) {
-    const h = 0.6 + rng() * 0.4;
-    const r = 0.012 + rng() * 0.01;
-    const tilt = 0.17 + rng() * 0.26;         // ~10–25° from vertical
-    const az = (i / stems) * Math.PI * 2 + rng() * 0.6;
-    const m = new THREE.Matrix4().makeRotationY(az)
-      .multiply(new THREE.Matrix4().makeRotationX(tilt));
-    const stem = new THREE.CylinderGeometry(r * 0.5, r, h, 4, 1);
-    stem.translate(0, h / 2, 0);
-    stem.applyMatrix4(m);
-    geos.push(stem);
-    const tip = new THREE.Vector3(0, h, 0).applyMatrix4(m);
-    const lr = 0.06 + rng() * 0.06;
-    const leaf = new THREE.SphereGeometry(lr, 5, 4);
-    leaf.scale(1.3, 0.7, 1.3);
-    leaf.translate(tip.x, tip.y, tip.z);
-    geos.push(leaf);
+  const lL = F.leaf[0], lW = F.leaf[1];
+
+  // Leafy stems: a stem cylinder with leaves spaced up its upper length.
+  const nStems = F.stems[1] ? qn(_rint(rng, F.stems[0], F.stems[1])) : 0;
+  for (let i = 0; i < nStems; i++) {
+    const az0 = (i / Math.max(1, nStems)) * Math.PI * 2 + rng() * 0.7;
+    const splay = F.splay * (0.5 + rng());
+    const h = 0.7 + rng() * 0.3;
+    const rot = new THREE.Matrix4().makeRotationY(az0)
+      .multiply(new THREE.Matrix4().makeRotationZ(splay));
+    geos.push(_stem(0.012, 0.006, h, rot));
+    const nLeaf = qn(_rint(rng, F.perStem[0], F.perStem[1]));
+    for (let j = 0; j < nLeaf; j++) {
+      const t = F.leafFrom + (1 - F.leafFrom) * (j / Math.max(1, nLeaf - 1));
+      const at = new THREE.Vector3(0, h * t, 0).applyMatrix4(rot);
+      geos.push(makeLeaf(rng, lL, lW, F.leafTilt, j * 2.39996 + az0, at));
+    }
   }
-  const mounds = 2 + Math.floor(rng() * 2);
-  for (let i = 0; i < mounds; i++) {
-    const r = 0.08 + rng() * 0.07;
-    const s = new THREE.SphereGeometry(r, 5, 4);
-    s.scale(1, 0.7, 1);
-    s.translate((rng() - 0.5) * 0.2, r * 0.4, (rng() - 0.5) * 0.2);
-    geos.push(s);
+
+  // Basal leaves: a rosette / ferny mound / strap tuft / mat at the ground.
+  if (F.basal) {
+    const nb = qn(_rint(rng, F.basal[0], F.basal[1]));
+    for (let i = 0; i < nb; i++) {
+      const az = rng() * Math.PI * 2;
+      const len = lL * (F.fine ? 0.6 + rng() * 0.5 : 1);
+      const lf = makeLeaf(rng, len, lW, F.leafTilt * (0.8 + rng() * 0.4), az, null);
+      const rr = (F.low ? 0.18 : 0.1) * rng();
+      lf.translate(Math.cos(az) * rr, (F.low ? 0.01 : 0.02), Math.sin(az) * rr);
+      geos.push(lf);
+    }
   }
+
+  // Bare flower stalks rising above the foliage (the flower sprite lands on top).
+  if (F.stalks) {
+    const ns = qn(_rint(rng, F.stalks[0], F.stalks[1]));
+    for (let i = 0; i < ns; i++) {
+      const h = 0.75 + rng() * 0.25;
+      const lean = 0.05 + rng() * 0.18;
+      const rot = new THREE.Matrix4().makeRotationY(rng() * Math.PI * 2)
+        .multiply(new THREE.Matrix4().makeRotationZ(lean));
+      geos.push(_stem(0.008, 0.005, h, rot));
+    }
+  }
+
   const g = mergeGeometries(geos, false);
   normalizeUnit([g]);
   applyFoliageGradient(g);
@@ -1146,14 +1258,13 @@ function getTreeArch(cls, prof, form, tier, sub) {
 
 function buildArchetypes() {
   if (ARCH) return;
-  // Shrubs are built per-genus on demand (SHRUB_CACHE); the rest are the cheap
-  // shared variant arrays.
-  const peren = [], ground = [], grass = [], aquatic = [];
-  for (const sd of [211, 251, 307]) peren.push(buildPerennialGeo(mulberry32(sd)));
+  // Shrubs (SHRUB_CACHE) and herbs (HERB_CACHE) are built per-profile on demand;
+  // the rest are the cheap shared variant arrays.
+  const ground = [], grass = [], aquatic = [];
   for (const sd of [331, 379]) ground.push(buildGroundcoverGeo(mulberry32(sd)));
   for (const sd of [421, 457, 503]) grass.push(buildGrassGeo(mulberry32(sd)));
   for (const sd of [541, 587, 631]) aquatic.push(buildAquaticGeo(mulberry32(sd)));
-  ARCH = { peren, ground, grass, aquatic };
+  ARCH = { ground, grass, aquatic };
 }
 
 function ensurePlantMats() {
@@ -1167,6 +1278,10 @@ function ensurePlantMats() {
     // clumps, not smooth blobs (V1.96).
     shrubFoliage: plantMaterial({ roughness: 0.82, wind: 0.06, vertexColors: true,
                     flatShading: true }),
+    // Flat leaf blades for herbaceous plants (V1.98) — double-sided so a leaf
+    // shows from both faces, gentle sway.
+    leaf:    plantMaterial({ roughness: 0.8, wind: 0.09, vertexColors: true,
+               doubleSide: true }),
     // Flat grass/reed blades read from both sides and catch top light via
     // lifted normals (V1.92) — lush tufts rather than thin spindly stalks.
     blade:   plantMaterial({ roughness: 0.72, wind: 0.11, vertexColors: true,
@@ -1265,6 +1380,53 @@ function getShrubArch(prof, v) {
   a = buildShrubGeo(mulberry32(13 + v * 97 + prof.id.charCodeAt(0) * 7), prof);
   SHRUB_CACHE.set(key, a);
   return a;
+}
+
+// Herb archetypes are growth-form specific (HERB_CACHE), cached by
+// (form × variant × quality). One green geometry per form (leaves + stems +
+// stalks are all herbaceous).
+const HERB_VARIANTS = 3;
+const HERB_CACHE = new Map();
+function getHerbArch(formName, v) {
+  const key = formName + '_' + v + '_q' + QUALITY;
+  let a = HERB_CACHE.get(key);
+  if (a) return a;
+  a = buildPerennialGeo(mulberry32(29 + v * 89 + formName.charCodeAt(0) * 7),
+                        HERB_FORMS[formName]);
+  HERB_CACHE.set(key, a);
+  return a;
+}
+
+function buildHerbLayer(list, month, year, terrain) {
+  if (!list || !list.length) return;
+  const buckets = {};
+  for (const p of list) {
+    const formName = herbFormFor(p);
+    const v = hashPid(p.plant_id) % HERB_VARIANTS;
+    (buckets[formName + '_' + v] = buckets[formName + '_' + v]
+      || { formName, v, items: [] }).items.push(p);
+  }
+  for (const key in buckets) {
+    const { formName, v, items } = buckets[key];
+    const arch = getHerbArch(formName, v);
+    const places = items.map(p => spreadPlacements(p, year));
+    const total = places.reduce((s, pl) => s + pl.length, 0);
+    const mesh = instancedMesh(arch, total, MATS.leaf);
+    let idx = 0;
+    items.forEach((p, ii) => {
+      const c = Math.max(0.15, p.canopy_m), h = Math.max(0.08, p.height_m);
+      const rotY0 = (indHash(p) % 628) / 100;
+      const col = fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity);
+      places[ii].forEach((pl, k) => {
+        const m = pl.mul, x = p.x + pl.dx, wy = p.y + pl.dz;
+        const rotY = rotY0 + (k ? pl.dx : 0);
+        const gy = terrainHeightAt(x, wy, terrain);
+        setInst2(mesh, idx, x, gy, -wy, c * m, h * m, c * m, rotY, col);
+        idx++;
+      });
+    });
+    plantsGroup.add(mesh);
+  }
 }
 
 function buildShrubLayer(list, month, year, terrain) {
@@ -1373,10 +1535,9 @@ function buildPlants(group, plants, month, year, terrain) {
   // upright, etc. (V1.94). One InstancedMesh per (profile × variant).
   buildShrubLayer(byKind.shrub, month, year, terrain);
 
-  // Perennials/herbs — multi-stem clumps; vines — slim swaying cones.
-  buildLayer(byKind.herb, 3, MATS.shrub, (v) => ARCH.peren[v],
-             (p) => [Math.max(0.15, p.canopy_m), Math.max(0.08, p.height_m),
-                     Math.max(0.15, p.canopy_m)], month, year, false, terrain);
+  // Herbaceous plants (wildflower / herb / fern) — built to each species' growth
+  // form (V1.98): fireweed erect, yarrow ferny, fleabane rosette, etc.
+  buildHerbLayer(byKind.herb, month, year, terrain);
 
   // Grasses / sedges / rushes — dense flat-blade tufts (V1.92).
   buildLayer(byKind.grass, 3, MATS.blade, (v) => ARCH.grass[v],
@@ -1752,6 +1913,7 @@ function disposeDesignGroup(group) {
     if (a.foliageGeo) sharedGeo.add(a.foliageGeo);
     if (a.stemGeo) sharedGeo.add(a.stemGeo);
   }
+  for (const g of HERB_CACHE.values()) sharedGeo.add(g);
   for (const k in GEO) sharedGeo.add(GEO[k]);
   const sharedMat = new Set(MATS ? Object.values(MATS) : []);
   group.traverse(obj => {
@@ -1822,6 +1984,7 @@ window.permaSetQuality = function (level) {
   QUALITY = q;
   TREE_CACHE.clear();
   SHRUB_CACHE.clear();
+  HERB_CACHE.clear();
   ARCH = null;
   if (lastSceneObj) permaSetScene(lastSceneObj);   // same origin → camera stays put
 };

@@ -85,15 +85,29 @@ foliage masses:
 | `mound` | low dense rounded thicket to the ground | Rose, spirea, snowberry, blueberry |
 | `thicket` | many fine arching canes, airy | Currant (Ribes), raspberry |
 | `irregular` | sparse asymmetric woody (often silvery) | Sagebrush, buffaloberry |
-| Perennial / herb clump | `buildPerennialGeo` | thin stems + leaf rosettes over a mound | a wildflower, herb, or **fern** |
+| **Herbaceous** (by growth form) | `buildPerennialGeo` | leaves built to the species' real habit *(V1.98)* | wildflower / herb / fern — see below |
 | Grass / sedge / rush tuft | `buildGrassGeo` | dense fan of flat arching blades *(V1.92)* | a grass, sedge, or rush |
 | Aquatic / emergent clump | `buildAquaticGeo` | tall erect strap leaves *(V1.92)* | an aquatic (Cattail, Great Bulrush) |
 | Groundcover mat | `buildGroundcoverGeo` | low scatter of textured domes | Bearberry |
 | Vine | `GEO.cone` | slim swaying cone | Blue Clematis |
 
+Herbaceous plants (wildflower / herb / fern) are built to their **growth form**
+(`HERB_FORMS`, keyed by genus via `_HPROF`, else inferred from flower form +
+aspect) — leaves placed where the real plant carries them:
+
+| Form | Looks like | Genera |
+|------|-----------|--------|
+| `erect` | tall leafy stem, lance leaves spiralling up | Fireweed, goldenrod, penstemon, blazingstar, lupine, paintbrush |
+| `ferny` | low mound of fine feathery foliage + flat stalks | Yarrow, tansy, meadow rue, columbine, cinquefoil |
+| `rosette` | basal leaf rosette under wiry flower stalks | Fleabane, arnica, evening primrose, avens, shooting star |
+| `clump` | bushy upright leafy clump | Asters, sunflower, milkweed, bee balm |
+| `grassy` | upright strap / linear basal leaves | Onion, harebell, blue-eyed grass, lily, camas |
+| `mat` | low cushion of basal leaves | Pussytoes, umbrella-plant, violets, moss campion |
+| `fern` | arching divided fronds | ferns |
+
 Everything stays procedural + instanced + archetype-cached; genus changes
 silhouette and colour, not per-frame cost. The **Detail** toggle scales build-time
-density (blade / blob / tier counts) for weak hardware.
+density (blade / blob / leaf / tier counts) for weak hardware.
 
 ## Regenerating the gallery & images
 
