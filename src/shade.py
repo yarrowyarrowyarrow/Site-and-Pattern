@@ -43,6 +43,8 @@ import math
 from datetime import datetime, timedelta
 from typing import Optional
 
+from src.projection import M_PER_DEG_LAT
+
 try:
     from src import shadow_geometry
     _HAVE_SHAPELY = shadow_geometry._HAVE_SHAPELY
@@ -251,8 +253,8 @@ def _accumulate_shade_circle(out, casters, sun, lat, lng, rows, cols, bbox,
             for c in range(cols):
                 clat, clng = _cell_ll(r, c)
                 # Cell offset from the caster, in metres.
-                pe = (clng - cv["lng"]) * 111320.0 * cos_lat
-                pn = (clat - cv["lat"]) * 111320.0
+                pe = (clng - cv["lng"]) * M_PER_DEG_LAT * cos_lat
+                pn = (clat - cv["lat"]) * M_PER_DEG_LAT
                 # Project onto the base→tip segment (t clamped to [0,1]).
                 if seg_len2 <= 1e-9:
                     t = 0.0

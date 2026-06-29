@@ -27,13 +27,10 @@ shared per-user data folder, V1.69-renamed from ``PermaDesign`` to
 
 from __future__ import annotations
 
-import hashlib
-import json
 import os
 import sqlite3
-import sys
-import zlib
 
+from src.tile_store import connect, ensure_schema, pack, sha1_json, unpack
 # Pure tile geometry is shared with the terrain pack — same 0.01° scheme.
 from src.terrain_store import _tile_key, _tiles_for_bbox, _tiles_touched_by_line
 
@@ -58,26 +55,18 @@ CREATE TABLE IF NOT EXISTS building_meta (
 
 
 def _connect(path: str | None = None) -> sqlite3.Connection:
-    conn = sqlite3.connect(path or _db_path(), timeout=30)
-    conn.execute("PRAGMA journal_mode = WAL")
-    conn.execute("PRAGMA synchronous = NORMAL")
-    return conn
+    return connect(path or _db_path())
 
 
 def _ensure_schema(conn: sqlite3.Connection) -> None:
-    for stmt in _DDL.strip().split(";"):
-        stmt = stmt.strip()
-        if stmt:
-            conn.execute(stmt)
-    conn.commit()
+    ensure_schema(conn, _DDL)
 
 
 def _footprint_hash(item: dict) -> str:
     """Stable identity for a building, so the same footprint stored in two
     overlapping tiles (or fetched from two sub-bboxes) is counted once."""
     fp = item.get("footprint") or [[item.get("lng"), item.get("lat")]]
-    return hashlib.sha1(
-        json.dumps(fp, separators=(",", ":")).encode()).hexdigest()
+    return sha1_json(fp)
 
 
 def _tiles_for_item(item: dict) -> set:
@@ -155,7 +144,7 @@ class BuildingStore:
                     f"SELECT data FROM building_tiles WHERE tile_key IN ({ph})",
                     keys).fetchall()
             for (blob,) in rows:
-                for item in json.loads(zlib.decompress(blob)):
+                for item in unpack(blob):
                     h = _footprint_hash(item)
                     if h in seen:
                         continue
@@ -195,7 +184,7 @@ class BuildingStore:
                 rows = conn.execute(
                     f"SELECT tile_key, data FROM building_tiles "
                     f"WHERE tile_key IN ({ph})", list(affected)).fetchall()
-                tiles: dict[str, list] = {tk: json.loads(zlib.decompress(blob))
+                tiles: dict[str, list] = {tk: unpack(blob)
                                           for tk, blob in rows}
                 present = {_footprint_hash(i)
                            for lst in tiles.values() for i in lst}
@@ -210,9 +199,7 @@ class BuildingStore:
                     conn.executemany(
                         "INSERT OR REPLACE INTO building_tiles "
                         "(tile_key, data, feature_count) VALUES (?,?,?)",
-                        [(tk, zlib.compress(
-                            json.dumps(lst, separators=(",", ":")).encode(),
-                            level=6), len(lst))
+                        [(tk, pack(lst), len(lst))
                          for tk, lst in tiles.items()])
                     conn.commit()
         except Exception:  # noqa: BLE001

@@ -30,6 +30,7 @@ from typing import Optional
 
 from src.climate import get_zone
 from src.http_utils import http_get_json
+from src.projection import M_PER_DEG_LAT
 from src.resources import resource_path
 
 
@@ -419,11 +420,11 @@ def fetch_elevation(lat: float, lng: float, sample_m: float = 60.0) -> Optional[
 
 def _slope_sample_points(lat: float, lng: float, m: float):
     """[centre, N, E, S, W] in degrees, offset by ``m`` metres."""
-    dlat = m / 111320.0
+    dlat = m / M_PER_DEG_LAT
     cos_lat = math.cos(math.radians(lat))
     if abs(cos_lat) < 1e-9:
         cos_lat = 1e-9
-    dlng = m / (111320.0 * cos_lat)
+    dlng = m / (M_PER_DEG_LAT * cos_lat)
     return [
         (lat,        lng),
         (lat + dlat, lng),
