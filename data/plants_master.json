@@ -1806,7 +1806,7 @@
     "image_attribution": "(c) Joshua Mayer, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
     "flower_color": "#6f8fd6",
-    "flower_form": "daisy"
+    "flower_form": "lily"
   },
   {
     "common_name": "Bluebunch Fescue",
@@ -2382,7 +2382,7 @@
     "image_attribution": "no rights reserved, uploaded by Kallum McDonald",
     "image_license": "cc0",
     "flower_color": "#ece6c8",
-    "flower_form": "spike"
+    "flower_form": "lily"
   },
   {
     "common_name": "Broomweed",
@@ -5411,7 +5411,7 @@
     "image_attribution": "(c) er-birds, some rights reserved (CC BY), uploaded by er-birds",
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
-    "flower_form": "spike"
+    "flower_form": "star"
   },
   {
     "common_name": "Fuzzy-tongue Penstemon",
@@ -5684,7 +5684,7 @@
     "availability_class": "native_specialist",
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
-    "flower_form": "bell"
+    "flower_form": "lily"
   },
   {
     "common_name": "Golden Bean",
@@ -5830,7 +5830,7 @@
     "image_attribution": "(c) crothfels, some rights reserved (CC BY)",
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
-    "flower_form": "cluster"
+    "flower_form": "cross"
   },
   {
     "common_name": "Golden Sedge",
@@ -7274,7 +7274,7 @@
     "image_attribution": "(c) Thomas Gyselinck, some rights reserved (CC BY), uploaded by Thomas Gyselinck",
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
-    "flower_form": "cluster"
+    "flower_form": "star"
   },
   {
     "common_name": "Late Goldenrod",
@@ -8689,7 +8689,7 @@
     "image_attribution": "(c) Katrin Simon, some rights reserved (CC BY), uploaded by Katrin Simon",
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
-    "flower_form": "cluster"
+    "flower_form": "star"
   },
   {
     "common_name": "Moss Phlox",
@@ -8733,7 +8733,7 @@
     "availability_class": "native_specialist",
     "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026",
     "flower_color": "#e58fb0",
-    "flower_form": "cluster"
+    "flower_form": "star"
   },
   {
     "common_name": "Mountain Brome",
@@ -9524,7 +9524,7 @@
     "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
     "flower_color": "#e58fb0",
-    "flower_form": "cluster"
+    "flower_form": "star"
   },
   {
     "common_name": "Ostrich Fern",
@@ -11176,7 +11176,7 @@
     "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
     "flower_color": "#e58fb0",
-    "flower_form": "cluster"
+    "flower_form": "star"
   },
   {
     "common_name": "Prairie Thistle",
@@ -11409,7 +11409,7 @@
     "image_attribution": "(c) Георгий Виноградов (Georgy Vinogradov), some rights reserved (CC BY), uploaded by Георгий Виноградов (Georgy Vinogradov)",
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
-    "flower_form": "cluster"
+    "flower_form": "star"
   },
   {
     "common_name": "Purple Coneflower",
@@ -15412,7 +15412,7 @@
     "image_attribution": "no rights reserved, uploaded by Kallum McDonald",
     "image_license": "cc0",
     "flower_color": "#e58fb0",
-    "flower_form": "daisy"
+    "flower_form": "star"
   },
   {
     "common_name": "Stiff Goldenrod",
@@ -17860,7 +17860,7 @@
     "availability_class": "rare",
     "sourcing_notes": "Estimate (specialist / rare); AB retail as of 2026",
     "flower_color": "#e07020",
-    "flower_form": "bell"
+    "flower_form": "lily"
   },
   {
     "common_name": "White Camas",
@@ -17910,7 +17910,7 @@
     "image_attribution": "(c) marlin harms, some rights reserved (CC BY)",
     "image_license": "cc-by",
     "flower_color": "#ece6c8",
-    "flower_form": "spike"
+    "flower_form": "lily"
   },
   {
     "common_name": "White Evening Primrose",
@@ -18002,7 +18002,7 @@
     "image_attribution": "no rights reserved",
     "image_license": "cc0",
     "flower_color": "#e58fb0",
-    "flower_form": "daisy"
+    "flower_form": "star"
   },
   {
     "common_name": "White Mountain Avens",
@@ -18327,7 +18327,7 @@
     "image_attribution": "(c) Tom Hilton, some rights reserved (CC BY), uploaded by Tom Hilton",
     "image_license": "cc-by",
     "flower_color": "#6f8fd6",
-    "flower_form": "cluster"
+    "flower_form": "star"
   },
   {
     "common_name": "Wild Chives",
@@ -19382,7 +19382,7 @@
     "image_attribution": "(c) Joshua Mayer, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
     "flower_color": "#e58fb0",
-    "flower_form": "cluster"
+    "flower_form": "star"
   },
   {
     "common_name": "Yellow Beardtongue",
@@ -19574,7 +19574,7 @@
     "image_attribution": "(c) Laura Clark, some rights reserved (CC BY), uploaded by Laura Clark",
     "image_license": "cc-by",
     "flower_color": "#6f8fd6",
-    "flower_form": "cluster"
+    "flower_form": "star"
   },
   {
     "common_name": "Yellow Lady's Slipper",
@@ -20046,7 +20046,7 @@
     "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
     "flower_color": "#f0a818",
-    "flower_form": "bell"
+    "flower_form": "lily"
   },
   {
     "common_name": "Yellowstone Draba",
@@ -20090,6 +20090,6 @@
     "availability_class": "native_specialist",
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
-    "flower_form": "cluster"
+    "flower_form": "cross"
   }
 ]

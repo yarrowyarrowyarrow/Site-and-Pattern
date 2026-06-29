@@ -1700,7 +1700,8 @@ function buildPlants(group, plants, month, year, terrain) {
 // per-form canvas texture so different flowers read differently. Shown only when
 // the scene's month falls inside the plant's bloom window.
 const FLOWER_FORMS = ['daisy', 'rays', 'spike', 'plume', 'umbel', 'globe',
-                      'cluster', 'bell', 'trumpet', 'cattail', 'pea', 'whorl'];
+                      'cluster', 'bell', 'trumpet', 'cattail', 'pea', 'whorl',
+                      'star', 'cross', 'lily'];
 let FLOWER_TEX = null;
 
 function makeFlowerTexture(form) {
@@ -1802,6 +1803,35 @@ function makeFlowerTexture(form) {
       g.ellipse(rr * 0.5, 0, s * 0.17, s * 0.032, 0, 0, Math.PI * 2); g.fill(); g.restore();
     }
     g.fillStyle = 'rgba(255,255,255,0.85)'; dot(cx, cy, s * 0.09);
+  } else if (form === 'star') {            // 5 broad rounded petals (flax, geranium, phlox)
+    const petals = 5, R = s * 0.34;
+    for (let i = 0; i < petals; i++) {
+      const a = -Math.PI / 2 + i / petals * Math.PI * 2;
+      g.save(); g.translate(cx + Math.cos(a) * R * 0.52, cy + Math.sin(a) * R * 0.52);
+      g.rotate(a + Math.PI / 2); g.beginPath();
+      g.ellipse(0, 0, s * 0.135, s * 0.2, 0, 0, Math.PI * 2); g.fill(); g.restore();
+    }
+    g.fillStyle = 'rgba(255,255,255,0.6)'; dot(cx, cy, s * 0.085);
+  } else if (form === 'cross') {           // 4 petals (mustard family — draba)
+    const petals = 4, R = s * 0.3;
+    for (let i = 0; i < petals; i++) {
+      const a = i / petals * Math.PI * 2;
+      g.save(); g.translate(cx + Math.cos(a) * R * 0.55, cy + Math.sin(a) * R * 0.55);
+      g.rotate(a); g.beginPath();
+      g.ellipse(0, 0, s * 0.17, s * 0.115, 0, 0, Math.PI * 2); g.fill(); g.restore();
+    }
+    dot(cx, cy, s * 0.06);
+  } else if (form === 'lily') {            // 6 pointed tepals (lily, blue-eyed grass, camas)
+    const tepals = 6, R = s * 0.44;
+    for (let i = 0; i < tepals; i++) {
+      const a = -Math.PI / 2 + i / tepals * Math.PI * 2;
+      g.save(); g.translate(cx, cy); g.rotate(a);
+      g.beginPath();
+      g.moveTo(0, 0); g.lineTo(s * 0.07, -s * 0.13);
+      g.lineTo(0, -R); g.lineTo(-s * 0.07, -s * 0.13);
+      g.closePath(); g.fill(); g.restore();
+    }
+    g.fillStyle = 'rgba(255,255,255,0.55)'; dot(cx, cy, s * 0.08);
   } else { // cluster
     for (let i = 0; i < 11; i++) {
       const a = i * 2.39996, rr = Math.sqrt(i / 11) * s * 0.34;
@@ -1818,7 +1848,8 @@ function makeFlowerTexture(form) {
 // plant reads as its flower colour when in bloom).
 const _FLOWER_SIZE = { rays: 0.42, plume: 0.34, spike: 0.34, umbel: 0.30,
                        globe: 0.32, trumpet: 0.30, bell: 0.24, daisy: 0.24,
-                       cluster: 0.26, cattail: 0.7, pea: 0.34, whorl: 0.30 };
+                       cluster: 0.26, cattail: 0.7, pea: 0.34, whorl: 0.30,
+                       star: 0.28, cross: 0.22, lily: 0.34 };
 
 function buildFlowers(plants, month, terrain) {
   if (!FLOWER_TEX) {

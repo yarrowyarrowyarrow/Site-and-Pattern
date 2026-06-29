@@ -55,6 +55,9 @@ grow berries.
 | `cattail` | brown emergent spike *(V1.92)* | Cattail (Typha) |
 | `pea` | legume raceme (banner + wings) *(V1.94)* | Silky Lupine, vetches, milkvetches |
 | `whorl` | tubular whorl / shaggy head *(V1.94)* | Wild Bergamot (Monarda) |
+| `star` | 5 broad rounded petals *(V2.1)* | Wild Blue Flax, geranium, phlox, prairie smoke |
+| `cross` | 4 petals (mustard family) *(V2.1)* | Golden Draba |
+| `lily` | 6 pointed tepals *(V2.1)* | Wood Lily, Blue-eyed Grass, camas, glacier lily |
 
 ## Plant-body geometry archetypes
 

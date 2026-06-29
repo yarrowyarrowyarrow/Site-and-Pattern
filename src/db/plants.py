@@ -134,7 +134,9 @@ _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 # v35 (V2.0): no DDL — reseed for curated fruit_color on fleshy-fruited species
 # (saskatoon, chokecherry, currants, viburnum, rose hips…) feeding the new 3D
 # berry layer shown in each plant's fruit season.
-_SCHEMA_VERSION = 35
+# v36 (V2.1): no DDL — reseed for the new star / cross / lily flower forms
+# (flax, geranium, phlox, draba, blue-eyed grass, wood lily, camas…).
+_SCHEMA_VERSION = 36
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────

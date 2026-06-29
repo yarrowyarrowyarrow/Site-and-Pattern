@@ -91,7 +91,7 @@ AVAILABILITY_CLASSES = {"big_box", "garden_centre", "native_specialist",
 # showy flower; empty string is also tolerated (treated as 'none').
 FLOWER_FORMS      = {"daisy", "rays", "spike", "plume", "umbel", "globe",
                      "cluster", "bell", "trumpet", "cattail", "pea", "whorl",
-                     "none"}
+                     "star", "cross", "lily", "none"}
 
 # ── Soft enum allowlists (drift here is a WARNING) ──────────────────────────
 
