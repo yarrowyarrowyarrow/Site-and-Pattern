@@ -186,11 +186,11 @@ Site & Pattern was built as a personal tool by Marci while studying ecological d
 
 ## Documentation
 
-- [`INSTALL.md`](INSTALL.md) — Installation instructions, including the one-click `.exe` installer for friends and testers
-- [`FRIEND_SETUP_GUIDE.md`](FRIEND_SETUP_GUIDE.md) — Plain-English setup guide for non-technical users
-- [`ROADMAP.md`](ROADMAP.md) — Feature roadmap with shipped vs. planned items
-- [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) — Developer-facing notes for active development sessions
+- [`INSTALL.md`](INSTALL.md) — Installation guide for all platforms (one-click installers + from source), plus updating and troubleshooting
 - [`USER_GUIDE.md`](USER_GUIDE.md) — In-app feature reference
+- [`BUILD.md`](BUILD.md) — Building the installers (Windows `.exe`, macOS `.dmg`, Linux zip) and the release/packaging internals
+- [`ROADMAP.md`](ROADMAP.md) — Feature roadmap with shipped vs. planned items
+- [`docs/archive/SESSION_HANDOFF.md`](docs/archive/SESSION_HANDOFF.md) — Archived developer session notes
 - [`docs/AGENT_API.md`](docs/AGENT_API.md) — Headless scripting API, CLI, and MCP tool reference for automation & AI agents
 - [`docs/PROJECT_FILE_FORMAT.md`](docs/PROJECT_FILE_FORMAT.md) — The `.perma.geojson` project file format
 - [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) — SQLite schema, seeding, and the version-bump checklist

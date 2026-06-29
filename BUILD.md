@@ -12,7 +12,8 @@ This document explains how to run Site & Pattern locally and create a 1-click in
 
 ```bash
 # Clone or navigate to the repository
-cd /home/user/Site & Pattern
+git clone https://github.com/yarrowyarrowyarrow/PermaDesign.git
+cd PermaDesign
 
 # Create a virtual environment
 python3 -m venv venv
@@ -86,8 +87,16 @@ The executable will be in `dist\SiteAndPattern\SiteAndPattern.exe`.
 
 ### macOS: Create App Bundle & DMG
 
-> See **`MAC_SETUP_GUIDE.md`** for the friend-facing install steps and the
-> full Mac build walkthrough (incl. Command Line Tools prerequisites).
+> Friend-facing install steps (drag-to-Applications + the one-time
+> right-click → Open) live in **[INSTALL.md](INSTALL.md)**.
+
+**One-time prerequisites:** Xcode Command Line Tools (provides `git` and
+`codesign`) and Python 3.10+:
+
+```bash
+xcode-select --install            # click through the installer if it pops up
+python3 --version                 # 3.10+ ; install from python.org if missing
+```
 
 ```bash
 git clone https://github.com/yarrowyarrowyarrow/PermaDesign.git
@@ -224,6 +233,51 @@ The installer includes all dependencies. If it fails to start:
    - **macOS**: `dist/SiteAndPattern.app/Contents/MacOS/SiteAndPattern`
    - **Linux**: `./dist/SiteAndPattern/SiteAndPattern`
 2. Check that `data/` and `html/` directories are included
+
+### App panels are empty / `no such table`
+A bundled data file isn't being found. Confirm it's listed in `permadesign.spec`
+`datas` **and** read via `resource_path(...)` (see
+[How resource bundling works](#how-resource-bundling-works-for-maintainers)).
+
+### `ERROR: could not delete build\` (Windows)
+An old `SiteAndPattern.exe` or an Explorer window is holding a lock. Close them
+and rerun.
+
+---
+
+## Verifying a build
+
+1. Run the installer/app on a clean machine with **no** Python (a VM is ideal),
+   accepting a **non-default** install directory to confirm path handling.
+2. Launch from the shortcut / Applications folder.
+3. Confirm: the plant browser and the polyculture/community panels are populated,
+   the Leaflet map loads, and **no** error dialogs appear.
+
+To sanity-check bundled-resource resolution without a separate machine, run the
+test suite — it includes a frozen-build simulation:
+
+```bash
+python -m unittest discover -s tests
+```
+
+---
+
+## How resource bundling works (for maintainers)
+
+- The PyInstaller spec (`permadesign.spec`) lists every non-Python runtime file
+  in `datas`, preserving its relative layout: `('data', 'data')`,
+  `('html', 'html')`, `('src/db/schema.sql', 'src/db')`.
+- At runtime the app **must not** build paths from `__file__` — a module's
+  `__file__` is unreliable once frozen into the PYZ archive. Instead it calls
+  `resource_path("data", "plants_master.json")` etc. (`src/resources.py`), which
+  returns a path under `sys._MEIPASS` in a frozen build and under the repo root
+  in a source checkout.
+- **If you add a new bundled data file**, do both: add it to `datas` in
+  `permadesign.spec`, and read it via `resource_path(...)`. `installer.nsi` needs
+  no change — it bundles the entire PyInstaller output.
+- The user database lives in the per-user data folder (writable), **not** in the
+  install directory — so it survives reinstalls/upgrades and never needs write
+  access to `Program Files`.
 
 ---
 

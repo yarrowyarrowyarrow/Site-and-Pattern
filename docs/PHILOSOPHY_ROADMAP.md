@@ -6,7 +6,7 @@ the next move can be chosen deliberately. Each entry states **Impact / Effort / 
 the principle(s) it serves, and a concrete **how I'd build it** (the actual functions and
 files it would lean on).
 
-**Relationship to the other backlogs.** [`../FEATURE_BRAINSTORM.md`](../FEATURE_BRAINSTORM.md)
+**Relationship to the other backlogs.** [`archive/FEATURE_BRAINSTORM.md`](archive/FEATURE_BRAINSTORM.md)
 is the engineering backlog (what's shipped, effort-tiered); [`../ROADMAP.md`](../ROADMAP.md)
 is the feature ledger. This is the *philosophical* lens over both, and is meant to be
 amended alongside them. Feature IDs (F1, F2, …) are stable handles — say "let's do F5".
