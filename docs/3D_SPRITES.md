@@ -89,7 +89,7 @@ foliage masses:
 | Grass / sedge / rush tuft | `buildGrassGeo` | dense fan of flat arching blades *(V1.92)* | a grass, sedge, or rush |
 | Aquatic / emergent clump | `buildAquaticGeo` | tall erect strap leaves *(V1.92)* | an aquatic (Cattail, Great Bulrush) |
 | Groundcover mat | `buildGroundcoverGeo` | low scatter of textured domes | Bearberry |
-| Vine | `GEO.cone` | slim swaying cone | Blue Clematis |
+| Vine | `buildVineGeo` | sprawling/twining leafy stems *(V1.99)* | Blue Clematis, vetch, peavine |
 
 Herbaceous plants (wildflower / herb / fern) are built to their **growth form**
 (`HERB_FORMS`, keyed by genus via `_HPROF`, else inferred from flower form +

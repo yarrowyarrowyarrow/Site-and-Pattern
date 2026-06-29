@@ -35,6 +35,8 @@ from src.branding import APP_NAME
 _MAX_YEAR = 25
 _MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+_MONTH_FULL = ["January", "February", "March", "April", "May", "June",
+               "July", "August", "September", "October", "November", "December"]
 _DETAIL_KEY = "viewer3d/detail"            # 0 Low · 1 Medium · 2 High (shared w/ gallery)
 _DETAIL_LABELS = ["Low", "Medium", "High"]
 
@@ -81,6 +83,7 @@ class Scene3DWindow(QWidget):
         self._month = QSlider(Qt.Orientation.Horizontal)
         self._month.setRange(1, 12)
         self._month.setValue(6)
+        self._month_lbl = QLabel()          # shows the current month name
         self._hour = QSlider(Qt.Orientation.Horizontal)
         self._hour.setRange(5, 21)
         self._hour.setValue(13)
@@ -131,6 +134,7 @@ class Scene3DWindow(QWidget):
         bar.addSpacing(16)
         bar.addWidget(QLabel("Time of year:"))
         bar.addWidget(self._month, 1)
+        bar.addWidget(self._month_lbl)
         bar.addWidget(QLabel("Time of day:"))
         bar.addWidget(self._hour, 1)
         bar.addWidget(self._sun_lbl)
@@ -156,8 +160,8 @@ class Scene3DWindow(QWidget):
     def _update_labels(self):
         y = self._year.value()
         self._year_lbl.setText("mature" if y == 0 else f"year {y}")
-        self._sun_lbl.setText(
-            f"{_MONTH_NAMES[self._month.value() - 1]} {self._hour.value()}:00")
+        self._month_lbl.setText(_MONTH_FULL[self._month.value() - 1])
+        self._sun_lbl.setText(f"{self._hour.value()}:00")
 
     def _push_scene(self):
         scene = build_scene(

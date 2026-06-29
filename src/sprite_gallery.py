@@ -140,7 +140,7 @@ GEOMETRY = [
      "Great Bulrush",     _plain("aquatic", "Schoenoplectus acutus", 1.8, 0.6, "Great Bulrush")),
     ("groundcover",    "Groundcover mat", "Low scatter of textured domes.",
      "Bearberry",         _plain("groundcover", "Arctostaphylos uva-ursi", 0.15, 0.7, "Bearberry")),
-    ("vine",           "Vine", "A slim swaying cone.",
+    ("vine",           "Vine", "Sprawling/twining leafy stems (clematis, vetch, peavine).",
      "Blue Clematis",     _plain("vine", "Clematis occidentalis", 2.0, 1.2, "Blue Clematis")),
 ]
 

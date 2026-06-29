@@ -50,10 +50,18 @@
     align-items: center; justify-content: center; text-align: center;
     font-family: system-ui, sans-serif; color: #5d4037; background: #efebe9;
   }
+  #plant-tip {
+    position: absolute; z-index: 6; display: none; pointer-events: none;
+    font-family: system-ui, sans-serif; font-size: 12.5px; color: #eafaea;
+    background: rgba(20,32,24,.92); border: 1px solid #3a5a3a;
+    border-radius: 6px; padding: 3px 8px; white-space: nowrap;
+    transform: translate(12px, 12px);
+  }
 </style>
 </head>
 <body>
 <div id="hud">3D view — loading…</div>
+<div id="plant-tip"></div>
 <div id="offline"><div id="offline-msg"><b>3D viewer couldn't start</b><br>
 The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
 
@@ -234,6 +242,40 @@ camera.position.set(45, 38, 55);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.maxPolarAngle = Math.PI / 2 - 0.02;   // never go underground
 controls.target.set(0, 0, 0);
+
+// Hover → plant name (V1.99): raycast the instanced plant meshes and show the
+// common name of the instance under the cursor. Throttled; flower point-sprites
+// aren't pickable. Each plant mesh carries userData.pick = [name per instance].
+const _ray = new THREE.Raycaster();
+const _ptr = new THREE.Vector2();
+let _lastPick = 0;
+renderer.domElement.addEventListener('pointermove', (ev) => {
+  const tip = document.getElementById('plant-tip');
+  if (!tip) return;
+  tip.style.left = ev.clientX + 'px'; tip.style.top = ev.clientY + 'px';
+  const now = performance.now();
+  if (now - _lastPick < 45) return;             // throttle the raycast
+  _lastPick = now;
+  if (!plantsGroup) { tip.style.display = 'none'; return; }
+  const r = renderer.domElement.getBoundingClientRect();
+  _ptr.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
+  _ptr.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
+  _ray.setFromCamera(_ptr, camera);
+  const meshes = [];
+  plantsGroup.traverse(o => { if (o.isInstancedMesh && o.userData.pick) meshes.push(o); });
+  const hits = _ray.intersectObjects(meshes, false);
+  let name = '';
+  for (const h of hits) {
+    const nm = h.object.userData.pick[h.instanceId];
+    if (nm) { name = nm; break; }
+  }
+  tip.textContent = name;
+  tip.style.display = name ? 'block' : 'none';
+});
+renderer.domElement.addEventListener('pointerleave', () => {
+  const tip = document.getElementById('plant-tip');
+  if (tip) tip.style.display = 'none';
+});
 
 scene.add(new THREE.HemisphereLight(0xdfeefc, 0x5d6e51, 0.75));
 const sun = new THREE.DirectionalLight(0xfff4d6, 2.1);
@@ -622,30 +664,31 @@ function shrubProfileFor(p) {
 // broad vs fine), and how many bare flower stalks rise above (the flower sprite
 // lands on top). `q(n)` quality-scales the counts.
 const HERB_FORMS = {
-  // erect leafy stem(s), leaves spiralling up — fireweed, goldenrod, penstemon,
-  // blazingstar, lupine, paintbrush, loosestrife.
-  erect:   { stems: [1, 3], splay: 0.1,  leafFrom: 0.25, leaf: [0.16, 0.012],
-             perStem: [5, 9], leafTilt: 1.15, stalks: 0, basal: 0, fine: 0 },
+  // erect leafy stem(s), narrow lance leaves spiralling up — fireweed, goldenrod,
+  // penstemon, blazingstar, lupine, paintbrush, loosestrife.
+  erect:   { stems: [1, 3], splay: 0.1,  leafFrom: 0.22, leaf: [0.2, 0.04],
+             shape: 'lance', perStem: [6, 10], leafTilt: 1.1, stalks: 0, basal: 0, fine: 0 },
   // low ferny mound of fine divided foliage + thin flower stalks — yarrow,
   // tansy, meadow rue, columbine, cinquefoil, sweet cicely.
-  ferny:   { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.1, 0.008],
-             perStem: 0, leafTilt: 1.3, stalks: [3, 5], basal: [18, 30], fine: 1 },
-  // basal leaf rosette under a few wiry, nearly bare flower stalks — fleabane,
+  ferny:   { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.13, 0.02],
+             shape: 'lance', perStem: 0, leafTilt: 1.3, stalks: [3, 5], basal: [20, 34], fine: 1 },
+  // basal leaf rosette of broad spoon leaves under wiry flower stalks — fleabane,
   // arnica, evening primrose, avens, alumroot, agoseris, shooting star.
-  rosette: { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.22, 0.03],
-             perStem: 0, leafTilt: 1.35, stalks: [3, 6], basal: [7, 12], fine: 0 },
-  // bushy upright leafy clump — asters, sunflower, milkweed, bee balm, monkeyflower.
-  clump:   { stems: [3, 6], splay: 0.42, leafFrom: 0.15, leaf: [0.18, 0.05],
-             perStem: [4, 6], leafTilt: 1.0, stalks: 0, basal: [2, 3], fine: 0 },
+  rosette: { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.26, 0.085],
+             shape: 'ovate', perStem: 0, leafTilt: 1.32, stalks: [3, 6], basal: [8, 13], fine: 0 },
+  // bushy upright leafy clump, broad ovate leaves — asters, sunflower, milkweed,
+  // bee balm, monkeyflower.
+  clump:   { stems: [3, 6], splay: 0.42, leafFrom: 0.12, leaf: [0.22, 0.1],
+             shape: 'ovate', perStem: [4, 7], leafTilt: 0.95, stalks: 0, basal: [2, 3], fine: 0 },
   // upright strap / linear basal leaves — onion, harebell, blue-eyed grass, lily, camas.
-  grassy:  { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.9, 0.02],
-             perStem: 0, leafTilt: 0.18, stalks: [2, 4], basal: [5, 8], fine: 0, blades: 1 },
-  // low cushion / mat — umbrella-plant, moss campion, violets, creeping forbs.
-  mat:     { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.12, 0.05],
-             perStem: 0, leafTilt: 1.45, stalks: [2, 4], basal: [12, 20], fine: 0, low: 1 },
+  grassy:  { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.9, 0.035],
+             shape: 'strap', perStem: 0, leafTilt: 0.16, stalks: [2, 4], basal: [6, 9], fine: 0 },
+  // low cushion / mat of small spoon leaves — umbrella-plant, moss campion, violets.
+  mat:     { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.14, 0.075],
+             shape: 'ovate', perStem: 0, leafTilt: 1.45, stalks: [2, 4], basal: [14, 22], fine: 0, low: 1 },
   // arching divided fronds from a crown — ferns.
-  fern:    { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.95, 0.06],
-             perStem: 0, leafTilt: 0.5, stalks: 0, basal: [5, 8], fine: 0, blades: 1, arch: 1 },
+  fern:    { stems: [0, 0], splay: 0,    leafFrom: 0,    leaf: [0.95, 0.11],
+             shape: 'lance', perStem: 0, leafTilt: 0.5, stalks: 0, basal: [6, 9], fine: 0 },
 };
 
 // Genus → herb growth form for the common prairie/Alberta forbs. Foliage colour
@@ -684,11 +727,42 @@ function herbFormFor(p) {
   return tall ? 'erect' : 'clump';
 }
 
-// One small leaf blade (a flat tapered ribbon) tilted `tilt` from vertical at
-// azimuth `az` and translated to an attachment point — the building block for
-// herbaceous foliage. Reuses makeBlade so a leaf shares the blade pipeline.
-function makeLeaf(rng, len, wid, tilt, az, at) {
-  const blade = makeBlade(rng, len * (0.8 + rng() * 0.4), wid, 0.12 + rng() * 0.18, 1.2);
+// A flat leaf with a real width profile (V1.99) so foliage reads as leaves, not
+// threads: `lance` widest near the base tapering to a point (fireweed/willow),
+// `ovate` widest in the middle (aster/milkweed), `strap` near-constant (onion/
+// iris). Position-only indexed geometry so it merges with the (stripped) stems.
+function _leafWidth(shape, t) {
+  if (shape === 'ovate') return Math.pow(Math.sin(Math.PI * Math.min(0.96, Math.max(0.06, t))), 0.7);
+  if (shape === 'strap') return t < 0.9 ? 1 : Math.max(0.15, (1 - t) / 0.1);
+  return Math.max(0.05, 1 - 0.9 * t);          // lance / default
+}
+function makeLeafBlade(rng, len, wid, shape) {
+  const segs = 4, dir = rng() * Math.PI * 2;
+  const dx = Math.cos(dir), dz = Math.sin(dir), px = -dz, pz = dx;
+  const lean = (shape === 'strap' ? 0.05 : 0.12) + rng() * 0.18;
+  const pos = [], idx = [];
+  for (let s = 0; s <= segs; s++) {
+    const t = s / segs, y = len * t;
+    const off = lean * Math.pow(t, 1.4);
+    const wHalf = wid * 0.5 * _leafWidth(shape, t) + 0.0008;
+    const cx = dx * off, cz = dz * off;
+    pos.push(cx - px * wHalf, y, cz - pz * wHalf);
+    pos.push(cx + px * wHalf, y, cz + pz * wHalf);
+  }
+  for (let s = 0; s < segs; s++) {
+    const a = s * 2, b = s * 2 + 1, c = s * 2 + 2, d = s * 2 + 3;
+    idx.push(a, b, c, b, d, c);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  return g;
+}
+
+// Place one leaf: build it, tilt `tilt` from vertical at azimuth `az`, translate
+// to attachment point `at`. The building block for herbaceous + vine foliage.
+function makeLeaf(rng, len, wid, tilt, az, at, shape) {
+  const blade = makeLeafBlade(rng, len * (0.8 + rng() * 0.4), wid, shape || 'lance');
   blade.applyMatrix4(new THREE.Matrix4().makeRotationY(az)
     .multiply(new THREE.Matrix4().makeRotationZ(tilt)));
   if (at) blade.translate(at.x, at.y, at.z);
@@ -1114,7 +1188,7 @@ function buildPerennialGeo(rng, form) {
     for (let j = 0; j < nLeaf; j++) {
       const t = F.leafFrom + (1 - F.leafFrom) * (j / Math.max(1, nLeaf - 1));
       const at = new THREE.Vector3(0, h * t, 0).applyMatrix4(rot);
-      geos.push(makeLeaf(rng, lL, lW, F.leafTilt, j * 2.39996 + az0, at));
+      geos.push(makeLeaf(rng, lL, lW, F.leafTilt, j * 2.39996 + az0, at, F.shape));
     }
   }
 
@@ -1124,7 +1198,7 @@ function buildPerennialGeo(rng, form) {
     for (let i = 0; i < nb; i++) {
       const az = rng() * Math.PI * 2;
       const len = lL * (F.fine ? 0.6 + rng() * 0.5 : 1);
-      const lf = makeLeaf(rng, len, lW, F.leafTilt * (0.8 + rng() * 0.4), az, null);
+      const lf = makeLeaf(rng, len, lW, F.leafTilt * (0.8 + rng() * 0.4), az, null, F.shape);
       const rr = (F.low ? 0.18 : 0.1) * rng();
       lf.translate(Math.cos(az) * rr, (F.low ? 0.01 : 0.02), Math.sin(az) * rr);
       geos.push(lf);
@@ -1209,6 +1283,32 @@ function buildAquaticGeo(rng) {
   return g;
 }
 
+// A vine (V1.99): several slender stems sprawling/twining out and up from a low
+// base, clothed with broad leaves — a leafy tangle, not a cone. Reads as a
+// climbing/trailing plant (clematis, vetch, peavine, hops).
+function buildVineGeo(rng) {
+  const geos = [];
+  const stems = qn(4 + Math.floor(rng() * 3));   // 4–6 trailing/twining stems
+  for (let i = 0; i < stems; i++) {
+    const az = (i / stems) * Math.PI * 2 + rng() * 0.8;
+    const splay = 0.6 + rng() * 0.55;            // lean far out — sprawling
+    const h = 0.7 + rng() * 0.35;
+    const rot = new THREE.Matrix4().makeRotationY(az)
+      .multiply(new THREE.Matrix4().makeRotationZ(splay));
+    geos.push(_stem(0.013, 0.007, h, rot));
+    const nL = qn(4 + Math.floor(rng() * 3));
+    for (let j = 0; j < nL; j++) {
+      const t = 0.3 + 0.65 * (j / Math.max(1, nL - 1));
+      const at = new THREE.Vector3(0, h * t, 0).applyMatrix4(rot);
+      geos.push(makeLeaf(rng, 0.16, 0.1, 1.05, j * 2.39996 + az, at, 'ovate'));
+    }
+  }
+  const g = mergeGeometries(geos, false);
+  normalizeUnit([g]);
+  applyFoliageGradient(g);
+  return g;
+}
+
 // Built once, reused across every scene rebuild (deterministic seeds).
 // ARCH holds the cheap shrub/peren/ground variant arrays; trees are built
 // lazily and memoised by (class, form, tier, sub) in TREE_CACHE.
@@ -1260,11 +1360,12 @@ function buildArchetypes() {
   if (ARCH) return;
   // Shrubs (SHRUB_CACHE) and herbs (HERB_CACHE) are built per-profile on demand;
   // the rest are the cheap shared variant arrays.
-  const ground = [], grass = [], aquatic = [];
+  const ground = [], grass = [], aquatic = [], vine = [];
   for (const sd of [331, 379]) ground.push(buildGroundcoverGeo(mulberry32(sd)));
   for (const sd of [421, 457, 503]) grass.push(buildGrassGeo(mulberry32(sd)));
   for (const sd of [541, 587, 631]) aquatic.push(buildAquaticGeo(mulberry32(sd)));
-  ARCH = { ground, grass, aquatic };
+  for (const sd of [661, 707, 743]) vine.push(buildVineGeo(mulberry32(sd)));
+  ARCH = { ground, grass, aquatic, vine };
 }
 
 function ensurePlantMats() {
@@ -1348,6 +1449,7 @@ function buildLayer(list, variants, mat, archOf, scaleOf, month, year, noRot, te
     const places = items.map(p => spreadPlacements(p, year));
     const total = places.reduce((s, pl) => s + pl.length, 0);
     const mesh = instancedMesh(archOf(v), total, mat);
+    const names = new Array(total);
     let idx = 0;
     items.forEach((p, ii) => {
       const [sx, sy, sz] = scaleOf(p);
@@ -1360,9 +1462,11 @@ function buildLayer(list, variants, mat, archOf, scaleOf, month, year, noRot, te
         const gy = terrainHeightAt(wx, wy, terrain);
         setInst2(mesh, idx, wx, gy, -wy,
                  sx * m, sy * (noRot ? 1 : m), sz * m, rotY, col);
+        names[idx] = p.common_name || '';
         idx++;
       });
     });
+    mesh.userData.pick = names;
     plantsGroup.add(mesh);
   });
 }
@@ -1412,6 +1516,7 @@ function buildHerbLayer(list, month, year, terrain) {
     const places = items.map(p => spreadPlacements(p, year));
     const total = places.reduce((s, pl) => s + pl.length, 0);
     const mesh = instancedMesh(arch, total, MATS.leaf);
+    const names = new Array(total);
     let idx = 0;
     items.forEach((p, ii) => {
       const c = Math.max(0.15, p.canopy_m), h = Math.max(0.08, p.height_m);
@@ -1422,9 +1527,11 @@ function buildHerbLayer(list, month, year, terrain) {
         const rotY = rotY0 + (k ? pl.dx : 0);
         const gy = terrainHeightAt(x, wy, terrain);
         setInst2(mesh, idx, x, gy, -wy, c * m, h * m, c * m, rotY, col);
+        names[idx] = p.common_name || '';
         idx++;
       });
     });
+    mesh.userData.pick = names;
     plantsGroup.add(mesh);
   }
 }
@@ -1447,6 +1554,7 @@ function buildShrubLayer(list, month, year, terrain) {
     const stems = arch.stemGeo ? instancedMesh(arch.stemGeo, total, MATS.branch) : null;
     // Woody stems are bark-brown, except red-osier dogwood's signature red.
     const stemHex = prof.redStems ? '#b5402e' : '#6b5236';
+    const names = new Array(total);
     let idx = 0;
     items.forEach((p, ii) => {
       const c = Math.max(0.25, p.canopy_m), h = Math.max(0.2, p.height_m);
@@ -1459,9 +1567,11 @@ function buildShrubLayer(list, month, year, terrain) {
         const gy = terrainHeightAt(x, wy, terrain);
         setInst2(foliage, idx, x, gy, -wy, c * m, h * m, c * m, rotY, col);
         if (stems) setInst2(stems, idx, x, gy, -wy, c * m, h * m, c * m, rotY, scol);
+        names[idx] = p.common_name || '';
         idx++;
       });
     });
+    foliage.userData.pick = names;
     plantsGroup.add(foliage);
     if (stems) plantsGroup.add(stems);
   }
@@ -1510,6 +1620,7 @@ function buildPlants(group, plants, month, year, terrain) {
       const total = places.reduce((s, pl) => s + pl.length, 0);
       const branch = instancedMesh(arch.branchGeo, total, MATS.branch);
       const foliage = instancedMesh(arch.foliageGeo, total, MATS.foliage);
+      const names = new Array(total);
       let idx = 0;
       items.forEach((p, ii) => {
         const h = Math.max(0.4, p.height_m), c = Math.max(0.4, p.canopy_m);
@@ -1524,9 +1635,12 @@ function buildPlants(group, plants, month, year, terrain) {
           setInst2(branch, idx, x, gy, z, c * m, h * m, c * m, rotY, bcol);
           if (bare) setInst2(foliage, idx, x, gy, z, 0.001, 0.001, 0.001, rotY, _white);
           else setInst2(foliage, idx, x, gy, z, c * m, h * m, c * m, rotY, fcol);
+          names[idx] = p.common_name || '';
           idx++;
         });
       });
+      // Pick from the trunk too, so a bare-winter tree still names on hover.
+      branch.userData.pick = names; foliage.userData.pick = names;
       plantsGroup.add(branch, foliage);
     }
   }
@@ -1549,26 +1663,10 @@ function buildPlants(group, plants, month, year, terrain) {
   buildLayer(byKind.aquatic, 3, MATS.blade, (v) => ARCH.aquatic[v],
              (p) => [Math.max(0.18, p.canopy_m), Math.max(0.5, p.height_m),
                      Math.max(0.18, p.canopy_m)], month, year, false, terrain);
-  if (byKind.vine.length) {
-    const list = byKind.vine;
-    const places = list.map(p => spreadPlacements(p, year));
-    const total = places.reduce((s, pl) => s + pl.length, 0);
-    const mesh = instancedMesh(GEO.cone, total, MATS.simple);
-    let idx = 0;
-    list.forEach((p, ii) => {
-      const h = Math.max(0.08, p.height_m), c = Math.max(0.25, p.canopy_m * 0.6);
-      const rotY = (hashPid(p.plant_id) % 628) / 100;
-      const col = fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity);
-      places[ii].forEach((pl) => {
-        const m = pl.mul, cc = Math.max(0.2, c * m);
-        const wx = p.x + pl.dx, wy = p.y + pl.dz;
-        const gy = terrainHeightAt(wx, wy, terrain);
-        setInst2(mesh, idx, wx, gy, -wy, cc, h * m, cc, rotY, col);
-        idx++;
-      });
-    });
-    plantsGroup.add(mesh);
-  }
+  // Vines — sprawling/twining leafy stems (V1.99), not a cone.
+  buildLayer(byKind.vine, 3, MATS.leaf, (v) => ARCH.vine[v],
+             (p) => [Math.max(0.25, p.canopy_m), Math.max(0.2, p.height_m),
+                     Math.max(0.25, p.canopy_m)], month, year, false, terrain);
 
   // Groundcover — low textured dome mats (no flat discs), gentle sway.
   buildLayer(byKind.groundcover, 2, MATS.ground, (v) => ARCH.ground[v],
