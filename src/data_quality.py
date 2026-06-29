@@ -263,6 +263,11 @@ def validate_plant(
     if fc and not re.fullmatch(r"#[0-9a-fA-F]{6}", fc):
         err(f"flower_color={fc!r} is not a #rrggbb hex")
 
+    # fruit_color: empty (dry-fruited / non-fruiting) or a #rrggbb hex (v35).
+    frc = (record.get("fruit_color") or "").strip()
+    if frc and not re.fullmatch(r"#[0-9a-fA-F]{6}", frc):
+        err(f"fruit_color={frc!r} is not a #rrggbb hex")
+
     # ── Soft enums (deviations = warning) ────────────────────────────────
     val = (record.get("growth_curve") or "").strip()
     if val and val not in GROWTH_CURVES:

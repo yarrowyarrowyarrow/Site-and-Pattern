@@ -1113,7 +1113,8 @@
     "image_attribution": "(c) Douglas Goldman, some rights reserved (CC BY-SA), uploaded by Douglas Goldman",
     "image_license": "cc-by-sa",
     "flower_color": "#e58fb0",
-    "flower_form": "bell"
+    "flower_form": "bell",
+    "fruit_color": "#c1271d"
   },
   {
     "common_name": "Bebb's Sedge",
@@ -1479,7 +1480,8 @@
     "availability_class": "garden_centre",
     "sourcing_notes": "Estimate (shrub default); AB retail as of 2026",
     "flower_color": "#f2f2ea",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#a81d1d"
   },
   {
     "common_name": "Black Spruce",
@@ -1945,7 +1947,8 @@
     "image_attribution": "(c) Andrey Zharkikh, some rights reserved (CC BY)",
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
-    "flower_form": "bell"
+    "flower_form": "bell",
+    "fruit_color": "#3b4f8c"
   },
   {
     "common_name": "Bog Cranberry",
@@ -1992,7 +1995,8 @@
     "image_attribution": "no rights reserved, uploaded by David Bird",
     "image_license": "cc0",
     "flower_color": "#e58fb0",
-    "flower_form": "bell"
+    "flower_form": "bell",
+    "fruit_color": "#b3122a"
   },
   {
     "common_name": "Boreal Yarrow",
@@ -2140,7 +2144,8 @@
     "image_attribution": "(c) Laura Gaudette, some rights reserved (CC BY), uploaded by Laura Gaudette",
     "image_license": "cc-by",
     "flower_color": "#f0a818",
-    "flower_form": "trumpet"
+    "flower_form": "trumpet",
+    "fruit_color": "#c1271d"
   },
   {
     "common_name": "Bristly Black Currant",
@@ -2188,7 +2193,8 @@
     "image_attribution": "(c) Brian Finzel, some rights reserved (CC BY-SA), uploaded by Brian Finzel",
     "image_license": "cc-by-sa",
     "flower_color": "#ece6c8",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#9a1f1f"
   },
   {
     "common_name": "Brittle Prickly-pear",
@@ -2515,7 +2521,8 @@
     "availability_class": "native_specialist",
     "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026",
     "flower_color": "#f2f2ea",
-    "flower_form": "umbel"
+    "flower_form": "umbel",
+    "fruit_color": "#cc2e2e"
   },
   {
     "common_name": "Bur Oak",
@@ -2701,7 +2708,8 @@
     "image_attribution": "(c) Matt Lavin, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
     "flower_color": "",
-    "flower_form": "none"
+    "flower_form": "none",
+    "fruit_color": "#d2451c"
   },
   {
     "common_name": "Canada Goldenrod",
@@ -3035,7 +3043,8 @@
     "image_attribution": "(c) Douglas Goldman, some rights reserved (CC BY-SA), uploaded by Douglas Goldman",
     "image_license": "cc-by-sa",
     "flower_color": "#f2f2ea",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#3a1426"
   },
   {
     "common_name": "Common Alumroot",
@@ -3364,7 +3373,8 @@
     "image_attribution": "(c) tomasz przechlewski, some rights reserved (CC BY)",
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
-    "flower_form": "bell"
+    "flower_form": "bell",
+    "fruit_color": "#eff0ea"
   },
   {
     "common_name": "Common Sunflower",
@@ -3647,7 +3657,8 @@
     "availability_class": "native_specialist",
     "sourcing_notes": "Estimate (shrub default); AB retail as of 2026",
     "flower_color": "#f2c11e",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#3a5a86"
   },
   {
     "common_name": "Creeping Sibbaldia",
@@ -4072,7 +4083,8 @@
     "image_attribution": "(c) aarongunnar, some rights reserved (CC BY), uploaded by aarongunnar",
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#a82a47"
   },
   {
     "common_name": "Dotted Blazingstar",
@@ -4452,7 +4464,8 @@
     "image_attribution": "(c) abogomazova, some rights reserved (CC BY), uploaded by abogomazova",
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#a82a47"
   },
   {
     "common_name": "Early Blue Violet",
@@ -4875,7 +4888,8 @@
     "image_attribution": "(c) Don Loarie, some rights reserved (CC BY), uploaded by Don Loarie",
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
-    "flower_form": "spike"
+    "flower_form": "spike",
+    "fruit_color": "#b81f2a"
   },
   {
     "common_name": "Field Chickweed",
@@ -5302,7 +5316,8 @@
     "image_attribution": "(c) Catherine C. Galley, some rights reserved (CC BY), uploaded by Catherine C. Galley",
     "image_license": "cc-by",
     "flower_color": "",
-    "flower_form": "none"
+    "flower_form": "none",
+    "fruit_color": "#7e2418"
   },
   {
     "common_name": "Fringed Brome",
@@ -5767,7 +5782,8 @@
     "image_attribution": "(c) peganum, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
     "flower_color": "#ece6c8",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#1c1422"
   },
   {
     "common_name": "Golden Draba",
@@ -6607,7 +6623,8 @@
     "image_attribution": "(c) Tom Norton, some rights reserved (CC BY), uploaded by Tom Norton",
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
-    "flower_form": "umbel"
+    "flower_form": "umbel",
+    "fruit_color": "#c1271d"
   },
   {
     "common_name": "Hoary Aster",
@@ -7780,7 +7797,8 @@
     "image_attribution": "(c) \nBenjamin Zwittnig, some rights reserved (CC BY)",
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
-    "flower_form": "bell"
+    "flower_form": "bell",
+    "fruit_color": "#3b4f8c"
   },
   {
     "common_name": "Low Townsendia",
@@ -7874,7 +7892,8 @@
     "image_attribution": "(c) psweet, some rights reserved (CC BY-SA), uploaded by psweet",
     "image_license": "cc-by-sa",
     "flower_color": "#f2f2ea",
-    "flower_form": "umbel"
+    "flower_form": "umbel",
+    "fruit_color": "#c1271d"
   },
   {
     "common_name": "Lyalls Penstemon",
@@ -9266,7 +9285,8 @@
     "availability_class": "garden_centre",
     "sourcing_notes": "Estimate (shrub default); AB retail as of 2026",
     "flower_color": "#ece6c8",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#1c1422"
   },
   {
     "common_name": "Northern Gentian",
@@ -9931,7 +9951,8 @@
     "image_attribution": "(c) Tom Norton, some rights reserved (CC BY), uploaded by Tom Norton",
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#3a1426"
   },
   {
     "common_name": "Pink Corydalis",
@@ -11015,7 +11036,8 @@
     "image_attribution": "(c) Joshua Mayer, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
     "flower_color": "#e58fb0",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#c14a2e"
   },
   {
     "common_name": "Prairie Sage",
@@ -11338,7 +11360,8 @@
     "image_attribution": "(c) Tom Norton, some rights reserved (CC BY), uploaded by Tom Norton",
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#c14a2e"
   },
   {
     "common_name": "Purple Avens (Water Avens)",
@@ -11892,7 +11915,8 @@
     "image_attribution": "(c) Brian Finzel, some rights reserved (CC BY-SA), uploaded by Brian Finzel",
     "image_license": "cc-by-sa",
     "flower_color": "#f2f2ea",
-    "flower_form": "spike"
+    "flower_form": "spike",
+    "fruit_color": "#b81f2a"
   },
   {
     "common_name": "Red Columbine",
@@ -12037,7 +12061,8 @@
     "image_attribution": "(c) giantcicada, some rights reserved (CC BY), uploaded by giantcicada",
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
-    "flower_form": "umbel"
+    "flower_form": "umbel",
+    "fruit_color": "#e7eae4"
   },
   {
     "common_name": "Richardson's Needlegrass",
@@ -13055,7 +13080,8 @@
     "image_attribution": "(c) Sam Kieschnick, some rights reserved (CC BY), uploaded by Sam Kieschnick",
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#46295e"
   },
   {
     "common_name": "Scarlet Butterfly Plant",
@@ -13890,7 +13916,8 @@
     "image_attribution": "(c) Mary Krieger, some rights reserved (CC BY), uploaded by Mary Krieger",
     "image_license": "cc-by",
     "flower_color": "",
-    "flower_form": "none"
+    "flower_form": "none",
+    "fruit_color": "#d2451c"
   },
   {
     "common_name": "Silver Sagebrush",
@@ -14170,7 +14197,8 @@
     "availability_class": "garden_centre",
     "sourcing_notes": "Estimate (shrub default); AB retail as of 2026",
     "flower_color": "#ece6c8",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#9a1f1f"
   },
   {
     "common_name": "Slender Blue Beardtongue",
@@ -15244,7 +15272,8 @@
     "image_attribution": "(c) Tom Norton, some rights reserved (CC BY), uploaded by Tom Norton",
     "image_license": "cc-by",
     "flower_color": "",
-    "flower_form": "none"
+    "flower_form": "none",
+    "fruit_color": "#b81f2a"
   },
   {
     "common_name": "Sticky Goldenrod",
@@ -16287,7 +16316,8 @@
     "image_attribution": "(c) Gavin Slater, some rights reserved (CC BY), uploaded by Gavin Slater",
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#a82a47"
   },
   {
     "common_name": "Thinleaf Alder",
@@ -16520,7 +16550,8 @@
     "availability_class": "garden_centre",
     "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026",
     "flower_color": "#f2f2ea",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#a82a47"
   },
   {
     "common_name": "Trembling Aspen",
@@ -16844,7 +16875,8 @@
     "image_attribution": "(c) Rob Routledge, Sault College, Bugwood.org, some rights reserved (CC BY)",
     "image_license": "cc-by",
     "flower_color": "#f0a818",
-    "flower_form": "trumpet"
+    "flower_form": "trumpet",
+    "fruit_color": "#c1271d"
   },
   {
     "common_name": "Umbrella Buckwheat",
@@ -17078,7 +17110,8 @@
     "image_attribution": "(c) naturalist charlie, some rights reserved (CC BY), uploaded by naturalist charlie",
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
-    "flower_form": "bell"
+    "flower_form": "bell",
+    "fruit_color": "#3b4f8c"
   },
   {
     "common_name": "Water Arum (Wild Calla)",
@@ -17598,7 +17631,8 @@
     "image_attribution": "no rights reserved, uploaded by Kate Manning",
     "image_license": "cc0",
     "flower_color": "#f2f2ea",
-    "flower_form": "umbel"
+    "flower_form": "umbel",
+    "fruit_color": "#d2451c"
   },
   {
     "common_name": "Western Porcupine Grass",
@@ -17692,7 +17726,8 @@
     "image_attribution": "(c) Mary Krieger, some rights reserved (CC BY), uploaded by Mary Krieger",
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
-    "flower_form": "bell"
+    "flower_form": "bell",
+    "fruit_color": "#eff0ea"
   },
   {
     "common_name": "Western Wheatgrass",
@@ -18244,7 +18279,8 @@
     "availability_class": "garden_centre",
     "sourcing_notes": "Estimate (shrub default); AB retail as of 2026",
     "flower_color": "#ece6c8",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#9a1f1f"
   },
   {
     "common_name": "Wild Blue Flax",
@@ -18433,7 +18469,8 @@
     "availability_class": "garden_centre",
     "sourcing_notes": "Estimate (shrub default); AB retail as of 2026",
     "flower_color": "#ece6c8",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#9a1f1f"
   },
   {
     "common_name": "Wild Licorice",
@@ -18532,7 +18569,8 @@
     "image_attribution": "no rights reserved, uploaded by Kevin Keegan",
     "image_license": "cc0",
     "flower_color": "#f2f2ea",
-    "flower_form": "spike"
+    "flower_form": "spike",
+    "fruit_color": "#b81f2a"
   },
   {
     "common_name": "Wild Mint",
@@ -18625,7 +18663,8 @@
     "image_attribution": "(c) Ole Husby, some rights reserved (CC BY-SA)",
     "image_license": "cc-by-sa",
     "flower_color": "#f2f2ea",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#a82a47"
   },
   {
     "common_name": "Wild Red Currant",
@@ -18672,7 +18711,8 @@
     "image_attribution": "(c) Jenn (McPhee) Dyson, some rights reserved (CC BY), uploaded by Jenn (McPhee) Dyson",
     "image_license": "cc-by",
     "flower_color": "#ece6c8",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#9a1f1f"
   },
   {
     "common_name": "Wild Sarsaparilla",
@@ -18767,7 +18807,8 @@
     "image_attribution": "(c) Abby Hyde, some rights reserved (CC BY), uploaded by Abby Hyde",
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#cc2e2e"
   },
   {
     "common_name": "Wild Vetch",
@@ -19054,7 +19095,8 @@
     "image_attribution": "(c) Douglas Goldman, some rights reserved (CC BY-SA), uploaded by Douglas Goldman",
     "image_license": "cc-by-sa",
     "flower_color": "#f2f2ea",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#cc2e2e"
   },
   {
     "common_name": "Woods' Rose",
@@ -19102,7 +19144,8 @@
     "image_attribution": "(c) Don Loarie, some rights reserved (CC BY), uploaded by Don Loarie",
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#c14a2e"
   },
   {
     "common_name": "Woolly Cinquefoil",

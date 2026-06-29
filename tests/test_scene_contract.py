@@ -40,6 +40,10 @@ _FAKE_PLANTS = {
     5: {"plant_type": "tree", "years_to_maturity": 20, "growth_curve": "steady",
         "mature_height_meters": 18.0, "mature_canopy_m": 6.0,
         "deciduous_evergreen": "evergreen", "scientific_name": "Picea glauca"},
+    6: {"plant_type": "shrub", "years_to_maturity": 4, "growth_curve": "steady",
+        "mature_height_meters": 3.0, "mature_canopy_m": 2.0,
+        "scientific_name": "Amelanchier alnifolia", "fruit_period": "July–August",
+        "fruit_color": "#46295e"},
 }
 
 
@@ -159,6 +163,23 @@ class TestSceneBasics(unittest.TestCase):
         self.assertEqual(p["genus"], "picea")
         self.assertEqual(p["color"].lower(), "#46685a")   # spruce blue-green
         self.assertNotEqual(p["color"].lower(), "#355e3b")  # not the generic conifer
+
+    def test_fruit_color_and_window_for_fleshy_fruit(self):
+        # V2.0: a fleshy-fruited plant carries its berry colour + fruit window so
+        # the 3D viewer can show berries in season; dry/non-fruiting plants don't.
+        proj = _project([
+            plant_feature({"plant_id": 6, "common_name": "Saskatoon Berry",
+                           "lat": _LAT, "lng": _LNG}),
+        ])
+        p = build_scene(proj, get_plant=_get_plant)["plants"][0]
+        self.assertEqual(p["fruit_color"], "#46295e")
+        self.assertEqual((p["fruit_start"], p["fruit_end"]), (7, 8))
+        # A non-fruiting plant (the spruce) carries no berry colour.
+        spruce = build_scene(_project([
+            plant_feature({"plant_id": 5, "common_name": "White Spruce",
+                           "lat": _LAT, "lng": _LNG}),
+        ]), get_plant=_get_plant)["plants"][0]
+        self.assertEqual(spruce["fruit_color"], "")
 
     def test_grass_seedhead_default_bloom(self):
         # A flowering plant with no bloom_period (e.g. a grass seed-head plume)

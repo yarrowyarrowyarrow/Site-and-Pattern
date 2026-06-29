@@ -1691,6 +1691,8 @@ function buildPlants(group, plants, month, year, terrain) {
 
   // Flowers — real-coloured blooms on plants in flower for this month (V1.90).
   buildFlowers(plants, month, terrain);
+  // Fruit — berries on fleshy-fruited plants in their fruit season (V2.0).
+  buildFruit(plants, month, terrain);
 }
 
 // ── Flowers (V1.90) ──────────────────────────────────────────────────────────
@@ -1869,6 +1871,66 @@ function buildFlowers(plants, month, terrain) {
     });
     plantsGroup.add(new THREE.Points(geo, mat));
   }
+}
+
+// ── Fruit / berries (V2.0) ───────────────────────────────────────────────────
+// Fleshy-fruited plants (curated fruit_color) show clusters of berries through
+// their canopy during the fruit season. A radial-gradient sprite gives each
+// berry a highlit, shaded-sphere look once tinted by the real fruit colour.
+let BERRY_TEX = null;
+function makeBerryTexture() {
+  const s = 48, cv = document.createElement('canvas');
+  cv.width = cv.height = s;
+  const g = cv.getContext('2d');
+  const grd = g.createRadialGradient(s * 0.38, s * 0.36, s * 0.04,
+                                     s * 0.5, s * 0.5, s * 0.5);
+  grd.addColorStop(0, '#ffffff');
+  grd.addColorStop(0.4, '#d2d2d2');
+  grd.addColorStop(1, '#7e7e7e');
+  g.fillStyle = grd;
+  g.beginPath(); g.arc(s / 2, s / 2, s * 0.46, 0, Math.PI * 2); g.fill();
+  const t = new THREE.CanvasTexture(cv);
+  if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace;
+  t.needsUpdate = true;
+  return t;
+}
+
+function buildFruit(plants, month, terrain) {
+  const list = [];
+  for (const p of plants || []) {
+    if (!p.fruit_color) continue;
+    if ((p.opacity ?? 1) < 0.25) continue;
+    const fs = p.fruit_start || 0, fe = p.fruit_end || 0;
+    if (!fs || month < fs || month > fe) continue;     // not in fruit this month
+    list.push(p);
+  }
+  if (!list.length) return;
+  if (!BERRY_TEX) BERRY_TEX = makeBerryTexture();
+  const _c = new THREE.Color();
+  const pos = [], col = [];
+  for (const p of list) {
+    const gy = terrainHeightAt(p.x, p.y, terrain);
+    const h = Math.max(0.1, p.height_m), rad = Math.max(0.1, p.canopy_m * 0.5);
+    _c.set(p.fruit_color);
+    const seed = hashPid(p.plant_id || 1);
+    const n = qn(p.plant_type === 'tree' ? 18 : p.plant_type === 'shrub' ? 15 : 8);
+    for (let k = 0; k < n; k++) {
+      const a = ((seed + k * 97) % 628) / 100;
+      const rr = rad * (0.2 + 0.7 * (((seed + k * 61) % 100) / 100));
+      const yy = gy + h * (0.4 + 0.45 * (((seed + k * 37) % 100) / 100));   // through the canopy
+      pos.push(p.x + Math.cos(a) * rr, yy, -(p.y + Math.sin(a) * rr));
+      col.push(_c.r, _c.g, _c.b);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  const mat = new THREE.PointsMaterial({
+    map: BERRY_TEX, color: 0xffffff, vertexColors: true,
+    transparent: true, alphaTest: 0.5, depthWrite: false,
+    sizeAttenuation: true, size: 0.19,
+  });
+  plantsGroup.add(new THREE.Points(geo, mat));
 }
 
 function buildScanPoints(group, pts) {

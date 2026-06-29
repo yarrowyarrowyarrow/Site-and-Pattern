@@ -69,13 +69,14 @@ def _tree(sci, h, c, *, evergreen=False, name=""):
             "bloom_period": "", "common_name": name}
 
 
-def _shrub(sci, h, c, name=""):
+def _shrub(sci, h, c, name="", fruit="", fruit_period=""):
     return {"plant_type": "shrub", "scientific_name": sci,
             "deciduous_evergreen": "deciduous",
             "mature_height_meters": h, "mature_canopy_m": c,
             "growth_curve": "steady", "spread_habit": "clumping",
             "years_to_maturity": 3, "flower_color": "", "flower_form": "none",
-            "bloom_period": "", "common_name": name}
+            "bloom_period": "", "fruit_color": fruit, "fruit_period": fruit_period,
+            "common_name": name}
 
 
 def _plain(ptype, sci, h, c, name=""):
@@ -112,12 +113,14 @@ GEOMETRY = [
      "Red-osier Dogwood", _shrub("Cornus sericea", 2, 2.4, name="Red-osier Dogwood")),
     ("shrub_willow",   "Willow (vase)", "Pale upright multi-stem vase (Salix).",
      "Pussy Willow",      _shrub("Salix discolor", 3, 2.2, name="Pussy Willow")),
-    ("shrub_saskatoon", "Saskatoon (vase)", "Upright multi-stem vase, fine twigs (Amelanchier).",
-     "Saskatoon Berry",   _shrub("Amelanchier alnifolia", 3, 2, name="Saskatoon Berry")),
+    ("shrub_saskatoon", "Saskatoon (vase)", "Upright multi-stem vase, fine twigs; purple berries in July (Amelanchier).",
+     "Saskatoon Berry",   _shrub("Amelanchier alnifolia", 3, 2, name="Saskatoon Berry",
+                                  fruit="#46295e", fruit_period="July–August")),
     ("shrub_rose",     "Rose (mound)", "Low dense rounded thicket to the ground (Rosa).",
      "Wild Rose",         _shrub("Rosa acicularis", 1, 1.1, name="Wild Rose")),
-    ("shrub_currant",  "Currant (thicket)", "Many fine arching canes, airy (Ribes).",
-     "Wild Black Currant", _shrub("Ribes americanum", 1.4, 1.2, name="Wild Black Currant")),
+    ("shrub_currant",  "Currant (thicket)", "Many fine arching canes; red berries in summer (Ribes).",
+     "Wild Red Currant", _shrub("Ribes triste", 1.4, 1.2, name="Wild Red Currant",
+                                fruit="#9a1f1f", fruit_period="July–August")),
     ("shrub_sage",     "Sagebrush (irregular)", "Sparse asymmetric silvery woody form (Artemisia).",
      "Prairie Sagewort", _shrub("Artemisia frigida", 0.5, 0.6, name="Prairie Sagewort")),
     ("herb_fireweed",  "Fireweed (erect)", "Tall erect leafy stem, lance leaves spiralling up (Chamaenerion).",

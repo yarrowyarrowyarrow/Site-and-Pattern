@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS plants (
     -- the 3D viewer, shown when in bloom. Empty / 'none' = no showy flower.
     flower_color TEXT DEFAULT '',       -- hex like '#f2c11e' or '' (no showy flower)
     flower_form TEXT DEFAULT 'none',    -- daisy | spike | umbel | cluster | bell | none
+    fruit_color TEXT DEFAULT '',        -- berry hex (v35, V2.0); '' = dry/non-fruiting
     -- Imagery (schema v24, V1.60). An OPENLY-licensed photo + its citation;
     -- NULL/empty until the dataset workflow fills them. The app caches the URL
     -- locally and shows the attribution beside the photo (src/image_cache.py).

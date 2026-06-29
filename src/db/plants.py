@@ -131,7 +131,10 @@ _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 # v34 (V1.94): no DDL — reseed for the legume "pea" + bee-balm "whorl" flower
 # forms (lupines / vetches / milkvetches / Monarda) feeding the expanded 3D
 # flower sprite library + the genus-specific tree/shrub geometry.
-_SCHEMA_VERSION = 34
+# v35 (V2.0): no DDL — reseed for curated fruit_color on fleshy-fruited species
+# (saskatoon, chokecherry, currants, viburnum, rose hips…) feeding the new 3D
+# berry layer shown in each plant's fruit season.
+_SCHEMA_VERSION = 35
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -329,6 +332,17 @@ def _migrate_to_v31(conn: sqlite3.Connection):
             conn.execute(f"ALTER TABLE plants ADD COLUMN {col_name} {col_def}")
         except sqlite3.OperationalError:
             pass  # column already present
+    conn.commit()
+
+
+def _migrate_to_v35(conn: sqlite3.Connection):
+    """Add the fruit colour column (V2.0) used by the 3D viewer to render berries
+    on fleshy-fruited plants in their fruit season. The bump triggers a reseed
+    that fills it from the curated seed JSON."""
+    try:
+        conn.execute("ALTER TABLE plants ADD COLUMN fruit_color TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass  # column already present
     conn.commit()
 
 
@@ -638,6 +652,7 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("sourcing_notes", ""),
             p.get("flower_color", ""),
             p.get("flower_form", "none"),
+            p.get("fruit_color", ""),
             p.get("image_url", ""),
             p.get("image_attribution", ""),
             p.get("image_license", ""),
@@ -658,9 +673,9 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             toxicity_pets, toxicity_humans, has_thorns,
             spread_habit, safety_source,
             price_low_cad, price_high_cad, availability_class,
-            sourcing_notes, flower_color, flower_form,
+            sourcing_notes, flower_color, flower_form, fruit_color,
             image_url, image_attribution, image_license)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -749,6 +764,8 @@ def init_db() -> None:
 
         if current_version < 31:
             _migrate_to_v31(conn)
+        if current_version < 35:
+            _migrate_to_v35(conn)
 
         # Add parent_id to polycultures if missing
         try:

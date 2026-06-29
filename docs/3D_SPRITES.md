@@ -33,6 +33,12 @@ These are drawn by `makeFlowerTexture()` and rendered in each plant's real
 The image below is the **actual** `makeFlowerTexture` output (extracted from
 `scene3d.html`), tinted with a representative real colour per form.
 
+**Berries (V2.0):** fleshy-fruited plants (curated `fruit_color` — saskatoon,
+chokecherry, currants, viburnum, dogwood, rose hips, blueberry…) show clusters of
+shaded berries through the canopy during their `fruit_period` (`buildFruit`).
+Dry-fruited plants (acorns, cones, catkins) carry no `fruit_color`, so they never
+grow berries.
+
 ![Flower sprite sheet](3d/flower_sprites.png)
 
 | Form | Looks like | Example plant (place to test) |

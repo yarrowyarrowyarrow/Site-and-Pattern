@@ -168,6 +168,14 @@ def _bloom_window(plant: dict) -> dict:
     return {"bloom_start": bs, "bloom_end": be}
 
 
+def _fruit_window(plant: dict) -> dict:
+    """``{fruit_start, fruit_end}`` for the 3D berry layer, from ``fruit_period``.
+    Only fleshy-fruited species carry a ``fruit_color`` (curated), so dry-fruited
+    plants (acorns, cones, catkins) never grow berries even if they 'fruit'."""
+    fs, fe = _bloom_months(plant.get("fruit_period"))
+    return {"fruit_start": fs, "fruit_end": fe}
+
+
 def _boundary_ring(project: dict) -> Optional[list]:
     """First property_boundary ring as ``[[lat, lng], ...]`` (open)."""
     for f in project.get("features", []):
@@ -319,6 +327,10 @@ def build_scene(project: dict, *, year: int = 0,
                 "flower_color": plant.get("flower_color") or "",
                 "flower_form": plant.get("flower_form") or "none",
                 **_bloom_window(plant),
+                # Fleshy fruit (V2.0): a curated berry colour shown in the fruit
+                # season. Empty for dry-fruited / non-fruiting plants.
+                "fruit_color": plant.get("fruit_color") or "",
+                **_fruit_window(plant),
                 "opacity": st["presence_opacity"],
             })
             continue

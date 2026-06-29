@@ -129,7 +129,8 @@
     "availability_class": "big_box",
     "sourcing_notes": "Estimate (tree default); AB retail as of 2026",
     "flower_color": "#f2f2ea",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#3a1426"
   },
   {
     "common_name": "Nanking Cherry",
@@ -175,7 +176,8 @@
     "availability_class": "big_box",
     "sourcing_notes": "Estimate (shrub default); AB retail as of 2026",
     "flower_color": "#f2f2ea",
-    "flower_form": "cluster"
+    "flower_form": "cluster",
+    "fruit_color": "#3a1426"
   },
   {
     "common_name": "Bee Balm (Wild Bergamot)",
