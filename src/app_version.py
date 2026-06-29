@@ -8,10 +8,10 @@ Two cases:
   _current_branch_name``).
 * **Frozen build** (`.dmg` / `.exe`): there is no git, so the build's
   version is read from ``version.txt`` — a one-line file written by
-  ``build_installer.sh`` / ``build_installer.bat`` (or the GitHub Actions
-  release workflow via ``APP_BUILD_VERSION``) and bundled by
-  ``permadesign.spec``. It holds the ``V<major>.<minor>`` branch/tag the
-  bundle was built from.
+  ``scripts/packaging/build_installer.sh`` / ``…/build_installer.bat`` (or the
+  GitHub Actions release workflow via ``APP_BUILD_VERSION``) and bundled by
+  ``scripts/packaging/permadesign.spec``. It holds the ``V<major>.<minor>``
+  branch/tag the bundle was built from.
 
 Kept Qt-free so any layer can ask "what version am I".
 """

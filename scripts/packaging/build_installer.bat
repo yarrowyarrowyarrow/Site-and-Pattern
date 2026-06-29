@@ -1,6 +1,11 @@
 @echo off
 setlocal enabledelayedexpansion
 
+REM Operate from the repository root so every relative path resolves the same
+REM regardless of how this is invoked — CI calls it as
+REM scripts\packaging\build_installer.bat.
+cd /d "%~dp0..\.."
+
 echo === Site ^& Pattern Installer Builder ===
 echo.
 
@@ -59,7 +64,7 @@ echo Baking version: %BUILD_VERSION%
 
 REM Build with PyInstaller — bail if it fails so we don't ship a broken bundle.
 echo Building application bundle with PyInstaller...
-pyinstaller permadesign.spec --clean
+pyinstaller scripts\packaging\permadesign.spec --clean
 if !ERRORLEVEL! neq 0 (
     echo ERROR: PyInstaller build failed. Aborting.
     exit /b 1
@@ -76,7 +81,7 @@ if exist "C:\Program Files (x86)\NSIS\makensis.exe" (
 
     REM Copy the dist folder to create the installer package
     echo Creating installer package...
-    "C:\Program Files (x86)\NSIS\makensis.exe" /V4 installer.nsi
+    "C:\Program Files (x86)\NSIS\makensis.exe" /V4 scripts\packaging\installer.nsi
 
     if !ERRORLEVEL! equ 0 (
         echo Created SiteAndPattern-Installer.exe

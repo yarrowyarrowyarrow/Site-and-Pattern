@@ -1,5 +1,5 @@
 """
-seed_data.py — Plant catalogue seeding for PermaDesign.
+seed_data.py — Plant catalogue seeding for Site & Pattern.
 
 Plants are loaded exclusively from data/plants_master.json (433 plants).
 The hardcoded SEED_PLANTS tuple list has been removed in v6.

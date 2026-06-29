@@ -21,7 +21,7 @@ from src.settings import get_mapbox_token
 
 
 def _dbg(msg: str) -> None:
-    """Append a diagnostic line to ~/permadesign-debug.log.
+    """Append a diagnostic line to ~/site-and-pattern-debug.log.
 
     Used both for informational tracing AND as part of the load-bearing
     resize machinery (see the block comment above MapWidget.invalidate_size):
@@ -31,7 +31,7 @@ def _dbg(msg: str) -> None:
     """
     try:
         import time
-        path = os.path.join(os.path.expanduser("~"), "permadesign-debug.log")
+        path = os.path.join(os.path.expanduser("~"), "site-and-pattern-debug.log")
         with open(path, "a", encoding="utf-8") as f:
             f.write(f"{time.strftime('%H:%M:%S')} {msg}\n")
     except Exception:

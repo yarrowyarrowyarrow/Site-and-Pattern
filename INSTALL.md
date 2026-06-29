@@ -9,8 +9,8 @@ one-click installer or running from source. Pick the section that matches you:
 - **[Updating](#updating-to-the-newest-version)**
 - **[Troubleshooting](#troubleshooting)** · **[Where your files live](#where-your-files-live)**
 
-> Building the installers yourself? See **[BUILD.md](BUILD.md)**.
-> Learning the app? See **[USER_GUIDE.md](USER_GUIDE.md)**.
+> Building the installers yourself? See **[docs/BUILD.md](docs/BUILD.md)**.
+> Learning the app? See **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)**.
 
 ---
 
@@ -87,9 +87,9 @@ Useful if an installer isn't available for the version you want, or if you plan
 to tinker with the code. Requires **Python 3.10+** and **Git**.
 
 ```bash
-# 1. Clone the repository (creates a PermaDesign folder)
-git clone https://github.com/yarrowyarrowyarrow/PermaDesign.git
-cd PermaDesign
+# 1. Clone the repository (creates a Site-and-Pattern folder)
+git clone https://github.com/yarrowyarrowyarrow/Site-and-Pattern.git
+cd Site-and-Pattern
 
 # 2. Create and activate a virtual environment
 python -m venv venv
@@ -140,7 +140,7 @@ Open Site & Pattern → **Help → Check for Updates…**:
 
 ### From source — terminal
 ```bash
-cd PermaDesign
+cd Site-and-Pattern
 git pull
 source venv/bin/activate
 pip install -r requirements.txt   # usually a no-op

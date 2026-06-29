@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 # PyInstaller spec for Site & Pattern (one-directory bundled mode)
-# Build with: pyinstaller permadesign.spec
+# Build with: pyinstaller scripts/packaging/permadesign.spec  (from the repo root)
 # Display name is "Site & Pattern"; the artifact base name is the script-safe
 # "SiteAndPattern" (no spaces/ampersand) so the build scripts and NSIS paths
 # stay quoting-safe. Shortcuts/Start-Menu/.app show the display name.
@@ -10,22 +10,28 @@ import sys
 
 block_cipher = None
 
+# This spec lives in scripts/packaging/, but the build scripts always invoke
+# PyInstaller with the repo root as the working directory (they cd there first).
+# Anchor every source path to that working dir so bundling is unambiguous
+# regardless of where the spec file sits.
+_ROOT = os.getcwd()
+
 # Runtime data files, preserving their relative layout under the bundle root.
 _datas = [
-    ('data', 'data'),
-    ('html', 'html'),
-    ('src/db/schema.sql', 'src/db'),
+    (os.path.join(_ROOT, 'data'), 'data'),
+    (os.path.join(_ROOT, 'html'), 'html'),
+    (os.path.join(_ROOT, 'src', 'db', 'schema.sql'), 'src/db'),
 ]
 # version.txt is written by build_installer.sh / .bat (or the release
 # workflow) just before this spec runs; it lets the frozen app know which
 # V<major>.<minor> it is for the in-app updater (src/app_version.py). It is
 # absent in a plain source checkout, so only bundle it when present.
-if os.path.exists('version.txt'):
-    _datas.append(('version.txt', '.'))
+if os.path.exists(os.path.join(_ROOT, 'version.txt')):
+    _datas.append((os.path.join(_ROOT, 'version.txt'), '.'))
 
 a = Analysis(
-    ['main.py'],
-    pathex=[],
+    [os.path.join(_ROOT, 'main.py')],
+    pathex=[_ROOT],
     binaries=[],
     datas=_datas,
     hiddenimports=[

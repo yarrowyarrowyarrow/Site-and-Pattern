@@ -40,7 +40,7 @@ _lock = threading.Lock()
 
 
 def _log(msg: str) -> None:
-    """Append a 3D-viewer diagnostic line to ~/permadesign-debug.log (opened and
+    """Append a 3D-viewer diagnostic line to ~/site-and-pattern-debug.log (opened and
     closed per call, so it survives even while the app is still running). This
     file is the durable trace we use to diagnose why the viewer won't start on a
     user's box.
@@ -54,7 +54,7 @@ def _log(msg: str) -> None:
     line = f"[web_assets {time.strftime('%H:%M:%S')}] {msg}"
     try:
         with open(os.path.join(os.path.expanduser("~"),
-                               "permadesign-debug.log"), "a",
+                               "site-and-pattern-debug.log"), "a",
                   encoding="utf-8") as fh:
             fh.write(line + "\n")
     except OSError:

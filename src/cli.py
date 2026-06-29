@@ -1,5 +1,5 @@
 """
-cli.py — Command-line interface for PermaDesign's headless operations.
+cli.py — Command-line interface for Site & Pattern's headless operations.
 
 A thin argparse shell over the Qt-free scripting facade
 (:mod:`src.permadesign_api`). Every subcommand is a few lines around an

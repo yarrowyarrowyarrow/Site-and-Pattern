@@ -1,5 +1,5 @@
 """
-project.py — Save/load PermaDesign projects as GeoJSON (Step 4 implementation).
+project.py — Save/load Site & Pattern projects as GeoJSON (Step 4 implementation).
 
 For Step 1 this provides a minimal stub with the data structures defined,
 but no file I/O yet.  The full implementation comes in Step 4.

@@ -99,7 +99,7 @@ class PersistenceController:
     def _autosave(self):
         if not self._main._modified:
             return
-        tmp = os.path.join(os.path.expanduser("~"), ".permadesign_autosave.perma.geojson")
+        tmp = os.path.join(os.path.expanduser("~"), ".site-and-pattern_autosave.perma.geojson")
         try:
             project_io.save_project(self._main._project, tmp)
         except Exception:

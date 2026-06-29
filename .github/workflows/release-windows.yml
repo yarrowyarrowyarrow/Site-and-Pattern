@@ -57,7 +57,7 @@ jobs:
         # APP_BUILD_VERSION, runs PyInstaller, then NSIS → SiteAndPattern-Installer.exe
         # in the repo root. It exits non-zero on any failure so a broken bundle
         # fails the job instead of shipping.
-        run: .\build_installer.bat
+        run: .\scripts\packaging\build_installer.bat
         shell: cmd
 
       - name: Name the installer after the version

@@ -12,8 +12,8 @@ This document explains how to run Site & Pattern locally and create a 1-click in
 
 ```bash
 # Clone or navigate to the repository
-git clone https://github.com/yarrowyarrowyarrow/PermaDesign.git
-cd PermaDesign
+git clone https://github.com/yarrowyarrowyarrow/Site-and-Pattern.git
+cd Site-and-Pattern
 
 # Create a virtual environment
 python3 -m venv venv
@@ -56,7 +56,7 @@ The Site & Pattern window should open. Create a new project to test functionalit
 
 ```cmd
 cd C:\path\to\Site & Pattern
-build_installer.bat
+scripts\packaging\build_installer.bat
 ```
 
 The script will:
@@ -80,7 +80,7 @@ Then run the build script (same as Option A).
 ```cmd
 venv\Scripts\activate.bat
 pip install pyinstaller
-pyinstaller permadesign.spec --clean
+pyinstaller scripts/packaging/permadesign.spec --clean
 ```
 
 The executable will be in `dist\SiteAndPattern\SiteAndPattern.exe`.
@@ -88,7 +88,7 @@ The executable will be in `dist\SiteAndPattern\SiteAndPattern.exe`.
 ### macOS: Create App Bundle & DMG
 
 > Friend-facing install steps (drag-to-Applications + the one-time
-> right-click → Open) live in **[INSTALL.md](INSTALL.md)**.
+> right-click → Open) live in **[../INSTALL.md](../INSTALL.md)**.
 
 **One-time prerequisites:** Xcode Command Line Tools (provides `git` and
 `codesign`) and Python 3.10+:
@@ -99,12 +99,12 @@ python3 --version                 # 3.10+ ; install from python.org if missing
 ```
 
 ```bash
-git clone https://github.com/yarrowyarrowyarrow/PermaDesign.git
-cd PermaDesign
+git clone https://github.com/yarrowyarrowyarrow/Site-and-Pattern.git
+cd Site-and-Pattern
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-bash build_installer.sh
+bash scripts/packaging/build_installer.sh
 ```
 
 **Output:**
@@ -147,14 +147,14 @@ warning on first launch:
 
 Removing that warning entirely requires an Apple Developer account
 (US$99/yr): set `codesign_identity` (a "Developer ID Application"
-certificate) and `entitlements_file` in `permadesign.spec`, then notarize
+certificate) and `entitlements_file` in `scripts/packaging/permadesign.spec`, then notarize
 the DMG with `xcrun notarytool submit` and staple the ticket.
 
 ### Linux: Create Executable & Archive
 
 ```bash
 source venv/bin/activate
-bash build_installer.sh
+bash scripts/packaging/build_installer.sh
 ```
 
 **Output:**
@@ -183,7 +183,7 @@ Run via: `./dist/SiteAndPattern/SiteAndPattern`
 
 To avoid security warnings on macOS/Windows:
 
-**macOS:** `build_installer.sh` already applies a **verified inside-out
+**macOS:** `scripts/packaging/build_installer.sh` already applies a **verified inside-out
 ad-hoc signature** (nested binaries first, then the bundle, then
 `codesign --verify --deep --strict`). Fully removing the first-launch
 Gatekeeper warning requires an Apple Developer ID certificate plus
@@ -216,7 +216,7 @@ certifi is present: `pip install -r requirements.txt`, then rebuild if
 packaging.
 
 ### "Missing module" error
-Add the module to `permadesign.spec` under `hiddenimports`:
+Add the module to `scripts/packaging/permadesign.spec` under `hiddenimports`:
 
 ```python
 hiddenimports=[
@@ -235,7 +235,7 @@ The installer includes all dependencies. If it fails to start:
 2. Check that `data/` and `html/` directories are included
 
 ### App panels are empty / `no such table`
-A bundled data file isn't being found. Confirm it's listed in `permadesign.spec`
+A bundled data file isn't being found. Confirm it's listed in `scripts/packaging/permadesign.spec`
 `datas` **and** read via `resource_path(...)` (see
 [How resource bundling works](#how-resource-bundling-works-for-maintainers)).
 
@@ -264,7 +264,7 @@ python -m unittest discover -s tests
 
 ## How resource bundling works (for maintainers)
 
-- The PyInstaller spec (`permadesign.spec`) lists every non-Python runtime file
+- The PyInstaller spec (`scripts/packaging/permadesign.spec`) lists every non-Python runtime file
   in `datas`, preserving its relative layout: `('data', 'data')`,
   `('html', 'html')`, `('src/db/schema.sql', 'src/db')`.
 - At runtime the app **must not** build paths from `__file__` — a module's
@@ -273,7 +273,7 @@ python -m unittest discover -s tests
   returns a path under `sys._MEIPASS` in a frozen build and under the repo root
   in a source checkout.
 - **If you add a new bundled data file**, do both: add it to `datas` in
-  `permadesign.spec`, and read it via `resource_path(...)`. `installer.nsi` needs
+  `scripts/packaging/permadesign.spec`, and read it via `resource_path(...)`. `installer.nsi` needs
   no change — it bundles the entire PyInstaller output.
 - The user database lives in the per-user data folder (writable), **not** in the
   install directory — so it survives reinstalls/upgrades and never needs write
@@ -286,7 +286,7 @@ python -m unittest discover -s tests
 ### Change Icon
 
 1. Create a `.png` or `.ico` file (256x256+ pixels)
-2. Edit `permadesign.spec` and update the `exe` section:
+2. Edit `scripts/packaging/permadesign.spec` and update the `exe` section:
 ```python
 exe = EXE(
     ...
@@ -297,7 +297,7 @@ exe = EXE(
 
 ### Bundle Additional Assets
 
-Edit `permadesign.spec` under `datas`:
+Edit `scripts/packaging/permadesign.spec` under `datas`:
 ```python
 datas=[
     ('data', 'data'),           # Already included
@@ -310,9 +310,9 @@ datas=[
 
 Currently the spec creates a folder (`Site & Pattern/`). To make a single `.exe`:
 
-Edit `permadesign.spec` — change the `EXE` section from `COLLECT()` to use `--onefile`:
+Edit `scripts/packaging/permadesign.spec` — change the `EXE` section from `COLLECT()` to use `--onefile`:
 ```bash
-pyinstaller permadesign.spec --onefile
+pyinstaller scripts/packaging/permadesign.spec --onefile
 ```
 
 **Trade-off**: Single file (~400 MB) but slower startup (~5-10 seconds). Not recommended for users unless disk space is critical.
@@ -355,8 +355,8 @@ every installed Mac app offers V1.73 under Help → Check for Updates.
 
 | Platform | Build Command | Output | User Experience |
 |----------|---|---|---|
-| **Windows** | `build_installer.bat` | `SiteAndPattern-Installer.exe` (or ZIP) | Double-click, 1-click install |
-| **macOS** | `bash build_installer.sh` | `SiteAndPattern.dmg` | Drag to Applications |
-| **Linux** | `bash build_installer.sh` | `SiteAndPattern-Linux.zip` | Extract & run binary |
+| **Windows** | `scripts\packaging\build_installer.bat` | `SiteAndPattern-Installer.exe` (or ZIP) | Double-click, 1-click install |
+| **macOS** | `bash scripts/packaging/build_installer.sh` | `SiteAndPattern.dmg` | Drag to Applications |
+| **Linux** | `bash scripts/packaging/build_installer.sh` | `SiteAndPattern-Linux.zip` | Extract & run binary |
 
 All builds are fully self-contained with zero external dependencies after install.

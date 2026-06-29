@@ -41,7 +41,7 @@ from src.version_branch import (
 )
 
 
-_REPO_RELEASES_URL = "https://github.com/yarrowyarrowyarrow/PermaDesign/releases"
+_REPO_RELEASES_URL = "https://github.com/yarrowyarrowyarrow/Site-and-Pattern/releases"
 
 
 def _human_size(num_bytes) -> str:

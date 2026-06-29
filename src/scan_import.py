@@ -2,7 +2,7 @@
 src/scan_import.py — phone-scan (point cloud) import → nDSM → footprints
 (V1.62).
 
-The "scan your yard" path. PermaDesign doesn't capture scans — phones do
+The "scan your yard" path. Site & Pattern doesn't capture scans — phones do
 that far better (Polycam, Scaniverse, any LiDAR/photogrammetry app). This
 module turns their *exports* into design data:
 

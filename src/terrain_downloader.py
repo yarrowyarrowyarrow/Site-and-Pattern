@@ -410,7 +410,7 @@ def _convert_page(features: list, elev_field: str) -> list:
       {"coords": [[lat, lng], ...], "elevation_m": float}
 
     Socrata encodes coordinates as [lng, lat]; we flip to [lat, lng] to
-    match the rest of PermaDesign.
+    match the rest of Site & Pattern.
     """
     result = []
     for f in features:

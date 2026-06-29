@@ -1,7 +1,7 @@
 """
 projection.py — Lat/lng ↔ local-metre projection with a UTM upgrade path.
 
-PermaDesign's distance and area maths historically used an ad-hoc
+Site & Pattern's distance and area maths historically used an ad-hoc
 equirectangular ("cosLat") approximation: one degree of latitude is
 ~111,320 m everywhere, and one degree of longitude is that scaled by
 cos(latitude). That's accurate to ~1% over spans under a couple of km

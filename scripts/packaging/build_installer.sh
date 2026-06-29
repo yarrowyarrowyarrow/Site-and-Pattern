@@ -2,6 +2,11 @@
 
 set -e
 
+# Always operate from the repository root so every relative path (build/, dist/,
+# version.txt, the spec) resolves the same regardless of how this is invoked —
+# CI calls it as scripts/packaging/build_installer.sh.
+cd "$(dirname "$0")/../.." || exit 1
+
 echo "=== Site & Pattern Installer Builder ==="
 echo ""
 
@@ -33,7 +38,7 @@ echo -e "${YELLOW}Baking version: ${BUILD_VERSION:-<unknown>}${NC}"
 
 # Build with PyInstaller
 echo -e "${YELLOW}Building application bundle with PyInstaller...${NC}"
-pyinstaller permadesign.spec --clean
+pyinstaller scripts/packaging/permadesign.spec --clean
 
 # Create platform-specific installer
 if [[ "$OSTYPE" == "darwin"* ]]; then

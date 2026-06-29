@@ -81,7 +81,7 @@ jobs:
         env:
           APP_BUILD_VERSION: ${{ github.ref_name }}   # baked into version.txt
           PYI_TARGET_ARCH: x86_64                      # spec → EXE(target_arch=…)
-        run: arch -x86_64 bash build_installer.sh
+        run: arch -x86_64 bash scripts/packaging/build_installer.sh
 
       - name: Name the DMG after the version
         run: mv "dist/SiteAndPattern.dmg" "dist/SiteAndPattern-${{ github.ref_name }}.dmg"

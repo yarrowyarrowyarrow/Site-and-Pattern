@@ -1,7 +1,9 @@
 ; Site & Pattern Installer
 ; Built with NSIS 3.x
 ; Display name is "Site & Pattern"; the bundled artifact base name is the
-; script-safe "SiteAndPattern" (matches permadesign.spec).
+; script-safe "SiteAndPattern" (matches scripts/packaging/permadesign.spec).
+; Run from the repo root (build_installer.bat cd's there): the File/OutFile
+; paths below resolve against that working directory.
 
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
