@@ -8,7 +8,10 @@ CREATE TABLE IF NOT EXISTS plants (
     sun_requirement TEXT,           -- full_sun, partial_shade, full_shade
     water_needs TEXT,               -- low, medium, high
     native_region TEXT,
-    permaculture_uses TEXT,         -- comma-separated tags
+    -- permaculture_uses dropped in schema v37: the normalized plant_uses
+    -- junction (below) is the single source of truth. Read-side consumers get
+    -- a derived comma-joined `permaculture_uses` synthesized in get_plant /
+    -- search_plants / get_all_plants.
     spacing_meters REAL,
     mature_height_meters REAL,
     mature_canopy_m REAL,           -- horizontal spread at maturity (NULL ⇒ heuristic in get_plant)

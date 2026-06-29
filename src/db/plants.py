@@ -136,7 +136,10 @@ _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 # berry layer shown in each plant's fruit season.
 # v36 (V2.1): no DDL — reseed for the new star / cross / lily flower forms
 # (flax, geranium, phlox, draba, blue-eyed grass, wood lily, camas…).
-_SCHEMA_VERSION = 36
+# v37 (V2.2): dropped the denormalized plants.permaculture_uses column; the
+# plant_uses junction is now the single source of truth and the legacy
+# comma-blob field is synthesized on read. Reseed rebuilds plant_uses.
+_SCHEMA_VERSION = 37
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -612,9 +615,6 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
 
     plant_rows = []
     for p in entries:
-        uses = p.get("permaculture_uses", "")
-        if isinstance(uses, list):
-            uses = ", ".join(uses)
         ecoregion = p.get("ab_ecoregion", "")
         if isinstance(ecoregion, list):
             ecoregion = ",".join(ecoregion)
@@ -627,7 +627,6 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("sun_requirement", ""),
             p.get("water_needs", ""),
             p.get("native_region", ""),
-            uses,
             p.get("spacing_m") or p.get("spacing_meters"),
             p.get("mature_height_m") or p.get("mature_height_meters"),
             p.get("notes", ""),
@@ -665,7 +664,7 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
            (common_name, scientific_name, plant_type,
             hardiness_zone_min, hardiness_zone_max,
             sun_requirement, water_needs,
-            native_region, permaculture_uses,
+            native_region,
             spacing_meters, mature_height_meters, notes,
             bloom_period, fruit_period, native_to_alberta,
             edible_parts, deciduous_evergreen,
@@ -677,7 +676,7 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             price_low_cad, price_high_cad, availability_class,
             sourcing_notes, flower_color, flower_form, fruit_color,
             image_url, image_attribution, image_license)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -856,23 +855,6 @@ def init_db() -> None:
         pass  # Non-critical; user can recreate recipes from the new tab
 
 
-def _insert_plants(conn: sqlite3.Connection, plants: list[tuple]) -> None:
-    conn.executemany(
-        """INSERT INTO plants
-           (common_name, scientific_name, plant_type,
-            hardiness_zone_min, hardiness_zone_max,
-            sun_requirement, water_needs,
-            native_region, permaculture_uses,
-            spacing_meters, mature_height_meters, notes,
-            bloom_period, fruit_period, native_to_alberta,
-            edible_parts, deciduous_evergreen,
-            soil_ph_min, soil_ph_max, perennial_or_annual)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-        plants
-    )
-    conn.commit()
-
-
 def _insert_companions(conn: sqlite3.Connection,
                        companions: list[tuple]) -> None:
     """
@@ -922,13 +904,29 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
     return d
 
 
+def _attach_permaculture_uses(plants: list[dict]) -> None:
+    """Populate each dict's derived ``permaculture_uses`` (comma-joined, sorted)
+    from the plant_uses junction. The denormalized column was dropped in schema
+    v37; this keeps the legacy blob-shaped field available to read-side consumers
+    (succession, the plant browser, the polyculture panel) while the junction is
+    the single source of truth. One batched query for the whole list."""
+    ids = [p["id"] for p in plants if p.get("id") is not None]
+    if not ids:
+        return
+    uses_map = plant_uses_for_ids(ids)
+    for p in plants:
+        p["permaculture_uses"] = ",".join(sorted(uses_map.get(p["id"], ())))
+
+
 def get_all_plants() -> list[dict]:
     conn = get_connection()
     try:
         rows = conn.execute(
             "SELECT * FROM plants ORDER BY plant_type, common_name"
         ).fetchall()
-        return [_row_to_dict(r) for r in rows]
+        result = [_row_to_dict(r) for r in rows]
+        _attach_permaculture_uses(result)
+        return result
     finally:
         conn.close()
 
@@ -939,7 +937,11 @@ def get_plant(plant_id: int) -> Optional[dict]:
         row = conn.execute(
             "SELECT * FROM plants WHERE id = ?", (plant_id,)
         ).fetchone()
-        return _row_to_dict(row) if row else None
+        if not row:
+            return None
+        d = _row_to_dict(row)
+        _attach_permaculture_uses([d])
+        return d
     finally:
         conn.close()
 
@@ -992,7 +994,10 @@ def search_plants(
         return [str(x) for x in v if x]
 
     if query:
-        sql += " AND (LOWER(common_name) LIKE ? OR LOWER(scientific_name) LIKE ? OR LOWER(permaculture_uses) LIKE ?)"
+        sql += (" AND (LOWER(common_name) LIKE ? OR LOWER(scientific_name) LIKE ?"
+                " OR EXISTS (SELECT 1 FROM plant_uses pu JOIN uses u"
+                " ON u.id = pu.use_id WHERE pu.plant_id = plants.id"
+                " AND LOWER(u.key) LIKE ?))")
         q = f"%{query.lower()}%"
         params += [q, q, q]
 
@@ -1171,7 +1176,9 @@ def search_plants(
     conn = get_connection()
     try:
         rows = conn.execute(sql, params).fetchall()
-        return [_row_to_dict(r) for r in rows]
+        result = [_row_to_dict(r) for r in rows]
+        _attach_permaculture_uses(result)
+        return result
     finally:
         conn.close()
 
@@ -1193,7 +1200,9 @@ def get_companions(plant_id: int) -> dict[str, list[dict]]:
                     ORDER BY p.common_name""",
                 (plant_id, plant_id)
             ).fetchall()
-            return [_row_to_dict(r) for r in rows]
+            result = [_row_to_dict(r) for r in rows]
+            _attach_permaculture_uses(result)
+            return result
 
         return {
             "friends": _fetch("companion_friends"),

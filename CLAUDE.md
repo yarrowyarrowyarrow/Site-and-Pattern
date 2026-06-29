@@ -128,10 +128,16 @@ only, doesn't affect real commits.
 - **FK constraints are ON at runtime** (`plants.py:get_connection`) but
   disabled temporarily during the bulk reseed (Python 3.14 enforces FKs
   at statement time rather than transaction-commit time).
-- **`permaculture_uses` is in transition:** the comma-delimited blob on
-  `plants` is kept populated for one release cycle while filter queries
-  migrate to the `plant_uses` junction (V1.31). When safe, the column
-  can be dropped — but only after every read site is checked.
+- **`permaculture_uses` is junction-backed (schema v37, V2.2):** the
+  denormalized comma-blob column was dropped from `plants`; the
+  `plant_uses` junction (seeded from the JSON `permaculture_uses` field)
+  is the single source of truth. Read-side consumers still see a
+  `permaculture_uses` comma-string, but it is *synthesized on read* from
+  the junction in `get_plant` / `get_all_plants` / `search_plants` /
+  `get_companions` (via `_attach_permaculture_uses`). The keyword filter
+  in `search_plants` matches use tags through an EXISTS-on-`plant_uses`
+  subquery. The JSON seed field stays — it feeds both the junction and
+  `data_quality` validation.
 - **The map only stores `(lat, lon)`.** Distance/area math goes through
   `src/projection.py` — default backend is the legacy cosLat metric
   (~1% error at <2 km); an optional UTM backend (pyproj) exists behind
