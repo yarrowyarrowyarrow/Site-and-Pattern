@@ -2,15 +2,17 @@
 ; Built with NSIS 3.x
 ; Display name is "Site & Pattern"; the bundled artifact base name is the
 ; script-safe "SiteAndPattern" (matches scripts/packaging/permadesign.spec).
-; Run from the repo root (build_installer.bat cd's there): the File/OutFile
-; paths below resolve against that working directory.
+; NSIS chdir's to this .nsi file's own directory before processing, so the
+; File/OutFile paths below are relative to scripts/packaging/ — "..\.." reaches
+; the repo root, where PyInstaller wrote dist/ and where the workflow expects
+; SiteAndPattern-Installer.exe.
 
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
 
 ; General
 Name "Site & Pattern"
-OutFile "SiteAndPattern-Installer.exe"
+OutFile "..\..\SiteAndPattern-Installer.exe"
 InstallDir "$PROGRAMFILES\Site & Pattern"
 
 RequestExecutionLevel admin
@@ -23,7 +25,7 @@ RequestExecutionLevel admin
 ; Installer sections
 Section "Site & Pattern"
   SetOutPath "$INSTDIR"
-  File /r "dist\SiteAndPattern\*.*"
+  File /r "..\..\dist\SiteAndPattern\*.*"
 
   ; Create desktop shortcut
   CreateShortCut "$DESKTOP\Site & Pattern.lnk" "$INSTDIR\SiteAndPattern.exe"
