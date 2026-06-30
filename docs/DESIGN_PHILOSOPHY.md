@@ -136,9 +136,12 @@ Ecological succession, Buddhist impermanence, Taleb's antifragility, Carse's inf
 
 > **Where this lives in the code:** price/spacing/height **ranges** in `src/sourcing.py`,
 > the `backed` flag + caveats in `src/design_goals.py`, the informational (deliberately
-> un-summed) fauna counts and month-range bloom parsing in `src/habitat_score.py`.
-> **State: strong** (language); **partial** (placement is still point-wise/deterministic
-> once generated — see roadmap item C).
+> un-summed) fauna counts and month-range bloom parsing in `src/habitat_score.py`, and the
+> **precipitation-timing split** in `src/precip_split.py` — which separates immediately-available
+> growing-season rain from delayed snowmelt water (both as honest liquid-water equivalent, with
+> *no* false snow-depth precision) rather than letting one "precipitation" number imply more
+> growing-season water than a site gets. **State: strong** (language); **partial** (placement is
+> still point-wise/deterministic once generated — see roadmap item C).
 
 ### 10. Design for relationships, not objects
 

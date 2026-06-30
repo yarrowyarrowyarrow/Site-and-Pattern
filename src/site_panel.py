@@ -450,8 +450,20 @@ class SitePanel(QWidget):
         self._lbl_rain_src = QLabel("")
         self._lbl_rain_src.setStyleSheet("color: #78909c; font-size: 10px;")
         self._lbl_rain_src.setWordWrap(True)
+        # Rain/snow timing (precip_split): what the total hides is *when* the
+        # water arrives — growing-season rain infiltrates now; snow is a delayed
+        # spring-melt pulse. Both are liquid-water equivalent (no depth figure).
+        self._lbl_rain_growing = QLabel("—")
+        self._lbl_rain_growing.setStyleSheet("color: #a5d6a7; font-size: 11px;")
+        self._lbl_rain_growing.setWordWrap(True)
+        self._lbl_rain_snow = QLabel("—")
+        self._lbl_rain_snow.setStyleSheet("color: #90caf9; font-size: 11px;")
+        self._lbl_rain_snow.setWordWrap(True)
+        self._rain_form = rl
         rl.addRow("Annual mean:", self._lbl_rain_annual)
         rl.addRow("Monthly mm:",  self._lbl_rain_monthly)
+        rl.addRow("Growing rain:", self._lbl_rain_growing)
+        rl.addRow("Snow → melt:",  self._lbl_rain_snow)
         rl.addRow("Source:",      self._lbl_rain_src)
         layout.addWidget(self._rain_box)
 
@@ -1160,6 +1172,7 @@ class SitePanel(QWidget):
     def _on_rainfall(self, data):
         if not data:
             self._lbl_rain_annual.setText("Unavailable")
+            self._show_precip_timing(None)
             return
         years = data.get("years_used", "?")
         self._lbl_rain_annual.setText(
@@ -1171,6 +1184,33 @@ class SitePanel(QWidget):
             row = "  ".join(f"{n}:{int(round(v))}" for n, v in zip(names, months))
             self._lbl_rain_monthly.setText(row)
         self._lbl_rain_src.setText(data.get("source", ""))
+        self._show_precip_timing(data)
+
+    def _show_precip_timing(self, data):
+        """Surface what the precipitation total hides — *when* the water is
+        available (precip_split). Growing-season rain infiltrates during the
+        season; snow is delayed spring-melt water (and much can run off frozen
+        or sloped ground). Both are liquid-water equivalent. Rows hide when the
+        split isn't present."""
+        form = getattr(self, "_rain_form", None)
+        if form is None:
+            return
+        grow = (data or {}).get("growing_season_rain_mm")
+        snow = (data or {}).get("annual_snow_mm")
+        have = data is not None and grow is not None and snow is not None
+        try:
+            form.setRowVisible(self._lbl_rain_growing, have)
+            form.setRowVisible(self._lbl_rain_snow, have)
+        except Exception:
+            pass
+        if not have:
+            return
+        estimated = "estimated" in (data.get("snow_split_source") or "")
+        approx = "≈" if estimated else ""
+        self._lbl_rain_growing.setText(
+            f"{approx}{grow:.0f} mm  (Apr–Oct rain — available now)")
+        self._lbl_rain_snow.setText(
+            f"{approx}{snow:.0f} mm water  (delayed spring-melt pulse)")
 
     def _on_soil(self, data):
         if not data:
