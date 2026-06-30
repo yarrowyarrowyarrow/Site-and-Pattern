@@ -117,8 +117,10 @@ The most important insights in ecological design come from people who cross disc
 Kintsugi philosophy, Cradle to Cradle design, regenerative landscaping, and mycoremediation all demonstrate that restoring broken systems requires deeper understanding than building new ones. Most users will not be designing landscapes from bare ground — they will be converting existing lawns, ornamental beds, and degraded sites. The application must be as effective at guiding transformation and restoration as it is at new design.
 
 > **Where this lives in the code:** the lawn-to-habitat conversion workflow
-> (`src/lawn_zones.py` + drawn conversion zones) and the evaluate→critique→revise→repair
-> loop in `src/design_critic.py`. **State: strong.**
+> (`src/lawn_zones.py` + drawn conversion zones), the evaluate→critique→revise→repair loop in
+> `src/design_critic.py`, and now the **phased Planting Plan** (`src/planting_plan.py`, roadmap
+> F40) that sequences the conversion into the ground — structure, then matrix, then fill.
+> **State: strong.**
 
 ### 9. Uncertainty is a feature, not a bug
 
@@ -146,10 +148,12 @@ This is the synthesis of all preceding themes. Every other landscape application
 Knowledge lives in hands, soil, wind, and direct observation — not only in abstractions and databases. The application should drive users outside, not keep them at a screen. The best landscape designs come from people who walk the site, feel the soil texture, notice where water pools and where wind dries. Digital tools augment direct observation; they do not replace it.
 
 > **Where this lives in the code:** `src/analysis_panel.py`, `src/wind.py`,
-> `src/soil_grid.py`, `src/terrain.py`, `src/property_data.py`, `src/scan_import.py`.
-> **State: partial** — strong at *fetching* site data, weak at *capturing the user's own
-> on-site observation*. The structured "site-walk field notes" idea (roadmap item D) is
-> the most direct expression of this principle still to be built.
+> `src/soil_grid.py`, `src/terrain.py`, `src/property_data.py`, `src/scan_import.py`; and the
+> **printable Planting Plan** (`src/planting_plan.py`, roadmap F40) — the first artifact that
+> actually sends the user *out to the yard* with what to buy, where to space it, and when to
+> plant. **State: partial** — strong at *fetching* site data and now at *handing the user a field
+> plan*, still weak at *capturing the user's own on-site observation* (the "site-walk field notes"
+> idea, roadmap F6, is the most direct expression of this principle still to be built).
 
 ### 12. Indigenous knowledge is honoured through relationship, not extraction
 

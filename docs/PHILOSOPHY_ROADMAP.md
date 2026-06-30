@@ -23,6 +23,38 @@ amended alongside them. Feature IDs (F1, F2, …) are stable handles — say "le
 
 ---
 
+## The funnel lens — ranking for *ecosystems created*
+
+The ratings above weigh philosophical alignment × user value × conservation outcome. But the
+ultimate goal is **more native ecosystems actually in the ground**, and that is gated by an
+adoption funnel: a person has to *get started* (activation), *build a design*, *trust it enough
+to act* (confidence), and then *actually buy and plant it* (action). Sorting F1–F39 by the funnel
+stage each primarily serves is sobering:
+
+| Funnel stage | # of features | Verdict |
+|---|---|---|
+| DESIGN (build/improve the design) | 18 | overweight |
+| LEGIBILITY / EDUCATE (make ecology visible) | 13 | overweight |
+| DECIDE / CONFIDENCE (trust it enough to act) | 7 | moderate |
+| **ACT / OUTPUT (design → plants in the ground)** | **5** | **critical deficit** |
+| **ONBOARD / ACTIVATE (cold start → first design)** | **1** | **severe deficit** |
+| MAINTAIN (after planting) | 2 | minor |
+
+The roadmap is a superb toolkit for an *already-engaged* user, and comparatively silent on the
+two stages that actually move the conservation needle. Encouragingly, those two stages map onto
+the philosophy's own **under-served principles** — P8 (repair/conversion), P9 (uncertainty/
+confidence), P11 (the body & the site). Serving them is not a departure from the philosophy; it
+strengthens its weakest spots. So the working rule for what comes next:
+
+> **Lead with ACTION and ACTIVATION; keep (but defer) the DEPTH.** Optimize the funnel for the
+> novice lawn-to-habitat converter — the long tail of yards where conversions create the most
+> ecosystems — without losing the depth features that reward users who go further.
+
+The new entries below (**F40–F45**) fill the ACT/OUTPUT and ONBOARD gaps; the **Defer** tier
+parks the high-effort power-user-depth items until activation/action prove out.
+
+---
+
 ## Shipped since this roadmap was written
 
 These started life as entries below and have since landed — the State markers in
@@ -37,10 +69,14 @@ These started life as entries below and have since landed — the State markers 
 | F9 | Specialist-host spotlight | `src/habitat_score.py` + `src/db/fauna.py` specificity | P3, P6 |
 | F16 | Seasonal view toggle | `src/analysis_panel.py`, `src/map_js.py`, `src/scene_contract.py` | P4, P5 |
 | F22 / F35 | Naturalistic drift placement + spread-aware spacing | `src/layout.py`, `src/planting_spacing.py` | P1, P2, P4 |
+| F40 | Planting Plan — buy-it / plant-it sheet (quantities, form, spacing, planting window, phased schedule) | `src/planting_plan.py`, surfaced in `src/app.py` + `src/pdf_export.py` | P8, P4, P11, P6, P9 |
 
 Net effect on the principles: **P1 partial → strong** (pattern language is now explicit), and
-P3/P4/P5 are visibly stronger. The distinctive frontier that's still open is the
-**relationship graph overlay (F5)** and the **unified edges layer (F7)**.
+P3/P4/P5 are visibly stronger. **F40 is the first real ACT/OUTPUT win** — it turns a design into
+a nursery-ready, plant-it-this-way artifact, advancing the under-served P8 (repair/conversion as a
+*plan*) and P11 (a printable field plan that drives the user outside). The distinctive depth
+frontier that's still open is the **relationship graph overlay (F5)** and the **unified edges
+layer (F7)** — now deliberately *after* the adoption work (see "Defer" below).
 
 ---
 
@@ -321,18 +357,94 @@ connectivity to the design's planted areas; a new analysis layer.
 
 ---
 
+## Activation & Action — the adoption frontier (F40–F45)
+
+New entries that fill the ONBOARD and ACT/OUTPUT gaps the funnel lens exposed. These lead the
+roadmap now — novices first, depth deferred (not dropped).
+
+| ID | Feature | Stage | Effort | Risk | Principle |
+|----|---------|-------|--------|------|-----------|
+| ✅ F40 | Planting Plan (buy-it / plant-it sheet) | ACT | M | Low | P8, P4, P11, P6, P9 |
+| F41 | Numbered plant-by-numbers map | ACT | M | Med | P5, P11 |
+| F42 | Design-specific maintenance calendar | ACT / MAINTAIN | S–M | Low | P4, P9 |
+| F43 | Site-prep & soil-amendment sheet | ACT | M | Med | P8, P11 |
+| F44 | First-run activation pack | ONBOARD | M | Low | P1, P9 |
+| F45 | In-context guidance | ONBOARD | S | Low | P5 |
+
+### ✅ F40 · Planting Plan — buy-it / plant-it sheet — *Shipped · was Impact High / Effort M / Risk Low (P8, P4, P11, P6, P9)*
+**Shipped** in `src/planting_plan.py`, surfaced in the text export (`app.py`) and the PDF
+(`pdf_export.py`). Answers the three questions that otherwise strand a design on the screen:
+*what to buy* (species, quantity, nursery form, per-species price range, grouped by Alberta
+source), *when to plant* (per-species window from `db/calendar_data.py` + a phased
+structure → matrix → fill schedule), and *how far apart* (spacing from `planting_spacing.py`).
+Reuses `sourcing`, `planting_spacing`, `succession`, `calendar_data`; Qt-free and unit-tested;
+consolidated the 165-line in-`MainWindow` order-list builder into the testable module.
+
+### F41 · Numbered plant-by-numbers map — *Impact High · Effort M · Risk Med — map capture (P5, P11)*
+The companion to F40: a keyed, numbered planting map so "buy 3 Saskatoon" becomes "dig holes 7,
+8, 9 — here." **How:** number the placed plants in the same order as the F40 list, draw numbered
+markers onto the captured map image (the offscreen capture path the PDF / yard-photo bake already
+uses), and key them to the plan table. Watch the map-capture / coordinate plumbing.
+
+### F42 · Design-specific maintenance calendar — *Impact Med · Effort S–M · Risk Low (P4, P9)*
+Extends F20 from a curve into an actionable cadence: "Year 1 — water weekly to establish, mulch in
+October; Year 2 — taper water; Year 5+ — annual cut-back, no irrigation." **How:** derive stages
+from `succession.restoration_stage` + structures' `maintenance_hours_year`, rendered into the
+Planting Plan output as honest *ranges*, not false precision (P9).
+
+### F43 · Site-prep & soil-amendment sheet — *Impact Med · Effort M · Risk Med (P8, P11)*
+Turn measured site data into a do-this-first prep step (the repair sequence *before* planting).
+**How:** from `property_data.fetch_soil` (`ph_top`, `texture_class`) + the design's plant soil
+needs, emit "this bed reads heavy clay → loosen and top with 5–8 cm compost" into the plan. Pairs
+with F18.
+
+### F44 · First-run activation pack — *Impact High · Effort M · Risk Low (P1, P9)*
+The biggest ONBOARD gap: the app opens to a silent blank map and the easy path ("Generate
+Design") is buried in File → Ctrl+G. **How:** a first-run welcome (QSettings flag) offering
+*Generate / Start blank / Open example*; an empty-state map hint ("drop a pin → draw a boundary →
+Generate"); surface **"Generate Design ✨"** as a visible button; ship a sample `.perma.geojson`;
+pre-check sensible Generate defaults (budget-friendly, won't-take-over). Reuses
+`generate_design_dialog`, `design_goals`.
+
+### F45 · In-context guidance — *Impact Med · Effort S · Risk Low (P5)*
+Lower the learning curve in place: tooltips on the boundary tool, placement modes and plant
+filters; a geocode-failure toast that points to pin-drop; a bolded first-step line in the Site
+panel. **How:** small, local UI additions — no new surfaces.
+
+---
+
+## Defer — depth & connoisseurship (after activation/action prove out)
+
+Kept on the roadmap (the depth is the delight), but **parked** behind the adoption work: these
+are high-effort and serve already-engaged power users, so they don't move "ecosystems created"
+until the funnel above is healthier.
+
+- **F7 · Unified edges layer** — *XL*: the synthesis, but invisible until F5/F25/F26 prove the
+  edge shapes. Sequence last.
+- **F25 · Mycorrhizal / symbiosis model** — *L · schema*: connoisseur depth, not a planting
+  blocker.
+- **F26 · Successional-sequence edges** — *L · schema*: `succession.py` roles already cover the
+  timeline on today's data.
+- **F27 · Habitat-corridor analysis** — *L*: landscape-scale, speculative, needs external data.
+- **F36 · Emergent community spacing** — *L · schema*: F22/F35 already give naturalistic spacing.
+- **F37 · "What the bee sees" mode** — *M*: delightful, optional.
+- **F39 · Sensor integration hooks** — *L · external*: speculative IoT; defer until asked.
+
+---
+
 ## How to choose
 
-A few natural shortlists, depending on appetite (✅ F2, F3, F4, F9, F16, F22/F35 have shipped):
-- **Fastest visible wins:** F8, F10, F11, F12, F20 (all S, Low risk) — a "legibility +
-  honesty" sprint that advances P6/P9 with little risk.
-- **Highest philosophical payoff:** F5 (relationship graph) is now the single biggest open
-  lever — with F2 (time snapshots) and F3 (food-web) already shipped, drawing the design as a
-  living network is the most invisible-structure-made-visible move left.
-- **The namesake move (next layer):** F4 shipped the pattern-language *framing*; F23
-  (declarative, inspectable placement rules) is the follow-on that makes the generative rules
-  themselves first-class.
-- **The big bet, sequenced:** edges are proven (F9 shipped) → F5 → F25/F26, then unify in F7.
+Sequenced for **more ecosystems created** — Action and Activation first, Depth deferred
+(✅ F2/F3/F4/F9/F16/F22/F35/F40 have shipped):
+- **Now — close the loop to the ground (ACTION):** ✅ F40 (Planting Plan, shipped) → **F41**
+  (numbered plant-by-numbers map) → **F42** (maintenance calendar). This is where a design
+  actually becomes a planted ecosystem.
+- **Next — get more people to a first design (ACTIVATION):** **F44** (first-run pack) → **F45**
+  (in-context guidance), plus the quick confidence wins **F10 / F11 / F14 / F20** (all S–M, Low
+  risk) that build the trust to act.
+- **Then — reward the engaged (DEPTH):** F5 (relationship graph), then F1 / F9 / F15, and F33
+  (observation journal).
+- **Defer:** F7, F25, F26, F27, F36, F37, F39 — see the Defer tier above.
 
 ---
 

@@ -466,8 +466,10 @@ class MainWindow(QMainWindow):
 
         file_menu.addSeparator()
 
-        act_shopping = file_menu.addAction("Export &Plant Order List…")
-        act_shopping.setStatusTip("Export a plant order list grouped by Alberta nursery source")
+        act_shopping = file_menu.addAction("Export Planting &Plan…")
+        act_shopping.setStatusTip(
+            "Export a buy-it / plant-it planting plan — quantities, cost, spacing, "
+            "and a phased planting schedule, grouped by Alberta nursery source")
         act_shopping.triggered.connect(self._on_export_shopping_list)
 
         act_pdf = file_menu.addAction("Export &PDF…")
@@ -1700,109 +1702,20 @@ class MainWindow(QMainWindow):
         # Shim → PersistenceController; see src/controllers/persistence.py.
         return self._persistence._autosave()
 
-    # ── Plant order list export ──────────────────────────────────────────────
-
-    # Form (seed / plug / container) inferred from plant_type. Native nurseries
-    # commonly stock trees/shrubs as containers, herbaceous as plugs, and grasses
-    # / forbs as seed for broadcast applications.
-    _PLANT_FORM_BY_TYPE = {
-        "tree":        "container",
-        "shrub":       "container",
-        "vine":        "container",
-        "herb":        "plug or seed",
-        "groundcover": "plug or seed",
-        "root":        "bulb / tuber",
-    }
+    # ── Planting plan export ─────────────────────────────────────────────────
 
     def _on_export_shopping_list(self):
+        """Export the design as a buy-it / plant-it Planting Plan (F40).
+
+        All the assembly lives in the Qt-free :mod:`src.planting_plan` so it can
+        be unit-tested and shared with the PDF export; this is just the file
+        plumbing."""
         if not self._placed_plants:
-            QMessageBox.information(self, "Plant Order List", "No plants placed yet.")
+            QMessageBox.information(self, "Planting Plan", "No plants placed yet.")
             return
 
-        from collections import Counter
-        from src.sourcing import (
-            plant_price_range, structure_cost, mulch_cost, format_cost,
-        )
-        counts: Counter = Counter()
-        names: dict[int, str] = {}
-        for p in self._placed_plants:
-            pid = p["plant_id"]
-            counts[pid] += 1
-            names[pid] = p["common_name"]
+        from src.planting_plan import build_planting_plan, render_plan_text
 
-        try:
-            from src.db.plants import get_plant
-        except Exception:
-            get_plant = lambda pid: None
-
-        # Bucket by sourcing channel. Each entry carries its extended price range
-        # (unit range × qty) so each section can subtotal and the design can total.
-        #   native_trees_shrubs → ALCLA / Bow Valley Habitat Development
-        #   native_herbaceous   → ALCLA / Wild About Flowers / Bedrock Seed Bank
-        #   cultivated          → local garden centres
-        native_woody: list[tuple] = []
-        native_herb:  list[tuple] = []
-        cultivated:   list[tuple] = []
-
-        total = 0
-        for pid, qty in counts.items():
-            plant = get_plant(pid) or {}
-            ptype = plant.get("plant_type", "other")
-            sci   = plant.get("scientific_name", "")
-            native = bool(plant.get("native_to_alberta"))
-            form  = self._PLANT_FORM_BY_TYPE.get(ptype, "—")
-            lo, hi = plant_price_range(plant)
-            entry = (names[pid], sci, form, qty, lo * qty, hi * qty)
-            if native and ptype in ("tree", "shrub", "vine"):
-                native_woody.append(entry)
-            elif native:
-                native_herb.append(entry)
-            else:
-                cultivated.append(entry)
-            total += qty
-
-        plants_lo = plants_hi = 0.0
-
-        def fmt_section(title: str, items: list[tuple]) -> list[str]:
-            nonlocal plants_lo, plants_hi
-            if not items:
-                return []
-            out = [title, "-" * len(title)]
-            sub_lo = sub_hi = 0.0
-            for name, sci, form, qty, clo, chi in sorted(items, key=lambda x: x[0].lower()):
-                line = f"  {name}"
-                if sci:
-                    line += f"  ({sci})"
-                line += f"  ×{qty}  [{form}]  ~{format_cost(clo, chi)}"
-                out.append(line)
-                sub_lo += clo
-                sub_hi += chi
-            out.append(f"  Subtotal: {format_cost(sub_lo, sub_hi)}")
-            out.append("")
-            plants_lo += sub_lo
-            plants_hi += sub_hi
-            return out
-
-        lines = [
-            f"{APP_NAME} — Native Plant Order List",
-            "=" * 44,
-            "",
-        ]
-        lines += fmt_section(
-            "NATIVE TREES & SHRUBS  (sources: ALCLA, Bow Valley Habitat)",
-            native_woody,
-        )
-        lines += fmt_section(
-            "NATIVE HERBACEOUS & GROUNDCOVER  "
-            "(sources: ALCLA, Wild About Flowers, Bedrock Seed Bank)",
-            native_herb,
-        )
-        lines += fmt_section(
-            "CULTIVATED / NON-NATIVE  (sources: local garden centres)",
-            cultivated,
-        )
-
-        # Non-plant costs: structures (install) + mulch for any drawn beds.
         structs = [
             f["properties"]["struct_def"]
             for f in self._project.get("features", [])
@@ -1814,62 +1727,12 @@ class MainWindow(QMainWindow):
             for f in self._project.get("features", [])
             if f.get("properties", {}).get("element_type") == "custom_shape"
         )
-        struct_lo, struct_hi = structure_cost(structs)
-        mulch_lo, mulch_hi = mulch_cost(bed_area)
-        if structs or bed_area > 0:
-            sec_title = "SITE PREP & STRUCTURES  (estimated install / materials)"
-            lines.append(sec_title)
-            lines.append("-" * len(sec_title))
-            from src.db.structures import get_structure
-            scount: Counter = Counter(s.get("id") for s in structs)
-            sdef_by_id = {s.get("id"): s for s in structs}
-            for sid, n in sorted(scount.items(), key=lambda kv: str(kv[0])):
-                sdef = sdef_by_id.get(sid, {})
-                catalogue = get_structure(sid) or {}
-                nm = sdef.get("name") or catalogue.get("name") or (sid or "structure")
-                # Prefer the catalogue's current install cost so older projects
-                # (whose stored struct_def predates install_cost_cad) still cost
-                # correctly and match the grand total below.
-                ic = catalogue.get("install_cost_cad") or sdef.get("install_cost_cad") or (0.0, 0.0)
-                lines.append(
-                    f"  {nm}  ×{n}  ~{format_cost(ic[0] * n, ic[1] * n)}"
-                )
-            if bed_area > 0:
-                lines.append(
-                    f"  Mulch — {bed_area:,.0f} m² @ 7.5 cm  "
-                    f"~{format_cost(mulch_lo, mulch_hi)}"
-                )
-            lines.append("")
-
-        lines.append("=" * 44)
-        n_native = sum(e[3] for e in native_woody + native_herb)
-        n_cult   = sum(e[3] for e in cultivated)
-        lines.append(
-            f"Total: {total} plants ({len(counts)} species)  "
-            f"— {n_native} native, {n_cult} cultivated"
-        )
-        grand_lo = plants_lo + struct_lo + mulch_lo
-        grand_hi = plants_hi + struct_hi + mulch_hi
-        lines.append(f"Plants:           {format_cost(plants_lo, plants_hi)}")
-        if structs:
-            lines.append(f"Structures:       {format_cost(struct_lo, struct_hi)}")
-        if bed_area > 0:
-            lines.append(f"Mulch:            {format_cost(mulch_lo, mulch_hi)}")
-        lines.append(
-            f"ESTIMATED TOTAL:  {format_cost(grand_lo, grand_hi)}  "
-            f"(AB retail/install estimate — varies by nursery, year, site)"
-        )
-        lines.append("")
-        lines.append("Alberta native plant nurseries / seed sources:")
-        lines.append("  • ALCLA Native Plants            https://alclanativeplants.com/")
-        lines.append("  • Bow Valley Habitat Development https://bowvalleyhabitat.com/")
-        lines.append("  • Wild About Flowers             https://wildaboutflowers.ca/")
-        lines.append("  • Bedrock Seed Bank              https://bedrockseedbank.ca/")
-
-        text = "\n".join(lines)
+        plan = build_planting_plan(self._placed_plants, structures=structs,
+                                   bed_area_m2=bed_area)
+        text = render_plan_text(plan)
 
         path, _ = QFileDialog.getSaveFileName(
-            self, "Export Plant Order List", "plant_order_list.txt",
+            self, "Export Planting Plan", "planting_plan.txt",
             "Text Files (*.txt);;CSV (*.csv);;All Files (*)"
         )
         if not path:
@@ -1877,7 +1740,7 @@ class MainWindow(QMainWindow):
         try:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(text)
-            self.statusBar().showMessage(f"Plant order list saved: {path}", 3000)
+            self.statusBar().showMessage(f"Planting plan saved: {path}", 3000)
         except Exception as exc:
             QMessageBox.critical(self, "Export failed", str(exc))
 
