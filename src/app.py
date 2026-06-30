@@ -702,6 +702,29 @@ class MainWindow(QMainWindow):
         # Satellite imagery alignment nudge → shift the basemap tiles (cosmetic).
         self.site_panel.satellite_offset_changed.connect(
             self.map_widget.set_satellite_offset)
+
+        # Site-walk field notes (F6) — store on the project + mark modified.
+        # Two thin lambdas (MainWindow is at its method ceiling).
+        from src import field_notes as _field_notes
+        self.site_panel.field_notes_changed.connect(
+            lambda notes: _field_notes.set_field_notes(self._project, notes))
+        self.site_panel.field_notes_changed.connect(
+            lambda _notes: self._mark_modified())
+
+        # Site photo overlay (F24) — wired straight to the flow module (free
+        # functions taking ``main``, mirroring splat_flow; MainWindow is full).
+        from src import site_photo_flow
+        self.site_panel.site_photo_import_requested.connect(
+            lambda path: site_photo_flow.import_site_photo(self, path))
+        self.site_panel.site_photo_width_changed.connect(
+            lambda w: site_photo_flow.set_width(self, w))
+        self.site_panel.site_photo_opacity_changed.connect(
+            lambda o: site_photo_flow.set_opacity(self, o))
+        self.site_panel.site_photo_visible_changed.connect(
+            lambda v: self.map_widget.set_site_photo_visible(v))
+        self.site_panel.site_photo_clear_requested.connect(
+            lambda: site_photo_flow.clear_site_photo(self))
+
         self.analysis_panel.wind_requested.connect(self._on_wind_requested)
         self.analysis_panel.wind_cleared.connect(self.map_widget.clear_wind_overlay)
         # Straight to the controller (MainWindow is at its method ceiling).
@@ -1622,6 +1645,10 @@ class MainWindow(QMainWindow):
         self.planning_panel.set_structures([])
         self.analysis_panel.set_placed_plants([])
         self.analysis_panel.set_structures([])
+        # Reset site-walk field notes (F6) and clear any site photo (F24).
+        self.site_panel.set_field_notes({})
+        from src import site_photo_flow
+        site_photo_flow.restore_site_photo(self)
         self.setWindowTitle(f"{APP_NAME} — {name}")
         self._set_mode_label("Ready")
 
@@ -1674,6 +1701,11 @@ class MainWindow(QMainWindow):
         # Load notes
         notes = proj.get("properties", {}).get("notes", "")
         self.planning_panel.set_notes(notes)
+
+        # Site-walk field notes (F6). The site photo overlay (F24) is already
+        # restored by render_project_to_map above (shared with undo/redo).
+        from src import field_notes as _field_notes
+        self.site_panel.set_field_notes(_field_notes.get_field_notes(proj))
 
         name = proj.get("properties", {}).get("project_name", "Design")
         self.setWindowTitle(f"{APP_NAME} — {name}")

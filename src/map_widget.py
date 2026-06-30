@@ -783,6 +783,22 @@ class MapWidget(QWebEngineView):
     def clear_splat_ortho(self):
         self.run_js(map_js.clear_splat_ortho())
 
+    # ── Site photo overlay (F24) ─────────────────────────────────────────────
+
+    def draw_site_photo_overlay(self, image_data_url: str, bbox: dict,
+                                opacity: float = 0.7):
+        """Show a user yard/drone photo as a georeferenced map underlay (F24)."""
+        self.run_js(map_js.draw_site_photo_overlay(image_data_url, bbox, opacity))
+
+    def set_site_photo_visible(self, visible: bool):
+        self.run_js(map_js.set_site_photo_visible(visible))
+
+    def set_site_photo_opacity(self, opacity: float):
+        self.run_js(map_js.set_site_photo_opacity(opacity))
+
+    def clear_site_photo(self):
+        self.run_js(map_js.clear_site_photo())
+
     # ── Dynamic wind shadow (V1.68) ──────────────────────────────────────────
 
     def set_wind_casters(self, casters: list):

@@ -67,11 +67,13 @@ These started life as entries below and have since landed — the State markers 
 | F2 | Year 1 / 5 / 15 / 30 snapshot view | `src/snapshot_timeline.py`, `src/snapshot_window.py` | P4 |
 | F3 | Food-web completeness score | `src/habitat_score.py` (`food_web`), `src/design_critic.py` | P3, P6 |
 | F4 | Pattern-language framing for communities | `src/pattern_language.py`, `src/polyculture_panel.py` | P1, P7 |
+| F6 | Site-walk field notes | `src/field_notes.py`, surfaced in `src/site_panel.py` (Field Notes tab) | P11 |
 | F9 | Specialist-host spotlight | `src/habitat_score.py` + `src/db/fauna.py` specificity | P3, P6 |
 | F10 | Lawn-equivalent counterfactual | `src/lawn_zones.py` (`lawn_counterfactual`), surfaced in `src/analysis_panel.py` | P6, P8 |
 | F16 | Seasonal view toggle | `src/analysis_panel.py`, `src/map_js.py`, `src/scene_contract.py` | P4, P5 |
 | F17 | Phased conversion plan (year-by-year) | `src/conversion_plan.py`, surfaced in `src/planning_panel.py` + `src/app.py` + `src/pdf_export.py` | P8, P4 |
 | F22 / F35 | Naturalistic drift placement + spread-aware spacing | `src/layout.py`, `src/planting_spacing.py` | P1, P2, P4 |
+| F24 | Site photo overlay + markup | `src/site_photo.py` + `src/site_photo_flow.py`, surfaced in `src/site_panel.py` + `html/map/06-overlays.js` | P11, P5 |
 | F40 | Planting Plan — buy-it / plant-it sheet (quantities, form, spacing, planting window, phased schedule) | `src/planting_plan.py`, surfaced in `src/app.py` + `src/pdf_export.py` | P8, P4, P11, P6, P9 |
 
 Net effect on the principles: **P1 partial → strong** (pattern language is now explicit), and
@@ -82,9 +84,13 @@ a nursery-ready, plant-it-this-way artifact, advancing the under-served P8 (repa
 caterpillars / specialist / bird food) where the user already looks (P6, P10); **F10** makes the
 Tallamy contrast explicit — this design vs. the ≈0 an equivalent lawn provides (P6, P8); and
 **F17** turns the drawn conversion zones into a year-by-year remove-this / plant-that schedule
-(P8, P4). The distinctive depth frontier that's still open is the **relationship graph overlay
-(F5)** and the **unified edges layer (F7)** — now deliberately *after* the adoption work (see
-"Defer" below).
+(P8, P4). The next batch finally invests in the long-neglected **P11 (the body & the site)**:
+**F6** captures what the *site* knows as a walked checklist of field observations saved with the
+project, and **F24** drops a real yard/drone photo onto the map as a georeferenced underlay you
+can mark up — together moving P11 from "fetches site data" toward "captures the user's own
+ground-truth". The distinctive depth frontier that's still open is the **relationship graph
+overlay (F5)** and the **unified edges layer (F7)** — now deliberately *after* the adoption work
+(see "Defer" below).
 
 ---
 
@@ -98,7 +104,7 @@ Tallamy contrast explicit — this design vs. the ≈0 an equivalent lawn provid
 | ✅ F3 | Food-web completeness score | M | Low | P3, P6 |
 | ✅ F4 | Pattern-language framing for communities | M (full L) | Med | P1, P7 |
 | F5 | Relationship graph overlay (the distinctive frontier) | L | Med | P3, P5 |
-| F6 | Site-walk field notes | L (slice M) | Med | P11 |
+| ✅ F6 | Site-walk field notes | L (slice M) | Med | P11 |
 | F7 | Relationship-first data model (unified edges layer) | XL | High | P3, P10 |
 
 ### Medium impact
@@ -120,7 +126,7 @@ Tallamy contrast explicit — this design vs. the ≈0 an equivalent lawn provid
 | F21 | Ecosystem-services readout | M | Med | P6, P9 |
 | ✅ F22 | Naturalistic drift placement | M | Med | P2 |
 | F23 | Declarative, inspectable placement rules | M | Low | P1 |
-| F24 | Site photo overlay + markup | M | Med | P11 |
+| ✅ F24 | Site photo overlay + markup | M | Med | P11 |
 | F25 | Mycorrhizal / symbiosis model | L | Med | P3 |
 | F26 | Successional-sequence edges | L | Med | P3, P4 |
 | F27 | Habitat-corridor analysis | L | Med | P3 |
@@ -196,15 +202,19 @@ it as a new toggle layer in `html/map/06-overlays.js`, mirroring the existing sp
 **First slice:** companion edges only (data already exists), then layer in pollinator/bird
 edges. Watch the map-JS line ceiling — put geometry math in Python, keep the JS thin.
 
-### F6 · Site-walk field notes — *Impact High · Effort L (slice M) · Risk Med — new UI surface (P11)*
-Drive the user outside and capture what the *site* knows (where water pools, snow drifts,
-soil compacts, wind tunnels). **How:** store a structured `field_notes` block in the
-project FeatureCollection `properties` (in `src/project.py`) — no DB schema bump — with a
-prompted checklist + free text. Optionally pin notes to map points by reusing the existing
-annotation / custom-shape pipeline. Later, feed notes into generation as soft constraints
-via the existing zone/`exclusion` steering (brainstorm F5) — e.g. a "pools water" pin
-biases toward riparian species. **First slice:** non-pinned checklist + free text saved
-with the project.
+### ✅ F6 · Site-walk field notes — *Shipped (first slice) · was Impact High / Effort L (slice M) / Risk Med (P11)*
+**Shipped** as the Qt-free `src/field_notes.py` (prompts catalogue + project-properties
+read/write/format), surfaced as a **Field Notes** sub-tab in `src/site_panel.py`. Drives the user
+outside and captures what the *site* knows. **How (as built):** a `field_notes` block lives on the
+project FeatureCollection `properties` (no DB schema bump) holding a prompted walking checklist —
+where water pools, where snow drifts, where soil compacts, where wind funnels, frost pockets, what's
+already thriving, where people walk, sun morning vs. afternoon, and an embodied "stand here and
+notice" — each a checkbox + one-line observation, plus a free-text catch-all. The panel debounces
+edits into a `field_notes_changed` signal; `app.py` stores it on the project and marks it modified
+(two thin lambdas — MainWindow is at its method ceiling). **Still to come:** pinning individual
+observations to map points (reusing the annotation pipeline) and feeding them into generation as
+soft constraints (zone/`exclusion` steering) — e.g. a "pools water" note biasing toward riparian
+species.
 
 ### F7 · Relationship-first data model (unified edges layer) — *Impact High · Effort XL · Risk High — schema + UI (P3, P10)*
 The synthesis of the whole philosophy: one queryable "edges" layer unifying mycorrhizal,
@@ -324,11 +334,19 @@ balance) as a small, tweakable rule set. **How:** lift the constants now embedde
 `placement_score` / `llm_design` into a named, documented rule object the UI can show and
 adjust.
 
-### F24 · Site photo overlay + markup — *Impact Med · Effort M · Risk Med (P11)*
-Drop a site/drone photo as a map underlay with pins (ROADMAP V5; complements the Gaussian-
-splat "yard photo"). **How:** store the image reference + world placement in the project
-`properties` and render it as a toggle layer in the map JS, reusing the splat-overlay
-plumbing.
+### ✅ F24 · Site photo overlay + markup — *Shipped · was Impact Med / Effort M / Risk Med (P11, P5)*
+**Shipped** in the Qt-free `src/site_photo.py` (bbox maths + the `site_photo` GeoJSON feature) plus
+`src/site_photo_flow.py` (image load/embed + map glue), surfaced as a "Site photo (map underlay)"
+group on the Site → Field Notes tab and a new image layer in `html/map/06-overlays.js`. Drops a
+yard/drone photo onto the map as a georeferenced underlay (complementing the Gaussian-splat "yard
+photo"). **How (as built):** the chosen image is scaled, embedded as a data URL on a `site_photo`
+feature, and placed centred on the property pin (or the current map centre) at a real-world **width
+across** in metres, preserving aspect — so placement maths is Python-side and the map JS stays a
+thin `L.imageOverlay`, mirroring the splat-ortho plumbing (`draw/set-visible/set-opacity/clear`).
+Width + opacity are live; it persists with the project and restores through `render_project_to_map`
+(so undo/redo and reload stay in sync). **Markup** reuses the existing map annotation pins — no
+separate machinery. (The 06-overlays.js guard ceiling was deliberately bumped 1400 → 1480 for the
+new overlay block.)
 
 ### F25 · Mycorrhizal / symbiosis model — *Impact Med · Effort L · Risk Med — schema bump (P3)*
 Promote the facts now buried in plant `notes` (Frankia, ericoid, AMF, inoculation needs)
@@ -456,7 +474,7 @@ until the funnel above is healthier.
 ## How to choose
 
 Sequenced for **more ecosystems created** — Action and Activation first, Depth deferred
-(✅ F1/F2/F3/F4/F9/F10/F16/F17/F22/F35/F40 have shipped):
+(✅ F1/F2/F3/F4/F6/F9/F10/F16/F17/F22/F24/F35/F40 have shipped):
 - **Now — close the loop to the ground (ACTION):** ✅ F40 (Planting Plan) → ✅ F17 (phased
   conversion schedule) → **F41** (numbered plant-by-numbers map) → **F42** (maintenance calendar).
   This is where a design actually becomes a planted ecosystem.

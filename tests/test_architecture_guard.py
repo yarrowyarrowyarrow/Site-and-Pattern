@@ -79,7 +79,7 @@ class TestStructuralCeilings(unittest.TestCase):
         (_HTML / "map" / "03-plants.js", 950),         # ~817 now
         (_HTML / "map" / "04-tools.js", 450),          # ~360 now
         (_HTML / "map" / "05-features.js", 1100),      # ~956 now
-        (_HTML / "map" / "06-overlays.js", 1400),      # ~1193 now
+        (_HTML / "map" / "06-overlays.js", 1480),      # ~1400 now (F24 site-photo overlay)
     ]
 
     def test_module_line_ceilings(self):

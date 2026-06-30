@@ -88,11 +88,12 @@ Brand's shearing layers, Weaner's succession planting, Bridges' transition psych
 Yong's Umwelt research, Deutscher's linguistic relativity, Berger's visual culture theory, Norman's affordances, and pain science all demonstrate that what an observer notices depends on what they have been trained to notice. The application is fundamentally a perception tool: it should help users *see* ecological relationships they currently cannot — pollinator pathways, mycorrhizal connections, successional trajectories, and habitat value that are invisible to the untrained eye.
 
 > **Where this lives in the code:** the site-analysis overlays in `src/analysis_panel.py`
-> and `html/map/06-overlays.js` (sun path, wind shelter zones, shade), plus sector analysis
-> and the seasonal view toggle (roadmap F16, shipped) that lets the eye read leaf-on vs.
-> leaf-off and bloom. **State: partial** — site forces and seasonality are made visible, but
-> ecological *relationships* (pollinator pathways, mycorrhizal networks, succession
-> trajectories) are still not drawn (roadmap F5, F15).
+> and `html/map/06-overlays.js` (sun path, wind shelter zones, shade), plus sector analysis,
+> the seasonal view toggle (roadmap F16, shipped) that lets the eye read leaf-on vs.
+> leaf-off and bloom, and the **site photo underlay** (`src/site_photo.py`, roadmap F24) that
+> puts the user's real yard under the design. **State: partial** — site forces, seasonality and
+> now the real site are made visible, but ecological *relationships* (pollinator pathways,
+> mycorrhizal networks, succession trajectories) are still not drawn (roadmap F5, F15).
 
 ### 6. Conventional value metrics miss ecological value
 
@@ -157,12 +158,15 @@ This is the synthesis of all preceding themes. Every other landscape application
 Knowledge lives in hands, soil, wind, and direct observation — not only in abstractions and databases. The application should drive users outside, not keep them at a screen. The best landscape designs come from people who walk the site, feel the soil texture, notice where water pools and where wind dries. Digital tools augment direct observation; they do not replace it.
 
 > **Where this lives in the code:** `src/analysis_panel.py`, `src/wind.py`,
-> `src/soil_grid.py`, `src/terrain.py`, `src/property_data.py`, `src/scan_import.py`; and the
-> **printable Planting Plan** (`src/planting_plan.py`, roadmap F40) — the first artifact that
-> actually sends the user *out to the yard* with what to buy, where to space it, and when to
-> plant. **State: partial** — strong at *fetching* site data and now at *handing the user a field
-> plan*, still weak at *capturing the user's own on-site observation* (the "site-walk field notes"
-> idea, roadmap F6, is the most direct expression of this principle still to be built).
+> `src/soil_grid.py`, `src/terrain.py`, `src/property_data.py`, `src/scan_import.py`; the
+> **printable Planting Plan** (`src/planting_plan.py`, roadmap F40) that sends the user *out to
+> the yard* with what to buy, where to space it, and when to plant; the **site-walk field notes**
+> (`src/field_notes.py`, roadmap F6) that capture what the user notices on the ground (where water
+> pools, snow drifts, soil compacts); and the **site photo underlay** (`src/site_photo.py`, roadmap
+> F24) that brings a real yard/drone photo onto the map. **State: strong (was a gap)** — the app now
+> *fetches* site data, *hands the user a field plan*, *and captures their own on-site observation*.
+> The remaining reach: pinning individual observations to map points and feeding them back into
+> generation as soft constraints (the "pinned" slice of F6).
 
 ### 12. Indigenous knowledge is honoured through relationship, not extraction
 

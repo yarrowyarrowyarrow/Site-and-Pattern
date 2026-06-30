@@ -861,6 +861,34 @@
       }
     }
 
+    // ── Site photo overlay (F24) — a user yard/drone photo dropped on the map
+    // as a georeferenced underlay. Same image-layer machinery as the splat
+    // "yard photo"; bbox is computed Python-side (src/site_photo.py).
+    var sitePhotoLayer = null;
+
+    function drawSitePhotoOverlay(payload) {
+      clearSitePhoto();
+      if (!payload || !payload.image || !payload.bbox) return;
+      var b = payload.bbox;
+      sitePhotoLayer = L.imageOverlay(payload.image,
+        L.latLngBounds([b.south, b.west], [b.north, b.east]),
+        { opacity: typeof payload.opacity === 'number' ? payload.opacity : 1.0,
+          interactive: false }).addTo(map);
+    }
+
+    function setSitePhotoVisible(visible) {
+      if (!sitePhotoLayer) return;
+      if (visible) { sitePhotoLayer.addTo(map); } else { map.removeLayer(sitePhotoLayer); }
+    }
+
+    function setSitePhotoOpacity(opacity) {
+      if (sitePhotoLayer && sitePhotoLayer.setOpacity) sitePhotoLayer.setOpacity(opacity);
+    }
+
+    function clearSitePhoto() {
+      if (sitePhotoLayer) { map.removeLayer(sitePhotoLayer); sitePhotoLayer = null; }
+    }
+
     // ── Planting-zone shade map (discrete sun/partial/shade cells) ──────────
     // The "Classify planting zones" result drawn as a coloured grid so you can
     // see, at a glance, where full-sun / partial / full-shade planting spots

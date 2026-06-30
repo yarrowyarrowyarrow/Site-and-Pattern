@@ -537,6 +537,27 @@ def clear_splat_ortho() -> str:
     return "clearSplatOrtho();"
 
 
+def draw_site_photo_overlay(image_data_url: str, bbox: dict,
+                            opacity: float) -> str:
+    """Render a user yard/drone photo as a georeferenced map underlay (F24) —
+    its own image layer (like the splat ortho / shade overlays) so it composes
+    with everything else."""
+    payload = {"image": image_data_url, "bbox": bbox, "opacity": float(opacity)}
+    return f"drawSitePhotoOverlay({_jsobj(payload)});"
+
+
+def set_site_photo_visible(visible: bool) -> str:
+    return f"setSitePhotoVisible({_jsbool(visible)});"
+
+
+def set_site_photo_opacity(opacity: float) -> str:
+    return f"setSitePhotoOpacity({float(opacity)});"
+
+
+def clear_site_photo() -> str:
+    return "clearSitePhoto();"
+
+
 def draw_shade_zones(cells: list, d_lat: float, d_lng: float,
                      opacity: float = 0.45) -> str:
     """Draw the classified planting zones as a coloured grid (V1.60). ``cells``

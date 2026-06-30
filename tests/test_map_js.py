@@ -118,6 +118,8 @@ class TestJsEntryPointsExist(unittest.TestCase):
         "clearAutoTerrain",
         "drawShadeOverlay", "setShadeOverlayOpacity", "clearShadeOverlay",
         "drawShadeZones", "setShadeZonesVisible", "clearShadeZones",
+        "drawSitePhotoOverlay", "setSitePhotoVisible", "setSitePhotoOpacity",
+        "clearSitePhoto",
         "_removeBoundaryEntry",
         # Globals touched by the inline IIFEs:
         "plantMarkers", "plantLabels",
