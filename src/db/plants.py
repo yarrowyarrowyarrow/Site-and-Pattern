@@ -139,7 +139,10 @@ _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 # v37 (V2.2): dropped the denormalized plants.permaculture_uses column; the
 # plant_uses junction is now the single source of truth and the legacy
 # comma-blob field is synthesized on read. Reseed rebuilds plant_uses.
-_SCHEMA_VERSION = 37
+# v38 (V2.3): no DDL — reseed to expand EXAMPLE_POLYCULTURES to full retail-native
+# coverage (every native sold at native nurseries / garden centres / big-box) and
+# to add the multi-valued "By Function" Group-By facet (derived from plant uses).
+_SCHEMA_VERSION = 38
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────

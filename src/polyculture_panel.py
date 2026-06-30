@@ -112,6 +112,7 @@ _TREE_COLLAPSED_ROWS = 7
 # buckets communities under bold, unselectable category nodes.
 _GROUP_BY_OPTIONS = [
     ("none",      "No grouping"),
+    ("function",  "By Function"),
     ("habitat",   "By Habitat"),
     ("structure", "By Structure"),
     ("sun",       "By Sun"),
@@ -1657,11 +1658,20 @@ class PolyculturePanel(QWidget):
             return
 
         # Grouped: bucket communities under bold, unselectable category nodes.
+        # The "function" lens is multi-valued (a list of labels), so a community
+        # can appear under several folders; since a QTreeWidgetItem may only have
+        # one parent, the 2nd+ folder gets a clone (clone keeps the UserRole
+        # community id + nested variations, so selection/placement still work).
         facets = polycultures.get_community_facets()
         buckets: dict[str, list] = {}
         for g, item in built:
-            label = facets.get(g["id"], {}).get(group_by) or "Other"
-            buckets.setdefault(label, []).append(item)
+            val = facets.get(g["id"], {}).get(group_by)
+            labels = val if isinstance(val, list) else [val or "Other"]
+            if not labels:
+                labels = ["Other"]
+            for i, label in enumerate(labels):
+                node = item if i == 0 else item.clone()
+                buckets.setdefault(label, []).append(node)
         for label in sorted(buckets):
             group_node = QTreeWidgetItem([f"{label}  ({len(buckets[label])})"])
             font = group_node.font(0)

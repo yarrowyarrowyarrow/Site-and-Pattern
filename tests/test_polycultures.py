@@ -319,6 +319,11 @@ class TestCommunityFacets(unittest.TestCase):
             for lens in ("habitat", "structure", "sun", "moisture"):
                 self.assertIn(lens, f)
                 self.assertTrue(str(f[lens]).strip())
+            # The "function" lens is multi-valued: a non-empty list of labels.
+            self.assertIn("function", f)
+            self.assertIsInstance(f["function"], list)
+            self.assertTrue(f["function"])
+            self.assertTrue(all(str(x).strip() for x in f["function"]))
 
     def test_structure_uses_tallest_layer(self):
         # A tree-anchored community groups under "Canopy".
@@ -326,6 +331,96 @@ class TestCommunityFacets(unittest.TestCase):
         self.assertEqual(
             polycultures.get_community_facets()[apple["id"]]["structure"],
             "Canopy")
+
+    def test_function_labels_for_known_communities(self):
+        facets = polycultures.get_community_facets()
+
+        def fns(name):
+            pc = polycultures.get_polyculture_by_name(name)
+            self.assertIsNotNone(pc, name)
+            return facets[pc["id"]]["function"]
+
+        # The host garden is built from documented larval-host plants.
+        self.assertIn("Host Community", fns("Caterpillar Host Garden"))
+        # The keystone mound is built from Tallamy keystone genera.
+        self.assertIn("Keystone Species", fns("Keystone Pollinator Mound"))
+        # Multi-bucket: a community serves several functions at once.
+        self.assertIn("Pollination", fns("Caterpillar Host Garden"))
+
+    def test_function_fallback_generalist(self):
+        # A community whose plants carry no permaculture-use tags falls back to
+        # the "Generalist" bucket rather than vanishing.
+        conn = get_connection()
+        try:
+            p1 = _add_dummy_plant(conn, "Untagged One")
+            p2 = _add_dummy_plant(conn, "Untagged Two")
+        finally:
+            conn.close()
+        pid = polycultures.create_polyculture("Untagged Community", "d", p1)
+        polycultures.add_polyculture_member(pid, p1, "herbaceous", 0, 0)
+        polycultures.add_polyculture_member(pid, p2, "herbaceous", 1, 0)
+        self.assertEqual(
+            polycultures.get_community_facets()[pid]["function"], ["Generalist"])
+
+
+class TestCommunityCoverage(unittest.TestCase):
+    """The seeded library covers the retail-available natives (native nursery /
+    garden centre / big box) and every member name resolves — guards against the
+    silent member-drop drift the legacy presets suffered from."""
+
+    _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _RETAIL = {"native_specialist", "garden_centre", "big_box"}
+
+    @classmethod
+    def setUpClass(cls):
+        _setup_db()
+
+    @staticmethod
+    def _all_member_names():
+        names = []
+
+        def walk(defn):
+            for m in defn.get("members", []):
+                names.append(m[0])
+            for v in defn.get("variations", []):
+                walk(v)
+
+        for community in polycultures.EXAMPLE_POLYCULTURES:
+            walk(community)
+        return names
+
+    def test_all_member_names_resolve(self):
+        # Every seeded community member must match a real catalogue plant or it
+        # is silently skipped at seed time (the 6 legacy drift bugs + any typo).
+        unresolved = sorted({
+            n for n in self._all_member_names()
+            if polycultures._get_plant_by_name(n) is None
+        })
+        self.assertEqual(unresolved, [], f"unresolved member names: {unresolved}")
+
+    def _retail_natives(self):
+        import json
+        plants = []
+        for rel in ("data/plants_master.json", "data/garden_plants.json"):
+            with open(os.path.join(self._ROOT, rel), encoding="utf-8") as fh:
+                plants += json.load(fh)
+        return {
+            p["common_name"] for p in plants
+            if p.get("availability_class") in self._RETAIL
+            and str(p.get("native_to_alberta", 0)) in ("1", "True", "true")
+        }
+
+    def test_retail_native_coverage(self):
+        retail = self._retail_natives()
+        members = {n.lower() for n in self._all_member_names()}
+        covered = {n for n in retail if n.lower() in members}
+        missing = sorted(retail - covered)
+        # Authored to full coverage; allow a small margin for future catalogue
+        # growth before the breadth guard trips.
+        self.assertGreaterEqual(
+            len(covered), len(retail) - 4,
+            f"retail-native coverage regressed: {len(missing)} uncovered "
+            f"(e.g. {missing[:8]})")
 
 
 if __name__ == "__main__":
