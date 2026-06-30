@@ -23,15 +23,36 @@ amended alongside them. Feature IDs (F1, F2, …) are stable handles — say "le
 
 ---
 
+## Shipped since this roadmap was written
+
+These started life as entries below and have since landed — the State markers in
+[`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md) reflect the lift. The detail entries are kept
+(marked **✅ Shipped**) as the historical record of how they were built.
+
+| ID | Feature | Lives in | Advances |
+|----|---------|----------|----------|
+| F2 | Year 1 / 5 / 15 / 30 snapshot view | `src/snapshot_timeline.py`, `src/snapshot_window.py` | P4 |
+| F3 | Food-web completeness score | `src/habitat_score.py` (`food_web`), `src/design_critic.py` | P3, P6 |
+| F4 | Pattern-language framing for communities | `src/pattern_language.py`, `src/polyculture_panel.py` | P1, P7 |
+| F9 | Specialist-host spotlight | `src/habitat_score.py` + `src/db/fauna.py` specificity | P3, P6 |
+| F16 | Seasonal view toggle | `src/analysis_panel.py`, `src/map_js.py`, `src/scene_contract.py` | P4, P5 |
+| F22 / F35 | Naturalistic drift placement + spread-aware spacing | `src/layout.py`, `src/planting_spacing.py` | P1, P2, P4 |
+
+Net effect on the principles: **P1 partial → strong** (pattern language is now explicit), and
+P3/P4/P5 are visibly stronger. The distinctive frontier that's still open is the
+**relationship graph overlay (F5)** and the **unified edges layer (F7)**.
+
+---
+
 ## Ranked summary
 
 ### High impact
 | ID | Feature | Effort | Risk | Principle |
 |----|---------|--------|------|-----------|
 | F1 | "Why it matters" labels in the plant browser | M | Low | P6, P10 |
-| F2 | Year 1 / 5 / 15 / 30 snapshot view | M | Low | P4 |
-| F3 | Food-web completeness score | M | Low | P3, P6 |
-| F4 | Pattern-language framing for communities | M (full L) | Med | P1, P7 |
+| ✅ F2 | Year 1 / 5 / 15 / 30 snapshot view | M | Low | P4 |
+| ✅ F3 | Food-web completeness score | M | Low | P3, P6 |
+| ✅ F4 | Pattern-language framing for communities | M (full L) | Med | P1, P7 |
 | F5 | Relationship graph overlay (the distinctive frontier) | L | Med | P3, P5 |
 | F6 | Site-walk field notes | L (slice M) | Med | P11 |
 | F7 | Relationship-first data model (unified edges layer) | XL | High | P3, P10 |
@@ -40,20 +61,20 @@ amended alongside them. Feature IDs (F1, F2, …) are stable handles — say "le
 | ID | Feature | Effort | Risk | Principle |
 |----|---------|--------|------|-----------|
 | F8 | Uncertainty language pass | S | Low | P9 |
-| F9 | Specialist-host spotlight | S | Low | P3, P6 |
+| ✅ F9 | Specialist-host spotlight | S | Low | P3, P6 |
 | F10 | Lawn-equivalent counterfactual | S | Low | P6, P8 |
 | F11 | Value-vs-price framing | S | Low | P6 |
 | F12 | Inline "why this matters" provenance/citations | S | Low | P7, P6 |
 | F13 | Reference-ecosystem fidelity score | M | Low | P2, P6 |
 | F14 | Establishment-likelihood band | M | Med | P9 |
 | F15 | Pollinator-pathway (bloom-in-space) overlay | M | Med | P5, P3 |
-| F16 | Seasonal view toggle (spring/summer/fall/winter) | M | Med | P4, P5 |
+| ✅ F16 | Seasonal view toggle (spring/summer/fall/winter) | M | Med | P4, P5 |
 | F17 | Phased conversion plan (year-by-year) | M | Low | P8 |
 | F18 | Site-condition remediation advisor | M | Med | P8, P4 |
 | F19 | "Why here?" composition reasoning toggle | M | Low | P2, P5 |
 | F20 | Maintenance-over-time curve | S | Low | P4 |
 | F21 | Ecosystem-services readout | M | Med | P6, P9 |
-| F22 | Naturalistic drift placement | M | Med | P2 |
+| ✅ F22 | Naturalistic drift placement | M | Med | P2 |
 | F23 | Declarative, inspectable placement rules | M | Low | P1 |
 | F24 | Site photo overlay + markup | M | Med | P11 |
 | F25 | Mycorrhizal / symbiosis model | L | Med | P3 |
@@ -70,7 +91,7 @@ amended alongside them. Feature IDs (F1, F2, …) are stable handles — say "le
 | F32 | Field-mode checklist (printable) | S | Low | P11 |
 | F33 | Seasonal observation journal | M | Low | P11, P4 |
 | F34 | Shearing-layers data audit | S | Low | P4 |
-| F35 | Self-seeding / spread simulation | M | Med | P1, P4 |
+| ✅ F35 | Self-seeding / spread simulation | M | Med | P1, P4 |
 | F36 | Emergent community spacing | L | Med | P1, P4 |
 | F37 | "What the bee sees" mode | M | Low | P5 |
 | F38 | Mycoremediation / degraded-site notes | S | Low | P8 |
@@ -90,16 +111,17 @@ Surface it first in the *expanded* detail row of `src/plant_list_view.py` (no de
 paint changes → avoids the `plant_panel.py` guard ceiling), then in the collapsed row once
 proven. **First slice:** expanded-row text only.
 
-### F2 · Year 1 / 5 / 15 / 30 snapshot view — *Impact High · Effort M · Risk Low (P4)*
-The philosophy's literal "most important feature": see the trajectory, not the install-day
-moment. **How:** the engine already renders any year — `scene_contract.build_scene(project,
+### ✅ F2 · Year 1 / 5 / 15 / 30 snapshot view — *Shipped · was Impact High / Effort M / Risk Low (P4)*
+**Shipped** in `src/snapshot_timeline.py` + `src/snapshot_window.py`. The philosophy's literal
+"most important feature": see the trajectory, not the install-day moment. **How:** the engine already renders any year — `scene_contract.build_scene(project,
 year=…)` → `scene3d.plant_3d_state(plant, lat, lng, year)` scales size via
 `growth_scale_factor` and fades via `succession.presence_factor`. Build a four-up
 comparison (2D thumbnails or 3D captures) calling `build_scene` at years {1,5,15,30}
 clamped to `succession.timeline_max_years`. Reuse the 3D window's offscreen capture path
 (the same one the "yard photo" bake uses). **First slice:** a 2×2 of 2D canopy renders.
 
-### F3 · Food-web completeness score — *Impact High · Effort M · Risk Low (P3, P6)*
+### ✅ F3 · Food-web completeness score — *Shipped · was Impact High / Effort M / Risk Low (P3, P6)*
+**Shipped** as the `food_web` line in `src/habitat_score.py`, fed into `src/design_critic.py`.
 Score whether the design closes the Tallamy chain (host plants → caterpillars → bird
 nestlings), not just whether species are present. **How:** add an 8th, *informational*
 line to `habitat_score.compute_habitat_score` that cross-references host-plant counts
@@ -108,9 +130,10 @@ and bird-food producers — reporting "supports caterpillars **and** the birds t
 them" vs. a broken link. Keep it un-summed (like the existing fauna counts) so historical
 scores don't drift. Feed a gap line into `design_critic.critique_lines`.
 
-### F4 · Pattern-language framing for communities — *Impact High · Effort M (full L) · Risk Med (P1, P7)*
-Present plant communities as Alexander patterns (problem → context → forces → solution →
-related) — the app's namesake made literal. **How (presentation-first, no schema bump):**
+### ✅ F4 · Pattern-language framing for communities — *Shipped (presentation-first) · was Impact High / Effort M / Risk Med (P1, P7)*
+**Shipped** in `src/pattern_language.py` + `src/polyculture_panel.py` (the schema-bump "full
+version" remains optional). Present plant communities as Alexander patterns (problem → context
+→ forces → solution → related) — the app's namesake made literal. **How (presentation-first, no schema bump):**
 in `src/polyculture_panel.py`, render each community under the five headings, deriving
 *problem/solution* from the existing `description`, *context* from members' `ab_ecoregion`
 + sun/moisture envelope, *forces* from member `functions` and the layer mix, and *related
@@ -157,9 +180,9 @@ Soften deterministic phrasing toward honest ranges ("tends to establish well her
 `design_goals.caveats_for_goals` (both pure, no LLM) and reword toward probabilistic
 framing; nudge the `llm_design` system prompt the same way. No new computation.
 
-### F9 · Specialist-host spotlight — *Impact Med · Effort S · Risk Low (P3, P6)* — quick win
-Flag the conservation wins — designs that feed *specialist* species (monarch↔milkweed),
-not just generalists. **How:** `fauna.fauna_for_plant` already returns `specificity`;
+### ✅ F9 · Specialist-host spotlight — *Shipped · was Impact Med / Effort S / Risk Low (P3, P6)*
+**Shipped** via `fauna` specificity surfaced in `src/habitat_score.py`. Flag the conservation
+wins — designs that feed *specialist* species (monarch↔milkweed), not just generalists. **How:** `fauna.fauna_for_plant` already returns `specificity`;
 surface a "supports N specialist species" badge/line in the habitat breakdown and on the
 F1 plant labels. Pure read.
 
@@ -196,8 +219,10 @@ calendar already finds them in time). **How:** `habitat_score.parse_month_range`
 yields per-plant bloom months; emit per-month flowering locations to a scrubbable map layer
 in `html/map/06-overlays.js`. Pairs naturally with F5.
 
-### F16 · Seasonal view toggle — *Impact Med · Effort M · Risk Med (P4, P5)*
-Switch the scene between spring/summer/fall/winter (deciduous vs. evergreen reads).
+### ✅ F16 · Seasonal view toggle — *Shipped · was Impact Med / Effort M / Risk Med (P4, P5)*
+**Shipped** — season selector wired through `src/analysis_panel.py` → `src/map_js.py` →
+`src/scene_contract.py`. Switch the scene between spring/summer/fall/winter (deciduous vs.
+evergreen reads).
 **How:** `build_scene` already takes a `when` datetime (the 3D window has month/hour
 sliders driving `_when()`); extend the scene/material logic to vary leaf-on/leaf-off and
 bloom colour from `deciduous_evergreen` + `bloom_period`, and expose a season switch.
@@ -231,10 +256,10 @@ score. **How:** add range-based estimators (keyed off canopy area, leaf area, sp
 in the spirit of `sourcing.py`'s ranged costing; surface in the Analysis panel with
 explicit uncertainty.
 
-### F22 · Naturalistic drift placement — *Impact Med · Effort M · Risk Med (P2)*
-Rainer/West "designed plant communities": matrix + scatter + drift, not rows. **How:** add
-drift/matrix layout options to the `area_fill` / `placement_score` placement path alongside
-the existing patterns.
+### ✅ F22 · Naturalistic drift placement — *Shipped · was Impact Med / Effort M / Risk Med (P2)*
+**Shipped** — drift/matrix/scatter generators in `src/layout.py` with layer/spread-aware
+spacing in `src/planting_spacing.py` (this also delivered F35). Rainer/West "designed plant
+communities": matrix + scatter + drift, not rows.
 
 ### F23 · Declarative, inspectable placement rules — *Impact Med · Effort M · Risk Low (P1)*
 Surface the implicit generative rules (density/m², native-first, anti-monoculture, layer
@@ -282,9 +307,9 @@ connectivity to the design's planted areas; a new analysis layer.
   knowledge over years.
 - **F34 · Shearing-layers data audit** — *S · Low (P4)*: confirm every layer (tree/shrub/
   perennial/annual/soil) carries the rate-of-change fields Brand's framing needs.
-- **F35 · Self-seeding / spread simulation** — *M · Med (P1, P4)*: use the `spread_habit`
-  field to let spreaders fill gaps over the timeline (invert the `well_behaved_only` filter
-  to find them).
+- **✅ F35 · Self-seeding / spread simulation** — *Shipped (P1, P4)*: `src/planting_spacing.py`
+  reads the `spread_habit` field so self-spreaders are spaced wider and fill gaps over the
+  timeline (delivered alongside F22).
 - **F36 · Emergent community spacing** — *L · Med — schema (P1, P4)*: generate
   `polyculture_members` offsets from competition/canopy rules instead of fixed offsets.
 - **F37 · "What the bee sees" mode** — *M · Low (P5)*: recolour the map by floral-resource
@@ -298,13 +323,16 @@ connectivity to the design's planted areas; a new analysis layer.
 
 ## How to choose
 
-A few natural shortlists, depending on appetite:
-- **Fastest visible wins:** F8, F9, F10, F11, F12, F20 (all S, Low risk) — a "legibility +
+A few natural shortlists, depending on appetite (✅ F2, F3, F4, F9, F16, F22/F35 have shipped):
+- **Fastest visible wins:** F8, F10, F11, F12, F20 (all S, Low risk) — a "legibility +
   honesty" sprint that advances P6/P9 with little risk.
-- **Highest philosophical payoff:** F5 (relationship graph) and F2 (time snapshots) — the
-  two features that most make invisible structure visible; F3 deepens the headline metric.
-- **The namesake move:** F4 (pattern-language framing).
-- **The big bet, sequenced:** prove edges with F9 → F5 → F25/F26, then unify in F7.
+- **Highest philosophical payoff:** F5 (relationship graph) is now the single biggest open
+  lever — with F2 (time snapshots) and F3 (food-web) already shipped, drawing the design as a
+  living network is the most invisible-structure-made-visible move left.
+- **The namesake move (next layer):** F4 shipped the pattern-language *framing*; F23
+  (declarative, inspectable placement rules) is the follow-on that makes the generative rules
+  themselves first-class.
+- **The big bet, sequenced:** edges are proven (F9 shipped) → F5 → F25/F26, then unify in F7.
 
 ---
 
@@ -319,6 +347,8 @@ A few natural shortlists, depending on appetite:
 - **Uncertainty (P9):** ship ranges and confidence, never false precision.
 - **Discipline:** respect the architecture guard — keep map-JS thin and domain logic
   Qt-free/Python-side; mind `plant_panel.py`'s line ceiling for any browser change.
-- **Indigenous knowledge:** anything touching Indigenous land knowledge is gated by the
-  consent principles in [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md) — directional only
-  until consultation and FPIC.
+- **Indigenous knowledge (P12):** anything touching Indigenous land knowledge is gated by
+  **core principle #12** in [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md) (*Indigenous
+  knowledge is honoured through relationship, not extraction*) — directional only until
+  consultation and free, prior, and informed consent. This is a hard guardrail, not a backlog
+  item: there is no feature to "build" here without consent.

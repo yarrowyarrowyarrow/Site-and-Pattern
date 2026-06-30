@@ -4,8 +4,9 @@ The complete bibliography behind [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md).
 here is condensed: the ranked Top 10 (also summarized in the philosophy doc) is repeated
 for convenience, followed by the full Extended Source Material grouped by domain. These
 sources are the intellectual provenance of the application; they are *directional* — see
-the Indigenous Knowledge addendum in the philosophy document for the consent principles
-governing how any of this is operationalized.
+core principle #12 (*Indigenous knowledge is honoured through relationship, not extraction*)
+in the philosophy document for the consent principles governing how any of this is
+operationalized.
 
 ---
 
