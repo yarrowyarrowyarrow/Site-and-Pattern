@@ -128,6 +128,7 @@ from src.climate import (
     compute_gdd,
     frost_window,
     get_climate_summary,
+    get_winter_summary,
     doy_to_date_label,
 )
 
@@ -251,6 +252,32 @@ def test_get_climate_summary_handles_fetch_failure():
         53.5, -113.5, use_cache=False, _fetcher=lambda lat, lng: None
     )
     assert summary is None
+
+
+def _synth_winter_rows():
+    """A cold, snowy Nov–Mar plus a warm summer (so the snow model builds a
+    real pack only in winter)."""
+    from datetime import date, timedelta
+    rows = []
+    d, end = date(2021, 11, 1), date(2022, 3, 31)
+    while d <= end:
+        rows.append({"date": d.isoformat(), "tmin": -18.0, "tmax": -8.0,
+                     "precip": 3.0})
+        d += timedelta(days=1)
+    return rows
+
+
+def test_get_winter_summary_with_mock_fetcher():
+    summary = get_winter_summary(
+        53.5, -113.5, _fetcher=lambda lat, lng: _synth_winter_rows())
+    assert summary is not None
+    assert summary["snow_cover_days"] > 100
+    assert summary["reliability"] == "reliable"
+    assert "modelled" in summary["source"]
+
+
+def test_get_winter_summary_handles_fetch_failure():
+    assert get_winter_summary(53.5, -113.5, _fetcher=lambda lat, lng: None) is None
 
 
 def test_doy_to_date_label():

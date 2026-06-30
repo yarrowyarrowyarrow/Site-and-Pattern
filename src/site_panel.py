@@ -63,6 +63,7 @@ class _SiteFetchWorker(QObject):
     elevation     = pyqtSignal(object)
     hardiness     = pyqtSignal(object)
     climate       = pyqtSignal(object)        # GDD / frost-window summary
+    winter        = pyqtSignal(object)        # snow-cover + survival metrics
     ecoregion     = pyqtSignal(object)        # auto-detected AB ecoregion
     fast_ready    = pyqtSignal()              # fast batch done — climate may still be loading
     finished      = pyqtSignal(dict)          # combined result dict
@@ -89,7 +90,7 @@ class _SiteFetchWorker(QObject):
         from concurrent.futures import ThreadPoolExecutor
         from src.property_data import (
             fetch_rainfall, fetch_soil, fetch_elevation, fetch_hardiness,
-            fetch_climate, fetch_ecoregion,
+            fetch_climate, fetch_winter, fetch_ecoregion,
         )
         out = {"lat": self.lat, "lng": self.lng}
 
@@ -140,9 +141,19 @@ class _SiteFetchWorker(QObject):
                 value = None
             out["climate"] = value
             self.climate.emit(value)
-            # Clear the progress line once the climate fetch is done —
-            # otherwise the "Computing growing-degree days…" message
-            # sits there forever even after the GDD row populates.
+
+        if not self._cancelled:
+            # Winter snow-cover + survival metrics (insulation half of the snow
+            # story) — a second archive call, run after climate; modelled in
+            # src/snow.py.
+            self.progress.emit("Modelling winter snow cover…")
+            try:
+                wvalue = fetch_winter(self.lat, self.lng)
+            except Exception:
+                wvalue = None
+            out["winter"] = wvalue
+            self.winter.emit(wvalue)
+            # Clear the progress line once the slow tail fetches are done.
             self.progress.emit("Site data ready.")
 
         self.finished.emit(out)
@@ -459,13 +470,35 @@ class SitePanel(QWidget):
         self._lbl_rain_snow = QLabel("—")
         self._lbl_rain_snow.setStyleSheet("color: #90caf9; font-size: 11px;")
         self._lbl_rain_snow.setWordWrap(True)
+        self._lbl_rain_note = QLabel("")
+        self._lbl_rain_note.setStyleSheet("color: #78909c; font-size: 10px;")
+        self._lbl_rain_note.setWordWrap(True)
+        self._lbl_rain_note.setVisible(False)
         self._rain_form = rl
         rl.addRow("Annual mean:", self._lbl_rain_annual)
         rl.addRow("Monthly mm:",  self._lbl_rain_monthly)
         rl.addRow("Growing rain:", self._lbl_rain_growing)
         rl.addRow("Snow → melt:",  self._lbl_rain_snow)
+        rl.addRow("",             self._lbl_rain_note)
         rl.addRow("Source:",      self._lbl_rain_src)
         layout.addWidget(self._rain_box)
+
+        # ── Winter cover & survival (snow as insulation) ─────────────
+        self._winter_box = QGroupBox("Winter cover & survival")
+        self._winter_box.setStyleSheet(_GROUP_STYLE)
+        wl = QFormLayout(self._winter_box)
+        self._lbl_winter_cover = QLabel("—")
+        self._lbl_winter_cover.setWordWrap(True)
+        self._lbl_winter_thaw = QLabel("—")
+        self._lbl_winter_thaw.setWordWrap(True)
+        self._lbl_winter_notes = QLabel("")
+        self._lbl_winter_notes.setWordWrap(True)
+        self._lbl_winter_notes.setStyleSheet("color: #b0bec5; font-size: 11px;")
+        wl.addRow("Snow cover:", self._lbl_winter_cover)
+        wl.addRow("Thaw stress:", self._lbl_winter_thaw)
+        wl.addRow("", self._lbl_winter_notes)
+        self._winter_box.setVisible(False)   # shown once metrics arrive
+        layout.addWidget(self._winter_box)
 
         # ── Soil (moved up under pin/zone) ──────────────────────────
         self._soil_box = QGroupBox("Soil (top 0–5 cm)")
@@ -1011,6 +1044,9 @@ class SitePanel(QWidget):
         self._lbl_rain_annual.setText("—")
         self._lbl_rain_monthly.setText("—")
         self._lbl_rain_src.setText("")
+        self._show_precip_timing(None)
+        if hasattr(self, "_winter_box"):
+            self._winter_box.setVisible(False)
         self._lbl_soil_ph.setText("—")
         self._lbl_soil_texture.setText("—")
         self._lbl_soil_mix.setText("—")
@@ -1034,6 +1070,7 @@ class SitePanel(QWidget):
         worker.rainfall.connect(self._on_rainfall)
         worker.soil.connect(self._on_soil)
         worker.climate.connect(self._on_climate)
+        worker.winter.connect(self._on_winter)
         worker.ecoregion.connect(self._on_ecoregion)
         worker.fast_ready.connect(self._on_fast_ready)
         worker.finished.connect(self._on_finished)
@@ -1071,8 +1108,8 @@ class SitePanel(QWidget):
             except Exception:
                 pass
             for sig_name in ("progress", "hardiness", "elevation",
-                             "rainfall", "soil", "climate", "ecoregion",
-                             "fast_ready", "finished"):
+                             "rainfall", "soil", "climate", "winter",
+                             "ecoregion", "fast_ready", "finished"):
                 try:
                     getattr(worker, sig_name).disconnect()
                 except (TypeError, RuntimeError):
@@ -1147,6 +1184,34 @@ class SitePanel(QWidget):
         else:
             self._lbl_frost.setText("—")
 
+    def _on_winter(self, data):
+        """Render snow-cover + survival metrics (the insulation half of snow).
+        ``data`` is ``src.climate.get_winter_summary``'s dict or ``None``."""
+        box = getattr(self, "_winter_box", None)
+        if box is None:
+            return
+        if not data:
+            box.setVisible(False)
+            return
+        from src import snow
+        rel = data.get("reliability", "—")
+        cover = data.get("snow_cover_days")
+        rel_color = {"reliable": "#a5d6a7", "variable": "#ffd54f",
+                     "unreliable": "#ffab91"}.get(rel, "#c8e6c9")
+        cover_txt = (f"{cover:.0f} insulating days/yr" if cover is not None else "—")
+        self._lbl_winter_cover.setText(
+            f"<span style='color:{rel_color};'>{rel}</span> — {cover_txt}")
+        self._lbl_winter_cover.setTextFormat(Qt.TextFormat.RichText)
+        ft = data.get("freeze_thaw_cycles", 0)
+        thaw = data.get("midwinter_thaw_days", 0)
+        ros = data.get("rain_on_snow_days", 0)
+        self._lbl_winter_thaw.setText(
+            f"{thaw:.0f} midwinter thaw days · {ft:.0f} freeze–thaw · "
+            f"{ros:.0f} rain-on-snow / yr")
+        self._lbl_winter_notes.setText("  ".join(
+            "• " + n for n in snow.survival_notes(data)))
+        box.setVisible(True)
+
     def _on_elevation(self, data):
         if not data:
             self._lbl_elev.setText("Unavailable")
@@ -1201,16 +1266,27 @@ class SitePanel(QWidget):
         try:
             form.setRowVisible(self._lbl_rain_growing, have)
             form.setRowVisible(self._lbl_rain_snow, have)
+            form.setRowVisible(self._lbl_rain_note, have)
         except Exception:
             pass
         if not have:
+            self._lbl_rain_note.setVisible(False)
             return
         estimated = "estimated" in (data.get("snow_split_source") or "")
         approx = "≈" if estimated else ""
+        # Rooting-depth framing: in-season rain feeds shallow/new plantings now;
+        # the snowmelt pulse is the deep-profile recharge woody plants draw on
+        # through summer (P9/P11).
         self._lbl_rain_growing.setText(
-            f"{approx}{grow:.0f} mm  (Apr–Oct rain — available now)")
+            f"{approx}{grow:.0f} mm  (Apr–Oct rain — feeds herbaceous & new "
+            f"plantings now)")
         self._lbl_rain_snow.setText(
-            f"{approx}{snow:.0f} mm water  (delayed spring-melt pulse)")
+            f"{approx}{snow:.0f} mm water  (spring-melt pulse — deep recharge "
+            f"for trees & shrubs)")
+        self._lbl_rain_note.setText(
+            "Amounts are liquid-water equivalent; melt can run off frozen or "
+            "sloped ground, so effective recharge is often less.")
+        self._lbl_rain_note.setVisible(True)
 
     def _on_soil(self, data):
         if not data:

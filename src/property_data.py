@@ -781,6 +781,14 @@ def fetch_climate(lat: float, lng: float) -> Optional[dict]:
     return get_climate_summary(lat, lng)
 
 
+def fetch_winter(lat: float, lng: float) -> Optional[dict]:
+    """Thin shim around ``src.climate.get_winter_summary`` (snow-cover +
+    survival metrics — the insulation half of the snow story) for the site
+    panel's worker. Returns the winter-metrics dict or ``None``."""
+    from src.climate import get_winter_summary
+    return get_winter_summary(lat, lng)
+
+
 # ── Ecoregion (V1.36) ───────────────────────────────────────────────────────
 
 def fetch_ecoregion(lat: float, lng: float) -> Optional[dict]:
@@ -806,7 +814,7 @@ def fetch_ecoregion(lat: float, lng: float) -> Optional[dict]:
 # ── Aggregator ──────────────────────────────────────────────────────────────
 
 def fetch_all(lat: float, lng: float) -> dict:
-    """Fetch all six datasets sequentially. Caller may want a thread."""
+    """Fetch all datasets sequentially. Caller may want a thread."""
     return {
         "lat":       lat,
         "lng":       lng,
@@ -815,5 +823,6 @@ def fetch_all(lat: float, lng: float) -> dict:
         "elevation": fetch_elevation(lat, lng),
         "hardiness": fetch_hardiness(lat, lng),
         "climate":   fetch_climate(lat, lng),
+        "winter":    fetch_winter(lat, lng),
         "ecoregion": fetch_ecoregion(lat, lng),
     }

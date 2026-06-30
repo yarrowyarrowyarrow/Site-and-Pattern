@@ -1691,6 +1691,7 @@ class MainWindow(QMainWindow):
                 ("elevation", self.site_panel._on_elevation),
                 ("rainfall",  self.site_panel._on_rainfall),
                 ("soil",      self.site_panel._on_soil),
+                ("winter",    self.site_panel._on_winter),
             ):
                 if sc.get(key):
                     slot(sc[key])

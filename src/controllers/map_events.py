@@ -1489,7 +1489,10 @@ class MapEventRouter:
         """SitePanel finished fetching; persist results into project state."""
         from src.project import _utc_now_iso
         sc = self._main._project["properties"].setdefault("site_config", {})
-        for key in ("rainfall", "soil", "elevation", "hardiness"):
+        # "winter" (snow-cover + survival metrics) is cached here because — unlike
+        # the DB-cached climate summary — it has no other persistence; this keeps
+        # it with the saved project so it survives reload without a refetch.
+        for key in ("rainfall", "soil", "elevation", "hardiness", "winter"):
             if result.get(key) is not None:
                 sc[key] = result[key]
         # Make soil actionable: pH/texture → flat site_config + plant matching.
