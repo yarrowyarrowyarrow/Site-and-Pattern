@@ -741,12 +741,23 @@ class MainWindow(QMainWindow):
             lambda d: wind_shadow_flow.on_angle_live(self, d))
         self.analysis_panel.wind_shadow_commit.connect(
             self._map_events._on_wind_angle_commit)
-        # Extra slot on the existing plant-move signals → rebuild the shelter.
+        # Snow-catch overlay (Step 3) — winter drifts in the lee of windbreaks;
+        # straight to the flow module (MainWindow is at its method ceiling).
+        from src import snow_microsite_flow
+        self.analysis_panel.snow_catch_toggled.connect(
+            lambda on: snow_microsite_flow.enable(self, on))
+        # Extra slot on the existing plant-move signals → rebuild the shelter +
+        # the snow-catch zones (both depend on where the sheltering plants are).
         b.plant_moved.connect(lambda *a: wind_shadow_flow.on_plants_changed(self))
         b.plant_group_moved.connect(
             lambda *a: wind_shadow_flow.on_plants_changed(self))
         b.selection_moved.connect(
             lambda *a: wind_shadow_flow.on_plants_changed(self))
+        b.plant_moved.connect(lambda *a: snow_microsite_flow.on_plants_changed(self))
+        b.plant_group_moved.connect(
+            lambda *a: snow_microsite_flow.on_plants_changed(self))
+        b.selection_moved.connect(
+            lambda *a: snow_microsite_flow.on_plants_changed(self))
         self.analysis_panel.season_changed.connect(self._on_season_changed)
 
         # Map → polyculture removal

@@ -511,6 +511,20 @@ def set_wind_shadow_visible(visible: bool) -> str:
     return f"setWindShadowVisible({_jsbool(visible)});"
 
 
+def draw_snow_catch(payload: dict) -> str:
+    """Draw snow-catch microsites (winter drifts in the lee of windbreaks, Step
+    3). ``payload`` = ``{bands:[{catch,rings}], wind_from_deg}``."""
+    return f"drawSnowCatch({_jsobj(payload or {})});"
+
+
+def set_snow_catch_visible(visible: bool) -> str:
+    return f"setSnowCatchVisible({_jsbool(visible)});"
+
+
+def clear_snow_catch() -> str:
+    return "clearSnowCatch();"
+
+
 def clear_wind_shadow() -> str:
     return "clearWindShadow();"
 

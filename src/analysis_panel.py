@@ -46,6 +46,8 @@ class AnalysisPanel(QWidget):
     wind_shadow_toggled = pyqtSignal(bool)
     wind_angle_changed_live = pyqtSignal(int)   # dial scrub (JS-only redraw)
     wind_shadow_commit = pyqtSignal(int)        # dial released (Python merge)
+    # Snow-catch microsites (Step 3): winter drifts in the lee of windbreaks.
+    snow_catch_toggled = pyqtSignal(bool)
 
     # Season view
     season_changed = pyqtSignal(str)        # "Spring" | "Summer" | "Fall" | "Winter"
@@ -514,6 +516,16 @@ class AnalysisPanel(QWidget):
             "Turn the dial or drag a plant to see it update live.")
         self._wind_shadow_chk.toggled.connect(self.wind_shadow_toggled.emit)
         layout.addWidget(self._wind_shadow_chk)
+
+        # Snow-catch microsites (Step 3): winter snow drifts into the lee of
+        # windbreaks — deeper-insulated, moister, slightly warmer planting spots.
+        self._snow_catch_chk = QCheckBox("Snow catch (winter drifts in lee)")
+        self._snow_catch_chk.setToolTip(
+            "Show where winter snow drifts into the shelter of trees, shrubs and "
+            "structures — insulated, moister microsites. Uses the prevailing "
+            "winter wind from the fetched wind rose.")
+        self._snow_catch_chk.toggled.connect(self.snow_catch_toggled.emit)
+        layout.addWidget(self._snow_catch_chk)
 
         dial_row = QHBoxLayout()
         self._wind_dial = QDial()

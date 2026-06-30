@@ -1258,6 +1258,41 @@
       if (windGhostLayer) windGhostLayer.clearLayers();
     }
 
+    // ── Snow-catch microsites (Step 3) — winter snow drifts into the lee of
+    // windbreaks (same geometry as wind shelter, snow framing). Cool palette,
+    // deeper catch = more saturated. Its own layer so it composes with the rest.
+    var snowCatchLayer = null;
+    var _SNOW_STYLE = {
+      deep:     { color: '#1565c0', weight: 1, opacity: 0.6, fill: true,
+                  fillColor: '#42a5f5', fillOpacity: 0.32 },
+      moderate: { color: '#1976d2', weight: 1, opacity: 0.5, fill: true,
+                  fillColor: '#90caf9', fillOpacity: 0.22 },
+      light:    { color: '#90caf9', weight: 1, opacity: 0.4, fill: true,
+                  fillColor: '#bbdefb', fillOpacity: 0.14 }
+    };
+
+    function drawSnowCatch(payload) {
+      if (!snowCatchLayer) snowCatchLayer = L.layerGroup();
+      snowCatchLayer.clearLayers();
+      (payload && payload.bands || []).forEach(function (band) {
+        (band.rings || []).forEach(function (polyRings) {
+          L.polygon(polyRings, Object.assign({ interactive: false },
+                    _SNOW_STYLE[band.catch] || _SNOW_STYLE.moderate))
+            .addTo(snowCatchLayer);
+        });
+      });
+      if (!map.hasLayer(snowCatchLayer)) snowCatchLayer.addTo(map);
+    }
+
+    function setSnowCatchVisible(v) {
+      if (!snowCatchLayer) return;
+      if (v) { snowCatchLayer.addTo(map); } else { map.removeLayer(snowCatchLayer); }
+    }
+
+    function clearSnowCatch() {
+      if (snowCatchLayer) { snowCatchLayer.clearLayers(); map.removeLayer(snowCatchLayer); }
+    }
+
     // Called from the plant drag handler (03-plants.js) so dragged plants'
     // shelter follows live. Match casters→markers ONCE at drag start (positions
     // drift each frame), then update by markerId per frame.

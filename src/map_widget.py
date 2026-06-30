@@ -816,6 +816,17 @@ class MapWidget(QWebEngineView):
     def clear_wind_shadow(self):
         self.run_js(map_js.clear_wind_shadow())
 
+    # ── Snow-catch microsites (Step 3) ───────────────────────────────────────
+
+    def draw_snow_catch(self, payload: dict):
+        self.run_js(map_js.draw_snow_catch(payload))
+
+    def set_snow_catch_visible(self, visible: bool):
+        self.run_js(map_js.set_snow_catch_visible(visible))
+
+    def clear_snow_catch(self):
+        self.run_js(map_js.clear_snow_catch())
+
     def draw_shade_zones(self, cells: list, d_lat: float, d_lng: float,
                          opacity: float = 0.45):
         self.run_js(map_js.draw_shade_zones(cells, d_lat, d_lng, opacity))

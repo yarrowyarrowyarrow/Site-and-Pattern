@@ -90,10 +90,13 @@ Yong's Umwelt research, Deutscher's linguistic relativity, Berger's visual cultu
 > **Where this lives in the code:** the site-analysis overlays in `src/analysis_panel.py`
 > and `html/map/06-overlays.js` (sun path, wind shelter zones, shade), plus sector analysis,
 > the seasonal view toggle (roadmap F16, shipped) that lets the eye read leaf-on vs.
-> leaf-off and bloom, and the **site photo underlay** (`src/site_photo.py`, roadmap F24) that
-> puts the user's real yard under the design. **State: partial** — site forces, seasonality and
-> now the real site are made visible, but ecological *relationships* (pollinator pathways,
-> mycorrhizal networks, succession trajectories) are still not drawn (roadmap F5, F15).
+> leaf-off and bloom, the **site photo underlay** (`src/site_photo.py`, roadmap F24) that
+> puts the user's real yard under the design, and the **snow-catch microsite overlay**
+> (`src/snow_microsite.py`) that draws where winter snow drifts into the lee of windbreaks —
+> an invisible microclimate made visible by reusing the wind-shelter geometry. **State:
+> partial** — site forces, seasonality, the real site and now winter snow microsites are made
+> visible, but ecological *relationships* (pollinator pathways, mycorrhizal networks,
+> succession trajectories) are still not drawn (roadmap F5, F15).
 
 ### 6. Conventional value metrics miss ecological value
 
@@ -166,10 +169,13 @@ Knowledge lives in hands, soil, wind, and direct observation — not only in abs
 > the yard* with what to buy, where to space it, and when to plant; the **site-walk field notes**
 > (`src/field_notes.py`, roadmap F6) that capture what the user notices on the ground (where water
 > pools, snow drifts, soil compacts); and the **site photo underlay** (`src/site_photo.py`, roadmap
-> F24) that brings a real yard/drone photo onto the map. **State: strong (was a gap)** — the app now
-> *fetches* site data, *hands the user a field plan*, *and captures their own on-site observation*.
-> The remaining reach: pinning individual observations to map points and feeding them back into
-> generation as soft constraints (the "pinned" slice of F6).
+> F24) that brings a real yard/drone photo onto the map; and **winter snow cover & survival
+> metrics** (`src/snow.py`) that model snow's insulation (cover-days, freeze–thaw, chinook thaw,
+> rain-on-snow) into honest, design-for-the-bad-year guidance. **State: strong (was a gap)** — the
+> app now *fetches* site data, *hands the user a field plan*, *captures their own on-site
+> observation*, and *reads the winter the plants will actually face*. The remaining reach: pinning
+> individual observations to map points and feeding them back into generation as soft constraints
+> (the "pinned" slice of F6).
 
 ### 12. Indigenous knowledge is honoured through relationship, not extraction
 
