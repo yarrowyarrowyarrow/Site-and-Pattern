@@ -101,7 +101,11 @@ Graeber, Saito, Raworth, Schumacher, and Tsing demonstrate that market price fai
 > **Where this lives in the code:** `src/habitat_score.py` and the Habitat Value tab in
 > `src/analysis_panel.py` (a 0–100 score from native ratio, keystone species, host plants,
 > bird food, vegetation layers, structures, and bloom continuity — explicitly grounded in
-> Tallamy); honest cost framing in `src/sourcing.py`. **State: strong.**
+> Tallamy); honest cost framing in `src/sourcing.py`; the **lawn-equivalent counterfactual**
+> (`src/lawn_zones.py:lawn_counterfactual`, roadmap F10) that scores this design against the ≈0
+> an equivalent lawn provides; and **"why it matters" ecological-role labels**
+> (`src/ecological_role.py`, roadmap F1) that make each plant's value legible in the browser
+> itself, not just in the Habitat tab. **State: strong.**
 
 ### 7. Generalist knowledge produces the most original design insights
 
@@ -118,9 +122,12 @@ Kintsugi philosophy, Cradle to Cradle design, regenerative landscaping, and myco
 
 > **Where this lives in the code:** the lawn-to-habitat conversion workflow
 > (`src/lawn_zones.py` + drawn conversion zones), the evaluate→critique→revise→repair loop in
-> `src/design_critic.py`, and now the **phased Planting Plan** (`src/planting_plan.py`, roadmap
-> F40) that sequences the conversion into the ground — structure, then matrix, then fill.
-> **State: strong.**
+> `src/design_critic.py`, the **phased Planting Plan** (`src/planting_plan.py`, roadmap F40) that
+> sequences the conversion into the ground — structure, then matrix, then fill — and now the
+> **year-by-year conversion schedule** (`src/conversion_plan.py`, roadmap F17) that crosses the
+> drawn zones with the restoration-stage timeline into a remove-this / plant-that, when task list,
+> plus the **lawn-equivalent counterfactual** (roadmap F10) that frames the conversion as repair of
+> a near-zero-value lawn. **State: strong.**
 
 ### 9. Uncertainty is a feature, not a bug
 
@@ -139,9 +146,11 @@ This is the synthesis of all preceding themes. Every other landscape application
 > **Where this lives in the code:** the synthesis of #3 — `src/db/fauna.py`,
 > `src/db/polycultures.py`, the companion tables, and the `plant_uses` junction (the
 > shipped schema is now 41 fields); the food-web score (F3) and specialist-host spotlight
-> (F9) have begun surfacing edges as scored, legible relationships. **State: partial** — the
-> edges are modeled in data and increasingly scored, but not yet surfaced as a first-class
-> relationship network in the UI (roadmap F5, F7).
+> (F9) have begun surfacing edges as scored, legible relationships, and the **ecological-role
+> labels** (`src/ecological_role.py`, roadmap F1) now read those plant↔fauna edges back to the
+> user per plant ("hosts 7 caterpillars", "specialist host"). **State: partial** — the edges are
+> modeled in data, increasingly scored, and now summarised per node, but not yet drawn as a
+> first-class relationship network in the UI (roadmap F5, F7).
 
 ### 11. The body and the site know things the screen does not
 

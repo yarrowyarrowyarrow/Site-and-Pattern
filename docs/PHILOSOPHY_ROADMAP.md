@@ -63,20 +63,28 @@ These started life as entries below and have since landed — the State markers 
 
 | ID | Feature | Lives in | Advances |
 |----|---------|----------|----------|
+| F1 | "Why it matters" ecological-role labels in the plant browser | `src/ecological_role.py`, surfaced in `src/plant_list_view.py` | P6, P10 |
 | F2 | Year 1 / 5 / 15 / 30 snapshot view | `src/snapshot_timeline.py`, `src/snapshot_window.py` | P4 |
 | F3 | Food-web completeness score | `src/habitat_score.py` (`food_web`), `src/design_critic.py` | P3, P6 |
 | F4 | Pattern-language framing for communities | `src/pattern_language.py`, `src/polyculture_panel.py` | P1, P7 |
 | F9 | Specialist-host spotlight | `src/habitat_score.py` + `src/db/fauna.py` specificity | P3, P6 |
+| F10 | Lawn-equivalent counterfactual | `src/lawn_zones.py` (`lawn_counterfactual`), surfaced in `src/analysis_panel.py` | P6, P8 |
 | F16 | Seasonal view toggle | `src/analysis_panel.py`, `src/map_js.py`, `src/scene_contract.py` | P4, P5 |
+| F17 | Phased conversion plan (year-by-year) | `src/conversion_plan.py`, surfaced in `src/planning_panel.py` + `src/app.py` + `src/pdf_export.py` | P8, P4 |
 | F22 / F35 | Naturalistic drift placement + spread-aware spacing | `src/layout.py`, `src/planting_spacing.py` | P1, P2, P4 |
 | F40 | Planting Plan — buy-it / plant-it sheet (quantities, form, spacing, planting window, phased schedule) | `src/planting_plan.py`, surfaced in `src/app.py` + `src/pdf_export.py` | P8, P4, P11, P6, P9 |
 
 Net effect on the principles: **P1 partial → strong** (pattern language is now explicit), and
 P3/P4/P5 are visibly stronger. **F40 is the first real ACT/OUTPUT win** — it turns a design into
 a nursery-ready, plant-it-this-way artifact, advancing the under-served P8 (repair/conversion as a
-*plan*) and P11 (a printable field plan that drives the user outside). The distinctive depth
-frontier that's still open is the **relationship graph overlay (F5)** and the **unified edges
-layer (F7)** — now deliberately *after* the adoption work (see "Defer" below).
+*plan*) and P11 (a printable field plan that drives the user outside). The latest batch deepens the
+*legibility* and *repair* spine: **F1** puts each plant's ecological role (keystone / hosts N
+caterpillars / specialist / bird food) where the user already looks (P6, P10); **F10** makes the
+Tallamy contrast explicit — this design vs. the ≈0 an equivalent lawn provides (P6, P8); and
+**F17** turns the drawn conversion zones into a year-by-year remove-this / plant-that schedule
+(P8, P4). The distinctive depth frontier that's still open is the **relationship graph overlay
+(F5)** and the **unified edges layer (F7)** — now deliberately *after* the adoption work (see
+"Defer" below).
 
 ---
 
@@ -85,7 +93,7 @@ layer (F7)** — now deliberately *after* the adoption work (see "Defer" below).
 ### High impact
 | ID | Feature | Effort | Risk | Principle |
 |----|---------|--------|------|-----------|
-| F1 | "Why it matters" labels in the plant browser | M | Low | P6, P10 |
+| ✅ F1 | "Why it matters" labels in the plant browser | M | Low | P6, P10 |
 | ✅ F2 | Year 1 / 5 / 15 / 30 snapshot view | M | Low | P4 |
 | ✅ F3 | Food-web completeness score | M | Low | P3, P6 |
 | ✅ F4 | Pattern-language framing for communities | M (full L) | Med | P1, P7 |
@@ -98,14 +106,14 @@ layer (F7)** — now deliberately *after* the adoption work (see "Defer" below).
 |----|---------|--------|------|-----------|
 | F8 | Uncertainty language pass | S | Low | P9 |
 | ✅ F9 | Specialist-host spotlight | S | Low | P3, P6 |
-| F10 | Lawn-equivalent counterfactual | S | Low | P6, P8 |
+| ✅ F10 | Lawn-equivalent counterfactual | S | Low | P6, P8 |
 | F11 | Value-vs-price framing | S | Low | P6 |
 | F12 | Inline "why this matters" provenance/citations | S | Low | P7, P6 |
 | F13 | Reference-ecosystem fidelity score | M | Low | P2, P6 |
 | F14 | Establishment-likelihood band | M | Med | P9 |
 | F15 | Pollinator-pathway (bloom-in-space) overlay | M | Med | P5, P3 |
 | ✅ F16 | Seasonal view toggle (spring/summer/fall/winter) | M | Med | P4, P5 |
-| F17 | Phased conversion plan (year-by-year) | M | Low | P8 |
+| ✅ F17 | Phased conversion plan (year-by-year) | M | Low | P8 |
 | F18 | Site-condition remediation advisor | M | Med | P8, P4 |
 | F19 | "Why here?" composition reasoning toggle | M | Low | P2, P5 |
 | F20 | Maintenance-over-time curve | S | Low | P4 |
@@ -137,15 +145,17 @@ layer (F7)** — now deliberately *after* the adoption work (see "Defer" below).
 
 ## High impact — detail
 
-### F1 · "Why it matters" labels in the plant browser — *Impact High · Effort M · Risk Low (P6, P10)*
-Make every plant carry its ecological role where the user already looks, not just in the
-Habitat tab. **How:** add a Qt-free `ecological_role_summary(plant) -> list[str]` that
-reuses the keystone / host / bird-food logic from `habitat_score.compute_habitat_score`
-and `fauna.fauna_for_plant(plant_id)` (which returns `relationship` + `specificity`), and
-renders short badges ("Keystone", "Hosts 7 caterpillars", "Bird food", "Specialist host").
-Surface it first in the *expanded* detail row of `src/plant_list_view.py` (no delegate
-paint changes → avoids the `plant_panel.py` guard ceiling), then in the collapsed row once
-proven. **First slice:** expanded-row text only.
+### ✅ F1 · "Why it matters" labels in the plant browser — *Shipped · was Impact High / Effort M / Risk Low (P6, P10)*
+**Shipped** as the Qt-free `src/ecological_role.py` (`ecological_role_summary(plant) -> list[str]`),
+surfaced as a leading **Role:** line in the expanded detail row of `src/plant_list_view.py`. Every
+plant now carries its ecological role where the user already looks, not just in the Habitat tab.
+**How (as built):** `ecological_role_summary` reuses the same use-tag membership the Habitat Value
+Score keys off (keystone / host / bird-food / pollinator / nitrogen-fixer, from the synthesised
+`permaculture_uses` blob) plus `fauna.fauna_for_plant(plant_id)` (its `relationship` + `specificity`
+columns) to emit short badges — "Keystone", "Hosts 7 caterpillars", "Specialist host", "Bird food",
+"Pollinator plant" — highest-value first. The delegate caches the line per `plant_id` (paint runs on
+every scroll) and renders it text-only as the first detail row, avoiding the `plant_panel.py` guard
+ceiling (the logic and tests live outside the widget). The collapsed-row badge remains the next slice.
 
 ### ✅ F2 · Year 1 / 5 / 15 / 30 snapshot view — *Shipped · was Impact High / Effort M / Risk Low (P4)*
 **Shipped** in `src/snapshot_timeline.py` + `src/snapshot_window.py`. The philosophy's literal
@@ -222,10 +232,15 @@ wins — designs that feed *specialist* species (monarch↔milkweed), not just g
 surface a "supports N specialist species" badge/line in the habitat breakdown and on the
 F1 plant labels. Pure read.
 
-### F10 · Lawn-equivalent counterfactual — *Impact Med · Effort S · Risk Low (P6, P8)* — quick win
-Make the Tallamy contrast explicit: "the same area as lawn supports ≈0 of this." **How:**
-in the Habitat tab, render a side-by-side of the current score vs. a lawn baseline (a
-constant ≈0 habitat value) over the converted area from `lawn_zones.conversion_summary`.
+### ✅ F10 · Lawn-equivalent counterfactual — *Shipped · was Impact Med / Effort S / Risk Low (P6, P8)*
+**Shipped** in `src/lawn_zones.py` (`lawn_counterfactual` + `format_lawn_counterfactual`), surfaced
+as a "vs. lawn" callout directly under the score in the Habitat tab (`src/analysis_panel.py`). Makes
+the Tallamy contrast explicit: "this design: 62/100 · the same area as lawn: ~0/100." **How (as
+built):** a constant ≈0 lawn baseline (`LAWN_HABITAT_SCORE`) is set beside the design's Habitat Value
+total; when conversion zones are drawn, the contrast is grounded in the lawn+restoration area from
+`lawn_zones.conversion_summary` ("you're reclaiming ~120 m² from lawn"). `app.py` pushes the same
+summary it already computes for the "On This Design" tab into the analysis panel, so the callout stays
+live with edits. Qt-free and unit-tested.
 
 ### F11 · Value-vs-price framing — *Impact Med · Effort S · Risk Low (P6)*
 Pair the cost estimate with the ecological value it buys (the Graeber/Raworth point).
@@ -263,11 +278,17 @@ evergreen reads).
 sliders driving `_when()`); extend the scene/material logic to vary leaf-on/leaf-off and
 bloom colour from `deciduous_evergreen` + `bloom_period`, and expose a season switch.
 
-### F17 · Phased conversion plan — *Impact Med · Effort M · Risk Low (P8)*
-Turn drawn conversion zones into a year-by-year "remove this / plant that, when" schedule.
-**How:** `lawn_zones.conversion_summary` already returns a `by_stage` breakdown
-(lawn → year-1 → year-3 → established); cross it with `succession.restoration_stage` to
-emit an ordered task list into the planning panel and the PDF.
+### ✅ F17 · Phased conversion plan — *Shipped · was Impact Med / Effort M / Risk Low (P8)*
+**Shipped** in the Qt-free `src/conversion_plan.py` (`build_conversion_schedule` +
+`render_schedule_text`), surfaced in the planning **Timeline** tab (`src/planning_panel.py`), the
+Planting Plan text export (`src/app.py`) and a dedicated PDF page (`src/pdf_export.py`). Turns drawn
+conversion zones into a year-by-year "remove this / plant that, when" schedule. **How (as built):**
+it crosses `lawn_zones.conversion_summary`'s `by_stage` breakdown (how much lawn is being converted)
+with `succession.restoration_stage` (the five restoration bands: planting → pioneer forbs →
+forb–grass matrix → shrubs establishing → climax/canopy) and the design's plants grouped by
+successional role (woody structure / pioneers / matrix / self-spreaders / climax). The lawn-removal
+step appears only when zones are drawn; the cadence is given as honest year *ranges*, never false
+day-precision (P9). Dependency-injectable and unit-tested.
 
 ### F18 · Site-condition remediation advisor — *Impact Med · Effort M · Risk Med (P8, P4)*
 From measured soil/disturbance, recommend a *repair sequence* (pioneer cover → soil
@@ -435,15 +456,15 @@ until the funnel above is healthier.
 ## How to choose
 
 Sequenced for **more ecosystems created** — Action and Activation first, Depth deferred
-(✅ F2/F3/F4/F9/F16/F22/F35/F40 have shipped):
-- **Now — close the loop to the ground (ACTION):** ✅ F40 (Planting Plan, shipped) → **F41**
-  (numbered plant-by-numbers map) → **F42** (maintenance calendar). This is where a design
-  actually becomes a planted ecosystem.
+(✅ F1/F2/F3/F4/F9/F10/F16/F17/F22/F35/F40 have shipped):
+- **Now — close the loop to the ground (ACTION):** ✅ F40 (Planting Plan) → ✅ F17 (phased
+  conversion schedule) → **F41** (numbered plant-by-numbers map) → **F42** (maintenance calendar).
+  This is where a design actually becomes a planted ecosystem.
 - **Next — get more people to a first design (ACTIVATION):** **F44** (first-run pack) → **F45**
-  (in-context guidance), plus the quick confidence wins **F10 / F11 / F14 / F20** (all S–M, Low
-  risk) that build the trust to act.
-- **Then — reward the engaged (DEPTH):** F5 (relationship graph), then F1 / F9 / F15, and F33
-  (observation journal).
+  (in-context guidance), plus the quick confidence wins ✅ F10 (lawn counterfactual) → **F11 / F14
+  / F20** (all S–M, Low risk) that build the trust to act.
+- **Then — reward the engaged (DEPTH):** F5 (relationship graph), with ✅ F1 (ecological-role
+  labels) and ✅ F9 already in; then F15 and F33 (observation journal).
 - **Defer:** F7, F25, F26, F27, F36, F37, F39 — see the Defer tier above.
 
 ---

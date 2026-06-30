@@ -1141,6 +1141,27 @@ class PlanningPanel(QWidget):
         self._timeline_summary.setStyleSheet("color: #b0bec5; font-size: 11px; padding: 8px;")
         layout.addWidget(self._timeline_summary)
 
+        # Year-by-year conversion schedule (F17, P8/P4): turn the drawn lawn
+        # zones + the design's plants into an ordered remove-this / plant-that,
+        # when list across the restoration stages above.
+        sched_label = QLabel("Phased conversion plan")
+        sched_label.setStyleSheet(
+            "color: #a5d6a7; font-size: 12px; font-weight: bold; "
+            "padding: 6px 0 2px 0;")
+        layout.addWidget(sched_label)
+
+        self._conversion_schedule = QTextEdit()
+        self._conversion_schedule.setReadOnly(True)
+        self._conversion_schedule.setStyleSheet(
+            "QTextEdit { background: #1a2a1a; color: #c8e6c9; "
+            "border: 1px solid #2e4a2e; border-radius: 4px; padding: 6px; "
+            "font-size: 11px; }")
+        self._conversion_schedule.setMinimumHeight(180)
+        self._conversion_schedule.setPlainText(
+            "Place plants (and draw lawn-conversion zones) to see a "
+            "year-by-year planting & establishment schedule.")
+        layout.addWidget(self._conversion_schedule)
+
         # Reset button
         btn_row = QHBoxLayout()
         reset_btn = QPushButton("Reset to Planting (Year 0)")
@@ -1164,6 +1185,24 @@ class PlanningPanel(QWidget):
     def update_timeline_summary(self, summary: str):
         """Called from app.py with a text summary of the landscape at this year."""
         self._timeline_summary.setText(summary)
+
+    def set_conversion_schedule(self, schedule):
+        """Render the year-by-year conversion schedule (F17) in the Timeline tab.
+        ``schedule`` is a ``conversion_plan.ConversionSchedule`` (or None to show
+        the empty-state hint). Never raises — the schedule is a planning aid."""
+        widget = getattr(self, "_conversion_schedule", None)
+        if widget is None:
+            return
+        if schedule is None:
+            widget.setPlainText(
+                "Place plants (and draw lawn-conversion zones) to see a "
+                "year-by-year planting & establishment schedule.")
+            return
+        try:
+            from src.conversion_plan import render_schedule_text
+            widget.setPlainText(render_schedule_text(schedule))
+        except Exception:  # noqa: BLE001
+            pass
 
     def set_placed_plants(self, plants: list[dict]):
         """Update the list of placed plants (from app.py)."""

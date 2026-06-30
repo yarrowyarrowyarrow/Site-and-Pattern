@@ -1731,6 +1731,19 @@ class MainWindow(QMainWindow):
                                    bed_area_m2=bed_area)
         text = render_plan_text(plan)
 
+        # Year-by-year conversion schedule (F17): remove-this / plant-that, when.
+        try:
+            from src.conversion_plan import (
+                build_conversion_schedule, render_schedule_text)
+            from src.lawn_zones import conversion_summary
+            schedule = build_conversion_schedule(
+                self._placed_plants,
+                summary=conversion_summary(self._project.get("features", [])),
+            )
+            text += "\n\n" + render_schedule_text(schedule)
+        except Exception:  # noqa: BLE001 — the schedule augments the plan, never blocks it
+            pass
+
         path, _ = QFileDialog.getSaveFileName(
             self, "Export Planting Plan", "planting_plan.txt",
             "Text Files (*.txt);;CSV (*.csv);;All Files (*)"
@@ -1862,9 +1875,19 @@ class MainWindow(QMainWindow):
             self.on_this_design.set_cost_breakdown(_cost)
             # Lawn-to-habitat conversion tally (N2).
             from src.lawn_zones import conversion_summary
-            self.on_this_design.set_lawn_conversion(
-                conversion_summary(self._project.get("features", []))
-            )
+            _conv = conversion_summary(self._project.get("features", []))
+            self.on_this_design.set_lawn_conversion(_conv)
+            # Same summary grounds the Habitat tab's lawn-equivalent
+            # counterfactual (F10) and the phased conversion plan (F17).
+            self.analysis_panel.set_lawn_conversion(_conv)
+            # Year-by-year conversion schedule (F17) in the planning Timeline tab.
+            try:
+                from src.conversion_plan import build_conversion_schedule
+                self.planning_panel.set_conversion_schedule(
+                    build_conversion_schedule(enriched, summary=_conv)
+                )
+            except Exception:  # noqa: BLE001 — schedule is a planning aid
+                self.planning_panel.set_conversion_schedule(None)
             # Habitat value on the Stats tab (F11) — what the design is worth,
             # shown beside the cost. Computed here so it stays live with edits.
             try:

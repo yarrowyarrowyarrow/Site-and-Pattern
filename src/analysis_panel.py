@@ -61,6 +61,7 @@ class AnalysisPanel(QWidget):
         self._structures: list[dict] = []
         self._last_habitat_result = None          # for the species gallery re-render
         self._gallery_warmed: set[str] = set()    # image urls already fetched once
+        self._lawn_conversion: dict | None = None  # for the F10 counterfactual
         self._build_ui()
 
     def _build_ui(self):
@@ -741,6 +742,18 @@ class AnalysisPanel(QWidget):
         )
         layout.addWidget(self._habitat_score_label)
 
+        # Lawn-equivalent counterfactual (F10, P6/P8): the Tallamy contrast made
+        # explicit — what this design provides vs. the ≈0 a conventional lawn of
+        # the same ground would. Hidden until a score is computed.
+        self._lawn_counterfactual_label = QLabel("")
+        self._lawn_counterfactual_label.setWordWrap(True)
+        self._lawn_counterfactual_label.setVisible(False)
+        self._lawn_counterfactual_label.setStyleSheet(
+            "color: #dcedc8; font-size: 11px; padding: 8px; "
+            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px;"
+        )
+        layout.addWidget(self._lawn_counterfactual_label)
+
         # Species galleries (F11 / I1) — photos that make the value tangible.
         # "Species doing the work" = the plants (keystone / host / bird-food
         # first); "Species supported" = the fauna those plants feed/host. Both
@@ -868,6 +881,37 @@ class AnalysisPanel(QWidget):
         """Update the list of placed structures (from app.py)."""
         self._structures = structures
 
+    def set_lawn_conversion(self, summary: dict | None):
+        """Store the lawn-conversion summary (from ``lawn_zones.conversion_summary``)
+        so the F10 counterfactual can ground its contrast in the converted area.
+        Re-renders the counterfactual if a score is already on screen."""
+        self._lawn_conversion = summary or None
+        if getattr(self, "_last_habitat_result", None) is not None:
+            self._render_lawn_counterfactual(self._last_habitat_result)
+
+    def _render_lawn_counterfactual(self, result):
+        """Show the design's habitat value beside the ≈0 of an equivalent lawn
+        (F10). Never raises — the counterfactual is a nicety, not the score."""
+        lbl = getattr(self, "_lawn_counterfactual_label", None)
+        if lbl is None:
+            return
+        try:
+            from src.lawn_zones import lawn_counterfactual, format_lawn_counterfactual
+            cf = lawn_counterfactual(result, self._lawn_conversion)
+            lines = format_lawn_counterfactual(cf)
+        except Exception:  # noqa: BLE001
+            lines = []
+        if not lines:
+            lbl.setVisible(False)
+            return
+        head = lines[0]
+        rest = lines[1:]
+        html = (f"<b>vs. lawn</b><br>{head}"
+                + ("<br><span style='color:#90a4ae;font-size:10px;'>"
+                   + "<br>".join(rest) + "</span>" if rest else ""))
+        lbl.setText(html)
+        lbl.setVisible(True)
+
     def _calc_habitat_score(self):
         # Scoring maths moved to src/habitat_score.py (Chunk 6) so the
         # headless scripting API and this panel share one implementation.
@@ -878,10 +922,12 @@ class AnalysisPanel(QWidget):
         except HabitatScoreError:
             self._habitat_score_label.setText("?")
             self._habitat_breakdown.setText("Plant database unavailable.")
+            self._lawn_counterfactual_label.setVisible(False)
             return
         if result is None:
             self._habitat_score_label.setText("—")
             self._habitat_breakdown.setText("Place some plants and structures first.")
+            self._lawn_counterfactual_label.setVisible(False)
             return
 
         total_int = result.total
@@ -903,9 +949,13 @@ class AnalysisPanel(QWidget):
             "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px; padding: 12px;"
         )
 
+        # Lawn-equivalent counterfactual (F10): this design vs. the ≈0 of an
+        # equivalent lawn, grounded in the converted area when zones are drawn.
+        self._last_habitat_result = result
+        self._render_lawn_counterfactual(result)
+
         # Species photos that make the value tangible (F11 / I1): the plants
         # doing the work and the fauna they support.
-        self._last_habitat_result = result
         try:
             self._render_galleries(result)
         except Exception:  # noqa: BLE001 — galleries are a nicety, never break the score

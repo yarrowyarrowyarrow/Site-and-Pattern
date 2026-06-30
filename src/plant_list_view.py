@@ -467,6 +467,8 @@ class PlantRowDelegate(QStyledItemDelegate):
         # rebuilding the delegate (cheap; only on schema reload).
         self._wildlife_cache: dict[int, str] = {}
         self._companions_cache: dict[int, str] = {}
+        # "Why it matters" ecological-role line (F1), cached per plant_id.
+        self._role_cache: dict[int, str] = {}
 
     def _wildlife_text_for_plant(self, plant_id) -> str:
         """Return a short comma-separated list of fauna supported by this
@@ -507,6 +509,27 @@ class PlantRowDelegate(QStyledItemDelegate):
             # users wondering what was hidden is no longer needed.
             text = ", ".join(ordered)
         self._wildlife_cache[plant_id] = text
+        return text
+
+    def _role_text_for_plant(self, plant: dict) -> str:
+        """Short ecological-role line for the detail block (F1) — e.g.
+        "Keystone · Hosts 7 caterpillars · Bird food". The badge logic is the
+        Qt-free :func:`src.ecological_role.ecological_role_summary`; the result
+        is cached per plant_id since paint() runs on every scroll. Plants with
+        no recognised role render '—'."""
+        pid = plant.get("id")
+        if not pid:
+            return "—"
+        cached = self._role_cache.get(pid)
+        if cached is not None:
+            return cached
+        try:
+            from src.ecological_role import ecological_role_summary
+            badges = ecological_role_summary(plant)
+        except Exception:
+            badges = []
+        text = " · ".join(badges) if badges else "—"
+        self._role_cache[pid] = text
         return text
 
     def _companions_text_for_plant(self, plant_id) -> str:
@@ -649,11 +672,11 @@ class PlantRowDelegate(QStyledItemDelegate):
         image_h = 0
         if _detail_image_path(plant):
             image_h = _IMG_MAX_H + 2 * fm.lineSpacing() + 6
-        # Detail rows: 6 single-line (Zones, Sun·Water, Spacing, Height,
-        # Bloom·Fruit, Edible, Availability) + 3 double-line (Uses,
-        # Wildlife, Companions) = 12 lineSpacing units; round up to 13 for
-        # the gap before the calendar block (V1.84 added the Availability row).
-        detail_h = 13 * fm.lineSpacing() + cal_h + notes_h + image_h + 8
+        # Detail rows: 1 double-line ecological-role line (Role, F1) at the top
+        # + 7 single-line (Zones, Sun·Water, Spacing, Height, Bloom·Fruit,
+        # Edible, Availability) + 3 double-line (Uses, Wildlife, Companions)
+        # = 2 + 7 + 6 = 15 lineSpacing units before the calendar block.
+        detail_h = 15 * fm.lineSpacing() + cal_h + notes_h + image_h + 8
         return QSize(0, compact_h + detail_h)
 
     # Painting -----------------------------------------------------------
@@ -936,22 +959,29 @@ class PlantRowDelegate(QStyledItemDelegate):
             # not available.
             hosts_text = self._wildlife_text_for_plant(plant.get("id"))
             companions_text = self._companions_text_for_plant(plant.get("id"))
+            # "Why it matters" ecological-role line (F1): keystone / hosts N
+            # caterpillars / specialist / bird food / pollinator, derived from
+            # the use tags + the plant↔fauna junction. Surfaced at the very top
+            # so the user reads the plant's ecological role before its specs.
+            role_text = self._role_text_for_plant(plant)
 
-            # Layout: short single-line rows stack at 1 * line_h each,
-            # then Uses + Wildlife + Companions get 2 * line_h each so
-            # their long comma-separated lists wrap instead of clipping
-            # at the right edge. Total detail rows below: 6 single +
-            # 3 double = 6 + 6 = 12 line_h (the calendar starts at 13).
-            _row("Zones:",         zones_str, 0)
-            _row("Sun · Water:",   f"{sun}  ·  {water}", line_h)
-            _row("Spacing:",       (f"{spacing} m" if spacing else "—"), 2 * line_h)
-            _row("Height:",        (f"{height} m" if height else "—"), 3 * line_h)
-            _row("Bloom · Fruit:", f"{bloom}  ·  {fruit}", 4 * line_h)
-            _row("Edible:",        edible, 5 * line_h)
-            _row("Availability:",  avail, 6 * line_h)
-            _row("Uses:",          uses, 7 * line_h, max_lines=2)
-            _row("Wildlife:",      hosts_text, 9 * line_h, max_lines=2)
-            _row("Companions:",    companions_text, 11 * line_h, max_lines=2)
+            # Layout: the ecological-role line leads (2 * line_h so its badge
+            # list can wrap), then short single-line rows at 1 * line_h each,
+            # then Uses + Wildlife + Companions get 2 * line_h each so their
+            # long comma-separated lists wrap instead of clipping at the right
+            # edge. Total detail rows below: 1 double (Role) + 7 single +
+            # 3 double = 2 + 7 + 6 = 15 line_h (the calendar starts at 15).
+            _row("Role:",          role_text, 0, max_lines=2)
+            _row("Zones:",         zones_str, 2 * line_h)
+            _row("Sun · Water:",   f"{sun}  ·  {water}", 3 * line_h)
+            _row("Spacing:",       (f"{spacing} m" if spacing else "—"), 4 * line_h)
+            _row("Height:",        (f"{height} m" if height else "—"), 5 * line_h)
+            _row("Bloom · Fruit:", f"{bloom}  ·  {fruit}", 6 * line_h)
+            _row("Edible:",        edible, 7 * line_h)
+            _row("Availability:",  avail, 8 * line_h)
+            _row("Uses:",          uses, 9 * line_h, max_lines=2)
+            _row("Wildlife:",      hosts_text, 11 * line_h, max_lines=2)
+            _row("Companions:",    companions_text, 13 * line_h, max_lines=2)
 
             # ── Colour-coded planting calendar strip ──────────────
             # 12 cells across the detail width, one per month, coloured by
@@ -959,7 +989,7 @@ class PlantRowDelegate(QStyledItemDelegate):
             # the at-a-glance "what is this plant doing in July?" visual
             # that lived in the legacy detail panel before the compact
             # list landed.
-            cal_block_top = detail.top() + 13 * line_h
+            cal_block_top = detail.top() + 15 * line_h
             model = index.model()
             cal: list[dict] = []
             if isinstance(model, PlantListModel):
@@ -970,11 +1000,11 @@ class PlantRowDelegate(QStyledItemDelegate):
                 # the legend actually wrapped onto so the notes start
                 # below it instead of underneath it.
                 extra_rows = self._legend_rows_for_width(detail.width()) - 1
-                notes_top_offset = (13 * line_h + _CAL_BLOCK_H
+                notes_top_offset = (15 * line_h + _CAL_BLOCK_H
                                     + extra_rows * (_CAL_LEGEND_H + 2)
                                     + _CAL_NOTES_GAP)
             else:
-                notes_top_offset = 13 * line_h + 4
+                notes_top_offset = 15 * line_h + 4
 
             notes = plant.get("notes") or ""
             if notes:
