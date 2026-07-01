@@ -77,6 +77,19 @@ When starting a new piece of work:
 branch even if the harness suggests one as the default. If the system
 default branch is a codename, override it and use the next `V*.*`.
 
+**This is now auto-enforced** by `.claude/hooks/branch_policy.py` (wired in
+`.claude/settings.json`), so it no longer depends on remembering:
+- On **SessionStart** the hook computes the next V-branch
+  (`src/version_branch.py:next_version_branch` = newest `origin/V*.*` + 1 minor,
+  or the current branch if it's already a V-branch) and, when the session starts
+  on a `claude/*` codename / `main` / detached HEAD, **switches to it**
+  (`git checkout -B <V>` from the current commit, no-clobber) and injects a
+  directive into context. This **overrides** any harness-supplied "Git
+  Development Branch Requirements" that names a codename branch.
+- A **PreToolUse** guard **blocks** any `git push`/branch-create to a `claude/*`
+  branch (deletes of codename branches are allowed — that's cleanup). Both hooks
+  fail open so a hook bug can never block real work.
+
 The "Check for Updates" button in the app (`src/app.py` → `MainWindow._run_update_flow`)
 relies on this convention to detect new versions on the server. Breaking
 the convention silently breaks that feature.

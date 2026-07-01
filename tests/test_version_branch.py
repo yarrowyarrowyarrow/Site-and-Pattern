@@ -20,6 +20,7 @@ from src.version_branch import (  # noqa: E402
     parse_version_branch,
     is_newer_version,
     newest_remote_version_branch,
+    next_version_branch,
 )
 
 
@@ -184,6 +185,85 @@ class TestNewestRemoteVersionBranch(unittest.TestCase):
         gr = self._git_runner()
         gr("fetch", "--quiet")
         self.assertEqual(newest_remote_version_branch(gr), "V1.100")
+
+
+class TestNextVersionBranch(unittest.TestCase):
+    """``next_version_branch`` drives the branch-policy hook: it decides which
+    V-branch a session should land on. Exercised against a real git repo so the
+    ``for-each-ref`` parse + increment run end-to-end."""
+
+    def setUp(self):
+        self._tmp = tempfile.mkdtemp(prefix="permadesign_nextbranch_")
+        self.addCleanup(lambda: shutil.rmtree(self._tmp, ignore_errors=True))
+        self._upstream = os.path.join(self._tmp, "upstream")
+        os.makedirs(self._upstream)
+        subprocess.run(["git", "init", "-q", "-b", "main", self._upstream],
+                       check=True)
+        self._run_upstream("config", "user.email", "t@t")
+        self._run_upstream("config", "user.name", "T")
+        self._run_upstream("config", "commit.gpgsign", "false")
+        with open(os.path.join(self._upstream, "f"), "w") as f:
+            f.write("hi\n")
+        self._run_upstream("add", "f")
+        self._run_upstream("commit", "-q", "-m", "init")
+        self._downstream = os.path.join(self._tmp, "downstream")
+        subprocess.run(["git", "clone", "-q", self._upstream, self._downstream],
+                       check=True)
+
+    def _run_upstream(self, *args):
+        return subprocess.run(["git", "-C", self._upstream, *args],
+                              capture_output=True, text=True, check=False)
+
+    def _git_runner(self):
+        def _git(*args, timeout=10):
+            return subprocess.run(
+                ["git", "-C", self._downstream, *args],
+                capture_output=True, text=True, timeout=timeout, check=False,
+            )
+        return _git
+
+    def _make_remote_branch(self, name):
+        self._run_upstream("checkout", "-q", "-b", name)
+        safe = name.replace("/", "_")
+        with open(os.path.join(self._upstream, safe + ".txt"), "w") as f:
+            f.write(name)
+        self._run_upstream("add", ".")
+        self._run_upstream("commit", "-q", "-m", name)
+        self._run_upstream("checkout", "-q", "main")
+
+    def test_none_when_no_version_branches(self):
+        gr = self._git_runner()
+        gr("fetch", "--quiet")
+        self.assertIsNone(next_version_branch(gr, current="claude/foo-bar"))
+
+    def test_increments_newest_minor(self):
+        self._make_remote_branch("V2.05")
+        gr = self._git_runner()
+        gr("fetch", "--quiet")
+        self.assertEqual(next_version_branch(gr, current="claude/foo-bar"),
+                         "V2.06")
+
+    def test_increments_highest_of_several(self):
+        for name in ["V2.03", "V2.05", "V2.04", "main-dev"]:
+            self._make_remote_branch(name)
+        gr = self._git_runner()
+        gr("fetch", "--quiet")
+        self.assertEqual(next_version_branch(gr, current="main"), "V2.06")
+
+    def test_keeps_current_when_already_a_version_branch(self):
+        # A continuation of an existing release branch must NOT bump.
+        self._make_remote_branch("V2.05")
+        gr = self._git_runner()
+        gr("fetch", "--quiet")
+        self.assertEqual(next_version_branch(gr, current="V3.1"), "V3.1")
+        self.assertEqual(next_version_branch(gr, current="  V2.05 "), "V2.05")
+
+    def test_major_rollover_only_bumps_minor(self):
+        self._make_remote_branch("V2.99")
+        gr = self._git_runner()
+        gr("fetch", "--quiet")
+        # By convention only the minor increments (V2.99 → V2.100).
+        self.assertEqual(next_version_branch(gr, current="main"), "V2.100")
 
 
 class TestVersionBranchSwitchCheckout(unittest.TestCase):
