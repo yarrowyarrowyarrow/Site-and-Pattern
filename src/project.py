@@ -17,10 +17,12 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
 # 1.7 (V1.48): added the `existing_tree` / `existing_building` feature types
-# (user-marked shade casters). Additive — older readers ignore unknown
-# element_types in project_to_map_data, so projects stay forward/backward
-# compatible.
-SCHEMA_VERSION = "1.7"
+# (user-marked shade casters).
+# 1.8 (V2.05): added the `site_photo` feature type (F24 map-underlay photo) and
+# the `field_notes` properties block (F6 site-walk notes). Additive — older
+# readers ignore unknown element_types in project_to_map_data and unknown
+# properties keys, so projects stay forward/backward compatible.
+SCHEMA_VERSION = "1.8"
 
 
 def new_placement_group_id() -> str:

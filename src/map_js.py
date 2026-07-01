@@ -396,6 +396,20 @@ def set_season_view(season: str, pid_visibility: dict) -> str:
     return f"setSeasonView({_jsstr(season)}, {_jslit(pid_visibility)});"
 
 
+def set_bee_forage_view(bee_label: str, pid_style: dict) -> str:
+    """"What the bee sees" (F37 increment 3): recolour the map as a chosen bee's
+    floral-resource map. ``pid_style`` maps plant_id (as a string) → a fit key
+    ('good' | 'plausible' | 'host'); those markers glow like nectar and every
+    other plant recedes to grey. ``bee_label`` names the bee for the legend."""
+    return f"setBeeForageView({_jsstr(bee_label)}, {_jslit(pid_style)});"
+
+
+def clear_bee_forage_view() -> str:
+    """Leave the bee's-eye map view — restore every plant marker to its normal
+    plant-type colour (F37 increment 3)."""
+    return "clearBeeForageView();"
+
+
 def set_timeline_year_by_plant_id(year: int, pid_factors: dict,
                                   pid_presence: dict | None = None,
                                   pid_spread: dict | None = None) -> str:
@@ -511,6 +525,20 @@ def set_wind_shadow_visible(visible: bool) -> str:
     return f"setWindShadowVisible({_jsbool(visible)});"
 
 
+def draw_snow_catch(payload: dict) -> str:
+    """Draw snow-catch microsites (winter drifts in the lee of windbreaks, Step
+    3). ``payload`` = ``{bands:[{catch,rings}], wind_from_deg}``."""
+    return f"drawSnowCatch({_jsobj(payload or {})});"
+
+
+def set_snow_catch_visible(visible: bool) -> str:
+    return f"setSnowCatchVisible({_jsbool(visible)});"
+
+
+def clear_snow_catch() -> str:
+    return "clearSnowCatch();"
+
+
 def clear_wind_shadow() -> str:
     return "clearWindShadow();"
 
@@ -535,6 +563,27 @@ def set_splat_ortho_opacity(opacity: float) -> str:
 
 def clear_splat_ortho() -> str:
     return "clearSplatOrtho();"
+
+
+def draw_site_photo_overlay(image_data_url: str, bbox: dict,
+                            opacity: float) -> str:
+    """Render a user yard/drone photo as a georeferenced map underlay (F24) —
+    its own image layer (like the splat ortho / shade overlays) so it composes
+    with everything else."""
+    payload = {"image": image_data_url, "bbox": bbox, "opacity": float(opacity)}
+    return f"drawSitePhotoOverlay({_jsobj(payload)});"
+
+
+def set_site_photo_visible(visible: bool) -> str:
+    return f"setSitePhotoVisible({_jsbool(visible)});"
+
+
+def set_site_photo_opacity(opacity: float) -> str:
+    return f"setSitePhotoOpacity({float(opacity)});"
+
+
+def clear_site_photo() -> str:
+    return "clearSitePhoto();"
 
 
 def draw_shade_zones(cells: list, d_lat: float, d_lng: float,

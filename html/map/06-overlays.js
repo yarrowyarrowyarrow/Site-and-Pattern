@@ -861,6 +861,34 @@
       }
     }
 
+    // ── Site photo overlay (F24) — a user yard/drone photo dropped on the map
+    // as a georeferenced underlay. Same image-layer machinery as the splat
+    // "yard photo"; bbox is computed Python-side (src/site_photo.py).
+    var sitePhotoLayer = null;
+
+    function drawSitePhotoOverlay(payload) {
+      clearSitePhoto();
+      if (!payload || !payload.image || !payload.bbox) return;
+      var b = payload.bbox;
+      sitePhotoLayer = L.imageOverlay(payload.image,
+        L.latLngBounds([b.south, b.west], [b.north, b.east]),
+        { opacity: typeof payload.opacity === 'number' ? payload.opacity : 1.0,
+          interactive: false }).addTo(map);
+    }
+
+    function setSitePhotoVisible(visible) {
+      if (!sitePhotoLayer) return;
+      if (visible) { sitePhotoLayer.addTo(map); } else { map.removeLayer(sitePhotoLayer); }
+    }
+
+    function setSitePhotoOpacity(opacity) {
+      if (sitePhotoLayer && sitePhotoLayer.setOpacity) sitePhotoLayer.setOpacity(opacity);
+    }
+
+    function clearSitePhoto() {
+      if (sitePhotoLayer) { map.removeLayer(sitePhotoLayer); sitePhotoLayer = null; }
+    }
+
     // ── Planting-zone shade map (discrete sun/partial/shade cells) ──────────
     // The "Classify planting zones" result drawn as a coloured grid so you can
     // see, at a glance, where full-sun / partial / full-shade planting spots
@@ -1228,6 +1256,41 @@
     function clearWindShadow() {
       if (windShadowLayer) windShadowLayer.clearLayers();
       if (windGhostLayer) windGhostLayer.clearLayers();
+    }
+
+    // ── Snow-catch microsites (Step 3) — winter snow drifts into the lee of
+    // windbreaks (same geometry as wind shelter, snow framing). Cool palette,
+    // deeper catch = more saturated. Its own layer so it composes with the rest.
+    var snowCatchLayer = null;
+    var _SNOW_STYLE = {
+      deep:     { color: '#1565c0', weight: 1, opacity: 0.6, fill: true,
+                  fillColor: '#42a5f5', fillOpacity: 0.32 },
+      moderate: { color: '#1976d2', weight: 1, opacity: 0.5, fill: true,
+                  fillColor: '#90caf9', fillOpacity: 0.22 },
+      light:    { color: '#90caf9', weight: 1, opacity: 0.4, fill: true,
+                  fillColor: '#bbdefb', fillOpacity: 0.14 }
+    };
+
+    function drawSnowCatch(payload) {
+      if (!snowCatchLayer) snowCatchLayer = L.layerGroup();
+      snowCatchLayer.clearLayers();
+      (payload && payload.bands || []).forEach(function (band) {
+        (band.rings || []).forEach(function (polyRings) {
+          L.polygon(polyRings, Object.assign({ interactive: false },
+                    _SNOW_STYLE[band.catch] || _SNOW_STYLE.moderate))
+            .addTo(snowCatchLayer);
+        });
+      });
+      if (!map.hasLayer(snowCatchLayer)) snowCatchLayer.addTo(map);
+    }
+
+    function setSnowCatchVisible(v) {
+      if (!snowCatchLayer) return;
+      if (v) { snowCatchLayer.addTo(map); } else { map.removeLayer(snowCatchLayer); }
+    }
+
+    function clearSnowCatch() {
+      if (snowCatchLayer) { snowCatchLayer.clearLayers(); map.removeLayer(snowCatchLayer); }
     }
 
     // Called from the plant drag handler (03-plants.js) so dragged plants'

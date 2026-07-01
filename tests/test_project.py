@@ -425,8 +425,9 @@ class TestSchemaVersionStable(unittest.TestCase):
     tests above — this assertion is a tripwire prompting that thought."""
 
     def test_schema_version_value(self):
-        # 1.7 (V1.48): added existing_tree / existing_building feature types.
-        self.assertEqual(SCHEMA_VERSION, "1.7")
+        # 1.8 (V2.05): added the site_photo feature type (F24) + field_notes
+        # properties block (F6).
+        self.assertEqual(SCHEMA_VERSION, "1.8")
 
     def test_existing_feature_types_round_trip(self):
         # The new shade-caster features must survive save → reload, and the
@@ -450,6 +451,33 @@ class TestSchemaVersionStable(unittest.TestCase):
         self.assertIn("existing_tree", ets)
         # loader doesn't crash on the unknown type
         project_to_map_data(reloaded)
+
+    def test_site_photo_and_field_notes_round_trip(self):
+        # 1.8 additions: a site_photo feature (F24) and a field_notes properties
+        # block (F6) must survive save → reload, and the map loader must tolerate
+        # the new feature type (it isn't a map shape).
+        import tempfile
+        from src.project import save_project, load_project, project_to_map_data
+        from src import site_photo, field_notes
+        p = new_project("t")
+        site_photo.set_feature(p, site_photo.build_feature(
+            image="data:image/jpeg;base64,QUJD",
+            center={"lat": 53.5, "lng": -113.5}, width_m=30.0, aspect=0.75))
+        field_notes.set_field_notes(p, {
+            "observations": {"water_pools": {"checked": True, "note": "NE corner"}},
+            "free_text": "clay near the fence"})
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "t.perma.geojson")
+            save_project(p, path)
+            reloaded = load_project(path)
+        # site_photo feature survives and is recoverable
+        self.assertIsNotNone(site_photo.feature_from_project(reloaded))
+        # field notes survive
+        fn = field_notes.get_field_notes(reloaded)
+        self.assertEqual(fn["observations"]["water_pools"]["note"], "NE corner")
+        # loader doesn't crash and doesn't mistake the photo for a drawn shape
+        md = project_to_map_data(reloaded)
+        self.assertEqual(md["shapes"], [])
 
 
 if __name__ == "__main__":

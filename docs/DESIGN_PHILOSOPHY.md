@@ -40,9 +40,11 @@ Complex ecological order emerges from simple rules applied locally, not from top
 > **Where this lives in the code:** `src/placement_score.py` scores every candidate cell
 > for a plant on continuous ecological fitness (shade, moisture, slope, edge) rather than
 > stamping a fixed layout; `src/llm_design.py` turns an ecological brief into deterministic,
-> scored placement; seeded communities live in `src/db/polycultures.py`.
-> **State: partial** — placement is generative-by-scoring, but communities are still
-> templates and most generative rules are implicit rather than declared.
+> scored placement; `src/pattern_language.py` now frames seeded communities
+> (`src/db/polycultures.py`) as Alexander patterns (problem → context → forces → solution →
+> related patterns). **State: strong** — generative scoring *plus* an explicit pattern-language
+> framing (roadmap F4, shipped); the remaining gap is that the placement rules themselves are
+> still implicit in `placement_score`/`llm_design` rather than declared and tweakable (F23).
 
 ### 2. The best designs disappear into their context
 
@@ -50,7 +52,10 @@ Fukuoka's do-nothing farming, Alexander's "quality without a name," Weaner's man
 
 > **Where this lives in the code:** the aesthetic-composition terms in
 > `src/placement_score.py` — `_height_gradient` (tall to the north), `_cohesion` (legible
-> bed grouping), `_rhythm` (natural repetition, not mega-clumps). **State: strong.**
+> bed grouping), `_rhythm` (natural repetition, not mega-clumps) — joined by naturalistic
+> drift layouts in `src/layout.py` and layer/spread-aware spacing in
+> `src/planting_spacing.py` (roadmap F22/F35, shipped) so plantings read as grown rather
+> than gridded. **State: strong.**
 
 ### 3. Relationships matter more than components
 
@@ -58,9 +63,16 @@ Simard's mycorrhizal networks, Lowenfels' soil food web, Sheldrake's fungal conn
 
 > **Where this lives in the code:** `src/db/fauna.py` + the `plant_fauna` junction (500+
 > documented plant↔animal relationships with type and specificity), companion pairs in
-> `src/db/seed_data.py`, `polyculture_members`, and the `plant_uses` junction.
-> **State: partial** — the relationship data is rich but not yet visualized as a network,
-> and mycorrhizal/symbiosis links currently live only in plant `notes` text.
+> `src/db/seed_data.py`, `polyculture_members`, and the `plant_uses` junction; the food-web
+> completeness check in `src/habitat_score.py` (`food_web`) now scores whether a design
+> closes the host-plant → caterpillar → bird chain (roadmap F3, shipped), and specialist
+> relationships are spotlighted through `fauna` specificity (F9, shipped); the **native-bee
+> habitat builder** (`src/bee_habitat.py`, roadmap F37) now turns the plant↔bee edges into
+> per-species advice — matched floral hosts, nesting needs, and a flight-season forage check
+> backed by the schema-v39 `bee_attributes` spine. **State: partial
+> (strengthening)** — the relationships are increasingly *scored*, but not yet drawn as a
+> network (F5) or unified into one edges layer (F7); mycorrhizal/symbiosis links still live
+> only in plant `notes` text.
 
 ### 4. Time is the most undervalued design variable
 
@@ -68,18 +80,33 @@ Brand's shearing layers, Weaner's succession planting, Bridges' transition psych
 
 > **Where this lives in the code:** `src/succession.py` (pioneer/mid/climax roles +
 > presence-fade curves + restoration stages), the growth-year slider in
-> `src/scene3d_window.py`, the year-aware `src/scene_contract.py`, and the growth fields
-> (`growth_rate`, `years_to_maturity`, `growth_curve`) in `src/db/schema.sql`.
-> **State: strong.**
+> `src/scene3d_window.py`, the year-aware `src/scene_contract.py`, the growth fields
+> (`growth_rate`, `years_to_maturity`, `growth_curve`) in `src/db/schema.sql`, the
+> Year 1 / 5 / 15 / 30 snapshot view (`src/snapshot_timeline.py` + `src/snapshot_window.py`,
+> roadmap F2 — the philosophy's literal "most important feature", shipped), and the
+> spring/summer/fall/winter seasonal toggle (F16, shipped). **State: strong.**
 
 ### 5. Perception is constructed, not received
 
 Yong's Umwelt research, Deutscher's linguistic relativity, Berger's visual culture theory, Norman's affordances, and pain science all demonstrate that what an observer notices depends on what they have been trained to notice. The application is fundamentally a perception tool: it should help users *see* ecological relationships they currently cannot — pollinator pathways, mycorrhizal connections, successional trajectories, and habitat value that are invisible to the untrained eye.
 
 > **Where this lives in the code:** the site-analysis overlays in `src/analysis_panel.py`
-> and `html/map/06-overlays.js` (sun path, wind shelter zones, shade), plus sector
-> analysis. **State: partial** — site forces are made visible; ecological *relationships*
-> (pollinator pathways, mycorrhizal networks, succession trajectories) are not yet drawn.
+> and `html/map/06-overlays.js` (sun path, wind shelter zones, shade), plus sector analysis,
+> the seasonal view toggle (roadmap F16, shipped) that lets the eye read leaf-on vs.
+> leaf-off and bloom, the **site photo underlay** (`src/site_photo.py`, roadmap F24) that
+> puts the user's real yard under the design, and the **snow-catch microsite overlay**
+> (`src/snow_microsite.py`) that draws where winter snow drifts into the lee of windbreaks —
+> an invisible microclimate made visible by reusing the wind-shelter geometry — and the
+> **native-bee habitat builder** (`src/bee_habitat.py`, roadmap F37, "see what a bee sees"),
+> which makes a chosen bee's hidden needs legible: which of your plants feed it, where it
+> nests, and the gaps in its flight-season forage — and, in the 3D preview, lets you *fly as
+> that bee* (`src/scene3d_window.py` → `html/scene3d.html`, a first-person bee camera with its
+> host flowers marked) and recolours the 2D map as that bee's floral-resource map
+> (`html/map/06-overlays.js` — its nectar/pollen plants glow, the rest greys out), a first taste
+> of Umwelt as both overlay *and* embodiment. **State:
+> partial** — site forces, seasonality, the real site, winter snow microsites and now a single
+> bee's world are made visible, but ecological *relationships* (pollinator pathways, mycorrhizal
+> networks, succession trajectories) are still not drawn as networks (roadmap F5, F15).
 
 ### 6. Conventional value metrics miss ecological value
 
@@ -88,7 +115,11 @@ Graeber, Saito, Raworth, Schumacher, and Tsing demonstrate that market price fai
 > **Where this lives in the code:** `src/habitat_score.py` and the Habitat Value tab in
 > `src/analysis_panel.py` (a 0–100 score from native ratio, keystone species, host plants,
 > bird food, vegetation layers, structures, and bloom continuity — explicitly grounded in
-> Tallamy); honest cost framing in `src/sourcing.py`. **State: strong.**
+> Tallamy); honest cost framing in `src/sourcing.py`; the **lawn-equivalent counterfactual**
+> (`src/lawn_zones.py:lawn_counterfactual`, roadmap F10) that scores this design against the ≈0
+> an equivalent lawn provides; and **"why it matters" ecological-role labels**
+> (`src/ecological_role.py`, roadmap F1) that make each plant's value legible in the browser
+> itself, not just in the Habitat tab. **State: strong.**
 
 ### 7. Generalist knowledge produces the most original design insights
 
@@ -104,8 +135,13 @@ The most important insights in ecological design come from people who cross disc
 Kintsugi philosophy, Cradle to Cradle design, regenerative landscaping, and mycoremediation all demonstrate that restoring broken systems requires deeper understanding than building new ones. Most users will not be designing landscapes from bare ground — they will be converting existing lawns, ornamental beds, and degraded sites. The application must be as effective at guiding transformation and restoration as it is at new design.
 
 > **Where this lives in the code:** the lawn-to-habitat conversion workflow
-> (`src/lawn_zones.py` + drawn conversion zones) and the evaluate→critique→revise→repair
-> loop in `src/design_critic.py`. **State: strong.**
+> (`src/lawn_zones.py` + drawn conversion zones), the evaluate→critique→revise→repair loop in
+> `src/design_critic.py`, the **phased Planting Plan** (`src/planting_plan.py`, roadmap F40) that
+> sequences the conversion into the ground — structure, then matrix, then fill — and now the
+> **year-by-year conversion schedule** (`src/conversion_plan.py`, roadmap F17) that crosses the
+> drawn zones with the restoration-stage timeline into a remove-this / plant-that, when task list,
+> plus the **lawn-equivalent counterfactual** (roadmap F10) that frames the conversion as repair of
+> a near-zero-value lawn. **State: strong.**
 
 ### 9. Uncertainty is a feature, not a bug
 
@@ -113,9 +149,12 @@ Ecological succession, Buddhist impermanence, Taleb's antifragility, Carse's inf
 
 > **Where this lives in the code:** price/spacing/height **ranges** in `src/sourcing.py`,
 > the `backed` flag + caveats in `src/design_goals.py`, the informational (deliberately
-> un-summed) fauna counts and month-range bloom parsing in `src/habitat_score.py`.
-> **State: strong** (language); **partial** (placement is still point-wise/deterministic
-> once generated — see roadmap item C).
+> un-summed) fauna counts and month-range bloom parsing in `src/habitat_score.py`, and the
+> **precipitation-timing split** in `src/precip_split.py` — which separates immediately-available
+> growing-season rain from delayed snowmelt water (both as honest liquid-water equivalent, with
+> *no* false snow-depth precision) rather than letting one "precipitation" number imply more
+> growing-season water than a site gets. **State: strong** (language); **partial** (placement is
+> still point-wise/deterministic once generated — see roadmap item C).
 
 ### 10. Design for relationships, not objects
 
@@ -123,18 +162,52 @@ This is the synthesis of all preceding themes. Every other landscape application
 
 > **Where this lives in the code:** the synthesis of #3 — `src/db/fauna.py`,
 > `src/db/polycultures.py`, the companion tables, and the `plant_uses` junction (the
-> shipped schema is now 41 fields). **State: partial** — the edges are modeled in data but
-> not yet surfaced as first-class relationships in the UI.
+> shipped schema is now 41 fields); the food-web score (F3) and specialist-host spotlight
+> (F9) have begun surfacing edges as scored, legible relationships, and the **ecological-role
+> labels** (`src/ecological_role.py`, roadmap F1) now read those plant↔fauna edges back to the
+> user per plant ("hosts 7 caterpillars", "specialist host"); the **native-bee habitat builder**
+> (`src/bee_habitat.py`, F37) reads the same bee↔plant edges *forward* into "design for this
+> species" guidance. **State: partial** — the edges are
+> modeled in data, increasingly scored, summarised per node, and now actionable per target
+> species, but not yet drawn as a first-class relationship network in the UI (roadmap F5, F7).
 
 ### 11. The body and the site know things the screen does not
 
 Knowledge lives in hands, soil, wind, and direct observation — not only in abstractions and databases. The application should drive users outside, not keep them at a screen. The best landscape designs come from people who walk the site, feel the soil texture, notice where water pools and where wind dries. Digital tools augment direct observation; they do not replace it.
 
 > **Where this lives in the code:** `src/analysis_panel.py`, `src/wind.py`,
-> `src/soil_grid.py`, `src/terrain.py`, `src/property_data.py`, `src/scan_import.py`.
-> **State: partial** — strong at *fetching* site data, weak at *capturing the user's own
-> on-site observation*. The structured "site-walk field notes" idea (roadmap item D) is
-> the most direct expression of this principle still to be built.
+> `src/soil_grid.py`, `src/terrain.py`, `src/property_data.py`, `src/scan_import.py`; the
+> **printable Planting Plan** (`src/planting_plan.py`, roadmap F40) that sends the user *out to
+> the yard* with what to buy, where to space it, and when to plant; the **site-walk field notes**
+> (`src/field_notes.py`, roadmap F6) that capture what the user notices on the ground (where water
+> pools, snow drifts, soil compacts); and the **site photo underlay** (`src/site_photo.py`, roadmap
+> F24) that brings a real yard/drone photo onto the map; and **winter snow cover & survival
+> metrics** (`src/snow.py`) that model snow's insulation (cover-days, freeze–thaw, chinook thaw,
+> rain-on-snow) into honest, design-for-the-bad-year guidance. **State: strong (was a gap)** — the
+> app now *fetches* site data, *hands the user a field plan*, *captures their own on-site
+> observation*, and *reads the winter the plants will actually face*. The remaining reach: pinning
+> individual observations to map points and feeding them back into generation as soft constraints
+> (the "pinned" slice of F6).
+
+### 12. Indigenous knowledge is honoured through relationship, not extraction
+
+Several of this document's sources — notably Kimmerer's *Braiding Sweetgrass*, Yunkaporta's *Sand Talk*, and elements of Ohlsen's *The Regenerative Landscaper* — draw on Indigenous knowledge systems, land stewardship, and ecological worldviews developed over millennia by Indigenous peoples. This knowledge is consistently among the most sophisticated and empirically validated ecological design wisdom available, often anticipating findings Western ecology has only recently arrived at. But Indigenous knowledge is **not an open resource to be extracted, encoded, or productized** without the explicit involvement and consent of the communities it originates from — to do so would replicate the very colonial pattern of extraction these knowledge systems critique. The same ecological thinking that drives the rest of this document insists that knowledge, like an ecosystem, functions through relationship and reciprocity, not extraction. So this is a design principle, not a footnote: Site & Pattern will not incorporate Indigenous ecological knowledge, land-management practices, plant-use traditions, or design frameworks into its data model, recommendations, or interface without:
+
+- **Direct consultation** with Indigenous elders, knowledge keepers, and/or community leaders relevant to the specific knowledge in question and to the Treaty 6 territory (Alberta) context in which this application operates.
+- **Free, prior, and informed consent** from appropriate Indigenous community representatives, consistent with UNDRIP (the United Nations Declaration on the Rights of Indigenous Peoples) and the Truth and Reconciliation Commission's Calls to Action.
+- **Ongoing relationship**, not transactional consultation — sustained, reciprocal partnership rather than a one-time approval.
+- **Attribution, benefit-sharing, and community control** over how Indigenous knowledge is represented, contextualized, and used within the application.
+
+Until such consultation has taken place, references to Indigenous knowledge in this project serve as *directional indicators* — they point toward bodies of knowledge that are relevant and valuable, without presuming the right to encode or operationalize them. Proceeding otherwise would contradict the philosophical foundation of the project itself.
+
+> **Where this lives in the code:** nowhere — *by design*. This principle is expressed as a
+> constraint, not a feature: the app deliberately does **not** encode Indigenous knowledge
+> into its data model, recommendations, or UI. The gate is consent. It surfaces as a guardrail
+> wherever work could brush against it — the "Indigenous knowledge" method note in
+> [`PHILOSOPHY_ROADMAP.md`](PHILOSOPHY_ROADMAP.md), the directional framing in
+> [`REFERENCES.md`](REFERENCES.md), and the consent-gate rule injected at session start (see
+> `CLAUDE.md` and the `.claude/` SessionStart hook). **State: directional guardrail** —
+> references stay directional until free, prior, and informed consent is obtained.
 
 ---
 
@@ -172,21 +245,7 @@ Ranked by direct relevance to the application's architecture, data modeling, UX,
 10. **Nature's Best Hope** — Doug Tallamy (2019)
     The application's *why*. The scientific case — grounded in insect-plant co-evolution data and food web research — that native plant landscapes in private yards constitute the most impactful conservation strategy available. When a user asks "why should I use this?" Tallamy's data is the answer.
 
----
-
-## Addendum: Indigenous Knowledge, Consultation & Consent
-
-Several source texts in this document — notably Kimmerer's *Braiding Sweetgrass*, Yunkaporta's *Sand Talk*, and elements of Ohlsen's *The Regenerative Landscaper* — draw on Indigenous knowledge systems, land stewardship practices, and ecological worldviews developed over millennia by Indigenous peoples. This knowledge is consistently among the most sophisticated and empirically validated ecological design wisdom available, often anticipating findings that Western ecology has only recently arrived at through institutional science.
-
-**However, Indigenous knowledge is not an open resource to be extracted, encoded, or productized without the explicit involvement and consent of the communities from which it originates.** To do so would replicate the very colonial pattern of extraction that these knowledge systems critique.
-
-Site & Pattern will not incorporate Indigenous ecological knowledge, land management practices, plant use traditions, or design frameworks into its data model, recommendations, or interface without:
-
-- **Direct consultation** with Indigenous elders, knowledge keepers, and/or community leaders relevant to the specific knowledge in question and to the Treaty 6 territory (Alberta) context in which this application operates.
-- **Free, prior, and informed consent** from appropriate Indigenous community representatives, consistent with the principles outlined in UNDRIP (United Nations Declaration on the Rights of Indigenous Peoples) and the Truth and Reconciliation Commission's Calls to Action.
-- **Ongoing relationship**, not transactional consultation. Any incorporation of Indigenous knowledge must be grounded in sustained, reciprocal partnership — not a one-time approval process.
-- **Attribution, benefit-sharing, and community control** over how Indigenous knowledge is represented, contextualized, and used within the application.
-
-This is not a limitation on the application's development — it is a design principle. The same ecological thinking that informs the rest of this document insists that knowledge, like ecosystems, functions through relationship and reciprocity, not extraction. Proceeding without proper consultation would contradict the philosophical foundation of the project itself.
-
-Until such consultation has taken place, references to Indigenous knowledge in this document serve as *directional indicators* — they point toward bodies of knowledge that are relevant and valuable, without presuming the right to encode or operationalize them.
+> **On Indigenous knowledge:** the consent principles that once lived in an addendum here are
+> now **core principle #12** above (*Indigenous knowledge is honoured through relationship,
+> not extraction*) — promoted from footnote to foundation. The full bibliography is in
+> [`REFERENCES.md`](REFERENCES.md).

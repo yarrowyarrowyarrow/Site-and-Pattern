@@ -446,6 +446,10 @@ class PersistenceController:
             m.map_widget.place_site_pin(plat, plng, sc.get("pin_label", ""))
         from src import splat_flow
         splat_flow.restore_splat_overlay(m)
+        # Site photo underlay (F24) — same story: redraw from the project so
+        # undo of an import that added/removed it stays in sync.
+        from src import site_photo_flow
+        site_photo_flow.restore_site_photo(m)
 
     # ── per-action handlers ──────────────────────────────────────────────────
 

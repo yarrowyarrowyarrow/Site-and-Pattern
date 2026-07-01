@@ -152,6 +152,52 @@ def test_parse_rainfall_empty():
     assert pd._parse_rainfall({"daily": {"time": [], "precipitation_sum": []}}) is None
 
 
+def test_parse_rainfall_measured_split():
+    # rain_sum present → a measured rain/snow split (snow water-equivalent =
+    # total − rain) that reconciles to the precipitation total.
+    data = {
+        "daily": {
+            "time":              ["2020-01-15", "2020-07-15"],
+            "precipitation_sum": [10.0,         50.0],
+            "rain_sum":          [0.0,          50.0],   # Jan all snow, Jul all rain
+        }
+    }
+    out = pd._parse_rainfall(data)
+    assert "measured" in out["snow_split_source"]
+    # January: all snow → rain 0, snow water-equiv = total
+    assert out["monthly_rain_mm"][0] == 0.0
+    assert out["monthly_snow_mm"][0] == 10.0
+    # July: all rain
+    assert out["monthly_snow_mm"][6] == 0.0
+    # No snow-depth conversion reported (water-equivalent only).
+    assert "monthly_snow_cm" not in out
+    # rain + snow reconciles to the total every month
+    for t, r, s in zip(out["monthly_mm"], out["monthly_rain_mm"],
+                       out["monthly_snow_mm"]):
+        assert abs((r + s) - t) < 0.05
+
+
+def test_parse_rainfall_estimated_split_when_no_measured():
+    # Only precipitation_sum → estimated prairie-climatology split.
+    data = {"daily": {"time": ["2020-01-15", "2020-07-15"],
+                      "precipitation_sum": [10.0, 50.0]}}
+    out = pd._parse_rainfall(data)
+    assert "estimated" in out["snow_split_source"]
+    assert "monthly_rain_mm" in out and len(out["monthly_rain_mm"]) == 12
+
+
+def test_ec_normal_carries_estimated_split():
+    out = pd._climate_normal_rainfall(53.4890, -113.5440, max_km=150.0)
+    assert out is not None
+    assert "estimated" in out["snow_split_source"]
+    # The split conserves the authoritative monthly total (no inflation).
+    for t, r, s in zip(out["monthly_mm"], out["monthly_rain_mm"],
+                       out["monthly_snow_mm"]):
+        assert abs((r + s) - t) < 0.05
+    # Growing-season rain is a subset of the annual total.
+    assert out["growing_season_rain_mm"] < out["annual_mm"]
+
+
 # ── fetch_rainfall: EC normal primary, ERA5-Land secondary ──────────────────
 
 def test_fetch_rainfall_prefers_ec_normal_offline():

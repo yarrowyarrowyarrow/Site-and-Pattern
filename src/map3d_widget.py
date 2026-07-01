@@ -162,6 +162,15 @@ class Map3DWidget(QWebEngineView):
         """Set the viewer's geometry detail (0 Low · 1 Medium · 2 High)."""
         self.run_js(map3d_js.set_quality(level))
 
+    def set_bee_mode(self, on: bool):
+        """Enter/leave the "fly as a bee" first-person mode (F37 increment 2)."""
+        self.run_js(map3d_js.set_bee_mode(on))
+
+    def set_bee_targets(self, plant_ids: list):
+        """Mark the chosen bee's floral-host plants so the fly-through beacons
+        them (F37 increment 2)."""
+        self.run_js(map3d_js.set_bee_targets(plant_ids))
+
     def set_sun_for(self, lat: float, lng: float, when: datetime):
         """Point the 3D sun for a place/time (reuses ``src/solar`` via map3d_js)."""
         self.run_js(map3d_js.set_sun_for(lat, lng, when))

@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
     QFormLayout, QFrame, QGroupBox, QScrollArea, QComboBox,
     QDoubleSpinBox, QSpinBox, QCheckBox, QSlider, QColorDialog,
-    QListWidget, QListWidgetItem, QProgressBar, QTabWidget,
+    QListWidget, QListWidgetItem, QProgressBar, QTabWidget, QTextEdit,
 )
 
 
@@ -63,6 +63,7 @@ class _SiteFetchWorker(QObject):
     elevation     = pyqtSignal(object)
     hardiness     = pyqtSignal(object)
     climate       = pyqtSignal(object)        # GDD / frost-window summary
+    winter        = pyqtSignal(object)        # snow-cover + survival metrics
     ecoregion     = pyqtSignal(object)        # auto-detected AB ecoregion
     fast_ready    = pyqtSignal()              # fast batch done — climate may still be loading
     finished      = pyqtSignal(dict)          # combined result dict
@@ -89,7 +90,7 @@ class _SiteFetchWorker(QObject):
         from concurrent.futures import ThreadPoolExecutor
         from src.property_data import (
             fetch_rainfall, fetch_soil, fetch_elevation, fetch_hardiness,
-            fetch_climate, fetch_ecoregion,
+            fetch_climate, fetch_winter, fetch_ecoregion,
         )
         out = {"lat": self.lat, "lng": self.lng}
 
@@ -140,9 +141,19 @@ class _SiteFetchWorker(QObject):
                 value = None
             out["climate"] = value
             self.climate.emit(value)
-            # Clear the progress line once the climate fetch is done —
-            # otherwise the "Computing growing-degree days…" message
-            # sits there forever even after the GDD row populates.
+
+        if not self._cancelled:
+            # Winter snow-cover + survival metrics (insulation half of the snow
+            # story) — a second archive call, run after climate; modelled in
+            # src/snow.py.
+            self.progress.emit("Modelling winter snow cover…")
+            try:
+                wvalue = fetch_winter(self.lat, self.lng)
+            except Exception:
+                wvalue = None
+            out["winter"] = wvalue
+            self.winter.emit(wvalue)
+            # Clear the progress line once the slow tail fetches are done.
             self.progress.emit("Site data ready.")
 
         self.finished.emit(out)
@@ -231,6 +242,18 @@ class SitePanel(QWidget):
     # shifts only the basemap tiles so they line up with OSM/placements.
     satellite_offset_changed  = pyqtSignal(float, float)
 
+    # Site-walk field notes (F6, P11) — emitted (debounced) when the user edits
+    # the checklist / free text; MainWindow stores it on the project.
+    field_notes_changed = pyqtSignal(dict)
+
+    # Site photo overlay (F24, P11). Import a yard/drone photo as a map underlay,
+    # adjust its on-map width + opacity, toggle it, or remove it.
+    site_photo_import_requested = pyqtSignal(str)     # image file path
+    site_photo_width_changed    = pyqtSignal(float)   # on-map width across, metres
+    site_photo_opacity_changed  = pyqtSignal(float)   # 0..1
+    site_photo_visible_changed  = pyqtSignal(bool)
+    site_photo_clear_requested  = pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._lat: Optional[float] = None
@@ -276,6 +299,7 @@ class SitePanel(QWidget):
         self._build_info_page(self._add_scroll_page(tabs, "Site Information"))
         self._build_slope_page(self._add_scroll_page(tabs, "Slope"))
         self._build_shade_page(self._add_scroll_page(tabs, "Shade"))
+        self._build_field_notes_page(self._add_scroll_page(tabs, "Field Notes"))
 
     def _add_scroll_page(self, tabs, title):
         """Add a scrollable page to the inner tab strip; return its body layout."""
@@ -437,10 +461,44 @@ class SitePanel(QWidget):
         self._lbl_rain_src = QLabel("")
         self._lbl_rain_src.setStyleSheet("color: #78909c; font-size: 10px;")
         self._lbl_rain_src.setWordWrap(True)
+        # Rain/snow timing (precip_split): what the total hides is *when* the
+        # water arrives — growing-season rain infiltrates now; snow is a delayed
+        # spring-melt pulse. Both are liquid-water equivalent (no depth figure).
+        self._lbl_rain_growing = QLabel("—")
+        self._lbl_rain_growing.setStyleSheet("color: #a5d6a7; font-size: 11px;")
+        self._lbl_rain_growing.setWordWrap(True)
+        self._lbl_rain_snow = QLabel("—")
+        self._lbl_rain_snow.setStyleSheet("color: #90caf9; font-size: 11px;")
+        self._lbl_rain_snow.setWordWrap(True)
+        self._lbl_rain_note = QLabel("")
+        self._lbl_rain_note.setStyleSheet("color: #78909c; font-size: 10px;")
+        self._lbl_rain_note.setWordWrap(True)
+        self._lbl_rain_note.setVisible(False)
+        self._rain_form = rl
         rl.addRow("Annual mean:", self._lbl_rain_annual)
         rl.addRow("Monthly mm:",  self._lbl_rain_monthly)
+        rl.addRow("Growing rain:", self._lbl_rain_growing)
+        rl.addRow("Snow → melt:",  self._lbl_rain_snow)
+        rl.addRow("",             self._lbl_rain_note)
         rl.addRow("Source:",      self._lbl_rain_src)
         layout.addWidget(self._rain_box)
+
+        # ── Winter cover & survival (snow as insulation) ─────────────
+        self._winter_box = QGroupBox("Winter cover & survival")
+        self._winter_box.setStyleSheet(_GROUP_STYLE)
+        wl = QFormLayout(self._winter_box)
+        self._lbl_winter_cover = QLabel("—")
+        self._lbl_winter_cover.setWordWrap(True)
+        self._lbl_winter_thaw = QLabel("—")
+        self._lbl_winter_thaw.setWordWrap(True)
+        self._lbl_winter_notes = QLabel("")
+        self._lbl_winter_notes.setWordWrap(True)
+        self._lbl_winter_notes.setStyleSheet("color: #b0bec5; font-size: 11px;")
+        wl.addRow("Snow cover:", self._lbl_winter_cover)
+        wl.addRow("Thaw stress:", self._lbl_winter_thaw)
+        wl.addRow("", self._lbl_winter_notes)
+        self._winter_box.setVisible(False)   # shown once metrics arrive
+        layout.addWidget(self._winter_box)
 
         # ── Soil (moved up under pin/zone) ──────────────────────────
         self._soil_box = QGroupBox("Soil (top 0–5 cm)")
@@ -495,6 +553,208 @@ class SitePanel(QWidget):
             self._soil_dl_status.setText(text)
         self._soil_dl_btn.setEnabled(not busy)
         self._soil_cancel_btn.setVisible(busy)
+
+    # ── Field Notes sub-tab (F6, P11) ─────────────────────────────────────────
+
+    def _build_field_notes_page(self, layout):
+        """Site-walk field notes: a prompted checklist + free text that capture
+        what the *site* knows (P11). Saved with the project; the prompts are the
+        McHarg overlay method turned into a walking checklist."""
+        from src.field_notes import FIELD_PROMPTS
+
+        info = QLabel(
+            "Walk the site — don't design it all from the screen. Tick what you "
+            "notice on the ground and jot a quick observation; it's saved with "
+            "the project and informs the design."
+        )
+        info.setWordWrap(True)
+        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        layout.addWidget(info)
+
+        # Debounce so a flurry of keystrokes emits one update.
+        self._fn_timer = QTimer(self)
+        self._fn_timer.setSingleShot(True)
+        self._fn_timer.setInterval(400)
+        self._fn_timer.timeout.connect(
+            lambda: self.field_notes_changed.emit(self.get_field_notes()))
+
+        box = QGroupBox("What does the site tell you?")
+        box.setStyleSheet(_GROUP_STYLE)
+        box_layout = QVBoxLayout(box)
+        box_layout.setSpacing(8)
+
+        self._fn_checks: dict = {}
+        self._fn_notes: dict = {}
+        for key, prompt in FIELD_PROMPTS:
+            cb = QCheckBox(prompt)
+            cb.setStyleSheet("color: #c8e6c9; font-size: 11px;")
+            cb.toggled.connect(self._fn_edited)
+            le = QLineEdit()
+            le.setPlaceholderText("what you noticed…")
+            le.setStyleSheet(
+                "QLineEdit { background: #1a2a1a; color: #c8e6c9; "
+                "border: 1px solid #2e4a2e; border-radius: 3px; padding: 3px; "
+                "font-size: 11px; }")
+            le.textChanged.connect(self._fn_edited)
+            box_layout.addWidget(cb)
+            box_layout.addWidget(le)
+            self._fn_checks[key] = cb
+            self._fn_notes[key] = le
+        layout.addWidget(box)
+
+        free_label = QLabel("Anything else you noticed on site")
+        free_label.setStyleSheet(
+            "color: #a5d6a7; font-size: 12px; font-weight: bold; "
+            "padding: 4px 0 2px 0;")
+        layout.addWidget(free_label)
+
+        self._fn_free = QTextEdit()
+        self._fn_free.setPlaceholderText(
+            "Soil felt like clay near the fence; back corner stays wet; "
+            "magpies nest in the spruce…")
+        self._fn_free.setStyleSheet(
+            "QTextEdit { background: #1a2a1a; color: #c8e6c9; "
+            "border: 1px solid #2e4a2e; border-radius: 4px; padding: 6px; "
+            "font-size: 11px; }")
+        self._fn_free.setMinimumHeight(110)
+        self._fn_free.textChanged.connect(self._fn_edited)
+        layout.addWidget(self._fn_free)
+
+        self._build_site_photo_group(layout)
+
+        layout.addStretch()
+
+    # ── Site photo overlay controls (F24, P11) ────────────────────────────────
+
+    def _build_site_photo_group(self, layout):
+        """Controls for the site-photo map underlay: import, width, opacity,
+        show/hide, remove. The photo itself is placed/redrawn by app.py via
+        src/site_photo_flow.py; this panel only drives it."""
+        box = QGroupBox("Site photo (map underlay)")
+        box.setStyleSheet(_GROUP_STYLE)
+        v = QVBoxLayout(box)
+        v.setSpacing(6)
+
+        hint = QLabel(
+            "Drop a photo of your yard (or a drone shot) onto the map as a "
+            "georeferenced underlay, centred on your pin. Drop annotation pins "
+            "to mark what you see.")
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        v.addWidget(hint)
+
+        self._sp_add_btn = QPushButton("Add a photo of your site…")
+        self._sp_add_btn.clicked.connect(self._on_add_site_photo_clicked)
+        v.addWidget(self._sp_add_btn)
+
+        self._sp_status = QLabel("No site photo.")
+        self._sp_status.setWordWrap(True)
+        self._sp_status.setStyleSheet("color: #b0bec5; font-size: 11px;")
+        v.addWidget(self._sp_status)
+
+        form = QFormLayout()
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+
+        self._sp_width = QDoubleSpinBox()
+        self._sp_width.setRange(2.0, 500.0)
+        self._sp_width.setSingleStep(1.0)
+        self._sp_width.setValue(30.0)
+        self._sp_width.setSuffix(" m")
+        self._sp_width.valueChanged.connect(
+            lambda val: None if self._sp_loading
+            else self.site_photo_width_changed.emit(float(val)))
+        form.addRow("Width across:", self._sp_width)
+
+        self._sp_opacity = QSlider(Qt.Orientation.Horizontal)
+        self._sp_opacity.setRange(10, 100)
+        self._sp_opacity.setValue(70)
+        self._sp_opacity.valueChanged.connect(
+            lambda val: None if self._sp_loading
+            else self.site_photo_opacity_changed.emit(val / 100.0))
+        form.addRow("Opacity:", self._sp_opacity)
+        v.addLayout(form)
+
+        self._sp_visible = QCheckBox("Show on map")
+        self._sp_visible.setChecked(True)
+        self._sp_visible.setStyleSheet("color: #c8e6c9; font-size: 11px;")
+        self._sp_visible.toggled.connect(
+            lambda on: None if self._sp_loading
+            else self.site_photo_visible_changed.emit(bool(on)))
+        v.addWidget(self._sp_visible)
+
+        self._sp_remove_btn = QPushButton("Remove site photo")
+        self._sp_remove_btn.clicked.connect(self.site_photo_clear_requested)
+        v.addWidget(self._sp_remove_btn)
+
+        self._sp_loading = False
+        layout.addWidget(box)
+        self.set_site_photo_state(False)
+
+    def _on_add_site_photo_clicked(self):
+        from PyQt6.QtWidgets import QFileDialog
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Add site photo", "",
+            "Images (*.jpg *.jpeg *.png *.webp);;All files (*)")
+        if path:
+            self.site_photo_import_requested.emit(path)
+
+    def set_site_photo_state(self, available: bool, *, width_m: float = 30.0,
+                             opacity: float = 0.7, visible: bool = True,
+                             name: str = ""):
+        """Enable/disable + populate the site-photo controls (called by app.py
+        after import / project load / clear). Signals are suppressed while we
+        sync so loading a project doesn't echo edits back out."""
+        if not hasattr(self, "_sp_width"):
+            return
+        self._sp_loading = True
+        try:
+            for w in (self._sp_width, self._sp_opacity, self._sp_visible,
+                      self._sp_remove_btn):
+                w.setEnabled(available)
+            if available:
+                self._sp_width.setValue(float(width_m))
+                self._sp_opacity.setValue(int(round(opacity * 100)))
+                self._sp_visible.setChecked(bool(visible))
+                self._sp_status.setText(f"Showing: {name}" if name
+                                        else "Site photo loaded.")
+            else:
+                self._sp_status.setText("No site photo.")
+        finally:
+            self._sp_loading = False
+
+    def _fn_edited(self, *_args):
+        """Any field-notes edit → (debounced) emit, unless we're loading."""
+        if getattr(self, "_fn_loading", False):
+            return
+        self._fn_timer.start()
+
+    def get_field_notes(self) -> dict:
+        """Current field-notes as a raw dict (normalized on store by app.py)."""
+        observations = {}
+        for key, cb in getattr(self, "_fn_checks", {}).items():
+            note = self._fn_notes[key].text().strip()
+            if cb.isChecked() or note:
+                observations[key] = {"checked": cb.isChecked(), "note": note}
+        free = self._fn_free.toPlainText().strip() if hasattr(self, "_fn_free") else ""
+        return {"observations": observations, "free_text": free}
+
+    def set_field_notes(self, notes):
+        """Load a (normalized) field-notes dict into the widgets without
+        re-emitting. Called on project open / new project."""
+        if not hasattr(self, "_fn_checks"):
+            return
+        from src.field_notes import normalize
+        n = normalize(notes)
+        self._fn_loading = True
+        try:
+            obs = n["observations"]
+            for key, cb in self._fn_checks.items():
+                entry = obs.get(key) or {}
+                cb.setChecked(bool(entry.get("checked")))
+                self._fn_notes[key].setText(entry.get("note", ""))
+            self._fn_free.setPlainText(n["free_text"])
+        finally:
+            self._fn_loading = False
 
     def _build_slope_page(self, layout):
         """Slope sub-tab: single-point elevation/slope, auto contours + slope
@@ -784,6 +1044,9 @@ class SitePanel(QWidget):
         self._lbl_rain_annual.setText("—")
         self._lbl_rain_monthly.setText("—")
         self._lbl_rain_src.setText("")
+        self._show_precip_timing(None)
+        if hasattr(self, "_winter_box"):
+            self._winter_box.setVisible(False)
         self._lbl_soil_ph.setText("—")
         self._lbl_soil_texture.setText("—")
         self._lbl_soil_mix.setText("—")
@@ -807,6 +1070,7 @@ class SitePanel(QWidget):
         worker.rainfall.connect(self._on_rainfall)
         worker.soil.connect(self._on_soil)
         worker.climate.connect(self._on_climate)
+        worker.winter.connect(self._on_winter)
         worker.ecoregion.connect(self._on_ecoregion)
         worker.fast_ready.connect(self._on_fast_ready)
         worker.finished.connect(self._on_finished)
@@ -844,8 +1108,8 @@ class SitePanel(QWidget):
             except Exception:
                 pass
             for sig_name in ("progress", "hardiness", "elevation",
-                             "rainfall", "soil", "climate", "ecoregion",
-                             "fast_ready", "finished"):
+                             "rainfall", "soil", "climate", "winter",
+                             "ecoregion", "fast_ready", "finished"):
                 try:
                     getattr(worker, sig_name).disconnect()
                 except (TypeError, RuntimeError):
@@ -920,6 +1184,34 @@ class SitePanel(QWidget):
         else:
             self._lbl_frost.setText("—")
 
+    def _on_winter(self, data):
+        """Render snow-cover + survival metrics (the insulation half of snow).
+        ``data`` is ``src.climate.get_winter_summary``'s dict or ``None``."""
+        box = getattr(self, "_winter_box", None)
+        if box is None:
+            return
+        if not data:
+            box.setVisible(False)
+            return
+        from src import snow
+        rel = data.get("reliability", "—")
+        cover = data.get("snow_cover_days")
+        rel_color = {"reliable": "#a5d6a7", "variable": "#ffd54f",
+                     "unreliable": "#ffab91"}.get(rel, "#c8e6c9")
+        cover_txt = (f"{cover:.0f} insulating days/yr" if cover is not None else "—")
+        self._lbl_winter_cover.setText(
+            f"<span style='color:{rel_color};'>{rel}</span> — {cover_txt}")
+        self._lbl_winter_cover.setTextFormat(Qt.TextFormat.RichText)
+        ft = data.get("freeze_thaw_cycles", 0)
+        thaw = data.get("midwinter_thaw_days", 0)
+        ros = data.get("rain_on_snow_days", 0)
+        self._lbl_winter_thaw.setText(
+            f"{thaw:.0f} midwinter thaw days · {ft:.0f} freeze–thaw · "
+            f"{ros:.0f} rain-on-snow / yr")
+        self._lbl_winter_notes.setText("  ".join(
+            "• " + n for n in snow.survival_notes(data)))
+        box.setVisible(True)
+
     def _on_elevation(self, data):
         if not data:
             self._lbl_elev.setText("Unavailable")
@@ -945,6 +1237,7 @@ class SitePanel(QWidget):
     def _on_rainfall(self, data):
         if not data:
             self._lbl_rain_annual.setText("Unavailable")
+            self._show_precip_timing(None)
             return
         years = data.get("years_used", "?")
         self._lbl_rain_annual.setText(
@@ -956,6 +1249,44 @@ class SitePanel(QWidget):
             row = "  ".join(f"{n}:{int(round(v))}" for n, v in zip(names, months))
             self._lbl_rain_monthly.setText(row)
         self._lbl_rain_src.setText(data.get("source", ""))
+        self._show_precip_timing(data)
+
+    def _show_precip_timing(self, data):
+        """Surface what the precipitation total hides — *when* the water is
+        available (precip_split). Growing-season rain infiltrates during the
+        season; snow is delayed spring-melt water (and much can run off frozen
+        or sloped ground). Both are liquid-water equivalent. Rows hide when the
+        split isn't present."""
+        form = getattr(self, "_rain_form", None)
+        if form is None:
+            return
+        grow = (data or {}).get("growing_season_rain_mm")
+        snow = (data or {}).get("annual_snow_mm")
+        have = data is not None and grow is not None and snow is not None
+        try:
+            form.setRowVisible(self._lbl_rain_growing, have)
+            form.setRowVisible(self._lbl_rain_snow, have)
+            form.setRowVisible(self._lbl_rain_note, have)
+        except Exception:
+            pass
+        if not have:
+            self._lbl_rain_note.setVisible(False)
+            return
+        estimated = "estimated" in (data.get("snow_split_source") or "")
+        approx = "≈" if estimated else ""
+        # Rooting-depth framing: in-season rain feeds shallow/new plantings now;
+        # the snowmelt pulse is the deep-profile recharge woody plants draw on
+        # through summer (P9/P11).
+        self._lbl_rain_growing.setText(
+            f"{approx}{grow:.0f} mm  (Apr–Oct rain — feeds herbaceous & new "
+            f"plantings now)")
+        self._lbl_rain_snow.setText(
+            f"{approx}{snow:.0f} mm water  (spring-melt pulse — deep recharge "
+            f"for trees & shrubs)")
+        self._lbl_rain_note.setText(
+            "Amounts are liquid-water equivalent; melt can run off frozen or "
+            "sloped ground, so effective recharge is often less.")
+        self._lbl_rain_note.setVisible(True)
 
     def _on_soil(self, data):
         if not data:

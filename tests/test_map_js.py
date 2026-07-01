@@ -112,12 +112,16 @@ class TestJsEntryPointsExist(unittest.TestCase):
         "drawSectors", "clearSectors",
         "drawWindOverlay", "clearWindOverlay",
         "setSeasonView", "setTimelineYearByPlantId",
+        "setBeeForageView", "clearBeeForageView",
         "clearContours", "undoLastContour", "finishContour",
         "emitTerrainBboxFromViewport", "emitTerrainBboxFromBoundary",
         "drawAutoContours", "drawSlopeOverlay", "setSlopeOverlayOpacity",
         "clearAutoTerrain",
         "drawShadeOverlay", "setShadeOverlayOpacity", "clearShadeOverlay",
         "drawShadeZones", "setShadeZonesVisible", "clearShadeZones",
+        "drawSitePhotoOverlay", "setSitePhotoVisible", "setSitePhotoOpacity",
+        "clearSitePhoto",
+        "drawSnowCatch", "setSnowCatchVisible", "clearSnowCatch",
         "_removeBoundaryEntry",
         # Globals touched by the inline IIFEs:
         "plantMarkers", "plantLabels",
@@ -562,6 +566,24 @@ class TestInvalidateSize(unittest.TestCase):
         # The two console.log calls bracket invalidateSize.
         self.assertEqual(out.count("console.log"), 2)
         self.assertIn("map.invalidateSize(false)", out)
+
+
+class TestBeeForageView(unittest.TestCase):
+    def test_set_bee_forage_view_emits_call_with_label_and_styles(self):
+        js = mj.set_bee_forage_view("Yellow-banded Bumble Bee",
+                                    {"12": "good", "7": "host"})
+        self.assertTrue(js.startswith("setBeeForageView("))
+        self.assertIn("Yellow-banded Bumble Bee", js)
+        self.assertIn('"12": "good"', js)
+        self.assertTrue(js.strip().endswith(");"))
+
+    def test_clear_bee_forage_view(self):
+        self.assertEqual(mj.clear_bee_forage_view(), "clearBeeForageView();")
+
+    def test_label_is_json_escaped(self):
+        # A quote in the bee name must not break out of the JS string literal.
+        js = mj.set_bee_forage_view('a "cuckoo" bee', {})
+        self.assertIn('\\"cuckoo\\"', js)
 
 
 if __name__ == "__main__":

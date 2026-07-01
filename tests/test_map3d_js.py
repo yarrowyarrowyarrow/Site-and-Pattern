@@ -111,5 +111,25 @@ class TestSetPlants(unittest.TestCase):
         self.assertIn("window.permaSetPlants && window.permaSetPlants([]", js)
 
 
+class TestBeeMode(unittest.TestCase):
+    def test_set_bee_mode_guarded_bool(self):
+        on = m3.set_bee_mode(True)
+        self.assertIn("window.permaSetBeeMode && window.permaSetBeeMode(", on)
+        self.assertIn("true", on)
+        self.assertTrue(on.strip().endswith(");"))
+        self.assertIn("false", m3.set_bee_mode(False))
+
+    def test_set_bee_targets_json_int_list(self):
+        js = m3.set_bee_targets([3, 7, 12])
+        self.assertIn("window.permaSetBeeTargets && window.permaSetBeeTargets(", js)
+        self.assertIn("[3, 7, 12]", js)
+        self.assertTrue(js.strip().endswith(");"))
+
+    def test_set_bee_targets_coerces_and_handles_empty(self):
+        # ids arrive as ints even if passed as strings; empty → []
+        self.assertIn("[1, 2]", m3.set_bee_targets(["1", "2"]))
+        self.assertIn("permaSetBeeTargets([]", m3.set_bee_targets([]))
+
+
 if __name__ == "__main__":
     unittest.main()

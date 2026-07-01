@@ -783,6 +783,22 @@ class MapWidget(QWebEngineView):
     def clear_splat_ortho(self):
         self.run_js(map_js.clear_splat_ortho())
 
+    # ── Site photo overlay (F24) ─────────────────────────────────────────────
+
+    def draw_site_photo_overlay(self, image_data_url: str, bbox: dict,
+                                opacity: float = 0.7):
+        """Show a user yard/drone photo as a georeferenced map underlay (F24)."""
+        self.run_js(map_js.draw_site_photo_overlay(image_data_url, bbox, opacity))
+
+    def set_site_photo_visible(self, visible: bool):
+        self.run_js(map_js.set_site_photo_visible(visible))
+
+    def set_site_photo_opacity(self, opacity: float):
+        self.run_js(map_js.set_site_photo_opacity(opacity))
+
+    def clear_site_photo(self):
+        self.run_js(map_js.clear_site_photo())
+
     # ── Dynamic wind shadow (V1.68) ──────────────────────────────────────────
 
     def set_wind_casters(self, casters: list):
@@ -799,6 +815,17 @@ class MapWidget(QWebEngineView):
 
     def clear_wind_shadow(self):
         self.run_js(map_js.clear_wind_shadow())
+
+    # ── Snow-catch microsites (Step 3) ───────────────────────────────────────
+
+    def draw_snow_catch(self, payload: dict):
+        self.run_js(map_js.draw_snow_catch(payload))
+
+    def set_snow_catch_visible(self, visible: bool):
+        self.run_js(map_js.set_snow_catch_visible(visible))
+
+    def clear_snow_catch(self):
+        self.run_js(map_js.clear_snow_catch())
 
     def draw_shade_zones(self, cells: list, d_lat: float, d_lng: float,
                          opacity: float = 0.45):
@@ -841,9 +868,21 @@ class MapWidget(QWebEngineView):
         in-progress drawing globals)."""
         self.run_js(map_js.restore_contour(contour))
 
+    def clear_bee_forage_view(self):
+        """Leave the "what the bee sees" map view (F37 increment 3)."""
+        self.run_js(map_js.clear_bee_forage_view())
+
     def clear_selection(self):
         """Clear the current map selection (no delete)."""
         self.run_js(map_js.clear_selection())
+
+    def set_bee_forage_view(self, payload: dict):
+        """Recolour the map as the chosen bee's floral-resource map
+        (F37 increment 3). ``payload`` = ``{"bee": name, "styles": {pid: fit}}``,
+        built by the analysis panel's Bees tab and delivered via its signal."""
+        payload = payload or {}
+        self.run_js(map_js.set_bee_forage_view(
+            payload.get("bee", ""), payload.get("styles", {})))
 
     def delete_selected(self):
         """Delete every currently-selected map item."""

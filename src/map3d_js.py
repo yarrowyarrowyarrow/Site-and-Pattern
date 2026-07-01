@@ -87,6 +87,25 @@ def set_plants(records: list) -> str:
             f"{json.dumps(records or [])});")
 
 
+def set_bee_mode(on: bool) -> str:
+    """JS to enter/leave the "fly as a bee" first-person mode in the built-in
+    viewer (F37 increment 2). When on, OrbitControls is disabled and a low fly
+    camera + bee-vision overlay take over; when off, the orbit view is restored.
+    Guarded with ``&&`` so it's a no-op until the viewer registers the hook."""
+    return ("window.permaSetBeeMode && window.permaSetBeeMode("
+            f"{json.dumps(bool(on))});")
+
+
+def set_bee_targets(plant_ids: list) -> str:
+    """JS to mark which placed plants feed the chosen bee, so the fly-through
+    floats a glowing beacon over each one (F37 increment 2). ``plant_ids`` are DB
+    plant ids from ``bee_habitat.target_plant_ids_for_bee``; the viewer shows a
+    beacon only for those actually present in the scene. Guarded with ``&&``."""
+    ids = [int(p) for p in (plant_ids or [])]
+    return ("window.permaSetBeeTargets && window.permaSetBeeTargets("
+            f"{json.dumps(ids)});")
+
+
 def set_quality(level: int) -> str:
     """JS to set the viewer's geometry detail (0 Low · 1 Medium · 2 High). The
     viewer drops its archetype caches and re-renders the current scene at the new

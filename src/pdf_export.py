@@ -126,11 +126,48 @@ def export_pdf(
         y = _draw_summary(painter, w, y, placed_plants, structures, dpi_scale,
                           score, cost)
 
-        # ── Page 2: Plant List ────────────────────────────────────────────
+        # ── Page 2: Planting Plan ─────────────────────────────────────────
+        # The buy-it / plant-it plan (F40) — quantities, form, spacing, when, and
+        # cost, plus a phased schedule. Falls back to the bare plant list if the
+        # plan can't be built for any reason.
         printer.newPage()
-        y = _draw_plant_list(painter, w, h, placed_plants, dpi_scale)
+        try:
+            from src.planting_plan import build_planting_plan
+            structs = [
+                f["properties"]["struct_def"]
+                for f in project.get("features", [])
+                if f.get("properties", {}).get("element_type") == "structure"
+                and f.get("properties", {}).get("struct_def")
+            ]
+            plan_bed_area = sum(
+                float(f.get("properties", {}).get("area_m2") or 0.0)
+                for f in project.get("features", [])
+                if f.get("properties", {}).get("element_type") == "custom_shape"
+            )
+            plan = build_planting_plan(placed_plants, structures=structs,
+                                       bed_area_m2=plan_bed_area)
+        except Exception:
+            plan = None
+        if plan is not None:
+            _draw_planting_plan(painter, w, h, plan, dpi_scale)
+        else:
+            _draw_plant_list(painter, w, h, placed_plants, dpi_scale)
 
-        # ── Page 3: Notes (if any) ────────────────────────────────────────
+        # ── Page 3: Phased conversion schedule (F17) ──────────────────────
+        # Year-by-year "remove this / plant that, when" — only when there is a
+        # design (or drawn lawn zones) to schedule.
+        try:
+            from src.conversion_plan import build_conversion_schedule
+            from src.lawn_zones import conversion_summary
+            schedule = build_conversion_schedule(
+                placed_plants, summary=conversion_summary(project.get("features", [])))
+        except Exception:
+            schedule = None
+        if schedule is not None and (placed_plants or schedule.has_zones):
+            printer.newPage()
+            _draw_conversion_schedule(painter, w, h, schedule, dpi_scale)
+
+        # ── Page 4: Notes (if any) ────────────────────────────────────────
         if notes.strip():
             printer.newPage()
             _draw_notes_page(painter, w, h, notes, dpi_scale)
@@ -315,6 +352,179 @@ def _draw_plant_list(painter: QPainter, w: float, h: float,
             painter.drawText(QRectF(15 * s, y, w - 30 * s, 12 * s),
                              Qt.AlignmentFlag.AlignLeft, src_line)
             y += 12 * s
+
+    return y
+
+
+def _wrap(text: str, width: int) -> list[str]:
+    """Greedy word-wrap to ``width`` characters (for the phased summary)."""
+    out: list[str] = []
+    cur = ""
+    for word in text.split(" "):
+        if cur and len(cur) + 1 + len(word) > width:
+            out.append(cur)
+            cur = word
+        else:
+            cur = word if not cur else f"{cur} {word}"
+    if cur:
+        out.append(cur)
+    return out
+
+
+def _draw_planting_plan(painter: QPainter, w: float, h: float, plan, s: float) -> float:
+    """Draw the buy-it / plant-it Planting Plan page (F40): species grouped by
+    nursery source with form / qty / spacing / when / price, then a phased
+    planting schedule and the nursery footer. Returns final Y."""
+    from src.sourcing import format_cost
+    from src.planting_plan import PHASES, NURSERIES
+
+    # Title bar
+    painter.fillRect(QRectF(0, 0, w, 35 * s), QColor("#1b3a1b"))
+    painter.setPen(QColor("#a5d6a7"))
+    painter.setFont(QFont("Arial", _safe_size(14 * s), QFont.Weight.Bold))
+    painter.drawText(QRectF(15 * s, 8 * s, w, 25 * s),
+                     Qt.AlignmentFlag.AlignLeft, "Planting Plan")
+
+    y = 45 * s
+    col_x = [15 * s, 200 * s, 280 * s, 320 * s, 380 * s, 480 * s]
+    headers = ["Species", "Form", "Qty", "Space", "When", "Price"]
+    sections = [
+        ("native_woody", "Native trees & shrubs"),
+        ("native_herb", "Native herbaceous & groundcover"),
+        ("cultivated", "Cultivated / non-native"),
+    ]
+
+    for bucket, label in sections:
+        items = plan.items_by_source(bucket)
+        if not items or y > h - 60 * s:
+            continue
+        painter.setFont(QFont("Arial", _safe_size(9 * s), QFont.Weight.Bold))
+        painter.setPen(QColor("#a5d6a7"))
+        painter.drawText(QRectF(15 * s, y, w - 30 * s, 14 * s),
+                         Qt.AlignmentFlag.AlignLeft, label)
+        y += 15 * s
+
+        painter.setFont(QFont("Arial", _safe_size(7 * s), QFont.Weight.Bold))
+        painter.setPen(QColor("#78909c"))
+        for i, head in enumerate(headers):
+            painter.drawText(QRectF(col_x[i], y, 120 * s, 12 * s),
+                             Qt.AlignmentFlag.AlignLeft, head)
+        y += 11 * s
+        painter.setPen(QPen(QColor("#2e4a2e"), 1))
+        painter.drawLine(int(15 * s), int(y), int(w - 15 * s), int(y))
+        y += 4 * s
+
+        painter.setFont(QFont("Arial", _safe_size(7 * s)))
+        painter.setPen(QColor("#c8e6c9"))
+        for it in items:
+            if y > h - 40 * s:
+                break
+            vals = [
+                it.common_name,
+                it.form,
+                str(it.qty),
+                f"{it.spacing_m:g} m",
+                it.planting_window,
+                format_cost(it.ext_low, it.ext_high),
+            ]
+            for i, val in enumerate(vals):
+                cw = (col_x[i + 1] - col_x[i] - 4 * s) if i + 1 < len(col_x) else 120 * s
+                painter.drawText(QRectF(col_x[i], y, max(40 * s, cw), 12 * s),
+                                 Qt.AlignmentFlag.AlignLeft, val)
+            y += 11 * s
+        y += 8 * s
+
+    # Phased planting schedule
+    if y < h - 90 * s:
+        painter.setFont(QFont("Arial", _safe_size(9 * s), QFont.Weight.Bold))
+        painter.setPen(QColor("#a5d6a7"))
+        painter.drawText(QRectF(15 * s, y, w - 30 * s, 14 * s),
+                         Qt.AlignmentFlag.AlignLeft,
+                         "Phased planting (work top to bottom)")
+        y += 15 * s
+        for phase, season in PHASES:
+            pit = plan.items_by_phase(phase)
+            if not pit or y > h - 40 * s:
+                continue
+            painter.setFont(QFont("Arial", _safe_size(7 * s), QFont.Weight.Bold))
+            painter.setPen(QColor("#a5d6a7"))
+            painter.drawText(QRectF(15 * s, y, w - 30 * s, 12 * s),
+                             Qt.AlignmentFlag.AlignLeft, f"{phase}  ·  {season}")
+            y += 11 * s
+            painter.setFont(QFont("Arial", _safe_size(7 * s)))
+            painter.setPen(QColor("#c8e6c9"))
+            names = ", ".join(f"{it.common_name} ×{it.qty}" for it in pit)
+            for line in _wrap(names, 95):
+                if y > h - 30 * s:
+                    break
+                painter.drawText(QRectF(25 * s, y, w - 45 * s, 12 * s),
+                                 Qt.AlignmentFlag.AlignLeft, line)
+                y += 11 * s
+            y += 3 * s
+
+    # Alberta native sourcing footer
+    if y < h - 45 * s:
+        y += 6 * s
+        painter.setFont(QFont("Arial", _safe_size(7 * s), QFont.Weight.Bold))
+        painter.setPen(QColor("#a5d6a7"))
+        painter.drawText(QRectF(15 * s, y, w - 30 * s, 12 * s),
+                         Qt.AlignmentFlag.AlignLeft,
+                         "Alberta native plant / seed sources")
+        y += 12 * s
+        painter.setFont(QFont("Arial", _safe_size(7 * s)))
+        painter.setPen(QColor("#78909c"))
+        for nm, url in NURSERIES:
+            if y > h - 20 * s:
+                break
+            painter.drawText(QRectF(15 * s, y, w - 30 * s, 12 * s),
+                             Qt.AlignmentFlag.AlignLeft, f"{nm} · {url}")
+            y += 11 * s
+
+    return y
+
+
+def _draw_conversion_schedule(painter: QPainter, w: float, h: float,
+                              schedule, s: float) -> float:
+    """Draw the year-by-year phased conversion schedule page (F17): each
+    restoration band as a heading with its tasks. Returns final Y."""
+    # Title bar
+    painter.fillRect(QRectF(0, 0, w, 35 * s), QColor("#1b3a1b"))
+    painter.setPen(QColor("#a5d6a7"))
+    painter.setFont(QFont("Arial", _safe_size(14 * s), QFont.Weight.Bold))
+    painter.drawText(QRectF(15 * s, 8 * s, w, 25 * s),
+                     Qt.AlignmentFlag.AlignLeft, "Phased Conversion")
+
+    y = 45 * s
+    if schedule.has_zones:
+        from src.conversion_plan import _area_str
+        sub = f"Converting ~{_area_str(schedule.target_m2)} of lawn to habitat"
+        if schedule.converted_m2 > 0:
+            sub += f" ({_area_str(schedule.converted_m2)} already underway)"
+        painter.setFont(QFont("Arial", _safe_size(8 * s)))
+        painter.setPen(QColor("#90a4ae"))
+        painter.drawText(QRectF(15 * s, y, w - 30 * s, 12 * s),
+                         Qt.AlignmentFlag.AlignLeft, sub + ".")
+        y += 16 * s
+
+    for st in schedule.stages:
+        if y > h - 50 * s:
+            break
+        painter.setFont(QFont("Arial", _safe_size(9 * s), QFont.Weight.Bold))
+        painter.setPen(QColor("#a5d6a7"))
+        painter.drawText(QRectF(15 * s, y, w - 30 * s, 14 * s),
+                         Qt.AlignmentFlag.AlignLeft, f"{st.year_label} · {st.stage}")
+        y += 14 * s
+        painter.setFont(QFont("Arial", _safe_size(7 * s)))
+        painter.setPen(QColor("#c8e6c9"))
+        for task in st.tasks:
+            for i, line in enumerate(_wrap(task, 95)):
+                if y > h - 30 * s:
+                    break
+                prefix = "•  " if i == 0 else "   "
+                painter.drawText(QRectF(25 * s, y, w - 45 * s, 12 * s),
+                                 Qt.AlignmentFlag.AlignLeft, prefix + line)
+                y += 10 * s
+        y += 6 * s
 
     return y
 

@@ -46,9 +46,16 @@ class AnalysisPanel(QWidget):
     wind_shadow_toggled = pyqtSignal(bool)
     wind_angle_changed_live = pyqtSignal(int)   # dial scrub (JS-only redraw)
     wind_shadow_commit = pyqtSignal(int)        # dial released (Python merge)
+    # Snow-catch microsites (Step 3): winter drifts in the lee of windbreaks.
+    snow_catch_toggled = pyqtSignal(bool)
 
     # Season view
     season_changed = pyqtSignal(str)        # "Spring" | "Summer" | "Fall" | "Winter"
+
+    # "What the bee sees" map overlay (F37 increment 3): the Bees tab asks the
+    # 2D map to recolour by the selected bee's floral-resource value.
+    bee_map_overlay_requested = pyqtSignal(dict)   # {"bee": name, "styles": {pid: fit}}
+    bee_map_overlay_cleared = pyqtSignal()
 
     # A cached species photo finished downloading off-thread — re-render the
     # Habitat tab's species gallery (F11 / I1). Emitted from a worker thread;
@@ -61,6 +68,7 @@ class AnalysisPanel(QWidget):
         self._structures: list[dict] = []
         self._last_habitat_result = None          # for the species gallery re-render
         self._gallery_warmed: set[str] = set()    # image urls already fetched once
+        self._lawn_conversion: dict | None = None  # for the F10 counterfactual
         self._build_ui()
 
     def _build_ui(self):
@@ -89,6 +97,7 @@ class AnalysisPanel(QWidget):
         self._build_wind_tab()
         self._build_season_tab()
         self._build_habitat_tab()
+        self._build_bee_tab()
 
         layout.addWidget(self._tabs)
 
@@ -514,6 +523,16 @@ class AnalysisPanel(QWidget):
         self._wind_shadow_chk.toggled.connect(self.wind_shadow_toggled.emit)
         layout.addWidget(self._wind_shadow_chk)
 
+        # Snow-catch microsites (Step 3): winter snow drifts into the lee of
+        # windbreaks — deeper-insulated, moister, slightly warmer planting spots.
+        self._snow_catch_chk = QCheckBox("Snow catch (winter drifts in lee)")
+        self._snow_catch_chk.setToolTip(
+            "Show where winter snow drifts into the shelter of trees, shrubs and "
+            "structures — insulated, moister microsites. Uses the prevailing "
+            "winter wind from the fetched wind rose.")
+        self._snow_catch_chk.toggled.connect(self.snow_catch_toggled.emit)
+        layout.addWidget(self._snow_catch_chk)
+
         dial_row = QHBoxLayout()
         self._wind_dial = QDial()
         self._wind_dial.setRange(0, 359)
@@ -741,6 +760,18 @@ class AnalysisPanel(QWidget):
         )
         layout.addWidget(self._habitat_score_label)
 
+        # Lawn-equivalent counterfactual (F10, P6/P8): the Tallamy contrast made
+        # explicit — what this design provides vs. the ≈0 a conventional lawn of
+        # the same ground would. Hidden until a score is computed.
+        self._lawn_counterfactual_label = QLabel("")
+        self._lawn_counterfactual_label.setWordWrap(True)
+        self._lawn_counterfactual_label.setVisible(False)
+        self._lawn_counterfactual_label.setStyleSheet(
+            "color: #dcedc8; font-size: 11px; padding: 8px; "
+            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px;"
+        )
+        layout.addWidget(self._lawn_counterfactual_label)
+
         # Species galleries (F11 / I1) — photos that make the value tangible.
         # "Species doing the work" = the plants (keystone / host / bird-food
         # first); "Species supported" = the fauna those plants feed/host. Both
@@ -834,6 +865,341 @@ class AnalysisPanel(QWidget):
         # font; the page itself carries the full "Habitat Value" wording.
         self._tabs.addTab(page, "Habitat")
 
+    # ═════════════════════════════════════════════════════════════════════════
+    #  Bees — "Design for a bee" habitat builder (F37)
+    # ═════════════════════════════════════════════════════════════════════════
+
+    _FIT_CHIP = {
+        "good":      ("#1b5e20", "#a5d6a7", "good fit"),
+        "plausible": ("#33450f", "#dcedc8", "workable"),
+        "unknown":   ("#37474f", "#b0bec5", "—"),
+    }
+    _MONTH_ABBR = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+    def _build_bee_tab(self):
+        page = QScrollArea()
+        page.setWidgetResizable(True)
+        page.setFrameShape(QFrame.Shape.NoFrame)
+        tab = QWidget()
+        page.setWidget(tab)
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(8)
+
+        info = QLabel(
+            "Design habitat for a specific native bee. Pick a target — a whole "
+            "genus or a single species — to see which of your plants feed it, how "
+            "to give it a place to nest, and whether your design blooms across its "
+            "flight season."
+        )
+        info.setWordWrap(True)
+        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        layout.addWidget(info)
+
+        self._bee_selector = QComboBox()
+        self._bee_selector.setStyleSheet("QComboBox { padding: 4px; }")
+        self._populate_bee_selector()
+        self._bee_selector.currentIndexChanged.connect(self._update_bee_plan)
+        layout.addWidget(self._bee_selector)
+
+        # "What the bee sees" — recolour the 2D map as this bee's resource map.
+        self._bee_map_btn = QPushButton("🗺  Show what this bee sees on the map")
+        self._bee_map_btn.setCheckable(True)
+        self._bee_map_btn.setToolTip(
+            "Recolour the 2D map as this bee's floral-resource map — its host "
+            "plants glow like nectar, everything else greys out")
+        self._bee_map_btn.toggled.connect(self._on_bee_map_toggle)
+        layout.addWidget(self._bee_map_btn)
+
+        # Summary: photo + facts
+        summ = QHBoxLayout()
+        summ.setSpacing(8)
+        self._bee_photo = QLabel("🐝")
+        self._bee_photo.setFixedSize(96, 72)
+        self._bee_photo.setScaledContents(False)
+        self._bee_photo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._bee_photo.setStyleSheet(
+            "border: 1px solid #2e4a2e; border-radius: 3px; "
+            "background: #14241a; font-size: 30px;")
+        summ.addWidget(self._bee_photo, 0, Qt.AlignmentFlag.AlignTop)
+        self._bee_summary = QLabel("")
+        self._bee_summary.setWordWrap(True)
+        self._bee_summary.setTextFormat(Qt.TextFormat.RichText)
+        self._bee_summary.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._bee_summary.setStyleSheet("color: #c8e6c9; font-size: 11px;")
+        summ.addWidget(self._bee_summary, 1)
+        layout.addLayout(summ)
+
+        def _section(title: str) -> QLabel:
+            hdr = QLabel(title)
+            hdr.setStyleSheet(
+                "color: #a5d6a7; font-size: 12px; font-weight: bold; "
+                "padding: 6px 0 2px 0;")
+            layout.addWidget(hdr)
+            body = QLabel("")
+            body.setWordWrap(True)
+            body.setTextFormat(Qt.TextFormat.RichText)
+            body.setStyleSheet(
+                "color: #c8e6c9; font-size: 11px; padding: 8px; "
+                "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px;")
+            body.setAlignment(Qt.AlignmentFlag.AlignTop)
+            layout.addWidget(body)
+            return body
+
+        self._bee_floral = _section("Floral hosts — plants that feed this bee")
+        self._bee_nesting = _section("Nesting — give it a place to live")
+        self._bee_forage = _section("Forage across the flight season")
+
+        self._bee_footnote = QLabel("")
+        self._bee_footnote.setWordWrap(True)
+        self._bee_footnote.setStyleSheet(
+            "color: #607d8b; font-size: 10px; font-style: italic;")
+        layout.addWidget(self._bee_footnote)
+
+        # Re-render the bee photo when a warmed image lands (shared signal).
+        self.galleryImageReady.connect(self._render_bee_photo)
+
+        self._tabs.addTab(page, "Bees")
+        self._bee_tab_index = self._tabs.indexOf(page)
+        # Recompute the plan lazily when the Bees tab is opened, so "in your
+        # design" and forage coverage stay live without recomputing on every
+        # plant placement.
+        self._tabs.currentChanged.connect(self._on_tab_changed)
+        self._update_bee_plan()
+
+    def _on_tab_changed(self, idx: int):
+        if idx == getattr(self, "_bee_tab_index", -1):
+            self.refresh_bee_tab()
+
+    def _populate_bee_selector(self):
+        """Fill the target-bee combo, grouped genus-first with disabled headers."""
+        combo = self._bee_selector
+        combo.blockSignals(True)
+        combo.clear()
+        try:
+            from src.bee_habitat import list_target_bees
+            bees = list_target_bees()
+        except Exception:  # noqa: BLE001 — never let a data issue break the panel
+            bees = []
+        current_genus = None
+        for b in bees:
+            if b["genus"] != current_genus:
+                current_genus = b["genus"]
+                combo.addItem(f"── {current_genus} ──", userData=None)
+                idx = combo.count() - 1
+                item = combo.model().item(idx)
+                if item is not None:
+                    item.setEnabled(False)
+            if b["is_group"]:
+                label = f"    {b['common_name']} (any {b['genus']})"
+            else:
+                label = f"    {b['common_name']}  ·  {b['scientific_name']}"
+            combo.addItem(label, userData=b["id"])
+        combo.blockSignals(False)
+        # Select the first real (enabled) entry.
+        for i in range(combo.count()):
+            if combo.itemData(i) is not None:
+                combo.setCurrentIndex(i)
+                break
+
+    def _current_bee_id(self):
+        return self._bee_selector.itemData(self._bee_selector.currentIndex())
+
+    def _placed_plant_ids(self) -> list[int]:
+        ids: list[int] = []
+        for p in (self._placed_plants or []):
+            pid = p.get("plant_id")
+            if pid is not None:
+                try:
+                    ids.append(int(pid))
+                except (TypeError, ValueError):
+                    pass
+        return ids
+
+    def _update_bee_plan(self, *args):
+        """Build and render the habitat plan for the selected bee."""
+        fid = self._current_bee_id()
+        if fid is None:
+            return
+        try:
+            from src.bee_habitat import build_bee_habitat_plan
+            plan = build_bee_habitat_plan(fid, plant_ids=self._placed_plant_ids())
+        except Exception:  # noqa: BLE001
+            plan = None
+        if plan is None:
+            self._bee_summary.setText("<i>No data for this bee yet.</i>")
+            for lbl in (self._bee_floral, self._bee_nesting, self._bee_forage):
+                lbl.setText("—")
+            self._bee_footnote.setText("")
+            return
+        self._bee_plan = plan
+        self._render_bee_summary(plan)
+        self._render_bee_photo()
+        self._render_bee_floral(plan)
+        self._render_bee_nesting(plan)
+        self._render_bee_forage(plan)
+        src = (plan.attrs or {}).get("source") or ""
+        conf = {"documented": "well-documented", "partial": "partly documented",
+                "thin": "sparse"}.get(plan.data_confidence, plan.data_confidence)
+        self._bee_footnote.setText(
+            f"Data confidence: {conf}. Floral matches shown as documented "
+            f"(plant↔bee records) or inferred (genus-level hosts). {src}")
+        # Keep the map overlay live when the user switches bee while it's on.
+        if getattr(self, "_bee_map_btn", None) is not None and self._bee_map_btn.isChecked():
+            self.bee_map_overlay_requested.emit(self._bee_map_payload(plan))
+
+    def _render_bee_summary(self, plan):
+        bee = plan.bee or {}
+        a = plan.attrs or {}
+        tongue = a.get("tongue_length")
+        nest = a.get("nesting_habit")
+        season = a.get("flight_season")
+        cons = a.get("conservation_status")
+        bits = [f"<b>{bee.get('common_name','')}</b> "
+                f"<span style='color:#90a4ae;'><i>{bee.get('scientific_name','')}</i></span>"]
+        facts = []
+        if tongue and tongue != "unknown":
+            facts.append(f"{tongue}-tongued")
+        elif tongue == "unknown":
+            facts.append("tongue not characterised")
+        if season:
+            facts.append(f"flies {season}")
+        if facts:
+            bits.append("<span style='color:#a5d6a7;'>" + " · ".join(facts) + "</span>")
+        if cons:
+            colour = "#ff8a65" if "risk" in cons.lower() else "#90a4ae"
+            bits.append(f"<span style='color:{colour};'>{cons}</span>")
+        desc = bee.get("description") or ""
+        if desc:
+            bits.append(f"<span style='color:#c8e6c9;'>{desc}</span>")
+        self._bee_summary.setText("<br>".join(bits))
+
+    def _render_bee_photo(self):
+        """Show the selected bee's cached photo (warming it if needed), else 🐝."""
+        plan = getattr(self, "_bee_plan", None)
+        if plan is None:
+            return
+        url = (plan.bee or {}).get("image_url") or ""
+        if not url:
+            self._bee_photo.setText("🐝")
+            self._bee_photo.setPixmap(QPixmap())
+            return
+        try:
+            from src.image_cache import get_cached_image
+            path = get_cached_image(url)
+        except Exception:  # noqa: BLE001
+            path = None
+        if path:
+            pm = QPixmap(path)
+            if not pm.isNull():
+                self._bee_photo.setText("")
+                self._bee_photo.setScaledContents(True)
+                self._bee_photo.setPixmap(pm)
+                return
+        # not cached yet — keep the icon and warm it in the background
+        self._bee_photo.setText("🐝")
+        if url not in self._gallery_warmed:
+            self._gallery_warmed.add(url)
+            self._warm_gallery_images([(url,
+                                        (plan.bee or {}).get("image_attribution", ""),
+                                        (plan.bee or {}).get("image_license", ""))])
+
+    def _render_bee_floral(self, plan):
+        matches = plan.floral_matches or []
+        if not matches:
+            self._bee_floral.setText(
+                "<i>No floral-host plants matched — this is often a cuckoo bee "
+                "that feeds itself by parasitising a host bee (see Nesting).</i>")
+            return
+        in_design = [m for m in matches if m.in_users_list]
+        rows = []
+        if in_design:
+            rows.append("<b>In your design:</b>")
+            rows.extend(self._bee_match_row(m) for m in in_design[:12])
+            rows.append("<br><b>Also good to add:</b>")
+            others = [m for m in matches if not m.in_users_list]
+        else:
+            rows.append("<b>Plants that feed this bee:</b>")
+            others = matches
+        rows.extend(self._bee_match_row(m) for m in others[:14])
+        self._bee_floral.setText("".join(f"<div style='padding:1px 0;'>{r}</div>"
+                                          for r in rows))
+
+    def _bee_match_row(self, m) -> str:
+        bg, fg, txt = self._FIT_CHIP.get(m.tongue_form_fit, self._FIT_CHIP["unknown"])
+        chip = (f"<span style='background:{bg}; color:{fg}; border-radius:3px; "
+                f"padding:0 4px; font-size:9px;'>{txt}</span>")
+        bloom = f" <span style='color:#90a4ae;'>· {m.bloom_period}</span>" if m.bloom_period else ""
+        basis = "" if m.confidence == "documented" else \
+                " <span style='color:#78909c; font-size:9px;'>(genus match)</span>"
+        star = "★ " if m.in_users_list else ""
+        return (f"{star}{m.common_name} {chip}{bloom}{basis}")
+
+    def _render_bee_nesting(self, plan):
+        g = plan.nesting
+        parts = [f"<b>{g.headline}</b>"]
+        if g.structures:
+            names = ", ".join(s.get("name", "") for s in g.structures)
+            parts.append(f"<span style='color:#a5d6a7;'>Structures: {names}</span>")
+        for a in g.actions:
+            parts.append(f"• {a}")
+        self._bee_nesting.setText("".join(f"<div style='padding:1px 0;'>{p}</div>"
+                                           for p in parts))
+
+    def _render_bee_forage(self, plan):
+        f = plan.forage
+        if not f.flight_months:
+            self._bee_forage.setText(f"<i>{f.note}</i>")
+            return
+        flight = set(f.flight_months)
+        covered = set(f.covered_months)
+        cells = []
+        for mo in range(3, 11):    # Mar–Oct strip
+            abbr = self._MONTH_ABBR[mo]
+            if mo not in flight:
+                style = "color:#4a5a4a;"
+            elif mo in covered:
+                style = "background:#1b5e20; color:#c8e6c9; border-radius:3px;"
+            else:
+                style = "background:#5d3a1a; color:#ffcc80; border-radius:3px;"
+            cells.append(f"<span style='{style} padding:2px 5px; margin:0 1px;'>{abbr}</span>")
+        strip = "".join(cells)
+        legend = ("<div style='color:#90a4ae; font-size:9px; padding-top:4px;'>"
+                  "green = a plant in bloom for it · orange = flying but no bloom "
+                  "(a gap to fill)</div>")
+        note = f"<div style='padding-top:4px;'>{f.note}</div>"
+        sug = ""
+        if f.suggestions:
+            names = ", ".join(s.common_name for s in f.suggestions[:6])
+            sug = (f"<div style='padding-top:4px; color:#a5d6a7;'>"
+                   f"Fill the gap with: {names}</div>")
+        self._bee_forage.setText(strip + note + legend + sug)
+
+    def _bee_map_payload(self, plan) -> dict:
+        """Build the {bee, styles:{pid: fit}} payload the 2D map uses to recolour
+        by this bee's floral-resource value ('good'/'plausible' for graded
+        tongue-fit, else 'host')."""
+        styles = {}
+        for m in plan.floral_matches:
+            fit = m.tongue_form_fit if m.tongue_form_fit in ("good", "plausible") else "host"
+            styles[str(m.plant_id)] = fit
+        return {"bee": (plan.bee or {}).get("common_name", ""), "styles": styles}
+
+    def _on_bee_map_toggle(self, on: bool):
+        """Toggle the 'what the bee sees' recolour on the 2D map."""
+        plan = getattr(self, "_bee_plan", None)
+        if on and plan is not None:
+            self.bee_map_overlay_requested.emit(self._bee_map_payload(plan))
+        else:
+            self.bee_map_overlay_cleared.emit()
+
+    def refresh_bee_tab(self):
+        """Re-render the bee plan against the current placed plants (call after
+        the design changes so 'in your design' / forage coverage stay live)."""
+        if hasattr(self, "_bee_selector"):
+            self._update_bee_plan()
+
     def set_shade_breakdown(self, counts: dict | None):
         """Render the cached shade-tag mix (``{tag: n}`` from
         shade_zones.tag_counts), or a prompt when nothing is classified yet.
@@ -863,10 +1229,45 @@ class AnalysisPanel(QWidget):
     def set_placed_plants(self, plants: list[dict]):
         """Update the list of placed plants (from app.py)."""
         self._placed_plants = plants
+        # Keep the bee plan live if its tab is the one on screen.
+        if (hasattr(self, "_bee_tab_index")
+                and self._tabs.currentIndex() == self._bee_tab_index):
+            self.refresh_bee_tab()
 
     def set_structures(self, structures: list[dict]):
         """Update the list of placed structures (from app.py)."""
         self._structures = structures
+
+    def set_lawn_conversion(self, summary: dict | None):
+        """Store the lawn-conversion summary (from ``lawn_zones.conversion_summary``)
+        so the F10 counterfactual can ground its contrast in the converted area.
+        Re-renders the counterfactual if a score is already on screen."""
+        self._lawn_conversion = summary or None
+        if getattr(self, "_last_habitat_result", None) is not None:
+            self._render_lawn_counterfactual(self._last_habitat_result)
+
+    def _render_lawn_counterfactual(self, result):
+        """Show the design's habitat value beside the ≈0 of an equivalent lawn
+        (F10). Never raises — the counterfactual is a nicety, not the score."""
+        lbl = getattr(self, "_lawn_counterfactual_label", None)
+        if lbl is None:
+            return
+        try:
+            from src.lawn_zones import lawn_counterfactual, format_lawn_counterfactual
+            cf = lawn_counterfactual(result, self._lawn_conversion)
+            lines = format_lawn_counterfactual(cf)
+        except Exception:  # noqa: BLE001
+            lines = []
+        if not lines:
+            lbl.setVisible(False)
+            return
+        head = lines[0]
+        rest = lines[1:]
+        html = (f"<b>vs. lawn</b><br>{head}"
+                + ("<br><span style='color:#90a4ae;font-size:10px;'>"
+                   + "<br>".join(rest) + "</span>" if rest else ""))
+        lbl.setText(html)
+        lbl.setVisible(True)
 
     def _calc_habitat_score(self):
         # Scoring maths moved to src/habitat_score.py (Chunk 6) so the
@@ -878,10 +1279,12 @@ class AnalysisPanel(QWidget):
         except HabitatScoreError:
             self._habitat_score_label.setText("?")
             self._habitat_breakdown.setText("Plant database unavailable.")
+            self._lawn_counterfactual_label.setVisible(False)
             return
         if result is None:
             self._habitat_score_label.setText("—")
             self._habitat_breakdown.setText("Place some plants and structures first.")
+            self._lawn_counterfactual_label.setVisible(False)
             return
 
         total_int = result.total
@@ -903,9 +1306,13 @@ class AnalysisPanel(QWidget):
             "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px; padding: 12px;"
         )
 
+        # Lawn-equivalent counterfactual (F10): this design vs. the ≈0 of an
+        # equivalent lawn, grounded in the converted area when zones are drawn.
+        self._last_habitat_result = result
+        self._render_lawn_counterfactual(result)
+
         # Species photos that make the value tangible (F11 / I1): the plants
         # doing the work and the fauna they support.
-        self._last_habitat_result = result
         try:
             self._render_galleries(result)
         except Exception:  # noqa: BLE001 — galleries are a nicety, never break the score

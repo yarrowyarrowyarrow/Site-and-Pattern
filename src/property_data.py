@@ -87,7 +87,10 @@ def fetch_rainfall(lat: float, lng: float, years: int = 10) -> Optional[dict]:
         "https://archive-api.open-meteo.com/v1/archive?"
         f"latitude={lat:.4f}&longitude={lng:.4f}"
         f"&start_date={start.isoformat()}&end_date={end_d.isoformat()}"
-        "&daily=precipitation_sum&models=era5_land&timezone=auto"
+        # rain_sum alongside the total gives a *measured* rain/snow split: snow
+        # water-equivalent = precipitation_sum − rain_sum. precipitation_sum
+        # stays the headline total (liquid-water equivalent).
+        "&daily=precipitation_sum,rain_sum&models=era5_land&timezone=auto"
     )
     # The archive API ships ~10 years of daily data per call; the
     # default 8 s timeout is borderline on slower connections, so give
@@ -150,37 +153,65 @@ def _climate_normal_rainfall(
     source = f"Environment Canada 1981–2010 normal — {region}"
     if dist_km > _NORMAL_LOCAL_KM:
         source += " (nearest station)"
-    return {
+    result = {
         "annual_mm":   round(float(best.get("annual_mm") or sum(monthly)), 1),
         "monthly_mm":  [round(float(m), 1) for m in monthly],
         "years_used":  30,
         "source":      source,
     }
+    # The bundled normal carries total precipitation only — add an honest,
+    # clearly-flagged rain/snow split from the prairie snow-fraction climatology.
+    from src import precip_split
+    return precip_split.add_estimated_split(result)
 
 
 def _parse_rainfall(data: dict) -> Optional[dict]:
-    times = data["daily"].get("time") or []
-    sums  = data["daily"].get("precipitation_sum") or []
+    daily = data["daily"]
+    times = daily.get("time") or []
+    sums  = daily.get("precipitation_sum") or []
     if not times or len(times) != len(sums):
         return None
+    # Optional measured rain series (rain_sum, mm). When present and aligned it
+    # gives a real split (snow water-equivalent = total − rain); otherwise we
+    # fall back to the estimated prairie-climatology split below.
+    rains = daily.get("rain_sum") or []
+    have_split = len(rains) == len(times)
+
     monthly = [0.0] * 12
+    monthly_rain = [0.0] * 12
     annuals: dict[int, float] = {}
-    for t, p in zip(times, sums):
+    for i, (t, p) in enumerate(zip(times, sums)):
         if p is None:
             continue
         year  = int(t[:4])
         month = int(t[5:7])
         annuals[year] = annuals.get(year, 0.0) + p
         monthly[month - 1] += p
+        if have_split:
+            r = rains[i]
+            monthly_rain[month - 1] += r if r is not None else 0.0
     n_years = len(annuals) or 1
     monthly_mean = [round(monthly[i] / n_years, 1) for i in range(12)]
     annual_mean  = round(sum(annuals.values()) / n_years, 1)
-    return {
+    result = {
         "annual_mm":   annual_mean,
         "monthly_mm":  monthly_mean,
         "years_used":  n_years,
         "source":      "Open-Meteo / ERA5-Land",
     }
+
+    from src import precip_split
+    if have_split:
+        rain_mean = [round(monthly_rain[i] / n_years, 1) for i in range(12)]
+        # Snow water-equivalent = total − rain (clamped ≥ 0), so rain + snow
+        # always reconcile to the precipitation total.
+        snow_mm = [max(0.0, round(monthly_mean[i] - rain_mean[i], 1))
+                   for i in range(12)]
+        return precip_split.add_measured_split(
+            result, rain_mean, snow_mm,
+            source="Open-Meteo ERA5-Land (measured rain/snow)")
+    # No measured series — estimate the split from the prairie climatology.
+    return precip_split.add_estimated_split(result)
 
 
 # ── Soil ────────────────────────────────────────────────────────────────────
@@ -750,6 +781,14 @@ def fetch_climate(lat: float, lng: float) -> Optional[dict]:
     return get_climate_summary(lat, lng)
 
 
+def fetch_winter(lat: float, lng: float) -> Optional[dict]:
+    """Thin shim around ``src.climate.get_winter_summary`` (snow-cover +
+    survival metrics — the insulation half of the snow story) for the site
+    panel's worker. Returns the winter-metrics dict or ``None``."""
+    from src.climate import get_winter_summary
+    return get_winter_summary(lat, lng)
+
+
 # ── Ecoregion (V1.36) ───────────────────────────────────────────────────────
 
 def fetch_ecoregion(lat: float, lng: float) -> Optional[dict]:
@@ -775,7 +814,7 @@ def fetch_ecoregion(lat: float, lng: float) -> Optional[dict]:
 # ── Aggregator ──────────────────────────────────────────────────────────────
 
 def fetch_all(lat: float, lng: float) -> dict:
-    """Fetch all six datasets sequentially. Caller may want a thread."""
+    """Fetch all datasets sequentially. Caller may want a thread."""
     return {
         "lat":       lat,
         "lng":       lng,
@@ -784,5 +823,6 @@ def fetch_all(lat: float, lng: float) -> dict:
         "elevation": fetch_elevation(lat, lng),
         "hardiness": fetch_hardiness(lat, lng),
         "climate":   fetch_climate(lat, lng),
+        "winter":    fetch_winter(lat, lng),
         "ecoregion": fetch_ecoregion(lat, lng),
     }

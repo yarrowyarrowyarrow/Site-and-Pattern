@@ -79,3 +79,37 @@ def newest_remote_version_branch(
         return None
     candidates.sort()
     return candidates[-1][1]
+
+
+def next_version_branch(
+    git_runner: Callable[..., object],
+    *,
+    current: Optional[str] = None,
+) -> Optional[str]:
+    """The branch the current session should develop/push on, per the
+    ``V<major>.<minor>`` convention.
+
+    * If ``current`` is already a valid V-branch, keep it — this is a
+      continuation of an existing release branch, so we must NOT bump.
+    * Otherwise (a ``claude/*`` codename branch, ``main``, or detached HEAD),
+      return the newest published V-branch with its minor incremented by one
+      (e.g. newest ``V2.05`` → ``V2.06``).
+    * ``None`` when no V-branches exist on ``origin`` yet, so the caller can
+      leave the branch untouched rather than inventing a version.
+
+    ``git_runner`` has the same shape as in ``newest_remote_version_branch``.
+    """
+    if parse_version_branch((current or "").strip()):
+        return current.strip()
+    newest = newest_remote_version_branch(git_runner)
+    if newest is None:
+        return None
+    m = _VERSION_BRANCH_RE.match(newest)
+    if m is None:  # defensive — newest_remote only returns valid V-branches
+        return None
+    major = int(m.group(1))
+    minor_str = m.group(2)
+    # Preserve the source minor's zero-padding width (the current release line
+    # is padded, e.g. V2.05 → V2.06; an unpadded V1.31 → V1.32 is unchanged).
+    width = len(minor_str)
+    return f"V{major}.{int(minor_str) + 1:0{width}d}"

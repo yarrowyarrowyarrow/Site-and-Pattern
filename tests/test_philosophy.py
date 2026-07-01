@@ -7,8 +7,8 @@ modules carry a one-line ``Design principle P# — see docs/DESIGN_PHILOSOPHY.md
 anchor. This test freezes that weave so it can't silently rot — the same
 "the contract is a test" discipline as test_architecture_guard.py:
 
-  1. The philosophy doc exists and documents all eleven core themes.
-  2. Every ``Design principle P#`` anchor in src/ names a real principle (1–11),
+  1. The philosophy doc exists and documents all twelve core themes.
+  2. Every ``Design principle P#`` anchor in src/ names a real principle (1–12),
      and the convention is actually in use across several modules.
   3. The user-facing app name flows from src.branding (the rebrand's single
      source of truth) rather than a hard-coded title string in app.py.
@@ -32,9 +32,9 @@ class TestPhilosophyDoc(unittest.TestCase):
         self.assertTrue(_DOC.is_file(),
                         "docs/DESIGN_PHILOSOPHY.md is missing")
 
-    def test_doc_documents_all_eleven_themes(self):
+    def test_doc_documents_all_twelve_themes(self):
         text = _DOC.read_text(encoding="utf-8")
-        for n in range(1, 12):
+        for n in range(1, 13):
             self.assertRegex(
                 text, rf"(?m)^### {n}\. ",
                 f"DESIGN_PHILOSOPHY.md is missing core theme #{n}",
@@ -56,8 +56,8 @@ class TestCodeAnchors(unittest.TestCase):
             if found:
                 anchored.add(path)
             for num in found:
-                if not (1 <= int(num) <= 11):
-                    offenders.append(f"{path}: P{num} is not a real principle (1–11)")
+                if not (1 <= int(num) <= 12):
+                    offenders.append(f"{path}: P{num} is not a real principle (1–12)")
         self.assertFalse(offenders, "\n".join(offenders))
         # The convention is actually in use — a refactor that strips every anchor
         # (losing the doc↔code link) should trip this.

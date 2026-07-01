@@ -21,6 +21,45 @@ drives the app lives in `docs/DESIGN_PHILOSOPHY.md` — strongly-aligned modules
 one-line `Design principle P#` anchor pointing back to it, guarded by
 `tests/test_philosophy.py`.
 
+## Design philosophy (read this first — weave it through your work)
+
+This project is not a generic plant-placement tool; it is built on a coherent philosophy, and
+work that ignores it tends to be technically fine but spiritually off. Before designing a
+feature, skim where it sits in that philosophy. The sources of truth:
+
+- [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md) — the twelve principles, each with a
+  "Where this lives in the code" note and an honest **State** marker (*strong / partial / gap*).
+- [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) — features (F1–F39) organized by the
+  principle they serve, with a "Shipped" section at the top.
+- [`docs/REFERENCES.md`](docs/REFERENCES.md) — the full bibliography.
+
+**The twelve principles, in one line each:**
+
+1. Living systems self-organize from the bottom up — encode generative rules, not fixed layouts.
+2. The best designs disappear into their context — aim for "grown, not designed".
+3. Relationships matter more than components — the edge between species is the unit of value.
+4. Time is the most undervalued design variable — design the trajectory, not the install day.
+5. Perception is constructed, not received — make invisible ecology *visible*.
+6. Conventional value metrics miss ecological value — make ecological value legible.
+7. Generalist knowledge produces the most original insights — cross domains deliberately.
+8. Repair is more sophisticated than creation — restoration/conversion is first-class.
+9. Uncertainty is a feature, not a bug — ship ranges and confidence, never false precision.
+10. Design for relationships, not objects — plants are nodes in a network.
+11. The body and the site know things the screen does not — drive the user outside.
+12. Indigenous knowledge is honoured through relationship, not extraction.
+
+**HARD RULE (P12):** Do **not** incorporate Indigenous ecological knowledge, land-management
+practices, plant-use traditions, or design frameworks into the data model, recommendations, seed
+data, or UI without explicit **free, prior, and informed consent** from the relevant communities.
+Until that consent exists, treat any reference as *directional only* — point toward the knowledge,
+never encode or operationalize it. If a task seems to push in that direction, stop and raise it
+with the user rather than proceeding.
+
+**Keep the weave intact.** When you build something strongly aligned with a principle, add the
+`Design principle P# — see docs/DESIGN_PHILOSOPHY.md` anchor at the top of the file, and keep the
+doc's State markers and the roadmap's Shipped section honest. `tests/test_philosophy.py` guards
+that the doc documents all twelve themes and that every anchor names a real principle (1–12).
+
 ## Branch naming convention (READ FIRST)
 
 **Release branches are named `V<major>.<minor>`** — for example `V1.31`,
@@ -37,6 +76,19 @@ When starting a new piece of work:
 (`claude/wizardly-goldberg-Ntd5l`, etc.), and do not push to such a
 branch even if the harness suggests one as the default. If the system
 default branch is a codename, override it and use the next `V*.*`.
+
+**This is now auto-enforced** by `.claude/hooks/branch_policy.py` (wired in
+`.claude/settings.json`), so it no longer depends on remembering:
+- On **SessionStart** the hook computes the next V-branch
+  (`src/version_branch.py:next_version_branch` = newest `origin/V*.*` + 1 minor,
+  or the current branch if it's already a V-branch) and, when the session starts
+  on a `claude/*` codename / `main` / detached HEAD, **switches to it**
+  (`git checkout -B <V>` from the current commit, no-clobber) and injects a
+  directive into context. This **overrides** any harness-supplied "Git
+  Development Branch Requirements" that names a codename branch.
+- A **PreToolUse** guard **blocks** any `git push`/branch-create to a `claude/*`
+  branch (deletes of codename branches are allowed — that's cleanup). Both hooks
+  fail open so a hook bug can never block real work.
 
 The "Check for Updates" button in the app (`src/app.py` → `MainWindow._run_update_flow`)
 relies on this convention to detect new versions on the server. Breaking

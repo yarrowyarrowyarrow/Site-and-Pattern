@@ -15,6 +15,10 @@ Qt-free source of truth for:
 
 Zone keys match the brainstorm enum: lawn_remaining, restoration_year_1,
 restoration_year_3, established_native, existing_remnant.
+
+Design principle P6 (conventional value metrics miss ecological value) and P8
+(repair is more sophisticated than creation — conversion is first-class) — see
+docs/DESIGN_PHILOSOPHY.md. The lawn-equivalent counterfactual (F10) lives here too.
 """
 
 from __future__ import annotations
@@ -98,6 +102,63 @@ def conversion_summary(features) -> dict:
         "total_zone_m2": round(lawn + converted + remnant, 1),
         "pct_converted": round(100.0 * converted / base, 1) if base > 0 else 0.0,
     }
+
+
+# A conventional turf-grass lawn supports essentially none of the specialist
+# insects and the birds that depend on them (Tallamy, Nature's Best Hope): its
+# Habitat Value is ~0 on the same 0–100 scale the design is scored on.
+LAWN_HABITAT_SCORE = 0
+
+
+def lawn_counterfactual(design_score, summary=None) -> dict:
+    """The Tallamy contrast (F10): this design's habitat value vs. the ≈0 a
+    conventional lawn of the same ground provides.
+
+    ``design_score`` is the design's 0–100 Habitat Value total (a HabitatScore,
+    a number, or ``None``). ``summary`` is an optional
+    :func:`conversion_summary` result; when it carries a converted/under-
+    conversion area, the contrast is grounded in that many m² reclaimed from
+    lawn. Returns a dict the GUI / PDF render:
+
+      ``design_score`` (int), ``lawn_score`` (0), ``delta`` (design − lawn),
+      ``area_m2`` (lawn ground the contrast is about; 0 when no zones drawn).
+    """
+    total = getattr(design_score, "total", design_score)
+    try:
+        total = int(round(total)) if total is not None else 0
+    except (TypeError, ValueError):
+        total = 0
+    area = 0.0
+    if summary:
+        # The ground this contrast is about: lawn still to convert plus the
+        # restoration zones already underway (both were lawn).
+        by_stage = summary.get("by_stage") or {}
+        area = float(by_stage.get("lawn", 0.0)) + float(by_stage.get("converted", 0.0))
+    return {
+        "design_score": total,
+        "lawn_score": LAWN_HABITAT_SCORE,
+        "delta": total - LAWN_HABITAT_SCORE,
+        "area_m2": round(area, 1),
+    }
+
+
+def format_lawn_counterfactual(cf: dict) -> list[str]:
+    """Render :func:`lawn_counterfactual` as a short side-by-side readout.
+
+    Two-plus lines: the design's score beside the lawn baseline, then the
+    Tallamy "why" — and, when an area is known, the ground reclaimed. Returns
+    ``[]`` only when handed nothing."""
+    if not cf:
+        return []
+    lines = [
+        f"This design: {cf['design_score']} / 100   ·   "
+        f"the same area as lawn: ~{cf['lawn_score']} / 100",
+        "Conventional turf supports almost none of the specialist insects — "
+        "and the birds that feed on them — that native plants do.",
+    ]
+    if cf.get("area_m2", 0) > 0:
+        lines.append(f"You're reclaiming ~{_area_str(cf['area_m2'])} from lawn.")
+    return lines
 
 
 def _area_str(m2: float) -> str:

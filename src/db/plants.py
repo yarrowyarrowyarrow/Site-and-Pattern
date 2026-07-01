@@ -54,6 +54,7 @@ _MASTER_JSON_PATH       = resource_path("data", "plants_master.json")
 _GARDEN_JSON_PATH       = resource_path("data", "garden_plants.json")
 _FAUNA_JSON_PATH        = resource_path("data", "fauna_master.json")
 _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
+_BEE_ATTR_JSON_PATH     = resource_path("data", "bee_attributes_master.json")
 
 # Current schema version — bump when adding columns/tables, or when the
 # bundled seed data changes meaningfully (forces a reseed on next start).
@@ -139,7 +140,14 @@ _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 # v37 (V2.2): dropped the denormalized plants.permaculture_uses column; the
 # plant_uses junction is now the single source of truth and the legacy
 # comma-blob field is synthesized on read. Reseed rebuilds plant_uses.
-_SCHEMA_VERSION = 37
+# v38 (V2.3): no DDL — reseed to expand EXAMPLE_POLYCULTURES to full retail-native
+# coverage (every native sold at native nurseries / garden centres / big-box) and
+# to add the multi-valued "By Function" Group-By facet (derived from plant uses).
+# v39 (V2.07): added the `bee_attributes` table (F37 "see what a bee sees") — per
+# bee-species nesting habit, tongue length, flight season, and floral-host genera,
+# seeded from data/bee_attributes_master.json + an expanded Alberta Apidae roster
+# in data/fauna_master.json. Reseed wipes/repopulates bee_attributes with fauna.
+_SCHEMA_VERSION = 39
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -590,6 +598,68 @@ def _seed_fauna(conn: sqlite3.Connection) -> int:
     return len(link_rows)
 
 
+def _seed_bee_attributes(conn: sqlite3.Connection) -> int:
+    """
+    Load ``data/bee_attributes_master.json`` into the ``bee_attributes`` table
+    (schema v39, F37). Each record is keyed by ``scientific_name`` and resolved
+    to the matching ``fauna`` row's id (bee rows only); records whose bee is not
+    in the fauna registry are skipped. Idempotent via ``INSERT OR IGNORE`` on the
+    ``fauna_id`` primary key. Returns the number of rows inserted.
+
+    Mirrors ``_seed_fauna`` phase 2 and must run *after* ``_seed_fauna`` so the
+    fauna registry exists to resolve scientific_name → fauna_id.
+    """
+    import json as _json
+
+    if not os.path.exists(_BEE_ATTR_JSON_PATH):
+        return 0
+
+    with open(_BEE_ATTR_JSON_PATH, "r", encoding="utf-8") as f:
+        entries = _json.load(f)
+
+    sci_to_fid = {
+        row["scientific_name"]: row["id"]
+        for row in conn.execute(
+            "SELECT id, scientific_name FROM fauna WHERE taxon = 'bee'"
+        ).fetchall()
+    }
+
+    rows: list[tuple] = []
+    for e in entries:
+        # Skip metadata records (those without a 'scientific_name' key).
+        if "scientific_name" not in e:
+            continue
+        fid = sci_to_fid.get(e["scientific_name"])
+        if fid is None:
+            continue
+        pollen = e.get("pollen_specialist")
+        rows.append((
+            fid,
+            e.get("genus"),
+            e.get("nesting_habit"),
+            e.get("host_genus"),
+            e.get("tongue_length"),
+            e.get("flight_season"),
+            e.get("floral_host_genera"),
+            int(pollen) if pollen is not None else None,
+            e.get("conservation_status"),
+            e.get("source"),
+            e.get("notes"),
+        ))
+
+    if rows:
+        conn.executemany(
+            "INSERT OR IGNORE INTO bee_attributes "
+            "(fauna_id, genus, nesting_habit, host_genus, tongue_length, "
+            " flight_season, floral_host_genera, pollen_specialist, "
+            " conservation_status, source, notes) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            rows,
+        )
+        conn.commit()
+    return len(rows)
+
+
 def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
     """
     Insert all plants from a JSON file into the plants table (skipping duplicates
@@ -799,6 +869,7 @@ def init_db() -> None:
             conn.execute("PRAGMA foreign_keys = OFF")
             # Wipe child tables before parents so FK chains (even with FK off
             # they still inform the order we'd want when FK is back on).
+            conn.execute("DELETE FROM bee_attributes")   # child of fauna — wipe first
             conn.execute("DELETE FROM plant_fauna")
             conn.execute("DELETE FROM plant_uses")
             conn.execute("DELETE FROM fauna")
@@ -831,6 +902,9 @@ def init_db() -> None:
             # Fauna registry + plant↔fauna links — depends on plants being
             # seeded first so we can resolve common_name → plant_id.
             _seed_fauna(conn)
+            # Bee attributes (F37) — depends on the fauna registry above so we
+            # can resolve each bee's scientific_name → fauna_id.
+            _seed_bee_attributes(conn)
             conn.execute("PRAGMA foreign_keys = ON")
             conn.commit()
 

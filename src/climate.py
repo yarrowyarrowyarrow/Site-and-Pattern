@@ -323,6 +323,69 @@ def get_climate_summary(
     return summary
 
 
+def fetch_daily_temp_precip(
+    lat: float, lng: float, years: int = 5,
+) -> Optional[list[dict]]:
+    """Fetch the last ``years`` complete calendar years of daily min/max
+    temperature **and** precipitation for (lat, lng) from Open-Meteo (ERA5-Land).
+    Returns ``[{date, tmin, tmax, precip}]`` chronologically, or ``None``.
+
+    Same vendor/endpoint as :func:`fetch_historical_temps`; precipitation is
+    included so the snow model (:mod:`src.snow`) can build a snowpack alongside
+    the freeze–thaw counts. Default ``years=5`` for stable winter averages."""
+    today = date.today()
+    end_d = date(today.year - 1, 12, 31)
+    start = date(end_d.year - years + 1, 1, 1)
+    url = (
+        "https://archive-api.open-meteo.com/v1/archive?"
+        f"latitude={lat:.4f}&longitude={lng:.4f}"
+        f"&start_date={start.isoformat()}&end_date={end_d.isoformat()}"
+        "&daily=temperature_2m_min,temperature_2m_max,precipitation_sum"
+        "&models=era5_land&timezone=UTC"
+    )
+    data = _http_get_json(url, timeout=20.0)
+    if not data or "daily" not in data:
+        return None
+    daily = data["daily"]
+    times  = daily.get("time")               or []
+    tmins  = daily.get("temperature_2m_min") or []
+    tmaxs  = daily.get("temperature_2m_max") or []
+    precs  = daily.get("precipitation_sum")  or []
+    if not times or len(times) != len(tmins) or len(times) != len(tmaxs):
+        return None
+    out: list[dict] = []
+    for i, t in enumerate(times):
+        if tmins[i] is None or tmaxs[i] is None:
+            continue
+        out.append({
+            "date":   t,
+            "tmin":   tmins[i],
+            "tmax":   tmaxs[i],
+            "precip": precs[i] if i < len(precs) and precs[i] is not None else 0.0,
+        })
+    return out
+
+
+def get_winter_summary(
+    lat: float, lng: float, *, _fetcher=fetch_daily_temp_precip,
+) -> Optional[dict]:
+    """Winter snow-cover + survival metrics for (lat, lng) — the *insulation*
+    half of the snow story. Fetches daily temp+precip and runs the snow model in
+    :mod:`src.snow`. Returns the metrics dict (with a ``source``), or ``None``.
+
+    Not DB-cached (unlike :func:`get_climate_summary`): the result rides in the
+    project's ``site_config`` so it persists with the design and is always
+    computed fresh on a new pin-drop. ``_fetcher`` is injectable for tests."""
+    rows = _fetcher(lat, lng)
+    if not rows:
+        return None
+    from src import snow
+    metrics = snow.winter_metrics(rows)
+    if metrics:
+        metrics["source"] = "Open-Meteo / ERA5-Land (modelled snowpack)"
+    return metrics
+
+
 def doy_to_date_label(doy: Optional[int], year: int = 2025) -> str:
     """Format a day-of-year as 'Jun 15' for UI display. Uses a non-leap
     reference year by default — the difference vs leap years is at most
