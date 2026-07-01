@@ -868,9 +868,21 @@ class MapWidget(QWebEngineView):
         in-progress drawing globals)."""
         self.run_js(map_js.restore_contour(contour))
 
+    def clear_bee_forage_view(self):
+        """Leave the "what the bee sees" map view (F37 increment 3)."""
+        self.run_js(map_js.clear_bee_forage_view())
+
     def clear_selection(self):
         """Clear the current map selection (no delete)."""
         self.run_js(map_js.clear_selection())
+
+    def set_bee_forage_view(self, payload: dict):
+        """Recolour the map as the chosen bee's floral-resource map
+        (F37 increment 3). ``payload`` = ``{"bee": name, "styles": {pid: fit}}``,
+        built by the analysis panel's Bees tab and delivered via its signal."""
+        payload = payload or {}
+        self.run_js(map_js.set_bee_forage_view(
+            payload.get("bee", ""), payload.get("styles", {})))
 
     def delete_selected(self):
         """Delete every currently-selected map item."""

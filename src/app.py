@@ -759,6 +759,12 @@ class MainWindow(QMainWindow):
         b.selection_moved.connect(
             lambda *a: snow_microsite_flow.on_plants_changed(self))
         self.analysis_panel.season_changed.connect(self._on_season_changed)
+        # "What the bee sees" (F37): the Bees tab drives the map recolour direct
+        # (payload is built panel-side, so no new MainWindow method is needed).
+        self.analysis_panel.bee_map_overlay_requested.connect(
+            self.map_widget.set_bee_forage_view)
+        self.analysis_panel.bee_map_overlay_cleared.connect(
+            self.map_widget.clear_bee_forage_view)
 
         # Map → polyculture removal
         b.polyculture_removed.connect(self._on_polyculture_removed)

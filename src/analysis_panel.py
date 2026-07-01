@@ -52,6 +52,11 @@ class AnalysisPanel(QWidget):
     # Season view
     season_changed = pyqtSignal(str)        # "Spring" | "Summer" | "Fall" | "Winter"
 
+    # "What the bee sees" map overlay (F37 increment 3): the Bees tab asks the
+    # 2D map to recolour by the selected bee's floral-resource value.
+    bee_map_overlay_requested = pyqtSignal(dict)   # {"bee": name, "styles": {pid: fit}}
+    bee_map_overlay_cleared = pyqtSignal()
+
     # A cached species photo finished downloading off-thread — re-render the
     # Habitat tab's species gallery (F11 / I1). Emitted from a worker thread;
     # Qt delivers it to the GUI thread.
@@ -898,6 +903,15 @@ class AnalysisPanel(QWidget):
         self._bee_selector.currentIndexChanged.connect(self._update_bee_plan)
         layout.addWidget(self._bee_selector)
 
+        # "What the bee sees" — recolour the 2D map as this bee's resource map.
+        self._bee_map_btn = QPushButton("🗺  Show what this bee sees on the map")
+        self._bee_map_btn.setCheckable(True)
+        self._bee_map_btn.setToolTip(
+            "Recolour the 2D map as this bee's floral-resource map — its host "
+            "plants glow like nectar, everything else greys out")
+        self._bee_map_btn.toggled.connect(self._on_bee_map_toggle)
+        layout.addWidget(self._bee_map_btn)
+
         # Summary: photo + facts
         summ = QHBoxLayout()
         summ.setSpacing(8)
@@ -1031,6 +1045,9 @@ class AnalysisPanel(QWidget):
         self._bee_footnote.setText(
             f"Data confidence: {conf}. Floral matches shown as documented "
             f"(plant↔bee records) or inferred (genus-level hosts). {src}")
+        # Keep the map overlay live when the user switches bee while it's on.
+        if getattr(self, "_bee_map_btn", None) is not None and self._bee_map_btn.isChecked():
+            self.bee_map_overlay_requested.emit(self._bee_map_payload(plan))
 
     def _render_bee_summary(self, plan):
         bee = plan.bee or {}
@@ -1158,6 +1175,24 @@ class AnalysisPanel(QWidget):
             sug = (f"<div style='padding-top:4px; color:#a5d6a7;'>"
                    f"Fill the gap with: {names}</div>")
         self._bee_forage.setText(strip + note + legend + sug)
+
+    def _bee_map_payload(self, plan) -> dict:
+        """Build the {bee, styles:{pid: fit}} payload the 2D map uses to recolour
+        by this bee's floral-resource value ('good'/'plausible' for graded
+        tongue-fit, else 'host')."""
+        styles = {}
+        for m in plan.floral_matches:
+            fit = m.tongue_form_fit if m.tongue_form_fit in ("good", "plausible") else "host"
+            styles[str(m.plant_id)] = fit
+        return {"bee": (plan.bee or {}).get("common_name", ""), "styles": styles}
+
+    def _on_bee_map_toggle(self, on: bool):
+        """Toggle the 'what the bee sees' recolour on the 2D map."""
+        plan = getattr(self, "_bee_plan", None)
+        if on and plan is not None:
+            self.bee_map_overlay_requested.emit(self._bee_map_payload(plan))
+        else:
+            self.bee_map_overlay_cleared.emit()
 
     def refresh_bee_tab(self):
         """Re-render the bee plan against the current placed plants (call after

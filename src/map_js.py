@@ -396,6 +396,20 @@ def set_season_view(season: str, pid_visibility: dict) -> str:
     return f"setSeasonView({_jsstr(season)}, {_jslit(pid_visibility)});"
 
 
+def set_bee_forage_view(bee_label: str, pid_style: dict) -> str:
+    """"What the bee sees" (F37 increment 3): recolour the map as a chosen bee's
+    floral-resource map. ``pid_style`` maps plant_id (as a string) → a fit key
+    ('good' | 'plausible' | 'host'); those markers glow like nectar and every
+    other plant recedes to grey. ``bee_label`` names the bee for the legend."""
+    return f"setBeeForageView({_jsstr(bee_label)}, {_jslit(pid_style)});"
+
+
+def clear_bee_forage_view() -> str:
+    """Leave the bee's-eye map view — restore every plant marker to its normal
+    plant-type colour (F37 increment 3)."""
+    return "clearBeeForageView();"
+
+
 def set_timeline_year_by_plant_id(year: int, pid_factors: dict,
                                   pid_presence: dict | None = None,
                                   pid_spread: dict | None = None) -> str:
