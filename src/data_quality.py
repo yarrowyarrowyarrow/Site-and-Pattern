@@ -400,10 +400,14 @@ def validate_file(path: Path) -> tuple[list[str], list[str]]:
 
 
 def validate_all() -> tuple[list[str], list[str]]:
-    """Validate every shipped plant data file. Returns
+    """Validate every shipped data file the app reseeds from. Returns
     ``(errors, warnings)``. Adding a new shipped data file means
     appending it here (and adding it to the reseed wipe list in
-    plants.py per CLAUDE.md)."""
+    plants.py per CLAUDE.md).
+
+    Covers the plant catalogues plus the fauna data spine: the bee
+    attributes (F37) and the fauna photo-licence compliance (A1) run in
+    the central gate too, not only in an isolated bee test."""
     files = [
         DATA_DIR / "plants_master.json",
         DATA_DIR / "garden_plants.json",
@@ -434,6 +438,13 @@ def validate_all() -> tuple[list[str], list[str]]:
             use_keys=use_keys,
             ecoregion_keys=ecoregion_keys,
         )
+        errors.extend(e)
+        warnings.extend(w)
+
+    # Fauna data spine: the bee attributes (F37) and fauna photo-licence
+    # compliance (A1). Both read shipped data/*.json the app reseeds from.
+    for validate_fauna in (validate_bee_attributes, validate_fauna_images):
+        e, w = validate_fauna()
         errors.extend(e)
         warnings.extend(w)
     return errors, warnings

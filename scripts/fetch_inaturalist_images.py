@@ -7,7 +7,10 @@ that are safe to redistribute in a shipped installer.
 For each record's ``scientific_name`` it queries the iNaturalist taxa endpoint
 (no API key needed for read) and scans the species' photos for the first one
 whose licence is in the redistributable whitelist (CC0 / CC BY / CC BY-SA; NC /
-ND / all-rights-reserved are SKIPPED). It checks the curated ``default_photo``
+ND / all-rights-reserved are SKIPPED). **Bees are held to a stricter,
+commercial-safe bar — CC0 / CC-BY only, no ShareAlike** (the F37 A1 decision,
+mirrored by ``src/data_quality.py:validate_fauna_images`` so a bee photo this
+script writes always passes validation). It checks the curated ``default_photo``
 first, then — if that isn't openly licensed — the species' WIDER photo set from
 the taxon-detail endpoint (often ~12 photos by different photographers), so a
 species isn't skipped just because its single default photo is NonCommercial.
@@ -23,7 +26,7 @@ idempotent: records that already have an ``image_url`` are skipped unless
 (e.g. to pick up the wider-photo-set scan added after a first pass). Throttled to be polite to the API (≈1 req/s; iNat asks for ≤60/min
 and a descriptive User-Agent).
 
-After a run, bump ``src/db/plants.py:_SCHEMA_VERSION`` (24 → 25) so existing
+After a run, bump ``src/db/plants.py:_SCHEMA_VERSION`` (by one) so existing
 installs reseed and pick up the new images.
 
 This script needs outbound network to api.inaturalist.org. Run it on a machine
@@ -65,12 +68,27 @@ _USER_AGENT = ("PermaDesign image sourcing "
 # (cc-by-nc*, cc-by-nd, c / all-rights-reserved, null) is skipped.
 ACCEPT_LICENSES = {"cc0", "cc-by", "cc-by-sa"}
 
+# Bee photos are held to a stricter, commercial-safe bar than the rest of the
+# fauna: CC0 / CC-BY only — no ShareAlike (the F37 A1 decision, mirrored by
+# src/data_quality.py:_BEE_IMAGE_LICENSES which rejects any bee photo outside
+# this set). Kept in sync here so a bee image this script writes always passes
+# validate_fauna_images().
+BEE_ACCEPT_LICENSES = {"cc0", "cc-by"}
+
+
+def accept_for(taxon) -> set:
+    """The licence whitelist to apply to a record of this ``taxon``. Bees use the
+    stricter commercial-safe set; every other taxon may also use CC-BY-SA."""
+    return BEE_ACCEPT_LICENSES if (taxon or "").strip().lower() == "bee" \
+        else ACCEPT_LICENSES
+
 
 # ── Pure helpers (unit-tested, no network) ───────────────────────────────────
 
-def license_ok(code) -> bool:
-    """True only for licences we may redistribute."""
-    return (code or "").strip().lower() in ACCEPT_LICENSES
+def license_ok(code, accept=ACCEPT_LICENSES) -> bool:
+    """True only for licences in ``accept`` — the redistributable set by default,
+    or ``BEE_ACCEPT_LICENSES`` for the stricter commercial-safe bee policy."""
+    return (code or "").strip().lower() in accept
 
 
 def best_taxon(results, scientific_name):
@@ -102,10 +120,11 @@ def taxon_candidates(taxon) -> list:
     return out
 
 
-def pick_photo(candidates) -> "tuple | None":
+def pick_photo(candidates, accept=ACCEPT_LICENSES) -> "tuple | None":
     """First ``(url, attribution, license_code)`` among ``candidates`` whose
-    licence is redistributable, else None. De-dupes by photo id so a photo that
-    appears as both the default and in taxon_photos isn't checked twice."""
+    licence is in ``accept`` (defaults to the redistributable set; pass
+    ``BEE_ACCEPT_LICENSES`` for bees), else None. De-dupes by photo id so a photo
+    that appears as both the default and in taxon_photos isn't checked twice."""
     seen = set()
     for ph in candidates or []:
         if not isinstance(ph, dict):
@@ -116,7 +135,7 @@ def pick_photo(candidates) -> "tuple | None":
                 continue
             seen.add(pid)
         code = (ph.get("license_code") or "").strip().lower()
-        if not license_ok(code):
+        if not license_ok(code, accept):
             continue
         url = ph.get("medium_url") or ph.get("url") or ph.get("square_url")
         if not url:
@@ -125,10 +144,11 @@ def pick_photo(candidates) -> "tuple | None":
     return None
 
 
-def photo_from_taxon(taxon) -> "tuple | None":
-    """``(url, attribution, license_code)`` for the first redistributable photo
-    in the taxon's photo set (default first, then taxon_photos), else None."""
-    return pick_photo(taxon_candidates(taxon))
+def photo_from_taxon(taxon, accept=ACCEPT_LICENSES) -> "tuple | None":
+    """``(url, attribution, license_code)`` for the first photo in the taxon's
+    photo set (default first, then taxon_photos) whose licence is in ``accept``,
+    else None."""
+    return pick_photo(taxon_candidates(taxon), accept)
 
 
 # ── Network ───────────────────────────────────────────────────────────────--
@@ -177,6 +197,8 @@ def _process(path: str, label: str, *, force: bool, limit, sleep: float) -> None
     found = skipped = errors = deep = 0
     for i, rec in enumerate(todo, 1):
         sci = rec["scientific_name"]
+        # Bees only accept CC0/CC-BY (commercial-safe); other taxa also CC-BY-SA.
+        accept = accept_for(rec.get("taxon"))
         try:
             taxon = _query_taxon(sci)
         except Exception as exc:  # noqa: BLE001
@@ -189,7 +211,7 @@ def _process(path: str, label: str, *, force: bool, limit, sleep: float) -> None
         # taxon_photos). If none are openly licensed, pull the full photo set
         # from the taxon-detail endpoint and scan that (one extra request, only
         # for the species that need it).
-        photo = pick_photo(taxon_candidates(taxon)) if taxon else None
+        photo = pick_photo(taxon_candidates(taxon), accept) if taxon else None
         via = "default/set"
         if not photo and taxon and taxon.get("id"):
             time.sleep(sleep)
@@ -199,7 +221,7 @@ def _process(path: str, label: str, *, force: bool, limit, sleep: float) -> None
                 detail = None
                 print(f"  [{i}/{len(todo)}] {sci}: detail fetch error {exc}")
             deep += 1
-            photo = pick_photo(taxon_candidates(detail)) if detail else None
+            photo = pick_photo(taxon_candidates(detail), accept) if detail else None
             via = "full set"
 
         if photo:
@@ -245,7 +267,7 @@ def main(argv=None) -> int:
         _process(_FAUNA_JSON, "Fauna", force=args.force, limit=limit,
                  sleep=args.sleep)
 
-    print("\nDone. Now bump src/db/plants.py:_SCHEMA_VERSION (24 → 25) so "
+    print("\nDone. Now bump src/db/plants.py:_SCHEMA_VERSION (by one) so "
           "existing installs reseed and surface the new photos.")
     return 0
 
