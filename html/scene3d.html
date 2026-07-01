@@ -260,6 +260,9 @@ camera.position.set(45, 38, 55);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.maxPolarAngle = Math.PI / 2 - 0.02;   // never go underground
 controls.target.set(0, 0, 0);
+// Put the camera in the scene graph so objects parented to it (the bee avatar in
+// "fly as a bee" mode) are traversed and rendered. Harmless for normal rendering.
+scene.add(camera);
 
 // Hover → plant name (V1.99): raycast the instanced plant meshes and show the
 // common name of the instance under the cursor. Throttled; flower point-sprites
@@ -2229,10 +2232,56 @@ window.permaSetPlants = function (records) {
 let beeMode = false;
 let beeTargetIds = new Set();           // String(plant_id) of the bee's host plants
 let beaconGroup = null;
+let beeAvatar = null;                   // the visible bumblebee, parented to camera
+let beeBank = 0;                        // eased roll for a bit of life on turns
 const beeKeys = new Set();
 let beeYaw = 0, beePitch = -0.05;       // radians; yaw 0 → looking north (−z)
 let beeDragging = false, beeLastX = 0, beeLastY = 0;
 let beePrevT = 0;
+
+// A simple procedural bumble bee, built once and parented to the camera so the
+// user can SEE the bee they're flying (it sits low-forward, like riding just
+// behind it). Unlit MeshBasicMaterial so it's always clearly visible regardless
+// of sun angle. Wings + body are animated in beeStep.
+function makeBeeAvatar() {
+  const g = new THREE.Group();
+  const fuzz  = new THREE.MeshBasicMaterial({ color: 0xe4a92a });   // fuzzy yellow
+  const dark  = new THREE.MeshBasicMaterial({ color: 0x241f1b });   // black
+  const tipM  = new THREE.MeshBasicMaterial({ color: 0xb5651d });   // warm tail tip
+  const wingM = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true,
+                 opacity: 0.34, side: THREE.DoubleSide, depthWrite: false });
+  const sphere = (r) => new THREE.SphereGeometry(r, 16, 12);
+  const thorax = new THREE.Mesh(sphere(0.5), fuzz); thorax.scale.set(1, 0.9, 1);
+  const head = new THREE.Mesh(sphere(0.34), dark); head.position.set(0, 0.02, -0.6);
+  g.add(thorax, head);
+  const antGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.42, 6);
+  for (const s of [-1, 1]) {
+    const a = new THREE.Mesh(antGeo, dark);
+    a.position.set(0.1 * s, 0.18, -0.8); a.rotation.set(-0.9, 0, 0.2 * s);
+    g.add(a);
+  }
+  const abdomen = new THREE.Mesh(sphere(0.6), dark);
+  abdomen.scale.set(0.92, 0.9, 1.5); abdomen.position.set(0, -0.02, 0.85);
+  const band = new THREE.Mesh(sphere(0.62), fuzz);
+  band.scale.set(0.93, 0.91, 0.42); band.position.set(0, -0.02, 0.7);
+  const tip = new THREE.Mesh(sphere(0.34), tipM);
+  tip.scale.set(0.9, 0.88, 1.15); tip.position.set(0, -0.02, 1.42);
+  g.add(abdomen, band, tip);
+  const wingGeo = new THREE.CircleGeometry(0.6, 16);
+  const wings = [];
+  for (const s of [-1, 1]) {
+    const pivot = new THREE.Group();
+    pivot.position.set(0.1 * s, 0.42, 0.06);
+    const w = new THREE.Mesh(wingGeo, wingM);
+    w.scale.set(0.7, 1.5, 1); w.position.set(0.55 * s, 0, 0.1);
+    w.rotation.set(-0.5, 0, 0);
+    pivot.add(w); g.add(pivot);
+    wings.push({ pivot, sign: s });
+  }
+  g.userData.wings = wings;
+  g.scale.setScalar(0.5);
+  return g;
+}
 const _BEE_MOVE_CODES = new Set([
   'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE',
   'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ShiftLeft']);
@@ -2295,6 +2344,12 @@ function enterBeeMode() {
   beeYaw = 0; beePitch = -0.05;
   camera.position.y = groundAtCamera() + 1.6;   // flower-and-a-bit height
   beePrevT = 0;
+  if (!beeAvatar) {
+    beeAvatar = makeBeeAvatar();
+    beeAvatar.position.set(0, -0.5, -1.15);     // low-forward, in camera space
+    camera.add(beeAvatar);
+  }
+  beeAvatar.visible = true;
   setBeeVisionUI(true);
   rebuildBeacons();
 }
@@ -2302,6 +2357,7 @@ function enterBeeMode() {
 function exitBeeMode() {
   beeKeys.clear();
   beeDragging = false;
+  if (beeAvatar) beeAvatar.visible = false;
   setBeeVisionUI(false);
   rebuildBeacons();                 // beeMode is false now → clears the beacons
   controls.enabled = true;
@@ -2316,10 +2372,11 @@ function beeStep(t) {
   const dir = new THREE.Vector3(Math.sin(beeYaw) * cp, sp, -Math.cos(beeYaw) * cp);
   const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
   const step = new THREE.Vector3();
+  let strafe = 0;
   if (beeKeys.has('KeyW') || beeKeys.has('ArrowUp'))    step.add(dir);
   if (beeKeys.has('KeyS') || beeKeys.has('ArrowDown'))  step.addScaledVector(dir, -1);
-  if (beeKeys.has('KeyD') || beeKeys.has('ArrowRight')) step.add(right);
-  if (beeKeys.has('KeyA') || beeKeys.has('ArrowLeft'))  step.addScaledVector(right, -1);
+  if (beeKeys.has('KeyD') || beeKeys.has('ArrowRight')) { step.add(right); strafe += 1; }
+  if (beeKeys.has('KeyA') || beeKeys.has('ArrowLeft'))  { step.addScaledVector(right, -1); strafe -= 1; }
   if (beeKeys.has('KeyE') || beeKeys.has('Space'))      step.y += 1;
   if (beeKeys.has('KeyQ') || beeKeys.has('ShiftLeft'))  step.y -= 1;
   if (step.lengthSq() > 0) camera.position.addScaledVector(step.normalize(), 9 * dt);
@@ -2329,6 +2386,16 @@ function beeStep(t) {
   camera.lookAt(camera.position.x + dir.x,
                 camera.position.y + dir.y,
                 camera.position.z + dir.z);
+
+  // Animate the visible bee: wing flutter, a body bob, and a gentle bank on turns.
+  if (beeAvatar && beeAvatar.visible) {
+    const flap = 0.15 + (0.5 + 0.5 * Math.sin(t * 0.08)) * 0.7;
+    for (const { pivot, sign } of beeAvatar.userData.wings) pivot.rotation.z = sign * flap;
+    beeAvatar.position.y = -0.5 + Math.sin(t * 0.006) * 0.03;
+    beeBank += ((-0.35 * strafe) - beeBank) * Math.min(1, dt * 6);
+    beeAvatar.rotation.z = beeBank;
+  }
+
   if (beaconGroup) {                                  // pulse the halos
     const s = 2.4 * (1 + 0.22 * Math.sin(t * 0.006));
     for (const m of beaconGroup.children) {
