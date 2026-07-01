@@ -125,6 +125,21 @@ class Scene3DWindow(QWidget):
         self._bake_btn.setEnabled(False)
         self._bake_btn.clicked.connect(self._on_bake_yard_photo)
 
+        # "Fly as a bee" — first-person bee's-eye view (F37 increment 2). Pick a
+        # target native bee, then drop into a low fly camera with its floral-host
+        # plants marked by glowing beacons + a bee-vision overlay.
+        self._bee_combo = QComboBox()
+        self._bee_combo.setToolTip(
+            "Choose a native bee — its floral-host plants get marked in the fly view")
+        self._populate_bee_combo()
+        self._bee_combo.currentIndexChanged.connect(self._on_bee_target_changed)
+        self._bee_btn = QPushButton("🐝 Fly as a bee")
+        self._bee_btn.setCheckable(True)
+        self._bee_btn.setToolTip(
+            "Drop into a first-person bee's-eye view — WASD/arrows to fly, "
+            "Q/E up-down, drag to look")
+        self._bee_btn.toggled.connect(self._on_bee_mode)
+
         self._last_origin = None
 
         bar = QHBoxLayout()
@@ -144,6 +159,9 @@ class Scene3DWindow(QWidget):
         bar.addWidget(reset_view)
         bar.addWidget(refresh)
         bar.addWidget(self._bake_btn)
+        bar.addSpacing(16)
+        bar.addWidget(self._bee_combo)
+        bar.addWidget(self._bee_btn)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(6, 6, 6, 6)
@@ -210,6 +228,62 @@ class Scene3DWindow(QWidget):
         scene at the new density itself (build-time only)."""
         QSettings().setValue(_DETAIL_KEY, int(level))
         self.viewer.set_quality(level)
+
+    # ── "Fly as a bee" (F37 increment 2) ──────────────────────────────────
+
+    def _populate_bee_combo(self):
+        """Fill the target-bee combo, grouped genus-first with disabled headers
+        (mirrors the analysis panel's Bees tab selector)."""
+        combo = self._bee_combo
+        combo.blockSignals(True)
+        combo.clear()
+        try:
+            from src.bee_habitat import list_target_bees
+            bees = list_target_bees()
+        except Exception:      # noqa: BLE001 — never let a data issue break the window
+            bees = []
+        current_genus = None
+        for b in bees:
+            if b["genus"] != current_genus:
+                current_genus = b["genus"]
+                combo.addItem(f"── {current_genus} ──", userData=None)
+                item = combo.model().item(combo.count() - 1)
+                if item is not None:
+                    item.setEnabled(False)
+            label = (f"    {b['common_name']} (any {b['genus']})" if b["is_group"]
+                     else f"    {b['common_name']}")
+            combo.addItem(label, userData=b["id"])
+        combo.blockSignals(False)
+        for i in range(combo.count()):
+            if combo.itemData(i) is not None:
+                combo.setCurrentIndex(i)
+                break
+
+    def _current_bee_fid(self):
+        return self._bee_combo.itemData(self._bee_combo.currentIndex())
+
+    def _push_bee_targets(self):
+        fid = self._current_bee_fid()
+        if fid is None:
+            self.viewer.set_bee_targets([])
+            return
+        try:
+            from src.bee_habitat import target_plant_ids_for_bee
+            ids = target_plant_ids_for_bee(fid)
+        except Exception:      # noqa: BLE001
+            ids = []
+        self.viewer.set_bee_targets(ids)
+
+    def _on_bee_mode(self, on: bool):
+        """Toggle the first-person bee view. Pushes the current bee's target
+        plants before entering so the beacons are ready."""
+        if on:
+            self._push_bee_targets()
+        self.viewer.set_bee_mode(on)
+
+    def _on_bee_target_changed(self, *_):
+        if getattr(self, "_bee_btn", None) is not None and self._bee_btn.isChecked():
+            self._push_bee_targets()
 
     def refresh(self):
         """Re-read the live project (and kick a terrain fetch if we don't

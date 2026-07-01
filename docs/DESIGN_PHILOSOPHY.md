@@ -99,7 +99,9 @@ Yong's Umwelt research, Deutscher's linguistic relativity, Berger's visual cultu
 > an invisible microclimate made visible by reusing the wind-shelter geometry — and the
 > **native-bee habitat builder** (`src/bee_habitat.py`, roadmap F37, "see what a bee sees"),
 > which makes a chosen bee's hidden needs legible: which of your plants feed it, where it
-> nests, and the gaps in its flight-season forage. **State:
+> nests, and the gaps in its flight-season forage — and, in the 3D preview, lets you *fly as
+> that bee* (`src/scene3d_window.py` → `html/scene3d.html`, a first-person bee camera with its
+> host flowers marked), a first taste of Umwelt as embodiment, not just overlay. **State:
 > partial** — site forces, seasonality, the real site, winter snow microsites and now a single
 > bee's world are made visible, but ecological *relationships* (pollinator pathways, mycorrhizal
 > networks, succession trajectories) are still not drawn as networks (roadmap F5, F15).

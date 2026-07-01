@@ -354,6 +354,15 @@ def build_bee_habitat_plan(fauna_id: int,
     )
 
 
+def target_plant_ids_for_bee(fauna_id: int) -> list[int]:
+    """The DB plant ids that feed ``fauna_id`` (documented edges + genus hosts).
+
+    The shared selection the 3D fly-through (increment 2) and the map-recolour
+    lens (increment 3) consume to know which plants to highlight for a chosen bee.
+    """
+    return [m.plant_id for m in floral_matches_for_bee(fauna_id)]
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _genus_of(scientific_name: str) -> str:

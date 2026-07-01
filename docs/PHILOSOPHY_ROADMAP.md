@@ -398,8 +398,13 @@ connectivity to the design's planted areas; a new analysis layer.
     or "support the host bee" for cuckoos, and a flight-season forage-coverage check that flags
     bloom gaps. Qt-free core + a Bees tab in `src/analysis_panel.py`. Honest about thin data (P9):
     tongue length is graded only for *Bombus*; undocumented flight seasons skip the coverage check.
-  - **Increment 2 — "Be a bumblebee" 3D fly-through** *(next, M · Low, P5/P11)*: a first-person bee
-    camera + bee-vision post-process in `html/scene3d.html`, glowing the chosen bee's floral matches.
+  - **✅ Increment 2 — "Be a bumblebee" 3D fly-through (shipped):** a "Fly as a bee" toggle + target-bee
+    selector in `src/scene3d_window.py` drops into a first-person fly camera in `html/scene3d.html`
+    (WASD/arrows + Q/E + drag-look), with a CSS "bee-vision" tint/vignette overlay and glowing beacons
+    floating over the chosen bee's floral-host plants (from `bee_habitat.target_plant_ids_for_bee`,
+    driven through `map3d_js.set_bee_mode` / `set_bee_targets`). Purely additive to the viewer — when
+    off, OrbitControls owns the camera exactly as before. (A true UV/compound-eye post-process pass is
+    a later polish; the vendored three.js addons don't ship EffectComposer.)
   - **Increment 3 — "What the bee sees" map recolour** *(M · Low, P5)*: recolour the Leaflet map by
     floral-resource value for the selected bee (the original card; Yong's Umwelt made literal).
 - **F38 · Mycoremediation / degraded-site notes** — *S · Low (P8)*: well-cited restoration

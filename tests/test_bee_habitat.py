@@ -231,6 +231,17 @@ class TestPlanEndToEnd(unittest.TestCase):
         # A lepidoptera id must not build a bee plan.
         self.assertIsNone(BH.build_bee_habitat_plan(_fid("Danaus plexippus")))
 
+    def test_target_plant_ids_match_floral_matches(self):
+        # The shared "chosen bee -> plant ids" selection the 3D fly-through uses.
+        tid = _fid("Bombus terricola")
+        ids = BH.target_plant_ids_for_bee(tid)
+        self.assertTrue(ids)
+        self.assertEqual(set(ids),
+                         {m.plant_id for m in BH.floral_matches_for_bee(tid)})
+
+    def test_target_plant_ids_empty_for_cuckoo(self):
+        self.assertEqual(BH.target_plant_ids_for_bee(_fid("Nomada bella")), [])
+
 
 class TestBeeDataQuality(unittest.TestCase):
 

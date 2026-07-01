@@ -57,6 +57,22 @@
     border-radius: 6px; padding: 3px 8px; white-space: nowrap;
     transform: translate(12px, 12px);
   }
+  /* "Fly as a bee" (F37): a UV-goggles tint + soft compound-eye vignette laid
+     over the canvas — pointer-events:none so it never blocks look/fly input. */
+  #bee-vision {
+    position: absolute; inset: 0; z-index: 4; display: none; pointer-events: none;
+    background:
+      radial-gradient(ellipse 78% 78% at center,
+        rgba(60,20,120,0) 40%, rgba(26,6,64,.62) 100%),
+      linear-gradient(rgba(70,110,255,.12), rgba(150,70,210,.14));
+  }
+  #bee-hint {
+    position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);
+    z-index: 7; display: none; pointer-events: none;
+    font-family: system-ui, sans-serif; font-size: 12.5px; color: #f3e9ff;
+    background: rgba(30,12,60,.80); border: 1px solid #6a4ea0;
+    border-radius: 8px; padding: 6px 12px; line-height: 1.4; text-align: center;
+  }
 </style>
 </head>
 <body>
@@ -64,6 +80,8 @@
 <div id="plant-tip"></div>
 <div id="offline"><div id="offline-msg"><b>3D viewer couldn't start</b><br>
 The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
+<div id="bee-vision"></div>
+<div id="bee-hint"></div>
 
 <script type="importmap">
 {
@@ -2153,9 +2171,12 @@ window.permaSetScene = function (sc) {
     (o && (Math.abs(o.lat - framedOrigin.lat) > 1e-6 ||
            Math.abs(o.lng - framedOrigin.lng) > 1e-6));
   if (moved) {
-    frameCamera(sc.bounds);
+    // Don't yank the camera while the user is flying as a bee — beeStep owns it.
+    if (!beeMode) frameCamera(sc.bounds);
     framedOrigin = o ? { lat: o.lat, lng: o.lng } : { lat: 0, lng: 0 };
   }
+  // Re-place the bee's flower beacons against the freshly-built scene.
+  if (beeMode) rebuildBeacons();
 
   const n = (sc.plants || []).length;
   document.getElementById('hud').innerHTML =
@@ -2201,6 +2222,149 @@ window.permaSetPlants = function (records) {
   buildPlants(designGroup, plants, lastMonth, lastYear, lastTerrain);
 };
 
+// ── "Fly as a bee" first-person mode (F37 increment 2) ──────────────────────
+// A low fly camera + bee-vision overlay + glowing beacons over the chosen bee's
+// floral-host plants. Purely additive: when beeMode is off nothing here runs and
+// OrbitControls owns the camera exactly as before.
+let beeMode = false;
+let beeTargetIds = new Set();           // String(plant_id) of the bee's host plants
+let beaconGroup = null;
+const beeKeys = new Set();
+let beeYaw = 0, beePitch = -0.05;       // radians; yaw 0 → looking north (−z)
+let beeDragging = false, beeLastX = 0, beeLastY = 0;
+let beePrevT = 0;
+const _BEE_MOVE_CODES = new Set([
+  'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE',
+  'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ShiftLeft']);
+
+function groundAtCamera() {
+  // terrainHeightAt expects (x_east, y_north); world z = −y_north.
+  return terrainHeightAt(camera.position.x, -camera.position.z, lastTerrain);
+}
+
+function disposeBeacons() {
+  if (!beaconGroup) return;
+  scene.remove(beaconGroup);
+  beaconGroup.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) o.material.dispose();
+  });
+  beaconGroup = null;
+}
+
+function rebuildBeacons() {
+  disposeBeacons();
+  if (!beeMode || !lastSceneObj || beeTargetIds.size === 0) return;
+  beaconGroup = new THREE.Group();
+  const geo = new THREE.SphereGeometry(0.22, 10, 8);
+  for (const p of (lastSceneObj.plants || [])) {
+    if (!beeTargetIds.has(String(p.plant_id))) continue;
+    const x = p.x, wy = p.y, z = -wy;
+    const top = terrainHeightAt(x, wy, lastTerrain)
+                + Math.max(0.4, p.height_m || 0.6) + 0.6;
+    const core = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+      color: 0xffe14d, transparent: true, opacity: 0.95 }));
+    core.position.set(x, top, z);
+    const halo = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+      color: 0xffd24d, transparent: true, opacity: 0.26, depthWrite: false }));
+    halo.position.copy(core.position);
+    halo.scale.setScalar(2.4);
+    beaconGroup.add(core, halo);
+  }
+  scene.add(beaconGroup);
+}
+
+function setBeeVisionUI(on) {
+  const v = document.getElementById('bee-vision');
+  const h = document.getElementById('bee-hint');
+  if (v) v.style.display = on ? 'block' : 'none';
+  if (h) {
+    h.style.display = on ? 'block' : 'none';
+    h.innerHTML = "🐝 <b>Bee's-eye view</b> — WASD / arrows to fly · "
+      + "Q/E up &amp; down · drag to look · the glowing markers are this bee's flowers";
+  }
+}
+
+function enterBeeMode() {
+  controls.enabled = false;
+  if (lastBounds) {
+    const cx = (lastBounds.min_x + lastBounds.max_x) / 2;
+    const cz = -(lastBounds.min_y + lastBounds.max_y) / 2;
+    camera.position.set(cx, 0, cz + 6);
+  }
+  beeYaw = 0; beePitch = -0.05;
+  camera.position.y = groundAtCamera() + 1.6;   // flower-and-a-bit height
+  beePrevT = 0;
+  setBeeVisionUI(true);
+  rebuildBeacons();
+}
+
+function exitBeeMode() {
+  beeKeys.clear();
+  beeDragging = false;
+  setBeeVisionUI(false);
+  rebuildBeacons();                 // beeMode is false now → clears the beacons
+  controls.enabled = true;
+  if (lastBounds) frameCamera(lastBounds);   // back to a sensible orbit
+  else controls.update();
+}
+
+function beeStep(t) {
+  const dt = beePrevT ? Math.min(0.05, (t - beePrevT) / 1000) : 0.016;
+  beePrevT = t;
+  const cp = Math.cos(beePitch), sp = Math.sin(beePitch);
+  const dir = new THREE.Vector3(Math.sin(beeYaw) * cp, sp, -Math.cos(beeYaw) * cp);
+  const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
+  const step = new THREE.Vector3();
+  if (beeKeys.has('KeyW') || beeKeys.has('ArrowUp'))    step.add(dir);
+  if (beeKeys.has('KeyS') || beeKeys.has('ArrowDown'))  step.addScaledVector(dir, -1);
+  if (beeKeys.has('KeyD') || beeKeys.has('ArrowRight')) step.add(right);
+  if (beeKeys.has('KeyA') || beeKeys.has('ArrowLeft'))  step.addScaledVector(right, -1);
+  if (beeKeys.has('KeyE') || beeKeys.has('Space'))      step.y += 1;
+  if (beeKeys.has('KeyQ') || beeKeys.has('ShiftLeft'))  step.y -= 1;
+  if (step.lengthSq() > 0) camera.position.addScaledVector(step.normalize(), 9 * dt);
+  camera.position.y += Math.sin(t * 0.004) * 0.006;   // gentle idle bob
+  const g = groundAtCamera() + 0.3;                   // never sink below ground
+  if (camera.position.y < g) camera.position.y = g;
+  camera.lookAt(camera.position.x + dir.x,
+                camera.position.y + dir.y,
+                camera.position.z + dir.z);
+  if (beaconGroup) {                                  // pulse the halos
+    const s = 2.4 * (1 + 0.22 * Math.sin(t * 0.006));
+    for (const m of beaconGroup.children) {
+      if (m.material && m.material.opacity < 0.5) m.scale.setScalar(s);
+    }
+  }
+}
+
+addEventListener('keydown', (e) => {
+  if (!beeMode) return;
+  if (_BEE_MOVE_CODES.has(e.code)) { beeKeys.add(e.code); e.preventDefault(); }
+});
+addEventListener('keyup', (e) => { beeKeys.delete(e.code); });
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (!beeMode) return;
+  beeDragging = true; beeLastX = e.clientX; beeLastY = e.clientY;
+});
+addEventListener('pointerup', () => { beeDragging = false; });
+renderer.domElement.addEventListener('pointermove', (e) => {
+  if (!beeMode || !beeDragging) return;
+  beeYaw += (e.clientX - beeLastX) * 0.005;
+  beePitch = Math.max(-1.4, Math.min(1.4, beePitch - (e.clientY - beeLastY) * 0.005));
+  beeLastX = e.clientX; beeLastY = e.clientY;
+});
+
+window.permaSetBeeMode = function (on) {
+  const want = !!on;
+  if (want === beeMode) return;
+  beeMode = want;
+  if (beeMode) enterBeeMode(); else exitBeeMode();
+};
+window.permaSetBeeTargets = function (ids) {
+  beeTargetIds = new Set((ids || []).map(String));
+  rebuildBeacons();
+};
+
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
@@ -2215,7 +2379,7 @@ renderer.setAnimationLoop((t) => {
   if (document.hidden || (t - _lastFrame) < _FRAME_MS) return;
   _lastFrame = t;
   windUniforms.uTime.value = clock.getElapsedTime();
-  controls.update();
+  if (beeMode) beeStep(t); else controls.update();
   renderer.render(scene, camera);
 });
 </script>
