@@ -250,6 +250,11 @@ class TestBeeDataQuality(unittest.TestCase):
         errors, _ = validate_bee_attributes()
         self.assertEqual(errors, [], "\n".join(errors))
 
+    def test_shipped_bee_images_are_cc0_or_ccby_with_credit(self):
+        from src.data_quality import validate_fauna_images
+        errors, _ = validate_fauna_images()
+        self.assertEqual(errors, [], "\n".join(errors))
+
 
 if __name__ == "__main__":
     unittest.main()

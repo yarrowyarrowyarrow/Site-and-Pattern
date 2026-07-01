@@ -912,9 +912,11 @@ class AnalysisPanel(QWidget):
         self._bee_map_btn.toggled.connect(self._on_bee_map_toggle)
         layout.addWidget(self._bee_map_btn)
 
-        # Summary: photo + facts
+        # Summary: photo (+ credit) + facts
         summ = QHBoxLayout()
         summ.setSpacing(8)
+        photo_col = QVBoxLayout()
+        photo_col.setSpacing(2)
         self._bee_photo = QLabel("🐝")
         self._bee_photo.setFixedSize(96, 72)
         self._bee_photo.setScaledContents(False)
@@ -922,7 +924,15 @@ class AnalysisPanel(QWidget):
         self._bee_photo.setStyleSheet(
             "border: 1px solid #2e4a2e; border-radius: 3px; "
             "background: #14241a; font-size: 30px;")
-        summ.addWidget(self._bee_photo, 0, Qt.AlignmentFlag.AlignTop)
+        photo_col.addWidget(self._bee_photo)
+        # Visible photo credit — required for CC-BY reuse (harmless for CC0).
+        self._bee_photo_credit = QLabel("")
+        self._bee_photo_credit.setFixedWidth(96)
+        self._bee_photo_credit.setWordWrap(True)
+        self._bee_photo_credit.setStyleSheet("color: #607d8b; font-size: 8px;")
+        self._bee_photo_credit.setVisible(False)
+        photo_col.addWidget(self._bee_photo_credit)
+        summ.addLayout(photo_col, 0)
         self._bee_summary = QLabel("")
         self._bee_summary.setWordWrap(True)
         self._bee_summary.setTextFormat(Qt.TextFormat.RichText)
@@ -1075,6 +1085,17 @@ class AnalysisPanel(QWidget):
             bits.append(f"<span style='color:#c8e6c9;'>{desc}</span>")
         self._bee_summary.setText("<br>".join(bits))
 
+    def _set_bee_credit(self, on: bool):
+        """Show the bee photo's attribution credit when a real photo is on screen
+        (CC-BY compliance); hide it for the 🐝 fallback."""
+        cr = getattr(self, "_bee_photo_credit", None)
+        if cr is None:
+            return
+        bee = (getattr(self, "_bee_plan", None) and self._bee_plan.bee) or {}
+        txt = bee.get("image_attribution", "") if on else ""
+        cr.setText(txt or "")
+        cr.setVisible(bool(txt))
+
     def _render_bee_photo(self):
         """Show the selected bee's cached photo (warming it if needed), else 🐝."""
         plan = getattr(self, "_bee_plan", None)
@@ -1084,6 +1105,7 @@ class AnalysisPanel(QWidget):
         if not url:
             self._bee_photo.setText("🐝")
             self._bee_photo.setPixmap(QPixmap())
+            self._set_bee_credit(False)
             return
         try:
             from src.image_cache import get_cached_image
@@ -1096,9 +1118,11 @@ class AnalysisPanel(QWidget):
                 self._bee_photo.setText("")
                 self._bee_photo.setScaledContents(True)
                 self._bee_photo.setPixmap(pm)
+                self._set_bee_credit(True)
                 return
         # not cached yet — keep the icon and warm it in the background
         self._bee_photo.setText("🐝")
+        self._set_bee_credit(False)
         if url not in self._gallery_warmed:
             self._gallery_warmed.add(url)
             self._warm_gallery_images([(url,
@@ -1448,8 +1472,10 @@ class AnalysisPanel(QWidget):
                 _add(r)
         return out[:12]
 
-    def _make_species_card(self, name: str, path: str) -> QWidget:
-        """A small thumbnail + caption card for one species."""
+    def _make_species_card(self, name: str, path: str,
+                           attribution: str = "") -> QWidget:
+        """A small thumbnail + caption card for one species. ``attribution`` is
+        shown as the thumbnail's tooltip so CC-BY photos carry a visible credit."""
         card = QWidget()
         v = QVBoxLayout(card)
         v.setContentsMargins(0, 0, 0, 0)
@@ -1460,6 +1486,8 @@ class AnalysisPanel(QWidget):
         pm = QPixmap(path)
         if not pm.isNull():
             thumb.setPixmap(pm)
+        if attribution:
+            thumb.setToolTip(attribution)
         thumb.setStyleSheet("border: 1px solid #2e4a2e; border-radius: 3px;")
         cap = QLabel(name)
         cap.setWordWrap(True)
@@ -1507,7 +1535,8 @@ class AnalysisPanel(QWidget):
         shown = 0
         for name, path, url, attr, lic in items:
             if path:
-                row.insertWidget(row.count() - 1, self._make_species_card(name, path))
+                row.insertWidget(row.count() - 1,
+                                 self._make_species_card(name, path, attr))
                 shown += 1
             elif url and url not in self._gallery_warmed:
                 pending.append((url, attr, lic))

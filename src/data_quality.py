@@ -508,3 +508,35 @@ def validate_bee_attributes() -> tuple[list[str], list[str]]:
                 f"bee_attributes: {name}: graded tongue_length {tl!r} is only "
                 f"documented for Bombus (use 'unknown' elsewhere)")
     return errors, warnings
+
+
+# Bees use only commercial-safe CC licences (F37 A1 decision: CC0 + CC-BY).
+_BEE_IMAGE_LICENSES = {"", "cc0", "cc-by"}
+
+
+def validate_fauna_images() -> tuple[list[str], list[str]]:
+    """Validate bee photo licences in ``data/fauna_master.json`` (F37 A1): a bee
+    photo must be CC0 or CC-BY (no NC/SA — commercial-safe), and any non-CC0
+    licensed photo must carry a non-empty attribution (CC-BY needs a visible
+    credit). Non-bee taxa are not constrained here. Returns ``(errors, warnings)``."""
+    errors: list[str] = []
+    warnings: list[str] = []
+    path = DATA_DIR / "fauna_master.json"
+    try:
+        records = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return [f"{path.name}: not found"], []
+    except json.JSONDecodeError as e:
+        return [f"{path.name}: JSON parse error: {e}"], []
+    for rec in records:
+        if rec.get("taxon") != "bee" or not (rec.get("image_url") or ""):
+            continue
+        name = rec.get("scientific_name", "?")
+        lic = (rec.get("image_license") or "").lower().strip()
+        if lic not in _BEE_IMAGE_LICENSES:
+            errors.append(
+                f"fauna image: {name}: bee photo licence {lic!r} is not CC0/CC-BY")
+        if lic and lic != "cc0" and not (rec.get("image_attribution") or "").strip():
+            errors.append(
+                f"fauna image: {name}: {lic} photo needs a non-empty attribution")
+    return errors, warnings
