@@ -52,6 +52,75 @@ def list_fauna(taxon: str = "") -> list[dict]:
         conn.close()
 
 
+# ── Bee attributes (F37 "see what a bee sees") ────────────────────────────────
+
+def bee_attributes_for(fauna_id: int) -> dict:
+    """Return the ``bee_attributes`` row for ``fauna_id`` (or ``{}`` if the
+    fauna row is not a bee / has no attributes seeded)."""
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT * FROM bee_attributes WHERE fauna_id = ?", (fauna_id,)
+        ).fetchone()
+        return _row_to_dict(row) if row else {}
+    finally:
+        conn.close()
+
+
+def list_bees_with_attributes() -> list[dict]:
+    """Return every bee in the fauna registry LEFT JOIN its bee_attributes,
+    so callers get name/image fields alongside nesting/tongue/season. Bees
+    with no seeded attributes still appear (attribute columns are NULL).
+    Sorted by genus then common_name so the UI can group by genus."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            """SELECT f.*,
+                      ba.genus              AS bee_genus,
+                      ba.nesting_habit      AS nesting_habit,
+                      ba.host_genus         AS host_genus,
+                      ba.tongue_length      AS tongue_length,
+                      ba.flight_season      AS flight_season,
+                      ba.floral_host_genera AS floral_host_genera,
+                      ba.pollen_specialist  AS pollen_specialist,
+                      ba.conservation_status AS conservation_status
+               FROM fauna f
+               LEFT JOIN bee_attributes ba ON ba.fauna_id = f.id
+               WHERE f.taxon = 'bee'
+               ORDER BY COALESCE(ba.genus, f.scientific_name), f.common_name""",
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def plants_in_genera(genera: list[str]) -> list[dict]:
+    """Return plant rows whose scientific-name genus (the first token) is one of
+    ``genera`` (case-insensitive). Used by the bee habitat builder's genus-level
+    floral-host fallback when there is no curated plant↔bee edge.
+
+    Empty ``genera`` → ``[]``.
+    """
+    if not genera:
+        return []
+    conn = get_connection()
+    try:
+        qmarks = ",".join("?" * len(genera))
+        # Genus = characters up to the first space (INSTR on 'name ' guarantees a
+        # match even for a single-token scientific_name). Compared upper-cased.
+        rows = conn.execute(
+            f"""SELECT * FROM plants
+                WHERE UPPER(SUBSTR(scientific_name, 1,
+                                   INSTR(scientific_name || ' ', ' ') - 1))
+                      IN ({qmarks})
+                ORDER BY common_name""",
+            [g.upper() for g in genera],
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
 # ── Plant → fauna ─────────────────────────────────────────────────────────────
 
 def fauna_for_plant(plant_id: int) -> list[dict]:

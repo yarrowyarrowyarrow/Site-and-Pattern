@@ -437,3 +437,74 @@ def validate_all() -> tuple[list[str], list[str]]:
         errors.extend(e)
         warnings.extend(w)
     return errors, warnings
+
+
+# ── Bee attributes (F37) ──────────────────────────────────────────────────────
+
+_BEE_NESTING = {
+    "ground", "cavity", "pithy_stem", "social_ground", "cleptoparasite", "unknown",
+}
+_BEE_TONGUE = {"short", "medium", "long", "unknown"}
+
+
+def validate_bee_attributes() -> tuple[list[str], list[str]]:
+    """Validate ``data/bee_attributes_master.json`` against the schema-v39
+    ``bee_attributes`` invariants and its cross-reference into
+    ``fauna_master.json``. Returns ``(errors, warnings)``.
+
+    Checks: valid JSON list; unique ``scientific_name``; each name resolves to a
+    ``taxon='bee'`` fauna row; ``nesting_habit`` / ``tongue_length`` in their
+    enums; ``pollen_specialist`` in {0, 1, null}; and the honesty invariant that
+    a graded tongue length is only asserted for *Bombus* (the only genus the
+    source characterises)."""
+    errors: list[str] = []
+    warnings: list[str] = []
+    bee_path = DATA_DIR / "bee_attributes_master.json"
+    fauna_path = DATA_DIR / "fauna_master.json"
+    try:
+        records = json.loads(bee_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return [f"{bee_path.name}: not found"], []
+    except json.JSONDecodeError as e:
+        return [f"{bee_path.name}: JSON parse error: {e}"], []
+    if not isinstance(records, list):
+        return [f"{bee_path.name}: top-level should be a list"], []
+
+    # Build the set of bee scientific names from the fauna file.
+    try:
+        fauna = json.loads(fauna_path.read_text(encoding="utf-8"))
+        bee_names = {
+            e["scientific_name"] for e in fauna
+            if e.get("taxon") == "bee" and "scientific_name" in e
+        }
+    except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
+        return [f"{fauna_path.name}: could not load bee names ({e})"], []
+
+    seen: set[str] = set()
+    for rec in records:
+        name = rec.get("scientific_name")
+        if not name:
+            errors.append("bee_attributes: record missing scientific_name")
+            continue
+        if name in seen:
+            errors.append(f"bee_attributes: duplicate scientific_name {name!r}")
+        seen.add(name)
+        if name not in bee_names:
+            errors.append(
+                f"bee_attributes: {name!r} has no matching taxon='bee' row in "
+                f"{fauna_path.name}")
+        nh = rec.get("nesting_habit")
+        if nh is not None and nh not in _BEE_NESTING:
+            errors.append(f"bee_attributes: {name}: bad nesting_habit {nh!r}")
+        tl = rec.get("tongue_length")
+        if tl is not None and tl not in _BEE_TONGUE:
+            errors.append(f"bee_attributes: {name}: bad tongue_length {tl!r}")
+        ps = rec.get("pollen_specialist")
+        if ps not in (0, 1, None):
+            errors.append(f"bee_attributes: {name}: pollen_specialist must be 0/1/null")
+        # P9 honesty: only Bombus carries a graded tongue length.
+        if tl in ("short", "medium", "long") and not str(name).startswith("Bombus "):
+            errors.append(
+                f"bee_attributes: {name}: graded tongue_length {tl!r} is only "
+                f"documented for Bombus (use 'unknown' elsewhere)")
+    return errors, warnings

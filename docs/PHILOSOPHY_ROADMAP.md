@@ -74,6 +74,7 @@ These started life as entries below and have since landed — the State markers 
 | F17 | Phased conversion plan (year-by-year) | `src/conversion_plan.py`, surfaced in `src/planning_panel.py` + `src/app.py` + `src/pdf_export.py` | P8, P4 |
 | F22 / F35 | Naturalistic drift placement + spread-aware spacing | `src/layout.py`, `src/planting_spacing.py` | P1, P2, P4 |
 | F24 | Site photo overlay + markup | `src/site_photo.py` + `src/site_photo_flow.py`, surfaced in `src/site_panel.py` + `html/map/06-overlays.js` | P11, P5 |
+| F37 (part) | "Design for a bee" habitat builder + Alberta native-bee data spine | `src/bee_habitat.py`, `data/bee_attributes_master.json` (+ Apidae roster in `data/fauna_master.json`), `src/db/fauna.py`, surfaced in `src/analysis_panel.py` (Bees tab) | P8, P3, P10, P5, P9 |
 | F40 | Planting Plan — buy-it / plant-it sheet (quantities, form, spacing, planting window, phased schedule) | `src/planting_plan.py`, surfaced in `src/app.py` + `src/pdf_export.py` | P8, P4, P11, P6, P9 |
 
 Net effect on the principles: **P1 partial → strong** (pattern language is now explicit), and
@@ -387,8 +388,20 @@ connectivity to the design's planted areas; a new analysis layer.
   timeline (delivered alongside F22).
 - **F36 · Emergent community spacing** — *L · Med — schema (P1, P4)*: generate
   `polyculture_members` offsets from competition/canopy rules instead of fixed offsets.
-- **F37 · "What the bee sees" mode** — *M · Low (P5)*: recolour the map by floral-resource
-  value (Yong's Umwelt made literal); playful, optional.
+- **F37 · "See what a bee sees" family** — *P8, P3, P10, P5, P9*: one Alberta native-bee data
+  spine (nesting habit, tongue length, flight season, floral-host genera per species — schema
+  v39 `bee_attributes`, seeded from the ANBC Apidae tables after Sheffield et al. 2014) feeding
+  three lenses that share one *chosen bee → relevant flowers* selection (`src/bee_habitat.py`).
+  - **✅ Increment 1 — "Design for a bee" habitat builder (shipped):** pick a genus or species and
+    get floral hosts matched from your own plants (with a *Bombus* tongue↔flower-form fit), nesting
+    guidance mapped to the real habitat structures (bee hotel, drilled log, brush pile, unmown lawn)
+    or "support the host bee" for cuckoos, and a flight-season forage-coverage check that flags
+    bloom gaps. Qt-free core + a Bees tab in `src/analysis_panel.py`. Honest about thin data (P9):
+    tongue length is graded only for *Bombus*; undocumented flight seasons skip the coverage check.
+  - **Increment 2 — "Be a bumblebee" 3D fly-through** *(next, M · Low, P5/P11)*: a first-person bee
+    camera + bee-vision post-process in `html/scene3d.html`, glowing the chosen bee's floral matches.
+  - **Increment 3 — "What the bee sees" map recolour** *(M · Low, P5)*: recolour the Leaflet map by
+    floral-resource value for the selected bee (the original card; Yong's Umwelt made literal).
 - **F38 · Mycoremediation / degraded-site notes** — *S · Low (P8)*: well-cited restoration
   techniques for contaminated/compacted ground (content, directional).
 - **F39 · Sensor integration hooks** — *L · High — external (P11)*: optional soil-moisture/

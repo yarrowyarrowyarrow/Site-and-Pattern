@@ -66,7 +66,10 @@ Simard's mycorrhizal networks, Lowenfels' soil food web, Sheldrake's fungal conn
 > `src/db/seed_data.py`, `polyculture_members`, and the `plant_uses` junction; the food-web
 > completeness check in `src/habitat_score.py` (`food_web`) now scores whether a design
 > closes the host-plant → caterpillar → bird chain (roadmap F3, shipped), and specialist
-> relationships are spotlighted through `fauna` specificity (F9, shipped). **State: partial
+> relationships are spotlighted through `fauna` specificity (F9, shipped); the **native-bee
+> habitat builder** (`src/bee_habitat.py`, roadmap F37) now turns the plant↔bee edges into
+> per-species advice — matched floral hosts, nesting needs, and a flight-season forage check
+> backed by the schema-v39 `bee_attributes` spine. **State: partial
 > (strengthening)** — the relationships are increasingly *scored*, but not yet drawn as a
 > network (F5) or unified into one edges layer (F7); mycorrhizal/symbiosis links still live
 > only in plant `notes` text.
@@ -93,10 +96,13 @@ Yong's Umwelt research, Deutscher's linguistic relativity, Berger's visual cultu
 > leaf-off and bloom, the **site photo underlay** (`src/site_photo.py`, roadmap F24) that
 > puts the user's real yard under the design, and the **snow-catch microsite overlay**
 > (`src/snow_microsite.py`) that draws where winter snow drifts into the lee of windbreaks —
-> an invisible microclimate made visible by reusing the wind-shelter geometry. **State:
-> partial** — site forces, seasonality, the real site and now winter snow microsites are made
-> visible, but ecological *relationships* (pollinator pathways, mycorrhizal networks,
-> succession trajectories) are still not drawn (roadmap F5, F15).
+> an invisible microclimate made visible by reusing the wind-shelter geometry — and the
+> **native-bee habitat builder** (`src/bee_habitat.py`, roadmap F37, "see what a bee sees"),
+> which makes a chosen bee's hidden needs legible: which of your plants feed it, where it
+> nests, and the gaps in its flight-season forage. **State:
+> partial** — site forces, seasonality, the real site, winter snow microsites and now a single
+> bee's world are made visible, but ecological *relationships* (pollinator pathways, mycorrhizal
+> networks, succession trajectories) are still not drawn as networks (roadmap F5, F15).
 
 ### 6. Conventional value metrics miss ecological value
 
@@ -155,9 +161,11 @@ This is the synthesis of all preceding themes. Every other landscape application
 > shipped schema is now 41 fields); the food-web score (F3) and specialist-host spotlight
 > (F9) have begun surfacing edges as scored, legible relationships, and the **ecological-role
 > labels** (`src/ecological_role.py`, roadmap F1) now read those plant↔fauna edges back to the
-> user per plant ("hosts 7 caterpillars", "specialist host"). **State: partial** — the edges are
-> modeled in data, increasingly scored, and now summarised per node, but not yet drawn as a
-> first-class relationship network in the UI (roadmap F5, F7).
+> user per plant ("hosts 7 caterpillars", "specialist host"); the **native-bee habitat builder**
+> (`src/bee_habitat.py`, F37) reads the same bee↔plant edges *forward* into "design for this
+> species" guidance. **State: partial** — the edges are
+> modeled in data, increasingly scored, summarised per node, and now actionable per target
+> species, but not yet drawn as a first-class relationship network in the UI (roadmap F5, F7).
 
 ### 11. The body and the site know things the screen does not
 

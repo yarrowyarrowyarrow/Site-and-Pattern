@@ -191,6 +191,38 @@ CREATE TABLE IF NOT EXISTS plant_fauna (
     PRIMARY KEY (plant_id, fauna_id, relationship)
 );
 
+-- Bee attributes (schema v39, F37 "see what a bee sees"). One row per fauna row
+-- with taxon='bee'. Kept in a narrow table keyed on fauna_id rather than as extra
+-- columns on the 5-taxon `fauna` table so the bee-only enums (tongue length,
+-- nesting habit) and sparse fields don't add perpetually-NULL columns to birds /
+-- lepidoptera / mammals. Data honesty (P8/P9): tongue_length is populated ONLY for
+-- Bombus; 'unknown' / NULL means "not characterised", never a silent default.
+-- floral_host_genera and flight_season are deliberately coarse free-text ranges.
+CREATE TABLE IF NOT EXISTS bee_attributes (
+    fauna_id INTEGER PRIMARY KEY REFERENCES fauna(id) ON DELETE CASCADE,
+    genus TEXT,                    -- denormalised for genus-level grouping / selection
+    nesting_habit TEXT CHECK (nesting_habit IN (
+        'ground',         -- soil / underground excavators (Anthophora, Melissodes, many Bombus)
+        'cavity',         -- pre-formed holes / reed tubes / drilled wood (mason, leafcutter)
+        'pithy_stem',     -- excavate soft / pithy stems
+        'social_ground',  -- social colonies in ground cavities, tussocks, old rodent nests (Bombus)
+        'cleptoparasite', -- cuckoo bees: no nest, develop in a host bee's nest
+        'unknown'
+    )),
+    host_genus TEXT,               -- cleptoparasites: host bee genus ('Bombus', 'Melissodes', …)
+    tongue_length TEXT CHECK (tongue_length IN (
+        'short', 'medium', 'long', 'unknown'
+    )),
+    flight_season TEXT,            -- free-text month range ("April–September"); parsed downstream
+    floral_host_genera TEXT,       -- comma-separated plant genera ("Salix,Rosa,Solidago") | NULL
+    pollen_specialist INTEGER,     -- 1 oligolectic, 0 polylectic, NULL unknown
+    conservation_status TEXT,      -- free text ("Secure", "At Risk", "Data Deficient")
+    source TEXT,
+    notes TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_bee_attr_genus   ON bee_attributes(genus);
+CREATE INDEX IF NOT EXISTS idx_bee_attr_nesting ON bee_attributes(nesting_habit);
+
 -- Climate cache (schema v14, V1.35). One row per ~1 km^2 location;
 -- stores derived growing-degree-day and frost-window stats from the
 -- Open-Meteo Historical Weather endpoint. Lat/lng are quantized to
