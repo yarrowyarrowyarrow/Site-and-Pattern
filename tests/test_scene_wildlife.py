@@ -88,6 +88,23 @@ class TestSceneWildlife(unittest.TestCase):
                  "fly": "ins", "beetle": "ins", "mammal": "mam"}
         self.assertGreaterEqual(len({group[k] for k in kinds}), 2)
 
+    def test_no_clumping(self):
+        # The de-clump fix (V2.12): no two creatures share a spot; the relaxation
+        # pass keeps them at least ~min_sep apart in the ground plane so a rich
+        # scene reads as individuals, not a blob.
+        import math
+        pts = [(c["x"], c["y"]) for c in self.crit]
+        worst = min((math.hypot(pts[i][0] - pts[j][0], pts[i][1] - pts[j][1])
+                     for i in range(len(pts)) for j in range(i + 1, len(pts))),
+                    default=99)
+        self.assertGreaterEqual(worst, 0.8, "creatures are clumping together")
+
+    def test_spread_across_plants(self):
+        # A species that uses several present plants shouldn't pile every animal
+        # onto one keystone — creatures anchor to more than one plant.
+        anchors = {c["on"] for c in self.crit}
+        self.assertGreaterEqual(len(anchors), 3)
+
     def test_deterministic(self):
         again = W.wildlife_for_scene(self.scene)
         self.assertEqual([(c["name"], c["x"], c["y"]) for c in self.crit],

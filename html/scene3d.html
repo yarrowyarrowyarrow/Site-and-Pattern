@@ -301,12 +301,21 @@ controls.target.set(0, 0, 0);
 // "fly as a bee" mode) are traversed and rendered. Harmless for normal rendering.
 scene.add(camera);
 
-// Hover → plant name (V1.99): raycast the instanced plant meshes and show the
-// common name of the instance under the cursor. Throttled; flower point-sprites
-// aren't pickable. Each plant mesh carries userData.pick = [name per instance].
+// Hover → name (V1.99; wildlife V2.12): raycast the ambient creatures first
+// (so you can tell what a bug is — "Bumble bee · nectar on Wild Bergamot"), then
+// fall back to the instanced plant meshes (each carries userData.pick = [name
+// per instance]). Throttled; flower point-sprites aren't pickable.
 const _ray = new THREE.Raycaster();
 const _ptr = new THREE.Vector2();
 let _lastPick = 0;
+const _REL_WORDS = { nectar: 'sips nectar at', pollen: 'gathers pollen at',
+  larval_host: 'lays eggs on', fruit_food: 'eats fruit of', seed_food: 'eats seed of',
+  cover: 'shelters in', nesting: 'nests in' };
+function _critterAt(object) {
+  let o = object;
+  while (o) { if (o.userData && o.userData.critterInfo) return o.userData.critterInfo; o = o.parent; }
+  return null;
+}
 renderer.domElement.addEventListener('pointermove', (ev) => {
   const tip = document.getElementById('plant-tip');
   if (!tip) return;
@@ -314,21 +323,37 @@ renderer.domElement.addEventListener('pointermove', (ev) => {
   const now = performance.now();
   if (now - _lastPick < 45) return;             // throttle the raycast
   _lastPick = now;
-  if (!plantsGroup) { tip.style.display = 'none'; return; }
   const r = renderer.domElement.getBoundingClientRect();
   _ptr.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
   _ptr.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
   _ray.setFromCamera(_ptr, camera);
-  const meshes = [];
-  plantsGroup.traverse(o => { if (o.isInstancedMesh && o.userData.pick) meshes.push(o); });
-  const hits = _ray.intersectObjects(meshes, false);
-  let name = '';
-  for (const h of hits) {
-    const nm = h.object.userData.pick[h.instanceId];
-    if (nm) { name = nm; break; }
+  let html = '';
+  // 1) A creature under the cursor — name + what it uses this plant for.
+  if (wildlifeGroup && wildlifeGroup.visible) {
+    const cw = [];
+    wildlifeGroup.traverse(o => { if (o.isMesh && _critterAt(o)) cw.push(o); });
+    const ch = _ray.intersectObjects(cw, false);
+    if (ch.length) {
+      const info = _critterAt(ch[0].object);
+      if (info) {
+        const verb = _REL_WORDS[info.rel] || 'uses';
+        html = '🐾 <b>' + info.name + '</b>'
+          + (info.on ? ' · ' + verb + ' ' + info.on : '');
+      }
+    }
   }
-  tip.textContent = name;
-  tip.style.display = name ? 'block' : 'none';
+  // 2) Otherwise the plant under the cursor.
+  if (!html && plantsGroup) {
+    const meshes = [];
+    plantsGroup.traverse(o => { if (o.isInstancedMesh && o.userData.pick) meshes.push(o); });
+    const hits = _ray.intersectObjects(meshes, false);
+    for (const h of hits) {
+      const nm = h.object.userData.pick[h.instanceId];
+      if (nm) { html = nm; break; }
+    }
+  }
+  tip.innerHTML = html;
+  tip.style.display = html ? 'block' : 'none';
 });
 renderer.domElement.addEventListener('pointerleave', () => {
   const tip = document.getElementById('plant-tip');
@@ -2437,8 +2462,43 @@ const beeKeys = new Set();
 let beeYaw = 0, beePitch = -0.05;        // radians; yaw 0 → looking north (−z)
 let beeDragging = false, beeLastX = 0, beeLastY = 0;
 let beePrevT = 0;
+const BEE_SPEED = 4.0;                    // flyer cruise (m/s) — an unhurried bee (was 7)
+let beeNameSprite = null, beeNameText = '';   // floating flower-name label on approach
 const _MONTHS3 = ['', 'January', 'February', 'March', 'April', 'May', 'June',
                   'July', 'August', 'September', 'October', 'November', 'December'];
+
+// A small floating text label (canvas → sprite) used to name the flower the
+// flyer is approaching. One reusable sprite; its texture is rebuilt only when
+// the text changes.
+function makeTextSprite() {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({
+    transparent: true, depthWrite: false, depthTest: false }));
+  s.renderOrder = 999;
+  return s;
+}
+function setSpriteText(sprite, text) {
+  const pad = 10, fs = 40;
+  const cv = document.createElement('canvas');
+  const ctx = cv.getContext('2d');
+  ctx.font = '600 ' + fs + 'px system-ui, sans-serif';
+  const w = Math.ceil(ctx.measureText(text).width) + pad * 2;
+  const h = fs + pad * 2;
+  cv.width = w; cv.height = h;
+  const g = cv.getContext('2d');
+  g.font = '600 ' + fs + 'px system-ui, sans-serif';
+  g.textBaseline = 'middle';
+  g.fillStyle = 'rgba(20,30,22,0.86)';
+  const r = 12;
+  g.beginPath();
+  g.moveTo(r, 0); g.arcTo(w, 0, w, h, r); g.arcTo(w, h, 0, h, r);
+  g.arcTo(0, h, 0, 0, r); g.arcTo(0, 0, w, 0, r); g.closePath(); g.fill();
+  g.fillStyle = '#eafaea'; g.fillText(text, pad, h / 2 + 1);
+  const tex = new THREE.CanvasTexture(cv);
+  if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
+  if (sprite.material.map) sprite.material.map.dispose();
+  sprite.material.map = tex; sprite.material.needsUpdate = true;
+  sprite.userData.aspect = w / h;   // scale is set per-frame from the view distance
+}
 
 // Is a plant in bloom for the current scene month? Drives bloom-gated nectar
 // beacons (V2.12 fix — nectar was collectable even out of bloom).
@@ -2878,6 +2938,8 @@ function enterBeeMode() {
   ensureAvatar();
   beeAvatar.visible = true;
   setBeeVisionUI(true);
+  if (!beeNameSprite) { beeNameSprite = makeTextSprite(); scene.add(beeNameSprite); }
+  beeNameSprite.visible = false; beeNameText = '';
   if (wildlifeGroup) wildlifeGroup.visible = false;   // focus on the flown creature
   rebuildBeacons();
   beeSpawn();
@@ -2891,6 +2953,7 @@ function exitBeeMode() {
   tourMode = false;
   clearBursts();
   if (beeAvatar) beeAvatar.visible = false;
+  if (beeNameSprite) beeNameSprite.visible = false;
   setBeeVisionUI(false);
   rebuildBeacons();                 // beeMode is false now → clears the beacons
   if (wildlifeGroup) wildlifeGroup.visible = true;   // wildlife returns in orbit
@@ -2936,10 +2999,11 @@ function beeStep(t) {
     const dist = d.length();
     if (dist < 1.2) beeAuto = null;              // collection radius takes it
     else {
-      beeYaw = _turnToward(beeYaw, Math.atan2(d.x, -d.z), 2.6 * dt);
+      beeYaw = _turnToward(beeYaw, Math.atan2(d.x, -d.z), 1.9 * dt);
       beePitch = _turnToward(beePitch,
-        Math.asin(Math.max(-1, Math.min(1, d.y / dist))), 1.8 * dt);
-      want.copy(d).normalize().multiplyScalar(Math.min(7, 2 + dist));
+        Math.asin(Math.max(-1, Math.min(1, d.y / dist))), 1.3 * dt);
+      // Ease right down as it nears the flower so the arrival reads, not blurs.
+      want.copy(d).normalize().multiplyScalar(Math.min(BEE_SPEED, 1.1 + dist * 0.7));
     }
   }
   const cp = Math.cos(beePitch), sp = Math.sin(beePitch);
@@ -2952,7 +3016,7 @@ function beeStep(t) {
     if (beeKeys.has('KeyA') || beeKeys.has('ArrowLeft'))  { want.addScaledVector(right, -1); strafe -= 1; }
     if (beeKeys.has('KeyE') || beeKeys.has('Space'))      want.y += 1;
     if (beeKeys.has('KeyQ') || beeKeys.has('ShiftLeft'))  want.y -= 1;
-    if (want.lengthSq() > 0) want.normalize().multiplyScalar(7);
+    if (want.lengthSq() > 0) want.normalize().multiplyScalar(BEE_SPEED);
   }
   // Smoothed velocity: the bee glides and settles instead of stopping dead.
   beeVel.lerp(want, 1 - Math.exp(-6 * dt));
@@ -2983,6 +3047,25 @@ function beeStep(t) {
     for (const b of beeBeacons)
       if (!b.visited && camera.position.distanceTo(b.pos) < 1.25) collectBeacon(b, t);
   stepBursts(t, dt);
+
+  // Reveal the flower's name as the flyer approaches it: a floating label over
+  // the nearest unvisited bloom within ~3.5 m (the flower the flyer is heading
+  // for). The collect callout still names it on arrival.
+  if (beeNameSprite) {
+    const nu = nearestUnvisited();
+    if (nu && nu.d < 4.0) {
+      if (beeNameText !== nu.b.name) { beeNameText = nu.b.name; setSpriteText(beeNameSprite, nu.b.name); }
+      // Constant on-screen size: world height scales with the view distance so
+      // the label reads the same near or far (never fills the screen up close).
+      const hh = 0.052 * Math.max(1.2, nu.d);
+      beeNameSprite.scale.set((beeNameSprite.userData.aspect || 4) * hh, hh, 1);
+      beeNameSprite.position.set(nu.b.pos.x, nu.b.pos.y + 0.45 + hh * 0.6, nu.b.pos.z);
+      beeNameSprite.material.opacity = Math.max(0, Math.min(1, (4.0 - nu.d) / 1.6));
+      beeNameSprite.visible = true;
+    } else {
+      beeNameSprite.visible = false;
+    }
+  }
 
   // Pulse the unvisited glows; float the cores gently. Everything melts away
   // as the bee arrives (nearFade) — a marker 0.6 m from the camera would
@@ -3102,7 +3185,7 @@ function flapWings(obj, t) {
 
 // Bees + butterflies/moths reuse the (species-styled) avatar bodies, scaled down.
 function makeBeeCritter(app) {
-  const g = makeBeeAvatar(app); g.scale.multiplyScalar(0.7);
+  const g = makeBeeAvatar(app); g.scale.multiplyScalar(0.85);
   g.userData.anim = 'flier'; return g;
 }
 function makeButterflyCritter(app) {
@@ -3253,6 +3336,19 @@ function disposeWildlife() {
   wildlifeGroup = null; wildlifeCritters = [];
 }
 
+// A soft contact-shadow disc on the ground under a critter — grounds the
+// hovering ones and helps you tell a low bee from a flower.
+let _CRIT_SHADOW_MAT = null, _CRIT_SHADOW_GEO = null;
+function makeCritShadow(r) {
+  if (!SHADOW_TEX) SHADOW_TEX = makeShadowTexture();
+  if (!_CRIT_SHADOW_MAT) _CRIT_SHADOW_MAT = new THREE.MeshBasicMaterial({
+    map: SHADOW_TEX, transparent: true, depthWrite: false, color: 0x243018, opacity: 0.5 });
+  if (!_CRIT_SHADOW_GEO) _CRIT_SHADOW_GEO = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+  const sh = new THREE.Mesh(_CRIT_SHADOW_GEO, _CRIT_SHADOW_MAT);
+  sh.scale.set(r, 1, r);
+  return sh;
+}
+
 function rebuildWildlife() {
   disposeWildlife();
   if (!WILDLIFE.length) return;
@@ -3265,11 +3361,17 @@ function rebuildWildlife() {
     const gy = terrainHeightAt(spec.x, spec.y, lastTerrain);
     const anchor = new THREE.Vector3(spec.x, gy, -spec.y);
     obj.position.set(anchor.x, gy + (spec.h || 0.3), anchor.z);
-    const flier = obj.userData.anim === 'flier';
+    // Backref so hover can name the creature + the plant it's using.
+    obj.userData.critterInfo = { name: spec.name || '', on: spec.on || '',
+                                 rel: spec.rel || '', kind: spec.kind };
+    const flier = obj.userData.anim === 'flier' || obj.userData.anim === 'hover';
+    const shadow = makeCritShadow(flier ? 0.5 : 0.4);
+    shadow.position.set(anchor.x, gy + 0.02, anchor.z);
+    wildlifeGroup.add(shadow);
     wildlifeCritters.push({
-      obj, anchor, h: spec.h || 0.3, seed: (spec.seed || 0) % 1000,
+      obj, shadow, anchor, h: spec.h || 0.3, seed: (spec.seed || 0) % 1000,
       anim: obj.userData.anim,
-      driftR: flier ? 0.25 + ((spec.seed || 0) % 40) / 100 : 0,
+      driftR: (obj.userData.anim === 'flier') ? 0.25 + ((spec.seed || 0) % 40) / 100 : 0,
       speed: 0.6 + ((spec.seed || 0) % 50) / 60,
     });
     wildlifeGroup.add(obj);
@@ -3288,12 +3390,14 @@ function animateWildlife(t) {
       const z = a.z + Math.sin(ang) * c.driftR;
       o.position.set(x, a.y + c.h + Math.sin(t * 0.004 + ph) * 0.05, z);
       o.rotation.y = -ang;                 // face the tangent of the circle
+      if (c.shadow) c.shadow.position.set(x, a.y + 0.02, z);   // shadow tracks it
       flapWings(o, t);
     } else if (c.anim === 'hover') {
-      o.position.set(a.x + Math.sin(t * 0.002 + ph) * 0.12,
-                     a.y + c.h + Math.sin(t * 0.005 + ph) * 0.06,
-                     a.z + Math.cos(t * 0.0022 + ph) * 0.12);
+      const x = a.x + Math.sin(t * 0.002 + ph) * 0.12;
+      const z = a.z + Math.cos(t * 0.0022 + ph) * 0.12;
+      o.position.set(x, a.y + c.h + Math.sin(t * 0.005 + ph) * 0.06, z);
       o.rotation.y = ph + Math.sin(t * 0.001 + ph) * 0.6;
+      if (c.shadow) c.shadow.position.set(x, a.y + 0.02, z);
       flapWings(o, t);
     } else if (c.anim === 'perch') {
       o.position.y = a.y + c.h + Math.sin(t * 0.003 + ph) * 0.02;

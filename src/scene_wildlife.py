@@ -218,9 +218,10 @@ def wildlife_for_scene(scene: dict, *,
     if not rows:
         return []
 
-    # Collapse to one best (plant, relationship) per fauna species, preferring
-    # the taxon's most placement-appropriate relationship and a present plant.
-    best: dict = {}    # fauna_id -> row (with plant_id)
+    # Per species, keep ALL its best-rank (plant, relationship) candidates, so a
+    # species that uses several present plants can be spread across them rather
+    # than piling every animal onto one keystone shrub (the old clumping bug).
+    cand: dict = {}    # fauna_id -> {"best_rank", "row", "plants": [pid,...]}
     for r in rows:
         fid = r.get("id")
         pid = r.get("plant_id")
@@ -228,16 +229,22 @@ def wildlife_for_scene(scene: dict, *,
             continue
         prio = _REL_PRIORITY.get(r.get("taxon"), ())
         rank = prio.index(r["relationship"]) if r.get("relationship") in prio else len(prio)
-        cur = best.get(fid)
-        if cur is None or rank < cur["_rank"]:
-            best[fid] = {**r, "_rank": rank}
+        c = cand.get(fid)
+        if c is None or rank < c["best_rank"]:
+            cand[fid] = {"best_rank": rank, "row": {**r}, "plants": [pid]}
+        elif rank == c["best_rank"] and pid not in c["plants"]:
+            c["plants"].append(pid)
 
-    # Order deterministically, then apply per-taxon caps + a global cap.
-    chosen = sorted(best.values(),
-                    key=lambda r: (r.get("taxon", ""), r.get("common_name", "")))
+    chosen = sorted(cand.values(),
+                    key=lambda c: (c["row"].get("taxon", ""),
+                                   c["row"].get("common_name", "")))
+    # Round-robin how many animals each plant already carries, so shared plants
+    # don't stack: a species prefers a candidate plant with the fewest so far.
+    load: dict = {}
     per_taxon: dict = {}
     creatures: list[dict] = []
-    for r in chosen:
+    for c in chosen:
+        r = c["row"]
         taxon = r.get("taxon")
         cap = _TAXON_CAP.get(taxon, 3)
         if per_taxon.get(taxon, 0) >= cap:
@@ -245,28 +252,63 @@ def wildlife_for_scene(scene: dict, *,
         app = _appearance_for(r)
         if app is None:
             continue
-        p = by_id[r["plant_id"]]
         seed = _hash(r.get("id"), r.get("plant_id"))
-        # A deterministic offset in a ring around the plant (golden-angle spread),
-        # scaled to the plant's canopy so small herbs get tight placement.
+        # Pick the least-loaded candidate plant (ties broken deterministically).
+        pid = min(sorted(c["plants"]),
+                  key=lambda q: (load.get(q, 0), (seed + q) % 7))
+        load[pid] = load.get(pid, 0) + 1
+        p = by_id[pid]
         canopy = max(0.3, float(p.get("canopy_m") or 0.5))
         ang = (seed % 360) * math.pi / 180.0
-        rad = canopy * (0.35 + 0.4 * ((seed >> 4) % 100) / 100.0)
-        dx = math.cos(ang) * rad
-        dy = math.sin(ang) * rad
-        h = _perch_height(app["kind"], float(p.get("height_m") or 0.5), r.get("relationship", ""))
+        # A wider ring with a real floor so animals sit *around* the plant, not
+        # inside it; the k-th animal on a plant steps further out.
+        k = load[pid] - 1
+        rad = max(0.7, canopy * 0.55) + 0.5 * k
+        base_h = _perch_height(app["kind"], float(p.get("height_m") or 0.5),
+                               r.get("relationship", ""))
         creatures.append({
             "kind": app["kind"],
-            "x": round(p["x"] + dx, 2),
-            "y": round(p["y"] + dy, 2),
-            "h": round(h, 2),
+            "x": round(p["x"] + math.cos(ang) * rad, 2),
+            "y": round(p["y"] + math.sin(ang) * rad, 2),
+            # Small per-animal height jitter separates same-plant, same-band animals.
+            "h": round(base_h + ((seed >> 6) % 20 - 10) / 100.0 * base_h, 2),
             "name": r.get("common_name", ""),
             "on": p.get("common_name", ""),
             "rel": r.get("relationship", ""),
             "seed": seed % 100000,
             "app": app,
+            "_ax": p["x"], "_ay": p["y"],
         })
         per_taxon[taxon] = per_taxon.get(taxon, 0) + 1
         if len(creatures) >= max_creatures:
             break
+
+    _relax_spacing(creatures)
+    for c in creatures:
+        c.pop("_ax", None); c.pop("_ay", None)
     return creatures
+
+
+def _relax_spacing(creatures: list, min_sep: float = 0.85, tries: int = 12) -> None:
+    """Nudge overlapping creatures apart in the ground plane so a rich scene
+    reads as individuals, not a blob. Each creature is pushed radially outward
+    from its anchor plant until it clears its neighbours (deterministic)."""
+    placed: list = []
+    for c in creatures:
+        ax, ay = c.get("_ax", c["x"]), c.get("_ay", c["y"])
+        vx, vy = c["x"] - ax, c["y"] - ay
+        r = math.hypot(vx, vy) or 0.01
+        ux, uy = vx / r, vy / r
+        step = 0
+        while step < tries:
+            clash = any((c["x"] - q[0]) ** 2 + (c["y"] - q[1]) ** 2 < min_sep ** 2
+                        for q in placed)
+            if not clash:
+                break
+            # Spiral out: grow the radius and rotate a little each try.
+            step += 1
+            r += 0.35
+            ang = math.atan2(uy, ux) + step * 0.7
+            c["x"] = round(ax + math.cos(ang) * r, 2)
+            c["y"] = round(ay + math.sin(ang) * r, 2)
+        placed.append((c["x"], c["y"]))
