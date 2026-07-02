@@ -130,6 +130,14 @@ class TestBeeMode(unittest.TestCase):
         self.assertIn("[1, 2]", m3.set_bee_targets(["1", "2"]))
         self.assertIn("permaSetBeeTargets([]", m3.set_bee_targets([]))
 
+    def test_set_bee_targets_passes_label(self):
+        # The bee's display name feeds the nectar-run HUD (V2.12); it is JSON-
+        # quoted (never raw-interpolated) and defaults to "".
+        js = m3.set_bee_targets([3], "Mining Bees (any Andrena)")
+        self.assertIn('[3], "Mining Bees (any Andrena)"', js)
+        self.assertIn('[], ""', m3.set_bee_targets([], ""))
+        self.assertIn('""', m3.set_bee_targets([1]))
+
 
 if __name__ == "__main__":
     unittest.main()

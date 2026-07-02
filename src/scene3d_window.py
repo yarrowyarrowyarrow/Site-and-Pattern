@@ -136,8 +136,9 @@ class Scene3DWindow(QWidget):
         self._bee_btn = QPushButton("🐝 Fly as a bee")
         self._bee_btn.setCheckable(True)
         self._bee_btn.setToolTip(
-            "Drop into a first-person bee's-eye view — WASD/arrows to fly, "
-            "Q/E up-down, drag to look")
+            "Drop into a first-person nectar run — WASD/arrows to fly, "
+            "Q/E up-down, drag to look, F flies you to the nearest flower. "
+            "Brush a glowing flower to collect its nectar.")
         self._bee_btn.toggled.connect(self._on_bee_mode)
 
         self._last_origin = None
@@ -264,15 +265,16 @@ class Scene3DWindow(QWidget):
 
     def _push_bee_targets(self):
         fid = self._current_bee_fid()
+        label = self._bee_combo.currentText().strip()
         if fid is None:
-            self.viewer.set_bee_targets([])
+            self.viewer.set_bee_targets([], label)
             return
         try:
             from src.bee_habitat import target_plant_ids_for_bee
             ids = target_plant_ids_for_bee(fid)
         except Exception:      # noqa: BLE001
             ids = []
-        self.viewer.set_bee_targets(ids)
+        self.viewer.set_bee_targets(ids, label)
 
     def _on_bee_mode(self, on: bool):
         """Toggle the first-person bee view. Pushes the current bee's target

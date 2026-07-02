@@ -96,14 +96,16 @@ def set_bee_mode(on: bool) -> str:
             f"{json.dumps(bool(on))});")
 
 
-def set_bee_targets(plant_ids: list) -> str:
+def set_bee_targets(plant_ids: list, bee_label: str = "") -> str:
     """JS to mark which placed plants feed the chosen bee, so the fly-through
-    floats a glowing beacon over each one (F37 increment 2). ``plant_ids`` are DB
-    plant ids from ``bee_habitat.target_plant_ids_for_bee``; the viewer shows a
-    beacon only for those actually present in the scene. Guarded with ``&&``."""
+    floats a glowing nectar beacon over each one (F37 increment 2). ``plant_ids``
+    are DB plant ids from ``bee_habitat.target_plant_ids_for_bee``; the viewer
+    shows a beacon only for those actually present in the scene. ``bee_label``
+    is the bee's display name for the nectar-run HUD ("…this design feeds X",
+    V2.12). Guarded with ``&&``."""
     ids = [int(p) for p in (plant_ids or [])]
     return ("window.permaSetBeeTargets && window.permaSetBeeTargets("
-            f"{json.dumps(ids)});")
+            f"{json.dumps(ids)}, {json.dumps(str(bee_label or ''))});")
 
 
 def set_quality(level: int) -> str:

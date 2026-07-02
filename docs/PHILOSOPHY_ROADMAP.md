@@ -405,6 +405,16 @@ connectivity to the design's planted areas; a new analysis layer.
     driven through `map3d_js.set_bee_mode` / `set_bee_targets`). Purely additive to the viewer — when
     off, OrbitControls owns the camera exactly as before. (A true UV/compound-eye post-process pass is
     a later polish; the vendored three.js addons don't ship EffectComposer.)
+    *V2.12 polish — the fly-through became a **nectar run**:* brushing a glowing flower collects its
+    nectar (sparkle burst + a `Nectar n/N` HUD with a bearing arrow to the nearest unvisited flower,
+    per-flower "collected!" callouts naming the plant, and a "this design feeds ⟨bee⟩" celebration when
+    the run is complete — the bee's name rides along on `set_bee_targets`); **F** autopilots to the
+    nearest unvisited flower for players who don't fly WASD; spawn faces the nearest target; flight is
+    velocity-smoothed at 60 fps with banking; the bee avatar was rebuilt lit + properly scaled (its old
+    wing discs used to whiteout half the screen). Alongside: a viewer-wide visual pass (ACES filmic
+    tone mapping, a gradient sky dome + time-of-day atmosphere so low sun goes golden, a tiled
+    procedural meadow ground texture, point-sprite size clamping, shadow-bias tuning) and the
+    previously-unregistered `permaResetView` hook now works (Reset view button + sprite gallery).
   - **✅ Increment 3 — "What the bee sees" map recolour (shipped):** a "Show what this bee sees on the
     map" toggle in the Bees tab recolours the 2D Leaflet map as the selected bee's floral-resource map —
     its host plants glow like nectar (graded by tongue-fit for bumble bees via `setBeeForageView`), every
