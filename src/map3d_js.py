@@ -97,7 +97,8 @@ def set_bee_mode(on: bool) -> str:
 
 
 def set_bee_targets(plant_ids: list, bee_label: str = "",
-                    kind: str = "bee", host_ids: list = None) -> str:
+                    kind: str = "bee", host_ids: list = None,
+                    appearance: dict = None) -> str:
     """JS to mark the plants a chosen pollinator uses, so the fly-through floats
     a glowing nectar beacon over each one (F37 increment 2; lepidoptera V2.12).
 
@@ -108,12 +109,34 @@ def set_bee_targets(plant_ids: list, bee_label: str = "",
     ``'bee'`` | ``'butterfly'`` | ``'moth'`` and selects the flying avatar.
     ``host_ids`` are larval-host plant ids (butterflies/moths) shown as
     "caterpillar nursery" markers — present-gated, not bloom-gated, and never
-    collectable. Guarded with ``&&``."""
+    collectable. ``appearance`` is the flown creature's look spec (from
+    ``scene_wildlife.appearance_for_fauna``) so the avatar matches the species —
+    a green sweat bee ≠ a bumble bee. Guarded with ``&&``."""
     ids = [int(p) for p in (plant_ids or [])]
     hosts = [int(p) for p in (host_ids or [])]
     return ("window.permaSetBeeTargets && window.permaSetBeeTargets("
             f"{json.dumps(ids)}, {json.dumps(str(bee_label or ''))}, "
-            f"{json.dumps(str(kind or 'bee'))}, {json.dumps(hosts)});")
+            f"{json.dumps(str(kind or 'bee'))}, {json.dumps(hosts)}, "
+            f"{json.dumps(appearance or None)});")
+
+
+def set_wildlife(creatures: list) -> str:
+    """JS to populate the scene with ambient wildlife — the animals the design's
+    plants support, each on/near a plant it uses, with a per-species appearance
+    spec (V2.12). ``creatures`` is ``src.scene_wildlife.wildlife_for_scene``
+    output. Shown in the orbit + walk views (hidden while flying as one creature).
+    Guarded with ``&&`` so it's a no-op until the viewer registers the hook."""
+    return ("window.permaSetWildlife && window.permaSetWildlife("
+            f"{json.dumps(creatures or [])});")
+
+
+def set_walk_mode(on: bool) -> str:
+    """JS to enter/leave the third-person "walk the garden" mode (V2.12): a
+    walking human avatar with a follow camera, strolling among the ambient
+    wildlife. Guarded with ``&&`` so it's a no-op until the viewer registers
+    ``window.permaSetWalkMode``."""
+    return ("window.permaSetWalkMode && window.permaSetWalkMode("
+            f"{json.dumps(bool(on))});")
 
 
 def set_bee_tour(on: bool) -> str:

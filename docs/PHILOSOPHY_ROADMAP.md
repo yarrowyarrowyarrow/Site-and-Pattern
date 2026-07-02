@@ -441,6 +441,21 @@ connectivity to the design's planted areas; a new analysis layer.
     concentric rings (canopy centre → nectar-rich edge), with an honest overwintering/nesting note.
     A Monarch yields a *Monarch Waystation* (milkweed hosts + late-nectar composites); a non-feeding
     Cecropia moth yields a host-only tree/shrub community.
+  - **✅ Increment 6 — Ambient wildlife + a third-person walk (shipped, V2.12):** the 3D scene now shows
+    **the animals the design's plants actually support**, not just the one you fly. `src/scene_wildlife.py`
+    (Qt-free) reads the documented plant↔fauna edges for the scene's plants and places a capped,
+    balanced, deterministic community — **bees drawn per genus** (a metallic-green *Agapostemon* sweat
+    bee, a fuzzy *Bombus*, a stout leafcutter, a slender mining bee, a wasp-like cuckoo bee),
+    butterflies/moths by species colourway, **birds, hover- & dragonflies, lady beetles and small
+    mammals** — each standing on/near a plant it uses (a bird in a fruiting shrub, a bee at a nectar
+    flower), pushed via `permaSetWildlife` and animated (fliers circle their flower, birds perch and
+    look around, mammals hop). A new **"🚶 Walk the garden"** button drops you into a **third-person**
+    stroll (a low-poly walker + follow camera, WASD + drag-look) to meet them; wildlife shows in the
+    orbit + walk views and hides while flying as one creature. The flown avatar is now **species-styled**
+    from the same appearance spec (`appearance_for_fauna`), so *which* bee you are is visible. Alongside,
+    ~50 curated documented `nectar` plant↔lepidoptera edges were added (schema v41) so nectaring
+    butterflies place from real records. `src/scene3d_window.py` computes wildlife on every scene push;
+    the viewer factories + walk mode live in `html/scene3d.html`.
 - **F38 · Mycoremediation / degraded-site notes** — *S · Low (P8)*: well-cited restoration
   techniques for contaminated/compacted ground (content, directional).
 - **F39 · Sensor integration hooks** — *L · High — external (P11)*: optional soil-moisture/

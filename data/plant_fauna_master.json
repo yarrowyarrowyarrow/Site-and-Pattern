@@ -2082,5 +2082,413 @@
     "relationship": "nectar",
     "specificity": "generalist",
     "source": "Acorn & Sheldon 2006"
+  },
+  {
+    "plant": "Showy Milkweed",
+    "fauna": "Danaus plexippus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Canada Goldenrod",
+    "fauna": "Danaus plexippus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Danaus plexippus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Dotted Blazingstar",
+    "fauna": "Danaus plexippus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Wild Bergamot",
+    "fauna": "Danaus plexippus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Blanketflower",
+    "fauna": "Danaus plexippus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Prairie Thistle",
+    "fauna": "Vanessa cardui",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Vanessa cardui",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Canada Goldenrod",
+    "fauna": "Vanessa cardui",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Purple Coneflower",
+    "fauna": "Vanessa cardui",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Blanketflower",
+    "fauna": "Vanessa cardui",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Vanessa atalanta",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Canada Goldenrod",
+    "fauna": "Vanessa atalanta",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Wild Bergamot",
+    "fauna": "Speyeria aphrodite",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Prairie Thistle",
+    "fauna": "Speyeria aphrodite",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Speyeria aphrodite",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Purple Coneflower",
+    "fauna": "Speyeria aphrodite",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Dotted Blazingstar",
+    "fauna": "Speyeria aphrodite",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Canada Goldenrod",
+    "fauna": "Speyeria mormonia",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Speyeria mormonia",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Boreal Yarrow",
+    "fauna": "Speyeria mormonia",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Aglais milberti",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Canada Goldenrod",
+    "fauna": "Aglais milberti",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Prairie Thistle",
+    "fauna": "Aglais milberti",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Canada Goldenrod",
+    "fauna": "Colias philodice",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Colias philodice",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Purple Prairie Clover",
+    "fauna": "Colias philodice",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Phyciodes cocyta",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Boreal Yarrow",
+    "fauna": "Phyciodes cocyta",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Hesperia comma",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Canada Goldenrod",
+    "fauna": "Hesperia comma",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Prairie Thistle",
+    "fauna": "Hesperia comma",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Prairie Thistle",
+    "fauna": "Epargyreus clarus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Purple Coneflower",
+    "fauna": "Epargyreus clarus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Wild Bergamot",
+    "fauna": "Hemaris thysbe",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Prairie Thistle",
+    "fauna": "Hemaris thysbe",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Harebell",
+    "fauna": "Hemaris thysbe",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Wild Bergamot",
+    "fauna": "Hemaris diffinis",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Harebell",
+    "fauna": "Hemaris diffinis",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Fireweed",
+    "fauna": "Hyles lineata",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Prairie Coneflower",
+    "fauna": "Hyles lineata",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Prairie Thistle",
+    "fauna": "Papilio canadensis",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Wild Bergamot",
+    "fauna": "Papilio canadensis",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Papilio canadensis",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Purple Prairie Clover",
+    "fauna": "Glaucopsyche lygdamus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Purple Prairie Clover",
+    "fauna": "Plebejus melissa",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Canada Goldenrod",
+    "fauna": "Plebejus melissa",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Smooth Aster",
+    "fauna": "Coenonympha tullia",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Boreal Yarrow",
+    "fauna": "Coenonympha tullia",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Wild Bergamot",
+    "fauna": "Cercyonis pegala",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Prairie Thistle",
+    "fauna": "Cercyonis pegala",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
+    "notes": "Documented adult nectar source (V2.12)."
   }
 ]

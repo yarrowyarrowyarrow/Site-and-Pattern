@@ -157,6 +157,16 @@ class Scene3DWindow(QWidget):
         self._tour_months: list = []          # flight months of the current creature
         self._tour_timer = None
 
+        # "Walk the garden" — third-person stroll among the ambient wildlife
+        # (V2.12). Mutually exclusive with the first-person fly view.
+        self._walk_btn = QPushButton("🚶 Walk the garden")
+        self._walk_btn.setCheckable(True)
+        self._walk_btn.setToolTip(
+            "Stroll through your design in third person — WASD/arrows to walk, "
+            "drag to look around — and meet the bees, butterflies, birds and "
+            "other creatures your plants support.")
+        self._walk_btn.toggled.connect(self._on_walk)
+
         self._last_origin = None
 
         bar = QHBoxLayout()
@@ -180,6 +190,7 @@ class Scene3DWindow(QWidget):
         bar.addWidget(self._bee_combo)
         bar.addWidget(self._bee_btn)
         bar.addWidget(self._tour_btn)
+        bar.addWidget(self._walk_btn)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(6, 6, 6, 6)
@@ -212,6 +223,14 @@ class Scene3DWindow(QWidget):
         # Remember the origin so a yard-photo bake frames the splat correctly.
         self._last_origin = scene.get("origin")
         self.viewer.apply_scene(scene)
+        # Ambient wildlife: the animals the design's plants support, placed on
+        # the plants they use (V2.12). Recomputed each push so it tracks the
+        # year/season. Never let a data hiccup break the scene.
+        try:
+            from src.scene_wildlife import wildlife_for_scene
+            self.viewer.set_wildlife(wildlife_for_scene(scene))
+        except Exception:      # noqa: BLE001
+            self.viewer.set_wildlife([])
 
     def _on_bake_yard_photo(self):
         """Render the loaded splat top-down and hand the PNG to the map layer."""
@@ -319,6 +338,7 @@ class Scene3DWindow(QWidget):
         fid, kind, name = creature["fid"], creature["kind"], creature["name"]
         nectar_ids: list = []
         host_ids: list = []
+        appearance = None
         try:
             if creature["taxon"] == "bee":
                 from src.bee_habitat import (target_plant_ids_for_bee,
@@ -332,20 +352,30 @@ class Scene3DWindow(QWidget):
                 nectar_ids = nectar_plant_ids_for_lep(fid)
                 host_ids = larval_host_ids_for_lep(fid)
                 self._tour_months = flight_months_for_lep(fid)
+            from src.scene_wildlife import appearance_for_fauna
+            appearance = appearance_for_fauna(fid)   # style the avatar to species
         except Exception:      # noqa: BLE001
             nectar_ids, host_ids = [], []
-        self.viewer.set_bee_targets(nectar_ids, name, kind, host_ids)
+        self.viewer.set_bee_targets(nectar_ids, name, kind, host_ids, appearance)
 
     def _on_bee_mode(self, on: bool):
         """Toggle the first-person fly view. Pushes the current creature's target
         plants before entering so the beacons are ready."""
         if on:
+            if self._walk_btn.isChecked():      # fly and walk are exclusive
+                self._walk_btn.setChecked(False)
             self._push_targets()
         else:
             # Leaving fly mode also ends any running tour.
             if self._tour_btn.isChecked():
                 self._tour_btn.setChecked(False)
         self.viewer.set_bee_mode(on)
+
+    def _on_walk(self, on: bool):
+        """Toggle the third-person walk-through. Exclusive with the fly view."""
+        if on and self._bee_btn.isChecked():
+            self._bee_btn.setChecked(False)     # leaves fly mode first
+        self.viewer.set_walk_mode(on)
 
     def _on_bee_target_changed(self, *_):
         self._bee_btn.setText(self._fly_verb(self._current_creature()))

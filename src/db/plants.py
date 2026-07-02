@@ -154,7 +154,12 @@ _LEP_ATTR_JSON_PATH     = resource_path("data", "lepidoptera_attributes_master.j
 # data/lepidoptera_attributes_master.json. Powers the fly-through's butterfly/moth
 # targets, bloom-accurate nectar beacons, and the seasonal nectar tour. Reseed
 # wipes/repopulates lepidoptera_attributes with fauna.
-_SCHEMA_VERSION = 40
+# v41 (V2.12): no DDL — reseed to pick up ~50 curated documented `nectar`
+# plant↔lepidoptera edges (data/plant_fauna_master.json) for the flagship
+# butterflies & day-flying moths, so ambient wildlife (scene_wildlife) can place
+# nectaring butterflies from real edges and the habitat builder shows documented
+# (not just genus-inferred) nectar sources.
+_SCHEMA_VERSION = 41
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────

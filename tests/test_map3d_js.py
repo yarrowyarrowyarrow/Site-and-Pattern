@@ -156,6 +156,34 @@ class TestBeeMode(unittest.TestCase):
         self.assertTrue(on.strip().endswith(");"))
         self.assertIn("false", m3.set_bee_tour(False))
 
+    def test_set_bee_targets_appearance(self):
+        # The flown avatar's look spec is JSON-encoded as the 5th arg; None by
+        # default so an un-styled bee still flies (V2.12).
+        app = {"kind": "bee", "fuzz": "#3fae5a", "metallic": True}
+        js = m3.set_bee_targets([1], "Green Sweat Bee", "bee", [], app)
+        self.assertIn('"metallic": true', js)
+        self.assertIn('"#3fae5a"', js)
+        self.assertIn("null", m3.set_bee_targets([1]))   # default appearance
+
+
+class TestWildlifeAndWalk(unittest.TestCase):
+    def test_set_wildlife_json(self):
+        crit = [{"kind": "bee", "x": 1.0, "y": 2.0, "h": 0.5,
+                 "app": {"kind": "bee", "fuzz": "#f2c12e"}}]
+        js = m3.set_wildlife(crit)
+        self.assertIn("window.permaSetWildlife && window.permaSetWildlife(", js)
+        self.assertIn('"kind": "bee"', js)
+        self.assertIn('"#f2c12e"', js)
+        self.assertTrue(js.strip().endswith(");"))
+        self.assertIn("permaSetWildlife([]", m3.set_wildlife([]))
+
+    def test_set_walk_mode_guarded_bool(self):
+        on = m3.set_walk_mode(True)
+        self.assertIn("window.permaSetWalkMode && window.permaSetWalkMode(", on)
+        self.assertIn("true", on)
+        self.assertTrue(on.strip().endswith(");"))
+        self.assertIn("false", m3.set_walk_mode(False))
+
 
 if __name__ == "__main__":
     unittest.main()

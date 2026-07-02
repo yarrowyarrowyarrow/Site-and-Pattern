@@ -40,6 +40,18 @@
   collected on approach (sparkle burst + HUD counter, F = autopilot to the
   nearest flower), with a properly-scaled lit bumblebee avatar.
 
+  V2.12 also added ambient wildlife + a third-person walk:
+    · permaSetWildlife(list) populates the scene with the animals the design's
+      plants support (src/scene_wildlife.py) — bees drawn per genus, butterflies/
+      moths by species colourway, birds, hover/dragon flies, beetles and small
+      mammals — each placed on/near a plant it uses and animated (fliers circle
+      their flower, birds perch, mammals hop). Shown in orbit + walk; hidden
+      while flying as one creature.
+    · permaSetWalkMode(on) is a third-person stroll: a low-poly walker with a
+      follow camera (WASD + drag-look) you steer among the wildlife.
+    · The flown avatar is now species-styled from an appearance spec passed on
+      set_bee_targets (a metallic-green sweat bee ≠ a fuzzy bumble bee).
+
   V2.12 also opened the fly-through to Lepidoptera and made it bloom-accurate:
     · beeKind ∈ {bee, butterfly, moth} picks the flying avatar; butterflies/
       moths also float low green "caterpillar nursery" markers over their
@@ -2342,8 +2354,9 @@ window.permaSetScene = function (sc) {
     (o && (Math.abs(o.lat - framedOrigin.lat) > 1e-6 ||
            Math.abs(o.lng - framedOrigin.lng) > 1e-6));
   if (moved) {
-    // Don't yank the camera while the user is flying as a bee — beeStep owns it.
-    if (!beeMode) frameCamera(sc.bounds);
+    // Don't yank the camera while the user is flying or walking — those modes
+    // own the camera (beeStep / walkStep).
+    if (!beeMode && !walkMode) frameCamera(sc.bounds);
     framedOrigin = o ? { lat: o.lat, lng: o.lng } : { lat: 0, lng: 0 };
   }
   // Re-place the bee's flower beacons against the freshly-built scene.
@@ -2401,6 +2414,7 @@ window.permaSetPlants = function (records) {
 // is off nothing here runs and OrbitControls owns the camera as before.
 let beeMode = false;
 let beeKind = 'bee';                     // 'bee' | 'butterfly' | 'moth' — picks the avatar
+let beeApp = null;                       // avatar appearance spec (styles the flyer)
 let beeTargetIds = new Set();            // String(plant_id) of the adult nectar plants
 let beeHostIds = new Set();              // String(plant_id) of larval host plants (leps)
 let beeLabel = '';                       // display name of the chosen creature (HUD)
@@ -2436,22 +2450,28 @@ function inBloomNow(p) {
 const _esc = (s) => String(s).replace(/[&<>"]/g,
   (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-// A small procedural bumblebee riding low-forward of the camera — company on
-// the flight, not a windshield. Lit materials with a touch of emissive so the
-// fur reads as a body under any sun; the wings are swept back, small and
-// mostly transparent (the V2.12 fix — at the old scale the two wing discs
-// covered half the screen as a white veil).
-function makeBeeAvatar() {
+// A small procedural bee riding low-forward of the camera — company on the
+// flight, not a windshield. Styled by an appearance spec (V2.12) so the avatar
+// looks like the chosen species: fuzz/dark colours, abdominal band count, body
+// shape (round bumble / slender sweat / stout leafcutter), metallic sheen for
+// mason & green sweat bees. Lit + emissive so it reads under any sun; wings are
+// swept back, small and mostly transparent (the V2.12 fix — the old wing discs
+// covered half the screen).
+const _DEF_BEE_APP = { fuzz: '#d99b26', dark: '#201a14', bands: 2,
+                       shape: 'round', size: 1.0, metallic: false };
+function makeBeeAvatar(app) {
+  app = Object.assign({}, _DEF_BEE_APP, app || {});
   const g = new THREE.Group();
-  const fuzz = new THREE.MeshStandardMaterial({ color: 0xd99b26, roughness: 0.9,
-                 emissive: 0x3a2506, emissiveIntensity: 0.5 });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x201a14, roughness: 0.85,
-                 emissive: 0x120e0a, emissiveIntensity: 0.5 });
-  const tail = new THREE.MeshStandardMaterial({ color: 0xc47a35, roughness: 0.9,
-                 emissive: 0x2f1a08, emissiveIntensity: 0.5 });
-  const wingM = new THREE.MeshBasicMaterial({ color: 0xe8f1fa, transparent: true,
-                 opacity: 0.22, side: THREE.DoubleSide, depthWrite: false });
+  const met = app.metallic ? { metalness: 0.7, roughness: 0.35 } : {};
+  const fuzz = new THREE.MeshStandardMaterial(Object.assign({ color: app.fuzz,
+                 roughness: 0.9, emissive: 0x241a08, emissiveIntensity: 0.4 }, met));
+  const dark = new THREE.MeshStandardMaterial(Object.assign({ color: app.dark,
+                 roughness: 0.85, emissive: 0x100c08, emissiveIntensity: 0.4 }, met));
   const sphere = (r) => new THREE.SphereGeometry(r, 14, 10);
+  // Body shape: abdomen elongation + girth by growth form.
+  const shp = app.shape === 'slender' ? [0.82, 0.8, 1.7]
+            : app.shape === 'stout'   ? [1.02, 0.95, 1.2]
+            : [0.92, 0.88, 1.45];                                 // round
   const thorax = new THREE.Mesh(sphere(0.5), fuzz); thorax.scale.set(1, 0.9, 1);
   const head = new THREE.Mesh(sphere(0.32), dark); head.position.set(0, 0, -0.62);
   g.add(thorax, head);
@@ -2462,13 +2482,22 @@ function makeBeeAvatar() {
     g.add(a);
   }
   const abdomen = new THREE.Mesh(sphere(0.55), dark);
-  abdomen.scale.set(0.92, 0.88, 1.45); abdomen.position.set(0, -0.03, 0.8);
-  const band = new THREE.Mesh(sphere(0.57), fuzz);
-  band.scale.set(0.93, 0.89, 0.4); band.position.set(0, -0.03, 0.66);
-  const tip = new THREE.Mesh(sphere(0.3), tail);
-  tip.scale.set(0.9, 0.85, 1.1); tip.position.set(0, -0.04, 1.3);
-  g.add(abdomen, band, tip);
+  abdomen.scale.set(shp[0], shp[1], shp[2]); abdomen.position.set(0, -0.03, 0.8);
+  g.add(abdomen);
+  // Abdominal bands (0–3): alternating fuzz stripes down the abdomen.
+  const nb = Math.max(0, Math.min(3, app.bands | 0));
+  for (let i = 0; i < nb; i++) {
+    const band = new THREE.Mesh(sphere(0.57), fuzz);
+    band.scale.set(shp[0] * 1.02, shp[1] * 1.02, 0.34);
+    band.position.set(0, -0.03, 0.5 + i * 0.45);
+    g.add(band);
+  }
+  const tip = new THREE.Mesh(sphere(0.3), app.cuckoo ? fuzz : dark);
+  tip.scale.set(0.9, 0.85, 1.1); tip.position.set(0, -0.04, 0.8 + shp[2] * 0.35);
+  g.add(tip);
   const wingGeo = new THREE.CircleGeometry(0.55, 12);
+  const wingM = new THREE.MeshBasicMaterial({ color: 0xe8f1fa, transparent: true,
+                 opacity: 0.22, side: THREE.DoubleSide, depthWrite: false });
   const wings = [];
   for (const s of [-1, 1]) {
     const pivot = new THREE.Group();
@@ -2481,7 +2510,7 @@ function makeBeeAvatar() {
   }
   g.userData.wings = wings;
   g.userData.flap = { base: 0.2, amp: 0.75, speed: 0.09 };   // fast bee flutter
-  g.scale.setScalar(0.22);
+  g.scale.setScalar(0.2 * (0.82 + 0.32 * (app.size || 1)));
   return g;
 }
 
@@ -2489,13 +2518,14 @@ function makeBeeAvatar() {
 // per side on a slim body; the wings flap up and down with a graceful, slower
 // beat than the bee. Colours: butterflies get a warm patterned upper wing, moths
 // a muted tan/grey. Lit + emissive so the flyer reads under any sun angle.
-function makeButterflyAvatar(moth) {
+function makeButterflyAvatar(moth, app) {
   const g = new THREE.Group();
   const bodyM = new THREE.MeshStandardMaterial({ color: moth ? 0x4a3d2e : 0x2a2320,
                  roughness: 0.85, emissive: 0x140f0a, emissiveIntensity: 0.5 });
-  const foreCol = moth ? 0xb8a274 : 0xe6912f;   // upper wing
-  const hindCol = moth ? 0x9c8763 : 0xd8701f;   // lower wing
-  const edge = moth ? 0x5c4a30 : 0x2a1c10;
+  const _c = (hex, fb) => (hex ? new THREE.Color(hex).getHex() : fb);
+  const foreCol = _c(app && app.fore, moth ? 0xb8a274 : 0xe6912f);   // upper wing
+  const hindCol = _c(app && app.hind, moth ? 0x9c8763 : 0xd8701f);   // lower wing
+  const edge = _c(app && app.edge, moth ? 0x5c4a30 : 0x2a1c10);
   const wingMat = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.7,
                     emissive: c, emissiveIntensity: 0.28, side: THREE.DoubleSide,
                     flatShading: true });
@@ -2547,16 +2577,18 @@ function makeButterflyAvatar(moth) {
   return g;
 }
 
-// (Re)build the avatar for the current beeKind and park it low-forward of the
-// camera. Cached by kind so switching creatures doesn't rebuild every frame.
+// (Re)build the avatar for the current beeKind + appearance and park it
+// low-forward of the camera. Cached by a signature so switching creatures
+// rebuilds, but a same-creature re-push doesn't.
 function ensureAvatar() {
-  if (beeAvatar && beeAvatarKind === beeKind) return;
+  const sig = beeKind + '|' + (beeApp ? JSON.stringify(beeApp) : '');
+  if (beeAvatar && beeAvatarKind === sig) return;
   if (beeAvatar) { camera.remove(beeAvatar); disposeObject(beeAvatar); }
-  beeAvatar = beeKind === 'bee' ? makeBeeAvatar()
-            : makeButterflyAvatar(beeKind === 'moth');
+  beeAvatar = beeKind === 'bee' ? makeBeeAvatar(beeApp)
+            : makeButterflyAvatar(beeKind === 'moth', beeApp);
   beeAvatar.position.set(0, beeKind === 'bee' ? -0.42 : -0.86,
                             beeKind === 'bee' ? -1.1 : -1.5);
-  beeAvatarKind = beeKind;
+  beeAvatarKind = sig;
   camera.add(beeAvatar);
 }
 
@@ -2846,6 +2878,7 @@ function enterBeeMode() {
   ensureAvatar();
   beeAvatar.visible = true;
   setBeeVisionUI(true);
+  if (wildlifeGroup) wildlifeGroup.visible = false;   // focus on the flown creature
   rebuildBeacons();
   beeSpawn();
   updateBeeHud();
@@ -2860,6 +2893,7 @@ function exitBeeMode() {
   if (beeAvatar) beeAvatar.visible = false;
   setBeeVisionUI(false);
   rebuildBeacons();                 // beeMode is false now → clears the beacons
+  if (wildlifeGroup) wildlifeGroup.visible = true;   // wildlife returns in orbit
   controls.enabled = true;
   if (lastBounds) frameCamera(lastBounds);   // back to a sensible orbit
   else controls.update();
@@ -3007,15 +3041,14 @@ window.permaSetBeeMode = function (on) {
 // Set the chosen pollinator's plants + avatar kind. ``ids`` are adult nectar
 // plants (bloom-gated beacons); ``hostIds`` are larval hosts (butterflies/moths)
 // shown as green nursery markers; ``kind`` picks the flying avatar.
-window.permaSetBeeTargets = function (ids, label, kind, hostIds) {
+window.permaSetBeeTargets = function (ids, label, kind, hostIds, appearance) {
   beeTargetIds = new Set((ids || []).map(String));
   beeHostIds = new Set((hostIds || []).map(String));
   beeLabel = String(label || '');
+  beeApp = appearance || null;
   const k = (kind === 'butterfly' || kind === 'moth') ? kind : 'bee';
-  if (k !== beeKind) {
-    beeKind = k;
-    if (beeMode) { ensureAvatar(); beeAvatar.visible = true; setBeeVisionUI(true); }
-  }
+  beeKind = k;
+  if (beeMode) { ensureAvatar(); beeAvatar.visible = true; setBeeVisionUI(true); }
   beeVisited.clear();                 // a new creature starts a fresh nectar run
   beeAuto = null;
   rebuildBeacons();
@@ -3034,7 +3067,409 @@ window.permaSetBeeTour = function (on) {
 // so the button silently did nothing. In fly mode it re-spawns the flyer.
 window.permaResetView = function () {
   if (beeMode) { beeSpawn(); updateBeeHud(); return; }
+  if (walkMode) { walkSpawn(); return; }
   if (lastBounds) frameCamera(lastBounds);
+};
+
+// ── Ambient wildlife (V2.12) ─────────────────────────────────────────────────
+// The animals the design's plants support, placed on/near a plant they use and
+// drawn to look like their real species (from src/scene_wildlife.py). Shown in
+// the orbit + walk views; hidden while flying as one creature. A separate group
+// (like the beacons) so a scene rebuild doesn't dispose it — the host re-pushes
+// wildlife after each scene push.
+let WILDLIFE = [];
+let wildlifeGroup = null;
+let wildlifeCritters = [];
+
+function _cmat(hex, opts) {
+  opts = opts || {};
+  const c = new THREE.Color(hex);
+  return new THREE.MeshStandardMaterial({
+    color: c, roughness: opts.metal ? 0.35 : 0.82, metalness: opts.metal ? 0.7 : 0.0,
+    emissive: c.clone().multiplyScalar(0.28), emissiveIntensity: 0.6,
+    flatShading: !!opts.flat });
+}
+function _wingMat(hex) {
+  return new THREE.MeshBasicMaterial({ color: new THREE.Color(hex || 0xeef4f8),
+    transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false });
+}
+function flapWings(obj, t) {
+  const fp = obj.userData.flap;
+  if (!fp || !obj.userData.wings) return;
+  const w = fp.base + (0.5 + 0.5 * Math.sin(t * fp.speed)) * fp.amp;
+  for (const { pivot, sign } of obj.userData.wings) pivot.rotation.z = sign * w;
+}
+
+// Bees + butterflies/moths reuse the (species-styled) avatar bodies, scaled down.
+function makeBeeCritter(app) {
+  const g = makeBeeAvatar(app); g.scale.multiplyScalar(0.7);
+  g.userData.anim = 'flier'; return g;
+}
+function makeButterflyCritter(app) {
+  const g = makeButterflyAvatar(app.kind === 'moth', app);
+  g.scale.multiplyScalar(1.15); g.userData.anim = 'flier'; return g;
+}
+
+// A perched (or hovering, for hummingbirds) low-poly bird.
+function makeBirdCritter(app) {
+  const g = new THREE.Group();
+  const body = _cmat(app.body, { flat: true }), belly = _cmat(app.belly, { flat: true });
+  const wing = _cmat(app.wing, { flat: true });
+  const b = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), body);
+  b.scale.set(0.85, 0.9, 1.35);
+  const bel = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), belly);
+  bel.scale.set(0.7, 0.8, 1.0); bel.position.set(0, -0.05, 0.06);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.11, 9, 7), body);
+  head.position.set(0, 0.12, -0.16);
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.03, app.hummer ? 0.22 : 0.09, 5),
+                              _cmat('#2a221a', { flat: true }));
+  beak.rotation.x = -Math.PI / 2; beak.position.set(0, 0.12, -0.28 - (app.hummer ? 0.08 : 0));
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 0.22), wing);
+  tail.position.set(0, 0.02, 0.28); tail.rotation.x = 0.3;
+  g.add(b, bel, head, beak, tail);
+  const wings = [];
+  const wg = new THREE.SphereGeometry(0.14, 8, 3);
+  for (const s of [-1, 1]) {
+    const pivot = new THREE.Group(); pivot.position.set(0.08 * s, 0.04, 0.02);
+    const w = new THREE.Mesh(wg, wing); w.scale.set(0.5, 0.14, 1.0);
+    w.position.set(0.12 * s, 0, 0.02); pivot.add(w); g.add(pivot);
+    wings.push({ pivot, sign: s });
+  }
+  g.userData.wings = wings;
+  if (app.hummer) {
+    g.userData.flap = { base: 0, amp: 1.1, speed: 0.4 };   // blur
+    g.userData.anim = 'hover';
+  } else {
+    g.userData.flap = { base: -0.2, amp: 0.0, speed: 0.05 };  // folded
+    g.userData.anim = 'perch';
+  }
+  g.scale.setScalar(0.9 * (app.size || 1));
+  return g;
+}
+
+// Flower fly / hover fly, or an elongate dragonfly/damselfly.
+function makeFlyCritter(app) {
+  const g = new THREE.Group();
+  const body = _cmat(app.body, { metal: !app.elongate, flat: true });
+  const wing = _wingMat(app.wing);
+  if (app.elongate) {
+    const th = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), body);
+    const abd = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.015, 0.5, 6), body);
+    abd.rotation.x = Math.PI / 2; abd.position.set(0, 0, 0.28);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6),
+                                _cmat('#20242a', { flat: true }));
+    head.position.set(0, 0, -0.1);
+    g.add(th, abd, head);
+    const wings = [];
+    for (const s of [-1, 1]) for (const z of [-0.02, 0.12]) {
+      const pivot = new THREE.Group(); pivot.position.set(0.04 * s, 0.03, z);
+      const w = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.09).rotateX(-Math.PI / 2), wing);
+      w.position.set(0.2 * s, 0, 0); pivot.add(w); g.add(pivot);
+      if (z < 0) wings.push({ pivot, sign: s });
+    }
+    g.userData.wings = wings;
+    g.userData.flap = { base: 0, amp: 0.25, speed: 0.3 };
+    g.userData.anim = 'hover';
+  } else {
+    const th = new THREE.Mesh(new THREE.SphereGeometry(0.07, 9, 7), body);
+    th.scale.set(0.9, 0.8, 1.3);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6),
+                                _cmat('#20242a', { flat: true }));
+    head.position.set(0, 0.01, -0.12);
+    g.add(th, head);
+    const wings = [];
+    const wg = new THREE.CircleGeometry(0.16, 10);
+    for (const s of [-1, 1]) {
+      const pivot = new THREE.Group(); pivot.position.set(0.03 * s, 0.05, 0.0);
+      const w = new THREE.Mesh(wg, wing); w.scale.set(0.55, 1, 1);
+      w.position.set(0.14 * s, 0, 0.03); w.rotation.set(-1.2, 0, 0.2 * s);
+      pivot.add(w); g.add(pivot);
+      wings.push({ pivot, sign: s });
+    }
+    g.userData.wings = wings;
+    g.userData.flap = { base: 0.1, amp: 0.8, speed: 0.5 };
+    g.userData.anim = 'flier';
+  }
+  g.scale.setScalar(0.9 * (app.size || 1));
+  return g;
+}
+
+function makeBeetleCritter(app) {
+  const g = new THREE.Group();
+  const body = _cmat(app.body, { metal: true, flat: true });
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8,
+                 0, Math.PI * 2, 0, Math.PI / 2), body);
+  dome.scale.set(1, 0.7, 1.25);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6),
+                              _cmat('#1c1a16', { flat: true }));
+  head.position.set(0, 0.01, -0.15);
+  g.add(dome, head);
+  if (app.spots) {
+    const dot = _cmat('#1c1a16', { flat: true });
+    for (let i = 0; i < 6; i++) {
+      const s = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 5), dot);
+      const a = i / 6 * Math.PI * 2;
+      s.position.set(Math.cos(a) * 0.06, 0.075, Math.sin(a) * 0.08 + 0.02);
+      g.add(s);
+    }
+  }
+  g.userData.anim = 'crawl';
+  g.scale.setScalar(1.1 * (app.size || 1));
+  return g;
+}
+
+function makeMammalCritter(app) {
+  const g = new THREE.Group();
+  const fur = _cmat(app.body, { flat: true });
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), fur);
+  body.scale.set(0.9, 0.85, 1.5);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.09, 9, 7), fur);
+  head.position.set(0, 0.04, -0.17);
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.08, 5), fur);
+  nose.rotation.x = -Math.PI / 2; nose.position.set(0, 0.02, -0.26);
+  g.add(body, head, nose);
+  for (const s of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.CircleGeometry(0.04, 8), fur);
+    ear.position.set(0.05 * s, 0.12, -0.14); g.add(ear);
+  }
+  const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.004, 0.3, 5),
+                              _cmat('#caa0a0', { flat: true }));
+  tail.rotation.x = -1.2; tail.position.set(0, 0.02, 0.24); g.add(tail);
+  g.userData.anim = 'ground';
+  g.scale.setScalar(1.0 * (app.size || 1));
+  return g;
+}
+
+const _CRITTER_FACTORY = {
+  bee: makeBeeCritter, butterfly: makeButterflyCritter, moth: makeButterflyCritter,
+  bird: makeBirdCritter, fly: makeFlyCritter, beetle: makeBeetleCritter,
+  mammal: makeMammalCritter,
+};
+
+function disposeWildlife() {
+  if (!wildlifeGroup) { wildlifeCritters = []; return; }
+  scene.remove(wildlifeGroup);
+  disposeObject(wildlifeGroup);
+  wildlifeGroup = null; wildlifeCritters = [];
+}
+
+function rebuildWildlife() {
+  disposeWildlife();
+  if (!WILDLIFE.length) return;
+  wildlifeGroup = new THREE.Group();
+  for (const spec of WILDLIFE) {
+    const app = spec.app || { kind: spec.kind };
+    const make = _CRITTER_FACTORY[spec.kind] || _CRITTER_FACTORY[app.kind];
+    if (!make) continue;
+    let obj; try { obj = make(app); } catch (e) { continue; }
+    const gy = terrainHeightAt(spec.x, spec.y, lastTerrain);
+    const anchor = new THREE.Vector3(spec.x, gy, -spec.y);
+    obj.position.set(anchor.x, gy + (spec.h || 0.3), anchor.z);
+    const flier = obj.userData.anim === 'flier';
+    wildlifeCritters.push({
+      obj, anchor, h: spec.h || 0.3, seed: (spec.seed || 0) % 1000,
+      anim: obj.userData.anim,
+      driftR: flier ? 0.25 + ((spec.seed || 0) % 40) / 100 : 0,
+      speed: 0.6 + ((spec.seed || 0) % 50) / 60,
+    });
+    wildlifeGroup.add(obj);
+  }
+  wildlifeGroup.visible = !beeMode;   // hidden while flying as one creature
+  scene.add(wildlifeGroup);
+}
+
+function animateWildlife(t) {
+  if (!wildlifeGroup || !wildlifeGroup.visible) return;
+  for (const c of wildlifeCritters) {
+    const ph = c.seed * 0.11, o = c.obj, a = c.anchor;
+    if (c.anim === 'flier') {
+      const ang = t * 0.0006 * c.speed + ph;
+      const x = a.x + Math.cos(ang) * c.driftR;
+      const z = a.z + Math.sin(ang) * c.driftR;
+      o.position.set(x, a.y + c.h + Math.sin(t * 0.004 + ph) * 0.05, z);
+      o.rotation.y = -ang;                 // face the tangent of the circle
+      flapWings(o, t);
+    } else if (c.anim === 'hover') {
+      o.position.set(a.x + Math.sin(t * 0.002 + ph) * 0.12,
+                     a.y + c.h + Math.sin(t * 0.005 + ph) * 0.06,
+                     a.z + Math.cos(t * 0.0022 + ph) * 0.12);
+      o.rotation.y = ph + Math.sin(t * 0.001 + ph) * 0.6;
+      flapWings(o, t);
+    } else if (c.anim === 'perch') {
+      o.position.y = a.y + c.h + Math.sin(t * 0.003 + ph) * 0.02;
+      o.rotation.y = ph + Math.sin(t * 0.0008 + ph) * 0.25;   // look around
+    } else if (c.anim === 'ground') {
+      const hop = Math.max(0, Math.sin(t * 0.002 + ph));
+      o.position.y = a.y + 0.02 + hop * hop * 0.12;
+      o.rotation.y = ph;
+    } else {                                // crawl (beetle)
+      o.position.y = a.y + c.h + Math.sin(t * 0.001 + ph) * 0.01;
+      o.rotation.y = ph + t * 0.0002;
+    }
+  }
+}
+
+window.permaSetWildlife = function (list) {
+  WILDLIFE = Array.isArray(list) ? list : [];
+  rebuildWildlife();
+};
+
+// ── Third-person "Walk the garden" (V2.12) ───────────────────────────────────
+// A walking human avatar with a follow camera, strolling among the wildlife.
+// Parallel to bee mode; when off, OrbitControls owns the camera as before.
+let walkMode = false;
+let walkAvatar = null;
+let walkYaw = 0, walkPitch = 0.22;       // camera orbit around the walker
+let walkFacing = 0;                       // avatar heading (eased toward motion)
+const walkKeys = new Set();
+let walkDragging = false, walkLastX = 0, walkLastY = 0;
+let walkPrevT = 0, walkStride = 0;
+const _WALK_DIST = 6.5;
+
+function makeWalker() {
+  const g = new THREE.Group();
+  const skin = _cmat('#c98d63', { flat: true });
+  const coat = _cmat('#4f6b8a', { flat: true });
+  const legM = _cmat('#3a4653', { flat: true });
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.26, 0.7, 8), coat);
+  torso.position.y = 1.15;
+  const hips = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), legM);
+  hips.scale.set(1, 0.6, 0.8); hips.position.y = 0.82;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8), skin);
+  head.position.y = 1.62;
+  const hat = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.2, 0.12, 10),
+                             _cmat('#7a5a3a', { flat: true }));
+  hat.position.y = 1.74;
+  const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.02, 12),
+                              _cmat('#7a5a3a', { flat: true }));
+  brim.position.y = 1.69;
+  g.add(torso, hips, head, hat, brim);
+  const legs = [], arms = [];
+  const legGeo = THREE.CapsuleGeometry
+    ? new THREE.CapsuleGeometry(0.075, 0.55, 3, 6)
+    : new THREE.CylinderGeometry(0.08, 0.06, 0.7, 6);
+  const armGeo = new THREE.CylinderGeometry(0.06, 0.05, 0.55, 6);
+  for (const s of [-1, 1]) {
+    const legPivot = new THREE.Group(); legPivot.position.set(0.1 * s, 0.82, 0);
+    const leg = new THREE.Mesh(legGeo, legM); leg.position.y = -0.32;
+    legPivot.add(leg); g.add(legPivot); legs.push({ pivot: legPivot, sign: s });
+    const armPivot = new THREE.Group(); armPivot.position.set(0.26 * s, 1.42, 0);
+    const arm = new THREE.Mesh(armGeo, coat); arm.position.y = -0.28;
+    armPivot.add(arm); g.add(armPivot); arms.push({ pivot: armPivot, sign: s });
+  }
+  g.userData.legs = legs; g.userData.arms = arms;
+  return g;
+}
+
+function groundAt(x, z) { return terrainHeightAt(x, -z, lastTerrain); }
+
+function walkSpawn() {
+  const cx = lastBounds ? (lastBounds.min_x + lastBounds.max_x) / 2 : 0;
+  const cz = lastBounds ? -(lastBounds.min_y + lastBounds.max_y) / 2 : 0;
+  walkAvatar.position.set(cx, groundAt(cx, cz), cz);
+  walkYaw = 0; walkPitch = 0.22; walkFacing = 0;
+  walkAvatar.rotation.y = 0;
+  walkPrevT = 0;
+}
+
+function setWalkHintUI(on) {
+  const h = document.getElementById('bee-hint');
+  if (!h) return;
+  h.style.display = on ? 'block' : 'none';
+  if (on) h.innerHTML = '🚶 <b>Walk the garden</b> — WASD / arrows to walk · '
+    + 'drag to look around · the creatures are the wildlife your plants support';
+}
+
+function enterWalkMode() {
+  controls.enabled = false;
+  if (!walkAvatar) { walkAvatar = makeWalker(); scene.add(walkAvatar); }
+  walkAvatar.visible = true;
+  walkSpawn();
+  if (wildlifeGroup) wildlifeGroup.visible = true;
+  setWalkHintUI(true);
+}
+
+function exitWalkMode() {
+  walkKeys.clear(); walkDragging = false;
+  if (walkAvatar) walkAvatar.visible = false;
+  setWalkHintUI(false);
+  controls.enabled = true;
+  if (lastBounds) frameCamera(lastBounds); else controls.update();
+}
+
+function walkStep(t) {
+  const dt = walkPrevT ? Math.min(0.05, (t - walkPrevT) / 1000) : 0.016;
+  walkPrevT = t;
+  // Movement is relative to the camera's horizontal facing (walkYaw).
+  const fwd = new THREE.Vector3(Math.sin(walkYaw), 0, -Math.cos(walkYaw));
+  const right = new THREE.Vector3(Math.cos(walkYaw), 0, Math.sin(walkYaw));
+  const move = new THREE.Vector3();
+  if (walkKeys.has('KeyW') || walkKeys.has('ArrowUp'))    move.add(fwd);
+  if (walkKeys.has('KeyS') || walkKeys.has('ArrowDown'))  move.addScaledVector(fwd, -1);
+  if (walkKeys.has('KeyD') || walkKeys.has('ArrowRight')) move.add(right);
+  if (walkKeys.has('KeyA') || walkKeys.has('ArrowLeft'))  move.addScaledVector(right, -1);
+  const moving = move.lengthSq() > 0;
+  if (moving) {
+    move.normalize();
+    const speed = (walkKeys.has('ShiftLeft') ? 7 : 3.5);
+    walkAvatar.position.addScaledVector(move, speed * dt);
+    walkStride += speed * dt * 2.2;
+    // Ease the avatar's heading toward its travel direction.
+    const target = Math.atan2(move.x, -move.z);
+    let d = (target - walkFacing + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+    walkFacing += d * Math.min(1, dt * 10);
+  }
+  // Keep bounded to a sensible stage around the design.
+  if (lastBounds) {
+    const pad = 20;
+    walkAvatar.position.x = Math.max(lastBounds.min_x - pad,
+      Math.min(lastBounds.max_x + pad, walkAvatar.position.x));
+    walkAvatar.position.z = Math.max(-(lastBounds.max_y) - pad,
+      Math.min(-(lastBounds.min_y) + pad, walkAvatar.position.z));
+  }
+  walkAvatar.position.y = groundAt(walkAvatar.position.x, walkAvatar.position.z);
+  walkAvatar.rotation.y = walkFacing;
+  // Swing legs + arms while walking; settle when still.
+  const sw = moving ? Math.sin(walkStride) * 0.5 : walkAvatar.userData._sw * 0.9 || 0;
+  walkAvatar.userData._sw = sw;
+  for (const { pivot, sign } of walkAvatar.userData.legs) pivot.rotation.x = sw * sign;
+  for (const { pivot, sign } of walkAvatar.userData.arms) pivot.rotation.x = -sw * sign;
+
+  // Follow camera: orbit behind the walker at (walkYaw, walkPitch).
+  const head = walkAvatar.position.clone().add(new THREE.Vector3(0, 1.5, 0));
+  const cp = Math.cos(walkPitch);
+  const cam = new THREE.Vector3(-Math.sin(walkYaw) * cp, Math.sin(walkPitch), Math.cos(walkYaw) * cp);
+  const desired = head.clone().addScaledVector(cam, _WALK_DIST);
+  const gy = groundAt(desired.x, desired.z) + 0.4;
+  if (desired.y < gy) desired.y = gy;          // don't clip through terrain
+  camera.position.lerp(desired, Math.min(1, dt * 8));
+  camera.lookAt(head);
+}
+
+addEventListener('keydown', (e) => {
+  if (!walkMode) return;
+  if (_BEE_MOVE_CODES.has(e.code) || e.code === 'ShiftLeft') {
+    walkKeys.add(e.code); e.preventDefault();
+  }
+});
+addEventListener('keyup', (e) => { walkKeys.delete(e.code); });
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (!walkMode) return;
+  walkDragging = true; walkLastX = e.clientX; walkLastY = e.clientY;
+});
+addEventListener('pointerup', () => { walkDragging = false; });
+renderer.domElement.addEventListener('pointermove', (e) => {
+  if (!walkMode || !walkDragging) return;
+  walkYaw -= (e.clientX - walkLastX) * 0.005;
+  walkPitch = Math.max(-0.2, Math.min(1.2, walkPitch + (e.clientY - walkLastY) * 0.004));
+  walkLastX = e.clientX; walkLastY = e.clientY;
+});
+
+window.permaSetWalkMode = function (on) {
+  const want = !!on;
+  if (want === walkMode) return;
+  walkMode = want;
+  if (walkMode) enterWalkMode(); else exitWalkMode();
 };
 
 addEventListener('resize', () => {
@@ -3049,11 +3484,14 @@ addEventListener('resize', () => {
 let _lastFrame = 0;
 const _FRAME_MS = 1000 / 30;
 renderer.setAnimationLoop((t) => {
-  const frameMs = beeMode ? 1000 / 60 : _FRAME_MS;
+  const frameMs = (beeMode || walkMode) ? 1000 / 60 : _FRAME_MS;
   if (document.hidden || (t - _lastFrame) < frameMs) return;
   _lastFrame = t;
   windUniforms.uTime.value = clock.getElapsedTime();
-  if (beeMode) beeStep(t); else controls.update();
+  if (beeMode) beeStep(t);
+  else if (walkMode) walkStep(t);
+  else controls.update();
+  animateWildlife(t);               // ambient life (no-op when the group is hidden)
   renderer.render(scene, camera);
 });
 </script>
