@@ -96,16 +96,33 @@ def set_bee_mode(on: bool) -> str:
             f"{json.dumps(bool(on))});")
 
 
-def set_bee_targets(plant_ids: list, bee_label: str = "") -> str:
-    """JS to mark which placed plants feed the chosen bee, so the fly-through
-    floats a glowing nectar beacon over each one (F37 increment 2). ``plant_ids``
-    are DB plant ids from ``bee_habitat.target_plant_ids_for_bee``; the viewer
-    shows a beacon only for those actually present in the scene. ``bee_label``
-    is the bee's display name for the nectar-run HUD ("…this design feeds X",
-    V2.12). Guarded with ``&&``."""
+def set_bee_targets(plant_ids: list, bee_label: str = "",
+                    kind: str = "bee", host_ids: list = None) -> str:
+    """JS to mark the plants a chosen pollinator uses, so the fly-through floats
+    a glowing nectar beacon over each one (F37 increment 2; lepidoptera V2.12).
+
+    ``plant_ids`` are the ADULT nectar plants (DB ids from
+    ``bee_habitat.target_plant_ids_for_bee`` / ``lep_habitat.nectar_plant_ids_for_lep``);
+    the viewer shows a beacon only for those present AND in bloom for the scene
+    month. ``bee_label`` is the creature's display name for the HUD. ``kind`` is
+    ``'bee'`` | ``'butterfly'`` | ``'moth'`` and selects the flying avatar.
+    ``host_ids`` are larval-host plant ids (butterflies/moths) shown as
+    "caterpillar nursery" markers — present-gated, not bloom-gated, and never
+    collectable. Guarded with ``&&``."""
     ids = [int(p) for p in (plant_ids or [])]
+    hosts = [int(p) for p in (host_ids or [])]
     return ("window.permaSetBeeTargets && window.permaSetBeeTargets("
-            f"{json.dumps(ids)}, {json.dumps(str(bee_label or ''))});")
+            f"{json.dumps(ids)}, {json.dumps(str(bee_label or ''))}, "
+            f"{json.dumps(str(kind or 'bee'))}, {json.dumps(hosts)});")
+
+
+def set_bee_tour(on: bool) -> str:
+    """JS to toggle the seasonal nectar tour in the fly-through (V2.12): the
+    flyer auto-hops flower to flower, and the host advances the scene month
+    underneath it so blooms come and go across the year. Guarded with ``&&`` so
+    it's a no-op until the viewer registers ``window.permaSetBeeTour``."""
+    return ("window.permaSetBeeTour && window.permaSetBeeTour("
+            f"{json.dumps(bool(on))});")
 
 
 def set_quality(level: int) -> str:

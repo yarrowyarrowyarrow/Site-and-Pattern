@@ -223,6 +223,29 @@ CREATE TABLE IF NOT EXISTS bee_attributes (
 CREATE INDEX IF NOT EXISTS idx_bee_attr_genus   ON bee_attributes(genus);
 CREATE INDEX IF NOT EXISTS idx_bee_attr_nesting ON bee_attributes(nesting_habit);
 
+-- Lepidoptera attributes (schema v40, V2.12 "fly as a butterfly"). One row per
+-- fauna row with taxon='lepidoptera'. Parallels bee_attributes: a narrow table
+-- keyed on fauna_id so the lep-only fields (flight season, overwintering stage,
+-- adult nectar genera) don't add perpetually-NULL columns to the 5-taxon fauna
+-- table. Larval host plants stay in plant_fauna (relationship='larval_host').
+-- Data honesty (P9): giant silk moths and some sphinxes DO NOT feed as adults —
+-- nectar_flower_genera is NULL for them, never a silent generalist default.
+CREATE TABLE IF NOT EXISTS lepidoptera_attributes (
+    fauna_id INTEGER PRIMARY KEY REFERENCES fauna(id) ON DELETE CASCADE,
+    kind TEXT CHECK (kind IN ('butterfly', 'moth', 'skipper')),
+    activity TEXT CHECK (activity IN ('day', 'night', 'day_dusk', 'unknown')),
+    flight_season TEXT,             -- free-text month range ("May-August"); parsed downstream
+    overwintering_stage TEXT CHECK (overwintering_stage IN
+        ('egg', 'larva', 'pupa', 'adult', 'migrant', 'unknown')),
+    voltinism TEXT,                 -- free text ("one brood", "multiple broods")
+    nectar_flower_genera TEXT,      -- comma-separated adult-nectar genera | NULL (non-feeding)
+    larval_host_note TEXT,          -- plain-language summary (edges live in plant_fauna)
+    conservation_status TEXT,
+    source TEXT,
+    notes TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_lep_attr_kind ON lepidoptera_attributes(kind);
+
 -- Climate cache (schema v14, V1.35). One row per ~1 km^2 location;
 -- stores derived growing-degree-day and frost-window stats from the
 -- Open-Meteo Historical Weather endpoint. Lat/lng are quantized to

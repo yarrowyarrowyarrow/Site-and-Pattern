@@ -166,10 +166,17 @@ class Map3DWidget(QWebEngineView):
         """Enter/leave the "fly as a bee" first-person mode (F37 increment 2)."""
         self.run_js(map3d_js.set_bee_mode(on))
 
-    def set_bee_targets(self, plant_ids: list, bee_label: str = ""):
-        """Mark the chosen bee's floral-host plants so the fly-through beacons
-        them (F37 increment 2); ``bee_label`` names the bee in the nectar HUD."""
-        self.run_js(map3d_js.set_bee_targets(plant_ids, bee_label))
+    def set_bee_targets(self, plant_ids: list, bee_label: str = "",
+                        kind: str = "bee", host_ids: list = None):
+        """Mark the chosen pollinator's plants so the fly-through beacons them
+        (F37 increment 2). ``plant_ids`` are adult nectar plants; ``bee_label``
+        names the creature in the HUD; ``kind`` picks the avatar
+        (bee/butterfly/moth); ``host_ids`` are larval-host "nursery" markers."""
+        self.run_js(map3d_js.set_bee_targets(plant_ids, bee_label, kind, host_ids))
+
+    def set_bee_tour(self, on: bool):
+        """Toggle the fly-through's seasonal nectar tour (V2.12)."""
+        self.run_js(map3d_js.set_bee_tour(on))
 
     def set_sun_for(self, lat: float, lng: float, when: datetime):
         """Point the 3D sun for a place/time (reuses ``src/solar`` via map3d_js)."""

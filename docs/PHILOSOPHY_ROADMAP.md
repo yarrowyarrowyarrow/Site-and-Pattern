@@ -421,6 +421,26 @@ connectivity to the design's planted areas; a new analysis layer.
     other plant greys out, with a legend. The original F37 card; Yong's Umwelt made literal.
     (`src/map_js.py` + `html/map/06-overlays.js`, wired panel → map through the Bees tab's
     `bee_map_overlay_*` signals, reusing the same `floral_matches_for_bee` selection.)
+  - **✅ Increment 4 — Lepidoptera + a seasonal nectar tour (shipped, V2.12):** the fly-through opened
+    to **butterflies & moths** and became **bloom-accurate**. A new schema-v40 `lepidoptera_attributes`
+    table (flight season, adult-nectar genera, overwintering stage, activity; seeded from
+    `data/lepidoptera_attributes_master.json`, sourced after Acorn & Sheldon 2006 and Pohl et al. 2010,
+    the ZooKeys annotated list) feeds `src/lep_habitat.py`, which yields a butterfly/moth's **nectar
+    plants** (documented edges + genus fallback — empty for non-feeding giant silk moths, P9) and its
+    **larval hosts** (the app's existing rich `larval_host` edges). The pollinator selector in
+    `src/scene3d_window.py` now lists bees *and* butterflies/moths; the viewer picks a bee/butterfly/moth
+    avatar, floats green "caterpillar nursery" markers over larval hosts, and **only lets nectar be
+    collected from flowers actually in bloom that month** (the bloom-gating fix — nectar used to be
+    collectable year-round). A **"Tour the year"** toggle drives a hands-free seasonal tour: the flyer
+    auto-hops flower to flower while a host-side month timer walks the creature's flight season, so you
+    watch the bloom succession come and go (`permaSetBeeTour` + `set_bee_tour`).
+  - **✅ Increment 5 — Communities *for a creature* (shipped, V2.12):** the plant-community panel grew a
+    **"For a creature…"** button. Pick a native bee, butterfly or moth and `src/creature_community.py`
+    (Qt-free) assembles a ready-to-plant community from its nectar/pollen plants and — for
+    butterflies/moths — its caterpillar host plants, bucketed by vegetation layer and laid out in
+    concentric rings (canopy centre → nectar-rich edge), with an honest overwintering/nesting note.
+    A Monarch yields a *Monarch Waystation* (milkweed hosts + late-nectar composites); a non-feeding
+    Cecropia moth yields a host-only tree/shrub community.
 - **F38 · Mycoremediation / degraded-site notes** — *S · Low (P8)*: well-cited restoration
   techniques for contaminated/compacted ground (content, directional).
 - **F39 · Sensor integration hooks** — *L · High — external (P11)*: optional soil-moisture/

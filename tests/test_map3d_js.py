@@ -138,6 +138,24 @@ class TestBeeMode(unittest.TestCase):
         self.assertIn('[], ""', m3.set_bee_targets([], ""))
         self.assertIn('""', m3.set_bee_targets([1]))
 
+    def test_set_bee_targets_kind_and_hosts(self):
+        # Lepidoptera (V2.12): kind picks the avatar, host_ids are larval-host
+        # "nursery" markers. Both are JSON-encoded; defaults are 'bee' + [].
+        js = m3.set_bee_targets([3, 4], "Monarch", "butterfly", [7, 9])
+        self.assertIn('[3, 4], "Monarch", "butterfly", [7, 9]', js)
+        self.assertTrue(js.strip().endswith(");"))
+        # Host ids are coerced to ints like the nectar ids.
+        self.assertIn("[1, 2]", m3.set_bee_targets([], "", "moth", ["1", "2"]))
+        # Default kind/hosts when omitted.
+        self.assertIn('"bee", []', m3.set_bee_targets([1]))
+
+    def test_set_bee_tour_guarded_bool(self):
+        on = m3.set_bee_tour(True)
+        self.assertIn("window.permaSetBeeTour && window.permaSetBeeTour(", on)
+        self.assertIn("true", on)
+        self.assertTrue(on.strip().endswith(");"))
+        self.assertIn("false", m3.set_bee_tour(False))
+
 
 if __name__ == "__main__":
     unittest.main()

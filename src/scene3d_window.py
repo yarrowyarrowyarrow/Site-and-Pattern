@@ -125,13 +125,16 @@ class Scene3DWindow(QWidget):
         self._bake_btn.setEnabled(False)
         self._bake_btn.clicked.connect(self._on_bake_yard_photo)
 
-        # "Fly as a bee" — first-person bee's-eye view (F37 increment 2). Pick a
-        # target native bee, then drop into a low fly camera with its floral-host
-        # plants marked by glowing beacons + a bee-vision overlay.
+        # "Fly as a pollinator" — first-person fly-through (F37 increment 2; V2.12
+        # adds butterflies & moths). Pick a native bee, butterfly or moth, then
+        # drop into a low fly camera: its adult nectar plants are glowing beacons
+        # (bloom-gated), a butterfly/moth also shows its caterpillar-host plants.
         self._bee_combo = QComboBox()
         self._bee_combo.setToolTip(
-            "Choose a native bee — its floral-host plants get marked in the fly view")
-        self._populate_bee_combo()
+            "Choose a native pollinator — a bee, butterfly or moth. Its nectar "
+            "plants get marked in the fly view (butterflies/moths also show "
+            "their caterpillar host plants).")
+        self._populate_creature_combo()
         self._bee_combo.currentIndexChanged.connect(self._on_bee_target_changed)
         self._bee_btn = QPushButton("🐝 Fly as a bee")
         self._bee_btn.setCheckable(True)
@@ -140,6 +143,19 @@ class Scene3DWindow(QWidget):
             "Q/E up-down, drag to look, F flies you to the nearest flower. "
             "Brush a glowing flower to collect its nectar.")
         self._bee_btn.toggled.connect(self._on_bee_mode)
+
+        # "Tour the year" — auto-hop flower to flower while the season advances
+        # under you, so you watch the design's bloom succession (V2.12). Steps
+        # the month through the creature's flight season on a timer.
+        self._tour_btn = QPushButton("🌸 Tour the year")
+        self._tour_btn.setCheckable(True)
+        self._tour_btn.setToolTip(
+            "Fly a hands-free tour: the flyer visits each flower in turn while "
+            "the months roll forward, revealing what blooms when for this "
+            "creature. Toggle off to take back the controls.")
+        self._tour_btn.toggled.connect(self._on_tour)
+        self._tour_months: list = []          # flight months of the current creature
+        self._tour_timer = None
 
         self._last_origin = None
 
@@ -163,6 +179,7 @@ class Scene3DWindow(QWidget):
         bar.addSpacing(16)
         bar.addWidget(self._bee_combo)
         bar.addWidget(self._bee_btn)
+        bar.addWidget(self._tour_btn)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(6, 6, 6, 6)
@@ -230,14 +247,22 @@ class Scene3DWindow(QWidget):
         QSettings().setValue(_DETAIL_KEY, int(level))
         self.viewer.set_quality(level)
 
-    # ── "Fly as a bee" (F37 increment 2) ──────────────────────────────────
+    # ── "Fly as a pollinator" (F37 increment 2; butterflies/moths V2.12) ──
 
-    def _populate_bee_combo(self):
-        """Fill the target-bee combo, grouped genus-first with disabled headers
-        (mirrors the analysis panel's Bees tab selector)."""
+    def _populate_creature_combo(self):
+        """Fill the target-creature combo: native bees grouped genus-first (as
+        the analysis panel's Bees tab), then a Butterflies & Moths section. Each
+        selectable item's userData is a dict describing the creature."""
         combo = self._bee_combo
         combo.blockSignals(True)
         combo.clear()
+
+        def _header(text):
+            combo.addItem(text, userData=None)
+            item = combo.model().item(combo.count() - 1)
+            if item is not None:
+                item.setEnabled(False)
+
         try:
             from src.bee_habitat import list_target_bees
             bees = list_target_bees()
@@ -247,45 +272,116 @@ class Scene3DWindow(QWidget):
         for b in bees:
             if b["genus"] != current_genus:
                 current_genus = b["genus"]
-                combo.addItem(f"── {current_genus} ──", userData=None)
-                item = combo.model().item(combo.count() - 1)
-                if item is not None:
-                    item.setEnabled(False)
+                _header(f"── {current_genus} ──")
             label = (f"    {b['common_name']} (any {b['genus']})" if b["is_group"]
                      else f"    {b['common_name']}")
-            combo.addItem(label, userData=b["id"])
+            combo.addItem(label, userData={"taxon": "bee", "fid": b["id"],
+                                           "kind": "bee", "name": b["common_name"]})
+
+        try:
+            from src.lep_habitat import list_target_lepidoptera
+            leps = list_target_lepidoptera()
+        except Exception:      # noqa: BLE001
+            leps = []
+        if leps:
+            _header("── Butterflies & Moths ──")
+            for lp in leps:
+                # 'skipper' flies like a butterfly for our purposes.
+                kind = "moth" if lp["kind"] == "moth" else "butterfly"
+                icon = "🦋" if kind == "butterfly" else "🌙"
+                combo.addItem(f"    {icon} {lp['common_name']}",
+                              userData={"taxon": "lep", "fid": lp["id"],
+                                        "kind": kind, "name": lp["common_name"]})
+
         combo.blockSignals(False)
         for i in range(combo.count()):
             if combo.itemData(i) is not None:
                 combo.setCurrentIndex(i)
                 break
 
-    def _current_bee_fid(self):
+    def _current_creature(self):
+        """The selected creature dict, or None on a disabled header row."""
         return self._bee_combo.itemData(self._bee_combo.currentIndex())
 
-    def _push_bee_targets(self):
-        fid = self._current_bee_fid()
-        label = self._bee_combo.currentText().strip()
-        if fid is None:
-            self.viewer.set_bee_targets([], label)
+    def _fly_verb(self, creature) -> str:
+        kind = (creature or {}).get("kind", "bee")
+        return {"bee": "🐝 Fly as a bee", "butterfly": "🦋 Fly as a butterfly",
+                "moth": "🌙 Fly as a moth"}.get(kind, "🐝 Fly as a bee")
+
+    def _push_targets(self):
+        """Push the selected creature's plant selections + avatar kind to the
+        viewer, and remember its flight months for the seasonal tour."""
+        creature = self._current_creature()
+        self._tour_months = []
+        if creature is None:
+            self.viewer.set_bee_targets([], "", "bee", [])
             return
+        fid, kind, name = creature["fid"], creature["kind"], creature["name"]
+        nectar_ids: list = []
+        host_ids: list = []
         try:
-            from src.bee_habitat import target_plant_ids_for_bee
-            ids = target_plant_ids_for_bee(fid)
+            if creature["taxon"] == "bee":
+                from src.bee_habitat import (target_plant_ids_for_bee,
+                                             flight_months_for_bee)
+                nectar_ids = target_plant_ids_for_bee(fid)
+                self._tour_months = flight_months_for_bee(fid)
+            else:
+                from src.lep_habitat import (nectar_plant_ids_for_lep,
+                                             larval_host_ids_for_lep,
+                                             flight_months_for_lep)
+                nectar_ids = nectar_plant_ids_for_lep(fid)
+                host_ids = larval_host_ids_for_lep(fid)
+                self._tour_months = flight_months_for_lep(fid)
         except Exception:      # noqa: BLE001
-            ids = []
-        self.viewer.set_bee_targets(ids, label)
+            nectar_ids, host_ids = [], []
+        self.viewer.set_bee_targets(nectar_ids, name, kind, host_ids)
 
     def _on_bee_mode(self, on: bool):
-        """Toggle the first-person bee view. Pushes the current bee's target
+        """Toggle the first-person fly view. Pushes the current creature's target
         plants before entering so the beacons are ready."""
         if on:
-            self._push_bee_targets()
+            self._push_targets()
+        else:
+            # Leaving fly mode also ends any running tour.
+            if self._tour_btn.isChecked():
+                self._tour_btn.setChecked(False)
         self.viewer.set_bee_mode(on)
 
     def _on_bee_target_changed(self, *_):
-        if getattr(self, "_bee_btn", None) is not None and self._bee_btn.isChecked():
-            self._push_bee_targets()
+        self._bee_btn.setText(self._fly_verb(self._current_creature()))
+        if self._bee_btn.isChecked():
+            self._push_targets()
+
+    # ── Seasonal "Tour the year" (V2.12) ──────────────────────────────────
+
+    def _on_tour(self, on: bool):
+        """Start/stop the hands-free seasonal tour. Ensures fly mode is on, tells
+        the viewer to auto-hop flowers, and steps the month on a timer so the
+        blooms change across the creature's flight season."""
+        from PyQt6.QtCore import QTimer
+        if on:
+            if not self._bee_btn.isChecked():
+                self._bee_btn.setChecked(True)   # enters fly mode + pushes targets
+            self.viewer.set_bee_tour(True)
+            if self._tour_timer is None:
+                self._tour_timer = QTimer(self)
+                self._tour_timer.timeout.connect(self._advance_tour_month)
+            self._tour_timer.start(4000)
+        else:
+            if self._tour_timer is not None:
+                self._tour_timer.stop()
+            self.viewer.set_bee_tour(False)
+
+    def _advance_tour_month(self):
+        """Move the month slider to the creature's next flight month (cycling),
+        or through all twelve when the flight season is undocumented. Changing
+        the slider re-pushes the scene, which the viewer keeps in step (the
+        camera stays put in fly mode)."""
+        months = self._tour_months or list(range(1, 13))
+        cur = self._month.value()
+        later = [m for m in months if m > cur]
+        nxt = later[0] if later else months[0]
+        self._month.setValue(nxt)            # → _on_controls_changed → _push_scene
 
     def refresh(self):
         """Re-read the live project (and kick a terrain fetch if we don't
@@ -333,6 +429,8 @@ class Scene3DWindow(QWidget):
         self._worker = None
 
     def closeEvent(self, event):
+        if self._tour_timer is not None:
+            self._tour_timer.stop()
         t = self._thread
         if t is not None and t.isRunning():
             t.quit()

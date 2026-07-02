@@ -39,6 +39,17 @@
   "fly as a bee" mode (F37) became a nectar run: glowing flower beacons are
   collected on approach (sparkle burst + HUD counter, F = autopilot to the
   nearest flower), with a properly-scaled lit bumblebee avatar.
+
+  V2.12 also opened the fly-through to Lepidoptera and made it bloom-accurate:
+    · beeKind ∈ {bee, butterfly, moth} picks the flying avatar; butterflies/
+      moths also float low green "caterpillar nursery" markers over their
+      larval-host plants (beeHostIds; present-gated, never collectable).
+    · Nectar beacons are BLOOM-GATED (inBloomNow): a flower only beacons in
+      the months it actually blooms — the fix for nectar being collectable
+      year-round. sceneMonth tracks the pushed scene's month.
+    · permaSetBeeTour + a host-side month timer drive a hands-free seasonal
+      tour: the flyer auto-hops flower to flower while the season advances,
+      revealing the design's bloom succession across the year.
 -->
 <html>
 <head>
@@ -2308,6 +2319,7 @@ window.permaSetScene = function (sc) {
   scene.add(designGroup);
   lastOrigin = sc.origin || null;
   lastMonth = sc.month || 6;
+  sceneMonth = sc.month || 6;         // bloom-gating + the seasonal-tour HUD
   lastYear = sc.year || 0;
   lastBounds = sc.bounds;
   lastTerrain = sc.terrain || null;
@@ -2388,23 +2400,38 @@ window.permaSetPlants = function (records) {
 // autopilot to the nearest unvisited flower). Purely additive: when beeMode
 // is off nothing here runs and OrbitControls owns the camera as before.
 let beeMode = false;
-let beeTargetIds = new Set();           // String(plant_id) of the bee's host plants
-let beeLabel = '';                      // display name of the chosen bee (HUD)
+let beeKind = 'bee';                     // 'bee' | 'butterfly' | 'moth' — picks the avatar
+let beeTargetIds = new Set();            // String(plant_id) of the adult nectar plants
+let beeHostIds = new Set();              // String(plant_id) of larval host plants (leps)
+let beeLabel = '';                       // display name of the chosen creature (HUD)
 let beaconGroup = null;
-let beeBeacons = [];                    // [{key,name,pos,core,glow,beam,phase,visited}]
-let beeVisited = new Set();             // beacon keys collected this run
-let beeBursts = [];                     // live sparkle bursts [{pts,vel,t0}]
-let beeAuto = null;                     // autopilot target {key,pos} | null
-let beeMsg = '', beeMsgUntil = 0;       // transient HUD line ("nectar collected!")
-let beeHudAt = 0;                       // last HUD refresh (throttled)
-let beeGraceUntil = 0;                  // no collection right after spawning
-let beeAvatar = null;                   // the visible bumblebee, parented to camera
-let beeBank = 0;                        // eased roll for a bit of life on turns
-const beeVel = new THREE.Vector3();     // smoothed velocity (m/s) — glide, not stop
+let beeBeacons = [];                     // [{key,name,pos,core,glow,beam,phase,visited}]
+let beeHosts = [];                       // [{marker,glow,phase}] caterpillar-host markers
+let beeVisited = new Set();              // beacon keys collected this run
+let beeBursts = [];                      // live sparkle bursts [{pts,vel,t0}]
+let beeAuto = null;                      // autopilot target {key,pos} | null
+let tourMode = false;                    // seasonal auto-tour (host advances the month)
+let sceneMonth = 6;                      // current scene month — bloom-gating + HUD
+let beeMsg = '', beeMsgUntil = 0;        // transient HUD line ("nectar collected!")
+let beeHudAt = 0;                        // last HUD refresh (throttled)
+let beeGraceUntil = 0;                   // no collection right after spawning
+let beeAvatar = null;                    // the visible flyer, parented to camera
+let beeAvatarKind = '';                  // which kind the current avatar was built for
+let beeBank = 0;                         // eased roll for a bit of life on turns
+const beeVel = new THREE.Vector3();      // smoothed velocity (m/s) — glide, not stop
 const beeKeys = new Set();
-let beeYaw = 0, beePitch = -0.05;       // radians; yaw 0 → looking north (−z)
+let beeYaw = 0, beePitch = -0.05;        // radians; yaw 0 → looking north (−z)
 let beeDragging = false, beeLastX = 0, beeLastY = 0;
 let beePrevT = 0;
+const _MONTHS3 = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+
+// Is a plant in bloom for the current scene month? Drives bloom-gated nectar
+// beacons (V2.12 fix — nectar was collectable even out of bloom).
+function inBloomNow(p) {
+  const bs = p.bloom_start || 0, be = p.bloom_end || 0;
+  return bs > 0 && sceneMonth >= bs && sceneMonth <= be;
+}
 
 const _esc = (s) => String(s).replace(/[&<>"]/g,
   (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -2453,8 +2480,92 @@ function makeBeeAvatar() {
     wings.push({ pivot, sign: s });
   }
   g.userData.wings = wings;
+  g.userData.flap = { base: 0.2, amp: 0.75, speed: 0.09 };   // fast bee flutter
   g.scale.setScalar(0.22);
   return g;
+}
+
+// A butterfly (or drab moth) riding low-forward of the camera. Two wing pairs
+// per side on a slim body; the wings flap up and down with a graceful, slower
+// beat than the bee. Colours: butterflies get a warm patterned upper wing, moths
+// a muted tan/grey. Lit + emissive so the flyer reads under any sun angle.
+function makeButterflyAvatar(moth) {
+  const g = new THREE.Group();
+  const bodyM = new THREE.MeshStandardMaterial({ color: moth ? 0x4a3d2e : 0x2a2320,
+                 roughness: 0.85, emissive: 0x140f0a, emissiveIntensity: 0.5 });
+  const foreCol = moth ? 0xb8a274 : 0xe6912f;   // upper wing
+  const hindCol = moth ? 0x9c8763 : 0xd8701f;   // lower wing
+  const edge = moth ? 0x5c4a30 : 0x2a1c10;
+  const wingMat = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.7,
+                    emissive: c, emissiveIntensity: 0.28, side: THREE.DoubleSide,
+                    flatShading: true });
+  const sphere = (r) => new THREE.SphereGeometry(r, 12, 9);
+  // slim segmented body along -z (head) .. +z (abdomen)
+  const thorax = new THREE.Mesh(sphere(0.16), bodyM); thorax.scale.set(1, 1, 1.4);
+  const head = new THREE.Mesh(sphere(0.12), bodyM); head.position.set(0, 0.02, -0.28);
+  const abd = new THREE.Mesh(sphere(0.13), bodyM);
+  abd.scale.set(0.8, 0.8, 2.6); abd.position.set(0, -0.01, 0.4);
+  g.add(thorax, head, abd);
+  const antGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.32, 4);
+  const clubGeo = new THREE.SphereGeometry(0.03, 6, 5);
+  for (const s of [-1, 1]) {
+    const a = new THREE.Mesh(antGeo, bodyM);
+    a.position.set(0.06 * s, 0.08, -0.42); a.rotation.set(-0.7, 0, 0.28 * s);
+    g.add(a);
+    if (!moth) {                                  // clubbed tips = butterfly
+      const c = new THREE.Mesh(clubGeo, bodyM);
+      c.position.set(0.13 * s, 0.2, -0.54); g.add(c);
+    }
+  }
+  // A wing = fore + hind lobe, built flat in the XZ plane then hung off a pivot
+  // on the body midline so it flaps around the forward (z) axis.
+  const foreGeo = new THREE.CircleGeometry(0.42, 16).rotateX(-Math.PI / 2);
+  const hindGeo = new THREE.CircleGeometry(0.30, 14).rotateX(-Math.PI / 2);
+  const wings = [];
+  for (const s of [-1, 1]) {
+    const pivot = new THREE.Group();
+    const fore = new THREE.Mesh(foreGeo, wingMat(foreCol));
+    fore.scale.set(0.85, 1, moth ? 0.7 : 0.95);
+    fore.position.set(0.42 * s, 0, -0.1);
+    const hind = new THREE.Mesh(hindGeo, wingMat(hindCol));
+    hind.scale.set(0.9, 1, 1.05);
+    hind.position.set(0.4 * s, -0.01, 0.3);
+    const rim = new THREE.Mesh(new THREE.RingGeometry(0.35, 0.42, 18).rotateX(-Math.PI / 2),
+                  new THREE.MeshBasicMaterial({ color: edge, side: THREE.DoubleSide,
+                    transparent: true, opacity: 0.5 }));
+    rim.position.set(0.42 * s, 0.002, -0.1); rim.scale.set(0.85, 1, 0.95);
+    pivot.add(fore, hind, rim);
+    g.add(pivot);
+    wings.push({ pivot, sign: s });
+  }
+  g.userData.wings = wings;
+  // Rest angled downward so the wings frame the lower view rather than fill it;
+  // moths beat faster + shallower, butterflies a big slow graceful flap.
+  g.userData.flap = moth ? { base: -0.45, amp: 0.75, speed: 0.055 }
+                         : { base: -0.6, amp: 1.05, speed: 0.028 };
+  g.scale.setScalar(moth ? 0.42 : 0.46);
+  return g;
+}
+
+// (Re)build the avatar for the current beeKind and park it low-forward of the
+// camera. Cached by kind so switching creatures doesn't rebuild every frame.
+function ensureAvatar() {
+  if (beeAvatar && beeAvatarKind === beeKind) return;
+  if (beeAvatar) { camera.remove(beeAvatar); disposeObject(beeAvatar); }
+  beeAvatar = beeKind === 'bee' ? makeBeeAvatar()
+            : makeButterflyAvatar(beeKind === 'moth');
+  beeAvatar.position.set(0, beeKind === 'bee' ? -0.42 : -0.86,
+                            beeKind === 'bee' ? -1.1 : -1.5);
+  beeAvatarKind = beeKind;
+  camera.add(beeAvatar);
+}
+
+function disposeObject(root) {
+  root.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) for (const m of (Array.isArray(o.material) ? o.material : [o.material]))
+      m && m.dispose();
+  });
 }
 const _BEE_MOVE_CODES = new Set([
   'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE',
@@ -2492,43 +2603,69 @@ function disposeBeacons() {
     beaconGroup = null;
   }
   beeBeacons = [];
+  beeHosts = [];
 }
 
-// Nectar beacons (V2.12): a small warm core + an additive glow sprite + a
-// faint light beam rising over each host plant — readable across a meadow
-// without looking like a second sun. Collected ones dim to green.
+// Nectar beacons (V2.12): a small warm core + an additive glow sprite + a faint
+// light beam rising over each nectar plant — readable across a meadow without
+// looking like a second sun. BLOOM-GATED: a plant only beacons in the months it
+// actually flowers (the V2.12 fix — nectar used to be collectable year-round).
+// Butterflies/moths also get low green "caterpillar nursery" markers over their
+// larval host plants (present-gated, never collectable).
 function rebuildBeacons() {
   disposeBeacons();
-  if (!beeMode || !lastSceneObj || beeTargetIds.size === 0) { updateBeeHud(); return; }
+  if (!beeMode || !lastSceneObj) { updateBeeHud(); return; }
+  if (beeTargetIds.size === 0 && beeHostIds.size === 0) { updateBeeHud(); return; }
   if (!GLOW_TEX) GLOW_TEX = makeGlowTexture();
   beaconGroup = new THREE.Group();
   const coreGeo = new THREE.SphereGeometry(0.12, 10, 8);
   const beamGeo = new THREE.CylinderGeometry(0.03, 0.10, 2.6, 6, 1, true);
+  const hostGeo = new THREE.IcosahedronGeometry(0.16, 0);
   for (const p of (lastSceneObj.plants || [])) {
-    if (!beeTargetIds.has(String(p.plant_id))) continue;
     if ((p.opacity ?? 1) < 0.25) continue;     // not yet present this year
+    const pid = String(p.plant_id);
     const x = p.x, wy = p.y, z = -wy;
-    const top = terrainHeightAt(x, wy, lastTerrain)
-                + Math.max(0.4, p.height_m || 0.6) + 0.35;
-    const pos = new THREE.Vector3(x, top, z);
-    const core = new THREE.Mesh(coreGeo, new THREE.MeshBasicMaterial({
-      color: 0xffd75e, transparent: true, opacity: 0.95 }));
-    core.position.copy(pos);
-    const glow = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: GLOW_TEX, color: 0xffc94d, transparent: true, opacity: 0.75,
-      blending: THREE.AdditiveBlending, depthWrite: false }));
-    glow.position.copy(pos); glow.scale.setScalar(1.5);
-    const beam = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({
-      color: 0xffd75e, transparent: true, opacity: 0.10, side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending, depthWrite: false }));
-    beam.position.set(x, top + 1.1, z);
-    beaconGroup.add(core, glow, beam);
-    const b = { key: String(p.plant_id) + '@' + x + ',' + wy,
-                name: p.common_name || 'flower', pos, core, glow, beam,
-                phase: (hashPid(p.plant_id) % 100) / 16, visited: false };
-    if (beeVisited.has(b.key)) styleBeaconVisited(b);
-    beeBeacons.push(b);
+    const gy = terrainHeightAt(x, wy, lastTerrain);
+    const isNectar = beeTargetIds.has(pid) && inBloomNow(p);   // BLOOM-GATED
+    if (isNectar) {
+      const top = gy + Math.max(0.4, p.height_m || 0.6) + 0.35;
+      const pos = new THREE.Vector3(x, top, z);
+      const core = new THREE.Mesh(coreGeo, new THREE.MeshBasicMaterial({
+        color: 0xffd75e, transparent: true, opacity: 0.95 }));
+      core.position.copy(pos);
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: GLOW_TEX, color: 0xffc94d, transparent: true, opacity: 0.75,
+        blending: THREE.AdditiveBlending, depthWrite: false }));
+      glow.position.copy(pos); glow.scale.setScalar(1.5);
+      const beam = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({
+        color: 0xffd75e, transparent: true, opacity: 0.10, side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending, depthWrite: false }));
+      beam.position.set(x, top + 1.1, z);
+      beaconGroup.add(core, glow, beam);
+      const b = { key: pid + '@' + x + ',' + wy,
+                  name: p.common_name || 'flower', pos, core, glow, beam,
+                  phase: (hashPid(p.plant_id) % 100) / 16, visited: false };
+      if (beeVisited.has(b.key)) styleBeaconVisited(b);
+      beeBeacons.push(b);
+    } else if (beeHostIds.has(pid)) {
+      // Caterpillar host: a low green faceted marker + soft green glow. (Skip if
+      // this plant is also a live nectar beacon this month — that took priority.)
+      const top = gy + Math.min(1.4, Math.max(0.35, (p.height_m || 0.6) * 0.6));
+      const pos = new THREE.Vector3(x, top, z);
+      const marker = new THREE.Mesh(hostGeo, new THREE.MeshStandardMaterial({
+        color: 0x6ab04a, roughness: 0.6, emissive: 0x1f4d1a,
+        emissiveIntensity: 0.6, flatShading: true }));
+      marker.position.copy(pos);
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: GLOW_TEX, color: 0x8fe06a, transparent: true, opacity: 0.4,
+        blending: THREE.AdditiveBlending, depthWrite: false }));
+      glow.position.copy(pos); glow.scale.setScalar(0.9);
+      beaconGroup.add(marker, glow);
+      beeHosts.push({ marker, glow, pos, phase: (hashPid(p.plant_id) % 100) / 16 });
+    }
   }
+  // A vanished autopilot target (its bloom ended on a month change) is dropped.
+  if (beeAuto && !beeBeacons.some(b => b.key === beeAuto.key)) beeAuto = null;
   scene.add(beaconGroup);
   updateBeeHud();
 }
@@ -2616,22 +2753,47 @@ function nearestUnvisited() {
   return best ? { b: best, d: bd } : null;
 }
 
+const _CREATURE_ICON = { bee: '🐝', butterfly: '🦋', moth: '🌙' };
+
 function updateBeeHud(t) {
   const h = document.getElementById('bee-hint');
   if (!h || !beeMode) return;
   if (beeMsg && (t ?? performance.now()) < beeMsgUntil) { h.innerHTML = beeMsg; return; }
-  const who = _esc(beeLabel) || 'this bee';
+  const icon = _CREATURE_ICON[beeKind] || '🐝';
+  const who = _esc(beeLabel) || 'this pollinator';
   const controls = 'WASD fly · Q/E up-down · drag to look';
+  const hostHint = beeHosts.length ? ' · 🌿 green = caterpillar host' : '';
   const total = beeBeacons.length;
-  if (!total) {
-    h.innerHTML = '🐝 <b>Bee\'s-eye view</b> — no flowers for ' + who
-      + ' in this design yet · ' + controls;
+  const got = beeBeacons.filter(b => b.visited).length;
+
+  // Seasonal tour: show the month and the running nectar tally.
+  if (tourMode) {
+    h.innerHTML = '🌸 <b>Touring the year</b> — ' + _MONTHS3[sceneMonth]
+      + ' · ' + icon + ' ' + who + ' · nectar collected ' + beeVisited.size
+      + hostHint + ' · toggle <b>Tour</b> off to fly yourself';
     return;
   }
-  const got = beeBeacons.filter(b => b.visited).length;
+
+  if (!total) {
+    // No collectable nectar THIS MONTH. Distinguish "not in bloom now" from
+    // "adult doesn't feed" (non-feeding moths) from "no nectar plants at all".
+    if (beeTargetIds.size > 0) {
+      h.innerHTML = icon + ' <b>' + who + '</b> — nothing it drinks from is in bloom in '
+        + _MONTHS3[sceneMonth] + '. Try <b>🌸 Tour the year</b> or the season slider.'
+        + hostHint;
+    } else if (beeHostIds.size > 0) {
+      h.innerHTML = icon + ' <b>' + who + '</b> doesn\'t feed as an adult — the 🌿 green '
+        + 'markers are its caterpillar host plants. ' + controls;
+    } else {
+      h.innerHTML = icon + ' <b>' + who + '</b> — no plants for it in this design yet · '
+        + controls;
+    }
+    return;
+  }
   if (got >= total) {
-    h.innerHTML = '🎉 <b>All ' + total + ' flowers visited!</b> This design feeds '
-      + who + '.';
+    h.innerHTML = '🎉 <b>All ' + total + ' bloom' + (total === 1 ? '' : 's')
+      + ' visited!</b> This design feeds ' + who + ' in ' + _MONTHS3[sceneMonth]
+      + '.' + hostHint;
     return;
   }
   // Relative bearing to the nearest unvisited flower → an 8-way arrow.
@@ -2639,15 +2801,22 @@ function updateBeeHud(t) {
   const dx = nu.b.pos.x - camera.position.x, dz = nu.b.pos.z - camera.position.z;
   const brg = Math.atan2(dx, -dz) - beeYaw;
   const idx = ((Math.round(brg / (Math.PI / 4)) % 8) + 8) % 8;
-  h.innerHTML = '🐝 <b>Nectar ' + got + '/' + total + '</b> · nearest flower '
+  h.innerHTML = icon + ' <b>Nectar ' + got + '/' + total + '</b> · nearest '
     + Math.max(1, Math.round(nu.d)) + ' m ' + _ARROWS[idx] + ' · ' + controls
-    + ' · <b>F</b> = fly me there';
+    + ' · <b>F</b> = fly me there' + hostHint;
 }
 
+// The overlay tint is a bee-specific "UV goggles" cue; butterflies/moths get a
+// plain soft vignette instead (no false claim about their colour vision).
 function setBeeVisionUI(on) {
   const v = document.getElementById('bee-vision');
   const h = document.getElementById('bee-hint');
-  if (v) v.style.display = on ? 'block' : 'none';
+  if (v) {
+    v.style.display = on ? 'block' : 'none';
+    v.style.background = beeKind === 'bee' ? '' :
+      'radial-gradient(ellipse 84% 84% at center,' +
+      ' rgba(0,0,0,0) 58%, rgba(20,28,40,.40) 100%)';
+  }
   if (h) h.style.display = on ? 'block' : 'none';
 }
 
@@ -2674,11 +2843,7 @@ function enterBeeMode() {
   beeVisited.clear();                 // every flight is a fresh nectar run
   beeMsg = ''; beeMsgUntil = 0;
   beePrevT = 0;
-  if (!beeAvatar) {
-    beeAvatar = makeBeeAvatar();
-    beeAvatar.position.set(0, -0.42, -1.1);     // low-forward, in camera space
-    camera.add(beeAvatar);
-  }
+  ensureAvatar();
   beeAvatar.visible = true;
   setBeeVisionUI(true);
   rebuildBeacons();
@@ -2690,6 +2855,7 @@ function exitBeeMode() {
   beeKeys.clear();
   beeDragging = false;
   beeAuto = null;
+  tourMode = false;
   clearBursts();
   if (beeAvatar) beeAvatar.visible = false;
   setBeeVisionUI(false);
@@ -2722,6 +2888,12 @@ function beeStep(t) {
   beePrevT = t;
 
   if (beeAuto && beeKeys.size) beeAuto = null;   // manual input takes over
+  // Seasonal tour: keep auto-hopping to the nearest unvisited bloom (silent — the
+  // HUD shows the touring state). The host advances the month underneath us.
+  if (tourMode && !beeAuto && beeKeys.size === 0) {
+    const nu = nearestUnvisited();
+    if (nu) beeAuto = { key: nu.b.key, pos: nu.b.pos.clone() };
+  }
   const want = new THREE.Vector3();
   let strafe = 0;
   if (beeAuto) {
@@ -2761,11 +2933,12 @@ function beeStep(t) {
   beeBank += ((-0.35 * strafe) - beeBank) * Math.min(1, dt * 6);
   camera.rotateZ(beeBank * 0.35);
 
-  // Animate the visible bee: fast wing flutter + a hover bob.
+  // Animate the visible flyer: wingbeat (per-kind rate/amplitude) + a hover bob.
   if (beeAvatar && beeAvatar.visible) {
-    const flap = 0.2 + (0.5 + 0.5 * Math.sin(t * 0.09)) * 0.75;
+    const fp = beeAvatar.userData.flap;
+    const flap = fp.base + (0.5 + 0.5 * Math.sin(t * fp.speed)) * fp.amp;
     for (const { pivot, sign } of beeAvatar.userData.wings) pivot.rotation.z = sign * flap;
-    beeAvatar.position.y = -0.42 + Math.sin(t * 0.006) * 0.03;
+    beeAvatar.position.y = (beeKind === 'bee' ? -0.42 : -0.86) + Math.sin(t * 0.006) * 0.03;
     beeAvatar.rotation.z = beeBank;
   }
 
@@ -2796,6 +2969,12 @@ function beeStep(t) {
     b.core.material.opacity = 0.95 * nearFade;
     b.core.position.y = b.pos.y + Math.sin(t * 0.0035 + b.phase) * 0.08;
   }
+  // Caterpillar-host markers: slow spin + a gentle green pulse.
+  for (const hst of beeHosts) {
+    hst.marker.rotation.y += dt * 0.7;
+    hst.marker.position.y = hst.pos.y + Math.sin(t * 0.003 + hst.phase) * 0.05;
+    hst.glow.scale.setScalar(0.9 * (1 + 0.18 * Math.sin(t * 0.004 + hst.phase)));
+  }
 
   if (t - beeHudAt > 200) { beeHudAt = t; updateBeeHud(t); }
 }
@@ -2825,21 +3004,40 @@ window.permaSetBeeMode = function (on) {
   beeMode = want;
   if (beeMode) enterBeeMode(); else exitBeeMode();
 };
-window.permaSetBeeTargets = function (ids, label) {
+// Set the chosen pollinator's plants + avatar kind. ``ids`` are adult nectar
+// plants (bloom-gated beacons); ``hostIds`` are larval hosts (butterflies/moths)
+// shown as green nursery markers; ``kind`` picks the flying avatar.
+window.permaSetBeeTargets = function (ids, label, kind, hostIds) {
   beeTargetIds = new Set((ids || []).map(String));
+  beeHostIds = new Set((hostIds || []).map(String));
   beeLabel = String(label || '');
-  beeVisited.clear();                 // a new bee starts a fresh nectar run
+  const k = (kind === 'butterfly' || kind === 'moth') ? kind : 'bee';
+  if (k !== beeKind) {
+    beeKind = k;
+    if (beeMode) { ensureAvatar(); beeAvatar.visible = true; setBeeVisionUI(true); }
+  }
+  beeVisited.clear();                 // a new creature starts a fresh nectar run
   beeAuto = null;
   rebuildBeacons();
 };
 
+// Toggle the seasonal nectar tour: the flyer auto-hops flower to flower while
+// the host advances the scene month, so blooms come and go across the year.
+window.permaSetBeeTour = function (on) {
+  tourMode = !!on;
+  if (!tourMode) beeAuto = null;
+  updateBeeHud();
+};
+
 // Reset view — registered for BOTH callers (the 3D window's "Reset view"
 // button and the sprite gallery); before V2.12 this hook was never defined,
-// so the button silently did nothing. In bee mode it re-spawns the bee.
+// so the button silently did nothing. In fly mode it re-spawns the flyer.
 window.permaResetView = function () {
   if (beeMode) { beeSpawn(); updateBeeHud(); return; }
   if (lastBounds) frameCamera(lastBounds);
-};addEventListener('resize', () => {
+};
+
+addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);

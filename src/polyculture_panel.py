@@ -1069,6 +1069,77 @@ class PolycultureBuilderDialog(QDialog):
         }
 
 
+class _CreaturePickerDialog(QDialog):
+    """Small modal picker for the "For a creature…" community generator: a
+    grouped combo of native bees (genus-first) and butterflies & moths, mirroring
+    the 3D fly-through's selector. ``pick()`` returns ``{"fid", "name"}`` or
+    ``None`` if cancelled."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Design a community for a creature")
+        layout = QVBoxLayout(self)
+        layout.addWidget(QLabel(
+            "Choose a native pollinator. Its nectar plants — and, for a "
+            "butterfly or moth, the host plants its caterpillars need — become "
+            "a ready-to-plant community."))
+        self._combo = QComboBox()
+        self._populate(self._combo)
+        layout.addWidget(self._combo)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    @staticmethod
+    def _populate(combo):
+        def _header(text):
+            combo.addItem(text, userData=None)
+            item = combo.model().item(combo.count() - 1)
+            if item is not None:
+                item.setEnabled(False)
+
+        try:
+            from src.bee_habitat import list_target_bees
+            bees = list_target_bees()
+        except Exception:      # noqa: BLE001
+            bees = []
+        genus = None
+        for b in bees:
+            if b["genus"] != genus:
+                genus = b["genus"]
+                _header(f"── {genus} ──")
+            label = (f"    {b['common_name']} (any {b['genus']})" if b["is_group"]
+                     else f"    {b['common_name']}")
+            combo.addItem(label, userData={"fid": b["id"], "name": b["common_name"]})
+        try:
+            from src.lep_habitat import list_target_lepidoptera
+            leps = list_target_lepidoptera()
+        except Exception:      # noqa: BLE001
+            leps = []
+        if leps:
+            _header("── Butterflies & Moths ──")
+            for lp in leps:
+                icon = "🌙" if lp["kind"] == "moth" else "🦋"
+                combo.addItem(f"    {icon} {lp['common_name']}",
+                              userData={"fid": lp["id"], "name": lp["common_name"]})
+        for i in range(combo.count()):
+            if combo.itemData(i) is not None:
+                combo.setCurrentIndex(i)
+                break
+
+    def selected(self):
+        return self._combo.itemData(self._combo.currentIndex())
+
+    @classmethod
+    def pick(cls, parent):
+        dlg = cls(parent)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return None
+        return dlg.selected()
+
+
 class PolyculturePanel(QWidget):
     placePolycultureRequested = pyqtSignal(dict)  # polyculture data with members
     fillAreaRequested = pyqtSignal(int, float, bool)  # polyculture_id, cell spacing (m), matrix (F22)
@@ -1184,6 +1255,17 @@ class PolyculturePanel(QWidget):
         self.new_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
         self.new_btn.clicked.connect(self._on_new_polyculture)
         btn_row1.addWidget(self.new_btn)
+
+        # "For a creature…" — generate a community tailored to a native bee,
+        # butterfly or moth from its nectar + larval-host plants (V2.12).
+        self.creature_btn = QPushButton("🦋 For a creature…")
+        self.creature_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
+        self.creature_btn.setToolTip(
+            "Build a plant community tailored to a native bee, butterfly or "
+            "moth — its nectar plants and (for butterflies/moths) the host "
+            "plants its caterpillars need.")
+        self.creature_btn.clicked.connect(self._on_creature_community)
+        btn_row1.addWidget(self.creature_btn)
 
         self.delete_btn = QPushButton("Delete")
         self.delete_btn.setStyleSheet(_POLY_MGMT_BTN_STYLE)
@@ -2107,6 +2189,36 @@ class PolyculturePanel(QWidget):
             QMessageBox.critical(self, "Error", f"Could not create plant community:\n{e}")
             return
         self._refresh_polyculture_list()
+
+    def _on_creature_community(self):
+        """Generate a plant community tailored to a chosen native pollinator
+        (bee, butterfly or moth) and add it to the library (V2.12)."""
+        creature = _CreaturePickerDialog.pick(self)
+        if creature is None:
+            return
+        try:
+            from src.creature_community import build_creature_community
+            community = build_creature_community(creature["fid"])
+        except Exception as e:      # noqa: BLE001
+            QMessageBox.critical(self, "Error",
+                                 f"Could not build the community:\n{e}")
+            return
+        if not community or not community["members"]:
+            QMessageBox.information(
+                self, "Nothing to plant yet",
+                f"The plant database doesn't yet record plants that support "
+                f"the {creature['name']}, so there's no community to build.")
+            return
+        try:
+            new_id = polycultures.create_polyculture(
+                community["name"], community["description"], None)
+            polycultures.replace_polyculture_members(new_id, community["members"])
+        except Exception as e:      # noqa: BLE001
+            QMessageBox.critical(self, "Error",
+                                 f"Could not save the community:\n{e}")
+            return
+        self._refresh_polyculture_list()
+        self._select_polyculture_in_tree(new_id)
 
     def _on_edit_polyculture(self):
         """Open the visual builder pre-loaded with the selected polyculture.
