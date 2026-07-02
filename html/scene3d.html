@@ -51,6 +51,12 @@
       follow camera (WASD + drag-look) you steer among the wildlife.
     · The flown avatar is now species-styled from an appearance spec passed on
       set_bee_targets (a metallic-green sweat bee ≠ a fuzzy bumble bee).
+    · permaSetPlantSpotlight(items, app) lights a labelled glow column over each
+      plant a creature uses and tours one of that creature between them — the
+      "which of my plants help this bee?" overlay (orbit/walk).
+    · Ambient wildlife is de-clumped host-side (scene_wildlife) + grounded with
+      contact shadows; hovering a creature identifies it and the plant edge; the
+      flyer cruises slower (BEE_SPEED) and names the flower it reaches.
 
   V2.12 also opened the fly-through to Lepidoptera and made it bloom-accurate:
     · beeKind ∈ {bee, butterfly, moth} picks the flying avatar; butterflies/
@@ -2941,6 +2947,7 @@ function enterBeeMode() {
   if (!beeNameSprite) { beeNameSprite = makeTextSprite(); scene.add(beeNameSprite); }
   beeNameSprite.visible = false; beeNameText = '';
   if (wildlifeGroup) wildlifeGroup.visible = false;   // focus on the flown creature
+  if (spotGroup) spotGroup.visible = false;           // the spotlight is orbit/walk-only
   rebuildBeacons();
   beeSpawn();
   updateBeeHud();
@@ -2957,6 +2964,7 @@ function exitBeeMode() {
   setBeeVisionUI(false);
   rebuildBeacons();                 // beeMode is false now → clears the beacons
   if (wildlifeGroup) wildlifeGroup.visible = true;   // wildlife returns in orbit
+  if (spotGroup) spotGroup.visible = true;           // spotlight returns too
   controls.enabled = true;
   if (lastBounds) frameCamera(lastBounds);   // back to a sensible orbit
   else controls.update();
@@ -3332,7 +3340,14 @@ const _CRITTER_FACTORY = {
 function disposeWildlife() {
   if (!wildlifeGroup) { wildlifeCritters = []; return; }
   scene.remove(wildlifeGroup);
-  disposeObject(wildlifeGroup);
+  // Dispose per-critter geometry/materials, but NOT the shared contact-shadow
+  // geometry/material (reused across rebuilds) or its shared SHADOW_TEX.
+  wildlifeGroup.traverse(o => {
+    if (o.geometry && o.geometry !== _CRIT_SHADOW_GEO) o.geometry.dispose();
+    const m = o.material;
+    if (m) for (const mm of (Array.isArray(m) ? m : [m]))
+      if (mm && mm !== _CRIT_SHADOW_MAT) mm.dispose();
+  });
   wildlifeGroup = null; wildlifeCritters = [];
 }
 
@@ -3417,6 +3432,87 @@ window.permaSetWildlife = function (list) {
   WILDLIFE = Array.isArray(list) ? list : [];
   rebuildWildlife();
 };
+
+// ── "Show its plants" spotlight (V2.12) ──────────────────────────────────────
+// An orbit/walk overlay that answers "which of my plants does this creature
+// benefit from?": a glowing column + name label rises over each plant the
+// chosen creature uses, and one of that creature tours them, visiting each in
+// turn. Both illuminate AND visit. Cleared by pushing an empty list.
+let SPOT = [], spotGroup = null, spotCritter = null, spotIdx = 0, spotPause = 0;
+
+function disposeSpot() {
+  if (spotGroup) {
+    scene.remove(spotGroup);
+    spotGroup.traverse(o => {
+      if (o.geometry && !o.isSprite) o.geometry.dispose();   // sprites share geo
+      const m = o.material;
+      if (m) for (const mm of (Array.isArray(m) ? m : [m])) {
+        if (mm && mm.map && mm.map !== GLOW_TEX && mm.map !== SHADOW_TEX) mm.map.dispose();
+        if (mm) mm.dispose();
+      }
+    });
+  }
+  spotGroup = null; spotCritter = null; SPOT = []; spotIdx = 0; spotPause = 0;
+}
+
+window.permaSetPlantSpotlight = function (items, appearance) {
+  disposeSpot();
+  const list = Array.isArray(items) ? items : [];
+  if (!list.length) return;
+  if (beeMode) window.permaSetBeeMode(false);   // an orbit/walk overlay, not fly
+  if (!GLOW_TEX) GLOW_TEX = makeGlowTexture();
+  spotGroup = new THREE.Group();
+  for (const it of list) {
+    const gy = terrainHeightAt(it.x, it.y, lastTerrain);
+    const ph = Math.max(0.8, it.h || 1);
+    const top = gy + ph;
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.18, ph + 1.4, 8, 1, true),
+      new THREE.MeshBasicMaterial({ color: 0xbfe98a, transparent: true, opacity: 0.16,
+        side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }));
+    beam.position.set(it.x, gy + (ph + 1.4) / 2, -it.y);
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX,
+      color: 0xd8f0a0, transparent: true, opacity: 0.85,
+      blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.position.set(it.x, top, -it.y); glow.scale.setScalar(1.7);
+    const label = makeTextSprite(); setSpriteText(label, it.name || 'plant');
+    const lh = 1.05; label.scale.set((label.userData.aspect || 4) * lh, lh, 1);
+    label.position.set(it.x, top + 1.0, -it.y);
+    spotGroup.add(beam, glow, label);
+    it._top = new THREE.Vector3(it.x, top, -it.y);
+  }
+  const app = appearance || { kind: 'bee' };
+  spotCritter = (app.kind === 'butterfly' || app.kind === 'moth')
+    ? makeButterflyCritter(app) : makeBeeCritter(app);
+  spotCritter.scale.multiplyScalar(1.8);
+  spotCritter.position.copy(list[0]._top);
+  spotGroup.add(spotCritter);
+  SPOT = list; spotIdx = 0; spotPause = 0;
+  scene.add(spotGroup);
+};
+
+let _spotPrevT = 0;
+function stepSpotlight(t) {
+  if (!spotGroup || !SPOT.length || !spotCritter) { _spotPrevT = t; return; }
+  const dt = _spotPrevT ? Math.min(0.05, (t - _spotPrevT) / 1000) : 0.016;
+  _spotPrevT = t;
+  const tgt = SPOT[spotIdx]._top;
+  if (spotPause > 0) {
+    spotPause -= dt;
+    if (spotPause <= 0) spotIdx = (spotIdx + 1) % SPOT.length;
+  } else {
+    const d = new THREE.Vector3().subVectors(tgt, spotCritter.position);
+    const dist = d.length();
+    if (dist < 0.35) { spotPause = 1.3; }        // pause and sip at each flower
+    else {
+      spotCritter.position.addScaledVector(d.multiplyScalar(1 / dist),
+                                           Math.min(dist, (BEE_SPEED * 0.8) * dt));
+      spotCritter.rotation.y = Math.atan2(d.x, -d.z);
+    }
+  }
+  spotCritter.position.y = tgt.y + Math.sin(t * 0.005 + spotIdx) * 0.06;
+  flapWings(spotCritter, t);
+}
 
 // ── Third-person "Walk the garden" (V2.12) ───────────────────────────────────
 // A walking human avatar with a follow camera, strolling among the wildlife.
@@ -3596,6 +3692,7 @@ renderer.setAnimationLoop((t) => {
   else if (walkMode) walkStep(t);
   else controls.update();
   animateWildlife(t);               // ambient life (no-op when the group is hidden)
+  if (!beeMode) stepSpotlight(t);   // "show its plants" tour (orbit/walk overlay)
   renderer.render(scene, camera);
 });
 </script>

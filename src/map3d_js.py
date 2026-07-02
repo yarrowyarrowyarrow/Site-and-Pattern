@@ -130,6 +130,17 @@ def set_wildlife(creatures: list) -> str:
             f"{json.dumps(creatures or [])});")
 
 
+def set_plant_spotlight(items: list, appearance: dict = None) -> str:
+    """JS to spotlight the plants a chosen creature uses (V2.12): a glowing
+    column + name label over each, and one of that creature touring them.
+    ``items`` is ``[{plant_id, name, x, y, h}, ...]`` (the design's plants the
+    creature benefits from); ``appearance`` styles the touring creature. Push an
+    empty list to clear. Guarded with ``&&`` so it's a no-op until the viewer
+    registers ``window.permaSetPlantSpotlight``."""
+    return ("window.permaSetPlantSpotlight && window.permaSetPlantSpotlight("
+            f"{json.dumps(items or [])}, {json.dumps(appearance or None)});")
+
+
 def set_walk_mode(on: bool) -> str:
     """JS to enter/leave the third-person "walk the garden" mode (V2.12): a
     walking human avatar with a follow camera, strolling among the ambient

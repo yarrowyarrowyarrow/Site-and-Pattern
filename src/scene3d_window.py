@@ -167,6 +167,16 @@ class Scene3DWindow(QWidget):
             "other creatures your plants support.")
         self._walk_btn.toggled.connect(self._on_walk)
 
+        # "Show its plants" — spotlight (illuminate + a touring creature) the
+        # plants in THIS design that the chosen creature benefits from (V2.12).
+        self._spot_btn = QPushButton("✨ Show its plants")
+        self._spot_btn.setCheckable(True)
+        self._spot_btn.setToolTip(
+            "Light up the plants in your design that feed or host the selected "
+            "creature, and send one of it to visit each — an at-a-glance answer "
+            "to 'which of my plants help this bee / butterfly?'")
+        self._spot_btn.toggled.connect(self._on_spotlight)
+
         self._last_origin = None
 
         bar = QHBoxLayout()
@@ -191,6 +201,7 @@ class Scene3DWindow(QWidget):
         bar.addWidget(self._bee_btn)
         bar.addWidget(self._tour_btn)
         bar.addWidget(self._walk_btn)
+        bar.addWidget(self._spot_btn)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(6, 6, 6, 6)
@@ -220,8 +231,10 @@ class Scene3DWindow(QWidget):
             # the scan's footprints are; the raw points are a preview aid).
             scan=getattr(self._main, "_scan_scene_sample", None),
         )
-        # Remember the origin so a yard-photo bake frames the splat correctly.
+        # Remember the origin so a yard-photo bake frames the splat correctly,
+        # and keep the built scene for the "show its plants" spotlight.
         self._last_origin = scene.get("origin")
+        self._scene = scene
         self.viewer.apply_scene(scene)
         # Ambient wildlife: the animals the design's plants support, placed on
         # the plants they use (V2.12). Recomputed each push so it tracks the
@@ -231,6 +244,9 @@ class Scene3DWindow(QWidget):
             self.viewer.set_wildlife(wildlife_for_scene(scene))
         except Exception:      # noqa: BLE001
             self.viewer.set_wildlife([])
+        # Keep an active "show its plants" spotlight in sync with the new scene.
+        if getattr(self, "_spot_btn", None) is not None and self._spot_btn.isChecked():
+            self._push_spotlight()
 
     def _on_bake_yard_photo(self):
         """Render the loaded splat top-down and hand the PNG to the map layer."""
@@ -377,10 +393,60 @@ class Scene3DWindow(QWidget):
             self._bee_btn.setChecked(False)     # leaves fly mode first
         self.viewer.set_walk_mode(on)
 
+    # ── "Show its plants" spotlight (V2.12) ───────────────────────────────
+
+    def _creature_plant_ids(self, creature) -> list:
+        """DB plant ids the creature benefits from: a bee's forage, or a
+        butterfly/moth's nectar + larval-host plants."""
+        fid = creature["fid"]
+        try:
+            if creature["taxon"] == "bee":
+                from src.bee_habitat import target_plant_ids_for_bee
+                return target_plant_ids_for_bee(fid)
+            from src.lep_habitat import (nectar_plant_ids_for_lep,
+                                         larval_host_ids_for_lep)
+            return sorted(set(nectar_plant_ids_for_lep(fid))
+                          | set(larval_host_ids_for_lep(fid)))
+        except Exception:      # noqa: BLE001
+            return []
+
+    def _push_spotlight(self):
+        """Build the spotlight item list (the design's plants the selected
+        creature uses) and push it, with the creature's avatar appearance."""
+        creature = self._current_creature()
+        scene = getattr(self, "_scene", None)
+        if creature is None or not scene:
+            self.viewer.set_plant_spotlight([])
+            return
+        used = set(self._creature_plant_ids(creature))
+        items = [{"plant_id": p["plant_id"], "name": p.get("common_name", ""),
+                  "x": p["x"], "y": p["y"], "h": p.get("height_m", 1.0)}
+                 for p in scene.get("plants", [])
+                 if p.get("plant_id") in used]
+        appearance = None
+        try:
+            from src.scene_wildlife import appearance_for_fauna
+            appearance = appearance_for_fauna(creature["fid"])
+        except Exception:      # noqa: BLE001
+            pass
+        self.viewer.set_plant_spotlight(items, appearance)
+
+    def _on_spotlight(self, on: bool):
+        """Toggle the spotlight. Exclusive with fly mode (it's an orbit/walk
+        overlay); pushes an empty list to clear."""
+        if on:
+            if self._bee_btn.isChecked():
+                self._bee_btn.setChecked(False)
+            self._push_spotlight()
+        else:
+            self.viewer.set_plant_spotlight([])
+
     def _on_bee_target_changed(self, *_):
         self._bee_btn.setText(self._fly_verb(self._current_creature()))
         if self._bee_btn.isChecked():
             self._push_targets()
+        if getattr(self, "_spot_btn", None) is not None and self._spot_btn.isChecked():
+            self._push_spotlight()
 
     # ── Seasonal "Tour the year" (V2.12) ──────────────────────────────────
 

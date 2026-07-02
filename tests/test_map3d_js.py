@@ -184,6 +184,18 @@ class TestWildlifeAndWalk(unittest.TestCase):
         self.assertTrue(on.strip().endswith(");"))
         self.assertIn("false", m3.set_walk_mode(False))
 
+    def test_set_plant_spotlight_json(self):
+        items = [{"plant_id": 5, "name": "Wild Bergamot", "x": 1.0, "y": 2.0, "h": 0.9}]
+        app = {"kind": "bee", "fuzz": "#f2c12e"}
+        js = m3.set_plant_spotlight(items, app)
+        self.assertIn("window.permaSetPlantSpotlight && window.permaSetPlantSpotlight(",
+                      js)
+        self.assertIn('"Wild Bergamot"', js)
+        self.assertIn('"#f2c12e"', js)
+        self.assertTrue(js.strip().endswith(");"))
+        # Empty clears; appearance defaults to null.
+        self.assertIn("permaSetPlantSpotlight([], null", m3.set_plant_spotlight([]))
+
 
 if __name__ == "__main__":
     unittest.main()

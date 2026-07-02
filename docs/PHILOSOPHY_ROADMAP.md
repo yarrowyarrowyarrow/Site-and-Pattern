@@ -441,6 +441,19 @@ connectivity to the design's planted areas; a new analysis layer.
     concentric rings (canopy centre → nectar-rich edge), with an honest overwintering/nesting note.
     A Monarch yields a *Monarch Waystation* (milkweed hosts + late-nectar composites); a non-feeding
     Cecropia moth yields a host-only tree/shrub community.
+  - **✅ Increment 7 — 3D readability pass + "Show its plants" (shipped, V2.12):** answering the "the
+    bugs clump / you can't tell what is what / the bee's too fast" feedback. Ambient wildlife no longer
+    piles onto one keystone plant — `scene_wildlife` spreads each species across the plants it uses and
+    runs a spacing-relaxation pass so no two creatures sit within ~0.85 m; each critter gets a
+    contact-shadow disc (tracking the fliers) so a low bee reads apart from a flower. Hovering a creature
+    now identifies it and the edge — *"Bumble bee · sips nectar at Wild Bergamot"* (raycast wildlife
+    first, plant names as the fallback). The flyer's cruise dropped 7→4 m/s with a gentler autopilot, and
+    the flower's name is revealed on approach as a constant-screen-size floating label. New **"✨ Show its
+    plants"** button (`permaSetPlantSpotlight`): in orbit/walk it raises a glowing, name-labelled light
+    column over every plant in the design the selected creature benefits from and sends one of that
+    creature touring them — the at-a-glance "which of my plants help this bee?" the 2D "what the bee sees"
+    lens does on the map, now in 3D. (Also fixed a latent dispose bug that freed the shared critter-shadow
+    geometry on every wildlife rebuild.)
   - **✅ Increment 6 — Ambient wildlife + a third-person walk (shipped, V2.12):** the 3D scene now shows
     **the animals the design's plants actually support**, not just the one you fly. `src/scene_wildlife.py`
     (Qt-free) reads the documented plant↔fauna edges for the scene's plants and places a capped,

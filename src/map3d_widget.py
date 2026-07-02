@@ -189,6 +189,10 @@ class Map3DWidget(QWebEngineView):
         """Enter/leave third-person "walk the garden" mode (V2.12)."""
         self.run_js(map3d_js.set_walk_mode(on))
 
+    def set_plant_spotlight(self, items: list, appearance: dict = None):
+        """Spotlight the plants a chosen creature uses; empty list clears (V2.12)."""
+        self.run_js(map3d_js.set_plant_spotlight(items, appearance))
+
     def set_sun_for(self, lat: float, lng: float, when: datetime):
         """Point the 3D sun for a place/time (reuses ``src/solar`` via map3d_js)."""
         self.run_js(map3d_js.set_sun_for(lat, lng, when))
