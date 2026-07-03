@@ -58,6 +58,12 @@
       lift so they read against the dark.
     · permaSetPlantSpotlight(items, appearance) lights + labels the design's
       plants a chosen creature uses, with one of it touring them.
+    · V2.13 liveliness pass: flower sprites de-blob (varied per-bloom size +
+      even areal spread, per-point aSize attribute); ambient critters follow a
+      route of the plants their species uses (travel · land · dwell) with
+      per-taxon motion (butterflies flutter, birds hop perch-to-perch, mammals
+      scurry); permaSetWildlifeLabels(on) shows a "who lives here" roster +
+      distance-gated name labels over each creature.
     · permaSetPlantSpotlight(items, app) lights a labelled glow column over each
       plant a creature uses and tours one of that creature between them — the
       "which of my plants help this bee?" overlay (orbit/walk).
@@ -117,6 +123,19 @@
     background: rgba(30,12,60,.80); border: 1px solid #6a4ea0;
     border-radius: 8px; padding: 6px 12px; line-height: 1.4; text-align: center;
   }
+  /* "Who lives here" roster (V2.13): the wildlife the design's plants support,
+     grouped by kind — so you can read the scene without hovering. */
+  #wild-roster {
+    position: absolute; top: 10px; right: 10px; z-index: 6; display: none;
+    max-height: 78%; overflow-y: auto; width: 240px;
+    font-family: system-ui, sans-serif; font-size: 12px; color: #eef4ec;
+    background: rgba(18,28,20,.86); border: 1px solid #3a5a3a;
+    border-radius: 8px; padding: 8px 11px; line-height: 1.4;
+  }
+  #wild-roster h4 { margin: 0 0 5px; font-size: 12.5px; color: #cfe8c8; }
+  #wild-roster .grp { margin-top: 7px; font-weight: 600; color: #b7d8ea; }
+  #wild-roster .row { color: #d7e6d2; padding-left: 4px; }
+  #wild-roster .on { color: #8fae86; }
 </style>
 </head>
 <body>
@@ -124,6 +143,7 @@
 <div id="plant-tip"></div>
 <div id="offline"><div id="offline-msg"><b>3D viewer couldn't start</b><br>
 The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
+<div id="wild-roster"></div>
 <div id="bee-vision"></div>
 <div id="bee-hint"></div>
 
@@ -2155,6 +2175,21 @@ function clampPointSize(mat, px) {
   return mat;
 }
 
+// Like clampPointSize, but each point also carries a per-sprite size multiplier
+// (a required `aSize` attribute). Varying bloom sizes is the other half of the
+// de-blob fix (V2.13): a plant reads as several distinct flowers of different
+// sizes rather than one uniform coloured disc.
+function flowerPointSize(mat, px) {
+  mat.onBeforeCompile = (shader) => {
+    shader.vertexShader = 'attribute float aSize;\n' + shader.vertexShader.replace(
+      'gl_PointSize *= ( scale / - mvPosition.z );',
+      'gl_PointSize *= ( scale / - mvPosition.z ) * aSize; '
+      + 'gl_PointSize = min( gl_PointSize, ' + px.toFixed(1) + ' );');
+  };
+  mat.customProgramCacheKey = () => 'fsize' + px;
+  return mat;
+}
+
 // Per-form bloom size + how many sprites to scatter per plant (denser = the
 // plant reads as its flower colour when in bloom).
 const _FLOWER_SIZE = { rays: 0.42, plume: 0.34, spike: 0.34, umbel: 0.30,
@@ -2180,33 +2215,40 @@ function buildFlowers(plants, month, terrain) {
     const list = byForm[form];
     if (!list.length) continue;
     const isCattail = form === 'cattail';
-    const pos = [], col = [];
+    const pos = [], col = [], siz = [];
     for (const p of list) {
       const gy = terrainHeightAt(p.x, p.y, terrain);
       const h = Math.max(0.1, p.height_m);
       const top = gy + h * (isCattail ? 0.96 : 0.9);
-      const rad = Math.max(0.1, p.canopy_m * 0.5);
+      const rad = Math.max(0.12, p.canopy_m * 0.5);
       _fc.set(p.flower_color);
       const seed = hashPid(p.plant_id || 1);
-      // Cattails: a couple of tall brown spikes near the clump centre. Other
-      // forms: dense enough that a blooming plant reads as its flower colour.
+      // Fewer, better-spread heads than before: they used to pile into one
+      // uniform disc. Now sqrt-spaced across the canopy for even areal density,
+      // with real vertical spread + per-bloom size variation so a plant reads as
+      // several distinct flowers (V2.13 de-blob).
       const n = isCattail ? 1 + (seed % 3)
-              : qn(p.plant_type === 'tree' ? 14
-                 : p.plant_type === 'shrub' ? 11
-                 : p.plant_type === 'grass' ? 6 : 9);
+              : qn(p.plant_type === 'tree' ? 10
+                 : p.plant_type === 'shrub' ? 8
+                 : p.plant_type === 'grass' ? 5 : 7);
       for (let k = 0; k < n; k++) {
-        const a = ((seed + k * 97) % 628) / 100;
-        const rr = isCattail ? rad * 0.22 * (((seed + k * 53) % 100) / 100)
-                             : rad * (0.18 + 0.78 * (((seed + k * 53) % 100) / 100));
-        const dy = isCattail ? 0 : ((k % 3) - 1) * rad * 0.2;
+        const j1 = ((seed + k * 97) % 997) / 997;
+        const j2 = ((seed + k * 53) % 991) / 991;
+        const j3 = ((seed + k * 29) % 983) / 983;
+        const a = j1 * Math.PI * 2;
+        const rr = isCattail ? rad * 0.22 * j2
+                             : rad * (0.12 + 0.9 * Math.sqrt(j2));  // even areal spread
+        const dy = isCattail ? 0 : (j3 - 0.5) * Math.max(0.14, h * 0.3);
         pos.push(p.x + Math.cos(a) * rr, top + dy, -(p.y + Math.sin(a) * rr));
         col.push(_fc.r, _fc.g, _fc.b);
+        siz.push(isCattail ? 1 : 0.6 + 0.85 * (((seed + k * 17) % 100) / 100));
       }
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-    const mat = clampPointSize(new THREE.PointsMaterial({
+    geo.setAttribute('aSize', new THREE.Float32BufferAttribute(siz, 1));
+    const mat = flowerPointSize(new THREE.PointsMaterial({
       map: FLOWER_TEX[form], color: 0xffffff, vertexColors: true,
       transparent: true, alphaTest: 0.4, depthWrite: false,
       // At night the blooms softly luminesce (additive) so they read like
@@ -3468,10 +3510,14 @@ function disposeWildlife() {
   // Dispose per-critter geometry/materials, but NOT the shared contact-shadow
   // geometry/material (reused across rebuilds) or its shared SHADOW_TEX.
   wildlifeGroup.traverse(o => {
-    if (o.geometry && o.geometry !== _CRIT_SHADOW_GEO) o.geometry.dispose();
+    // Skip sprite geometry (shared THREE internal) and the shared shadow geo.
+    if (o.geometry && !o.isSprite && o.geometry !== _CRIT_SHADOW_GEO) o.geometry.dispose();
     const m = o.material;
     if (m) for (const mm of (Array.isArray(m) ? m : [m]))
-      if (mm && mm !== _CRIT_SHADOW_MAT) mm.dispose();
+      if (mm && mm !== _CRIT_SHADOW_MAT) {
+        if (mm.map && mm.map !== SHADOW_TEX) mm.map.dispose();   // per-label canvas
+        mm.dispose();
+      }
   });
   wildlifeGroup = null; wildlifeCritters = [];
 }
@@ -3514,11 +3560,19 @@ function rebuildWildlife() {
     const shadow = makeCritShadow(flier ? 0.5 : 0.4);
     shadow.position.set(anchor.x, gy + 0.02, anchor.z);
     wildlifeGroup.add(shadow);
+    // Route: the plants this species uses, as world targets (x, ground+perchH, z).
+    // The animal travels between them (V2.13) instead of orbiting one plant.
+    const route = (spec.route && spec.route.length ? spec.route
+                   : [[spec.x, spec.y, spec.h || 0.3]]).map(w => {
+      const wgy = terrainHeightAt(w[0], w[1], lastTerrain);
+      return new THREE.Vector3(w[0], wgy + (w[2] || 0.3), -w[1]);
+    });
     wildlifeCritters.push({
       obj, shadow, anchor, h: spec.h || 0.3, seed: (spec.seed || 0) % 1000,
-      anim: obj.userData.anim,
-      driftR: (obj.userData.anim === 'flier') ? 0.25 + ((spec.seed || 0) % 40) / 100 : 0,
-      speed: 0.6 + ((spec.seed || 0) % 50) / 60,
+      anim: obj.userData.anim, route, ri: 0, dwell: 0,
+      pos: obj.position.clone(),
+      speed: (0.7 + ((spec.seed || 0) % 50) / 45),   // m/s scale per animal
+      wanderPh: ((spec.seed || 0) % 628) / 100,
     });
     wildlifeGroup.add(obj);
   }
@@ -3526,42 +3580,149 @@ function rebuildWildlife() {
   scene.add(wildlifeGroup);
 }
 
+// Per-taxon travel speed (m/s) + dwell (s) when it reaches a plant.
+const _WILD_MOVE = {
+  flier:  { spd: 1.6, dwell: 1.6, bob: 0.05 },   // bees: cruise, land & sip
+  hover:  { spd: 1.2, dwell: 1.1, bob: 0.06 },   // hummingbird/dragonfly darts
+  perch:  { spd: 4.5, dwell: 3.2, bob: 0.02 },   // birds: quick hop, long sit
+  ground: { spd: 2.2, dwell: 1.4, bob: 0.0 },    // mammals: scurry then freeze
+  crawl:  { spd: 0.25, dwell: 2.5, bob: 0.0 },   // beetles: slow amble
+};
+const _WV = new THREE.Vector3();
 function animateWildlife(t) {
   if (!wildlifeGroup || !wildlifeGroup.visible) return;
+  const dt = _wildDt(t);
   for (const c of wildlifeCritters) {
-    const ph = c.seed * 0.11, o = c.obj, a = c.anchor;
-    if (c.anim === 'flier') {
-      const ang = t * 0.0006 * c.speed + ph;
-      const x = a.x + Math.cos(ang) * c.driftR;
-      const z = a.z + Math.sin(ang) * c.driftR;
-      o.position.set(x, a.y + c.h + Math.sin(t * 0.004 + ph) * 0.05, z);
-      o.rotation.y = -ang;                 // face the tangent of the circle
-      if (c.shadow) c.shadow.position.set(x, a.y + 0.02, z);   // shadow tracks it
+    const o = c.obj, ph = c.wanderPh, mv = _WILD_MOVE[c.anim] || _WILD_MOVE.flier;
+    const tgt = c.route[c.ri];
+    const single = c.route.length < 2;
+    if (c.dwell > 0) {
+      c.dwell -= dt;                              // resting at / on a plant
+      if (c.dwell <= 0 && !single) c.ri = (c.ri + 1) % c.route.length;
+    } else {
+      _WV.subVectors(tgt, c.pos); _WV.y = 0;
+      const flat = _WV.length();
+      if (flat < 0.25) {                          // arrived → dwell
+        c.dwell = mv.dwell * (0.6 + (c.seed % 40) / 50);
+      } else if (c.anim === 'perch') {
+        // Birds hop discretely between perches: brief hold, then jump.
+        c.pos.lerp(tgt, Math.min(1, dt * 3.0));
+        o.position.copy(c.pos);
+      } else {
+        _WV.multiplyScalar(1 / flat);
+        c.pos.addScaledVector(_WV, Math.min(flat, mv.spd * c.speed * dt));
+        // Butterflies/moths flutter: weave sideways off the straight line.
+        if (c.anim === 'flier' && (o.userData.critterInfo &&
+            (o.userData.critterInfo.kind === 'butterfly' || o.userData.critterInfo.kind === 'moth'))) {
+          const side = new THREE.Vector3(-_WV.z, 0, _WV.x);
+          c.pos.addScaledVector(side, Math.sin(t * 0.012 + ph) * 0.6 * dt);
+          c.pos.y = tgt.y + Math.sin(t * 0.009 + ph) * 0.25;   // bob up & down
+        }
+        o.position.copy(c.pos);
+        o.rotation.y = Math.atan2(_WV.x, _WV.z);
+      }
+    }
+    // Height + local idle motion by kind.
+    if (c.anim === 'flier' || c.anim === 'hover') {
+      const wob = single ? 0.18 : 0.0;            // lone fliers wander in place
+      o.position.x = c.pos.x + Math.sin(t * 0.0016 + ph) * wob;
+      o.position.z = c.pos.z + Math.cos(t * 0.0019 + ph) * wob;
+      o.position.y = (c.dwell > 0 || single ? tgt.y : o.position.y) + Math.sin(t * 0.005 + ph) * mv.bob;
       flapWings(o, t);
-    } else if (c.anim === 'hover') {
-      const x = a.x + Math.sin(t * 0.002 + ph) * 0.12;
-      const z = a.z + Math.cos(t * 0.0022 + ph) * 0.12;
-      o.position.set(x, a.y + c.h + Math.sin(t * 0.005 + ph) * 0.06, z);
-      o.rotation.y = ph + Math.sin(t * 0.001 + ph) * 0.6;
-      if (c.shadow) c.shadow.position.set(x, a.y + 0.02, z);
-      flapWings(o, t);
+      if (c.shadow) c.shadow.position.set(o.position.x, c.anchor.y + 0.02, o.position.z);
     } else if (c.anim === 'perch') {
-      o.position.y = a.y + c.h + Math.sin(t * 0.003 + ph) * 0.02;
-      o.rotation.y = ph + Math.sin(t * 0.0008 + ph) * 0.25;   // look around
+      o.position.y = tgt.y + Math.sin(t * 0.003 + ph) * mv.bob;
+      if (c.dwell > 0) o.rotation.y = ph + Math.sin(t * 0.0009 + ph) * 0.4;   // look around
     } else if (c.anim === 'ground') {
-      const hop = Math.max(0, Math.sin(t * 0.002 + ph));
-      o.position.y = a.y + 0.02 + hop * hop * 0.12;
-      o.rotation.y = ph;
-    } else {                                // crawl (beetle)
-      o.position.y = a.y + c.h + Math.sin(t * 0.001 + ph) * 0.01;
-      o.rotation.y = ph + t * 0.0002;
+      const hop = c.dwell > 0 ? 0 : Math.abs(Math.sin(t * 0.02 + ph)) * 0.06;
+      o.position.y = c.anchor.y + 0.02 + hop;
+      if (c.shadow) c.shadow.position.set(o.position.x, c.anchor.y + 0.02, o.position.z);
+    } else {                                       // crawl (beetle)
+      o.position.y = tgt.y + Math.sin(t * 0.001 + ph) * 0.01;
+    }
+    // Always-on name label: small, constant on-screen size, and only for
+    // creatures within ~13 m (the roster is the full list) so distant labels
+    // don't pile up. Fades out with distance.
+    if (c.label) {
+      const d = camera.position.distanceTo(o.position);
+      if (d > 13) { c.label.visible = false; }
+      else {
+        c.label.visible = true;
+        const hh = 0.02 * Math.max(1.5, d);
+        c.label.scale.set((c.label.userData.aspect || 4) * hh, hh, 1);
+        c.label.position.set(o.position.x, o.position.y + 0.28 + hh * 0.7, o.position.z);
+        c.label.material.opacity = Math.max(0.25, Math.min(0.95, (13 - d) / 6));
+      }
     }
   }
+}
+let _wildPrevT = 0;
+function _wildDt(t) {
+  const dt = _wildPrevT ? Math.min(0.05, (t - _wildPrevT) / 1000) : 0.016;
+  _wildPrevT = t; return dt;
 }
 
 window.permaSetWildlife = function (list) {
   WILDLIFE = Array.isArray(list) ? list : [];
   rebuildWildlife();
+  if (wildLabelsOn) { buildWildLabels(); updateRoster(); }
+};
+
+// ── "Who lives here": roster + always-on labels (V2.13) ──────────────────────
+// One toggle answers "what is what" without hovering: a corner roster grouped
+// by kind, and a small name label floating over each creature.
+let wildLabelsOn = false;
+const _KIND_LABEL = { bee: '🐝 Bees', butterfly: '🦋 Butterflies', moth: '🌙 Moths',
+  bird: '🐦 Birds', fly: '🪰 Flies & dragonflies', beetle: '🐞 Beetles',
+  mammal: '🦇 Mammals' };
+const _KIND_ORDER = ['bee', 'butterfly', 'moth', 'fly', 'beetle', 'bird', 'mammal'];
+
+function updateRoster() {
+  const el = document.getElementById('wild-roster');
+  if (!el) return;
+  if (!wildLabelsOn || !WILDLIFE.length) { el.style.display = 'none'; return; }
+  const byKind = {};
+  for (const c of WILDLIFE) (byKind[c.kind] = byKind[c.kind] || []).push(c);
+  let html = '<h4>🌿 Who lives here — ' + WILDLIFE.length + ' visitors</h4>';
+  for (const k of _KIND_ORDER) {
+    const list = byKind[k]; if (!list || !list.length) continue;
+    html += '<div class="grp">' + (_KIND_LABEL[k] || k) + ' · ' + list.length + '</div>';
+    for (const c of list)
+      html += '<div class="row">' + _escHtml(c.name)
+        + (c.on ? ' <span class="on">· ' + _escHtml(c.on) + '</span>' : '') + '</div>';
+  }
+  el.innerHTML = html;
+  el.style.display = 'block';
+}
+function _escHtml(s) {
+  return String(s || '').replace(/[&<>]/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+}
+
+function buildWildLabels() {
+  clearWildLabels();
+  if (!wildlifeGroup) return;
+  for (const c of wildlifeCritters) {
+    const lab = makeTextSprite(); setSpriteText(lab, c.obj.userData.critterInfo.name || '?');
+    lab.material.depthTest = true;      // occlude behind plants → less clutter
+    lab.renderOrder = 5;
+    wildlifeGroup.add(lab); c.label = lab;
+  }
+}
+function clearWildLabels() {
+  for (const c of wildlifeCritters) {
+    if (c.label) {
+      wildlifeGroup && wildlifeGroup.remove(c.label);
+      if (c.label.material.map) c.label.material.map.dispose();
+      c.label.material.dispose(); c.label = null;
+    }
+  }
+}
+
+window.permaSetWildlifeLabels = function (on) {
+  wildLabelsOn = !!on;
+  if (wildLabelsOn) { buildWildLabels(); updateRoster(); }
+  else { clearWildLabels(); const el = document.getElementById('wild-roster'); if (el) el.style.display = 'none'; }
 };
 
 // ── "Show its plants" spotlight (V2.12) ──────────────────────────────────────

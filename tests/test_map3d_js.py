@@ -184,6 +184,13 @@ class TestWildlifeAndWalk(unittest.TestCase):
         self.assertTrue(on.strip().endswith(");"))
         self.assertIn("false", m3.set_walk_mode(False))
 
+    def test_set_wildlife_labels_guarded_bool(self):
+        on = m3.set_wildlife_labels(True)
+        self.assertIn("window.permaSetWildlifeLabels && window.permaSetWildlifeLabels(", on)
+        self.assertIn("true", on)
+        self.assertTrue(on.strip().endswith(");"))
+        self.assertIn("false", m3.set_wildlife_labels(False))
+
     def test_set_plant_spotlight_json(self):
         items = [{"plant_id": 5, "name": "Wild Bergamot", "x": 1.0, "y": 2.0, "h": 0.9}]
         app = {"kind": "bee", "fuzz": "#f2c12e"}

@@ -332,10 +332,24 @@ def wildlife_for_scene(scene: dict, *,
         # inside it; the k-th animal on a plant steps further out.
         k = load[pid] - 1
         rad = max(0.7, canopy * 0.55) + 0.5 * k
-        base_h = _perch_height(app["kind"], float(p.get("height_m") or 0.5),
+        def _ph(pl):
+            bh = _perch_height(app["kind"], float(pl.get("height_m") or 0.5),
                                r.get("relationship", ""))
-        if app.get("form") == "bat":       # bats flit above the canopy
-            base_h = max(2.5, float(p.get("height_m") or 1.0) + 1.5)
+            if app.get("form") == "bat":
+                bh = max(2.5, float(pl.get("height_m") or 1.0) + 1.5)
+            return bh
+        base_h = _ph(p)
+        # A route of the plants this species uses (present ones), nearest first —
+        # the viewer moves the animal between them so it visits its plants instead
+        # of orbiting one (V2.13). Cap at 4 waypoints; a single-plant species just
+        # wanders locally.
+        others = [q for q in c["plants"] if q != pid and q in by_id]
+        others.sort(key=lambda q: (by_id[q]["x"] - p["x"]) ** 2
+                    + (by_id[q]["y"] - p["y"]) ** 2)
+        route = [[p["x"], p["y"], round(base_h, 2)]]
+        for q in others[:3]:
+            pq = by_id[q]
+            route.append([pq["x"], pq["y"], round(_ph(pq), 2)])
         creatures.append({
             "kind": app["kind"],
             "x": round(p["x"] + math.cos(ang) * rad, 2),
@@ -347,6 +361,7 @@ def wildlife_for_scene(scene: dict, *,
             "rel": r.get("relationship", ""),
             "seed": seed % 100000,
             "app": app,
+            "route": route,
             "_ax": p["x"], "_ay": p["y"],
         })
         per_taxon[taxon] = per_taxon.get(taxon, 0) + 1

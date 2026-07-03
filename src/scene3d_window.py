@@ -181,6 +181,16 @@ class Scene3DWindow(QWidget):
             "to 'which of my plants help this bee / butterfly?'")
         self._spot_btn.toggled.connect(self._on_spotlight)
 
+        # "Identify" — the "who lives here" roster + always-on name labels over
+        # the ambient wildlife, so you can read the scene without hovering (V2.13).
+        self._id_btn = QPushButton("🔎 Identify")
+        self._id_btn.setCheckable(True)
+        self._id_btn.setToolTip(
+            "Label every creature and list who lives here — the wildlife your "
+            "plants support, without having to hover.")
+        self._id_btn.toggled.connect(
+            lambda on: self.viewer.set_wildlife_labels(on))
+
         self._last_origin = None
 
         bar = QHBoxLayout()
@@ -206,6 +216,7 @@ class Scene3DWindow(QWidget):
         bar.addWidget(self._tour_btn)
         bar.addWidget(self._walk_btn)
         bar.addWidget(self._spot_btn)
+        bar.addWidget(self._id_btn)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(6, 6, 6, 6)

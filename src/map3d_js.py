@@ -141,6 +141,14 @@ def set_plant_spotlight(items: list, appearance: dict = None) -> str:
             f"{json.dumps(items or [])}, {json.dumps(appearance or None)});")
 
 
+def set_wildlife_labels(on: bool) -> str:
+    """JS to toggle the "who lives here" roster + always-on name labels over the
+    ambient wildlife (V2.13) — identify the scene without hovering. Guarded with
+    ``&&`` so it's a no-op until the viewer registers ``permaSetWildlifeLabels``."""
+    return ("window.permaSetWildlifeLabels && window.permaSetWildlifeLabels("
+            f"{json.dumps(bool(on))});")
+
+
 def set_walk_mode(on: bool) -> str:
     """JS to enter/leave the third-person "walk the garden" mode (V2.12): a
     walking human avatar with a follow camera, strolling among the ambient

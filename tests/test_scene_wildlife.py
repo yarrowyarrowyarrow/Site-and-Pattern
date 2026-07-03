@@ -105,6 +105,18 @@ class TestSceneWildlife(unittest.TestCase):
         anchors = {c["on"] for c in self.crit}
         self.assertGreaterEqual(len(anchors), 3)
 
+    def test_routes_emitted(self):
+        # Every creature carries a route (≥1 waypoint); a species that uses
+        # several present plants gets a multi-waypoint route so the viewer can
+        # move it between them (V2.13).
+        for c in self.crit:
+            self.assertIn("route", c)
+            self.assertGreaterEqual(len(c["route"]), 1)
+            for wp in c["route"]:
+                self.assertEqual(len(wp), 3)     # [x, y, h]
+        self.assertTrue(any(len(c["route"]) > 1 for c in self.crit),
+                        "expected some multi-plant routes")
+
     def test_deterministic(self):
         again = W.wildlife_for_scene(self.scene)
         self.assertEqual([(c["name"], c["x"], c["y"]) for c in self.crit],

@@ -486,6 +486,15 @@ connectivity to the design's planted areas; a new analysis layer.
     the dark. This also thins the daytime clutter (P9: show only what's true). Data in
     `src/scene_wildlife.py` (+ `bee_flight_seasons` / `lep_activity_seasons` in `src/db/fauna.py`),
     render in `html/scene3d.html`.
+  - **✅ Increment 9 — Liveliness pass: de-blob, travelling wildlife, "who lives here" (shipped, V2.13):**
+    finishing the "alive & legible" axis. **Flowers de-blob** — bloom sprites now vary in size (a
+    per-point `aSize` attribute) and spread evenly across the canopy, so a plant reads as several
+    distinct flowers instead of one coloured disc. **Wildlife travels** — each creature carries a
+    `route` of the plants its species uses (`scene_wildlife`) and the viewer moves it between them
+    (travel → land → dwell) with per-taxon motion: butterflies flutter, birds hop perch-to-perch,
+    mammals scurry-and-freeze. **"🔎 Identify"** — one toggle shows a corner **roster** ("who lives here",
+    grouped by kind with the plant each visitor uses) plus distance-gated **name labels** over each
+    creature, so you read the scene without hovering (`permaSetWildlifeLabels`).
 - **F38 · Mycoremediation / degraded-site notes** — *S · Low (P8)*: well-cited restoration
   techniques for contaminated/compacted ground (content, directional).
 - **F39 · Sensor integration hooks** — *L · High — external (P11)*: optional soil-moisture/
