@@ -207,6 +207,7 @@ class Scene3DWindow(QWidget):
 
         self._last_origin = None
 
+        # Row 1 — the "when / how it looks" scene controls.
         bar = QHBoxLayout()
         bar.addWidget(QLabel("Year:"))
         bar.addWidget(self._year, 2)
@@ -224,18 +225,26 @@ class Scene3DWindow(QWidget):
         bar.addWidget(reset_view)
         bar.addWidget(refresh)
         bar.addWidget(self._bake_btn)
-        bar.addSpacing(16)
-        bar.addWidget(self._bee_combo)
-        bar.addWidget(self._bee_btn)
-        bar.addWidget(self._tour_btn)
-        bar.addWidget(self._walk_btn)
-        bar.addWidget(self._spot_btn)
-        bar.addWidget(self._fly_btn)
-        bar.addWidget(self._id_btn)
+
+        # Row 2 — pick a creature, then the view modes + overlays. Grouped and
+        # labelled so seven controls don't read as one undifferentiated strip.
+        bar2 = QHBoxLayout()
+        bar2.addWidget(QLabel("Creature:"))
+        bar2.addWidget(self._bee_combo)
+        bar2.addWidget(self._bee_btn)
+        bar2.addWidget(self._tour_btn)
+        bar2.addWidget(self._spot_btn)
+        bar2.addSpacing(16)
+        bar2.addWidget(QLabel("View:"))
+        bar2.addWidget(self._walk_btn)
+        bar2.addWidget(self._fly_btn)
+        bar2.addWidget(self._id_btn)
+        bar2.addStretch(1)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(6, 6, 6, 6)
         root.addLayout(bar)
+        root.addLayout(bar2)
         root.addWidget(self.viewer, 1)
 
         self._update_labels()
@@ -270,8 +279,11 @@ class Scene3DWindow(QWidget):
         # the plants they use (V2.12). Recomputed each push so it tracks the
         # year/season. Never let a data hiccup break the scene.
         try:
-            from src.scene_wildlife import wildlife_for_scene
-            self.viewer.set_wildlife(wildlife_for_scene(scene))
+            from src.scene_wildlife import wildlife_for_scene, support_by_taxon
+            pids = [p["plant_id"] for p in scene.get("plants", [])
+                    if p.get("plant_id")]
+            self.viewer.set_wildlife(wildlife_for_scene(scene),
+                                     support_by_taxon(pids))
         except Exception:      # noqa: BLE001
             self.viewer.set_wildlife([])
         # Keep an active "show its plants" spotlight in sync with the new scene.

@@ -141,6 +141,9 @@
   #wild-roster .grp { margin-top: 7px; font-weight: 600; color: #b7d8ea; }
   #wild-roster .row { color: #d7e6d2; padding-left: 4px; }
   #wild-roster .on { color: #8fae86; }
+  #wild-roster .reach { margin: 2px 0 4px; padding: 4px 6px; font-size: 11.5px;
+    color: #eaf6df; background: rgba(90,140,70,.28); border-radius: 5px; }
+  #wild-roster .reach b { color: #ffffff; }
   /* Cinematic flyover (V2.13): letterbox bars + a lower-third caption for the
      hands-free "watch the lawn become habitat" tour. */
   .cine-bar {
@@ -2546,6 +2549,8 @@ window.permaSetScene = function (sc) {
   }
   // Re-place the bee's flower beacons against the freshly-built scene.
   if (beeMode) rebuildBeacons();
+  // Refresh walk obstacles (plants grow/shift with year & season).
+  if (walkMode) buildWalkObstacles();
 
   const n = (sc.plants || []).length;
   document.getElementById('hud').innerHTML =
@@ -3686,11 +3691,16 @@ function _wildDt(t) {
   _wildPrevT = t; return dt;
 }
 
-window.permaSetWildlife = function (list) {
+window.permaSetWildlife = function (list, summary) {
   WILDLIFE = Array.isArray(list) ? list : [];
+  // Optional {taxon: distinct-species-count} the design supports (from the
+  // Habitat Value Score's fauna tally) — shown as the roster headline so the
+  // ecological reach behind the score is legible right where you see them.
+  WILD_SUMMARY = summary && typeof summary === 'object' ? summary : null;
   rebuildWildlife();
   if (wildLabelsOn) { buildWildLabels(); updateRoster(); }
 };
+let WILD_SUMMARY = null;
 
 // ── "Who lives here": roster + always-on labels (V2.13) ──────────────────────
 // One toggle answers "what is what" without hovering: a corner roster grouped
@@ -3700,6 +3710,8 @@ const _KIND_LABEL = { bee: '🐝 Bees', butterfly: '🦋 Butterflies', moth: '�
   bird: '🐦 Birds', fly: '🪰 Flies & dragonflies', beetle: '🐞 Beetles',
   mammal: '🦇 Mammals' };
 const _KIND_ORDER = ['bee', 'butterfly', 'moth', 'fly', 'beetle', 'bird', 'mammal'];
+const _TAXON_WORD = { bee: 'bees', lepidoptera: 'butterflies & moths',
+  bird: 'birds', other_insect: 'other insects', mammal: 'mammals' };
 
 function updateRoster() {
   const el = document.getElementById('wild-roster');
@@ -3707,7 +3719,29 @@ function updateRoster() {
   if (!wildLabelsOn || !WILDLIFE.length) { el.style.display = 'none'; return; }
   const byKind = {};
   for (const c of WILDLIFE) (byKind[c.kind] = byKind[c.kind] || []).push(c);
-  let html = '<h4>🌿 Who lives here — ' + WILDLIFE.length + ' visitors</h4>';
+  let html = '<h4>🌿 Who lives here — ' + WILDLIFE.length + ' out now</h4>';
+  // Headline the design's total ecological reach (the score's wildlife tally):
+  // "supports N wildlife species" so the count behind the Habitat Value Score
+  // is legible right beside the creatures it represents.
+  if (WILD_SUMMARY) {
+    const total = Object.values(WILD_SUMMARY).reduce((a, b) => a + (b | 0), 0);
+    if (total) {
+      const parts = _KIND_ORDER.map(k => {
+        const tax = k === 'butterfly' || k === 'moth' ? 'lepidoptera'
+          : k === 'fly' || k === 'beetle' ? 'other_insect' : k;
+        return [tax, k];
+      });
+      const seen = {}, bits = [];
+      for (const [tax] of parts) {
+        if (seen[tax] || !WILD_SUMMARY[tax]) continue;
+        seen[tax] = 1;
+        bits.push(WILD_SUMMARY[tax] + ' ' + (_TAXON_WORD[tax] || tax));
+      }
+      html += '<div class="reach">🌎 Your plants support <b>' + total
+        + ' wildlife species</b>' + (bits.length ? ' · ' + bits.join(', ') : '')
+        + '</div>';
+    }
+  }
   for (const k of _KIND_ORDER) {
     const list = byKind[k]; if (!list || !list.length) continue;
     html += '<div class="grp">' + (_KIND_LABEL[k] || k) + ' · ' + list.length + '</div>';
@@ -3840,7 +3874,51 @@ let walkFacing = 0;                       // avatar heading (eased toward motion
 const walkKeys = new Set();
 let walkDragging = false, walkLastX = 0, walkLastY = 0;
 let walkPrevT = 0, walkStride = 0;
+let walkObstacles = [];                    // {x, z, r} trunks/buildings to not walk through
 const _WALK_DIST = 6.5;
+const _WALKER_R = 0.35;                     // the walker's body radius
+
+// Solid things the walker shouldn't pass through: tree/tall-shrub trunks and
+// building footprints (as bounding circles). Rebuilt on scene push while walking
+// so it tracks growth/season. You can still stroll *under* a canopy — only the
+// trunk blocks — so the garden stays explorable.
+function buildWalkObstacles() {
+  walkObstacles = [];
+  const sc = lastSceneObj;
+  if (!sc) return;
+  for (const p of sc.plants || []) {
+    const h = p.height_m || 0;
+    if (p.plant_type === 'tree') walkObstacles.push({ x: p.x, z: -p.y, r: 0.45 });
+    else if (p.plant_type === 'shrub' && h > 1.2) walkObstacles.push({ x: p.x, z: -p.y, r: 0.4 });
+  }
+  for (const b of sc.buildings || []) {
+    const ring = b.ring || [];
+    if (ring.length < 3) continue;
+    let cx = 0, cy = 0;
+    for (const pt of ring) { cx += pt[0]; cy += pt[1]; }
+    cx /= ring.length; cy /= ring.length;
+    let r = 0;
+    for (const pt of ring) r = Math.max(r, Math.hypot(pt[0] - cx, pt[1] - cy));
+    walkObstacles.push({ x: cx, z: -cy, r: r * 0.9 });
+  }
+}
+// Push a proposed (x,z) out of any obstacle it lands inside (a couple of passes
+// so a corner between two trunks still resolves). Returns [x, z].
+function resolveWalkCollision(x, z) {
+  for (let pass = 0; pass < 2; pass++) {
+    for (const o of walkObstacles) {
+      const dx = x - o.x, dz = z - o.z;
+      const rr = o.r + _WALKER_R;
+      const d2 = dx * dx + dz * dz;
+      if (d2 < rr * rr) {
+        const d = Math.sqrt(d2) || 1e-4;
+        x = o.x + (dx / d) * rr;
+        z = o.z + (dz / d) * rr;
+      }
+    }
+  }
+  return [x, z];
+}
 
 function makeWalker() {
   const g = new THREE.Group();
@@ -3900,6 +3978,7 @@ function enterWalkMode() {
   controls.enabled = false;
   if (!walkAvatar) { walkAvatar = makeWalker(); scene.add(walkAvatar); }
   walkAvatar.visible = true;
+  buildWalkObstacles();
   walkSpawn();
   if (wildlifeGroup) wildlifeGroup.visible = true;
   setWalkHintUI(true);
@@ -3935,6 +4014,9 @@ function walkStep(t) {
     let d = (target - walkFacing + Math.PI * 3) % (Math.PI * 2) - Math.PI;
     walkFacing += d * Math.min(1, dt * 10);
   }
+  // Don't walk through trunks or the house.
+  const [rx, rz] = resolveWalkCollision(walkAvatar.position.x, walkAvatar.position.z);
+  walkAvatar.position.x = rx; walkAvatar.position.z = rz;
   // Keep bounded to a sensible stage around the design.
   if (lastBounds) {
     const pad = 20;

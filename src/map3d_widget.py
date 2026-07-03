@@ -181,9 +181,10 @@ class Map3DWidget(QWebEngineView):
         """Toggle the fly-through's seasonal nectar tour (V2.12)."""
         self.run_js(map3d_js.set_bee_tour(on))
 
-    def set_wildlife(self, creatures: list):
-        """Populate the scene with ambient wildlife (V2.12)."""
-        self.run_js(map3d_js.set_wildlife(creatures))
+    def set_wildlife(self, creatures: list, summary: dict = None):
+        """Populate the scene with ambient wildlife + an optional roster-headline
+        support summary (V2.12/V2.13)."""
+        self.run_js(map3d_js.set_wildlife(creatures, summary))
 
     def set_walk_mode(self, on: bool):
         """Enter/leave third-person "walk the garden" mode (V2.12)."""

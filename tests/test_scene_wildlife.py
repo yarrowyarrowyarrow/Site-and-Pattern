@@ -184,6 +184,28 @@ class TestSeasonalDiel(unittest.TestCase):
         self.assertNotIn("butterfly", winter_kinds)
 
 
+class TestSupportSummary(unittest.TestCase):
+    """V2.13: the design's total wildlife reach (roster headline)."""
+
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+
+    def test_support_by_taxon(self):
+        scene = _scene_with_edged_plants()
+        pids = [p["plant_id"] for p in scene["plants"]]
+        summ = W.support_by_taxon(pids)
+        self.assertTrue(summ, "a plant-rich design should support wildlife")
+        self.assertTrue(set(summ) <= {"bee", "lepidoptera", "bird",
+                                      "other_insect", "mammal"})
+        # Counts are distinct-species tallies — at least as many as are ever
+        # simultaneously placed for that taxon.
+        self.assertTrue(all(v > 0 for v in summ.values()))
+
+    def test_empty(self):
+        self.assertEqual(W.support_by_taxon([]), {})
+
+
 class TestAppearanceForFauna(unittest.TestCase):
 
     @classmethod

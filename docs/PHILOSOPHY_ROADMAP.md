@@ -486,15 +486,6 @@ connectivity to the design's planted areas; a new analysis layer.
     the dark. This also thins the daytime clutter (P9: show only what's true). Data in
     `src/scene_wildlife.py` (+ `bee_flight_seasons` / `lep_activity_seasons` in `src/db/fauna.py`),
     render in `html/scene3d.html`.
-  - **✅ Increment 9 — Liveliness pass: de-blob, travelling wildlife, "who lives here" (shipped, V2.13):**
-    finishing the "alive & legible" axis. **Flowers de-blob** — bloom sprites now vary in size (a
-    per-point `aSize` attribute) and spread evenly across the canopy, so a plant reads as several
-    distinct flowers instead of one coloured disc. **Wildlife travels** — each creature carries a
-    `route` of the plants its species uses (`scene_wildlife`) and the viewer moves it between them
-    (travel → land → dwell) with per-taxon motion: butterflies flutter, birds hop perch-to-perch,
-    mammals scurry-and-freeze. **"🔎 Identify"** — one toggle shows a corner **roster** ("who lives here",
-    grouped by kind with the plant each visitor uses) plus distance-gated **name labels** over each
-    creature, so you read the scene without hovering (`permaSetWildlifeLabels`).
   - **✅ Increment 9 — Liveliness pass + cinematic flyover (shipped, V2.13):** two tracks. *Liveliness:*
     flower sprites de-blob (per-point size + even areal/vertical spread → distinct blooms, not a disc);
     ambient wildlife now **travels** the plants its species uses (bees cruise-land-sip, butterflies/moths
@@ -505,6 +496,14 @@ connectivity to the design's planted areas; a new analysis layer.
     slow-orbits with letterbox bars + a lower-third caption (`permaSetCinematic` / `set_cinematic_caption`;
     storyboard in `src/scene3d_window.py`). Time is the undervalued design variable made watchable (P4);
     "grown, not designed" made literal (P2).
+  - **✅ Increment 10 — Polish + wildlife legible in the score (shipped, V2.13):** *Polish:* **walk-mode
+    collision** (trunks + building footprints as bounding circles; you slide around them instead of
+    clipping through, and can still stroll under a canopy) and a **two-row toolbar** (scene controls up
+    top; a labelled Creature / View row below) so seven mode buttons stop reading as one strip. *Score
+    made legible (P6):* the "who lives here" roster now headlines the design's **total ecological reach**
+    — "your plants support N wildlife species" with the per-taxon breakdown — computed from the same
+    documented edges as the Habitat Value Score (`scene_wildlife.support_by_taxon`, pushed on
+    `set_wildlife`), so the number behind the score is visible right beside the animals it represents.
 - **F38 · Mycoremediation / degraded-site notes** — *S · Low (P8)*: well-cited restoration
   techniques for contaminated/compacted ground (content, directional).
 - **F39 · Sensor integration hooks** — *L · High — external (P11)*: optional soil-moisture/

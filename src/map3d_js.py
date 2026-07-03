@@ -120,14 +120,16 @@ def set_bee_targets(plant_ids: list, bee_label: str = "",
             f"{json.dumps(appearance or None)});")
 
 
-def set_wildlife(creatures: list) -> str:
+def set_wildlife(creatures: list, summary: dict = None) -> str:
     """JS to populate the scene with ambient wildlife — the animals the design's
     plants support, each on/near a plant it uses, with a per-species appearance
     spec (V2.12). ``creatures`` is ``src.scene_wildlife.wildlife_for_scene``
-    output. Shown in the orbit + walk views (hidden while flying as one creature).
-    Guarded with ``&&`` so it's a no-op until the viewer registers the hook."""
+    output. ``summary`` is an optional ``{taxon: distinct-species-count}`` of the
+    design's total wildlife support (from the Habitat Value Score), shown as the
+    "who lives here" roster headline (V2.13). Shown in the orbit + walk views
+    (hidden while flying as one creature). Guarded with ``&&``."""
     return ("window.permaSetWildlife && window.permaSetWildlife("
-            f"{json.dumps(creatures or [])});")
+            f"{json.dumps(creatures or [])}, {json.dumps(summary or None)});")
 
 
 def set_plant_spotlight(items: list, appearance: dict = None) -> str:

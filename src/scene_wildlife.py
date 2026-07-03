@@ -150,6 +150,30 @@ def _mammal_appearance(name: str) -> dict:
     return {"kind": "mammal", "body": "#8a6f52", "form": "mouse", "size": 0.5}
 
 
+def support_by_taxon(plant_ids: list) -> dict:
+    """``{taxon: distinct-species-count}`` of native fauna the given plants
+    support — the design's total ecological reach, shown as the 3D roster's
+    headline so the Habitat Value Score's wildlife tally is legible where you
+    see the animals. Uses the same documented edges as the score (P6). Empty on
+    error / no plants."""
+    ids = [int(p) for p in (plant_ids or [])]
+    if not ids:
+        return {}
+    try:
+        from src.db.fauna import fauna_supported_by_plants
+    except Exception:      # noqa: BLE001
+        return {}
+    out: dict = {}
+    for taxon in ("bee", "lepidoptera", "bird", "other_insect", "mammal"):
+        try:
+            n = len(fauna_supported_by_plants(ids, taxon=taxon))
+        except Exception:      # noqa: BLE001
+            n = 0
+        if n:
+            out[taxon] = n
+    return out
+
+
 def appearance_for_fauna(fauna_id: int) -> Optional[dict]:
     """The per-species appearance spec for one fauna id — reused by the
     fly-through so the flown avatar looks like the chosen species (a green sweat
