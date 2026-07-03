@@ -184,6 +184,20 @@ class TestWildlifeAndWalk(unittest.TestCase):
         self.assertTrue(on.strip().endswith(");"))
         self.assertIn("false", m3.set_walk_mode(False))
 
+    def test_set_cinematic_guarded_bool(self):
+        on = m3.set_cinematic(True)
+        self.assertIn("window.permaSetCinematic && window.permaSetCinematic(", on)
+        self.assertIn("true", on)
+        self.assertTrue(on.strip().endswith(");"))
+        self.assertIn("false", m3.set_cinematic(False))
+
+    def test_set_cinematic_caption_json(self):
+        js = m3.set_cinematic_caption("Year 5", "the canopy fills in")
+        self.assertIn("window.permaSetCinematicCaption && "
+                      "window.permaSetCinematicCaption(", js)
+        self.assertIn('"Year 5", "the canopy fills in"', js)
+        self.assertIn('"", ""', m3.set_cinematic_caption("", ""))
+
     def test_set_wildlife_labels_guarded_bool(self):
         on = m3.set_wildlife_labels(True)
         self.assertIn("window.permaSetWildlifeLabels && window.permaSetWildlifeLabels(", on)

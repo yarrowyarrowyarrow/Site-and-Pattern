@@ -189,6 +189,14 @@ class Map3DWidget(QWebEngineView):
         """Enter/leave third-person "walk the garden" mode (V2.12)."""
         self.run_js(map3d_js.set_walk_mode(on))
 
+    def set_cinematic(self, on: bool):
+        """Toggle the cinematic flyover (V2.13)."""
+        self.run_js(map3d_js.set_cinematic(on))
+
+    def set_cinematic_caption(self, big: str, sub: str = ""):
+        """Set the flyover's lower-third caption (V2.13)."""
+        self.run_js(map3d_js.set_cinematic_caption(big, sub))
+
     def set_plant_spotlight(self, items: list, appearance: dict = None):
         """Spotlight the plants a chosen creature uses; empty list clears (V2.12)."""
         self.run_js(map3d_js.set_plant_spotlight(items, appearance))

@@ -495,6 +495,16 @@ connectivity to the design's planted areas; a new analysis layer.
     mammals scurry-and-freeze. **"🔎 Identify"** — one toggle shows a corner **roster** ("who lives here",
     grouped by kind with the plant each visitor uses) plus distance-gated **name labels** over each
     creature, so you read the scene without hovering (`permaSetWildlifeLabels`).
+  - **✅ Increment 9 — Liveliness pass + cinematic flyover (shipped, V2.13):** two tracks. *Liveliness:*
+    flower sprites de-blob (per-point size + even areal/vertical spread → distinct blooms, not a disc);
+    ambient wildlife now **travels** the plants its species uses (bees cruise-land-sip, butterflies/moths
+    flutter, birds hop perch-to-perch, mammals scurry-and-freeze) instead of orbiting one; and a
+    **"🔎 Identify"** toggle adds a "who lives here" roster + distance-gated name labels so you read the
+    scene without hovering. *Cinematic:* a **"🎬 Flyover"** button plays a ~60 s three-act storyboard —
+    grow the design year 0→25, turn the seasons at maturity, fall into a moonlit night — while the viewer
+    slow-orbits with letterbox bars + a lower-third caption (`permaSetCinematic` / `set_cinematic_caption`;
+    storyboard in `src/scene3d_window.py`). Time is the undervalued design variable made watchable (P4);
+    "grown, not designed" made literal (P2).
 - **F38 · Mycoremediation / degraded-site notes** — *S · Low (P8)*: well-cited restoration
   techniques for contaminated/compacted ground (content, directional).
 - **F39 · Sensor integration hooks** — *L · High — external (P11)*: optional soil-moisture/

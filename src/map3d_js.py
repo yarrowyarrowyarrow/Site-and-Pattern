@@ -149,6 +149,22 @@ def set_wildlife_labels(on: bool) -> str:
             f"{json.dumps(bool(on))});")
 
 
+def set_cinematic(on: bool) -> str:
+    """JS to toggle the hands-free cinematic flyover (V2.13): a slow auto-orbit
+    with letterbox bars while the host advances the growth year / season / time
+    of day. Guarded with ``&&`` so it's a no-op until the viewer registers
+    ``window.permaSetCinematic``."""
+    return ("window.permaSetCinematic && window.permaSetCinematic("
+            f"{json.dumps(bool(on))});")
+
+
+def set_cinematic_caption(big: str, sub: str = "") -> str:
+    """JS to set the flyover's lower-third caption for the current beat
+    (e.g. big='Year 5', sub='the canopy fills in'). Guarded with ``&&``."""
+    return ("window.permaSetCinematicCaption && window.permaSetCinematicCaption("
+            f"{json.dumps(str(big or ''))}, {json.dumps(str(sub or ''))});")
+
+
 def set_walk_mode(on: bool) -> str:
     """JS to enter/leave the third-person "walk the garden" mode (V2.12): a
     walking human avatar with a follow camera, strolling among the ambient

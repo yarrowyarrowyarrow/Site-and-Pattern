@@ -58,6 +58,11 @@
       lift so they read against the dark.
     · permaSetPlantSpotlight(items, appearance) lights + labels the design's
       plants a chosen creature uses, with one of it touring them.
+    · permaSetCinematic(on) is a hands-free flyover: a slow auto-orbit with a
+      breathing dolly, letterbox bars + a lower-third caption
+      (permaSetCinematicCaption), while the host steps the growth year /
+      season / time of day underneath it (scene3d_window's storyboard) — the
+      lawn-to-habitat pitch in ~60 s.
     · V2.13 liveliness pass: flower sprites de-blob (varied per-bloom size +
       even areal spread, per-point aSize attribute); ambient critters follow a
       route of the plants their species uses (travel · land · dwell) with
@@ -136,6 +141,22 @@
   #wild-roster .grp { margin-top: 7px; font-weight: 600; color: #b7d8ea; }
   #wild-roster .row { color: #d7e6d2; padding-left: 4px; }
   #wild-roster .on { color: #8fae86; }
+  /* Cinematic flyover (V2.13): letterbox bars + a lower-third caption for the
+     hands-free "watch the lawn become habitat" tour. */
+  .cine-bar {
+    position: absolute; left: 0; right: 0; height: 0; z-index: 8; background: #000;
+    pointer-events: none; transition: height .5s ease;
+  }
+  #cine-top { top: 0; } #cine-bottom { bottom: 0; }
+  body.cinematic .cine-bar { height: 8.5%; }
+  #cine-cap {
+    position: absolute; left: 50%; bottom: 10%; transform: translateX(-50%);
+    z-index: 9; display: none; pointer-events: none; text-align: center;
+    font-family: system-ui, sans-serif; color: #f4f7f2; letter-spacing: .3px;
+    text-shadow: 0 2px 8px rgba(0,0,0,.7);
+  }
+  #cine-cap .big { font-size: 26px; font-weight: 700; }
+  #cine-cap .sub { font-size: 14px; opacity: .9; margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -146,6 +167,9 @@ The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
 <div id="wild-roster"></div>
 <div id="bee-vision"></div>
 <div id="bee-hint"></div>
+<div id="cine-top" class="cine-bar"></div>
+<div id="cine-bottom" class="cine-bar"></div>
+<div id="cine-cap"><div class="big"></div><div class="sub"></div></div>
 
 <script type="importmap">
 {
@@ -2515,9 +2539,9 @@ window.permaSetScene = function (sc) {
     (o && (Math.abs(o.lat - framedOrigin.lat) > 1e-6 ||
            Math.abs(o.lng - framedOrigin.lng) > 1e-6));
   if (moved) {
-    // Don't yank the camera while the user is flying or walking — those modes
-    // own the camera (beeStep / walkStep).
-    if (!beeMode && !walkMode) frameCamera(sc.bounds);
+    // Don't yank the camera while the user is flying, walking, or in the
+    // cinematic flyover — those modes own the camera.
+    if (!beeMode && !walkMode && !cinematic) frameCamera(sc.bounds);
     framedOrigin = o ? { lat: o.lat, lng: o.lng } : { lat: 0, lng: 0 };
   }
   // Re-place the bee's flower beacons against the freshly-built scene.
@@ -3964,6 +3988,56 @@ window.permaSetWalkMode = function (on) {
   if (walkMode) enterWalkMode(); else exitWalkMode();
 };
 
+// ── Cinematic flyover (V2.13) ────────────────────────────────────────────────
+// A hands-free "watch the lawn become habitat" tour: a slow auto-orbit with a
+// gentle breathing dolly, letterbox bars and a lower-third caption, while the
+// host advances the growth year / season / time of day underneath it. Orbit
+// input is frozen; toggling off restores the free camera.
+let cinematic = false;
+let _cineBaseR = 0, _cinePrevAuto = false;
+function setCinematicCaption(big, sub) {
+  const cap = document.getElementById('cine-cap');
+  if (!cap) return;
+  cap.querySelector('.big').textContent = big || '';
+  cap.querySelector('.sub').textContent = sub || '';
+  cap.style.display = (big || sub) ? 'block' : 'none';
+}
+window.permaSetCinematic = function (on) {
+  const want = !!on;
+  if (want === cinematic) return;
+  cinematic = want;
+  document.body.classList.toggle('cinematic', cinematic);
+  const tip = document.getElementById('plant-tip'); if (tip) tip.style.display = 'none';
+  if (cinematic) {
+    if (lastBounds) frameCamera(lastBounds);
+    _cineBaseR = camera.position.distanceTo(controls.target);
+    _cinePrevAuto = controls.autoRotate;
+    controls.autoRotate = true; controls.autoRotateSpeed = 0.5;
+    controls.enableRotate = false; controls.enablePan = false;
+  } else {
+    controls.autoRotate = _cinePrevAuto;
+    controls.enableRotate = true; controls.enablePan = true;
+    setCinematicCaption('', '');
+    if (lastBounds) frameCamera(lastBounds);
+  }
+};
+// The host sets the lower-third caption for the current beat ("Year 5", "October").
+window.permaSetCinematicCaption = function (big, sub) {
+  if (cinematic) setCinematicCaption(big, sub);
+};
+// A slow breathing dolly layered on the auto-orbit — pushes in/out and rises a
+// touch, so the shot never feels like a rigid turntable.
+function cineStep(t) {
+  const breath = 1 + 0.08 * Math.sin(t * 0.00035);
+  const dir = new THREE.Vector3().subVectors(camera.position, controls.target);
+  dir.y = 0; const flat = dir.length() || 1;
+  const wantFlat = _cineBaseR * 0.92 * breath;
+  dir.multiplyScalar(wantFlat / flat);
+  camera.position.x = controls.target.x + dir.x;
+  camera.position.z = controls.target.z + dir.z;
+  camera.position.y = controls.target.y + _cineBaseR * (0.55 + 0.08 * Math.sin(t * 0.0003 + 1.6));
+}
+
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
@@ -3976,13 +4050,13 @@ addEventListener('resize', () => {
 let _lastFrame = 0;
 const _FRAME_MS = 1000 / 30;
 renderer.setAnimationLoop((t) => {
-  const frameMs = (beeMode || walkMode) ? 1000 / 60 : _FRAME_MS;
+  const frameMs = (beeMode || walkMode || cinematic) ? 1000 / 60 : _FRAME_MS;
   if (document.hidden || (t - _lastFrame) < frameMs) return;
   _lastFrame = t;
   windUniforms.uTime.value = clock.getElapsedTime();
   if (beeMode) beeStep(t);
   else if (walkMode) walkStep(t);
-  else controls.update();
+  else { if (cinematic) cineStep(t); controls.update(); }   // dolly, then auto-orbit
   animateWildlife(t);               // ambient life (no-op when the group is hidden)
   if (!beeMode) stepSpotlight(t);   // "show its plants" tour (orbit/walk overlay)
   renderer.render(scene, camera);

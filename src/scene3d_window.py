@@ -181,6 +181,20 @@ class Scene3DWindow(QWidget):
             "to 'which of my plants help this bee / butterfly?'")
         self._spot_btn.toggled.connect(self._on_spotlight)
 
+        # "Flyover" — a hands-free cinematic tour that grows the design, cycles
+        # the seasons, and dips into night, while the camera slowly orbits: the
+        # lawn-to-habitat pitch in ~60 s (V2.13).
+        self._fly_btn = QPushButton("🎬 Flyover")
+        self._fly_btn.setCheckable(True)
+        self._fly_btn.setToolTip(
+            "Play a cinematic tour: watch the design grow year by year, the "
+            "seasons turn, and night fall — with the camera orbiting. Toggle "
+            "off to take back the controls.")
+        self._fly_btn.toggled.connect(self._on_flyover)
+        self._fly_timer = None
+        self._fly_frames: list = []
+        self._fly_idx = 0
+
         # "Identify" — the "who lives here" roster + always-on name labels over
         # the ambient wildlife, so you can read the scene without hovering (V2.13).
         self._id_btn = QPushButton("🔎 Identify")
@@ -216,6 +230,7 @@ class Scene3DWindow(QWidget):
         bar.addWidget(self._tour_btn)
         bar.addWidget(self._walk_btn)
         bar.addWidget(self._spot_btn)
+        bar.addWidget(self._fly_btn)
         bar.addWidget(self._id_btn)
 
         root = QVBoxLayout(self)
@@ -393,8 +408,9 @@ class Scene3DWindow(QWidget):
         """Toggle the first-person fly view. Pushes the current creature's target
         plants before entering so the beacons are ready."""
         if on:
-            if self._walk_btn.isChecked():      # fly and walk are exclusive
-                self._walk_btn.setChecked(False)
+            for b in (self._walk_btn, self._fly_btn):   # fly view is exclusive
+                if b.isChecked():
+                    b.setChecked(False)
             self._push_targets()
         else:
             # Leaving fly mode also ends any running tour.
@@ -403,9 +419,11 @@ class Scene3DWindow(QWidget):
         self.viewer.set_bee_mode(on)
 
     def _on_walk(self, on: bool):
-        """Toggle the third-person walk-through. Exclusive with the fly view."""
-        if on and self._bee_btn.isChecked():
-            self._bee_btn.setChecked(False)     # leaves fly mode first
+        """Toggle the third-person walk-through. Exclusive with fly + flyover."""
+        if on:
+            for b in (self._bee_btn, self._fly_btn):
+                if b.isChecked():
+                    b.setChecked(False)
         self.viewer.set_walk_mode(on)
 
     # ── "Show its plants" spotlight (V2.12) ───────────────────────────────
@@ -450,8 +468,9 @@ class Scene3DWindow(QWidget):
         """Toggle the spotlight. Exclusive with fly mode (it's an orbit/walk
         overlay); pushes an empty list to clear."""
         if on:
-            if self._bee_btn.isChecked():
-                self._bee_btn.setChecked(False)
+            for b in (self._bee_btn, self._fly_btn):
+                if b.isChecked():
+                    b.setChecked(False)
             self._push_spotlight()
         else:
             self.viewer.set_plant_spotlight([])
@@ -493,6 +512,67 @@ class Scene3DWindow(QWidget):
         later = [m for m in months if m > cur]
         nxt = later[0] if later else months[0]
         self._month.setValue(nxt)            # → _on_controls_changed → _push_scene
+
+    # ── Cinematic "Flyover" (V2.13) ───────────────────────────────────────
+
+    @staticmethod
+    def _flyover_storyboard() -> list:
+        """A ~60 s, three-act storyboard as (year, month, hour, big, sub)
+        keyframes. Act 1 grows the design at peak-summer midday; act 2 turns the
+        seasons at maturity; act 3 falls into a moonlit night."""
+        frames = []
+        # Act 1 — growth (year 0 → mature), July midday.
+        for y in (0, 1, 2, 3, 5, 7, 9, 12, 15, 18, 22, 25):
+            sub = ("the lawn, today" if y == 0 else
+                   "seedlings in" if y <= 2 else
+                   "filling in" if y <= 9 else
+                   "a young habitat" if y <= 18 else "grown, not designed")
+            frames.append((y, 7, 13, f"Year {y}", sub))
+        # Act 2 — the seasons turn, at maturity.
+        season = {3: "spring green", 5: "first blooms", 7: "high summer",
+                  9: "autumn seed & fruit", 11: "bare stems, standing seed"}
+        for m in (3, 5, 7, 9, 11):
+            frames.append((25, m, 13, _MONTH_FULL[m - 1], season[m]))
+        # Act 3 — into the night (moths, bats, glowing blooms).
+        frames.append((25, 7, 18, "Evening", "the day shift clocks off"))
+        frames.append((25, 7, 21, "Dusk", "hawkmoths on the wing"))
+        frames.append((25, 7, 23, "Night", "moths, bats & moonlit blooms"))
+        return frames
+
+    def _on_flyover(self, on: bool):
+        """Start/stop the cinematic flyover. Turns off the interactive modes,
+        enables the viewer's auto-orbit, and steps the storyboard on a timer."""
+        from PyQt6.QtCore import QTimer
+        if on:
+            for b in (self._bee_btn, self._walk_btn, self._spot_btn):
+                if b.isChecked():
+                    b.setChecked(False)
+            self.viewer.set_cinematic(True)
+            self._fly_frames = self._flyover_storyboard()
+            self._fly_idx = 0
+            if self._fly_timer is None:
+                self._fly_timer = QTimer(self)
+                self._fly_timer.timeout.connect(self._advance_flyover)
+            self._advance_flyover()               # show the first beat at once
+            self._fly_timer.start(2200)
+        else:
+            if self._fly_timer is not None:
+                self._fly_timer.stop()
+            self.viewer.set_cinematic(False)
+
+    def _advance_flyover(self):
+        """Apply the next storyboard keyframe (looping), pushing the scene once
+        and updating the caption."""
+        if not self._fly_frames:
+            return
+        year, month, hour, big, sub = self._fly_frames[self._fly_idx]
+        self._fly_idx = (self._fly_idx + 1) % len(self._fly_frames)
+        # Set all three sliders without three separate scene pushes.
+        for w, v in ((self._year, year), (self._month, month), (self._hour, hour)):
+            w.blockSignals(True); w.setValue(v); w.blockSignals(False)
+        self._update_labels()
+        self.viewer.set_cinematic_caption(big, sub)
+        self._push_scene()
 
     def refresh(self):
         """Re-read the live project (and kick a terrain fetch if we don't
@@ -542,6 +622,8 @@ class Scene3DWindow(QWidget):
     def closeEvent(self, event):
         if self._tour_timer is not None:
             self._tour_timer.stop()
+        if self._fly_timer is not None:
+            self._fly_timer.stop()
         t = self._thread
         if t is not None and t.isRunning():
             t.quit()
