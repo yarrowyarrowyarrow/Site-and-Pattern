@@ -39,6 +39,7 @@ Scene schema (``SCENE_VERSION`` = 1)::
       "scan_points": [[x, y, z], ...] | None,   # imported yard scan (V1.63)
       "splat": {path, matrix, opacity} | None,  # Gaussian-splat backdrop (V1.65)
       "sun": {"azimuth_deg": .., "altitude_deg": ..} | None,
+      "is_night": bool,                # sun below horizon → moonlit 3D + nocturnal wildlife
     }
 
 Everything is plain JSON-serialisable data. Qt-free, DB-free (``get_plant``
@@ -226,6 +227,14 @@ def _sun_for(lat: float, lng: float, when: datetime) -> Optional[dict]:
         return None
     return {"azimuth_deg": round(sun.azimuth, 2),
             "altitude_deg": round(sun.altitude, 2)}
+
+
+def _is_night(lat: float, lng: float, when: datetime) -> bool:
+    """True once the sun is below the horizon — drives the 3D night render and
+    which wildlife is out (nocturnal moths & bats vs. day pollinators)."""
+    from src.solar import sun_position
+    sun = sun_position(lat, lng, when + timedelta(hours=-lng / 15.0))
+    return sun.altitude <= 0
 
 
 def _terrain_block(elevation: Optional[dict], proj: Projector) -> Optional[dict]:
@@ -463,4 +472,7 @@ def build_scene(project: dict, *, year: int = 0,
         "scan_points": scan_points,
         "splat": splat_field,
         "sun": _sun_for(lat0, lng0, when or _DEFAULT_WHEN),
+        # Night when the sun is down (V2.12): the 3D view renders a moonlit
+        # scene and swaps day pollinators for nocturnal moths & bats.
+        "is_night": _is_night(lat0, lng0, when or _DEFAULT_WHEN),
     }

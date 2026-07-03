@@ -469,6 +469,23 @@ connectivity to the design's planted areas; a new analysis layer.
     ~50 curated documented `nectar` plant↔lepidoptera edges were added (schema v41) so nectaring
     butterflies place from real records. `src/scene3d_window.py` computes wildlife on every scene push;
     the viewer factories + walk mode live in `html/scene3d.html`.
+  - **✅ Increment 7 — "Show its plants" + readability/feel pass (shipped, V2.12):** a **"✨ Show its
+    plants"** button lights + name-labels every plant in the design the selected creature benefits from
+    and sends one of it touring them (`permaSetPlantSpotlight`) — the 3D cousin of the 2D "what the bee
+    sees" lens. Alongside: wildlife **de-clumping** (spread each species across the plants it uses +
+    a min-separation relaxation so a rich scene reads as individuals), **contact shadows** under critters,
+    **hover-identification** ("Bumble bee · sips nectar at Wild Bergamot"), a **slower flyer** (7→4 m/s)
+    that **reveals the flower's name on arrival**, and species-styled fly avatars.
+  - **✅ Increment 8 — Seasonal + diurnal truth and a night mode (shipped, V2.12):** ambient wildlife is
+    gated to when each animal is actually out — documented flight seasons for bees & leps, a coarse
+    warm-season default for insects, year-round for birds; and a day/night split so day brings
+    bees/butterflies while **night swaps in moths & bats** (owls too). The contract carries an
+    `is_night` flag (sun below the horizon; the hour slider now spans a full 24 h), and the viewer
+    renders a **moonlit night** — deep sky, a moon + star field, dim cool moonlight, additive-glowing
+    blooms (moth-pollination made visible, P5), and an emissive lift so nocturnal critters read against
+    the dark. This also thins the daytime clutter (P9: show only what's true). Data in
+    `src/scene_wildlife.py` (+ `bee_flight_seasons` / `lep_activity_seasons` in `src/db/fauna.py`),
+    render in `html/scene3d.html`.
 - **F38 · Mycoremediation / degraded-site notes** — *S · Low (P8)*: well-cited restoration
   techniques for contaminated/compacted ground (content, directional).
 - **F39 · Sensor integration hooks** — *L · High — external (P11)*: optional soil-moisture/

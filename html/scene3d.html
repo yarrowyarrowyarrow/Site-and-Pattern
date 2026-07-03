@@ -51,6 +51,13 @@
       follow camera (WASD + drag-look) you steer among the wildlife.
     · The flown avatar is now species-styled from an appearance spec passed on
       set_bee_targets (a metallic-green sweat bee ≠ a fuzzy bumble bee).
+    · Wildlife is seasonal + diurnal (scene_wildlife gates by month + is_night):
+      day brings bees/butterflies, night swaps in moths & bats. A NIGHT render
+      (is_night from the contract) draws a deep sky, a moon + stars, dim cool
+      moonlight, and additive-glowing blooms; night critters get an emissive
+      lift so they read against the dark.
+    · permaSetPlantSpotlight(items, appearance) lights + labels the design's
+      plants a chosen creature uses, with one of it touring them.
     · permaSetPlantSpotlight(items, app) lights a labelled glow column over each
       plant a creature uses and tours one of that creature between them — the
       "which of my plants help this bee?" overlay (orbit/walk).
@@ -436,6 +443,82 @@ function updateAtmosphere(altDeg) {
   sun.intensity = 1.5 + 0.9 * t;                       // softer key when low
   hemi.intensity = 0.55 + 0.35 * t;
   scene.fog.color.copy(skyU.uHorizon.value);           // ground melts into haze
+}
+
+// ── Night (V2.12) ────────────────────────────────────────────────────────────
+// A moonlit render for when the sun is down: a deep sky, a moon disc high in the
+// sky feeding the "sun" glow + a dim cool key light, a field of stars, and lower
+// exposure. Toggled from permaSetScene via the contract's is_night flag.
+let sceneNight = false;
+let moonMesh = null, starField = null;
+const _NIGHT = {
+  zen: new THREE.Color(0x0b1430), hor: new THREE.Color(0x243a5a),
+  moon: new THREE.Color(0xdfe6f2), fog: new THREE.Color(0x1a2740),
+};
+function ensureNightSky() {
+  if (starField) return;
+  // Stars: a Points field on the inside of a large sphere (upper hemisphere).
+  const N = 500, pos = new Float32Array(N * 3);
+  const rng = mulberry32(90210);
+  for (let i = 0; i < N; i++) {
+    const u = rng(), v = rng() * 0.75;              // bias to the upper sky
+    const th = u * Math.PI * 2, ph = Math.acos(1 - v);
+    const R = 2400;
+    pos[i * 3] = Math.sin(ph) * Math.cos(th) * R;
+    pos[i * 3 + 1] = Math.cos(ph) * R;
+    pos[i * 3 + 2] = Math.sin(ph) * Math.sin(th) * R;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  starField = new THREE.Points(g, new THREE.PointsMaterial({
+    color: 0xeaf0ff, size: 7, sizeAttenuation: true, transparent: true,
+    opacity: 0.9, depthWrite: false, fog: false }));
+  starField.name = 'stars'; starField.visible = false;
+  scene.add(starField);
+  if (!GLOW_TEX) GLOW_TEX = makeGlowTexture();
+  // A crisp moon disc as a camera-facing sprite (so it never goes edge-on).
+  const mc = document.createElement('canvas'); mc.width = mc.height = 64;
+  const mg = mc.getContext('2d');
+  mg.fillStyle = '#eef1f7'; mg.beginPath(); mg.arc(32, 32, 30, 0, Math.PI * 2); mg.fill();
+  const moonTex = new THREE.CanvasTexture(mc);
+  const moonGroup = new THREE.Group();
+  const disc = new THREE.Sprite(new THREE.SpriteMaterial({ map: moonTex,
+    transparent: true, depthWrite: false, fog: false }));
+  disc.scale.setScalar(220);
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX,
+    color: 0xcfe0ff, transparent: true, opacity: 0.5, depthWrite: false,
+    blending: THREE.AdditiveBlending, fog: false }));
+  halo.scale.setScalar(560);
+  moonGroup.add(halo, disc);
+  moonMesh = moonGroup; moonMesh.name = 'moon'; moonMesh.visible = false;
+  scene.add(moonMesh);
+}
+function setNight() {
+  sceneNight = true;
+  ensureNightSky();
+  const moonDir = new THREE.Vector3(0.35, 0.86, 0.37).normalize();
+  skyU.uZenith.value.copy(_NIGHT.zen);
+  skyU.uHorizon.value.copy(_NIGHT.hor);
+  skyU.uSunDir.value.copy(moonDir);       // the "sun" glow becomes the moon glow
+  skyU.uSunGlow.value.copy(_NIGHT.moon);
+  skyU.uGlowAmt.value = 0.12;
+  scene.fog.color.copy(_NIGHT.fog);
+  // Dim, cool moonlight from the moon's direction — enough to read the foliage
+  // as silhouettes with a hint of colour, but unmistakably night.
+  sun.color.set(0xaec4ee); sun.intensity = 0.6;
+  hemi.color.set(0x3a4c70); hemi.groundColor.set(0x141c2a); hemi.intensity = 0.5;
+  sun.position.copy(moonDir).multiplyScalar(300); sun.target.position.set(0, 0, 0);
+  renderer.toneMappingExposure = 1.0;
+  moonMesh.position.copy(moonDir).multiplyScalar(1900); moonMesh.visible = true;
+  starField.visible = true;
+}
+function setDay() {
+  if (!sceneNight) return;
+  sceneNight = false;
+  hemi.color.set(0xdfeefc); hemi.groundColor.set(0x5d6e51);
+  renderer.toneMappingExposure = 1.15;
+  if (moonMesh) moonMesh.visible = false;
+  if (starField) starField.visible = false;
 }
 
 // Everything rebuilt per scene push lives under one group.
@@ -2126,7 +2209,10 @@ function buildFlowers(plants, month, terrain) {
     const mat = clampPointSize(new THREE.PointsMaterial({
       map: FLOWER_TEX[form], color: 0xffffff, vertexColors: true,
       transparent: true, alphaTest: 0.4, depthWrite: false,
-      sizeAttenuation: true, size: _FLOWER_SIZE[form] || 0.24,
+      // At night the blooms softly luminesce (additive) so they read like
+      // moonlit / moth-pollinated flowers instead of vanishing into the dark.
+      blending: sceneNight ? THREE.AdditiveBlending : THREE.NormalBlending,
+      sizeAttenuation: true, size: (_FLOWER_SIZE[form] || 0.24) * (sceneNight ? 1.25 : 1),
     }), 96);
     plantsGroup.add(new THREE.Points(geo, mat));
   }
@@ -2363,6 +2449,7 @@ window.permaSetScene = function (sc) {
   lastOrigin = sc.origin || null;
   lastMonth = sc.month || 6;
   sceneMonth = sc.month || 6;         // bloom-gating + the seasonal-tour HUD
+  sceneNight = !!sc.is_night;         // set before buildPlants so flowers night-glow
   lastYear = sc.year || 0;
   lastBounds = sc.bounds;
   lastTerrain = sc.terrain || null;
@@ -2374,7 +2461,8 @@ window.permaSetScene = function (sc) {
   buildStructures(designGroup, sc.structures);
   buildScanPoints(designGroup, sc.scan_points);
   ensureSplat(sc.splat);
-  if (sc.sun) setSun(sc.sun.azimuth_deg, sc.sun.altitude_deg);
+  if (sc.is_night) setNight();
+  else { setDay(); if (sc.sun) setSun(sc.sun.azimuth_deg, sc.sun.altitude_deg); }
   fitShadow(sc.bounds);
 
   // Frame the camera only on first load or when a genuinely different design is
@@ -3309,7 +3397,44 @@ function makeBeetleCritter(app) {
   return g;
 }
 
+// A flitting bat: dark body + two membranous wings that flap; flies like the
+// other fliers. (Only ever placed at night by scene_wildlife.)
+function makeBatCritter(app) {
+  const g = new THREE.Group();
+  const fur = _cmat(app.body || '#3a2f28', { flat: true });
+  const memb = new THREE.MeshStandardMaterial({ color: 0x2a2430, roughness: 0.9,
+    emissive: 0x0e0b12, emissiveIntensity: 0.5, side: THREE.DoubleSide, flatShading: true });
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), fur);
+  body.scale.set(0.8, 0.9, 1.3);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), fur);
+  head.position.set(0, 0.03, -0.1);
+  for (const s of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.06, 4), fur);
+    ear.position.set(0.03 * s, 0.09, -0.11); g.add(ear);
+  }
+  g.add(body, head);
+  const wingShape = new THREE.Shape();
+  wingShape.moveTo(0, 0); wingShape.lineTo(0.34, 0.06);
+  wingShape.lineTo(0.32, -0.05); wingShape.lineTo(0.18, -0.08);
+  wingShape.lineTo(0.1, -0.12); wingShape.lineTo(0, 0);
+  const wingGeo = new THREE.ShapeGeometry(wingShape);
+  const wings = [];
+  for (const s of [-1, 1]) {
+    const pivot = new THREE.Group(); pivot.position.set(0.02 * s, 0.02, 0);
+    const w = new THREE.Mesh(wingGeo, memb);
+    w.scale.x = s; w.rotation.x = -Math.PI / 2;
+    pivot.add(w); g.add(pivot);
+    wings.push({ pivot, sign: s });
+  }
+  g.userData.wings = wings;
+  g.userData.flap = { base: 0, amp: 0.9, speed: 0.28 };
+  g.userData.anim = 'flier';
+  g.scale.setScalar(1.1 * (app.size || 1));
+  return g;
+}
+
 function makeMammalCritter(app) {
+  if (app.form === 'bat') return makeBatCritter(app);
   const g = new THREE.Group();
   const fur = _cmat(app.body, { flat: true });
   const body = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), fur);
@@ -3373,6 +3498,12 @@ function rebuildWildlife() {
     const make = _CRITTER_FACTORY[spec.kind] || _CRITTER_FACTORY[app.kind];
     if (!make) continue;
     let obj; try { obj = make(app); } catch (e) { continue; }
+    // At night, lift each critter's self-illumination so the moths & bats read
+    // against the dark instead of disappearing.
+    if (sceneNight) obj.traverse(o => {
+      const m = o.material;
+      if (m && m.emissive) m.emissiveIntensity = Math.min(1.5, (m.emissiveIntensity || 0.5) * 2.4);
+    });
     const gy = terrainHeightAt(spec.x, spec.y, lastTerrain);
     const anchor = new THREE.Vector3(spec.x, gy, -spec.y);
     obj.position.set(anchor.x, gy + (spec.h || 0.3), anchor.z);

@@ -85,7 +85,9 @@ class Scene3DWindow(QWidget):
         self._month.setValue(6)
         self._month_lbl = QLabel()          # shows the current month name
         self._hour = QSlider(Qt.Orientation.Horizontal)
-        self._hour.setRange(5, 21)
+        # Full 24 h so you can drag into night — a moonlit scene with moths & bats
+        # instead of the day's bees & butterflies (V2.12).
+        self._hour.setRange(0, 23)
         self._hour.setValue(13)
         self._sun_lbl = QLabel()
         self._month.valueChanged.connect(self._on_controls_changed)
@@ -93,7 +95,9 @@ class Scene3DWindow(QWidget):
 
         self._year.setToolTip("Watch the design grow — drag to a future year")
         self._month.setToolTip("Season — shifts foliage colour and the sun")
-        self._hour.setToolTip("Time of day — drives the shadow-casting sun")
+        self._hour.setToolTip(
+            "Time of day — drives the sun; drag past dusk for a moonlit night "
+            "(moths, bats and glowing blooms)")
 
         # Detail / quality — lower it if the 3D view is sluggish on this machine
         # (drives window.permaSetQuality in the viewer). Shared with the gallery.

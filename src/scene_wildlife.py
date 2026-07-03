@@ -175,9 +175,62 @@ def _appearance_for(row: dict) -> Optional[dict]:
     if taxon == "other_insect":
         return _insect_appearance(name)
     if taxon == "mammal":
-        app = _mammal_appearance(name)
-        return None if app.get("form") == "bat" else app   # bats are nocturnal — skip by day
+        return _mammal_appearance(name)      # bats included; the diel filter gates them
     return None
+
+
+# ── Season + day/night activity (V2.12) ───────────────────────────────────────
+# When each animal is out. Documented flight seasons gate the bees & leps by
+# month; birds/mammals are treated as year-round, insects as a warm-season
+# default (a coarse, honest heuristic — not per-species precision, P9). Diel:
+# bees + most birds + flower/dragonflies are day; owls, moths, bats are night;
+# hawkmoths/hummingbird clearwings ("day_dusk") and small mammals are both.
+_WARM_MONTHS = frozenset({4, 5, 6, 7, 8, 9, 10})   # insects / bats default season
+
+
+def _diel(taxon: str, name: str, lep_activity: Optional[str]) -> str:
+    """'day' | 'night' | 'both' — when this creature is active."""
+    n = name.lower()
+    if taxon == "bee":
+        return "day"
+    if taxon == "lepidoptera":
+        return {"day": "day", "night": "night", "day_dusk": "both"}.get(
+            lep_activity or "day", "day")
+    if taxon == "bird":
+        return "night" if "owl" in n else "day"
+    if taxon == "other_insect":
+        return "both" if "lacewing" in n else "day"
+    if taxon == "mammal":
+        return "night"                       # bats + nocturnal small mammals
+    return "day"
+
+
+def _season_months(taxon: str, fid: int,
+                   bee_seasons: dict, lep_seasons: dict) -> frozenset:
+    """The months (1-12) this creature is out; empty = no seasonal gate."""
+    from src.habitat_score import parse_month_range
+    if taxon == "bee":
+        return frozenset(parse_month_range(bee_seasons.get(fid) or ""))
+    if taxon == "lepidoptera":
+        _act, season = lep_seasons.get(fid, (None, None))
+        return frozenset(parse_month_range(season or ""))
+    if taxon in ("other_insect", "mammal"):
+        return _WARM_MONTHS
+    return frozenset()                        # birds: year-round
+
+
+def _active_now(taxon: str, name: str, fid: int, month: int, is_night: bool,
+                bee_seasons: dict, lep_seasons: dict) -> bool:
+    diel = _diel(taxon, name,
+                 (lep_seasons.get(fid, (None, None))[0]) if taxon == "lepidoptera" else None)
+    if is_night and diel == "day":
+        return False
+    if (not is_night) and diel == "night":
+        return False
+    months = _season_months(taxon, fid, bee_seasons, lep_seasons)
+    if month and months and month not in months:
+        return False
+    return True
 
 
 # ── Placement height above the anchor plant's base (metres) ───────────────────
@@ -218,6 +271,17 @@ def wildlife_for_scene(scene: dict, *,
     if not rows:
         return []
 
+    # Season + day/night truth (V2.12): only show a creature when it is actually
+    # out. Attribute maps are best-effort — if unavailable, nothing is gated.
+    month = int(scene.get("month") or 0)
+    is_night = bool(scene.get("is_night"))
+    try:
+        from src.db.fauna import bee_flight_seasons, lep_activity_seasons
+        bee_seasons = bee_flight_seasons()
+        lep_seasons = lep_activity_seasons()
+    except Exception:      # noqa: BLE001
+        bee_seasons, lep_seasons = {}, {}
+
     # Per species, keep ALL its best-rank (plant, relationship) candidates, so a
     # species that uses several present plants can be spread across them rather
     # than piling every animal onto one keystone shrub (the old clumping bug).
@@ -226,6 +290,10 @@ def wildlife_for_scene(scene: dict, *,
         fid = r.get("id")
         pid = r.get("plant_id")
         if fid is None or pid not in by_id:
+            continue
+        # Season + day/night: skip creatures that aren't out right now.
+        if not _active_now(r.get("taxon"), r.get("common_name", ""), fid,
+                           month, is_night, bee_seasons, lep_seasons):
             continue
         prio = _REL_PRIORITY.get(r.get("taxon"), ())
         rank = prio.index(r["relationship"]) if r.get("relationship") in prio else len(prio)
@@ -266,6 +334,8 @@ def wildlife_for_scene(scene: dict, *,
         rad = max(0.7, canopy * 0.55) + 0.5 * k
         base_h = _perch_height(app["kind"], float(p.get("height_m") or 0.5),
                                r.get("relationship", ""))
+        if app.get("form") == "bat":       # bats flit above the canopy
+            base_h = max(2.5, float(p.get("height_m") or 1.0) + 1.5)
         creatures.append({
             "kind": app["kind"],
             "x": round(p["x"] + math.cos(ang) * rad, 2),

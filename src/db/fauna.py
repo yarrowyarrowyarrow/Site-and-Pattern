@@ -139,6 +139,32 @@ def list_lepidoptera_with_attributes() -> list[dict]:
         conn.close()
 
 
+def bee_flight_seasons() -> dict:
+    """``{fauna_id: flight_season_text}`` for every bee with a seeded season —
+    used to show a bee in the 3D scene only in the months it actually flies."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT fauna_id, flight_season FROM bee_attributes "
+            "WHERE flight_season IS NOT NULL").fetchall()
+        return {r[0]: r[1] for r in rows}
+    finally:
+        conn.close()
+
+
+def lep_activity_seasons() -> dict:
+    """``{fauna_id: (activity, flight_season)}`` for every lepidopteran with
+    attributes — used to gate butterflies/moths by month and by day/night."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT fauna_id, activity, flight_season "
+            "FROM lepidoptera_attributes").fetchall()
+        return {r[0]: (r[1], r[2]) for r in rows}
+    finally:
+        conn.close()
+
+
 def plants_in_genera(genera: list[str]) -> list[dict]:
     """Return plant rows whose scientific-name genus (the first token) is one of
     ``genera`` (case-insensitive). Used by the bee habitat builder's genus-level

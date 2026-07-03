@@ -132,6 +132,46 @@ class TestSceneWildlife(unittest.TestCase):
         self.assertEqual(W.wildlife_for_scene(scene), [])
 
 
+class TestSeasonalDiel(unittest.TestCase):
+    """V2.12: only show creatures that are actually out — by month and day/night."""
+
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+        cls.base = _scene_with_edged_plants()
+
+    def _scene(self, month, night):
+        return dict(self.base, month=month, is_night=night)
+
+    def test_night_swaps_day_for_nocturnal(self):
+        day = W.wildlife_for_scene(self._scene(7, False))
+        night = W.wildlife_for_scene(self._scene(7, True))
+        day_kinds = {c["kind"] for c in day}
+        night_kinds = {c["kind"] for c in night}
+        # Day has bees/butterflies; night is moths + mammals (bats/mice), no bees.
+        self.assertIn("bee", day_kinds)
+        self.assertNotIn("bee", night_kinds)
+        self.assertTrue({"moth", "mammal"} & night_kinds,
+                        "night should bring out moths and/or bats")
+
+    def test_bats_only_at_night(self):
+        day = W.wildlife_for_scene(self._scene(7, False))
+        night = W.wildlife_for_scene(self._scene(7, True))
+        self.assertFalse(any("bat" in c["name"].lower() for c in day))
+        # Bats appear at night if any host plant supports one.
+        # (Not asserting presence — depends on the sampled plant set — only that
+        #  they never appear by day.)
+
+    def test_winter_thins_to_year_round_taxa(self):
+        summer = W.wildlife_for_scene(self._scene(7, False))
+        winter = W.wildlife_for_scene(self._scene(1, False))
+        # January (day): bees/butterflies/insects are gone; birds persist.
+        self.assertLess(len(winter), len(summer))
+        winter_kinds = {c["kind"] for c in winter}
+        self.assertNotIn("bee", winter_kinds)
+        self.assertNotIn("butterfly", winter_kinds)
+
+
 class TestAppearanceForFauna(unittest.TestCase):
 
     @classmethod
