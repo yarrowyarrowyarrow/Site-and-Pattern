@@ -50,6 +50,8 @@ from src.controllers.area_fill_controller import AreaFillController
 from src.project_store import ProjectStore
 from src.scan_import_dialog import start_scan_import as _start_scan_import
 from src.scene3d_window import open_3d_view as _open_3d_view
+from src.reference_ecosystem_window import (
+    open_reference_ecosystem as _open_reference_ecosystem)
 from src.snapshot_window import open_snapshot_view as _open_snapshot_view
 from src.sprite_gallery_window import open_sprite_gallery as _open_sprite_gallery
 from src.branding import APP_NAME, APP_TITLE
@@ -505,6 +507,16 @@ class MainWindow(QMainWindow):
         # itself in src/scene3d_window.py and the architecture guard's
         # method ceiling stays meaningful.
         act_3d.triggered.connect(lambda: _open_3d_view(self))
+
+        act_reference = view_menu.addAction("Walk a &Reference Ecosystem…")
+        act_reference.setStatusTip(
+            "Walk the natural community your ecoregion is reaching toward — "
+            "the reference target for this design (F50)"
+        )
+        # Lambda (not a MainWindow method): the window lives in
+        # src/reference_ecosystem_window.py, off MainWindow's method ledger.
+        act_reference.triggered.connect(
+            lambda: _open_reference_ecosystem(self))
 
         act_snapshots = view_menu.addAction("&Growth Snapshots…")
         act_snapshots.setStatusTip(

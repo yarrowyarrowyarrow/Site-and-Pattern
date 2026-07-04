@@ -55,7 +55,9 @@ Fukuoka's do-nothing farming, Alexander's "quality without a name," Weaner's man
 > bed grouping), `_rhythm` (natural repetition, not mega-clumps) — joined by naturalistic
 > drift layouts in `src/layout.py` and layer/spread-aware spacing in
 > `src/planting_spacing.py` (roadmap F22/F35, shipped) so plantings read as grown rather
-> than gridded. **State: strong.**
+> than gridded; and the **walkable reference-ecosystem library** (`src/reference_ecosystem.py`,
+> roadmap F50) that lets the user walk the natural community their ecoregion is reaching toward —
+> the "grown, not designed" endpoint made concrete as a target to design against. **State: strong.**
 
 ### 3. Relationships matter more than components
 
@@ -88,8 +90,11 @@ Brand's shearing layers, Weaner's succession planting, Bridges' transition psych
 > `src/scene3d_window.py`, the year-aware `src/scene_contract.py`, the growth fields
 > (`growth_rate`, `years_to_maturity`, `growth_curve`) in `src/db/schema.sql`, the
 > Year 1 / 5 / 15 / 30 snapshot view (`src/snapshot_timeline.py` + `src/snapshot_window.py`,
-> roadmap F2 — the philosophy's literal "most important feature", shipped), and the
-> spring/summer/fall/winter seasonal toggle (F16, shipped). **State: strong.**
+> roadmap F2 — the philosophy's literal "most important feature", shipped), the
+> spring/summer/fall/winter seasonal toggle (F16, shipped), and the **phenology "what's
+> happening now" dashboard** (`src/phenology.py`, roadmap F51) that reads the design's trajectory
+> at *this* month's resolution — what's blooming, fruiting, waking, and going dormant right now.
+> **State: strong.**
 
 ### 5. Perception is constructed, not received
 
@@ -111,9 +116,15 @@ Yong's Umwelt research, Deutscher's linguistic relativity, Berger's visual cultu
 > of Umwelt as both overlay *and* embodiment. The **Field Study quiz layer**
 > (`src/field_study.py`, roadmap F48) closes the loop the other way — the first time the app
 > *asks* the user instead of only answering, building the perception through retrieval practice
-> (identify a plant, trace a specialist to its host, spot the food-web gap in your own design).
+> (identify a plant, trace a specialist to its host, spot the food-web gap in your own design);
+> and the **guided lesson track** (`src/lesson_track.py`, roadmap F53) sequences the scattered
+> teaching moments into one narrated path — keystone plants, closing the food web, succession,
+> ranges-not-certainties — each step read back against the user's own design; and **docent /
+> presentation mode** (`src/docent.py`, roadmap F52) turns the design into a narrated tour built
+> from its own facts, so the user can teach *others* to see it (a neighbour, an HOA board, a class).
 > **State: partial** — site forces, seasonality, the real site, winter snow microsites, a single
-> bee's world and now active recall are made visible, but ecological *relationships* (pollinator
+> bee's world, active recall, a guided course and a presentable tour are made visible, but
+> ecological *relationships* (pollinator
 > pathways, mycorrhizal networks, succession trajectories) are still not drawn as networks
 > (roadmap F5, F15).
 
@@ -141,7 +152,9 @@ The most important insights in ecological design come from people who cross disc
 > **Where this lives in the code:** app-wide rather than in a single module — the
 > architecture itself sits at the intersection of complexity science, ecology, and
 > software design (e.g. the deep-module / information-hiding discipline frozen by
-> `tests/test_architecture_guard.py`). **State: foundational.**
+> `tests/test_architecture_guard.py`); and the **guided lesson track**
+> (`src/lesson_track.py`, roadmap F53) deliberately crosses ecology, design and time in one
+> short course. **State: foundational.**
 
 ### 8. Repair is more sophisticated than creation
 
@@ -196,11 +209,14 @@ Knowledge lives in hands, soil, wind, and direct observation — not only in abs
 > pools, snow drifts, soil compacts); and the **site photo underlay** (`src/site_photo.py`, roadmap
 > F24) that brings a real yard/drone photo onto the map; and **winter snow cover & survival
 > metrics** (`src/snow.py`) that model snow's insulation (cover-days, freeze–thaw, chinook thaw,
-> rain-on-snow) into honest, design-for-the-bad-year guidance. **State: strong (was a gap)** — the
-> app now *fetches* site data, *hands the user a field plan*, *captures their own on-site
-> observation*, and *reads the winter the plants will actually face*. The remaining reach: pinning
-> individual observations to map points and feeding them back into generation as soft constraints
-> (the "pinned" slice of F6).
+> rain-on-snow) into honest, design-for-the-bad-year guidance; and the **phenology dashboard's
+> "go check outside" prompt** (`src/phenology.py`, roadmap F51) that turns each month's prediction
+> into a standing invitation to walk the ground and confirm it ("is it early, late, on time?").
+> **State: strong (was a gap)** — the app now *fetches* site data, *hands the user a field plan*,
+> *captures their own on-site observation*, *reads the winter the plants will actually face*, and
+> *sends the user out to verify its predictions*. The remaining reach: pinning individual
+> observations to map points and feeding them back into generation as soft constraints (the
+> "pinned" slice of F6).
 
 ### 12. Indigenous knowledge is honoured through relationship, not extraction
 

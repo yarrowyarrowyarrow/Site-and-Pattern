@@ -593,10 +593,10 @@ plant-use knowledge; Principle 12).
 | ✅ F48 | Field Study quiz layer | M | Low | P5, P7 |
 | ✅ F47 | Feed-a-chickadee provisioning scenario | S–M | Low | P3, P6 |
 | F49 | Ornamental → native swap card | S–M | Med — new seed data | P6, P8 |
-| F50 | Walkable reference-ecosystem library | L | Med — 3D assets | P2, P6 |
-| F51 | Phenology "what's happening now" dashboard | M | Low | P4, P11 |
-| F52 | Docent / presentation mode | M | Med — capture plumbing | P5 |
-| F53 | Guided lesson track | M | Low | P5, P7 |
+| ✅ F50 | Walkable reference-ecosystem library | L | Med — 3D assets | P2, P6 |
+| ✅ F51 | Phenology "what's happening now" dashboard | M | Low | P4, P11 |
+| ✅ F52 | Docent / presentation mode | M | Med — capture plumbing | P5 |
+| ✅ F53 | Guided lesson track | M | Low | P5, P7 |
 
 ### ✅ F46 · Pull-a-plant impact simulator — *Shipped · was Impact High · Effort M · Risk Low (P3, P5, P10)*
 **Shipped** in `src/plant_impact.py` (`pull_plant_impact`), surfaced in the Analysis → Habitat tab
@@ -636,34 +636,54 @@ substitute keyed to a real `plants` row, the ecological gain) seeded into a new 
 table (bump `_SCHEMA_VERSION`, add to the reseed wipe), a Qt-free `src/native_swaps.py` lookup, and
 a search-box card in the plant browser. Data-cost worth discussing before building.
 
-### F50 · Walkable reference-ecosystem library — *Impact Med · Effort L · Risk Med — 3D assets (P2, P6)*
-Let the user *walk* the natural community of their ecoregion as a "target" in the existing 3D
-viewer — the companion to the F13 fidelity score. **How:** from `ecoregion.lookup_ecoregion(lat,
-lng)` pick a canned reference community per ecoregion (a curated species list + layer ratios),
-build it into a `scene_contract`-shaped scene, and open it in `scene3d_window` with the walk mode;
-"walk your design vs. walk the reference." Carries asset/curation cost — discuss first.
+### ✅ F50 · Walkable reference-ecosystem library — *Shipped · was Impact Med · Effort L · Risk Med — 3D assets (P2, P6)*
+**Shipped** in `src/reference_ecosystem.py` (curated communities + `build_reference_project` /
+`build_reference_scene`), surfaced as a **View → Walk a Reference Ecosystem…** window
+(`src/reference_ecosystem_window.py`, a `Map3DWidget` in walk mode with an ecoregion selector) and
+headless via `permadesign_api.reference_community`. Lets the user *walk* the natural community their
+ecoregion is reaching toward — "walk your design, then walk the reference." Rather than a canned
+species list with an asset cost, each of the seven Alberta communities is authored as
+**characteristic genera per canopy/shrub/forb/grass layer + layer counts** and resolved against the
+*live* plant database (`fauna.plants_in_genera`), so it can never name a plant the app doesn't have
+and improves as the seed grows; the resolved species are scattered into a `scene_contract` scene at
+maturity (year 12) and opened straight into third-person walk mode. The initial community follows
+the project's location via `ecoregion.lookup_ecoregion`. Qt-free core + unit tests (community
+resolution and the full build-scene pipeline); the companion to the F13 fidelity score.
 
-### F51 · Phenology "what's happening now" dashboard — *Impact Med · Effort M · Risk Low (P4, P11)*
-A month-by-month "what's blooming / fruiting / emerging / going dormant right now" view of the
-design, tying predictions back to `field_notes` so they become things to go verify outside. **How:**
-join the `planting_calendar` (`cal_jan…cal_dec`) + `bloom_period` + `fruit_period` for the placed
-plants into a per-month event list (extends `src/forage_calendar.py`), rendered as a dashboard and
-seeded into a `field_notes` prompt ("we predict X in bloom this week — go check").
+### ✅ F51 · Phenology "what's happening now" dashboard — *Shipped · was Impact Med · Effort M · Risk Low (P4, P11)*
+**Shipped** in `src/phenology.py` (`build_phenology`), surfaced as an Analysis → **This Month** tab
+(`src/phenology_widget.py`) and headless via `permadesign_api.phenology`. A month-by-month view of
+the design — what's **blooming / fruiting / waking** (breaking dormancy) / **going dormant** / and
+which hands-on **tasks** the planting calendar calls for — derived by joining `plants.bloom_period`
++ `fruit_period` (parsed with the score's `parse_month_range`) with the `planting_calendar` ring
+(`db.plants.get_calendar`); dormancy transitions come from active→inactive edges in that ring. The
+current month becomes a short **"go check outside"** prompt ("we predict X in bloom around now — is
+it early, late, on time?"), turning a prediction into a thing to verify on the ground (P11). Qt-free
+core + unit tests. Pinning individual observations back into the `field_notes` block stays a cheap
+follow-on.
 
-### F52 · Docent / presentation mode — *Impact Med · Effort M · Risk Med — capture plumbing (P5)*
-A narrated walk-through of a finished design to show a neighbour / HOA / class. **How:** script a
-sequence of camera + season states (reuse the F-flyover keyframes) with generated narration lines
-from the design's own facts (score, species supported, food-web status), rendered over the existing
-offscreen 3D capture + `pdf_export.py` path into a shareable slide/booklet or an on-screen guided
-tour.
+### ✅ F52 · Docent / presentation mode — *Shipped · was Impact Med · Effort M · Risk Med — capture plumbing (P5)*
+**Shipped** in `src/docent.py` (`build_docent_script`), surfaced as an Analysis → **Present** tab
+(`src/docent_widget.py`, an on-screen guided tour with Back/Next) and headless via
+`permadesign_api.docent_script`. A narrated walk-through of a finished design to show a neighbour /
+HOA / class: a sequence of *beats* — each a camera + season/year state plus a narration line
+**generated from the design's own facts** (habitat score vs. the lawn's ≈0, food-web status,
+species supported per taxon, seasonal bloom peak from `forage_calendar`, and the chickadee-brood
+story from F47) — so the tour is always true to the project in front of you, never boilerplate.
+The beats carry the camera/season state a 3D flyover could sync to (reusing the existing flyover
+keyframe idea); the shipped surface walks them as an on-screen guided tour, and the same Qt-free
+script can feed an offscreen-capture booklet as a cheap follow-on. Unit tests cover the beat
+sequence and fact-driven narration.
 
-### F53 · Guided lesson track — *Impact Med · Effort M · Risk Low (P5, P7)*
-Stitch the scattered teaching moments into a short **course narrated against the user's OWN
-project**: keystone plants → closing the food web → succession over time → ranges-not-certainties.
-**How:** a `src/lesson_track.py` state machine of 4–5 steps, each pointing at a live surface it
-already has (`ecological_role`, `habitat_score.food_web`, `succession`, the score's confidence
-language) with a one-paragraph lesson and a "your design" readout, walked through a small stepper
-panel.
+### ✅ F53 · Guided lesson track — *Shipped · was Impact Med · Effort M · Risk Low (P5, P7)*
+**Shipped** in `src/lesson_track.py` (`build_lesson_track`), surfaced as an Analysis → **Learn** tab
+(`src/lesson_track_widget.py`, a Back/Next stepper with a status-dot row) and headless via
+`permadesign_api.lesson_track`. A short **course narrated against the user's OWN project** in four
+steps — keystone plants → closing the food web → succession over time → ranges-not-certainties —
+each pairing a one-paragraph lesson with a live "your design" readout drawn from the surfaces the
+app already computes (`fauna.keystone_rank_lepidoptera`, `habitat_score.food_web`,
+`succession.successional_role`, and the app's own hedged ranges) plus a good/attention/empty status.
+Qt-free core + unit tests. Turns scattered teaching moments into one legible path.
 
 ---
 

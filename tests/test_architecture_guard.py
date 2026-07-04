@@ -191,6 +191,10 @@ class TestAgentApiContract(unittest.TestCase):
         "run_analysis": ["project"],
         "pull_plant_impact": ["project", "plant_id"],   # F46 (V2.13)
         "chickadee_provision": ["project"],             # F47 (V2.13)
+        "phenology": ["project", "month"],              # F51 (V2.13)
+        "lesson_track": ["project"],                    # F53 (V2.13)
+        "reference_community": ["ecoregion"],           # F50 (V2.13)
+        "docent_script": ["project"],                   # F52 (V2.13)
         "export_plant_catalogue_docx": ["out_path"],
     }
 

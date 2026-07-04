@@ -98,7 +98,10 @@ class AnalysisPanel(QWidget):
         self._build_season_tab()
         self._build_habitat_tab()
         self._build_forage_tab()
+        self._build_phenology_tab()
         self._build_field_study_tab()
+        self._build_lesson_tab()
+        self._build_present_tab()
         self._build_bee_tab()
 
         layout.addWidget(self._tabs)
@@ -732,6 +735,54 @@ class AnalysisPanel(QWidget):
             plants_provider=lambda: self._placed_plants)
         page.setWidget(self._field_study)
         self._tabs.addTab(page, "Field Study")
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  F53 — Guided lesson track
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def _build_lesson_tab(self):
+        from src.lesson_track_widget import LessonTrackWidget
+        page = QScrollArea()
+        page.setWidgetResizable(True)
+        page.setFrameShape(QFrame.Shape.NoFrame)
+        # Design-aware: each step's "your design" readout is the live project.
+        self._lesson_track = LessonTrackWidget(
+            plants_provider=lambda: self._placed_plants,
+            structures_provider=lambda: self._structures)
+        page.setWidget(self._lesson_track)
+        self._tabs.addTab(page, "Learn")
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  F52 — Docent / presentation mode
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def _build_present_tab(self):
+        from src.docent_widget import DocentWidget
+        page = QScrollArea()
+        page.setWidgetResizable(True)
+        page.setFrameShape(QFrame.Shape.NoFrame)
+        # Design-aware: the narration is generated from the live project's facts.
+        self._docent = DocentWidget(
+            plants_provider=lambda: self._placed_plants,
+            structures_provider=lambda: self._structures)
+        page.setWidget(self._docent)
+        self._tabs.addTab(page, "Present")
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  F51 — Phenology "what's happening now" dashboard
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def _build_phenology_tab(self):
+        from src.phenology_widget import PhenologyWidget
+        page = QScrollArea()
+        page.setWidgetResizable(True)
+        page.setFrameShape(QFrame.Shape.NoFrame)
+        # Design-aware: reads the live placed-plant list so "this month" is the
+        # user's own design.
+        self._phenology = PhenologyWidget(
+            plants_provider=lambda: self._placed_plants)
+        page.setWidget(self._phenology)
+        self._tabs.addTab(page, "This Month")
 
     # ═════════════════════════════════════════════════════════════════════════
     #  Forage calendar — whole-design bloom succession + gaps (V2.13)
@@ -1487,6 +1538,15 @@ class AnalysisPanel(QWidget):
             self.refresh_bee_tab()
         # The forage calendar tracks the placed plants directly (no button).
         self.refresh_forage_tab()
+        # Phenology dashboard likewise reads the live design.
+        if hasattr(self, "_phenology"):
+            self._phenology.refresh()
+        # Guided lesson track reads the live design too.
+        if hasattr(self, "_lesson_track"):
+            self._lesson_track.refresh()
+        # Docent presentation script is regenerated from the live design.
+        if hasattr(self, "_docent"):
+            self._docent.refresh()
 
     def set_structures(self, structures: list[dict]):
         """Update the list of placed structures (from app.py)."""
