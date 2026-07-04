@@ -173,6 +173,17 @@ comparison (2D thumbnails or 3D captures) calling `build_scene` at years {1,5,15
 clamped to `succession.timeline_max_years`. Reuse the 3D window's offscreen capture path
 (the same one the "yard photo" bake uses). **First slice:** a 2×2 of 2D canopy renders.
 
+### ✅ Forage calendar — whole-design bloom succession + gaps — *Shipped (P6, P9)*
+**Shipped** as `src/forage_calendar.py` (Qt-free core) + `src/forage_calendar_widget.py` (a QPainter
+chart) behind a new **Analysis → Forage** tab (V2.13). The Habitat Value Score already rewarded *bloom
+continuity* as a hidden sub-score; this makes it **legible**: a 12-month bar of how many plants flower
+each month (growing season shaded), the pollinator **gap months** flagged red, and a per-plant
+spring→fall **succession** band coloured by flower colour. Honest per P9 — wind-pollinated graminoids
+don't count as forage, undated bloomers fall back to a summer relay, and the gaps are named, with
+**gap-filling suggestions** (unplaced Alberta natives that flower in a gap, best-fit first). Parses
+bloom windows with the same `parse_month_range` the score uses, so calendar and score never disagree.
+Refreshes live from the placed plants (no button).
+
 ### ✅ F3 · Food-web completeness score — *Shipped · was Impact High / Effort M / Risk Low (P3, P6)*
 **Shipped** as the `food_web` line in `src/habitat_score.py`, fed into `src/design_critic.py`.
 Score whether the design closes the Tallamy chain (host plants → caterpillars → bird

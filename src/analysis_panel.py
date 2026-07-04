@@ -97,6 +97,7 @@ class AnalysisPanel(QWidget):
         self._build_wind_tab()
         self._build_season_tab()
         self._build_habitat_tab()
+        self._build_forage_tab()
         self._build_bee_tab()
 
         layout.addWidget(self._tabs)
@@ -716,6 +717,95 @@ class AnalysisPanel(QWidget):
         self.season_changed.emit(self._season_combo.currentText())
 
     # ═════════════════════════════════════════════════════════════════════════
+    #  Forage calendar — whole-design bloom succession + gaps (V2.13)
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def _build_forage_tab(self):
+        from src.forage_calendar_widget import ForageCalendarWidget
+        page = QScrollArea()
+        page.setWidgetResizable(True)
+        page.setFrameShape(QFrame.Shape.NoFrame)
+        tab = QWidget()
+        page.setWidget(tab)
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(8)
+
+        info = QLabel(
+            "Is there always something in bloom? This is your design's forage "
+            "calendar — how many plants flower each month, where the pollinator "
+            "gaps are, and the spring-to-fall relay of who blooms when."
+        )
+        info.setWordWrap(True)
+        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        layout.addWidget(info)
+
+        self._forage_headline = QLabel("—")
+        self._forage_headline.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._forage_headline.setStyleSheet(
+            "color: #c8e6c9; font-size: 20px; font-weight: bold; "
+            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px; padding: 10px;")
+        layout.addWidget(self._forage_headline)
+
+        self._forage_chart = ForageCalendarWidget()
+        layout.addWidget(self._forage_chart)
+
+        self._forage_note = QLabel("")
+        self._forage_note.setWordWrap(True)
+        self._forage_note.setStyleSheet(
+            "color: #dcedc8; font-size: 11px; padding: 8px; "
+            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px;")
+        layout.addWidget(self._forage_note)
+
+        self._forage_suggest = QLabel("")
+        self._forage_suggest.setWordWrap(True)
+        self._forage_suggest.setTextFormat(Qt.TextFormat.RichText)
+        self._forage_suggest.setStyleSheet("color: #cbd8bf; font-size: 11px;")
+        self._forage_suggest.setVisible(False)
+        layout.addWidget(self._forage_suggest)
+
+        layout.addStretch()
+        self._forage_tab_index = self._tabs.addTab(page, "Forage")
+
+    def refresh_forage_tab(self):
+        """Rebuild the forage calendar from the placed plants (P6/P9)."""
+        if not hasattr(self, "_forage_chart"):
+            return
+        from src.forage_calendar import (build_forage_calendar,
+                                         gap_filling_suggestions)
+        cal = build_forage_calendar(self._placed_plants)
+        self._forage_chart.set_calendar(cal)
+        cov = cal["covered_growing"]
+        if cal["flowering_plants"] == 0:
+            self._forage_headline.setText("No forage yet")
+        elif not cal["gap_months"]:
+            self._forage_headline.setText(f"Continuous bloom · {cov}/7 months")
+        else:
+            self._forage_headline.setText(
+                f"Forage {cov}/7 growing months · "
+                f"{len(cal['gap_months'])} gap"
+                f"{'s' if len(cal['gap_months']) != 1 else ''}")
+        self._forage_note.setText(cal["note"])
+
+        # Gap-filling suggestions from the native plant list (best-fit first).
+        self._forage_suggest.setVisible(False)
+        if cal["gap_months"]:
+            try:
+                from src.db.plants import get_all_plants
+                allp = get_all_plants()
+                natives = [p for p in allp if p.get("native_to_alberta")]
+                cands = natives or allp
+                sugg = gap_filling_suggestions(self._placed_plants, cands, limit=6)
+            except Exception:      # noqa: BLE001 — never break the tab on a data hiccup
+                sugg = []
+            if sugg:
+                items = "; ".join(
+                    f"<b>{s['common_name']}</b> ({s['bloom_period']})" for s in sugg)
+                self._forage_suggest.setText(
+                    "🌱 <b>Fill the gaps with:</b> " + items)
+                self._forage_suggest.setVisible(True)
+
+    # ═════════════════════════════════════════════════════════════════════════
     #  H1 — Habitat Value Score
     # ═════════════════════════════════════════════════════════════════════════
 
@@ -1257,6 +1347,8 @@ class AnalysisPanel(QWidget):
         if (hasattr(self, "_bee_tab_index")
                 and self._tabs.currentIndex() == self._bee_tab_index):
             self.refresh_bee_tab()
+        # The forage calendar tracks the placed plants directly (no button).
+        self.refresh_forage_tab()
 
     def set_structures(self, structures: list[dict]):
         """Update the list of placed structures (from app.py)."""
