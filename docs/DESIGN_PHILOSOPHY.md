@@ -69,10 +69,15 @@ Simard's mycorrhizal networks, Lowenfels' soil food web, Sheldrake's fungal conn
 > relationships are spotlighted through `fauna` specificity (F9, shipped); the **native-bee
 > habitat builder** (`src/bee_habitat.py`, roadmap F37) now turns the plant↔bee edges into
 > per-species advice — matched floral hosts, nesting needs, and a flight-season forage check
-> backed by the schema-v39 `bee_attributes` spine. **State: partial
-> (strengthening)** — the relationships are increasingly *scored*, but not yet drawn as a
-> network (F5) or unified into one edges layer (F7); mycorrhizal/symbiosis links still live
-> only in plant `notes` text.
+> backed by the schema-v39 `bee_attributes` spine; the **pull-a-plant impact simulator**
+> (`src/plant_impact.py`, roadmap F46) makes those edges felt by *breaking* them — remove a
+> plant and see which species lose all support and whether the food-web chain snaps; and the
+> **feed-a-chickadee scenario** (`src/chickadee_scenario.py`, roadmap F47) walks one edge all
+> the way up — host plant → caterpillar → nestling — weighing the design's caterpillar capacity
+> against the 6,000–9,000 a brood needs. **State: partial (strengthening)** — the relationships
+> are increasingly *scored*, now *testable by removal*, and now *followed up the chain to a
+> fledged bird*, but not yet drawn as a network (F5) or unified into one edges layer (F7);
+> mycorrhizal/symbiosis links still live only in plant `notes` text.
 
 ### 4. Time is the most undervalued design variable
 
@@ -121,9 +126,13 @@ Graeber, Saito, Raworth, Schumacher, and Tsing demonstrate that market price fai
 > bird food, vegetation layers, structures, and bloom continuity — explicitly grounded in
 > Tallamy); honest cost framing in `src/sourcing.py`; the **lawn-equivalent counterfactual**
 > (`src/lawn_zones.py:lawn_counterfactual`, roadmap F10) that scores this design against the ≈0
-> an equivalent lawn provides; and **"why it matters" ecological-role labels**
+> an equivalent lawn provides; **"why it matters" ecological-role labels**
 > (`src/ecological_role.py`, roadmap F1) that make each plant's value legible in the browser
-> itself, not just in the Habitat tab. **State: strong.**
+> itself, not just in the Habitat tab; and the **feed-a-chickadee scenario**
+> (`src/chickadee_scenario.py`, roadmap F47), which converts the abstract food-web score into
+> the one number people feel — whether the design's host plants could raise a chickadee brood
+> (the 6,000–9,000 caterpillars of Tallamy & Shropshire 2009), reported as an honest range.
+> **State: strong.**
 
 ### 7. Generalist knowledge produces the most original design insights
 

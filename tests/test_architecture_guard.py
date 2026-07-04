@@ -189,6 +189,8 @@ class TestAgentApiContract(unittest.TestCase):
         "list_polycultures": ["top_level_only"],
         "list_structures": [],
         "run_analysis": ["project"],
+        "pull_plant_impact": ["project", "plant_id"],   # F46 (V2.13)
+        "chickadee_provision": ["project"],             # F47 (V2.13)
         "export_plant_catalogue_docx": ["out_path"],
     }
 

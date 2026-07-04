@@ -56,6 +56,8 @@ __all__ = [
     "list_polycultures",
     "list_structures",
     "run_analysis",
+    "pull_plant_impact",
+    "chickadee_provision",
     "export_plant_catalogue_docx",
 ]
 
@@ -291,6 +293,43 @@ def run_analysis(project: Project) -> dict:
         "habitat_score": score.as_dict() if score is not None else None,
         "warnings": project.validate(),
     }
+
+
+def pull_plant_impact(project: Project, plant_id: int) -> Optional[dict]:
+    """Preview the cost of removing one placed ``plant_id`` from ``project`` —
+    the "pull-a-plant" impact simulator (F46). Returns the JSON-friendly dict
+    from :func:`src.plant_impact.pull_plant_impact` (supported species lost,
+    whether the food-web chain snaps, Habitat Score delta), or ``None`` if the
+    plant isn't placed.
+
+    Raises:
+        AnalysisError: if the plant database can't be read.
+    """
+    _ensure_db()
+    from src.plant_impact import pull_plant_impact as _impact
+    try:
+        return _impact(project.placed_plants, project.structures, int(plant_id))
+    except HabitatScoreError as exc:
+        raise AnalysisError(f"Impact unavailable: {exc}") from exc
+
+
+def chickadee_provision(project: Project) -> dict:
+    """Estimate whether ``project`` could provision a chickadee brood — the
+    "feed a chickadee" scenario (F47). Returns the JSON-friendly dict from
+    :func:`src.chickadee_scenario.chickadee_provision`: the design's estimated
+    caterpillar capacity (an honest range) against the 6,000–9,000 a brood
+    needs, a pass/partway/short ``status`` + ``verdict``, and the keystone host
+    plants doing the work.
+
+    Raises:
+        AnalysisError: if the plant/fauna database can't be read.
+    """
+    _ensure_db()
+    from src.chickadee_scenario import chickadee_provision as _provision
+    try:
+        return _provision(project.placed_plants)
+    except Exception as exc:      # noqa: BLE001
+        raise AnalysisError(f"Chickadee scenario unavailable: {exc}") from exc
 
 
 # ── Exports ────────────────────────────────────────────────────────────────

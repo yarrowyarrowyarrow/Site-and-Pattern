@@ -926,6 +926,49 @@ class AnalysisPanel(QWidget):
         self._habitat_breakdown.setMinimumHeight(220)
         layout.addWidget(self._habitat_breakdown)
 
+        # ── Pull-a-plant impact simulator (F46) — learn by breaking it ─────
+        pull_label = QLabel("Pull-a-plant — what does each plant hold up?")
+        pull_label.setStyleSheet(
+            "color: #a5d6a7; font-size: 12px; font-weight: bold; padding: 6px 0 2px 0;")
+        layout.addWidget(pull_label)
+
+        pull_hint = QLabel(
+            "Pick a plant to preview what removing it would cost — the wildlife "
+            "that lose all their support, whether the food-web chain snaps, and "
+            "the score change.")
+        pull_hint.setWordWrap(True)
+        pull_hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        layout.addWidget(pull_hint)
+
+        self._pull_combo = QComboBox()
+        self._pull_combo.setToolTip("Preview the impact of removing this plant")
+        self._pull_combo.currentIndexChanged.connect(self._on_pull_plant)
+        layout.addWidget(self._pull_combo)
+
+        self._pull_result = QLabel("")
+        self._pull_result.setWordWrap(True)
+        self._pull_result.setVisible(False)
+        self._pull_result.setStyleSheet(
+            "color: #ffe0b2; font-size: 12px; padding: 8px; "
+            "background: #241a12; border: 1px solid #5a3a1e; border-radius: 4px;")
+        layout.addWidget(self._pull_result)
+
+        # ── Feed-a-chickadee provisioning scenario (F47) ──────────────────────
+        chickadee_label = QLabel("Feed a chickadee brood")
+        chickadee_label.setStyleSheet(
+            "color: #a5d6a7; font-size: 12px; font-weight: bold; padding: 6px 0 2px 0;")
+        layout.addWidget(chickadee_label)
+
+        self._chickadee_result = QLabel(
+            "One clutch of chickadees needs 6,000–9,000 caterpillars to fledge. "
+            "Calculate your Habitat Value Score to see whether your host plants "
+            "could feed a brood.")
+        self._chickadee_result.setWordWrap(True)
+        self._chickadee_result.setStyleSheet(
+            "color: #cfe3f0; font-size: 12px; padding: 8px; "
+            "background: #12202a; border: 1px solid #1e4a5a; border-radius: 4px;")
+        layout.addWidget(self._chickadee_result)
+
         # Tips for raising your score
         tips_label = QLabel("Tips for raising your score")
         tips_label.setStyleSheet("color: #a5d6a7; font-size: 12px; font-weight: bold; padding: 4px 0 2px 0;")
@@ -1331,6 +1374,84 @@ class AnalysisPanel(QWidget):
         if hasattr(self, "_bee_selector"):
             self._update_bee_plan()
 
+    # ── Pull-a-plant impact simulator (F46) ───────────────────────────────
+
+    def _populate_pull_combo(self):
+        """Fill the pull-a-plant selector with the design's distinct species."""
+        combo = getattr(self, "_pull_combo", None)
+        if combo is None:
+            return
+        combo.blockSignals(True)
+        combo.clear()
+        by_id: dict = {}
+        for p in (self._placed_plants or []):
+            pid = p.get("plant_id")
+            if pid is not None and pid not in by_id:
+                by_id[pid] = p.get("common_name") or f"plant {pid}"
+        if not by_id:
+            combo.addItem("Place plants first", userData=None)
+            combo.setEnabled(False)
+            self._pull_result.setVisible(False)
+        else:
+            combo.setEnabled(True)
+            combo.addItem("— pick a plant to test —", userData=None)
+            for pid, name in sorted(by_id.items(), key=lambda kv: kv[1].lower()):
+                combo.addItem(name, userData=pid)
+        combo.blockSignals(False)
+        self._pull_result.setVisible(False)
+
+    def _on_pull_plant(self, *_):
+        """Render the impact of removing the selected plant (F46)."""
+        combo = self._pull_combo
+        pid = combo.currentData()
+        if pid is None:
+            self._pull_result.setVisible(False)
+            return
+        try:
+            from src.plant_impact import pull_plant_impact
+            r = pull_plant_impact(self._placed_plants, self._structures, int(pid))
+        except Exception:      # noqa: BLE001 — never let the sim break the tab
+            self._pull_result.setVisible(False)
+            return
+        if r is None:
+            self._pull_result.setVisible(False)
+            return
+        detail = (f"Habitat Score {r['score_before']} → {r['score_after']}"
+                  f"   ·   this plant feeds {r['species_supported']} species")
+        lost_bits = []
+        for taxon, names in r["species_lost_by_taxon"].items():
+            shown = ", ".join(names[:4]) + ("…" if len(names) > 4 else "")
+            lost_bits.append(shown)
+        lost_line = ("<br><span style='color:#ffab91'>Lost: "
+                     + "; ".join(lost_bits) + "</span>") if lost_bits else ""
+        self._pull_result.setText(
+            f"<b>{r['verdict']}</b><br><span style='color:#c8b08a'>{detail}"
+            f"</span>{lost_line}")
+        self._pull_result.setVisible(True)
+
+    # ── Feed-a-chickadee provisioning scenario (F47) ──────────────────────
+
+    def _update_chickadee_scenario(self):
+        """Refresh the chickadee-brood provisioning story from the live design."""
+        label = getattr(self, "_chickadee_result", None)
+        if label is None:
+            return
+        try:
+            from src.chickadee_scenario import chickadee_provision
+            r = chickadee_provision(self._placed_plants or [])
+        except Exception:      # noqa: BLE001 — never let the scenario break the tab
+            return
+        colors = {"clears": "#a5d6a7", "partway": "#ffe0b2",
+                  "short": "#ffab91", "none": "#cfe3f0"}
+        c = colors.get(r["status"], "#cfe3f0")
+        body = f"<span style='color:{c}'>{r['verdict']}</span>"
+        if r["host_plants"]:
+            body += (f"<br><span style='color:#9fbccf; font-size:11px'>"
+                     f"Capacity ≈ {r['caterpillars_low']:,}–"
+                     f"{r['caterpillars_high']:,} caterpillars from "
+                     f"{r['n_host_species']} host species.</span>")
+        label.setText(body)
+
     def set_shade_breakdown(self, counts: dict | None):
         """Render the cached shade-tag mix (``{tag: n}`` from
         shade_zones.tag_counts), or a prompt when nothing is classified yet.
@@ -1443,6 +1564,8 @@ class AnalysisPanel(QWidget):
         # equivalent lawn, grounded in the converted area when zones are drawn.
         self._last_habitat_result = result
         self._render_lawn_counterfactual(result)
+        self._populate_pull_combo()
+        self._update_chickadee_scenario()
 
         # Species photos that make the value tangible (F11 / I1): the plants
         # doing the work and the fauna they support.

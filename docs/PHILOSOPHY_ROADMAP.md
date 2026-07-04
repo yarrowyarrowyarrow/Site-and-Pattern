@@ -578,6 +578,95 @@ panel. **How:** small, local UI additions — no new surfaces.
 
 ---
 
+## Education & mastery — the learning layer (F46–F53)
+
+The app already teaches by *showing* (role badges F1, the score rubric + food-web check F3,
+communities as patterns F4, "become a bee/butterfly" embodiment, the lawn counterfactual F10).
+What it never lets you do is **test recall**, **break something to understand it**, or **follow a
+narrative**. These entries add the missing learning mechanisms — retrieval practice, learning by
+breaking, and guided narrative — always on ecological-relationship ground (never Indigenous
+plant-use knowledge; Principle 12).
+
+| ID | Feature | Effort | Risk | Principle |
+|----|---------|--------|------|-----------|
+| ✅ F46 | Pull-a-plant impact simulator | M | Low | P3, P5, P10 |
+| ✅ F48 | Field Study quiz layer | M | Low | P5, P7 |
+| ✅ F47 | Feed-a-chickadee provisioning scenario | S–M | Low | P3, P6 |
+| F49 | Ornamental → native swap card | S–M | Med — new seed data | P6, P8 |
+| F50 | Walkable reference-ecosystem library | L | Med — 3D assets | P2, P6 |
+| F51 | Phenology "what's happening now" dashboard | M | Low | P4, P11 |
+| F52 | Docent / presentation mode | M | Med — capture plumbing | P5 |
+| F53 | Guided lesson track | M | Low | P5, P7 |
+
+### ✅ F46 · Pull-a-plant impact simulator — *Shipped · was Impact High · Effort M · Risk Low (P3, P5, P10)*
+**Shipped** in `src/plant_impact.py` (`pull_plant_impact`), surfaced in the Analysis → Habitat tab
+("Pull-a-plant") and exposed headless via `permadesign_api.run_analysis`-adjacent
+`pull_plant_impact`. The flagship *learn-by-breaking-it* mechanic: pick a placed species and preview
+what removing it costs — recomputes `habitat_score.compute_habitat_score` with and without it for the
+score delta, diffs `fauna.fauna_supported_by_plants` per taxon to name the **species that lose all
+their support** (the plant's true keystone weight *in this design*), and reports whether the Tallamy
+**food-web chain snaps** (`HabitatScore.food_web` complete→broken). Honest about redundancy (P9): if
+another copy remains, nothing is lost — and it says so, teaching resilience. Qt-free core + unit
+tests; the map right-click gesture is a cheap follow-on (`map_events` plant context menu).
+
+### ✅ F47 · Feed-a-chickadee provisioning scenario — *Shipped · was Impact High · Effort S–M · Risk Low (P3, P6)*
+**Shipped** in `src/chickadee_scenario.py` (`chickadee_provision`), surfaced in the Habitat tab and
+via the scripting API. Extends the embodiment family from "be a bee" to "provision a bird": tallies
+the design's caterpillar-supporting capacity (distinct larval-host lepidoptera the design's plants
+support, weighted by each host plant's keystone rank via `fauna.keystone_rank_lepidoptera`) against
+the **6,000–9,000 caterpillars one chickadee brood needs** (Tallamy & Shropshire 2009), as an
+honest *range* (P9), with a pass/partway/short verdict and the keystone plants doing the work. Makes
+the invisible food web emotionally concrete without inventing precision.
+
+### ✅ F48 · Field Study quiz layer — *Shipped · was Impact High · Effort M · Risk Low (P5, P7)*
+**Shipped** in `src/field_study.py` (`generate_quiz`), surfaced as an Analysis → Field Study tab.
+Procedurally-generated retrieval practice from data already present — no new content: *identify the
+plant* (from an image + traits), *which plant feeds this specialist* (from the `plant_fauna`
+specialist edges), and *spot the food-web gap* (from the design's own missing links). Deterministic
+per seed so a question set is reproducible/testable; doubles as plant-ID training for a nursery or
+trail visit (P7 cross-domain: turns the screen tool into field prep). New mechanism the app wholly
+lacked — the first time it asks the user a question instead of only answering theirs.
+
+### F49 · Ornamental → native swap card — *Impact Med · Effort S–M · Risk Med — new seed data (P6, P8)*
+For a small **curated** ornamental→native swap table (the DB is native-only, so this needs a new
+seed file + a schema bump), show the native that does the same aesthetic job *and* feeds the food
+web — correcting the exact mistake a beginner makes at the garden centre. **How:** a
+`data/native_swaps_master.json` (ornamental name, the aesthetic role it plays, the native
+substitute keyed to a real `plants` row, the ecological gain) seeded into a new `native_swaps`
+table (bump `_SCHEMA_VERSION`, add to the reseed wipe), a Qt-free `src/native_swaps.py` lookup, and
+a search-box card in the plant browser. Data-cost worth discussing before building.
+
+### F50 · Walkable reference-ecosystem library — *Impact Med · Effort L · Risk Med — 3D assets (P2, P6)*
+Let the user *walk* the natural community of their ecoregion as a "target" in the existing 3D
+viewer — the companion to the F13 fidelity score. **How:** from `ecoregion.lookup_ecoregion(lat,
+lng)` pick a canned reference community per ecoregion (a curated species list + layer ratios),
+build it into a `scene_contract`-shaped scene, and open it in `scene3d_window` with the walk mode;
+"walk your design vs. walk the reference." Carries asset/curation cost — discuss first.
+
+### F51 · Phenology "what's happening now" dashboard — *Impact Med · Effort M · Risk Low (P4, P11)*
+A month-by-month "what's blooming / fruiting / emerging / going dormant right now" view of the
+design, tying predictions back to `field_notes` so they become things to go verify outside. **How:**
+join the `planting_calendar` (`cal_jan…cal_dec`) + `bloom_period` + `fruit_period` for the placed
+plants into a per-month event list (extends `src/forage_calendar.py`), rendered as a dashboard and
+seeded into a `field_notes` prompt ("we predict X in bloom this week — go check").
+
+### F52 · Docent / presentation mode — *Impact Med · Effort M · Risk Med — capture plumbing (P5)*
+A narrated walk-through of a finished design to show a neighbour / HOA / class. **How:** script a
+sequence of camera + season states (reuse the F-flyover keyframes) with generated narration lines
+from the design's own facts (score, species supported, food-web status), rendered over the existing
+offscreen 3D capture + `pdf_export.py` path into a shareable slide/booklet or an on-screen guided
+tour.
+
+### F53 · Guided lesson track — *Impact Med · Effort M · Risk Low (P5, P7)*
+Stitch the scattered teaching moments into a short **course narrated against the user's OWN
+project**: keystone plants → closing the food web → succession over time → ranges-not-certainties.
+**How:** a `src/lesson_track.py` state machine of 4–5 steps, each pointing at a live surface it
+already has (`ecological_role`, `habitat_score.food_web`, `succession`, the score's confidence
+language) with a one-paragraph lesson and a "your design" readout, walked through a small stepper
+panel.
+
+---
+
 ## Defer — depth & connoisseurship (after activation/action prove out)
 
 Kept on the roadmap (the depth is the delight), but **parked** behind the adoption work: these
