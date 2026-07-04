@@ -103,10 +103,14 @@ Yong's Umwelt research, Deutscher's linguistic relativity, Berger's visual cultu
 > that bee* (`src/scene3d_window.py` → `html/scene3d.html`, a first-person bee camera with its
 > host flowers marked) and recolours the 2D map as that bee's floral-resource map
 > (`html/map/06-overlays.js` — its nectar/pollen plants glow, the rest greys out), a first taste
-> of Umwelt as both overlay *and* embodiment. **State:
-> partial** — site forces, seasonality, the real site, winter snow microsites and now a single
-> bee's world are made visible, but ecological *relationships* (pollinator pathways, mycorrhizal
-> networks, succession trajectories) are still not drawn as networks (roadmap F5, F15).
+> of Umwelt as both overlay *and* embodiment. The **Field Study quiz layer**
+> (`src/field_study.py`, roadmap F48) closes the loop the other way — the first time the app
+> *asks* the user instead of only answering, building the perception through retrieval practice
+> (identify a plant, trace a specialist to its host, spot the food-web gap in your own design).
+> **State: partial** — site forces, seasonality, the real site, winter snow microsites, a single
+> bee's world and now active recall are made visible, but ecological *relationships* (pollinator
+> pathways, mycorrhizal networks, succession trajectories) are still not drawn as networks
+> (roadmap F5, F15).
 
 ### 6. Conventional value metrics miss ecological value
 

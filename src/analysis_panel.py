@@ -98,6 +98,7 @@ class AnalysisPanel(QWidget):
         self._build_season_tab()
         self._build_habitat_tab()
         self._build_forage_tab()
+        self._build_field_study_tab()
         self._build_bee_tab()
 
         layout.addWidget(self._tabs)
@@ -715,6 +716,22 @@ class AnalysisPanel(QWidget):
 
     def _on_season_apply(self):
         self.season_changed.emit(self._season_combo.currentText())
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  F48 — Field Study quiz layer
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def _build_field_study_tab(self):
+        from src.field_study_widget import FieldStudyWidget
+        page = QScrollArea()
+        page.setWidgetResizable(True)
+        page.setFrameShape(QFrame.Shape.NoFrame)
+        # The quiz is design-aware: it reads the live placed-plant list so the
+        # "spot the food-web gap" question is about the user's own design.
+        self._field_study = FieldStudyWidget(
+            plants_provider=lambda: self._placed_plants)
+        page.setWidget(self._field_study)
+        self._tabs.addTab(page, "Field Study")
 
     # ═════════════════════════════════════════════════════════════════════════
     #  Forage calendar — whole-design bloom succession + gaps (V2.13)
