@@ -32,6 +32,12 @@ from PyQt6.QtWidgets import (
 from src import ui_style
 
 
+# Dimmed empty-state placeholder for data rows (V2.13). QLabel auto-detects
+# the rich-text span; handlers later call setText() with plain strings, which
+# restores the normal value colour.
+_DASH = "<span style='color:#546e7a;'>—</span>"
+
+
 # ── QThread-lifecycle helper ─────────────────────────────────────────────────
 
 def _safe_is_running(thread) -> bool:
@@ -418,7 +424,7 @@ class SitePanel(QWidget):
         self._lbl_zone   = QLabel("—")
         self._lbl_zone.setStyleSheet("color: #c8e6c9; font-weight: bold; font-size: 14px;")
         self._lbl_hard_src = QLabel("")
-        self._lbl_hard_src.setStyleSheet("color: #78909c; font-size: 10px;")
+        self._lbl_hard_src.setStyleSheet("color: #90a4ae; font-size: 10px;")
         self._lbl_hard_src.setWordWrap(True)
         self._lbl_gdd   = QLabel("—")
         self._lbl_gdd.setStyleSheet("color: #c8e6c9;")
@@ -461,7 +467,7 @@ class SitePanel(QWidget):
             "color: #90caf9; font-family: monospace; font-size: 10px;"
         )
         self._lbl_rain_src = QLabel("")
-        self._lbl_rain_src.setStyleSheet("color: #78909c; font-size: 10px;")
+        self._lbl_rain_src.setStyleSheet("color: #90a4ae; font-size: 10px;")
         self._lbl_rain_src.setWordWrap(True)
         # Rain/snow timing (precip_split): what the total hides is *when* the
         # water arrives — growing-season rain infiltrates now; snow is a delayed
@@ -473,7 +479,7 @@ class SitePanel(QWidget):
         self._lbl_rain_snow.setStyleSheet("color: #90caf9; font-size: 11px;")
         self._lbl_rain_snow.setWordWrap(True)
         self._lbl_rain_note = QLabel("")
-        self._lbl_rain_note.setStyleSheet("color: #78909c; font-size: 10px;")
+        self._lbl_rain_note.setStyleSheet("color: #90a4ae; font-size: 10px;")
         self._lbl_rain_note.setWordWrap(True)
         self._lbl_rain_note.setVisible(False)
         self._rain_form = rl
@@ -511,7 +517,7 @@ class SitePanel(QWidget):
         self._lbl_soil_mix     = QLabel("—")
         self._lbl_soil_depth   = QLabel("—")
         self._lbl_soil_src     = QLabel("")
-        self._lbl_soil_src.setStyleSheet("color: #78909c; font-size: 10px;")
+        self._lbl_soil_src.setStyleSheet("color: #90a4ae; font-size: 10px;")
         self._lbl_soil_src.setWordWrap(True)
         sl.addRow("pH (H₂O):",     self._lbl_soil_ph)
         sl.addRow("Texture class:", self._lbl_soil_texture)
@@ -769,7 +775,7 @@ class SitePanel(QWidget):
         self._lbl_slope   = QLabel("—")
         self._lbl_aspect  = QLabel("—")
         self._lbl_elev_src = QLabel("")
-        self._lbl_elev_src.setStyleSheet("color: #78909c; font-size: 10px;")
+        self._lbl_elev_src.setStyleSheet("color: #90a4ae; font-size: 10px;")
         self._lbl_elev_src.setWordWrap(True)
         el.addRow("Elevation:", self._lbl_elev)
         el.addRow("Slope:",     self._lbl_slope)
@@ -1028,31 +1034,34 @@ class SitePanel(QWidget):
         self._start_fetch()
 
     def _set_empty_state(self):
-        self._lbl_label.setText("—")
-        self._lbl_coords.setText("—")
+        self._lbl_label.setText(_DASH)
+        self._lbl_coords.setText(_DASH)
         self._lbl_status.setText("Drop a pin to auto-fill site data.")
         self._reset_data_rows()
 
     def _reset_data_rows(self):
-        self._lbl_zone.setText("—")
+        # Placeholders render dimmed (rich-text span) so the pre-pin panel
+        # reads as quiet empty slots, not a wall of data-coloured dashes; the
+        # fetch handlers overwrite with plain text at full value colour.
+        self._lbl_zone.setText(_DASH)
         self._lbl_hard_src.setText("")
-        self._lbl_gdd.setText("—")
-        self._lbl_frost.setText("—")
-        self._lbl_ecoregion.setText("—")
-        self._lbl_elev.setText("—")
-        self._lbl_slope.setText("—")
-        self._lbl_aspect.setText("—")
+        self._lbl_gdd.setText(_DASH)
+        self._lbl_frost.setText(_DASH)
+        self._lbl_ecoregion.setText(_DASH)
+        self._lbl_elev.setText(_DASH)
+        self._lbl_slope.setText(_DASH)
+        self._lbl_aspect.setText(_DASH)
         self._lbl_elev_src.setText("")
-        self._lbl_rain_annual.setText("—")
-        self._lbl_rain_monthly.setText("—")
+        self._lbl_rain_annual.setText(_DASH)
+        self._lbl_rain_monthly.setText(_DASH)
         self._lbl_rain_src.setText("")
         self._show_precip_timing(None)
         if hasattr(self, "_winter_box"):
             self._winter_box.setVisible(False)
-        self._lbl_soil_ph.setText("—")
-        self._lbl_soil_texture.setText("—")
-        self._lbl_soil_mix.setText("—")
-        self._lbl_soil_depth.setText("—")
+        self._lbl_soil_ph.setText(_DASH)
+        self._lbl_soil_texture.setText(_DASH)
+        self._lbl_soil_mix.setText(_DASH)
+        self._lbl_soil_depth.setText(_DASH)
         self._lbl_soil_src.setText("")
 
     def _start_fetch(self):
@@ -1163,7 +1172,7 @@ class SitePanel(QWidget):
         fetch failure."""
         if not data:
             self._lbl_gdd.setText("Unavailable (offline?)")
-            self._lbl_frost.setText("—")
+            self._lbl_frost.setText(_DASH)
             return
         from src.climate import doy_to_date_label
         gdd = data.get("gdd5_mean")
@@ -1174,7 +1183,7 @@ class SitePanel(QWidget):
                 + cached_marker
             )
         else:
-            self._lbl_gdd.setText("—")
+            self._lbl_gdd.setText(_DASH)
         last = data.get("last_spring_frost_doy")
         first = data.get("first_fall_frost_doy")
         free = data.get("frost_free_days")
@@ -1184,7 +1193,7 @@ class SitePanel(QWidget):
                 + (f"  ({free} days)" if free is not None else "")
             )
         else:
-            self._lbl_frost.setText("—")
+            self._lbl_frost.setText(_DASH)
 
     def _on_winter(self, data):
         """Render snow-cover + survival metrics (the insulation half of snow).
@@ -1227,7 +1236,7 @@ class SitePanel(QWidget):
         if slope_pct is not None and slope_deg is not None:
             self._lbl_slope.setText(f"{slope_pct:.2f} %  ({slope_deg:.2f}°)")
         else:
-            self._lbl_slope.setText("—")
+            self._lbl_slope.setText(_DASH)
         if data.get("aspect_deg") is not None:
             self._lbl_aspect.setText(
                 f"{data['aspect']}  ({data['aspect_deg']:.0f}°)"
@@ -1550,7 +1559,10 @@ class SitePanel(QWidget):
         self._exist_height.setSingleStep(0.5)
         self._exist_height.setValue(6.0)
         dims.addWidget(self._exist_height)
-        dims.addWidget(QLabel("Size (m):"))
+        size_lbl = QLabel("Canopy dia. (m):")
+        size_lbl.setToolTip("Canopy diameter (tree) or footprint width "
+                            "(building).")
+        dims.addWidget(size_lbl)
         self._exist_size = QDoubleSpinBox()
         self._exist_size.setRange(0.5, 40.0)
         self._exist_size.setSingleStep(0.5)
@@ -1560,10 +1572,14 @@ class SitePanel(QWidget):
         dims.addWidget(self._exist_size)
         vb.addLayout(dims)
 
+        # All four placement buttons share the secondary chrome so the row of
+        # emoji labels lines up as buttons, not floating text.
         btns = QHBoxLayout()
         btn_tree = QPushButton("🌳 Mark tree")
+        btn_tree.setStyleSheet(_BTN_SECONDARY)
         btn_tree.clicked.connect(lambda: self._on_mark_existing(EXISTING_TREE_ID))
         btn_bldg = QPushButton("🏠 Mark building")
+        btn_bldg.setStyleSheet(_BTN_SECONDARY)
         btn_bldg.clicked.connect(
             lambda: self._on_mark_existing(EXISTING_BUILDING_ID))
         btns.addWidget(btn_tree)
@@ -1572,6 +1588,7 @@ class SitePanel(QWidget):
 
         draw_btns = QHBoxLayout()
         btn_tree_outline = QPushButton("🌲 Draw tree canopy")
+        btn_tree_outline.setStyleSheet(_BTN_SECONDARY)
         btn_tree_outline.setToolTip(
             "Draw a tree canopy outline (click points, double-click to finish). "
             "Uses the height above; casts a tapering tree shadow.")
@@ -1579,6 +1596,7 @@ class SitePanel(QWidget):
         draw_btns.addWidget(btn_tree_outline)
 
         btn_outline = QPushButton("✏️ Draw building")
+        btn_outline.setStyleSheet(_BTN_SECONDARY)
         btn_outline.setToolTip(
             "Draw the building's outline (click corners, double-click to "
             "finish). Uses the height above; casts an accurate shadow.")
@@ -1742,7 +1760,7 @@ class SitePanel(QWidget):
         vl.addWidget(self._terrain_status_lbl)
 
         self._terrain_storage_lbl = QLabel("")
-        self._terrain_storage_lbl.setStyleSheet("color: #78909c; font-size: 10px;")
+        self._terrain_storage_lbl.setStyleSheet("color: #90a4ae; font-size: 10px;")
         vl.addWidget(self._terrain_storage_lbl)
 
         self._terrain_progress = QProgressBar()
