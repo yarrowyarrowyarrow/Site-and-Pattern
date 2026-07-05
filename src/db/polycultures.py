@@ -278,6 +278,187 @@ def get_community_facets() -> dict:
     }
 
 
+# ── Library index: batched search / filter / sort backbone (V2.13) ──────────
+# The Plant Community Library panel used to run one query per community (and
+# per variation) on every keystroke; these functions replace that with a few
+# batched queries plus pure-Python filtering, and add the multi-facet filter +
+# sort dimensions. Pure data — no Qt.
+
+# Public alias for the site→library cross-link: ecoregion key → habitat label.
+ECOREGION_LABELS = dict(_GROUP_ECOREGION)
+
+LIBRARY_SORT_KEYS = ("name", "members", "wildlife", "native", "modified")
+
+
+def facet_filter_choices() -> dict:
+    """Facet name → ordered list of filter labels for the library's filter
+    dropdowns. Labels double as keys. Built from the same tables the facet
+    reducers use, so the choices can never drift from the derived values.
+    Catch-all labels ("Unsorted"/"Mixed"/"Unknown") are deliberately absent —
+    they aren't things a user sets out to find."""
+    functions: list = []
+    for _key, label in _GROUP_FUNCTION:
+        if label not in functions:
+            functions.append(label)
+    return {
+        "sun":       list(_GROUP_SUN.values()),
+        "moisture":  ["Dry", "Mesic", "Wet"],
+        "structure": [label for _key, label in _GROUP_LAYER_ORDER],
+        "habitat":   list(dict.fromkeys(_GROUP_ECOREGION.values())) + ["Generalist"],
+        "function":  functions + ["Generalist"],
+    }
+
+
+def get_library_index() -> dict:
+    """Return ``{community_id: entry}`` for EVERY community — top-level and
+    variations — from three batched queries. Each entry carries what the
+    library list needs to search, filter, sort and render tooltips without
+    further queries:
+
+      id, name, description, parent_id, modified, children (child ids, A–Z),
+      member_count, native_pct (0–100 int over members with known status),
+      fauna_count (distinct fauna supported by any member),
+      members_brief ([(common_name, role), …] for tooltips),
+      search_blob (lowercased name + description + member common & scientific
+      names), and facets — the same labels get_community_facets() produces.
+    """
+    conn = get_connection()
+    try:
+        comms = conn.execute(
+            "SELECT id, name, description, parent_id, modified FROM polycultures"
+        ).fetchall()
+        member_rows = conn.execute(
+            "SELECT gm.id AS mid, gm.polyculture_id AS cid, gm.layer AS layer, "
+            "gm.role AS role, gm.functions AS functions, p.ab_ecoregion AS eco, "
+            "p.sun_requirement AS sun, p.water_needs AS water, "
+            "p.common_name AS common_name, p.scientific_name AS scientific_name, "
+            "p.native_to_alberta AS native, "
+            "GROUP_CONCAT(u.key) AS use_keys "
+            "FROM polyculture_members gm "
+            "JOIN plants p ON gm.plant_id = p.id "
+            "LEFT JOIN plant_uses pu ON pu.plant_id = gm.plant_id "
+            "LEFT JOIN uses u ON u.id = pu.use_id "
+            "GROUP BY gm.id"
+        ).fetchall()
+        fauna_rows = conn.execute(
+            "SELECT gm.polyculture_id AS cid, COUNT(DISTINCT pf.fauna_id) AS n "
+            "FROM polyculture_members gm "
+            "JOIN plant_fauna pf ON pf.plant_id = gm.plant_id "
+            "GROUP BY gm.polyculture_id"
+        ).fetchall()
+    finally:
+        conn.close()
+
+    members_by_cid: dict = {}
+    for r in member_rows:
+        members_by_cid.setdefault(r["cid"], []).append(dict(r))
+    fauna_by_cid = {r["cid"]: r["n"] for r in fauna_rows}
+
+    index: dict = {}
+    for c in comms:
+        cid = c["id"]
+        ms = members_by_cid.get(cid, [])
+        native_known = [m["native"] for m in ms if m.get("native") is not None]
+        native_pct = (round(100 * sum(1 for v in native_known if v)
+                            / len(native_known)) if native_known else 0)
+        blob = [c["name"] or "", c["description"] or ""]
+        for m in ms:
+            blob.append(m.get("common_name") or "")
+            blob.append(m.get("scientific_name") or "")
+        index[cid] = {
+            "id":            cid,
+            "name":          c["name"] or "",
+            "description":   c["description"] or "",
+            "parent_id":     c["parent_id"],
+            "modified":      c["modified"] or "",
+            "children":      [],
+            "member_count":  len(ms),
+            "native_pct":    native_pct,
+            "fauna_count":   fauna_by_cid.get(cid, 0),
+            "members_brief": [(m.get("common_name") or "",
+                               _normalize_role(m.get("role")) or "")
+                              for m in ms],
+            "search_blob":   " ".join(blob).lower(),
+            "facets": {
+                "structure": _community_structure(ms),
+                "habitat":   _community_habitat(ms),
+                "sun":       _community_sun(ms),
+                "moisture":  _community_moisture(ms),
+                "function":  _community_functions(ms),
+            },
+        }
+    for cid, entry in index.items():
+        pid = entry["parent_id"]
+        if pid is not None and pid in index:
+            index[pid]["children"].append(cid)
+    for entry in index.values():
+        entry["children"].sort(key=lambda i: index[i]["name"].lower())
+    return index
+
+
+def filter_library(index: dict, *, search: str = "", facets=None) -> dict:
+    """Apply search + facet filters over a ``get_library_index()`` result.
+
+    Returns ``{top_level_id: {"self": bool, "children": [child_id, …]}}``
+    holding only the top-level communities that pass. ``self`` says the parent
+    passed on its own; ``children`` lists the variations that passed
+    individually — the panel shows every variation when the parent passes,
+    or just the passing ones when only a variation matched.
+
+    ``search`` is a case-insensitive substring over name, description and
+    member common + scientific names. ``facets`` maps facet name → accepted
+    labels; within a facet accepted labels are OR-ed, across facets AND-ed
+    (the same semantics as search_plants). The multi-valued "function" facet
+    passes on any overlap.
+    """
+    needle = (search or "").strip().lower()
+    active = {k: set(v) for k, v in (facets or {}).items() if v}
+
+    def _passes(entry) -> bool:
+        if needle and needle not in entry["search_blob"]:
+            return False
+        for name, accepted in active.items():
+            val = entry["facets"].get(name)
+            if isinstance(val, list):
+                if not accepted.intersection(val):
+                    return False
+            elif val not in accepted:
+                return False
+        return True
+
+    out: dict = {}
+    for cid, entry in index.items():
+        if entry["parent_id"] is not None:
+            continue
+        self_ok = _passes(entry)
+        kids_ok = [k for k in entry["children"] if _passes(index[k])]
+        if self_ok or kids_ok:
+            out[cid] = {"self": self_ok, "children": kids_ok}
+    return out
+
+
+def sort_community_ids(index: dict, ids, key: str = "name") -> list:
+    """Order ``ids`` by a library sort key: ``name`` (A–Z, default) ·
+    ``members`` (most members first) · ``wildlife`` (most distinct fauna
+    supported) · ``native`` (highest native %) · ``modified`` (most recent).
+    Numeric sorts tie-break alphabetically; unknown keys fall back to name."""
+    def _name(i):
+        return index[i]["name"].lower()
+
+    if key == "members":
+        return sorted(ids, key=lambda i: (-index[i]["member_count"], _name(i)))
+    if key == "wildlife":
+        return sorted(ids, key=lambda i: (-index[i]["fauna_count"], _name(i)))
+    if key == "native":
+        return sorted(ids, key=lambda i: (-index[i]["native_pct"], _name(i)))
+    if key == "modified":
+        # ISO-ish SQLite timestamps sort lexicographically; stable two-pass
+        # keeps the alphabetical tie-break while newest-first wins overall.
+        by_name = sorted(ids, key=_name)
+        return sorted(by_name, key=lambda i: index[i]["modified"], reverse=True)
+    return sorted(ids, key=_name)
+
+
 def get_polyculture_by_name(name: str):
     """Look up a top-level or variation polyculture by exact name. Returns
     the raw row dict (no members) or ``None`` if no match. Used by the
