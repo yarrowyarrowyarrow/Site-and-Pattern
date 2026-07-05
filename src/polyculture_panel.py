@@ -2,7 +2,7 @@ import json
 import re
 
 from PyQt6.QtCore import (
-    Qt, pyqtSignal, QPointF, QRectF, QSettings, QMimeData, QByteArray,
+    Qt, pyqtSignal, QPointF, QRectF, QSettings, QMimeData, QByteArray, QTimer,
 )
 from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont
 from PyQt6.QtWidgets import (
@@ -37,6 +37,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.db import polycultures
+from src.filter_widgets import make_multi_combo
 
 
 # Drag a community from the library tree → drop on the "Plant Communities Mix"
@@ -125,6 +126,27 @@ _GROUP_COMBO_STYLE = (
     "QComboBox QAbstractItemView { background: #1e2e1e; color: #c8e6c9; "
     "border: 1px solid #2e4a2e; selection-background-color: #2e5a2e; }"
 )
+
+# Sort orders for the community library (V2.13). Keys match
+# polycultures.sort_community_ids; label prefix keeps the closed combo legible
+# next to the facet dropdowns.
+_SORT_BY_OPTIONS = [
+    ("name",     "Sort: A–Z"),
+    ("members",  "Sort: Most members"),
+    ("wildlife", "Sort: Most wildlife"),
+    ("native",   "Sort: Most native"),
+    ("modified", "Sort: Recently changed"),
+]
+
+# Facet filter dropdowns (V2.13): (facet key, placeholder). Facet keys match
+# polycultures.facet_filter_choices() / the entry["facets"] labels.
+_FACET_FILTER_SPECS = [
+    ("sun",       "Any sun"),
+    ("moisture",  "Any moisture"),
+    ("structure", "Any structure"),
+    ("habitat",   "Any habitat"),
+    ("function",  "Any function"),
+]
 
 
 # Vegetation layer (single-select) — the physical position of a plant in
@@ -1191,15 +1213,23 @@ class PolyculturePanel(QWidget):
         # Search box + a compact "Group By" lens dropdown beside it: pivot the
         # library between a flat list and category folders along an ecological
         # lens (Habitat / Structure / Sun / Moisture) without losing vertical
-        # space (V1.88).
+        # space (V1.88). Typing is debounced 200 ms (same rhythm as the Plant
+        # Library) so the batched refresh runs once per pause, not per key.
         self._group_by = settings.value(
             "plant_communities/group_by", "none", type=str)
+        self._sort_by = settings.value(
+            "plant_communities/sort_by", "name", type=str)
+        self._search_timer = QTimer(self)
+        self._search_timer.setSingleShot(True)
+        self._search_timer.setInterval(200)
+        self._search_timer.timeout.connect(self._refresh_polyculture_list)
         search_row = QHBoxLayout()
         search_row.setSpacing(4)
         self._search_box = QLineEdit()
         self._search_box.setPlaceholderText("Search communities...")
         self._search_box.setClearButtonEnabled(True)
-        self._search_box.textChanged.connect(self._refresh_polyculture_list)
+        self._search_box.textChanged.connect(
+            lambda _t: self._search_timer.start())
         search_row.addWidget(self._search_box, 1)
 
         self._group_combo = QComboBox()
@@ -1217,6 +1247,63 @@ class PolyculturePanel(QWidget):
         self._group_combo.currentIndexChanged.connect(self._on_group_by_changed)
         search_row.addWidget(self._group_combo)
         layout.addLayout(search_row)
+
+        # ── Facet filters + sort (V2.13) ──────────────────────────────────
+        # Same multi-select UX as the Plant Library: OR within a facet, AND
+        # across facets. Values are derived from each community's member
+        # plants (polycultures.get_library_index), so a community shows up
+        # under what it actually is, not what it was named.
+        choices = polycultures.facet_filter_choices()
+        self._facet_combos: dict = {}
+        for facet, placeholder in _FACET_FILTER_SPECS:
+            self._facet_combos[facet] = make_multi_combo(
+                placeholder, {label: label for label in choices[facet]},
+                on_change=self._refresh_polyculture_list)
+        self._facet_combos["sun"].setToolTip(
+            "Dominant sun need across the community's members.")
+        self._facet_combos["moisture"].setToolTip(
+            "Dominant moisture need across the community's members.")
+        self._facet_combos["structure"].setToolTip(
+            "Tallest vegetation layer the community reaches.")
+        self._facet_combos["habitat"].setToolTip(
+            "Alberta ecoregion the member plants are documented from;\n"
+            "Generalist = no single home region.")
+        self._facet_combos["function"].setToolTip(
+            "Ecological functions the community serves (from its members'\n"
+            "use tags). A community can serve several.")
+
+        filter_row1 = QHBoxLayout()
+        filter_row1.setSpacing(4)
+        filter_row1.addWidget(self._facet_combos["sun"], 1)
+        filter_row1.addWidget(self._facet_combos["moisture"], 1)
+        layout.addLayout(filter_row1)
+
+        filter_row2 = QHBoxLayout()
+        filter_row2.setSpacing(4)
+        filter_row2.addWidget(self._facet_combos["structure"], 1)
+        filter_row2.addWidget(self._facet_combos["habitat"], 1)
+        layout.addLayout(filter_row2)
+
+        filter_row3 = QHBoxLayout()
+        filter_row3.setSpacing(4)
+        filter_row3.addWidget(self._facet_combos["function"], 1)
+        self._sort_combo = QComboBox()
+        self._sort_combo.setToolTip(
+            "Order the library — alphabetical, biggest communities, most\n"
+            "wildlife supported, most Alberta-native, or recently changed."
+        )
+        self._sort_combo.setStyleSheet(_GROUP_COMBO_STYLE)
+        for key, label in _SORT_BY_OPTIONS:
+            self._sort_combo.addItem(label, key)
+        _si = self._sort_combo.findData(self._sort_by)
+        if _si >= 0:
+            self._sort_combo.setCurrentIndex(_si)  # before connecting → no early refresh
+        self._sort_combo.currentIndexChanged.connect(self._on_sort_changed)
+        filter_row3.addWidget(self._sort_combo, 1)
+        self._result_count = QLabel("")
+        self._result_count.setStyleSheet("color: #78909c; font-size: 11px;")
+        filter_row3.addWidget(self._result_count)
+        layout.addLayout(filter_row3)
 
         # Polyculture tree (parent polycultures + variations as children)
         self.polyculture_tree = _CommunityTree()
@@ -1726,16 +1813,28 @@ class PolyculturePanel(QWidget):
                   if hasattr(self, '_search_box') else "")
         group_by = getattr(self, "_group_by", "none")
 
-        # Build the (community, item) list once; the item already has its
-        # variations nested + expansion applied.
-        built = []
-        for g in polycultures.get_all_polycultures(top_level_only=True):
-            item = self._make_community_item(g, search)
-            if item is not None:
-                built.append((g, item))
+        # One batched index for the whole refresh (V2.13) — search, facet
+        # filters and sorting are pure-Python passes over it; no per-community
+        # queries.
+        index = polycultures.get_library_index()
+        facet_filters = self._active_facet_filters()
+        passed = polycultures.filter_library(
+            index, search=search, facets=facet_filters)
+        ordered = polycultures.sort_community_ids(
+            index, list(passed), getattr(self, "_sort_by", "name"))
+
+        if hasattr(self, "_result_count"):
+            n = len(ordered)
+            self._result_count.setText(
+                f"{n} communit{'y' if n == 1 else 'ies'}")
+
+        filtering = bool(search or facet_filters)
+        built = [(cid, self._make_community_item(index, cid, passed[cid],
+                                                 filtering))
+                 for cid in ordered]
 
         if group_by == "none":
-            for _g, item in built:
+            for _cid, item in built:
                 self.polyculture_tree.addTopLevelItem(item)
             return
 
@@ -1744,10 +1843,10 @@ class PolyculturePanel(QWidget):
         # can appear under several folders; since a QTreeWidgetItem may only have
         # one parent, the 2nd+ folder gets a clone (clone keeps the UserRole
         # community id + nested variations, so selection/placement still work).
-        facets = polycultures.get_community_facets()
+        # Buckets sort A–Z; within a bucket the active sort order holds.
         buckets: dict[str, list] = {}
-        for g, item in built:
-            val = facets.get(g["id"], {}).get(group_by)
+        for cid, item in built:
+            val = index[cid]["facets"].get(group_by)
             labels = val if isinstance(val, list) else [val or "Other"]
             if not labels:
                 labels = ["Other"]
@@ -1768,63 +1867,77 @@ class PolyculturePanel(QWidget):
                 group_node.addChild(item)
             group_node.setExpanded(True)
 
-    def _make_community_item(self, g, search):
-        """Build the tree item for one top-level community — variations nested as
-        children, expansion applied. Returns ``None`` when a search is active and
-        neither the community nor its variations match."""
-        detail = polycultures.get_polyculture_by_id(g["id"])
-        members = detail.get("members", []) if detail else []
-        member_names = [m["common_name"] for m in members]
-        children = polycultures.get_polyculture_children(g["id"])
+    def _active_facet_filters(self) -> dict:
+        """Facet name → checked labels, for facets with anything checked."""
+        combos = getattr(self, "_facet_combos", None) or {}
+        out = {}
+        for facet, combo in combos.items():
+            checked = combo.checked_keys()
+            if checked:
+                out[facet] = checked
+        return out
 
-        child_match = False
-        child_details = []
-        for child in children:
-            cd = polycultures.get_polyculture_by_id(child["id"])
-            cm = [m["common_name"] for m in (cd.get("members", []) if cd else [])]
-            child_details.append((child, cd, cm))
-            if search and (search in child["name"].lower()
-                           or any(search in n.lower() for n in cm)):
-                child_match = True
-        if search:
-            parent_match = (
-                search in g["name"].lower()
-                or search in (g.get("description") or "").lower()
-                or any(search in n.lower() for n in member_names)
-            )
-            if not parent_match and not child_match:
-                return None
-
+    @staticmethod
+    def _community_tooltip(entry) -> str:
         roles_summary = ", ".join(
-            f"{m['common_name']} ({(m.get('role') or '').replace('_',' ')})"
-            for m in members[:5]
-        )
-        if len(members) > 5:
-            roles_summary += f", +{len(members)-5} more"
-        tooltip = (f"{g['name']}\n{g.get('description', '')[:120]}"
-                   f"\n\nMembers: {roles_summary}")
+            f"{name} ({(role or '').replace('_', ' ')})"
+            for name, role in entry["members_brief"][:5])
+        if entry["member_count"] > 5:
+            roles_summary += f", +{entry['member_count'] - 5} more"
+        return (f"{entry['name']}\n{(entry['description'] or '')[:120]}"
+                f"\n\nMembers: {roles_summary}")
 
-        item = QTreeWidgetItem([g["name"]])
-        item.setData(0, Qt.ItemDataRole.UserRole, g["id"])
-        item.setToolTip(0, tooltip)
+    def _make_community_item(self, index, cid, passinfo, filtering):
+        """Build the tree item for one passing top-level community, its
+        variations nested. When the parent only got in because a variation
+        matched, just the matching variations are shown (and expanded)."""
+        entry = index[cid]
+        item = QTreeWidgetItem([entry["name"]])
+        item.setData(0, Qt.ItemDataRole.UserRole, cid)
+        item.setToolTip(0, self._community_tooltip(entry))
 
-        for child, cd, _cm in child_details:
-            cm = cd.get("members", []) if cd else []
-            child_roles = ", ".join(
-                f"{m['common_name']} ({(m.get('role') or '').replace('_',' ')})"
-                for m in cm[:5]
-            )
-            child_tooltip = (f"{child['name']}\n{child.get('description','')[:120]}"
-                             f"\n\nMembers: {child_roles}")
-            child_item = QTreeWidgetItem([child["name"]])
-            child_item.setData(0, Qt.ItemDataRole.UserRole, child["id"])
-            child_item.setToolTip(0, child_tooltip)
+        child_ids = (entry["children"] if (not filtering or passinfo["self"])
+                     else passinfo["children"])
+        for kid in child_ids:
+            child_item = QTreeWidgetItem([index[kid]["name"]])
+            child_item.setData(0, Qt.ItemDataRole.UserRole, kid)
+            child_item.setToolTip(0, self._community_tooltip(index[kid]))
             item.addChild(child_item)
-        if children:
-            # Expand when the user has globally enabled variation display, or the
-            # active search hit a variation under this parent.
-            item.setExpanded(bool(self._show_variations or (search and child_match)))
+        if child_ids:
+            # Expand when the user has globally enabled variation display, or
+            # the active filters hit a variation under this parent.
+            item.setExpanded(bool(self._show_variations
+                                  or (filtering and passinfo["children"])))
         return item
+
+    # ── Cross-link API (Site tab → library, V2.13) ───────────────────────────
+
+    def set_habitat_filter(self, ecoregion_keys, *, clear_others: bool = True):
+        """Pre-set the Habitat facet from ecoregion keys (e.g.
+        ``["aspen_parkland"]``) — the Site tab's "browse reference communities
+        for this ecoregion" link lands here. Unknown keys are ignored;
+        ``clear_others`` resets the other facets first so the user sees the
+        ecoregion's communities, not an accidental intersection."""
+        labels = [polycultures.ECOREGION_LABELS[k]
+                  for k in (ecoregion_keys or [])
+                  if k in polycultures.ECOREGION_LABELS]
+        if clear_others:
+            for combo in self._facet_combos.values():
+                combo.set_checked_keys([])
+        self._facet_combos["habitat"].set_checked_keys(labels)
+        self._refresh_polyculture_list()
+
+    def clear_filters(self):
+        """Uncheck every facet filter (search text and grouping untouched)."""
+        for combo in self._facet_combos.values():
+            combo.set_checked_keys([])
+        self._refresh_polyculture_list()
+
+    def _on_sort_changed(self, _idx=0):
+        """Re-order the library by the chosen sort key and persist it."""
+        self._sort_by = self._sort_combo.currentData() or "name"
+        QSettings().setValue("plant_communities/sort_by", self._sort_by)
+        self._refresh_polyculture_list()
 
     def _on_group_by_changed(self, _idx=0):
         """Pivot the library to a new grouping lens and rebuild the tree."""
