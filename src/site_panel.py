@@ -73,6 +73,7 @@ class _SiteFetchWorker(QObject):
     climate       = pyqtSignal(object)        # GDD / frost-window summary
     winter        = pyqtSignal(object)        # snow-cover + survival metrics
     ecoregion     = pyqtSignal(object)        # auto-detected AB ecoregion
+    wind          = pyqtSignal(object)        # seasonal wind rose (V2.13)
     fast_ready    = pyqtSignal()              # fast batch done — climate may still be loading
     finished      = pyqtSignal(dict)          # combined result dict
 
@@ -142,6 +143,19 @@ class _SiteFetchWorker(QObject):
         self.fast_ready.emit()
 
         if not self._cancelled:
+            # Prevailing wind for the Climate-context row (V2.13). Instant on
+            # a wind_cache hit; one Open-Meteo archive call otherwise. The
+            # rose is deliberately NOT added to `out` — it lives in the DB
+            # cache, and `out` is persisted into the project JSON.
+            self.progress.emit("Reading wind history…")
+            try:
+                from src.wind import get_wind_summary
+                wind_value = get_wind_summary(self.lat, self.lng)
+            except Exception:
+                wind_value = None
+            self.wind.emit(wind_value)
+
+        if not self._cancelled:
             self.progress.emit("Computing growing-degree days…")
             try:
                 value = fetch_climate(self.lat, self.lng)
@@ -203,6 +217,9 @@ class SitePanel(QWidget):
     pin_clear_requested = pyqtSignal()
     site_data_updated  = pyqtSignal(dict)         # full result dict
     ecoregion_detected = pyqtSignal(object)       # AB ecoregion key (str) or "" (V1.87)
+    # "Browse N reference communities →" clicked; carries the ecoregion key
+    # so MainWindow can open the community library pre-filtered (V2.13).
+    browse_communities_requested = pyqtSignal(str)
 
     # Address search (geocode + place pin). Emitted when the user has
     # selected a result; MainWindow places the pin on the map and the
@@ -449,12 +466,61 @@ class SitePanel(QWidget):
             "species native to your area. You can still override the "
             "filter manually."
         )
+        # Ecoregion → community library cross-link (V2.13): once a region is
+        # detected, jump to the Plant Communities tab with the Habitat filter
+        # pre-set — from "where am I" straight to "what belongs here" (P2/P8).
+        self._btn_browse_comms = QPushButton("")
+        self._btn_browse_comms.setStyleSheet(
+            "QPushButton { background: transparent; color: #81c784; border: none;"
+            " text-align: left; padding: 0; font-size: 11px;"
+            " text-decoration: underline; }"
+            "QPushButton:hover { color: #a5d6a7; }"
+        )
+        self._btn_browse_comms.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_browse_comms.setToolTip(
+            "Open the Plant Community Library filtered to communities whose "
+            "member plants are documented from this ecoregion.")
+        self._btn_browse_comms.setVisible(False)
+        self._btn_browse_comms.clicked.connect(
+            lambda: self.browse_communities_requested.emit(self._eco_key))
+        self._eco_key = ""
+
         hl.addRow("Zone:",                self._lbl_zone)
         hl.addRow("Source:",              self._lbl_hard_src)
         hl.addRow("Growing-degree days:", self._lbl_gdd)
         hl.addRow("Frost window:",        self._lbl_frost)
         hl.addRow("Ecoregion:",           self._lbl_ecoregion)
+        hl.addRow("",                     self._btn_browse_comms)
         layout.addWidget(self._hard_box)
+
+        # ── Climate context (V2.13) ──────────────────────────────────
+        # Elevation/aspect ride along from the Slope tab's fetch; the
+        # prevailing wind is a one-line summary of the Analysis → Wind rose
+        # (windbreaks are one of the most actionable site responses).
+        self._climate_box = QGroupBox("Climate context")
+        self._climate_box.setStyleSheet(_GROUP_STYLE)
+        cl = QFormLayout(self._climate_box)
+        self._lbl_info_elev = QLabel("—")
+        self._lbl_info_elev.setStyleSheet("color: #c8e6c9;")
+        self._lbl_info_aspect = QLabel("—")
+        self._lbl_info_aspect.setStyleSheet("color: #c8e6c9;")
+        self._lbl_info_aspect.setToolTip(
+            "Which way the ground faces. South-facing slopes run warmer and "
+            "drier; north-facing stay cooler and hold snow longer.")
+        self._lbl_info_wind = QLabel("—")
+        self._lbl_info_wind.setStyleSheet("color: #c8e6c9;")
+        self._lbl_info_wind.setToolTip(
+            "Annual prevailing direction from hourly ERA5 history "
+            "(cached offline). Full seasonal wind rose: Analysis → Wind.")
+        self._lbl_wind_hint = QLabel("")
+        self._lbl_wind_hint.setWordWrap(True)
+        self._lbl_wind_hint.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._lbl_wind_hint.setVisible(False)
+        cl.addRow("Elevation:",       self._lbl_info_elev)
+        cl.addRow("Aspect:",          self._lbl_info_aspect)
+        cl.addRow("Prevailing wind:", self._lbl_info_wind)
+        cl.addRow("",                 self._lbl_wind_hint)
+        layout.addWidget(self._climate_box)
 
         # ── Rainfall (moved up under pin/zone) ──────────────────────
         self._rain_box = QGroupBox("Rainfall (climate normal)")
@@ -1048,6 +1114,12 @@ class SitePanel(QWidget):
         self._lbl_gdd.setText(_DASH)
         self._lbl_frost.setText(_DASH)
         self._lbl_ecoregion.setText(_DASH)
+        self._eco_key = ""
+        self._btn_browse_comms.setVisible(False)
+        self._lbl_info_elev.setText(_DASH)
+        self._lbl_info_aspect.setText(_DASH)
+        self._lbl_info_wind.setText(_DASH)
+        self._lbl_wind_hint.setVisible(False)
         self._lbl_elev.setText(_DASH)
         self._lbl_slope.setText(_DASH)
         self._lbl_aspect.setText(_DASH)
@@ -1083,6 +1155,7 @@ class SitePanel(QWidget):
         worker.climate.connect(self._on_climate)
         worker.winter.connect(self._on_winter)
         worker.ecoregion.connect(self._on_ecoregion)
+        worker.wind.connect(self._on_wind)
         worker.fast_ready.connect(self._on_fast_ready)
         worker.finished.connect(self._on_finished)
 
@@ -1160,11 +1233,64 @@ class SitePanel(QWidget):
         sessions. An empty string clears it (pin outside known regions)."""
         if not data:
             self._lbl_ecoregion.setText("Outside known regions")
+            self._eco_key = ""
+            self._btn_browse_comms.setVisible(False)
             self.ecoregion_detected.emit("")
             return
         label = data.get("label") or data.get("key") or "—"
         self._lbl_ecoregion.setText(f"{label}  (auto)")
-        self.ecoregion_detected.emit(data.get("key") or "")
+        self._eco_key = data.get("key") or ""
+        n = self._count_reference_communities(self._eco_key)
+        if n:
+            self._btn_browse_comms.setText(
+                f"Browse {n} reference communit{'y' if n == 1 else 'ies'} "
+                "for this ecoregion →")
+            self._btn_browse_comms.setVisible(True)
+        else:
+            self._btn_browse_comms.setVisible(False)
+        self.ecoregion_detected.emit(self._eco_key)
+
+    @staticmethod
+    def _count_reference_communities(eco_key: str) -> int:
+        """How many top-level saved communities have this ecoregion as their
+        dominant habitat facet — the count shown on the cross-link."""
+        if not eco_key:
+            return 0
+        try:
+            from src.db import polycultures
+            label = polycultures.ECOREGION_LABELS.get(eco_key)
+            if not label:
+                return 0
+            idx = polycultures.get_library_index()
+            return sum(1 for e in idx.values()
+                       if e["parent_id"] is None
+                       and e["facets"].get("habitat") == label)
+        except Exception:
+            return 0
+
+    def _on_wind(self, data):
+        """One-line prevailing-wind summary for the Climate-context group.
+        ``data`` is the wind.get_wind_summary rose dict or ``None``."""
+        if not data:
+            self._lbl_info_wind.setText("Unavailable (offline?)")
+            self._lbl_wind_hint.setVisible(False)
+            return
+        annual = data.get("annual") or {}
+        label = annual.get("prevailing_label")
+        mean = annual.get("mean_speed")
+        if label:
+            mean_txt = f"  (~{mean:.0f} km/h mean)" if mean is not None else ""
+            cached = "  (cached)" if data.get("cached") else ""
+            self._lbl_info_wind.setText(f"from {label}{mean_txt}{cached}")
+        else:
+            self._lbl_info_wind.setText("No dominant direction")
+        from src.wind import windbreak_advice
+        adv = windbreak_advice(data)
+        if adv:
+            self._lbl_wind_hint.setText(adv["text"])
+            self._lbl_wind_hint.setVisible(True)
+        else:
+            self._lbl_wind_hint.setVisible(False)
 
     def _on_climate(self, data):
         """Update the GDD₅ + frost-window rows. ``data`` is the dict
@@ -1226,6 +1352,7 @@ class SitePanel(QWidget):
     def _on_elevation(self, data):
         if not data:
             self._lbl_elev.setText("Unavailable")
+            self._lbl_info_elev.setText("Unavailable")
             return
         self._lbl_elev.setText(f"{data['elevation_m']:.1f} m")
         # V1.37: slope_pct may be None when the pin sits on water — the
@@ -1244,6 +1371,9 @@ class SitePanel(QWidget):
         else:
             self._lbl_aspect.setText(data.get("aspect", "—"))
         self._lbl_elev_src.setText(data.get("source", ""))
+        # Mirror into the Site Information → Climate context rows (V2.13).
+        self._lbl_info_elev.setText(f"{data['elevation_m']:.0f} m")
+        self._lbl_info_aspect.setText(self._lbl_aspect.text())
 
     def _on_rainfall(self, data):
         if not data:
