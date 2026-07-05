@@ -29,6 +29,8 @@ from PyQt6.QtWidgets import (
     QListWidget, QListWidgetItem, QProgressBar, QTabWidget, QTextEdit,
 )
 
+from src import ui_style
+
 
 # ── QThread-lifecycle helper ─────────────────────────────────────────────────
 
@@ -521,8 +523,8 @@ class SitePanel(QWidget):
         # per-location soil offline, instead of the regional approximation that
         # the paused SoilGrids API otherwise forces.
         soil_btn_row = QHBoxLayout()
-        self._soil_dl_btn = QPushButton("Download soil data (offline)")
-        self._soil_dl_btn.setStyleSheet(_BTN_SECONDARY)
+        self._soil_dl_btn = QPushButton("⬇ Download soil data (offline)")
+        self._soil_dl_btn.setStyleSheet(_BTN_DOWNLOAD)
         self._soil_dl_btn.setToolTip(
             "One-time download of Canadian gridded soil data so soil pH and "
             "texture are sampled per-location offline (and feed plant matching).")
@@ -1642,8 +1644,8 @@ class SitePanel(QWidget):
         # cache (buildings.db), so future designs in this area import buildings
         # instantly and offline — the contour-pack model, for buildings.
         bld_row = QHBoxLayout()
-        self._bldg_dl_btn = QPushButton("Download buildings for this area")
-        self._bldg_dl_btn.setStyleSheet(_BTN_SECONDARY)
+        self._bldg_dl_btn = QPushButton("⬇ Download buildings for this area")
+        self._bldg_dl_btn.setStyleSheet(_BTN_DOWNLOAD)
         self._bldg_dl_btn.setToolTip(
             "Bulk-download OpenStreetMap building footprints around this "
             "property into a local cache so 'Import from OpenStreetMap' works "
@@ -1754,8 +1756,8 @@ class SitePanel(QWidget):
         vl.addWidget(self._terrain_progress)
 
         btn_row = QHBoxLayout()
-        self._terrain_dl_btn = QPushButton("Download Edmonton Data")
-        self._terrain_dl_btn.setStyleSheet(_BTN_PRIMARY)
+        self._terrain_dl_btn = QPushButton("⬇ Download Edmonton Data")
+        self._terrain_dl_btn.setStyleSheet(_BTN_DOWNLOAD)
         self._terrain_dl_btn.clicked.connect(self._on_download_clicked)
         btn_row.addWidget(self._terrain_dl_btn)
 
@@ -1916,21 +1918,10 @@ class SitePanel(QWidget):
 
 
 # ── Styling ──────────────────────────────────────────────────────────────────
+# The button tiers live in src/ui_style.py (V2.13) so every panel draws from
+# one source; the local names are kept as aliases for the many call sites.
 
-_GROUP_STYLE = (
-    "QGroupBox { border: 1px solid #2e4a2e; border-radius: 4px; "
-    "margin-top: 10px; padding-top: 12px; }"
-    "QGroupBox::title { color: #a5d6a7; subcontrol-origin: margin; left: 8px; }"
-)
-
-_BTN_PRIMARY = (
-    "QPushButton { background: #2e7d32; color: #e8f5e9; border: 1px solid #43a047;"
-    " border-radius: 4px; padding: 6px; font-weight: bold; }"
-    "QPushButton:hover { background: #388e3c; }"
-)
-
-_BTN_SECONDARY = (
-    "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a;"
-    " border-radius: 4px; padding: 6px; }"
-    "QPushButton:hover { background: #455a64; }"
-)
+_GROUP_STYLE = ui_style.GROUP_STYLE
+_BTN_PRIMARY = ui_style.BTN_PRIMARY
+_BTN_SECONDARY = ui_style.BTN_SECONDARY
+_BTN_DOWNLOAD = ui_style.BTN_DOWNLOAD
