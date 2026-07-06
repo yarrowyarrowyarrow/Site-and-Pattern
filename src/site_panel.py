@@ -1922,8 +1922,10 @@ class SitePanel(QWidget):
                        "drawn or marked by hand in the next section.")
         v = QVBoxLayout(box)
         v.setContentsMargins(6, 6, 6, 6)
-        hint = QLabel("Step 1 — capture what's already there; the shade map "
-                      "below is only as real as these features.")
+        hint = QLabel("Captures what's already there using your drawn "
+                      "property boundary (plus the neighbour margin below); "
+                      "with no boundary it searches ≈60 m around the pin. "
+                      "The shade map below is only as real as these features.")
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
         v.addWidget(hint)
@@ -1935,13 +1937,38 @@ class SitePanel(QWidget):
             "Traces nearby building perimeters — with heights from "
             "OpenStreetMap's height / storey tags where present, otherwise "
             "≈5 m (3 m per storey) — plus mapped trees (≈7 m unless tagged).\n"
-            "Covers your drawn boundary + 30 m margin, or ≈60 m around the "
-            "property pin.\n"
+            "Keeps what's inside your drawn boundary plus neighbours within "
+            "the margin below; with no boundary, ≈60 m around the pin.\n"
             "Works offline from a downloaded building pack (buildings only — "
             "trees need the online import).\n"
             "Imported features cast shade and keep plants off them.")
         btn.clicked.connect(self.osm_import_requested.emit)
         v.addWidget(btn)
+
+        # Neighbour margin (V2.13): how far past the boundary to keep
+        # buildings — a tall neighbour still shades the site. 0 = strictly
+        # inside the boundary. Persisted; read by the controller via
+        # osm_neighbour_margin().
+        marg_row = QHBoxLayout()
+        marg_lbl = QLabel("Neighbours within:")
+        marg_lbl.setToolTip(
+            "Buildings/trees outside your boundary but within this distance "
+            "are kept too — their shade falls on your site. Set 0 to import "
+            "only what's inside the boundary.")
+        marg_row.addWidget(marg_lbl)
+        self._osm_margin = QDoubleSpinBox()
+        self._osm_margin.setRange(0.0, 100.0)
+        self._osm_margin.setSingleStep(5.0)
+        self._osm_margin.setDecimals(0)
+        self._osm_margin.setSuffix(" m")
+        self._osm_margin.setValue(float(QSettings().value(
+            "site/osm_neighbour_margin", 30.0, type=float)))
+        self._osm_margin.setToolTip(marg_lbl.toolTip())
+        self._osm_margin.valueChanged.connect(
+            lambda v_: QSettings().setValue("site/osm_neighbour_margin", v_))
+        marg_row.addWidget(self._osm_margin)
+        marg_row.addStretch(1)
+        v.addLayout(marg_row)
 
         # One-time bulk download of nearby building footprints into a local
         # cache (buildings.db), so future designs in this area import buildings
@@ -1996,6 +2023,10 @@ class SitePanel(QWidget):
 
     def set_osm_status(self, text: str):
         self._osm_status.setText(text)
+
+    def osm_neighbour_margin(self) -> float:
+        """How far past the boundary the OSM import keeps neighbours (m)."""
+        return float(self._osm_margin.value())
 
     # ── Offline building-pack download (V1.66) ─────────────────────────────
 

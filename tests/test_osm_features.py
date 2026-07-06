@@ -159,6 +159,137 @@ class TestBboxHelpers(unittest.TestCase):
         self.assertEqual(bbox, bbox2)
 
 
+class TestFetchFailureHonesty(unittest.TestCase):
+    """A failed Overpass request must surface as None (failure), never as an
+    empty result — 'Found 0 buildings' on a rate-limit was a lie (V2.13)."""
+
+    _BBOX = {"south": 53.5, "west": -113.51, "north": 53.51, "east": -113.5}
+
+    def test_retry_then_mirror_then_none(self):
+        calls = []
+
+        def post(query, url):
+            calls.append(url)
+            return None
+
+        out = osm._fetch_overpass("q", _post=post, _sleep=lambda s: None)
+        self.assertIsNone(out)
+        # primary, primary retry, mirror.
+        self.assertEqual(calls, [osm._OVERPASS_URLS[0],
+                                 osm._OVERPASS_URLS[0],
+                                 osm._OVERPASS_URLS[1]])
+
+    def test_mirror_success_after_primary_failure(self):
+        def post(query, url):
+            return {"elements": []} if "kumi" in url else None
+
+        out = osm._fetch_overpass("q", _post=post, _sleep=lambda s: None)
+        self.assertEqual(out, {"elements": []})
+
+    def test_fetch_existing_features_none_on_failure(self):
+        orig = osm._fetch_overpass
+        osm._fetch_overpass = lambda q: None
+        try:
+            self.assertIsNone(osm.fetch_existing_features(self._BBOX))
+        finally:
+            osm._fetch_overpass = orig
+
+    def test_fetch_buildings_keeps_empty_list_contract(self):
+        orig = osm._fetch_overpass
+        osm._fetch_overpass = lambda q: None
+        try:
+            self.assertEqual(osm.fetch_buildings(self._BBOX), [])
+        finally:
+            osm._fetch_overpass = orig
+
+
+class TestBoundaryFilter(unittest.TestCase):
+    # ~100 m square boundary around (53.5005, -113.4995).
+    _POLY = [(53.5000, -113.5002), (53.5000, -113.4988),
+             (53.5009, -113.4988), (53.5009, -113.5002)]
+
+    @staticmethod
+    def _bldg(lat, lng):
+        return {"kind": "building", "lat": lat, "lng": lng,
+                "height_m": 5.0, "radius_m": 4.0}
+
+    def test_point_in_polygon(self):
+        self.assertTrue(osm._point_in_polygon(53.5005, -113.4995, self._POLY))
+        self.assertFalse(osm._point_in_polygon(53.5020, -113.4995, self._POLY))
+
+    def test_dist_to_polygon(self):
+        # ~22 m north of the north edge (53.5009).
+        d = osm._dist_to_polygon_m(53.5011, -113.4995, self._POLY)
+        self.assertAlmostEqual(d, 0.0002 * 111320.0, delta=2.0)
+
+    def test_filter_keeps_inside_and_near_drops_far(self):
+        inside = self._bldg(53.5005, -113.4995)
+        near = self._bldg(53.50105, -113.4995)     # ~17 m past the edge
+        far = self._bldg(53.5030, -113.4995)       # ~230 m away
+        kept, n_in, n_nb = osm.filter_to_boundary(
+            [inside, near, far], self._POLY, margin_m=30.0)
+        self.assertEqual((n_in, n_nb), (1, 1))
+        self.assertEqual(len(kept), 2)
+        self.assertNotIn(far, kept)
+
+    def test_margin_zero_keeps_only_inside(self):
+        inside = self._bldg(53.5005, -113.4995)
+        near = self._bldg(53.50105, -113.4995)
+        kept, n_in, n_nb = osm.filter_to_boundary(
+            [inside, near], self._POLY, margin_m=0.0)
+        self.assertEqual((len(kept), n_in, n_nb), (1, 1, 0))
+
+    def test_footprint_vertex_counts_as_near(self):
+        # Centroid far outside, but one footprint corner within the margin.
+        b = self._bldg(53.5013, -113.4995)
+        b["footprint"] = [[-113.4995, 53.50095], [-113.4994, 53.5013],
+                          [-113.4996, 53.5013], [-113.4995, 53.50095]]
+        kept, n_in, n_nb = osm.filter_to_boundary([b], self._POLY,
+                                                  margin_m=30.0)
+        self.assertEqual(len(kept), 1)
+        self.assertEqual(n_nb, 1)
+
+    def test_no_boundary_keeps_everything(self):
+        feats = [self._bldg(53.6, -113.6)]
+        kept, n_in, n_nb = osm.filter_to_boundary(feats, None, 30.0)
+        self.assertEqual(kept, feats)
+
+
+class TestImportOsmResult(unittest.TestCase):
+    _POLY = [(53.5000, -113.5002), (53.5000, -113.4988),
+             (53.5009, -113.4988), (53.5009, -113.5002)]
+
+    def test_failure_message(self):
+        proj = new_project("t")
+        out = osm.import_osm_result(None, proj, boundary=self._POLY)
+        self.assertEqual(out["added"], 0)
+        self.assertIn("didn't answer", out["message"])
+        self.assertNotIn("Found 0", out["message"])
+
+    def test_counts_and_message(self):
+        proj = new_project("t")
+        res = {"buildings": [
+            {"kind": "building", "lat": 53.5005, "lng": -113.4995,
+             "height_m": 5.0, "radius_m": 4.0},
+            {"kind": "building", "lat": 53.5030, "lng": -113.4995,
+             "height_m": 5.0, "radius_m": 4.0},        # far — filtered out
+        ], "trees": []}
+        out = osm.import_osm_result(res, proj, boundary=self._POLY,
+                                    margin_m=30.0)
+        self.assertEqual(out["found"], 2)
+        self.assertEqual(out["kept"], 1)
+        self.assertEqual(out["added"], 1)
+        self.assertIn("1 inside your boundary", out["message"])
+        self.assertIn("Delete", out["message"])
+
+    def test_genuinely_empty_result(self):
+        proj = new_project("t")
+        out = osm.import_osm_result({"buildings": [], "trees": []}, proj,
+                                    boundary=self._POLY)
+        self.assertEqual(out["added"], 0)
+        self.assertIn("knows no buildings", out["message"])
+
+
 class TestImport(unittest.TestCase):
     def test_adds_to_project(self):
         proj = new_project("t")

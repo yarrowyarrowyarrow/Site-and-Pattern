@@ -1247,9 +1247,15 @@ class MapEventRouter:
         sc = dict(self._main._project.get("properties", {})
                   .get("site_config", {}) or {})
         boundary = self._project_boundary_latlng()
-        bbox, area_note = bbox_with_area_note(boundary, sc)
-        # Stashed for _on_osm_ready so the result says what area was searched.
+        margin = self._main.site_panel.osm_neighbour_margin()
+        # Query bbox must cover the filter distance; results are then clipped
+        # to the boundary polygon + margin in osm_features.import_osm_result.
+        bbox, area_note = bbox_with_area_note(
+            boundary, sc, pad_m=max(30.0, margin))
+        # Stashed for _on_osm_ready (boundary-precise filtering + status).
         self._main._osm_area_note = area_note
+        self._main._osm_boundary = boundary
+        self._main._osm_margin = margin
         if bbox is None:
             self._main.site_panel.set_osm_status(
                 "Drop a pin or draw a boundary first.")
@@ -1258,7 +1264,9 @@ class MapEventRouter:
         # Prefer the offline building pack when this area has been downloaded
         # (instant, no network) — same data, same canopy_footprint pipeline.
         from src import building_flow
-        if building_flow.import_buildings_offline(self._main, bbox):
+        if building_flow.import_buildings_offline(self._main, bbox,
+                                                  boundary=boundary,
+                                                  margin_m=margin):
             return
 
         self._main.site_panel.set_osm_status("Querying OpenStreetMap…")
@@ -1291,30 +1299,21 @@ class MapEventRouter:
 
     @undoable("import buildings")
     def _on_osm_ready(self, res):
-        if not res:
-            self._main.site_panel.set_osm_status(
-                "OpenStreetMap unavailable or nothing found nearby.")
-            return
-        from src.osm_features import add_features_to_project
-        feats = list(res.get("buildings", [])) + list(res.get("trees", []))
-        added = add_features_to_project(feats, self._main._project)
-        if added:
+        # Filtering to the boundary polygon, project insert, and message
+        # composition all live in osm_features.import_osm_result (pure,
+        # tested; this file is at its line ceiling). res=None = the fetch
+        # FAILED after retry+mirror — reported honestly, never as "Found 0".
+        from src.osm_features import import_osm_result
+        out = import_osm_result(
+            res, self._main._project,
+            boundary=getattr(self._main, "_osm_boundary", None),
+            margin_m=getattr(self._main, "_osm_margin", 30.0),
+            area_note=getattr(self._main, "_osm_area_note", ""))
+        if out["added"]:
             self._main._mark_modified()
             # Re-render the newly imported features through the structure path.
             self._reload_existing_features()
-        n_b = len(res.get("buildings", []))
-        n_t = len(res.get("trees", []))
-        area = getattr(self._main, "_osm_area_note", "") or ""
-        msg = f"Found {n_b} building(s), {n_t} tree(s); added {added} new."
-        if area:
-            msg += f" Searched {area}."
-        if n_b == 0 and n_t == 0:
-            # The honest why (V2.13): Overpass matches a building only when a
-            # corner point falls inside the searched box.
-            msg += (" OSM returns a building only when one of its corner "
-                    "points falls in the searched area — if one sits at the "
-                    "edge, enlarge the boundary a touch and re-import.")
-        self._main.site_panel.set_osm_status(msg)
+        self._main.site_panel.set_osm_status(out["message"])
 
     def _reload_existing_features(self):
         """Draw OSM-imported existing features that aren't yet on the map: trees
