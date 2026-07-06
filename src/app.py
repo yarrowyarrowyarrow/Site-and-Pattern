@@ -1909,6 +1909,10 @@ class MainWindow(QMainWindow):
 
     def _sync_planning_panel(self):
         """Push current placed plants and structures to planning + analysis panels."""
+        # Shade-tab caster inventory (V2.13) — cheap feature scan, and this
+        # sync already runs on every design mutation, project load, and after
+        # OSM imports/feature marks.
+        self.site_panel.update_caster_summary(self._project)
         enriched = []
         for p in self._placed_plants:
             entry = dict(p)

@@ -136,7 +136,7 @@ class GenerateDesignDialog(QDialog):
         density_row.addStretch(1)
         layout.addLayout(density_row)
 
-        self._match_site_check = QCheckBox("Match to site conditions & terrain")
+        self._match_site_check = QCheckBox("Match to site conditions && terrain")
         self._match_site_check.setChecked(True)
         self._match_site_check.setToolTip(
             "Place moisture-loving plants in low/wet ground, drought-tolerant "

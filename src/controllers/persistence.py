@@ -58,6 +58,13 @@ class PersistenceController:
         self._main._modified = True
         if not self._main.windowTitle().endswith(' *'):
             self._main.setWindowTitle(self._main.windowTitle() + ' *')
+        # Shade-tab caster inventory (V2.13): every feature mutation lands
+        # here, so the "Casting shade: …" line stays live after imports,
+        # marks, draws, removals and undo. Cheap pure feature scan.
+        try:
+            self._main.site_panel.update_caster_summary(self._main._project)
+        except Exception:  # noqa: BLE001 — a status line must never block a save flag
+            pass
 
     # ── Save / Save As ────────────────────────────────────────────────────────
 

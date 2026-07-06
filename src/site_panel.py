@@ -318,12 +318,18 @@ class SitePanel(QWidget):
         tabs.setDocumentMode(True)
         tabs.tabBar().setUsesScrollButtons(False)
         tabs.tabBar().setExpanding(True)
-        tabs.setStyleSheet(inner_tab_stylesheet())
+        # Tighter tab padding than the stock sub-tab style: four labels — one
+        # of them "Existing Features & Shade" — have to fit the panel's 260 px
+        # minimum (same trick as the Analysis strip).
+        tabs.setStyleSheet(inner_tab_stylesheet()
+                           + "QTabBar::tab { padding: 4px 5px; }")
         outer.addWidget(tabs)
 
         self._build_info_page(self._add_scroll_page(tabs, "Site Information"))
         self._build_slope_page(self._add_scroll_page(tabs, "Slope"))
-        self._build_shade_page(self._add_scroll_page(tabs, "Shade"))
+        # "&&" — a single "&" is a Qt mnemonic marker and vanishes from view.
+        self._build_shade_page(
+            self._add_scroll_page(tabs, "Existing Features && Shade"))
         self._build_field_notes_page(self._add_scroll_page(tabs, "Field Notes"))
 
     def _add_scroll_page(self, tabs, title):
@@ -558,7 +564,7 @@ class SitePanel(QWidget):
         layout.addWidget(self._rain_box)
 
         # ── Winter cover & survival (snow as insulation) ─────────────
-        self._winter_box = QGroupBox("Winter cover & survival")
+        self._winter_box = QGroupBox("Winter cover && survival")
         self._winter_box.setStyleSheet(_GROUP_STYLE)
         wl = QFormLayout(self._winter_box)
         self._lbl_winter_cover = QLabel("—")
@@ -923,7 +929,7 @@ class SitePanel(QWidget):
         # Water flow & accumulation overlay (V2.13): D8 routing over the same
         # grid — where runoff concentrates (swale / rain-garden siting) and
         # where it ponds. Off by default; it's a design lens, not a basemap.
-        self._auto_want_water = QCheckBox("Water flow (runoff & accumulation)")
+        self._auto_want_water = QCheckBox("Water flow (runoff && accumulation)")
         self._auto_want_water.setChecked(False)
         self._auto_want_water.setToolTip(
             "Routes rain downhill across the elevation grid: blue shading "
@@ -1001,11 +1007,13 @@ class SitePanel(QWidget):
         layout.addStretch()
 
     def _build_shade_page(self, layout):
-        """Shade sub-tab: shade map, existing shade casters (mark/draw trees and
-        buildings), the OpenStreetMap import, and the satellite alignment nudge."""
-        self._build_shade_section(layout)
-        self._build_existing_features_section(layout)
+        """Existing Features & Shade sub-tab, in workflow order (V2.13):
+        capture what's already on the site (import, then by hand) BEFORE the
+        shade map — shade is only as real as the casters feeding it. The
+        satellite-alignment nudge stays last (cosmetic)."""
         self._build_osm_section(layout)
+        self._build_existing_features_section(layout)
+        self._build_shade_section(layout)
         self._build_imagery_align_section(layout)
         layout.addStretch()
 
@@ -1512,6 +1520,55 @@ class SitePanel(QWidget):
 
     # ── Shade overlay (V1.51) ──────────────────────────────────────────────
 
+    @staticmethod
+    def _nearest_key_date_index() -> int:
+        """Index into solar.KEY_DATES of the key date closest to today, by
+        circular day-of-year distance — so the shade view opens in the season
+        the user is actually standing in (V2.13)."""
+        from datetime import date
+        from src.solar import KEY_DATES
+        today = date.today().timetuple().tm_yday
+        best_i, best_d = 0, 400
+        for i, d in enumerate(KEY_DATES.values()):
+            doy = d.timetuple().tm_yday
+            dist = min(abs(doy - today), 365 - abs(doy - today))
+            if dist < best_d:
+                best_i, best_d = i, dist
+        return best_i
+
+    def update_caster_summary(self, project_dict: dict):
+        """Refresh the 'Casting shade: …' inventory line from the project's
+        existing-feature list. Pure feature scan (no DB); placed design trees
+        join the shade automatically and aren't counted here."""
+        lbl = getattr(self, "_caster_summary", None)
+        if lbl is None:
+            return
+        trees = buildings = 0
+        for f in (project_dict or {}).get("features") or []:
+            props = f.get("properties") or {}
+            et = props.get("element_type")
+            if et == "existing_tree":
+                trees += 1
+            elif et == "existing_building":
+                buildings += 1
+            elif (et == "canopy_footprint"
+                  or (et == "custom_shape" and props.get("cast_shade"))):
+                if props.get("caster_kind") == "tree":
+                    trees += 1
+                else:
+                    buildings += 1
+        if trees == 0 and buildings == 0:
+            lbl.setText("No existing features yet — import or draw them "
+                        "above so the shade is real.")
+            lbl.setStyleSheet("color: #ffcc80; font-size: 11px;")
+        else:
+            lbl.setText(
+                f"Casting shade: {buildings} building"
+                f"{'s' if buildings != 1 else ''} · {trees} tree"
+                f"{'s' if trees != 1 else ''} (+ your placed plants, "
+                "automatically).")
+            lbl.setStyleSheet("color: #a5d6a7; font-size: 11px;")
+
     def _build_shade_section(self, parent_layout):
         """Show-shade button + opacity, plus season & time-of-day selectors that
         drive the time-aware shade overlay (src/shade.py + ShadeWorker)."""
@@ -1523,6 +1580,15 @@ class SitePanel(QWidget):
         v.setContentsMargins(6, 6, 6, 6)
         v.setSpacing(4)
 
+        # Caster inventory (V2.13): tells the user whether the shade below
+        # will be real BEFORE they click — refreshed by update_caster_summary.
+        self._caster_summary = QLabel(
+            "No existing features yet — import or draw them above so the "
+            "shade is real.")
+        self._caster_summary.setWordWrap(True)
+        self._caster_summary.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        v.addWidget(self._caster_summary)
+
         season_row = QHBoxLayout()
         season_row.addWidget(QLabel("Season:"))
         self._shade_season = QComboBox()
@@ -1532,7 +1598,9 @@ class SitePanel(QWidget):
         # classification still uses the season average internally (separate path).
         for label, d in KEY_DATES.items():
             self._shade_season.addItem(label, (d.month, d.day))
-        self._shade_season.setCurrentIndex(0)          # Summer Solstice
+        # Default to the key date nearest today (V2.13) — opening in July
+        # should show July-ish sun, not whatever happens to be listed first.
+        self._shade_season.setCurrentIndex(self._nearest_key_date_index())
         self._shade_season.currentIndexChanged.connect(self._on_shade_season_changed)
         season_row.addWidget(self._shade_season)
         v.addLayout(season_row)
@@ -1648,6 +1716,10 @@ class SitePanel(QWidget):
         if season is not None:
             v = self._shade_hour.value()             # minutes since midnight
             when = (season[0], season[1], v // 60, v % 60)
+            # Hand the keyboard to the Time slider (V2.13): ←/→ scrub the
+            # shadows across the day immediately after showing them (the
+            # live-scrub debounce recomputes the overlay per step).
+            self._shade_hour.setFocus(Qt.FocusReason.OtherFocusReason)
         self.shade_requested.emit({"when": when})
 
     def _on_shade_season_changed(self, _idx):
@@ -1699,17 +1771,19 @@ class SitePanel(QWidget):
 
     def _build_existing_features_section(self, layout):
         from src.db.structures import EXISTING_TREE_ID, EXISTING_BUILDING_ID
-        box = QGroupBox("Existing features (trees & buildings)")
+        box = QGroupBox("Existing features — by hand")
         box.setStyleSheet(_GROUP_STYLE)
         box.setToolTip(
-            "Mark trees and buildings already on your property so the design "
+            "Add trees and buildings the import missed so the design "
             "generator places shade-loving plants in their cast shade."
         )
         vb = QVBoxLayout(box)
         vb.setContentsMargins(6, 6, 6, 6)
         vb.setSpacing(4)
 
-        hint = QLabel("Set height/size, click a button, then click the map.")
+        hint = QLabel("Set height/size, click a button, then click the map. "
+                      "Draw traces the real outline (best shadows); Mark "
+                      "drops a quick circle or box.")
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
         vb.addWidget(hint)
@@ -1759,19 +1833,9 @@ class SitePanel(QWidget):
         vb.addLayout(fol_row)
 
         # All four placement buttons share the secondary chrome so the row of
-        # emoji labels lines up as buttons, not floating text.
-        btns = QHBoxLayout()
-        btn_tree = QPushButton("🌳 Mark tree")
-        btn_tree.setStyleSheet(_BTN_SECONDARY)
-        btn_tree.clicked.connect(lambda: self._on_mark_existing(EXISTING_TREE_ID))
-        btn_bldg = QPushButton("🏠 Mark building")
-        btn_bldg.setStyleSheet(_BTN_SECONDARY)
-        btn_bldg.clicked.connect(
-            lambda: self._on_mark_existing(EXISTING_BUILDING_ID))
-        btns.addWidget(btn_tree)
-        btns.addWidget(btn_bldg)
-        vb.addLayout(btns)
-
+        # emoji labels lines up as buttons, not floating text. Draw comes
+        # first (V2.13): a traced outline casts the true shadow; Mark is the
+        # quick-and-rough fallback.
         draw_btns = QHBoxLayout()
         btn_tree_outline = QPushButton("🌲 Draw tree canopy")
         btn_tree_outline.setStyleSheet(_BTN_SECONDARY)
@@ -1789,6 +1853,23 @@ class SitePanel(QWidget):
         btn_outline.clicked.connect(self._on_draw_building_footprint)
         draw_btns.addWidget(btn_outline)
         vb.addLayout(draw_btns)
+
+        btns = QHBoxLayout()
+        btn_tree = QPushButton("🌳 Mark tree")
+        btn_tree.setStyleSheet(_BTN_SECONDARY)
+        btn_tree.setToolTip("Quick version: drops a circle of the canopy "
+                            "diameter above where you click.")
+        btn_tree.clicked.connect(lambda: self._on_mark_existing(EXISTING_TREE_ID))
+        btn_bldg = QPushButton("🏠 Mark building")
+        btn_bldg.setStyleSheet(_BTN_SECONDARY)
+        btn_bldg.setToolTip("Quick version: drops a box of the width above "
+                            "where you click — Draw building gives the real "
+                            "outline and a truer shadow.")
+        btn_bldg.clicked.connect(
+            lambda: self._on_mark_existing(EXISTING_BUILDING_ID))
+        btns.addWidget(btn_tree)
+        btns.addWidget(btn_bldg)
+        vb.addLayout(btns)
 
         layout.addWidget(box)
 
@@ -1834,20 +1915,28 @@ class SitePanel(QWidget):
     # ── Existing features from OpenStreetMap (V1.51) ───────────────────────
 
     def _build_osm_section(self, parent_layout):
-        box = QGroupBox("Existing features (OpenStreetMap)")
-        box.setToolTip("Import nearby buildings and mapped trees from "
-                       "OpenStreetMap so the design accounts for their shade "
-                       "and keeps plants off them. Anything missing can still "
-                       "be marked by hand in the Structures tab.")
+        box = QGroupBox("Existing features — import")
+        box.setToolTip("Start here: pull what's already on and around the "
+                       "site from OpenStreetMap so the shade map below has "
+                       "real casters to work with. Anything missing can be "
+                       "drawn or marked by hand in the next section.")
         v = QVBoxLayout(box)
         v.setContentsMargins(6, 6, 6, 6)
-        btn = QPushButton("Import building outlines & trees (OSM)")
-        btn.setStyleSheet(_BTN_SECONDARY)
+        hint = QLabel("Step 1 — capture what's already there; the shade map "
+                      "below is only as real as these features.")
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        v.addWidget(hint)
+        # The section's one primary action — the partner of "Show shade".
+        # "&&": a single "&" is a Qt mnemonic marker and vanishes from view.
+        btn = QPushButton("Import building && tree outlines")
+        btn.setStyleSheet(_BTN_PRIMARY)
         btn.setToolTip(
             "Traces nearby building perimeters — with heights from "
             "OpenStreetMap's height / storey tags where present, otherwise "
             "≈5 m (3 m per storey) — plus mapped trees (≈7 m unless tagged).\n"
-            "Covers your drawn boundary, or ≈60 m around the property pin.\n"
+            "Covers your drawn boundary + 30 m margin, or ≈60 m around the "
+            "property pin.\n"
             "Works offline from a downloaded building pack (buildings only — "
             "trees need the online import).\n"
             "Imported features cast shade and keep plants off them.")
@@ -1877,12 +1966,16 @@ class SitePanel(QWidget):
         # (numpy + shapely present), so a minimal install hides it.
         from src.footprint_extract import extraction_available
         if extraction_available():
-            btn_tiff = QPushButton("Import footprints (nDSM GeoTIFF)…")
+            btn_tiff = QPushButton("Import your own survey (nDSM GeoTIFF)…")
             btn_tiff.setStyleSheet(_BTN_SECONDARY)
             btn_tiff.setToolTip(
-                "Vectorize building/canopy footprints (with heights) from a "
-                "normalized-DSM GeoTIFF (DSM minus DEM). They land as "
-                "shade-casting footprints you can edit or remove.")
+                "Advanced — for height data YOU supply: a normalized DSM "
+                "GeoTIFF (surface minus ground) from a drone-photogrammetry "
+                "or LiDAR survey of the site. Building and canopy outlines "
+                "are vectorized from it, with heights, as editable "
+                "shade-casting footprints.\n"
+                "Not needed for the normal path — the OSM import above "
+                "covers most yards.")
             btn_tiff.clicked.connect(self._on_pick_footprint_tiff)
             v.addWidget(btn_tiff)
 
