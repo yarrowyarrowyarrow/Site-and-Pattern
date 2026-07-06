@@ -1,6 +1,12 @@
 """
 shade.py — Cast-shade estimation for the design grid (V1.48; polygon V1.53).
 
+Design principle P9 (uncertainty is a feature — ship an honest model, never
+false precision) — see docs/DESIGN_PHILOSOPHY.md. A bare deciduous crown does
+NOT cast a solid winter shadow, so V2.13 gives declared-deciduous trees a
+leaf-off weight in Oct–Apr instead of pretending the shade is full; untagged
+trees stay opaque because we don't actually know their foliage.
+
 Estimates which patches of ground are shaded a meaningful fraction of the day,
 so the generator can put shade-tolerant plants where it is actually shady —
 under existing trees, north of buildings, beneath the design's own canopy.
