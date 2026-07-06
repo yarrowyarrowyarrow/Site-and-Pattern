@@ -823,21 +823,29 @@ class MainWindow(QMainWindow):
             self.plant_panel.set_autodetected_ecoregion)
         # "Browse N reference communities →" jumps to the community library
         # with the Habitat filter pre-set to the detected ecoregion (V2.13).
+        # Handlers live in design_review_flow (MainWindow is at its method
+        # ceiling), wired through thin lambdas.
+        from src import design_review_flow as _drf
         self.site_panel.browse_communities_requested.connect(
-            self._on_browse_communities)
+            lambda key: _drf.browse_communities(self, key))
+        # On This Design rows → map (V2.13): click to locate, context menu to
+        # select / remove / open in the Plant Library.
+        self.on_this_design.species_focus_requested.connect(
+            lambda pid: _drf.focus_species(self, pid))
+        self.on_this_design.species_select_requested.connect(
+            lambda pid: _drf.select_species(self, pid))
+        self.on_this_design.species_remove_requested.connect(
+            lambda pid: _drf.remove_species(self, pid))
+        self.on_this_design.species_show_in_library_requested.connect(
+            lambda pid: _drf.show_in_library(self, pid))
+        self.on_this_design.community_focus_requested.connect(
+            lambda name: _drf.focus_community(self, name))
         # Address search → drop pin on map (the bridge then notifies us
         # back via site_pin_placed and the usual fetch flow runs).
         self.site_panel.address_resolved.connect(self._on_address_resolved)
         # Manual contour drawing controls live on the Site tab now.
         self.site_panel.contour_requested.connect(self._on_contour_requested)
         self.site_panel.contour_cleared.connect(self._on_contour_cleared)
-
-    def _on_browse_communities(self, eco_key: str):
-        """Site tab's ecoregion cross-link → open the Plant Community Library
-        pre-filtered to communities of that ecoregion (V2.13)."""
-        self._side_tabs.setCurrentWidget(self._plant_poly_tab)
-        self._plants_inner_tabs.setCurrentWidget(self.polyculture_panel)
-        self.polyculture_panel.set_habitat_filter([eco_key])
 
     # ── Map-ready ─────────────────────────────────────────────────────────────
 

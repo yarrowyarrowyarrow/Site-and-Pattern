@@ -974,6 +974,13 @@
       map.setView([lat, lng], zoom || 14);
     }
 
+    // Frame a lat/lng box with padding (V2.13). Used by the On This Design
+    // list to zoom to one species' placements or a community instance.
+    function fitMapBounds(south, west, north, east) {
+      map.fitBounds([[south, west], [north, east]],
+                    { padding: [40, 40], maxZoom: 21 });
+    }
+
     function cancelDraw() {
       setMode('none');
     }

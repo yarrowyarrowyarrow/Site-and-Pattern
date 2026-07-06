@@ -139,6 +139,11 @@ def clear_selection() -> str:
     return "clearSelection();"
 
 
+def select_plants_by_species(plant_id: int) -> str:
+    """Select every placed marker of one species (On This Design → map)."""
+    return f"selectPlantsBySpecies({int(plant_id)});"
+
+
 def delete_selected() -> str:
     return "deleteSelected();"
 
@@ -151,6 +156,12 @@ def toggle_legend() -> str:
 
 def set_view(lat: float, lng: float, zoom: int = 14) -> str:
     return f"setView({lat}, {lng}, {zoom});"
+
+
+def fit_bounds(south: float, west: float, north: float, east: float) -> str:
+    """Frame a lat/lng box with padding (species / community zoom, V2.13)."""
+    return (f"fitMapBounds({float(south)}, {float(west)}, "
+            f"{float(north)}, {float(east)});")
 
 
 def set_zoom_sensitivity(level: str) -> str:

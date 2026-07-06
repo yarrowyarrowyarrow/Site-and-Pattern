@@ -147,6 +147,21 @@
       _refreshSelectionVisuals();
     }
 
+    // Select every placed marker of one species (V2.13). Driven from Python
+    // by the On This Design list (click a species row → its plants light up);
+    // replaces the current selection so Delete/group-move then operate on
+    // exactly that species through the normal pipeline.
+    function selectPlantsBySpecies(plantId) {
+      selectedItems = [];
+      Object.keys(plantMarkers).forEach(function(mid) {
+        var c = plantMarkers[mid];
+        if (c && c._pd && c._pd.plantId === plantId) {
+          selectedItems.push(c._pd);
+        }
+      });
+      _refreshSelectionVisuals();
+    }
+
     // Apply / remove the selection highlight on every relevant feature.
     // Plants get a thicker yellow border + brighter fill while selected;
     // boundaries get a thicker stroke; sectors flag their group's centre.

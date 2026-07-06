@@ -18,9 +18,10 @@ inside ``_sync_planning_panel`` for Communities + Stats.
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QListWidget, QListWidgetItem, QSizePolicy,
+    QWidget, QVBoxLayout, QLabel, QListWidget, QListWidgetItem, QMenu,
+    QSizePolicy,
 )
 
 from src.plant_list_view import _RESULTS_LIST_STYLE, _type_icon
@@ -38,7 +39,18 @@ class OnThisDesignPanel(QWidget):
     App.py owns the instance and drives both inputs:
     ``set_plants_counts(plant_panel._placed_counts)`` whenever the Plants
     tab signals ``placed_counts_changed``; ``set_design_data(enriched)``
-    inside ``_sync_planning_panel`` for Communities + Stats."""
+    inside ``_sync_planning_panel`` for Communities + Stats.
+
+    V2.13: the lists are an instrument, not a readout — clicking a species
+    or community row locates it on the map, and the species context menu
+    selects / removes / opens it in the Plant Library. The panel only emits;
+    app.py wires the signals to ``design_review_flow``."""
+
+    species_focus_requested = pyqtSignal(int)            # click → select+zoom
+    species_select_requested = pyqtSignal(int)           # ctx: select on map
+    species_remove_requested = pyqtSignal(int)           # ctx: remove all (confirmed downstream)
+    species_show_in_library_requested = pyqtSignal(int)  # ctx: Plant Library
+    community_focus_requested = pyqtSignal(str)          # click → zoom to members
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -72,6 +84,14 @@ class OnThisDesignPanel(QWidget):
         self._plants_list.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
+        self._plants_list.setToolTip(
+            "Click a species to select and frame it on the map;\n"
+            "right-click for select / remove / open in Plant Library.")
+        self._plants_list.itemClicked.connect(self._on_plant_row_clicked)
+        self._plants_list.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu)
+        self._plants_list.customContextMenuRequested.connect(
+            self._on_plant_row_menu)
         pl.addWidget(self._plants_list, 1)
         self._tabs.addTab(plants_widget, "Plants")
 
@@ -92,6 +112,10 @@ class OnThisDesignPanel(QWidget):
         self._communities_list.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
+        self._communities_list.setToolTip(
+            "Click a community to frame its placed members on the map.")
+        self._communities_list.itemClicked.connect(
+            self._on_community_row_clicked)
         cl.addWidget(self._communities_list, 1)
         self._tabs.addTab(communities_widget, "Communities")
 
@@ -134,16 +158,53 @@ class OnThisDesignPanel(QWidget):
                 name = p["common_name"] if p else f"Plant #{pid}"
                 item = QListWidgetItem(f"{name}  ×{count}")
                 item.setIcon(_type_icon(p["plant_type"] if p else ""))
+                item.setData(Qt.ItemDataRole.UserRole, int(pid))
                 self._plants_list.addItem(item)
                 total += count
             self._plants_count_label.setText(
                 f"{total} plant{'s' if total != 1 else ''} placed"
-                f" ({len(counts)} species)"
+                f" ({len(counts)} species) · click a row to find it"
             )
         except Exception:
             self._plants_count_label.setText(
                 f"{sum(counts.values())} plants placed"
             )
+
+    # ── Row interactions (V2.13) ──────────────────────────────────────
+
+    def _on_plant_row_clicked(self, item: QListWidgetItem):
+        pid = item.data(Qt.ItemDataRole.UserRole)
+        if pid is not None:
+            self.species_focus_requested.emit(int(pid))
+
+    def _on_plant_row_menu(self, pos):
+        item = self._plants_list.itemAt(pos)
+        if item is None:
+            return
+        pid = item.data(Qt.ItemDataRole.UserRole)
+        if pid is None:
+            return
+        pid = int(pid)
+        menu = QMenu(self._plants_list)
+        act_focus = menu.addAction("Zoom to on map")
+        act_select = menu.addAction("Select on map")
+        act_library = menu.addAction("Show in Plant Library")
+        menu.addSeparator()
+        act_remove = menu.addAction("Remove all from design…")
+        chosen = menu.exec(self._plants_list.mapToGlobal(pos))
+        if chosen is act_focus:
+            self.species_focus_requested.emit(pid)
+        elif chosen is act_select:
+            self.species_select_requested.emit(pid)
+        elif chosen is act_library:
+            self.species_show_in_library_requested.emit(pid)
+        elif chosen is act_remove:
+            self.species_remove_requested.emit(pid)
+
+    def _on_community_row_clicked(self, item: QListWidgetItem):
+        name = item.data(Qt.ItemDataRole.UserRole)
+        if name:
+            self.community_focus_requested.emit(str(name))
 
     # ── Communities + Stats sub-tabs ──────────────────────────────────
 
@@ -184,6 +245,7 @@ class OnThisDesignPanel(QWidget):
                 f"{name}  — {n_inst} instance{'s' if n_inst != 1 else ''}"
                 f", {n_mem} member{'s' if n_mem != 1 else ''}"
             )
+            item.setData(Qt.ItemDataRole.UserRole, name)
             self._communities_list.addItem(item)
         total_inst = sum(len(v) for v in instances.values())
         self._communities_count_label.setText(
