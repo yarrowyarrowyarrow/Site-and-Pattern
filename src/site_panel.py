@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from PyQt6.QtCore import Qt, QObject, QThread, QTimer, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import Qt, QObject, QSettings, QThread, QTimer, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
@@ -1601,6 +1601,18 @@ class SitePanel(QWidget):
         self._shade_zone_status.setStyleSheet("color: #a5d6a7; font-size: 11px;")
         v.addWidget(self._shade_zone_status)
 
+        # Leaf-off honesty note (V2.13): shown for leaf-off dates so the
+        # lighter shadows under tagged deciduous trees aren't read as a bug.
+        self._shade_leafoff_note = QLabel(
+            "🍂 Deciduous trees are shown leaf-off for this date — bare "
+            "branches cast ~30% shade. Trees marked without a type still "
+            "cast full shade.")
+        self._shade_leafoff_note.setWordWrap(True)
+        self._shade_leafoff_note.setStyleSheet(
+            "color: #90a4ae; font-size: 10px;")
+        self._shade_leafoff_note.setVisible(False)
+        v.addWidget(self._shade_leafoff_note)
+
         parent_layout.addWidget(box)
 
     def mark_zones_shown(self):
@@ -1628,6 +1640,11 @@ class SitePanel(QWidget):
         scrubs only through real daylight, and label the ends. Falls back to the
         generic 5 AM–9 PM range until a site location is known."""
         season = self._shade_season.currentData()
+        # Leaf-off note for dates when deciduous crowns are bare (Oct–Apr).
+        if hasattr(self, "_shade_leafoff_note"):
+            from src.shade import _LEAF_OFF_MONTHS
+            self._shade_leafoff_note.setVisible(
+                season is not None and season[0] in _LEAF_OFF_MONTHS)
         if season is None or self._lat is None or self._lng is None:
             self._shade_hour.setRange(5 * 60, 21 * 60)
             return
@@ -1702,6 +1719,30 @@ class SitePanel(QWidget):
         dims.addWidget(self._exist_size)
         vb.addLayout(dims)
 
+        # Tree foliage (V2.13): drives honest winter shade — a bare deciduous
+        # crown casts ~30% shade at the Winter Solstice instead of a solid
+        # shadow. Applies to Mark tree and Draw tree canopy; persisted so a
+        # spruce-heavy yard doesn't re-toggle every session.
+        fol_row = QHBoxLayout()
+        fol_lbl = QLabel("Tree type:")
+        fol_row.addWidget(fol_lbl)
+        self._exist_foliage = QComboBox()
+        self._exist_foliage.addItem("🍂 Deciduous (bare in winter)", "deciduous")
+        self._exist_foliage.addItem("🌲 Evergreen (year-round shade)", "evergreen")
+        self._exist_foliage.setToolTip(
+            "Deciduous crowns drop their leaves — in the leaf-off months\n"
+            "(Oct–Apr) they cast only ~30% shade, so winter and early-spring\n"
+            "shade maps stay honest. Evergreens cast full shade all year.")
+        saved_fol = QSettings().value("site/tree_foliage", "deciduous", type=str)
+        _fi = self._exist_foliage.findData(saved_fol)
+        if _fi >= 0:
+            self._exist_foliage.setCurrentIndex(_fi)
+        self._exist_foliage.currentIndexChanged.connect(
+            lambda _i: QSettings().setValue(
+                "site/tree_foliage", self._exist_foliage.currentData()))
+        fol_row.addWidget(self._exist_foliage, 1)
+        vb.addLayout(fol_row)
+
         # All four placement buttons share the secondary chrome so the row of
         # emoji labels lines up as buttons, not floating text.
         btns = QHBoxLayout()
@@ -1743,7 +1784,8 @@ class SitePanel(QWidget):
         from src.db.structures import existing_feature_def
         payload = existing_feature_def(
             feature_id, size_m=self._exist_size.value(),
-            height_m=self._exist_height.value())
+            height_m=self._exist_height.value(),
+            foliage=self._exist_foliage.currentData())
         self.place_structure_requested.emit(payload)
 
     def _on_draw_building_footprint(self):
@@ -1771,6 +1813,7 @@ class SitePanel(QWidget):
             "fill_opacity": 0.3,
             "dash_array": "",
             "height_m": self._exist_height.value(),
+            "tree_foliage": self._exist_foliage.currentData(),
         })
 
     # ── Existing features from OpenStreetMap (V1.51) ───────────────────────

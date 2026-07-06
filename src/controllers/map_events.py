@@ -176,6 +176,7 @@ class MapEventRouter:
         from the mode controller's stash (the JS callback doesn't echo it)."""
         from src.db.structures import EXISTING_TREE_ID
         height_m = getattr(self._main, "_existing_feature_height_m", None)
+        foliage = getattr(self._main, "_existing_feature_foliage", None)
         etype = ("existing_tree" if struct_id == EXISTING_TREE_ID
                  else "existing_building")
         props = {
@@ -190,6 +191,10 @@ class MapEventRouter:
             "struct_id": struct_id,
             "size_m": size_m,
         }
+        # Foliage drives the leaf-off winter-shade weighting (V2.13);
+        # only meaningful on trees, absent on legacy marks.
+        if etype == "existing_tree" and foliage:
+            props["tree_foliage"] = foliage
         self._main._project["features"].append({
             "type": "Feature",
             "geometry": {"type": "Point", "coordinates": [lng, lat]},
@@ -200,7 +205,8 @@ class MapEventRouter:
         # identically. A bare {id,name,size_m} would render as the default box.
         from src.db.structures import existing_feature_def
         full_def = existing_feature_def(
-            struct_id, size_m=size_m, height_m=props["height_m"])
+            struct_id, size_m=size_m, height_m=props["height_m"],
+            foliage=props.get("tree_foliage", ""))
         full_def["name"] = name
         self._main._push_undo({
             "action": "place_structure", "struct_id": struct_id,
@@ -314,6 +320,11 @@ class MapEventRouter:
             # extrusion (see shade.casters_from_project / cast_tree_shadow).
             if shape_type == "Tree canopy":
                 props["caster_kind"] = "tree"
+                # Foliage from the mode stash (the JS callback doesn't echo
+                # custom config fields) — leaf-off winter shade, V2.13.
+                fol = getattr(self._main, "_tree_canopy_foliage", None)
+                if fol:
+                    props["tree_foliage"] = fol
         self._main._project["features"].append({
             "type": "Feature",
             "geometry": {"type": "Polygon", "coordinates": [ring]},
