@@ -840,6 +840,11 @@ class MainWindow(QMainWindow):
             lambda pid: _drf.show_in_library(self, pid))
         self.on_this_design.community_focus_requested.connect(
             lambda name: _drf.focus_community(self, name))
+        # Stats deep-links: habitat value → Analysis, cost → Planning (V2.13).
+        self.on_this_design.open_habitat_analysis_requested.connect(
+            lambda: _drf.open_habitat_analysis(self))
+        self.on_this_design.open_planning_requested.connect(
+            lambda: _drf.open_planning(self))
         # Address search → drop pin on map (the bridge then notifies us
         # back via site_pin_placed and the usual fetch flow runs).
         self.site_panel.address_resolved.connect(self._on_address_resolved)

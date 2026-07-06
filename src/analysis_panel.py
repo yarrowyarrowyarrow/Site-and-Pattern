@@ -1064,7 +1064,14 @@ class AnalysisPanel(QWidget):
 
         # Short tab label so all five fit the strip even with macOS's wider
         # font; the page itself carries the full "Habitat Value" wording.
-        self._tabs.addTab(page, "Habitat")
+        self._habitat_tab_index = self._tabs.addTab(page, "Habitat")
+
+    def show_habitat_tab(self):
+        """Raise the Habitat Value tab (On This Design → habitat-value
+        deep-link, V2.13)."""
+        idx = getattr(self, "_habitat_tab_index", None)
+        if idx is not None:
+            self._tabs.setCurrentIndex(idx)
 
     # ═════════════════════════════════════════════════════════════════════════
     #  Bees — "Design for a bee" habitat builder (F37)

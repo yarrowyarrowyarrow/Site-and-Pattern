@@ -117,3 +117,15 @@ def browse_communities(main, eco_key: str) -> None:
     main._side_tabs.setCurrentWidget(main._plant_poly_tab)
     main._plants_inner_tabs.setCurrentWidget(main.polyculture_panel)
     main.polyculture_panel.set_habitat_filter([eco_key])
+
+
+def open_habitat_analysis(main) -> None:
+    """Stats 'Habitat value ›' deep-link → the Analysis panel's Habitat tab."""
+    main._side_tabs.setCurrentWidget(main.analysis_panel)
+    if hasattr(main.analysis_panel, "show_habitat_tab"):
+        main.analysis_panel.show_habitat_tab()
+
+
+def open_planning(main) -> None:
+    """Stats 'Estimated cost ›' deep-link → the Planning panel."""
+    main._side_tabs.setCurrentWidget(main.planning_panel)

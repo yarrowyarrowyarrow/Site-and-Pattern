@@ -51,6 +51,8 @@ class OnThisDesignPanel(QWidget):
     species_remove_requested = pyqtSignal(int)           # ctx: remove all (confirmed downstream)
     species_show_in_library_requested = pyqtSignal(int)  # ctx: Plant Library
     community_focus_requested = pyqtSignal(str)          # click → zoom to members
+    open_habitat_analysis_requested = pyqtSignal()       # Stats: habitat value → Analysis
+    open_planning_requested = pyqtSignal()               # Stats: cost → Planning
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -129,6 +131,11 @@ class OnThisDesignPanel(QWidget):
             "QTextBrowser { background: #1a2a1a; color: #c8e6c9; "
             "border: 1px solid #2e4a2e; border-radius: 4px; font-size: 12px; }"
         )
+        # Deep-links: the habitat-value and cost headings are anchors into the
+        # Analysis and Planning tabs (V2.13). Handle them ourselves rather than
+        # letting QTextBrowser try to navigate to a made-up URL.
+        self._stats_text.setOpenLinks(False)
+        self._stats_text.anchorClicked.connect(self._on_stats_anchor)
         sl.addWidget(self._stats_text, 1)
         self._tabs.addTab(stats_widget, "Stats")
 
@@ -205,6 +212,14 @@ class OnThisDesignPanel(QWidget):
         name = item.data(Qt.ItemDataRole.UserRole)
         if name:
             self.community_focus_requested.emit(str(name))
+
+    def _on_stats_anchor(self, url):
+        """Route a Stats deep-link (custom sap: scheme) to the right tab."""
+        target = url.toString()
+        if target == "sap:analysis-habitat":
+            self.open_habitat_analysis_requested.emit()
+        elif target == "sap:planning":
+            self.open_planning_requested.emit()
 
     # ── Communities + Stats sub-tabs ──────────────────────────────────
 
@@ -295,7 +310,11 @@ class OnThisDesignPanel(QWidget):
         host = getattr(sc, "host_species", None) or []
         if host:
             bits.append(f"{len(host)} caterpillar host plants")
-        parts = [f"<p><b>Habitat value</b><br>{head}"]
+        parts = [
+            "<p><a href='sap:analysis-habitat' "
+            "style='color:#a5d6a7;text-decoration:none;'>"
+            f"<b>Habitat value</b> ›</a><br>{head}"
+        ]
         if bits:
             parts.append("<br><span style='color:#90a4ae;font-size:10px;'>"
                          + ", ".join(bits) + "</span>")
@@ -386,7 +405,10 @@ class OnThisDesignPanel(QWidget):
             v = bd.get(key)
             return f"{label}: {format_cost(v[0], v[1])}<br>" if v else ""
 
-        parts = ["<p><b>Estimated cost (CAD)</b><br>", row("Plants", "plants")]
+        parts = ["<p><a href='sap:planning' "
+                 "style='color:#a5d6a7;text-decoration:none;'>"
+                 "<b>Estimated cost (CAD)</b> ›</a><br>",
+                 row("Plants", "plants")]
         # Per-type breakdown so the plant total isn't one intimidating number,
         # with the math shown — count × per-plant range (F2 + R4).
         type_costs = bd.get("type_costs") or {}
