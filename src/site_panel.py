@@ -1826,8 +1826,16 @@ class SitePanel(QWidget):
                        "be marked by hand in the Structures tab.")
         v = QVBoxLayout(box)
         v.setContentsMargins(6, 6, 6, 6)
-        btn = QPushButton("Import from OpenStreetMap")
+        btn = QPushButton("Import building outlines & trees (OSM)")
         btn.setStyleSheet(_BTN_SECONDARY)
+        btn.setToolTip(
+            "Traces nearby building perimeters — with heights from "
+            "OpenStreetMap's height / storey tags where present, otherwise "
+            "≈5 m (3 m per storey) — plus mapped trees (≈7 m unless tagged).\n"
+            "Covers your drawn boundary, or ≈60 m around the property pin.\n"
+            "Works offline from a downloaded building pack (buildings only — "
+            "trees need the online import).\n"
+            "Imported features cast shade and keep plants off them.")
         btn.clicked.connect(self.osm_import_requested.emit)
         v.addWidget(btn)
 

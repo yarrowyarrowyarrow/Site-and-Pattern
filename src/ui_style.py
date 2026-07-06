@@ -8,10 +8,11 @@ and defines the three button tiers (V2.13):
   * BTN_PRIMARY   — filled green: the step the user came to this section for
                     (Find, Use Pin Drop, Generate, Show shade).
   * BTN_SECONDARY — quiet grey: supporting actions (Refresh, Clear, imports).
-  * BTN_DOWNLOAD  — green outline: heavy offline-data downloads. These used to
-                    share the primary fill, which made "fetch ~1 GB" look like
-                    the routine next step; the outline keeps them discoverable
-                    without recommending them. Pair with a "⬇" text prefix.
+  * BTN_DOWNLOAD  — quiet grey outline: heavy offline-data downloads. These
+                    used to share the primary fill, which made "fetch ~1 GB"
+                    look like the routine next step; the hollow shape + a "⬇"
+                    text prefix keep them discoverable without recommending
+                    them or out-shouting the secondary buttons beside them.
 
 Panels historically redefined their own copies; new/updated code should import
 these instead (site_panel.py migrated in V2.13).
@@ -38,12 +39,15 @@ BTN_SECONDARY = (
     "QPushButton:hover { background: #455a64; }"
 )
 
+# Outline only — deliberately the *quietest* tier. The first cut used a green
+# outline, which out-shouted the grey secondary buttons around it; the ⬇ glyph
+# and hollow shape carry the "big optional download" meaning on their own.
 BTN_DOWNLOAD = (
-    "QPushButton { background: transparent; color: #81c784; "
-    "border: 1px solid #2e7d32; border-radius: 4px; padding: 6px; }"
-    "QPushButton:hover { background: rgba(46, 125, 50, 0.18); "
-    "border-color: #43a047; }"
-    "QPushButton:disabled { color: #546e7a; border-color: #37474f; }"
+    "QPushButton { background: transparent; color: #90a4ae; "
+    "border: 1px solid #546e7a; border-radius: 4px; padding: 6px; }"
+    "QPushButton:hover { background: rgba(84, 110, 122, 0.18); "
+    "color: #b0bec5; border-color: #78909c; }"
+    "QPushButton:disabled { color: #455a64; border-color: #37474f; }"
 )
 
 
