@@ -67,6 +67,97 @@ class TestParse(unittest.TestCase):
                              "geometry": [{"lat": 1, "lon": 2}]}]}  # <3 pts
         self.assertEqual(osm.parse_elements(bad), [])
 
+    def test_relation_building_outer_rings_parse(self):
+        """Multipolygon buildings (V2.13): each closed outer member becomes a
+        footprint; unclosed fragments and inner (courtyard) rings are skipped."""
+        closed = [{"lat": 53.5000, "lon": -113.5000},
+                  {"lat": 53.5000, "lon": -113.4996},
+                  {"lat": 53.5003, "lon": -113.4996},
+                  {"lat": 53.5003, "lon": -113.5000},
+                  {"lat": 53.5000, "lon": -113.5000}]
+        inner = [{"lat": 53.5001, "lon": -113.4999},
+                 {"lat": 53.5001, "lon": -113.4998},
+                 {"lat": 53.5002, "lon": -113.4998},
+                 {"lat": 53.5001, "lon": -113.4999}]
+        fragment = [{"lat": 53.5004, "lon": -113.5000},
+                    {"lat": 53.5004, "lon": -113.4996},
+                    {"lat": 53.5006, "lon": -113.4996}]   # not closed
+        rel = {"elements": [{
+            "type": "relation",
+            "tags": {"building": "apartments", "building:levels": "4"},
+            "members": [
+                {"type": "way", "role": "outer", "geometry": closed},
+                {"type": "way", "role": "inner", "geometry": inner},
+                {"type": "way", "role": "outer", "geometry": fragment},
+            ],
+        }]}
+        feats = osm.parse_elements(rel)
+        self.assertEqual(len(feats), 1)
+        b = feats[0]
+        self.assertEqual(b["kind"], "building")
+        self.assertEqual(b["height_m"], 12.0)          # 4 levels × 3 m
+        self.assertGreaterEqual(len(b["footprint"]), 4)
+
+    def test_relation_without_building_tag_ignored(self):
+        rel = {"elements": [{
+            "type": "relation", "tags": {"landuse": "residential"},
+            "members": [{"type": "way", "role": "outer",
+                         "geometry": [{"lat": 1, "lon": 1}, {"lat": 1, "lon": 2},
+                                      {"lat": 2, "lon": 2}, {"lat": 1, "lon": 1}]}],
+        }]}
+        self.assertEqual(osm.parse_elements(rel), [])
+
+
+class TestQuery(unittest.TestCase):
+    _BBOX = {"south": 53.5, "west": -113.51, "north": 53.51, "east": -113.5}
+
+    def test_building_query_includes_ways_and_relations(self):
+        q = osm._query(self._BBOX, include_trees=False, include_buildings=True)
+        self.assertIn('way["building"](53.5,-113.51,53.51,-113.5);', q)
+        self.assertIn('relation["building"](53.5,-113.51,53.51,-113.5);', q)
+        self.assertIn("out geom;", q)
+
+    def test_tree_query_unchanged(self):
+        q = osm._query(self._BBOX, include_trees=True, include_buildings=False)
+        self.assertIn('node["natural"="tree"]', q)
+        self.assertNotIn("building", q)
+
+
+class TestBboxHelpers(unittest.TestCase):
+    _TRI = [(53.5000, -113.5000), (53.5000, -113.4990), (53.5009, -113.4995)]
+
+    def test_boundary_bbox_is_padded(self):
+        """The search box grows ~30 m past the boundary so buildings whose
+        corner nodes hug the drawn edge still match (V2.13 fix)."""
+        bbox, note = osm.bbox_with_area_note(self._TRI, {})
+        self.assertLess(bbox["south"], 53.5000)
+        self.assertGreater(bbox["north"], 53.5009)
+        self.assertLess(bbox["west"], -113.5000)
+        self.assertGreater(bbox["east"], -113.4990)
+        # ~30 m in degrees latitude.
+        self.assertAlmostEqual(53.5000 - bbox["south"], 30.0 / 111320.0,
+                               places=6)
+        self.assertIn("boundary", note)
+        self.assertIn("30 m", note)
+
+    def test_pin_fallback_note_and_size(self):
+        bbox, note = osm.bbox_with_area_note(
+            None, {"latitude": 53.5, "longitude": -113.5})
+        self.assertAlmostEqual(bbox["north"] - bbox["south"],
+                               2 * 60.0 / 111320.0, places=6)
+        self.assertIn("around the pin", note)
+        self.assertIn("boundary", note)      # tells the user how to control it
+
+    def test_no_boundary_no_pin(self):
+        bbox, note = osm.bbox_with_area_note(None, {})
+        self.assertIsNone(bbox)
+        self.assertEqual(note, "")
+
+    def test_back_compat_wrapper_matches(self):
+        bbox = osm.bbox_from_boundary_or_pin(self._TRI, {})
+        bbox2, _ = osm.bbox_with_area_note(self._TRI, {})
+        self.assertEqual(bbox, bbox2)
+
 
 class TestImport(unittest.TestCase):
     def test_adds_to_project(self):

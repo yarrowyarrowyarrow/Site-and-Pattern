@@ -15,17 +15,9 @@ and ``splat_flow``). Two entry points:
 
 from __future__ import annotations
 
-import math
-
-
-def _pad_bbox(bbox: dict, metres: float) -> dict:
-    """Grow a bbox by ``metres`` on every side so a region download pulls in
-    the neighbouring blocks (their buildings shade the property too)."""
-    clat = (bbox["south"] + bbox["north"]) / 2.0
-    dlat = metres / 111320.0
-    dlng = metres / (111320.0 * max(1e-9, math.cos(clat * math.pi / 180)))
-    return {"south": bbox["south"] - dlat, "north": bbox["north"] + dlat,
-            "west": bbox["west"] - dlng, "east": bbox["east"] + dlng}
+# The bbox-padding helper moved to osm_features.pad_bbox (V2.13) — it's now
+# load-bearing for the per-import query too, not just the region download.
+from src.osm_features import pad_bbox as _pad_bbox  # noqa: F401 (re-export)
 
 
 def import_buildings_offline(main, bbox: dict) -> bool:

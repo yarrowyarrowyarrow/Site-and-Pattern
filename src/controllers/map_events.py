@@ -1242,12 +1242,14 @@ class MapEventRouter:
     def _on_osm_import_requested(self):
         """Fetch buildings/trees from OSM for the boundary/pin area off-thread,
         then add them as existing_* features (deduped). Degrades gracefully."""
-        from src.osm_features import OSMWorker, bbox_from_boundary_or_pin
+        from src.osm_features import OSMWorker, bbox_with_area_note
 
         sc = dict(self._main._project.get("properties", {})
                   .get("site_config", {}) or {})
         boundary = self._project_boundary_latlng()
-        bbox = bbox_from_boundary_or_pin(boundary, sc)
+        bbox, area_note = bbox_with_area_note(boundary, sc)
+        # Stashed for _on_osm_ready so the result says what area was searched.
+        self._main._osm_area_note = area_note
         if bbox is None:
             self._main.site_panel.set_osm_status(
                 "Drop a pin or draw a boundary first.")
@@ -1302,8 +1304,17 @@ class MapEventRouter:
             self._reload_existing_features()
         n_b = len(res.get("buildings", []))
         n_t = len(res.get("trees", []))
-        self._main.site_panel.set_osm_status(
-            f"Found {n_b} building(s), {n_t} tree(s); added {added} new.")
+        area = getattr(self._main, "_osm_area_note", "") or ""
+        msg = f"Found {n_b} building(s), {n_t} tree(s); added {added} new."
+        if area:
+            msg += f" Searched {area}."
+        if n_b == 0 and n_t == 0:
+            # The honest why (V2.13): Overpass matches a building only when a
+            # corner point falls inside the searched box.
+            msg += (" OSM returns a building only when one of its corner "
+                    "points falls in the searched area — if one sits at the "
+                    "edge, enlarge the boundary a touch and re-import.")
+        self._main.site_panel.set_osm_status(msg)
 
     def _reload_existing_features(self):
         """Draw OSM-imported existing features that aren't yet on the map: trees

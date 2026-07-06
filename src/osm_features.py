@@ -51,10 +51,14 @@ def _bbox_str(bbox: dict) -> str:
 
 
 def _query(bbox: dict, include_trees: bool, include_buildings: bool) -> str:
+    # Both ways AND relations: large complexes (apartment blocks with
+    # courtyards) are often mapped as multipolygon relations, which a
+    # way-only query never returns (V2.13).
     parts = []
     b = _bbox_str(bbox)
     if include_buildings:
         parts.append(f'way["building"]({b});')
+        parts.append(f'relation["building"]({b});')
     if include_trees:
         parts.append(f'node["natural"="tree"]({b});')
     return f"[out:json][timeout:25];({''.join(parts)});out geom;"
@@ -183,6 +187,32 @@ def parse_elements(data: Optional[dict]) -> list[dict]:
                             tags, _DEFAULT_BUILDING_HEIGHT_M),
                         "radius_m": max(1.0, ring_radius_m(ring, (clat, clng))),
                         "footprint": ring})
+        elif etype == "relation" and tags.get("building"):
+            # Multipolygon building (V2.13): each *closed* outer-role member
+            # ring becomes a footprint (tags/height come from the relation).
+            # Outers split across several unclosed way fragments would need
+            # arc-stitching — skipped rather than force-closed into garbage.
+            for m in el.get("members", []) or []:
+                if m.get("type") != "way" or m.get("role") not in ("outer", ""):
+                    continue
+                geometry = m.get("geometry", []) or []
+                if (len(geometry) < 4
+                        or geometry[0].get("lat") != geometry[-1].get("lat")
+                        or geometry[0].get("lon") != geometry[-1].get("lon")):
+                    continue                     # unclosed fragment — skip
+                ring = _ring_lnglat(geometry)
+                if ring is None:
+                    continue
+                c = ring_centroid(ring)
+                if c is None:
+                    continue
+                clat, clng = c
+                out.append({"kind": "building", "lat": clat, "lng": clng,
+                            "height_m": _parse_height(
+                                tags, _DEFAULT_BUILDING_HEIGHT_M),
+                            "radius_m": max(1.0, ring_radius_m(
+                                ring, (clat, clng))),
+                            "footprint": ring})
     return out
 
 
@@ -361,21 +391,47 @@ if _HAVE_QT:
             self.finished.emit()
 
 
-def bbox_from_boundary_or_pin(boundary, site_config: dict,
-                              radius_m: float = 60.0):
-    """A bbox (terrain.py convention) from a boundary polygon, else a square of
-    half-extent ``radius_m`` around the property pin. None when neither is
-    available. Pure geometry, shared by the OSM + footprint import flows."""
+def pad_bbox(bbox: dict, metres: float) -> dict:
+    """Grow a bbox by ``metres`` on every side. Load-bearing for the import
+    (V2.13): Overpass returns a building way only when at least one of its
+    *corner nodes* falls inside the box, so a boundary drawn tight over a big
+    building can contain the building but none of its corners — the margin
+    catches them (the full footprint comes back via ``out geom`` regardless)."""
+    clat = (bbox["south"] + bbox["north"]) / 2.0
+    dlat = metres / 111320.0
+    dlng = metres / (111320.0 * max(1e-9, math.cos(clat * math.pi / 180)))
+    return {"south": bbox["south"] - dlat, "north": bbox["north"] + dlat,
+            "west": bbox["west"] - dlng, "east": bbox["east"] + dlng}
+
+
+def bbox_with_area_note(boundary, site_config: dict,
+                        radius_m: float = 60.0, pad_m: float = 30.0):
+    """``(bbox, note)``: the search bbox plus a human description of what area
+    it covers, so the import status can say exactly what was searched.
+    Boundary path = the polygon's bounding box grown by ``pad_m``; fallback =
+    a square of half-extent ``radius_m`` around the property pin. ``(None,
+    "")`` when neither exists. Pure geometry, shared by the OSM + footprint
+    import flows."""
     if boundary and len(boundary) >= 3:
         lats = [p[0] for p in boundary]
         lngs = [p[1] for p in boundary]
-        return {"north": max(lats), "south": min(lats),
-                "east": max(lngs), "west": min(lngs)}
+        raw = {"north": max(lats), "south": min(lats),
+               "east": max(lngs), "west": min(lngs)}
+        return (pad_bbox(raw, pad_m) if pad_m > 0 else raw,
+                f"your boundary + {pad_m:.0f} m margin")
     lat, lng = site_config.get("latitude"), site_config.get("longitude")
     if lat is None or lng is None:
-        return None
+        return None, ""
     cos_lat = math.cos(lat * math.pi / 180) or 1e-9
     dlat = radius_m / 111320.0
     dlng = radius_m / (111320.0 * cos_lat)
-    return {"north": lat + dlat, "south": lat - dlat,
-            "east": lng + dlng, "west": lng - dlng}
+    return ({"north": lat + dlat, "south": lat - dlat,
+             "east": lng + dlng, "west": lng - dlng},
+            f"≈{radius_m:.0f} m around the pin — draw a property boundary "
+            "to control the area")
+
+
+def bbox_from_boundary_or_pin(boundary, site_config: dict,
+                              radius_m: float = 60.0):
+    """Back-compat wrapper over :func:`bbox_with_area_note` (bbox only)."""
+    return bbox_with_area_note(boundary, site_config, radius_m=radius_m)[0]
