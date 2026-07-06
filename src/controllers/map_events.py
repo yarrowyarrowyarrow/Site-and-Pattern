@@ -815,6 +815,7 @@ class MapEventRouter:
             "resolution_m":       cfg.get("resolution_m", 30.0),
             "want_contours":      cfg.get("want_contours", True),
             "want_slope_overlay": cfg.get("want_slope_overlay", True),
+            "want_water":         cfg.get("want_water", False),
         }
         prefs = {
             "color":       cfg.get("color", "#44cc00"),
@@ -916,7 +917,7 @@ class MapEventRouter:
         self._main._project["features"] = [
             f for f in self._main._project["features"]
             if f.get("properties", {}).get("element_type") not in
-                ("auto_contour", "slope_overlay")
+                ("auto_contour", "slope_overlay", "water_overlay")
         ]
         self._main.map_widget.clear_auto_terrain()
 
@@ -981,6 +982,11 @@ class MapEventRouter:
                 },
             })
 
+        # Render water flow & accumulation overlay (V2.13) — glue lives in
+        # src/water_flow.py (this controller is at its line ceiling).
+        from src import water_flow
+        drew_water = water_flow.render_water_overlay(self._main, result)
+
         self._main._mark_modified()
         self._main._set_mode_label("Ready")
 
@@ -996,6 +1002,8 @@ class MapEventRouter:
             bits.append(
                 f"Aspect: {stats['dominant_aspect']} ({share_pct}% of slope ≥2%)"
             )
+        if drew_water:
+            bits.extend(water_flow.water_status_bits(stats))
         bits.append(f"{len(contours)} contour level(s)")
         for w in (result.get("warnings") or []):
             bits.append("⚠ " + w)
@@ -1018,7 +1026,7 @@ class MapEventRouter:
         self._main._project["features"] = [
             f for f in self._main._project["features"]
             if f.get("properties", {}).get("element_type") not in
-                ("auto_contour", "slope_overlay")
+                ("auto_contour", "slope_overlay", "water_overlay")
         ]
         self._main._mark_modified()
         self._main.site_panel.set_auto_terrain_status("")

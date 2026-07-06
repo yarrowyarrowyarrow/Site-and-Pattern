@@ -434,9 +434,15 @@ class PersistenceController:
                  for c in auto_contours],
                 color=auto_contours[0].get("color", "#44cc00"),
                 show_labels=True)
-        if data.get("slope_overlay"):
+        if data.get("slope_overlay") or data.get("water_overlay"):
+            layers = []
+            if data.get("slope_overlay"):
+                layers.append("Slope ramp")
+            if data.get("water_overlay"):
+                layers.append("water overlay")
             m.site_panel.set_auto_terrain_status(
-                "Slope ramp not loaded — click Generate to recompute.")
+                " and ".join(layers)
+                + " not loaded — click Generate to recompute.")
 
         # Site pin (clearAll wiped it) + photoreal splat backdrop, both read
         # from the project so undo of an import that removed them clears them.

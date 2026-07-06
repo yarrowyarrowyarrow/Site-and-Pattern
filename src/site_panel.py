@@ -920,6 +920,20 @@ class SitePanel(QWidget):
         self._auto_want_slope.setChecked(True)
         slope_form.addRow(self._auto_want_slope)
 
+        # Water flow & accumulation overlay (V2.13): D8 routing over the same
+        # grid — where runoff concentrates (swale / rain-garden siting) and
+        # where it ponds. Off by default; it's a design lens, not a basemap.
+        self._auto_want_water = QCheckBox("Water flow (runoff & accumulation)")
+        self._auto_want_water.setChecked(False)
+        self._auto_want_water.setToolTip(
+            "Routes rain downhill across the elevation grid: blue shading "
+            "where runoff concentrates (swale and rain-garden candidates), "
+            "teal where it ponds, arrows showing direction.\n"
+            "Honesty note: Edmonton's 0.5 m LiDAR resolves yard-scale flow; "
+            "elsewhere the 30 m DEM shows broad drainage patterns only — "
+            "don't site a swale off a single 30 m cell.")
+        slope_form.addRow(self._auto_want_water)
+
         self._auto_show_labels = QCheckBox("Label every 5th contour")
         self._auto_show_labels.setChecked(True)
         slope_form.addRow(self._auto_show_labels)
@@ -1485,6 +1499,7 @@ class SitePanel(QWidget):
             "resolution_m":        self._auto_resolution.value(),
             "want_contours":       self._auto_want_contours.isChecked(),
             "want_slope_overlay":  self._auto_want_slope.isChecked(),
+            "want_water":          self._auto_want_water.isChecked(),
             "show_labels":         self._auto_show_labels.isChecked(),
             "color":               self._auto_color,
             "opacity":             self._auto_opacity_slider.value() / 100.0,

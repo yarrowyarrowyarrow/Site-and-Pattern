@@ -766,6 +766,10 @@ class MapWidget(QWebEngineView):
     def set_slope_overlay_opacity(self, opacity: float):
         self.run_js(map_js.set_slope_overlay_opacity(opacity))
 
+    def draw_water_overlay(self, payload: dict):
+        """Water flow & accumulation raster + downhill arrows (V2.13)."""
+        self.run_js(map_js.draw_water_overlay(payload))
+
     def draw_shade_overlay(self, png_data_url: str, bbox: dict, opacity: float):
         """Render the shade-fraction PNG as a separate ImageOverlay (V1.51)."""
         self.run_js(map_js.draw_shade_overlay(png_data_url, bbox, opacity))

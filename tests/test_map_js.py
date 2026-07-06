@@ -117,7 +117,7 @@ class TestJsEntryPointsExist(unittest.TestCase):
         "clearContours", "undoLastContour", "finishContour",
         "emitTerrainBboxFromViewport", "emitTerrainBboxFromBoundary",
         "drawAutoContours", "drawSlopeOverlay", "setSlopeOverlayOpacity",
-        "clearAutoTerrain",
+        "drawWaterOverlay", "clearAutoTerrain",
         "drawShadeOverlay", "setShadeOverlayOpacity", "clearShadeOverlay",
         "drawShadeZones", "setShadeZonesVisible", "clearShadeZones",
         "drawSitePhotoOverlay", "setSitePhotoVisible", "setSitePhotoOpacity",
@@ -506,6 +506,18 @@ class TestContoursAndAutoTerrain(unittest.TestCase):
     def test_set_slope_overlay_opacity_coerces_float(self):
         out = mj.set_slope_overlay_opacity(1)  # int input
         self.assertEqual(out, "setSlopeOverlayOpacity(1.0);")
+
+    def test_draw_water_overlay_payload(self):
+        out = mj.draw_water_overlay({
+            "image": "data:image/png;base64,iVBORw0KGgo=",
+            "bbox": {"north": 53.6, "south": 53.5,
+                     "east": -113.4, "west": -113.5},
+            "opacity": 0.65,
+            "arrows": [{"lat": 53.55, "lng": -113.45,
+                        "bearing": 180.0, "strength": 0.8}],
+        })
+        self.assertTrue(out.startswith("drawWaterOverlay(JSON.parse("))
+        self.assertIn("bearing", out)
 
     def test_clear_auto_terrain(self):
         self.assertEqual(mj.clear_auto_terrain(), "clearAutoTerrain();")

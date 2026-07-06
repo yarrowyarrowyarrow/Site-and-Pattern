@@ -789,6 +789,61 @@
         map.removeLayer(slopeOverlayLayer);
         slopeOverlayLayer = null;
       }
+      if (waterOverlayLayer) {
+        map.removeLayer(waterOverlayLayer);
+        waterOverlayLayer = null;
+      }
+    }
+
+    // ── Water flow & accumulation (V2.13) — a layerGroup holding the blue
+    // accumulation raster plus sparse downhill arrows, so it composes with
+    // the slope ramp and clears with the rest of the auto terrain.
+    var waterOverlayLayer = null;
+
+    function drawWaterOverlay(payload) {
+      // payload: {image: data-url, bbox: {south,north,west,east},
+      //           opacity: 0..1, arrows: [{lat,lng,bearing,strength}, ...]}
+      if (waterOverlayLayer) {
+        map.removeLayer(waterOverlayLayer);
+        waterOverlayLayer = null;
+      }
+      if (!payload || !payload.image || !payload.bbox) return;
+      var b = payload.bbox;
+      waterOverlayLayer = L.layerGroup().addTo(map);
+      L.imageOverlay(payload.image,
+        L.latLngBounds([b.south, b.west], [b.north, b.east]),
+        { opacity: typeof payload.opacity === 'number' ? payload.opacity : 0.65,
+          interactive: false }
+      ).addTo(waterOverlayLayer);
+
+      // Downhill arrows: length/weight scale with log-accumulation strength.
+      var arrows = payload.arrows || [];
+      var spanM = (b.north - b.south) * 111320;
+      var baseLen = Math.max(1.5, spanM * 0.03);   // metres
+      for (var i = 0; i < arrows.length; i++) {
+        var a = arrows[i];
+        var rad = a.bearing * Math.PI / 180;
+        var len = baseLen * (0.5 + a.strength);
+        var cosLat = Math.cos(a.lat * Math.PI / 180);
+        var dLat = len * Math.cos(rad) / 111320;
+        var dLng = len * Math.sin(rad) / (111320 * cosLat);
+        var endLat = a.lat + dLat, endLng = a.lng + dLng;
+        var weight = 1 + a.strength * 1.5;
+        var opacity = 0.35 + a.strength * 0.45;
+        var style = { color: '#1976d2', weight: weight, opacity: opacity,
+                      interactive: false };
+        L.polyline([[a.lat, a.lng], [endLat, endLng]], style)
+          .addTo(waterOverlayLayer);
+        var headLen = (len * 0.35) / 111320;
+        var headAngle = Math.PI / 5;
+        L.polyline([
+          [endLat - headLen * Math.cos(rad - headAngle),
+           endLng - headLen * Math.sin(rad - headAngle) / cosLat],
+          [endLat, endLng],
+          [endLat - headLen * Math.cos(rad + headAngle),
+           endLng - headLen * Math.sin(rad + headAngle) / cosLat]
+        ], style).addTo(waterOverlayLayer);
+      }
     }
 
     // ── Shade overlay (V1.51) — a SEPARATE image layer from the slope

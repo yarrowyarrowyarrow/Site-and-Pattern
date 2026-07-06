@@ -184,6 +184,7 @@ def project_to_map_data(project: dict) -> dict:
         "contours": [],
         "auto_contours": [],   # auto-generated contour features (MultiLineString)
         "slope_overlay": None, # cached slope-overlay metadata (PNG regenerated on demand)
+        "water_overlay": None, # cached water-flow metadata (PNG regenerated on demand)
         "annotations": [],     # text notes pinned to the map (V1.81)
     }
     for feature in project.get("features", []):
@@ -297,6 +298,13 @@ def project_to_map_data(project: dict) -> dict:
                 "bbox":         props.get("bbox") or {},
                 "stats":        props.get("stats") or {},
                 "interval_m":   props.get("interval_m"),
+                "resolution_m": props.get("resolution_m"),
+                "source":       props.get("source", ""),
+            }
+
+        elif etype == "water_overlay":
+            result["water_overlay"] = {
+                "bbox":         props.get("bbox") or {},
                 "resolution_m": props.get("resolution_m"),
                 "source":       props.get("source", ""),
             }

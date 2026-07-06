@@ -433,6 +433,64 @@ def test_generate_terrain_reports_validation_error():
     assert out["error"] is not None
 
 
+def test_generate_terrain_want_water_produces_overlay():
+    """want_water rides the same grid: PNG + arrows + honesty flag (V2.13)."""
+    far = {"south": 49.0, "north": 49.0009, "west": -123.0, "east": -122.9994}
+    fake_grid = {
+        "grid": _ramp_grid(8, 8), "cols": 8, "rows": 8,
+        "bbox": far, "resolution_m": 25,
+        "source": "Open-Meteo / Copernicus DEM 30m",
+    }
+    real_edm = t.fetch_edmonton_contours
+    real_om  = t.fetch_openmeteo_grid
+    t.fetch_edmonton_contours = lambda *a, **kw: None
+    t.fetch_openmeteo_grid    = lambda *a, **kw: fake_grid
+    try:
+        result = t.generate_terrain(far, {
+            "interval_m": 1.0, "resolution_m": 15.0,
+            "want_contours": False, "want_slope_overlay": False,
+            "want_water": True,
+        })
+    finally:
+        t.fetch_edmonton_contours = real_edm
+        t.fetch_openmeteo_grid    = real_om
+
+    assert result["ok"]
+    assert result["water_png_bytes"][:8] == b"\x89PNG\r\n\x1a\n"
+    assert result["water_bbox"] == far
+    assert isinstance(result["water_arrows"], list)
+    # Coarse-DEM honesty flag set on the Open-Meteo path.
+    assert result["stats"]["water_dem_coarse"] is True
+    assert "n_ponding" in result["stats"]
+    # Slope wasn't requested — its keys stay empty.
+    assert result["slope_png_bytes"] is None
+
+
+def test_generate_terrain_water_off_by_default():
+    far = {"south": 49.0, "north": 49.0009, "west": -123.0, "east": -122.9994}
+    fake_grid = {
+        "grid": _ramp_grid(5, 5), "cols": 5, "rows": 5,
+        "bbox": far, "resolution_m": 25,
+        "source": "Open-Meteo / Copernicus DEM 30m",
+    }
+    real_edm = t.fetch_edmonton_contours
+    real_om  = t.fetch_openmeteo_grid
+    t.fetch_edmonton_contours = lambda *a, **kw: None
+    t.fetch_openmeteo_grid    = lambda *a, **kw: fake_grid
+    try:
+        result = t.generate_terrain(far, {
+            "interval_m": 1.0, "resolution_m": 15.0,
+            "want_contours": True, "want_slope_overlay": True,
+        })
+    finally:
+        t.fetch_edmonton_contours = real_edm
+        t.fetch_openmeteo_grid    = real_om
+
+    assert result["ok"]
+    assert result["water_png_bytes"] is None
+    assert result["water_arrows"] == []
+
+
 def test_generate_terrain_handles_no_network():
     real_edm = t.fetch_edmonton_contours
     real_om  = t.fetch_openmeteo_grid

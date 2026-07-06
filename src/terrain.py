@@ -1270,6 +1270,7 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
     resolution_m = float(options.get("resolution_m") or (5.0 if use_edm else 15.0))
     want_contours = options.get("want_contours", True)
     want_slope = options.get("want_slope_overlay", True)
+    want_water = options.get("want_water", False)
 
     contours: list[dict] = []
     source = ""
@@ -1299,10 +1300,10 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
             stats["min_elev"] = min(elevs)
             stats["max_elev"] = max(elevs)
 
-    # The slope ramp always needs a regular elevation grid. Fallback
-    # contours also need it when Edmonton didn't supply any.
+    # The slope ramp (and water routing) always needs a regular elevation
+    # grid. Fallback contours also need it when Edmonton didn't supply any.
     elev = None
-    need_grid = want_slope or (want_contours and not contours)
+    need_grid = want_slope or want_water or (want_contours and not contours)
     if need_grid:
         # Prefer the local LiDAR contours when available — much faster
         # than the Open-Meteo round-trip and finer than its 30 m grid.
@@ -1361,11 +1362,26 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
             stats["dominant_aspect_share"] = asp["share"]
             stats["mean_slope_pct"] = round(sum(flat) / len(flat), 2)
 
+    # Water flow & accumulation rides the same grid (V2.13) — D8 routing in
+    # src/hydrology.py, rendered as a blue raster + sparse downhill arrows.
+    water_png: Optional[bytes] = None
+    water_arrows: list = []
+    if want_water and elev is not None:
+        from src import hydrology
+        flow = hydrology.flow_accumulation(elev)
+        water_png = hydrology.water_png(elev, flow)
+        water_arrows = hydrology.flow_arrows(elev, flow)
+        stats["n_ponding"] = flow["n_ponding"]
+        # Honesty flag (P9): routing on the 30 m Copernicus DEM shows broad
+        # drainage patterns, not yard-scale flow — the UI says so.
+        stats["water_dem_coarse"] = "Open-Meteo" in (elev.get("source") or "")
+
     # Partial success counts: render whatever we have, surface warnings
     # in the panel. Only return error if every layer the user asked for
     # came up empty.
-    asked_for_anything = want_contours or want_slope
-    got_anything = bool(contours) or slope_png is not None
+    asked_for_anything = want_contours or want_slope or want_water
+    got_anything = (bool(contours) or slope_png is not None
+                    or water_png is not None)
     if asked_for_anything and not got_anything:
         if warnings:
             err = " ".join(warnings)
@@ -1384,6 +1400,9 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
         "contours": contours,
         "slope_png_bytes": slope_png,
         "slope_bbox": bbox if slope_png else None,
+        "water_png_bytes": water_png,
+        "water_bbox": bbox if water_png else None,
+        "water_arrows": water_arrows,
         "stats": stats,
         "warnings": warnings,
         "interval_m": interval_m,
