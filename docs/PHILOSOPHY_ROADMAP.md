@@ -76,6 +76,7 @@ These started life as entries below and have since landed — the State markers 
 | F24 | Site photo overlay + markup | `src/site_photo.py` + `src/site_photo_flow.py`, surfaced in `src/site_panel.py` + `html/map/06-overlays.js` | P11, P5 |
 | F37 (part) | "Design for a bee" habitat builder + Alberta native-bee data spine | `src/bee_habitat.py`, `data/bee_attributes_master.json` (+ Apidae roster in `data/fauna_master.json`), `src/db/fauna.py`, surfaced in `src/analysis_panel.py` (Bees tab) | P8, P3, P10, P5, P9 |
 | F40 | Planting Plan — buy-it / plant-it sheet (quantities, form, spacing, planting window, phased schedule) | `src/planting_plan.py`, surfaced in `src/app.py` + `src/pdf_export.py` | P8, P4, P11, P6, P9 |
+| F11 | Value-vs-price framing — the habitat value a design's spend *creates*, read together with its cost | `src/habitat_score.py` (`habitat_nudges`), surfaced in `src/on_this_design_panel.py` (Stats: habitat value → "where to grow next" → cost → "what your spend creates") | P6 |
 
 Net effect on the principles: **P1 partial → strong** (pattern language is now explicit), and
 P3/P4/P5 are visibly stronger. **F40 is the first real ACT/OUTPUT win** — it turns a design into
@@ -114,7 +115,7 @@ overlay (F5)** and the **unified edges layer (F7)** — now deliberately *after*
 | F8 | Uncertainty language pass | S | Low | P9 |
 | ✅ F9 | Specialist-host spotlight | S | Low | P3, P6 |
 | ✅ F10 | Lawn-equivalent counterfactual | S | Low | P6, P8 |
-| F11 | Value-vs-price framing | S | Low | P6 |
+| ✅ F11 | Value-vs-price framing | S | Low | P6 |
 | F12 | Inline "why this matters" provenance/citations | S | Low | P7, P6 |
 | F13 | Reference-ecosystem fidelity score | M | Low | P2, P6 |
 | F14 | Establishment-likelihood band | M | Med | P9 |
@@ -264,10 +265,13 @@ total; when conversion zones are drawn, the contrast is grounded in the lawn+res
 summary it already computes for the "On This Design" tab into the analysis panel, so the callout stays
 live with edits. Qt-free and unit-tested.
 
-### F11 · Value-vs-price framing — *Impact Med · Effort S · Risk Low (P6)*
+### ✅ F11 · Value-vs-price framing — *Shipped · was Impact Med / Effort S / Risk Low (P6)*
 Pair the cost estimate with the ecological value it buys (the Graeber/Raworth point).
-**How:** put `sourcing.design_cost(...)` next to the habitat score in the Analysis panel
-and the PDF, framed as "what your spend creates" rather than cost alone.
+**Shipped (V2.13):** the On This Design → Stats tab now reads top-to-bottom as habitat
+value → **"Where to grow next"** (the biggest-headroom habitat-score gaps as ranged,
+actionable nudges, `habitat_score.habitat_nudges`) → cost → **"What your spend creates"**
+(wildlife species / native species / structures the spend buys), so the cost never stands
+alone. Analysis-panel/PDF parity can follow later.
 
 ### F12 · Inline "why this matters" provenance — *Impact Med · Effort S · Risk Low (P7, P6)*
 Cite the science at the point of use (Tallamy, Xerces, McHarg), not buried. **How:** add

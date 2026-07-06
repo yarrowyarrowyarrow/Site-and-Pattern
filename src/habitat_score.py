@@ -206,6 +206,107 @@ def _grade_for(total_int: int) -> str:
     return "Just getting started"
 
 
+_MONTH_ABBR = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+
+def _gap_phrase(gap_months: list[int]) -> str:
+    """Human month list for a bloom gap: 'May', 'May & Jun', 'May, Jun & Jul'."""
+    names = [_MONTH_ABBR[m] for m in gap_months if 1 <= m <= 12]
+    if not names:
+        return ""
+    if len(names) == 1:
+        return names[0]
+    return ", ".join(names[:-1]) + " & " + names[-1]
+
+
+def habitat_nudges(score: "HabitatScore", *, limit: int = 3) -> list[dict]:
+    """The 'what would help most' half of the habitat readout (P6, P9).
+
+    Turns a :class:`HabitatScore` into up to ``limit`` actionable suggestions,
+    ranked by how many points each still has on the table — so the design's
+    biggest ecological gaps surface first. Each nudge is
+    ``{"headroom": float, "text": str}`` where ``text`` is soft, ranged
+    language ("up to +N pts"), never a false-precision promise. Returns an
+    empty list for a full or absent score.
+
+    Pure data — no Qt; the On This Design panel renders the strings.
+    """
+    if not score:
+        return []
+    nudges: list[dict] = []
+
+    def add(headroom: float, text: str):
+        if headroom > 0.5:
+            nudges.append({"headroom": round(headroom, 1), "text": text})
+
+    # Bloom is usually the biggest lever and the most concrete ask — lead with
+    # the specific gap months when there are any.
+    gap = _gap_phrase(getattr(score, "gap_months", []) or [])
+    if gap:
+        head = 20.0 - (getattr(score, "score_bloom", 0.0) or 0.0)
+        add(head, f"No bloom in {gap} — add forage for those weeks "
+                  f"(up to +{int(round(head))} pts, and it feeds pollinators "
+                  "through the gap).")
+
+    # Native ratio.
+    n = getattr(score, "n_species", 0)
+    nat = getattr(score, "native_species", 0)
+    if n:
+        head = 20.0 - (getattr(score, "score_native", 0.0) or 0.0)
+        if head > 0.5 and (n - nat) > 0:
+            add(head, f"{n - nat} of {n} species aren't Alberta-native — "
+                      f"swapping some for natives adds up to +{int(round(head))} "
+                      "pts and more wildlife value.")
+
+    # Keystone genera (full at 5). Kept generic — no specific taxa named.
+    n_key = len(getattr(score, "keystone_species", []) or [])
+    if n_key < 5:
+        head = 15.0 - (getattr(score, "score_keystone", 0.0) or 0.0)
+        add(head, f"Only {n_key} keystone species so far — these carry the most "
+                  "of the food web; a few more add up to "
+                  f"+{int(round(head))} pts (filter Plants → Use → Keystone).")
+
+    # Larval-host plants (full at 10).
+    n_host = len(getattr(score, "host_species", []) or [])
+    if n_host < 10:
+        head = 10.0 - (getattr(score, "score_host", 0.0) or 0.0)
+        add(head, f"{n_host} caterpillar-host plant"
+                  f"{'s' if n_host != 1 else ''} — hosts make the caterpillars "
+                  "most songbirds feed their young; more add up to "
+                  f"+{int(round(head))} pts (Plants → Use → Host Plant).")
+
+    # Bird-food plants (full at 10).
+    n_bird = len(getattr(score, "bird_species", []) or [])
+    if n_bird < 10:
+        head = 10.0 - (getattr(score, "score_bird", 0.0) or 0.0)
+        add(head, f"{n_bird} bird-food plant{'s' if n_bird != 1 else ''} — "
+                  "seed and fruit producers extend the design into fall/winter "
+                  f"(up to +{int(round(head))} pts, Plants → Use → Bird Food).")
+
+    # Vegetation layers (3 pts each, up to 5).
+    present = set(getattr(score, "layers_present", []) or [])
+    missing = [l for l in ("overstory", "shrub", "herbaceous",
+                           "groundcover", "vine") if l not in present]
+    if missing and len(present) < 5:
+        head = 15.0 - (getattr(score, "score_layers", 0.0) or 0.0)
+        pretty = ", ".join(m.replace("_", " ") for m in missing[:3])
+        add(head, f"Missing layers: {pretty} — stacking more vegetation layers "
+                  f"adds up to +{int(round(head))} pts and niches for wildlife.")
+
+    # Habitat structures (2 pts each, up to 5).
+    n_struct = len(getattr(score, "habitat_struct_types", []) or [])
+    if n_struct < 5:
+        head = 10.0 - (getattr(score, "score_structs", 0.0) or 0.0)
+        add(head, f"{n_struct} habitat structure type"
+                  f"{'s' if n_struct != 1 else ''} — a bee hotel, brush pile or "
+                  f"small pond adds up to +{int(round(head))} pts "
+                  "(Structures tab).")
+
+    nudges.sort(key=lambda d: -d["headroom"])
+    return nudges[:limit]
+
+
 def compute_habitat_score(
     placed_plants: list[dict],
     structures: list[dict],

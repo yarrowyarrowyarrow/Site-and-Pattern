@@ -302,6 +302,56 @@ class OnThisDesignPanel(QWidget):
         parts.append("</p>")
         return "".join(parts)
 
+    def _nudges_block_html(self) -> str:
+        """The 'what would help most' list (F11 companion, P6/P9): the design's
+        biggest ecological gaps as ranged, actionable suggestions — so the
+        score reads as a to-do list, not a verdict."""
+        sc = self._habitat_value
+        if not sc:
+            return ""
+        try:
+            from src.habitat_score import habitat_nudges
+            nudges = habitat_nudges(sc, limit=3)
+        except Exception:
+            return ""
+        if not nudges:
+            return ("<p><b>Where to grow next</b><br>"
+                    "<span style='color:#a5d6a7;font-size:10px;'>"
+                    "This design already covers the habitat basics — nice "
+                    "work.</span></p>")
+        items = "".join(
+            f"<li style='margin-bottom:3px;'>{nd['text']}</li>"
+            for nd in nudges)
+        return ("<p><b>Where to grow next</b>"
+                "<ul style='margin:2px 0 0 0;color:#c8e6c9;font-size:11px;'>"
+                f"{items}</ul></p>")
+
+    def _value_framing_html(self) -> str:
+        """One line that reads cost and habitat value together (F11, P6): the
+        spend isn't a cost, it's what buys the wildlife value above. Shown only
+        when both a cost total and a habitat score are present."""
+        bd = self._cost_breakdown
+        sc = self._habitat_value
+        if not bd or not sc or not bd.get("total"):
+            return ""
+        creates = []
+        fbt = getattr(sc, "fauna_by_taxon", None)
+        if fbt:
+            n_wild = sum(fbt.values())
+            if n_wild:
+                creates.append(f"{n_wild} wildlife species supported")
+        ns = getattr(sc, "native_species", 0)
+        if ns:
+            creates.append(f"{ns} native species")
+        n_struct = len(getattr(sc, "habitat_struct_types", []) or [])
+        if n_struct:
+            creates.append(f"{n_struct} habitat structure"
+                           f"{'s' if n_struct != 1 else ''}")
+        if not creates:
+            return ""
+        return ("<p style='color:#90a4ae;font-size:10px;margin-top:2px;'>"
+                "What your spend creates: " + ", ".join(creates) + ".</p>")
+
     def _lawn_block_html(self) -> str:
         s = self._lawn_conversion
         if not s or s.get("total_zone_m2", 0) <= 0:
@@ -375,11 +425,15 @@ class OnThisDesignPanel(QWidget):
 
     def _refresh_stats(self, enriched: list[dict]):
         value_html = self._value_block_html()
+        nudges_html = self._nudges_block_html()
         cost_html = self._cost_block_html()
+        framing_html = self._value_framing_html()
         lawn_html = self._lawn_block_html()
         if not enriched:
             body = "<i style='color:#78909c;'>Nothing placed yet.</i>"
-            self._stats_text.setHtml(body + lawn_html + value_html + cost_html)
+            self._stats_text.setHtml(
+                body + lawn_html + value_html + nudges_html
+                + cost_html + framing_html)
             return
         from src.db.plants import get_plant
         total = len(enriched)
@@ -451,5 +505,7 @@ class OnThisDesignPanel(QWidget):
             rows.append("</p>")
         rows.append(lawn_html)
         rows.append(value_html)
+        rows.append(nudges_html)
         rows.append(cost_html)
+        rows.append(framing_html)
         self._stats_text.setHtml("".join(rows))
