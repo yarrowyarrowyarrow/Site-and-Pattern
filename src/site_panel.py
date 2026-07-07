@@ -633,9 +633,10 @@ class SitePanel(QWidget):
         self._lbl_nurseries.setOpenExternalLinks(True)
         nl.addWidget(self._lbl_nurseries)
         self._lbl_nursery_note = QLabel(
-            "Compiled 2026 as a starting point — confirm hours, location and "
-            "current native stock before visiting; native plants are seasonal "
-            "and often limited.")
+            "Native-specific sources from the Native Plant Society of "
+            "Saskatchewan list (npss.sk.ca). Native plants and seed are seasonal "
+            "and often grown to order — confirm availability before visiting or "
+            "ordering; many suppliers ship province-wide.")
         self._lbl_nursery_note.setStyleSheet("color: #90a4ae; font-size: 10px;")
         self._lbl_nursery_note.setWordWrap(True)
         nl.addWidget(self._lbl_nursery_note)
@@ -1138,43 +1139,40 @@ class SitePanel(QWidget):
 
     # ── Internals ───────────────────────────────────────────────────────────
 
-    _SELLS_LABEL = {
-        "native_specialist": "native nursery",
-        "seed_or_plug": "seed / plugs",
-        "garden_centre": "garden centre",
-        "big_box": "big-box",
-        "rare": "specialist",
+    _KIND_ICON = {
+        "society": "🌾",        # native plant society (sales & education)
+        "native_nursery": "🌱",
+        "seed_house": "🌾",
+        "designer": "✎",
     }
 
     def _update_nurseries(self, lat: float, lng: float):
-        """Fill the 'Where to buy' box with the nearest native-plant suppliers.
-        Local DB lookup (no network); fail-quiet so it never blocks the pin."""
+        """Fill the 'Where to buy' box with native-specific plant sources near
+        the pin — the native-plant society first (sales & education), then the
+        nearest native nurseries and seed houses. Local DB lookup (no network);
+        fail-quiet so it never blocks the pin."""
         if not hasattr(self, "_lbl_nurseries"):
             return
         try:
-            from src.db.nurseries import nurseries_near
-            rows = nurseries_near(lat, lng, limit=5)
+            from src.db.nurseries import native_sources_near
+            rows = native_sources_near(lat, lng, limit=5)
         except Exception:  # noqa: BLE001 — directory is a nicety, never fatal
             rows = []
         if not rows:
             self._lbl_nurseries.setText(
-                "<span style='color:#90a4ae;'>No nursery directory available "
+                "<span style='color:#90a4ae;'>No native-plant supplier listing "
                 "for this area yet.</span>")
             return
         lines = []
         for n in rows:
-            chan = self._SELLS_LABEL.get(n.get("sells", ""), n.get("sells", ""))
-            dist = n.get("distance_km")
-            where = n.get("city", "")
-            ships = " · ships" if n.get("ships") else ""
-            dtxt = f"{dist:g} km" if isinstance(dist, (int, float)) else ""
-            meta = " · ".join(x for x in (where, dtxt, chan) if x)
+            icon = self._KIND_ICON.get(n.get("kind", ""), "🌱")
+            access = n.get("access", "")
             name = n.get("name", "")
             url = n.get("url") or ""
             name_html = (f"<a href='{url}' style='color:#66bb6a;'>{name}</a>"
                          if url else f"<b>{name}</b>")
-            lines.append(f"{name_html}<br><span style='color:#90a4ae;"
-                         f"font-size:10px;'>{meta}{ships}</span>")
+            lines.append(f"{icon} {name_html}<br><span style='color:#90a4ae;"
+                         f"font-size:10px;'>{access}</span>")
         self._lbl_nurseries.setText("<br>".join(lines))
 
     def _refresh_clicked(self):
@@ -1192,8 +1190,7 @@ class SitePanel(QWidget):
         if hasattr(self, "_lbl_nurseries"):
             self._lbl_nurseries.setText(
                 "<span style='color:#90a4ae;'>Drop a pin to list native-plant "
-                "nurseries, seed houses and native-plant societies near you."
-                "</span>")
+                "societies, nurseries and seed houses near you.</span>")
 
     def _reset_data_rows(self):
         # Placeholders render dimmed (rich-text span) so the pre-pin panel

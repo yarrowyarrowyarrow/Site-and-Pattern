@@ -771,7 +771,8 @@
     // placeholder.
     var _ESRI_TILEMAP =
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tilemap/';
-    var _SAT_MIN_NATIVE = 19;   // assumed globally present
+    var _SAT_MIN_NATIVE = 19;   // fallback when the probe can't run (network/CORS)
+    var _SAT_FLOOR      = 16;   // imagery is essentially always present at/below this
     var _SAT_MAX_NATIVE = 23;   // deepest Esri ever caches
     var _satNativeCache = {};    // coarse-tile key -> deepest native zoom
     var _satProbeTimer = null;
@@ -807,18 +808,29 @@
         });
     }
 
-    // Climb from _SAT_MIN_NATIVE+1 upward until a tile is missing; the last
-    // present zoom is the deepest real detail for this spot.
+    // Climb from _SAT_FLOOR upward until a tile is missing; the last present
+    // zoom is the deepest real detail here. Crucially the answer may fall BELOW
+    // _SAT_MIN_NATIVE (19): over rural areas like Lumsden, Esri's imagery is
+    // shallow, and if we left maxNativeZoom at 19 the z18-19 tiles render Esri's
+    // "Map data not yet available" placeholder instead of upscaling the deepest
+    // real tile. Probing from the floor lets us cap at the true depth (e.g. 17)
+    // so Leaflet enlarges real imagery. Deep urban areas (Edmonton) still climb
+    // to 23 unchanged. If the probe itself fails (network/CORS) we keep the old
+    // safe default of 19.
     function _probeMaxNative(lat, lng, cb) {
-      var best = _SAT_MIN_NATIVE;
+      var best = null;
       (function step(z) {
-        if (z > _SAT_MAX_NATIVE) { cb(best); return; }
+        if (z > _SAT_MAX_NATIVE) { cb(best === null ? _SAT_MIN_NATIVE : best); return; }
         var t = _tileXY(lat, lng, z);
         _probeTile(z, t.x, t.y, function (avail) {
-          if (avail === true) { best = z; step(z + 1); }
-          else { cb(best); }    // missing, or probe failed → stop at best
+          if (avail === true) { best = z; step(z + 1); return; }
+          if (avail === false) {                 // first gap → deepest real is best
+            cb(best === null ? Math.max(_SAT_FLOOR, z - 1) : best);
+          } else {                               // probe failed → old safe default
+            cb(best === null ? _SAT_MIN_NATIVE : best);
+          }
         });
-      })(_SAT_MIN_NATIVE + 1);
+      })(_SAT_FLOOR);
     }
 
     function _setSatNative(z) {

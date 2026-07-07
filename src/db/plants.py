@@ -160,7 +160,7 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # butterflies & day-flying moths, so ambient wildlife (scene_wildlife) can place
 # nectaring butterflies from real edges and the habitat builder shows documented
 # (not just genus-inferred) nectar sources.
-_SCHEMA_VERSION = 44
+_SCHEMA_VERSION = 45
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────

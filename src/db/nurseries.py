@@ -114,3 +114,59 @@ def nurseries_for_availability(availability_class: str, lat: float, lng: float,
     channels = _AVAILABILITY_TO_SELLS.get(
         availability_class or "", _NATIVE_CHANNELS)
     return nurseries_near(lat, lng, limit=limit, sells=list(channels))
+
+
+# How near a bricks-and-mortar supplier counts as "local" rather than "ships".
+_LOCAL_KM = 60.0
+
+
+def access_label(n: dict) -> str:
+    """A human, non-distance-shaming way to describe how to reach a supplier —
+    societies lead with their sales/education, distant mail-order suppliers with
+    'ships to you' rather than a discouraging 200 km figure (P9, and the user's
+    explicit ask)."""
+    city = n.get("city", "")
+    kind = n.get("kind", "")
+    if kind == "society":
+        return "native plant sales & education · province-wide"
+    if kind == "designer":
+        return f"native landscape design · {city}" if city else "native landscape design"
+    d = n.get("distance_km")
+    dtxt = f"{d:g} km" if isinstance(d, (int, float)) else ""
+    if isinstance(d, (int, float)) and d > _LOCAL_KM and n.get("ships"):
+        return f"ships to you · {city}" if city else "ships to you"
+    return " · ".join(x for x in (city, dtxt) if x)
+
+
+def native_sources_near(lat: float, lng: float, limit: int = 6) -> list[dict]:
+    """Curated 'where to buy natives' list for the site panel.
+
+    Every entry is native-specific (general garden centres are not in the
+    directory). The nearest native-plant society is pinned first — for a Regina
+    or Lumsden pin, where the closest native nursery is a couple hundred km away,
+    the honest and useful answer is "the NPSS runs native plant sales &
+    education province-wide, and these seed houses ship to you", not "nearest
+    garden centre 200 km". Remaining slots are the nearest native suppliers by
+    distance (so Saskatoon and North Battleford pins surface their local
+    growers), each carrying an ``access`` label from :func:`access_label`."""
+    rows = nurseries_near(lat, lng, limit=10_000)
+    if not rows:
+        return []
+    societies = [n for n in rows if n.get("kind") == "society"]
+    suppliers = [n for n in rows
+                 if n.get("kind") in ("native_nursery", "seed_house")]
+    designers = [n for n in rows if n.get("kind") == "designer"]
+
+    picked: list[dict] = []
+    if societies:
+        picked.append(societies[0])   # nearest society, pinned as the anchor
+    # Actual plant/seed sellers come next (they're what "buy" means), leaving
+    # room for a single nearby native-landscape designer as a bonus pointer.
+    room_for_designer = 1 if designers else 0
+    n_supp = max(0, int(limit) - len(picked) - room_for_designer)
+    picked += suppliers[:n_supp]
+    if designers and len(picked) < int(limit):
+        picked.append(designers[0])
+    for n in picked:
+        n["access"] = access_label(n)
+    return picked
