@@ -257,6 +257,28 @@ CREATE TABLE IF NOT EXISTS lepidoptera_attributes (
 );
 CREATE INDEX IF NOT EXISTS idx_lep_attr_kind ON lepidoptera_attributes(kind);
 
+-- Native-plant nurseries / seed houses / societies (schema v44, V2.18).
+-- Seeded from data/nurseries_master.json; feeds the site panel's "Where to buy
+-- near you" section (src/db/nurseries.py). ``sells`` mirrors the plants
+-- availability_class enum so a supplier can be matched to a plant's sourcing
+-- tier. ``lat``/``lng`` are approximate (community-level), used only to sort
+-- suppliers by rough distance from the property pin.
+CREATE TABLE IF NOT EXISTS nurseries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    kind TEXT,                      -- native_nursery | seed_house | garden_centre | society
+    province TEXT,                  -- AB, SK, ...
+    city TEXT,
+    lat REAL,
+    lng REAL,
+    url TEXT,
+    sells TEXT,                     -- availability_class channel: native_specialist,
+                                    -- seed_or_plug, garden_centre, big_box, rare
+    ships INTEGER DEFAULT 0,        -- 1 = mail-order / ships province-wide
+    notes TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_nurseries_province ON nurseries(province);
+
 -- Climate cache (schema v14, V1.35). One row per ~1 km^2 location;
 -- stores derived growing-degree-day and frost-window stats from the
 -- Open-Meteo Historical Weather endpoint. Lat/lng are quantized to

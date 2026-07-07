@@ -1,0 +1,161 @@
+{
+  "_comment": "Native-plant nurseries, seed houses and native-plant societies for the prairie provinces (V2.18). Feeds the 'Where to buy near you' site-panel section via src/db/nurseries.py. The 'sells' field maps to the availability_class enum (native_specialist / seed_or_plug / garden_centre) so it can be matched to a plant's sourcing tier.",
+  "_disclaimer": "Compiled 2026 as a STARTING POINT, not a verified live directory. Businesses move, change stock, or close, and native plants are often seasonal and limited — always confirm hours, location and current native availability before visiting or ordering. Coordinates are APPROXIMATE (community/city level), used only to sort suppliers by rough distance. URLs are intentionally left blank rather than guessed; search the name + city. Entries flagged 'verify' in notes are less certain and should be confirmed first.",
+  "_provenance": "Prairie native-plant community knowledge and the project's sourcing notes (src/sourcing.py, scripts/apply_sourcing_data.py). No affiliation or endorsement implied.",
+  "nurseries": [
+    {
+      "name": "Blazing Star Wildflower Seed Company",
+      "kind": "seed_house",
+      "province": "SK",
+      "city": "Aberdeen",
+      "lat": 52.32, "lng": -106.28,
+      "url": "",
+      "sells": "seed_or_plug",
+      "ships": 1,
+      "notes": "Saskatchewan-grown native prairie wildflower and grass seed; ships province-wide, so it serves Saskatoon, Regina, Lumsden and the Battlefords. Seed, not potted plants."
+    },
+    {
+      "name": "Prairie Garden Seeds",
+      "kind": "seed_house",
+      "province": "SK",
+      "city": "Cochin",
+      "lat": 53.31, "lng": -108.35,
+      "url": "",
+      "sells": "seed_or_plug",
+      "ships": 1,
+      "notes": "Long-running family seed house (Ternier family) of heritage, open-pollinated and some native prairie seed. Near the Battlefords; mail-orders across SK."
+    },
+    {
+      "name": "A Prairie Bouquet",
+      "kind": "native_nursery",
+      "province": "SK",
+      "city": "Asquith",
+      "lat": 52.13, "lng": -107.22,
+      "url": "",
+      "sells": "native_specialist",
+      "ships": 0,
+      "notes": "Small native/perennial grower west of Saskatoon (verify current status and hours before visiting)."
+    },
+    {
+      "name": "Early's Farm & Garden Centre",
+      "kind": "garden_centre",
+      "province": "SK",
+      "city": "Saskatoon",
+      "lat": 52.13, "lng": -106.65,
+      "url": "",
+      "sells": "garden_centre",
+      "ships": 0,
+      "notes": "Established Saskatoon garden centre and seed retailer; carries prairie-hardy stock and some native seed. Ask staff for natives — stock is seasonal."
+    },
+    {
+      "name": "Wilson's Greenhouse & Garden Centre",
+      "kind": "garden_centre",
+      "province": "SK",
+      "city": "Saskatoon",
+      "lat": 52.10, "lng": -106.72,
+      "url": "",
+      "sells": "garden_centre",
+      "ships": 0,
+      "notes": "Large Saskatoon-area greenhouse; prairie-hardy perennials, trees and shrubs. Native selection varies — call ahead."
+    },
+    {
+      "name": "Dutch Growers Home & Garden",
+      "kind": "garden_centre",
+      "province": "SK",
+      "city": "Saskatoon",
+      "lat": 52.10, "lng": -106.60,
+      "url": "",
+      "sells": "garden_centre",
+      "ships": 1,
+      "notes": "Saskatoon garden centre with an online shop; prairie-hardy perennials and woody stock. Native availability is seasonal."
+    },
+    {
+      "name": "Lakeshore Garden Centre",
+      "kind": "garden_centre",
+      "province": "SK",
+      "city": "Regina",
+      "lat": 50.43, "lng": -104.55,
+      "url": "",
+      "sells": "garden_centre",
+      "ships": 0,
+      "notes": "Regina-area garden centre serving Regina and Lumsden; prairie-hardy stock. Ask for natives (limited/seasonal) or start from seed via the SK seed houses (verify)."
+    },
+    {
+      "name": "Saskatchewan Native Plant Society",
+      "kind": "society",
+      "province": "SK",
+      "city": "Saskatoon",
+      "lat": 52.13, "lng": -106.67,
+      "url": "",
+      "sells": "native_specialist",
+      "ships": 0,
+      "notes": "Non-profit, province-wide: runs native plant/seed sales and connects gardeners with local growers — the best starting point for sourcing natives anywhere in SK, including Regina, Lumsden and the Battlefords. Not a storefront."
+    },
+    {
+      "name": "ALCLA Native Plants",
+      "kind": "native_nursery",
+      "province": "AB",
+      "city": "Calgary",
+      "lat": 51.05, "lng": -114.15,
+      "url": "",
+      "sells": "native_specialist",
+      "ships": 1,
+      "notes": "Long-established Calgary native-plant nursery and seed source; wildflowers, grasses, shrubs. Ships seed."
+    },
+    {
+      "name": "Bow Point Nursery",
+      "kind": "native_nursery",
+      "province": "AB",
+      "city": "Calgary (Springbank)",
+      "lat": 51.06, "lng": -114.36,
+      "url": "",
+      "sells": "native_specialist",
+      "ships": 0,
+      "notes": "Native trees and shrubs grown from local provenance seed, west of Calgary."
+    },
+    {
+      "name": "Wild About Flowers",
+      "kind": "native_nursery",
+      "province": "AB",
+      "city": "Diamond Valley",
+      "lat": 50.70, "lng": -114.27,
+      "url": "",
+      "sells": "native_specialist",
+      "ships": 1,
+      "notes": "Native wildflower and grass nursery south of Calgary; potted plants and seed."
+    },
+    {
+      "name": "Bedrock Seed Bank",
+      "kind": "seed_house",
+      "province": "AB",
+      "city": "Edmonton",
+      "lat": 53.52, "lng": -113.50,
+      "url": "",
+      "sells": "seed_or_plug",
+      "ships": 1,
+      "notes": "Edmonton seed house carrying native and heritage seed; mail-order."
+    },
+    {
+      "name": "Edmonton Native Plant Group",
+      "kind": "society",
+      "province": "AB",
+      "city": "Edmonton",
+      "lat": 53.55, "lng": -113.49,
+      "url": "",
+      "sells": "native_specialist",
+      "ships": 0,
+      "notes": "Volunteer group running native plant sales in the Edmonton area; a good pointer to central-Alberta native stock. Not a storefront (verify sale dates)."
+    },
+    {
+      "name": "TreeTime.ca",
+      "kind": "seed_house",
+      "province": "AB",
+      "city": "Edmonton",
+      "lat": 53.63, "lng": -113.60,
+      "url": "",
+      "sells": "seed_or_plug",
+      "ships": 1,
+      "notes": "Alberta reforestation-stock supplier; hardy native trees and shrubs as bare-root and plugs, mail-order across the prairies."
+    }
+  ]
+}

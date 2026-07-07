@@ -56,6 +56,7 @@ _FAUNA_JSON_PATH        = resource_path("data", "fauna_master.json")
 _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 _BEE_ATTR_JSON_PATH     = resource_path("data", "bee_attributes_master.json")
 _LEP_ATTR_JSON_PATH     = resource_path("data", "lepidoptera_attributes_master.json")
+_NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 
 # Current schema version — bump when adding columns/tables, or when the
 # bundled seed data changes meaningfully (forces a reseed on next start).
@@ -159,7 +160,7 @@ _LEP_ATTR_JSON_PATH     = resource_path("data", "lepidoptera_attributes_master.j
 # butterflies & day-flying moths, so ambient wildlife (scene_wildlife) can place
 # nectaring butterflies from real edges and the habitat builder shows documented
 # (not just genus-inferred) nectar sources.
-_SCHEMA_VERSION = 43
+_SCHEMA_VERSION = 44
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -776,6 +777,45 @@ def _seed_lepidoptera_attributes(conn: sqlite3.Connection) -> int:
     return len(rows)
 
 
+def _seed_nurseries(conn: sqlite3.Connection) -> int:
+    """Load ``data/nurseries_master.json`` into the ``nurseries`` table (schema
+    v44, V2.18). The JSON is an object with a ``nurseries`` list (plus metadata /
+    disclaimer keys, which are ignored). Returns the number of rows inserted."""
+    import json as _json
+
+    if not os.path.exists(_NURSERIES_JSON_PATH):
+        return 0
+    with open(_NURSERIES_JSON_PATH, "r", encoding="utf-8") as f:
+        payload = _json.load(f)
+    entries = payload.get("nurseries", []) if isinstance(payload, dict) else payload
+
+    rows = [
+        (
+            e.get("name", ""),
+            e.get("kind", ""),
+            e.get("province", ""),
+            e.get("city", ""),
+            e.get("lat"),
+            e.get("lng"),
+            e.get("url", ""),
+            e.get("sells", ""),
+            1 if e.get("ships") else 0,
+            e.get("notes", ""),
+        )
+        for e in entries
+        if isinstance(e, dict) and e.get("name")
+    ]
+    if rows:
+        conn.executemany(
+            "INSERT INTO nurseries "
+            "(name, kind, province, city, lat, lng, url, sells, ships, notes) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            rows,
+        )
+        conn.commit()
+    return len(rows)
+
+
 def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
     """
     Insert all plants from a JSON file into the plants table (skipping duplicates
@@ -1011,6 +1051,9 @@ def init_db() -> None:
             conn.execute("DELETE FROM polyculture_members")
             conn.execute("DELETE FROM polycultures")
             conn.execute("DELETE FROM plants")
+            # Nurseries are seeded from data/nurseries_master.json — wipe + reseed
+            # so directory edits ship on the next schema bump (V2.18).
+            conn.execute("DELETE FROM nurseries")
             # climate_cache is per-location user data, not seeded — wipe
             # on reseed so the next launch refetches against any updated
             # source defaults rather than serving stale interpretations.
@@ -1038,6 +1081,8 @@ def init_db() -> None:
             _seed_bee_attributes(conn)
             # Lepidoptera attributes (F37 "fly as a butterfly") — same dependency.
             _seed_lepidoptera_attributes(conn)
+            # Native-plant nursery directory (V2.18) — independent of plants/fauna.
+            _seed_nurseries(conn)
             conn.execute("PRAGMA foreign_keys = ON")
             conn.commit()
 

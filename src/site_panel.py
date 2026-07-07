@@ -619,6 +619,28 @@ class SitePanel(QWidget):
         sl.addRow(self._soil_dl_status)
         layout.addWidget(self._soil_box)
 
+        # ── Where to buy — native plant sources near the pin (V2.18) ──────────
+        self._nursery_box = QGroupBox("Where to buy — native plant sources")
+        self._nursery_box.setStyleSheet(_GROUP_STYLE)
+        nl = QVBoxLayout(self._nursery_box)
+        self._lbl_nurseries = QLabel(
+            "<span style='color:#90a4ae;'>Drop a pin to list native-plant "
+            "nurseries, seed houses and native-plant societies near you.</span>")
+        self._lbl_nurseries.setWordWrap(True)
+        self._lbl_nurseries.setTextFormat(Qt.TextFormat.RichText)
+        self._lbl_nurseries.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextBrowserInteraction)
+        self._lbl_nurseries.setOpenExternalLinks(True)
+        nl.addWidget(self._lbl_nurseries)
+        self._lbl_nursery_note = QLabel(
+            "Compiled 2026 as a starting point — confirm hours, location and "
+            "current native stock before visiting; native plants are seasonal "
+            "and often limited.")
+        self._lbl_nursery_note.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._lbl_nursery_note.setWordWrap(True)
+        nl.addWidget(self._lbl_nursery_note)
+        layout.addWidget(self._nursery_box)
+
         layout.addStretch()
 
     def _on_download_soil_clicked(self):
@@ -1084,6 +1106,8 @@ class SitePanel(QWidget):
         """
         self._lat, self._lng, self._label = lat, lng, label or self._label
         self._lbl_coords.setText(f"{lat:.5f}, {lng:.5f}")
+        # Nurseries are local (no network) — fill immediately on pin.
+        self._update_nurseries(lat, lng)
         if self._label:
             self._lbl_label.setText(self._label)
         else:
@@ -1114,6 +1138,45 @@ class SitePanel(QWidget):
 
     # ── Internals ───────────────────────────────────────────────────────────
 
+    _SELLS_LABEL = {
+        "native_specialist": "native nursery",
+        "seed_or_plug": "seed / plugs",
+        "garden_centre": "garden centre",
+        "big_box": "big-box",
+        "rare": "specialist",
+    }
+
+    def _update_nurseries(self, lat: float, lng: float):
+        """Fill the 'Where to buy' box with the nearest native-plant suppliers.
+        Local DB lookup (no network); fail-quiet so it never blocks the pin."""
+        if not hasattr(self, "_lbl_nurseries"):
+            return
+        try:
+            from src.db.nurseries import nurseries_near
+            rows = nurseries_near(lat, lng, limit=5)
+        except Exception:  # noqa: BLE001 — directory is a nicety, never fatal
+            rows = []
+        if not rows:
+            self._lbl_nurseries.setText(
+                "<span style='color:#90a4ae;'>No nursery directory available "
+                "for this area yet.</span>")
+            return
+        lines = []
+        for n in rows:
+            chan = self._SELLS_LABEL.get(n.get("sells", ""), n.get("sells", ""))
+            dist = n.get("distance_km")
+            where = n.get("city", "")
+            ships = " · ships" if n.get("ships") else ""
+            dtxt = f"{dist:g} km" if isinstance(dist, (int, float)) else ""
+            meta = " · ".join(x for x in (where, dtxt, chan) if x)
+            name = n.get("name", "")
+            url = n.get("url") or ""
+            name_html = (f"<a href='{url}' style='color:#66bb6a;'>{name}</a>"
+                         if url else f"<b>{name}</b>")
+            lines.append(f"{name_html}<br><span style='color:#90a4ae;"
+                         f"font-size:10px;'>{meta}{ships}</span>")
+        self._lbl_nurseries.setText("<br>".join(lines))
+
     def _refresh_clicked(self):
         if not self.has_pin():
             self._lbl_status.setText("No pin set — search an address first.")
@@ -1126,6 +1189,11 @@ class SitePanel(QWidget):
         self._lbl_coords.setText(_DASH)
         self._lbl_status.setText("Drop a pin to auto-fill site data.")
         self._reset_data_rows()
+        if hasattr(self, "_lbl_nurseries"):
+            self._lbl_nurseries.setText(
+                "<span style='color:#90a4ae;'>Drop a pin to list native-plant "
+                "nurseries, seed houses and native-plant societies near you."
+                "</span>")
 
     def _reset_data_rows(self):
         # Placeholders render dimmed (rich-text span) so the pre-pin panel
