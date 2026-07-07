@@ -98,9 +98,9 @@ def zone_description(zone: Optional[int]) -> str:
     _desc = {
         1: "Zone 1 — extreme cold (< -45 °C winters)",
         2: "Zone 2 — very cold (-45 to -40 °C winters)",
-        3: "Zone 3 — cold (-40 to -34 °C winters) — Edmonton area",
+        3: "Zone 3 — cold (-40 to -34 °C winters) — Edmonton, Regina, Saskatoon area",
         4: "Zone 4 — moderate-cold (-34 to -29 °C winters) — Calgary area",
-        5: "Zone 5 — mild-cold (-29 to -23 °C winters) — Lethbridge area",
+        5: "Zone 5 — mild-cold (-29 to -23 °C winters) — Lethbridge / Medicine Hat area",
         6: "Zone 6 — mild (-23 to -18 °C winters)",
         7: "Zone 7 — temperate (-18 to -12 °C winters)",
         8: "Zone 8 — warm-temperate (-12 to -7 °C winters) — Vancouver",

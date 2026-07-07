@@ -86,12 +86,19 @@ _LIFECYCLE_LABELS: dict[str, str] = {
 # filter).  Keep the ids in sync with the comma-separated tags stored in
 # plants.ab_ecoregion (see data/plants_master.json + src/db/plants.py
 # heuristic tagging pass).
+#
+# Ecoregion keys are shared across the prairie provinces where the ecoregion is
+# the same (Design principle P1/P2 — nature does not respect borders); the SK
+# Regina/Saskatoon belt adds the moist_mixedgrass key (V2.14). The constant
+# keeps its historical _AB_ name for back-compat; the province-neutral rename
+# lands in the Phase B schema refactor.
 _AB_ECOREGION_CHOICES: list[tuple[str, str]] = [
     ("Any ecoregion",          ""),
-    ("Aspen Parkland (central AB)", "aspen_parkland"),
-    ("Mixedgrass Prairie (south AB)", "mixedgrass_prairie"),
+    ("Aspen Parkland (central AB / SK)", "aspen_parkland"),
+    ("Mixedgrass Prairie (south AB / SK)", "mixedgrass_prairie"),
+    ("Moist Mixed Grassland (Regina / Saskatoon)", "moist_mixedgrass"),
     ("Fescue / Foothills (SW AB)",    "fescue_foothills"),
-    ("Boreal Mixedwood (north AB)",   "boreal_mixedwood"),
+    ("Boreal Mixedwood / Plain (north AB / SK)",   "boreal_mixedwood"),
     ("Riparian (streamside)",         "riparian"),
     ("Wet Meadow / Marsh",            "wet_meadow"),
     ("Subalpine / Montane (mountains)", "subalpine_montane"),

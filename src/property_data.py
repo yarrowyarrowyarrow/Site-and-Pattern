@@ -60,7 +60,7 @@ def fetch_rainfall(lat: float, lng: float, years: int = 10) -> Optional[dict]:
     Annual + monthly mean precipitation (mm) for a pin.
 
     Primary source is the bundled Environment Canada 1981–2010 climate
-    normal (``data/rainfall_fallback_alberta.json``): gauge-based ground
+    normal (``data/rainfall_fallback_prairie.json``): gauge-based ground
     truth, a genuine *climate normal* (matching the panel header), and
     fully offline. Open-Meteo's ERA5-Land reanalysis is only used as a
     secondary source for pins outside the bundled prairie coverage — it
@@ -128,7 +128,7 @@ def _climate_normal_rainfall(
     """
     import json as _json
 
-    path = resource_path("data", "rainfall_fallback_alberta.json")
+    path = resource_path("data", "rainfall_fallback_prairie.json")
     try:
         with open(path, "r", encoding="utf-8") as f:
             entries = _json.load(f)
@@ -223,8 +223,8 @@ def fetch_soil(lat: float, lng: float) -> Optional[dict]:
     Source order: the offline **Gridded Soil Landscapes of Canada** pack when
     downloaded (real per-location data, no network — see ``src/soil_grid.py``),
     then SoilGrids v2.0 (ISRIC) as an opportunistic online bonus, then a curated
-    Alberta regional approximation bundled with the app (see
-    ``data/soil_fallback_alberta.json``). The returned dict's ``source`` field
+    prairie regional approximation bundled with the app (see
+    ``data/soil_fallback_prairie.json``). The returned dict's ``source`` field
     always reflects which path was used so the UI can label it appropriately.
 
     Top-layer values are surfaced in ``summary``; per-depth values are
@@ -259,12 +259,12 @@ def fetch_soil(lat: float, lng: float) -> Optional[dict]:
     parsed = _parse_soilgrids(data) if data else None
     if parsed is not None:
         return parsed
-    # Fallback: nearest Alberta regional profile.
-    return _alberta_soil_fallback(lat, lng)
+    # Fallback: nearest prairie regional profile.
+    return _prairie_soil_fallback(lat, lng)
 
 
-def _alberta_soil_fallback(lat: float, lng: float) -> Optional[dict]:
-    """Return the closest bundled Alberta regional soil profile, or None.
+def _prairie_soil_fallback(lat: float, lng: float) -> Optional[dict]:
+    """Return the closest bundled prairie regional soil profile, or None.
 
     The result is shaped like ``_parse_soilgrids`` output (same
     ``summary`` keys, plus a single synthetic ``properties`` block) so
@@ -275,7 +275,7 @@ def _alberta_soil_fallback(lat: float, lng: float) -> Optional[dict]:
     import json as _json
     import math as _math
 
-    path = resource_path("data", "soil_fallback_alberta.json")
+    path = resource_path("data", "soil_fallback_prairie.json")
     try:
         with open(path, "r", encoding="utf-8") as f:
             entries = _json.load(f)
@@ -315,12 +315,17 @@ def _alberta_soil_fallback(lat: float, lng: float) -> Optional[dict]:
             "max_reported_depth_cm": depth,
         },
         "source": (
-            f"Regional approximation — {best.get('region', 'Alberta')} "
-            f"(SoilGrids v2.0 unavailable; bundled AB soil atlas)"
+            f"Regional approximation — {best.get('region', 'prairie')} "
+            f"(SoilGrids v2.0 unavailable; bundled prairie soil atlas)"
         ),
         "fallback": True,
         "fallback_notes": best.get("notes", ""),
     }
+
+
+# Back-compat alias: the regional soil fallback was Alberta-only before the
+# Saskatchewan expansion (V2.14).
+_alberta_soil_fallback = _prairie_soil_fallback
 
 
 # SoilGrids stores values as int * d_factor. For phh2o (pH) and sand/silt/clay
@@ -601,15 +606,28 @@ def usda_zone_from_min_c(min_c: float) -> int:
     return max(1, min(13, z))
 
 
-# ── Geocoding (Alberta, OSM Nominatim) ──────────────────────────────────────
+# ── Geocoding (prairie provinces, OSM Nominatim) ────────────────────────────
 
-_AB_VIEWBOX = "-120.0,48.95,-109.95,60.05"   # lng_min, lat_min, lng_max, lat_max
+# Combined Alberta + Saskatchewan viewbox (lng_min, lat_min, lng_max, lat_max).
+# The eastern edge reaches -101.0 to cover all of Saskatchewan (Regina,
+# Lumsden, Battleford, Saskatoon); the western edge stays at -120.0 for
+# Alberta. Point-in-viewbox plus the province filter below keep results on the
+# prairies.
+_PRAIRIE_VIEWBOX = "-120.0,48.95,-101.0,60.05"
+
+# Back-compat alias — historically the search was Alberta-only.
+_AB_VIEWBOX = _PRAIRIE_VIEWBOX
+
+# Provinces the address search accepts (Nominatim ``state`` / ISO codes).
+_SEARCH_PROVINCES = {"Alberta", "Saskatchewan"}
+_SEARCH_ISO = {"CA-AB", "CA-SK"}
 
 
-def geocode_alberta(query: str, limit: int = 6,
+def geocode_address(query: str, limit: int = 6,
                     *, near: "tuple[float, float] | None" = None,
                     radius_km: float = 50.0) -> list[dict]:
-    """Forward-geocode an address or place name, restricted to Alberta.
+    """Forward-geocode an address or place name across the prairie provinces
+    (Alberta + Saskatchewan).
 
     Returns a list of ``{"label", "lat", "lng"}`` dicts, or ``[]`` on
     failure / no match. Uses OSM Nominatim.
@@ -666,9 +684,9 @@ def geocode_alberta(query: str, limit: int = 6,
             extra_params["lat"] = f"{blat:.5f}"
             extra_params["lon"] = f"{blng:.5f}"
         except (TypeError, ValueError):
-            viewbox = _AB_VIEWBOX
+            viewbox = _PRAIRIE_VIEWBOX
     else:
-        viewbox = _AB_VIEWBOX
+        viewbox = _PRAIRIE_VIEWBOX
 
     params = urllib.parse.urlencode({
         "format": "json",
@@ -693,8 +711,10 @@ def geocode_alberta(query: str, limit: int = 6,
     out: list[tuple[int, int, dict]] = []  # (-score, original_idx, hit)
     for idx, it in enumerate(data):
         addr = it.get("address") or {}
-        # Defence in depth: drop anything outside Alberta.
-        if addr.get("state") != "Alberta" and addr.get("ISO3166-2-lvl4") != "CA-AB":
+        # Defence in depth: drop anything outside the supported prairie
+        # provinces (Alberta + Saskatchewan).
+        if (addr.get("state") not in _SEARCH_PROVINCES
+                and addr.get("ISO3166-2-lvl4") not in _SEARCH_ISO):
             continue
         try:
             lat = float(it["lat"])
@@ -741,6 +761,11 @@ def geocode_alberta(query: str, limit: int = 6,
     out.sort()
     ranked = [hit for _, _, hit in out]
     return ranked[:max(1, int(limit))]
+
+
+# Back-compat alias: the search was Alberta-only before the Saskatchewan
+# expansion (V2.14). Existing callers importing ``geocode_alberta`` keep working.
+geocode_alberta = geocode_address
 
 
 def reverse_geocode(lat: float, lng: float) -> Optional[str]:

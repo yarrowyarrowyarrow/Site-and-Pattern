@@ -33,5 +33,26 @@
     "prevailing_deg": 270,
     "mean_speed_kmh": 12,
     "notes": "Prevailing W; sheltered river valleys vary locally."
+  },
+  {
+    "region": "Moist mixed grassland (central Saskatchewan)",
+    "centroid": [51.0, -105.5],
+    "prevailing_deg": 300,
+    "mean_speed_kmh": 17,
+    "notes": "Prevailing WNW–NW; strong southeasterlies common in summer. Regina/Saskatoon plains — plan windbreaks against the cold NW winter wind."
+  },
+  {
+    "region": "Mixed grassland (SW Saskatchewan)",
+    "centroid": [50.3, -108.0],
+    "prevailing_deg": 292,
+    "mean_speed_kmh": 20,
+    "notes": "Strong, persistent westerlies; among the windiest parts of Canada (Swift Current)."
+  },
+  {
+    "region": "Aspen parkland / boreal (central-northern Saskatchewan)",
+    "centroid": [53.0, -107.5],
+    "prevailing_deg": 300,
+    "mean_speed_kmh": 13,
+    "notes": "Lighter winds with more shelter; prevailing WNW. Battleford / Prince Albert."
   }
 ]

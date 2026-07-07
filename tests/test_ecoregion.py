@@ -6,12 +6,13 @@ the shipped ``data/ecoregions_canada.geojson``. Each test asserts a
 real city's lat/lng resolves to the canonical ecoregion key the plant
 filter expects.
 
-The shipped starter polygon set is a rectangular partition of
-Alberta — the city assertions below are calibrated against that
-starter set. When a future revision replaces those rectangles with
-real CEC polygons (via ``scripts/prepare_ecoregions.py``), expect
-some of these assertions to need adjustment for boundary cases like
-Calgary (which sits at the prairie-foothills transition).
+The shipped starter polygon set is a rectangular partition of the
+prairie provinces — Alberta west of the -110 meridian, Saskatchewan
+east of it (V2.14) — and the city assertions below are calibrated
+against that starter set. When a future revision replaces those
+rectangles with real CEC polygons (via ``scripts/prepare_ecoregions.py``),
+expect some of these assertions to need adjustment for boundary cases
+like Calgary (which sits at the prairie-foothills transition).
 """
 
 import os
@@ -41,8 +42,8 @@ class TestLoadFeatures(unittest.TestCase):
         plant_panel._AB_ECOREGION_CHOICES — otherwise the auto-detect
         result wouldn't match any combo option."""
         canonical = {
-            "aspen_parkland", "mixedgrass_prairie", "fescue_foothills",
-            "boreal_mixedwood", "riparian", "wet_meadow",
+            "aspen_parkland", "mixedgrass_prairie", "moist_mixedgrass",
+            "fescue_foothills", "boreal_mixedwood", "riparian", "wet_meadow",
             "subalpine_montane",
         }
         for feat in _load_features():
@@ -128,9 +129,37 @@ class TestAlbertaCityLookups(unittest.TestCase):
         self.assertEco(52.8737, -118.0814, "subalpine_montane")
 
 
-class TestOutsideAlberta(unittest.TestCase):
-    """Points outside the shipped polygon coverage return None — never
-    raise."""
+class TestSaskatchewanCityLookups(unittest.TestCase):
+    """SK city coordinates → expected ecoregion key (V2.14 expansion).
+    SK polygons lie east of the -110 meridian (the AB/SK border)."""
+
+    def assertEco(self, lat: float, lng: float, expected_key: str):
+        got = lookup_ecoregion(lat, lng)
+        self.assertEqual(got, expected_key,
+                         f"({lat}, {lng}) → got {got!r}, expected {expected_key!r}")
+
+    def test_regina_is_moist_mixedgrass(self):
+        self.assertEco(50.4452, -104.6189, "moist_mixedgrass")
+
+    def test_lumsden_is_moist_mixedgrass(self):
+        self.assertEco(50.6500, -104.8700, "moist_mixedgrass")
+
+    def test_saskatoon_is_moist_mixedgrass(self):
+        self.assertEco(52.1332, -106.6700, "moist_mixedgrass")
+
+    def test_north_battleford_is_aspen_parkland(self):
+        self.assertEco(52.7575, -108.2861, "aspen_parkland")
+
+    def test_battleford_is_aspen_parkland(self):
+        self.assertEco(52.7368, -108.2967, "aspen_parkland")
+
+    def test_swift_current_is_mixedgrass_prairie(self):
+        self.assertEco(50.2881, -107.7939, "mixedgrass_prairie")
+
+
+class TestOutsideCoverage(unittest.TestCase):
+    """Points outside the shipped AB+SK polygon coverage return None — never
+    raise. Winnipeg (east of the SK/MB border) and Vancouver stay uncovered."""
 
     def test_vancouver_outside(self):
         self.assertIsNone(lookup_ecoregion(49.2827, -123.1207))

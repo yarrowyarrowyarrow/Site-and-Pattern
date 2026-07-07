@@ -82,6 +82,22 @@ def test_regina():
     _check(50.4452, -104.6189, 3, "Regina")
 
 
+def test_saskatoon():
+    """Saskatoon, SK should be Zone 3."""
+    _check(52.1332, -106.6700, 3, "Saskatoon")
+
+
+def test_north_battleford():
+    """North Battleford, SK should be Zone 3 (dedicated box added V2.14;
+    without it the broad 'Northern Saskatchewan' box would report Zone 2)."""
+    _check(52.7575, -108.2861, 3, "North Battleford")
+
+
+def test_lumsden():
+    """Lumsden, SK (Qu'Appelle valley near Regina) should be Zone 3."""
+    _check(50.6500, -104.8700, 3, "Lumsden")
+
+
 def test_winnipeg():
     """Winnipeg, MB should be Zone 4."""
     _check(49.8951, -97.1384, 4, "Winnipeg")

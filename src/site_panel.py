@@ -201,8 +201,8 @@ class _GeocodeWorker(QObject):
     @pyqtSlot()
     def run(self):
         try:
-            from src.property_data import geocode_alberta
-            hits = geocode_alberta(self._query, near=self._near) or []
+            from src.property_data import geocode_address
+            hits = geocode_address(self._query, near=self._near) or []
             self.results.emit(hits)
         except Exception as exc:
             self.failed.emit(str(exc))
