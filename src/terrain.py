@@ -1258,7 +1258,15 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
 
     ``options``: ``interval_m`` (default 0.5 in Edmonton, 1.0 elsewhere),
     ``resolution_m`` (default 5 in Edmonton, 15 elsewhere), ``want_contours``,
-    ``want_slope_overlay``, ``force_source`` ("auto" | "edmonton" | "openmeteo").
+    ``want_slope_overlay``, ``force_source`` ("auto" | "edmonton" | "hrdem" |
+    "openmeteo").
+
+    Elevation-source precedence (``auto``): City of Edmonton 0.5 m LiDAR inside
+    the Edmonton envelope; otherwise NRCan HRDEM 1–2 m LiDAR where it covers the
+    bbox (Regina/Saskatoon/Battleford and much of the settled prairie); otherwise
+    the 30 m Copernicus DEM via Open-Meteo. Each is labelled in ``source`` and the
+    coarse-DEM honesty flag (``stats["water_dem_coarse"]``) is set only for the
+    Copernicus fallback.
     """
     err = validate_bbox(bbox, options.get("resolution_m") or _MIN_RESOLUTION_M)
     if err:
@@ -1266,8 +1274,15 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
 
     force = options.get("force_source", "auto")
     use_edm = (force == "edmonton") or (force == "auto" and bbox_in_edmonton(bbox))
+    # HRDEM (NRCan 1–2 m LiDAR) is the national equivalent of the Edmonton
+    # contour pack — tried for any non-Edmonton bbox (or when forced). It is
+    # fail-safe: no coverage / no rasterio / offline → falls back to Copernicus.
+    try_hrdem = (force == "hrdem") or (force == "auto" and not use_edm)
     interval_m = float(options.get("interval_m") or (0.5 if use_edm else 1.0))
     resolution_m = float(options.get("resolution_m") or (5.0 if use_edm else 15.0))
+    # LiDAR sources resolve yard scale, so sample them on a fine grid; the coarse
+    # Copernicus fallback uses the 15 m default above.
+    hrdem_resolution_m = float(options.get("resolution_m") or 5.0)
     want_contours = options.get("want_contours", True)
     want_slope = options.get("want_slope_overlay", True)
     want_water = options.get("want_water", False)
@@ -1322,6 +1337,17 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
             elev = _grid_from_contours(slope_contours, bbox, resolution_m)
             if elev is not None and not source:
                 source = "City of Edmonton — LiDAR contours (IDW grid)"
+        # NRCan HRDEM 1 m LiDAR — Edmonton-parity relief for Regina/Saskatoon/
+        # Battleford and anywhere NRCan has flown LiDAR. Fail-safe: returns None
+        # (no coverage / no rasterio / offline) and we drop to Copernicus below.
+        if elev is None and try_hrdem:
+            try:
+                from src import hrdem as _hrdem
+                elev = _hrdem.fetch_hrdem_grid(bbox, hrdem_resolution_m)
+            except Exception:  # noqa: BLE001 — never let the LiDAR path break generation
+                elev = None
+            if elev is not None and not source:
+                source = elev.get("source") or source
         if elev is None:
             elev = fetch_openmeteo_grid(bbox, resolution_m)
             if elev is None:
