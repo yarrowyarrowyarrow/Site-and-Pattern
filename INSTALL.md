@@ -100,12 +100,22 @@ source venv/bin/activate              # macOS / Linux
 # 3. Install dependencies
 pip install -r requirements.txt
 
+# 3b. (Optional) offline soil pack + NRCan HRDEM LiDAR terrain — needs GDAL,
+#     so it's kept out of the packaged builds; add it only in a source install:
+# pip install -r requirements-optional.txt
+
 # 4. Run
 python main.py
 ```
 
 The app opens immediately. On first run the database is seeded automatically from
 the bundled plant data (a few extra seconds, one time).
+
+> **Optional geo features:** the offline soil pack and NRCan HRDEM 1–2 m LiDAR
+> terrain (Regina/Saskatoon/Battleford, etc.) need `rasterio` + `pyproj`, which
+> pull in native GDAL/PROJ. They're in `requirements-optional.txt` rather than
+> the main requirements because those wheels break the packaged macOS/Windows
+> builds. Without them the app falls back to SoilGrids / the 30 m Copernicus DEM.
 
 > **macOS note:** `requirements.txt` automatically pins Qt to the 6.7 series —
 > the last release that still runs on macOS 11 Big Sur. Don't override the pin.

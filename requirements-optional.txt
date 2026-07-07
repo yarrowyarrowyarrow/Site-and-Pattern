@@ -1,0 +1,17 @@
+# Optional dependencies — NOT installed by the packaged (frozen) macOS/Windows
+# builds, because their native GDAL/PROJ libraries break the PyInstaller DMG/EXE
+# jobs (see the note in requirements.txt). Install these in a source/dev checkout
+# to enable:
+#
+#   * the offline soil pack   — src/soil_grid.py (Gridded Soil Landscapes of
+#     Canada; per-location soil pH/texture sampled offline)
+#   * NRCan HRDEM LiDAR terrain — src/hrdem.py (1–2 m elevation for Regina,
+#     Saskatoon, Battleford, etc., instead of the 30 m Copernicus fallback)
+#
+# Both features import rasterio/pyproj lazily and degrade gracefully when absent,
+# so the app runs fine without this file — you just get the coarser fallbacks.
+#
+#   pip install -r requirements-optional.txt
+#
+rasterio>=1.3
+pyproj>=3.4
