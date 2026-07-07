@@ -201,14 +201,19 @@ class TestSiteFitFilters(unittest.TestCase):
         init_db()
 
     def test_soil_ph_containment(self):
+        # Containment now carries a tolerance margin (V2.18.1): a plant passes if
+        # the site pH falls within its bracket widened by _SOIL_PH_TOLERANCE at
+        # each end — so a coarse regional pH estimate doesn't wrongly drop woody
+        # species at a 0.1 boundary (the Regina/Lumsden clay bug).
+        from src.db.plants import _SOIL_PH_TOLERANCE as tol
         rows = search_plants(soil_ph=7.5)
         self.assertTrue(rows)
         for r in rows:
             lo, hi = r.get("soil_ph_min"), r.get("soil_ph_max")
             if lo not in (None, ""):
-                self.assertLessEqual(float(lo), 7.5)
+                self.assertLessEqual(float(lo), 7.5 + tol)
             if hi not in (None, ""):
-                self.assertGreaterEqual(float(hi), 7.5)
+                self.assertGreaterEqual(float(hi), 7.5 - tol)
 
     def test_moisture_wet_and_dry(self):
         wet = search_plants(moisture="wet")

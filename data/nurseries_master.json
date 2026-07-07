@@ -92,28 +92,6 @@
       "notes": "Native grass seed (alongside cereals and pulses) in northeast SK; retail and wholesale. Contact for native species. (306) 873-5569"
     },
     {
-      "name": "Lichen Nature",
-      "kind": "designer",
-      "province": "SK",
-      "city": "Saskatoon",
-      "lat": 52.13, "lng": -106.67,
-      "url": "",
-      "sells": "native_specialist",
-      "ships": 0,
-      "notes": "Saskatoon-based native-plant garden design, small-scale restoration and nature education — a good local guide to sourcing and planting natives around Saskatoon. (306) 291-3877"
-    },
-    {
-      "name": "Prairie River Gardens",
-      "kind": "designer",
-      "province": "SK",
-      "city": "Saskatoon",
-      "lat": 52.13, "lng": -106.67,
-      "url": "https://www.prairierivergardens.ca",
-      "sells": "native_specialist",
-      "ships": 0,
-      "notes": "Saskatoon prairie-landscape consulting, design and installation using native plants. (306) 715-8000"
-    },
-    {
       "name": "ALCLA Native Plants",
       "kind": "native_nursery",
       "province": "AB",

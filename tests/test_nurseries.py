@@ -33,7 +33,7 @@ _CITIES = {
     "North Battleford": (52.7575, -108.2861),
 }
 
-_NATIVE_KINDS = {"society", "native_nursery", "seed_house", "designer"}
+_NATIVE_KINDS = {"society", "native_nursery", "seed_house"}
 
 
 class TestNurseryDirectory(unittest.TestCase):
@@ -83,10 +83,12 @@ class TestNativeSourcesFraming(unittest.TestCase):
                              f"{city} should lead with a native-plant society")
             self.assertIn("sales", rows[0]["access"])
 
-    def test_no_garden_centre_ever_surfaces(self):
+    def test_no_garden_centre_or_designer_ever_surfaces(self):
+        # The directory carries only native sellers/societies now — no general
+        # garden centres and (per user request) no landscape designers.
         for city, (lat, lng) in _CITIES.items():
             for n in N.native_sources_near(lat, lng, limit=6):
-                self.assertNotEqual(n.get("kind"), "garden_centre")
+                self.assertNotIn(n.get("kind"), ("garden_centre", "designer"))
                 self.assertIn(n.get("kind"), _NATIVE_KINDS)
 
     def test_north_battleford_has_local_native_seed(self):

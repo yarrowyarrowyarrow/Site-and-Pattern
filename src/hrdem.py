@@ -316,3 +316,42 @@ def fetch_hrdem_ndsm(bbox: dict, resolution_m: float = DEFAULT_RESOLUTION_M, *,
         "resolution_m": resolution_m,
         "source": "NRCan HRDEM nDSM (DSM − DTM object heights)",
     }
+
+
+def diagnose(bbox: dict) -> dict:
+    """Report which stage of the HRDEM pipeline works for ``bbox`` — a self-serve
+    check for "why are my contours still Copernicus?". Returns a dict with:
+    ``rasterio`` (installed?), ``coverage`` (STAC finds a DTM?), ``dtm_cog`` /
+    ``dsm_cog`` (the chosen COG URLs), ``cog_opens`` (rasterio can open the DTM
+    over /vsicurl/?), and ``grid_ok`` (a small sample grid came back). Never
+    raises. Run e.g.:
+
+        python -c "from src import hrdem, json; \\
+          print(json.dumps(hrdem.diagnose({'south':50.42,'north':50.47, \\
+          'west':-104.66,'east':-104.60}), indent=2))"
+    """
+    out: dict = {"rasterio": False, "coverage": False, "dtm_cog": None,
+                 "dsm_cog": None, "cog_opens": False, "grid_ok": False,
+                 "error": None}
+    try:
+        import rasterio  # noqa: F401
+        out["rasterio"] = True
+    except ImportError:
+        out["error"] = "rasterio/pyproj not installed — HRDEM stays on Copernicus."
+    try:
+        items = _stac_search(bbox)
+        dtm = _pick_cog(items, _DTM_KEYS)
+        out["dtm_cog"] = dtm
+        out["dsm_cog"] = _pick_cog(items, _DSM_KEYS)
+        out["coverage"] = dtm is not None
+        if out["rasterio"] and dtm:
+            samp = _rasterio_sampler(dtm)
+            out["cog_opens"] = samp is not None
+            if samp is not None:
+                grid = _build_grid(bbox, 30.0, samp, "diagnose")
+                out["grid_ok"] = grid is not None
+                if grid is not None:
+                    out["sample_missing_pct"] = grid.get("missing_pct")
+    except Exception as exc:  # noqa: BLE001 — a diagnostic must never crash
+        out["error"] = f"{type(exc).__name__}: {exc}"
+    return out

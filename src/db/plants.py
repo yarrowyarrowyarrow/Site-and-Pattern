@@ -162,6 +162,11 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # (not just genus-inferred) nectar sources.
 _SCHEMA_VERSION = 45
 
+# Tolerance (pH units) added at each end of a plant's soil-pH bracket when
+# matching against a site's (often coarse, regional) pH estimate. See the
+# soil_ph filter in search_plants (P9 — uncertainty, not false precision).
+_SOIL_PH_TOLERANCE = 0.5
+
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
 # Source of truth for the `uses` lookup table. Each row becomes a row in
@@ -1416,10 +1421,18 @@ def search_plants(
     # brackets the site pH (containment, mirroring `zone`); unassessed bounds
     # (NULL) pass so a missing range never excludes a plant. `moisture` maps a
     # site wetness class to the existing water/habitat columns.
+    #
+    # A tolerance margin (V2.18.1) widens the bracket by _SOIL_PH_TOLERANCE at
+    # each end. Both the site pH (often a coarse regional estimate) and each
+    # plant's tolerance bounds are approximate, so a hard cutoff let a 0.1 pH
+    # gap wrongly exclude e.g. every tree on Regina's alkaline clay (site 7.6 vs
+    # a plant max of 7.5). Respecting that uncertainty (P9) restores the woody
+    # species people actually plant there.
     if soil_ph is not None:
         sql += (" AND (soil_ph_min IS NULL OR soil_ph_min <= ?)"
                 " AND (soil_ph_max IS NULL OR soil_ph_max >= ?)")
-        params += [float(soil_ph), float(soil_ph)]
+        params += [float(soil_ph) + _SOIL_PH_TOLERANCE,
+                   float(soil_ph) - _SOIL_PH_TOLERANCE]
 
     # water_needs may be comma-delimited (V1.84), so test membership with LIKE
     # rather than `=`/`IN` on the whole field.

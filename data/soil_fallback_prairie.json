@@ -79,7 +79,7 @@
   {
     "region": "Regina Plains (Moist Mixed Grassland — south Saskatchewan)",
     "centroid": [50.45, -104.62],
-    "ph_top": 7.6,
+    "ph_top": 7.4,
     "sand_pct_top": 15,
     "silt_pct_top": 30,
     "clay_pct_top": 55,
@@ -101,7 +101,7 @@
   {
     "region": "Brown chernozem (Mixed Grassland — SW Saskatchewan)",
     "centroid": [50.3, -107.8],
-    "ph_top": 7.6,
+    "ph_top": 7.5,
     "sand_pct_top": 40,
     "silt_pct_top": 38,
     "clay_pct_top": 22,

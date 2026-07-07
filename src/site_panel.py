@@ -1994,6 +1994,14 @@ class SitePanel(QWidget):
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
         v.addWidget(hint)
+        slow_note = QLabel("First import in a new area can take ~10–30 s while "
+                           "OpenStreetMap responds (slower outside big cities) — "
+                           "later imports nearby are quicker. For buildings you "
+                           "can also “Download buildings for this area” "
+                           "below for instant offline access.")
+        slow_note.setWordWrap(True)
+        slow_note.setStyleSheet("color: #78909c; font-size: 10px;")
+        v.addWidget(slow_note)
         # The section's one primary action — the partner of "Show shade".
         # "&&": a single "&" is a Qt mnemonic marker and vanishes from view.
         btn = QPushButton("Import building && tree outlines")

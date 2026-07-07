@@ -141,32 +141,26 @@ def access_label(n: dict) -> str:
 def native_sources_near(lat: float, lng: float, limit: int = 6) -> list[dict]:
     """Curated 'where to buy natives' list for the site panel.
 
-    Every entry is native-specific (general garden centres are not in the
-    directory). The nearest native-plant society is pinned first — for a Regina
-    or Lumsden pin, where the closest native nursery is a couple hundred km away,
-    the honest and useful answer is "the NPSS runs native plant sales &
-    education province-wide, and these seed houses ship to you", not "nearest
-    garden centre 200 km". Remaining slots are the nearest native suppliers by
-    distance (so Saskatoon and North Battleford pins surface their local
-    growers), each carrying an ``access`` label from :func:`access_label`."""
+    Every entry is a native-plant seller or society (general garden centres and
+    landscape designers are not surfaced). The nearest native-plant society is
+    pinned first — for a Regina or Lumsden pin, where the closest native nursery
+    is a couple hundred km away, the honest and useful answer is "the NPSS runs
+    native plant sales & education province-wide, and these seed houses ship to
+    you", not "nearest garden centre 200 km". Remaining slots are the nearest
+    native suppliers by distance (so Saskatoon and North Battleford pins surface
+    their local growers), each carrying an ``access`` label from
+    :func:`access_label`."""
     rows = nurseries_near(lat, lng, limit=10_000)
     if not rows:
         return []
     societies = [n for n in rows if n.get("kind") == "society"]
     suppliers = [n for n in rows
                  if n.get("kind") in ("native_nursery", "seed_house")]
-    designers = [n for n in rows if n.get("kind") == "designer"]
 
     picked: list[dict] = []
     if societies:
         picked.append(societies[0])   # nearest society, pinned as the anchor
-    # Actual plant/seed sellers come next (they're what "buy" means), leaving
-    # room for a single nearby native-landscape designer as a bonus pointer.
-    room_for_designer = 1 if designers else 0
-    n_supp = max(0, int(limit) - len(picked) - room_for_designer)
-    picked += suppliers[:n_supp]
-    if designers and len(picked) < int(limit):
-        picked.append(designers[0])
+    picked += suppliers[: max(0, int(limit) - len(picked))]
     for n in picked:
         n["access"] = access_label(n)
     return picked
