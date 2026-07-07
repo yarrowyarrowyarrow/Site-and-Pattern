@@ -159,7 +159,7 @@ _LEP_ATTR_JSON_PATH     = resource_path("data", "lepidoptera_attributes_master.j
 # butterflies & day-flying moths, so ambient wildlife (scene_wildlife) can place
 # nectaring butterflies from real edges and the habitat builder shows documented
 # (not just genus-inferred) nectar sources.
-_SCHEMA_VERSION = 42
+_SCHEMA_VERSION = 43
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -569,12 +569,23 @@ def _seed_fauna(conn: sqlite3.Connection) -> int:
     if os.path.exists(_FAUNA_JSON_PATH):
         with open(_FAUNA_JSON_PATH, "r", encoding="utf-8") as f:
             fauna_entries = _json.load(f)
+        def _fauna_provinces(e: dict) -> str:
+            # Explicit JSON value wins; else derive "AB" from the ab_native flag
+            # (province-neutral generalization added in schema v42).
+            np = e.get("native_provinces")
+            if isinstance(np, list):
+                return ",".join(np)
+            if np is not None:
+                return str(np)
+            return "AB" if int(e.get("ab_native", 1)) else ""
+
         fauna_rows = [
             (
                 e["scientific_name"],
                 e["common_name"],
                 e["taxon"],
                 int(e.get("ab_native", 1)),
+                _fauna_provinces(e),
                 e.get("range_notes"),
                 e.get("icon"),
                 e.get("description"),
@@ -589,9 +600,9 @@ def _seed_fauna(conn: sqlite3.Connection) -> int:
             conn.executemany(
                 "INSERT OR IGNORE INTO fauna "
                 "(scientific_name, common_name, taxon, ab_native, "
-                " range_notes, icon, description, "
+                " native_provinces, range_notes, icon, description, "
                 " image_url, image_attribution, image_license) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 fauna_rows,
             )
             conn.commit()

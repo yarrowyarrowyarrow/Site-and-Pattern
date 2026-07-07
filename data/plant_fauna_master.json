@@ -2490,5 +2490,133 @@
     "specificity": "generalist",
     "source": "Acorn & Sheldon 2006, Butterflies of Alberta",
     "notes": "Documented adult nectar source (V2.12)."
+  },
+  {
+    "plant": "Scarlet Globemallow",
+    "fauna": "Bombus spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Prairie-composite pollination literature; Acorn & Sheldon 2006",
+    "notes": "Bumble bees work the orange saucer flowers for pollen."
+  },
+  {
+    "plant": "Scarlet Globemallow",
+    "fauna": "Megachile spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Prairie-composite pollination literature; Acorn & Sheldon 2006",
+    "notes": "Leafcutter bees collect globemallow pollen."
+  },
+  {
+    "plant": "Scarlet Globemallow",
+    "fauna": "Halictus spp.",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Prairie-composite pollination literature; Acorn & Sheldon 2006",
+    "notes": ""
+  },
+  {
+    "plant": "Bastard Toadflax",
+    "fauna": "Lasioglossum spp.",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Prairie-composite pollination literature; Acorn & Sheldon 2006",
+    "notes": "Small sweat bees at the open umbels."
+  },
+  {
+    "plant": "Bastard Toadflax",
+    "fauna": "Halictus spp.",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Prairie-composite pollination literature; Acorn & Sheldon 2006",
+    "notes": ""
+  },
+  {
+    "plant": "Stiff Goldenrod",
+    "fauna": "Danaus plexippus",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Prairie-composite pollination literature; Acorn & Sheldon 2006",
+    "notes": "Fall goldenrod fuels migrating monarchs."
+  },
+  {
+    "plant": "Stiff Goldenrod",
+    "fauna": "Bombus spp.",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Prairie-composite pollination literature; Acorn & Sheldon 2006",
+    "notes": ""
+  },
+  {
+    "plant": "Stiff Goldenrod",
+    "fauna": "Colias philodice",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Prairie-composite pollination literature; Acorn & Sheldon 2006",
+    "notes": ""
+  },
+  {
+    "plant": "Stiff Goldenrod",
+    "fauna": "Agapostemon virescens",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Prairie-composite pollination literature; Acorn & Sheldon 2006",
+    "notes": ""
+  },
+  {
+    "plant": "White Prairie Aster",
+    "fauna": "Bombus spp.",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Prairie-composite pollination literature; Acorn & Sheldon 2006",
+    "notes": ""
+  },
+  {
+    "plant": "White Prairie Aster",
+    "fauna": "Vanessa cardui",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Prairie-composite pollination literature; Acorn & Sheldon 2006",
+    "notes": "Late-season nectar for migrating painted ladies."
+  },
+  {
+    "plant": "White Prairie Aster",
+    "fauna": "Lasioglossum spp.",
+    "relationship": "pollen",
+    "specificity": "generalist",
+    "source": "Prairie-composite pollination literature; Acorn & Sheldon 2006",
+    "notes": ""
+  },
+  {
+    "plant": "Woolly Groundsel",
+    "fauna": "Halictus spp.",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Prairie-composite pollination literature; Acorn & Sheldon 2006",
+    "notes": ""
+  },
+  {
+    "plant": "Woolly Groundsel",
+    "fauna": "Bombus spp.",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Prairie-composite pollination literature; Acorn & Sheldon 2006",
+    "notes": ""
+  },
+  {
+    "plant": "Tufted Fleabane",
+    "fauna": "Lasioglossum spp.",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Prairie-composite pollination literature; Acorn & Sheldon 2006",
+    "notes": ""
+  },
+  {
+    "plant": "Tufted Fleabane",
+    "fauna": "Halictus spp.",
+    "relationship": "nectar",
+    "specificity": "generalist",
+    "source": "Prairie-composite pollination literature; Acorn & Sheldon 2006",
+    "notes": ""
   }
 ]

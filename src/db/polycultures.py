@@ -1275,6 +1275,30 @@ EXAMPLE_POLYCULTURES = [
             },
         ],
     },
+    # ── Saskatchewan Moist/Mixed Grassland communities (V2.16) ────────────────────
+    {
+        "name": "Moist Mixed Grassland Pollinator Patch",
+        "description": "A treeless, drought-hardy native forb patch for the "
+                       "Saskatchewan Moist Mixed Grassland (Regina, Lumsden, "
+                       "Saskatoon) and the dry Mixed Grassland. Purple prairie "
+                       "clover anchors the patch and fixes nitrogen; woolly "
+                       "groundsel and tufted fleabane open the season, scarlet "
+                       "globemallow and bastard toadflax carry mid-summer, and "
+                       "white prairie aster and stiff goldenrod close it with a "
+                       "late nectar surge that fuels migrating monarchs and "
+                       "native bees. Zone 3, full sun, low water — a lawn-to-"
+                       "habitat conversion that thrives on heavy Regina clay.",
+        "members": [
+            # (common_name, role, offset_x, offset_y)
+            ("Purple Prairie Clover", "nitrogen_fixer",  0,    0),
+            ("Scarlet Globemallow",   "groundcover",     1.0,  0.4),
+            ("Woolly Groundsel",      "pollinator",     -1.0,  0.5),
+            ("Tufted Fleabane",       "groundcover",     0.6, -0.9),
+            ("Bastard Toadflax",      "groundcover",    -0.8, -0.7),
+            ("White Prairie Aster",   "pollinator",      1.2, -0.4),
+            ("Stiff Goldenrod",       "pollinator",     -1.2, -0.2),
+        ],
+    },
     # ── Edmonton-specific polycultures designed for Zone 3-4 ──────────────────────
     {
         "name": "Evans Cherry Community",
