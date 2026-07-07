@@ -159,7 +159,7 @@ _LEP_ATTR_JSON_PATH     = resource_path("data", "lepidoptera_attributes_master.j
 # butterflies & day-flying moths, so ambient wildlife (scene_wildlife) can place
 # nectaring butterflies from real edges and the habitat builder shows documented
 # (not just genus-inferred) nectar sources.
-_SCHEMA_VERSION = 41
+_SCHEMA_VERSION = 42
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -382,6 +382,37 @@ def _migrate_to_v24(conn: sqlite3.Connection):
                     f"ALTER TABLE {table} ADD COLUMN {col_name} TEXT DEFAULT ''")
             except sqlite3.OperationalError:
                 pass  # column already present
+    conn.commit()
+
+
+def _migrate_to_v42(conn: sqlite3.Connection):
+    """Province-neutral data model (V2.15, Saskatchewan expansion).
+
+    Renames ``plants.ab_ecoregion`` -> ``plants.ecoregion`` (the ecoregion is
+    not province-specific — P1/P2) and adds a ``native_provinces`` column to
+    ``plants`` and ``fauna`` (comma-separated province codes, e.g. ``"AB,SK"``).
+    All ALTERs are guarded so a fresh install (schema.sql already has the new
+    shape) skips them; the version bump triggers a reseed that fills the new
+    values from the seed JSON. ``native_to_alberta`` / ``ab_native`` are kept as
+    back-compat flags.
+
+    Column resolution handles both entry paths cleanly: on a v41 upgrade the
+    table has only ``ab_ecoregion`` (rename it); on a fresh install the DDL
+    already created ``ecoregion`` and the historical v11 migration re-added a
+    stray empty ``ab_ecoregion`` (drop it)."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(plants)").fetchall()}
+    if "ecoregion" not in cols and "ab_ecoregion" in cols:
+        conn.execute("ALTER TABLE plants RENAME COLUMN ab_ecoregion TO ecoregion")
+    elif "ecoregion" in cols and "ab_ecoregion" in cols:
+        try:
+            conn.execute("ALTER TABLE plants DROP COLUMN ab_ecoregion")
+        except sqlite3.OperationalError:
+            pass  # SQLite < 3.35 — harmless; _row_to_dict aliases authoritatively
+    for table in ("plants", "fauna"):
+        try:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN native_provinces TEXT")
+        except sqlite3.OperationalError:
+            pass  # column already present
     conn.commit()
 
 
@@ -759,9 +790,20 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
 
     plant_rows = []
     for p in entries:
-        ecoregion = p.get("ab_ecoregion", "")
+        # Accept the new ``ecoregion`` key or the legacy ``ab_ecoregion`` (v42
+        # province-neutral rename); either may be a list or comma-string.
+        ecoregion = p.get("ecoregion", p.get("ab_ecoregion", ""))
         if isinstance(ecoregion, list):
             ecoregion = ",".join(ecoregion)
+        # native_provinces: explicit JSON value wins; otherwise derive from the
+        # legacy native_to_alberta flag so existing AB seed data keeps working
+        # (native_to_alberta truthy -> "AB", else "").
+        native_provinces = p.get("native_provinces")
+        if isinstance(native_provinces, list):
+            native_provinces = ",".join(native_provinces)
+        if native_provinces is None:
+            native_provinces = "AB" if str(
+                p.get("native_to_alberta", 0)).strip() in ("1", "1?") else ""
         plant_rows.append((
             p.get("common_name", ""),
             p.get("scientific_name", ""),
@@ -786,6 +828,7 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("years_to_maturity"),
             p.get("growth_curve"),
             ecoregion,
+            native_provinces,
             p.get("toxicity_pets", ""),
             p.get("toxicity_humans", ""),
             1 if p.get("has_thorns") else 0,
@@ -814,13 +857,13 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             edible_parts, deciduous_evergreen,
             soil_ph_min, soil_ph_max, perennial_or_annual,
             growth_rate, years_to_maturity, growth_curve,
-            ab_ecoregion,
+            ecoregion, native_provinces,
             toxicity_pets, toxicity_humans, has_thorns,
             spread_habit, safety_source,
             price_low_cad, price_high_cad, availability_class,
             sourcing_notes, flower_color, flower_form, fruit_color,
             image_url, image_attribution, image_license)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -911,6 +954,8 @@ def init_db() -> None:
             _migrate_to_v31(conn)
         if current_version < 35:
             _migrate_to_v35(conn)
+        if current_version < 42:
+            _migrate_to_v42(conn)
 
         # Add parent_id to polycultures if missing
         try:
@@ -1052,6 +1097,12 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
         sp = d.get("spacing_meters")
         if sp:
             d["mature_canopy_m"] = float(sp) * 1.5
+    # Back-compat: the ab_ecoregion column was renamed to ecoregion in v42
+    # (province-neutral). Expose the legacy key as a synthesized alias so
+    # read-side consumers (plant browser, llm_design, polyculture panel, the
+    # frozen permadesign_api / MCP surface) keep working unchanged.
+    if "ecoregion" in d:
+        d["ab_ecoregion"] = d.get("ecoregion") or ""
     return d
 
 
@@ -1115,6 +1166,8 @@ def search_plants(
     bird_food_only: bool = False,
     has_image_only: bool = False,
     ab_ecoregion: str = "",
+    ecoregion: str = "",
+    native_province: str = "",
     pet_safe_only: bool = False,
     kid_safe_only: bool = False,
     well_behaved_only: bool = False,
@@ -1230,15 +1283,24 @@ def search_plants(
     if has_image_only:
         sql += " AND image_url IS NOT NULL AND image_url != ''"
 
-    # ab_ecoregion column is a comma-separated list of region ids. A
-    # multi-select "restoring toward" filter matches a plant documented from
-    # ANY of the chosen ecoregions (OR of substring-safe patterns). Accepts a
-    # single string (legacy) or a list (V1.85).
-    ecoregions = _as_filter_list(ab_ecoregion)
+    # ecoregion column is a comma-separated list of region ids. A multi-select
+    # "restoring toward" filter matches a plant documented from ANY of the chosen
+    # ecoregions (OR of substring-safe patterns). Accepts a single string
+    # (legacy) or a list (V1.85). The ``ab_ecoregion`` parameter is the
+    # pre-v42 name, kept for back-compat (frozen MCP contract); ``ecoregion`` is
+    # the province-neutral name — either (or both) may be supplied.
+    ecoregions = _as_filter_list(ecoregion) + _as_filter_list(ab_ecoregion)
     if ecoregions:
         sql += " AND (" + " OR ".join(
-            "(',' || COALESCE(ab_ecoregion,'') || ',') LIKE ?" for _ in ecoregions) + ")"
+            "(',' || COALESCE(ecoregion,'') || ',') LIKE ?" for _ in ecoregions) + ")"
         params += [f"%,{e},%" for e in ecoregions]
+
+    # native_province (v42): keep only plants native to the given province code
+    # (e.g. "SK"). The province-aware generalization of the native_only flag,
+    # which stays keyed on native_to_alberta for back-compat.
+    if native_province:
+        sql += " AND (',' || COALESCE(native_provinces,'') || ',') LIKE ?"
+        params.append(f"%,{native_province},%")
 
     # Safety filters (schema v18) use a DENYLIST: exclude only plants we have
     # classified as toxic. Unassessed ('') and explicit 'none' both pass, so
@@ -1315,8 +1377,8 @@ def search_plants(
         # species tagged to a wet ecoregion (wet_meadow / riparian).
         sql += (" AND (" + _water_like("high", "moderate") +
                 " OR plant_type = 'aquatic'"
-                " OR (',' || COALESCE(ab_ecoregion,'') || ',') LIKE '%,wet_meadow,%'"
-                " OR (',' || COALESCE(ab_ecoregion,'') || ',') LIKE '%,riparian,%')")
+                " OR (',' || COALESCE(ecoregion,'') || ',') LIKE '%,wet_meadow,%'"
+                " OR (',' || COALESCE(ecoregion,'') || ',') LIKE '%,riparian,%')")
     elif moisture == "dry":
         sql += " AND " + _water_like("low")
     elif moisture == "mesic":

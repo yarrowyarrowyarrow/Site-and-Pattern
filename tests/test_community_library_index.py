@@ -30,7 +30,7 @@ def _add_plant(conn, name, sci="", ptype="wildflower", sun="full_sun",
                water="low", native=1, eco=""):
     cur = conn.execute(
         "INSERT INTO plants (common_name, scientific_name, plant_type, "
-        "sun_requirement, water_needs, native_to_alberta, ab_ecoregion) "
+        "sun_requirement, water_needs, native_to_alberta, ecoregion) "
         "VALUES (?, ?, ?, ?, ?, ?, ?)",
         (name, sci, ptype, sun, water, native, eco),
     )

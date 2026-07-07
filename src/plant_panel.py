@@ -92,7 +92,7 @@ _LIFECYCLE_LABELS: dict[str, str] = {
 # Regina/Saskatoon belt adds the moist_mixedgrass key (V2.14). The constant
 # keeps its historical _AB_ name for back-compat; the province-neutral rename
 # lands in the Phase B schema refactor.
-_AB_ECOREGION_CHOICES: list[tuple[str, str]] = [
+_ECOREGION_CHOICES: list[tuple[str, str]] = [
     ("Any ecoregion",          ""),
     ("Aspen Parkland (central AB / SK)", "aspen_parkland"),
     ("Mixedgrass Prairie (south AB / SK)", "mixedgrass_prairie"),
@@ -103,6 +103,11 @@ _AB_ECOREGION_CHOICES: list[tuple[str, str]] = [
     ("Wet Meadow / Marsh",            "wet_meadow"),
     ("Subalpine / Montane (mountains)", "subalpine_montane"),
 ]
+
+# Back-compat alias — the constant was province-scoped (_AB_ECOREGION_CHOICES)
+# before the V2.15 province-neutral rename. Kept so external imports and the
+# data_quality key loader's fallback keep resolving.
+_AB_ECOREGION_CHOICES = _ECOREGION_CHOICES
 
 
 # NOTE: calendar constants, plant list-item roles, compact row geometry
@@ -335,7 +340,7 @@ class PlantPanel(QWidget):
         # Ecoregion choices are (label, key) tuples with a leading "Any" sentinel
         # (empty key); the multi-select combo uses its placeholder for "any", so
         # drop the sentinel and feed the real regions in display order.
-        _eco_labels = {key: lbl for lbl, key in _AB_ECOREGION_CHOICES if key}
+        _eco_labels = {key: lbl for lbl, key in _ECOREGION_CHOICES if key}
         self._ecoregion_combo = CheckableComboBox(placeholder="Restoring toward…")
         for key, lbl in _eco_labels.items():
             self._ecoregion_combo.add_check_item(lbl, key)

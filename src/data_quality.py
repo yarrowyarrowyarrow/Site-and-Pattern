@@ -13,8 +13,9 @@ Design notes:
     can call ``validate_all()`` without a display.
   * Source of truth for the canonical permaculture_uses tags is
     ``src.db.plants._USE_DEFINITIONS`` — imported, not duplicated.
-  * Source of truth for the canonical Alberta ecoregion keys is
-    ``_AB_ECOREGION_CHOICES`` in ``src/plant_panel.py``; that module
+  * Source of truth for the canonical ecoregion keys is
+    ``_ECOREGION_CHOICES`` in ``src/plant_panel.py`` (renamed from the
+    province-scoped ``_AB_ECOREGION_CHOICES`` in V2.15); that module
     imports PyQt6, so the constant is read out via ``ast.literal_eval``
     on the source text rather than via a real import.
   * The enum allowlists for plant_type / water_needs / etc. match the
@@ -103,6 +104,12 @@ CALENDAR_STATUS   = {"dormant", "start_indoors", "direct_sow", "transplant",
 # uncertain-native records; the code handles it via _truthy_int.
 NATIVE_TO_ALBERTA = {0, 1, "0", "1", "1?", "0?"}
 
+# Canadian province/territory codes accepted in the native_provinces field
+# (V2.15). The app's coverage is the prairies (AB, SK) with neighbours allowed
+# for provenance completeness.
+PROVINCE_CODES = {"AB", "SK", "MB", "BC", "ON", "QC", "NB", "NS", "PE", "NL",
+                  "YT", "NT", "NU"}
+
 # Month tokens for bloom_period / fruit_period. Short forms are the
 # preferred output of the existing parser at
 # src/analysis_panel.py:759 et al; long forms are accepted on input.
@@ -147,10 +154,14 @@ def _load_ecoregion_keys() -> set[str]:
                 and node.value is not None):
             target_name = node.target.id
             value_node = node.value
-        if target_name == "_AB_ECOREGION_CHOICES":
+        # Match the canonical list (renamed _ECOREGION_CHOICES in V2.15; the
+        # legacy _AB_ECOREGION_CHOICES name is kept as an alias). Require a list
+        # literal so the alias assignment (a bare Name) is skipped.
+        if (target_name in ("_ECOREGION_CHOICES", "_AB_ECOREGION_CHOICES")
+                and isinstance(value_node, ast.List)):
             literal = ast.literal_eval(value_node)
             return {key for _label, key in literal if key}
-    raise RuntimeError("_AB_ECOREGION_CHOICES not found in plant_panel.py")
+    raise RuntimeError("_ECOREGION_CHOICES not found in plant_panel.py")
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
@@ -321,10 +332,22 @@ def validate_plant(
         if token and token not in use_keys:
             warn(f"unknown permaculture_uses tag {token!r}")
 
-    eco_raw = record.get("ab_ecoregion", "") or ""
+    # Accept the new province-neutral ``ecoregion`` key or the legacy
+    # ``ab_ecoregion`` (V2.15 rename); the seed JSON still ships the latter.
+    eco_raw = record.get("ecoregion") or record.get("ab_ecoregion", "") or ""
+    if isinstance(eco_raw, list):
+        eco_raw = ",".join(eco_raw)
     for token in (t.strip() for t in eco_raw.split(",")):
         if token and token not in ecoregion_keys:
-            warn(f"unknown ab_ecoregion key {token!r}")
+            warn(f"unknown ecoregion key {token!r}")
+
+    # native_provinces (V2.15): optional; warn on unknown province codes.
+    np_raw = record.get("native_provinces") or ""
+    if isinstance(np_raw, list):
+        np_raw = ",".join(np_raw)
+    for token in (t.strip().upper() for t in np_raw.split(",")):
+        if token and token not in PROVINCE_CODES:
+            warn(f"unknown native_provinces code {token!r}")
 
     return errors, warnings
 

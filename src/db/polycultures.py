@@ -250,7 +250,7 @@ def get_community_facets() -> dict:
         # constant within a member so the GROUP BY leaves them untouched.
         rows = conn.execute(
             "SELECT gm.id AS mid, gm.polyculture_id AS cid, gm.layer AS layer, "
-            "gm.role AS role, gm.functions AS functions, p.ab_ecoregion AS eco, "
+            "gm.role AS role, gm.functions AS functions, p.ecoregion AS eco, "
             "p.sun_requirement AS sun, p.water_needs AS water, "
             "GROUP_CONCAT(u.key) AS use_keys "
             "FROM polyculture_members gm "
@@ -329,7 +329,7 @@ def get_library_index() -> dict:
         ).fetchall()
         member_rows = conn.execute(
             "SELECT gm.id AS mid, gm.polyculture_id AS cid, gm.layer AS layer, "
-            "gm.role AS role, gm.functions AS functions, p.ab_ecoregion AS eco, "
+            "gm.role AS role, gm.functions AS functions, p.ecoregion AS eco, "
             "p.sun_requirement AS sun, p.water_needs AS water, "
             "p.common_name AS common_name, p.scientific_name AS scientific_name, "
             "p.native_to_alberta AS native, "

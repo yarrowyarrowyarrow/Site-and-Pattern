@@ -19,7 +19,12 @@ CREATE TABLE IF NOT EXISTS plants (
     -- Extended fields (schema v2)
     bloom_period TEXT,              -- e.g. "May–June"
     fruit_period TEXT,              -- e.g. "August–September"
-    native_to_alberta INTEGER DEFAULT 0,  -- 1 = native to Alberta
+    native_to_alberta INTEGER DEFAULT 0,  -- 1 = native to Alberta (back-compat
+                                    -- flag; derived from native_provinces on seed)
+    native_provinces TEXT,          -- comma-separated province codes the plant is
+                                    -- native to (v42), e.g. "AB,SK". The
+                                    -- province-neutral generalization of
+                                    -- native_to_alberta.
     edible_parts TEXT,              -- comma-separated e.g. "fruit,leaves,flowers"
     deciduous_evergreen TEXT,       -- deciduous | evergreen | herbaceous
     soil_ph_min REAL,
@@ -30,11 +35,14 @@ CREATE TABLE IF NOT EXISTS plants (
     growth_rate TEXT,               -- slow | moderate | fast
     years_to_maturity INTEGER,      -- estimated years to reach mature size
     growth_curve TEXT,              -- fast_early | steady | slow_start
-    -- Schema v11
-    ab_ecoregion TEXT,              -- comma-separated AB ecoregion tags
+    -- Schema v11; renamed ab_ecoregion -> ecoregion in v42 (province-neutral,
+    -- Saskatchewan expansion). Ecoregion keys are shared across provinces where
+    -- the ecoregion is the same — nature does not respect borders (P1/P2).
+    ecoregion TEXT,                 -- comma-separated ecoregion tags
                                     -- (aspen_parkland, mixedgrass_prairie,
-                                    --  fescue_foothills, boreal_mixedwood,
-                                    --  riparian, wet_meadow, subalpine_montane)
+                                    --  moist_mixedgrass, fescue_foothills,
+                                    --  boreal_mixedwood, riparian, wet_meadow,
+                                    --  subalpine_montane)
     -- Safety + spread (schema v18, V1.44 chunk 2). Empty string = UNASSESSED,
     -- which is deliberately NOT the same as 'none' — the safety filters use a
     -- denylist (exclude only known-toxic), so unassessed plants are surfaced
@@ -169,6 +177,9 @@ CREATE TABLE IF NOT EXISTS fauna (
     taxon TEXT NOT NULL CHECK (taxon IN
         ('lepidoptera', 'bird', 'bee', 'other_insect', 'mammal')),
     ab_native INTEGER NOT NULL DEFAULT 1,
+    native_provinces TEXT,          -- comma-separated province codes (v42),
+                                    -- e.g. "AB,SK"; province-neutral companion
+                                    -- to ab_native.
     range_notes TEXT,
     icon TEXT,
     description TEXT,
