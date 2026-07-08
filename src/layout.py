@@ -237,10 +237,12 @@ def drift_positions(center_lat: float, center_lng: float, count: int,
 
 
 def positions_for_layout(layout: str, center_lat: float, center_lng: float,
-                         count: int, spacing_m: float
+                         count: int, spacing_m: float, *, seed: int = 0
                          ) -> list[tuple[float, float]]:
     """Dispatch to the requested pattern. Unknown / empty ``layout`` falls back
-    to ``scatter`` (the safe, natural default)."""
+    to ``scatter`` (the safe, natural default). ``seed`` varies the jitter and
+    drift bearing of the seeded-random patterns — pass a per-group value so
+    repeated drifts of one species don't come out as identical stamps."""
     layout = (layout or "").lower().strip()
     if layout == ROW:
         return row_positions(center_lat, center_lng, count, spacing_m)
@@ -249,8 +251,10 @@ def positions_for_layout(layout: str, center_lat: float, center_lng: float,
     if layout == CIRCLE:
         return circle_positions(center_lat, center_lng, count, spacing_m)
     if layout == DRIFT:
-        return drift_positions(center_lat, center_lng, count, spacing_m)
-    return scatter_positions(center_lat, center_lng, count, spacing_m)
+        return drift_positions(center_lat, center_lng, count, spacing_m,
+                               seed=seed)
+    return scatter_positions(center_lat, center_lng, count, spacing_m,
+                             seed=seed)
 
 
 def default_layout_for(plant_type: str) -> str:

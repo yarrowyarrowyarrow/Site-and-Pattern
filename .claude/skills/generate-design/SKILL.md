@@ -94,35 +94,66 @@ Spec safety rails, in order of defence:
 
 ## Placement engine facts (the deterministic half)
 
-- The anchor pool is `grid_cells_in_boundary` at `_SPACING_M` = 6 m.
-  Anchors inside keep-out circles (existing trees/buildings/water,
-  `src/exclusion.py:keepout_circles`) are removed; when the user drew
-  restoration/lawn-conversion fill zones, the pool is restricted to them
-  (`fill_regions`) — guarded so an empty restriction falls back to the
-  whole boundary rather than starving placement.
+- The anchor pool is `grid_cells_in_boundary` at `_SPACING_M` = 6 m
+  (row-major from the NW corner — see the spread rule below for why that
+  ordering must never drive selection). Anchors inside keep-out circles
+  (existing trees/buildings/water, `src/exclusion.py:keepout_circles`)
+  are removed; when the user drew restoration/lawn-conversion fill
+  zones, the pool is restricted to them (`fill_regions`) — guarded so an
+  empty restriction falls back to the whole boundary rather than
+  starving placement.
+- **Anchors spread by farthest-point sampling (V2.20).** Each anchor
+  after the first prefers the free cell farthest from everything
+  already placed. In `ScoredPositioner.take_best` this is a 20% score
+  term saturating at a quarter of the pool diagonal (`_spread_score`);
+  the FIRST anchor stays with ecology + composition (a tall tree still
+  goes to the north edge — `tests/test_aesthetics.py` pins it) with
+  only an epsilon centrality tie-break so flat sites start from the
+  middle. In the no-terrain `_Positioner`, farthest-point *is* the
+  selection (`_pop_spread`, centre-first). Before this, cells were
+  consumed in row-major order and every design crammed along the
+  boundary's north edge (see `legacy-lessons`).
+- **A species repeats as modest drifts, not one blob.**
+  `_split_into_drifts` caps members per group (`_DRIFT_MAX`: tree 3,
+  shrub 6, default 9) so a qty-18 wildflower becomes two-plus drifts
+  that the spread term pushes apart and the rhythm aesthetic rewards —
+  the Rainer/West "masses repeated in rhythm" pattern. Each group gets
+  a distinct layout seed so repeated drifts aren't identical stamps.
 - Plants place in **ecological layer order** — `_LAYER_ORDER` maps
   plant_type tree→0 … groundcover→6 — so canopy anchors first and a
   **dripline bonus** attracts understory into the zone around freshly
   placed trees. Stable sort preserves the model's order within a layer.
-- `ScoredPositioner.take_best` picks the highest-scoring free cell for
-  each plant using the pre-computed `cell_env_map`
-  (`src/placement_score.py:build_cell_env_map` — shade fraction,
-  elevation percentile, slope, aspect, edge flag per cell). **No DB or
+- `ScoredPositioner.take_best` scores every free cell **65% ecological
+  fit** (`src/placement_score.py:score_cell_for_plant` over the
+  pre-computed `cell_env_map` — shade, moisture, slope, edge), **15%
+  composition** (`aesthetic_score` — tall-north gradient, bed cohesion,
+  rhythm), **20% spread**. Ecology stays dominant by construction: a
+  wet-obligate still beats the pull to unused dry ground. **No DB or
   network calls at score time** — everything environmental is
   pre-computed once per design pass; keep it that way, it's the perf
-  contract. When terrain data is absent the older zone-routing
-  `_Positioner` (wet/dry/shaded buckets from `src/zoning.py`) is the
-  fallback.
+  contract. When terrain data is absent the zone-routing `_Positioner`
+  (wet/dry/shaded buckets from `src/zoning.py`) is the fallback.
 - Density: `_DENSITY_FRACTION` = sparse 0.30 / balanced 0.60 / full 0.90
   of the boundary's plantable capacity, with an absolute cap
   `_MAX_GENERATED_PLANTS = 300` — a generated design is a workable seed
-  the user refines, not thousands of markers that stall the map.
+  the user refines, not thousands of markers that stall the map. The
+  expansion is **habit-weighted** (herbaceous 4 : shrub 2 : tree 1) so
+  density fills the lot with the matrix/drift ground layer, not equal
+  numbers of every habit.
+- The offline selector ranks candidates before capping
+  (`_rank_offline_plants`): keystone/host/pollinator/bird-food value
+  first, round-robin across habit buckets for vertical layers, and
+  moisture-extreme specialists (aquatic / high-water) demoted to a
+  second tier — without site moisture data the design must not gamble
+  on a bog (P9). Pre-V2.20 it took the first N alphabetical rows, which
+  led generic yards with "B…" wetland plants.
 - Layout patterns (`src/layout.py`): row/grid/circle/scatter/drift.
   `scatter_positions` and `drift_positions` use `random.Random(seed)` —
   **deterministic for a given seed**. Never introduce unseeded
   randomness anywhere in placement; "realizing the same spec twice gives
   the same design" is what makes the critic's re-place step cheap and
-  the tests stable.
+  the tests stable (`tests/test_llm_design.py:TestPlacementSpread`
+  pins spread, drift splitting, and determinism).
 - Per-plant spacing comes from the catalogue (`_plant_spacing_m`),
   falling back to 6 m. Community placement checks `community_fits`
   before anchoring.

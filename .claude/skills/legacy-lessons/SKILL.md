@@ -232,6 +232,39 @@ so the GC destroyed them while the OS thread still ran.
 lines that look optional. Intermittent crashes near threads = missing
 reference, not a Qt bug. (See `add-feature`, `external-data`.)
 
+## 16. The top-band design (V2.20)
+
+A user screenshot showed a generated design with every plant crammed
+along the boundary's north edge and one corner — ~80% of a 3,372 m² lot
+empty. Three compounding causes, none of which any test caught because
+the tests asserted *validity* (inside boundary, no duplicates) but never
+*distribution*:
+- The placement pool (`grid_cells_in_boundary`) is row-major from the
+  NW corner, and the no-terrain `_Positioner` consumed it **in list
+  order** — anchors marched along the top rows.
+- On flat sites the scored path's strict-`>` tie-break degenerated to
+  the same first-cell-in-list choice, and the bed-cohesion aesthetic
+  term then actively pulled every later group toward the first.
+- Each species' whole quantity landed as **one blob** at a single
+  anchor (a qty-12 wildflower at 0.5 m spacing is a 2 m dot), so even
+  well-spread anchors couldn't use the space.
+
+**Scar:** farthest-point anchor sampling (spread term at 20% of the
+placement score; first anchor still decided by ecology + composition,
+with centrality as an epsilon tie-break — `tests/test_aesthetics.py`
+caught the first draft of this fix overriding the tall-tree-north
+rule), `_split_into_drifts` (species repeat as capped drifts),
+habit-weighted density expansion, ecological ranking of the offline
+pick (wetland specialists demoted for unknown-moisture sites) — all in
+`src/llm_design.py` — plus `tests/test_llm_design.py:TestPlacementSpread`
+and `tests/test_placement_score.py:TestAnchorSpread`, which assert
+coverage, drift separation, ecology-beats-spread, and determinism.
+**Rule:** when an algorithm selects from an ordered pool, list order is
+a hidden bias — either randomize deterministically or make the ordering
+criterion explicit. And test the *shape* of an output (spans, spacing,
+distribution), not just its validity; "all plants inside the boundary"
+was green while the feature was visibly broken. (See `generate-design`.)
+
 ## The meta-lessons
 
 1. **Silence is the enemy.** Nearly every entry above failed *silently*:

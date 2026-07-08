@@ -163,5 +163,37 @@ class TestIndex(unittest.TestCase):
         )
 
 
+class TestQuotedFactsCurrent(unittest.TestCase):
+    """Volatile facts quoted in skills must match the code they describe.
+
+    A skill that states a stale fact is worse than one that says nothing:
+    the reader trusts it. Where a skill quotes a value the code owns, this
+    guard makes the quote part of the change — bump the code, and the test
+    points you at the skills to update (the same discipline as the dead-path
+    check above)."""
+
+    def test_quoted_schema_version_matches_code(self):
+        src_text = (_ROOT / "src" / "db" / "plants.py").read_text(
+            encoding="utf-8")
+        m = re.search(r"^_SCHEMA_VERSION\s*=\s*(\d+)", src_text, re.M)
+        self.assertIsNotNone(m, "_SCHEMA_VERSION not found in src/db/plants.py")
+        actual = int(m.group(1))
+        offenders = []
+        for d in _skill_dirs():
+            for md in sorted(d.glob("*.md")):
+                text = md.read_text(encoding="utf-8")
+                for q in re.finditer(r"_SCHEMA_VERSION\s*=\s*(\d+)", text):
+                    if int(q.group(1)) != actual:
+                        offenders.append(
+                            f"{md.relative_to(_ROOT)}: quotes "
+                            f"_SCHEMA_VERSION = {q.group(1)}, code says "
+                            f"{actual}")
+        self.assertFalse(
+            offenders,
+            "stale schema version quoted in skill(s) — update them as part "
+            "of the schema change:\n" + "\n".join(offenders),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

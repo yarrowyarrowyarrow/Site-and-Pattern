@@ -419,5 +419,93 @@ class TestExistingFeaturesNote(unittest.TestCase):
         self.assertEqual(llm._existing_features_note(proj), "")
 
 
+class TestPlacementSpread(unittest.TestCase):
+    """V2.20 — a generated design must use the whole boundary and mass each
+    species as repeated modest drifts, not one blob. Guards the regression
+    where every group crammed along the boundary's north edge (row-major
+    cell consumption + cohesion pull) leaving ~80% of the lot empty."""
+
+    @classmethod
+    def setUpClass(cls):
+        _use_our_db()
+
+    @staticmethod
+    def _boundary():
+        """~90 m × 54 m rectangle at Edmonton, as (lat, lng) corners."""
+        import math
+        lat0, lng0 = 53.5461, -113.4938
+        dlat = 90.0 / 111320.0
+        dlng = 54.0 / (111320.0 * math.cos(math.radians(lat0)))
+        return [(lat0, lng0), (lat0 + dlat, lng0),
+                (lat0 + dlat, lng0 + dlng), (lat0, lng0 + dlng)]
+
+    def _generate(self):
+        spec = {
+            "summary": "spread test",
+            "plants": [
+                {"query": "yarrow", "quantity": 18},
+                {"query": "willow", "quantity": 4},
+            ],
+        }
+        return llm.generate_design(
+            "use the whole yard", boundary=self._boundary(),
+            client=_FakeClient(spec), match_site=False, revise=False)
+
+    def test_design_covers_the_boundary(self):
+        project = self._generate()
+        placed = project.placed_plants
+        self.assertGreater(len(placed), 10)
+        b = self._boundary()
+        b_lat_span = max(p[0] for p in b) - min(p[0] for p in b)
+        b_lng_span = max(p[1] for p in b) - min(p[1] for p in b)
+        lat_span = (max(p["lat"] for p in placed)
+                    - min(p["lat"] for p in placed))
+        lng_span = (max(p["lng"] for p in placed)
+                    - min(p["lng"] for p in placed))
+        self.assertGreaterEqual(
+            lat_span / b_lat_span, 0.5,
+            f"plants cover only {lat_span / b_lat_span:.0%} of the "
+            f"boundary's north–south span — the top-band regression")
+        self.assertGreaterEqual(
+            lng_span / b_lng_span, 0.5,
+            f"plants cover only {lng_span / b_lng_span:.0%} of the "
+            f"boundary's east–west span")
+
+    def test_species_repeat_as_separated_drifts(self):
+        import math
+        project = self._generate()
+        yid = _api.query_plants(query="yarrow")[0]["id"]
+        pts = [(p["lat"], p["lng"]) for p in project.placed_plants
+               if p.get("plant_id") == yid]
+        self.assertGreater(len(pts), 9, "density expansion should have "
+                                        "grown the yarrow beyond one drift")
+        cos_lat = math.cos(math.radians(pts[0][0]))
+        max_d = 0.0
+        for i, a in enumerate(pts):
+            for c in pts[i + 1:]:
+                dx = (c[1] - a[1]) * 111320.0 * cos_lat
+                dy = (c[0] - a[0]) * 111320.0
+                max_d = max(max_d, (dx * dx + dy * dy) ** 0.5)
+        self.assertGreater(max_d, 20.0,
+                           "one species should spread as repeated drifts "
+                           "across the lot, not pool in a single blob")
+
+    def test_split_into_drifts_caps_group_size(self):
+        yid = _api.query_plants(query="yarrow")[0]["id"]
+        out = llm._split_into_drifts([(yid, 20, "")])
+        self.assertEqual(sum(q for _, q, _ in out), 20)
+        self.assertTrue(all(q <= llm._DRIFT_MAX_DEFAULT for _, q, _ in out))
+        self.assertGreaterEqual(len(out), 3)
+
+    def test_generation_is_deterministic(self):
+        p1 = self._generate()
+        p2 = self._generate()
+        pts1 = sorted((p["plant_id"], round(p["lat"], 9), round(p["lng"], 9))
+                      for p in p1.placed_plants)
+        pts2 = sorted((p["plant_id"], round(p["lat"], 9), round(p["lng"], 9))
+                      for p in p2.placed_plants)
+        self.assertEqual(pts1, pts2)
+
+
 if __name__ == "__main__":
     unittest.main()
