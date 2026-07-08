@@ -76,6 +76,7 @@ These started life as entries below and have since landed — the State markers 
 | F24 | Site photo overlay + markup | `src/site_photo.py` + `src/site_photo_flow.py`, surfaced in `src/site_panel.py` + `html/map/06-overlays.js` | P11, P5 |
 | F37 (part) | "Design for a bee" habitat builder + Alberta native-bee data spine | `src/bee_habitat.py`, `data/bee_attributes_master.json` (+ Apidae roster in `data/fauna_master.json`), `src/db/fauna.py`, surfaced in `src/analysis_panel.py` (Bees tab) | P8, P3, P10, P5, P9 |
 | F40 | Planting Plan — buy-it / plant-it sheet (quantities, form, spacing, planting window, phased schedule) | `src/planting_plan.py`, surfaced in `src/app.py` + `src/pdf_export.py` | P8, P4, P11, P6, P9 |
+| F11 | Value-vs-price framing — the habitat value a design's spend *creates*, read together with its cost | `src/habitat_score.py` (`habitat_nudges`), surfaced in `src/on_this_design_panel.py` (Stats: habitat value → "where to grow next" → cost → "what your spend creates") | P6 |
 
 Net effect on the principles: **P1 partial → strong** (pattern language is now explicit), and
 P3/P4/P5 are visibly stronger. **F40 is the first real ACT/OUTPUT win** — it turns a design into
@@ -114,7 +115,7 @@ overlay (F5)** and the **unified edges layer (F7)** — now deliberately *after*
 | F8 | Uncertainty language pass | S | Low | P9 |
 | ✅ F9 | Specialist-host spotlight | S | Low | P3, P6 |
 | ✅ F10 | Lawn-equivalent counterfactual | S | Low | P6, P8 |
-| F11 | Value-vs-price framing | S | Low | P6 |
+| ✅ F11 | Value-vs-price framing | S | Low | P6 |
 | F12 | Inline "why this matters" provenance/citations | S | Low | P7, P6 |
 | F13 | Reference-ecosystem fidelity score | M | Low | P2, P6 |
 | F14 | Establishment-likelihood band | M | Med | P9 |
@@ -172,6 +173,17 @@ year=…)` → `scene3d.plant_3d_state(plant, lat, lng, year)` scales size via
 comparison (2D thumbnails or 3D captures) calling `build_scene` at years {1,5,15,30}
 clamped to `succession.timeline_max_years`. Reuse the 3D window's offscreen capture path
 (the same one the "yard photo" bake uses). **First slice:** a 2×2 of 2D canopy renders.
+
+### ✅ Forage calendar — whole-design bloom succession + gaps — *Shipped (P6, P9)*
+**Shipped** as `src/forage_calendar.py` (Qt-free core) + `src/forage_calendar_widget.py` (a QPainter
+chart) behind a new **Analysis → Forage** tab (V2.13). The Habitat Value Score already rewarded *bloom
+continuity* as a hidden sub-score; this makes it **legible**: a 12-month bar of how many plants flower
+each month (growing season shaded), the pollinator **gap months** flagged red, and a per-plant
+spring→fall **succession** band coloured by flower colour. Honest per P9 — wind-pollinated graminoids
+don't count as forage, undated bloomers fall back to a summer relay, and the gaps are named, with
+**gap-filling suggestions** (unplaced Alberta natives that flower in a gap, best-fit first). Parses
+bloom windows with the same `parse_month_range` the score uses, so calendar and score never disagree.
+Refreshes live from the placed plants (no button).
 
 ### ✅ F3 · Food-web completeness score — *Shipped · was Impact High / Effort M / Risk Low (P3, P6)*
 **Shipped** as the `food_web` line in `src/habitat_score.py`, fed into `src/design_critic.py`.
@@ -253,10 +265,13 @@ total; when conversion zones are drawn, the contrast is grounded in the lawn+res
 summary it already computes for the "On This Design" tab into the analysis panel, so the callout stays
 live with edits. Qt-free and unit-tested.
 
-### F11 · Value-vs-price framing — *Impact Med · Effort S · Risk Low (P6)*
+### ✅ F11 · Value-vs-price framing — *Shipped · was Impact Med / Effort S / Risk Low (P6)*
 Pair the cost estimate with the ecological value it buys (the Graeber/Raworth point).
-**How:** put `sourcing.design_cost(...)` next to the habitat score in the Analysis panel
-and the PDF, framed as "what your spend creates" rather than cost alone.
+**Shipped (V2.13):** the On This Design → Stats tab now reads top-to-bottom as habitat
+value → **"Where to grow next"** (the biggest-headroom habitat-score gaps as ranged,
+actionable nudges, `habitat_score.habitat_nudges`) → cost → **"What your spend creates"**
+(wildlife species / native species / structures the spend buys), so the cost never stands
+alone. Analysis-panel/PDF parity can follow later.
 
 ### F12 · Inline "why this matters" provenance — *Impact Med · Effort S · Risk Low (P7, P6)*
 Cite the science at the point of use (Tallamy, Xerces, McHarg), not buried. **How:** add
@@ -405,12 +420,105 @@ connectivity to the design's planted areas; a new analysis layer.
     driven through `map3d_js.set_bee_mode` / `set_bee_targets`). Purely additive to the viewer — when
     off, OrbitControls owns the camera exactly as before. (A true UV/compound-eye post-process pass is
     a later polish; the vendored three.js addons don't ship EffectComposer.)
+    *V2.12 polish — the fly-through became a **nectar run**:* brushing a glowing flower collects its
+    nectar (sparkle burst + a `Nectar n/N` HUD with a bearing arrow to the nearest unvisited flower,
+    per-flower "collected!" callouts naming the plant, and a "this design feeds ⟨bee⟩" celebration when
+    the run is complete — the bee's name rides along on `set_bee_targets`); **F** autopilots to the
+    nearest unvisited flower for players who don't fly WASD; spawn faces the nearest target; flight is
+    velocity-smoothed at 60 fps with banking; the bee avatar was rebuilt lit + properly scaled (its old
+    wing discs used to whiteout half the screen). Alongside: a viewer-wide visual pass (ACES filmic
+    tone mapping, a gradient sky dome + time-of-day atmosphere so low sun goes golden, a tiled
+    procedural meadow ground texture, point-sprite size clamping, shadow-bias tuning) and the
+    previously-unregistered `permaResetView` hook now works (Reset view button + sprite gallery).
   - **✅ Increment 3 — "What the bee sees" map recolour (shipped):** a "Show what this bee sees on the
     map" toggle in the Bees tab recolours the 2D Leaflet map as the selected bee's floral-resource map —
     its host plants glow like nectar (graded by tongue-fit for bumble bees via `setBeeForageView`), every
     other plant greys out, with a legend. The original F37 card; Yong's Umwelt made literal.
     (`src/map_js.py` + `html/map/06-overlays.js`, wired panel → map through the Bees tab's
     `bee_map_overlay_*` signals, reusing the same `floral_matches_for_bee` selection.)
+  - **✅ Increment 4 — Lepidoptera + a seasonal nectar tour (shipped, V2.12):** the fly-through opened
+    to **butterflies & moths** and became **bloom-accurate**. A new schema-v40 `lepidoptera_attributes`
+    table (flight season, adult-nectar genera, overwintering stage, activity; seeded from
+    `data/lepidoptera_attributes_master.json`, sourced after Acorn & Sheldon 2006 and Pohl et al. 2010,
+    the ZooKeys annotated list) feeds `src/lep_habitat.py`, which yields a butterfly/moth's **nectar
+    plants** (documented edges + genus fallback — empty for non-feeding giant silk moths, P9) and its
+    **larval hosts** (the app's existing rich `larval_host` edges). The pollinator selector in
+    `src/scene3d_window.py` now lists bees *and* butterflies/moths; the viewer picks a bee/butterfly/moth
+    avatar, floats green "caterpillar nursery" markers over larval hosts, and **only lets nectar be
+    collected from flowers actually in bloom that month** (the bloom-gating fix — nectar used to be
+    collectable year-round). A **"Tour the year"** toggle drives a hands-free seasonal tour: the flyer
+    auto-hops flower to flower while a host-side month timer walks the creature's flight season, so you
+    watch the bloom succession come and go (`permaSetBeeTour` + `set_bee_tour`).
+  - **✅ Increment 5 — Communities *for a creature* (shipped, V2.12):** the plant-community panel grew a
+    **"For a creature…"** button. Pick a native bee, butterfly or moth and `src/creature_community.py`
+    (Qt-free) assembles a ready-to-plant community from its nectar/pollen plants and — for
+    butterflies/moths — its caterpillar host plants, bucketed by vegetation layer and laid out in
+    concentric rings (canopy centre → nectar-rich edge), with an honest overwintering/nesting note.
+    A Monarch yields a *Monarch Waystation* (milkweed hosts + late-nectar composites); a non-feeding
+    Cecropia moth yields a host-only tree/shrub community.
+  - **✅ Increment 7 — 3D readability pass + "Show its plants" (shipped, V2.12):** answering the "the
+    bugs clump / you can't tell what is what / the bee's too fast" feedback. Ambient wildlife no longer
+    piles onto one keystone plant — `scene_wildlife` spreads each species across the plants it uses and
+    runs a spacing-relaxation pass so no two creatures sit within ~0.85 m; each critter gets a
+    contact-shadow disc (tracking the fliers) so a low bee reads apart from a flower. Hovering a creature
+    now identifies it and the edge — *"Bumble bee · sips nectar at Wild Bergamot"* (raycast wildlife
+    first, plant names as the fallback). The flyer's cruise dropped 7→4 m/s with a gentler autopilot, and
+    the flower's name is revealed on approach as a constant-screen-size floating label. New **"✨ Show its
+    plants"** button (`permaSetPlantSpotlight`): in orbit/walk it raises a glowing, name-labelled light
+    column over every plant in the design the selected creature benefits from and sends one of that
+    creature touring them — the at-a-glance "which of my plants help this bee?" the 2D "what the bee sees"
+    lens does on the map, now in 3D. (Also fixed a latent dispose bug that freed the shared critter-shadow
+    geometry on every wildlife rebuild.)
+  - **✅ Increment 6 — Ambient wildlife + a third-person walk (shipped, V2.12):** the 3D scene now shows
+    **the animals the design's plants actually support**, not just the one you fly. `src/scene_wildlife.py`
+    (Qt-free) reads the documented plant↔fauna edges for the scene's plants and places a capped,
+    balanced, deterministic community — **bees drawn per genus** (a metallic-green *Agapostemon* sweat
+    bee, a fuzzy *Bombus*, a stout leafcutter, a slender mining bee, a wasp-like cuckoo bee),
+    butterflies/moths by species colourway, **birds, hover- & dragonflies, lady beetles and small
+    mammals** — each standing on/near a plant it uses (a bird in a fruiting shrub, a bee at a nectar
+    flower), pushed via `permaSetWildlife` and animated (fliers circle their flower, birds perch and
+    look around, mammals hop). A new **"🚶 Walk the garden"** button drops you into a **third-person**
+    stroll (a low-poly walker + follow camera, WASD + drag-look) to meet them; wildlife shows in the
+    orbit + walk views and hides while flying as one creature. The flown avatar is now **species-styled**
+    from the same appearance spec (`appearance_for_fauna`), so *which* bee you are is visible. Alongside,
+    ~50 curated documented `nectar` plant↔lepidoptera edges were added (schema v41) so nectaring
+    butterflies place from real records. `src/scene3d_window.py` computes wildlife on every scene push;
+    the viewer factories + walk mode live in `html/scene3d.html`.
+  - **✅ Increment 7 — "Show its plants" + readability/feel pass (shipped, V2.12):** a **"✨ Show its
+    plants"** button lights + name-labels every plant in the design the selected creature benefits from
+    and sends one of it touring them (`permaSetPlantSpotlight`) — the 3D cousin of the 2D "what the bee
+    sees" lens. Alongside: wildlife **de-clumping** (spread each species across the plants it uses +
+    a min-separation relaxation so a rich scene reads as individuals), **contact shadows** under critters,
+    **hover-identification** ("Bumble bee · sips nectar at Wild Bergamot"), a **slower flyer** (7→4 m/s)
+    that **reveals the flower's name on arrival**, and species-styled fly avatars.
+  - **✅ Increment 8 — Seasonal + diurnal truth and a night mode (shipped, V2.12):** ambient wildlife is
+    gated to when each animal is actually out — documented flight seasons for bees & leps, a coarse
+    warm-season default for insects, year-round for birds; and a day/night split so day brings
+    bees/butterflies while **night swaps in moths & bats** (owls too). The contract carries an
+    `is_night` flag (sun below the horizon; the hour slider now spans a full 24 h), and the viewer
+    renders a **moonlit night** — deep sky, a moon + star field, dim cool moonlight, additive-glowing
+    blooms (moth-pollination made visible, P5), and an emissive lift so nocturnal critters read against
+    the dark. This also thins the daytime clutter (P9: show only what's true). Data in
+    `src/scene_wildlife.py` (+ `bee_flight_seasons` / `lep_activity_seasons` in `src/db/fauna.py`),
+    render in `html/scene3d.html`.
+  - **✅ Increment 9 — Liveliness pass + cinematic flyover (shipped, V2.13):** two tracks. *Liveliness:*
+    flower sprites de-blob (per-point size + even areal/vertical spread → distinct blooms, not a disc);
+    ambient wildlife now **travels** the plants its species uses (bees cruise-land-sip, butterflies/moths
+    flutter, birds hop perch-to-perch, mammals scurry-and-freeze) instead of orbiting one; and a
+    **"🔎 Identify"** toggle adds a "who lives here" roster + distance-gated name labels so you read the
+    scene without hovering. *Cinematic:* a **"🎬 Flyover"** button plays a ~60 s three-act storyboard —
+    grow the design year 0→25, turn the seasons at maturity, fall into a moonlit night — while the viewer
+    slow-orbits with letterbox bars + a lower-third caption (`permaSetCinematic` / `set_cinematic_caption`;
+    storyboard in `src/scene3d_window.py`). Time is the undervalued design variable made watchable (P4);
+    "grown, not designed" made literal (P2).
+  - **✅ Increment 10 — Polish + wildlife legible in the score (shipped, V2.13):** *Polish:* **walk-mode
+    collision** (trunks + building footprints as bounding circles; you slide around them instead of
+    clipping through, and can still stroll under a canopy) and a **two-row toolbar** (scene controls up
+    top; a labelled Creature / View row below) so seven mode buttons stop reading as one strip. *Score
+    made legible (P6):* the "who lives here" roster now headlines the design's **total ecological reach**
+    — "your plants support N wildlife species" with the per-taxon breakdown — computed from the same
+    documented edges as the Habitat Value Score (`scene_wildlife.support_by_taxon`, pushed on
+    `set_wildlife`), so the number behind the score is visible right beside the animals it represents.
 - **F38 · Mycoremediation / degraded-site notes** — *S · Low (P8)*: well-cited restoration
   techniques for contaminated/compacted ground (content, directional).
 - **F39 · Sensor integration hooks** — *L · High — external (P11)*: optional soil-moisture/
@@ -471,6 +579,115 @@ pre-check sensible Generate defaults (budget-friendly, won't-take-over). Reuses
 Lower the learning curve in place: tooltips on the boundary tool, placement modes and plant
 filters; a geocode-failure toast that points to pin-drop; a bolded first-step line in the Site
 panel. **How:** small, local UI additions — no new surfaces.
+
+---
+
+## Education & mastery — the learning layer (F46–F53)
+
+The app already teaches by *showing* (role badges F1, the score rubric + food-web check F3,
+communities as patterns F4, "become a bee/butterfly" embodiment, the lawn counterfactual F10).
+What it never lets you do is **test recall**, **break something to understand it**, or **follow a
+narrative**. These entries add the missing learning mechanisms — retrieval practice, learning by
+breaking, and guided narrative — always on ecological-relationship ground (never Indigenous
+plant-use knowledge; Principle 12).
+
+| ID | Feature | Effort | Risk | Principle |
+|----|---------|--------|------|-----------|
+| ✅ F46 | Pull-a-plant impact simulator | M | Low | P3, P5, P10 |
+| ✅ F48 | Field Study quiz layer | M | Low | P5, P7 |
+| ✅ F47 | Feed-a-chickadee provisioning scenario | S–M | Low | P3, P6 |
+| F49 | Ornamental → native swap card | S–M | Med — new seed data | P6, P8 |
+| ✅ F50 | Walkable reference-ecosystem library | L | Med — 3D assets | P2, P6 |
+| ✅ F51 | Phenology "what's happening now" dashboard | M | Low | P4, P11 |
+| ✅ F52 | Docent / presentation mode | M | Med — capture plumbing | P5 |
+| ✅ F53 | Guided lesson track | M | Low | P5, P7 |
+
+### ✅ F46 · Pull-a-plant impact simulator — *Shipped · was Impact High · Effort M · Risk Low (P3, P5, P10)*
+**Shipped** in `src/plant_impact.py` (`pull_plant_impact`), surfaced in the Analysis → Habitat tab
+("Pull-a-plant") and exposed headless via `permadesign_api.run_analysis`-adjacent
+`pull_plant_impact`. The flagship *learn-by-breaking-it* mechanic: pick a placed species and preview
+what removing it costs — recomputes `habitat_score.compute_habitat_score` with and without it for the
+score delta, diffs `fauna.fauna_supported_by_plants` per taxon to name the **species that lose all
+their support** (the plant's true keystone weight *in this design*), and reports whether the Tallamy
+**food-web chain snaps** (`HabitatScore.food_web` complete→broken). Honest about redundancy (P9): if
+another copy remains, nothing is lost — and it says so, teaching resilience. Qt-free core + unit
+tests; the map right-click gesture is a cheap follow-on (`map_events` plant context menu).
+
+### ✅ F47 · Feed-a-chickadee provisioning scenario — *Shipped · was Impact High · Effort S–M · Risk Low (P3, P6)*
+**Shipped** in `src/chickadee_scenario.py` (`chickadee_provision`), surfaced in the Habitat tab and
+via the scripting API. Extends the embodiment family from "be a bee" to "provision a bird": tallies
+the design's caterpillar-supporting capacity (distinct larval-host lepidoptera the design's plants
+support, weighted by each host plant's keystone rank via `fauna.keystone_rank_lepidoptera`) against
+the **6,000–9,000 caterpillars one chickadee brood needs** (Tallamy & Shropshire 2009), as an
+honest *range* (P9), with a pass/partway/short verdict and the keystone plants doing the work. Makes
+the invisible food web emotionally concrete without inventing precision.
+
+### ✅ F48 · Field Study quiz layer — *Shipped · was Impact High · Effort M · Risk Low (P5, P7)*
+**Shipped** in `src/field_study.py` (`generate_quiz`), surfaced as an Analysis → Field Study tab.
+Procedurally-generated retrieval practice from data already present — no new content: *identify the
+plant* (from an image + traits), *which plant feeds this specialist* (from the `plant_fauna`
+specialist edges), and *spot the food-web gap* (from the design's own missing links). Deterministic
+per seed so a question set is reproducible/testable; doubles as plant-ID training for a nursery or
+trail visit (P7 cross-domain: turns the screen tool into field prep). New mechanism the app wholly
+lacked — the first time it asks the user a question instead of only answering theirs.
+
+### F49 · Ornamental → native swap card — *Impact Med · Effort S–M · Risk Med — new seed data (P6, P8)*
+For a small **curated** ornamental→native swap table (the DB is native-only, so this needs a new
+seed file + a schema bump), show the native that does the same aesthetic job *and* feeds the food
+web — correcting the exact mistake a beginner makes at the garden centre. **How:** a
+`data/native_swaps_master.json` (ornamental name, the aesthetic role it plays, the native
+substitute keyed to a real `plants` row, the ecological gain) seeded into a new `native_swaps`
+table (bump `_SCHEMA_VERSION`, add to the reseed wipe), a Qt-free `src/native_swaps.py` lookup, and
+a search-box card in the plant browser. Data-cost worth discussing before building.
+
+### ✅ F50 · Walkable reference-ecosystem library — *Shipped · was Impact Med · Effort L · Risk Med — 3D assets (P2, P6)*
+**Shipped** in `src/reference_ecosystem.py` (curated communities + `build_reference_project` /
+`build_reference_scene`), surfaced as a **View → Walk a Reference Ecosystem…** window
+(`src/reference_ecosystem_window.py`, a `Map3DWidget` in walk mode with an ecoregion selector) and
+headless via `permadesign_api.reference_community`. Lets the user *walk* the natural community their
+ecoregion is reaching toward — "walk your design, then walk the reference." Rather than a canned
+species list with an asset cost, each of the seven Alberta communities is authored as
+**characteristic genera per canopy/shrub/forb/grass layer + layer counts** and resolved against the
+*live* plant database (`fauna.plants_in_genera`), so it can never name a plant the app doesn't have
+and improves as the seed grows; the resolved species are scattered into a `scene_contract` scene at
+maturity (year 12) and opened straight into third-person walk mode. The initial community follows
+the project's location via `ecoregion.lookup_ecoregion`. Qt-free core + unit tests (community
+resolution and the full build-scene pipeline); the companion to the F13 fidelity score.
+
+### ✅ F51 · Phenology "what's happening now" dashboard — *Shipped · was Impact Med · Effort M · Risk Low (P4, P11)*
+**Shipped** in `src/phenology.py` (`build_phenology`), surfaced as an Analysis → **This Month** tab
+(`src/phenology_widget.py`) and headless via `permadesign_api.phenology`. A month-by-month view of
+the design — what's **blooming / fruiting / waking** (breaking dormancy) / **going dormant** / and
+which hands-on **tasks** the planting calendar calls for — derived by joining `plants.bloom_period`
++ `fruit_period` (parsed with the score's `parse_month_range`) with the `planting_calendar` ring
+(`db.plants.get_calendar`); dormancy transitions come from active→inactive edges in that ring. The
+current month becomes a short **"go check outside"** prompt ("we predict X in bloom around now — is
+it early, late, on time?"), turning a prediction into a thing to verify on the ground (P11). Qt-free
+core + unit tests. Pinning individual observations back into the `field_notes` block stays a cheap
+follow-on.
+
+### ✅ F52 · Docent / presentation mode — *Shipped · was Impact Med · Effort M · Risk Med — capture plumbing (P5)*
+**Shipped** in `src/docent.py` (`build_docent_script`), surfaced as an Analysis → **Present** tab
+(`src/docent_widget.py`, an on-screen guided tour with Back/Next) and headless via
+`permadesign_api.docent_script`. A narrated walk-through of a finished design to show a neighbour /
+HOA / class: a sequence of *beats* — each a camera + season/year state plus a narration line
+**generated from the design's own facts** (habitat score vs. the lawn's ≈0, food-web status,
+species supported per taxon, seasonal bloom peak from `forage_calendar`, and the chickadee-brood
+story from F47) — so the tour is always true to the project in front of you, never boilerplate.
+The beats carry the camera/season state a 3D flyover could sync to (reusing the existing flyover
+keyframe idea); the shipped surface walks them as an on-screen guided tour, and the same Qt-free
+script can feed an offscreen-capture booklet as a cheap follow-on. Unit tests cover the beat
+sequence and fact-driven narration.
+
+### ✅ F53 · Guided lesson track — *Shipped · was Impact Med · Effort M · Risk Low (P5, P7)*
+**Shipped** in `src/lesson_track.py` (`build_lesson_track`), surfaced as an Analysis → **Learn** tab
+(`src/lesson_track_widget.py`, a Back/Next stepper with a status-dot row) and headless via
+`permadesign_api.lesson_track`. A short **course narrated against the user's OWN project** in four
+steps — keystone plants → closing the food web → succession over time → ranges-not-certainties —
+each pairing a one-paragraph lesson with a live "your design" readout drawn from the surfaces the
+app already computes (`fauna.keystone_rank_lepidoptera`, `habitat_score.food_web`,
+`succession.successional_role`, and the app's own hedged ranges) plus a good/attention/empty status.
+Qt-free core + unit tests. Turns scattered teaching moments into one legible path.
 
 ---
 

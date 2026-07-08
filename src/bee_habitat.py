@@ -363,6 +363,14 @@ def target_plant_ids_for_bee(fauna_id: int) -> list[int]:
     return [m.plant_id for m in floral_matches_for_bee(fauna_id)]
 
 
+def flight_months_for_bee(fauna_id: int) -> list[int]:
+    """The months (1-12) the bee is on the wing, from ``flight_season``. Empty
+    when undocumented — the fly-through's seasonal tour then spans the whole year
+    rather than guessing a window (P9). Shared with the lepidoptera fly-through."""
+    attrs = _fauna.bee_attributes_for(fauna_id)
+    return parse_month_range(attrs.get("flight_season") or "")
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _genus_of(scientific_name: str) -> str:

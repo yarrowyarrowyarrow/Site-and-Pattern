@@ -344,6 +344,17 @@ class TestTerrainAndSun(unittest.TestCase):
                           when=datetime(2025, 1, 21, 1, 0))["sun"]
         self.assertIsNone(sun)
 
+    def test_is_night_flag(self):
+        # is_night tracks the sun being below the horizon — drives the moonlit
+        # 3D render and nocturnal wildlife (V2.12).
+        proj = _project([_boundary_feature()])
+        noon = build_scene(proj, get_plant=_get_plant,
+                           when=datetime(2025, 6, 21, 13, 0))
+        night = build_scene(proj, get_plant=_get_plant,
+                            when=datetime(2025, 1, 21, 1, 0))
+        self.assertFalse(noon["is_night"])
+        self.assertTrue(night["is_night"])
+
 
 if __name__ == "__main__":
     unittest.main()

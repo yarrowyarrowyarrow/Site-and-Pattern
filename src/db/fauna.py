@@ -94,6 +94,77 @@ def list_bees_with_attributes() -> list[dict]:
         conn.close()
 
 
+# ── Lepidoptera attributes (F37 "fly as a butterfly") ─────────────────────────
+
+def lep_attributes_for(fauna_id: int) -> dict:
+    """Return the ``lepidoptera_attributes`` row for ``fauna_id`` (or ``{}`` if
+    the fauna row is not a butterfly/moth / has no attributes seeded)."""
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT * FROM lepidoptera_attributes WHERE fauna_id = ?", (fauna_id,)
+        ).fetchone()
+        return _row_to_dict(row) if row else {}
+    finally:
+        conn.close()
+
+
+def list_lepidoptera_with_attributes() -> list[dict]:
+    """Return every lepidopteran in the fauna registry LEFT JOIN its
+    ``lepidoptera_attributes``, so callers get name/image fields alongside
+    flight season, kind, activity and overwintering stage. Species with no
+    seeded attributes still appear (attribute columns are NULL). Sorted so
+    butterflies group ahead of moths, then by common name."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            """SELECT f.*,
+                      la.kind                AS lep_kind,
+                      la.activity            AS activity,
+                      la.flight_season       AS flight_season,
+                      la.overwintering_stage AS overwintering_stage,
+                      la.voltinism           AS voltinism,
+                      la.nectar_flower_genera AS nectar_flower_genera,
+                      la.larval_host_note    AS larval_host_note,
+                      la.conservation_status AS conservation_status
+               FROM fauna f
+               LEFT JOIN lepidoptera_attributes la ON la.fauna_id = f.id
+               WHERE f.taxon = 'lepidoptera'
+               ORDER BY CASE la.kind WHEN 'butterfly' THEN 0 WHEN 'skipper' THEN 1
+                                     WHEN 'moth' THEN 2 ELSE 3 END,
+                        f.common_name""",
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def bee_flight_seasons() -> dict:
+    """``{fauna_id: flight_season_text}`` for every bee with a seeded season —
+    used to show a bee in the 3D scene only in the months it actually flies."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT fauna_id, flight_season FROM bee_attributes "
+            "WHERE flight_season IS NOT NULL").fetchall()
+        return {r[0]: r[1] for r in rows}
+    finally:
+        conn.close()
+
+
+def lep_activity_seasons() -> dict:
+    """``{fauna_id: (activity, flight_season)}`` for every lepidopteran with
+    attributes — used to gate butterflies/moths by month and by day/night."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT fauna_id, activity, flight_season "
+            "FROM lepidoptera_attributes").fetchall()
+        return {r[0]: (r[1], r[2]) for r in rows}
+    finally:
+        conn.close()
+
+
 def plants_in_genera(genera: list[str]) -> list[dict]:
     """Return plant rows whose scientific-name genus (the first token) is one of
     ``genera`` (case-insensitive). Used by the bee habitat builder's genus-level

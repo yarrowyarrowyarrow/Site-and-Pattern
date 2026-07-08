@@ -6,7 +6,7 @@ Free functions taking ``main`` (kept off MainWindow/controller, like
 (``wind.get_wind_summary``, DB-cached → offline after first fetch) plus the live
 current reading off the UI thread, and hands them to the Analysis → Wind tab.
 Falls back to a bundled regional approximation
-(``data/wind_fallback_alberta.json``) when offline with nothing cached, mirroring
+(``data/wind_fallback_prairie.json``) when offline with nothing cached, mirroring
 the rainfall/soil fallbacks.
 """
 
@@ -27,7 +27,7 @@ def _fallback_rose(lat: float, lng: float):
     prevailing wind, so a fully-offline first run still shows something useful."""
     from src.resources import resource_path
     try:
-        with open(resource_path("data", "wind_fallback_alberta.json"),
+        with open(resource_path("data", "wind_fallback_prairie.json"),
                   encoding="utf-8") as f:
             entries = json.load(f)
     except Exception:  # noqa: BLE001
@@ -44,7 +44,7 @@ def _fallback_rose(lat: float, lng: float):
     rose = wind.compute_wind_rose(rows)
     rose["cached"] = False
     rose["approximate"] = True
-    rose["source"] = f"Regional approximation — {best.get('region', 'Alberta')}"
+    rose["source"] = f"Regional approximation — {best.get('region', 'prairie')}"
     return rose
 
 

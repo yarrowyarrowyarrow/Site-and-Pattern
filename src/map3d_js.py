@@ -96,14 +96,93 @@ def set_bee_mode(on: bool) -> str:
             f"{json.dumps(bool(on))});")
 
 
-def set_bee_targets(plant_ids: list) -> str:
-    """JS to mark which placed plants feed the chosen bee, so the fly-through
-    floats a glowing beacon over each one (F37 increment 2). ``plant_ids`` are DB
-    plant ids from ``bee_habitat.target_plant_ids_for_bee``; the viewer shows a
-    beacon only for those actually present in the scene. Guarded with ``&&``."""
+def set_bee_targets(plant_ids: list, bee_label: str = "",
+                    kind: str = "bee", host_ids: list = None,
+                    appearance: dict = None) -> str:
+    """JS to mark the plants a chosen pollinator uses, so the fly-through floats
+    a glowing nectar beacon over each one (F37 increment 2; lepidoptera V2.12).
+
+    ``plant_ids`` are the ADULT nectar plants (DB ids from
+    ``bee_habitat.target_plant_ids_for_bee`` / ``lep_habitat.nectar_plant_ids_for_lep``);
+    the viewer shows a beacon only for those present AND in bloom for the scene
+    month. ``bee_label`` is the creature's display name for the HUD. ``kind`` is
+    ``'bee'`` | ``'butterfly'`` | ``'moth'`` and selects the flying avatar.
+    ``host_ids`` are larval-host plant ids (butterflies/moths) shown as
+    "caterpillar nursery" markers — present-gated, not bloom-gated, and never
+    collectable. ``appearance`` is the flown creature's look spec (from
+    ``scene_wildlife.appearance_for_fauna``) so the avatar matches the species —
+    a green sweat bee ≠ a bumble bee. Guarded with ``&&``."""
     ids = [int(p) for p in (plant_ids or [])]
+    hosts = [int(p) for p in (host_ids or [])]
     return ("window.permaSetBeeTargets && window.permaSetBeeTargets("
-            f"{json.dumps(ids)});")
+            f"{json.dumps(ids)}, {json.dumps(str(bee_label or ''))}, "
+            f"{json.dumps(str(kind or 'bee'))}, {json.dumps(hosts)}, "
+            f"{json.dumps(appearance or None)});")
+
+
+def set_wildlife(creatures: list, summary: dict = None) -> str:
+    """JS to populate the scene with ambient wildlife — the animals the design's
+    plants support, each on/near a plant it uses, with a per-species appearance
+    spec (V2.12). ``creatures`` is ``src.scene_wildlife.wildlife_for_scene``
+    output. ``summary`` is an optional ``{taxon: distinct-species-count}`` of the
+    design's total wildlife support (from the Habitat Value Score), shown as the
+    "who lives here" roster headline (V2.13). Shown in the orbit + walk views
+    (hidden while flying as one creature). Guarded with ``&&``."""
+    return ("window.permaSetWildlife && window.permaSetWildlife("
+            f"{json.dumps(creatures or [])}, {json.dumps(summary or None)});")
+
+
+def set_plant_spotlight(items: list, appearance: dict = None) -> str:
+    """JS to spotlight the plants a chosen creature uses (V2.12): a glowing
+    column + name label over each, and one of that creature touring them.
+    ``items`` is ``[{plant_id, name, x, y, h}, ...]`` (the design's plants the
+    creature benefits from); ``appearance`` styles the touring creature. Push an
+    empty list to clear. Guarded with ``&&`` so it's a no-op until the viewer
+    registers ``window.permaSetPlantSpotlight``."""
+    return ("window.permaSetPlantSpotlight && window.permaSetPlantSpotlight("
+            f"{json.dumps(items or [])}, {json.dumps(appearance or None)});")
+
+
+def set_wildlife_labels(on: bool) -> str:
+    """JS to toggle the "who lives here" roster + always-on name labels over the
+    ambient wildlife (V2.13) — identify the scene without hovering. Guarded with
+    ``&&`` so it's a no-op until the viewer registers ``permaSetWildlifeLabels``."""
+    return ("window.permaSetWildlifeLabels && window.permaSetWildlifeLabels("
+            f"{json.dumps(bool(on))});")
+
+
+def set_cinematic(on: bool) -> str:
+    """JS to toggle the hands-free cinematic flyover (V2.13): a slow auto-orbit
+    with letterbox bars while the host advances the growth year / season / time
+    of day. Guarded with ``&&`` so it's a no-op until the viewer registers
+    ``window.permaSetCinematic``."""
+    return ("window.permaSetCinematic && window.permaSetCinematic("
+            f"{json.dumps(bool(on))});")
+
+
+def set_cinematic_caption(big: str, sub: str = "") -> str:
+    """JS to set the flyover's lower-third caption for the current beat
+    (e.g. big='Year 5', sub='the canopy fills in'). Guarded with ``&&``."""
+    return ("window.permaSetCinematicCaption && window.permaSetCinematicCaption("
+            f"{json.dumps(str(big or ''))}, {json.dumps(str(sub or ''))});")
+
+
+def set_walk_mode(on: bool) -> str:
+    """JS to enter/leave the third-person "walk the garden" mode (V2.12): a
+    walking human avatar with a follow camera, strolling among the ambient
+    wildlife. Guarded with ``&&`` so it's a no-op until the viewer registers
+    ``window.permaSetWalkMode``."""
+    return ("window.permaSetWalkMode && window.permaSetWalkMode("
+            f"{json.dumps(bool(on))});")
+
+
+def set_bee_tour(on: bool) -> str:
+    """JS to toggle the seasonal nectar tour in the fly-through (V2.12): the
+    flyer auto-hops flower to flower, and the host advances the scene month
+    underneath it so blooms come and go across the year. Guarded with ``&&`` so
+    it's a no-op until the viewer registers ``window.permaSetBeeTour``."""
+    return ("window.permaSetBeeTour && window.permaSetBeeTour("
+            f"{json.dumps(bool(on))});")
 
 
 def set_quality(level: int) -> str:

@@ -126,5 +126,54 @@ class TestWiderPhotoSet(unittest.TestCase):
         self.assertEqual([c["id"] for c in cands], [9, 8])
 
 
+class TestPerTaxonLicensePolicy(unittest.TestCase):
+    """Bees are held to a stricter, commercial-safe licence bar than the rest of
+    the fauna — CC0 / CC-BY only, no ShareAlike (F37 A1). This mirrors
+    src/data_quality.py:validate_fauna_images so a bee photo this script writes
+    always passes validation."""
+
+    def _photo(self, code):
+        return {"id": 1, "license_code": code,
+                "medium_url": "https://static.inaturalist.org/1.jpg",
+                "attribution": f"(c) someone ({code})"}
+
+    def test_accept_for_bee_is_strict(self):
+        self.assertEqual(F.accept_for("bee"), {"cc0", "cc-by"})
+        self.assertEqual(F.accept_for("Bee"), {"cc0", "cc-by"})   # case-insensitive
+
+    def test_accept_for_non_bee_allows_sharealike(self):
+        for taxon in ("lepidoptera", "bird", "mammal", "", None):
+            self.assertIn("cc-by-sa", F.accept_for(taxon), repr(taxon))
+
+    def test_license_ok_respects_accept_arg(self):
+        self.assertTrue(F.license_ok("cc-by-sa"))                       # default set
+        self.assertFalse(F.license_ok("cc-by-sa", F.BEE_ACCEPT_LICENSES))
+
+    def test_bee_rejects_sharealike_but_general_accepts(self):
+        taxon = {"default_photo": self._photo("cc-by-sa")}
+        self.assertIsNotNone(F.pick_photo(F.taxon_candidates(taxon)))            # general
+        self.assertIsNone(                                                      # bees
+            F.pick_photo(F.taxon_candidates(taxon), F.BEE_ACCEPT_LICENSES))
+
+    def test_bee_still_accepts_cc0_and_ccby(self):
+        for code in ("cc0", "cc-by"):
+            taxon = {"default_photo": self._photo(code)}
+            out = F.pick_photo(F.taxon_candidates(taxon), F.BEE_ACCEPT_LICENSES)
+            self.assertIsNotNone(out, code)
+            self.assertEqual(out[2], code)
+
+    def test_bee_skips_sa_default_for_open_alternate(self):
+        # A bee whose default is CC-BY-SA but which has a CC-BY alternate gets
+        # the alternate, not skipped outright.
+        taxon = {"default_photo": self._photo("cc-by-sa"),
+                 "taxon_photos": [{"photo": {"id": 2, "license_code": "cc-by",
+                                             "medium_url": "https://static.inaturalist.org/2.jpg",
+                                             "attribution": "(c) two"}}]}
+        out = F.pick_photo(F.taxon_candidates(taxon), F.BEE_ACCEPT_LICENSES)
+        self.assertIsNotNone(out)
+        self.assertEqual(out[0], "https://static.inaturalist.org/2.jpg")
+        self.assertEqual(out[2], "cc-by")
+
+
 if __name__ == "__main__":
     unittest.main()

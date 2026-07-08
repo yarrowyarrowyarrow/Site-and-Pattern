@@ -138,7 +138,13 @@ def shadow_length_factor(sun_alt: float) -> float:
     return 1.0 / math.tan(math.radians(sun_alt))
 
 
-# ── Edmonton-specific presets ────────────────────────────────────────────────
+# ── Central-prairie presets ──────────────────────────────────────────────────
+#
+# The EDMONTON_* coordinates are a convenience anchor (and the fixture the solar
+# tests exercise). The frost dates below are central-prairie approximations for
+# the sun-path preset; the *accurate* per-site frost window comes from the
+# Open-Meteo climate model (climate.get_climate_summary), which is what the
+# Analysis panel actually reports for a Regina/Saskatoon/Battleford site.
 
 EDMONTON_LAT = 53.5461
 EDMONTON_LNG = -113.4938

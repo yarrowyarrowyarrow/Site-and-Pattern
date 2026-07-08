@@ -34,6 +34,13 @@ class TestSoilPhFilter(unittest.TestCase):
                 "INSERT INTO plants (common_name, plant_type, soil_ph_min, "
                 "soil_ph_max) VALUES (?,?,?,?)",
                 ("ZZSoilTest Acidic", "herb", 4.0, 6.0))
+            # Boundary case (like Saskatoon Berry / Trembling Aspen: max 7.5):
+            # must survive Regina/Lumsden's alkaline clay (~7.4–7.6) thanks to
+            # the pH tolerance margin (V2.18.1).
+            conn.execute(
+                "INSERT INTO plants (common_name, plant_type, soil_ph_min, "
+                "soil_ph_max) VALUES (?,?,?,?)",
+                ("ZZSoilTest Boundary", "shrub", 5.5, 7.5))
             conn.commit()
         finally:
             conn.close()
@@ -42,10 +49,10 @@ class TestSoilPhFilter(unittest.TestCase):
         return {p["common_name"] for p in
                 search_plants(query="ZZSoilTest", **kw)}
 
-    def test_no_soil_filter_returns_both(self):
+    def test_no_soil_filter_returns_all(self):
         names = self._names()
         self.assertEqual(len([n for n in names if n.startswith("ZZSoilTest")]),
-                         2)
+                         3)
 
     def test_alkaline_ph_excludes_acid_only_plant(self):
         names = self._names(soil_ph=7.5)
@@ -57,6 +64,17 @@ class TestSoilPhFilter(unittest.TestCase):
         names = self._names(soil_ph=5.0)
         self.assertIn("ZZSoilTest Acidic", names)
         self.assertNotIn("ZZSoilTest Tolerant", names)
+
+    def test_ph_tolerance_keeps_boundary_plant(self):
+        # The Lumsden bug: a plant maxing at 7.5 must NOT be dropped by an
+        # alkaline-clay site pH of 7.6 — the tolerance margin brackets it.
+        names = self._names(soil_ph=7.6)
+        self.assertIn("ZZSoilTest Boundary", names)
+
+    def test_ph_tolerance_still_excludes_far_mismatch(self):
+        # The margin is small — a plant maxing at 6.0 is still excluded at 7.6.
+        names = self._names(soil_ph=7.6)
+        self.assertNotIn("ZZSoilTest Acidic", names)
 
 
 if __name__ == "__main__":

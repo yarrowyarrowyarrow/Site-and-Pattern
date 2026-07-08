@@ -550,6 +550,14 @@ class MapWidget(QWebEngineView):
     def set_view(self, lat: float, lng: float, zoom: int = 14):
         self.run_js(map_js.set_view(lat, lng, zoom))
 
+    def fit_bounds(self, south: float, west: float, north: float, east: float):
+        """Frame a lat/lng box with padding (species/community zoom, V2.13)."""
+        self.run_js(map_js.fit_bounds(south, west, north, east))
+
+    def select_plants_by_species(self, plant_id: int):
+        """Select every placed marker of one species (On This Design → map)."""
+        self.run_js(map_js.select_plants_by_species(plant_id))
+
     # ── LOAD-BEARING RESIZE / INVALIDATE MACHINERY ───────────────────────
     # The block below (invalidate_size + resizeEvent + _do_invalidate) is
     # the result of a long debugging session against the Windows + LiDAR
@@ -757,6 +765,10 @@ class MapWidget(QWebEngineView):
 
     def set_slope_overlay_opacity(self, opacity: float):
         self.run_js(map_js.set_slope_overlay_opacity(opacity))
+
+    def draw_water_overlay(self, payload: dict):
+        """Water flow & accumulation raster + downhill arrows (V2.13)."""
+        self.run_js(map_js.draw_water_overlay(payload))
 
     def draw_shade_overlay(self, png_data_url: str, bbox: dict, opacity: float):
         """Render the shade-fraction PNG as a separate ImageOverlay (V1.51)."""

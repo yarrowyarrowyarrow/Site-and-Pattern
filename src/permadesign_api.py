@@ -56,6 +56,12 @@ __all__ = [
     "list_polycultures",
     "list_structures",
     "run_analysis",
+    "pull_plant_impact",
+    "chickadee_provision",
+    "phenology",
+    "lesson_track",
+    "reference_community",
+    "docent_script",
     "export_plant_catalogue_docx",
 ]
 
@@ -291,6 +297,118 @@ def run_analysis(project: Project) -> dict:
         "habitat_score": score.as_dict() if score is not None else None,
         "warnings": project.validate(),
     }
+
+
+def pull_plant_impact(project: Project, plant_id: int) -> Optional[dict]:
+    """Preview the cost of removing one placed ``plant_id`` from ``project`` —
+    the "pull-a-plant" impact simulator (F46). Returns the JSON-friendly dict
+    from :func:`src.plant_impact.pull_plant_impact` (supported species lost,
+    whether the food-web chain snaps, Habitat Score delta), or ``None`` if the
+    plant isn't placed.
+
+    Raises:
+        AnalysisError: if the plant database can't be read.
+    """
+    _ensure_db()
+    from src.plant_impact import pull_plant_impact as _impact
+    try:
+        return _impact(project.placed_plants, project.structures, int(plant_id))
+    except HabitatScoreError as exc:
+        raise AnalysisError(f"Impact unavailable: {exc}") from exc
+
+
+def chickadee_provision(project: Project) -> dict:
+    """Estimate whether ``project`` could provision a chickadee brood — the
+    "feed a chickadee" scenario (F47). Returns the JSON-friendly dict from
+    :func:`src.chickadee_scenario.chickadee_provision`: the design's estimated
+    caterpillar capacity (an honest range) against the 6,000–9,000 a brood
+    needs, a pass/partway/short ``status`` + ``verdict``, and the keystone host
+    plants doing the work.
+
+    Raises:
+        AnalysisError: if the plant/fauna database can't be read.
+    """
+    _ensure_db()
+    from src.chickadee_scenario import chickadee_provision as _provision
+    try:
+        return _provision(project.placed_plants)
+    except Exception as exc:      # noqa: BLE001
+        raise AnalysisError(f"Chickadee scenario unavailable: {exc}") from exc
+
+
+def phenology(project: Project, month: Optional[int] = None) -> dict:
+    """The month-by-month phenology of ``project`` — the "what's happening now"
+    dashboard (F51). Returns the JSON-friendly dict from
+    :func:`src.phenology.build_phenology`: per-month blooming / fruiting / waking
+    / going-dormant / tasks, plus a ``now`` slice with a "go verify outside"
+    prompt. ``month`` defaults to the current calendar month.
+
+    Raises:
+        AnalysisError: if the plant database can't be read.
+    """
+    _ensure_db()
+    from src.phenology import build_phenology
+    try:
+        return build_phenology(project.placed_plants, month=month)
+    except Exception as exc:      # noqa: BLE001
+        raise AnalysisError(f"Phenology unavailable: {exc}") from exc
+
+
+def lesson_track(project: Project) -> dict:
+    """The guided lesson track for ``project`` (F53) — a four-step course
+    (keystone plants → closing the food web → succession over time → ranges, not
+    certainties) narrated against the user's own design. Returns the
+    JSON-friendly dict from :func:`src.lesson_track.build_lesson_track`: each
+    step's lesson, a live "your design" readout, and a good/attention/empty
+    status.
+
+    Raises:
+        AnalysisError: if the plant database can't be read.
+    """
+    _ensure_db()
+    from src.lesson_track import build_lesson_track
+    try:
+        return build_lesson_track(project.placed_plants, project.structures)
+    except Exception as exc:      # noqa: BLE001
+        raise AnalysisError(f"Lesson track unavailable: {exc}") from exc
+
+
+def reference_community(ecoregion: Optional[str] = None) -> dict:
+    """The curated reference community for an Alberta ``ecoregion`` — the
+    walkable "target" natural community (F50). Returns the JSON-friendly dict
+    from :func:`src.reference_ecosystem.resolve_reference_community`: the
+    community name/description and the real species it resolves to per canopy /
+    shrub / forb / grass layer from the live plant data. ``ecoregion`` accepts
+    the ``ab_ecoregion`` keys (e.g. ``"aspen_parkland"``); an unknown/empty key
+    falls back to a representative parkland community.
+
+    Raises:
+        AnalysisError: if the plant database can't be read.
+    """
+    _ensure_db()
+    from src.reference_ecosystem import resolve_reference_community
+    try:
+        return resolve_reference_community(ecoregion)
+    except Exception as exc:      # noqa: BLE001
+        raise AnalysisError(f"Reference community unavailable: {exc}") from exc
+
+
+def docent_script(project: Project) -> dict:
+    """The narrated docent / presentation script for ``project`` (F52) — a
+    sequence of camera/season beats with narration generated from the design's
+    own facts (habitat score, food-web status, species supported, seasonal
+    bloom, the chickadee-brood story). Returns the JSON-friendly dict from
+    :func:`src.docent.build_docent_script`.
+
+    Raises:
+        AnalysisError: if the plant database can't be read.
+    """
+    _ensure_db()
+    from src.docent import build_docent_script
+    try:
+        return build_docent_script(project.placed_plants, project.structures)
+    except Exception as exc:      # noqa: BLE001
+        raise AnalysisError(f"Docent script unavailable: {exc}") from exc
 
 
 # ── Exports ────────────────────────────────────────────────────────────────

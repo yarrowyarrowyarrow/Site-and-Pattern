@@ -1258,7 +1258,15 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
 
     ``options``: ``interval_m`` (default 0.5 in Edmonton, 1.0 elsewhere),
     ``resolution_m`` (default 5 in Edmonton, 15 elsewhere), ``want_contours``,
-    ``want_slope_overlay``, ``force_source`` ("auto" | "edmonton" | "openmeteo").
+    ``want_slope_overlay``, ``force_source`` ("auto" | "edmonton" | "hrdem" |
+    "openmeteo").
+
+    Elevation-source precedence (``auto``): City of Edmonton 0.5 m LiDAR inside
+    the Edmonton envelope; otherwise NRCan HRDEM 1–2 m LiDAR where it covers the
+    bbox (Regina/Saskatoon/Battleford and much of the settled prairie); otherwise
+    the 30 m Copernicus DEM via Open-Meteo. Each is labelled in ``source`` and the
+    coarse-DEM honesty flag (``stats["water_dem_coarse"]``) is set only for the
+    Copernicus fallback.
     """
     err = validate_bbox(bbox, options.get("resolution_m") or _MIN_RESOLUTION_M)
     if err:
@@ -1266,10 +1274,18 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
 
     force = options.get("force_source", "auto")
     use_edm = (force == "edmonton") or (force == "auto" and bbox_in_edmonton(bbox))
+    # HRDEM (NRCan 1–2 m LiDAR) is the national equivalent of the Edmonton
+    # contour pack — tried for any non-Edmonton bbox (or when forced). It is
+    # fail-safe: no coverage / no rasterio / offline → falls back to Copernicus.
+    try_hrdem = (force == "hrdem") or (force == "auto" and not use_edm)
     interval_m = float(options.get("interval_m") or (0.5 if use_edm else 1.0))
     resolution_m = float(options.get("resolution_m") or (5.0 if use_edm else 15.0))
+    # LiDAR sources resolve yard scale, so sample them on a fine grid; the coarse
+    # Copernicus fallback uses the 15 m default above.
+    hrdem_resolution_m = float(options.get("resolution_m") or 5.0)
     want_contours = options.get("want_contours", True)
     want_slope = options.get("want_slope_overlay", True)
+    want_water = options.get("want_water", False)
 
     contours: list[dict] = []
     source = ""
@@ -1299,10 +1315,10 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
             stats["min_elev"] = min(elevs)
             stats["max_elev"] = max(elevs)
 
-    # The slope ramp always needs a regular elevation grid. Fallback
-    # contours also need it when Edmonton didn't supply any.
+    # The slope ramp (and water routing) always needs a regular elevation
+    # grid. Fallback contours also need it when Edmonton didn't supply any.
     elev = None
-    need_grid = want_slope or (want_contours and not contours)
+    need_grid = want_slope or want_water or (want_contours and not contours)
     if need_grid:
         # Prefer the local LiDAR contours when available — much faster
         # than the Open-Meteo round-trip and finer than its 30 m grid.
@@ -1321,6 +1337,17 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
             elev = _grid_from_contours(slope_contours, bbox, resolution_m)
             if elev is not None and not source:
                 source = "City of Edmonton — LiDAR contours (IDW grid)"
+        # NRCan HRDEM 1 m LiDAR — Edmonton-parity relief for Regina/Saskatoon/
+        # Battleford and anywhere NRCan has flown LiDAR. Fail-safe: returns None
+        # (no coverage / no rasterio / offline) and we drop to Copernicus below.
+        if elev is None and try_hrdem:
+            try:
+                from src import hrdem as _hrdem
+                elev = _hrdem.fetch_hrdem_grid(bbox, hrdem_resolution_m)
+            except Exception:  # noqa: BLE001 — never let the LiDAR path break generation
+                elev = None
+            if elev is not None and not source:
+                source = elev.get("source") or source
         if elev is None:
             elev = fetch_openmeteo_grid(bbox, resolution_m)
             if elev is None:
@@ -1361,11 +1388,26 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
             stats["dominant_aspect_share"] = asp["share"]
             stats["mean_slope_pct"] = round(sum(flat) / len(flat), 2)
 
+    # Water flow & accumulation rides the same grid (V2.13) — D8 routing in
+    # src/hydrology.py, rendered as a blue raster + sparse downhill arrows.
+    water_png: Optional[bytes] = None
+    water_arrows: list = []
+    if want_water and elev is not None:
+        from src import hydrology
+        flow = hydrology.flow_accumulation(elev)
+        water_png = hydrology.water_png(elev, flow)
+        water_arrows = hydrology.flow_arrows(elev, flow)
+        stats["n_ponding"] = flow["n_ponding"]
+        # Honesty flag (P9): routing on the 30 m Copernicus DEM shows broad
+        # drainage patterns, not yard-scale flow — the UI says so.
+        stats["water_dem_coarse"] = "Open-Meteo" in (elev.get("source") or "")
+
     # Partial success counts: render whatever we have, surface warnings
     # in the panel. Only return error if every layer the user asked for
     # came up empty.
-    asked_for_anything = want_contours or want_slope
-    got_anything = bool(contours) or slope_png is not None
+    asked_for_anything = want_contours or want_slope or want_water
+    got_anything = (bool(contours) or slope_png is not None
+                    or water_png is not None)
     if asked_for_anything and not got_anything:
         if warnings:
             err = " ".join(warnings)
@@ -1384,6 +1426,9 @@ def generate_terrain(bbox: dict, options: dict) -> dict:
         "contours": contours,
         "slope_png_bytes": slope_png,
         "slope_bbox": bbox if slope_png else None,
+        "water_png_bytes": water_png,
+        "water_bbox": bbox if water_png else None,
+        "water_arrows": water_arrows,
         "stats": stats,
         "warnings": warnings,
         "interval_m": interval_m,

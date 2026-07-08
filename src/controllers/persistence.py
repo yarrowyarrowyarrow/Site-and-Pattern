@@ -58,6 +58,13 @@ class PersistenceController:
         self._main._modified = True
         if not self._main.windowTitle().endswith(' *'):
             self._main.setWindowTitle(self._main.windowTitle() + ' *')
+        # Shade-tab caster inventory (V2.13): every feature mutation lands
+        # here, so the "Casting shade: …" line stays live after imports,
+        # marks, draws, removals and undo. Cheap pure feature scan.
+        try:
+            self._main.site_panel.update_caster_summary(self._main._project)
+        except Exception:  # noqa: BLE001 — a status line must never block a save flag
+            pass
 
     # ── Save / Save As ────────────────────────────────────────────────────────
 
@@ -434,9 +441,15 @@ class PersistenceController:
                  for c in auto_contours],
                 color=auto_contours[0].get("color", "#44cc00"),
                 show_labels=True)
-        if data.get("slope_overlay"):
+        if data.get("slope_overlay") or data.get("water_overlay"):
+            layers = []
+            if data.get("slope_overlay"):
+                layers.append("Slope ramp")
+            if data.get("water_overlay"):
+                layers.append("water overlay")
             m.site_panel.set_auto_terrain_status(
-                "Slope ramp not loaded — click Generate to recompute.")
+                " and ".join(layers)
+                + " not loaded — click Generate to recompute.")
 
         # Site pin (clearAll wiped it) + photoreal splat backdrop, both read
         # from the project so undo of an import that removed them clears them.

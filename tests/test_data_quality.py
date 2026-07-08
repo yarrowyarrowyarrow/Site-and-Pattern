@@ -43,6 +43,25 @@ class TestShippedDataIsClean(unittest.TestCase):
             )
 
 
+class TestValidateAllWiresFaunaValidators(unittest.TestCase):
+    """validate_all() must run the fauna data-spine validators (bee attributes +
+    fauna photo-licence compliance, F37/A1), not only the plant catalogues — so
+    the central gate (CI, check_plant_data.py, cli.py) enforces them too. Guards
+    against a future refactor silently dropping them."""
+
+    def test_fauna_validator_errors_propagate(self):
+        import src.data_quality as dq
+        orig_img, orig_bee = dq.validate_fauna_images, dq.validate_bee_attributes
+        try:
+            dq.validate_fauna_images = lambda: (["SENTINEL_IMG_ERROR"], [])
+            dq.validate_bee_attributes = lambda: (["SENTINEL_BEE_ERROR"], [])
+            errors, _w = dq.validate_all()
+        finally:
+            dq.validate_fauna_images, dq.validate_bee_attributes = orig_img, orig_bee
+        self.assertIn("SENTINEL_IMG_ERROR", errors)
+        self.assertIn("SENTINEL_BEE_ERROR", errors)
+
+
 class TestMonthPeriodParser(unittest.TestCase):
 
     def test_empty_passes(self):

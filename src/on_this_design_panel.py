@@ -18,9 +18,10 @@ inside ``_sync_planning_panel`` for Communities + Stats.
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QListWidget, QListWidgetItem, QSizePolicy,
+    QWidget, QVBoxLayout, QLabel, QListWidget, QListWidgetItem, QMenu,
+    QSizePolicy,
 )
 
 from src.plant_list_view import _RESULTS_LIST_STYLE, _type_icon
@@ -38,7 +39,20 @@ class OnThisDesignPanel(QWidget):
     App.py owns the instance and drives both inputs:
     ``set_plants_counts(plant_panel._placed_counts)`` whenever the Plants
     tab signals ``placed_counts_changed``; ``set_design_data(enriched)``
-    inside ``_sync_planning_panel`` for Communities + Stats."""
+    inside ``_sync_planning_panel`` for Communities + Stats.
+
+    V2.13: the lists are an instrument, not a readout — clicking a species
+    or community row locates it on the map, and the species context menu
+    selects / removes / opens it in the Plant Library. The panel only emits;
+    app.py wires the signals to ``design_review_flow``."""
+
+    species_focus_requested = pyqtSignal(int)            # click → select+zoom
+    species_select_requested = pyqtSignal(int)           # ctx: select on map
+    species_remove_requested = pyqtSignal(int)           # ctx: remove all (confirmed downstream)
+    species_show_in_library_requested = pyqtSignal(int)  # ctx: Plant Library
+    community_focus_requested = pyqtSignal(str)          # click → zoom to members
+    open_habitat_analysis_requested = pyqtSignal()       # Stats: habitat value → Analysis
+    open_planning_requested = pyqtSignal()               # Stats: cost → Planning
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -72,6 +86,14 @@ class OnThisDesignPanel(QWidget):
         self._plants_list.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
+        self._plants_list.setToolTip(
+            "Click a species to select and frame it on the map;\n"
+            "right-click for select / remove / open in Plant Library.")
+        self._plants_list.itemClicked.connect(self._on_plant_row_clicked)
+        self._plants_list.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu)
+        self._plants_list.customContextMenuRequested.connect(
+            self._on_plant_row_menu)
         pl.addWidget(self._plants_list, 1)
         self._tabs.addTab(plants_widget, "Plants")
 
@@ -92,6 +114,10 @@ class OnThisDesignPanel(QWidget):
         self._communities_list.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
+        self._communities_list.setToolTip(
+            "Click a community to frame its placed members on the map.")
+        self._communities_list.itemClicked.connect(
+            self._on_community_row_clicked)
         cl.addWidget(self._communities_list, 1)
         self._tabs.addTab(communities_widget, "Communities")
 
@@ -105,6 +131,11 @@ class OnThisDesignPanel(QWidget):
             "QTextBrowser { background: #1a2a1a; color: #c8e6c9; "
             "border: 1px solid #2e4a2e; border-radius: 4px; font-size: 12px; }"
         )
+        # Deep-links: the habitat-value and cost headings are anchors into the
+        # Analysis and Planning tabs (V2.13). Handle them ourselves rather than
+        # letting QTextBrowser try to navigate to a made-up URL.
+        self._stats_text.setOpenLinks(False)
+        self._stats_text.anchorClicked.connect(self._on_stats_anchor)
         sl.addWidget(self._stats_text, 1)
         self._tabs.addTab(stats_widget, "Stats")
 
@@ -134,16 +165,61 @@ class OnThisDesignPanel(QWidget):
                 name = p["common_name"] if p else f"Plant #{pid}"
                 item = QListWidgetItem(f"{name}  ×{count}")
                 item.setIcon(_type_icon(p["plant_type"] if p else ""))
+                item.setData(Qt.ItemDataRole.UserRole, int(pid))
                 self._plants_list.addItem(item)
                 total += count
             self._plants_count_label.setText(
                 f"{total} plant{'s' if total != 1 else ''} placed"
-                f" ({len(counts)} species)"
+                f" ({len(counts)} species) · click a row to find it"
             )
         except Exception:
             self._plants_count_label.setText(
                 f"{sum(counts.values())} plants placed"
             )
+
+    # ── Row interactions (V2.13) ──────────────────────────────────────
+
+    def _on_plant_row_clicked(self, item: QListWidgetItem):
+        pid = item.data(Qt.ItemDataRole.UserRole)
+        if pid is not None:
+            self.species_focus_requested.emit(int(pid))
+
+    def _on_plant_row_menu(self, pos):
+        item = self._plants_list.itemAt(pos)
+        if item is None:
+            return
+        pid = item.data(Qt.ItemDataRole.UserRole)
+        if pid is None:
+            return
+        pid = int(pid)
+        menu = QMenu(self._plants_list)
+        act_focus = menu.addAction("Zoom to on map")
+        act_select = menu.addAction("Select on map")
+        act_library = menu.addAction("Show in Plant Library")
+        menu.addSeparator()
+        act_remove = menu.addAction("Remove all from design…")
+        chosen = menu.exec(self._plants_list.mapToGlobal(pos))
+        if chosen is act_focus:
+            self.species_focus_requested.emit(pid)
+        elif chosen is act_select:
+            self.species_select_requested.emit(pid)
+        elif chosen is act_library:
+            self.species_show_in_library_requested.emit(pid)
+        elif chosen is act_remove:
+            self.species_remove_requested.emit(pid)
+
+    def _on_community_row_clicked(self, item: QListWidgetItem):
+        name = item.data(Qt.ItemDataRole.UserRole)
+        if name:
+            self.community_focus_requested.emit(str(name))
+
+    def _on_stats_anchor(self, url):
+        """Route a Stats deep-link (custom sap: scheme) to the right tab."""
+        target = url.toString()
+        if target == "sap:analysis-habitat":
+            self.open_habitat_analysis_requested.emit()
+        elif target == "sap:planning":
+            self.open_planning_requested.emit()
 
     # ── Communities + Stats sub-tabs ──────────────────────────────────
 
@@ -184,6 +260,7 @@ class OnThisDesignPanel(QWidget):
                 f"{name}  — {n_inst} instance{'s' if n_inst != 1 else ''}"
                 f", {n_mem} member{'s' if n_mem != 1 else ''}"
             )
+            item.setData(Qt.ItemDataRole.UserRole, name)
             self._communities_list.addItem(item)
         total_inst = sum(len(v) for v in instances.values())
         self._communities_count_label.setText(
@@ -233,12 +310,66 @@ class OnThisDesignPanel(QWidget):
         host = getattr(sc, "host_species", None) or []
         if host:
             bits.append(f"{len(host)} caterpillar host plants")
-        parts = [f"<p><b>Habitat value</b><br>{head}"]
+        parts = [
+            "<p><a href='sap:analysis-habitat' "
+            "style='color:#a5d6a7;text-decoration:none;'>"
+            f"<b>Habitat value</b> ›</a><br>{head}"
+        ]
         if bits:
             parts.append("<br><span style='color:#90a4ae;font-size:10px;'>"
                          + ", ".join(bits) + "</span>")
         parts.append("</p>")
         return "".join(parts)
+
+    def _nudges_block_html(self) -> str:
+        """The 'what would help most' list (F11 companion, P6/P9): the design's
+        biggest ecological gaps as ranged, actionable suggestions — so the
+        score reads as a to-do list, not a verdict."""
+        sc = self._habitat_value
+        if not sc:
+            return ""
+        try:
+            from src.habitat_score import habitat_nudges
+            nudges = habitat_nudges(sc, limit=3)
+        except Exception:
+            return ""
+        if not nudges:
+            return ("<p><b>Where to grow next</b><br>"
+                    "<span style='color:#a5d6a7;font-size:10px;'>"
+                    "This design already covers the habitat basics — nice "
+                    "work.</span></p>")
+        items = "".join(
+            f"<li style='margin-bottom:3px;'>{nd['text']}</li>"
+            for nd in nudges)
+        return ("<p><b>Where to grow next</b>"
+                "<ul style='margin:2px 0 0 0;color:#c8e6c9;font-size:11px;'>"
+                f"{items}</ul></p>")
+
+    def _value_framing_html(self) -> str:
+        """One line that reads cost and habitat value together (F11, P6): the
+        spend isn't a cost, it's what buys the wildlife value above. Shown only
+        when both a cost total and a habitat score are present."""
+        bd = self._cost_breakdown
+        sc = self._habitat_value
+        if not bd or not sc or not bd.get("total"):
+            return ""
+        creates = []
+        fbt = getattr(sc, "fauna_by_taxon", None)
+        if fbt:
+            n_wild = sum(fbt.values())
+            if n_wild:
+                creates.append(f"{n_wild} wildlife species supported")
+        ns = getattr(sc, "native_species", 0)
+        if ns:
+            creates.append(f"{ns} native species")
+        n_struct = len(getattr(sc, "habitat_struct_types", []) or [])
+        if n_struct:
+            creates.append(f"{n_struct} habitat structure"
+                           f"{'s' if n_struct != 1 else ''}")
+        if not creates:
+            return ""
+        return ("<p style='color:#90a4ae;font-size:10px;margin-top:2px;'>"
+                "What your spend creates: " + ", ".join(creates) + ".</p>")
 
     def _lawn_block_html(self) -> str:
         s = self._lawn_conversion
@@ -274,7 +405,10 @@ class OnThisDesignPanel(QWidget):
             v = bd.get(key)
             return f"{label}: {format_cost(v[0], v[1])}<br>" if v else ""
 
-        parts = ["<p><b>Estimated cost (CAD)</b><br>", row("Plants", "plants")]
+        parts = ["<p><a href='sap:planning' "
+                 "style='color:#a5d6a7;text-decoration:none;'>"
+                 "<b>Estimated cost (CAD)</b> ›</a><br>",
+                 row("Plants", "plants")]
         # Per-type breakdown so the plant total isn't one intimidating number,
         # with the math shown — count × per-plant range (F2 + R4).
         type_costs = bd.get("type_costs") or {}
@@ -313,11 +447,15 @@ class OnThisDesignPanel(QWidget):
 
     def _refresh_stats(self, enriched: list[dict]):
         value_html = self._value_block_html()
+        nudges_html = self._nudges_block_html()
         cost_html = self._cost_block_html()
+        framing_html = self._value_framing_html()
         lawn_html = self._lawn_block_html()
         if not enriched:
             body = "<i style='color:#78909c;'>Nothing placed yet.</i>"
-            self._stats_text.setHtml(body + lawn_html + value_html + cost_html)
+            self._stats_text.setHtml(
+                body + lawn_html + value_html + nudges_html
+                + cost_html + framing_html)
             return
         from src.db.plants import get_plant
         total = len(enriched)
@@ -389,5 +527,7 @@ class OnThisDesignPanel(QWidget):
             rows.append("</p>")
         rows.append(lawn_html)
         rows.append(value_html)
+        rows.append(nudges_html)
         rows.append(cost_html)
+        rows.append(framing_html)
         self._stats_text.setHtml("".join(rows))

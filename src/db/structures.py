@@ -310,17 +310,22 @@ EXISTING_FEATURE_IDS = frozenset({EXISTING_TREE_ID, EXISTING_BUILDING_ID})
 
 
 def existing_feature_def(feature_id: str, *, size_m: float,
-                         height_m: float) -> dict:
+                         height_m: float, foliage: str = "") -> dict:
     """Build a structure-style placement payload for an existing tree/building
     so it flows through the normal click-to-place machinery (the map renders it
     like any structure). ``size_m`` is the canopy/footprint diameter; height is
-    carried through for the shade model."""
+    carried through for the shade model. ``foliage`` ("deciduous"/"evergreen",
+    trees only, V2.13) rides along so winter shade knows whether the crown is
+    bare at the solstice."""
     if feature_id == EXISTING_TREE_ID:
-        return {"id": EXISTING_TREE_ID, "name": "Existing tree", "icon": "🌳",
-                "shape": "circle", "size_m": float(size_m),
-                "color": "#33691e", "fill_color": "#7cb342",
-                "fill_opacity": 0.25, "height_m": float(height_m),
-                "category": "Existing"}
+        out = {"id": EXISTING_TREE_ID, "name": "Existing tree", "icon": "🌳",
+               "shape": "circle", "size_m": float(size_m),
+               "color": "#33691e", "fill_color": "#7cb342",
+               "fill_opacity": 0.25, "height_m": float(height_m),
+               "category": "Existing"}
+        if foliage:
+            out["tree_foliage"] = foliage
+        return out
     return {"id": EXISTING_BUILDING_ID, "name": "Existing building",
             "icon": "🏠", "shape": "rectangle", "size_m": float(size_m),
             "width_m": float(size_m), "color": "#5d4037",

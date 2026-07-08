@@ -9,15 +9,15 @@ from typing import Optional
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QComboBox, QListWidget, QFrame,
+    QListWidget, QFrame,
     QPushButton, QSizePolicy, QScrollArea,
     QGroupBox, QSpinBox, QDoubleSpinBox,
     QColorDialog, QMenu, QListView,
 )
 from PyQt6.QtCore import (
-    Qt, QTimer, pyqtSignal, QModelIndex, QEvent,
+    Qt, QTimer, pyqtSignal, QModelIndex,
 )
-from PyQt6.QtGui import QColor, QStandardItem, QStandardItemModel
+from PyQt6.QtGui import QColor
 
 # Model, delegate, vocabulary constants, and the shared QListWidget
 # stylesheet now live in src/plant_list_view.py (Chunk 4 of the
@@ -36,6 +36,15 @@ from src.plant_list_view import (
     _RESULTS_LIST_STYLE,
     _PLANT_MIME,
     _type_icon,
+)
+
+# The multi-select facet dropdown and the shared filter QSS moved to
+# src/filter_widgets.py (V2.13) so the Plant Community Library can reuse them.
+# CheckableComboBox stays importable from here for existing callers/tests.
+from src.filter_widgets import (  # noqa: F401  (re-export)
+    CheckableComboBox,
+    COMBO_STYLE as _COMBO_STYLE,
+    TOGGLE_STYLE as _TOGGLE_STYLE,
 )
 
 # ── PlantPanel-only vocabulary labels ────────────────────────────────────────
@@ -77,16 +86,28 @@ _LIFECYCLE_LABELS: dict[str, str] = {
 # filter).  Keep the ids in sync with the comma-separated tags stored in
 # plants.ab_ecoregion (see data/plants_master.json + src/db/plants.py
 # heuristic tagging pass).
-_AB_ECOREGION_CHOICES: list[tuple[str, str]] = [
+#
+# Ecoregion keys are shared across the prairie provinces where the ecoregion is
+# the same (Design principle P1/P2 — nature does not respect borders); the SK
+# Regina/Saskatoon belt adds the moist_mixedgrass key (V2.14). The constant
+# keeps its historical _AB_ name for back-compat; the province-neutral rename
+# lands in the Phase B schema refactor.
+_ECOREGION_CHOICES: list[tuple[str, str]] = [
     ("Any ecoregion",          ""),
-    ("Aspen Parkland (central AB)", "aspen_parkland"),
-    ("Mixedgrass Prairie (south AB)", "mixedgrass_prairie"),
+    ("Aspen Parkland (central AB / SK)", "aspen_parkland"),
+    ("Mixedgrass Prairie (south AB / SK)", "mixedgrass_prairie"),
+    ("Moist Mixed Grassland (Regina / Saskatoon)", "moist_mixedgrass"),
     ("Fescue / Foothills (SW AB)",    "fescue_foothills"),
-    ("Boreal Mixedwood (north AB)",   "boreal_mixedwood"),
+    ("Boreal Mixedwood / Plain (north AB / SK)",   "boreal_mixedwood"),
     ("Riparian (streamside)",         "riparian"),
     ("Wet Meadow / Marsh",            "wet_meadow"),
     ("Subalpine / Montane (mountains)", "subalpine_montane"),
 ]
+
+# Back-compat alias — the constant was province-scoped (_AB_ECOREGION_CHOICES)
+# before the V2.15 province-neutral rename. Kept so external imports and the
+# data_quality key loader's fallback keep resolving.
+_AB_ECOREGION_CHOICES = _ECOREGION_CHOICES
 
 
 # NOTE: calendar constants, plant list-item roles, compact row geometry
@@ -103,121 +124,7 @@ _AB_ECOREGION_CHOICES: list[tuple[str, str]] = [
 
 
 
-# ── Multi-select dropdown (V1.84) ─────────────────────────────────────────────
-
-class CheckableComboBox(QComboBox):
-    """A QComboBox whose items carry checkboxes, for "pick several" filters.
-
-    The line-edit area shows the checked labels (or a placeholder when none are
-    checked); the popup stays open while toggling so the user can select more
-    than one tier in a single trip. ``selectionChanged`` fires on every toggle.
-    Used by the rarity/availability filter so the user can show, say, big-box +
-    garden-centre + native-nursery plants at once.
-    """
-
-    selectionChanged = pyqtSignal()
-
-    def __init__(self, placeholder: str = "Any", parent=None):
-        super().__init__(parent)
-        self._placeholder = placeholder
-        self.setModel(QStandardItemModel(self))
-        self.setEditable(True)
-        self.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
-        le = self.lineEdit()
-        le.setReadOnly(True)
-        le.setPlaceholderText(placeholder)
-        le.installEventFilter(self)
-        self.view().viewport().installEventFilter(self)
-        self.model().itemChanged.connect(self._on_item_changed)
-        # An editable combo otherwise echoes the current item's text; keep the
-        # display under our control so it shows the checked labels (or nothing).
-        self.currentIndexChanged.connect(lambda _=0: self._refresh_text())
-        # Stay flexible, not rigid: expand to share the row evenly and base the
-        # size hint on a short minimum (not the longest item) so two combos in a
-        # row split 50/50 at any window width — same layout on a 22" or 27"
-        # monitor, windowed or full-screen (V1.86).
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.setSizeAdjustPolicy(
-            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
-        self.setMinimumContentsLength(6)
-
-    def add_check_item(self, label: str, key: str, icon=None):
-        item = QStandardItem(label)
-        item.setData(key, Qt.ItemDataRole.UserRole)
-        if icon is not None:
-            item.setIcon(icon)
-        item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsUserCheckable)
-        # Set the check state before the item joins the model so the initial
-        # state doesn't spuriously fire itemChanged during construction.
-        item.setData(Qt.CheckState.Unchecked, Qt.ItemDataRole.CheckStateRole)
-        self.model().appendRow(item)
-        # Keep no "current" item: an editable combo otherwise paints the current
-        # row's icon (e.g. the first Type's colour swatch) in the line edit,
-        # which reads as a stray dot next to the placeholder.
-        self.setCurrentIndex(-1)
-        self._refresh_text()
-
-    def checked_keys(self) -> list[str]:
-        out: list[str] = []
-        for i in range(self.model().rowCount()):
-            it = self.model().item(i)
-            if it.checkState() == Qt.CheckState.Checked:
-                out.append(it.data(Qt.ItemDataRole.UserRole))
-        return out
-
-    def set_checked_keys(self, keys, *, emit: bool = False):
-        """Check exactly the items whose key is in ``keys`` (others unchecked).
-
-        Silent by default so callers can restore saved state without triggering
-        a search; pass ``emit=True`` to fire ``selectionChanged`` once after.
-        ``model().blockSignals`` is needed because ``setCheckState`` emits
-        ``itemChanged`` (not covered by ``QComboBox.blockSignals``).
-        """
-        keyset = set(keys)
-        self.model().blockSignals(True)
-        for i in range(self.model().rowCount()):
-            it = self.model().item(i)
-            it.setCheckState(
-                Qt.CheckState.Checked
-                if it.data(Qt.ItemDataRole.UserRole) in keyset
-                else Qt.CheckState.Unchecked)
-        self.model().blockSignals(False)
-        self._refresh_text()
-        if emit:
-            self.selectionChanged.emit()
-
-    def _event_point(self, event):
-        # QMouseEvent.pos() is deprecated in PyQt6; prefer position().
-        if hasattr(event, "position"):
-            return event.position().toPoint()
-        return event.pos()
-
-    def eventFilter(self, obj, event):  # noqa: N802 (Qt override)
-        if (obj is self.lineEdit()
-                and event.type() == QEvent.Type.MouseButtonRelease):
-            self.showPopup()
-            return True
-        if (obj is self.view().viewport()
-                and event.type() == QEvent.Type.MouseButtonRelease):
-            idx = self.view().indexAt(self._event_point(event))
-            if idx.isValid():
-                it = self.model().itemFromIndex(idx)
-                it.setCheckState(
-                    Qt.CheckState.Unchecked
-                    if it.checkState() == Qt.CheckState.Checked
-                    else Qt.CheckState.Checked)
-            return True  # keep the popup open for further toggles
-        return super().eventFilter(obj, event)
-
-    def _refresh_text(self):
-        labels = [self.model().item(i).text()
-                  for i in range(self.model().rowCount())
-                  if self.model().item(i).checkState() == Qt.CheckState.Checked]
-        self.lineEdit().setText(", ".join(labels))
-
-    def _on_item_changed(self, _item):
-        self._refresh_text()
-        self.selectionChanged.emit()
+# CheckableComboBox moved to src/filter_widgets.py (V2.13); re-imported above.
 
 
 class _MixDropGroupBox(QGroupBox):
@@ -386,23 +293,10 @@ class PlantPanel(QWidget):
         # Type / Sun / Water / Use / Availability are all multi-select so the
         # user can combine values within a facet (e.g. Tree + Shrub, or Full
         # Sun + Partial Shade). They share one dark-green style that blends the
-        # plain combo shape with the toggle-button palette below.
-        _combo_style = (
-            "QComboBox { background: #1e2e1e; color: #a5d6a7; border: 1px solid #2e4a2e; "
-            "border-radius: 3px; padding: 2px 6px; font-size: 11px; }"
-            "QComboBox:hover { border-color: #4a7a4a; }"
-            "QComboBox::drop-down { border: none; width: 16px; }"
-            "QComboBox QLineEdit { background: transparent; color: #a5d6a7; border: none; }"
-            "QComboBox QAbstractItemView { background: #1e2e1e; color: #cfd8dc; "
-            "border: 1px solid #2e4a2e; outline: none; "
-            "selection-background-color: #2e5a2e; selection-color: #a5d6a7; }"
-        )
-        _toggle_style = (
-            "QPushButton { background: #1e2e1e; color: #78909c; border: 1px solid #2e4a2e; "
-            "border-radius: 3px; padding: 2px 6px; font-size: 11px; }"
-            "QPushButton:checked { background: #2e5a2e; color: #a5d6a7; border-color: #66bb6a; }"
-            "QPushButton:hover { border-color: #4a7a4a; }"
-        )
+        # plain combo shape with the toggle-button palette below (shared with
+        # the Plant Community Library via src/filter_widgets.py).
+        _combo_style = _COMBO_STYLE
+        _toggle_style = _TOGGLE_STYLE
 
         # Row 1: Type + Sun. The Type items carry the plant-type colour swatch
         # (same colours as the map markers / list dots), so the dropdown doubles
@@ -446,7 +340,7 @@ class PlantPanel(QWidget):
         # Ecoregion choices are (label, key) tuples with a leading "Any" sentinel
         # (empty key); the multi-select combo uses its placeholder for "any", so
         # drop the sentinel and feed the real regions in display order.
-        _eco_labels = {key: lbl for lbl, key in _AB_ECOREGION_CHOICES if key}
+        _eco_labels = {key: lbl for lbl, key in _ECOREGION_CHOICES if key}
         self._ecoregion_combo = CheckableComboBox(placeholder="Restoring toward…")
         for key, lbl in _eco_labels.items():
             self._ecoregion_combo.add_check_item(lbl, key)

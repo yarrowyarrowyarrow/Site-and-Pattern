@@ -79,7 +79,8 @@ class TestStructuralCeilings(unittest.TestCase):
         (_HTML / "map" / "03-plants.js", 950),         # ~817 now
         (_HTML / "map" / "04-tools.js", 450),          # ~360 now
         (_HTML / "map" / "05-features.js", 1100),      # ~956 now
-        (_HTML / "map" / "06-overlays.js", 1480),      # ~1400 now (F24 site-photo overlay)
+        # V2.13: + water flow & accumulation overlay (raster + arrow lattice).
+        (_HTML / "map" / "06-overlays.js", 1560),      # ~1490 now
     ]
 
     def test_module_line_ceilings(self):
@@ -189,6 +190,12 @@ class TestAgentApiContract(unittest.TestCase):
         "list_polycultures": ["top_level_only"],
         "list_structures": [],
         "run_analysis": ["project"],
+        "pull_plant_impact": ["project", "plant_id"],   # F46 (V2.13)
+        "chickadee_provision": ["project"],             # F47 (V2.13)
+        "phenology": ["project", "month"],              # F51 (V2.13)
+        "lesson_track": ["project"],                    # F53 (V2.13)
+        "reference_community": ["ecoregion"],           # F50 (V2.13)
+        "docent_script": ["project"],                   # F52 (V2.13)
         "export_plant_catalogue_docx": ["out_path"],
     }
 

@@ -55,7 +55,9 @@ Fukuoka's do-nothing farming, Alexander's "quality without a name," Weaner's man
 > bed grouping), `_rhythm` (natural repetition, not mega-clumps) — joined by naturalistic
 > drift layouts in `src/layout.py` and layer/spread-aware spacing in
 > `src/planting_spacing.py` (roadmap F22/F35, shipped) so plantings read as grown rather
-> than gridded. **State: strong.**
+> than gridded; and the **walkable reference-ecosystem library** (`src/reference_ecosystem.py`,
+> roadmap F50) that lets the user walk the natural community their ecoregion is reaching toward —
+> the "grown, not designed" endpoint made concrete as a target to design against. **State: strong.**
 
 ### 3. Relationships matter more than components
 
@@ -69,10 +71,15 @@ Simard's mycorrhizal networks, Lowenfels' soil food web, Sheldrake's fungal conn
 > relationships are spotlighted through `fauna` specificity (F9, shipped); the **native-bee
 > habitat builder** (`src/bee_habitat.py`, roadmap F37) now turns the plant↔bee edges into
 > per-species advice — matched floral hosts, nesting needs, and a flight-season forage check
-> backed by the schema-v39 `bee_attributes` spine. **State: partial
-> (strengthening)** — the relationships are increasingly *scored*, but not yet drawn as a
-> network (F5) or unified into one edges layer (F7); mycorrhizal/symbiosis links still live
-> only in plant `notes` text.
+> backed by the schema-v39 `bee_attributes` spine; the **pull-a-plant impact simulator**
+> (`src/plant_impact.py`, roadmap F46) makes those edges felt by *breaking* them — remove a
+> plant and see which species lose all support and whether the food-web chain snaps; and the
+> **feed-a-chickadee scenario** (`src/chickadee_scenario.py`, roadmap F47) walks one edge all
+> the way up — host plant → caterpillar → nestling — weighing the design's caterpillar capacity
+> against the 6,000–9,000 a brood needs. **State: partial (strengthening)** — the relationships
+> are increasingly *scored*, now *testable by removal*, and now *followed up the chain to a
+> fledged bird*, but not yet drawn as a network (F5) or unified into one edges layer (F7);
+> mycorrhizal/symbiosis links still live only in plant `notes` text.
 
 ### 4. Time is the most undervalued design variable
 
@@ -83,8 +90,11 @@ Brand's shearing layers, Weaner's succession planting, Bridges' transition psych
 > `src/scene3d_window.py`, the year-aware `src/scene_contract.py`, the growth fields
 > (`growth_rate`, `years_to_maturity`, `growth_curve`) in `src/db/schema.sql`, the
 > Year 1 / 5 / 15 / 30 snapshot view (`src/snapshot_timeline.py` + `src/snapshot_window.py`,
-> roadmap F2 — the philosophy's literal "most important feature", shipped), and the
-> spring/summer/fall/winter seasonal toggle (F16, shipped). **State: strong.**
+> roadmap F2 — the philosophy's literal "most important feature", shipped), the
+> spring/summer/fall/winter seasonal toggle (F16, shipped), and the **phenology "what's
+> happening now" dashboard** (`src/phenology.py`, roadmap F51) that reads the design's trajectory
+> at *this* month's resolution — what's blooming, fruiting, waking, and going dormant right now.
+> **State: strong.**
 
 ### 5. Perception is constructed, not received
 
@@ -103,10 +113,20 @@ Yong's Umwelt research, Deutscher's linguistic relativity, Berger's visual cultu
 > that bee* (`src/scene3d_window.py` → `html/scene3d.html`, a first-person bee camera with its
 > host flowers marked) and recolours the 2D map as that bee's floral-resource map
 > (`html/map/06-overlays.js` — its nectar/pollen plants glow, the rest greys out), a first taste
-> of Umwelt as both overlay *and* embodiment. **State:
-> partial** — site forces, seasonality, the real site, winter snow microsites and now a single
-> bee's world are made visible, but ecological *relationships* (pollinator pathways, mycorrhizal
-> networks, succession trajectories) are still not drawn as networks (roadmap F5, F15).
+> of Umwelt as both overlay *and* embodiment. The **Field Study quiz layer**
+> (`src/field_study.py`, roadmap F48) closes the loop the other way — the first time the app
+> *asks* the user instead of only answering, building the perception through retrieval practice
+> (identify a plant, trace a specialist to its host, spot the food-web gap in your own design);
+> and the **guided lesson track** (`src/lesson_track.py`, roadmap F53) sequences the scattered
+> teaching moments into one narrated path — keystone plants, closing the food web, succession,
+> ranges-not-certainties — each step read back against the user's own design; and **docent /
+> presentation mode** (`src/docent.py`, roadmap F52) turns the design into a narrated tour built
+> from its own facts, so the user can teach *others* to see it (a neighbour, an HOA board, a class).
+> **State: partial** — site forces, seasonality, the real site, winter snow microsites, a single
+> bee's world, active recall, a guided course and a presentable tour are made visible, but
+> ecological *relationships* (pollinator
+> pathways, mycorrhizal networks, succession trajectories) are still not drawn as networks
+> (roadmap F5, F15).
 
 ### 6. Conventional value metrics miss ecological value
 
@@ -117,9 +137,13 @@ Graeber, Saito, Raworth, Schumacher, and Tsing demonstrate that market price fai
 > bird food, vegetation layers, structures, and bloom continuity — explicitly grounded in
 > Tallamy); honest cost framing in `src/sourcing.py`; the **lawn-equivalent counterfactual**
 > (`src/lawn_zones.py:lawn_counterfactual`, roadmap F10) that scores this design against the ≈0
-> an equivalent lawn provides; and **"why it matters" ecological-role labels**
+> an equivalent lawn provides; **"why it matters" ecological-role labels**
 > (`src/ecological_role.py`, roadmap F1) that make each plant's value legible in the browser
-> itself, not just in the Habitat tab. **State: strong.**
+> itself, not just in the Habitat tab; and the **feed-a-chickadee scenario**
+> (`src/chickadee_scenario.py`, roadmap F47), which converts the abstract food-web score into
+> the one number people feel — whether the design's host plants could raise a chickadee brood
+> (the 6,000–9,000 caterpillars of Tallamy & Shropshire 2009), reported as an honest range.
+> **State: strong.**
 
 ### 7. Generalist knowledge produces the most original design insights
 
@@ -128,7 +152,9 @@ The most important insights in ecological design come from people who cross disc
 > **Where this lives in the code:** app-wide rather than in a single module — the
 > architecture itself sits at the intersection of complexity science, ecology, and
 > software design (e.g. the deep-module / information-hiding discipline frozen by
-> `tests/test_architecture_guard.py`). **State: foundational.**
+> `tests/test_architecture_guard.py`); and the **guided lesson track**
+> (`src/lesson_track.py`, roadmap F53) deliberately crosses ecology, design and time in one
+> short course. **State: foundational.**
 
 ### 8. Repair is more sophisticated than creation
 
@@ -183,11 +209,14 @@ Knowledge lives in hands, soil, wind, and direct observation — not only in abs
 > pools, snow drifts, soil compacts); and the **site photo underlay** (`src/site_photo.py`, roadmap
 > F24) that brings a real yard/drone photo onto the map; and **winter snow cover & survival
 > metrics** (`src/snow.py`) that model snow's insulation (cover-days, freeze–thaw, chinook thaw,
-> rain-on-snow) into honest, design-for-the-bad-year guidance. **State: strong (was a gap)** — the
-> app now *fetches* site data, *hands the user a field plan*, *captures their own on-site
-> observation*, and *reads the winter the plants will actually face*. The remaining reach: pinning
-> individual observations to map points and feeding them back into generation as soft constraints
-> (the "pinned" slice of F6).
+> rain-on-snow) into honest, design-for-the-bad-year guidance; and the **phenology dashboard's
+> "go check outside" prompt** (`src/phenology.py`, roadmap F51) that turns each month's prediction
+> into a standing invitation to walk the ground and confirm it ("is it early, late, on time?").
+> **State: strong (was a gap)** — the app now *fetches* site data, *hands the user a field plan*,
+> *captures their own on-site observation*, *reads the winter the plants will actually face*, and
+> *sends the user out to verify its predictions*. The remaining reach: pinning individual
+> observations to map points and feeding them back into generation as soft constraints (the
+> "pinned" slice of F6).
 
 ### 12. Indigenous knowledge is honoured through relationship, not extraction
 

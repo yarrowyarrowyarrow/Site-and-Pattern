@@ -15,24 +15,19 @@ and ``splat_flow``). Two entry points:
 
 from __future__ import annotations
 
-import math
+# The bbox-padding helper moved to osm_features.pad_bbox (V2.13) — it's now
+# load-bearing for the per-import query too, not just the region download.
+from src.osm_features import pad_bbox as _pad_bbox  # noqa: F401 (re-export)
 
 
-def _pad_bbox(bbox: dict, metres: float) -> dict:
-    """Grow a bbox by ``metres`` on every side so a region download pulls in
-    the neighbouring blocks (their buildings shade the property too)."""
-    clat = (bbox["south"] + bbox["north"]) / 2.0
-    dlat = metres / 111320.0
-    dlng = metres / (111320.0 * max(1e-9, math.cos(clat * math.pi / 180)))
-    return {"south": bbox["south"] - dlat, "north": bbox["north"] + dlat,
-            "west": bbox["west"] - dlng, "east": bbox["east"] + dlng}
-
-
-def import_buildings_offline(main, bbox: dict) -> bool:
+def import_buildings_offline(main, bbox: dict, *, boundary=None,
+                             margin_m: float = 30.0) -> bool:
     """Place buildings for ``bbox`` from the offline pack if it covers the area.
 
     Returns ``True`` when it handled the import (so the caller skips the live
     Overpass fetch); ``False`` when there's no pack or no buildings nearby.
+    ``boundary``/``margin_m`` clip the pack items to the drawn polygon exactly
+    like the live path (V2.13) — same precision either way.
     """
     from src.building_store import BuildingStore
     store = BuildingStore()
@@ -41,14 +36,18 @@ def import_buildings_offline(main, bbox: dict) -> bool:
     items = store.buildings_in_bbox(bbox)
     if not items:
         return False
-    from src.osm_features import add_features_to_project
-    added = add_features_to_project(items, main._project)
+    from src.osm_features import add_features_to_project, filter_to_boundary
+    kept, n_inside, n_neigh = filter_to_boundary(items, boundary, margin_m)
+    added = add_features_to_project(kept, main._project)
     if added:
         main._mark_modified()
         main._map_events._reload_existing_features()
+    where = (f"{n_inside} inside your boundary + {n_neigh} neighbour"
+             f"{'s' if n_neigh != 1 else ''} within {margin_m:.0f} m"
+             if boundary and len(boundary) >= 3 else f"{len(kept)} nearby")
     main.site_panel.set_osm_status(
-        f"Imported {added} building(s) from the offline pack "
-        f"({len(items)} nearby). Trees need an online import.")
+        f"Imported {added} building(s) from the offline pack ({where}). "
+        "Trees need an online import.")
     return True
 
 

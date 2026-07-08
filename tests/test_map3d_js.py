@@ -130,6 +130,93 @@ class TestBeeMode(unittest.TestCase):
         self.assertIn("[1, 2]", m3.set_bee_targets(["1", "2"]))
         self.assertIn("permaSetBeeTargets([]", m3.set_bee_targets([]))
 
+    def test_set_bee_targets_passes_label(self):
+        # The bee's display name feeds the nectar-run HUD (V2.12); it is JSON-
+        # quoted (never raw-interpolated) and defaults to "".
+        js = m3.set_bee_targets([3], "Mining Bees (any Andrena)")
+        self.assertIn('[3], "Mining Bees (any Andrena)"', js)
+        self.assertIn('[], ""', m3.set_bee_targets([], ""))
+        self.assertIn('""', m3.set_bee_targets([1]))
+
+    def test_set_bee_targets_kind_and_hosts(self):
+        # Lepidoptera (V2.12): kind picks the avatar, host_ids are larval-host
+        # "nursery" markers. Both are JSON-encoded; defaults are 'bee' + [].
+        js = m3.set_bee_targets([3, 4], "Monarch", "butterfly", [7, 9])
+        self.assertIn('[3, 4], "Monarch", "butterfly", [7, 9]', js)
+        self.assertTrue(js.strip().endswith(");"))
+        # Host ids are coerced to ints like the nectar ids.
+        self.assertIn("[1, 2]", m3.set_bee_targets([], "", "moth", ["1", "2"]))
+        # Default kind/hosts when omitted.
+        self.assertIn('"bee", []', m3.set_bee_targets([1]))
+
+    def test_set_bee_tour_guarded_bool(self):
+        on = m3.set_bee_tour(True)
+        self.assertIn("window.permaSetBeeTour && window.permaSetBeeTour(", on)
+        self.assertIn("true", on)
+        self.assertTrue(on.strip().endswith(");"))
+        self.assertIn("false", m3.set_bee_tour(False))
+
+    def test_set_bee_targets_appearance(self):
+        # The flown avatar's look spec is JSON-encoded as the 5th arg; None by
+        # default so an un-styled bee still flies (V2.12).
+        app = {"kind": "bee", "fuzz": "#3fae5a", "metallic": True}
+        js = m3.set_bee_targets([1], "Green Sweat Bee", "bee", [], app)
+        self.assertIn('"metallic": true', js)
+        self.assertIn('"#3fae5a"', js)
+        self.assertIn("null", m3.set_bee_targets([1]))   # default appearance
+
+
+class TestWildlifeAndWalk(unittest.TestCase):
+    def test_set_wildlife_json(self):
+        crit = [{"kind": "bee", "x": 1.0, "y": 2.0, "h": 0.5,
+                 "app": {"kind": "bee", "fuzz": "#f2c12e"}}]
+        js = m3.set_wildlife(crit)
+        self.assertIn("window.permaSetWildlife && window.permaSetWildlife(", js)
+        self.assertIn('"kind": "bee"', js)
+        self.assertIn('"#f2c12e"', js)
+        self.assertTrue(js.strip().endswith(");"))
+        self.assertIn("permaSetWildlife([]", m3.set_wildlife([]))
+
+    def test_set_walk_mode_guarded_bool(self):
+        on = m3.set_walk_mode(True)
+        self.assertIn("window.permaSetWalkMode && window.permaSetWalkMode(", on)
+        self.assertIn("true", on)
+        self.assertTrue(on.strip().endswith(");"))
+        self.assertIn("false", m3.set_walk_mode(False))
+
+    def test_set_cinematic_guarded_bool(self):
+        on = m3.set_cinematic(True)
+        self.assertIn("window.permaSetCinematic && window.permaSetCinematic(", on)
+        self.assertIn("true", on)
+        self.assertTrue(on.strip().endswith(");"))
+        self.assertIn("false", m3.set_cinematic(False))
+
+    def test_set_cinematic_caption_json(self):
+        js = m3.set_cinematic_caption("Year 5", "the canopy fills in")
+        self.assertIn("window.permaSetCinematicCaption && "
+                      "window.permaSetCinematicCaption(", js)
+        self.assertIn('"Year 5", "the canopy fills in"', js)
+        self.assertIn('"", ""', m3.set_cinematic_caption("", ""))
+
+    def test_set_wildlife_labels_guarded_bool(self):
+        on = m3.set_wildlife_labels(True)
+        self.assertIn("window.permaSetWildlifeLabels && window.permaSetWildlifeLabels(", on)
+        self.assertIn("true", on)
+        self.assertTrue(on.strip().endswith(");"))
+        self.assertIn("false", m3.set_wildlife_labels(False))
+
+    def test_set_plant_spotlight_json(self):
+        items = [{"plant_id": 5, "name": "Wild Bergamot", "x": 1.0, "y": 2.0, "h": 0.9}]
+        app = {"kind": "bee", "fuzz": "#f2c12e"}
+        js = m3.set_plant_spotlight(items, app)
+        self.assertIn("window.permaSetPlantSpotlight && window.permaSetPlantSpotlight(",
+                      js)
+        self.assertIn('"Wild Bergamot"', js)
+        self.assertIn('"#f2c12e"', js)
+        self.assertTrue(js.strip().endswith(");"))
+        # Empty clears; appearance defaults to null.
+        self.assertIn("permaSetPlantSpotlight([], null", m3.set_plant_spotlight([]))
+
 
 if __name__ == "__main__":
     unittest.main()

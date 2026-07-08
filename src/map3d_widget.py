@@ -166,10 +166,45 @@ class Map3DWidget(QWebEngineView):
         """Enter/leave the "fly as a bee" first-person mode (F37 increment 2)."""
         self.run_js(map3d_js.set_bee_mode(on))
 
-    def set_bee_targets(self, plant_ids: list):
-        """Mark the chosen bee's floral-host plants so the fly-through beacons
-        them (F37 increment 2)."""
-        self.run_js(map3d_js.set_bee_targets(plant_ids))
+    def set_bee_targets(self, plant_ids: list, bee_label: str = "",
+                        kind: str = "bee", host_ids: list = None,
+                        appearance: dict = None):
+        """Mark the chosen pollinator's plants so the fly-through beacons them
+        (F37 increment 2). ``plant_ids`` are adult nectar plants; ``bee_label``
+        names the creature in the HUD; ``kind`` picks the avatar
+        (bee/butterfly/moth); ``host_ids`` are larval-host "nursery" markers;
+        ``appearance`` styles the avatar to the species (V2.12)."""
+        self.run_js(map3d_js.set_bee_targets(
+            plant_ids, bee_label, kind, host_ids, appearance))
+
+    def set_bee_tour(self, on: bool):
+        """Toggle the fly-through's seasonal nectar tour (V2.12)."""
+        self.run_js(map3d_js.set_bee_tour(on))
+
+    def set_wildlife(self, creatures: list, summary: dict = None):
+        """Populate the scene with ambient wildlife + an optional roster-headline
+        support summary (V2.12/V2.13)."""
+        self.run_js(map3d_js.set_wildlife(creatures, summary))
+
+    def set_walk_mode(self, on: bool):
+        """Enter/leave third-person "walk the garden" mode (V2.12)."""
+        self.run_js(map3d_js.set_walk_mode(on))
+
+    def set_cinematic(self, on: bool):
+        """Toggle the cinematic flyover (V2.13)."""
+        self.run_js(map3d_js.set_cinematic(on))
+
+    def set_cinematic_caption(self, big: str, sub: str = ""):
+        """Set the flyover's lower-third caption (V2.13)."""
+        self.run_js(map3d_js.set_cinematic_caption(big, sub))
+
+    def set_plant_spotlight(self, items: list, appearance: dict = None):
+        """Spotlight the plants a chosen creature uses; empty list clears (V2.12)."""
+        self.run_js(map3d_js.set_plant_spotlight(items, appearance))
+
+    def set_wildlife_labels(self, on: bool):
+        """Toggle the wildlife roster + always-on name labels (V2.13)."""
+        self.run_js(map3d_js.set_wildlife_labels(on))
 
     def set_sun_for(self, lat: float, lng: float, when: datetime):
         """Point the 3D sun for a place/time (reuses ``src/solar`` via map3d_js)."""

@@ -75,5 +75,49 @@
     "texture_class": "loam",
     "max_reported_depth_cm": 80,
     "notes": "Cooler, moister island in the dry mixed-grass region; brown to dark-brown chernozems with forested patches."
+  },
+  {
+    "region": "Regina Plains (Moist Mixed Grassland — south Saskatchewan)",
+    "centroid": [50.45, -104.62],
+    "ph_top": 7.4,
+    "sand_pct_top": 15,
+    "silt_pct_top": 30,
+    "clay_pct_top": 55,
+    "texture_class": "clay",
+    "max_reported_depth_cm": 100,
+    "notes": "Deep heavy lacustrine clay (Rego / Dark Brown chernozem) of the Regina/Lumsden plains; shrink-swell, slow drainage, mildly alkaline. Amend for drainage; choose clay-tolerant natives."
+  },
+  {
+    "region": "Dark Brown chernozem (Moist Mixed Grassland — central Saskatchewan)",
+    "centroid": [52.13, -106.67],
+    "ph_top": 7.3,
+    "sand_pct_top": 35,
+    "silt_pct_top": 40,
+    "clay_pct_top": 25,
+    "texture_class": "loam",
+    "max_reported_depth_cm": 100,
+    "notes": "Dark Brown chernozem on glacial till around Saskatoon; moderately productive prairie loam."
+  },
+  {
+    "region": "Brown chernozem (Mixed Grassland — SW Saskatchewan)",
+    "centroid": [50.3, -107.8],
+    "ph_top": 7.5,
+    "sand_pct_top": 40,
+    "silt_pct_top": 38,
+    "clay_pct_top": 22,
+    "texture_class": "loam",
+    "max_reported_depth_cm": 100,
+    "notes": "Brown chernozem of the dry southwest; carbonate often near the surface. Drought-tolerant species recommended."
+  },
+  {
+    "region": "Black chernozem (Aspen Parkland — central-north Saskatchewan)",
+    "centroid": [52.9, -108.0],
+    "ph_top": 6.8,
+    "sand_pct_top": 30,
+    "silt_pct_top": 45,
+    "clay_pct_top": 25,
+    "texture_class": "loam",
+    "max_reported_depth_cm": 100,
+    "notes": "Black chernozem parkland (Battleford / Prince Albert); high organic matter, the most productive Saskatchewan zone."
   }
 ]

@@ -1,6 +1,12 @@
 """
 shade.py — Cast-shade estimation for the design grid (V1.48; polygon V1.53).
 
+Design principle P9 (uncertainty is a feature — ship an honest model, never
+false precision) — see docs/DESIGN_PHILOSOPHY.md. A bare deciduous crown does
+NOT cast a solid winter shadow, so V2.13 gives declared-deciduous trees a
+leaf-off weight in Oct–Apr instead of pretending the shade is full; untagged
+trees stay opaque because we don't actually know their foliage.
+
 Estimates which patches of ground are shaded a meaningful fraction of the day,
 so the generator can put shade-tolerant plants where it is actually shady —
 under existing trees, north of buildings, beneath the design's own canopy.
@@ -60,18 +66,33 @@ _MIN_SUN_ALT = 5.0                          # below this the sun casts no useful
                                             # shadow (and 1/tan blows up)
 _MAX_SHADOW_M = 60.0                        # clamp absurd low-sun shadows
 
+# Leaf-off phenology (V2.13). A deciduous crown is bare in Alberta from
+# roughly October through April (flush ~mid-May, drop ~late September), and a
+# bare crown is mostly light: dense twigging still intercepts ~20–40% of
+# direct sun, so leaf-off deciduous casters contribute a reduced weight rather
+# than vanishing. Only casters that *declare* foliage="deciduous" get the
+# reduction — untagged trees keep the old opaque behaviour, so the model only
+# changes where the user (or the plant catalogue) supplied real information.
+_LEAF_OFF_MONTHS = {10, 11, 12, 1, 2, 3, 4}
+_LEAF_OFF_WEIGHT = 0.3
+
 
 def _caster(lat: float, lng: float, height_m: float, radius_m: float,
-            footprint: Optional[list] = None, kind: str = "building") -> dict:
+            footprint: Optional[list] = None, kind: str = "building",
+            foliage: Optional[str] = None) -> dict:
     """A shade caster. ``footprint`` (a ring of ``(lng, lat)`` pairs), when
     present, is the true perimeter used by the shapely polygon path; the
     circle fallback always uses ``lat``/``lng`` + ``radius_m``. ``kind`` is
     ``"tree"`` (rounded crown that tapers — cast as a tapering canopy) or
-    ``"building"`` (vertical extrusion of the footprint)."""
+    ``"building"`` (vertical extrusion of the footprint). ``foliage``
+    ("deciduous" / "evergreen", trees only) drives the leaf-off winter
+    weighting; ``None`` = unknown = always-opaque legacy behaviour."""
     c = {"lat": lat, "lng": lng, "height_m": max(0.0, float(height_m)),
          "radius_m": max(0.5, float(radius_m)), "kind": kind}
     if footprint:
         c["footprint"] = footprint
+    if foliage:
+        c["foliage"] = foliage
     return c
 
 
@@ -89,9 +110,12 @@ def casters_from_project(project_dict: dict) -> list[dict]:
             row = get_plant(pid) or {}
             h = row.get("mature_height_meters") or row.get("mature_height_m")
             cw = row.get("mature_canopy_m") or row.get("spacing_meters")
-            return (float(h) if h else 0.0, float(cw) / 2 if cw else 0.5)
+            fol = (row.get("deciduous_evergreen") or "").strip().lower()
+            if fol not in ("deciduous", "evergreen"):
+                fol = None                    # herbaceous/unknown → legacy opaque
+            return (float(h) if h else 0.0, float(cw) / 2 if cw else 0.5, fol)
         except Exception:  # noqa: BLE001
-            return (0.0, 0.5)
+            return (0.0, 0.5, None)
 
     for f in feats:
         props = f.get("properties", {}) or {}
@@ -115,10 +139,15 @@ def casters_from_project(project_dict: dict) -> list[dict]:
         # A footprint/canopy tagged caster_kind="tree" (or an existing_tree)
         # casts a tapering tree shadow; everything else extrudes as a building.
         kind = "tree" if props.get("caster_kind") == "tree" else "building"
+        # Foliage (deciduous / evergreen) only means something for tree crowns;
+        # it drives the leaf-off winter weighting (V2.13).
+        foliage = (props.get("tree_foliage") or None) if kind == "tree" or \
+            et == "existing_tree" else None
         if et == "existing_tree":
             casters.append(_caster(lat, lng, props.get("height_m", 6.0),
                                    props.get("canopy_radius_m", 3.0),
-                                   footprint=ring, kind="tree"))
+                                   footprint=ring, kind="tree",
+                                   foliage=foliage))
         elif et == "existing_building":
             casters.append(_caster(lat, lng, props.get("height_m", 5.0),
                                    props.get("canopy_radius_m", 4.0),
@@ -129,20 +158,69 @@ def casters_from_project(project_dict: dict) -> list[dict]:
             if h and h > 0:
                 casters.append(_caster(lat, lng, h,
                                        props.get("canopy_radius_m", 3.0),
-                                       footprint=ring, kind=kind))
+                                       footprint=ring, kind=kind,
+                                       foliage=foliage))
         elif et == "custom_shape" and props.get("cast_shade"):
             # A generic drawn shape opted in as a shade caster.
             h = props.get("height_m", 0.0)
             if h and h > 0:
                 casters.append(_caster(lat, lng, h,
                                        props.get("canopy_radius_m", 3.0),
-                                       footprint=ring, kind=kind))
+                                       footprint=ring, kind=kind,
+                                       foliage=foliage))
         elif et == "plant":
             pid = props.get("plant_id")
-            h, r = _plant_dims(pid)
+            h, r, fol = _plant_dims(pid)
             if h >= 2.0:                      # only trees/large shrubs matter
-                casters.append(_caster(lat, lng, h, r, kind="tree"))
+                casters.append(_caster(lat, lng, h, r, kind="tree",
+                                       foliage=fol))
     return casters
+
+
+def _split_casters_by_leaf(casters, month):
+    """Partition casters into (full-shade, leaf-off-reduced) for a sample
+    month. Outside the leaf-off window — or with no month — everything is
+    full; inside it, declared-deciduous tree crowns move to the reduced list.
+    Untagged trees always stay full (unknown ≠ transparent)."""
+    if month is None or month not in _LEAF_OFF_MONTHS:
+        return list(casters or []), []
+    full, reduced = [], []
+    for c in casters or []:
+        if c.get("kind") == "tree" and c.get("foliage") == "deciduous":
+            reduced.append(c)
+        else:
+            full.append(c)
+    return full, reduced
+
+
+def _accumulate_moment(out, casters, sun, lat, lng, rows, cols, bbox,
+                       terrain_elev=None, month=None) -> bool:
+    """Foliage-aware accumulation of one sun-moment (V2.13): full casters (and
+    terrain) add 1.0 per shaded cell as before; declared-deciduous trees in a
+    leaf-off month add ``_LEAF_OFF_WEIGHT`` instead — bare branches, not a
+    solid crown. A cell under both takes the stronger (max), never the sum.
+    Delegates to ``_accumulate_shade`` when no reduced casters apply, so
+    summer/untagged behaviour is bit-for-bit unchanged."""
+    full, reduced = _split_casters_by_leaf(casters, month)
+    if not reduced:
+        return _accumulate_shade(out, full, sun, lat, lng, rows, cols, bbox,
+                                 terrain_elev=terrain_elev)
+    tmp_full = [[0.0] * cols for _ in range(rows)]
+    ok = _accumulate_shade(tmp_full, full, sun, lat, lng, rows, cols, bbox,
+                           terrain_elev=terrain_elev)
+    if not ok:
+        return False
+    tmp_red = [[0.0] * cols for _ in range(rows)]
+    _accumulate_shade(tmp_red, reduced, sun, lat, lng, rows, cols, bbox,
+                      terrain_elev=None)
+    for r in range(rows):
+        row_full, row_red, out_r = tmp_full[r], tmp_red[r], out[r]
+        for c in range(cols):
+            if row_full[c]:
+                out_r[c] += 1.0
+            elif row_red[c]:
+                out_r[c] += _LEAF_OFF_WEIGHT
+    return True
 
 
 def _accumulate_shade(out, casters, sun, lat, lng, rows, cols, bbox,
@@ -347,9 +425,9 @@ def shade_grid(casters: list[dict], elev: dict,
             # local solar time, so convert the local sample hour to UTC first
             # (utc = local - lng/15). Without this, noon would read as dawn.
             dt = datetime(2025, mo, day) + timedelta(hours=hr - lng / 15.0)
-            if _accumulate_shade(out, casters, sun_position(lat, lng, dt),
-                                 lat, lng, rows, cols, bbox,
-                                 terrain_elev=terrain_elev):
+            if _accumulate_moment(out, casters, sun_position(lat, lng, dt),
+                                  lat, lng, rows, cols, bbox,
+                                  terrain_elev=terrain_elev, month=mo):
                 samples += 1
 
     if samples:
@@ -363,11 +441,12 @@ def shade_grid_at(casters: list[dict], elev: dict, when: datetime,
                   lat: Optional[float] = None,
                   lng: Optional[float] = None,
                   terrain: bool = True) -> list[list[float]]:
-    """Binary shade grid for a single instant ``when`` (a naive *local* solar
-    datetime): 1.0 where shaded, 0.0 where lit. Used by the time-of-day overlay
-    slider so the user can watch shadows sweep across the day/season.
-    ``terrain`` unions in the DEM self-shadow for the instant (no-op on flat
-    grids)."""
+    """Shade grid for a single instant ``when`` (a naive *local* solar
+    datetime): 1.0 where shaded, 0.0 where lit — except declared-deciduous
+    trees in a leaf-off month, whose cells read ``_LEAF_OFF_WEIGHT`` (bare
+    branches pass most light, V2.13). Used by the time-of-day overlay slider
+    so the user can watch shadows sweep across the day/season. ``terrain``
+    unions in the DEM self-shadow for the instant (no-op on flat grids)."""
     grid = elev.get("grid") or []
     rows = elev.get("rows", len(grid))
     cols = elev.get("cols", len(grid[0]) if grid else 0)
@@ -384,8 +463,9 @@ def shade_grid_at(casters: list[dict], elev: dict, when: datetime,
         lng = (bbox["east"] + bbox["west"]) / 2.0
     from src.solar import sun_position
     dt_utc = when + timedelta(hours=-lng / 15.0)
-    _accumulate_shade(out, casters, sun_position(lat, lng, dt_utc),
-                      lat, lng, rows, cols, bbox, terrain_elev=terrain_elev)
+    _accumulate_moment(out, casters, sun_position(lat, lng, dt_utc),
+                       lat, lng, rows, cols, bbox, terrain_elev=terrain_elev,
+                       month=when.month)
     return out
 
 

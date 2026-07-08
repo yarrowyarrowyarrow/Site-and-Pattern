@@ -139,6 +139,11 @@ def clear_selection() -> str:
     return "clearSelection();"
 
 
+def select_plants_by_species(plant_id: int) -> str:
+    """Select every placed marker of one species (On This Design → map)."""
+    return f"selectPlantsBySpecies({int(plant_id)});"
+
+
 def delete_selected() -> str:
     return "deleteSelected();"
 
@@ -151,6 +156,12 @@ def toggle_legend() -> str:
 
 def set_view(lat: float, lng: float, zoom: int = 14) -> str:
     return f"setView({lat}, {lng}, {zoom});"
+
+
+def fit_bounds(south: float, west: float, north: float, east: float) -> str:
+    """Frame a lat/lng box with padding (species / community zoom, V2.13)."""
+    return (f"fitMapBounds({float(south)}, {float(west)}, "
+            f"{float(north)}, {float(east)});")
 
 
 def set_zoom_sensitivity(level: str) -> str:
@@ -485,6 +496,12 @@ def draw_slope_overlay(png_data_url: str, bbox: dict, opacity: float) -> str:
 
 def set_slope_overlay_opacity(opacity: float) -> str:
     return f"setSlopeOverlayOpacity({float(opacity)});"
+
+
+def draw_water_overlay(payload: dict) -> str:
+    """Water flow & accumulation (V2.13): blue accumulation raster + sparse
+    downhill arrows. ``payload`` = {image, bbox, opacity, arrows}."""
+    return f"drawWaterOverlay({_jsobj(payload)});"
 
 
 def draw_shade_overlay(png_data_url: str, bbox: dict, opacity: float) -> str:

@@ -20,3 +20,11 @@ shapely>=2.0
 # the DEM horizon ray-march has a pure-Python fallback, so a numpy-less install
 # still computes terrain shade (just slower); numpy only speeds it up.
 numpy>=1.21
+# NOTE: the offline soil pack (src/soil_grid.py) and NRCan HRDEM LiDAR elevation
+# (src/hrdem.py) need rasterio + pyproj, which pull in native GDAL/PROJ. Those
+# are NOT listed here on purpose: they broke the frozen macOS/Windows builds
+# (the PyInstaller DMG/EXE jobs install this file, and GDAL wheels fail to
+# install/bundle under the Rosetta x86_64 CI Mac). Both imports are lazy and
+# degrade gracefully — without them the app falls back to SoilGrids / the 30 m
+# Copernicus DEM. To enable the soil pack + HRDEM in a source/dev install:
+#     pip install -r requirements-optional.txt

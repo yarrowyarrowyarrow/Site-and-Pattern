@@ -74,8 +74,10 @@ class ModeController:
         # Stash height for existing tree/building marks (V1.49) — the JS
         # placement callback only echoes (id, name, lat, lng, size), so the
         # shade-relevant height is remembered here and read back in
-        # map_events._on_existing_feature_placed.
+        # map_events._on_existing_feature_placed. Tree foliage rides the same
+        # stash for the leaf-off winter-shade model (V2.13).
         self._main._existing_feature_height_m = struct_def.get("height_m")
+        self._main._existing_feature_foliage = struct_def.get("tree_foliage")
         self._main.map_widget.set_structure_mode(struct_def)
         self._main.toolbar.reset_draw_buttons()
         self._set_mode_label(
@@ -92,6 +94,10 @@ class ModeController:
 
     def _enter_shape_mode(self, shape_config: dict):
         self._main._current_mode = 'shape'
+        # Foliage stash for drawn tree canopies — the shape-complete callback
+        # doesn't echo custom config fields (V2.13, mirrors the height stash
+        # in _enter_structure_mode).
+        self._main._tree_canopy_foliage = shape_config.get("tree_foliage")
         self._main.map_widget.set_shape_mode(shape_config)
         self._main.toolbar.reset_draw_buttons()
         self._set_mode_label(

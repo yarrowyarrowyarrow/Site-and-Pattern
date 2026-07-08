@@ -176,6 +176,7 @@ class MapEventRouter:
         from the mode controller's stash (the JS callback doesn't echo it)."""
         from src.db.structures import EXISTING_TREE_ID
         height_m = getattr(self._main, "_existing_feature_height_m", None)
+        foliage = getattr(self._main, "_existing_feature_foliage", None)
         etype = ("existing_tree" if struct_id == EXISTING_TREE_ID
                  else "existing_building")
         props = {
@@ -190,6 +191,10 @@ class MapEventRouter:
             "struct_id": struct_id,
             "size_m": size_m,
         }
+        # Foliage drives the leaf-off winter-shade weighting (V2.13);
+        # only meaningful on trees, absent on legacy marks.
+        if etype == "existing_tree" and foliage:
+            props["tree_foliage"] = foliage
         self._main._project["features"].append({
             "type": "Feature",
             "geometry": {"type": "Point", "coordinates": [lng, lat]},
@@ -200,7 +205,8 @@ class MapEventRouter:
         # identically. A bare {id,name,size_m} would render as the default box.
         from src.db.structures import existing_feature_def
         full_def = existing_feature_def(
-            struct_id, size_m=size_m, height_m=props["height_m"])
+            struct_id, size_m=size_m, height_m=props["height_m"],
+            foliage=props.get("tree_foliage", ""))
         full_def["name"] = name
         self._main._push_undo({
             "action": "place_structure", "struct_id": struct_id,
@@ -314,6 +320,11 @@ class MapEventRouter:
             # extrusion (see shade.casters_from_project / cast_tree_shadow).
             if shape_type == "Tree canopy":
                 props["caster_kind"] = "tree"
+                # Foliage from the mode stash (the JS callback doesn't echo
+                # custom config fields) — leaf-off winter shade, V2.13.
+                fol = getattr(self._main, "_tree_canopy_foliage", None)
+                if fol:
+                    props["tree_foliage"] = fol
         self._main._project["features"].append({
             "type": "Feature",
             "geometry": {"type": "Polygon", "coordinates": [ring]},
@@ -804,6 +815,7 @@ class MapEventRouter:
             "resolution_m":       cfg.get("resolution_m", 30.0),
             "want_contours":      cfg.get("want_contours", True),
             "want_slope_overlay": cfg.get("want_slope_overlay", True),
+            "want_water":         cfg.get("want_water", False),
         }
         prefs = {
             "color":       cfg.get("color", "#44cc00"),
@@ -905,7 +917,7 @@ class MapEventRouter:
         self._main._project["features"] = [
             f for f in self._main._project["features"]
             if f.get("properties", {}).get("element_type") not in
-                ("auto_contour", "slope_overlay")
+                ("auto_contour", "slope_overlay", "water_overlay")
         ]
         self._main.map_widget.clear_auto_terrain()
 
@@ -970,6 +982,11 @@ class MapEventRouter:
                 },
             })
 
+        # Render water flow & accumulation overlay (V2.13) — glue lives in
+        # src/water_flow.py (this controller is at its line ceiling).
+        from src import water_flow
+        drew_water = water_flow.render_water_overlay(self._main, result)
+
         self._main._mark_modified()
         self._main._set_mode_label("Ready")
 
@@ -985,6 +1002,8 @@ class MapEventRouter:
             bits.append(
                 f"Aspect: {stats['dominant_aspect']} ({share_pct}% of slope ≥2%)"
             )
+        if drew_water:
+            bits.extend(water_flow.water_status_bits(stats))
         bits.append(f"{len(contours)} contour level(s)")
         for w in (result.get("warnings") or []):
             bits.append("⚠ " + w)
@@ -1007,7 +1026,7 @@ class MapEventRouter:
         self._main._project["features"] = [
             f for f in self._main._project["features"]
             if f.get("properties", {}).get("element_type") not in
-                ("auto_contour", "slope_overlay")
+                ("auto_contour", "slope_overlay", "water_overlay")
         ]
         self._main._mark_modified()
         self._main.site_panel.set_auto_terrain_status("")
@@ -1223,12 +1242,20 @@ class MapEventRouter:
     def _on_osm_import_requested(self):
         """Fetch buildings/trees from OSM for the boundary/pin area off-thread,
         then add them as existing_* features (deduped). Degrades gracefully."""
-        from src.osm_features import OSMWorker, bbox_from_boundary_or_pin
+        from src.osm_features import OSMWorker, bbox_with_area_note
 
         sc = dict(self._main._project.get("properties", {})
                   .get("site_config", {}) or {})
         boundary = self._project_boundary_latlng()
-        bbox = bbox_from_boundary_or_pin(boundary, sc)
+        margin = self._main.site_panel.osm_neighbour_margin()
+        # Query bbox must cover the filter distance; results are then clipped
+        # to the boundary polygon + margin in osm_features.import_osm_result.
+        bbox, area_note = bbox_with_area_note(
+            boundary, sc, pad_m=max(30.0, margin))
+        # Stashed for _on_osm_ready (boundary-precise filtering + status).
+        self._main._osm_area_note = area_note
+        self._main._osm_boundary = boundary
+        self._main._osm_margin = margin
         if bbox is None:
             self._main.site_panel.set_osm_status(
                 "Drop a pin or draw a boundary first.")
@@ -1237,7 +1264,9 @@ class MapEventRouter:
         # Prefer the offline building pack when this area has been downloaded
         # (instant, no network) — same data, same canopy_footprint pipeline.
         from src import building_flow
-        if building_flow.import_buildings_offline(self._main, bbox):
+        if building_flow.import_buildings_offline(self._main, bbox,
+                                                  boundary=boundary,
+                                                  margin_m=margin):
             return
 
         self._main.site_panel.set_osm_status("Querying OpenStreetMap…")
@@ -1270,21 +1299,21 @@ class MapEventRouter:
 
     @undoable("import buildings")
     def _on_osm_ready(self, res):
-        if not res:
-            self._main.site_panel.set_osm_status(
-                "OpenStreetMap unavailable or nothing found nearby.")
-            return
-        from src.osm_features import add_features_to_project
-        feats = list(res.get("buildings", [])) + list(res.get("trees", []))
-        added = add_features_to_project(feats, self._main._project)
-        if added:
+        # Filtering to the boundary polygon, project insert, and message
+        # composition all live in osm_features.import_osm_result (pure,
+        # tested; this file is at its line ceiling). res=None = the fetch
+        # FAILED after retry+mirror — reported honestly, never as "Found 0".
+        from src.osm_features import import_osm_result
+        out = import_osm_result(
+            res, self._main._project,
+            boundary=getattr(self._main, "_osm_boundary", None),
+            margin_m=getattr(self._main, "_osm_margin", 30.0),
+            area_note=getattr(self._main, "_osm_area_note", ""))
+        if out["added"]:
             self._main._mark_modified()
             # Re-render the newly imported features through the structure path.
             self._reload_existing_features()
-        n_b = len(res.get("buildings", []))
-        n_t = len(res.get("trees", []))
-        self._main.site_panel.set_osm_status(
-            f"Found {n_b} building(s), {n_t} tree(s); added {added} new.")
+        self._main.site_panel.set_osm_status(out["message"])
 
     def _reload_existing_features(self):
         """Draw OSM-imported existing features that aren't yet on the map: trees

@@ -50,6 +50,8 @@ from src.controllers.area_fill_controller import AreaFillController
 from src.project_store import ProjectStore
 from src.scan_import_dialog import start_scan_import as _start_scan_import
 from src.scene3d_window import open_3d_view as _open_3d_view
+from src.reference_ecosystem_window import (
+    open_reference_ecosystem as _open_reference_ecosystem)
 from src.snapshot_window import open_snapshot_view as _open_snapshot_view
 from src.sprite_gallery_window import open_sprite_gallery as _open_sprite_gallery
 from src.branding import APP_NAME, APP_TITLE
@@ -329,6 +331,9 @@ class MainWindow(QMainWindow):
         inner.addTab(self.polyculture_panel, "Plant Communities")
         inner.addTab(self.on_this_design, "On This Design")
         v.addWidget(inner)
+        # Kept for programmatic tab jumps (Site tab's ecoregion → community
+        # library cross-link, V2.13).
+        self._plants_inner_tabs = inner
         return wrap
 
     def _on_map_settings(self):
@@ -505,6 +510,16 @@ class MainWindow(QMainWindow):
         # itself in src/scene3d_window.py and the architecture guard's
         # method ceiling stays meaningful.
         act_3d.triggered.connect(lambda: _open_3d_view(self))
+
+        act_reference = view_menu.addAction("Walk a &Reference Ecosystem…")
+        act_reference.setStatusTip(
+            "Walk the natural community your ecoregion is reaching toward — "
+            "the reference target for this design (F50)"
+        )
+        # Lambda (not a MainWindow method): the window lives in
+        # src/reference_ecosystem_window.py, off MainWindow's method ledger.
+        act_reference.triggered.connect(
+            lambda: _open_reference_ecosystem(self))
 
         act_snapshots = view_menu.addAction("&Growth Snapshots…")
         act_snapshots.setStatusTip(
@@ -806,6 +821,30 @@ class MainWindow(QMainWindow):
         # "Restoring toward…" filter live, for this session only (V1.87).
         self.site_panel.ecoregion_detected.connect(
             self.plant_panel.set_autodetected_ecoregion)
+        # "Browse N reference communities →" jumps to the community library
+        # with the Habitat filter pre-set to the detected ecoregion (V2.13).
+        # Handlers live in design_review_flow (MainWindow is at its method
+        # ceiling), wired through thin lambdas.
+        from src import design_review_flow as _drf
+        self.site_panel.browse_communities_requested.connect(
+            lambda key: _drf.browse_communities(self, key))
+        # On This Design rows → map (V2.13): click to locate, context menu to
+        # select / remove / open in the Plant Library.
+        self.on_this_design.species_focus_requested.connect(
+            lambda pid: _drf.focus_species(self, pid))
+        self.on_this_design.species_select_requested.connect(
+            lambda pid: _drf.select_species(self, pid))
+        self.on_this_design.species_remove_requested.connect(
+            lambda pid: _drf.remove_species(self, pid))
+        self.on_this_design.species_show_in_library_requested.connect(
+            lambda pid: _drf.show_in_library(self, pid))
+        self.on_this_design.community_focus_requested.connect(
+            lambda name: _drf.focus_community(self, name))
+        # Stats deep-links: habitat value → Analysis, cost → Planning (V2.13).
+        self.on_this_design.open_habitat_analysis_requested.connect(
+            lambda: _drf.open_habitat_analysis(self))
+        self.on_this_design.open_planning_requested.connect(
+            lambda: _drf.open_planning(self))
         # Address search → drop pin on map (the bridge then notifies us
         # back via site_pin_placed and the usual fetch flow runs).
         self.site_panel.address_resolved.connect(self._on_address_resolved)
@@ -1870,6 +1909,10 @@ class MainWindow(QMainWindow):
 
     def _sync_planning_panel(self):
         """Push current placed plants and structures to planning + analysis panels."""
+        # Shade-tab caster inventory (V2.13) — cheap feature scan, and this
+        # sync already runs on every design mutation, project load, and after
+        # OSM imports/feature marks.
+        self.site_panel.update_caster_summary(self._project)
         enriched = []
         for p in self._placed_plants:
             entry = dict(p)

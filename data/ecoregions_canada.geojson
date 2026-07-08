@@ -1,7 +1,7 @@
 {
   "type": "FeatureCollection",
-  "name": "Alberta ecoregions (V1.36 starter set)",
-  "comment": "Hand-drawn approximations of Alberta's five major terrestrial ecoregions, used by src/ecoregion.py:lookup_ecoregion. The polygons are rectangular bounding regions chosen for non-overlap rather than fidelity to natural boundaries (e.g. river valleys). scripts/prepare_ecoregions.py is the documented upgrade path: replace this file with simplified polygons derived from the CEC Level III Ecoregions of North America shapefile when fidelity matters. Riparian and Wet Meadow are intentionally absent — those are per-feature rather than per-region at the provincial scale, so they remain manual-only in the plant filter.",
+  "name": "Prairie ecoregions (V1.36 starter set; Saskatchewan added V2.14)",
+  "comment": "Hand-drawn approximations of the prairie provinces' major terrestrial ecoregions, used by src/ecoregion.py:lookup_ecoregion. The polygons are rectangular bounding regions chosen for non-overlap rather than fidelity to natural boundaries (e.g. river valleys). Alberta features lie west of the -110 meridian (the AB/SK border, 4th meridian); Saskatchewan features lie east of it, up to the SK/MB border (~-101.4). Ecoregion keys are shared across provinces where the ecoregion is the same (aspen_parkland, mixedgrass_prairie, boreal_mixedwood) — nature does not respect borders (Design principle P1/P2); moist_mixedgrass is the SK Regina/Saskatoon belt. scripts/prepare_ecoregions.py is the documented upgrade path: replace this file with simplified polygons derived from the CEC Level III Ecoregions of North America shapefile when fidelity matters. Riparian and Wet Meadow are intentionally absent — those are per-feature rather than per-region at the provincial scale, so they remain manual-only in the plant filter.",
   "crs": "WGS84",
   "features": [
     {
@@ -86,6 +86,91 @@
           [-114.5, 54.0],
           [-120.0, 54.0],
           [-120.0, 49.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key":   "mixedgrass_prairie",
+        "label": "Mixed Grassland (dry SW Saskatchewan)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-110.0, 49.0],
+          [-106.0, 49.0],
+          [-106.0, 51.0],
+          [-110.0, 51.0],
+          [-110.0, 49.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key":   "moist_mixedgrass",
+        "label": "Moist Mixed Grassland (Regina / Lumsden belt)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-106.0, 49.0],
+          [-101.4, 49.0],
+          [-101.4, 51.0],
+          [-106.0, 51.0],
+          [-106.0, 49.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key":   "moist_mixedgrass",
+        "label": "Moist Mixed Grassland (Saskatoon plains)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-110.0, 51.0],
+          [-101.4, 51.0],
+          [-101.4, 52.3],
+          [-110.0, 52.3],
+          [-110.0, 51.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key":   "aspen_parkland",
+        "label": "Aspen Parkland (Battleford / central Saskatchewan)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-110.0, 52.3],
+          [-101.4, 52.3],
+          [-101.4, 54.0],
+          [-110.0, 54.0],
+          [-110.0, 52.3]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key":   "boreal_mixedwood",
+        "label": "Boreal Plain (northern Saskatchewan)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-110.0, 54.0],
+          [-101.4, 54.0],
+          [-101.4, 60.0],
+          [-110.0, 60.0],
+          [-110.0, 54.0]
         ]]
       }
     }

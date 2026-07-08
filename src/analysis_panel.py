@@ -97,6 +97,11 @@ class AnalysisPanel(QWidget):
         self._build_wind_tab()
         self._build_season_tab()
         self._build_habitat_tab()
+        self._build_forage_tab()
+        self._build_phenology_tab()
+        self._build_field_study_tab()
+        self._build_lesson_tab()
+        self._build_present_tab()
         self._build_bee_tab()
 
         layout.addWidget(self._tabs)
@@ -716,6 +721,159 @@ class AnalysisPanel(QWidget):
         self.season_changed.emit(self._season_combo.currentText())
 
     # ═════════════════════════════════════════════════════════════════════════
+    #  F48 — Field Study quiz layer
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def _build_field_study_tab(self):
+        from src.field_study_widget import FieldStudyWidget
+        page = QScrollArea()
+        page.setWidgetResizable(True)
+        page.setFrameShape(QFrame.Shape.NoFrame)
+        # The quiz is design-aware: it reads the live placed-plant list so the
+        # "spot the food-web gap" question is about the user's own design.
+        self._field_study = FieldStudyWidget(
+            plants_provider=lambda: self._placed_plants)
+        page.setWidget(self._field_study)
+        self._tabs.addTab(page, "Field Study")
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  F53 — Guided lesson track
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def _build_lesson_tab(self):
+        from src.lesson_track_widget import LessonTrackWidget
+        page = QScrollArea()
+        page.setWidgetResizable(True)
+        page.setFrameShape(QFrame.Shape.NoFrame)
+        # Design-aware: each step's "your design" readout is the live project.
+        self._lesson_track = LessonTrackWidget(
+            plants_provider=lambda: self._placed_plants,
+            structures_provider=lambda: self._structures)
+        page.setWidget(self._lesson_track)
+        self._tabs.addTab(page, "Learn")
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  F52 — Docent / presentation mode
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def _build_present_tab(self):
+        from src.docent_widget import DocentWidget
+        page = QScrollArea()
+        page.setWidgetResizable(True)
+        page.setFrameShape(QFrame.Shape.NoFrame)
+        # Design-aware: the narration is generated from the live project's facts.
+        self._docent = DocentWidget(
+            plants_provider=lambda: self._placed_plants,
+            structures_provider=lambda: self._structures)
+        page.setWidget(self._docent)
+        self._tabs.addTab(page, "Present")
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  F51 — Phenology "what's happening now" dashboard
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def _build_phenology_tab(self):
+        from src.phenology_widget import PhenologyWidget
+        page = QScrollArea()
+        page.setWidgetResizable(True)
+        page.setFrameShape(QFrame.Shape.NoFrame)
+        # Design-aware: reads the live placed-plant list so "this month" is the
+        # user's own design.
+        self._phenology = PhenologyWidget(
+            plants_provider=lambda: self._placed_plants)
+        page.setWidget(self._phenology)
+        self._tabs.addTab(page, "This Month")
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  Forage calendar — whole-design bloom succession + gaps (V2.13)
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def _build_forage_tab(self):
+        from src.forage_calendar_widget import ForageCalendarWidget
+        page = QScrollArea()
+        page.setWidgetResizable(True)
+        page.setFrameShape(QFrame.Shape.NoFrame)
+        tab = QWidget()
+        page.setWidget(tab)
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(8)
+
+        info = QLabel(
+            "Is there always something in bloom? This is your design's forage "
+            "calendar — how many plants flower each month, where the pollinator "
+            "gaps are, and the spring-to-fall relay of who blooms when."
+        )
+        info.setWordWrap(True)
+        info.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        layout.addWidget(info)
+
+        self._forage_headline = QLabel("—")
+        self._forage_headline.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._forage_headline.setStyleSheet(
+            "color: #c8e6c9; font-size: 20px; font-weight: bold; "
+            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px; padding: 10px;")
+        layout.addWidget(self._forage_headline)
+
+        self._forage_chart = ForageCalendarWidget()
+        layout.addWidget(self._forage_chart)
+
+        self._forage_note = QLabel("")
+        self._forage_note.setWordWrap(True)
+        self._forage_note.setStyleSheet(
+            "color: #dcedc8; font-size: 11px; padding: 8px; "
+            "background: #1a2a1a; border: 1px solid #2e4a2e; border-radius: 4px;")
+        layout.addWidget(self._forage_note)
+
+        self._forage_suggest = QLabel("")
+        self._forage_suggest.setWordWrap(True)
+        self._forage_suggest.setTextFormat(Qt.TextFormat.RichText)
+        self._forage_suggest.setStyleSheet("color: #cbd8bf; font-size: 11px;")
+        self._forage_suggest.setVisible(False)
+        layout.addWidget(self._forage_suggest)
+
+        layout.addStretch()
+        self._forage_tab_index = self._tabs.addTab(page, "Forage")
+
+    def refresh_forage_tab(self):
+        """Rebuild the forage calendar from the placed plants (P6/P9)."""
+        if not hasattr(self, "_forage_chart"):
+            return
+        from src.forage_calendar import (build_forage_calendar,
+                                         gap_filling_suggestions)
+        cal = build_forage_calendar(self._placed_plants)
+        self._forage_chart.set_calendar(cal)
+        cov = cal["covered_growing"]
+        if cal["flowering_plants"] == 0:
+            self._forage_headline.setText("No forage yet")
+        elif not cal["gap_months"]:
+            self._forage_headline.setText(f"Continuous bloom · {cov}/7 months")
+        else:
+            self._forage_headline.setText(
+                f"Forage {cov}/7 growing months · "
+                f"{len(cal['gap_months'])} gap"
+                f"{'s' if len(cal['gap_months']) != 1 else ''}")
+        self._forage_note.setText(cal["note"])
+
+        # Gap-filling suggestions from the native plant list (best-fit first).
+        self._forage_suggest.setVisible(False)
+        if cal["gap_months"]:
+            try:
+                from src.db.plants import get_all_plants
+                allp = get_all_plants()
+                natives = [p for p in allp if p.get("native_to_alberta")]
+                cands = natives or allp
+                sugg = gap_filling_suggestions(self._placed_plants, cands, limit=6)
+            except Exception:      # noqa: BLE001 — never break the tab on a data hiccup
+                sugg = []
+            if sugg:
+                items = "; ".join(
+                    f"<b>{s['common_name']}</b> ({s['bloom_period']})" for s in sugg)
+                self._forage_suggest.setText(
+                    "🌱 <b>Fill the gaps with:</b> " + items)
+                self._forage_suggest.setVisible(True)
+
+    # ═════════════════════════════════════════════════════════════════════════
     #  H1 — Habitat Value Score
     # ═════════════════════════════════════════════════════════════════════════
 
@@ -819,6 +977,49 @@ class AnalysisPanel(QWidget):
         self._habitat_breakdown.setMinimumHeight(220)
         layout.addWidget(self._habitat_breakdown)
 
+        # ── Pull-a-plant impact simulator (F46) — learn by breaking it ─────
+        pull_label = QLabel("Pull-a-plant — what does each plant hold up?")
+        pull_label.setStyleSheet(
+            "color: #a5d6a7; font-size: 12px; font-weight: bold; padding: 6px 0 2px 0;")
+        layout.addWidget(pull_label)
+
+        pull_hint = QLabel(
+            "Pick a plant to preview what removing it would cost — the wildlife "
+            "that lose all their support, whether the food-web chain snaps, and "
+            "the score change.")
+        pull_hint.setWordWrap(True)
+        pull_hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        layout.addWidget(pull_hint)
+
+        self._pull_combo = QComboBox()
+        self._pull_combo.setToolTip("Preview the impact of removing this plant")
+        self._pull_combo.currentIndexChanged.connect(self._on_pull_plant)
+        layout.addWidget(self._pull_combo)
+
+        self._pull_result = QLabel("")
+        self._pull_result.setWordWrap(True)
+        self._pull_result.setVisible(False)
+        self._pull_result.setStyleSheet(
+            "color: #ffe0b2; font-size: 12px; padding: 8px; "
+            "background: #241a12; border: 1px solid #5a3a1e; border-radius: 4px;")
+        layout.addWidget(self._pull_result)
+
+        # ── Feed-a-chickadee provisioning scenario (F47) ──────────────────────
+        chickadee_label = QLabel("Feed a chickadee brood")
+        chickadee_label.setStyleSheet(
+            "color: #a5d6a7; font-size: 12px; font-weight: bold; padding: 6px 0 2px 0;")
+        layout.addWidget(chickadee_label)
+
+        self._chickadee_result = QLabel(
+            "One clutch of chickadees needs 6,000–9,000 caterpillars to fledge. "
+            "Calculate your Habitat Value Score to see whether your host plants "
+            "could feed a brood.")
+        self._chickadee_result.setWordWrap(True)
+        self._chickadee_result.setStyleSheet(
+            "color: #cfe3f0; font-size: 12px; padding: 8px; "
+            "background: #12202a; border: 1px solid #1e4a5a; border-radius: 4px;")
+        layout.addWidget(self._chickadee_result)
+
         # Tips for raising your score
         tips_label = QLabel("Tips for raising your score")
         tips_label.setStyleSheet("color: #a5d6a7; font-size: 12px; font-weight: bold; padding: 4px 0 2px 0;")
@@ -863,7 +1064,14 @@ class AnalysisPanel(QWidget):
 
         # Short tab label so all five fit the strip even with macOS's wider
         # font; the page itself carries the full "Habitat Value" wording.
-        self._tabs.addTab(page, "Habitat")
+        self._habitat_tab_index = self._tabs.addTab(page, "Habitat")
+
+    def show_habitat_tab(self):
+        """Raise the Habitat Value tab (On This Design → habitat-value
+        deep-link, V2.13)."""
+        idx = getattr(self, "_habitat_tab_index", None)
+        if idx is not None:
+            self._tabs.setCurrentIndex(idx)
 
     # ═════════════════════════════════════════════════════════════════════════
     #  Bees — "Design for a bee" habitat builder (F37)
@@ -912,9 +1120,11 @@ class AnalysisPanel(QWidget):
         self._bee_map_btn.toggled.connect(self._on_bee_map_toggle)
         layout.addWidget(self._bee_map_btn)
 
-        # Summary: photo + facts
+        # Summary: photo (+ credit) + facts
         summ = QHBoxLayout()
         summ.setSpacing(8)
+        photo_col = QVBoxLayout()
+        photo_col.setSpacing(2)
         self._bee_photo = QLabel("🐝")
         self._bee_photo.setFixedSize(96, 72)
         self._bee_photo.setScaledContents(False)
@@ -922,7 +1132,15 @@ class AnalysisPanel(QWidget):
         self._bee_photo.setStyleSheet(
             "border: 1px solid #2e4a2e; border-radius: 3px; "
             "background: #14241a; font-size: 30px;")
-        summ.addWidget(self._bee_photo, 0, Qt.AlignmentFlag.AlignTop)
+        photo_col.addWidget(self._bee_photo)
+        # Visible photo credit — required for CC-BY reuse (harmless for CC0).
+        self._bee_photo_credit = QLabel("")
+        self._bee_photo_credit.setFixedWidth(96)
+        self._bee_photo_credit.setWordWrap(True)
+        self._bee_photo_credit.setStyleSheet("color: #607d8b; font-size: 8px;")
+        self._bee_photo_credit.setVisible(False)
+        photo_col.addWidget(self._bee_photo_credit)
+        summ.addLayout(photo_col, 0)
         self._bee_summary = QLabel("")
         self._bee_summary.setWordWrap(True)
         self._bee_summary.setTextFormat(Qt.TextFormat.RichText)
@@ -1075,6 +1293,17 @@ class AnalysisPanel(QWidget):
             bits.append(f"<span style='color:#c8e6c9;'>{desc}</span>")
         self._bee_summary.setText("<br>".join(bits))
 
+    def _set_bee_credit(self, on: bool):
+        """Show the bee photo's attribution credit when a real photo is on screen
+        (CC-BY compliance); hide it for the 🐝 fallback."""
+        cr = getattr(self, "_bee_photo_credit", None)
+        if cr is None:
+            return
+        bee = (getattr(self, "_bee_plan", None) and self._bee_plan.bee) or {}
+        txt = bee.get("image_attribution", "") if on else ""
+        cr.setText(txt or "")
+        cr.setVisible(bool(txt))
+
     def _render_bee_photo(self):
         """Show the selected bee's cached photo (warming it if needed), else 🐝."""
         plan = getattr(self, "_bee_plan", None)
@@ -1084,6 +1313,7 @@ class AnalysisPanel(QWidget):
         if not url:
             self._bee_photo.setText("🐝")
             self._bee_photo.setPixmap(QPixmap())
+            self._set_bee_credit(False)
             return
         try:
             from src.image_cache import get_cached_image
@@ -1096,9 +1326,11 @@ class AnalysisPanel(QWidget):
                 self._bee_photo.setText("")
                 self._bee_photo.setScaledContents(True)
                 self._bee_photo.setPixmap(pm)
+                self._set_bee_credit(True)
                 return
         # not cached yet — keep the icon and warm it in the background
         self._bee_photo.setText("🐝")
+        self._set_bee_credit(False)
         if url not in self._gallery_warmed:
             self._gallery_warmed.add(url)
             self._warm_gallery_images([(url,
@@ -1200,6 +1432,84 @@ class AnalysisPanel(QWidget):
         if hasattr(self, "_bee_selector"):
             self._update_bee_plan()
 
+    # ── Pull-a-plant impact simulator (F46) ───────────────────────────────
+
+    def _populate_pull_combo(self):
+        """Fill the pull-a-plant selector with the design's distinct species."""
+        combo = getattr(self, "_pull_combo", None)
+        if combo is None:
+            return
+        combo.blockSignals(True)
+        combo.clear()
+        by_id: dict = {}
+        for p in (self._placed_plants or []):
+            pid = p.get("plant_id")
+            if pid is not None and pid not in by_id:
+                by_id[pid] = p.get("common_name") or f"plant {pid}"
+        if not by_id:
+            combo.addItem("Place plants first", userData=None)
+            combo.setEnabled(False)
+            self._pull_result.setVisible(False)
+        else:
+            combo.setEnabled(True)
+            combo.addItem("— pick a plant to test —", userData=None)
+            for pid, name in sorted(by_id.items(), key=lambda kv: kv[1].lower()):
+                combo.addItem(name, userData=pid)
+        combo.blockSignals(False)
+        self._pull_result.setVisible(False)
+
+    def _on_pull_plant(self, *_):
+        """Render the impact of removing the selected plant (F46)."""
+        combo = self._pull_combo
+        pid = combo.currentData()
+        if pid is None:
+            self._pull_result.setVisible(False)
+            return
+        try:
+            from src.plant_impact import pull_plant_impact
+            r = pull_plant_impact(self._placed_plants, self._structures, int(pid))
+        except Exception:      # noqa: BLE001 — never let the sim break the tab
+            self._pull_result.setVisible(False)
+            return
+        if r is None:
+            self._pull_result.setVisible(False)
+            return
+        detail = (f"Habitat Score {r['score_before']} → {r['score_after']}"
+                  f"   ·   this plant feeds {r['species_supported']} species")
+        lost_bits = []
+        for taxon, names in r["species_lost_by_taxon"].items():
+            shown = ", ".join(names[:4]) + ("…" if len(names) > 4 else "")
+            lost_bits.append(shown)
+        lost_line = ("<br><span style='color:#ffab91'>Lost: "
+                     + "; ".join(lost_bits) + "</span>") if lost_bits else ""
+        self._pull_result.setText(
+            f"<b>{r['verdict']}</b><br><span style='color:#c8b08a'>{detail}"
+            f"</span>{lost_line}")
+        self._pull_result.setVisible(True)
+
+    # ── Feed-a-chickadee provisioning scenario (F47) ──────────────────────
+
+    def _update_chickadee_scenario(self):
+        """Refresh the chickadee-brood provisioning story from the live design."""
+        label = getattr(self, "_chickadee_result", None)
+        if label is None:
+            return
+        try:
+            from src.chickadee_scenario import chickadee_provision
+            r = chickadee_provision(self._placed_plants or [])
+        except Exception:      # noqa: BLE001 — never let the scenario break the tab
+            return
+        colors = {"clears": "#a5d6a7", "partway": "#ffe0b2",
+                  "short": "#ffab91", "none": "#cfe3f0"}
+        c = colors.get(r["status"], "#cfe3f0")
+        body = f"<span style='color:{c}'>{r['verdict']}</span>"
+        if r["host_plants"]:
+            body += (f"<br><span style='color:#9fbccf; font-size:11px'>"
+                     f"Capacity ≈ {r['caterpillars_low']:,}–"
+                     f"{r['caterpillars_high']:,} caterpillars from "
+                     f"{r['n_host_species']} host species.</span>")
+        label.setText(body)
+
     def set_shade_breakdown(self, counts: dict | None):
         """Render the cached shade-tag mix (``{tag: n}`` from
         shade_zones.tag_counts), or a prompt when nothing is classified yet.
@@ -1233,6 +1543,17 @@ class AnalysisPanel(QWidget):
         if (hasattr(self, "_bee_tab_index")
                 and self._tabs.currentIndex() == self._bee_tab_index):
             self.refresh_bee_tab()
+        # The forage calendar tracks the placed plants directly (no button).
+        self.refresh_forage_tab()
+        # Phenology dashboard likewise reads the live design.
+        if hasattr(self, "_phenology"):
+            self._phenology.refresh()
+        # Guided lesson track reads the live design too.
+        if hasattr(self, "_lesson_track"):
+            self._lesson_track.refresh()
+        # Docent presentation script is regenerated from the live design.
+        if hasattr(self, "_docent"):
+            self._docent.refresh()
 
     def set_structures(self, structures: list[dict]):
         """Update the list of placed structures (from app.py)."""
@@ -1310,6 +1631,8 @@ class AnalysisPanel(QWidget):
         # equivalent lawn, grounded in the converted area when zones are drawn.
         self._last_habitat_result = result
         self._render_lawn_counterfactual(result)
+        self._populate_pull_combo()
+        self._update_chickadee_scenario()
 
         # Species photos that make the value tangible (F11 / I1): the plants
         # doing the work and the fauna they support.
@@ -1448,8 +1771,10 @@ class AnalysisPanel(QWidget):
                 _add(r)
         return out[:12]
 
-    def _make_species_card(self, name: str, path: str) -> QWidget:
-        """A small thumbnail + caption card for one species."""
+    def _make_species_card(self, name: str, path: str,
+                           attribution: str = "") -> QWidget:
+        """A small thumbnail + caption card for one species. ``attribution`` is
+        shown as the thumbnail's tooltip so CC-BY photos carry a visible credit."""
         card = QWidget()
         v = QVBoxLayout(card)
         v.setContentsMargins(0, 0, 0, 0)
@@ -1460,6 +1785,8 @@ class AnalysisPanel(QWidget):
         pm = QPixmap(path)
         if not pm.isNull():
             thumb.setPixmap(pm)
+        if attribution:
+            thumb.setToolTip(attribution)
         thumb.setStyleSheet("border: 1px solid #2e4a2e; border-radius: 3px;")
         cap = QLabel(name)
         cap.setWordWrap(True)
@@ -1507,7 +1834,8 @@ class AnalysisPanel(QWidget):
         shown = 0
         for name, path, url, attr, lic in items:
             if path:
-                row.insertWidget(row.count() - 1, self._make_species_card(name, path))
+                row.insertWidget(row.count() - 1,
+                                 self._make_species_card(name, path, attr))
                 shown += 1
             elif url and url not in self._gallery_warmed:
                 pending.append((url, attr, lic))

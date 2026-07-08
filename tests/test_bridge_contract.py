@@ -102,6 +102,16 @@ class TestScene3DHooks(unittest.TestCase):
             "html/scene3d.html never registers these hooks the Python "
             f"side pushes to (every push would silently no-op): {missing}")
 
+    def test_reset_view_hook_registered(self):
+        # Driven outside map3d_js (scene3d_window's "Reset view" button and the
+        # sprite gallery both call it raw) — before V2.12 it was never defined,
+        # so the button silently did nothing.
+        viewer = _SCENE_HTML.read_text(encoding="utf-8")
+        self.assertRegex(
+            viewer, r"window\.permaResetView\s*=",
+            "html/scene3d.html must register window.permaResetView — the 3D "
+            "window's Reset-view button and the sprite gallery both call it")
+
     def test_viewer_does_not_register_unknown_hooks(self):
         # The reverse: a hook registered in the viewer but never driven
         # from Python is dead code or a naming drift.

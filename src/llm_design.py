@@ -1017,6 +1017,15 @@ def _add_warning(project, message: str) -> None:
     props.setdefault("generation_warnings", []).append(message)
 
 
+def _cell_dist_m(a: tuple, b: tuple) -> float:
+    """Metres between two ``(lat, lng)`` points — local cos-lat model (matches
+    the inline math in ``reserve_near`` / ``placement_score``)."""
+    cos_lat = math.cos(a[0] * math.pi / 180) or 1e-9
+    dx = (b[1] - a[1]) * 111320.0 * cos_lat
+    dy = (b[0] - a[0]) * 111320.0
+    return math.hypot(dx, dy)
+
+
 class _Positioner:
     """Hands out placement positions, preferring a requested micro-zone.
 
@@ -1024,7 +1033,13 @@ class _Positioner:
     in-boundary position list (Tier-1). ``take(zone)`` returns the next free
     position whose zone matches, else spills to NEUTRAL, else any remaining
     cell — so zoning *guides* placement without ever dropping a plant for lack
-    of a perfect cell. ``remaining`` tracks capacity for trim-to-fit."""
+    of a perfect cell. ``remaining`` tracks capacity for trim-to-fit.
+
+    Within a pool, ``take`` farthest-point-samples (V2.20): the first anchor
+    is the most central free cell and each later anchor is the free cell
+    farthest from everything already handed out — so groups distribute across
+    the whole space. Before this, cells were consumed in the pool's row-major
+    order and every design crammed along its north edge."""
 
     def __init__(self, zone_positions: Optional[dict], flat: list):
         self._by_zone: dict = {}
@@ -1034,6 +1049,22 @@ class _Positioner:
         # A flat fallback pool (used when no zoning, and as the final spill).
         self._flat = list(flat)
         self._used: set = set()
+        # Farthest-point state: anchors handed out so far, each free cell's
+        # distance to the nearest of them, and the pool centroid (the first
+        # anchor grows the design from the middle of the space outward).
+        self._taken_pts: list = []
+        self._mindist: dict = {}
+        pool = [p for pts in (self._pools()) for p in pts]
+        if pool:
+            self._centroid: Optional[tuple] = (
+                sum(p[0] for p in pool) / len(pool),
+                sum(p[1] for p in pool) / len(pool),
+            )
+        else:
+            self._centroid = None
+
+    def _pools(self) -> list:
+        return list(self._by_zone.values()) if self._by_zone else [self._flat]
 
     @property
     def remaining(self) -> int:
@@ -1048,6 +1079,39 @@ class _Positioner:
                 self._used.add(p)
                 return p
         return None
+
+    def _pop_spread(self, lst: list):
+        """Remove and return the best free cell in ``lst``: the most central
+        cell for the first anchor, then the cell farthest from every anchor
+        handed out so far (farthest-point sampling). Returns ``None`` when the
+        list holds no free cell. Ties break toward the pool's row-major order,
+        keeping selection deterministic."""
+        lst[:] = [p for p in lst if p not in self._used]
+        if not lst:
+            return None
+        if not self._taken_pts:
+            c = self._centroid
+            best = (min(lst, key=lambda p: _cell_dist_m(p, c))
+                    if c is not None else lst[0])
+        else:
+            best = max(lst, key=lambda p: self._mindist.get(p, float("inf")))
+        lst.remove(best)
+        self._used.add(best)
+        self._note_taken(best)
+        return best
+
+    def _note_taken(self, pt: tuple) -> None:
+        """Fold a newly handed-out anchor into every free cell's running
+        min-distance (one incremental pass keeps ``_pop_spread`` O(cells))."""
+        self._taken_pts.append(pt)
+        for pool in self._pools():
+            for cell in pool:
+                if cell in self._used:
+                    continue
+                d = _cell_dist_m(cell, pt)
+                prev = self._mindist.get(cell)
+                if prev is None or d < prev:
+                    self._mindist[cell] = d
 
     def reserve_near(self, positions, radius_m: float) -> None:
         """Mark every still-free cell within ``radius_m`` of any of
@@ -1083,11 +1147,11 @@ class _Positioner:
                 if z and z not in order:
                     order.append(z)
             for z in order:
-                p = self._pop_unused(self._by_zone.get(z, []))
+                p = self._pop_spread(self._by_zone.get(z, []))
                 if p is not None:
                     return p
             return None
-        return self._pop_unused(self._flat)
+        return self._pop_spread(self._flat)
 
 
 class ScoredPositioner:
@@ -1133,6 +1197,25 @@ class ScoredPositioner:
         else:
             self._lat_range = None
         self._anchors: list = []   # [(lat, lng, plant_id, height_m), ...]
+        # Spread state (V2.20): every cell handed out so far, each free
+        # cell's distance to the nearest of them, and a saturation scale of
+        # a quarter of the pool's diagonal. On a flat/uniform site the eco
+        # scores tie and strict-> selection used to degenerate to "first
+        # cell in row-major order" — every group along the north edge, with
+        # bed cohesion then pulling the rest toward it. The spread term
+        # breaks those ties toward unused ground so anchors distribute
+        # across the whole space.
+        self._spread_pts: list = []
+        self._spread_mindist: dict = {}
+        if self._all:
+            lngs = [c[1] for c in self._all]
+            diag = _cell_dist_m((min(lats), min(lngs)), (max(lats), max(lngs)))
+            self._spread_scale_m = max(12.0, 0.25 * diag)
+            self._pool_centroid: Optional[tuple] = (
+                sum(lats) / len(lats), sum(lngs) / len(lngs))
+        else:
+            self._spread_scale_m = 12.0
+            self._pool_centroid = None
 
     @property
     def remaining(self) -> int:
@@ -1151,18 +1234,49 @@ class ScoredPositioner:
             float(plant.get("mature_height_meters") or 0.0),
         ))
 
+    def _spread_score(self, cell: tuple) -> float:
+        """0–1 "uses new ground" term: the distance to the nearest
+        already-taken cell, saturating at ``_spread_scale_m`` —
+        farthest-point sampling expressed as a score term. Neutral (0.5)
+        before anything is anchored: the FIRST anchor is decided by
+        ecology + composition (e.g. the tall-north gradient sends a canopy
+        tree to the north edge), with only an epsilon centrality tie-break
+        in ``take_best`` so a flat, uniform site starts from the middle of
+        the space instead of the pool's first row-major cell."""
+        if not self._spread_pts:
+            return 0.5
+        d = self._spread_mindist.get(cell)
+        if d is None:
+            return 1.0
+        return min(1.0, d / self._spread_scale_m)
+
+    def _note_spread(self, cell: tuple) -> None:
+        """Fold a newly taken cell into every free cell's running
+        min-distance (one incremental pass keeps ``take_best`` O(cells))."""
+        self._spread_pts.append(cell)
+        for c in self._all:
+            if c in self._used:
+                continue
+            d = _cell_dist_m(c, cell)
+            prev = self._spread_mindist.get(c)
+            if prev is None or d < prev:
+                self._spread_mindist[c] = d
+
     def take_best(self, plant: dict,
                   zone: Optional[str] = None) -> Optional[tuple]:
         """Return the highest-scoring available cell for this plant.
 
         If ``cell_env_map`` is None, delegates to ``_Positioner.take(zone)``
-        so behaviour is identical to the pre-V1.51 path.  Otherwise iterates
-        all available cells, scoring each 80% on ecological fit
-        (:func:`score_cell_for_plant`) and 20% on composition
+        (which farthest-point-samples its pool).  Otherwise iterates all
+        available cells, scoring each 65% on ecological fit
+        (:func:`score_cell_for_plant`), 15% on composition
         (:func:`aesthetic_score` — tall-north gradient, bed cohesion,
-        repetition rhythm), and picks the best; still returns something
-        (the best of what remains) rather than None when capacity exists,
-        matching ``_Positioner``'s never-drop-a-plant guarantee."""
+        repetition rhythm) and 20% on spread (:meth:`_spread_score` — prefer
+        unused ground), and picks the best; still returns something (the best
+        of what remains) rather than None when capacity exists, matching
+        ``_Positioner``'s never-drop-a-plant guarantee. Ecological fit stays
+        dominant: a wet-obligate still beats the spread pull to a dry corner,
+        because eco spans the full 0–1 while spread contributes at most 0.2."""
         if self._env_map is None:
             return self._fallback.take(zone)
 
@@ -1183,8 +1297,15 @@ class ScoredPositioner:
             beauty = aesthetic_score(plant, cell,
                                      lat_range=self._lat_range,
                                      anchors=self._anchors)
-            score = 0.8 * eco + 0.2 * beauty
+            score = (0.65 * eco + 0.15 * beauty
+                     + 0.20 * self._spread_score(cell))
             score += self._bonus_cells.get(cell, 0.0)
+            if not self._spread_pts and self._pool_centroid is not None:
+                # Epsilon-weight centrality: breaks exact ties toward the
+                # middle of the pool for the first anchor without ever
+                # outvoting a real ecological or compositional signal.
+                d0 = _cell_dist_m(cell, self._pool_centroid)
+                score += 1e-6 * max(0.0, 1.0 - d0 / self._spread_scale_m)
             if score > best_score:
                 best_score = score
                 best_cell = cell
@@ -1193,6 +1314,7 @@ class ScoredPositioner:
             self._used.add(best_cell)
             # Keep fallback in sync so remaining count stays accurate.
             self._fallback._used.add(best_cell)
+            self._note_spread(best_cell)
             return best_cell
         return None
 
@@ -1266,8 +1388,11 @@ def _apply_density(plant_items, boundary, density: str, keepout=None):
     """Scale per-group quantities up so the design fills ``density`` × capacity,
     instead of placing one plant per group on a near-empty lot. Returns the
     (possibly expanded) plant_items. No-op without a boundary or for an unknown
-    density. Distributes the extra evenly across groups, round-robin, so every
-    species grows proportionally rather than one swamping the design."""
+    density. The extra is distributed round-robin **weighted by habit**
+    (V2.20): herbaceous species expand 4× as fast as trees and 2× as fast as
+    shrubs, so density fills the lot with the matrix/drift ground layer that
+    carries a naturalistic design — equal expansion used to hand a 3,000 m²
+    lot as many willows as wildflowers."""
     frac = _DENSITY_FRACTION.get((density or "").lower())
     if not frac or not plant_items or not boundary:
         return plant_items
@@ -1281,9 +1406,18 @@ def _apply_density(plant_items, boundary, density: str, keepout=None):
              for it in plant_items]
     # Normalise to 3 elements (plant_id, qty, layout).
     items = [[it[0], it[1], (it[2] if len(it) > 2 else "")] for it in items]
+    weights = []
+    for it in items:
+        try:
+            from src.db.plants import get_plant
+            ptype = (get_plant(it[0]) or {}).get("plant_type", "")
+        except Exception:  # noqa: BLE001
+            ptype = ""
+        weights.append(1 if ptype == "tree" else 2 if ptype == "shrub" else 4)
+    sequence = [i for i, w in enumerate(weights) for _ in range(w)]
     i = 0
     while sum(it[1] for it in items) < target:
-        items[i % len(items)][1] += 1
+        items[sequence[i % len(sequence)]][1] += 1
         i += 1
         if i > target * 2:   # safety valve
             break
@@ -1303,6 +1437,39 @@ def _plant_spacing_m(plant_id: int, default: float = _SPACING_M) -> float:
     except Exception:  # noqa: BLE001
         pass
     return default
+
+
+# Ecological massing (V2.20): a species repeats as several modest drifts
+# distributed through the design — the Rainer/West "masses repeated in
+# rhythm" pattern (P2, grown-not-designed) — rather than pooling its whole
+# quantity in one blob at a single anchor. Per-drift member caps by habit:
+# trees read as individuals or small groves, shrubs as clumps, herbaceous
+# plants as drifts.
+_DRIFT_MAX: dict = {"tree": 3, "shrub": 6}
+_DRIFT_MAX_DEFAULT = 9
+
+
+def _split_into_drifts(plant_items) -> list:
+    """Split each ``(plant_id, qty, layout?)`` item into repeated groups of at
+    most the habit's per-drift cap, so a species distributes across the space
+    (farthest-point anchoring then pushes the repeats apart, and the rhythm
+    aesthetic term rewards the recurrence). Item order is preserved — the
+    stable layer sort in ``_place_within_boundary`` runs after this."""
+    from src.db.plants import get_plant
+    out: list = []
+    for item in plant_items:
+        pid, qty = item[0], max(1, int(item[1] or 1))
+        group_layout = item[2] if len(item) > 2 else ""
+        try:
+            ptype = (get_plant(pid) or {}).get("plant_type", "")
+        except Exception:  # noqa: BLE001
+            ptype = ""
+        cap = _DRIFT_MAX.get(ptype, _DRIFT_MAX_DEFAULT)
+        while qty > 0:
+            take = min(qty, cap)
+            out.append((pid, take, group_layout))
+            qty -= take
+    return out
 
 
 def _place_within_boundary(project, plant_items, community_items,
@@ -1391,9 +1558,10 @@ def _place_within_boundary(project, plant_items, community_items,
         except Exception:  # noqa: BLE001
             return 7
 
-    plant_items_sorted = sorted(plant_items, key=_layer_rank)
+    plant_items_sorted = sorted(_split_into_drifts(plant_items),
+                                key=_layer_rank)
 
-    for item in plant_items_sorted:
+    for group_i, item in enumerate(plant_items_sorted):
         plant_id, qty = item[0], item[1]
         group_layout = item[2] if len(item) > 2 else ""
         zone = None
@@ -1419,8 +1587,10 @@ def _place_within_boundary(project, plant_items, community_items,
             group_layout = _layout.default_layout_for(
                 plant_row.get("plant_type", ""))
         spacing = _plant_spacing_m(plant_id)
+        # Per-group seed: repeated drifts of one species get different
+        # jitter/bearings instead of identical stamps (still deterministic).
         positions = _layout.positions_for_layout(
-            group_layout, anchor[0], anchor[1], qty, spacing)
+            group_layout, anchor[0], anchor[1], qty, spacing, seed=group_i)
         positions = _clip_keepout(positions, half_canopy_m=spacing / 2.0)
         if not positions:
             # The pattern fell outside / onto keep-out — fall back to the anchor.
@@ -1497,6 +1667,81 @@ def _place_within_boundary(project, plant_items, community_items,
 # ── Goal feedback + offline fallback ─────────────────────────────────────────
 
 _OFFLINE_PLANT_CAP = 7  # how many individual plants the no-LLM path places
+
+# Habit buckets for the offline pick, in round-robin priority order: the
+# herbaceous matrix carries a naturalistic design, but one pass across all
+# buckets first guarantees vertical layers (a habitat-score component and
+# basic ecological structure) before forbs/grasses fill the remaining slots.
+_OFFLINE_BUCKETS: tuple = (
+    ("wildflower", "herb"),
+    ("grass", "sedge", "rush"),
+    ("shrub",),
+    ("tree",),
+    ("groundcover", "vine", "fern"),
+)
+
+
+def _rank_offline_plants(plants: list) -> list:
+    """Order offline candidates by ecological value for a site whose moisture
+    is unknown: keystone / larval-host / pollinator / bird-food species first,
+    wetland and aquatic specialists last (P9 — with no site moisture data,
+    don't gamble the design on a bog), then round-robin across habit buckets
+    so the capped pick spans vertical layers instead of taking the first N
+    alphabetical catalogue rows. Deterministic: ties keep catalogue order."""
+    def value(p: dict) -> int:
+        uses = p.get("permaculture_uses") or ""
+        v = 0
+        if "keystone_species" in uses:
+            v += 3
+        if "host_plant" in uses:
+            v += 2
+        if "pollinator" in uses:
+            v += 1
+        if "bird_food" in uses:
+            v += 1
+        water = (p.get("water_needs") or "").lower()
+        if (p.get("plant_type") or "").lower() == "aquatic" or "high" in water:
+            v -= 6
+        return v
+
+    buckets: dict = {b: [] for b in _OFFLINE_BUCKETS}
+    other: list = []   # aquatic / unknown habits — no guaranteed slot
+    for p in plants:
+        pt = (p.get("plant_type") or "").lower()
+        for b in _OFFLINE_BUCKETS:
+            if pt in b:
+                buckets[b].append(p)
+                break
+        else:
+            other.append(p)
+
+    # Two tiers per bucket: sound generalist picks first, moisture-extreme
+    # specialists (negative value) only after every bucket's good candidates —
+    # so a bog plant reaches a generic design only when the pool is truly thin.
+    good_pools: list = []
+    bad_pools: list = []
+    for b in _OFFLINE_BUCKETS:
+        pool = sorted(buckets[b], key=value, reverse=True)  # stable sort
+        good_pools.append([p for p in pool if value(p) >= 0])
+        bad_pools.append([p for p in pool if value(p) < 0])
+    other.sort(key=value, reverse=True)
+
+    ordered: list = []
+
+    def _robin(pools: list) -> None:
+        while True:
+            took = False
+            for pool in pools:
+                if pool:
+                    ordered.append(pool.pop(0))
+                    took = True
+            if not took:
+                return
+
+    _robin(good_pools)
+    _robin(bad_pools)
+    ordered.extend(other)
+    return ordered
 
 
 def _match_communities_by_name(communities: list[dict],
@@ -1742,6 +1987,11 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
         except Exception:  # noqa: BLE001
             plants = []
 
+    # Rank the pool ecologically before capping — pre-V2.20 the cap took the
+    # first N rows in catalogue (alphabetical) order, which led generic yards
+    # with "B..." wetland specialists (Bog Cranberry, Buckbean, ...).
+    plants = _rank_offline_plants(plants)
+
     # If the user picked target wildlife, lead with plants that support it
     # (intersected with the goals where possible), then fill with the rest so
     # the capped selection still serves the chosen species.
@@ -1754,7 +2004,7 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
                         or query_plants(supports_fauna_id=int(fid)))
             except Exception:  # noqa: BLE001
                 hits = []
-            for pl in hits:
+            for pl in _rank_offline_plants(hits):
                 if pl["id"] not in seen:
                     seen.add(pl["id"]); chosen.append(pl)
         for pl in plants:

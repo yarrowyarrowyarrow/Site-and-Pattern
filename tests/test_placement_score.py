@@ -503,6 +503,82 @@ class TestScoredPositioner(unittest.TestCase):
                          "far cell should not have a bonus")
 
 
+_CELLS_5X5 = [
+    (_REF_LAT + r * _DLAT, _REF_LNG + c * _DLNG)
+    for r in range(5) for c in range(5)
+]
+
+
+class TestAnchorSpread(unittest.TestCase):
+    """V2.20 — anchors must distribute across the pool (farthest-point
+    spread), not consume it in row-major order. The regression this guards:
+    on a flat/uniform site every generated group crammed along one edge of
+    the boundary while the rest of the lot stayed empty."""
+
+    def test_flat_positioner_farthest_point_sampling(self):
+        pos = _llm._Positioner(None, list(_CELLS_5X5))
+        first = pos.take(None)
+        # The design grows from the middle out: first anchor = central cell.
+        self.assertEqual(first, (_REF_LAT + 2 * _DLAT, _REF_LNG + 2 * _DLNG))
+        second = pos.take(None)
+        third = pos.take(None)
+        # The next anchors are corners (farthest from what's placed), not
+        # the next cells in list order.
+        corners = {
+            (_REF_LAT, _REF_LNG),
+            (_REF_LAT, _REF_LNG + 4 * _DLNG),
+            (_REF_LAT + 4 * _DLAT, _REF_LNG),
+            (_REF_LAT + 4 * _DLAT, _REF_LNG + 4 * _DLNG),
+        }
+        self.assertIn(second, corners)
+        self.assertIn(third, corners)
+        self.assertNotEqual(second, third)
+
+    def test_uniform_scored_site_anchors_spread(self):
+        env = CellEnv(0.5, 0.5, 0.0, -1.0, False)
+        env_map = {c: env for c in _CELLS_5X5}
+        pos = _llm.ScoredPositioner(env_map, None, list(_CELLS_5X5))
+        plant = {"sun_requirement": "", "water_needs": "",
+                 "plant_type": "herb"}
+        taken = [pos.take_best(plant) for _ in range(4)]
+        self.assertTrue(all(t is not None for t in taken))
+        lats = [t[0] for t in taken]
+        lngs = [t[1] for t in taken]
+        # Both axes must be used — pre-V2.20 all four landed in row 0.
+        self.assertGreaterEqual(max(lats) - min(lats), 2 * _DLAT,
+                                f"anchors hug one row: {taken}")
+        self.assertGreaterEqual(max(lngs) - min(lngs), 2 * _DLNG,
+                                f"anchors hug one column: {taken}")
+
+    def test_scored_first_anchor_is_central(self):
+        env = CellEnv(0.5, 0.5, 0.0, -1.0, False)
+        env_map = {c: env for c in _CELLS_5X5}
+        pos = _llm.ScoredPositioner(env_map, None, list(_CELLS_5X5))
+        first = pos.take_best({"plant_type": "herb"})
+        self.assertEqual(first, (_REF_LAT + 2 * _DLAT, _REF_LNG + 2 * _DLNG))
+
+    def test_ecology_still_outvotes_spread(self):
+        """A strong ecological signal must beat the pull to unused ground:
+        a full-shade plant picks the one shaded cell even right beside an
+        existing anchor."""
+        shaded = (_REF_LAT + 2 * _DLAT, _REF_LNG + 3 * _DLNG)
+        env_map = {}
+        for c in _CELLS_5X5:
+            frac = 0.9 if c == shaded else 0.0
+            env_map[c] = CellEnv(frac, 0.5, 0.0, -1.0, False)
+        pos = _llm.ScoredPositioner(env_map, None, list(_CELLS_5X5))
+        sun_plant = {"sun_requirement": "full_sun", "water_needs": "medium",
+                     "plant_type": "herb"}
+        shade_plant = {"sun_requirement": "full_shade",
+                       "water_needs": "medium", "plant_type": "herb"}
+        first = pos.take_best(sun_plant)
+        self.assertNotEqual(first, shaded)
+        chosen = pos.take_best(shade_plant)
+        self.assertEqual(chosen, shaded,
+                         "full-shade plant must take the shaded cell even "
+                         "when spread points elsewhere")
+
+
 class TestShadeMatch(unittest.TestCase):
     """V1.53 — check_shade_matches reads the cached shade tags and flags plants
     placed in incompatible light."""

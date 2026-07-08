@@ -55,6 +55,8 @@ _GARDEN_JSON_PATH       = resource_path("data", "garden_plants.json")
 _FAUNA_JSON_PATH        = resource_path("data", "fauna_master.json")
 _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 _BEE_ATTR_JSON_PATH     = resource_path("data", "bee_attributes_master.json")
+_LEP_ATTR_JSON_PATH     = resource_path("data", "lepidoptera_attributes_master.json")
+_NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 
 # Current schema version — bump when adding columns/tables, or when the
 # bundled seed data changes meaningfully (forces a reseed on next start).
@@ -147,7 +149,23 @@ _BEE_ATTR_JSON_PATH     = resource_path("data", "bee_attributes_master.json")
 # bee-species nesting habit, tongue length, flight season, and floral-host genera,
 # seeded from data/bee_attributes_master.json + an expanded Alberta Apidae roster
 # in data/fauna_master.json. Reseed wipes/repopulates bee_attributes with fauna.
-_SCHEMA_VERSION = 39
+# v40 (V2.12): added the `lepidoptera_attributes` table (F37 "fly as a butterfly")
+# — per-species flight season, adult-nectar genera, overwintering stage and
+# activity for Alberta's butterflies & moths, seeded from
+# data/lepidoptera_attributes_master.json. Powers the fly-through's butterfly/moth
+# targets, bloom-accurate nectar beacons, and the seasonal nectar tour. Reseed
+# wipes/repopulates lepidoptera_attributes with fauna.
+# v41 (V2.12): no DDL — reseed to pick up ~50 curated documented `nectar`
+# plant↔lepidoptera edges (data/plant_fauna_master.json) for the flagship
+# butterflies & day-flying moths, so ambient wildlife (scene_wildlife) can place
+# nectaring butterflies from real edges and the habitat builder shows documented
+# (not just genus-inferred) nectar sources.
+_SCHEMA_VERSION = 45
+
+# Tolerance (pH units) added at each end of a plant's soil-pH bracket when
+# matching against a site's (often coarse, regional) pH estimate. See the
+# soil_ph filter in search_plants (P9 — uncertainty, not false precision).
+_SOIL_PH_TOLERANCE = 0.5
 
 
 # ── Canonical permaculture uses (schema v13) ──────────────────────────────────
@@ -373,6 +391,37 @@ def _migrate_to_v24(conn: sqlite3.Connection):
     conn.commit()
 
 
+def _migrate_to_v42(conn: sqlite3.Connection):
+    """Province-neutral data model (V2.15, Saskatchewan expansion).
+
+    Renames ``plants.ab_ecoregion`` -> ``plants.ecoregion`` (the ecoregion is
+    not province-specific — P1/P2) and adds a ``native_provinces`` column to
+    ``plants`` and ``fauna`` (comma-separated province codes, e.g. ``"AB,SK"``).
+    All ALTERs are guarded so a fresh install (schema.sql already has the new
+    shape) skips them; the version bump triggers a reseed that fills the new
+    values from the seed JSON. ``native_to_alberta`` / ``ab_native`` are kept as
+    back-compat flags.
+
+    Column resolution handles both entry paths cleanly: on a v41 upgrade the
+    table has only ``ab_ecoregion`` (rename it); on a fresh install the DDL
+    already created ``ecoregion`` and the historical v11 migration re-added a
+    stray empty ``ab_ecoregion`` (drop it)."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(plants)").fetchall()}
+    if "ecoregion" not in cols and "ab_ecoregion" in cols:
+        conn.execute("ALTER TABLE plants RENAME COLUMN ab_ecoregion TO ecoregion")
+    elif "ecoregion" in cols and "ab_ecoregion" in cols:
+        try:
+            conn.execute("ALTER TABLE plants DROP COLUMN ab_ecoregion")
+        except sqlite3.OperationalError:
+            pass  # SQLite < 3.35 — harmless; _row_to_dict aliases authoritatively
+    for table in ("plants", "fauna"):
+        try:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN native_provinces TEXT")
+        except sqlite3.OperationalError:
+            pass  # column already present
+    conn.commit()
+
+
 # Vegetation layers and ecological functions used to split the legacy
 # single `role` field on polyculture_members. Mirrored in
 # src/polyculture_panel.py so the UI and the migration use one source of
@@ -526,12 +575,23 @@ def _seed_fauna(conn: sqlite3.Connection) -> int:
     if os.path.exists(_FAUNA_JSON_PATH):
         with open(_FAUNA_JSON_PATH, "r", encoding="utf-8") as f:
             fauna_entries = _json.load(f)
+        def _fauna_provinces(e: dict) -> str:
+            # Explicit JSON value wins; else derive "AB" from the ab_native flag
+            # (province-neutral generalization added in schema v42).
+            np = e.get("native_provinces")
+            if isinstance(np, list):
+                return ",".join(np)
+            if np is not None:
+                return str(np)
+            return "AB" if int(e.get("ab_native", 1)) else ""
+
         fauna_rows = [
             (
                 e["scientific_name"],
                 e["common_name"],
                 e["taxon"],
                 int(e.get("ab_native", 1)),
+                _fauna_provinces(e),
                 e.get("range_notes"),
                 e.get("icon"),
                 e.get("description"),
@@ -546,9 +606,9 @@ def _seed_fauna(conn: sqlite3.Connection) -> int:
             conn.executemany(
                 "INSERT OR IGNORE INTO fauna "
                 "(scientific_name, common_name, taxon, ab_native, "
-                " range_notes, icon, description, "
+                " native_provinces, range_notes, icon, description, "
                 " image_url, image_attribution, image_license) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 fauna_rows,
             )
             conn.commit()
@@ -660,6 +720,107 @@ def _seed_bee_attributes(conn: sqlite3.Connection) -> int:
     return len(rows)
 
 
+def _seed_lepidoptera_attributes(conn: sqlite3.Connection) -> int:
+    """
+    Load ``data/lepidoptera_attributes_master.json`` into the
+    ``lepidoptera_attributes`` table (schema v40, F37 "fly as a butterfly").
+    Each record is keyed by ``scientific_name`` and resolved to the matching
+    ``fauna`` row's id (lepidoptera rows only); records whose species is not in
+    the fauna registry are skipped. Idempotent via ``INSERT OR IGNORE`` on the
+    ``fauna_id`` primary key. Returns the number of rows inserted.
+
+    Mirrors ``_seed_bee_attributes`` and must run *after* ``_seed_fauna`` so the
+    fauna registry exists to resolve scientific_name → fauna_id.
+    """
+    import json as _json
+
+    if not os.path.exists(_LEP_ATTR_JSON_PATH):
+        return 0
+
+    with open(_LEP_ATTR_JSON_PATH, "r", encoding="utf-8") as f:
+        entries = _json.load(f)
+
+    sci_to_fid = {
+        row["scientific_name"]: row["id"]
+        for row in conn.execute(
+            "SELECT id, scientific_name FROM fauna WHERE taxon = 'lepidoptera'"
+        ).fetchall()
+    }
+
+    rows: list[tuple] = []
+    for e in entries:
+        # Skip metadata records (those without a 'scientific_name' key).
+        if "scientific_name" not in e:
+            continue
+        fid = sci_to_fid.get(e["scientific_name"])
+        if fid is None:
+            continue
+        rows.append((
+            fid,
+            e.get("kind"),
+            e.get("activity"),
+            e.get("flight_season"),
+            e.get("overwintering_stage"),
+            e.get("voltinism"),
+            e.get("nectar_flower_genera"),
+            e.get("larval_host_note"),
+            e.get("conservation_status"),
+            e.get("source"),
+            e.get("notes"),
+        ))
+
+    if rows:
+        conn.executemany(
+            "INSERT OR IGNORE INTO lepidoptera_attributes "
+            "(fauna_id, kind, activity, flight_season, overwintering_stage, "
+            " voltinism, nectar_flower_genera, larval_host_note, "
+            " conservation_status, source, notes) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            rows,
+        )
+        conn.commit()
+    return len(rows)
+
+
+def _seed_nurseries(conn: sqlite3.Connection) -> int:
+    """Load ``data/nurseries_master.json`` into the ``nurseries`` table (schema
+    v44, V2.18). The JSON is an object with a ``nurseries`` list (plus metadata /
+    disclaimer keys, which are ignored). Returns the number of rows inserted."""
+    import json as _json
+
+    if not os.path.exists(_NURSERIES_JSON_PATH):
+        return 0
+    with open(_NURSERIES_JSON_PATH, "r", encoding="utf-8") as f:
+        payload = _json.load(f)
+    entries = payload.get("nurseries", []) if isinstance(payload, dict) else payload
+
+    rows = [
+        (
+            e.get("name", ""),
+            e.get("kind", ""),
+            e.get("province", ""),
+            e.get("city", ""),
+            e.get("lat"),
+            e.get("lng"),
+            e.get("url", ""),
+            e.get("sells", ""),
+            1 if e.get("ships") else 0,
+            e.get("notes", ""),
+        )
+        for e in entries
+        if isinstance(e, dict) and e.get("name")
+    ]
+    if rows:
+        conn.executemany(
+            "INSERT INTO nurseries "
+            "(name, kind, province, city, lat, lng, url, sells, ships, notes) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            rows,
+        )
+        conn.commit()
+    return len(rows)
+
+
 def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
     """
     Insert all plants from a JSON file into the plants table (skipping duplicates
@@ -685,9 +846,20 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
 
     plant_rows = []
     for p in entries:
-        ecoregion = p.get("ab_ecoregion", "")
+        # Accept the new ``ecoregion`` key or the legacy ``ab_ecoregion`` (v42
+        # province-neutral rename); either may be a list or comma-string.
+        ecoregion = p.get("ecoregion", p.get("ab_ecoregion", ""))
         if isinstance(ecoregion, list):
             ecoregion = ",".join(ecoregion)
+        # native_provinces: explicit JSON value wins; otherwise derive from the
+        # legacy native_to_alberta flag so existing AB seed data keeps working
+        # (native_to_alberta truthy -> "AB", else "").
+        native_provinces = p.get("native_provinces")
+        if isinstance(native_provinces, list):
+            native_provinces = ",".join(native_provinces)
+        if native_provinces is None:
+            native_provinces = "AB" if str(
+                p.get("native_to_alberta", 0)).strip() in ("1", "1?") else ""
         plant_rows.append((
             p.get("common_name", ""),
             p.get("scientific_name", ""),
@@ -712,6 +884,7 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("years_to_maturity"),
             p.get("growth_curve"),
             ecoregion,
+            native_provinces,
             p.get("toxicity_pets", ""),
             p.get("toxicity_humans", ""),
             1 if p.get("has_thorns") else 0,
@@ -740,13 +913,13 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             edible_parts, deciduous_evergreen,
             soil_ph_min, soil_ph_max, perennial_or_annual,
             growth_rate, years_to_maturity, growth_curve,
-            ab_ecoregion,
+            ecoregion, native_provinces,
             toxicity_pets, toxicity_humans, has_thorns,
             spread_habit, safety_source,
             price_low_cad, price_high_cad, availability_class,
             sourcing_notes, flower_color, flower_form, fruit_color,
             image_url, image_attribution, image_license)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -837,6 +1010,8 @@ def init_db() -> None:
             _migrate_to_v31(conn)
         if current_version < 35:
             _migrate_to_v35(conn)
+        if current_version < 42:
+            _migrate_to_v42(conn)
 
         # Add parent_id to polycultures if missing
         try:
@@ -870,6 +1045,7 @@ def init_db() -> None:
             # Wipe child tables before parents so FK chains (even with FK off
             # they still inform the order we'd want when FK is back on).
             conn.execute("DELETE FROM bee_attributes")   # child of fauna — wipe first
+            conn.execute("DELETE FROM lepidoptera_attributes")   # child of fauna
             conn.execute("DELETE FROM plant_fauna")
             conn.execute("DELETE FROM plant_uses")
             conn.execute("DELETE FROM fauna")
@@ -880,6 +1056,9 @@ def init_db() -> None:
             conn.execute("DELETE FROM polyculture_members")
             conn.execute("DELETE FROM polycultures")
             conn.execute("DELETE FROM plants")
+            # Nurseries are seeded from data/nurseries_master.json — wipe + reseed
+            # so directory edits ship on the next schema bump (V2.18).
+            conn.execute("DELETE FROM nurseries")
             # climate_cache is per-location user data, not seeded — wipe
             # on reseed so the next launch refetches against any updated
             # source defaults rather than serving stale interpretations.
@@ -905,6 +1084,10 @@ def init_db() -> None:
             # Bee attributes (F37) — depends on the fauna registry above so we
             # can resolve each bee's scientific_name → fauna_id.
             _seed_bee_attributes(conn)
+            # Lepidoptera attributes (F37 "fly as a butterfly") — same dependency.
+            _seed_lepidoptera_attributes(conn)
+            # Native-plant nursery directory (V2.18) — independent of plants/fauna.
+            _seed_nurseries(conn)
             conn.execute("PRAGMA foreign_keys = ON")
             conn.commit()
 
@@ -975,6 +1158,12 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
         sp = d.get("spacing_meters")
         if sp:
             d["mature_canopy_m"] = float(sp) * 1.5
+    # Back-compat: the ab_ecoregion column was renamed to ecoregion in v42
+    # (province-neutral). Expose the legacy key as a synthesized alias so
+    # read-side consumers (plant browser, llm_design, polyculture panel, the
+    # frozen permadesign_api / MCP surface) keep working unchanged.
+    if "ecoregion" in d:
+        d["ab_ecoregion"] = d.get("ecoregion") or ""
     return d
 
 
@@ -1038,6 +1227,8 @@ def search_plants(
     bird_food_only: bool = False,
     has_image_only: bool = False,
     ab_ecoregion: str = "",
+    ecoregion: str = "",
+    native_province: str = "",
     pet_safe_only: bool = False,
     kid_safe_only: bool = False,
     well_behaved_only: bool = False,
@@ -1153,15 +1344,24 @@ def search_plants(
     if has_image_only:
         sql += " AND image_url IS NOT NULL AND image_url != ''"
 
-    # ab_ecoregion column is a comma-separated list of region ids. A
-    # multi-select "restoring toward" filter matches a plant documented from
-    # ANY of the chosen ecoregions (OR of substring-safe patterns). Accepts a
-    # single string (legacy) or a list (V1.85).
-    ecoregions = _as_filter_list(ab_ecoregion)
+    # ecoregion column is a comma-separated list of region ids. A multi-select
+    # "restoring toward" filter matches a plant documented from ANY of the chosen
+    # ecoregions (OR of substring-safe patterns). Accepts a single string
+    # (legacy) or a list (V1.85). The ``ab_ecoregion`` parameter is the
+    # pre-v42 name, kept for back-compat (frozen MCP contract); ``ecoregion`` is
+    # the province-neutral name — either (or both) may be supplied.
+    ecoregions = _as_filter_list(ecoregion) + _as_filter_list(ab_ecoregion)
     if ecoregions:
         sql += " AND (" + " OR ".join(
-            "(',' || COALESCE(ab_ecoregion,'') || ',') LIKE ?" for _ in ecoregions) + ")"
+            "(',' || COALESCE(ecoregion,'') || ',') LIKE ?" for _ in ecoregions) + ")"
         params += [f"%,{e},%" for e in ecoregions]
+
+    # native_province (v42): keep only plants native to the given province code
+    # (e.g. "SK"). The province-aware generalization of the native_only flag,
+    # which stays keyed on native_to_alberta for back-compat.
+    if native_province:
+        sql += " AND (',' || COALESCE(native_provinces,'') || ',') LIKE ?"
+        params.append(f"%,{native_province},%")
 
     # Safety filters (schema v18) use a DENYLIST: exclude only plants we have
     # classified as toxic. Unassessed ('') and explicit 'none' both pass, so
@@ -1221,10 +1421,18 @@ def search_plants(
     # brackets the site pH (containment, mirroring `zone`); unassessed bounds
     # (NULL) pass so a missing range never excludes a plant. `moisture` maps a
     # site wetness class to the existing water/habitat columns.
+    #
+    # A tolerance margin (V2.18.1) widens the bracket by _SOIL_PH_TOLERANCE at
+    # each end. Both the site pH (often a coarse regional estimate) and each
+    # plant's tolerance bounds are approximate, so a hard cutoff let a 0.1 pH
+    # gap wrongly exclude e.g. every tree on Regina's alkaline clay (site 7.6 vs
+    # a plant max of 7.5). Respecting that uncertainty (P9) restores the woody
+    # species people actually plant there.
     if soil_ph is not None:
         sql += (" AND (soil_ph_min IS NULL OR soil_ph_min <= ?)"
                 " AND (soil_ph_max IS NULL OR soil_ph_max >= ?)")
-        params += [float(soil_ph), float(soil_ph)]
+        params += [float(soil_ph) + _SOIL_PH_TOLERANCE,
+                   float(soil_ph) - _SOIL_PH_TOLERANCE]
 
     # water_needs may be comma-delimited (V1.84), so test membership with LIKE
     # rather than `=`/`IN` on the whole field.
@@ -1238,8 +1446,8 @@ def search_plants(
         # species tagged to a wet ecoregion (wet_meadow / riparian).
         sql += (" AND (" + _water_like("high", "moderate") +
                 " OR plant_type = 'aquatic'"
-                " OR (',' || COALESCE(ab_ecoregion,'') || ',') LIKE '%,wet_meadow,%'"
-                " OR (',' || COALESCE(ab_ecoregion,'') || ',') LIKE '%,riparian,%')")
+                " OR (',' || COALESCE(ecoregion,'') || ',') LIKE '%,wet_meadow,%'"
+                " OR (',' || COALESCE(ecoregion,'') || ',') LIKE '%,riparian,%')")
     elif moisture == "dry":
         sql += " AND " + _water_like("low")
     elif moisture == "mesic":

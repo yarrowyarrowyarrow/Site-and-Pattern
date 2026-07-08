@@ -13,8 +13,9 @@ Design notes:
     can call ``validate_all()`` without a display.
   * Source of truth for the canonical permaculture_uses tags is
     ``src.db.plants._USE_DEFINITIONS`` — imported, not duplicated.
-  * Source of truth for the canonical Alberta ecoregion keys is
-    ``_AB_ECOREGION_CHOICES`` in ``src/plant_panel.py``; that module
+  * Source of truth for the canonical ecoregion keys is
+    ``_ECOREGION_CHOICES`` in ``src/plant_panel.py`` (renamed from the
+    province-scoped ``_AB_ECOREGION_CHOICES`` in V2.15); that module
     imports PyQt6, so the constant is read out via ``ast.literal_eval``
     on the source text rather than via a real import.
   * The enum allowlists for plant_type / water_needs / etc. match the
@@ -103,6 +104,12 @@ CALENDAR_STATUS   = {"dormant", "start_indoors", "direct_sow", "transplant",
 # uncertain-native records; the code handles it via _truthy_int.
 NATIVE_TO_ALBERTA = {0, 1, "0", "1", "1?", "0?"}
 
+# Canadian province/territory codes accepted in the native_provinces field
+# (V2.15). The app's coverage is the prairies (AB, SK) with neighbours allowed
+# for provenance completeness.
+PROVINCE_CODES = {"AB", "SK", "MB", "BC", "ON", "QC", "NB", "NS", "PE", "NL",
+                  "YT", "NT", "NU"}
+
 # Month tokens for bloom_period / fruit_period. Short forms are the
 # preferred output of the existing parser at
 # src/analysis_panel.py:759 et al; long forms are accepted on input.
@@ -147,10 +154,14 @@ def _load_ecoregion_keys() -> set[str]:
                 and node.value is not None):
             target_name = node.target.id
             value_node = node.value
-        if target_name == "_AB_ECOREGION_CHOICES":
+        # Match the canonical list (renamed _ECOREGION_CHOICES in V2.15; the
+        # legacy _AB_ECOREGION_CHOICES name is kept as an alias). Require a list
+        # literal so the alias assignment (a bare Name) is skipped.
+        if (target_name in ("_ECOREGION_CHOICES", "_AB_ECOREGION_CHOICES")
+                and isinstance(value_node, ast.List)):
             literal = ast.literal_eval(value_node)
             return {key for _label, key in literal if key}
-    raise RuntimeError("_AB_ECOREGION_CHOICES not found in plant_panel.py")
+    raise RuntimeError("_ECOREGION_CHOICES not found in plant_panel.py")
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
@@ -321,10 +332,22 @@ def validate_plant(
         if token and token not in use_keys:
             warn(f"unknown permaculture_uses tag {token!r}")
 
-    eco_raw = record.get("ab_ecoregion", "") or ""
+    # Accept the new province-neutral ``ecoregion`` key or the legacy
+    # ``ab_ecoregion`` (V2.15 rename); the seed JSON still ships the latter.
+    eco_raw = record.get("ecoregion") or record.get("ab_ecoregion", "") or ""
+    if isinstance(eco_raw, list):
+        eco_raw = ",".join(eco_raw)
     for token in (t.strip() for t in eco_raw.split(",")):
         if token and token not in ecoregion_keys:
-            warn(f"unknown ab_ecoregion key {token!r}")
+            warn(f"unknown ecoregion key {token!r}")
+
+    # native_provinces (V2.15): optional; warn on unknown province codes.
+    np_raw = record.get("native_provinces") or ""
+    if isinstance(np_raw, list):
+        np_raw = ",".join(np_raw)
+    for token in (t.strip().upper() for t in np_raw.split(",")):
+        if token and token not in PROVINCE_CODES:
+            warn(f"unknown native_provinces code {token!r}")
 
     return errors, warnings
 
@@ -400,10 +423,14 @@ def validate_file(path: Path) -> tuple[list[str], list[str]]:
 
 
 def validate_all() -> tuple[list[str], list[str]]:
-    """Validate every shipped plant data file. Returns
+    """Validate every shipped data file the app reseeds from. Returns
     ``(errors, warnings)``. Adding a new shipped data file means
     appending it here (and adding it to the reseed wipe list in
-    plants.py per CLAUDE.md)."""
+    plants.py per CLAUDE.md).
+
+    Covers the plant catalogues plus the fauna data spine: the bee
+    attributes (F37) and the fauna photo-licence compliance (A1) run in
+    the central gate too, not only in an isolated bee test."""
     files = [
         DATA_DIR / "plants_master.json",
         DATA_DIR / "garden_plants.json",
@@ -434,6 +461,13 @@ def validate_all() -> tuple[list[str], list[str]]:
             use_keys=use_keys,
             ecoregion_keys=ecoregion_keys,
         )
+        errors.extend(e)
+        warnings.extend(w)
+
+    # Fauna data spine: the bee attributes (F37) and fauna photo-licence
+    # compliance (A1). Both read shipped data/*.json the app reseeds from.
+    for validate_fauna in (validate_bee_attributes, validate_fauna_images):
+        e, w = validate_fauna()
         errors.extend(e)
         warnings.extend(w)
     return errors, warnings
@@ -507,4 +541,36 @@ def validate_bee_attributes() -> tuple[list[str], list[str]]:
             errors.append(
                 f"bee_attributes: {name}: graded tongue_length {tl!r} is only "
                 f"documented for Bombus (use 'unknown' elsewhere)")
+    return errors, warnings
+
+
+# Bees use only commercial-safe CC licences (F37 A1 decision: CC0 + CC-BY).
+_BEE_IMAGE_LICENSES = {"", "cc0", "cc-by"}
+
+
+def validate_fauna_images() -> tuple[list[str], list[str]]:
+    """Validate bee photo licences in ``data/fauna_master.json`` (F37 A1): a bee
+    photo must be CC0 or CC-BY (no NC/SA — commercial-safe), and any non-CC0
+    licensed photo must carry a non-empty attribution (CC-BY needs a visible
+    credit). Non-bee taxa are not constrained here. Returns ``(errors, warnings)``."""
+    errors: list[str] = []
+    warnings: list[str] = []
+    path = DATA_DIR / "fauna_master.json"
+    try:
+        records = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return [f"{path.name}: not found"], []
+    except json.JSONDecodeError as e:
+        return [f"{path.name}: JSON parse error: {e}"], []
+    for rec in records:
+        if rec.get("taxon") != "bee" or not (rec.get("image_url") or ""):
+            continue
+        name = rec.get("scientific_name", "?")
+        lic = (rec.get("image_license") or "").lower().strip()
+        if lic not in _BEE_IMAGE_LICENSES:
+            errors.append(
+                f"fauna image: {name}: bee photo licence {lic!r} is not CC0/CC-BY")
+        if lic and lic != "cc0" and not (rec.get("image_attribution") or "").strip():
+            errors.append(
+                f"fauna image: {name}: {lic} photo needs a non-empty attribution")
     return errors, warnings

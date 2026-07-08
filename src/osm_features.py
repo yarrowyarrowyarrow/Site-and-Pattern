@@ -38,6 +38,14 @@ _TIMEOUT = 25.0
 _USER_AGENT = "PermaDesign/1.0 (https://github.com/yarrowyarrowyarrow/permadesign)"
 # Public Overpass instance; the app degrades gracefully if it's unreachable.
 _OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+# Primary + fallback mirror. The public primary rate-limits per-IP hard —
+# two imports within seconds routinely get a 429 — so a failed attempt
+# retries once (after a pause) and then tries the mirror before giving up.
+_OVERPASS_URLS = [
+    _OVERPASS_URL,
+    "https://overpass.kumi.systems/api/interpreter",
+]
+_RETRY_PAUSE_S = 2.0
 
 _DEFAULT_TREE_HEIGHT_M = 7.0
 _DEFAULT_TREE_RADIUS_M = 3.0
@@ -51,27 +59,49 @@ def _bbox_str(bbox: dict) -> str:
 
 
 def _query(bbox: dict, include_trees: bool, include_buildings: bool) -> str:
+    # Both ways AND relations: large complexes (apartment blocks with
+    # courtyards) are often mapped as multipolygon relations, which a
+    # way-only query never returns (V2.13).
     parts = []
     b = _bbox_str(bbox)
     if include_buildings:
         parts.append(f'way["building"]({b});')
+        parts.append(f'relation["building"]({b});')
     if include_trees:
         parts.append(f'node["natural"="tree"]({b});')
     return f"[out:json][timeout:25];({''.join(parts)});out geom;"
 
 
-def _post_overpass(query: str) -> Optional[dict]:
-    """POST an Overpass QL query, return parsed JSON or None on any failure."""
+def _post_overpass(query: str, url: str = _OVERPASS_URL) -> Optional[dict]:
+    """POST an Overpass QL query to one endpoint; parsed JSON or None."""
     try:
         data = b"data=" + urllib.parse.quote(query).encode("utf-8")
         req = urllib.request.Request(
-            _OVERPASS_URL, data=data,
+            url, data=data,
             headers={"User-Agent": _USER_AGENT,
                      "Content-Type": "application/x-www-form-urlencoded"})
         with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
             return json.loads(resp.read().decode("utf-8"))
-    except Exception:  # noqa: BLE001 — any failure degrades to "no data"
+    except Exception:  # noqa: BLE001 — the caller retries / falls back
         return None
+
+
+def _fetch_overpass(query: str, *, _post=None, _sleep=None) -> Optional[dict]:
+    """Fetch with retry + mirror fallback: primary → (pause) primary again →
+    mirror. Returns parsed JSON, or None only when every attempt failed —
+    which callers must report as *failure*, never as an empty result.
+    ``_post``/``_sleep`` are injectable for tests."""
+    import time
+    post = _post or _post_overpass
+    sleep = _sleep or time.sleep
+    attempts = [_OVERPASS_URLS[0], _OVERPASS_URLS[0]] + _OVERPASS_URLS[1:]
+    for i, url in enumerate(attempts):
+        if i > 0:
+            sleep(_RETRY_PAUSE_S)   # etiquette: back off before hammering again
+        data = post(query, url)
+        if data is not None:
+            return data
+    return None
 
 
 def _parse_height(tags: dict, default: float) -> float:
@@ -183,16 +213,47 @@ def parse_elements(data: Optional[dict]) -> list[dict]:
                             tags, _DEFAULT_BUILDING_HEIGHT_M),
                         "radius_m": max(1.0, ring_radius_m(ring, (clat, clng))),
                         "footprint": ring})
+        elif etype == "relation" and tags.get("building"):
+            # Multipolygon building (V2.13): each *closed* outer-role member
+            # ring becomes a footprint (tags/height come from the relation).
+            # Outers split across several unclosed way fragments would need
+            # arc-stitching — skipped rather than force-closed into garbage.
+            for m in el.get("members", []) or []:
+                if m.get("type") != "way" or m.get("role") not in ("outer", ""):
+                    continue
+                geometry = m.get("geometry", []) or []
+                if (len(geometry) < 4
+                        or geometry[0].get("lat") != geometry[-1].get("lat")
+                        or geometry[0].get("lon") != geometry[-1].get("lon")):
+                    continue                     # unclosed fragment — skip
+                ring = _ring_lnglat(geometry)
+                if ring is None:
+                    continue
+                c = ring_centroid(ring)
+                if c is None:
+                    continue
+                clat, clng = c
+                out.append({"kind": "building", "lat": clat, "lng": clng,
+                            "height_m": _parse_height(
+                                tags, _DEFAULT_BUILDING_HEIGHT_M),
+                            "radius_m": max(1.0, ring_radius_m(
+                                ring, (clat, clng))),
+                            "footprint": ring})
     return out
 
 
 def fetch_existing_features(bbox: dict, *, trees: bool = True,
-                            buildings: bool = True) -> dict:
+                            buildings: bool = True) -> Optional[dict]:
     """Fetch existing trees and/or buildings in ``bbox`` from OSM. Returns
-    ``{"trees": [...], "buildings": [...]}`` (empty lists on any failure)."""
+    ``{"trees": [...], "buildings": [...]}``, or **None when the network
+    fetch failed** (timeout / rate-limit / server busy, after retry + mirror).
+    A None must be reported as a failure — for years a failed request was
+    silently rendered as "Found 0 buildings", which is a lie (V2.13)."""
     if not (trees or buildings):
         return {"trees": [], "buildings": []}
-    data = _post_overpass(_query(bbox, trees, buildings))
+    data = _fetch_overpass(_query(bbox, trees, buildings))
+    if data is None:
+        return None
     feats = parse_elements(data)
     return {
         "trees": [f for f in feats if f["kind"] == "tree"],
@@ -201,11 +262,15 @@ def fetch_existing_features(bbox: dict, *, trees: bool = True,
 
 
 def fetch_buildings(bbox: dict) -> list[dict]:
-    return fetch_existing_features(bbox, trees=False, buildings=True)["buildings"]
+    """Buildings only; keeps the legacy []-on-failure contract for the bulk
+    downloader (which has its own retry/progress handling)."""
+    res = fetch_existing_features(bbox, trees=False, buildings=True)
+    return res["buildings"] if res else []
 
 
 def fetch_trees(bbox: dict) -> list[dict]:
-    return fetch_existing_features(bbox, trees=True, buildings=False)["trees"]
+    res = fetch_existing_features(bbox, trees=True, buildings=False)
+    return res["trees"] if res else []
 
 
 def _too_close(lat, lng, existing, min_m=2.0) -> bool:
@@ -361,21 +426,166 @@ if _HAVE_QT:
             self.finished.emit()
 
 
-def bbox_from_boundary_or_pin(boundary, site_config: dict,
-                              radius_m: float = 60.0):
-    """A bbox (terrain.py convention) from a boundary polygon, else a square of
-    half-extent ``radius_m`` around the property pin. None when neither is
-    available. Pure geometry, shared by the OSM + footprint import flows."""
+def pad_bbox(bbox: dict, metres: float) -> dict:
+    """Grow a bbox by ``metres`` on every side. Load-bearing for the import
+    (V2.13): Overpass returns a building way only when at least one of its
+    *corner nodes* falls inside the box, so a boundary drawn tight over a big
+    building can contain the building but none of its corners — the margin
+    catches them (the full footprint comes back via ``out geom`` regardless)."""
+    clat = (bbox["south"] + bbox["north"]) / 2.0
+    dlat = metres / 111320.0
+    dlng = metres / (111320.0 * max(1e-9, math.cos(clat * math.pi / 180)))
+    return {"south": bbox["south"] - dlat, "north": bbox["north"] + dlat,
+            "west": bbox["west"] - dlng, "east": bbox["east"] + dlng}
+
+
+def bbox_with_area_note(boundary, site_config: dict,
+                        radius_m: float = 60.0, pad_m: float = 30.0):
+    """``(bbox, note)``: the search bbox plus a human description of what area
+    it covers, so the import status can say exactly what was searched.
+    Boundary path = the polygon's bounding box grown by ``pad_m``; fallback =
+    a square of half-extent ``radius_m`` around the property pin. ``(None,
+    "")`` when neither exists. Pure geometry, shared by the OSM + footprint
+    import flows."""
     if boundary and len(boundary) >= 3:
         lats = [p[0] for p in boundary]
         lngs = [p[1] for p in boundary]
-        return {"north": max(lats), "south": min(lats),
-                "east": max(lngs), "west": min(lngs)}
+        raw = {"north": max(lats), "south": min(lats),
+               "east": max(lngs), "west": min(lngs)}
+        return (pad_bbox(raw, pad_m) if pad_m > 0 else raw,
+                f"your boundary + {pad_m:.0f} m margin")
     lat, lng = site_config.get("latitude"), site_config.get("longitude")
     if lat is None or lng is None:
-        return None
+        return None, ""
     cos_lat = math.cos(lat * math.pi / 180) or 1e-9
     dlat = radius_m / 111320.0
     dlng = radius_m / (111320.0 * cos_lat)
-    return {"north": lat + dlat, "south": lat - dlat,
-            "east": lng + dlng, "west": lng - dlng}
+    return ({"north": lat + dlat, "south": lat - dlat,
+             "east": lng + dlng, "west": lng - dlng},
+            f"≈{radius_m:.0f} m around the pin — draw a property boundary "
+            "to control the area")
+
+
+def bbox_from_boundary_or_pin(boundary, site_config: dict,
+                              radius_m: float = 60.0):
+    """Back-compat wrapper over :func:`bbox_with_area_note` (bbox only)."""
+    return bbox_with_area_note(boundary, site_config, radius_m=radius_m)[0]
+
+
+# ── Boundary-precise filtering (V2.13) ───────────────────────────────────────
+# The Overpass query has to be a bbox, but the user drew a *polygon* — and a
+# padded bbox happily scoops up the neighbours' whole block corner. These
+# pure-Python helpers (no shapely; it's an optional dependency) clip the
+# results back to the drawn boundary plus a user-controlled neighbour margin.
+
+def _point_in_polygon(lat: float, lng: float, poly: list) -> bool:
+    """Ray-cast point-in-polygon; ``poly`` = [(lat, lng), …] (open or closed)."""
+    n = len(poly)
+    if n < 3:
+        return False
+    inside = False
+    j = n - 1
+    for i in range(n):
+        yi, xi = poly[i][0], poly[i][1]
+        yj, xj = poly[j][0], poly[j][1]
+        if (yi > lat) != (yj > lat):
+            x_cross = xj + (lat - yj) / (yi - yj) * (xi - xj)
+            if lng < x_cross:
+                inside = not inside
+        j = i
+    return inside
+
+
+def _dist_to_polygon_m(lat: float, lng: float, poly: list) -> float:
+    """Min distance (metres, equirectangular) from a point to the polygon's
+    edges. Zero-ish for points on the boundary; combine with
+    :func:`_point_in_polygon` for interior points."""
+    if not poly:
+        return float("inf")
+    cos_lat = math.cos(lat * math.pi / 180) or 1e-9
+
+    def _xy(p):
+        return ((p[1] - lng) * 111320.0 * cos_lat, (p[0] - lat) * 111320.0)
+
+    best = float("inf")
+    n = len(poly)
+    for i in range(n):
+        ax, ay = _xy(poly[i])
+        bx, by = _xy(poly[(i + 1) % n])
+        dx, dy = bx - ax, by - ay
+        seg2 = dx * dx + dy * dy
+        t = 0.0 if seg2 <= 1e-12 else max(
+            0.0, min(1.0, -(ax * dx + ay * dy) / seg2))
+        px, py = ax + t * dx, ay + t * dy
+        best = min(best, math.hypot(px, py))
+    return best
+
+
+def _feature_near_boundary(item: dict, boundary: list, margin_m: float) -> bool:
+    """True when the feature touches the boundary polygon or comes within
+    ``margin_m`` of it: centroid or any footprint vertex inside / near."""
+    pts = [(item.get("lat"), item.get("lng"))]
+    for p in item.get("footprint") or []:
+        pts.append((p[1], p[0]))                 # footprint is [lng, lat]
+    for la, ln in pts:
+        if la is None or ln is None:
+            continue
+        if _point_in_polygon(la, ln, boundary):
+            return True
+        if margin_m > 0 and _dist_to_polygon_m(la, ln, boundary) <= margin_m:
+            return True
+    return False
+
+
+def filter_to_boundary(feats: list, boundary, margin_m: float = 30.0):
+    """Split fetched features into (kept, n_inside, n_neighbours) against the
+    drawn boundary polygon: inside = centroid inside; neighbour = within
+    ``margin_m`` of the edge (their shade still falls on the site). With no
+    usable boundary everything is kept (bbox semantics, the pin fallback)."""
+    if not boundary or len(boundary) < 3:
+        return list(feats or []), len(feats or []), 0
+    kept, n_inside, n_neigh = [], 0, 0
+    for item in feats or []:
+        la, ln = item.get("lat"), item.get("lng")
+        centroid_inside = (la is not None and ln is not None
+                           and _point_in_polygon(la, ln, boundary))
+        if centroid_inside:
+            kept.append(item)
+            n_inside += 1
+        elif _feature_near_boundary(item, boundary, margin_m):
+            kept.append(item)
+            n_neigh += 1
+    return kept, n_inside, n_neigh
+
+
+def import_osm_result(res: Optional[dict], project_dict: dict, *,
+                      boundary=None, margin_m: float = 30.0,
+                      area_note: str = "") -> dict:
+    """Filter a fetch result to the boundary, add to the project, and compose
+    the status message — the whole import tail in one pure, testable call
+    (the map controller sits at its line ceiling). Returns
+    ``{"added": int, "kept": int, "found": int, "message": str}``;
+    ``res=None`` (network failure) produces added=0 and the honest message."""
+    if res is None:
+        return {"added": 0, "kept": 0, "found": 0,
+                "message": ("OpenStreetMap didn't answer (busy or offline) — "
+                            "nothing was imported. Wait ~30 s and try again.")}
+    feats = list(res.get("buildings", [])) + list(res.get("trees", []))
+    kept, n_inside, n_neigh = filter_to_boundary(feats, boundary, margin_m)
+    added = add_features_to_project(kept, project_dict)
+    msg = f"Found {len(feats)} nearby; "
+    if boundary and len(boundary) >= 3:
+        msg += (f"kept {len(kept)} ({n_inside} inside your boundary + "
+                f"{n_neigh} neighbour{'s' if n_neigh != 1 else ''} within "
+                f"{margin_m:.0f} m); ")
+    elif area_note:
+        msg += f"searched {area_note}; "
+    msg += f"added {added} new."
+    if added or len(kept):
+        msg += (" Click an imported outline and press Delete to drop any "
+                "you don't want.")
+    elif not feats:
+        msg += (" OSM knows no buildings/trees here — anything missing can "
+                "be drawn by hand below.")
+    return {"added": added, "kept": len(kept), "found": len(feats),
+            "message": msg}

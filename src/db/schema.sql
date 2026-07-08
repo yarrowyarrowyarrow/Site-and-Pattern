@@ -19,7 +19,12 @@ CREATE TABLE IF NOT EXISTS plants (
     -- Extended fields (schema v2)
     bloom_period TEXT,              -- e.g. "May–June"
     fruit_period TEXT,              -- e.g. "August–September"
-    native_to_alberta INTEGER DEFAULT 0,  -- 1 = native to Alberta
+    native_to_alberta INTEGER DEFAULT 0,  -- 1 = native to Alberta (back-compat
+                                    -- flag; derived from native_provinces on seed)
+    native_provinces TEXT,          -- comma-separated province codes the plant is
+                                    -- native to (v42), e.g. "AB,SK". The
+                                    -- province-neutral generalization of
+                                    -- native_to_alberta.
     edible_parts TEXT,              -- comma-separated e.g. "fruit,leaves,flowers"
     deciduous_evergreen TEXT,       -- deciduous | evergreen | herbaceous
     soil_ph_min REAL,
@@ -30,11 +35,14 @@ CREATE TABLE IF NOT EXISTS plants (
     growth_rate TEXT,               -- slow | moderate | fast
     years_to_maturity INTEGER,      -- estimated years to reach mature size
     growth_curve TEXT,              -- fast_early | steady | slow_start
-    -- Schema v11
-    ab_ecoregion TEXT,              -- comma-separated AB ecoregion tags
+    -- Schema v11; renamed ab_ecoregion -> ecoregion in v42 (province-neutral,
+    -- Saskatchewan expansion). Ecoregion keys are shared across provinces where
+    -- the ecoregion is the same — nature does not respect borders (P1/P2).
+    ecoregion TEXT,                 -- comma-separated ecoregion tags
                                     -- (aspen_parkland, mixedgrass_prairie,
-                                    --  fescue_foothills, boreal_mixedwood,
-                                    --  riparian, wet_meadow, subalpine_montane)
+                                    --  moist_mixedgrass, fescue_foothills,
+                                    --  boreal_mixedwood, riparian, wet_meadow,
+                                    --  subalpine_montane)
     -- Safety + spread (schema v18, V1.44 chunk 2). Empty string = UNASSESSED,
     -- which is deliberately NOT the same as 'none' — the safety filters use a
     -- denylist (exclude only known-toxic), so unassessed plants are surfaced
@@ -169,6 +177,9 @@ CREATE TABLE IF NOT EXISTS fauna (
     taxon TEXT NOT NULL CHECK (taxon IN
         ('lepidoptera', 'bird', 'bee', 'other_insect', 'mammal')),
     ab_native INTEGER NOT NULL DEFAULT 1,
+    native_provinces TEXT,          -- comma-separated province codes (v42),
+                                    -- e.g. "AB,SK"; province-neutral companion
+                                    -- to ab_native.
     range_notes TEXT,
     icon TEXT,
     description TEXT,
@@ -222,6 +233,51 @@ CREATE TABLE IF NOT EXISTS bee_attributes (
 );
 CREATE INDEX IF NOT EXISTS idx_bee_attr_genus   ON bee_attributes(genus);
 CREATE INDEX IF NOT EXISTS idx_bee_attr_nesting ON bee_attributes(nesting_habit);
+
+-- Lepidoptera attributes (schema v40, V2.12 "fly as a butterfly"). One row per
+-- fauna row with taxon='lepidoptera'. Parallels bee_attributes: a narrow table
+-- keyed on fauna_id so the lep-only fields (flight season, overwintering stage,
+-- adult nectar genera) don't add perpetually-NULL columns to the 5-taxon fauna
+-- table. Larval host plants stay in plant_fauna (relationship='larval_host').
+-- Data honesty (P9): giant silk moths and some sphinxes DO NOT feed as adults —
+-- nectar_flower_genera is NULL for them, never a silent generalist default.
+CREATE TABLE IF NOT EXISTS lepidoptera_attributes (
+    fauna_id INTEGER PRIMARY KEY REFERENCES fauna(id) ON DELETE CASCADE,
+    kind TEXT CHECK (kind IN ('butterfly', 'moth', 'skipper')),
+    activity TEXT CHECK (activity IN ('day', 'night', 'day_dusk', 'unknown')),
+    flight_season TEXT,             -- free-text month range ("May-August"); parsed downstream
+    overwintering_stage TEXT CHECK (overwintering_stage IN
+        ('egg', 'larva', 'pupa', 'adult', 'migrant', 'unknown')),
+    voltinism TEXT,                 -- free text ("one brood", "multiple broods")
+    nectar_flower_genera TEXT,      -- comma-separated adult-nectar genera | NULL (non-feeding)
+    larval_host_note TEXT,          -- plain-language summary (edges live in plant_fauna)
+    conservation_status TEXT,
+    source TEXT,
+    notes TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_lep_attr_kind ON lepidoptera_attributes(kind);
+
+-- Native-plant nurseries / seed houses / societies (schema v44, V2.18).
+-- Seeded from data/nurseries_master.json; feeds the site panel's "Where to buy
+-- near you" section (src/db/nurseries.py). ``sells`` mirrors the plants
+-- availability_class enum so a supplier can be matched to a plant's sourcing
+-- tier. ``lat``/``lng`` are approximate (community-level), used only to sort
+-- suppliers by rough distance from the property pin.
+CREATE TABLE IF NOT EXISTS nurseries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    kind TEXT,                      -- native_nursery | seed_house | garden_centre | society
+    province TEXT,                  -- AB, SK, ...
+    city TEXT,
+    lat REAL,
+    lng REAL,
+    url TEXT,
+    sells TEXT,                     -- availability_class channel: native_specialist,
+                                    -- seed_or_plug, garden_centre, big_box, rare
+    ships INTEGER DEFAULT 0,        -- 1 = mail-order / ships province-wide
+    notes TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_nurseries_province ON nurseries(province);
 
 -- Climate cache (schema v14, V1.35). One row per ~1 km^2 location;
 -- stores derived growing-degree-day and frost-window stats from the
