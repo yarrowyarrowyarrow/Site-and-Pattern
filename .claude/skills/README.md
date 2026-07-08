@@ -23,6 +23,7 @@ them; they are part of the change, not an afterthought.
 | Starting or finishing a unit of work (branches, commits, definition of done) | `start-work` |
 | Designing or reviewing a feature against the twelve principles / P12 hard rule | `philosophy-check` |
 | Adding a feature (controllers, core+flow+widget triad, ceilings, anchors) | `add-feature` |
+| Touching Generate Design — LLM spec, placement scoring, critic loop, goals, Habitat Score | `generate-design` |
 | Changing `src/db/schema.sql` or anything needing a `_SCHEMA_VERSION` bump | `schema-change` |
 | Editing seed JSON in `data/` (plants, fauna, junctions, nurseries) | `seed-data` |
 | Touching placed-plant state, undo/redo, or the project dict | `placed-plants` |
@@ -37,11 +38,12 @@ them; they are part of the change, not an afterthought.
 | Proving a change actually works before committing | `verify` |
 | Launching the app, CLI, MCP server, or scripts (incl. headless) | `run` |
 | Building installers or shipping a release (DMG/NSIS/updater chain) | `release-packaging` |
+| Wondering why a guard/convention exists, or about to "fix" something legacy | `legacy-lessons` |
 
 ## The shelves
 
-**Process** — `start-work`, `philosophy-check`, `release-packaging`
-**Architecture** — `codebase-map`, `add-feature`, `placed-plants`, `agent-api`
+**Process** — `start-work`, `philosophy-check`, `release-packaging`, `legacy-lessons`
+**Architecture** — `codebase-map`, `add-feature`, `placed-plants`, `agent-api`, `generate-design`
 **Data layer** — `schema-change`, `seed-data`, `offline-packs`, `external-data`
 **Frontend / geo / 3D** — `map-frontend`, `geo-projection`, `scene-3d`
 **Quality** — `testing`, `debugging`, `verify`, `run`

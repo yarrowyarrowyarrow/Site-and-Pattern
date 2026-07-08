@@ -36,12 +36,13 @@ EXPECTED_SKILLS = {
     "schema-change", "seed-data", "offline-packs", "external-data",
     # architecture
     "codebase-map", "add-feature", "placed-plants", "agent-api",
+    "generate-design",
     # frontend / geo / 3D
     "map-frontend", "geo-projection", "scene-3d",
     # quality
     "testing", "debugging", "verify", "run",
     # process
-    "start-work", "philosophy-check", "release-packaging",
+    "start-work", "philosophy-check", "release-packaging", "legacy-lessons",
 }
 
 # Backticked tokens that look like repo paths. Anchored to the top-level

@@ -234,6 +234,7 @@ scripts), `.github/workflows/release-macos.yml` and
 ## Deeper dives (skills in .claude/skills/)
 
 - **add-feature** — end-to-end feature playbook (triad pattern, ceilings, wiring, docs).
+- **generate-design** — the LLM spec → deterministic placement → critic pipeline + Habitat Score.
 - **placed-plants** — the ProjectStore single-write-path rule.
 - **agent-api** — scripting facade / CLI / MCP and the frozen contract.
 - **schema-change**, **seed-data** — DB schema and shipped JSON changes.
@@ -246,6 +247,4 @@ scripts), `.github/workflows/release-macos.yml` and
 - **start-work** — branch convention (`V<major>.<minor>`) and session setup.
 - **philosophy-check** — principle fit, anchors, State markers, the P12 rule.
 - **release-packaging** — installers, GitHub Releases, in-app updater.
-
-(Skills not yet present on disk are planned; fall back to `CLAUDE.md` and the
-paths above.)
+- **legacy-lessons** — the incident ledger: why each guard/convention exists.
