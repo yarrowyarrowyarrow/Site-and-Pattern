@@ -20,7 +20,7 @@ parent, status bar messages, the undo/redo QAction widgets created in
 
 from __future__ import annotations
 
-import copy
+import json
 import os
 from contextlib import contextmanager
 
@@ -306,10 +306,27 @@ class PersistenceController:
                                          "before": before, "after": after})
 
     # ── captured state = features + a compact analysis-overlay view-state ─────
+    # Features are snapshotted as ONE canonical JSON string, not a deepcopy
+    # tree (V2.22). Same information (features are JSON by definition — they
+    # ARE the saved file), but: ~several× less memory per entry than a
+    # Python object graph, immune to aliasing by construction (strings are
+    # immutable), before/after comparison is a string compare, and identical
+    # consecutive snapshots share one string object (the interning below) —
+    # so a 50-deep stack over a large imported project no longer holds up to
+    # 100 full deep copies of every feature.
 
     def _capture_state(self) -> dict:
+        feats_json = json.dumps(
+            self._main._project.get("features", []),
+            separators=(",", ":"), sort_keys=True, default=str)
+        # Chain-share: consecutive captures of unchanged features reuse the
+        # previous string object instead of holding a duplicate.
+        if feats_json == getattr(self, "_last_feats_json", None):
+            feats_json = self._last_feats_json
+        else:
+            self._last_feats_json = feats_json
         return {
-            "features": copy.deepcopy(self._main._project.get("features", [])),
+            "features_json": feats_json,
             "view": self._capture_view_state(),
         }
 
@@ -380,7 +397,10 @@ class PersistenceController:
                 sc.pop(sc_key, None)
             else:
                 sc[sc_key] = val
-        m._project["features"] = copy.deepcopy(side["features"])
+        # Decode a fresh feature tree (the JSON string in the entry stays
+        # pristine no matter what later gestures do to the live objects).
+        m._project["features"] = json.loads(side["features_json"])
+        self._last_feats_json = side["features_json"]
         m._store.rebuild_index()
         self.render_project_to_map(fit_view=False)
         self._apply_view_state(view)
