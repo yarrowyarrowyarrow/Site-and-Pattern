@@ -1187,6 +1187,9 @@ def init_db() -> None:
     except Exception:
         _log.exception("legacy recipe migration failed")  # user can recreate them
 
+    # Any init may have reseeded/migrated the catalogue — drop the cache.
+    invalidate_plant_cache()
+
 
 def _remap_user_polyculture_plants(conn: sqlite3.Connection,
                                    old_refs) -> None:
@@ -1331,19 +1334,44 @@ def get_all_plants() -> list[dict]:
         conn.close()
 
 
+# ── In-memory catalogue cache (V2.22) ────────────────────────────────────────
+# The catalogue is read-only between reseeds, but get_plant() opened a fresh
+# connection and ran two queries per call — and render_project_to_map calls
+# it once per placed plant on every File→Open and every snapshot undo/redo
+# (≈600 queries per Ctrl+Z on a 300-plant design). The first miss loads the
+# whole catalogue (a few hundred rows) into a dict; every plants write path
+# calls invalidate_plant_cache(). Keyed to _DB_PATH so tests that repoint
+# the DB (the temp-DB pattern) can never see another DB's rows.
+
+_plant_cache: Optional[dict] = None
+_plant_cache_db: Optional[str] = None
+
+
+def invalidate_plant_cache() -> None:
+    """Drop the in-memory catalogue cache. Call after ANY write to
+    ``plants`` (reseed, marker colour, USDA import)."""
+    global _plant_cache, _plant_cache_db
+    _plant_cache = None
+    _plant_cache_db = None
+
+
+def _cached_plants() -> dict:
+    global _plant_cache, _plant_cache_db
+    if _plant_cache is None or _plant_cache_db != _DB_PATH:
+        _plant_cache = {p["id"]: p for p in get_all_plants()}
+        _plant_cache_db = _DB_PATH
+    return _plant_cache
+
+
 def get_plant(plant_id: int) -> Optional[dict]:
-    conn = get_connection()
     try:
-        row = conn.execute(
-            "SELECT * FROM plants WHERE id = ?", (plant_id,)
-        ).fetchone()
-        if not row:
-            return None
-        d = _row_to_dict(row)
-        _attach_permaculture_uses([d])
-        return d
-    finally:
-        conn.close()
+        key = int(plant_id)
+    except (TypeError, ValueError):
+        return None
+    p = _cached_plants().get(key)
+    # Shallow copy per call: callers historically got a fresh dict and some
+    # annotate it in place — they must not be able to poison the cache.
+    return dict(p) if p is not None else None
 
 
 def search_plants(
@@ -1781,6 +1809,7 @@ def update_marker_color(plant_id: int, color: Optional[str]) -> None:
         conn.commit()
     finally:
         conn.close()
+    invalidate_plant_cache()
 
 
 # ── Climate cache (schema v14, V1.35) ────────────────────────────────────────

@@ -86,6 +86,8 @@ def reseed() -> None:
         print(f"Seeded {count} plants + companions into {_DB_PATH}")
     finally:
         conn.close()
+    from src.db.plants import invalidate_plant_cache
+    invalidate_plant_cache()
 
 
 if __name__ == "__main__":
