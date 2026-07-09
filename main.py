@@ -17,6 +17,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from src.ssl_bootstrap import ensure_ca_bundle
 ensure_ca_bundle()
 
+# File + stderr logging (V2.22) — before any Qt import so even an import-time
+# failure of the GUI stack leaves a trace in <user data dir>/logs/app.log.
+from src.log import init_logging
+init_logging()
+
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import Qt, QtMsgType, qInstallMessageHandler

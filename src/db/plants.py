@@ -20,7 +20,10 @@ import sqlite3
 import sys
 from typing import Optional
 
+from src.log import get_logger
 from src.resources import resource_path
+
+_log = get_logger(__name__)
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
@@ -1100,7 +1103,9 @@ def init_db() -> None:
         from src.db.polycultures import seed_example_polycultures
         seed_example_polycultures()
     except Exception:
-        pass  # Non-critical; polycultures can be created manually
+        # Non-critical; polycultures can be created manually — but a broken
+        # seed used to ship silently, so leave the evidence in the log.
+        _log.exception("seeding example polycultures failed")
 
     # One-time import of any pre-existing recipes that lived in
     # ~/.permadesign_config.json. Subsequent runs are no-ops thanks to
@@ -1109,7 +1114,7 @@ def init_db() -> None:
         from src.db.recipes import migrate_qsettings_recipes
         migrate_qsettings_recipes()
     except Exception:
-        pass  # Non-critical; user can recreate recipes from the new tab
+        _log.exception("legacy recipe migration failed")  # user can recreate them
 
 
 def _insert_companions(conn: sqlite3.Connection,

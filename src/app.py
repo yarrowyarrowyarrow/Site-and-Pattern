@@ -55,6 +55,9 @@ from src.reference_ecosystem_window import (
 from src.snapshot_window import open_snapshot_view as _open_snapshot_view
 from src.sprite_gallery_window import open_sprite_gallery as _open_sprite_gallery
 from src.branding import APP_NAME, APP_TITLE
+from src.log import get_logger
+
+_log = get_logger(__name__)
 
 
 # Marker colour tables for plant-community members — moved to the Qt-free
@@ -998,7 +1001,11 @@ class MainWindow(QMainWindow):
                     p.get("marker_color") or "",
                 )
         except Exception:
-            pass
+            # Fall through to defaults so the marker still renders, but a
+            # broken catalogue must not stay invisible (wrong spacings
+            # everywhere with no trace).
+            _log.warning("plant lookup failed for id=%s; using default "
+                         "spacing/type", plant_id, exc_info=True)
         return 1.0, "herb", ""
 
     def _enter_measure_mode(self):
