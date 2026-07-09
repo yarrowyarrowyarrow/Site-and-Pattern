@@ -73,17 +73,16 @@ class DesignGenerator:
         """Place a plant at the given coordinates."""
         plant = get_plant(plant_id)
         common_name = plant["common_name"] if plant else f"Plant #{plant_id}"
-        self.project["features"].append({
-            "type": "Feature",
-            "geometry": {"type": "Point", "coordinates": [lng, lat]},
-            "properties": {
-                "element_type": "plant",
-                "plant_id": plant_id,
-                "common_name": common_name,
-                "polyculture_name": polyculture_name,
-                "quantity": quantity,
-            }
-        })
+        # Through the one record↔feature converter (never hand-rolled), so
+        # API-placed plants carry the same canonical shape — and the same
+        # minted stable feature_id — as GUI placements.
+        from src.project_store import plant_feature
+        record = {"plant_id": plant_id, "common_name": common_name,
+                  "lat": lat, "lng": lng}
+        if polyculture_name:
+            record["polyculture_name"] = polyculture_name
+        self.project["features"].append(
+            plant_feature(record, quantity=quantity))
 
     def add_polyculture(self, polyculture_id: int, center_lat: float, center_lng: float) -> None:
         """Place a full polyculture at the given center coordinates."""
