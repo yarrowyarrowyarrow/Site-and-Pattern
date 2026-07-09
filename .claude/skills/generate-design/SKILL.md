@@ -28,7 +28,11 @@ change: if you're tempted to ask the LLM for positions, sizes, or
 distances, stop — that belongs in the placement engine.
 
 The LLM is **optional**: `generate_design_offline` builds a design from
-goal filters + seeded communities with zero network, and
+goal filters + seeded communities with zero network — and since V2.23 it
+speaks the same placement vocabulary (a capacity-sized matrix-grass +
+forbs meadow mix via `_offline_plant_mix`, community pockets / a weighted
+mosaic via `_offline_community_plan`, budgeted by the shared
+`_trim_spec_to_budget`), and
 `src/generate_worker.py` transparently falls back to it on any
 `LLMError`, so the one-click button always yields a design.
 

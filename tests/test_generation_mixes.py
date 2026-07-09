@@ -245,5 +245,94 @@ class TestMixPlacement(unittest.TestCase):
                          "a $5 budget cannot afford community pockets")
 
 
+class TestOfflinePlanners(unittest.TestCase):
+    """The no-LLM path builds the same mix/count structures deterministically
+    from the ranked pool + site capacity (V2.23) — pure planner units."""
+
+    @classmethod
+    def setUpClass(cls):
+        _use_our_db()
+
+    def _pool(self, *types):
+        return [{"id": i + 1, "plant_type": t} for i, t in enumerate(types)]
+
+    def test_meadow_mix_is_matrix_dominant(self):
+        pool = self._pool("wildflower", "grass", "wildflower", "shrub",
+                          "wildflower")
+        mix = llm._offline_plant_mix(pool, capacity=120, frac=0.6)
+        self.assertIsNotNone(mix)
+        self.assertEqual(mix["members"][0], (2, 3),
+                         "the first grass leads at weight 3")
+        self.assertEqual([m[1] for m in mix["members"]], [3, 1, 1])
+        self.assertEqual(mix["layout"], "drift")
+        self.assertEqual(mix["quantity"], min(48, int(120 * 0.6 * 0.35)))
+
+    def test_forb_blend_without_grass_needs_three(self):
+        self.assertIsNone(llm._offline_plant_mix(
+            self._pool("wildflower", "wildflower"), 100, 0.6))
+        mix = llm._offline_plant_mix(
+            self._pool("wildflower", "herb", "wildflower"), 100, 0.6)
+        self.assertIsNotNone(mix)
+        self.assertEqual([m[1] for m in mix["members"]], [1, 1, 1])
+
+    def test_quantity_clamped_small_site(self):
+        mix = llm._offline_plant_mix(
+            self._pool("grass", "wildflower"), capacity=6, frac=0.3)
+        self.assertEqual(mix["quantity"], 8, "floor keeps a visible stand")
+
+    def test_community_plan_shapes(self):
+        self.assertEqual(llm._offline_community_plan([], 100), ([], []))
+        groups, mixes = llm._offline_community_plan([7], capacity=30)
+        self.assertEqual(groups, [{"id": 7, "count": 2, "layout": ""}])
+        self.assertEqual(mixes, [])
+        groups, mixes = llm._offline_community_plan([7], capacity=10)
+        self.assertEqual(groups[0]["count"], 1)
+        groups, mixes = llm._offline_community_plan([7, 8, 9], capacity=60)
+        self.assertEqual(groups, [])
+        self.assertEqual(mixes[0]["members"], [(7, 2), (8, 1), (9, 1)])
+        self.assertEqual(mixes[0]["count"], 5)   # len(ids) + 2 (roomy site)
+
+    def test_shared_budget_trim_drops_communities_first(self):
+        a, b = _smallest_communities(2)
+        p_items = [(_api.query_plants(query="yarrow")[0]["id"], 2, "")]
+        c_mixes = [{"members": [(a["id"], 1), (b["id"], 1)], "count": 4,
+                    "layout": ""}]
+        p2, pm2, cg2, cm2, dropped = llm._trim_spec_to_budget(
+            list(p_items), [], [], list(c_mixes), budget=5.0)
+        self.assertEqual(cm2, [], "a $5 budget can't afford pockets")
+        self.assertTrue(p2, "plants must survive to carry the design")
+        self.assertGreaterEqual(dropped, 1)
+        # No budget → everything passes through untouched.
+        res = llm._trim_spec_to_budget(list(p_items), [], [], list(c_mixes),
+                                       budget=None)
+        self.assertEqual(res[3], c_mixes)
+
+
+class TestOfflineEndToEnd(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        _use_our_db()
+
+    def test_offline_design_places_community_pockets_and_analyzes(self):
+        project = llm.generate_design_offline(
+            site_config=_EDM, goals=["pollinator"])
+        instances = _community_instances(project)
+        total_pockets = sum(len(v) for v in instances.values())
+        self.assertGreaterEqual(
+            total_pockets, 2,
+            "offline pollinator goals should yield a community mosaic "
+            f"(got {instances})")
+        self.assertGreaterEqual(len(project.placed_plants), 8)
+        self.assertIn("habitat_score", project.analyze())
+
+    def test_offline_is_deterministic(self):
+        def _coords():
+            p = llm.generate_design_offline(site_config=_EDM,
+                                            goals=["pollinator"])
+            return sorted((r["plant_id"], round(r["lat"], 9),
+                           round(r["lng"], 9)) for r in p.placed_plants)
+        self.assertEqual(_coords(), _coords())
+
+
 if __name__ == "__main__":
     unittest.main()

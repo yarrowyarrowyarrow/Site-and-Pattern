@@ -120,6 +120,11 @@ Rules:
   tolerant plants for dry slopes, and species whose hardiness and ecoregion
   suit the site.
 - Favour native, pollinator-supporting, prairie-hardy species.
+- USE THE FULL VOCABULARY: for any meadow / naturalistic / lawn-conversion
+  brief include at least one "plant_mixes" stand (matrix grass + forbs);
+  when two or more communities suit the site, prefer one "community_mixes"
+  mosaic over separate single communities; give hedges/screens a "row" and
+  repeated feature pockets a "count".
 - Include at least a few plants. Omit a section by giving an empty list.
 """
 
@@ -771,6 +776,59 @@ def _expected_mix_counts(members: list[tuple[int, int]],
     return counts
 
 
+def _trim_spec_to_budget(p_items, p_mixes, c_groups, c_mixes, budget):
+    """One money rule for BOTH generation paths (LLM and offline).
+
+    Keeps the design within budget *before* placement (no project-removal
+    API needed): cost the atomic communities first (every repeat and every
+    expected mix pocket), dropping community groups/mixes lowest-ranked-
+    first when they alone blow the budget (only while plants remain to
+    carry the design); then trim individual plants; then drop whole plant
+    mixes (never trim inside one — that would skew its ratios) until the
+    remainder fits. Returns ``(p_items, p_mixes, c_groups, c_mixes,
+    n_dropped)``."""
+    if not budget or budget <= 0:
+        return p_items, p_mixes, c_groups, c_mixes, 0
+    from src.sourcing import estimate_cost, polyculture_cost, trim_to_budget
+
+    def _communities_mid_cost() -> float:
+        expanded = [g["id"] for g in c_groups for _ in range(g["count"])]
+        for mix in c_mixes:
+            for cid, n in _expected_mix_counts(
+                    mix["members"], mix["count"]).items():
+                expanded.extend([cid] * n)
+        lo, hi = polyculture_cost(expanded)
+        return (lo + hi) / 2.0
+
+    dropped = 0
+    cmid = _communities_mid_cost()
+    while cmid > budget and (p_items or p_mixes) and (c_groups or c_mixes):
+        if c_mixes:
+            c_mixes = c_mixes[:-1]      # drop lowest-priority first
+        else:
+            c_groups = c_groups[:-1]
+        dropped += 1
+        cmid = _communities_mid_cost()
+    if cmid > budget and (p_items or p_mixes):
+        c_groups, c_mixes = [], []
+        cmid = 0.0
+
+    p_items, n = trim_to_budget(p_items, max(budget - cmid, 0.0))
+    dropped += n
+    plo, phi = estimate_cost([(pid, q) for pid, q, *_ in p_items])
+    remaining = max(budget - cmid - (plo + phi) / 2.0, 0.0)
+    while p_mixes:
+        pairs = [(pid, n) for mix in p_mixes
+                 for pid, n in _expected_mix_counts(
+                     mix["members"], mix["quantity"]).items()]
+        mlo, mhi = estimate_cost(pairs)
+        if (mlo + mhi) / 2.0 <= remaining:
+            break
+        p_mixes = p_mixes[:-1]          # drop whole mixes, newest first
+        dropped += 1
+    return p_items, p_mixes, c_groups, c_mixes, dropped
+
+
 def _resolve_structures(entries: list, structures: list[dict]) -> list[str]:
     valid = {s.get("id") for s in structures}
     out: list[str] = []
@@ -1054,42 +1112,8 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
                 p_items.append((mix["members"][0][0], mix["quantity"],
                                 mix["layout"]))
 
-        # Keep the design within budget *before* placement (no
-        # project-removal API needed): count the atomic community cost
-        # first (every repeat and every expected mix pocket), drop
-        # communities that alone blow the budget (only if plants remain
-        # to carry the design), then trim individual plants, then drop
-        # whole plant mixes (never trim inside one — that would skew its
-        # ratios) until the remainder fits.
-        dropped = 0
-        if budget and budget > 0:
-            from src.sourcing import (
-                estimate_cost, polyculture_cost, trim_to_budget,
-            )
-            expanded_cids = [g["id"] for g in c_groups
-                             for _ in range(g["count"])]
-            for mix in c_mixes:
-                for cid, n in _expected_mix_counts(
-                        mix["members"], mix["count"]).items():
-                    expanded_cids.extend([cid] * n)
-            clow, chigh = polyculture_cost(expanded_cids)
-            cmid = (clow + chigh) / 2.0
-            if cmid > budget and (p_items or p_mixes):
-                c_groups, c_mixes = [], []
-                cmid = 0.0
-            p_items, dropped = trim_to_budget(p_items,
-                                              max(budget - cmid, 0.0))
-            plo, phi = estimate_cost([(pid, q) for pid, q, *_ in p_items])
-            remaining = max(budget - cmid - (plo + phi) / 2.0, 0.0)
-            while p_mixes:
-                pairs = [(pid, n) for mix in p_mixes
-                         for pid, n in _expected_mix_counts(
-                             mix["members"], mix["quantity"]).items()]
-                mlo, mhi = estimate_cost(pairs)
-                if (mlo + mhi) / 2.0 <= remaining:
-                    break
-                p_mixes.pop()          # drop whole mixes, newest first
-                dropped += 1
+        p_items, p_mixes, c_groups, c_mixes, dropped = _trim_spec_to_budget(
+            p_items, p_mixes, c_groups, c_mixes, budget)
 
         if not p_items and not c_groups and not p_mixes and not c_mixes:
             raise LLMError(
@@ -2110,6 +2134,59 @@ def _select_offline_communities(communities: list[dict], goals, site_config,
     return [c["id"] for c in picks if c.get("id") is not None]
 
 
+_MEADOW_MATRIX_TYPES = ("grass", "sedge", "rush")
+_MEADOW_FORB_TYPES = ("wildflower", "herb")
+
+
+def _offline_plant_mix(ranked_pool: list, capacity: int,
+                       frac: float) -> Optional[dict]:
+    """The offline path's signature meadow gesture: ONE interleaved stand of
+    matrix grass + flowering forbs (the Rainer/West ground layer), built
+    deterministically from the ranked site/goal-fit pool. Returns a
+    plant-mix dict (same shape the LLM spec resolves to) or None when the
+    pool can't support one (no grass and fewer than three forbs).
+
+    The stand is sized from the site's plantable capacity so a small yard
+    gets a pocket meadow and an acreage gets a real sweep — clamped to
+    [8, 48] plants (the mix supplements the individual drifts, it doesn't
+    replace the whole design)."""
+    matrix = next((p for p in ranked_pool
+                   if p.get("plant_type") in _MEADOW_MATRIX_TYPES), None)
+    forbs = [p for p in ranked_pool
+             if p.get("plant_type") in _MEADOW_FORB_TYPES
+             and (matrix is None or p["id"] != matrix["id"])][:3]
+    if matrix is not None and forbs:
+        # Matrix-dominant: 3 parts grass to 1 part each forb.
+        members = [(matrix["id"], 3)] + [(f["id"], 1) for f in forbs[:2]]
+    elif matrix is None and len(forbs) >= 3:
+        members = [(f["id"], 1) for f in forbs]   # wildflower blend
+    else:
+        return None
+    quantity = max(8, min(48, int((capacity or 20) * (frac or 0.6) * 0.35)))
+    return {"members": members, "quantity": quantity, "layout": "drift"}
+
+
+def _offline_community_plan(community_ids: list[int],
+                            capacity: int) -> tuple[list, list]:
+    """Turn the ranked offline community picks into placement structures:
+    one pick → a repeated group (two pockets when the site has room),
+    several picks → a weighted mosaic (top pick dominant 2:1), pockets
+    scaled by plantable capacity. Returns ``(community_groups,
+    community_mixes)`` — the same shapes the LLM spec resolves to."""
+    ids = [cid for cid in (community_ids or []) if cid is not None]
+    if not ids:
+        return [], []
+    roomy = (capacity or 0) >= 24     # ~4+ of the 6 m anchor cells per pocket
+    if len(ids) == 1:
+        return [{"id": ids[0], "count": 2 if roomy else 1,
+                 "layout": ""}], []
+    pockets = min(_MAX_MIX_POCKETS,
+                  len(ids) + (2 if (capacity or 0) >= 48 else 1 if roomy
+                              else 0))
+    members = [(ids[0], 2)] + [(cid, 1) for cid in ids[1:]]
+    return [], [{"members": members, "count": pockets, "layout": ""}]
+
+
 def _fauna_names(fauna_ids) -> list:
     """Resolve fauna ids to common names (for prompt hints / warnings). Skips
     unknown ids; returns [] on any error."""
@@ -2329,29 +2406,8 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
     communities = list_polycultures()
     # D2: place a couple of site/goal-fit communities as grouped units, not a
     # single default — scored by goal + ecoregion name match.
-    community_items = _select_offline_communities(
+    community_ids = _select_offline_communities(
         communities, goals, site_config, budget)
-
-    # Budget: count the (atomic) community cost first; drop the priciest /
-    # lowest-ranked communities one at a time until they fit (keeping individuals
-    # to carry the design), then trim individual plants to the remainder.
-    budget_dropped = 0
-    if budget and budget > 0:
-        from src.sourcing import trim_to_budget, polyculture_cost
-        while community_items:
-            clow, chigh = polyculture_cost(community_items)
-            if (clow + chigh) / 2.0 <= budget or not plant_items:
-                break
-            community_items = community_items[:-1]  # drop lowest-ranked
-        clow, chigh = polyculture_cost(community_items)
-        cmid = (clow + chigh) / 2.0
-        plant_items, budget_dropped = trim_to_budget(
-            plant_items, max(budget - cmid, 0.0))
-
-    if not plant_items and not community_items:
-        raise LLMError(
-            "offline generation found no plants or communities to place"
-        )
 
     project = Project.create(name, site_config=site_config, boundary=boundary)
     elev, zones, pzone, szone, cell_env_map = _zone_context(
@@ -2363,12 +2419,39 @@ def generate_design_offline(*, site_config: Optional[dict] = None,
     _ctx = {"features": existing_features or []}
     keepout = keepout_circles(project.as_dict()) + keepout_circles(_ctx)
     fills = fill_regions(_ctx)
+
+    # V2.23: the offline path speaks the full placement vocabulary too.
+    # A matrix-grass + forbs meadow mix replaces those species' stand-alone
+    # drifts (sized by the site's plantable capacity), and the selected
+    # communities become repeated pockets / a weighted mosaic instead of
+    # one instance each — the same structures the LLM spec produces, placed
+    # by the same engine.
+    capacity = _boundary_capacity(boundary, keepout)
+    frac = _DENSITY_FRACTION.get((density or "balanced").lower()) or 0.6
+    p_mixes: list[dict] = []
+    meadow = _offline_plant_mix(plants[:_OFFLINE_PLANT_CAP * 2],
+                                capacity, frac)
+    if meadow:
+        p_mixes.append(meadow)
+        in_mix = {pid for pid, _ in meadow["members"]}
+        plant_items = [it for it in plant_items if it[0] not in in_mix]
+    c_groups, c_mixes = _offline_community_plan(community_ids, capacity)
+
+    plant_items, p_mixes, c_groups, c_mixes, budget_dropped = \
+        _trim_spec_to_budget(plant_items, p_mixes, c_groups, c_mixes, budget)
+
+    if not plant_items and not c_groups and not p_mixes and not c_mixes:
+        raise LLMError(
+            "offline generation found no plants or communities to place"
+        )
+
     plant_items = _apply_density(plant_items, boundary, density, keepout)
-    _place_within_boundary(project, plant_items, community_items, [],
+    _place_within_boundary(project, plant_items, c_groups, [],
                            boundary, center, elev=elev, zones=zones,
                            plant_zone_for=pzone, structure_zone_for=szone,
                            keepout=keepout,
-                           cell_env_map=cell_env_map, fill_regions=fills)
+                           cell_env_map=cell_env_map, fill_regions=fills,
+                           community_mixes=c_mixes, plant_mixes=p_mixes)
 
     # The deterministic critic runs offline too (V1.62): score the placed
     # design and mend the most impactful gaps straight from the catalogue.
