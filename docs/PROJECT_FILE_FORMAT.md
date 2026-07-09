@@ -35,8 +35,9 @@ The authoritative reader/writer is [`src/project.py`](../src/project.py)
       "wind_exposure": null,
       "priorities": []
     }
-    // Optional, off by default (added V1.41):
-    // "use_utm_projection": false     // opt a project into the UTM distance backend
+    // "use_utm_projection" (V1.41–V2.21) is obsolete: the UTM backend was
+    // never reachable and was deleted in V2.22. Old files carrying the key
+    // are fine — readers ignore unknown properties.
   },
   "features": [ /* see element types below */ ]
 }

@@ -197,8 +197,10 @@ only, doesn't affect real commits.
   `data_quality` validation.
 - **The map only stores `(lat, lon)`.** Distance/area math goes through
   `src/projection.py` — default backend is the legacy cosLat metric
-  (~1% error at <2 km); an optional UTM backend (pyproj) exists behind
-  the per-project `use_utm_projection` flag.
+  (~1% error at <2 km — centimetres at yard scale, the app's real domain).
+  A parallel UTM backend existed until V2.22 but no code path ever enabled
+  it; it was deleted. A future accurate backend belongs behind the same
+  `Projector` interface.
 - **Placed-plant state has ONE write path:** `src/project_store.py`
   (V1.62). The project dict's plant features and the `_placed_plants`
   index are kept in sync by the store; `tests/test_project_store.py`
