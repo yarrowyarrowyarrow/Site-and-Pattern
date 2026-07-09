@@ -26,7 +26,6 @@ import subprocess
 import sys
 import tempfile
 import threading
-import time
 
 from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QDesktopServices
@@ -140,17 +139,15 @@ class UpdateFlowController:
         )
 
     def _on_pick_version(self):
-        """Let the user pick any published V<major>.<minor> branch and
-        switch the checkout to it. Useful for rolling back to an older
-        release or jumping ahead. Frozen installs download the chosen
-        version's installer from GitHub Releases instead."""
-        # Frozen / non-git install — there's no checkout to switch, so offer
-        # the published installers (download + install) instead.
+        """Frozen installs get the real in-app version picker (download a
+        published installer from GitHub Releases). Source checkouts get
+        pointed at the terminal: the app stopped managing git working
+        trees in V2.22 — a developer running from source has strictly
+        better tools for that than a dialog box."""
         if getattr(sys, "frozen", False):
             self._frozen_pick_version()
             return
-        repo = self._repo_path()
-        if not repo:
+        if not self._repo_path():
             QMessageBox.information(
                 self._main, "Switch version",
                 "This install isn't a git checkout — there's nothing to "
@@ -159,123 +156,30 @@ class UpdateFlowController:
             )
             self._open_releases_page()
             return
-
-        def _git(*args, timeout=10):
-            return subprocess.run(
-                ["git", "-C", repo, *args],
-                capture_output=True, text=True, timeout=timeout, check=False,
-            )
-
-        # Fetch so we see any branches published since launch.
-        self._main.statusBar().showMessage("Fetching version list…", 2000)
-        fetch = _git("fetch", "--prune", "--quiet")
-        if fetch.returncode != 0:
-            QMessageBox.warning(
-                self._main, "Switch version",
-                "Couldn't reach the git remote (check your network).\n\n"
-                f"{fetch.stderr.strip()}"
-            )
-            return
-
-        # Collect every V<major>.<minor> branch — remote + local — sorted
-        # newest first.
-        names: set[str] = set()
-        for ref_glob in ("refs/remotes/origin/", "refs/heads/"):
-            res = _git("for-each-ref", "--format=%(refname:short)", ref_glob)
-            if res.returncode != 0:
-                continue
-            for line in res.stdout.splitlines():
-                short = line.strip()
-                name = short[len("origin/"):] if short.startswith("origin/") else short
-                if parse_version_branch(name):
-                    names.add(name)
-        if not names:
-            QMessageBox.information(
-                self._main, "Switch version",
-                "No V<major>.<minor> branches found on this remote."
-            )
-            return
-        ordered = sorted(
-            names,
-            key=lambda n: parse_version_branch(n),
-            reverse=True,
-        )
-        current = self._current_branch_name() or "?"
-
-        # Build the list dialog. Pre-select the current branch if
-        # present in the list.
-        labels = [
-            f"{n}  (current)" if n == current else n
-            for n in ordered
-        ]
-        try:
-            preselect = ordered.index(current)
-        except ValueError:
-            preselect = 0
-        choice, ok = QInputDialog.getItem(
-            self._main, "Switch to a specific version",
-            "Pick a release branch. The app will check out the chosen "
-            "branch and pull any new commits. You'll need to restart "
-            "the app to load the new code.",
-            labels, current=preselect, editable=False,
-        )
-        if not ok or not choice:
-            return
-        target = ordered[labels.index(choice)]
-        if target == current:
-            QMessageBox.information(
-                self._main, "Switch version",
-                f"You're already on {target}."
-            )
-            return
-
-        # Reuse the existing dirty-tree handling + offer-branch-switch
-        # path so behaviour matches Check for Updates exactly.
-        status = _git("status", "--porcelain")
-        stash_label = None
-        if status.returncode == 0 and status.stdout.strip():
-            choice2 = QMessageBox.question(
-                self._main, "Uncommitted changes",
-                "Your working tree has uncommitted changes. Stash them "
-                f"before switching to {target}? They'll be restored on "
-                f"the new branch via `git stash pop`.",
-                QMessageBox.StandardButton.Yes
-                | QMessageBox.StandardButton.No
-                | QMessageBox.StandardButton.Cancel,
-            )
-            if choice2 == QMessageBox.StandardButton.Cancel:
-                return
-            if choice2 == QMessageBox.StandardButton.Yes:
-                stash_label = f"PermaDesign auto-stash before switch to {target}"
-                stash = _git("stash", "push", "-u", "-m", stash_label)
-                if stash.returncode != 0:
-                    QMessageBox.warning(
-                        self._main, "Stash failed",
-                        f"Couldn't stash local changes:\n\n{stash.stderr.strip()}"
-                    )
-                    return
-
-        self._offer_branch_switch(
-            _git,
-            target=target,
-            current=current,
-            stash_to_restore=stash_label,
+        QMessageBox.information(
+            self._main, "Switch version",
+            "This is a source checkout — switch versions from a terminal:\n\n"
+            "    git fetch --prune\n"
+            "    git checkout -B V2.21 origin/V2.21    (any published V-branch)\n\n"
+            "then relaunch the app. Frozen installs get an in-app installer "
+            "picker instead."
         )
 
     # ── Help → Check for Updates ──────────────────────────────────────────────
     #
     # Behaves differently depending on how the user is running the app:
     #
-    #   * Source install (git checkout, `python main.py`) — runs
-    #     `git fetch` + `git status` to detect upstream commits, then
-    #     offers a fast-forward `git pull`. If the working tree is dirty,
-    #     gives the user three options: stash & update (safe, recoverable
-    #     via `git stash pop`), discard & update (destructive, with a
-    #     second confirm), or cancel. Refuses to auto-merge on divergence.
+    #   * Frozen install (.dmg/.exe — the real audience) — checks GitHub
+    #     Releases and offers to download + install the newest published
+    #     installer, all in-app (below, unchanged).
     #
-    #   * Frozen install (PyInstaller .exe used by friends) — git isn't
-    #     available, so we open the GitHub releases page in the default
-    #     browser and let the user download the next installer.
+    #   * Source install (git checkout, `python main.py` — the developer) —
+    #     READ-ONLY since V2.22: fetch, compare against the newest
+    #     origin/V*.* release branch and the branch's upstream, and *report*
+    #     the exact terminal command to run. The app used to stash, reset
+    #     --hard and pull the working tree from inside a dialog box; a
+    #     developer at a checkout has strictly better tools for that, and an
+    #     app that mutates its own source tree is a footgun.
 
     def _on_check_for_updates(self):
         # Frozen build: no git — check GitHub Releases and offer to
@@ -301,323 +205,81 @@ class UpdateFlowController:
                 capture_output=True, text=True, timeout=timeout, check=False,
             )
 
-        status = _git("status", "--porcelain")
-        if status.returncode != 0:
-            QMessageBox.warning(
-                self._main, "Check for Updates",
-                "Couldn't run git. Make sure git is installed and on your PATH.\n\n"
-                f"{status.stderr.strip() or status.stdout.strip()}"
-            )
-            return
-
-        if status.stdout.strip():
-            # Dirty working tree — give the user three explicit choices
-            # instead of just refusing.
-            dirty_files = [
-                line[3:] for line in status.stdout.strip().splitlines()[:6]
-            ]
-            preview = "\n".join(f"  · {f}" for f in dirty_files)
-            if len(status.stdout.strip().splitlines()) > 6:
-                preview += f"\n  · …and more"
-
-            box = QMessageBox(self._main)
-            box.setIcon(QMessageBox.Icon.Warning)
-            box.setWindowTitle("Local changes detected")
-            box.setText(
-                "You have uncommitted local changes — pulling now could "
-                "clobber them. How would you like to proceed?"
-            )
-            box.setInformativeText(
-                f"Changed files:\n{preview}\n\n"
-                "• Stash & update — safest. Sets your changes aside in a "
-                "git stash, pulls, then restores them. If the restore "
-                "conflicts, the stash stays put so you can recover manually.\n\n"
-                "• Discard & update — destructive. Throws away all "
-                "uncommitted changes, then pulls. Requires a second confirm."
-            )
-            btn_stash   = box.addButton("Stash && update",
-                                        QMessageBox.ButtonRole.AcceptRole)
-            btn_discard = box.addButton("Discard && update",
-                                        QMessageBox.ButtonRole.DestructiveRole)
-            btn_cancel  = box.addButton(QMessageBox.StandardButton.Cancel)
-            box.setDefaultButton(btn_stash)
-            box.exec()
-
-            choice = box.clickedButton()
-            if choice is btn_cancel or choice is None:
-                return
-            if choice is btn_discard:
-                confirm = QMessageBox.question(
-                    self._main, "Discard all local changes?",
-                    "This will permanently delete every uncommitted change "
-                    "in your working tree (tracked-file edits will be "
-                    "reset to the last commit). Untracked files are left "
-                    "alone. Continue?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                    QMessageBox.StandardButton.No,
-                )
-                if confirm != QMessageBox.StandardButton.Yes:
-                    return
-                reset = _git("reset", "--hard", "HEAD")
-                if reset.returncode != 0:
-                    QMessageBox.warning(
-                        self._main, "Discard failed",
-                        "git reset --hard HEAD failed:\n\n"
-                        + (reset.stderr.strip() or reset.stdout.strip())
-                    )
-                    return
-                self._run_update_flow(_git, stash_to_restore=None)
-                return
-
-            # Stash & update
-            stash_label = f"permadesign-auto-{int(time.time())}"
-            stash = _git("stash", "push", "--include-untracked",
-                         "-m", stash_label)
-            if stash.returncode != 0:
-                QMessageBox.warning(
-                    self._main, "Stash failed",
-                    "git stash failed:\n\n"
-                    + (stash.stderr.strip() or stash.stdout.strip())
-                )
-                return
-            self._run_update_flow(_git, stash_to_restore=stash_label)
-            return
-
-        # Clean working tree — proceed straight to the update flow.
-        self._run_update_flow(_git, stash_to_restore=None)
-
-    def _run_update_flow(self, git_runner, *, stash_to_restore):
-        """Shared update flow: fetch → ahead/behind check → pull → optional
-        stash-pop → restart prompt. `git_runner` is the closure `_git` from
-        the caller (already bound to the repo path). `stash_to_restore` is
-        a stash message label (or None) — when set, we `git stash pop`
-        after a successful pull and warn if the pop conflicts.
-
-        Schema v1.32: after the fetch, also check whether origin carries a
-        newer ``V<major>.<minor>`` branch than the one we're on. If so,
-        prompt the user to switch to that branch instead of (or in addition
-        to) updating the current one. Branch naming convention is the same
-        one documented in CLAUDE.md."""
         self._main.statusBar().showMessage("Checking for updates…", 2000)
         # --prune drops references to branches the remote has deleted, so
         # _newest_remote_version_branch doesn't surface stale entries.
-        fetch = git_runner("fetch", "--prune", "--quiet")
+        fetch = _git("fetch", "--prune", "--quiet")
         if fetch.returncode != 0:
-            self._maybe_restore_stash(git_runner, stash_to_restore)
             QMessageBox.warning(
                 self._main, "Check for Updates",
-                "Couldn't reach the git remote (check your network).\n\n"
-                f"{fetch.stderr.strip()}"
+                "Couldn't reach the git remote (check your network), or git "
+                "isn't on your PATH.\n\n"
+                f"{fetch.stderr.strip() or fetch.stdout.strip()}"
             )
             return
 
-        current_branch = (
-            git_runner("rev-parse", "--abbrev-ref", "HEAD").stdout.strip() or "?"
-        )
+        current = self._current_branch_name() or "?"
 
-        # ── V<major>.<minor> auto-switch (V1.32) ──────────────────────────
-        # If a newer release branch exists on origin than the one we're on,
-        # offer the switch. Falls through to the standard fast-forward flow
-        # when we're already on the highest V-branch or no V-branches exist.
-        newest = self._newest_remote_version_branch(git_runner)
-        if newest and self._is_newer_version(newest, current_branch):
-            self._offer_branch_switch(
-                git_runner,
-                target=newest,
-                current=current_branch,
-                stash_to_restore=stash_to_restore,
+        # A newer V<major>.<minor> release branch on origin wins the report.
+        newest = self._newest_remote_version_branch(_git)
+        if newest and self._is_newer_version(newest, current):
+            log = _git("log", "--oneline", "-8", f"origin/{newest}",
+                       "--not", "HEAD")
+            recent = (log.stdout or "").strip() or "(commit log unavailable)"
+            QMessageBox.information(
+                self._main, "New version available",
+                f"A newer version of {APP_NAME} is on the server.\n\n"
+                f"You're on:   {current}\n"
+                f"Latest:      {newest}\n\n"
+                f"Recent changes in {newest}:\n{recent}\n\n"
+                "This is a source checkout — update from a terminal:\n\n"
+                f"    git checkout -B {newest} origin/{newest}\n\n"
+                "then relaunch the app."
             )
             return
 
-        behind = git_runner("rev-list", "--count", "HEAD..@{u}")
-        ahead  = git_runner("rev-list", "--count", "@{u}..HEAD")
+        # Same branch as the newest release — report upstream drift.
+        behind = _git("rev-list", "--count", "HEAD..@{u}")
+        ahead = _git("rev-list", "--count", "@{u}..HEAD")
         if behind.returncode != 0 or ahead.returncode != 0:
-            self._maybe_restore_stash(git_runner, stash_to_restore)
             QMessageBox.information(
                 self._main, "Check for Updates",
-                "This branch has no configured upstream. Set one with "
-                "`git branch --set-upstream-to=origin/<branch>` and try again."
+                f"You're on '{current}', which has no configured upstream — "
+                "nothing to compare against. (Set one with `git branch "
+                "--set-upstream-to=origin/<branch>` if you want drift "
+                "reports here.)"
             )
             return
-
         n_behind = int((behind.stdout or "0").strip() or 0)
-        n_ahead  = int((ahead.stdout  or "0").strip() or 0)
-        branch   = current_branch
-
-        if n_behind == 0 and n_ahead == 0:
-            self._maybe_restore_stash(git_runner, stash_to_restore)
+        n_ahead = int((ahead.stdout or "0").strip() or 0)
+        if n_behind == 0:
+            note = ("" if n_ahead == 0 else
+                    f" (and {n_ahead} local commit(s) ahead of it)")
             QMessageBox.information(
                 self._main, "Check for Updates",
-                f"You're up to date on branch '{branch}'."
-            )
+                f"You're up to date on branch '{current}'{note}.")
             return
-        if n_behind == 0 and n_ahead > 0:
-            self._maybe_restore_stash(git_runner, stash_to_restore)
-            QMessageBox.information(
-                self._main, "Check for Updates",
-                f"You're {n_ahead} commit(s) ahead of the remote on '{branch}'. "
-                "Nothing to pull."
-            )
-            return
-        if n_ahead > 0 and n_behind > 0:
-            self._maybe_restore_stash(git_runner, stash_to_restore)
-            QMessageBox.warning(
-                self._main, "Check for Updates",
-                f"Branch '{branch}' has diverged from the remote "
-                f"({n_ahead} ahead, {n_behind} behind). Resolve manually in a "
-                "terminal — the app won't auto-merge."
-            )
-            return
-
-        # Behind only — show recent incoming commits and offer the pull.
-        log = git_runner("log", "--oneline", f"-{min(n_behind, 8)}", "HEAD..@{u}")
-        recent = log.stdout.strip() or "(commit log unavailable)"
-        prompt = QMessageBox.question(
-            self._main, "Update available",
-            f"Branch '{branch}' is {n_behind} commit(s) behind the remote.\n\n"
-            f"Recent incoming changes:\n{recent}\n\n"
-            "Pull and fast-forward now? You'll need to restart the app for "
-            "code changes to take effect.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if prompt != QMessageBox.StandardButton.Yes:
-            self._maybe_restore_stash(git_runner, stash_to_restore)
-            return
-
-        pull = git_runner("pull", "--ff-only")
-        if pull.returncode != 0:
-            self._maybe_restore_stash(git_runner, stash_to_restore)
-            QMessageBox.warning(
-                self._main, "Pull failed",
-                "git pull --ff-only failed:\n\n"
-                + (pull.stderr.strip() or pull.stdout.strip())
-            )
-            return
-
-        # Pull succeeded. If we stashed, try to restore.
-        stash_note = ""
-        if stash_to_restore:
-            pop = git_runner("stash", "pop")
-            if pop.returncode == 0:
-                stash_note = ("\n\nYour stashed local changes were restored "
-                              "cleanly.")
-            else:
-                stash_note = (
-                    "\n\nYour stash could NOT be auto-restored (likely a "
-                    "merge conflict with the incoming changes). It's still "
-                    f"saved as `{stash_to_restore}` — recover it with:\n"
-                    "    git stash list\n"
-                    "    git stash apply stash@{0}"
-                )
         QMessageBox.information(
-            self._main, "Updated",
-            f"Pulled {n_behind} commit(s) from origin/{branch}.\n\n"
-            "Close and relaunch the app to load the new code."
-            + stash_note
+            self._main, "Update available",
+            f"Branch '{current}' is {n_behind} commit(s) behind its "
+            f"upstream"
+            + (f" and {n_ahead} ahead (diverged)" if n_ahead else "")
+            + ".\n\nThis is a source checkout — update from a terminal:\n\n"
+            + ("    git pull --ff-only\n\n" if not n_ahead else
+               "    git rebase @{u}    (or merge — your call)\n\n")
+            + "then relaunch the app."
         )
 
-    def _maybe_restore_stash(self, git_runner, stash_label):
-        """Best-effort stash pop on the abort/error paths so a user who hit
-        Cancel mid-flow gets their working tree back. Silent on failure —
-        the stash entry remains and we don't pile on additional dialogs."""
-        if not stash_label:
-            return
-        git_runner("stash", "pop")
-
-    # ── V<major>.<minor> branch auto-switch (V1.32) ───────────────────────────
-    #
-    # Convention (also documented in CLAUDE.md): release branches are named
-    # ``V<major>.<minor>`` (e.g. V1.31, V1.32). Each branch contains a single
-    # release's worth of work; "the latest version" is the numerically
-    # highest such branch on origin. The updater treats these as the
-    # authoritative release line.
-    #
-    # The parsing/comparison/listing helpers live in
-    # ``src/version_branch.py`` (Qt-free, unit-testable). This controller's
-    # responsibility here is only the user-facing switch dialog.
+    # ── V<major>.<minor> release-line helpers ─────────────────────────────────
+    # The parsing/comparison/listing logic lives in ``src/version_branch.py``
+    # (Qt-free, unit-testable); these delegates exist so MainWindow shims and
+    # tests can reach them through the controller.
 
     def _newest_remote_version_branch(self, git_runner):
         return newest_remote_version_branch(git_runner)
 
     def _is_newer_version(self, target, current):
         return is_newer_version(target, current)
-
-    def _offer_branch_switch(self, git_runner, *, target, current, stash_to_restore):
-        """Prompt the user to switch from ``current`` to ``target`` (a remote
-        V-branch). Reuses the stash carried in from
-        ``_on_check_for_updates`` so a dirty-tree pre-stash still survives
-        the switch."""
-        # Show the recent commit log of the target branch as a preview.
-        log = git_runner(
-            "log", "--oneline", "-8",
-            f"origin/{target}",
-            "--not", "HEAD",
-        )
-        recent = (log.stdout or "").strip() or "(commit log unavailable)"
-
-        prompt = QMessageBox.question(
-            self._main, "New version available",
-            f"A newer version of {APP_NAME} is on the server.\n\n"
-            f"You're on:   {current}\n"
-            f"Latest:      {target}\n\n"
-            f"Recent changes in {target}:\n{recent}\n\n"
-            f"Switch to {target} now? You'll need to restart the app "
-            "afterward to load the new code.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if prompt != QMessageBox.StandardButton.Yes:
-            self._maybe_restore_stash(git_runner, stash_to_restore)
-            return
-
-        # Attach HEAD to a local branch tracking origin/<target>, creating or
-        # resetting it to the remote tip in one step. The explicit
-        # origin/<target> start-point is critical: the release process
-        # publishes a git TAG with the same name as the branch (e.g. tag V1.77
-        # next to branch V1.77), so a bare ``git checkout V1.77`` can resolve to
-        # the TAG and land in DETACHED HEAD — after which ``git pull`` fails with
-        # "you are not currently on a branch" and the switch only half-completes
-        # (the exact symptom users hit switching to a version for the first
-        # time, when no local branch exists yet). ``checkout -B`` from the
-        # remote-tracking ref always lands on a real, tracking branch, even from
-        # a detached HEAD.
-        checkout = git_runner("checkout", "-B", target, f"origin/{target}")
-
-        if checkout.returncode != 0:
-            self._maybe_restore_stash(git_runner, stash_to_restore)
-            QMessageBox.warning(
-                self._main, "Switch failed",
-                f"Couldn't switch to {target}.\n\n"
-                + (checkout.stderr.strip() or checkout.stdout.strip())
-            )
-            return
-
-        # ``checkout -B`` reset the local branch to origin/<target>, so we're
-        # already at the remote tip — there is nothing to fast-forward.
-        pull_warning = ""
-
-        # Restore any stash we set aside on the source branch.
-        stash_note = ""
-        if stash_to_restore:
-            pop = git_runner("stash", "pop")
-            if pop.returncode == 0:
-                stash_note = (
-                    "\n\nYour stashed local changes were restored on "
-                    f"{target}."
-                )
-            else:
-                stash_note = (
-                    "\n\nYour stashed local changes did NOT auto-restore "
-                    "(likely conflicts on the new branch). It's still "
-                    f"saved as `{stash_to_restore}` — recover it with:\n"
-                    "    git stash list\n"
-                    "    git stash apply stash@{0}"
-                )
-
-        QMessageBox.information(
-            self._main, f"Switched to {target}",
-            f"You're now on {target}.{pull_warning}{stash_note}\n\n"
-            "Close and relaunch the app to load the new version."
-        )
 
     # ── Frozen-build updater (GitHub Releases) ────────────────────────────────
     #

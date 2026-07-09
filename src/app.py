@@ -392,26 +392,15 @@ class MainWindow(QMainWindow):
     def _on_check_for_updates(self):
         return self._update_flow._on_check_for_updates()
 
-    def _run_update_flow(self, git_runner, *, stash_to_restore):
-        return self._update_flow._run_update_flow(
-            git_runner, stash_to_restore=stash_to_restore,
-        )
-
-    def _maybe_restore_stash(self, git_runner, stash_label):
-        return self._update_flow._maybe_restore_stash(git_runner, stash_label)
+    # V2.22: the in-app git mutation flows (_run_update_flow, stash/pop,
+    # _offer_branch_switch) were deleted — source checkouts get a read-only
+    # drift report; frozen builds keep the Releases downloader.
 
     def _newest_remote_version_branch(self, git_runner):
         return self._update_flow._newest_remote_version_branch(git_runner)
 
     def _is_newer_version(self, target, current):
         return self._update_flow._is_newer_version(target, current)
-
-    def _offer_branch_switch(self, git_runner, *, target, current, stash_to_restore):
-        return self._update_flow._offer_branch_switch(
-            git_runner,
-            target=target, current=current,
-            stash_to_restore=stash_to_restore,
-        )
 
     def _open_releases_page(self):
         return self._update_flow._open_releases_page()

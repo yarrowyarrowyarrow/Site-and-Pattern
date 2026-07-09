@@ -90,9 +90,12 @@ default branch is a codename, override it and use the next `V*.*`.
   branch (deletes of codename branches are allowed — that's cleanup). Both hooks
   fail open so a hook bug can never block real work.
 
-The "Check for Updates" button in the app (`src/app.py` → `MainWindow._run_update_flow`)
-relies on this convention to detect new versions on the server. Breaking
-the convention silently breaks that feature.
+The "Check for Updates" button in the app
+(`src/controllers/update_flow.py:_on_check_for_updates`) relies on this
+convention to detect new versions on the server. Breaking the convention
+silently breaks that feature. (Since V2.22 the source-checkout path is
+read-only — it reports the newest `V*.*` and the terminal command to get
+it; only frozen builds update in-app, via GitHub Releases.)
 
 ## Schema versioning
 

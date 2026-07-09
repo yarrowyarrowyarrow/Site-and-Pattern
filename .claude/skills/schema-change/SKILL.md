@@ -20,7 +20,7 @@ Use this skill when you:
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
 **Current facts (verify before quoting):** branch `V2.19`,
-`_SCHEMA_VERSION = 45` (in `src/db/plants.py`). CLAUDE.md and
+`_SCHEMA_VERSION = 46` (in `src/db/plants.py`). CLAUDE.md and
 `docs/DATABASE_SCHEMA.md` lag the code — the code wins. `docs/DATABASE_SCHEMA.md`
 still says version 17; the inline changelog comments in `plants.py` stop at v41
 even though the constant is 45. Treat those docs as stale and fix them as part

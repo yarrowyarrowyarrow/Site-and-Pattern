@@ -161,15 +161,29 @@ class TestMainWindowSmoke(unittest.TestCase):
     # ── Update-flow surface ──────────────────────────────────────────────────
 
     def test_required_update_flow_methods_exist(self):
+        # V2.22: the git-mutation flows (_run_update_flow, stash/pop,
+        # _offer_branch_switch) were deliberately deleted — source checkouts
+        # get a read-only drift report; frozen builds keep the in-app
+        # Releases downloader. Only the surviving surface is pinned.
         for name in (
-            "_on_check_for_updates", "_run_update_flow",
+            "_on_check_for_updates",
             "_newest_remote_version_branch", "_is_newer_version",
-            "_offer_branch_switch", "_open_releases_page",
-            "_maybe_restore_stash",
+            "_open_releases_page",
         ):
             self.assertTrue(
                 callable(getattr(self._win, name, None)),
                 f"MainWindow.{name} should remain reachable after Chunk 5",
+            )
+
+    def test_git_mutation_flows_removed(self):
+        # The app must never grow back the ability to stash/reset/pull its
+        # own source tree from a dialog box (V2.22 deletion).
+        for name in ("_run_update_flow", "_maybe_restore_stash",
+                     "_offer_branch_switch"):
+            self.assertFalse(
+                hasattr(self._win, name),
+                f"MainWindow.{name} was deleted in V2.22 — don't resurrect "
+                f"the in-app git working-tree manager.",
             )
 
     # ── Legacy plant-API surface is gone ─────────────────────────────────────

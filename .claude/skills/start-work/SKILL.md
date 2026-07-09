@@ -107,13 +107,15 @@ Before you push, confirm:
 
 ## How the updater consumes branches
 
-`src/controllers/update_flow.py` + `src/app.py` `_run_update_flow` back the
-GUI's Help → Check for Updates. In a **source checkout** the updater reads
-the newest `origin/V*.*` (via the same `version_branch.py` helpers) and
-offers to switch to it. In a **frozen build** the updater lists GitHub
-Releases by tag and downloads the installer (`src/github_releases.py`, see
-`release-packaging`). Either way, a mis-named branch is invisible to it —
-which is why the convention is enforced by a hook rather than by trust.
+`src/controllers/update_flow.py` (`_on_check_for_updates`) backs the GUI's
+Help → Check for Updates. In a **source checkout** the updater is
+read-only (V2.22): it reads the newest `origin/V*.*` (via the same
+`version_branch.py` helpers) and reports the terminal command to switch —
+it never stashes, resets, or pulls the working tree. In a **frozen build**
+the updater lists GitHub Releases by tag and downloads the installer
+(`src/github_releases.py`, see `release-packaging`). Either way, a
+mis-named branch is invisible to it — which is why the convention is
+enforced by a hook rather than by trust.
 
 ## Pitfalls
 
