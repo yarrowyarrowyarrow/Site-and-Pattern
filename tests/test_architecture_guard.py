@@ -64,23 +64,40 @@ class TestStructuralCeilings(unittest.TestCase):
     """D2 — keep the decomposed modules from regrowing."""
 
     # (path, ceiling) — current value in the comment.
+    # V2.22 recalibration: ceilings exist to stop the NEXT monolith, so they
+    # must cover today's biggest files, not only the ones that burned us in
+    # V1.64. When one trips, the fix is extraction (a module/controller/
+    # split script), never raising the number without a split plan.
     _HTML = _SRC.parent / "html"
     LINE_CEILINGS = [
-        (_SRC / "app.py", 2600),                       # ~2251 now
-        (_SRC / "plant_panel.py", 1600),               # ~1390 now
+        (_SRC / "app.py", 2600),                       # ~2208 now
+        (_SRC / "plant_panel.py", 1600),               # ~1467 now
         # V1.81: @undoable on every feature + overlay-toggle handler (exhaustive
         # undo) and the wind/sun/sector/pin/shade undo wiring.
-        (_SRC / "controllers" / "map_events.py", 1950),# ~1909 now
+        # V2.22: headroom restored (was 2 lines!) — new handlers still belong
+        # in flow modules; the terrain-queue block is the natural extraction
+        # when this trips again.
+        (_SRC / "controllers" / "map_events.py", 2100),# ~1948 now
+        # V2.22: the three biggest panels, previously unguarded — each is
+        # already past the size plant_panel.py was split at (Chunk 4).
+        (_SRC / "polyculture_panel.py", 2900),         # ~2527 now
+        (_SRC / "site_panel.py", 2700),                # ~2338 now
+        (_SRC / "analysis_panel.py", 2450),            # ~2111 now
         # V1.64: the former 4,900-line map.html monolith — keep the shell
         # thin and the split files from regrowing into a new monolith.
-        (_HTML / "map.html", 400),                     # ~230 now
-        (_HTML / "map" / "01-core.js", 950),           # ~814 now
-        (_HTML / "map" / "02-boundary.js", 750),       # ~616 now
-        (_HTML / "map" / "03-plants.js", 950),         # ~817 now
-        (_HTML / "map" / "04-tools.js", 450),          # ~360 now
-        (_HTML / "map" / "05-features.js", 1100),      # ~956 now
+        (_HTML / "map.html", 400),                     # ~235 now
+        (_HTML / "map" / "01-core.js", 950),           # ~885 now
+        (_HTML / "map" / "02-boundary.js", 750),       # ~623 now
+        (_HTML / "map" / "03-plants.js", 950),         # ~931 now
+        (_HTML / "map" / "04-tools.js", 450),          # ~367 now
+        (_HTML / "map" / "05-features.js", 1100),      # ~1008 now
         # V2.13: + water flow & accumulation overlay (raster + arrow lattice).
         (_HTML / "map" / "06-overlays.js", 1560),      # ~1490 now
+        # V2.22: scene3d.html is a single 3,900-line <script> — the exact
+        # monolith shape the V1.64 split killed, reborn unguarded in the 3D
+        # viewer. Tight ceiling on purpose: the fix when this trips is the
+        # same split (html/scene3d/*.js loaded in order), not a bigger number.
+        (_HTML / "scene3d.html", 4400),                # ~4165 now
     ]
 
     def test_module_line_ceilings(self):
@@ -98,12 +115,15 @@ class TestStructuralCeilings(unittest.TestCase):
 
     def test_mainwindow_method_ceiling(self):
         # Shims keep the count ~stable; a jump means fat methods landed
-        # back on MainWindow instead of in a controller.
+        # back on MainWindow instead of in a controller. V2.22: reset from
+        # 135 (which the class sat AT, forcing new wiring into lambdas) to
+        # the post-updater-deletion count + real headroom — the ceiling
+        # should catch regrowth, not ration every addition.
         n = _method_count(_SRC / "app.py", "MainWindow")
         self.assertLessEqual(
-            n, 135,
-            f"MainWindow has {n} methods (>135). New behaviour should go "
-            f"in a controller with a thin shim, not as a fat method here.",
+            n, 140,
+            f"MainWindow has {n} methods (>140). New behaviour should go "
+            f"in a controller/flow module, not as a fat method here.",
         )
 
     def test_controllers_still_exist(self):
