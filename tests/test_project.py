@@ -425,9 +425,10 @@ class TestSchemaVersionStable(unittest.TestCase):
     tests above — this assertion is a tripwire prompting that thought."""
 
     def test_schema_version_value(self):
-        # 1.8 (V2.05): added the site_photo feature type (F24) + field_notes
-        # properties block (F6).
-        self.assertEqual(SCHEMA_VERSION, "1.8")
+        # 1.9 (V2.22): plant features carry a stable feature_id (additive;
+        # legacy files keep working through the coordinate fallback —
+        # see tests/test_project_store.py TestFeatureIdentity).
+        self.assertEqual(SCHEMA_VERSION, "1.9")
 
     def test_existing_feature_types_round_trip(self):
         # The new shade-caster features must survive save → reload, and the

@@ -34,10 +34,10 @@ All on `ProjectStore` in `src/project_store.py`:
 | Method | Use for |
 |---|---|
 | `add_plant(plant_id, common_name, lat, lng, *, placement_group_id="", polyculture_name="", polyculture_center_lat=None, polyculture_center_lng=None, pattern_kind="", quantity=1)` | Placing one plant. Returns the index record. |
-| `remove_plant(plant_id, lat, lng, *, newest_first=False)` | Remove ONE match. `newest_first=True` = undo semantics (remove most-recent); default = oldest (right-click-delete semantics). Returns the removed record or `None`. |
+| `remove_plant(plant_id, lat, lng, *, newest_first=False, feature_id="")` | Remove ONE match. Pass `feature_id` (V2.22) for an exact match that disambiguates duplicate-position plants; else id+coords, `newest_first=True` = undo semantics (remove most-recent), default = oldest (right-click-delete semantics). Returns the removed record or `None`. |
 | `remove_plants_batch(keys)` | Remove many in one pass. `keys` = iterable of `(plant_id, lat, lng)`; duplicate keys remove duplicate-position plants once each (multiset). |
 | `remove_polyculture(polyculture_name, center_lat, center_lng)` | Remove every member of one placed community instance (matched by the polyculture-center anchor). Returns count removed. |
-| `move_plant(plant_id, old_lat, old_lng, new_lat, new_lng, *, group_id=None)` | Move one plant (drag). `group_id` constrains the feature match so identically-positioned plants in other groups stay put. Returns `True` if moved. |
+| `move_plant(plant_id, old_lat, old_lng, new_lat, new_lng, *, group_id=None, feature_id="")` | Move one plant (drag). `feature_id` (V2.22) makes the match exact; else `group_id` constrains the feature match so identically-positioned plants in other groups stay put. Returns `True` if moved. |
 
 Whole-state replacement (New / Open / undo restore):
 
@@ -89,10 +89,17 @@ Critical details, mined from `plant_feature` / `plant_record_from_feature`:
 ## Matching tolerance
 
 Position matches use `COORD_TOL_DEG = 1e-7` degrees (≈ 1 cm) via the
-`_close()` helper — tight enough to distinguish neighbours, loose enough to
-absorb float noise from the JS round-trip (Leaflet hands coordinates back
-through JSON). If you add a matcher, reuse `_close` / `_key`; don't invent
-a new tolerance.
+`_close()` / `_same_spot()` helpers — tight enough to distinguish
+neighbours, loose enough to absorb float noise from the JS round-trip
+(Leaflet hands coordinates back through JSON). Every matcher, including
+batch removal, uses the same tolerance (the old rounded `_key` was deleted
+in V2.22 — it disagreed with `_close` at rounding boundaries). If you add
+a matcher, reuse `_same_spot`; don't invent a new tolerance.
+
+Since V2.22 every plant feature is minted a stable `feature_id`
+(`pf_<hex>`, written into both the feature and the index record by
+`plant_feature`). **Prefer matching by `feature_id`** — coordinates remain
+only as the legacy-file fallback.
 
 ## `store_for(main)` — getting the store
 

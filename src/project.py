@@ -23,7 +23,10 @@ def _utc_now_iso() -> str:
 # the `field_notes` properties block (F6 site-walk notes). Additive — older
 # readers ignore unknown element_types in project_to_map_data and unknown
 # properties keys, so projects stay forward/backward compatible.
-SCHEMA_VERSION = "1.8"
+# 1.9 (V2.22): plant features carry a stable `feature_id` (pf_<hex>), minted
+# at placement by src/project_store.plant_feature. Identity for mutations —
+# coordinate matching remains as the legacy-file fallback. Additive.
+SCHEMA_VERSION = "1.9"
 
 
 def new_placement_group_id() -> str:
@@ -241,7 +244,7 @@ def project_to_map_data(project: dict) -> dict:
             # singleton group. This keeps the group abstraction uniform and
             # lets group-delete operate consistently.
             group_id = props.get("placement_group_id") or new_placement_group_id()
-            result["plants"].append({
+            record = {
                 "plant_id":    props.get("plant_id", 0),
                 "common_name": props.get("common_name", "Unknown"),
                 "lat": lat,
@@ -250,7 +253,13 @@ def project_to_map_data(project: dict) -> dict:
                 "polyculture_name": props.get("polyculture_name", ""),
                 "polyculture_center_lat": props.get("polyculture_center_lat"),
                 "polyculture_center_lng": props.get("polyculture_center_lng"),
-            })
+            }
+            # Stable per-feature identity (schema 1.9) — carried when the
+            # file has one; legacy features stay id-less (coordinate
+            # fallback) rather than minting fresh ids every load.
+            if props.get("feature_id"):
+                record["feature_id"] = props["feature_id"]
+            result["plants"].append(record)
 
         elif etype in ("existing_tree", "existing_building") \
                 and geom.get("type") == "Point":

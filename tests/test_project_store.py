@@ -303,5 +303,98 @@ class TestSingleWritePathGuard(unittest.TestCase):
                 + "\n".join(offenders))
 
 
+class TestFeatureIdentity(unittest.TestCase):
+    """Stable per-feature ids (project schema 1.9, V2.22) — identity for
+    mutators, with coordinate matching kept as the legacy-file fallback."""
+
+    def _store(self):
+        from src.project_store import ProjectStore
+        return ProjectStore()
+
+    def test_add_plant_mints_shared_feature_id(self):
+        s = self._store()
+        rec = s.add_plant(1, "Wild Bergamot", 53.5, -113.5)
+        fid = rec.get("feature_id")
+        self.assertTrue(fid and fid.startswith("pf_"))
+        self.assertEqual(s.features[0]["properties"]["feature_id"], fid,
+                         "record and feature must share one identity")
+        self.assertFalse(s.check_consistency())
+
+    def test_ids_unique_for_duplicate_position_plants(self):
+        s = self._store()
+        a = s.add_plant(1, "Yarrow", 53.5, -113.5)
+        b = s.add_plant(1, "Yarrow", 53.5, -113.5)
+        self.assertNotEqual(a["feature_id"], b["feature_id"])
+
+    def test_remove_by_feature_id_disambiguates_duplicates(self):
+        s = self._store()
+        a = s.add_plant(1, "Yarrow", 53.5, -113.5)
+        b = s.add_plant(1, "Yarrow", 53.5, -113.5)
+        removed = s.remove_plant(1, 53.5, -113.5,
+                                 feature_id=b["feature_id"])
+        self.assertEqual(removed["feature_id"], b["feature_id"])
+        self.assertEqual(len(s.placed_plants), 1)
+        self.assertEqual(s.placed_plants[0]["feature_id"], a["feature_id"])
+        self.assertEqual(
+            s.features[0]["properties"]["feature_id"], a["feature_id"])
+        self.assertFalse(s.check_consistency())
+
+    def test_move_by_feature_id(self):
+        s = self._store()
+        a = s.add_plant(1, "Yarrow", 53.5, -113.5)
+        s.add_plant(1, "Yarrow", 53.5, -113.5)
+        self.assertTrue(s.move_plant(1, 53.5, -113.5, 53.6, -113.6,
+                                     feature_id=a["feature_id"]))
+        moved = [p for p in s.placed_plants
+                 if p["feature_id"] == a["feature_id"]][0]
+        self.assertEqual((moved["lat"], moved["lng"]), (53.6, -113.6))
+        self.assertFalse(s.check_consistency())
+
+    def test_legacy_features_without_ids_still_match_by_coords(self):
+        from src.project_store import ProjectStore
+        legacy = {
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [-113.5, 53.5]},
+            "properties": {"element_type": "plant", "plant_id": 7,
+                           "common_name": "Old Rose", "quantity": 1},
+        }
+        s = ProjectStore({"type": "FeatureCollection", "properties": {},
+                          "features": [legacy]})
+        self.assertEqual(len(s.placed_plants), 1)
+        self.assertTrue(s.move_plant(7, 53.5, -113.5, 53.51, -113.51))
+        removed = s.remove_plant(7, 53.51, -113.51)
+        self.assertIsNotNone(removed)
+        self.assertEqual(s.features, [])
+        self.assertFalse(s.check_consistency())
+
+    def test_batch_remove_uses_tolerance_not_rounding(self):
+        # Regression: 53.12345675 rounds to 8 dp≠7 dp of 53.12345674 —
+        # the old _key(round, 7) batch matcher missed pairs like this that
+        # single-remove matched (|Δ| = 1e-8 < COORD_TOL_DEG = 1e-7).
+        s = self._store()
+        s.add_plant(1, "Yarrow", 53.12345675, -113.5)
+        keys = [(1, 53.12345674, -113.5)]     # JS float round-trip noise
+        removed = s.remove_plants_batch(keys)
+        self.assertEqual(len(removed), 1,
+                         "tolerance-close key must batch-remove")
+        self.assertEqual(s.features, [])
+        self.assertFalse(s.check_consistency())
+
+    def test_feature_id_survives_save_load_rebuild(self):
+        import tempfile
+        from src import project as project_io
+        from src.project_store import ProjectStore
+        s = self._store()
+        rec = s.add_plant(1, "Wild Bergamot", 53.5, -113.5)
+        path = os.path.join(tempfile.mkdtemp(prefix="sp-fid-"), "x.perma.geojson")
+        project_io.save_project(s.project, path)
+        loaded = project_io.load_project(path)
+        s2 = ProjectStore(loaded)
+        self.assertEqual(s2.placed_plants[0]["feature_id"],
+                         rec["feature_id"])
+        data = project_io.project_to_map_data(loaded)
+        self.assertEqual(data["plants"][0]["feature_id"], rec["feature_id"])
+
+
 if __name__ == "__main__":
     unittest.main()

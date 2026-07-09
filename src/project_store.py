@@ -33,6 +33,7 @@ sites; the store only guarantees the two data structures agree.
 
 from __future__ import annotations
 
+import uuid
 from typing import Iterable, Optional
 
 # Coordinate tolerance for matching a plant by position. 1e-7 deg ≈ 1 cm —
@@ -49,6 +50,7 @@ _OPTIONAL_FIELDS = (
     "polyculture_center_lat",
     "polyculture_center_lng",
     "placement_group_id",
+    "feature_id",
 )
 
 
@@ -56,10 +58,27 @@ def _close(a: float, b: float, tol: float = COORD_TOL_DEG) -> bool:
     return abs(float(a) - float(b)) < tol
 
 
-def _key(plant_id, lat, lng) -> tuple:
-    """Multiset key for batch matching: id + coords rounded to the same
-    precision COORD_TOL_DEG implies."""
-    return (int(plant_id), round(float(lat), 7), round(float(lng), 7))
+def _same_spot(pid_a, lat_a, lng_a, pid_b, lat_b, lng_b) -> bool:
+    """One matcher for 'same plant at the same place', everywhere. Uses
+    _close on both axes — the batch path used to round to 7 dp instead,
+    so a pair straddling a rounding boundary (e.g. …45 vs …44, well
+    inside tolerance) matched in single-remove but not batch-remove."""
+    try:
+        if int(pid_a) != int(pid_b):
+            return False
+    except (TypeError, ValueError):
+        return False
+    return _close(lat_a, lat_b) and _close(lng_a, lng_b)
+
+
+def new_feature_id() -> str:
+    """Mint a stable identity for one placed feature (project-file scoped).
+
+    Identity-by-(plant_id, float coords) is ambiguous the moment area fill
+    or a generated design drops duplicate species side by side; the id is
+    what mutators should target. Legacy features without one keep working
+    through the coordinate fallback."""
+    return "pf_" + uuid.uuid4().hex[:12]
 
 
 def plant_feature(record: dict, *, pattern_kind: str = "",
@@ -70,7 +89,13 @@ def plant_feature(record: dict, *, pattern_kind: str = "",
     the optional polyculture/group fields are copied across when set.
     ``pattern_kind`` / ``quantity`` are feature-only metadata (how the
     plant was placed; how many it represents in a generated design).
+
+    Mints a ``feature_id`` when the record has none, and writes it back
+    into ``record`` — deliberate side effect, so the caller's index entry
+    and the feature share one identity from birth.
     """
+    if not record.get("feature_id"):
+        record["feature_id"] = new_feature_id()
     props: dict = {
         "element_type": "plant",
         "plant_id": record["plant_id"],
@@ -212,69 +237,98 @@ class ProjectStore:
         return record
 
     def remove_plant(self, plant_id: int, lat: float, lng: float, *,
-                     newest_first: bool = False) -> Optional[dict]:
-        """Remove ONE plant matching id + coords from both structures.
-        ``newest_first`` removes the most recently placed match (undo
-        semantics); the default removes the oldest (right-click-delete
-        semantics, matching the historical handlers). Returns the removed
-        record, or None if nothing matched."""
-        indices = range(len(self._placed) - 1, -1, -1) if newest_first \
-            else range(len(self._placed))
-        removed = None
-        for i in indices:
-            p = self._placed[i]
-            if (p["plant_id"] == plant_id and _close(p["lat"], lat)
-                    and _close(p["lng"], lng)):
-                removed = self._placed.pop(i)
-                break
-
+                     newest_first: bool = False,
+                     feature_id: str = "") -> Optional[dict]:
+        """Remove ONE plant from both structures. With ``feature_id`` the
+        match is exact (the feature's own coords then drive the index-side
+        match, so duplicate-position plants are unambiguous); otherwise
+        id + coords with ``newest_first`` picking the most recently placed
+        match (undo semantics) or the oldest (right-click-delete semantics,
+        the historical default). Returns the removed record, or None."""
         feats = self.features
+        if feature_id:
+            for i, f in enumerate(feats):
+                props = f.get("properties", {})
+                if (props.get("element_type") == "plant"
+                        and props.get("feature_id") == feature_id):
+                    coords = f.get("geometry", {}).get("coordinates", [0, 0])
+                    feats.pop(i)
+                    return self._pop_index_entry(
+                        props.get("plant_id"), coords[1], coords[0],
+                        feature_id=feature_id, newest_first=newest_first)
+            # Unknown id (legacy feature / stale caller) → coordinate path.
+
+        removed = self._pop_index_entry(plant_id, lat, lng,
+                                        newest_first=newest_first)
         findices = range(len(feats) - 1, -1, -1) if newest_first \
             else range(len(feats))
         for i in findices:
             f = feats[i]
             props = f.get("properties", {})
             coords = f.get("geometry", {}).get("coordinates", [])
-            if (props.get("element_type") == "plant"
-                    and props.get("plant_id") == plant_id
-                    and len(coords) >= 2
-                    and _close(coords[1], lat) and _close(coords[0], lng)):
+            if (props.get("element_type") == "plant" and len(coords) >= 2
+                    and _same_spot(props.get("plant_id"), coords[1], coords[0],
+                                   plant_id, lat, lng)):
                 feats.pop(i)
                 break
         return removed
+
+    def _pop_index_entry(self, plant_id, lat, lng, *, feature_id: str = "",
+                         newest_first: bool = False) -> Optional[dict]:
+        """Remove and return one index record — by feature_id when both
+        sides carry one, else by id + coords tolerance."""
+        indices = range(len(self._placed) - 1, -1, -1) if newest_first \
+            else range(len(self._placed))
+        if feature_id:
+            for i in indices:
+                if self._placed[i].get("feature_id") == feature_id:
+                    return self._placed.pop(i)
+            indices = range(len(self._placed) - 1, -1, -1) if newest_first \
+                else range(len(self._placed))
+        for i in indices:
+            p = self._placed[i]
+            if _same_spot(p["plant_id"], p["lat"], p["lng"],
+                          plant_id, lat, lng):
+                return self._placed.pop(i)
+        return None
 
     def remove_plants_batch(self, keys: Iterable[tuple]) -> list[dict]:
         """Remove many plants in one pass. ``keys`` is an iterable of
         ``(plant_id, lat, lng)``; duplicate keys remove duplicate-position
         plants exactly once each (multiset semantics). Returns the removed
-        records."""
-        want: dict = {}
-        for pid, lat, lng in keys:
-            k = _key(pid, lat, lng)
-            want[k] = want.get(k, 0) + 1
+        records.
+
+        Matching uses the same _close tolerance as every other mutator —
+        this path historically rounded to 7 dp instead, so a JS round-trip
+        pair straddling a rounding boundary silently failed to batch-remove."""
+        keys = [(pid, lat, lng) for pid, lat, lng in keys]  # may be a generator
+        pending = list(keys)
+
+        def _take(pid, lat, lng) -> bool:
+            for i, (wp, wlat, wlng) in enumerate(pending):
+                if _same_spot(pid, lat, lng, wp, wlat, wlng):
+                    pending.pop(i)
+                    return True
+            return False
 
         removed: list[dict] = []
         kept_plants = []
-        budget = dict(want)
         for p in self._placed:
-            k = _key(p["plant_id"], p["lat"], p["lng"])
-            if budget.get(k, 0) > 0:
-                budget[k] -= 1
+            if pending and _take(p["plant_id"], p["lat"], p["lng"]):
                 removed.append(p)
             else:
                 kept_plants.append(p)
         self._placed[:] = kept_plants
 
-        budget = dict(want)
+        pending = list(keys)
         kept_features = []
         for f in self.features:
             props = f.get("properties", {})
             coords = f.get("geometry", {}).get("coordinates", [])
-            if props.get("element_type") == "plant" and len(coords) >= 2:
-                fk = _key(props.get("plant_id"), coords[1], coords[0])
-                if budget.get(fk, 0) > 0:
-                    budget[fk] -= 1
-                    continue
+            if (props.get("element_type") == "plant" and len(coords) >= 2
+                    and pending
+                    and _take(props.get("plant_id"), coords[1], coords[0])):
+                continue
             kept_features.append(f)
         self.features[:] = kept_features
         return removed
@@ -312,30 +366,48 @@ class ProjectStore:
 
     def move_plant(self, plant_id: int, old_lat: float, old_lng: float,
                    new_lat: float, new_lng: float, *,
-                   group_id: Optional[str] = None) -> bool:
-        """Move one plant matching id + old coords to the new coords, in
-        both structures. ``group_id`` additionally constrains the feature
+                   group_id: Optional[str] = None,
+                   feature_id: str = "") -> bool:
+        """Move one plant to the new coords, in both structures. With
+        ``feature_id`` the feature match is exact; otherwise id + old
+        coords, with ``group_id`` additionally constraining the feature
         match (group drags pass it so identically-positioned plants in
         other groups stay put). Returns True when the index entry moved."""
-        moved = False
-        for p in self._placed:
-            if (p["plant_id"] == plant_id and _close(p["lat"], old_lat)
-                    and _close(p["lng"], old_lng)):
-                p["lat"], p["lng"] = new_lat, new_lng
-                moved = True
-                break
+        target_fid = feature_id
+        feature = None
         for f in self.features:
             props = f.get("properties", {})
+            if props.get("element_type") != "plant":
+                continue
             coords = f.get("geometry", {}).get("coordinates", [])
-            if (props.get("element_type") == "plant"
-                    and props.get("plant_id") == plant_id
+            if target_fid:
+                if props.get("feature_id") == target_fid:
+                    feature = f
+                    break
+            elif (len(coords) >= 2
                     and (group_id is None
                          or props.get("placement_group_id") == group_id)
-                    and len(coords) >= 2
-                    and _close(coords[1], old_lat)
-                    and _close(coords[0], old_lng)):
-                f["geometry"]["coordinates"] = [new_lng, new_lat]
+                    and _same_spot(props.get("plant_id"), coords[1], coords[0],
+                                   plant_id, old_lat, old_lng)):
+                feature = f
+                target_fid = props.get("feature_id") or ""
                 break
+        if feature is not None:
+            feature["geometry"]["coordinates"] = [new_lng, new_lat]
+
+        # Index side: prefer the identity the feature carries, so duplicate-
+        # position plants move the SAME entry the feature match picked.
+        moved = False
+        for p in self._placed:
+            if target_fid and p.get("feature_id"):
+                if p["feature_id"] != target_fid:
+                    continue
+            elif not _same_spot(p["plant_id"], p["lat"], p["lng"],
+                                plant_id, old_lat, old_lng):
+                continue
+            p["lat"], p["lng"] = new_lat, new_lng
+            moved = True
+            break
         return moved
 
     # ── consistency ───────────────────────────────────────────────────────
