@@ -93,6 +93,8 @@ Multiple boundaries are allowed; each needs a unique `boundary_id`.
     "element_type": "plant",
     "plant_id": 42,                       // FK into the plant database
     "common_name": "Yarrow",
+    "feature_id": "pf_49147dfef7e7",      // stable per-plant identity (1.9);
+                                          // absent in legacy files (coords fallback)
     "placement_group_id": "pg_abcdef0123",// shared by one placement gesture
     "quantity": 1,
     // present only for community members:
