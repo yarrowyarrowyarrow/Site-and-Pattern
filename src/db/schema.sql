@@ -110,6 +110,11 @@ CREATE TABLE IF NOT EXISTS polycultures (
     context TEXT,                   -- where & when to use it (the larger situation)
     forces TEXT,                    -- the competing considerations it balances
     solution TEXT,                  -- the instruction ("Therefore: …")
+    -- Row provenance (schema v46): 'seed' = shipped example (wiped + re-seeded
+    -- on every schema bump); 'user' = authored in the builder — NEVER wiped by
+    -- the reseed. Default 'user' so anything the seeder didn't explicitly
+    -- stamp is treated as the user's work.
+    origin TEXT NOT NULL DEFAULT 'user',
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

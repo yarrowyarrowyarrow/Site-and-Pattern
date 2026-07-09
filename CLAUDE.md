@@ -108,10 +108,15 @@ new rows.
 
 The reseed path (`src/db/plants.py:init_db` → "needs_reseed" block)
 wipes `plants`, `planting_calendar`, `companion_friends`,
-`companion_enemies`, `polyculture_members`, `polycultures`, `uses`,
-`plant_uses`, `fauna`, `plant_fauna` and re-seeds them from the
-shipped JSON. **Add any new dependent tables to that wipe list** or
-they will accumulate stale rows across reseeds.
+`companion_enemies`, `uses`, `plant_uses`, `fauna`, `plant_fauna` (and
+the attribute/nursery/cache tables) and re-seeds them from the shipped
+JSON. **Add any new dependent tables to that wipe list** or they will
+accumulate stale rows across reseeds. **Never wipe a table holding
+user-authored rows**: `polycultures` / `polyculture_members` are wiped
+only where `origin='seed'` (schema v46) so builder-authored communities
+survive upgrades — user member `plant_id`s are re-pointed by name after
+the plants wipe (`_remap_user_polyculture_plants`), because plant ids
+are NOT stable across reseeds.
 
 ## Running tests
 

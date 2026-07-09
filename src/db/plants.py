@@ -163,7 +163,21 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # butterflies & day-flying moths, so ambient wildlife (scene_wildlife) can place
 # nectaring butterflies from real edges and the habitat builder shows documented
 # (not just genus-inferred) nectar sources.
-_SCHEMA_VERSION = 45
+# v42 (V2.15): province-neutral data model — `ab_ecoregion` renamed to
+# `ecoregion` (+ native_province) for the Saskatchewan integration; the old
+# name survives as a read-side alias for the frozen agent-API contract.
+# v43 (V2.16): no DDL — reseed for the Saskatchewan grassland flora + fauna.
+# v44 (V2.18): added the `nurseries` table (native-plant supplier directory),
+# seeded from data/nurseries_master.json; wiped + reseeded on every bump.
+# v45 (V2.19): no DDL — reseed for the native-only supplier list (NPSS) and
+# the Lumsden soil-pH plant-matching fixes.
+# v46 (V2.22): added polycultures.origin ('seed' | 'user'). The reseed now
+# wipes ONLY origin='seed' rows, so communities users author in the builder
+# finally survive schema bumps (they were silently destroyed on every bump
+# since the builder shipped). _migrate_to_v46 adds the column to old DBs and
+# stamps the shipped examples by name so the first v46 reseed doesn't
+# duplicate them.
+_SCHEMA_VERSION = 46
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -422,6 +436,38 @@ def _migrate_to_v42(conn: sqlite3.Connection):
             conn.execute(f"ALTER TABLE {table} ADD COLUMN native_provinces TEXT")
         except sqlite3.OperationalError:
             pass  # column already present
+    conn.commit()
+
+
+def _migrate_to_v46(conn: sqlite3.Connection):
+    """Polyculture provenance (V2.22) — the end of reseed data loss.
+
+    Adds ``polycultures.origin`` ('seed' | 'user') so the reseed can wipe
+    shipped examples without touching communities the user authored in the
+    builder. On an upgraded DB every existing row lands as 'user' (the safe
+    default); the shipped examples are then re-stamped 'seed' **by name**
+    so the reseed that immediately follows this migration replaces them
+    instead of duplicating them. A user community that happens to share an
+    example's name is treated as the example (replaced) — the pre-v46
+    behaviour for every community, now confined to that one collision.
+    """
+    try:
+        conn.execute("ALTER TABLE polycultures "
+                     "ADD COLUMN origin TEXT NOT NULL DEFAULT 'user'")
+    except sqlite3.OperationalError:
+        return  # column already present → fresh install / already migrated
+    from src.db.polycultures import EXAMPLE_POLYCULTURES  # lazy: avoid cycle
+
+    def _names(defs):
+        for d in defs:
+            yield d["name"]
+            yield from _names(d.get("variations", []))
+
+    names = list(_names(EXAMPLE_POLYCULTURES))
+    qmarks = ",".join("?" for _ in names)
+    conn.execute(
+        f"UPDATE polycultures SET origin = 'seed' WHERE name IN ({qmarks})",
+        names)
     conn.commit()
 
 
@@ -1015,6 +1061,8 @@ def init_db() -> None:
             _migrate_to_v35(conn)
         if current_version < 42:
             _migrate_to_v42(conn)
+        if current_version < 46:
+            _migrate_to_v46(conn)
 
         # Add parent_id to polycultures if missing
         try:
@@ -1025,8 +1073,8 @@ def init_db() -> None:
 
         # Idempotent additive migration — adds layer/functions columns to
         # polyculture_members and backfills them from the existing role.
-        # Kept outside the version-bump reseed path so user-created
-        # plant communities are preserved.
+        # (User-created communities are protected from the reseed itself by
+        # the origin='seed' scoping below, schema v46.)
         _migrate_polyculture_member_layer_functions(conn)
 
         # Idempotent additive migration — adds the pattern-language columns to
@@ -1056,8 +1104,28 @@ def init_db() -> None:
             conn.execute("DELETE FROM companion_friends")
             conn.execute("DELETE FROM companion_enemies")
             conn.execute("DELETE FROM planting_calendar")
-            conn.execute("DELETE FROM polyculture_members")
-            conn.execute("DELETE FROM polycultures")
+            # Polycultures hold USER-AUTHORED data alongside the shipped
+            # examples (schema v46): wipe only origin='seed' rows. Members
+            # are scoped through their parent (FK is OFF here, so the
+            # CASCADE won't fire — delete children explicitly, then clear
+            # any parent_id that pointed at a wiped seed example so the id
+            # can't be re-used by a freshly seeded row.
+            conn.execute(
+                "DELETE FROM polyculture_members WHERE polyculture_id IN "
+                "(SELECT id FROM polycultures WHERE origin = 'seed')")
+            conn.execute("DELETE FROM polycultures WHERE origin = 'seed'")
+            conn.execute(
+                "UPDATE polycultures SET parent_id = NULL WHERE parent_id "
+                "IS NOT NULL AND parent_id NOT IN (SELECT id FROM polycultures)")
+            # Plant ids are NOT stable across a reseed (AUTOINCREMENT, never
+            # reset) — snapshot the names behind every plant id the surviving
+            # user communities reference, so they can be re-pointed at the
+            # reseeded rows afterwards (_remap_user_polyculture_plants).
+            user_plant_refs = conn.execute(
+                "SELECT id, scientific_name, common_name FROM plants "
+                "WHERE id IN (SELECT plant_id FROM polyculture_members) "
+                "   OR id IN (SELECT center_plant_id FROM polycultures "
+                "             WHERE center_plant_id IS NOT NULL)").fetchall()
             conn.execute("DELETE FROM plants")
             # Nurseries are seeded from data/nurseries_master.json — wipe + reseed
             # so directory edits ship on the next schema bump (V2.18).
@@ -1091,6 +1159,9 @@ def init_db() -> None:
             _seed_lepidoptera_attributes(conn)
             # Native-plant nursery directory (V2.18) — independent of plants/fauna.
             _seed_nurseries(conn)
+            # Re-point surviving user communities at the reseeded plant rows
+            # (ids shifted) — must run before FK enforcement returns.
+            _remap_user_polyculture_plants(conn, user_plant_refs)
             conn.execute("PRAGMA foreign_keys = ON")
             conn.commit()
 
@@ -1115,6 +1186,67 @@ def init_db() -> None:
         migrate_qsettings_recipes()
     except Exception:
         _log.exception("legacy recipe migration failed")  # user can recreate them
+
+
+def _remap_user_polyculture_plants(conn: sqlite3.Connection,
+                                   old_refs) -> None:
+    """Re-point user communities at the reseeded plant rows (schema v46).
+
+    ``old_refs`` is the pre-wipe snapshot of ``(id, scientific_name,
+    common_name)`` for every plant id referenced by a surviving (user)
+    polyculture. Plant ids shift on every reseed, so each old id is
+    resolved to the new catalogue row by scientific name (falling back to
+    common name). Members whose plant no longer exists in the catalogue
+    are dropped — with a log line, not silently."""
+    if not old_refs:
+        return
+    by_sci = {}
+    by_common = {}
+    for row in conn.execute(
+            "SELECT id, scientific_name, common_name FROM plants"):
+        if row["scientific_name"]:
+            by_sci.setdefault(row["scientific_name"], row["id"])
+        if row["common_name"]:
+            by_common.setdefault(row["common_name"], row["id"])
+
+    remap: dict[int, int] = {}
+    lost: list[str] = []
+    for old in old_refs:
+        new_id = (by_sci.get(old["scientific_name"])
+                  or by_common.get(old["common_name"]))
+        if new_id is not None:
+            remap[old["id"]] = new_id
+        else:
+            lost.append(old["common_name"] or old["scientific_name"]
+                        or str(old["id"]))
+
+    # Two-phase (via negative temp ids) so an old→new pair can never be
+    # re-remapped by a later pair that shares the number. FK is OFF here.
+    for old_id, new_id in remap.items():
+        conn.execute("UPDATE polyculture_members SET plant_id = ? "
+                     "WHERE plant_id = ?", (-new_id, old_id))
+        conn.execute("UPDATE polycultures SET center_plant_id = ? "
+                     "WHERE center_plant_id = ?", (-new_id, old_id))
+    conn.execute("UPDATE polyculture_members SET plant_id = -plant_id "
+                 "WHERE plant_id < 0")
+    conn.execute("UPDATE polycultures SET center_plant_id = -center_plant_id "
+                 "WHERE center_plant_id < 0")
+
+    # Anything still pointing outside the fresh catalogue references a plant
+    # that no longer ships — drop/clear it audibly rather than strand an
+    # FK-invalid row for the next runtime query to trip on.
+    cur = conn.execute(
+        "DELETE FROM polyculture_members "
+        "WHERE plant_id NOT IN (SELECT id FROM plants)")
+    conn.execute(
+        "UPDATE polycultures SET center_plant_id = NULL "
+        "WHERE center_plant_id IS NOT NULL "
+        "AND center_plant_id NOT IN (SELECT id FROM plants)")
+    if lost or cur.rowcount:
+        _log.warning(
+            "reseed: %d member row(s) dropped — plants no longer in the "
+            "catalogue%s", cur.rowcount,
+            (": " + ", ".join(sorted(lost)[:10])) if lost else "")
 
 
 def _insert_companions(conn: sqlite3.Connection,

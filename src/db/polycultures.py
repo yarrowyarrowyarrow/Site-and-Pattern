@@ -510,22 +510,27 @@ def get_polyculture_by_id(polyculture_id):
 
 
 def create_polyculture(name, description, center_plant_id, parent_id=None, *,
-                        problem=None, context=None, forces=None, solution=None):
+                        problem=None, context=None, forces=None, solution=None,
+                        origin="user"):
     """Create a polyculture row.
 
     ``problem`` / ``context`` / ``forces`` / ``solution`` are the authored
     Alexander pattern-language fields (schema v27, F4); they are optional so
     user-created communities (which only fill name + description) keep working.
+
+    ``origin`` (schema v46) marks provenance: the default ``"user"`` is the
+    protected value — only ``seed_example_polycultures`` passes ``"seed"``,
+    and only ``origin='seed'`` rows are wiped by the schema-bump reseed.
     """
     conn = get_connection()
     try:
         cur = conn.execute(
             "INSERT INTO polycultures "
             "(name, description, center_plant_id, parent_id, "
-            " problem, context, forces, solution) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            " problem, context, forces, solution, origin) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (name, description, center_plant_id, parent_id,
-             problem, context, forces, solution),
+             problem, context, forces, solution, origin),
         )
         polyculture_id = cur.lastrowid
         conn.commit()
@@ -2366,12 +2371,16 @@ EXAMPLE_POLYCULTURES = [
 
 
 def seed_example_polycultures():
-    """Create example polycultures if none exist yet. Safe to call multiple times."""
+    """Create the shipped example polycultures if they aren't present.
+    Safe to call multiple times. Counts only ``origin='seed'`` rows
+    (schema v46) — user-authored communities neither block the examples
+    from seeding nor get touched by it."""
     conn = get_connection()
     try:
-        count = conn.execute("SELECT COUNT(*) FROM polycultures").fetchone()[0]
+        count = conn.execute("SELECT COUNT(*) FROM polycultures "
+                             "WHERE origin = 'seed'").fetchone()[0]
         if count > 0:
-            return  # Already have polycultures, don't re-seed
+            return  # Examples already seeded
     finally:
         conn.close()
 
@@ -2390,6 +2399,7 @@ def seed_example_polycultures():
             context=poly_def.get("context") or text.get("context"),
             forces=poly_def.get("forces") or text.get("forces"),
             solution=poly_def.get("solution") or text.get("solution"),
+            origin="seed",
         )
         for common_name, role, ox, oy in poly_def["members"]:
             plant = _get_plant_by_name(common_name)

@@ -12,7 +12,8 @@ seeded reference data every project draws from.
   [`recipes.py`](../src/db/recipes.py),
   [`structures.py`](../src/db/structures.py),
   [`fauna.py`](../src/db/fauna.py)
-- **Current schema version:** `17` (`src/db/plants.py:_SCHEMA_VERSION`)
+- **Current schema version:** `46` (`src/db/plants.py:_SCHEMA_VERSION` — the
+  authoritative value; this doc's narrative may lag, the code wins)
 - **Location:**
   - Linux: `~/.local/share/Site & Pattern/permadesign.db`
   - Windows: `%APPDATA%/Site & Pattern/`
@@ -58,7 +59,11 @@ Symmetric plant↔plant companion relationships (`plant_id_a`, `plant_id_b`).
 ### `polycultures` / `polyculture_members`
 Saved **spatial** plant communities. Members carry `offset_x`/`offset_y`
 (metres from the community centre), a `layer`, and a JSON `functions`
-array. `parent_id` supports variations.
+array. `parent_id` supports variations. `origin` (schema v46) marks row
+provenance — `'seed'` for the shipped examples, `'user'` for communities
+authored in the builder; **only `'seed'` rows are wiped by the reseed**,
+so user communities survive schema bumps (their member `plant_id`s are
+re-pointed at the reseeded catalogue by name, since plant ids shift).
 
 ### `polyculture_recipes` / `polyculture_recipe_members`
 **Ratio-only** mixes (no spatial layout): members carry an integer
@@ -101,8 +106,12 @@ when the row count is low or the stored schema version is older than
 - `data/plant_fauna_master.json`
 
 The reseed wipes and repopulates: `plants`, `planting_calendar`,
-`companion_friends`, `companion_enemies`, `polyculture_members`,
-`polycultures`, `uses`, `plant_uses`, `fauna`, `plant_fauna`.
+`companion_friends`, `companion_enemies`, `uses`, `plant_uses`, `fauna`,
+`plant_fauna`, `bee_attributes`, `lepidoptera_attributes`, `nurseries`,
+plus the derived caches (`climate_cache`, `wind_cache`,
+`shade_zone_cache`). `polycultures` / `polyculture_members` are wiped
+**only where `origin='seed'`** (schema v46) — user-authored communities
+are never touched by the reseed.
 
 > FK constraints are ON at runtime but disabled during the bulk reseed
 > (Python 3.14 enforces FKs at statement time, not commit time).
