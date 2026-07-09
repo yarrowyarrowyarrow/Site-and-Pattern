@@ -77,6 +77,7 @@ These started life as entries below and have since landed — the State markers 
 | F37 (part) | "Design for a bee" habitat builder + Alberta native-bee data spine | `src/bee_habitat.py`, `data/bee_attributes_master.json` (+ Apidae roster in `data/fauna_master.json`), `src/db/fauna.py`, surfaced in `src/analysis_panel.py` (Bees tab) | P8, P3, P10, P5, P9 |
 | F40 | Planting Plan — buy-it / plant-it sheet (quantities, form, spacing, planting window, phased schedule) | `src/planting_plan.py`, surfaced in `src/app.py` + `src/pdf_export.py` | P8, P4, P11, P6, P9 |
 | F11 | Value-vs-price framing — the habitat value a design's spend *creates*, read together with its cost | `src/habitat_score.py` (`habitat_nudges`), surfaced in `src/on_this_design_panel.py` (Stats: habitat value → "where to grow next" → cost → "what your spend creates") | P6 |
+| — | **Temporal succession engine** — the growing overstory shades the understory year by year, so sun-lovers over-topped past their tolerance decline and die and the year-N scene shows the *climax community* (survivors), not every plant frozen healthy | `src/succession_engine.py` (Qt-free growth-matrix + point-sampled dynamic shade + cumulative-stress survival evaluator), folded into `src/scene_contract.py` (health/opacity) and `html/scene3d.html` (withered render) | P4, P3, P9 |
 
 Net effect on the principles: **P1 partial → strong** (pattern language is now explicit), and
 P3/P4/P5 are visibly stronger. **F40 is the first real ACT/OUTPUT win** — it turns a design into

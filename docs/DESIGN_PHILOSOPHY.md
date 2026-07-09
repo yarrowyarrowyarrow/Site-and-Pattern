@@ -94,7 +94,12 @@ Brand's shearing layers, Weaner's succession planting, Bridges' transition psych
 > spring/summer/fall/winter seasonal toggle (F16, shipped), and the **phenology "what's
 > happening now" dashboard** (`src/phenology.py`, roadmap F51) that reads the design's trajectory
 > at *this* month's resolution — what's blooming, fruiting, waking, and going dormant right now.
-> **State: strong.**
+> The timeline is no longer merely *visual*: the **temporal succession engine**
+> (`src/succession_engine.py`, V2.21) computes the shade the growing overstory casts over the
+> understory year by year and lets sun-loving plants that get over-topped past their tolerance
+> decline and die, so the year-N scene shows the emerging *climax community* — the survivors —
+> rather than every plant frozen at full health (folded into `scene_contract` health/opacity and
+> the 3D viewer's withered render). **State: strong.**
 
 ### 5. Perception is constructed, not received
 

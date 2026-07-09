@@ -22,7 +22,14 @@ Scene schema (``SCENE_VERSION`` = 1)::
       "boundary": [[x, y], ...] | None,              # property outline
       "plants": [{plant_id, x, y, height_m, canopy_m, plant_type,
                   foliage_type, scale_factor, spread_factor, spread_rate,
-                  growth_curve, color, opacity, common_name, existing?}, ...],
+                  growth_curve, color, opacity, health, health_state,
+                  common_name, existing?}, ...],
+                                       # health: 1.0 healthy → 0.0 dead;
+                                       #   health_state: healthy|declining|dead
+                                       #   — src.succession_engine, the growing
+                                       #   canopy shading understory out over
+                                       #   the timeline (opacity already folds
+                                       #   it in: dead → 0, declining dimmed)
                                        # foliage_type: deciduous|evergreen|
                                        #   herbaceous|semi-evergreen (3D crown
                                        #   shape + seasonal colour)
@@ -302,6 +309,31 @@ def build_scene(project: dict, *, year: int = 0,
             cache[pid] = get_plant(pid) or {}
         return cache[pid]
 
+    # ── Temporal succession (V2.21) ──────────────────────────────────────────
+    # Which placed plants the growing canopy has shaded past their tolerance by
+    # this year. Aligned to the placed-plant features in iteration order; folds
+    # into opacity (dead drop out of the climax community, declining dim) and
+    # ships as explicit health / health_state fields for the 3D viewer's
+    # withered render. Best-effort — a data hiccup must never break the scene.
+    health_by_index: dict = {}
+    try:
+        from src.succession_engine import (
+            SuccessionEngine, static_casters_from_project)
+        placed_recs = [r for r in
+                       (plant_record_from_feature(f)
+                        for f in project.get("features", []))
+                       if r is not None]
+        if placed_recs:
+            engine = SuccessionEngine(
+                placed_recs, get_plant=get_plant,
+                static_casters=static_casters_from_project(project),
+                origin=(lat0, lng0))
+            for info in engine.evaluate_year(int(year))["plants"]:
+                health_by_index[info["index"]] = info
+    except Exception:  # noqa: BLE001 — succession is best-effort
+        health_by_index = {}
+    _placed_i = 0
+
     for f in project.get("features", []):
         props = f.get("properties", {}) or {}
         geom = f.get("geometry", {}) or {}
@@ -312,6 +344,21 @@ def build_scene(project: dict, *, year: int = 0,
             plant = _plant_rec(rec["plant_id"])
             st = plant_3d_state(plant, rec["lat"], rec["lng"], year)
             x, y = proj.to_xy(rec["lat"], rec["lng"])
+            # Fold succession health into visibility: a plant shaded to death by
+            # the closing canopy drops out (opacity 0 → the viewer culls it),
+            # a declining one is dimmed, and health/health_state ride along so
+            # the 3D viewer can render the withered transition.
+            info = health_by_index.get(_placed_i)
+            _placed_i += 1
+            health = info["health"] if info else 1.0
+            health_state = info["state"] if info else "healthy"
+            presence = st["presence_opacity"]
+            if health_state == "dead":
+                opacity = 0.0
+            elif health_state == "declining":
+                opacity = round(presence * (0.5 + 0.5 * health), 3)
+            else:
+                opacity = presence
             plants.append({
                 "plant_id": rec["plant_id"],
                 "common_name": rec.get("common_name", ""),
@@ -340,7 +387,11 @@ def build_scene(project: dict, *, year: int = 0,
                 # season. Empty for dry-fruited / non-fruiting plants.
                 "fruit_color": plant.get("fruit_color") or "",
                 **_fruit_window(plant),
-                "opacity": st["presence_opacity"],
+                "opacity": opacity,
+                # Succession health (V2.21): 1.0 healthy → declining → 0.0 dead,
+                # from the shade the growing overstory casts over the years.
+                "health": health,
+                "health_state": health_state,
             })
             continue
 

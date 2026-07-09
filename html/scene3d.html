@@ -627,6 +627,18 @@ function fadeToward(hex, opacity) {
   return c.lerp(new THREE.Color(SKY), 1 - Math.max(0, Math.min(1, opacity ?? 1)));
 }
 
+// Succession health (src/succession_engine.py): as the growing overstory shades
+// an understory plant past its sun tolerance, its `health` falls 1 → 0 and we
+// blend the foliage toward a dry straw-brown so it reads as *withered* rather
+// than merely faded. Dead plants (health_state === 'dead') are dropped upstream
+// in buildPlants, so this handles the healthy→declining transition. Takes and
+// returns a THREE.Color (slots between seasonalColor and fadeColor).
+function witherColor(col, health) {
+  const h = Math.max(0, Math.min(1, health ?? 1));
+  if (h >= 0.85) return col;
+  return col.clone().lerp(new THREE.Color(0x8a7a3c), (0.85 - h) / 0.85 * 0.9);
+}
+
 // ── terrain / ground ────────────────────────────────────────────────────────
 
 // Procedural meadow texture (V2.12): a tileable two-tone green mottle with
@@ -1797,7 +1809,7 @@ function buildLayer(list, variants, mat, archOf, scaleOf, month, year, noRot, te
     items.forEach((p, ii) => {
       const [sx, sy, sz] = scaleOf(p);
       const rotY0 = noRot ? 0 : (indHash(p) % 628) / 100;
-      const col = fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity);
+      const col = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month), p.health), p.opacity);
       places[ii].forEach((pl, k) => {
         const m = pl.mul;
         const wx = p.x + pl.dx, wy = p.y + pl.dz;
@@ -1864,7 +1876,7 @@ function buildHerbLayer(list, month, year, terrain) {
     items.forEach((p, ii) => {
       const c = Math.max(0.15, p.canopy_m), h = Math.max(0.08, p.height_m);
       const rotY0 = (indHash(p) % 628) / 100;
-      const col = fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity);
+      const col = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month), p.health), p.opacity);
       places[ii].forEach((pl, k) => {
         const m = pl.mul, x = p.x + pl.dx, wy = p.y + pl.dz;
         const rotY = rotY0 + (k ? pl.dx : 0);
@@ -1902,7 +1914,7 @@ function buildShrubLayer(list, month, year, terrain) {
     items.forEach((p, ii) => {
       const c = Math.max(0.25, p.canopy_m), h = Math.max(0.2, p.height_m);
       const rotY0 = (indHash(p) % 628) / 100;
-      const col = fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity);
+      const col = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month), p.health), p.opacity);
       const scol = fadeToward(stemHex, p.opacity);
       places[ii].forEach((pl, k) => {
         const m = pl.mul, x = p.x + pl.dx, wy = p.y + pl.dz;
@@ -1928,6 +1940,11 @@ function buildPlants(group, plants, month, year, terrain) {
   ensurePlantMats();
   month = month || 6;
   year = year || 0;
+
+  // Succession: drop plants the closing canopy has shaded to death (V2.21), so
+  // the year-N scene is the climax community — the survivors — not every plant
+  // ever placed. Undefined health_state (older scenes / existing trees) is kept.
+  plants = (plants || []).filter(p => p.health_state !== 'dead');
 
   const byKind = { tree: [], shrub: [], vine: [], groundcover: [], grass: [],
                    aquatic: [], herb: [] };
@@ -1970,7 +1987,7 @@ function buildPlants(group, plants, month, year, terrain) {
         const rotY0 = (indHash(p) % 628) / 100;
         const bare = _isDecid(p.foliage_type) && _bareMonth(month);
         const bcol = fadeToward(prof.bark || '#5d4433', p.opacity);
-        const fcol = fadeColor(seasonalColor(p.color, p.foliage_type, month), p.opacity);
+        const fcol = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month), p.health), p.opacity);
         places[ii].forEach((pl, k) => {
           const m = pl.mul, x = p.x + pl.dx, wy = p.y + pl.dz, z = -wy;
           const rotY = rotY0 + (k ? pl.dx + pl.dz : 0);
