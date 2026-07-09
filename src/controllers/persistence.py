@@ -29,6 +29,17 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 import src.project as project_io
 from src.branding import APP_NAME
+from src.log import get_logger
+
+_log = get_logger(__name__)
+
+
+def autosave_path() -> str:
+    """The single crash-recovery autosave file. Fixed path (not per-project)
+    so the startup recovery check knows where to look; the design's real
+    path is stamped inside (``properties._autosave_source_path``)."""
+    return os.path.join(os.path.expanduser("~"),
+                        ".site-and-pattern_autosave.perma.geojson")
 
 
 class PersistenceController:
@@ -92,10 +103,20 @@ class PersistenceController:
             name = self._main._project["properties"].get("project_name", "Design")
             self._main.setWindowTitle(f"{APP_NAME} — {name}")
             self._main.statusBar().showMessage(f"Saved: {path}", 3000)
+            # The design is now durably on disk — a crash-recovery copy from
+            # before this save would only offer to roll the user back.
+            self.clear_autosave()
         except Exception as exc:
+            _log.exception("save failed: %s", path)
             QMessageBox.critical(self._main, "Save failed", str(exc))
 
-    # ── Autosave timer ────────────────────────────────────────────────────────
+    # ── Autosave + crash recovery ─────────────────────────────────────────────
+    # The timer writes a recovery copy (with the design's real path stamped
+    # inside) whenever there are unsaved changes; a clean save or clean exit
+    # deletes it. If it's still there at the next launch, the previous
+    # session died with unsaved work — maybe_offer_autosave_recovery (wired
+    # to the map bridge's map_ready in app.py, so the restore can render)
+    # offers it back exactly once.
 
     def _start_autosave(self):
         self._main._autosave_timer = QTimer(self._main)
@@ -106,11 +127,61 @@ class PersistenceController:
     def _autosave(self):
         if not self._main._modified:
             return
-        tmp = os.path.join(os.path.expanduser("~"), ".site-and-pattern_autosave.perma.geojson")
+        # Stamp the source path on shallow copies so the live project (and
+        # therefore real saves) never carry the recovery-only key.
+        data = dict(self._main._project)
+        props = dict(data.get("properties") or {})
+        props["_autosave_source_path"] = self._main._project_path or ""
+        data["properties"] = props
         try:
-            project_io.save_project(self._main._project, tmp)
+            project_io.save_project(data, autosave_path())
         except Exception:
+            _log.warning("autosave failed", exc_info=True)
+
+    def clear_autosave(self):
+        try:
+            os.unlink(autosave_path())
+        except FileNotFoundError:
             pass
+        except OSError:
+            _log.warning("could not remove autosave file", exc_info=True)
+
+    def maybe_offer_autosave_recovery(self):
+        """If the last session left an autosave behind, offer to restore it.
+        One-shot per launch; the file is consumed (deleted) either way —
+        declining means the user chose the on-disk version."""
+        if getattr(self, "_recovery_checked", False):
+            return
+        self._recovery_checked = True
+        path = autosave_path()
+        if not os.path.exists(path):
+            return
+        try:
+            data = project_io.load_project(path)
+            props = data.get("properties") or {}
+            source = props.pop("_autosave_source_path", "") or ""
+            name = props.get("project_name", "Untitled Design")
+        except Exception:
+            _log.warning("unreadable autosave file — discarding", exc_info=True)
+            self.clear_autosave()
+            return
+        r = QMessageBox.question(
+            self._main, "Restore autosaved design?",
+            f"Site & Pattern closed without saving last time.\n\n"
+            f"An autosaved copy of “{name}” was recovered"
+            + (f" (last saved to:\n{source})" if source else "")
+            + ".\n\nRestore it now?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        if r == QMessageBox.StandardButton.Yes:
+            m = self._main
+            m._project = data          # → ProjectStore.set_project
+            m._project_path = source if source and os.path.exists(source) else None
+            m._modified = True         # recovered work is unsaved by definition
+            self.render_project_to_map(fit_view=True)
+            m.setWindowTitle(f"{APP_NAME} — {name} *")
+            m.statusBar().showMessage("Recovered autosaved design", 5000)
+            _log.info("restored autosave (source=%s)", source or "unsaved")
+        self.clear_autosave()
 
     # ── Undo / redo ───────────────────────────────────────────────────────────
     # V1.63: the full undo/redo engine lives here (the Chunk 5c docstring

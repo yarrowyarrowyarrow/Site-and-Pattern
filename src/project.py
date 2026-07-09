@@ -7,6 +7,7 @@ but no file I/O yet.  The full implementation comes in Step 4.
 
 import json
 import os
+import tempfile
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -73,9 +74,36 @@ def new_project(name: str = "Untitled Design") -> dict:
 
 
 def save_project(project: dict, path: str) -> None:
-    """Write project dict to a .perma.geojson file."""
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(project, f, indent=2)
+    """Write project dict to a .perma.geojson file — atomically.
+
+    A design is a single file, so durability is the whole game here:
+    the JSON is serialized to a sibling temp file first (same directory ⇒
+    same filesystem), fsynced, then ``os.replace``d over the target — a
+    crash or power cut mid-save can truncate only the temp file, never the
+    user's design. The previous on-disk version survives one save as
+    ``<path>.bak`` so even a *successfully saved* mistake is recoverable.
+    """
+    path = os.path.abspath(path)
+    directory = os.path.dirname(path) or "."
+    fd, tmp = tempfile.mkstemp(
+        prefix=os.path.basename(path) + ".", suffix=".tmp", dir=directory)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(project, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        if os.path.exists(path):
+            try:
+                os.replace(path, path + ".bak")
+            except OSError:
+                pass  # backup is best-effort; the atomic swap below still holds
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def load_project(path: str) -> dict:

@@ -597,6 +597,10 @@ class MainWindow(QMainWindow):
         b.selection_moved.connect(self._on_selection_moved)
         b.fill_area_complete.connect(self._on_fill_area_complete)
         b.map_ready.connect(self._on_map_ready)
+        # Crash recovery: once the map can render, offer any autosave left
+        # behind by a session that died with unsaved work (one-shot).
+        b.map_ready.connect(
+            lambda: self._persistence.maybe_offer_autosave_recovery())
 
         # Toolbar → map
         self.toolbar.draw_boundary_requested.connect(self._enter_boundary_mode)
@@ -2070,6 +2074,13 @@ class MainWindow(QMainWindow):
             if r != QMessageBox.StandardButton.Yes:
                 event.ignore()
                 return
+        # Clean exit (saved, or the user explicitly discarded unsaved work):
+        # the crash-recovery autosave would only nag next launch. A crash
+        # never reaches this line — which is exactly the point. Guarded on
+        # the recovery check having run so a window that never got a live
+        # map (offscreen tests) can't delete a real session's recovery file.
+        if getattr(self._persistence, "_recovery_checked", False):
+            self._persistence.clear_autosave()
         event.accept()
 
     # ── Keyboard shortcuts ────────────────────────────────────────────────────
