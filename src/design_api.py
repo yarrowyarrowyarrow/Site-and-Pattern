@@ -12,11 +12,11 @@ would use.
 
 from __future__ import annotations
 
-import math
 from datetime import datetime
 from typing import Optional
 
 from src.project import new_project
+from src.projection import metres_per_deg
 from src.db.plants import get_plant
 from src.db.polycultures import get_polyculture_by_id
 
@@ -69,7 +69,8 @@ class DesignGenerator:
         })
 
     def add_plant(self, plant_id: int, lat: float, lng: float,
-                  polyculture_name: str = "", quantity: int = 1) -> None:
+                  polyculture_name: str = "", quantity: int = 1,
+                  polyculture_center: Optional[tuple] = None) -> None:
         """Place a plant at the given coordinates."""
         plant = get_plant(plant_id)
         common_name = plant["common_name"] if plant else f"Plant #{plant_id}"
@@ -81,24 +82,31 @@ class DesignGenerator:
                   "lat": lat, "lng": lng}
         if polyculture_name:
             record["polyculture_name"] = polyculture_name
+        if polyculture_center is not None:
+            record["polyculture_center_lat"] = polyculture_center[0]
+            record["polyculture_center_lng"] = polyculture_center[1]
         self.project["features"].append(
             plant_feature(record, quantity=quantity))
 
     def add_polyculture(self, polyculture_id: int, center_lat: float, center_lng: float) -> None:
-        """Place a full polyculture at the given center coordinates."""
+        """Place a full polyculture at the given center coordinates.
+
+        Members carry the instance's center anchor (like GUI community
+        placement), so each placed community selects/deletes as one unit
+        and repeated instances of the same community stay distinct."""
         polyculture = get_polyculture_by_id(polyculture_id)
         if not polyculture:
             return
         polyculture_name = polyculture["name"]
         members = polyculture.get("members", [])
 
+        m_lat, m_lng = metres_per_deg(center_lat)
         for m in members:
-            lat_offset = (m.get("offset_y", 0)) / 111320
-            lng_offset = (m.get("offset_x", 0)) / (
-                111320 * math.cos(center_lat * math.pi / 180))
-            mlat = center_lat + lat_offset
-            mlng = center_lng + lng_offset
-            self.add_plant(m["plant_id"], mlat, mlng, polyculture_name=polyculture_name)
+            mlat = center_lat + (m.get("offset_y", 0)) / m_lat
+            mlng = center_lng + (m.get("offset_x", 0)) / m_lng
+            self.add_plant(m["plant_id"], mlat, mlng,
+                           polyculture_name=polyculture_name,
+                           polyculture_center=(center_lat, center_lng))
 
     def add_structure(self, struct_id: str, lat: float, lng: float,
                       struct_def: Optional[dict] = None) -> None:

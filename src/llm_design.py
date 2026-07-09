@@ -62,8 +62,18 @@ shape:
     {"query": "wild bergamot", "quantity": 7, "layout": "scatter"},
     {"query": "saskatoon", "quantity": 5, "layout": "row"}
   ],
+  "plant_mixes": [
+    {"plants": [{"query": "blue grama grass", "weight": 3},
+                {"query": "gaillardia", "weight": 1}],
+     "quantity": 24, "layout": "drift"}
+  ],
   "communities": [
-    {"query": "pollinator"}
+    {"query": "pollinator", "count": 2, "layout": "scatter"}
+  ],
+  "community_mixes": [
+    {"communities": [{"query": "meadow", "weight": 2},
+                     {"query": "aromatic", "weight": 1}],
+     "count": 3}
   ],
   "structures": [
     {"structure_id": "bee_hotel"}
@@ -81,6 +91,12 @@ Rules:
   flowing, naturalistic sweep of grasses/forbs (the preferred look for a meadow);
   "scatter" for loosely-spread accents. Choose the layout that suits the plant's
   role; omit it to let the app pick by growth habit.
+- "plant_mixes" (optional) interleaves 2–4 species through ONE stand — a
+  seed-mix look (matrix grass + flowering forbs is the classic meadow).
+  "weight" sets the ratio (3:1 = three of the first per one of the second);
+  "quantity" is the TOTAL plants in the stand. Use a mix when species should
+  mingle; use separate "plants" entries when each species should hold its
+  own ground.
 - Use generous quantities and several groups so the planting FILLS the
   available space (see the planting target below) rather than leaving the lot
   mostly bare.
@@ -88,7 +104,13 @@ Rules:
   listed below. Choose communities whose description suits the SITE
   CONDITIONS (e.g. a riparian/willow community for wet ground, a mixedgrass
   or aromatic community for a dry sunny site, a boreal/shade community for
-  shade).
+  shade). "count" (optional, 1–6) repeats the community that many times —
+  e.g. three willow pockets along a wet edge; "layout" (optional) arranges
+  the repeats ("row" / "grid" / "circle" / "scatter").
+- "community_mixes" (optional) scatters SEVERAL community types across the
+  site in one gesture — "count" total pockets, each pocket one community
+  chosen by "weight" ratio. Use it for a mosaic (meadow + shrub island +
+  herb circle) instead of listing each community separately.
 - "structures[].structure_id" must be one of the AVAILABLE STRUCTURE IDS
   listed below. Match structures to the site: pond / swale / rain_garden for
   low or wet ground, bee_hotel / native_bee_log in sun, brush_pile / snag for
@@ -522,10 +544,12 @@ def _parse_spec_json(content: Any) -> dict:
 def _validate_spec(spec: Any) -> None:
     if not isinstance(spec, dict):
         raise LLMError("design spec must be a JSON object")
-    for key in ("plants", "communities", "structures"):
+    for key in ("plants", "plant_mixes", "communities", "community_mixes",
+                "structures"):
         if key in spec and not isinstance(spec[key], list):
             raise LLMError(f"design spec field '{key}' must be a list")
-    if not (spec.get("plants") or spec.get("communities")):
+    if not (spec.get("plants") or spec.get("communities")
+            or spec.get("plant_mixes") or spec.get("community_mixes")):
         raise LLMError("design spec contains no plants or communities")
 
 
@@ -590,27 +614,161 @@ def _resolve_plants(entries: list, query_plants,
     return out
 
 
-def _resolve_communities(entries: list, communities: list[dict]) -> list[int]:
-    by_name = {c["name"].lower(): c["id"]
-               for c in communities if c.get("name") and c.get("id") is not None}
-    out: list[int] = []
+def _one_community_id(entry, by_name: dict) -> Optional[int]:
+    """Resolve one spec entry (dict or bare string) to a community id —
+    exact name match first, then loose substring either way."""
+    term = ""
+    if isinstance(entry, dict):
+        term = str(entry.get("query") or entry.get("name") or "").strip().lower()
+    elif isinstance(entry, str):
+        term = entry.strip().lower()
+    if not term:
+        return None
+    cid = by_name.get(term)
+    if cid is None:
+        for nm, nid in by_name.items():
+            if term in nm or nm in term:
+                cid = nid
+                break
+    return cid
+
+
+def _community_index(communities: list[dict]) -> dict:
+    return {c["name"].lower(): c["id"]
+            for c in communities if c.get("name") and c.get("id") is not None}
+
+
+def _clean_layout(value) -> str:
+    """Validate a spec layout name against the canonical pattern set —
+    anything unrecognized becomes '' (let placement pick)."""
+    from src import layout as _layout
+    name = str(value or "").strip().lower()
+    return name if name in _layout.LAYOUTS else ""
+
+
+def _coerce_weight(value) -> int:
+    try:
+        return max(1, min(99, int(value)))
+    except (TypeError, ValueError):
+        return 1
+
+
+# How many repeats of one community / pockets in one mix the spec may ask
+# for. Communities are big multi-plant footprints — the cap keeps a
+# hallucinated "count": 400 from carpeting the lot.
+_MAX_COMMUNITY_COUNT = 6
+_MAX_MIX_POCKETS = 12
+
+
+def _resolve_communities(entries: list, communities: list[dict]) -> list[dict]:
+    """Spec ``communities`` entries → placement groups
+    ``{"id", "count", "layout"}``. Unmatched entries drop (same contract as
+    plant resolution); a bare string or count-less dict is one instance."""
+    by_name = _community_index(communities)
+    out: list[dict] = []
     for e in entries:
-        term = ""
-        if isinstance(e, dict):
-            term = str(e.get("query") or e.get("name") or "").strip().lower()
-        elif isinstance(e, str):
-            term = e.strip().lower()
-        if not term:
-            continue
-        cid = by_name.get(term)
+        cid = _one_community_id(e, by_name)
         if cid is None:
-            for nm, nid in by_name.items():
-                if term in nm or nm in term:
-                    cid = nid
-                    break
-        if cid is not None:
-            out.append(cid)
+            continue
+        count, layout = 1, ""
+        if isinstance(e, dict):
+            try:
+                count = max(1, min(_MAX_COMMUNITY_COUNT,
+                                   int(e.get("count") or 1)))
+            except (TypeError, ValueError):
+                count = 1
+            layout = _clean_layout(e.get("layout"))
+        out.append({"id": cid, "count": count, "layout": layout})
     return out
+
+
+def _resolve_community_mixes(entries: list,
+                             communities: list[dict]) -> list[dict]:
+    """Spec ``community_mixes`` → ``{"members": [(cid, weight)], "count",
+    "layout"}``. A mix needs ≥2 resolved member types — a one-community
+    "mix" folds down to a plain community group at the caller. Mixes whose
+    members all fail to resolve drop entirely."""
+    by_name = _community_index(communities)
+    out: list[dict] = []
+    for e in entries:
+        if not isinstance(e, dict):
+            continue
+        members: list[tuple[int, int]] = []
+        seen: set[int] = set()
+        for m in (e.get("communities") or e.get("members") or []):
+            cid = _one_community_id(m, by_name)
+            if cid is None or cid in seen:
+                continue
+            seen.add(cid)
+            weight = _coerce_weight(m.get("weight") if isinstance(m, dict)
+                                    else 1)
+            members.append((cid, weight))
+        if not members:
+            continue
+        try:
+            count = max(1, min(_MAX_MIX_POCKETS, int(e.get("count") or 0)))
+        except (TypeError, ValueError):
+            count = 0
+        if count < 1:
+            count = max(2, len(members))   # sensible default: one per type
+        out.append({"members": members, "count": count,
+                    "layout": _clean_layout(e.get("layout"))})
+    return out
+
+
+def _resolve_plant_mixes(entries: list, query_plants,
+                         goal_filters: Optional[dict]) -> list[dict]:
+    """Spec ``plant_mixes`` → ``{"members": [(plant_id, weight)],
+    "quantity", "layout"}``. Members resolve through the same catalogue
+    search as ``plants`` entries (so goal filters and the bare-term retry
+    apply); a mix keeps only resolved members and drops entirely when
+    fewer than one survives."""
+    out: list[dict] = []
+    for e in entries:
+        if not isinstance(e, dict):
+            continue
+        raw_members = e.get("plants") or e.get("members") or []
+        resolved: list[tuple[int, int]] = []
+        seen: set[int] = set()
+        for m in raw_members:
+            if isinstance(m, str):
+                m = {"query": m}
+            if not isinstance(m, dict):
+                continue
+            # Reuse the single-entry plant resolution (goal filters + the
+            # bare-term retry apply); read the plant id back off the item.
+            items = _resolve_plants([m], query_plants, goal_filters)
+            if not items:
+                continue
+            pid = items[0][0]
+            if pid in seen:
+                continue
+            seen.add(pid)
+            resolved.append((pid, _coerce_weight(m.get("weight"))))
+        if not resolved:
+            continue
+        # Cap the stand: mixes bypass the density expansion, so a
+        # hallucinated quantity must not carpet the lot on its own.
+        qty = min(_coerce_qty(e.get("quantity") or e.get("qty")
+                              or (4 * len(resolved))), 60)
+        out.append({"members": resolved, "quantity": qty,
+                    "layout": _clean_layout(e.get("layout"))})
+    return out
+
+
+def _expected_mix_counts(members: list[tuple[int, int]],
+                         total: int) -> dict[int, int]:
+    """Deterministic per-member instance counts for ``total`` placements —
+    the exact split ``assign_species`` will produce (largest-deficit over
+    weights), used for budget math before placement."""
+    from src.polyculture import assign_species
+    items = [{"id": mid, "weight": w} for mid, w in members]
+    assignments = assign_species([(0.0, 0.0)] * max(0, int(total)), items,
+                                 "even_split")
+    counts: dict[int, int] = {}
+    for a in assignments:
+        counts[a["id"]] = counts.get(a["id"], 0) + 1
+    return counts
 
 
 def _resolve_structures(entries: list, structures: list[dict]) -> list[str]:
@@ -871,28 +1029,69 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
         spec is cheap — only the LLM round costs anything."""
         p_items = _resolve_plants(spec_dict.get("plants") or [],
                                   query_plants, goal_filters)
-        c_items = _resolve_communities(spec_dict.get("communities") or [],
-                                       communities)
+        p_mixes = _resolve_plant_mixes(spec_dict.get("plant_mixes") or [],
+                                       query_plants, goal_filters)
+        c_groups = _resolve_communities(spec_dict.get("communities") or [],
+                                        communities)
+        c_mixes = _resolve_community_mixes(
+            spec_dict.get("community_mixes") or [], communities)
         s_items = _resolve_structures(spec_dict.get("structures") or [],
                                       structures)
+        # A "mix" with one surviving member type is just a repeated
+        # community / a plain plant group — fold it down so placement has
+        # one code path per real concept.
+        for mix in list(c_mixes):
+            if len(mix["members"]) == 1:
+                c_mixes.remove(mix)
+                c_groups.append({
+                    "id": mix["members"][0][0],
+                    "count": min(mix["count"], _MAX_COMMUNITY_COUNT),
+                    "layout": mix["layout"],
+                })
+        for mix in list(p_mixes):
+            if len(mix["members"]) == 1:
+                p_mixes.remove(mix)
+                p_items.append((mix["members"][0][0], mix["quantity"],
+                                mix["layout"]))
 
         # Keep the design within budget *before* placement (no
         # project-removal API needed): count the atomic community cost
-        # first, drop a community that alone blows the budget (only if
-        # individual plants remain to carry the design), then trim
-        # individual plants to the remainder.
+        # first (every repeat and every expected mix pocket), drop
+        # communities that alone blow the budget (only if plants remain
+        # to carry the design), then trim individual plants, then drop
+        # whole plant mixes (never trim inside one — that would skew its
+        # ratios) until the remainder fits.
         dropped = 0
         if budget and budget > 0:
-            from src.sourcing import trim_to_budget, polyculture_cost
-            clow, chigh = polyculture_cost(c_items)
+            from src.sourcing import (
+                estimate_cost, polyculture_cost, trim_to_budget,
+            )
+            expanded_cids = [g["id"] for g in c_groups
+                             for _ in range(g["count"])]
+            for mix in c_mixes:
+                for cid, n in _expected_mix_counts(
+                        mix["members"], mix["count"]).items():
+                    expanded_cids.extend([cid] * n)
+            clow, chigh = polyculture_cost(expanded_cids)
             cmid = (clow + chigh) / 2.0
-            if cmid > budget and p_items:
-                c_items = []
+            if cmid > budget and (p_items or p_mixes):
+                c_groups, c_mixes = [], []
                 cmid = 0.0
             p_items, dropped = trim_to_budget(p_items,
                                               max(budget - cmid, 0.0))
+            plo, phi = estimate_cost([(pid, q) for pid, q, *_ in p_items])
+            remaining = max(budget - cmid - (plo + phi) / 2.0, 0.0)
+            while p_mixes:
+                pairs = [(pid, n) for mix in p_mixes
+                         for pid, n in _expected_mix_counts(
+                             mix["members"], mix["quantity"]).items()]
+                mlo, mhi = estimate_cost(pairs)
+                if (mlo + mhi) / 2.0 <= remaining:
+                    break
+                p_mixes.pop()          # drop whole mixes, newest first
+                dropped += 1
 
-        if not p_items and not c_items:
+        if not p_items and not c_groups and not p_mixes and not c_mixes:
             raise LLMError(
                 "generated design had no plants or communities that "
                 "matched the catalogue"
@@ -901,14 +1100,16 @@ def generate_design(prompt: str, *, site_config: Optional[dict] = None,
         proj = into_project if into_project is not None else Project.create(
             name, site_config=site_config, boundary=boundary)
         p_items = _apply_density(p_items, boundary, density, keepout)
-        _place_within_boundary(proj, p_items, c_items, s_items,
+        _place_within_boundary(proj, p_items, c_groups, s_items,
                                boundary, center,
                                elev=elev, zones=zones,
                                plant_zone_for=pzone,
                                structure_zone_for=szone,
                                keepout=keepout,
                                cell_env_map=cell_env_map,
-                               fill_regions=fills)
+                               fill_regions=fills,
+                               community_mixes=c_mixes,
+                               plant_mixes=p_mixes)
         return proj, dropped
 
     spec = client.generate_spec(prompt, context, extra_hints=hints)
@@ -1472,7 +1673,7 @@ def _split_into_drifts(plant_items) -> list:
     return out
 
 
-def _place_within_boundary(project, plant_items, community_items,
+def _place_within_boundary(project, plant_items, community_groups,
                            structure_items, boundary,
                            center: tuple[float, float],
                            elev: Optional[dict] = None,
@@ -1481,7 +1682,9 @@ def _place_within_boundary(project, plant_items, community_items,
                            structure_zone_for=None,
                            keepout=None,
                            cell_env_map: Optional[dict] = None,
-                           fill_regions=None) -> None:
+                           fill_regions=None,
+                           community_mixes: Optional[list] = None,
+                           plant_mixes: Optional[list] = None) -> None:
     """Place plants (in their requested LAYOUT pattern), communities and
     structures so everything lands inside the boundary, avoids keep-out zones
     (existing trees/buildings/water structures), and spreads to use the space.
@@ -1612,23 +1815,127 @@ def _place_within_boundary(project, plant_items, community_items,
         elif positioner._bonus_cells:
             positioner.clear_bonus()
 
-    # ── Communities: only where the whole footprint fits + clears keep-out ──
-    skipped_comms = 0
-    for cid in community_items:
-        try:
-            radius = community_natural_radius(get_polyculture_by_id(cid))
-        except Exception:  # noqa: BLE001
-            radius = 1.0
-        anchor = positioner.take_best({}, None)
+    # ── Plant mixes: several species interleaved through ONE stand ─────────
+    # The generator's equivalent of the panel's "Place Mix": one pattern of
+    # positions, one species per position by weight ratio — the same
+    # assign_species("even_split") the manual pattern handler uses, so the
+    # generated stand rotates species exactly like a hand-placed one.
+    from src.polyculture import assign_species, resolve_spacing
+    for mix_i, mix in enumerate(plant_mixes or []):
+        members = mix.get("members") or []
+        if not members:
+            continue
+        species_items = [{
+            "id": pid,
+            "weight": w,
+            "spacing_m": _plant_spacing_m(pid),
+        } for pid, w in members]
+        # "max" mirrors the manual mix default: centre-to-centre spacing wide
+        # enough that no member's canopy overlaps its neighbour.
+        spacing = resolve_spacing(species_items, "max")
+        first_row = get_plant(members[0][0]) or {}
+        zone = None
+        if plant_zone_for is not None:
+            try:
+                zone = plant_zone_for(members[0][0])
+            except Exception:  # noqa: BLE001
+                zone = None
+        anchor = positioner.take_best(first_row, zone)
         if anchor is None:
             break
+        positioner.note_anchor(anchor, first_row)
+        layout_name = mix.get("layout") or _layout.DRIFT
+        positions = _layout.positions_for_layout(
+            layout_name, anchor[0], anchor[1], int(mix.get("quantity") or 1),
+            spacing, seed=1000 + mix_i)
+        positions = _clip_keepout(positions, half_canopy_m=spacing / 2.0)
+        if not positions:
+            positions = [anchor]
+        for (la, ln), pick in zip(positions,
+                                  assign_species(positions, species_items,
+                                                 "even_split")):
+            project.place_plant(pick["id"], la, ln, quantity=1)
+        positioner.reserve_near(positions, spacing)
+
+    # ── Communities: only where the whole footprint fits + clears keep-out ──
+    skipped_comms = 0
+
+    def _community_radius(cid: int) -> float:
+        try:
+            return community_natural_radius(get_polyculture_by_id(cid))
+        except Exception:  # noqa: BLE001
+            return 1.0
+
+    def _place_community_at(cid: int, anchor, radius: float) -> bool:
+        """One community instance at ``anchor`` if its footprint fits the
+        boundary and clears keep-out; reserves the footprint on success."""
         if (community_fits(boundary, anchor, radius)
                 and is_clear(anchor[0], anchor[1], keepout, radius)):
             project.place_polyculture(cid, anchor[0], anchor[1])
             positioner.note_anchor(anchor, {})
             positioner.reserve_near([anchor], radius * 2)
-        else:
-            skipped_comms += 1
+            return True
+        return False
+
+    def _community_anchors(count: int, layout_name: str, spacing: float,
+                           seed: int) -> list:
+        """``count`` candidate anchors: a pattern around the best free cell
+        when a layout was requested, else independently spread best cells.
+        Always at least one take_best anchor; pattern positions that fall
+        outside/onto keep-out are topped up with spread anchors."""
+        first = positioner.take_best({}, None)
+        if first is None:
+            return []
+        anchors: list = []
+        if layout_name and count > 1:
+            candidates = _layout.positions_for_layout(
+                layout_name, first[0], first[1], count, spacing, seed=seed)
+            anchors = _clip_keepout(candidates)[:count]
+        if not anchors:
+            anchors = [first]
+        while len(anchors) < count:
+            extra = positioner.take_best({}, None)
+            if extra is None:
+                break
+            anchors.append(extra)
+        return anchors
+
+    for group_i, group in enumerate(community_groups or []):
+        cid = group["id"] if isinstance(group, dict) else group
+        count = int(group.get("count") or 1) if isinstance(group, dict) else 1
+        layout_name = (group.get("layout") or "") if isinstance(group, dict) \
+            else ""
+        radius = _community_radius(cid)
+        anchors = _community_anchors(count, layout_name,
+                                     spacing=max(radius * 2.0, 4.0),
+                                     seed=2000 + group_i)
+        if not anchors:
+            break
+        placed = sum(1 for a in anchors if _place_community_at(cid, a, radius))
+        skipped_comms += count - placed
+
+    # ── Community mixes: N pockets, each one community picked by ratio ─────
+    # Mirrors the Communities tab's "mix as pattern": the same
+    # assign_species("even_split") the manual handler uses decides which
+    # community each pocket becomes, so a 2:1 mix over six pockets is
+    # exactly four of one and two of the other.
+    for mix_i, mix in enumerate(community_mixes or []):
+        members = mix.get("members") or []
+        if not members:
+            continue
+        radii = {cid: _community_radius(cid) for cid, _ in members}
+        spacing = max(max(radii.values()) * 2.0, 4.0)
+        anchors = _community_anchors(int(mix.get("count") or len(members)),
+                                     mix.get("layout") or "",
+                                     spacing, seed=3000 + mix_i)
+        if not anchors:
+            break
+        items = [{"id": cid, "weight": w} for cid, w in members]
+        for anchor, pick in zip(anchors,
+                                assign_species(anchors, items, "even_split")):
+            cid = int(pick["id"])
+            if not _place_community_at(cid, anchor, radii[cid]):
+                skipped_comms += 1
 
     # ── Structures: route to preferred zone (water → wet/low) ──────────────
     for struct_id in structure_items:

@@ -47,6 +47,12 @@ def http_get_json(url: str, timeout: float = 20.0) -> Optional[dict]:
     except urllib.error.URLError as exc:
         log.info("unreachable (offline?) %s: %s", url, exc.reason)
         return None
+    except TimeoutError as exc:
+        # Slow public endpoints (SoilGrids especially) time out routinely and
+        # every caller has an offline fallback — routine INFO, not a warning
+        # on the console of a working app.
+        log.info("timed out %s: %s", url, exc)
+        return None
     except Exception as exc:  # noqa: BLE001 — transport oddities degrade the same way
         log.warning("fetch failed %s: %s", url, exc)
         return None
