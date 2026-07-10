@@ -20,7 +20,16 @@ _LAT, _LNG = 53.5, -113.3       # Sherwood Park-ish; math must work anywhere
 TAN = (185, 160, 130)       # dry ground: ExG = 5  → not vegetation
 LAWN = (110, 170, 90)       # bright lawn: ExG = 140, brightness 135
 CROWN = (40, 70, 40)        # dark crown:  ExG = 60,  brightness 55
+DARK_LAWN = CROWN           # dark but *smooth* — lawn in shade / lush park
 ROOF = (120, 120, 125)      # building:    ExG = −5 → not vegetation
+
+
+def crown_texture(gx, gy):
+    """A real crown at yard scale: dark green with strong pixel-to-pixel
+    brightness swings (sunlit tufts + self-shadow). Equal-channel jitter
+    keeps ExG and hue identical to CROWN while the texture gate sees ±18."""
+    j = ((gx * 31 + gy * 17) % 37) - 18
+    return (CROWN[0] + j, CROWN[1] + j, CROWN[2] + j)
 
 
 def _center_px():
@@ -61,14 +70,15 @@ def _scene_decoder(scene):
 
 def _disk_scene(disks, background=TAN, extras=()):
     """Scene of coloured disks [(cx, cy, r, colour), …] over ``background``,
-    plus rectangles [(x0, y0, x1, y1, colour), …] painted first."""
+    plus rectangles [(x0, y0, x1, y1, colour), …] painted first. A ``colour``
+    may be a callable ``(gx, gy) -> (r, g, b)`` for textured surfaces."""
     def scene(gx, gy):
         for (cx, cy, r, colour) in disks:
             if (gx - cx) ** 2 + (gy - cy) ** 2 <= r * r:
-                return colour
+                return colour(gx, gy) if callable(colour) else colour
         for (x0, y0, x1, y1, colour) in extras:
             if x0 <= gx <= x1 and y0 <= gy <= y1:
-                return colour
+                return colour(gx, gy) if callable(colour) else colour
         return background
     return scene
 
@@ -138,7 +148,7 @@ class TestDetection(unittest.TestCase):
         cx, cy = _center_px()
         crowns = [(cx - 60, cy - 20, 20), (cx + 55, cy + 45, 12)]
         scene = _disk_scene(
-            [(x, y, r, CROWN) for (x, y, r) in crowns],
+            [(x, y, r, crown_texture) for (x, y, r) in crowns],
             extras=[(cx - 30, cy + 30, cx + 20, cy + 70, LAWN),
                     (cx - 100, cy + 60, cx - 40, cy + 100, ROOF)])
         res = tree_detect.detect_trees(
@@ -168,7 +178,7 @@ class TestDetection(unittest.TestCase):
         cx, cy = _center_px()
         r, spacing = 12, 22          # overlapping row → one connected blob
         row = [(cx - spacing, cy, r), (cx, cy, r), (cx + spacing, cy, r)]
-        scene = _disk_scene([(x, y, rr, CROWN) for (x, y, rr) in row])
+        scene = _disk_scene([(x, y, rr, crown_texture) for (x, y, rr) in row])
         res = tree_detect.detect_trees(
             _bbox_around(_LAT, _LNG, 30.0),
             _fetch_tile=_fetch_key, _decode=_scene_decoder(scene))
@@ -182,6 +192,26 @@ class TestDetection(unittest.TestCase):
             _fetch_tile=_fetch_key, _decode=_scene_decoder(scene))
         self.assertIsNotNone(res)       # imagery read fine — an honest zero
         self.assertEqual(res["trees"], [])
+
+    def test_dark_smooth_lawn_is_not_trees(self):
+        # The V2.26 park regression: a big *dark but smooth* patch of grass
+        # (shaded / lush lawn) passes the darkness split but must fail the
+        # texture gate — only the genuinely rough crown is a tree.
+        cx, cy = _center_px()
+        scene = _disk_scene(
+            [(cx + 60, cy - 30, 16, crown_texture)],
+            background=LAWN,
+            extras=[(cx - 110, cy - 20, cx - 10, cy + 60, DARK_LAWN)])
+        res = tree_detect.detect_trees(
+            _bbox_around(_LAT, _LNG, 30.0),
+            _fetch_tile=_fetch_key, _decode=_scene_decoder(scene))
+        self.assertIsNotNone(res)
+        self.assertEqual(len(res["trees"]), 1)
+        tlat, tlng = tree_detect._global_px_to_latlng(cx + 60.5, cy - 29.5,
+                                                      _Z)
+        t = res["trees"][0]
+        self.assertLess(_dist_m(tlat, tlng, t["lat"], t["lng"]),
+                        3.5 * res["m_per_px"])
 
     def test_fetch_failure_is_failure_not_zero(self):
         res = tree_detect.detect_trees(
@@ -279,6 +309,55 @@ class TestImportTail(unittest.TestCase):
             self._res([self._tree(_LAT, near_lng)]), project)
         self.assertEqual(out["added"], 0)
         self.assertEqual(len(project["features"]), 1)
+
+
+try:
+    import os
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PyQt6.QtGui import QImage
+    from PyQt6.QtCore import QBuffer, QIODevice
+    _HAVE_QT = True
+except ImportError:  # pragma: no cover — CI without Qt
+    _HAVE_QT = False
+
+
+@unittest.skipUnless(_HAVE_QT, "PyQt6 not installed")
+class TestQImageDecoder(unittest.TestCase):
+    """The production tile decoder (tree_detect_flow._qimage_decode) — the
+    only piece of the pipeline the synthetic-scene tests can't reach."""
+
+    def _png_bytes(self, img):
+        buf = QBuffer()
+        buf.open(QIODevice.OpenModeFlag.WriteOnly)
+        img.save(buf, "PNG")
+        return bytes(buf.data())
+
+    def _pattern_image(self, w, h):
+        img = QImage(w, h, QImage.Format.Format_RGB888)
+        for y in range(h):
+            for x in range(w):
+                img.setPixel(x, y, (x * 7 % 256) << 16 | (y * 3 % 256) << 8
+                             | ((x + y) % 256))
+        return img
+
+    def test_roundtrip_and_scanline_repack(self):
+        from src.tree_detect_flow import _qimage_decode
+        # 250 px wide → bytesPerLine padding → exercises the repack branch.
+        for w, h in ((64, 64), (250, 40)):
+            img = self._pattern_image(w, h)
+            decoded = _qimage_decode(self._png_bytes(img))
+            self.assertIsNotNone(decoded)
+            dw, dh, rgb = decoded
+            self.assertEqual((dw, dh), (w, h))
+            self.assertEqual(len(rgb), w * h * 3)
+            for (x, y) in ((0, 0), (w - 1, h - 1), (w // 2, h // 3)):
+                i = (y * w + x) * 3
+                self.assertEqual((rgb[i], rgb[i + 1], rgb[i + 2]),
+                                 (x * 7 % 256, y * 3 % 256, (x + y) % 256))
+
+    def test_garbage_bytes_decode_to_none(self):
+        from src.tree_detect_flow import _qimage_decode
+        self.assertIsNone(_qimage_decode(b"not an image"))
 
 
 class TestAddFeaturesOverrides(unittest.TestCase):

@@ -23,8 +23,16 @@ mirroring the optional-dependency policy of ``footprint_extract``):
   2. **Canopy vs lawn split** — tree crowns image darker than mowed grass
      (self-shading); Otsu's threshold on the brightness histogram of the
      vegetation pixels finds the split adaptively per property, with guards
-     for the all-forest and all-lawn degenerate cases.
-  3. **Crown separation** — connected canopy blobs get a chamfer distance
+     for the all-forest and all-lawn degenerate cases. The split runs on
+     3×3-smoothed brightness so a single textured surface's own noise can't
+     fool Otsu into "splitting" it (a wooded lot must not speckle apart).
+  3. **Texture gate** — darkness alone over-detects on unevenly lit grass
+     (a shaded or lush park lawn is dark too), so canopy pixels must also be
+     locally *rough*: crowns have big pixel-to-pixel brightness swings
+     (sunlit tufts + self-shadow) where mowed lawn — even dark lawn — is
+     smooth. A one-pixel dilation keeps small calm pockets inside real
+     crowns.
+  4. **Crown separation** — connected canopy blobs get a chamfer distance
      transform and greedy peak-picking (disk packing), so a shelterbelt row
      becomes a line of individual trees instead of one 100 m monster.
 
@@ -71,6 +79,10 @@ _EXG_MIN = 18           # vegetation gate: 2g − r − b at least this
 _G_MIN = 30             # and not near-black
 _OTSU_MIN_SEPARATION = 18   # dark/bright class means closer than this = no split
 _ALL_FOREST_MEAN = 95   # uniformly dark vegetation ⇒ treat all of it as canopy
+# Crown texture: min 3×3 brightness range for a canopy pixel. Mowed lawn at
+# this scale (incl. JPEG noise) ranges ~2–8; crowns 15–40. Smooth dark lawn
+# was the V2.26 over-detection failure — the park that hit the safety cap.
+_MIN_CANOPY_TEXTURE = 10
 _MIN_CROWN_RADIUS_M = 0.9   # smaller blobs are shrubs/noise — skip
 _MAX_CROWN_RADIUS_M = 12.0
 _MAX_TREES = 400        # flood guard for a bad threshold day
@@ -138,24 +150,52 @@ def _fetch_tile_bytes(zoom: int, x: int, y: int) -> Optional[bytes]:
 # ── Mask building ────────────────────────────────────────────────────────────
 
 def _vegetation_and_brightness(rgb: bytes, w: int, h: int) -> tuple:
-    """One pass over the mosaic: a vegetation mask (bytearray of 0/1) and a
-    256-bin brightness histogram of the vegetation pixels (brightness stored
-    into the mask's parallel bytearray for the later split)."""
+    """One pass over the mosaic: a vegetation mask (bytearray of 0/1) and the
+    per-pixel brightness of EVERY pixel (the texture gate reads neighbours,
+    which may be background). The split histogram comes later, from the
+    smoothed values (:func:`_smooth_brightness`)."""
     veg = bytearray(w * h)
     bright = bytearray(w * h)
-    hist = [0] * 256
     idx = 0
     for i in range(w * h):
         r = rgb[idx]
         g = rgb[idx + 1]
         b = rgb[idx + 2]
         idx += 3
+        bright[i] = (r + 2 * g + b) >> 2
         if g >= _G_MIN and (2 * g - r - b) >= _EXG_MIN and g > b:
             veg[i] = 1
-            lum = (r + 2 * g + b) >> 2
-            bright[i] = lum
-            hist[lum] += 1
-    return veg, bright, hist
+    return veg, bright
+
+
+def _smooth_brightness(veg: bytearray, bright: bytearray,
+                       w: int, h: int) -> tuple:
+    """3×3 box-smoothed brightness for the vegetation pixels, plus its
+    histogram. The canopy/lawn *split* runs on these values: within one
+    surface, smoothing collapses crown texture (±20 pixel-to-pixel) to a
+    tight cluster, so Otsu can't mistake a single textured canopy's noise
+    for two brightness classes — while genuine lawn-vs-crown contrast
+    survives smoothing untouched. The texture gate keeps reading the RAW
+    ``bright`` values; only the split uses these."""
+    smooth = bytearray(w * h)
+    hist = [0] * 256
+    for i in range(w * h):
+        if not veg[i]:
+            continue
+        x, y = i % w, i // w
+        acc = n = 0
+        for yy in (y - 1, y, y + 1):
+            if yy < 0 or yy >= h:
+                continue
+            base = yy * w
+            for xx in (x - 1, x, x + 1):
+                if 0 <= xx < w:
+                    acc += bright[base + xx]
+                    n += 1
+        v = acc // n
+        smooth[i] = v
+        hist[v] += 1
+    return smooth, hist
 
 
 def _otsu_threshold(hist: list) -> Optional[int]:
@@ -213,6 +253,54 @@ def _canopy_mask(veg: bytearray, bright: bytearray, hist: list,
     if mean < _ALL_FOREST_MEAN:
         return bytearray(veg)       # uniformly dark ⇒ wooded, keep it all
     return None                     # uniformly bright ⇒ lawn, nothing to find
+
+
+def _texture_mask(mask: bytearray, bright: bytearray, w: int, h: int,
+                  min_range: int = _MIN_CANOPY_TEXTURE) -> bytearray:
+    """Drop canopy-mask pixels that sit in *smooth* imagery. Crowns at yard
+    scale are rough (3×3 brightness range ≥ ``min_range``); mowed lawn is
+    smooth even where it images dark — the V2.26 park failure that blanketed
+    a lawn in detections. A one-pixel dilation of the rough set (within the
+    mask) keeps small calm pockets inside real crowns; the thin smooth-patch
+    *rims* that survive dilation are too narrow to pack a crown and die in
+    the min-size / min-radius filters downstream."""
+    rough = bytearray(w * h)
+    for i in range(w * h):
+        if not mask[i]:
+            continue
+        x, y = i % w, i // w
+        lo = hi = bright[i]
+        for yy in (y - 1, y, y + 1):
+            if yy < 0 or yy >= h:
+                continue
+            base = yy * w
+            for xx in (x - 1, x, x + 1):
+                if xx < 0 or xx >= w:
+                    continue
+                v = bright[base + xx]
+                if v < lo:
+                    lo = v
+                elif v > hi:
+                    hi = v
+        if hi - lo >= min_range:
+            rough[i] = 1
+    out = bytearray(w * h)
+    for i in range(w * h):
+        if not mask[i]:
+            continue
+        if rough[i]:
+            out[i] = 1
+            continue
+        x, y = i % w, i // w
+        for yy in (y - 1, y, y + 1):        # 1-px dilation of the rough set
+            if yy < 0 or yy >= h:
+                continue
+            base = yy * w
+            if any(rough[base + xx] for xx in (x - 1, x, x + 1)
+                   if 0 <= xx < w):
+                out[i] = 1
+                break
+    return out
 
 
 # ── Blob analysis ────────────────────────────────────────────────────────────
@@ -380,13 +468,15 @@ def detect_trees(bbox: dict, *,
     min_r_px = _MIN_CROWN_RADIUS_M / mpp
     min_area_px = max(4, int(math.pi * min_r_px * min_r_px))
 
-    veg, bright, hist = _vegetation_and_brightness(bytes(mosaic), w, h)
-    mask = _canopy_mask(veg, bright, hist, w, h)
+    veg, bright = _vegetation_and_brightness(bytes(mosaic), w, h)
+    smooth, hist = _smooth_brightness(veg, bright, w, h)
+    mask = _canopy_mask(veg, smooth, hist, w, h)
     base = {"zoom": zoom, "m_per_px": mpp, "tiles_ok": tiles_ok,
             "tiles_failed": tiles_failed, "capped": False,
             "partial": partial}
     if mask is None:
         return {**base, "trees": []}
+    mask = _texture_mask(mask, bright, w, h)
 
     origin_x = tx0 * _TILE_PX       # mosaic (0,0) in global pixel coords
     origin_y = ty0 * _TILE_PX
@@ -493,8 +583,9 @@ def import_detected_trees(res: Optional[dict], project_dict: dict, *,
                 "and press Delete to drop any false hits (shrub beds, "
                 "shadows).")
     elif not items:
-        msg += (" Crowns need to read as darker-green blobs against the "
-                "ground — leaf-off deciduous trees may be invisible in the "
-                "photo. Mark or draw missed trees by hand below.")
+        msg += (" Crowns need to read as darker, textured green blobs "
+                "against the ground — leaf-off deciduous trees may be "
+                "invisible in the photo. Mark or draw missed trees by "
+                "hand below.")
     return {"added": added, "kept": len(kept), "found": len(items),
             "message": msg}
