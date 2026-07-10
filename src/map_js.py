@@ -370,7 +370,7 @@ def undo_custom_shape_by_id(shape_id: str) -> str:
     return f"undoCustomShapeById({_jsstr(shape_id)});"
 
 
-# ── Sun / sector / wind / season overlays ───────────────────────────────────
+# ── Sun / wind overlays ──────────────────────────────────────────────────────
 
 def draw_sun_path(data: dict, lat: Optional[float] = None,
                    lng: Optional[float] = None) -> str:
@@ -383,28 +383,12 @@ def clear_sun_path() -> str:
     return "clearSunPath();"
 
 
-def draw_sectors(data: dict, lat: Optional[float] = None,
-                  lng: Optional[float] = None) -> str:
-    if lat is not None and lng is not None:
-        return f"drawSectors({_jsobj(data)}, {lat}, {lng});"
-    return f"drawSectors({_jsobj(data)});"
-
-
-def clear_sectors() -> str:
-    return "clearSectors();"
-
-
 def draw_wind_overlay(data: dict) -> str:
     return f"drawWindOverlay({_jsobj(data)});"
 
 
 def clear_wind_overlay() -> str:
     return "clearWindOverlay();"
-
-
-def set_season_view(season: str, pid_visibility: dict) -> str:
-    """Highlight plants in/out of season for a given month name."""
-    return f"setSeasonView({_jsstr(season)}, {_jslit(pid_visibility)});"
 
 
 def set_bee_forage_view(bee_label: str, pid_style: dict) -> str:

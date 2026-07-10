@@ -215,7 +215,7 @@ class MainToolbar(QToolBar):
         self._act_select.setStatusTip("Drag a box to select plants, structures, boundaries…")
         self._act_select.setToolTip(
             "Box-select: drag a rectangle on the map to select everything inside\n"
-            "(plants, structures, boundaries, sun sectors). Then drag the\n"
+            "(plants, structures, boundaries). Then drag the\n"
             "selection to move it, or press Delete. (Shift+drag works any time too.)"
         )
         self._act_select.triggered.connect(self._on_select_toggled)
@@ -231,14 +231,14 @@ class MainToolbar(QToolBar):
 
         self.addSeparator()
 
-        # Undo (Ctrl+Z) / Redo (Ctrl+Shift+Z) — reverse / re-apply the last
-        # action. Distinct from Cancel, which only aborts the *current*
-        # in-progress drawing operation (e.g. mid-boundary). Held as
+        # Undo (Ctrl+Z) / Redo (Ctrl+Shift+Z or Ctrl+Y) — reverse / re-apply
+        # the last action. Distinct from Cancel, which only aborts the
+        # *current* in-progress drawing operation (e.g. mid-boundary). Held as
         # attributes + disabled initially so set_undo_redo_enabled() can grey
         # them out when the matching stack is empty.
-        # Shortcuts live on the Edit-menu actions (Ctrl+Z / Ctrl+Shift+Z) to
-        # avoid an ambiguous-shortcut clash; these toolbar buttons are
-        # click-only, with the key shown in the status tip.
+        # Shortcuts live on MainWindow's window-level QActions (built in
+        # app.py:_build_menu) to avoid an ambiguous-shortcut clash; these
+        # toolbar buttons are click-only, with the key shown in the status tip.
         self._act_undo = QAction("⤺ Undo", self)
         self._act_undo.setStatusTip("Undo the last action (Ctrl+Z)")
         self._act_undo.setToolTip(
@@ -250,8 +250,10 @@ class MainToolbar(QToolBar):
         self.addAction(self._act_undo)
 
         self._act_redo = QAction("⤻ Redo", self)
-        self._act_redo.setStatusTip("Redo the last undone action (Ctrl+Shift+Z)")
-        self._act_redo.setToolTip("Re-apply the action you just undid (Ctrl+Shift+Z).")
+        self._act_redo.setStatusTip(
+            "Redo the last undone action (Ctrl+Shift+Z or Ctrl+Y)")
+        self._act_redo.setToolTip(
+            "Re-apply the action you just undid (Ctrl+Shift+Z or Ctrl+Y).")
         self._act_redo.setEnabled(False)
         self._act_redo.triggered.connect(self.redo_requested)
         self.addAction(self._act_redo)

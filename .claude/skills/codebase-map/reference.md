@@ -76,7 +76,6 @@ added; trust the source over this list).
 | `src/analysis_panel.py` | Side-panel tab for site analysis overlays |
 | `src/planning_panel.py` | Side-panel tab for planning and analysis features |
 | `src/wind_rose_widget.py` | a small QPainter wind-rose (V1.67) |
-| `src/forage_calendar_widget.py` | a small QPainter bloom-succession chart (V2.13) |
 | `src/phenology_widget.py` | the "what's happening now" dashboard UI (F51) |
 | `src/docent_widget.py` | the docent / presentation-mode UI (F52) |
 | `src/field_study_widget.py` | the Field Study quiz runner UI (F48) |

@@ -501,17 +501,6 @@ class TestSnapshotUndoExhaustive(unittest.TestCase):
         self.w._do_redo()
         self.assertIsNotNone(self.w._active_sun_state)
 
-    def test_sectors_round_trip(self):
-        self.w._clear_undo()
-        self.w._pending_sector_config = {"sectors": [{"name": "Morning"}]}
-        self.w._map_events._on_sector_anchor_placed(53.5, -113.5)
-        self.assertIsNotNone(self.w._active_sector_state)
-        self._assert_snapshot_top()
-        self.w._do_undo()
-        self.assertIsNone(self.w._active_sector_state)
-        self.w._do_redo()
-        self.assertIsNotNone(self.w._active_sector_state)
-
     def test_site_pin_round_trip(self):
         self.w._clear_undo()
 

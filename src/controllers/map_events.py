@@ -489,6 +489,8 @@ class MapEventRouter:
             }
         })
         self._main._mark_modified()
+        # Mirror into Planning → Notes ("Notes on the map" list).
+        self._main._sync_planning_panel()
 
     @undoable("remove note")
     def _on_annotation_removed(self, ann_id: str):
@@ -497,6 +499,7 @@ class MapEventRouter:
             if f.get("properties", {}).get("annotation_id") != ann_id
         ]
         self._main._mark_modified()
+        self._main._sync_planning_panel()
 
     # ── Plant move handlers ──────────────────────────────────────────────────
 
@@ -610,7 +613,7 @@ class MapEventRouter:
     def _on_mouse_moved(self, lat: float, lng: float):
         self._main._sb_coords.setText(f"Lat: {lat:.5f} , Lng: {lng:.5f}")
 
-    # ── Sun-path / sector anchor handlers ───────────────────────────────────
+    # ── Sun-path anchor handlers ─────────────────────────────────────────────
 
     @undoable("sun path")
     def _on_sun_anchor_placed(self, lat: float, lng: float):
@@ -619,31 +622,11 @@ class MapEventRouter:
         if self._main._pending_sun_config:
             self._main._render_sun_path(self._main._pending_sun_config, lat, lng)
 
-    @undoable("sun sectors")
-    def _on_sector_anchor_placed(self, lat: float, lng: float):
-        """User placed sector anchor; now draw."""
-        if self._main._pending_sector_config:
-            self._main.map_widget.draw_sectors(
-                self._main._pending_sector_config, lat, lng,
-            )
-            names = [s["name"] for s in
-                     self._main._pending_sector_config.get("sectors", [])]
-            self._main._set_mode_label(f"Sectors: {', '.join(names)}")
-            # Remember the rendered overlay so undo/redo can reproduce it.
-            self._main._active_sector_state = (
-                self._main._pending_sector_config, lat, lng)
-            self._main._pending_sector_config = None
-
     @undoable("remove sun path")
     def _on_sun_path_removed(self):
         self._main.map_widget.clear_sun_path()
         self._main._active_sun_state = None
         self._main._set_mode_label("Sun path removed")
-
-    @undoable("clear sun sectors")
-    def _on_sectors_cleared(self):
-        self._main.map_widget.clear_sectors()
-        self._main._active_sector_state = None
 
     def _on_anchor_cancelled(self, mode: str):
         self._main.toolbar.reset_draw_buttons()
@@ -652,18 +635,6 @@ class MapEventRouter:
             self._main.plant_panel.clear_pending_polyculture()
         except Exception:
             pass
-
-    def _on_sector_group_removed(self, sid: str):
-        self._main._set_mode_label("Sector group removed")
-
-    def _on_sector_group_moved(self, sid: str, lat: float, lng: float):
-        pass  # could persist if sectors were saved to project file
-
-    def _on_sector_group_rotated(self, sid: str, rotation_deg: float):
-        pass
-
-    def _on_sector_group_resized(self, sid: str, radius_m: float):
-        pass
 
     # ── Site pin handlers ───────────────────────────────────────────────────
 
@@ -1403,7 +1374,7 @@ class MapEventRouter:
         from src import building_flow
         building_flow.start_building_download(self._main)
 
-    # ── Sun / sector / contour / wind analysis-overlay request slots ────────
+    # ── Sun / contour / wind analysis-overlay request slots ─────────────────
 
     def _on_sun_path_requested(self, config: dict):
         """A1: Enter anchor-placement mode; render after user clicks the map."""
@@ -1412,14 +1383,6 @@ class MapEventRouter:
         self._main.map_widget.enter_sun_anchor_mode()
         self._main._set_mode_label(
             "Click map to place sun path anchor — right-click to cancel"
-        )
-
-    def _on_sector_requested(self, config: dict):
-        """A2: Enter anchor-placement mode; draw after user clicks the map."""
-        self._main._pending_sector_config = config
-        self._main.map_widget.enter_sector_anchor_mode()
-        self._main._set_mode_label(
-            "Click map to place sector anchor — right-click to cancel"
         )
 
     def _on_contour_requested(self, config: dict):
@@ -1539,50 +1502,7 @@ class MapEventRouter:
         self._main._mark_modified()
         self._main._set_mode_label("Site data ready")
 
-    # ── Season view + growth timeline ────────────────────────────────────────
-
-    def _on_season_changed(self, season: str):
-        """Apply seasonal view to the map — adjusts plant visibility by type."""
-        from src.db.plants import get_plant
-
-        # Seasonal opacity rules based on deciduous_evergreen field
-        # Summer: everything full
-        # Winter: deciduous → 0.15, herbaceous → 0.05, evergreen → 1.0
-        # Spring/Fall: intermediate
-        season_opacity = {
-            "Summer":  {"deciduous": 1.0, "evergreen": 1.0, "herbaceous": 1.0},
-            "Spring":  {"deciduous": 0.7, "evergreen": 1.0, "herbaceous": 0.6},
-            "Fall":    {"deciduous": 0.5, "evergreen": 1.0, "herbaceous": 0.4},
-            "Winter":  {"deciduous": 0.15, "evergreen": 1.0, "herbaceous": 0.05},
-        }
-        rules = season_opacity.get(season, season_opacity["Summer"])
-
-        pid_vis = {}
-        plant_cache = {}
-        for p in self._main._placed_plants:
-            pid = p["plant_id"]
-            if pid not in plant_cache:
-                plant = get_plant(pid)
-                if plant:
-                    de = (plant.get("deciduous_evergreen") or "").lower()
-                    if de in ("evergreen",):
-                        plant_cache[pid] = "evergreen"
-                    elif de in ("deciduous",):
-                        plant_cache[pid] = "deciduous"
-                    else:
-                        # Herbs, groundcover, etc. treated as herbaceous
-                        ptype = plant.get("plant_type", "herb")
-                        if ptype in ("tree", "shrub"):
-                            plant_cache[pid] = "deciduous"
-                        else:
-                            plant_cache[pid] = "herbaceous"
-                else:
-                    plant_cache[pid] = "herbaceous"
-
-            pid_vis[pid] = rules[plant_cache[pid]]
-
-        self._main.map_widget.set_season_view(season, pid_vis)
-        self._main._set_mode_label(f"Season: {season}")
+    # ── Growth timeline ──────────────────────────────────────────────────────
 
     def _on_timeline_year_changed(self, year: int):
         """Compute per-plant scale factors for the timeline year and send to JS."""

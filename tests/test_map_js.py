@@ -110,9 +110,8 @@ class TestJsEntryPointsExist(unittest.TestCase):
         "loadHedgerow", "undoHedgerowById",
         "loadShape", "undoCustomShapeById",
         "drawSunPath", "clearSunPath",
-        "drawSectors", "clearSectors",
         "drawWindOverlay", "clearWindOverlay",
-        "setSeasonView", "setTimelineYearByPlantId",
+        "setTimelineYearByPlantId",
         "setBeeForageView", "clearBeeForageView",
         "clearContours", "undoLastContour", "finishContour",
         "emitTerrainBboxFromViewport", "emitTerrainBboxFromBoundary",
@@ -438,23 +437,13 @@ class TestOverlays(unittest.TestCase):
         out = mj.draw_sun_path({"hours": []}, lat=53.5, lng=-113.5)
         self.assertIn(", 53.5, -113.5", out)
 
-    def test_draw_sectors_pair(self):
-        self.assertTrue(mj.draw_sectors({}).startswith("drawSectors(JSON.parse("))
-        self.assertIn(", 1.0, 2.0", mj.draw_sectors({}, 1.0, 2.0))
-
     def test_clear_overlays(self):
         self.assertEqual(mj.clear_sun_path(), "clearSunPath();")
-        self.assertEqual(mj.clear_sectors(), "clearSectors();")
         self.assertEqual(mj.clear_wind_overlay(), "clearWindOverlay();")
 
     def test_draw_wind_overlay(self):
         out = mj.draw_wind_overlay({"speed_kts": 8})
         self.assertTrue(out.startswith("drawWindOverlay(JSON.parse("))
-
-    def test_set_season_view(self):
-        out = mj.set_season_view("July", {"7": True, "42": False})
-        self.assertIn('"July"', out)
-        self.assertIn('"7": true', out)
 
     def test_set_timeline_year_by_plant_id(self):
         out = mj.set_timeline_year_by_plant_id(5, {"7": 0.4})

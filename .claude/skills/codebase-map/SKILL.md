@@ -83,7 +83,7 @@ inventory: [reference.md](reference.md).
 `src/placement_controls.py`), `src/polyculture_panel.py`,
 `src/structure_panel.py`, `src/site_panel.py`, `src/analysis_panel.py`,
 `src/planning_panel.py`, plus small QPainter widgets
-(`src/wind_rose_widget.py`, `src/forage_calendar_widget.py`,
+(`src/wind_rose_widget.py`,
 `src/phenology_widget.py`, `src/docent_widget.py`, `src/field_study_widget.py`,
 `src/lesson_track_widget.py`). Widgets draw; they never compute — the maths
 lives in a Qt-free sibling module.

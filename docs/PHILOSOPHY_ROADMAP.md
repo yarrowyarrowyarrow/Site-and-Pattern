@@ -178,8 +178,11 @@ clamped to `succession.timeline_max_years`. Reuse the 3D window's offscreen capt
 (the same one the "yard photo" bake uses). **First slice:** a 2×2 of 2D canopy renders.
 
 ### ✅ Forage calendar — whole-design bloom succession + gaps — *Shipped (P6, P9)*
-**Shipped** as `src/forage_calendar.py` (Qt-free core) + `src/forage_calendar_widget.py` (a QPainter
-chart) behind a new **Analysis → Forage** tab (V2.13). The Habitat Value Score already rewarded *bloom
+**Shipped** as `src/forage_calendar.py` (Qt-free core) + a QPainter chart behind an
+**Analysis → Forage** tab (V2.13). The dedicated tab (and chart widget) was retired in V2.25 —
+Planning → Wildlife covers the same month-by-month bloom/gap question, the Habitat tab's
+"fill nectar gaps" tips carry the gap-filling suggestions, and the Qt-free core still powers
+the docent narration. The Habitat Value Score already rewarded *bloom
 continuity* as a hidden sub-score; this makes it **legible**: a 12-month bar of how many plants flower
 each month (growing season shaded), the pollinator **gap months** flagged red, and a per-plant
 spring→fall **succession** band coloured by flower colour. Honest per P9 — wind-pollinated graminoids

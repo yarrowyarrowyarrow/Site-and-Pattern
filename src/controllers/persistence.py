@@ -332,7 +332,7 @@ class PersistenceController:
 
     def _capture_view_state(self) -> dict:
         """The transient analysis overlays that aren't part of project features
-        (shade, live wind-shadow, sun path, sun sectors, site pin). Scalars are
+        (shade, live wind-shadow, sun path, site pin). Scalars are
         read fresh; the shade payload is held by reference (never mutated in
         place), so this is cheap to call on every checkpoint."""
         m = self._main
@@ -348,7 +348,6 @@ class PersistenceController:
                 "angle": getattr(m, "_wind_shadow_angle", None),
             },
             "sun": getattr(m, "_active_sun_state", None),
-            "sectors": getattr(m, "_active_sector_state", None),
             "pin": {"lat": sc.get("latitude"), "lng": sc.get("longitude"),
                     "label": sc.get("pin_label")},
         }
@@ -404,6 +403,9 @@ class PersistenceController:
         m._store.rebuild_index()
         self.render_project_to_map(fit_view=False)
         self._apply_view_state(view)
+        # Feature-derived panel readouts (incl. the Planning → Notes map-note
+        # list) track the restored features.
+        m._sync_planning_panel()
 
     def _apply_view_state(self, target: dict):
         """Re-apply the transient overlays to ``target``. Called right after
@@ -434,14 +436,6 @@ class PersistenceController:
         else:
             m.map_widget.clear_sun_path()
             m._active_sun_state = None
-
-        tsec = target.get("sectors")
-        if tsec:
-            m.map_widget.draw_sectors(tsec[0], tsec[1], tsec[2])
-            m._active_sector_state = tsec
-        else:
-            m.map_widget.clear_sectors()
-            m._active_sector_state = None
 
     def _redraw_shade(self, payload, opacity):
         """Redraw a cached shade overlay synchronously (no worker) — raster or

@@ -314,22 +314,26 @@ class SitePanel(QWidget):
         outer.setSpacing(0)
 
         from src.fill_tab_widget import FillTabWidget
-        tabs = FillTabWidget()
+        # Four wide labels on a narrow panel — opt into shrink-to-fit (with
+        # elide) so a crowded strip compresses evenly instead of clipping the
+        # first tab off-screen (the "te Information" bug when Field Notes was
+        # selected; same fix as the Planning panel's six tabs).
+        tabs = FillTabWidget(allow_shrink=True)
         tabs.setDocumentMode(True)
         tabs.tabBar().setUsesScrollButtons(False)
         tabs.tabBar().setExpanding(True)
-        # Tighter tab padding than the stock sub-tab style: four labels — one
-        # of them "Existing Features & Shade" — have to fit the panel's 260 px
-        # minimum (same trick as the Analysis strip).
+        tabs.tabBar().setElideMode(Qt.TextElideMode.ElideRight)
+        # Tighter tab padding than the stock sub-tab style: four labels have
+        # to fit the panel's 260 px minimum (same trick as the Analysis strip).
         tabs.setStyleSheet(inner_tab_stylesheet()
                            + "QTabBar::tab { padding: 4px 5px; }")
         outer.addWidget(tabs)
 
-        self._build_info_page(self._add_scroll_page(tabs, "Site Information"))
+        self._build_info_page(self._add_scroll_page(tabs, "Site Info"))
         self._build_slope_page(self._add_scroll_page(tabs, "Slope"))
         # "&&" — a single "&" is a Qt mnemonic marker and vanishes from view.
         self._build_shade_page(
-            self._add_scroll_page(tabs, "Existing Features && Shade"))
+            self._add_scroll_page(tabs, "Features && Shade"))
         self._build_field_notes_page(self._add_scroll_page(tabs, "Field Notes"))
 
     def _add_scroll_page(self, tabs, title):

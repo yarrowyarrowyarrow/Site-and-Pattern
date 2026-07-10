@@ -1,4 +1,4 @@
-// html/map/04-tools.js — canvas renderer, geometry utilities, snap-to-grid, canopy preview, growth timeline, season view, measurement, annotations.
+// html/map/04-tools.js — canvas renderer, geometry utilities, snap-to-grid, canopy preview, growth timeline, measurement, annotations.
 //
 // Split from the former single map.html <script> (V1.64). These are
 // CLASSIC scripts loaded sequentially by map.html — NOT ES modules —
@@ -191,47 +191,6 @@
 
       // Rebuild canopy if visible (canopy scales with markers)
       if (canopyVisible) rebuildCanopyGroup();
-    }
-
-    // ── Season view ─────────────────────────────────────────────────────────
-    // NASA GIBS MODIS Terra True Color — free, no key, max zoom 9 (blurry at high zoom)
-    var _GIBS_DATES = {
-      'Spring': '2023-05-10',
-      'Summer': null,             // no overlay; normal map IS summer
-      'Fall':   '2023-10-05',
-      'Winter': '2023-01-20'
-    };
-
-    function setSeasonView(season, plantVisData) {
-      // Remove any existing seasonal overlay
-      if (seasonOverlay) { map.removeLayer(seasonOverlay); seasonOverlay = null; }
-      // Reset CSS filter
-      var tilePane = document.querySelector('.leaflet-tile-pane');
-      if (tilePane) tilePane.style.filter = '';
-
-      var gibsDate = _GIBS_DATES[season];
-      if (gibsDate) {
-        var url = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/' +
-                  'MODIS_Terra_CorrectedReflectance_TrueColor/default/' +
-                  gibsDate + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg';
-        seasonOverlay = L.tileLayer(url, {
-          attribution: 'NASA GIBS',
-          maxNativeZoom: 9,
-          maxZoom: 22,
-          opacity: 0.72,
-          tileSize: 256
-        }).addTo(map);
-      }
-
-      // Adjust plant marker opacity based on season + plant type
-      Object.keys(plantMarkers).forEach(function(mid) {
-        var m = plantMarkers[mid];
-        if (!m || !m._pd) return;
-        var vis = plantVisData[m._pd.plantId];
-        if (vis !== undefined) {
-          m.setStyle({fillOpacity: vis * 0.35, opacity: vis});
-        }
-      });
     }
 
     // ── Measurement tool ───────────────────────────────────────────────────────

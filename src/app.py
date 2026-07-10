@@ -27,7 +27,7 @@ from PyQt6.QtWidgets import (
     QInputDialog, QTabWidget,
 )
 from PyQt6.QtCore import Qt, QTimer, QThread, QEvent
-from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtGui import QAction, QKeySequence, QShortcut
 
 from src.map_widget       import MapWidget
 from src.plant_panel        import PlantPanel
@@ -141,7 +141,6 @@ class MainWindow(QMainWindow):
         # Pending anchor-mode configs (set when entering anchor mode, cleared after render)
         self._pending_sun_config:    dict | None = None
         self._pending_sun_anchor:    tuple | None = None
-        self._pending_sector_config: dict | None = None
         # Community-pattern stash: when set, _on_pattern_placed expands
         # each anchor position into one full community (instead of one
         # plant). Set by _enter_polyculture_pattern_mode, cleared on
@@ -408,18 +407,27 @@ class MainWindow(QMainWindow):
     def _build_menu(self):
         mb = self.menuBar()
 
-        # Edit menu
-        edit_menu = mb.addMenu("&Edit")
-
-        self._act_undo = edit_menu.addAction("&Undo")
+        # Undo/redo live on the Draw toolbar (the visible buttons); the menu
+        # bar stays File / View / Help (V2.25 — the Edit menu duplicated the
+        # toolbar and was dropped). The QActions still exist, parented to the
+        # window, so the keyboard shortcuts keep working and
+        # PersistenceController._sync_undo_actions can grey them out in step
+        # with the toolbar buttons.
+        self._act_undo = QAction("Undo", self)
         self._act_undo.setShortcut(QKeySequence.StandardKey.Undo)
         self._act_undo.setEnabled(False)
         self._act_undo.triggered.connect(self._do_undo)
+        self.addAction(self._act_undo)
 
-        self._act_redo = edit_menu.addAction("&Redo")
-        self._act_redo.setShortcut(QKeySequence.StandardKey.Redo)
+        self._act_redo = QAction("Redo", self)
+        # Both conventions: Ctrl+Shift+Z (shown on the toolbar) and the
+        # platform-standard binding (Ctrl+Y on Windows). Qt drops duplicates.
+        self._act_redo.setShortcuts(
+            [QKeySequence("Ctrl+Shift+Z"), QKeySequence("Ctrl+Y")]
+            + QKeySequence.keyBindings(QKeySequence.StandardKey.Redo))
         self._act_redo.setEnabled(False)
         self._act_redo.triggered.connect(self._do_redo)
+        self.addAction(self._act_redo)
 
         # File menu
         file_menu = mb.addMenu("&File")
@@ -673,9 +681,6 @@ class MainWindow(QMainWindow):
         # state and record an undo step (not straight to the map widget).
         self.analysis_panel.sun_path_cleared.connect(
             self._map_events._on_sun_path_removed)
-        self.analysis_panel.sector_requested.connect(self._on_sector_requested)
-        self.analysis_panel.sector_cleared.connect(
-            self._map_events._on_sectors_cleared)
         # (Manual contour drawing moved to Site panel — wired below.)
         # Auto-terrain controls live on the Site panel now (alongside the
         # single-point Elevation/slope readout) — the request / clear /
@@ -769,7 +774,6 @@ class MainWindow(QMainWindow):
             lambda *a: snow_microsite_flow.on_plants_changed(self))
         b.selection_moved.connect(
             lambda *a: snow_microsite_flow.on_plants_changed(self))
-        self.analysis_panel.season_changed.connect(self._on_season_changed)
         # "What the bee sees" (F37): the Bees tab drives the map recolour direct
         # (payload is built panel-side, so no new MainWindow method is needed).
         self.analysis_panel.bee_map_overlay_requested.connect(
@@ -790,15 +794,10 @@ class MainWindow(QMainWindow):
         b.boundary_props_changed.connect(self._on_boundary_props_changed)
         b.boundary_removed.connect(self._on_boundary_removed)
 
-        # Map → sun path / sector anchor & removal
+        # Map → sun path anchor & removal
         b.sun_anchor_placed.connect(self._on_sun_anchor_placed)
         b.sun_path_removed.connect(self._on_sun_path_removed)
         b.anchor_cancelled.connect(self._on_anchor_cancelled)
-        b.sector_anchor_placed.connect(self._on_sector_anchor_placed)
-        b.sector_group_removed.connect(self._on_sector_group_removed)
-        b.sector_group_moved.connect(self._on_sector_group_moved)
-        b.sector_group_rotated.connect(self._on_sector_group_rotated)
-        b.sector_group_resized.connect(self._on_sector_group_resized)
 
         # Toolbar → zoom sensitivity
         self.toolbar.zoom_step_changed.connect(self.map_widget.set_zoom_sensitivity)
@@ -806,6 +805,11 @@ class MainWindow(QMainWindow):
         # Planning panel → timeline / notes
         self.planning_panel.timeline_year_changed.connect(self._on_timeline_year_changed)
         self.planning_panel.notes_changed.connect(self._on_notes_changed)
+        # Planning → Notes lists the map's 📝 Note pins; clicking one frames
+        # it on the map (~40 m box around the pin).
+        self.planning_panel.map_note_focus_requested.connect(
+            lambda lat, lng: self.map_widget.fit_bounds(
+                lat - 0.0004, lng - 0.0006, lat + 0.0004, lng + 0.0006))
 
         # Site panel ↔ map
         b.site_pin_placed.connect(self._on_site_pin_placed)
@@ -1125,10 +1129,6 @@ class MainWindow(QMainWindow):
         # Remember the rendered overlay so undo/redo can reproduce it.
         self._active_sun_state = (config, lat, lng)
 
-    def _on_sector_requested(self, config: dict):
-        # Shim → MapEventRouter; see src/controllers/map_events.py.
-        return self._map_events._on_sector_requested(config)
-
     def _on_contour_requested(self, config: dict):
         # Shim → MapEventRouter; see src/controllers/map_events.py.
         return self._map_events._on_contour_requested(config)
@@ -1227,10 +1227,6 @@ class MainWindow(QMainWindow):
     def _on_wind_requested(self, config: dict):
         # Shim → MapEventRouter; see src/controllers/map_events.py.
         return self._map_events._on_wind_requested(config)
-
-    def _on_season_changed(self, season: str):
-        # Shim → MapEventRouter; see src/controllers/map_events.py.
-        return self._map_events._on_season_changed(season)
 
     # ── Draw-then-fill plant placement (F3) ──────────────────────────────────
 
@@ -1500,31 +1496,16 @@ class MainWindow(QMainWindow):
     def _on_selection_moved(self, originals_json: str, moved_json: str):
         return self._map_events._on_selection_moved(originals_json, moved_json)
 
-    # Sun-path / sector anchor handlers — shims → MapEventRouter.
+    # Sun-path anchor handlers — shims → MapEventRouter.
 
     def _on_sun_anchor_placed(self, lat: float, lng: float):
         return self._map_events._on_sun_anchor_placed(lat, lng)
-
-    def _on_sector_anchor_placed(self, lat: float, lng: float):
-        return self._map_events._on_sector_anchor_placed(lat, lng)
 
     def _on_sun_path_removed(self):
         return self._map_events._on_sun_path_removed()
 
     def _on_anchor_cancelled(self, mode: str):
         return self._map_events._on_anchor_cancelled(mode)
-
-    def _on_sector_group_removed(self, sid: str):
-        return self._map_events._on_sector_group_removed(sid)
-
-    def _on_sector_group_moved(self, sid: str, lat: float, lng: float):
-        return self._map_events._on_sector_group_moved(sid, lat, lng)
-
-    def _on_sector_group_rotated(self, sid: str, rotation_deg: float):
-        return self._map_events._on_sector_group_rotated(sid, rotation_deg)
-
-    def _on_sector_group_resized(self, sid: str, radius_m: float):
-        return self._map_events._on_sector_group_resized(sid, radius_m)
 
     def _on_plant_placed(self, plant_id: int, common_name: str, lat: float, lng: float):
         # Shim → MapEventRouter; see src/controllers/map_events.py.
@@ -1935,6 +1916,20 @@ class MainWindow(QMainWindow):
                 sd = props.get("struct_def", {})
                 structs.append(sd)
         self.planning_panel.set_structures(structs)
+
+        # Map notes (Draw → 📝 Note) mirrored into Planning → Notes so the
+        # journal and the on-map observations read as one record (V2.25).
+        map_notes = []
+        for f in self._project.get("features", []):
+            props = f.get("properties", {})
+            if props.get("element_type") != "annotation":
+                continue
+            coords = f.get("geometry", {}).get("coordinates") or []
+            if len(coords) >= 2:
+                map_notes.append({"id": props.get("annotation_id", ""),
+                                  "text": props.get("text", ""),
+                                  "lat": coords[1], "lng": coords[0]})
+        self.planning_panel.set_map_notes(map_notes)
 
         # Habitat Value Score tab in the analysis panel uses the same data.
         self.analysis_panel.set_placed_plants(enriched)

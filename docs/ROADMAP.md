@@ -52,7 +52,7 @@ Tools that help designers understand their site.
 | ID | Feature | Description | Status |
 |----|---------|-------------|--------|
 | A1 | **Sun path / shadow overlay** | Given lat/lng + date, draw the sun arc and show shadow direction arrows for morning/noon/evening — helps place shade-sensitive crops | Done |
-| A2 | **Sector analysis layer** | Draw directional wedges on the map for sun, prevailing wind, frost flow, noise, views — directional site analysis | Done |
+| A2 | **Sector analysis layer** | Draw directional wedges on the map for sun, prevailing wind, frost flow, noise, views — directional site analysis | Retired (V2.25 — Sun Path + real wind data cover it) |
 | A3 | **Slope / contour indicator** | Manual or imported contour lines to show terrain; helps place swales and ponds correctly | Done |
 | A4 | **Wind sector & windbreak effect** | Mark prevailing wind direction; windbreak structures/hedges show a "shelter zone" behind them (10x their height) | Done |
 
@@ -78,7 +78,7 @@ Features for long-term planning and tracking.
 | ID | Feature | Description | Status |
 |----|---------|-------------|--------|
 | V1 | **Vegetation layer indicators** | Visual markers for vegetation layers (overstory, understory, shrub layer, herbaceous, groundcover, vine, root) with layer toggle | Planned |
-| V2 | **Season view toggle** | Switch map appearance between spring/summer/fall/winter to see deciduous vs. evergreen coverage | Planned |
+| V2 | **Season view toggle** | Switch map appearance between spring/summer/fall/winter to see deciduous vs. evergreen coverage | Retired (V2.25 — shipped in V1.x, removed: the tile filter added no design value; the 3D preview owns seasons now) |
 | V3 | **Print / PDF export** | Export the current map view as a presentation-quality PDF with legend, title block, and plant list | Done |
 | V4 | **Design notes / journal** | Per-project text area for recording observations, soil test results, and design rationale | Done |
 | V5 | **Photo overlay** | Import a site photo or drone image as a semi-transparent overlay under the map for reference | Planned |
@@ -132,7 +132,7 @@ Features for long-term planning and tracking.
 | Hedgerow / fence line tool (4 styles, plant spacing, species) | Done |
 | Custom shape drawing (7 presets, fill/stroke, labels, area calc) | Done |
 | Sun path / shadow overlay (6 key dates, shadow arrows) | Done |
-| Sector analysis (8 presets: sun, wind, frost, noise, views, fire) | Done |
+| Sector analysis (8 presets: sun, wind, frost, noise, views, fire) | Retired in V2.25 |
 | Slope / contour indicator (manual contour lines, elevation labels, slope arrows) | Done |
 | Wind sector & windbreak effect (16 directions, shelter zones 10× height) | Done |
 | Maintenance / labour estimator (plants + structures, capacity check) | Done |

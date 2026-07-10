@@ -140,13 +140,6 @@ class MapBridge(QObject):
     sun_path_removed  = pyqtSignal()
     anchor_cancelled  = pyqtSignal(str)            # mode that was cancelled
 
-    # Sector signals
-    sector_anchor_placed   = pyqtSignal(float, float)     # lat, lng
-    sector_group_removed   = pyqtSignal(str)              # sid
-    sector_group_moved     = pyqtSignal(str, float, float) # sid, lat, lng
-    sector_group_rotated   = pyqtSignal(str, float)        # sid, rotationDeg
-    sector_group_resized   = pyqtSignal(str, float)        # sid, radiusM
-
     # Site pin (search-bar pin drop / drag / right-click remove)
     site_pin_placed  = pyqtSignal(float, float, str)   # lat, lng, label
     site_pin_removed = pyqtSignal()
@@ -222,26 +215,6 @@ class MapBridge(QObject):
     @pyqtSlot(str)
     def onAnchorCancelled(self, mode: str):
         self.anchor_cancelled.emit(mode)
-
-    @pyqtSlot(float, float)
-    def onSectorAnchorPlaced(self, lat: float, lng: float):
-        self.sector_anchor_placed.emit(lat, lng)
-
-    @pyqtSlot(str)
-    def onSectorGroupRemoved(self, sid: str):
-        self.sector_group_removed.emit(sid)
-
-    @pyqtSlot(str, float, float)
-    def onSectorGroupMoved(self, sid: str, lat: float, lng: float):
-        self.sector_group_moved.emit(sid, lat, lng)
-
-    @pyqtSlot(str, float)
-    def onSectorGroupRotated(self, sid: str, rotation_deg: float):
-        self.sector_group_rotated.emit(sid, rotation_deg)
-
-    @pyqtSlot(str, float)
-    def onSectorGroupResized(self, sid: str, radius_m: float):
-        self.sector_group_resized.emit(sid, radius_m)
 
     @pyqtSlot(int, str, float, float)
     def onPlantPlaced(self, plant_id: int, common_name: str, lat: float, lng: float):
@@ -706,10 +679,6 @@ class MapWidget(QWebEngineView):
         """Enter sun-path anchor placement mode (user clicks map to place)."""
         self.run_js(map_js.set_mode("sun_anchor"))
 
-    def enter_sector_anchor_mode(self):
-        """Enter sector anchor placement mode."""
-        self.run_js(map_js.set_mode("sector_anchor"))
-
     def draw_sun_path(self, data: dict, lat: float = None, lng: float = None):
         """Draw the sun path arc and shadow arrows on the map."""
         if lat is not None and lng is not None:
@@ -719,16 +688,6 @@ class MapWidget(QWebEngineView):
 
     def clear_sun_path(self):
         self.run_js(map_js.clear_sun_path())
-
-    def draw_sectors(self, data: dict, lat: float = None, lng: float = None):
-        """Draw sector analysis wedges on the map at the given anchor."""
-        if lat is not None and lng is not None:
-            self.run_js(map_js.draw_sectors(data, lat, lng))
-        else:
-            self.run_js(map_js.draw_sectors(data))
-
-    def clear_sectors(self):
-        self.run_js(map_js.clear_sectors())
 
     def set_zoom_sensitivity(self, level: str):
         """Set zoom sensitivity: 'fine'|'normal'|'fast'|'coarse'."""
@@ -934,10 +893,6 @@ class MapWidget(QWebEngineView):
         self.run_js(map_js.set_plant_group_for_latest(
             plant_id, lat, lng, group_id,
         ))
-
-    def set_season_view(self, season: str, pid_visibility: dict):
-        """Highlight plants in/out of season for a given month name."""
-        self.run_js(map_js.set_season_view(season, pid_visibility))
 
     def set_timeline_year_by_plant_id(self, year: int, pid_factors: dict,
                                       pid_presence: dict | None = None,

@@ -7,10 +7,12 @@ Covers src/field_study.py:
   3. Specialist questions — the answer is a real host, distractors are not.
   4. identify de-dup — repeated identify questions have distinct answers.
   5. Design-aware 'gap' question fires from a food-web status.
-  6. Integration against the seeded temp DB.
+  6. identify only asks about plants whose photo passes ``image_available``
+     (V2.25 — no photo-ID questions without a showable photo).
+  7. Integration against the seeded temp DB.
 
-Logic tests inject ``plants`` / ``specialists`` (DB-free); one integration test
-uses the temp-DB seed.
+Logic tests inject ``plants`` / ``specialists`` / ``image_available``
+(DB-free); one integration test uses the temp-DB seed.
 """
 
 import os
@@ -55,8 +57,12 @@ def _specialists():
 class TestQuizLogic(unittest.TestCase):
 
     def _quiz(self, **kw):
+        # image_available accepts any URL here so the logic tests exercise
+        # identify generation without a real image cache.
         return generate_quiz(seed=kw.pop("seed", 1), n=kw.pop("n", 5),
-                             plants=_plants(), specialists=_specialists(), **kw)
+                             plants=_plants(), specialists=_specialists(),
+                             image_available=kw.pop("image_available",
+                                                    lambda u: bool(u)), **kw)
 
     def test_well_formed(self):
         for q in self._quiz(n=6):
@@ -102,6 +108,23 @@ class TestQuizLogic(unittest.TestCase):
         ans = gaps[0]["options"][gaps[0]["answer_index"]]
         self.assertIn("bird", ans.lower())
 
+    def test_identify_requires_showable_photo(self):
+        # Only a fixed subset of photo URLs counts as "cached" — identify
+        # questions must draw their target from exactly that pool.
+        ok = {"http://x/4.jpg", "http://x/8.jpg", "http://x/12.jpg",
+              "http://x/16.jpg", "http://x/0.jpg"}
+        qs = self._quiz(seed=2, n=10, image_available=lambda u: u in ok)
+        idents = [q for q in qs if q["type"] == "identify"]
+        self.assertTrue(idents, "expected identify questions from the ok pool")
+        for q in idents:
+            self.assertIn(q["image_url"], ok)
+
+    def test_identify_absent_when_no_photos_showable(self):
+        qs = self._quiz(seed=3, n=8, image_available=lambda u: False)
+        self.assertTrue(qs, "quiz should still exist (specialist questions)")
+        self.assertFalse([q for q in qs if q["type"] == "identify"],
+                         "no identify questions without showable photos")
+
 
 class TestQuizIntegration(unittest.TestCase):
     @classmethod
@@ -110,15 +133,24 @@ class TestQuizIntegration(unittest.TestCase):
         init_db()
 
     def test_real_db_quiz(self):
-        q = generate_quiz(seed=7, n=5)
+        # The temp environment has an empty image cache, so accept any URL —
+        # the cache-gating logic itself is covered by the unit tests above.
+        _any = {"image_available": (lambda u: bool(u))}
+        q = generate_quiz(seed=7, n=5, **_any)
         self.assertEqual(len(q), 5)
         for x in q:
             self.assertEqual(len(x["options"]), 4)
             self.assertIn(x["answer_index"], range(4))
         # both question kinds appear from the seeded data
-        kinds = {x["type"] for x in generate_quiz(seed=9, n=8)}
+        kinds = {x["type"] for x in generate_quiz(seed=9, n=8, **_any)}
         self.assertIn("identify", kinds)
         self.assertIn("specialist", kinds)
+
+    def test_real_db_quiz_cold_cache_has_no_identify(self):
+        # Default image gate + empty cache dir ⇒ specialist-only quiz, never
+        # a photo question without a photo.
+        kinds = {x["type"] for x in generate_quiz(seed=9, n=8)}
+        self.assertNotIn("identify", kinds)
 
 
 if __name__ == "__main__":

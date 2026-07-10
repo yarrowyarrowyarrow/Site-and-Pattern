@@ -8,7 +8,9 @@ doubling as plant-ID prep for a nursery or trail visit.
 
 Three question kinds, each grounded in a real relationship (never Indigenous
 plant-use knowledge; Principle 12):
-  * identify — a plant photo + traits, name it (four choices);
+  * identify — a plant photo + traits, name it (four choices). Only plants
+    whose photo is actually *displayable* (cached locally) are asked — a
+    photo-ID question with no photo teaches nothing (V2.25);
   * specialist — which plant feeds this *specialist* animal (from the
     documented specialist `plant_fauna` edges);
   * gap — spot the food-web gap in the user's OWN design (from
@@ -37,6 +39,18 @@ _MONTHS_ABBR = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
 def _default_plants() -> list[dict]:
     from src.db.plants import get_all_plants
     return get_all_plants()
+
+
+def _default_image_available(url: str) -> bool:
+    """True when the photo is already cached locally, i.e. showable right now
+    (offline included). Never touches the network — quiz generation must stay
+    instant. The quiz widget warms uncached photos in the background so this
+    pool grows across sessions."""
+    try:
+        from src.image_cache import get_cached_image
+        return bool(get_cached_image(url))
+    except Exception:      # noqa: BLE001 — no cache ⇒ no identify questions
+        return False
 
 
 def _default_specialists() -> list[dict]:
@@ -80,9 +94,11 @@ def _mc(rng: random.Random, correct: str, distractors: list[str]) -> tuple:
     return opts, opts.index(correct)
 
 
-def _identify_question(rng: random.Random, plants: list[dict]) -> Optional[dict]:
+def _identify_question(rng: random.Random, plants: list[dict],
+                       image_ok: Callable[[str], bool]) -> Optional[dict]:
     withimg = [p for p in plants if (p.get("image_url") or "").strip()
-               and (p.get("common_name") or "").strip()]
+               and (p.get("common_name") or "").strip()
+               and image_ok(p["image_url"])]
     if len(withimg) < 4:
         return None
     target = rng.choice(withimg)
@@ -177,20 +193,29 @@ def generate_quiz(placed_plants: Optional[list[dict]] = None, *,
                   seed: int = 0, n: int = 5,
                   plants: Optional[list[dict]] = None,
                   specialists: Optional[list[dict]] = None,
-                  design_state: Optional[dict] = None) -> list[dict]:
+                  design_state: Optional[dict] = None,
+                  image_available: Optional[Callable[[str], bool]] = None,
+                  ) -> list[dict]:
     """Return ``n`` deterministic quiz questions.
 
     ``placed_plants`` (optional) enables the design-aware 'gap' question and
     focuses 'identify' on species relevant to the user. ``seed`` makes the set
-    reproducible. ``plants`` / ``specialists`` / ``design_state`` are injectable
-    for tests; by default they read the DB (and the design's food-web status via
-    ``habitat_score``).
+    reproducible. ``plants`` / ``specialists`` / ``design_state`` /
+    ``image_available`` are injectable for tests; by default they read the DB
+    (and the design's food-web status via ``habitat_score``).
+
+    ``image_available(url) -> bool`` gates the 'identify' pool: only plants
+    whose photo it accepts are asked (default: the photo is cached locally and
+    can actually be shown). With no showable photos the quiz is
+    specialist/gap-only rather than asking photo questions without photos.
     """
     rng = random.Random(seed)
     if plants is None:
         plants = _default_plants()
     if specialists is None:
         specialists = _default_specialists()
+    image_ok = (image_available if image_available is not None
+                else _default_image_available)
     if design_state is None and placed_plants:
         try:
             from src.habitat_score import compute_habitat_score
@@ -209,7 +234,7 @@ def generate_quiz(placed_plants: Optional[list[dict]] = None, *,
     # Fill the rest by rotating identify / specialist, skipping questions with
     # the same answer (identify shares one prompt, so key on content not prompt).
     builders = [
-        lambda: _identify_question(rng, plants),
+        lambda: _identify_question(rng, plants, image_ok),
         lambda: _specialist_question(rng, specialists, plants),
     ]
     def _key(q):

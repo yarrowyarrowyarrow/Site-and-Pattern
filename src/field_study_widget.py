@@ -125,6 +125,10 @@ class FieldStudyWidget(QWidget):
             self._quiz = generate_quiz(plants, seed=random.randrange(1 << 30), n=5)
         except Exception:      # noqa: BLE001
             self._quiz = []
+        # Identify questions only cover plants whose photo is already cached,
+        # so warm a few more catalogue photos each run — the ID pool grows
+        # with every quiz (and works offline once cached).
+        self._warm_photo_pool()
         self._i = 0
         self._score = 0
         self._start_btn.setText("Restart quiz")
@@ -133,6 +137,37 @@ class FieldStudyWidget(QWidget):
                                    "couldn't be read.")
             return
         self._show()
+
+    def _warm_photo_pool(self, limit: int = 8):
+        """Fetch+cache a random handful of not-yet-cached catalogue photos off
+        the UI thread (mirrors the analysis panel's gallery warm). Failures are
+        silent — a missing photo just stays out of the identify pool."""
+        try:
+            from src.db.plants import get_all_plants
+            from src.image_cache import get_cached_image
+            pending = [(p["image_url"], p.get("image_attribution", ""),
+                        p.get("image_license", ""))
+                       for p in get_all_plants()
+                       if (p.get("image_url") or "").strip()
+                       and not get_cached_image(p["image_url"])]
+        except Exception:      # noqa: BLE001
+            return
+        from PyQt6.QtCore import QRunnable, QThreadPool
+
+        class _FetchTask(QRunnable):
+            def __init__(self, url, attr, lic):
+                super().__init__()
+                self._url, self._attr, self._lic = url, attr, lic
+
+            def run(self):
+                try:
+                    from src.image_cache import resolve_image
+                    resolve_image(self._url, self._attr, self._lic)
+                except Exception:      # noqa: BLE001
+                    pass
+
+        for url, attr, lic in random.sample(pending, min(limit, len(pending))):
+            QThreadPool.globalInstance().start(_FetchTask(url, attr, lic))
 
     def _show(self):
         q = self._quiz[self._i]

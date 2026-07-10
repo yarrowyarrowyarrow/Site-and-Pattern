@@ -98,7 +98,7 @@ The **Plant Communities** library on the same tab ships with 18 pre-built commun
 
 ## 7. Selection & multi-delete
 
-- **Shift+drag** on empty map → marquee-selects every plant, boundary, sector, and sun-path inside the rectangle.
+- **Shift+drag** on empty map → marquee-selects every plant, boundary, and sun-path inside the rectangle.
 - **Shift+click** an item to toggle its membership in the selection.
 - **Ctrl+Shift+drag** = additive marquee (extends instead of replaces).
 - The top-right **selection badge** shows the count plus **Delete** and **Clear** links.
@@ -108,7 +108,7 @@ The **Plant Communities** library on the same tab ships with 18 pre-built commun
 ## 8. Other drawing tools
 
 - **📏 Measure** — click two points to add a measurement; right-click any existing measurement to delete just that one. Use the View bar's Measurement toggle to hide them all without deleting.
-- **📝 Note** — click to drop a draggable text note. Right-click the note to remove it.
+- **📝 Note** — click to drop a draggable text note. Right-click the note to remove it. Every map note is also listed under **Planning → Notes** — click one there to jump to it on the map.
 - **Structures tab** — search a structure library, drag hedgerows (4 styles: Hedge / Fence / Living Fence / Windbreak), or draw shapes (Garden Bed, Pathway, Patio, Lawn, Mulch, Water Feature, Custom).
 
 The View bar (🛰 Satellite, ⬡ Boundary, 📏 Measurement, **#** Grid, ✿ Plants, 🌳 Canopy, 🏗 Structures) toggles each layer's visibility without deleting anything. The Grid action's ▾ menu picks the base size (1×1, 5×5, 10×10, 100×100 m) plus opacity and colour.
@@ -118,10 +118,10 @@ The View bar (🛰 Satellite, ⬡ Boundary, 📏 Measurement, **#** Grid, ✿ Pl
 ## 9. Site analysis (Analysis tab)
 
 - **Sun Path** — pick a date (Summer Solstice, Equinox, Today, …), click *Place Sun Path…*, click the map. Shows the sun arc + sunrise/sunset/daylight-hours summary.
-- **Sectors** — toggle presets (Summer Sun, Winter Sun, NW Wind, Cold North, Frost Pocket, Noise, View, Fire Risk), click *Place Sectors…*, click the map. Drag the handles to resize / rotate / move; right-click the centre to remove.
-- **Contours** — set elevation + interval, click *Draw Contour Line*, click points on the map, double-click to finish.
-- **Wind** — pick direction + speed, click *Show Wind Overlay*.
-- **Season View** — Summer / Spring / Fall / Winter buttons fade plant markers by deciduous/evergreen behaviour to preview seasonal density.
+- **Wind** — three steps in one tab: **1** fetch this site's real wind history (Open-Meteo, cached for offline) and read the wind rose; **2** check the prevailing-direction dial (set automatically from the data — drag it to test other directions); **3** overlay the map: live wind shadow (sheltered zones behind trees/shrubs), snow catch, and the arrows + windbreak shelter-zone overlay via *Show Wind Overlay*.
+- Manual **contour drawing** lives on the Site tab (next to the automatic slope analysis).
+
+(The old Sectors and Season View tabs were retired in V2.25 — Sun Path and Wind cover the same questions with real data, and the season tile filter added no design value.)
 
 ---
 
@@ -133,7 +133,7 @@ The View bar (🛰 Satellite, ⬡ Boundary, 📏 Measurement, **#** Grid, ✿ Pl
 - **Habitat Value Score** (Analysis panel) — composite 0–100 score derived from native ratio, keystone species, host plants, bird-food species, vegetation-layer diversity, habitat structures, and bloom continuity. The panel also generates **Tips for raising your score**: concrete Alberta-native plant and habitat-structure suggestions targeted at your lowest-scoring categories (e.g., "Add host plants: …", "Fill nectar gaps in June: …"). Based on Doug Tallamy's keystone-species framework.
 - **Establishment Water Budget** — same garden / catchment inputs, but the demand splits into **Year 1** (1.5× baseline for establishment irrigation) and **Year 3+** (natives drop to ~0.2× baseline once rooted; cultivars stay at 1.0×). Shows both surpluses / deficits side-by-side, plus a suggested extra-barrel count for the Year-1 deficit.
 - **Succession timeline** — drag the year slider 0–20 to see how the design matures.
-- **Notes / journal** — free-form text editor with **Add Timestamp** and **+ Section** buttons.
+- **Notes / journal** — free-form text editor with **Add Timestamp** and **+ Section** buttons, plus a **Notes pinned on the map** list of your 📝 Note pins — click one to frame it on the map.
 
 ---
 
@@ -154,7 +154,8 @@ The View bar (🛰 Satellite, ⬡ Boundary, 📏 Measurement, **#** Grid, ✿ Pl
 |----------|--------|
 | Ctrl+N / Ctrl+O / Ctrl+S | New / Open / Save project |
 | Ctrl+Shift+S | Save As |
-| Ctrl+Z / Ctrl+Y | Undo / Redo |
+| Ctrl+Z | Undo |
+| Ctrl+Shift+Z or Ctrl+Y | Redo |
 | Esc | Cancel current drawing / exit placement mode |
 | Shift+drag | Marquee-select |
 | Shift+click | Toggle an item in the selection |

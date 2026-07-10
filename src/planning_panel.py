@@ -71,6 +71,10 @@ class PlanningPanel(QWidget):
     # V4 signal: notes changed
     notes_changed = pyqtSignal(str)
 
+    # A map note (Draw → 📝 Note) was clicked in the Notes tab — frame it
+    # on the map. Payload: lat, lng.
+    map_note_focus_requested = pyqtSignal(float, float)
+
     # Timeline signal: year slider changed
     timeline_year_changed = pyqtSignal(int)
 
@@ -1070,7 +1074,59 @@ class PlanningPanel(QWidget):
         self._notes_count.setStyleSheet("color: #546e7a; font-size: 10px;")
         layout.addWidget(self._notes_count)
 
+        # ── Notes pinned on the map (Draw → 📝 Note) ─────────────────────────
+        # The journal above and the on-map observations are one record: every
+        # map note is listed here, and clicking one frames it on the map.
+        self._map_notes_header = QLabel("Notes pinned on the map")
+        self._map_notes_header.setStyleSheet(
+            "color: #a5d6a7; font-size: 12px; font-weight: bold; "
+            "padding: 6px 0 2px 0;")
+        layout.addWidget(self._map_notes_header)
+
+        self._map_notes_hint = QLabel(
+            "None yet — use Draw → 📝 Note to pin an observation to a spot "
+            "on the map. It will show up here; click it to jump there.")
+        self._map_notes_hint.setWordWrap(True)
+        self._map_notes_hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        layout.addWidget(self._map_notes_hint)
+
+        map_notes_box = QWidget()
+        self._map_notes_list = QVBoxLayout(map_notes_box)
+        self._map_notes_list.setContentsMargins(0, 0, 0, 0)
+        self._map_notes_list.setSpacing(2)
+        layout.addWidget(map_notes_box)
+
         self._tabs.addTab(tab, "Notes")
+
+    def set_map_notes(self, notes: list[dict]):
+        """Render the map-note list (``[{id, text, lat, lng}]``) in the Notes
+        tab. Called from app.py's ``_sync_planning_panel`` so it tracks note
+        add/remove, undo/redo, and project load."""
+        lst = getattr(self, "_map_notes_list", None)
+        if lst is None:
+            return
+        while lst.count():
+            item = lst.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                w.deleteLater()
+        notes = notes or []
+        self._map_notes_hint.setVisible(not notes)
+        for n in notes:
+            btn = QPushButton("📍 " + (n.get("text") or "(no text)"))
+            btn.setToolTip("Show this note on the map")
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.setStyleSheet(
+                "QPushButton { text-align: left; padding: 4px 8px; "
+                "color: #c8e6c9; background: #1a2a1a; "
+                "border: 1px solid #2e4a2e; border-radius: 4px; }"
+                "QPushButton:hover { border-color: #4a7a4a; }")
+            lat, lng = n.get("lat"), n.get("lng")
+            if lat is not None and lng is not None:
+                btn.clicked.connect(
+                    lambda _=False, a=float(lat), b=float(lng):
+                    self.map_note_focus_requested.emit(a, b))
+            lst.addWidget(btn)
 
     def _insert_timestamp(self):
         ts = datetime.now().strftime("\n--- %Y-%m-%d %H:%M ---\n")

@@ -112,8 +112,8 @@
     // Build a right-click menu for a plant marker. Offers single delete,
     // delete-group (when this marker is part of a multi-plant placement),
     // and bulk-delete-selection (when ≥1 plant is selected and this is one
-    // of them). Reuses the showContextMenu pattern established by sectors
-    // and sun path.
+    // of them). Reuses the showContextMenu pattern established by the
+    // sun path.
     function showPlantContextMenu(e, circle) {
       var pd = circle._pd;
       var ev = e.originalEvent;

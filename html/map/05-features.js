@@ -688,7 +688,6 @@
           map.getContainer().style.cursor = 'crosshair';
           break;
         case 'sun_anchor':
-        case 'sector_anchor':
           map.getContainer().style.cursor = 'crosshair';
           _anchorPreviewMarker = L.circleMarker(map.getCenter(), {
             radius: 7, color: '#ffb300', fillColor: '#fff', fillOpacity: 0.8,
@@ -948,7 +947,6 @@
       Object.values(shapeLayers).forEach(function(g) { map.removeLayer(g); });
       shapeLayers = {};
       clearSunPath();
-      clearSectors();
       clearContours();
       clearAutoTerrain();
       clearWindOverlay();

@@ -30,7 +30,6 @@
     // Zoom sensitivity (zoomDelta applied to map.options at runtime)
     var _zoomSensitivity = 'fine';     // 'fine'|'normal'|'fast'|'coarse'
 
-    var seasonOverlay     = null;  // NASA GIBS seasonal tile layer
     var measureVisible    = true;  // whether measure result is shown
     var plantMarkers  = {};   // id -> marker
     var plantLayerGroup = null; // L.layerGroup for batch visibility toggle
@@ -65,12 +64,12 @@
     // Annotation state
     var annotations   = {};     // id -> {marker, text}
 
-    // Anchor placement preview marker (sun path / sector placement modes)
+    // Anchor placement preview marker (sun-path placement mode)
     var _anchorPreviewMarker = null;
 
     // ── Unified selection model ──────────────────────────────────────────────
     // Each entry is a `_pd`-style descriptor with at least { kind, ... }
-    // where kind ∈ 'plant' | 'boundary' | 'sector' | 'structure' | 'shape'
+    // where kind ∈ 'plant' | 'boundary' | 'structure' | 'shape'
     // | 'sunpath' and the rest of the fields identify the underlying object
     // (markerId, boundaryId, shapeId, etc.). 'shape' covers OSM buildings,
     // shade-casting footprints and custom area shapes — all in shapeLayers.
@@ -105,7 +104,6 @@
       if (!a || !b || a.kind !== b.kind) return false;
       if (a.kind === 'plant')     return a.markerId === b.markerId;
       if (a.kind === 'boundary')  return a.boundaryId === b.boundaryId;
-      if (a.kind === 'sector')    return a.sectorId === b.sectorId;
       if (a.kind === 'structure') return a.structureId === b.structureId;
       if (a.kind === 'shape')     return a.shapeId === b.shapeId;
       if (a.kind === 'sunpath')   return true;   // single sunpath at a time
@@ -164,7 +162,7 @@
 
     // Apply / remove the selection highlight on every relevant feature.
     // Plants get a thicker yellow border + brighter fill while selected;
-    // boundaries get a thicker stroke; sectors flag their group's centre.
+    // boundaries get a thicker stroke.
     function _refreshSelectionVisuals() {
       // Plants
       Object.keys(plantMarkers).forEach(function(mid) {
@@ -189,18 +187,6 @@
           });
         }
       });
-      // Sectors
-      if (typeof sectorGroups !== 'undefined') {
-        sectorGroups.forEach(function(sg) {
-          var sel = _selectionContains({ kind: 'sector', sectorId: sg.id });
-          if (sg.centerMk && sg.centerMk.setStyle) {
-            sg.centerMk.setStyle({
-              color: sel ? '#fdd835' : '#263238',
-              weight: sel ? 3 : 1
-            });
-          }
-        });
-      }
       // Structures — thicken the outline of the selected ones.
       Object.keys(structureMarkers).forEach(function(sid) {
         var sel = _selectionContains({ kind: 'structure', structureId: sid });
@@ -265,7 +251,7 @@
 
     // ── Marquee (shift+drag) selection ───────────────────────────────────────
     // Shift+drag on the map background draws a yellow dashed rectangle and
-    // selects every plant / boundary / sector / structure (incl. marked
+    // selects every plant / boundary / structure (incl. marked
     // trees+buildings) / shape (OSM buildings, shade footprints, custom
     // shapes) / sun-path centre that intersects it. Plain drag continues to
     // pan; ctrl+shift+drag is additive (extend the existing selection). We
@@ -404,14 +390,6 @@
           }
         }
       });
-      // Sectors — anchor point.
-      if (typeof sectorGroups !== 'undefined') {
-        sectorGroups.forEach(function(sg) {
-          if (bounds.contains(L.latLng(sg.lat, sg.lng))) {
-            hits.push({ kind: 'sector', sectorId: sg.id });
-          }
-        });
-      }
       // Structures — anchor point stashed on the layer group.
       Object.keys(structureMarkers).forEach(function(sid) {
         var g = structureMarkers[sid];
@@ -484,11 +462,6 @@
           if (typeof _removeBoundaryEntry === 'function') {
             _removeBoundaryEntry(item.boundaryId);
             if (bridge) bridge.onBoundaryRemoved(item.boundaryId);
-          }
-        } else if (item.kind === 'sector') {
-          if (typeof _removeSectorGroup === 'function') {
-            _removeSectorGroup(item.sectorId);
-            if (bridge) bridge.onSectorGroupRemoved(item.sectorId);
           }
         } else if (item.kind === 'structure') {
           var sg2 = structureMarkers[item.structureId];
@@ -599,7 +572,7 @@
           if (bridge) bridge.onTerrainBboxCancelled();
           return;
         }
-        if (currentMode === 'sun_anchor' || currentMode === 'sector_anchor') {
+        if (currentMode === 'sun_anchor') {
           L.DomEvent.stop(e);
           setMode('none');
           if (bridge) bridge.onAnchorCancelled(currentMode);
@@ -734,9 +707,6 @@
         // Place sun-path anchor then render via Python callback
         setMode('none');
         if (bridge) bridge.onSunAnchorPlaced(lat, lng);
-      } else if (currentMode === 'sector_anchor') {
-        setMode('none');
-        if (bridge) bridge.onSectorAnchorPlaced(lat, lng);
       }
     }
 
@@ -756,7 +726,7 @@
       if (currentMode === 'contour' && contourPoints.length > 0) {
         updateContourPreview(e.latlng);
       }
-      if ((currentMode === 'sun_anchor' || currentMode === 'sector_anchor') && _anchorPreviewMarker) {
+      if (currentMode === 'sun_anchor' && _anchorPreviewMarker) {
         _anchorPreviewMarker.setLatLng(e.latlng);
       }
       if (currentMode === 'plant' && currentPlant && currentPlant.pattern

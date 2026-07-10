@@ -1,6 +1,6 @@
 """
 tests/test_map_features.py — Unit tests for map annotation features added in
-the map-annotations branch: multi-boundary, zoom math, sector geometry.
+the map-annotations branch: multi-boundary and zoom math.
 
 Run with:
     python -m pytest tests/test_map_features.py -v
@@ -240,74 +240,6 @@ def test_zoom_coarse_approx_2x():
     """Coarse sensitivity (zoomDelta=1.0) = exactly 2× per tick."""
     scale = _scale_factor(1.0)
     assert abs(scale - 2.0) < 1e-9, f"Coarse zoom scale {scale:.4f} not 2×"
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Sector transform math
-# ─────────────────────────────────────────────────────────────────────────────
-
-def _sector_wedge_pts(lat, lng, azimuth_deg, spread_deg, radius_m, steps=12):
-    """Reproduce the JS wedge polygon computation."""
-    start = azimuth_deg - spread_deg / 2
-    end   = azimuth_deg + spread_deg / 2
-    cos_lat = math.cos(math.radians(lat))
-    pts = [[lat, lng]]
-    for i in range(steps + 1):
-        angle = math.radians(start + (end - start) * i / steps)
-        d_lat = radius_m * math.cos(angle) / 111_320
-        d_lng = radius_m * math.sin(angle) / (111_320 * cos_lat)
-        pts.append([lat + d_lat, lng + d_lng])
-    pts.append([lat, lng])
-    return pts
-
-
-def test_sector_outer_arc_radius():
-    """All outer arc points should be ~radius_m from the centre."""
-    lat, lng, R = 53.5461, -113.4938, 100.0
-    pts = _sector_wedge_pts(lat, lng, 0, 90, R)
-    cos_lat = math.cos(math.radians(lat))
-    for pt in pts[1:-1]:  # skip centre (first and last)
-        d_lat_m = (pt[0] - lat) * 111_320
-        d_lng_m = (pt[1] - lng) * 111_320 * cos_lat
-        dist = math.sqrt(d_lat_m ** 2 + d_lng_m ** 2)
-        assert 98 < dist < 102, f"Arc point distance {dist:.2f} m not near 100 m"
-
-
-def test_sector_rotation_shifts_azimuth():
-    """Rotating a sector by 45° should shift each outer point by 45°."""
-    lat, lng, R = 53.5461, -113.4938, 100.0
-    cos_lat = math.cos(math.radians(lat))
-
-    def mid_angle(pts):
-        mid = pts[len(pts) // 2]
-        d_lat = (mid[0] - lat) * 111_320
-        d_lng = (mid[1] - lng) * 111_320 * cos_lat
-        return math.degrees(math.atan2(d_lng, d_lat))
-
-    pts_0  = _sector_wedge_pts(lat, lng, 0,  90, R)
-    pts_45 = _sector_wedge_pts(lat, lng, 45, 90, R)
-    diff = mid_angle(pts_45) - mid_angle(pts_0)
-    # Normalize to [-180, 180]
-    diff = (diff + 180) % 360 - 180
-    assert 43 < diff < 47, f"Rotation angle diff {diff:.2f}° not near 45°"
-
-
-def test_sector_resize_scales_radius():
-    """Doubling the radius should double the distance of outer arc points."""
-    lat, lng = 53.5461, -113.4938
-    pts_100 = _sector_wedge_pts(lat, lng, 0, 90, 100.0)
-    pts_200 = _sector_wedge_pts(lat, lng, 0, 90, 200.0)
-    cos_lat = math.cos(math.radians(lat))
-
-    def avg_dist(pts):
-        inner = pts[1:-1]
-        dists = [math.sqrt(((p[0]-lat)*111320)**2 + ((p[1]-lng)*111320*cos_lat)**2)
-                 for p in inner]
-        return sum(dists) / len(dists)
-
-    r1 = avg_dist(pts_100)
-    r2 = avg_dist(pts_200)
-    assert 1.95 < r2 / r1 < 2.05, f"Resize ratio {r2/r1:.3f} not near 2.0"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
