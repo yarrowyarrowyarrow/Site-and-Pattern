@@ -43,8 +43,11 @@ Complex ecological order emerges from simple rules applied locally, not from top
 > scored placement; `src/pattern_language.py` now frames seeded communities
 > (`src/db/polycultures.py`) as Alexander patterns (problem → context → forces → solution →
 > related patterns). **State: strong** — generative scoring *plus* an explicit pattern-language
-> framing (roadmap F4, shipped); the remaining gap is that the placement rules themselves are
-> still implicit in `placement_score`/`llm_design` rather than declared and tweakable (F23).
+> framing (roadmap F4, shipped); and the design now *self-heals* over time — the V2.24 gap
+> recruitment in `src/succession_engine.py` lets self-seeding natives colonise the openings the
+> closing canopy leaves, an emergent bottom-up behaviour rather than a stamped layout. The
+> remaining gap is that the placement rules themselves are still implicit in
+> `placement_score`/`llm_design` rather than declared and tweakable (F23).
 
 ### 2. The best designs disappear into their context
 
@@ -99,7 +102,12 @@ Brand's shearing layers, Weaner's succession planting, Bridges' transition psych
 > understory year by year and lets sun-loving plants that get over-topped past their tolerance
 > decline and die, so the year-N scene shows the emerging *climax community* — the survivors —
 > rather than every plant frozen at full health (folded into `scene_contract` health/opacity and
-> the 3D viewer's withered render). **State: strong.**
+> the 3D viewer's withered render). V2.24 makes that simulation more honest: a declared-deciduous
+> crown shades the understory only for its leaf-on season (so a part-shade plant thrives under a
+> birch where it would struggle under a spruce), canopy trees are *suppressed* by crowding rather
+> than culled like a forb, and — crucially — a shaded-out gap does not stay bare: a self-seeding
+> herbaceous native already in the design **recruits into it** and grows in, so the trajectory now
+> shows *recovery*, not just loss. **State: strong.**
 
 ### 5. Perception is constructed, not received
 
@@ -172,7 +180,9 @@ Kintsugi philosophy, Cradle to Cradle design, regenerative landscaping, and myco
 > **year-by-year conversion schedule** (`src/conversion_plan.py`, roadmap F17) that crosses the
 > drawn zones with the restoration-stage timeline into a remove-this / plant-that, when task list,
 > plus the **lawn-equivalent counterfactual** (roadmap F10) that frames the conversion as repair of
-> a near-zero-value lawn. **State: strong.**
+> a near-zero-value lawn; and the V2.24 **gap recruitment** in `src/succession_engine.py` models the
+> system repairing *itself* — self-seeding natives recolonising the openings the maturing canopy
+> leaves, so restoration is shown as an ongoing process rather than a one-time install. **State: strong.**
 
 ### 9. Uncertainty is a feature, not a bug
 

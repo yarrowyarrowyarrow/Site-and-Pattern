@@ -23,7 +23,11 @@ Scene schema (``SCENE_VERSION`` = 1)::
       "plants": [{plant_id, x, y, height_m, canopy_m, plant_type,
                   foliage_type, scale_factor, spread_factor, spread_rate,
                   growth_curve, color, opacity, health, health_state,
-                  common_name, existing?}, ...],
+                  common_name, existing?, recruit?}, ...],
+                                       # recruit: true = a self-seeded gap
+                                       #   coloniser that grew in where a plant
+                                       #   was shaded out (V2.24 regeneration);
+                                       #   additive, older viewers just draw it
                                        # health: 1.0 healthy → 0.0 dead;
                                        #   health_state: healthy|declining|dead
                                        #   — src.succession_engine, the growing
@@ -309,6 +313,44 @@ def build_scene(project: dict, *, year: int = 0,
             cache[pid] = get_plant(pid) or {}
         return cache[pid]
 
+    def _plant_scene_dict(plant_id, common_name, plant, x, y, st, *,
+                          opacity, health, health_state, recruit=False):
+        """One plant's Scene JSON record. Shared by placed plants and the
+        regeneration recruits so the two can never drift. ``st`` is a
+        ``scene3d.plant_3d_state`` result; ``plant`` the DB record.
+
+        Genus drives the viewer's species-specific geometry; scale/spread drive
+        the structural tier + colony; colour is the natural foliage green with a
+        real-coloured flower/berry layer shown in season."""
+        d = {
+            "plant_id": plant_id,
+            "common_name": common_name,
+            "x": round(x, 2), "y": round(y, 2),
+            "height_m": st["height_m"], "canopy_m": st["canopy_m"],
+            "plant_type": st["plant_type"] or "herb",
+            "genus": _genus_of(plant),
+            "foliage_type": st.get("foliage_type", "herbaceous"),
+            "scale_factor": st["scale_factor"],
+            "spread_factor": st["spread_factor"],
+            "spread_rate": st["spread_rate"],
+            "growth_curve": plant.get("growth_curve") or "steady",
+            "color": _foliage_color(plant),
+            "flower_color": plant.get("flower_color") or "",
+            "flower_form": plant.get("flower_form") or "none",
+            **_bloom_window(plant),
+            "fruit_color": plant.get("fruit_color") or "",
+            **_fruit_window(plant),
+            "opacity": opacity,
+            "health": health,
+            "health_state": health_state,
+        }
+        if recruit:
+            # A self-seeded gap coloniser that grew in after a plant was shaded
+            # out (V2.24). Additive flag — the viewer may style it, old viewers
+            # just draw it as the young plant it is.
+            d["recruit"] = True
+        return d
+
     # ── Temporal succession (V2.21) ──────────────────────────────────────────
     # Which placed plants the growing canopy has shaded past their tolerance by
     # this year. Aligned to the placed-plant features in iteration order; folds
@@ -316,6 +358,7 @@ def build_scene(project: dict, *, year: int = 0,
     # ships as explicit health / health_state fields for the 3D viewer's
     # withered render. Best-effort — a data hiccup must never break the scene.
     health_by_index: dict = {}
+    recruit_list: list = []
     try:
         from src.succession_engine import (
             SuccessionEngine, static_casters_from_project)
@@ -330,8 +373,12 @@ def build_scene(project: dict, *, year: int = 0,
                 origin=(lat0, lng0))
             for info in engine.evaluate_year(int(year))["plants"]:
                 health_by_index[info["index"]] = info
+            # Regeneration (V2.24): self-seeders that fill the gaps left by
+            # plants the closing canopy shaded out.
+            recruit_list = engine.recruits(int(year))
     except Exception:  # noqa: BLE001 — succession is best-effort
         health_by_index = {}
+        recruit_list = []
     _placed_i = 0
 
     for f in project.get("features", []):
@@ -359,40 +406,12 @@ def build_scene(project: dict, *, year: int = 0,
                 opacity = round(presence * (0.5 + 0.5 * health), 3)
             else:
                 opacity = presence
-            plants.append({
-                "plant_id": rec["plant_id"],
-                "common_name": rec.get("common_name", ""),
-                "x": round(x, 2), "y": round(y, 2),
-                "height_m": st["height_m"], "canopy_m": st["canopy_m"],
-                "plant_type": st["plant_type"] or "herb",
-                # Genus drives the 3D viewer's species-specific geometry (spruce
-                # vs pine vs fir, white-barked aspen/birch, red-stemmed dogwood…).
-                "genus": _genus_of(plant),
-                "foliage_type": st.get("foliage_type", "herbaceous"),
-                # Growth maturity (0.1–1.0) drives the 3D viewer's structural
-                # tier (sapling/young/mature branch complexity); spread_factor
-                # (≥1.0) widens the footprint; spread_rate (0–1) drives the
-                # continuous, year-by-year colony scatter for self-spreaders.
-                "scale_factor": st["scale_factor"],
-                "spread_factor": st["spread_factor"],
-                "spread_rate": st["spread_rate"],
-                "growth_curve": plant.get("growth_curve") or "steady",
-                # 3D body = natural foliage colour (V1.90); flowers carry their
-                # own real colour + form, shown when in bloom for the month.
-                "color": _foliage_color(plant),
-                "flower_color": plant.get("flower_color") or "",
-                "flower_form": plant.get("flower_form") or "none",
-                **_bloom_window(plant),
-                # Fleshy fruit (V2.0): a curated berry colour shown in the fruit
-                # season. Empty for dry-fruited / non-fruiting plants.
-                "fruit_color": plant.get("fruit_color") or "",
-                **_fruit_window(plant),
-                "opacity": opacity,
-                # Succession health (V2.21): 1.0 healthy → declining → 0.0 dead,
-                # from the shade the growing overstory casts over the years.
-                "health": health,
-                "health_state": health_state,
-            })
+            # Succession health (V2.21) folds into opacity above; the shared
+            # builder emits the rest of the record (genus geometry, scale/spread
+            # tier, foliage colour, seasonal flower/berry layer).
+            plants.append(_plant_scene_dict(
+                rec["plant_id"], rec.get("common_name", ""), plant, x, y, st,
+                opacity=opacity, health=health, health_state=health_state))
             continue
 
         if etype == "existing_tree" and geom.get("type") == "Point":
@@ -461,6 +480,22 @@ def build_scene(project: dict, *, year: int = 0,
                 "size_m": float(sd.get("size_m") or 1.0),
                 "height_m": float(sd.get("height_m") or 1.0),
             })
+
+    # Regeneration (V2.24): self-seeding herbaceous natives fill the gaps the
+    # closing canopy has opened, so the mature scene shows recovery rather than
+    # permanent bare spots. Recruits are additive plants (flagged `recruit`) that
+    # grow in from the year they established.
+    for rc in recruit_list:
+        plant = _plant_rec(rc["plant_id"])
+        # age+1: the scene's year 0 means "mature", so a freshly-established
+        # recruit is sized as a young plant of its age and grows on as the slider
+        # advances.
+        st = plant_3d_state(plant, rc["lat"], rc["lng"], int(rc["age"]) + 1)
+        rx, ry = proj.to_xy(rc["lat"], rc["lng"])
+        plants.append(_plant_scene_dict(
+            rc["plant_id"], plant.get("common_name", ""), plant, rx, ry, st,
+            opacity=st["presence_opacity"], health=1.0, health_state="healthy",
+            recruit=True))
 
     boundary_xy = None
     if boundary:

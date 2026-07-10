@@ -104,6 +104,20 @@ _DEAD_BELOW = 0.20          # below this: gone from the climax community
 # mortal. Above _DEAD_BELOW, below _DECLINING_BELOW.
 _TREE_HEALTH_FLOOR = 0.3
 
+# Regeneration (V2.24). When the closing canopy shades a plant out, its gap does
+# not stay bare forever: a self-seeding herbaceous native already in the design
+# recruits into it a season or two later and grows in — repair, bottom-up (P8,
+# P1). Only species already present colonise (no invented species — P9), only the
+# non-woody self-spreaders (a tree does not seed into a shady gap in a few years),
+# and only after a short lag while the gap actually opens.
+_RECRUIT_HERB_TYPES = frozenset({
+    "wildflower", "herb", "forb", "groundcover", "grass", "sedge", "rush", "fern",
+})
+_RECRUIT_SPREAD_HABITS = frozenset({
+    "self_seeding", "slow_spreader", "aggressive_rhizomatous",
+})
+_RECRUIT_LAG_YEARS = 2      # seasons a gap sits open before a coloniser establishes
+
 # A caster must overtop a receiver's crown by at least this much (metres) to
 # shade it — a plant is not shaded by a neighbour no taller than itself.
 _OVERTOP_MARGIN_M = 0.5
@@ -520,6 +534,73 @@ class SuccessionEngine:
             "plants": plants,
             "delta": [p for p in plants if p["state"] != _HEALTHY],
         }
+
+    # ── regeneration ─────────────────────────────────────────────────────────
+    def _death_year(self, index: int, year: int) -> Optional[int]:
+        """The first year in 1..``year`` the plant at ``index`` reads *dead*, or
+        ``None`` if it is still alive. Health is monotone, so the earliest dead
+        year is when its gap opened."""
+        for y in range(1, int(year) + 1):
+            h, _, _ = self.health_at(index, y)
+            if _state_for(h) == _DEAD:
+                return y
+        return None
+
+    def recruits(self, year: int) -> list[dict]:
+        """Self-seeding herbaceous natives already in the design that recruit
+        into the gaps the closing canopy has opened by ``year`` (V2.24).
+
+        A plant shaded to death leaves a gap; a season or two later
+        (:data:`_RECRUIT_LAG_YEARS`) the nearest present *self-spreading
+        herbaceous* species — one whose light needs fit the gap, so it isn't
+        doomed in turn — colonises it and grows in from the year it established.
+        Repair from the bottom up (P8, P1); nothing invented (P9 — only species
+        already placed). Returns ``[{plant_id, lat, lng, age, into}, ...]`` for
+        the scene builder to size and place (``age`` = years since establishment;
+        ``into`` = the common name of the plant whose gap this fills). Empty until
+        something has actually died."""
+        year = int(year)
+        if year <= 0 or not self._plants:
+            return []
+        # Present colonisers: herbaceous self-seeders in the design.
+        colonisers = []      # (x, y, plant_id, rec, ceiling)
+        for pl in self._plants:
+            if pl is None:
+                continue
+            rec = pl["rec"]
+            ptype = (rec.get("plant_type") or "").strip().lower()
+            habit = (rec.get("spread_habit") or "").strip().lower()
+            if ptype in _RECRUIT_HERB_TYPES and habit in _RECRUIT_SPREAD_HABITS:
+                colonisers.append((pl["x"], pl["y"], pl["plant_id"], rec,
+                                   shade_ceiling(rec.get("sun_requirement"))))
+        if not colonisers:
+            return []
+
+        out: list = []
+        for i, pl in enumerate(self._plants):
+            if pl is None:
+                continue
+            health, _f, _o = self.health_at(i, year)
+            if _state_for(health) != _DEAD:
+                continue
+            dyear = self._death_year(i, year)
+            if dyear is None:
+                continue
+            est = dyear + _RECRUIT_LAG_YEARS
+            if est > year:
+                continue                     # gap still bare — not colonised yet
+            gx, gy = pl["x"], pl["y"]
+            gap_shade = self.experienced_shade(i, year)
+            # Prefer a coloniser whose tolerance fits the (still-shady) gap so the
+            # recruit isn't shaded out in turn; fall back to the nearest so a
+            # gap is not left permanently bare.
+            fit = [c for c in colonisers if c[4] >= gap_shade - 1e-6]
+            pool = fit or colonisers
+            cx, cy, cpid, crec, _c = min(
+                pool, key=lambda c: (c[0] - gx) ** 2 + (c[1] - gy) ** 2)
+            out.append({"plant_id": cpid, "lat": pl["lat"], "lng": pl["lng"],
+                        "age": year - est, "into": pl["common_name"]})
+        return out
 
 
 def evaluate_project(project: dict, year: int,

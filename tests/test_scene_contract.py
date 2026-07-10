@@ -44,6 +44,18 @@ _FAKE_PLANTS = {
         "mature_height_meters": 3.0, "mature_canopy_m": 2.0,
         "scientific_name": "Amelanchier alnifolia", "fruit_period": "July–August",
         "fruit_color": "#46295e"},
+    # Regeneration fixtures: a fast deciduous overstory, a full-sun forb it shades
+    # out, and a self-seeding native that colonises the gap.
+    7: {"plant_type": "tree", "years_to_maturity": 12, "growth_curve": "fast_early",
+        "mature_height_meters": 11.0, "mature_canopy_m": 8.0,
+        "deciduous_evergreen": "deciduous", "common_name": "Aspen"},
+    8: {"plant_type": "wildflower", "years_to_maturity": 2, "growth_curve": "steady",
+        "mature_height_meters": 0.6, "mature_canopy_m": 0.4,
+        "sun_requirement": "full_sun", "common_name": "Sun forb"},
+    9: {"plant_type": "wildflower", "years_to_maturity": 3, "growth_curve": "steady",
+        "mature_height_meters": 0.7, "mature_canopy_m": 0.5,
+        "sun_requirement": "full_sun,partial_shade", "spread_habit": "self_seeding",
+        "common_name": "Selfseeder"},
 }
 
 
@@ -106,6 +118,34 @@ class TestSceneBasics(unittest.TestCase):
         self.assertEqual(young["height_m"], 5.0)    # linear, 10/20 years
         self.assertEqual(young["canopy_m"], 3.0)
         self.assertEqual(mature["plant_type"], "tree")
+
+    def test_regeneration_recruits_fill_gaps(self):
+        # V2.24: when the closing canopy shades a plant to death, a self-seeding
+        # native already in the design recruits into the gap — the mature scene
+        # shows recovery, not a permanent bare spot.
+        n2 = 2.0 / 111320.0
+        n8 = 8.0 / 111320.0
+        proj = _project([
+            plant_feature({"plant_id": 7, "common_name": "Aspen",
+                           "lat": _LAT, "lng": _LNG}),
+            plant_feature({"plant_id": 8, "common_name": "Sun forb",
+                           "lat": _LAT + n2, "lng": _LNG}),
+            plant_feature({"plant_id": 9, "common_name": "Selfseeder",
+                           "lat": _LAT + n8, "lng": _LNG}),
+        ])
+        young = build_scene(proj, year=1, get_plant=_get_plant)["plants"]
+        mature = build_scene(proj, year=25, get_plant=_get_plant)["plants"]
+        # Nothing recruited before anything died.
+        self.assertFalse(any(p.get("recruit") for p in young))
+        # The forb has been shaded out (opacity 0) and a recruit has grown in.
+        forb = next(p for p in mature if p["common_name"] == "Sun forb")
+        self.assertEqual(forb["health_state"], "dead")
+        recruits = [p for p in mature if p.get("recruit")]
+        self.assertTrue(recruits, "the gap should be colonised by year 25")
+        self.assertEqual(recruits[0]["plant_type"], "wildflower")
+        # It renders as a real (young, healthy) plant, not a ghost.
+        self.assertEqual(recruits[0]["health_state"], "healthy")
+        self.assertGreater(recruits[0]["opacity"], 0.0)
 
     def test_foliage_type_and_month_for_3d_forms(self):
         # The 3D viewer keys crown shape (conifer vs deciduous) and seasonal

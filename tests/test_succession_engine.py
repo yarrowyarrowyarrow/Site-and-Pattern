@@ -55,9 +55,15 @@ _PART_FORB = {"plant_type": "wildflower", "years_to_maturity": 2, "growth_curve"
 _SAPLING = {"plant_type": "tree", "years_to_maturity": 25, "growth_curve": "slow_start",
             "mature_height_meters": 6.0, "mature_canopy_m": 4.0,
             "sun_requirement": "full_sun", "common_name": "Sapling"}
+# A self-seeding herbaceous native that colonises the gaps left by shaded-out
+# plants (tolerates part shade, so it fits an understory gap).
+_SEEDER = {"plant_type": "wildflower", "years_to_maturity": 3, "growth_curve": "steady",
+           "mature_height_meters": 0.7, "mature_canopy_m": 0.5,
+           "sun_requirement": "full_sun,partial_shade",
+           "spread_habit": "self_seeding", "common_name": "Selfseeder"}
 
 _FAKE = {10: _ASPEN, 20: _SUN_FORB, 30: _SHADE_FORB,
-         40: _SPRUCE, 50: _PART_FORB, 60: _SAPLING}
+         40: _SPRUCE, 50: _PART_FORB, 60: _SAPLING, 70: _SEEDER}
 
 
 def _get_plant(pid):
@@ -235,6 +241,59 @@ class TestTreesSuppressedNotKilled(unittest.TestCase):
                                get_plant=_get_plant, origin=(_LAT, _LNG))
         forb = eng.evaluate_year(25)["plants"][1]
         self.assertEqual(forb["state"], "dead")
+
+
+class TestRegeneration(unittest.TestCase):
+    def _eng(self):
+        # Aspen overstory; a full-sun forb that gets shaded out 2 m north; a
+        # self-seeding native 8 m away to colonise the gap.
+        return SuccessionEngine(
+            _placed((10, 0), (20, 2), (70, 8)),
+            get_plant=_get_plant, origin=(_LAT, _LNG))
+
+    def test_no_recruits_before_anything_dies(self):
+        eng = self._eng()
+        for y in (0, 3, 8):
+            self.assertEqual(eng.recruits(y), [],
+                             f"nothing has died by year {y}")
+
+    def test_gap_is_colonised_after_a_death(self):
+        eng = self._eng()
+        # By maturity the forb is dead and its gap has been recruited into.
+        self.assertEqual(eng.evaluate_year(25)["counts"]["dead"], 1)
+        rc = eng.recruits(25)
+        self.assertEqual(len(rc), 1)
+        r = rc[0]
+        self.assertEqual(r["plant_id"], 70)           # the self-seeder colonised
+        self.assertEqual(r["into"], "Sun forb")       # the gap it filled
+        self.assertGreaterEqual(r["age"], 0)          # established, growing in
+
+    def test_recruit_lags_the_death(self):
+        # A recruit only appears a couple of seasons after the gap opens, and its
+        # age tracks the slider so it visibly grows in.
+        eng = self._eng()
+        ages = {}
+        for y in range(0, 26):
+            rc = eng.recruits(y)
+            if rc:
+                ages[y] = rc[0]["age"]
+        self.assertTrue(ages, "the gap should eventually be colonised")
+        first = min(ages)
+        self.assertEqual(ages[first], 0)              # just established
+        self.assertGreater(ages[max(ages)], ages[first])  # grows with the years
+
+    def test_only_self_seeding_herbs_recruit(self):
+        # With no self-seeder present, a dead plant's gap stays bare — nothing is
+        # invented (P9); only species already in the design colonise.
+        eng = SuccessionEngine(_placed((10, 0), (20, 2)),
+                               get_plant=_get_plant, origin=(_LAT, _LNG))
+        self.assertEqual(eng.evaluate_year(25)["counts"]["dead"], 1)
+        self.assertEqual(eng.recruits(25), [])
+
+    def test_recruits_deterministic(self):
+        a = self._eng().recruits(25)
+        b = self._eng().recruits(25)
+        self.assertEqual(a, b)
 
 
 class TestStaticCasters(unittest.TestCase):
