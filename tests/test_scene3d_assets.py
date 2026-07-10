@@ -128,8 +128,33 @@ class SceneViewerAssetsTest(unittest.TestCase):
                     f"{os.path.relpath(resolved, _ROOT)}")
 
     def test_no_cdn_references_anywhere_in_html(self):
-        self.assertNotIn("unpkg.com", self.html)
-        self.assertNotIn("sparkjs.dev", self.html)
+        # The HTML shell and every split viewer chunk (html/scene3d/*.js, V2.24).
+        srcs = [self.html]
+        chunk_dir = os.path.join(_ROOT, "html", "scene3d")
+        if os.path.isdir(chunk_dir):
+            for f in sorted(os.listdir(chunk_dir)):
+                if f.endswith(".js"):
+                    srcs.append(_read(os.path.join(chunk_dir, f)))
+        for src in srcs:
+            self.assertNotIn("unpkg.com", src)
+            self.assertNotIn("sparkjs.dev", src)
+
+    def test_split_chunks_use_no_es_imports(self):
+        # The chunks are CLASSIC scripts sharing globals (THREE etc. come from the
+        # bootstrap module); a stray ES `import`/`export` would throw at load.
+        # Dynamic `import(...)` (Spark) is fine and stays.
+        chunk_dir = os.path.join(_ROOT, "html", "scene3d")
+        if not os.path.isdir(chunk_dir):
+            self.skipTest("viewer not split into chunks")
+        bad = []
+        static_im = re.compile(r"^\s*(?:import\s+[^(]|export\b)", re.M)
+        for f in sorted(os.listdir(chunk_dir)):
+            if not f.endswith(".js"):
+                continue
+            if static_im.search(_read(os.path.join(chunk_dir, f))):
+                bad.append(f)
+        self.assertFalse(bad, f"split chunks must not use static ES import/export "
+                              f"(they are classic scripts): {bad}")
 
 
 if __name__ == "__main__":

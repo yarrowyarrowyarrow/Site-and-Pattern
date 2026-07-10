@@ -93,11 +93,21 @@ class TestStructuralCeilings(unittest.TestCase):
         (_HTML / "map" / "05-features.js", 1100),      # ~1008 now
         # V2.13: + water flow & accumulation overlay (raster + arrow lattice).
         (_HTML / "map" / "06-overlays.js", 1560),      # ~1490 now
-        # V2.22: scene3d.html is a single 3,900-line <script> — the exact
-        # monolith shape the V1.64 split killed, reborn unguarded in the 3D
-        # viewer. Tight ceiling on purpose: the fix when this trips is the
-        # same split (html/scene3d/*.js loaded in order), not a bigger number.
-        (_HTML / "scene3d.html", 4400),                # ~4165 now
+        # V2.24: scene3d.html was a single ~4,200-line <script> — the exact
+        # monolith shape the V1.64 split killed. It is now the HTML shell + a
+        # bootstrap module; the viewer lives in html/scene3d/*.js loaded in
+        # order (shared-global classic scripts like html/map/*.js). Keep each
+        # chunk under its own ceiling; the fix when one trips is a further split,
+        # not a bigger number.
+        (_HTML / "scene3d.html", 400),                 # ~279 now
+        (_HTML / "scene3d" / "01-core.js", 700),       # ~403 now
+        (_HTML / "scene3d" / "02-plants.js", 700),     # ~435 now
+        (_HTML / "scene3d" / "03-herbs.js", 700),      # ~431 now
+        (_HTML / "scene3d" / "04-quality.js", 900),    # ~629 now
+        (_HTML / "scene3d" / "05-flowers.js", 800),    # ~565 now
+        (_HTML / "scene3d" / "06-fly.js", 950),        # ~732 now
+        (_HTML / "scene3d" / "07-wildlife.js", 800),   # ~550 now
+        (_HTML / "scene3d" / "08-modes.js", 600),      # ~286 now
     ]
 
     def test_module_line_ceilings(self):
