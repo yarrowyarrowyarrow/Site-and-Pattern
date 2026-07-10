@@ -36,6 +36,7 @@ from src.polyculture_panel      import PolyculturePanel
 from src.structure_panel  import StructurePanel
 from src.analysis_panel   import AnalysisPanel
 from src.planning_panel   import PlanningPanel
+from src.learn_panel      import LearnPanel
 from src.site_panel       import SitePanel
 from src.toolbar          import MainToolbar
 from src.climate          import zone_label
@@ -197,33 +198,36 @@ class MainWindow(QMainWindow):
         self.structure_panel = StructurePanel(self)
         self.analysis_panel  = AnalysisPanel(self)
         self.planning_panel  = PlanningPanel(self)
+        self.learn_panel     = LearnPanel(self)
 
-        # Tabbed side panel — five top-level tabs (Site, Plants, Structures,
-        # Analysis, Planning). The Polyculture library lives under an inner
-        # tab inside "Plants".
+        # Tabbed side panel — six top-level tabs (Site, Plants, Structures,
+        # Analysis, Planning, Learn). The Polyculture library lives under an
+        # inner tab inside "Plants".
         self._plant_poly_tab = self._build_plants_polycultures_tab()
 
         from src.fill_tab_widget import FillTabWidget
-        self._side_tabs = FillTabWidget()
+        # allow_shrink + elide as a safety net: with six labels the strip can
+        # overflow the panel minimum on wide-font systems (macOS); eliding a
+        # label beats clipping the first tab off-screen entirely.
+        self._side_tabs = FillTabWidget(allow_shrink=True)
         # Document mode lets the tab bar span the full width, which is what lets
-        # FillTabWidget stretch the tabs edge-to-edge (no gap after "Planning").
+        # FillTabWidget stretch the tabs edge-to-edge (no gap after "Learn").
         self._side_tabs.setDocumentMode(True)
         self._side_tabs.addTab(self.site_panel, "Site")
         self._side_tabs.addTab(self._plant_poly_tab, "Plants")
         self._side_tabs.addTab(self.structure_panel, "Structures")
         self._side_tabs.addTab(self.analysis_panel, "Analysis")
         self._side_tabs.addTab(self.planning_panel, "Planning")
-        # Side panel needs to be wide enough that all five tab labels can
-        # render in full ("Structures" is the widest at ~11px font). 260px
-        # is the empirical minimum; below that the tab bar truncates to
-        # "S..." even with elide off, because tabs share width equally
-        # when setExpanding(True).
-        self._side_tabs.setMinimumWidth(260)
+        self._side_tabs.addTab(self.learn_panel, "Learn")
+        # Side panel needs to be wide enough that all six tab labels can
+        # render in full ("Structures" is the widest at ~11px font). 300px
+        # is the empirical minimum with six tabs; below that labels elide.
+        self._side_tabs.setMinimumWidth(300)
         self._side_tabs.setMaximumWidth(480)
-        # Show every label in full, and stretch the tabs to fill the whole tab
-        # strip (no empty gap to the right of "Planning").
+        # Stretch the tabs to fill the whole tab strip (no empty gap to the
+        # right of "Learn"); elide right on overflow instead of clipping.
         self._side_tabs.tabBar().setUsesScrollButtons(False)
-        self._side_tabs.tabBar().setElideMode(Qt.TextElideMode.ElideNone)
+        self._side_tabs.tabBar().setElideMode(Qt.TextElideMode.ElideRight)
         self._side_tabs.tabBar().setExpanding(True)
         # Tab styling — every tab strip in the app (these top-level tabs plus
         # the Site/Plants/Analysis/Planning sub-tabs) shares the same
@@ -233,9 +237,9 @@ class MainWindow(QMainWindow):
         self._side_tabs.setStyleSheet(
             inner_tab_stylesheet()
             + "QTabWidget::pane { border: 1px solid #2e4a2e; top: -1px; }"
-            # Tighter horizontal padding than the sub-tabs so all five top-level
-            # labels still render in full at the 260px minimum panel width.
-            + "QTabBar::tab { padding: 5px 8px; }"
+            # Tighter horizontal padding than the sub-tabs so all six top-level
+            # labels still render in full at the 300px minimum panel width.
+            + "QTabBar::tab { padding: 5px 7px; }"
             + "QWidget { background-color: #1e2a1e; color: #c8e6c9; }"
         )
 
@@ -1934,6 +1938,10 @@ class MainWindow(QMainWindow):
         # Habitat Value Score tab in the analysis panel uses the same data.
         self.analysis_panel.set_placed_plants(enriched)
         self.analysis_panel.set_structures(structs)
+
+        # Learn tab (Field Study / Lessons / Present) narrates the same design.
+        self.learn_panel.set_placed_plants(enriched)
+        self.learn_panel.set_structures(structs)
 
         # Read-only shade-mix breakdown from the cached tags (if classified).
         try:

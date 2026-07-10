@@ -629,7 +629,8 @@ honest *range* (P9), with a pass/partway/short verdict and the keystone plants d
 the invisible food web emotionally concrete without inventing precision.
 
 ### ✅ F48 · Field Study quiz layer — *Shipped · was Impact High · Effort M · Risk Low (P5, P7)*
-**Shipped** in `src/field_study.py` (`generate_quiz`), surfaced as an Analysis → Field Study tab.
+**Shipped** in `src/field_study.py` (`generate_quiz`), surfaced as a Learn → Field Study tab
+(moved from Analysis with the rest of the teaching tools when the top-level Learn tab landed, V2.25).
 Procedurally-generated retrieval practice from data already present — no new content: *identify the
 plant* (from an image + traits), *which plant feeds this specialist* (from the `plant_fauna`
 specialist edges), and *spot the food-web gap* (from the design's own missing links). Deterministic
@@ -673,7 +674,7 @@ core + unit tests. Pinning individual observations back into the `field_notes` b
 follow-on.
 
 ### ✅ F52 · Docent / presentation mode — *Shipped · was Impact Med · Effort M · Risk Med — capture plumbing (P5)*
-**Shipped** in `src/docent.py` (`build_docent_script`), surfaced as an Analysis → **Present** tab
+**Shipped** in `src/docent.py` (`build_docent_script`), surfaced as a Learn → **Present** tab (V2.25; was Analysis → Present)
 (`src/docent_widget.py`, an on-screen guided tour with Back/Next) and headless via
 `permadesign_api.docent_script`. A narrated walk-through of a finished design to show a neighbour /
 HOA / class: a sequence of *beats* — each a camera + season/year state plus a narration line
@@ -686,7 +687,7 @@ script can feed an offscreen-capture booklet as a cheap follow-on. Unit tests co
 sequence and fact-driven narration.
 
 ### ✅ F53 · Guided lesson track — *Shipped · was Impact Med · Effort M · Risk Low (P5, P7)*
-**Shipped** in `src/lesson_track.py` (`build_lesson_track`), surfaced as an Analysis → **Learn** tab
+**Shipped** in `src/lesson_track.py` (`build_lesson_track`), surfaced as a Learn → **Lessons** tab (V2.25; was Analysis → Learn)
 (`src/lesson_track_widget.py`, a Back/Next stepper with a status-dot row) and headless via
 `permadesign_api.lesson_track`. A short **course narrated against the user's OWN project** in four
 steps — keystone plants → closing the food web → succession over time → ranges-not-certainties —

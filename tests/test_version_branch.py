@@ -17,6 +17,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.version_branch import (  # noqa: E402
+    normalize_branch_ref,
     parse_version_branch,
     is_newer_version,
     newest_remote_version_branch,
@@ -343,6 +344,33 @@ class TestVersionBranchSwitchCheckout(unittest.TestCase):
         self.assertNotEqual(
             self._symbolic_ref().returncode, 0,
             "bare `git checkout V1.77` should detach onto the same-named tag")
+
+
+class TestNormalizeBranchRef(unittest.TestCase):
+    """V2.25 — once the release *tag* V2.NN exists (published by the release
+    workflow), ``git rev-parse --abbrev-ref HEAD`` disambiguates the branch to
+    ``heads/V2.NN``; the updater dialogs and the Help-menu version label must
+    see the plain branch name."""
+
+    def test_strips_heads_prefix(self):
+        self.assertEqual(normalize_branch_ref("heads/V2.22"), "V2.22")
+        self.assertEqual(normalize_branch_ref("refs/heads/V2.22"), "V2.22")
+
+    def test_plain_names_pass_through(self):
+        self.assertEqual(normalize_branch_ref("V2.22"), "V2.22")
+        self.assertEqual(normalize_branch_ref("main"), "main")
+        self.assertEqual(normalize_branch_ref("  V2.22\n"), "V2.22")
+
+    def test_none_and_empty(self):
+        self.assertIsNone(normalize_branch_ref(None))
+        self.assertEqual(normalize_branch_ref(""), "")
+
+    def test_normalized_name_parses_as_version(self):
+        # The end-to-end point: the Help menu showed "dev" because
+        # parse_version_branch rejected "heads/V2.22".
+        self.assertIsNone(parse_version_branch("heads/V2.22"))
+        self.assertEqual(
+            parse_version_branch(normalize_branch_ref("heads/V2.22")), (2, 22))
 
 
 if __name__ == "__main__":

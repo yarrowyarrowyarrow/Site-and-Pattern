@@ -324,7 +324,7 @@ class SitePanel(QWidget):
         tabs.tabBar().setExpanding(True)
         tabs.tabBar().setElideMode(Qt.TextElideMode.ElideRight)
         # Tighter tab padding than the stock sub-tab style: four labels have
-        # to fit the panel's 260 px minimum (same trick as the Analysis strip).
+        # to fit the panel's 300 px minimum (same trick as the Analysis strip).
         tabs.setStyleSheet(inner_tab_stylesheet()
                            + "QTabBar::tab { padding: 4px 5px; }")
         outer.addWidget(tabs)

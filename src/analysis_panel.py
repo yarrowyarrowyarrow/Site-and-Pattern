@@ -5,11 +5,12 @@ Contains inner tabs:
   A1: Sun Path / Shadow overlay
   A4: Wind / Windbreak effect
   H1: Habitat Value Score (Tallamy-style composite scoring of native habitat quality)
-  plus the learning/observation tabs: This Month, Field Study, Learn, Present, Bees.
+  plus the observation/design tabs: This Month (phenology) and Bees.
 
 (The Sector, Season and Forage tabs were retired in V2.25: sun and wind cover
 the sector wedges' job, the season tile filter added no design value, and the
-forage calendar lives in Planning → Wildlife.)
+forage calendar lives in Planning → Wildlife. The Field Study / Lessons /
+Present teaching tabs moved to the top-level Learn tab — src/learn_panel.py.)
 """
 
 from __future__ import annotations
@@ -70,7 +71,7 @@ class AnalysisPanel(QWidget):
 
         from src.ui_style import inner_tab_stylesheet
         from src.fill_tab_widget import FillTabWidget
-        # Eight sub-tabs on a narrow panel — opt into shrink-to-fit (with
+        # Five sub-tabs on a narrow panel — opt into shrink-to-fit (with
         # elide) so labels compress instead of the strip clipping off-screen
         # (the Planning panel uses the same trick for its six tabs).
         self._tabs = FillTabWidget(allow_shrink=True)
@@ -79,9 +80,9 @@ class AnalysisPanel(QWidget):
         self._tabs.tabBar().setExpanding(True)
         self._tabs.tabBar().setElideMode(Qt.TextElideMode.ElideRight)
         # Tighter horizontal padding than the stock sub-tab style: this strip
-        # holds eight labels and has to fit the side panel's 260px minimum on
-        # macOS too, whose system font renders wider than Windows/Linux at the
-        # same 11px (same trick as the top-level strip in app.py).
+        # has to fit the side panel's 300px minimum on macOS too, whose system
+        # font renders wider than Windows/Linux at the same 11px (same trick
+        # as the top-level strip in app.py).
         self._tabs.setStyleSheet(inner_tab_stylesheet()
                                  + "QTabBar::tab { padding: 4px 6px; }")
 
@@ -92,9 +93,8 @@ class AnalysisPanel(QWidget):
         self._build_wind_tab()
         self._build_habitat_tab()
         self._build_phenology_tab()
-        self._build_field_study_tab()
-        self._build_lesson_tab()
-        self._build_present_tab()
+        # Field Study / Lessons / Present moved to the top-level Learn tab
+        # (src/learn_panel.py, V2.25) — teaching tools, not analysis.
         self._build_bee_tab()
 
         layout.addWidget(self._tabs)
@@ -476,54 +476,6 @@ class AnalysisPanel(QWidget):
             f"Prevailing {label} · mean {mean:.0f} km/h · calm {calm:.0f}%  "
             f"({src}). The dial below is set to match — step 3 draws it "
             f"on the map.")
-
-    # ═════════════════════════════════════════════════════════════════════════
-    #  F48 — Field Study quiz layer
-    # ═════════════════════════════════════════════════════════════════════════
-
-    def _build_field_study_tab(self):
-        from src.field_study_widget import FieldStudyWidget
-        page = QScrollArea()
-        page.setWidgetResizable(True)
-        page.setFrameShape(QFrame.Shape.NoFrame)
-        # The quiz is design-aware: it reads the live placed-plant list so the
-        # "spot the food-web gap" question is about the user's own design.
-        self._field_study = FieldStudyWidget(
-            plants_provider=lambda: self._placed_plants)
-        page.setWidget(self._field_study)
-        self._tabs.addTab(page, "Field Study")
-
-    # ═════════════════════════════════════════════════════════════════════════
-    #  F53 — Guided lesson track
-    # ═════════════════════════════════════════════════════════════════════════
-
-    def _build_lesson_tab(self):
-        from src.lesson_track_widget import LessonTrackWidget
-        page = QScrollArea()
-        page.setWidgetResizable(True)
-        page.setFrameShape(QFrame.Shape.NoFrame)
-        # Design-aware: each step's "your design" readout is the live project.
-        self._lesson_track = LessonTrackWidget(
-            plants_provider=lambda: self._placed_plants,
-            structures_provider=lambda: self._structures)
-        page.setWidget(self._lesson_track)
-        self._tabs.addTab(page, "Learn")
-
-    # ═════════════════════════════════════════════════════════════════════════
-    #  F52 — Docent / presentation mode
-    # ═════════════════════════════════════════════════════════════════════════
-
-    def _build_present_tab(self):
-        from src.docent_widget import DocentWidget
-        page = QScrollArea()
-        page.setWidgetResizable(True)
-        page.setFrameShape(QFrame.Shape.NoFrame)
-        # Design-aware: the narration is generated from the live project's facts.
-        self._docent = DocentWidget(
-            plants_provider=lambda: self._placed_plants,
-            structures_provider=lambda: self._structures)
-        page.setWidget(self._docent)
-        self._tabs.addTab(page, "Present")
 
     # ═════════════════════════════════════════════════════════════════════════
     #  F51 — Phenology "what's happening now" dashboard
@@ -1214,12 +1166,6 @@ class AnalysisPanel(QWidget):
         # Phenology dashboard likewise reads the live design.
         if hasattr(self, "_phenology"):
             self._phenology.refresh()
-        # Guided lesson track reads the live design too.
-        if hasattr(self, "_lesson_track"):
-            self._lesson_track.refresh()
-        # Docent presentation script is regenerated from the live design.
-        if hasattr(self, "_docent"):
-            self._docent.refresh()
 
     def set_structures(self, structures: list[dict]):
         """Update the list of placed structures (from app.py)."""

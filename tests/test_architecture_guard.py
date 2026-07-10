@@ -164,11 +164,15 @@ class TestStructuralCeilings(unittest.TestCase):
 class TestAnalysisPanelTabsRegistered(unittest.TestCase):
     """V1.54 — guard the regression where the 'Habitat Value' tab vanished:
     its ``addTab`` had slipped past a ``return`` in a sibling method, so the tab
-    was never registered. AST-only (the panel needs Qt to instantiate)."""
+    was never registered. AST-only (the panel needs Qt to instantiate).
+    V2.25: also covers the Learn panel, which uses the same builder pattern."""
 
-    def _func(self, class_name, method_name):
-        tree = ast.parse(
-            (_SRC / "analysis_panel.py").read_text(encoding="utf-8"))
+    # (file, class) pairs whose _build_*_tab methods must each call addTab.
+    _PANELS = [("analysis_panel.py", "AnalysisPanel"),
+               ("learn_panel.py", "LearnPanel")]
+
+    def _func(self, class_name, method_name, filename="analysis_panel.py"):
+        tree = ast.parse((_SRC / filename).read_text(encoding="utf-8"))
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef) and node.name == class_name:
                 for n in node.body:
@@ -183,21 +187,26 @@ class TestAnalysisPanelTabsRegistered(unittest.TestCase):
                 return True
         return False
 
+    def _builders(self, filename):
+        tree = ast.parse((_SRC / filename).read_text(encoding="utf-8"))
+        return [n.name for n in ast.walk(tree)
+                if isinstance(n, ast.FunctionDef)
+                and n.name.startswith("_build_") and n.name.endswith("_tab")]
+
     def test_every_build_tab_registers_a_tab(self):
         # Each _build_*_tab must actually call self._tabs.addTab(...).
-        tree = ast.parse(
-            (_SRC / "analysis_panel.py").read_text(encoding="utf-8"))
-        builders = [n.name for n in ast.walk(tree)
-                    if isinstance(n, ast.FunctionDef)
-                    and n.name.startswith("_build_") and n.name.endswith("_tab")]
-        self.assertIn("_build_habitat_tab", builders)
-        for name in builders:
-            fn = self._func("AnalysisPanel", name)
-            self.assertTrue(
-                self._calls_addtab(fn),
-                f"{name} no longer calls addTab — its tab won't appear. "
-                f"Did an addTab slip past a return into another method?",
-            )
+        self.assertIn("_build_habitat_tab", self._builders("analysis_panel.py"))
+        self.assertIn("_build_field_study_tab",
+                      self._builders("learn_panel.py"))
+        for filename, class_name in self._PANELS:
+            for name in self._builders(filename):
+                fn = self._func(class_name, name, filename)
+                self.assertTrue(
+                    self._calls_addtab(fn),
+                    f"{class_name}.{name} no longer calls addTab — its tab "
+                    f"won't appear. Did an addTab slip past a return into "
+                    f"another method?",
+                )
 
     def test_set_shade_breakdown_has_no_dead_code_after_return(self):
         fn = self._func("AnalysisPanel", "set_shade_breakdown")

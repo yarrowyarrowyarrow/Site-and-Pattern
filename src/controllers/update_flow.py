@@ -36,8 +36,15 @@ from src.branding import APP_NAME
 from src.version_branch import (
     is_newer_version,
     newest_remote_version_branch,
+    normalize_branch_ref,
     parse_version_branch,
 )
+
+# git emits UTF-8 (commit subjects, branch names) regardless of the OS locale;
+# decoding subprocess output with the locale default mojibakes commit messages
+# on Windows (cp1252 renders "→" as "â†'" — seen live in the V2.25 update
+# dialog). Every git call below decodes explicitly.
+_GIT_TEXT = {"encoding": "utf-8", "errors": "replace"}
 
 
 _REPO_RELEASES_URL = "https://github.com/yarrowyarrowyarrow/Site-and-Pattern/releases"
@@ -84,17 +91,19 @@ class UpdateFlowController:
     def _current_branch_name(self):
         """Return the current git branch name, or None for frozen /
         non-git installs. Cached only across the call site that built
-        the menu label."""
+        the menu label. Normalized: once the release tag V2.NN exists,
+        ``rev-parse --abbrev-ref`` disambiguates to ``heads/V2.NN`` — the
+        plain branch name is what every caller wants."""
         repo = self._repo_path()
         if not repo:
             return None
         try:
             res = subprocess.run(
                 ["git", "-C", repo, "rev-parse", "--abbrev-ref", "HEAD"],
-                capture_output=True, text=True, timeout=3,
+                capture_output=True, timeout=3, **_GIT_TEXT,
             )
             if res.returncode == 0:
-                return res.stdout.strip() or None
+                return normalize_branch_ref(res.stdout.strip()) or None
         except Exception:
             pass
         return None
@@ -111,7 +120,7 @@ class UpdateFlowController:
             try:
                 res = subprocess.run(
                     ["git", "-C", repo, "rev-parse", "--short", "HEAD"],
-                    capture_output=True, text=True, timeout=3,
+                    capture_output=True, timeout=3, **_GIT_TEXT,
                 )
                 if res.returncode == 0:
                     commit = res.stdout.strip() or "?"
@@ -202,7 +211,7 @@ class UpdateFlowController:
         def _git(*args, timeout=30):
             return subprocess.run(
                 ["git", "-C", repo_root, *args],
-                capture_output=True, text=True, timeout=timeout, check=False,
+                capture_output=True, timeout=timeout, check=False, **_GIT_TEXT,
             )
 
         self._main.statusBar().showMessage("Checking for updates…", 2000)
@@ -226,16 +235,26 @@ class UpdateFlowController:
             log = _git("log", "--oneline", "-8", f"origin/{newest}",
                        "--not", "HEAD")
             recent = (log.stdout or "").strip() or "(commit log unavailable)"
-            QMessageBox.information(
-                self._main, "New version available",
+            command = f"git checkout -B {newest} origin/{newest}"
+            box = QMessageBox(
+                QMessageBox.Icon.Information, "New version available",
                 f"A newer version of {APP_NAME} is on the server.\n\n"
                 f"You're on:   {current}\n"
                 f"Latest:      {newest}\n\n"
                 f"Recent changes in {newest}:\n{recent}\n\n"
                 "This is a source checkout — update from a terminal:\n\n"
-                f"    git checkout -B {newest} origin/{newest}\n\n"
-                "then relaunch the app."
+                f"    {command}\n\n"
+                "then relaunch the app.",
+                QMessageBox.StandardButton.Ok, self._main,
             )
+            copy_btn = box.addButton(
+                "Copy command", QMessageBox.ButtonRole.ActionRole)
+            box.exec()
+            if box.clickedButton() is copy_btn:
+                from PyQt6.QtWidgets import QApplication
+                QApplication.clipboard().setText(command)
+                self._main.statusBar().showMessage(
+                    f"Copied to clipboard: {command}", 5000)
             return
 
         # Same branch as the newest release — report upstream drift.

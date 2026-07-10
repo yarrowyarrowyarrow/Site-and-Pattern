@@ -21,6 +21,23 @@ from typing import Callable, Optional, Tuple
 _VERSION_BRANCH_RE = re.compile(r"^V(\d+)\.(\d+)$")
 
 
+def normalize_branch_ref(name: Optional[str]) -> Optional[str]:
+    """Strip the ref-namespace prefix git prepends when a branch name is
+    ambiguous with another ref: ``git rev-parse --abbrev-ref HEAD`` answers
+    ``heads/V2.22`` instead of ``V2.22`` once the release *tag* V2.22 exists —
+    and the release workflow publishes a tag for every V-branch, so on a real
+    install this is the norm, not the exception. Without normalization the
+    ugly name leaks into the updater dialogs and ``parse_version_branch``
+    rejects it (the Help menu then mislabels the build as "dev")."""
+    if not name:
+        return name
+    s = name.strip()
+    for prefix in ("refs/heads/", "heads/"):
+        if s.startswith(prefix):
+            return s[len(prefix):]
+    return s
+
+
 def parse_version_branch(name: str) -> Optional[Tuple[int, int]]:
     """Return ``(major, minor)`` if ``name`` matches the convention, else
     ``None``. Comparison is strict — lowercase ``v``, suffixes, and

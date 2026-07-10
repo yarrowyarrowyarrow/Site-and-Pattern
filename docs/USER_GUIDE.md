@@ -123,6 +123,12 @@ The View bar (🛰 Satellite, ⬡ Boundary, 📏 Measurement, **#** Grid, ✿ Pl
 
 (The old Sectors and Season View tabs were retired in V2.25 — Sun Path and Wind cover the same questions with real data, and the season tile filter added no design value.)
 
+The teaching tools live on their own top-level **Learn** tab (V2.25):
+
+- **Field Study** — a five-question recall quiz built from your design and the plant catalogue: photo ID (only plants whose photo is actually downloaded), specialist relationships, and spot-the-gap questions about your own food web.
+- **Lessons** — a short guided course narrated against your own project.
+- **Present** — a docent-style walkthrough for showing the design to a neighbour or client.
+
 ---
 
 ## 10. Planning helpers (Planning tab)

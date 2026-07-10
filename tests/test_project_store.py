@@ -284,7 +284,7 @@ class TestSingleWritePathGuard(unittest.TestCase):
         r"|\.insert|\.remove)\b")
     # Panels own private lists that merely share the attribute name; they
     # are not MainWindow's index.
-    _EXEMPT = {"planning_panel.py", "analysis_panel.py"}
+    _EXEMPT = {"planning_panel.py", "analysis_panel.py", "learn_panel.py"}
 
     def test_no_direct_placed_plants_mutation_in_src(self):
         offenders = []

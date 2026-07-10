@@ -77,6 +77,7 @@ added; trust the source over this list).
 | `src/planning_panel.py` | Side-panel tab for planning and analysis features |
 | `src/wind_rose_widget.py` | a small QPainter wind-rose (V1.67) |
 | `src/phenology_widget.py` | the "what's happening now" dashboard UI (F51) |
+| `src/learn_panel.py` | the Learn side tab: Field Study / Lessons / Present (V2.25) |
 | `src/docent_widget.py` | the docent / presentation-mode UI (F52) |
 | `src/field_study_widget.py` | the Field Study quiz runner UI (F48) |
 | `src/lesson_track_widget.py` | the guided lesson-track stepper UI (F53) |

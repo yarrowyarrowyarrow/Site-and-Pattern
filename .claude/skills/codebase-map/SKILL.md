@@ -17,7 +17,7 @@ inventory: [reference.md](reference.md).
 
 - Entry: `main.py` → `src/app.py` `MainWindow`. Left: Leaflet map in
   QWebEngineView (`src/map_widget.py` + `html/map.html` + `html/map/`). Right:
-  five side tabs (Site / Plants / Structures / Analysis / Planning).
+  six side tabs (Site / Plants / Structures / Analysis / Planning / Learn).
 - Reference data (plant catalogue, fauna, communities) lives in a per-user
   SQLite DB seeded from `data/*.json` — never in the repo tree
   (`src/user_paths.py` is the single source of truth for the directory).
@@ -82,7 +82,8 @@ inventory: [reference.md](reference.md).
 `src/plant_panel.py` (+ `src/plant_list_view.py`, `src/on_this_design_panel.py`,
 `src/placement_controls.py`), `src/polyculture_panel.py`,
 `src/structure_panel.py`, `src/site_panel.py`, `src/analysis_panel.py`,
-`src/planning_panel.py`, plus small QPainter widgets
+`src/planning_panel.py`, `src/learn_panel.py` (Field Study / Lessons /
+Present, V2.25), plus small QPainter widgets
 (`src/wind_rose_widget.py`,
 `src/phenology_widget.py`, `src/docent_widget.py`, `src/field_study_widget.py`,
 `src/lesson_track_widget.py`). Widgets draw; they never compute — the maths
