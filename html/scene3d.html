@@ -679,6 +679,41 @@ function makeMeadowTexture() {
   return t;
 }
 
+// Winter ground cover — the prairie yard is under snow for much of the year, so
+// the ground should not read summer-green in January. A bright, faintly blue-
+// hollowed drift texture built the same way as the meadow.
+function makeSnowTexture() {
+  const s = 256, cv = document.createElement('canvas');
+  cv.width = cv.height = s;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#eef3f8'; g.fillRect(0, 0, s, s);
+  const rng = mulberry32(20250131);
+  const blob = (x, y, r, rgb, a) => {
+    for (const ox of [-s, 0, s]) for (const oy of [-s, 0, s]) {
+      const grd = g.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, r);
+      grd.addColorStop(0, 'rgba(' + rgb + ',' + a.toFixed(3) + ')');
+      grd.addColorStop(1, 'rgba(' + rgb + ',0)');
+      g.fillStyle = grd;
+      g.beginPath(); g.arc(x + ox, y + oy, r, 0, Math.PI * 2); g.fill();
+    }
+  };
+  for (let i = 0; i < 30; i++)              // soft blue hollows between drifts
+    blob(rng() * s, rng() * s, 20 + rng() * 40, '188,204,224', 0.10 + rng() * 0.12);
+  for (let i = 0; i < 24; i++)              // brighter wind-packed drifts
+    blob(rng() * s, rng() * s, 10 + rng() * 22, '255,255,255', 0.12 + rng() * 0.18);
+  g.fillStyle = 'rgba(210,222,238,0.6)';    // fine grain / sparkle
+  for (let i = 0; i < 300; i++) {
+    g.beginPath();
+    g.arc(rng() * s, rng() * s, 0.5 + rng() * 0.8, 0, Math.PI * 2);
+    g.fill();
+  }
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy() || 1);
+  return t;
+}
+
 // One shared ground material across every scene rebuild (its texture is never
 // disposed — disposeDesignGroup skips it via the shared-material set). Plane
 // UVs are scaled so one texture tile always covers ~_GROUND_TILE_M metres.
@@ -697,9 +732,32 @@ function scaleGroundUv(geo, w, d) {
                 uv.getY(i) * (d / _GROUND_TILE_M));
 }
 
+// A second cached material for snow, plus a seasonal picker: deep winter
+// (Nov–Mar) lays snow on the ground; the Oct / Apr shoulders tint the meadow
+// toward straw / a waking green rather than swapping it. Driven by the scene
+// month — the same signal the plants' seasonalColor uses — so ground, foliage
+// and bare branches turn together.
+let GROUND_SNOW_MAT = null;
+function ensureGroundSnowMat() {
+  if (!GROUND_SNOW_MAT)
+    GROUND_SNOW_MAT = new THREE.MeshStandardMaterial({
+      map: makeSnowTexture(), roughness: 0.82 });
+  return GROUND_SNOW_MAT;
+}
+function groundMatFor(month) {
+  const m = month || 0;
+  if (m >= 11 || m <= 3) return ensureGroundSnowMat();   // snow on the ground
+  const mat = ensureGroundMat();
+  // .color multiplies the texture: white = untouched growing-season green.
+  if (m === 10) mat.color.setHex(0xbfa878);              // October straw
+  else if (m === 4) mat.color.setHex(0xc7cba2);          // April, still waking
+  else mat.color.setHex(0xffffff);
+  return mat;
+}
+
 function buildGround(group, sc) {
   const b = sc.bounds, t = sc.terrain;
-  const mat = ensureGroundMat();
+  const mat = groundMatFor(sc.month);
   if (t && t.rows > 1 && t.cols > 1) {
     const w = t.max_x - t.min_x, d = t.max_y - t.min_y;
     const geo = new THREE.PlaneGeometry(w, d, t.cols - 1, t.rows - 1);
