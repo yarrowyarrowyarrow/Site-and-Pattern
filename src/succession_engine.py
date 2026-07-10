@@ -68,12 +68,24 @@ from src.solar import sun_position, shadow_azimuth, shadow_length_factor
 _SHADE_CEILING = {"full_sun": 0.35, "partial_shade": 0.70, "full_shade": 1.0}
 # Unknown light needs → lean generalist and, crucially, forgiving: we do not
 # invent mortality for a plant whose requirement we cannot read (P9).
-_DEFAULT_CEILING = 0.60
+_DEFAULT_CEILING = 0.65
 
 # Shade fraction assigned to a plant sitting *under* an overtopping crown. Not a
 # flat 1.0: even a dense summer canopy leaks sky/side light, and we prefer to
-# under-claim mortality over inventing it (P9).
+# under-claim mortality over inventing it (P9). This is the evergreen / unknown
+# value — a crown that is opaque all season.
 _UNDER_CANOPY_SHADE = 0.9
+
+# A declared-*deciduous* crown is bare for the shoulders of the growing season
+# (leaf-out ~mid-May, drop ~late-Sept in the prairies), so an understory plant
+# banks real spring + fall light beneath it — spring ephemerals live on exactly
+# this. Its effective growing-season shade is a fraction of an evergreen's, so a
+# part-shade plant thrives under a deciduous tree where it would struggle under a
+# spruce. Coarse and honest (P9), mirroring the leaf-off idea in src/shade.py
+# (`_LEAF_OFF_WEIGHT`) without pretending to per-day precision. Only crowns that
+# *declare* foliage="deciduous" get the break — unknown stays opaque, never
+# invented-transparent.
+_DECIDUOUS_LEAF_ON = 0.6
 
 # Cumulative "stress-years" (stress in [0,1] summed over the trajectory) that
 # take a plant from full health to dead. ~5 means a fully-over-shaded plant
@@ -84,6 +96,13 @@ _LETHAL_STRESS_YEARS = 5.0
 # Health-coefficient → state bands.
 _DECLINING_BELOW = 0.66     # below this: visibly struggling
 _DEAD_BELOW = 0.20          # below this: gone from the climax community
+
+# Canopy trees are *suppressed* by crowding, not shaded to death like an
+# understory forb: a young tree overtopped in a gap grows into the canopy rather
+# than being culled. So a tree receiver's health is floored here — it can read
+# "declining" (visibly crowded) but never "dead". Understory layers stay fully
+# mortal. Above _DEAD_BELOW, below _DECLINING_BELOW.
+_TREE_HEALTH_FLOOR = 0.3
 
 # A caster must overtop a receiver's crown by at least this much (metres) to
 # shade it — a plant is not shaded by a neighbour no taller than itself.
@@ -104,6 +123,15 @@ def shade_ceiling(sun_requirement) -> float:
     if not tokens:
         return _DEFAULT_CEILING
     return max(_SHADE_CEILING.get(t, _DEFAULT_CEILING) for t in tokens)
+
+
+def _leaf_weight(foliage) -> float:
+    """How much of an evergreen's shade a crown of this foliage casts over the
+    understory's growing season. A declared-*deciduous* crown is bare for the
+    season's shoulders → :data:`_DECIDUOUS_LEAF_ON`; everything else (evergreen,
+    semi-evergreen, unknown) stays fully opaque (1.0) — unknown ≠ transparent."""
+    return _DECIDUOUS_LEAF_ON if (foliage or "").strip().lower() == "deciduous" \
+        else 1.0
 
 
 def _state_for(health: float) -> str:
@@ -186,6 +214,10 @@ class SuccessionEngine:
                 "ceiling": shade_ceiling(rec.get("sun_requirement")),
                 "mature_h": mature["height_m"],
                 "mature_r": max(0.1, mature["canopy_m"] / 2.0),
+                # Foliage drives the leaf-off shade break this plant casts as a
+                # neighbour; is_tree exempts it from being shaded to *death*.
+                "foliage": (rec.get("deciduous_evergreen") or "").strip().lower(),
+                "is_tree": (rec.get("plant_type") or "").strip().lower() == "tree",
             })
             lat_acc.append(lat)
             lng_acc.append(lng)
@@ -198,6 +230,9 @@ class SuccessionEngine:
                 "height_m": float(c.get("height_m") or 0.0),
                 "radius_m": max(0.1, float(c.get("radius_m") or 0.5)),
                 "is_tree": c.get("kind") == "tree",
+                # shade.casters_from_project carries foliage for declared trees;
+                # unknown stays opaque (leaf weight 1.0).
+                "foliage": c.get("foliage"),
             })
             lat_acc.append(c["lat"])
             lng_acc.append(c["lng"])
@@ -345,31 +380,38 @@ class SuccessionEngine:
 
         rx, ry = pl["x"], pl["y"]
         rh, _, _ = self._dims("g", index, year)
-        # Resolve each candidate caster's year-N dims once (not per moment).
+        # Resolve each candidate caster's year-N dims + foliage weight once.
         active: list = []
         for kind, j in cands:
             ch, cr, is_tree = self._dims(kind, j, year)
             if ch <= rh + _OVERTOP_MARGIN_M:
                 continue
-            cx = self._statics[j]["x"] if kind == "s" else self._plants[j]["x"]
-            cy = self._statics[j]["y"] if kind == "s" else self._plants[j]["y"]
-            active.append((cx, cy, ch, cr, is_tree))
+            src = self._statics[j] if kind == "s" else self._plants[j]
+            lw = _leaf_weight(src.get("foliage"))
+            active.append((src["x"], src["y"], ch, cr, is_tree, lw))
         if not active:
             self._shade_cache[key] = 0.0
             return 0.0
 
-        # Overhead canopy cover — moment-independent. Under any overtopping
-        # crown → deep shade all day (the crown blocks the sky above), which a
-        # ground-cast shadow alone can't express.
-        for cx, cy, ch, cr, _is_tree in active:
+        # Overhead canopy cover — moment-independent. Under an overtopping crown
+        # the sky above is blocked, which a ground-cast shadow alone can't
+        # express. A deciduous crown blocks less over the season (leaf weight),
+        # so take the strongest overhead cover among the crowns the plant sits
+        # beneath — an evergreen overhead beats a deciduous one.
+        under = 0.0
+        for cx, cy, ch, cr, _is_tree, lw in active:
             if (rx - cx) ** 2 + (ry - cy) ** 2 <= cr * cr:
-                self._shade_cache[key] = _UNDER_CANOPY_SHADE
-                return _UNDER_CANOPY_SHADE
+                under = max(under, _UNDER_CANOPY_SHADE * lw)
 
-        shaded = 0
+        # Cast shadow — fraction of sampled sun-moments the point lies in a swept
+        # down-sun shadow, each caster weighted by its foliage (a bare deciduous
+        # crown intercepts less). Per moment, keep the strongest-weighted hit.
+        wsum = 0.0
         for sin_d, cos_d, lf in moments:
-            hit = False
-            for cx, cy, ch, cr, is_tree in active:
+            best = 0.0
+            for cx, cy, ch, cr, is_tree, lw in active:
+                if lw <= best:
+                    continue          # can't beat a stronger hit already found
                 shadow_len = ch * lf
                 if shadow_len > _shade._MAX_SHADOW_M:
                     shadow_len = _shade._MAX_SHADOW_M
@@ -393,11 +435,12 @@ class SuccessionEngine:
                 # building-like caster is a constant-radius capsule.
                 w = _shade._tree_halfwidth(t, cr) if is_tree else cr
                 if d2 <= w * w:
-                    hit = True
-                    break
-            if hit:
-                shaded += 1
-        frac = shaded / len(moments)
+                    best = lw
+            wsum += best
+        cast = wsum / len(moments)
+
+        # The two mechanisms combine by taking the stronger.
+        frac = max(under, cast)
         self._shade_cache[key] = frac
         return frac
 
@@ -428,6 +471,12 @@ class SuccessionEngine:
                     stress = self._lethal
                     break
         health = max(0.0, 1.0 - stress / self._lethal)
+        # Canopy trees are suppressed by crowding, not shaded to death like an
+        # understory forb: a young tree overtopped in a gap grows into the
+        # canopy. Floor a tree's health so it can read "declining" but never
+        # drop out of the design.
+        if pl.get("is_tree"):
+            health = max(health, _TREE_HEALTH_FLOOR)
         return health, self.experienced_shade(index, int(year)), overtopped
 
     def evaluate_year(self, year: int) -> dict:

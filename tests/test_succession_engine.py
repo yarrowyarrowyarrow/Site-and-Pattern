@@ -39,8 +39,25 @@ _SUN_FORB = {"plant_type": "wildflower", "years_to_maturity": 2, "growth_curve":
 _SHADE_FORB = {"plant_type": "wildflower", "years_to_maturity": 2, "growth_curve": "steady",
                "mature_height_meters": 0.6, "mature_canopy_m": 0.4,
                "sun_requirement": "partial_shade,full_shade", "common_name": "Shade forb"}
+# An evergreen overstory the same size as the aspen — casts opaque shade all
+# season (no leaf-off break), so the same understory plant fares worse under it.
+_SPRUCE = {"plant_type": "tree", "years_to_maturity": 12, "growth_curve": "fast_early",
+           "mature_height_meters": 11.0, "mature_canopy_m": 8.0,
+           "deciduous_evergreen": "evergreen", "common_name": "Spruce"}
+# A part-shade forb: fine in real understory shade, but not under a dense
+# evergreen crown all season.
+_PART_FORB = {"plant_type": "wildflower", "years_to_maturity": 2, "growth_curve": "steady",
+              "mature_height_meters": 0.6, "mature_canopy_m": 0.4,
+              "sun_requirement": "partial_shade", "common_name": "Part forb"}
+# A slow young full-sun tree that gets overtopped early by a taller evergreen —
+# genuinely shade-stressed, yet as a canopy species it is suppressed (declining),
+# not culled the way an understory forb would be.
+_SAPLING = {"plant_type": "tree", "years_to_maturity": 25, "growth_curve": "slow_start",
+            "mature_height_meters": 6.0, "mature_canopy_m": 4.0,
+            "sun_requirement": "full_sun", "common_name": "Sapling"}
 
-_FAKE = {10: _ASPEN, 20: _SUN_FORB, 30: _SHADE_FORB}
+_FAKE = {10: _ASPEN, 20: _SUN_FORB, 30: _SHADE_FORB,
+         40: _SPRUCE, 50: _PART_FORB, 60: _SAPLING}
 
 
 def _get_plant(pid):
@@ -159,6 +176,65 @@ class TestShadeOut(unittest.TestCase):
                                get_plant=_get_plant, origin=(_LAT, _LNG))
         aspen = eng.evaluate_year(25)["plants"][0]
         self.assertEqual(aspen["state"], "healthy")
+
+
+class TestLeafOff(unittest.TestCase):
+    def test_part_shade_survives_under_deciduous_canopy(self):
+        # A part-shade forb directly under a deciduous aspen keeps enough
+        # spring/fall light to thrive — the leaf-off break puts the crown's
+        # effective shade below the plant's tolerance. This is the "many plants
+        # handle part shade" correctness fix.
+        eng = SuccessionEngine(_placed((10, 0), (50, 1)),
+                               get_plant=_get_plant, origin=(_LAT, _LNG))
+        forb = eng.evaluate_year(25)["plants"][1]
+        self.assertEqual(forb["common_name"], "Part forb")
+        self.assertEqual(forb["state"], "healthy")
+
+    def test_part_shade_struggles_under_evergreen_canopy(self):
+        # The same part-shade forb under an evergreen of the same size fares
+        # worse — a dense crown that never drops its leaves shades all season.
+        eng = SuccessionEngine(_placed((40, 0), (50, 1)),
+                               get_plant=_get_plant, origin=(_LAT, _LNG))
+        forb = eng.evaluate_year(25)["plants"][1]
+        self.assertIn(forb["state"], ("declining", "dead"))
+
+    def test_deciduous_shades_less_than_evergreen(self):
+        # Same understory plant, same geometry: the deciduous overstory leaves it
+        # healthier than the evergreen does.
+        decid = SuccessionEngine(_placed((10, 0), (50, 1)),
+                                 get_plant=_get_plant, origin=(_LAT, _LNG))
+        everg = SuccessionEngine(_placed((40, 0), (50, 1)),
+                                 get_plant=_get_plant, origin=(_LAT, _LNG))
+        self.assertGreater(decid.evaluate_year(25)["plants"][1]["health"],
+                           everg.evaluate_year(25)["plants"][1]["health"])
+
+
+class TestTreesSuppressedNotKilled(unittest.TestCase):
+    def test_overtopped_sapling_declines_but_never_dies(self):
+        # A slow young full-sun tree shaded early by a taller evergreen is
+        # suppressed, but a canopy species grows toward the light rather than
+        # being culled like a forb.
+        eng = SuccessionEngine(_placed((40, 0), (60, 1)),
+                               get_plant=_get_plant, origin=(_LAT, _LNG))
+
+        def sapling(y):
+            return next(p for p in eng.evaluate_year(y)["plants"]
+                        if p["common_name"] == "Sapling")
+
+        # It is genuinely stressed (overtopped, off full health)…
+        self.assertTrue(sapling(25)["overtopped"])
+        self.assertLess(sapling(25)["health"], 1.0)
+        # …but never dead, across the whole horizon.
+        for y in range(0, 26):
+            self.assertNotEqual(sapling(y)["state"], "dead")
+
+    def test_forb_in_the_same_spot_still_dies(self):
+        # Contrast: a full-sun forb under the same evergreen is still mortal —
+        # the exemption is for canopy trees only, not a blanket immortality.
+        eng = SuccessionEngine(_placed((40, 0), (20, 1)),
+                               get_plant=_get_plant, origin=(_LAT, _LNG))
+        forb = eng.evaluate_year(25)["plants"][1]
+        self.assertEqual(forb["state"], "dead")
 
 
 class TestStaticCasters(unittest.TestCase):

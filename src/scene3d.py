@@ -91,8 +91,16 @@ def plant_3d_state(plant: dict, lat: float, lng: float, year: int) -> dict:
     curve = plant.get("growth_curve") or "steady"
     role = successional_role(plant)
     factor = growth_scale_factor(year, ytm, curve)
-    spread = spread_scale_factor(year, plant.get("spread_habit") or "", ytm)
-    rate = spread_aggressiveness(plant.get("spread_habit") or "")
+    # Woody plants (trees & shrubs) don't scatter a visible clonal colony in the
+    # scene: a "spreading" tree or shrub reads as the yard filling with
+    # duplicates, which isn't how a canopy grows or how the user wants it drawn.
+    # Only herbaceous layers colonise the ground here. (Clonal-shrub *spacing*
+    # still widens via planting_spacing.spread_factor — this gate is the scene's
+    # visual colony only.)
+    woody = ptype in ("tree", "shrub")
+    spread = (1.0 if woody
+              else spread_scale_factor(year, plant.get("spread_habit") or "", ytm))
+    rate = 0.0 if woody else spread_aggressiveness(plant.get("spread_habit") or "")
     mature_h = plant.get("mature_height_meters") or _DEFAULT_HEIGHT_M.get(ptype, 0.5)
     mature_c = plant.get("mature_canopy_m") or _DEFAULT_CANOPY_M.get(ptype, 0.4)
     return {
