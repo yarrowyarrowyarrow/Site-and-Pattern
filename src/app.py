@@ -570,9 +570,11 @@ class MainWindow(QMainWindow):
         act_about.triggered.connect(self._on_about)
 
         act_update = help_menu.addAction("Check for &Updates…")
-        act_update.setStatusTip("Get the latest version: pulls via git on source "
-                                "installs, or downloads and installs the newest "
-                                "release in-app on packaged (.dmg/.exe) installs")
+        act_update.setStatusTip("One-click update to the newest version: "
+                                "switches a source install to the latest "
+                                "V-branch in place, or downloads and installs "
+                                "the newest release on packaged (.dmg/.exe) "
+                                "installs")
         act_update.triggered.connect(self._on_check_for_updates)
 
         act_pick = help_menu.addAction("&Switch to a specific version…")

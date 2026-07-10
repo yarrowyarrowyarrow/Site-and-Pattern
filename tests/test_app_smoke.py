@@ -161,10 +161,11 @@ class TestMainWindowSmoke(unittest.TestCase):
     # ── Update-flow surface ──────────────────────────────────────────────────
 
     def test_required_update_flow_methods_exist(self):
-        # V2.22: the git-mutation flows (_run_update_flow, stash/pop,
-        # _offer_branch_switch) were deliberately deleted — source checkouts
-        # get a read-only drift report; frozen builds keep the in-app
-        # Releases downloader. Only the surviving surface is pinned.
+        # V2.22 deleted the git-mutation flows; V2.25 restored a one-click
+        # updater by user request — but as controller methods
+        # (UpdateFlowController._perform_source_update) over Qt-free helpers
+        # (version_branch.update_to_branch), not as MainWindow shims. Only
+        # the long-standing MainWindow surface is pinned here.
         for name in (
             "_on_check_for_updates",
             "_newest_remote_version_branch", "_is_newer_version",
@@ -176,14 +177,17 @@ class TestMainWindowSmoke(unittest.TestCase):
             )
 
     def test_git_mutation_flows_removed(self):
-        # The app must never grow back the ability to stash/reset/pull its
-        # own source tree from a dialog box (V2.22 deletion).
+        # The V1.x git working-tree manager's MainWindow shims stay dead.
+        # The V2.25 one-click updater lives on UpdateFlowController with new
+        # names; MainWindow itself never grew the surface back. (The
+        # destructive reset---hard path is pinned out separately in
+        # tests/test_architecture_guard.py.)
         for name in ("_run_update_flow", "_maybe_restore_stash",
                      "_offer_branch_switch"):
             self.assertFalse(
                 hasattr(self._win, name),
-                f"MainWindow.{name} was deleted in V2.22 — don't resurrect "
-                f"the in-app git working-tree manager.",
+                f"MainWindow.{name} was deleted in V2.22 — the one-click "
+                f"updater belongs on UpdateFlowController, not MainWindow.",
             )
 
     # ── Legacy plant-API surface is gone ─────────────────────────────────────

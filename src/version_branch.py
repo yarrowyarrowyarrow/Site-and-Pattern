@@ -65,12 +65,12 @@ def is_newer_version(target: str, current: str) -> bool:
     return t > c
 
 
-def newest_remote_version_branch(
+def list_remote_version_branches(
     git_runner: Callable[..., object],
-) -> Optional[str]:
-    """Return the highest ``V<major>.<minor>`` branch present on
-    ``origin``, as a plain branch name (no ``origin/`` prefix). ``None``
-    if no V-branches are published yet, or if ``for-each-ref`` fails.
+) -> list[str]:
+    """Every ``V<major>.<minor>`` branch present on ``origin``, as plain
+    branch names (no ``origin/`` prefix), newest first. Empty when no
+    V-branches are published yet, or when ``for-each-ref`` fails.
 
     ``git_runner`` is the same closure used elsewhere in the updater: it
     takes positional ``git`` arguments and returns an object with
@@ -82,7 +82,7 @@ def newest_remote_version_branch(
         "refs/remotes/origin/",
     )
     if getattr(res, "returncode", 1) != 0:
-        return None
+        return []
     candidates: list[tuple[Tuple[int, int], str]] = []
     for line in (getattr(res, "stdout", "") or "").splitlines():
         short = line.strip()
@@ -92,10 +92,96 @@ def newest_remote_version_branch(
         parsed = parse_version_branch(local_name)
         if parsed is not None:
             candidates.append((parsed, local_name))
-    if not candidates:
+    candidates.sort(reverse=True)
+    return [name for _parsed, name in candidates]
+
+
+def newest_remote_version_branch(
+    git_runner: Callable[..., object],
+) -> Optional[str]:
+    """Return the highest ``V<major>.<minor>`` branch present on
+    ``origin``, as a plain branch name (no ``origin/`` prefix). ``None``
+    if no V-branches are published yet, or if ``for-each-ref`` fails."""
+    branches = list_remote_version_branches(git_runner)
+    return branches[0] if branches else None
+
+
+# ── One-click source update (V2.25) ──────────────────────────────────────────
+# The V2.22 cleanup made source checkouts read-only; the product owner asked
+# for the one-click updater back — most users won't open a terminal. What
+# returns is the SAFE subset: stash-aware branch switch and pure fast-forward.
+# The old "Discard & update" (`git reset --hard`) path stays dead — local
+# changes are set aside recoverably, never destroyed
+# (tests/test_architecture_guard.py pins update_flow.py free of `--hard`).
+
+
+def _run_detail(res) -> str:
+    return ((getattr(res, "stderr", "") or "").strip()
+            or (getattr(res, "stdout", "") or "").strip())
+
+
+def working_tree_dirty(git_runner: Callable[..., object]) -> Optional[bool]:
+    """``True``/``False`` per ``git status --porcelain``; ``None`` when git
+    itself failed. Untracked files do NOT count — they never block a branch
+    switch, and stashing them could sweep up a user's own files (e.g. a
+    design saved into the app folder)."""
+    res = git_runner("status", "--porcelain", "--untracked-files=no")
+    if getattr(res, "returncode", 1) != 0:
         return None
-    candidates.sort()
-    return candidates[-1][1]
+    return bool((getattr(res, "stdout", "") or "").strip())
+
+
+def update_to_branch(
+    git_runner: Callable[..., object],
+    branch: str,
+    *,
+    stash_label: Optional[str] = None,
+) -> Tuple[bool, str]:
+    """Move the checkout onto ``origin/<branch>`` — the one-click update.
+
+    Uses ``git checkout -B <branch> origin/<branch>`` with the explicit
+    start point: a bare ``git checkout V2.NN`` can detach onto the
+    same-named release *tag* (see TestVersionBranchSwitchCheckout).
+
+    When ``stash_label`` is given, tracked local modifications are stashed
+    first and popped back after the switch. Returns ``(ok, detail)`` —
+    ``detail`` is the failure text, or a warning note on success (e.g. the
+    stash-pop conflicted and the changes stay safe in the stash)."""
+    if stash_label:
+        res = git_runner("stash", "push", "-m", stash_label)
+        if getattr(res, "returncode", 1) != 0:
+            return False, ("Couldn't set local changes aside "
+                           "(git stash push):\n" + _run_detail(res))
+    res = git_runner("checkout", "-B", branch, f"origin/{branch}")
+    if getattr(res, "returncode", 1) != 0:
+        msg = (f"git checkout -B {branch} origin/{branch} failed:\n"
+               + _run_detail(res))
+        if stash_label:
+            pop = git_runner("stash", "pop")
+            if getattr(pop, "returncode", 1) != 0:
+                msg += ("\n\nYour local changes are still set aside — "
+                        "restore them with: git stash pop")
+        return False, msg
+    if stash_label:
+        pop = git_runner("stash", "pop")
+        if getattr(pop, "returncode", 1) != 0:
+            return True, ("Updated — but restoring your local changes hit a "
+                          "conflict, so they were kept safe in the stash "
+                          f"('{stash_label}'). Restore them with: "
+                          "git stash pop")
+    return True, ""
+
+
+def fast_forward_upstream(
+    git_runner: Callable[..., object],
+) -> Tuple[bool, str]:
+    """Fast-forward the current branch to its upstream
+    (``git merge --ff-only @{u}``). Pure fast-forward — fails cleanly (no
+    merge, no rebase) when the branches have diverged."""
+    res = git_runner("merge", "--ff-only", "@{u}")
+    if getattr(res, "returncode", 1) != 0:
+        return False, "git merge --ff-only failed:\n" + _run_detail(res)
+    return True, ""
 
 
 def next_version_branch(

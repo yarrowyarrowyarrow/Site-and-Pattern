@@ -26,6 +26,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 
 from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QDesktopServices
@@ -34,10 +35,14 @@ from PyQt6.QtWidgets import QInputDialog, QMessageBox, QProgressDialog
 from src.app_version import build_version
 from src.branding import APP_NAME
 from src.version_branch import (
+    fast_forward_upstream,
     is_newer_version,
+    list_remote_version_branches,
     newest_remote_version_branch,
     normalize_branch_ref,
     parse_version_branch,
+    update_to_branch,
+    working_tree_dirty,
 )
 
 # git emits UTF-8 (commit subjects, branch names) regardless of the OS locale;
@@ -148,15 +153,15 @@ class UpdateFlowController:
         )
 
     def _on_pick_version(self):
-        """Frozen installs get the real in-app version picker (download a
-        published installer from GitHub Releases). Source checkouts get
-        pointed at the terminal: the app stopped managing git working
-        trees in V2.22 — a developer running from source has strictly
-        better tools for that than a dialog box."""
+        """Version picker. Frozen installs download a published installer
+        from GitHub Releases; source checkouts pick a published V-branch and
+        the app switches to it in place (one-click, restored in V2.25 —
+        same safe path as Check for Updates: stash-aware, no reset-hard)."""
         if getattr(sys, "frozen", False):
             self._frozen_pick_version()
             return
-        if not self._repo_path():
+        repo = self._repo_path()
+        if not repo:
             QMessageBox.information(
                 self._main, "Switch version",
                 "This install isn't a git checkout — there's nothing to "
@@ -165,30 +170,69 @@ class UpdateFlowController:
             )
             self._open_releases_page()
             return
-        QMessageBox.information(
-            self._main, "Switch version",
-            "This is a source checkout — switch versions from a terminal:\n\n"
-            "    git fetch --prune\n"
-            "    git checkout -B V2.21 origin/V2.21    (any published V-branch)\n\n"
-            "then relaunch the app. Frozen installs get an in-app installer "
-            "picker instead."
+
+        def _git(*args, timeout=30):
+            return subprocess.run(
+                ["git", "-C", repo, *args],
+                capture_output=True, timeout=timeout, check=False, **_GIT_TEXT,
+            )
+
+        self._main.statusBar().showMessage("Fetching version list…", 2000)
+        fetch = _git("fetch", "--prune", "--quiet")
+        if fetch.returncode != 0:
+            QMessageBox.warning(
+                self._main, "Switch version",
+                "Couldn't reach the git remote (check your network), or git "
+                "isn't on your PATH.\n\n"
+                f"{fetch.stderr.strip() or fetch.stdout.strip()}"
+            )
+            return
+        branches = list_remote_version_branches(_git)
+        if not branches:
+            QMessageBox.information(
+                self._main, "Switch version",
+                "No published V<major>.<minor> versions found on the remote."
+            )
+            return
+        current = self._current_branch_name() or "?"
+        labels = [f"{b}  (current)" if b == current else b for b in branches]
+        preselect = branches.index(current) if current in branches else 0
+        choice, ok = QInputDialog.getItem(
+            self._main, "Switch to a specific version",
+            "Pick a published version. The app switches its checkout to it "
+            "(local source edits are set aside safely first) and offers a "
+            "restart.",
+            labels, current=preselect, editable=False,
         )
+        if not ok or not choice:
+            return
+        target = branches[labels.index(choice)]
+        if target == current:
+            QMessageBox.information(
+                self._main, "Switch version",
+                f"You're already on {target}.")
+            return
+        self._perform_source_update(_git, target)
 
     # ── Help → Check for Updates ──────────────────────────────────────────────
     #
     # Behaves differently depending on how the user is running the app:
     #
-    #   * Frozen install (.dmg/.exe — the real audience) — checks GitHub
-    #     Releases and offers to download + install the newest published
-    #     installer, all in-app (below, unchanged).
+    #   * Frozen install (.dmg/.exe) — checks GitHub Releases and offers to
+    #     download + install the newest published installer, all in-app
+    #     (below, unchanged).
     #
-    #   * Source install (git checkout, `python main.py` — the developer) —
-    #     READ-ONLY since V2.22: fetch, compare against the newest
-    #     origin/V*.* release branch and the branch's upstream, and *report*
-    #     the exact terminal command to run. The app used to stash, reset
-    #     --hard and pull the working tree from inside a dialog box; a
-    #     developer at a checkout has strictly better tools for that, and an
-    #     app that mutates its own source tree is a footgun.
+    #   * Source install (git checkout, `python main.py`) — one-click
+    #     update, restored in V2.25 by user request (most users won't open
+    #     a terminal; V2.22 had made this path read-only). Only the SAFE
+    #     subset returned: a stash-aware `git checkout -B <V> origin/<V>`
+    #     for a newer release branch, or a pure `merge --ff-only` when
+    #     merely behind upstream — then a restart prompt. The old
+    #     "Discard & update" (destructive reset) path stays dead: local
+    #     changes are set aside recoverably, never destroyed, and a
+    #     diverged branch is reported, not auto-merged.
+    #     (tests/test_architecture_guard.py pins this file free of the
+    #     destructive git flags.)
 
     def _on_check_for_updates(self):
         # Frozen build: no git — check GitHub Releases and offer to
@@ -229,7 +273,7 @@ class UpdateFlowController:
 
         current = self._current_branch_name() or "?"
 
-        # A newer V<major>.<minor> release branch on origin wins the report.
+        # A newer V<major>.<minor> release branch on origin wins the offer.
         newest = self._newest_remote_version_branch(_git)
         if newest and self._is_newer_version(newest, current):
             log = _git("log", "--oneline", "-8", f"origin/{newest}",
@@ -242,22 +286,29 @@ class UpdateFlowController:
                 f"You're on:   {current}\n"
                 f"Latest:      {newest}\n\n"
                 f"Recent changes in {newest}:\n{recent}\n\n"
-                "This is a source checkout — update from a terminal:\n\n"
-                f"    {command}\n\n"
-                "then relaunch the app.",
-                QMessageBox.StandardButton.Ok, self._main,
+                "Update now switches to it in place and offers a restart. "
+                "(Any local source edits are set aside safely first — or do "
+                f"it from a terminal: {command})",
+                QMessageBox.StandardButton.NoButton, self._main,
             )
+            update_btn = box.addButton(
+                f"Update to {newest}", QMessageBox.ButtonRole.AcceptRole)
             copy_btn = box.addButton(
                 "Copy command", QMessageBox.ButtonRole.ActionRole)
+            box.addButton("Not now", QMessageBox.ButtonRole.RejectRole)
+            box.setDefaultButton(update_btn)
             box.exec()
-            if box.clickedButton() is copy_btn:
+            clicked = box.clickedButton()
+            if clicked is copy_btn:
                 from PyQt6.QtWidgets import QApplication
                 QApplication.clipboard().setText(command)
                 self._main.statusBar().showMessage(
                     f"Copied to clipboard: {command}", 5000)
+            elif clicked is update_btn:
+                self._perform_source_update(_git, newest)
             return
 
-        # Same branch as the newest release — report upstream drift.
+        # Same branch as the newest release — check upstream drift.
         behind = _git("rev-list", "--count", "HEAD..@{u}")
         ahead = _git("rev-list", "--count", "@{u}..HEAD")
         if behind.returncode != 0 or ahead.returncode != 0:
@@ -278,16 +329,101 @@ class UpdateFlowController:
                 self._main, "Check for Updates",
                 f"You're up to date on branch '{current}'{note}.")
             return
-        QMessageBox.information(
+        if n_ahead:
+            # Diverged — never auto-merge; report only.
+            QMessageBox.information(
+                self._main, "Update available",
+                f"Branch '{current}' is {n_behind} commit(s) behind its "
+                f"upstream and {n_ahead} ahead (diverged). The app won't "
+                "auto-merge — resolve from a terminal:\n\n"
+                "    git rebase @{u}    (or merge — your call)\n\n"
+                "then relaunch the app."
+            )
+            return
+        prompt = QMessageBox.question(
             self._main, "Update available",
             f"Branch '{current}' is {n_behind} commit(s) behind its "
-            f"upstream"
-            + (f" and {n_ahead} ahead (diverged)" if n_ahead else "")
-            + ".\n\nThis is a source checkout — update from a terminal:\n\n"
-            + ("    git pull --ff-only\n\n" if not n_ahead else
-               "    git rebase @{u}    (or merge — your call)\n\n")
-            + "then relaunch the app."
+            "upstream.\n\nUpdate now (fast-forward) and restart?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
+        if prompt != QMessageBox.StandardButton.Yes:
+            return
+        ok, detail = fast_forward_upstream(_git)
+        if not ok:
+            QMessageBox.warning(
+                self._main, "Update failed",
+                detail + "\n\nYou can finish from a terminal instead:\n\n"
+                "    git pull --ff-only")
+            return
+        self._offer_restart(f"the latest {current}")
+
+    # ── One-click source update (V2.25) ───────────────────────────────────────
+
+    def _perform_source_update(self, git_runner, target: str):
+        """Switch the checkout to origin/<target> in-app. Local tracked
+        changes are stashed (with consent) and restored after — the V2.22
+        lesson kept: nothing here can destroy work, and there is no
+        reset-hard path."""
+        dirty = working_tree_dirty(git_runner)
+        if dirty is None:
+            QMessageBox.warning(
+                self._main, "Update failed",
+                "Couldn't inspect the working tree — is git on your PATH?")
+            return
+        stash_label = None
+        if dirty:
+            choice = QMessageBox.question(
+                self._main, "Local changes detected",
+                "Some of the app's source files have local modifications. "
+                "Set them aside safely (git stash) and restore them after "
+                f"the update to {target}?",
+                QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.Cancel,
+            )
+            if choice != QMessageBox.StandardButton.Yes:
+                return
+            stash_label = f"site-and-pattern auto-update {int(time.time())}"
+        self._main.statusBar().showMessage(f"Updating to {target}…", 3000)
+        ok, note = update_to_branch(git_runner, target,
+                                    stash_label=stash_label)
+        if not ok:
+            QMessageBox.warning(
+                self._main, "Update failed",
+                note + "\n\nYou can finish from a terminal instead:\n\n"
+                f"    git checkout -B {target} origin/{target}")
+            return
+        self._offer_restart(target, note)
+
+    def _offer_restart(self, version: str, note: str = ""):
+        """Post-update restart prompt. The new code only loads on relaunch
+        (and a schema/seed bump only reseeds the DB on next start)."""
+        extra = f"\n\n{note}" if note else ""
+        prompt = QMessageBox.question(
+            self._main, "Update complete",
+            f"{APP_NAME} is now on {version}.{extra}\n\n"
+            "Restart now to load it? (You'll be asked to save any unsaved "
+            "changes first.)",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if prompt == QMessageBox.StandardButton.Yes:
+            self._restart_app()
+        else:
+            self._main.statusBar().showMessage(
+                f"Updated to {version} — it loads next time you start "
+                "the app.", 8000)
+
+    def _restart_app(self):
+        """Close the window (which runs the normal unsaved-changes prompt),
+        then spawn a fresh process on the updated code. Spawn only after the
+        close actually happened — a cancelled save prompt must not leave two
+        copies running."""
+        argv = [sys.executable] + sys.argv
+        if self._main.close():
+            subprocess.Popen(argv)
+        else:
+            self._main.statusBar().showMessage(
+                "Restart cancelled — the update loads next time you start "
+                "the app.", 8000)
 
     # ── V<major>.<minor> release-line helpers ─────────────────────────────────
     # The parsing/comparison/listing logic lives in ``src/version_branch.py``

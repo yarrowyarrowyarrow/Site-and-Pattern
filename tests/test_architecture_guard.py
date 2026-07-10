@@ -161,6 +161,22 @@ class TestStructuralCeilings(unittest.TestCase):
             )
 
 
+class TestUpdaterStaysNonDestructive(unittest.TestCase):
+    """V2.22 deleted the updater's 'Discard & update' path (`git reset
+    --hard` from a dialog box); V2.25 restored one-click updating WITHOUT
+    it. Local changes may be stashed — recoverable by design — but the
+    updater must never be able to destroy work."""
+
+    def test_no_destructive_git_in_update_flow(self):
+        src = (_SRC / "controllers" / "update_flow.py").read_text(
+            encoding="utf-8")
+        for banned in ("--hard", "git clean", '"clean"'):
+            self.assertNotIn(
+                banned, src,
+                f"update_flow.py contains {banned!r} — the one-click updater "
+                "must stay non-destructive (stash, never discard).")
+
+
 class TestAnalysisPanelTabsRegistered(unittest.TestCase):
     """V1.54 — guard the regression where the 'Habitat Value' tab vanished:
     its ``addTab`` had slipped past a ``return`` in a sibling method, so the tab

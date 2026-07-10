@@ -108,14 +108,17 @@ Before you push, confirm:
 ## How the updater consumes branches
 
 `src/controllers/update_flow.py` (`_on_check_for_updates`) backs the GUI's
-Help → Check for Updates. In a **source checkout** the updater is
-read-only (V2.22): it reads the newest `origin/V*.*` (via the same
-`version_branch.py` helpers) and reports the terminal command to switch —
-it never stashes, resets, or pulls the working tree. In a **frozen build**
-the updater lists GitHub Releases by tag and downloads the installer
-(`src/github_releases.py`, see `release-packaging`). Either way, a
-mis-named branch is invisible to it — which is why the convention is
-enforced by a hook rather than by trust.
+Help → Check for Updates. In a **source checkout** the updater offers a
+one-click switch to the newest `origin/V*.*` (restored in V2.25 by user
+request; V2.22 had made it read-only): the Qt-free sequence lives in
+`version_branch.update_to_branch` — stash tracked changes with consent,
+`git checkout -B <V> origin/<V>`, pop the stash, offer a restart. It never
+resets or discards (`tests/test_architecture_guard.py` pins update_flow.py
+free of `--hard`); a diverged branch is reported, not auto-merged. In a
+**frozen build** the updater lists GitHub Releases by tag and downloads
+the installer (`src/github_releases.py`, see `release-packaging`). Either
+way, a mis-named branch is invisible to it — which is why the convention
+is enforced by a hook rather than by trust.
 
 ## Pitfalls
 

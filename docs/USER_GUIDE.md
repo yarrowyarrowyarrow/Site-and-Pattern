@@ -150,7 +150,7 @@ The teaching tools live on their own top-level **Learn** tab (V2.25):
 - **File → Export PDF…** produces a printable booklet with the map screenshot, plant list, and notes.
 - **File → Export Plant Order List…** produces a text list grouped by Alberta nursery source (ALCLA, Bow Valley Habitat, Wild About Flowers, Bedrock Seed Bank), with native woody / native herbaceous / cultivated sections.
 - The app auto-saves every 5 minutes in the background.
-- **Help → Check for Updates…** — on source installs (git checkout), runs `git pull --ff-only` after a fetch + dirty-tree check; on `.exe` installs, opens the GitHub releases page in your browser. Restart the app after a successful pull for the new code to take effect.
+- **Help → Check for Updates…** — one click to the newest version. On source installs (git checkout) the app switches itself to the newest published `V*.*` branch (any local source edits are set aside safely first) and offers to restart; on packaged `.dmg`/`.exe` installs it downloads and opens the newest installer from GitHub Releases. **Help → Switch to a specific version…** does the same for any published version, forward or back.
 
 ---
 

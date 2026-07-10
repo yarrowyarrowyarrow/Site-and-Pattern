@@ -17,11 +17,15 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.version_branch import (  # noqa: E402
+    fast_forward_upstream,
+    list_remote_version_branches,
     normalize_branch_ref,
     parse_version_branch,
     is_newer_version,
     newest_remote_version_branch,
     next_version_branch,
+    update_to_branch,
+    working_tree_dirty,
 )
 
 
@@ -344,6 +348,104 @@ class TestVersionBranchSwitchCheckout(unittest.TestCase):
         self.assertNotEqual(
             self._symbolic_ref().returncode, 0,
             "bare `git checkout V1.77` should detach onto the same-named tag")
+
+
+class TestOneClickUpdateHelpers(TestVersionBranchSwitchCheckout):
+    """V2.25 — the restored one-click updater's Qt-free core. Reuses the
+    switch-checkout scaffolding (upstream repo with a V-branch AND a
+    same-named tag, downstream clone starting detached), which is exactly
+    the state a real install updates from."""
+
+    def _runner(self):
+        def _git(*args, timeout=30):
+            return self._d(*args)
+        return _git
+
+    def test_update_to_branch_attaches_despite_same_named_tag(self):
+        ok, note = update_to_branch(self._runner(), "V1.77")
+        self.assertTrue(ok, note)
+        self.assertEqual(note, "")
+        sym = self._symbolic_ref()
+        self.assertEqual(sym.returncode, 0, "detached HEAD after update")
+        self.assertEqual(sym.stdout.strip(), "refs/heads/V1.77")
+
+    def test_update_to_branch_stashes_and_restores_local_changes(self):
+        self._d("checkout", "-q", "main")
+        path = os.path.join(self._downstream, "f")
+        with open(path, "w") as fh:
+            fh.write("local edit\n")
+        self.assertTrue(working_tree_dirty(self._runner()))
+        ok, note = update_to_branch(self._runner(), "V1.77",
+                                    stash_label="test-stash")
+        self.assertTrue(ok, note)
+        self.assertEqual(note, "")
+        with open(path) as fh:
+            self.assertEqual(fh.read().strip(), "local edit",
+                             "stashed local change was not restored")
+
+    def test_working_tree_dirty_ignores_untracked_files(self):
+        # A user's own file saved into the app folder must not trigger the
+        # stash prompt (and must never be swept into a stash).
+        with open(os.path.join(self._downstream, "yard.perma.geojson"),
+                  "w") as fh:
+            fh.write("{}\n")
+        self.assertFalse(working_tree_dirty(self._runner()))
+        ok, note = update_to_branch(self._runner(), "V1.77")
+        self.assertTrue(ok, note)
+        self.assertTrue(os.path.exists(
+            os.path.join(self._downstream, "yard.perma.geojson")))
+
+    def test_update_to_branch_reports_failure(self):
+        ok, note = update_to_branch(self._runner(), "V9.99")
+        self.assertFalse(ok)
+        self.assertIn("V9.99", note)
+
+    def test_fast_forward_upstream_when_behind(self):
+        # Attach to V1.77, grow the upstream branch, fetch → behind by one.
+        self._d("checkout", "-B", "V1.77", "origin/V1.77")
+        self._u("checkout", "-q", "V1.77")
+        self._write_commit("v177b.txt", "more", "V1.77 more")
+        self._u("checkout", "-q", "main")
+        self._d("fetch", "--quiet", "origin")
+        ok, note = fast_forward_upstream(self._runner())
+        self.assertTrue(ok, note)
+        self.assertTrue(os.path.exists(
+            os.path.join(self._downstream, "v177b.txt")))
+
+    def test_fast_forward_refuses_divergence(self):
+        self._d("checkout", "-B", "V1.77", "origin/V1.77")
+        # Local commit downstream + different commit upstream → diverged.
+        with open(os.path.join(self._downstream, "local.txt"), "w") as fh:
+            fh.write("mine\n")
+        self._d("add", ".")
+        self._d("-c", "user.email=t@t", "-c", "user.name=T",
+                "-c", "commit.gpgsign=false", "commit", "-q", "-m", "local")
+        self._u("checkout", "-q", "V1.77")
+        self._write_commit("theirs.txt", "theirs", "upstream work")
+        self._u("checkout", "-q", "main")
+        self._d("fetch", "--quiet", "origin")
+        ok, note = fast_forward_upstream(self._runner())
+        self.assertFalse(ok, "diverged branches must not fast-forward")
+
+
+class TestListRemoteVersionBranches(unittest.TestCase):
+    """V2.25 — the picker's full newest-first list (the newest-only helper
+    delegates to it)."""
+
+    class _Res:
+        def __init__(self, rc, out):
+            self.returncode, self.stdout = rc, out
+
+    def test_sorted_newest_first(self):
+        out = "origin/V1.9\norigin/V2.0\norigin/main\norigin/V1.31\n"
+        runner = lambda *a: self._Res(0, out)  # noqa: E731
+        self.assertEqual(list_remote_version_branches(runner),
+                         ["V2.0", "V1.31", "V1.9"])
+        self.assertEqual(newest_remote_version_branch(runner), "V2.0")
+
+    def test_failure_is_empty(self):
+        runner = lambda *a: self._Res(1, "")  # noqa: E731
+        self.assertEqual(list_remote_version_branches(runner), [])
 
 
 class TestNormalizeBranchRef(unittest.TestCase):

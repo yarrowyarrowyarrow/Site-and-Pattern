@@ -93,9 +93,11 @@ default branch is a codename, override it and use the next `V*.*`.
 The "Check for Updates" button in the app
 (`src/controllers/update_flow.py:_on_check_for_updates`) relies on this
 convention to detect new versions on the server. Breaking the convention
-silently breaks that feature. (Since V2.22 the source-checkout path is
-read-only — it reports the newest `V*.*` and the terminal command to get
-it; only frozen builds update in-app, via GitHub Releases.)
+silently breaks that feature. (V2.25: source checkouts update in-app with
+one click — a stash-aware `git checkout -B <V> origin/<V>` + restart
+prompt; the destructive `reset --hard` path deleted in V2.22 stays dead
+and is pinned out by `tests/test_architecture_guard.py`. Frozen builds
+update via GitHub Releases.)
 
 ## Schema versioning
 
