@@ -401,3 +401,67 @@ function witherColor(col, health) {
   return col.clone().lerp(new THREE.Color(0x8a7a3c), (0.85 - h) / 0.85 * 0.9);
 }
 
+// ── Precipitation: falling snow in winter (V2.24) ────────────────────────────
+// Matches the snow ground: a single-moment WINTER view of a prairie yard is
+// snowy, so showing snow then is honest (P9). Rain is weather, not season —
+// without a real "it's raining now" signal we don't invent it, but the system
+// below would drive it the day that signal exists. A camera-followed box of
+// ~1400 point flakes falling straight down; drawn behind the design, hidden
+// outside winter and before any scene has been pushed.
+let precipGroup = null, _precipLast = 0;
+const _PRECIP = { half: 46, yTop: 34, yBot: -16, n: 1400 };
+
+function _makeFlakeTexture() {
+  const s = 32, cv = document.createElement('canvas'); cv.width = cv.height = s;
+  const g = cv.getContext('2d');
+  const grd = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  grd.addColorStop(0, 'rgba(255,255,255,0.95)');
+  grd.addColorStop(0.45, 'rgba(255,255,255,0.5)');
+  grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, s, s);
+  return new THREE.CanvasTexture(cv);
+}
+
+function ensurePrecip() {
+  if (precipGroup) return precipGroup;
+  const n = _PRECIP.n, pos = new Float32Array(n * 3), spd = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    pos[i * 3]     = (Math.random() - 0.5) * 2 * _PRECIP.half;
+    pos[i * 3 + 1] = _PRECIP.yBot + Math.random() * (_PRECIP.yTop - _PRECIP.yBot);
+    pos[i * 3 + 2] = (Math.random() - 0.5) * 2 * _PRECIP.half;
+    spd[i] = 0.9 + Math.random() * 1.5;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.userData.spd = spd;
+  const mat = new THREE.PointsMaterial({
+    map: _makeFlakeTexture(), size: 0.32, transparent: true, depthWrite: false,
+    opacity: 0.9, sizeAttenuation: true });
+  precipGroup = new THREE.Points(geo, mat);
+  precipGroup.frustumCulled = false;
+  precipGroup.visible = false;
+  scene.add(precipGroup);
+  return precipGroup;
+}
+
+function updatePrecip(t) {
+  // Winter months only, and only once a real scene is up (sceneMonth /
+  // lastSceneObj are set by permaSetScene in a later chunk — read at call time).
+  const snowing = (typeof lastSceneObj !== 'undefined' && lastSceneObj)
+    && (sceneMonth >= 11 || sceneMonth <= 3);
+  if (!snowing) { if (precipGroup) precipGroup.visible = false; return; }
+  const p = ensurePrecip();
+  p.visible = true;
+  p.position.copy(camera.position);            // the flurry follows the camera
+  const dt = _precipLast ? Math.min(0.05, (t - _precipLast) / 1000) : 0.016;
+  _precipLast = t;
+  const pos = p.geometry.attributes.position, spd = p.geometry.userData.spd;
+  const span = _PRECIP.yTop - _PRECIP.yBot;
+  for (let i = 0; i < spd.length; i++) {
+    let y = pos.getY(i) - spd[i] * dt * 1.7;
+    if (y < _PRECIP.yBot) y += span;           // wrap back to the top
+    pos.setY(i, y);
+  }
+  pos.needsUpdate = true;
+}
+

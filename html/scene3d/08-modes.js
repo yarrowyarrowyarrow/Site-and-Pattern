@@ -282,5 +282,6 @@ renderer.setAnimationLoop((t) => {
   else { if (cinematic) cineStep(t); controls.update(); }   // dolly, then auto-orbit
   animateWildlife(t);               // ambient life (no-op when the group is hidden)
   if (!beeMode) stepSpotlight(t);   // "show its plants" tour (orbit/walk overlay)
+  updatePrecip(t);                  // falling snow in winter (no-op otherwise)
   renderer.render(scene, camera);
 });
