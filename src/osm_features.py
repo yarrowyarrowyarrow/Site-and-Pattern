@@ -358,7 +358,12 @@ def add_features_to_project(features: list[dict], project_dict: dict) -> int:
     added = 0
     for item in features or []:
         lat, lng = item.get("lat"), item.get("lng")
-        if lat is None or lng is None or _too_close(lat, lng, existing_pts):
+        # ``dedupe_m`` lets a source scale the duplicate radius with the
+        # feature it detected (tree_detect: a crown centred inside an
+        # already-known crown is the same tree). Default stays 2 m.
+        if lat is None or lng is None or _too_close(
+                lat, lng, existing_pts,
+                min_m=float(item.get("dedupe_m") or 2.0)):
             continue
         if item.get("kind") == "building":
             feat = _osm_building_feature(item)
@@ -368,24 +373,30 @@ def add_features_to_project(features: list[dict], project_dict: dict) -> int:
                 added += 1
                 continue
         # Tree, or a building with no usable footprint → legacy Point feature.
+        # Items may override label/source (e.g. tree_detect's imagery-derived
+        # trees, V2.26) and declare foliage; absent keys keep OSM semantics.
         etype = ("existing_tree" if item.get("kind") == "tree"
                  else "existing_building")
+        props = {
+            "element_type": etype,
+            "height_m": float(item.get("height_m") or (
+                _DEFAULT_TREE_HEIGHT_M if etype == "existing_tree"
+                else _DEFAULT_BUILDING_HEIGHT_M)),
+            "canopy_radius_m": float(item.get("radius_m") or (
+                _DEFAULT_TREE_RADIUS_M if etype == "existing_tree"
+                else 4.0)),
+            "label": item.get("label") or (
+                "Tree (OSM)" if etype == "existing_tree"
+                else "Building (OSM)"),
+            "struct_id": etype,
+            "source": item.get("source") or "osm",
+        }
+        if etype == "existing_tree" and item.get("foliage"):
+            props["tree_foliage"] = item["foliage"]
         feats.append({
             "type": "Feature",
             "geometry": {"type": "Point", "coordinates": [lng, lat]},
-            "properties": {
-                "element_type": etype,
-                "height_m": float(item.get("height_m") or (
-                    _DEFAULT_TREE_HEIGHT_M if etype == "existing_tree"
-                    else _DEFAULT_BUILDING_HEIGHT_M)),
-                "canopy_radius_m": float(item.get("radius_m") or (
-                    _DEFAULT_TREE_RADIUS_M if etype == "existing_tree"
-                    else 4.0)),
-                "label": ("Tree (OSM)" if etype == "existing_tree"
-                          else "Building (OSM)"),
-                "struct_id": etype,
-                "source": "osm",
-            },
+            "properties": props,
         })
         existing_pts.append((lat, lng))
         added += 1

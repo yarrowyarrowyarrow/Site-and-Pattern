@@ -710,6 +710,11 @@ class MainWindow(QMainWindow):
         self.site_panel.shade_zones_visible_changed.connect(
             self.map_widget.set_shade_zones_visible)
         self.site_panel.osm_import_requested.connect(self._on_osm_import_requested)
+        # Tree crowns from the satellite photo (V2.26) — wired straight to the
+        # flow module via a lambda (MainWindow is at its method ceiling).
+        from src import tree_detect_flow
+        self.site_panel.tree_detect_requested.connect(
+            lambda: tree_detect_flow.detect_trees_for_site(self))
         # Wired straight to the controller (MainWindow is at its method ceiling,
         # so no shim) — the building-pack download lives in MapEventRouter.
         self.site_panel.download_buildings_requested.connect(

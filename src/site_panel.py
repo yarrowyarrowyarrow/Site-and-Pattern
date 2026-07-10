@@ -252,6 +252,10 @@ class SitePanel(QWidget):
 
     # Import existing trees/buildings from OpenStreetMap (V1.51).
     osm_import_requested = pyqtSignal()
+    # Detect existing tree crowns from the satellite photo itself (V2.26) —
+    # OSM rarely maps individual trees outside cities, so rural/acreage
+    # properties get their shade casters from the imagery instead.
+    tree_detect_requested = pyqtSignal()
     # Bulk-download a region's building footprints for offline reuse (V1.66).
     download_buildings_requested = pyqtSignal()
 
@@ -2022,6 +2026,26 @@ class SitePanel(QWidget):
         btn.clicked.connect(self.osm_import_requested.emit)
         v.addWidget(btn)
 
+        # Trees from the imagery itself (V2.26): OSM's tree coverage is near
+        # zero outside city cores, so treed acreages got nothing from the
+        # import above — this reads crowns off the same satellite photo the
+        # map displays, anywhere in the world.
+        btn_trees = QPushButton("Detect trees from the satellite photo")
+        btn_trees.setStyleSheet(_BTN_SECONDARY)
+        btn_trees.setToolTip(
+            "Scans the satellite photo shown on the map for tree crowns — "
+            "OpenStreetMap rarely maps individual trees outside cities, so "
+            "this fills the gap on treed and rural properties.\n"
+            "Crown positions and sizes are measured from the photo; heights "
+            "are rough estimates from crown size — select any tree and press "
+            "Delete to drop false hits. Uses your boundary plus the "
+            "neighbour margin below, like the import above.\n"
+            "Detection sees what the photo saw: conifers and leafed-out "
+            "crowns read best; leaf-off deciduous trees may be missed. "
+            "Needs internet (fetches imagery tiles).")
+        btn_trees.clicked.connect(self.tree_detect_requested.emit)
+        v.addWidget(btn_trees)
+
         # Neighbour margin (V2.13): how far past the boundary to keep
         # buildings — a tall neighbour still shades the site. 0 = strictly
         # inside the boundary. Persisted; read by the controller via
@@ -2104,6 +2128,12 @@ class SitePanel(QWidget):
     def osm_neighbour_margin(self) -> float:
         """How far past the boundary the OSM import keeps neighbours (m)."""
         return float(self._osm_margin.value())
+
+    def satellite_offset(self) -> tuple:
+        """Current satellite-alignment nudge as ``(east_m, north_m)``. The
+        basemap is *displayed* shifted by this much, so imagery-derived
+        positions (tree detection) add it to land in data space."""
+        return (float(self._sat_east.value()), float(self._sat_north.value()))
 
     # ── Offline building-pack download (V1.66) ─────────────────────────────
 

@@ -182,7 +182,10 @@ Kintsugi philosophy, Cradle to Cradle design, regenerative landscaping, and myco
 > plus the **lawn-equivalent counterfactual** (roadmap F10) that frames the conversion as repair of
 > a near-zero-value lawn; and the V2.24 **gap recruitment** in `src/succession_engine.py` models the
 > system repairing *itself* — self-seeding natives recolonising the openings the maturing canopy
-> leaves, so restoration is shown as an ongoing process rather than a one-time install. **State: strong.**
+> leaves, so restoration is shown as an ongoing process rather than a one-time install. Repair
+> starts from an honest inventory of what's already there: V2.26's **satellite tree detection**
+> (`src/tree_detect.py`) fills the site inventory on the treed/rural properties OSM knows nothing
+> about, so the shade map reflects the real site anywhere in the world. **State: strong.**
 
 ### 9. Uncertainty is a feature, not a bug
 
