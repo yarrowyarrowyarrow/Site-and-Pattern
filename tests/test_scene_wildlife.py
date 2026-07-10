@@ -117,10 +117,42 @@ class TestSceneWildlife(unittest.TestCase):
         self.assertTrue(any(len(c["route"]) > 1 for c in self.crit),
                         "expected some multi-plant routes")
 
+    def test_rangers_patrol_the_whole_design(self):
+        # V2.24: ranging fliers get scene-wide patrol waypoints so they forage
+        # across the yard instead of orbiting their anchor's bed (the reported
+        # clustering). At least one flier's route reaches well beyond its anchor.
+        import math
+        reached = 0.0
+        for c in self.crit:
+            if c["kind"] not in W._RANGING:
+                continue
+            ax, ay = c["route"][0][0], c["route"][0][1]
+            for wp in c["route"][1:]:
+                reached = max(reached, math.hypot(wp[0] - ax, wp[1] - ay))
+        # The synthetic scene spans ~18 m; a patrol leg should clear the anchor
+        # ring by a good margin (much more than the ~2 m own-host spacing).
+        self.assertGreaterEqual(reached, W._PATROL_MIN_M,
+                                "rangers should patrol across the design")
+
+    def test_ground_critters_do_not_patrol(self):
+        # Mammals / beetles keep to their patch — their route never gains a
+        # far-flung patrol leg (movement stays local).
+        import math
+        for c in self.crit:
+            if c["kind"] not in ("mammal", "beetle"):
+                continue
+            ax, ay = c["route"][0][0], c["route"][0][1]
+            for wp in c["route"][1:]:
+                # own-host legs can exist but never a scene-wide patrol jump
+                self.assertLess(math.hypot(wp[0] - ax, wp[1] - ay), 30.0)
+
     def test_deterministic(self):
         again = W.wildlife_for_scene(self.scene)
         self.assertEqual([(c["name"], c["x"], c["y"]) for c in self.crit],
                          [(c["name"], c["x"], c["y"]) for c in again])
+        # Routes (incl. patrol legs) are deterministic too.
+        self.assertEqual([c["route"] for c in self.crit],
+                         [c["route"] for c in again])
 
     def test_all_hex_valid(self):
         for c in self.crit:

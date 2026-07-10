@@ -26,6 +26,15 @@ from typing import Callable, Optional
 _TAXON_CAP = {"bee": 8, "lepidoptera": 7, "bird": 6, "other_insect": 5, "mammal": 3}
 _TOTAL_CAP = 26
 
+# Home-range patrol (V2.24). Ranging fliers forage over the whole yard, so they
+# get scene-wide route waypoints and stop clumping in the one bed their anchor
+# plant happens to sit in (the reported "insects cluster on one part of the map").
+# Movement only — the documented host and identity stay put (P9). Ground / crawling
+# critters keep to their patch.
+_RANGING = frozenset({"bee", "fly", "butterfly", "moth", "bird"})
+_PATROL_MIN_M = 3.0      # only patrol to plants at least this far from the anchor
+_PATROL_WAYPOINTS = 2    # extra scene-wide legs added to a ranger's route
+
 # Relationships that make sense to *stand an animal on*, best-first per taxon —
 # a bird on a fruiting shrub, a bee on a nectar flower, a mammal by cover.
 _REL_PRIORITY = {
@@ -288,6 +297,9 @@ def wildlife_for_scene(scene: dict, *,
     if not plants:
         return []
     by_id = {p["plant_id"]: p for p in plants}
+    # Every plant position in the design — a ranger's home-range patrol samples
+    # these so it forages across the whole yard, not just its anchor's bed.
+    all_xy = [(pp["x"], pp["y"]) for pp in plants]
     if fauna_edges is None:
         from src.db.fauna import fauna_for_plants as fauna_edges
 
@@ -374,6 +386,23 @@ def wildlife_for_scene(scene: dict, *,
         for q in others[:3]:
             pq = by_id[q]
             route.append([pq["x"], pq["y"], round(_ph(pq), 2)])
+        # Home-range patrol: a ranging flier (bee/fly/butterfly/moth/bird) also
+        # visits spread-out plants across the design so it roams the whole yard
+        # instead of orbiting its anchor — the fix for wildlife clumping in one
+        # bed. Walk the plant list at a seed-dependent stride so different
+        # creatures head to different corners rather than all to the same plant.
+        if app["kind"] in _RANGING and len(all_xy) > 2:
+            stride = 1 + (seed % (len(all_xy) - 1))
+            j = seed % len(all_xy)
+            added = 0
+            for _ in range(len(all_xy)):
+                qx, qy = all_xy[j]
+                j = (j + stride) % len(all_xy)
+                if (qx - p["x"]) ** 2 + (qy - p["y"]) ** 2 >= _PATROL_MIN_M ** 2:
+                    route.append([round(qx, 2), round(qy, 2), round(base_h, 2)])
+                    added += 1
+                    if added >= _PATROL_WAYPOINTS:
+                        break
         creatures.append({
             "kind": app["kind"],
             "x": round(p["x"] + math.cos(ang) * rad, 2),
