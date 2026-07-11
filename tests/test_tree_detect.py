@@ -37,9 +37,19 @@ def crown_texture(gx, gy):
 
 def deciduous_texture(gx, gy):
     """A leafed-out broadleaf crown: brighter, saturated green (lum ≈ 91,
-    ExG ≈ 115, g−b ≈ 65), still rough."""
-    j = ((gx * 31 + gy * 17) % 29) - 14
+    ExG ≈ 115, g−b ≈ 65), still rough — wide jitter so the internal-contrast
+    (sunlit-tuft) gate reads it as a lit crown."""
+    j = ((gx * 31 + gy * 17) % 41) - 20
     return (70 + j, 120 + j, 55 + j)
+
+
+def shadow_on_grass_texture(gx, gy):
+    """Tree shadow cast ON grass: dark (lum ≈ 64), green enough to pass the
+    vegetation gate (ExG ≈ 31), textured enough to pass the 3×3 texture gate
+    (±8 jitter) — but with NO direct light, so its internal contrast stays
+    far below a sunlit crown's. The park mega-blob poison."""
+    j = ((gx * 13 + gy * 7) % 17) - 8
+    return (58 + j, 72 + j, 55 + j)
 
 
 def _shadow_band(cx, cy, r, length, disk_r=None):
@@ -342,6 +352,37 @@ class TestShadowPhysics(unittest.TestCase):
                 [(cx, cy, 14, deciduous_texture)])))
         self.assertEqual(len(res2["trees"]), 1)
         self.assertEqual(res2["trees"][0]["foliage"], "deciduous")
+
+    def test_shadow_swath_on_grass_yields_no_trees(self):
+        # Park regression v3 (the mega-blob): long tree shadows falling ON
+        # grass are dark AND green AND textured, so they enter the canopy
+        # mask and weld crowns + lawn into one giant blob. But cast shadow
+        # receives no direct light — the internal-contrast gate drops those
+        # disks and hands their pixels to the shadow stages instead.
+        cx, cy = _center_px()
+        disks = []
+        crowns = [(cx - 50, cy - 30, 11), (cx, cy - 30, 12),
+                  (cx + 50, cy - 30, 11)]
+        for (x, y, r) in crowns:
+            disks += _shadowed_crown(x, y, r, 2 * r)
+        # A big shadow swath attached to the crown row (welds the blob),
+        # spreading south-east where no crown shadow belongs.
+        extras = [(cx - 60, cy - 20, cx + 70, cy + 25,
+                   shadow_on_grass_texture)]
+        res = tree_detect.detect_trees(
+            _bbox_around(_LAT, _LNG, 30.0), _fetch_tile=_fetch_key,
+            _decode=_scene_decoder(_disk_scene(disks, background=LAWN,
+                                               extras=extras)))
+        self.assertIsNotNone(res)
+        self.assertGreater(res["dropped"]["flat"], 0)
+        self.assertEqual(len(res["trees"]), len(crowns))
+        mpp = res["m_per_px"]
+        for (gx, gy, _r) in crowns:
+            tlat, tlng = tree_detect._global_px_to_latlng(gx + 0.5, gy + 0.5,
+                                                          _Z)
+            best = min(_dist_m(tlat, tlng, t["lat"], t["lng"])
+                       for t in res["trees"])
+            self.assertLess(best, 3.5 * mpp)
 
     def test_capped_result_imports_nothing(self):
         res = {"trees": [{"kind": "tree", "lat": _LAT, "lng": _LNG,

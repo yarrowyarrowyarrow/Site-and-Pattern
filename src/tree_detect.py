@@ -35,6 +35,17 @@ mirroring the optional-dependency policy of ``footprint_extract``):
   4. **Crown separation** — connected canopy blobs get a chamfer distance
      transform and greedy peak-picking (disk packing), so a shelterbelt row
      becomes a line of individual trees instead of one 100 m monster.
+  5. **Physics verification** (second field pass) — colour, darkness and
+     texture are all fakeable by real grass; these aren't: a sunlit crown
+     mixes lit tufts with self-shadow (internal contrast — cast shadow on
+     grass has no direct light and fails it), a crown is darker than the
+     sunlit ground around it (ring contrast), and every tree in one photo
+     casts its shadow the same compass way (shadow-bearing consensus, with
+     a hemisphere prior; stand interiors inherit their blob's edge
+     verdict). Shadow lengths then give *measured* heights — calibrated
+     absolutely when an imported building of known height casts a legible
+     shadow in the same photo — and crown colour tags obvious conifers/
+     broadleafs for honest winter shade.
 
 Honesty contract (P9): crown *positions and sizes* are measured from the photo;
 *heights* are rough allometric estimates from crown size and are labelled as
@@ -87,6 +98,13 @@ _MIN_CANOPY_TEXTURE = 10
 # darkness split AND the texture gate — but grass can't fake these two):
 _RING_CONTRAST_MIN = 10     # a crown is darker than the sunlit ground *around*
 #                             it; a "tree" inside a big grassy expanse isn't.
+_CROWN_CONTRAST_MIN = 22    # p90 − p10 brightness inside a crown: sunlit
+#                             tufts + self-shadow. Cast shadow ON grass gets
+#                             no direct light at all, so however textured the
+#                             grass is, it stays uniformly dark (the park
+#                             mega-blob failure: tree shadows on lawn are
+#                             dark AND green AND textured — this is the gate
+#                             they cannot pass).
 _SHADOW_LUM_FACTOR = 0.6    # shadow pixels: darker than 0.6 × scene median…
 _SHADOW_LUM_CAP = 110       # …and dark in absolute terms.
 _MIN_SHADOW_FRAC = 0.25     # aligned-shadow coverage that verifies a crown
@@ -517,6 +535,29 @@ def _ring_contrast(mask: bytearray, shadow: bytearray, bright: bytearray,
     return "fail"
 
 
+def _disk_contrast(bright: bytearray, mask: bytearray, w: int, h: int,
+                   px: int, py: int, r_px: float) -> int:
+    """Internal brightness spread (p90 − p10) across a candidate crown's
+    masked pixels. Sunlit crowns mix lit tufts with self-shadow → high
+    spread; cast shadow lying on grass receives no direct light → uniformly
+    dark, whatever the grass texture. Tiny disks return 255 (pass — too
+    small to judge, the size filters own that call)."""
+    r_i = max(1, int(r_px))
+    vals = []
+    for y in range(max(0, py - r_i), min(h, py + r_i + 1)):
+        for x in range(max(0, px - r_i), min(w, px + r_i + 1)):
+            if (x - px) ** 2 + (y - py) ** 2 > r_i * r_i:
+                continue
+            i = y * w + x
+            if mask[i]:
+                vals.append(bright[i])
+    if len(vals) < 8:
+        return 255
+    vals.sort()
+    return (vals[int(0.9 * (len(vals) - 1))]
+            - vals[int(0.1 * (len(vals) - 1))])
+
+
 def _classify_foliage(mosaic: bytes, mask: bytearray, w: int, h: int,
                       px: int, py: int, r_px: float) -> Optional[str]:
     """Confident-only conifer/broadleaf tell from crown colour: conifers
@@ -737,19 +778,60 @@ def detect_trees(bbox: dict, *,
     base = {"zoom": zoom, "m_per_px": mpp, "tiles_ok": tiles_ok,
             "tiles_failed": tiles_failed, "capped": False, "partial": partial,
             "shadow_bearing": None, "anchor": None,
-            "dropped": {"ring": 0, "shadow": 0, "stand": 0}}
+            "dropped": {"flat": 0, "ring": 0, "shadow": 0, "stand": 0}}
     if mask is None:
         return {**base, "trees": []}
     mask = _texture_mask(mask, bright, w, h)
-    shadow = _shadow_mask_for(mask, bright, hist_all, w, h)
 
     # Candidate crowns (colour + darkness + texture say "tree-ish"); the
     # physics gates below decide which ones actually are.
     cands = []
+    blob_pixels = {}
     for blob_idx, comp in enumerate(_components(mask, w, h, min_area_px)):
+        blob_pixels[blob_idx] = comp
         dist = _chamfer(comp, w)
         for (px, py, r_px) in _pack_crowns(comp, dist, w, min_r_px):
             cands.append({"blob": blob_idx, "x": px, "y": py, "r": r_px})
+
+    # Gate 0 — direct light: a sunlit crown mixes lit tufts with
+    # self-shadow (high internal brightness spread); cast shadow lying on
+    # grass gets no direct light and stays uniformly dark however textured
+    # the grass is (the park mega-blob: tree shadows on lawn welded crowns
+    # and grass into one giant blob).
+    dropped = {"flat": 0, "ring": 0, "shadow": 0, "stand": 0}
+    lit_cands = []
+    blob_flat = {}
+    for c in cands:
+        stats = blob_flat.setdefault(c["blob"], [0, 0])
+        stats[1] += 1
+        if _disk_contrast(bright, mask, w, h, c["x"], c["y"], c["r"]) \
+                >= _CROWN_CONTRAST_MIN:
+            lit_cands.append(c)
+        else:
+            stats[0] += 1
+            dropped["flat"] += 1
+    cands = lit_cands
+    # A blob whose candidates are mostly flat is a misread (shadow swath /
+    # shaded grass), not a stand — clear its whole footprint back to the
+    # scene and re-stamp only its lit crowns, so the survivors get a clean
+    # ring, and the freed dark pixels feed the shadow stages instead of
+    # starving them. Mostly-lit blobs (real woodlots) are left intact.
+    for blob_idx, (n_flat, n_total) in blob_flat.items():
+        if n_total >= 3 and n_flat / n_total >= 0.6:
+            for i in blob_pixels[blob_idx]:
+                mask[i] = 0
+            for c in cands:
+                if c["blob"] != blob_idx:
+                    continue
+                r_i = max(1, int(c["r"]))
+                for y in range(max(0, c["y"] - r_i),
+                               min(h, c["y"] + r_i + 1)):
+                    for x in range(max(0, c["x"] - r_i),
+                                   min(w, c["x"] + r_i + 1)):
+                        if (x - c["x"]) ** 2 + (y - c["y"]) ** 2 \
+                                <= r_i * r_i:
+                            mask[y * w + x] = 1
+    shadow = _shadow_mask_for(mask, bright, hist_all, w, h)
 
     # Gate 1 — ring contrast: darker than the visible sunlit ground around
     # it, or 'interior' when a closed stand leaves no ground to compare.
@@ -790,7 +872,6 @@ def detect_trees(bbox: dict, *,
     # falls on the neighbouring crown, their ring is more canopy) — they
     # inherit their blob's edge verdict: a real stand has verified edges,
     # a mis-masked grass expanse doesn't.
-    dropped = {"ring": 0, "shadow": 0, "stand": 0}
     blob_edge: dict = {}
     for c in cands:
         if c["ring"] == "interior":
