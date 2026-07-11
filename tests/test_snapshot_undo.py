@@ -60,6 +60,11 @@ class _FakeMain:
     def windowTitle(self):
         return "t"
 
+    def _sync_planning_panel(self):
+        # Feature-derived panel readouts refreshed by _apply_snapshot —
+        # not under test here.
+        pass
+
 
 def _controller(main):
     import src.controllers.persistence as pmod
