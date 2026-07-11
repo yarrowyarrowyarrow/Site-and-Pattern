@@ -12,7 +12,10 @@
 // (like the beacons) so a scene rebuild doesn't dispose it — the host re-pushes
 // wildlife after each scene push.
 let WILDLIFE = [];
-let wildlifeGroup = null;
+// wildlifeGroup is forward-declared in 01-core.js (the first chunk) because
+// 01-core's pointermove handler reads it — see the note there. Assign, don't
+// re-declare, or the two `let`s would collide in the shared global scope.
+wildlifeGroup = null;
 let wildlifeCritters = [];
 
 function _cmat(hex, opts) {

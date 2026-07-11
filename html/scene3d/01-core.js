@@ -130,6 +130,12 @@ scene.add(camera);
 const _ray = new THREE.Raycaster();
 const _ptr = new THREE.Vector2();
 let _lastPick = 0;
+// Forward-declared here (the FIRST chunk) though it's built in 07-wildlife.js:
+// the pointermove handler just below reads wildlifeGroup, and can fire while
+// chunks 02–07 are still async-loading. Declaring it in 07 left a window where
+// the binding didn't exist yet → "wildlifeGroup is not defined" latched the
+// error overlay and blanked the scene. Same convention as plantsGroup/scene.
+let wildlifeGroup = null;
 const _REL_WORDS = { nectar: 'sips nectar at', pollen: 'gathers pollen at',
   larval_host: 'lays eggs on', fruit_food: 'eats fruit of', seed_food: 'eats seed of',
   cover: 'shelters in', nesting: 'nests in' };

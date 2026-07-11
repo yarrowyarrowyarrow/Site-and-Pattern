@@ -21,12 +21,41 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _SCENE3D = os.path.join(_ROOT, "html", "scene3d.html")
+_SCENE3D_DIR = os.path.join(_ROOT, "html", "scene3d")
 _VENDOR = os.path.join(_ROOT, "html", "vendor")
 
 
 def _read(path):
     with open(path, "r", encoding="utf-8") as fh:
         return fh.read()
+
+
+class SharedGlobalDeclarationTest(unittest.TestCase):
+    """The viewer chunks are classic scripts sharing one global lexical scope,
+    loaded in order (01→08). A global that an EARLIER chunk reads must be
+    declared in an earlier (ideally the first) chunk, or the reader can hit it
+    before its `let` runs → "X is not defined" latches the error overlay and
+    blanks the scene. V2.26 bug: wildlifeGroup was `let` in 07 but read by
+    01-core's pointermove handler."""
+
+    def test_cross_chunk_globals_declared_in_first_chunk(self):
+        # Globals declared in a later chunk but read by 01-core (the first).
+        # Each must be declared exactly once, and in 01-core.js.
+        core = _read(os.path.join(_SCENE3D_DIR, "01-core.js"))
+        for name in ("wildlifeGroup",):
+            if not re.search(r"\b" + name + r"\b", core):
+                continue
+            decls = []
+            for fn in sorted(os.listdir(_SCENE3D_DIR)):
+                if not fn.endswith(".js"):
+                    continue
+                if re.search(r"\b(?:let|const|var)\s+" + name + r"\b",
+                             _read(os.path.join(_SCENE3D_DIR, fn))):
+                    decls.append(fn)
+            self.assertEqual(
+                decls, ["01-core.js"],
+                f"{name} is read by 01-core but declared in {decls} — declare "
+                "it in 01-core.js (see SharedGlobalDeclarationTest docstring)")
 
 
 class SceneViewerAssetsTest(unittest.TestCase):
