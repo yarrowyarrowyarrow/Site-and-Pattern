@@ -703,6 +703,60 @@ def _pack_crowns(comp: list, dist: dict, w: int, min_r_px: float) -> list:
     return accepted
 
 
+# ── Imagery mosaic (shared by detection + foliage sampling) ──────────────────
+
+def _build_mosaic(bbox: dict, fetch: Callable, decode: Callable,
+                  max_tiles: int) -> Optional[dict]:
+    """Fetch + assemble the Esri imagery mosaic covering ``bbox``. Returns
+    ``{mosaic(bytes), w, h, origin_x, origin_y, zoom, mpp, tiles_ok,
+    tiles_failed, partial}`` or ``None`` when too few tiles decoded (mostly
+    holes — a failure, never silently "0"). Shared by ``detect_trees`` (RGB
+    fallback) and ``classify_foliage_at_points`` (colour tags for CHM trees)."""
+    zoom = _pick_zoom(bbox, max_tiles)
+    tx0, ty0, tx1, ty1 = _tile_range(bbox, zoom)
+    # A boundary far beyond yard scale can outrun the mosaic budget even at
+    # the minimum useful zoom — scan the central block that fits and say so.
+    partial = False
+    while (tx1 - tx0 + 1) * (ty1 - ty0 + 1) > max_tiles:
+        partial = True
+        if (tx1 - tx0) >= (ty1 - ty0):
+            tx0 += 1
+            tx1 -= 1
+        else:
+            ty0 += 1
+            ty1 -= 1
+    ntx, nty = tx1 - tx0 + 1, ty1 - ty0 + 1
+    w, h = ntx * _TILE_PX, nty * _TILE_PX
+    mosaic = bytearray(w * h * 3)
+    tiles_ok = tiles_failed = 0
+    for ty in range(ty0, ty1 + 1):
+        for tx in range(tx0, tx1 + 1):
+            data = fetch(zoom, tx, ty)
+            decoded = decode(data) if data else None
+            if not decoded:
+                tiles_failed += 1
+                continue
+            tw, th, rgb = decoded
+            if tw != _TILE_PX or th != _TILE_PX:
+                tiles_failed += 1
+                continue
+            tiles_ok += 1
+            ox = (tx - tx0) * _TILE_PX
+            oy = (ty - ty0) * _TILE_PX
+            for row in range(_TILE_PX):
+                src = row * _TILE_PX * 3
+                dst = ((oy + row) * w + ox) * 3
+                mosaic[dst:dst + _TILE_PX * 3] = rgb[src:src + _TILE_PX * 3]
+    if tiles_ok == 0 or tiles_failed > tiles_ok:
+        return None
+    clat = (bbox["north"] + bbox["south"]) / 2.0
+    return {"mosaic": bytes(mosaic), "w": w, "h": h,
+            "origin_x": tx0 * _TILE_PX, "origin_y": ty0 * _TILE_PX,
+            "zoom": zoom, "mpp": _m_per_px(clat, zoom),
+            "tiles_ok": tiles_ok, "tiles_failed": tiles_failed,
+            "partial": partial}
+
+
 # ── Detection pipeline ───────────────────────────────────────────────────────
 
 def detect_trees(bbox: dict, *,
@@ -737,51 +791,20 @@ def detect_trees(bbox: dict, *,
     if _decode is None:
         return None                  # no codec available — honest failure
     fetch = _fetch_tile or _fetch_tile_bytes
-    zoom = _pick_zoom(bbox, max_tiles)
-    tx0, ty0, tx1, ty1 = _tile_range(bbox, zoom)
-    # A boundary far beyond yard scale can outrun the mosaic budget even at
-    # the minimum useful zoom — scan the central block that fits and say so,
-    # rather than fetching hundreds of tiles or silently lying about coverage.
-    partial = False
-    while (tx1 - tx0 + 1) * (ty1 - ty0 + 1) > max_tiles:
-        partial = True
-        if (tx1 - tx0) >= (ty1 - ty0):
-            tx0 += 1
-            tx1 -= 1
-        else:
-            ty0 += 1
-            ty1 -= 1
-    ntx, nty = tx1 - tx0 + 1, ty1 - ty0 + 1
-    w, h = ntx * _TILE_PX, nty * _TILE_PX
-    mosaic = bytearray(w * h * 3)
-    tiles_ok = tiles_failed = 0
-    for ty in range(ty0, ty1 + 1):
-        for tx in range(tx0, tx1 + 1):
-            data = fetch(zoom, tx, ty)
-            decoded = _decode(data) if data else None
-            if not decoded:
-                tiles_failed += 1
-                continue
-            tw, th, rgb = decoded
-            if tw != _TILE_PX or th != _TILE_PX:
-                tiles_failed += 1
-                continue
-            tiles_ok += 1
-            ox = (tx - tx0) * _TILE_PX
-            oy = (ty - ty0) * _TILE_PX
-            for row in range(_TILE_PX):
-                src = row * _TILE_PX * 3
-                dst = ((oy + row) * w + ox) * 3
-                mosaic[dst:dst + _TILE_PX * 3] = rgb[src:src + _TILE_PX * 3]
-    if tiles_ok == 0 or tiles_failed > tiles_ok:
+    mos = _build_mosaic(bbox, fetch, _decode, max_tiles)
+    if mos is None:
         return None                  # mostly holes — report failure, not "0"
-
-    clat = (bbox["north"] + bbox["south"]) / 2.0
-    mpp = _m_per_px(clat, zoom)
+    w, h = mos["w"], mos["h"]
+    mosaic = mos["mosaic"]           # bytes
+    zoom, mpp = mos["zoom"], mos["mpp"]
+    tiles_ok, tiles_failed = mos["tiles_ok"], mos["tiles_failed"]
+    partial = mos["partial"]
+    origin_x, origin_y = mos["origin_x"], mos["origin_y"]
+    clat = (bbox["north"] + bbox["south"]) / 2.0     # for the hemisphere prior
     min_r_px = _MIN_CROWN_RADIUS_M / mpp
     min_area_px = max(4, int(math.pi * min_r_px * min_r_px))
 
-    veg, bright, hist_all = _vegetation_and_brightness(bytes(mosaic), w, h)
+    veg, bright, hist_all = _vegetation_and_brightness(mosaic, w, h)
     smooth, hist = _smooth_brightness(veg, bright, w, h)
     mask = _canopy_mask(veg, smooth, hist, w, h)
     base = {"zoom": zoom, "m_per_px": mpp, "tiles_ok": tiles_ok,
@@ -939,8 +962,8 @@ def detect_trees(bbox: dict, *,
     # Sun-elevation anchor for shadow→height: prefer a building of known
     # height (its shadow in the same photo calibrates tan(elevation)
     # absolutely); else the median allometric ratio over verified crowns.
-    origin_x = tx0 * _TILE_PX       # mosaic (0,0) in global pixel coords
-    origin_y = ty0 * _TILE_PX
+    # origin_x/origin_y (mosaic (0,0) in global pixel coords) come from
+    # _build_mosaic above.
     tan_elev = None
     anchor = None
     if bearing is not None:
@@ -1157,3 +1180,41 @@ def import_detected_trees(res: Optional[dict], project_dict: dict, *,
                 "hand below.")
     return {"added": added, "kept": len(kept), "found": len(items),
             "message": msg}
+
+
+# ── Foliage tagging for height-detected trees (colour ⊗ height, P7) ──────────
+
+def classify_foliage_at_points(trees: list, bbox: dict, *,
+                               _fetch_tile: Optional[Callable] = None,
+                               _decode: Optional[Callable] = None,
+                               max_tiles: int = _MAX_TILES) -> list:
+    """Best-effort: tag each tree's foliage (conifer/broadleaf) from the
+    satellite photo's colour at its location. The canopy-height map gives
+    position + height but no colour, so this crosses the two data domains
+    (P7) to add the conifer/deciduous distinction the height map can't —
+    feeding leaf-off winter shade and the 3D crown shape.
+
+    Mutates ``trees`` in place (sets ``foliage`` where the colour is
+    confident) and returns them. Any fetch failure or ambiguous colour
+    leaves ``foliage`` unchanged (unknown = year-round shade — never
+    invents a winter sun break). ``_fetch_tile``/``_decode`` injectable."""
+    if _decode is None or not trees:
+        return trees
+    fetch = _fetch_tile or _fetch_tile_bytes
+    mos = _build_mosaic(bbox, fetch, _decode, max_tiles)
+    if mos is None:
+        return trees
+    w, h, mosaic = mos["w"], mos["h"], mos["mosaic"]
+    zoom, mpp = mos["zoom"], mos["mpp"]
+    ox, oy = mos["origin_x"], mos["origin_y"]
+    veg, _bright, _hist = _vegetation_and_brightness(mosaic, w, h)
+    for t in trees:
+        gx, gy = _latlng_to_global_px(t["lat"], t["lng"], zoom)
+        px, py = int(gx - ox), int(gy - oy)
+        if not (0 <= px < w and 0 <= py < h):
+            continue
+        r_px = max(2, int((t.get("radius_m") or 2.0) / mpp))
+        fol = _classify_foliage(mosaic, veg, w, h, px, py, r_px)
+        if fol:
+            t["foliage"] = fol
+    return trees

@@ -586,6 +586,40 @@ class TestQImageDecoder(unittest.TestCase):
         self.assertIsNone(_qimage_decode(b"not an image"))
 
 
+class TestFoliageAtPoints(unittest.TestCase):
+    """classify_foliage_at_points tags CHM-detected trees (height, no colour)
+    with conifer/broadleaf from the satellite photo at each point — the
+    height ⊗ colour cross (V2.26)."""
+
+    def test_tags_conifer_and_broadleaf(self):
+        cx, cy = _center_px()
+        scene = _disk_scene([(cx - 45, cy, 14, crown_texture),
+                             (cx + 45, cy, 14, deciduous_texture)])
+        bbox = _bbox_around(_LAT, _LNG, 30.0)
+        le, ne = tree_detect._global_px_to_latlng(cx - 45 + 0.5, cy + 0.5, _Z)
+        ld, nd = tree_detect._global_px_to_latlng(cx + 45 + 0.5, cy + 0.5, _Z)
+        trees = [{"lat": le, "lng": ne, "radius_m": 2.5, "foliage": None},
+                 {"lat": ld, "lng": nd, "radius_m": 2.5, "foliage": None}]
+        tree_detect.classify_foliage_at_points(
+            trees, bbox, _fetch_tile=_fetch_key, _decode=_scene_decoder(scene))
+        self.assertEqual(trees[0]["foliage"], "evergreen")
+        self.assertEqual(trees[1]["foliage"], "deciduous")
+
+    def test_no_decoder_leaves_foliage_unchanged(self):
+        trees = [{"lat": _LAT, "lng": _LNG, "radius_m": 2.0, "foliage": None}]
+        tree_detect.classify_foliage_at_points(
+            trees, _bbox_around(_LAT, _LNG, 30.0), _decode=None)
+        self.assertIsNone(trees[0]["foliage"])
+
+    def test_fetch_failure_leaves_foliage_unchanged(self):
+        trees = [{"lat": _LAT, "lng": _LNG, "radius_m": 2.0, "foliage": None}]
+        tree_detect.classify_foliage_at_points(
+            trees, _bbox_around(_LAT, _LNG, 30.0),
+            _fetch_tile=lambda z, x, y: None,
+            _decode=_scene_decoder(_disk_scene([])))
+        self.assertIsNone(trees[0]["foliage"])
+
+
 class TestAddFeaturesOverrides(unittest.TestCase):
     def test_detected_item_overrides_and_foliage(self):
         project = {"features": []}

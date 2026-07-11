@@ -178,6 +178,15 @@ if _HAVE_QT:
             except Exception:  # noqa: BLE001 — never crash the worker thread
                 res = None
             if res is not None:
+                # The height map has no colour, so tag conifer/broadleaf from
+                # the satellite photo at each tree (best-effort; leaves foliage
+                # unknown on any failure). Crosses height ⊗ colour (P7).
+                try:
+                    tree_detect.classify_foliage_at_points(
+                        res.get("trees") or [], self._bbox,
+                        _decode=_qimage_decode)
+                except Exception:  # noqa: BLE001
+                    pass
                 self.done.emit({"mode": "chm", "res": res})
                 return
             # Fallback: the RGB-from-basemap heuristic (no rasterio / offline /

@@ -82,6 +82,37 @@ def _project(features):
             "features": list(features)}
 
 
+def _existing_tree(foliage=""):
+    props = {"element_type": "existing_tree", "height_m": 10.0,
+             "canopy_radius_m": 3.0, "label": "Tree"}
+    if foliage:
+        props["tree_foliage"] = foliage
+    return {"type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [_LNG, _LAT]},
+            "properties": props}
+
+
+class TestExistingTreeFoliageShape(unittest.TestCase):
+    """An existing tree's foliage must drive its 3D shape (the viewer keys
+    tree shape off genus): evergreen → a conifer genus, deciduous/unknown →
+    the broadleaf default. Without this the conifer/deciduous distinction is
+    invisible in 3D (V2.26)."""
+
+    def _tree_plant(self, foliage):
+        scene = build_scene(_project([_existing_tree(foliage)]),
+                            get_plant=_get_plant)
+        trees = [p for p in scene["plants"] if p.get("existing")]
+        self.assertEqual(len(trees), 1)
+        return trees[0]
+
+    def test_evergreen_renders_as_conifer(self):
+        self.assertEqual(self._tree_plant("evergreen")["genus"], "spruce")
+
+    def test_deciduous_and_unknown_stay_broadleaf(self):
+        self.assertEqual(self._tree_plant("deciduous")["genus"], "")
+        self.assertEqual(self._tree_plant("")["genus"], "")
+
+
 class TestSceneBasics(unittest.TestCase):
 
     def test_version_and_serialisable(self):

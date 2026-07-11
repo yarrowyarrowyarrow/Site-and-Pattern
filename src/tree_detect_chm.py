@@ -31,8 +31,10 @@ Architecture reuse:
 
 Honesty contract (P9): heights are measured from the map and carry its ≈3 m
 error; crown *radius* is a stated allometric estimate from height (the map
-gives height well, per-crown width less so); foliage is left unknown (no
-spectral data in a height map) = year-round shade, the app's honest default; a
+gives height well, per-crown width less so); a height map has no colour, so
+conifer/broadleaf is tagged separately by the flow from the satellite photo at
+each tree (``tree_detect.classify_foliage_at_points`` — height ⊗ colour, P7),
+staying unknown = year-round shade where the colour is ambiguous; a
 failed/absent fetch returns ``None`` — reported as "couldn't get height data",
 never as "no trees".
 
@@ -399,11 +401,15 @@ def import_chm_result(res: Optional[dict], project_dict: dict, *,
         msg += f" ({area_note})"
     msg += f"; added {added} new."
     if added:
-        msg += (f" Heights are measured from the map (±≈{res.get('mae_m', _CHM_MAE_M):.0f} m); "
-                "crown sizes are estimated from height. Foliage is unknown "
-                "(a height map has no colour), so all are treated as "
-                "year-round shade. Click a tree and press Delete to remove "
-                "any you don't want.")
+        n_ev = sum(1 for t in kept if t.get("foliage") == "evergreen")
+        n_de = sum(1 for t in kept if t.get("foliage") == "deciduous")
+        n_un = len(kept) - n_ev - n_de
+        msg += (f" Heights are measured from the map "
+                f"(±≈{res.get('mae_m', _CHM_MAE_M):.0f} m); crown sizes are "
+                "estimated from height. Foliage (from the photo's colour): "
+                f"{n_ev} conifer-like, {n_de} broadleaf-like, {n_un} unknown "
+                "(treated as year-round shade). Click a tree and press Delete "
+                "to remove any you don't want.")
     elif not items:
         msg += (" The canopy-height map shows nothing above that height here "
                 "— lower the height threshold, or mark trees by hand below.")

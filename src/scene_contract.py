@@ -419,6 +419,12 @@ def build_scene(project: dict, *, year: int = 0,
             x, y = proj.to_xy(lat, lng)
             canopy = float(props.get("canopy_radius_m")
                            or (props.get("size_m") or 6.0) / 2.0) * 2.0
+            # A declared-evergreen crown renders as a conifer (the 3D viewer
+            # keys tree shape off genus; "spruce" is the generic conifer
+            # profile). Deciduous / unknown fall through to the broadleaf
+            # default — so the conifer/deciduous distinction is visible, not
+            # just baked into the winter-shade weighting.
+            _foliage = (props.get("tree_foliage") or "").lower()
             plants.append({
                 "plant_id": None,
                 "common_name": props.get("label", "Existing tree"),
@@ -426,7 +432,7 @@ def build_scene(project: dict, *, year: int = 0,
                 "height_m": float(props.get("height_m") or 6.0),
                 "canopy_m": canopy,
                 "plant_type": "tree",
-                "genus": "",
+                "genus": "spruce" if _foliage == "evergreen" else "",
                 # Existing trees are mature with no modelled colony spread.
                 "scale_factor": 1.0,
                 "spread_factor": 1.0,
