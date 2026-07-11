@@ -56,6 +56,21 @@ def on_existing_feature_moved(main, marker_id: str, struct_id: str,
     main._mark_modified()
 
 
+def on_existing_feature_foliage(main, marker_id: str, struct_id: str,
+                                lat: float, lng: float, foliage: str) -> None:
+    """Set a tree's foliage (conifer/deciduous) from the map's right-click
+    switch — drives the 2D crown colour, 3D shape, and winter-shade weighting.
+    Only trees carry foliage; a building mark is ignored."""
+    if foliage not in ("evergreen", "deciduous"):
+        return
+    feat = _find(main, struct_id, lat, lng)
+    if feat is None or feat["properties"].get("element_type") != "existing_tree":
+        return
+    with _checkpoint(main, "set tree foliage"):
+        feat["properties"]["tree_foliage"] = foliage
+    main._mark_modified()
+
+
 def on_existing_feature_resized(main, marker_id: str, struct_id: str,
                                 lat: float, lng: float,
                                 new_diameter_m: float) -> None:

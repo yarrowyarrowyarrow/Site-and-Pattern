@@ -115,6 +115,8 @@ class MapBridge(QObject):
         # markerId, structId, oldLat, oldLng, newLat, newLng
     existing_feature_resized = pyqtSignal(str, str, float, float, float)
         # markerId, structId, lat, lng, newDiameterM
+    existing_feature_foliage = pyqtSignal(str, str, float, float, str)
+        # markerId, structId, lat, lng, foliage ("evergreen"|"deciduous")
 
     # Hedgerow signals
     hedgerow_complete = pyqtSignal(str, str, str, str, float, int)  # id, pointsJson, species, style, lengthM, numPlants
@@ -297,6 +299,12 @@ class MapBridge(QObject):
                                  lat: float, lng: float, new_diameter_m: float):
         self.existing_feature_resized.emit(marker_id, struct_id, lat, lng,
                                            new_diameter_m)
+
+    @pyqtSlot(str, str, float, float, str)
+    def onExistingFeatureFoliage(self, marker_id: str, struct_id: str,
+                                 lat: float, lng: float, foliage: str):
+        self.existing_feature_foliage.emit(marker_id, struct_id, lat, lng,
+                                           foliage)
 
     # ── Hedgerow slots ────────────────────────────────────────────────────────
 

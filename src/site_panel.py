@@ -2046,6 +2046,31 @@ class SitePanel(QWidget):
         btn_trees.clicked.connect(self.tree_detect_requested.emit)
         v.addWidget(btn_trees)
 
+        # Detection sensitivity: the shortest crown to call a tree. Lower =
+        # more (and smaller) trees — the canopy-height map underestimates
+        # isolated crowns, so 2 m catches spaced acreage trees a 3 m floor
+        # missed; raise it if a busy site picks up shrubs.
+        mh_row = QHBoxLayout()
+        mh_lbl = QLabel("Min tree height:")
+        mh_tip = ("Trees shorter than this (measured from the canopy-height "
+                  "map) are skipped. Lower it to catch more/smaller trees; "
+                  "raise it if detection picks up shrubs or hedges.")
+        mh_lbl.setToolTip(mh_tip)
+        mh_row.addWidget(mh_lbl)
+        self._tree_min_height = QDoubleSpinBox()
+        self._tree_min_height.setRange(1.0, 15.0)
+        self._tree_min_height.setSingleStep(0.5)
+        self._tree_min_height.setDecimals(1)
+        self._tree_min_height.setSuffix(" m")
+        self._tree_min_height.setValue(float(QSettings().value(
+            "site/tree_min_height", 2.0, type=float)))
+        self._tree_min_height.setToolTip(mh_tip)
+        self._tree_min_height.valueChanged.connect(
+            lambda v_: QSettings().setValue("site/tree_min_height", v_))
+        mh_row.addWidget(self._tree_min_height)
+        mh_row.addStretch(1)
+        v.addLayout(mh_row)
+
         # Neighbour margin (V2.13): how far past the boundary to keep
         # buildings — a tall neighbour still shades the site. 0 = strictly
         # inside the boundary. Persisted; read by the controller via
@@ -2128,6 +2153,10 @@ class SitePanel(QWidget):
     def osm_neighbour_margin(self) -> float:
         """How far past the boundary the OSM import keeps neighbours (m)."""
         return float(self._osm_margin.value())
+
+    def tree_min_height(self) -> float:
+        """Minimum crown height (m) to count as a tree in auto-detection."""
+        return float(self._tree_min_height.value())
 
     def satellite_offset(self) -> tuple:
         """Current satellite-alignment nudge as ``(east_m, north_m)``. The

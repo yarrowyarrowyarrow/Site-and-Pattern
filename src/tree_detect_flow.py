@@ -109,7 +109,11 @@ def detect_trees_for_site(main) -> None:
 
     from PyQt6.QtCore import QThread
     thread = QThread(main)
-    worker = _TreeDetectWorker(bbox, _building_anchors(main._project))
+    try:
+        min_h = float(main.site_panel.tree_min_height())
+    except Exception:  # noqa: BLE001 — fall back to the core default
+        min_h = None
+    worker = _TreeDetectWorker(bbox, _building_anchors(main._project), min_h)
     worker.moveToThread(thread)
     main._tree_detect_thread = thread
     main._tree_detect_worker = worker
@@ -166,15 +170,18 @@ if _HAVE_QT:
         # {"mode": "chm"|"rgb", "res": detector result | None}
         done = pyqtSignal(object)
 
-        def __init__(self, bbox, buildings=None):
+        def __init__(self, bbox, buildings=None, min_height_m=None):
             super().__init__()
             self._bbox = bbox
             self._buildings = buildings or []
+            self._min_height_m = min_height_m
 
         def run(self):
             # Height first: measured, location-independent, no per-photo tuning.
+            kw = ({} if self._min_height_m is None
+                  else {"min_height_m": self._min_height_m})
             try:
-                res = tree_detect_chm.detect_trees_chm(self._bbox)
+                res = tree_detect_chm.detect_trees_chm(self._bbox, **kw)
             except Exception:  # noqa: BLE001 — never crash the worker thread
                 res = None
             if res is not None:

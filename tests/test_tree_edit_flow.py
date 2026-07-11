@@ -84,5 +84,32 @@ class TestResize(unittest.TestCase):
             m._project["features"][0]["properties"]["canopy_radius_m"], 4.0)
 
 
+class TestFoliage(unittest.TestCase):
+    def test_switch_sets_tree_foliage(self):
+        m = _FakeMain([_tree(53.5, -113.3)])
+        tree_edit_flow.on_existing_feature_foliage(
+            m, "mk", "existing_tree", 53.5, -113.3, "evergreen")
+        self.assertEqual(
+            m._project["features"][0]["properties"]["tree_foliage"],
+            "evergreen")
+        tree_edit_flow.on_existing_feature_foliage(
+            m, "mk", "existing_tree", 53.5, -113.3, "deciduous")
+        self.assertEqual(
+            m._project["features"][0]["properties"]["tree_foliage"],
+            "deciduous")
+
+    def test_switch_ignores_buildings_and_bad_values(self):
+        m = _FakeMain([_tree(53.5, -113.3, struct_id="existing_building")])
+        tree_edit_flow.on_existing_feature_foliage(
+            m, "mk", "existing_building", 53.5, -113.3, "evergreen")
+        self.assertNotIn("tree_foliage",
+                         m._project["features"][0]["properties"])
+        m2 = _FakeMain([_tree(53.5, -113.3)])
+        tree_edit_flow.on_existing_feature_foliage(
+            m2, "mk", "existing_tree", 53.5, -113.3, "banana")
+        self.assertNotIn("tree_foliage",
+                         m2._project["features"][0]["properties"])
+
+
 if __name__ == "__main__":
     unittest.main()

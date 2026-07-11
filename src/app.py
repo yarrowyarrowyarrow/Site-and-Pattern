@@ -679,6 +679,8 @@ class MainWindow(QMainWindow):
             lambda *a: tree_edit_flow.on_existing_feature_moved(self, *a))
         b.existing_feature_resized.connect(
             lambda *a: tree_edit_flow.on_existing_feature_resized(self, *a))
+        b.existing_feature_foliage.connect(
+            lambda *a: tree_edit_flow.on_existing_feature_foliage(self, *a))
         b.hedgerow_complete.connect(self._on_hedgerow_complete)
         b.hedgerow_removed.connect(self._on_hedgerow_removed)
         b.shape_complete.connect(self._on_shape_complete)

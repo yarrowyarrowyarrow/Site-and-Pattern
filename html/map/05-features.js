@@ -102,12 +102,34 @@
         maintenance: structDef.maintenance_hours_year || 0
       };
 
-      // Right-click to remove
+      // Right-click: existing trees get a small menu (switch conifer/
+      // deciduous, or remove); everything else removes directly. Uses the
+      // group's live position so a dragged marker removes at its real spot.
       mainLayer.on('contextmenu', function(e) {
         L.DomEvent.stop(e);
-        map.removeLayer(group);
-        delete structureMarkers[id];
-        if (bridge) bridge.onStructureRemoved(id, structDef.id, lat, lng);
+        var pos = group._pdStruct || { lat: lat, lng: lng };
+        function _remove() {
+          map.removeLayer(group);
+          delete structureMarkers[id];
+          if (bridge) bridge.onStructureRemoved(id, structDef.id,
+                                                pos.lat, pos.lng);
+        }
+        if (structDef.id === 'existing_tree' &&
+            typeof showContextMenu === 'function') {
+          var oe = e.originalEvent;
+          showContextMenu(oe.clientX, oe.clientY, [
+            { label: '🌲 Make coniferous', action: function() {
+                if (group._pdExisting)
+                  _setExistingFoliage(group._pdExisting, 'evergreen'); } },
+            { label: '🌳 Make deciduous', action: function() {
+                if (group._pdExisting)
+                  _setExistingFoliage(group._pdExisting, 'deciduous'); } },
+            'sep',
+            { label: '🗑 Remove tree', action: _remove },
+          ]);
+          return;
+        }
+        _remove();
       });
 
       // Stash identifying metadata on the group so undoStructureAt can
@@ -120,9 +142,35 @@
       // 'Existing' category so decorative structures stay fixed.
       if (structDef.category === 'Existing') {
         _makeExistingEditable(group, mainLayer, labelMarker, id,
-                              structDef.id, lat, lng, sizeM, shape, widthM);
+                              structDef.id, lat, lng, sizeM, shape, widthM,
+                              name);
       }
       return id;
+    }
+
+    // Switch an existing tree between conifer/deciduous from the map (V2.26):
+    // recolour the crown + swap the label icon live, and persist the choice
+    // (src/tree_edit_flow.on_existing_feature_foliage) — drives the 2D colour,
+    // the 3D crown shape and the winter-shade weighting.
+    var _FOLIAGE_STYLE = {
+      evergreen: { color: '#1b5e20', fill: '#2e7d32', icon: '🌲' },
+      deciduous: { color: '#8d6e00', fill: '#c0ca33', icon: '🌳' },
+    };
+    function _setExistingFoliage(st, foliage) {
+      var s = _FOLIAGE_STYLE[foliage];
+      if (!s) return;
+      if (st.layer.setStyle) st.layer.setStyle({ color: s.color,
+                                                 fillColor: s.fill });
+      st.foliage = foliage;
+      if (st.label && st.label.setIcon) {
+        st.label.setIcon(L.divIcon({ className: 'structure-label',
+          html: '<span class="struct-icon">' + s.icon + '</span> ' +
+                escH(st.name || 'Tree'),
+          iconSize: [0, 0], iconAnchor: [0, 12] }));
+      }
+      if (bridge && bridge.onExistingFeatureFoliage)
+        bridge.onExistingFeatureFoliage(st.id, st.structId, st.lat, st.lng,
+                                        foliage);
     }
 
     // ── Editable existing features (drag + scroll-resize, V2.26) ─────────────
@@ -145,10 +193,10 @@
     }
 
     function _makeExistingEditable(group, layer, label, id, structId,
-                                   lat, lng, sizeM, shape, widthM) {
+                                   lat, lng, sizeM, shape, widthM, name) {
       var st = { id: id, structId: structId, lat: lat, lng: lng,
                  sizeM: sizeM, widthM: widthM || sizeM, layer: layer,
-                 label: label, group: group };
+                 label: label, group: group, name: name };
       group._pdExisting = st;                   // read by the wheel handler
       var el = layer.getElement && layer.getElement();
       if (el) el.style.cursor = 'move';

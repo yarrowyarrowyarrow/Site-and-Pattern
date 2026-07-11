@@ -93,10 +93,13 @@ def _existing_tree(foliage=""):
 
 
 class TestExistingTreeFoliageShape(unittest.TestCase):
-    """An existing tree's foliage must drive its 3D shape (the viewer keys
-    tree shape off genus): evergreen → a conifer genus, deciduous/unknown →
-    the broadleaf default. Without this the conifer/deciduous distinction is
-    invisible in 3D (V2.26)."""
+    """An existing tree's foliage must drive BOTH its 3D crown shape (the
+    viewer keys conifer off genus + foliage_type) and its seasonal colour /
+    winter bareness (foliage_type). Rule (V2.26): explicit deciduous →
+    broadleaf; evergreen OR unknown → conifer (matching the shade model's
+    unknown-is-year-round rule). Setting foliage_type was the fix for
+    conifers rendering as deciduous — genus alone left _isDecid(undefined)
+    colouring/baring them like broadleaf."""
 
     def _tree_plant(self, foliage):
         scene = build_scene(_project([_existing_tree(foliage)]),
@@ -106,11 +109,20 @@ class TestExistingTreeFoliageShape(unittest.TestCase):
         return trees[0]
 
     def test_evergreen_renders_as_conifer(self):
-        self.assertEqual(self._tree_plant("evergreen")["genus"], "spruce")
+        p = self._tree_plant("evergreen")
+        self.assertEqual(p["genus"], "spruce")
+        self.assertEqual(p["foliage_type"], "evergreen")
 
-    def test_deciduous_and_unknown_stay_broadleaf(self):
-        self.assertEqual(self._tree_plant("deciduous")["genus"], "")
-        self.assertEqual(self._tree_plant("")["genus"], "")
+    def test_unknown_defaults_to_conifer(self):
+        # Conifer-dominated sites + shade model treats unknown as year-round.
+        p = self._tree_plant("")
+        self.assertEqual(p["genus"], "spruce")
+        self.assertEqual(p["foliage_type"], "evergreen")
+
+    def test_explicit_deciduous_is_broadleaf(self):
+        p = self._tree_plant("deciduous")
+        self.assertEqual(p["genus"], "")
+        self.assertEqual(p["foliage_type"], "deciduous")
 
 
 class TestSceneBasics(unittest.TestCase):

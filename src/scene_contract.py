@@ -419,12 +419,18 @@ def build_scene(project: dict, *, year: int = 0,
             x, y = proj.to_xy(lat, lng)
             canopy = float(props.get("canopy_radius_m")
                            or (props.get("size_m") or 6.0) / 2.0) * 2.0
-            # A declared-evergreen crown renders as a conifer (the 3D viewer
-            # keys tree shape off genus; "spruce" is the generic conifer
-            # profile). Deciduous / unknown fall through to the broadleaf
-            # default — so the conifer/deciduous distinction is visible, not
-            # just baked into the winter-shade weighting.
+            # Foliage drives BOTH the 3D crown shape (the viewer keys conifer
+            # off genus AND foliage_type — 04-quality.js) and its seasonal
+            # colour / winter bareness (foliage_type). Rule: an explicitly
+            # deciduous crown is broadleaf-and-bare-in-winter; everything else
+            # — evergreen OR unknown — renders as a conifer, matching the
+            # shade model (which treats unknown foliage as year-round shade)
+            # and the conifer-dominated sites this serves. Setting foliage_type
+            # was the fix for "conifers showed as deciduous in 3D": genus alone
+            # gave a conifer shape but _isDecid(undefined) still coloured and
+            # bared it like a broadleaf.
             _foliage = (props.get("tree_foliage") or "").lower()
+            _ft = "deciduous" if _foliage == "deciduous" else "evergreen"
             plants.append({
                 "plant_id": None,
                 "common_name": props.get("label", "Existing tree"),
@@ -432,7 +438,8 @@ def build_scene(project: dict, *, year: int = 0,
                 "height_m": float(props.get("height_m") or 6.0),
                 "canopy_m": canopy,
                 "plant_type": "tree",
-                "genus": "spruce" if _foliage == "evergreen" else "",
+                "genus": "spruce" if _ft == "evergreen" else "",
+                "foliage_type": _ft,
                 # Existing trees are mature with no modelled colony spread.
                 "scale_factor": 1.0,
                 "spread_factor": 1.0,
