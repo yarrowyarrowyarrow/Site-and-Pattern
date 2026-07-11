@@ -30,8 +30,16 @@ SHADOW = (55, 62, 52)       # cast shadow: dark (lum 57), ExG 17 → not veg
 def crown_texture(gx, gy):
     """A real crown at yard scale: dark green with strong pixel-to-pixel
     brightness swings (sunlit tufts + self-shadow). Equal-channel jitter
-    keeps ExG and hue identical to CROWN while the texture gate sees ±18."""
-    j = ((gx * 31 + gy * 17) % 37) - 18
+    keeps ExG and hue identical to CROWN while the internal-contrast gate
+    sees ±24 — a lit crown even under the strict no-shadow bar."""
+    j = ((gx * 31 + gy * 17) % 49) - 24
+    return (CROWN[0] + j, CROWN[1] + j, CROWN[2] + j)
+
+
+def dim_crown_texture(gx, gy):
+    """Marginal internal contrast (±17): passes the normal direct-light gate
+    but NOT the strict bar that applies when a photo has no legible shadows."""
+    j = ((gx * 31 + gy * 17) % 35) - 17
     return (CROWN[0] + j, CROWN[1] + j, CROWN[2] + j)
 
 
@@ -384,17 +392,63 @@ class TestShadowPhysics(unittest.TestCase):
                        for t in res["trees"])
             self.assertLess(best, 3.5 * mpp)
 
-    def test_capped_result_imports_nothing(self):
-        res = {"trees": [{"kind": "tree", "lat": _LAT, "lng": _LNG,
-                          "radius_m": 3.0, "height_m": 8.0}] * 400,
-               "capped": True, "m_per_px": 0.36, "zoom": 18,
+    def test_capped_result_truncates_not_aborts(self):
+        # With the physics gates in front, hitting the cap means a genuinely
+        # busy/tree-dense read — import the (already strongest-first) trees
+        # and say the cap was hit, rather than refusing wholesale.
+        dlng = 5.0 / (111320.0 * math.cos(math.radians(_LAT)))
+        res = {"trees": [{"kind": "tree", "lat": _LAT, "lng": _LNG + i * dlng,
+                          "radius_m": 3.0, "height_m": 8.0}
+                         for i in range(3)],
+               "capped": True, "m_per_px": 0.18, "zoom": 19,
                "tiles_ok": 9, "tiles_failed": 0, "partial": False}
         project = {"features": []}
         out = tree_detect.import_detected_trees(res, project)
-        self.assertEqual(out["added"], 0)
-        self.assertEqual(project["features"], [])
+        self.assertEqual(out["added"], 3)
         self.assertIn("safety cap", out["message"])
-        self.assertIn("nothing was imported", out["message"])
+        self.assertIn("strongest", out["message"])
+
+    def test_short_shadow_retry_finds_high_sun_bearing(self):
+        # Near-noon capture: shadows are a thin fringe the standard band
+        # misses — the tight-band retry must still elect a bearing and keep
+        # the shadow gate online (the third park run regression: bearing
+        # None made the fallback too permissive).
+        cx, cy = _center_px()
+        disks = []
+        crowns = [(cx - 60, cy - 20, 12), (cx, cy - 40, 12),
+                  (cx + 60, cy, 12)]
+        for (x, y, r) in crowns:
+            disks.append((x, y, r, crown_texture))
+            disks += _shadow_band(x, y, r, 4, disk_r=2)   # 4 px fringe
+        fakes = [(cx - 50, cy + 55, 12), (cx + 45, cy + 60, 12)]
+        disks += [(x, y, r, crown_texture) for (x, y, r) in fakes]
+        res = tree_detect.detect_trees(
+            _bbox_around(_LAT, _LNG, 30.0), _fetch_tile=_fetch_key,
+            _decode=_scene_decoder(_disk_scene(disks)))
+        self.assertIsNotNone(res)
+        self.assertEqual(res["shadow_bearing"], "N")
+        self.assertEqual(len(res["trees"]), len(crowns))
+        self.assertEqual(res["dropped"]["shadow"], len(fakes))
+
+    def test_no_shadow_fallback_is_strict(self):
+        # With genuinely no shadows anywhere, evidence is thinner — the
+        # internal-contrast bar rises, so marginal candidates are dropped
+        # while strongly-lit crowns survive.
+        cx, cy = _center_px()
+        res = tree_detect.detect_trees(
+            _bbox_around(_LAT, _LNG, 30.0), _fetch_tile=_fetch_key,
+            _decode=_scene_decoder(_disk_scene(
+                [(cx - 40, cy, 13, crown_texture),
+                 (cx + 45, cy + 10, 13, dim_crown_texture)])))
+        self.assertIsNotNone(res)
+        self.assertIsNone(res["shadow_bearing"])
+        self.assertEqual(len(res["trees"]), 1)
+        self.assertEqual(res["dropped"]["weak"], 1)
+        tlat, tlng = tree_detect._global_px_to_latlng(cx - 39.5, cy + 0.5,
+                                                      _Z)
+        t = res["trees"][0]
+        self.assertLess(_dist_m(tlat, tlng, t["lat"], t["lng"]),
+                        3.5 * res["m_per_px"])
 
 
 class TestCanopyMaskGuards(unittest.TestCase):

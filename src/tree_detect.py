@@ -111,6 +111,12 @@ _MIN_SHADOW_FRAC = 0.25     # aligned-shadow coverage that verifies a crown
 _SHADOW_VOTE_FRAC = 0.30    # a candidate votes only with a clear best bearing
 _SHADOW_BINS = 16           # compass resolution of the consensus vote
 _SHADOW_SEARCH_MAX_M = 30.0
+_SHADOW_SHORT_SPAN_PX = 6.0  # high-sun retry: near-noon captures leave only a
+#                              2–6 px shadow fringe — sample a tight band just
+#                              past the crown edge before giving up on shadows.
+_CROWN_CONTRAST_STRICT = 30  # with NO legible shadows the physics evidence is
+#                              thinner, so the internal-contrast bar rises —
+#                              degrade toward caution, never permissiveness.
 _MIN_CROWN_RADIUS_M = 0.9   # smaller blobs are shrubs/noise — skip
 _MAX_CROWN_RADIUS_M = 12.0
 _MAX_TREES = 400        # flood guard for a bad threshold day
@@ -453,11 +459,14 @@ def _bearing_allowed(bin_idx: int, lat: float) -> bool:
 
 
 def _shadow_frac(shadow: bytearray, w: int, h: int,
-                 px: float, py: float, r_px: float, bin_idx: int) -> float:
+                 px: float, py: float, r_px: float, bin_idx: int,
+                 span: Optional[float] = None) -> float:
     """Fraction of sample points just beyond the crown edge, along one
-    bearing, that land on shadow."""
+    bearing, that land on shadow. ``span`` (px) narrows the sampled band for
+    the high-sun retry; default scales with the crown."""
     dx, dy = _bearing_vec(bin_idx)
-    span = max(8.0, 2.0 * r_px)
+    if span is None:
+        span = max(8.0, 2.0 * r_px)
     hits = n = 0
     for k in range(8):
         d = r_px + 1.0 + span * k / 7.0
@@ -778,7 +787,8 @@ def detect_trees(bbox: dict, *,
     base = {"zoom": zoom, "m_per_px": mpp, "tiles_ok": tiles_ok,
             "tiles_failed": tiles_failed, "capped": False, "partial": partial,
             "shadow_bearing": None, "anchor": None,
-            "dropped": {"flat": 0, "ring": 0, "shadow": 0, "stand": 0}}
+            "dropped": {"flat": 0, "ring": 0, "shadow": 0, "stand": 0,
+                        "weak": 0}}
     if mask is None:
         return {**base, "trees": []}
     mask = _texture_mask(mask, bright, w, h)
@@ -798,14 +808,15 @@ def detect_trees(bbox: dict, *,
     # grass gets no direct light and stays uniformly dark however textured
     # the grass is (the park mega-blob: tree shadows on lawn welded crowns
     # and grass into one giant blob).
-    dropped = {"flat": 0, "ring": 0, "shadow": 0, "stand": 0}
+    dropped = {"flat": 0, "ring": 0, "shadow": 0, "stand": 0, "weak": 0}
     lit_cands = []
     blob_flat = {}
     for c in cands:
         stats = blob_flat.setdefault(c["blob"], [0, 0])
         stats[1] += 1
-        if _disk_contrast(bright, mask, w, h, c["x"], c["y"], c["r"]) \
-                >= _CROWN_CONTRAST_MIN:
+        c["contrast"] = _disk_contrast(bright, mask, w, h,
+                                       c["x"], c["y"], c["r"])
+        if c["contrast"] >= _CROWN_CONTRAST_MIN:
             lit_cands.append(c)
         else:
             stats[0] += 1
@@ -842,36 +853,52 @@ def detect_trees(bbox: dict, *,
     # Gate 2 — shadow consensus. Ring-passing candidates vote on a shadow
     # bearing (hemisphere prior applied); a coherent peak means the photo
     # has legible shadows, and every kept crown must then agree with it.
-    votes = [0.0] * _SHADOW_BINS
-    n_voters = 0
     edge_cands = [c for c in cands if c["ring"] == "pass"]
-    for c in edge_cands:
-        best_bin, best_frac = None, 0.0
-        for k in range(_SHADOW_BINS):
-            if not _bearing_allowed(k, clat):
-                continue
-            f = _shadow_frac(shadow, w, h, c["x"], c["y"], c["r"], k)
-            if f > best_frac:
-                best_frac, best_bin = f, k
-        if best_bin is not None and best_frac >= _SHADOW_VOTE_FRAC:
-            votes[best_bin] += best_frac
-            n_voters += 1
-    bearing = None
-    total_votes = sum(votes)
-    if n_voters >= 3 and n_voters >= 0.1 * max(1, len(cands)) \
-            and total_votes > 0:
-        peak = max(range(_SHADOW_BINS),
-                   key=lambda k: (votes[(k - 1) % _SHADOW_BINS] + votes[k]
-                                  + votes[(k + 1) % _SHADOW_BINS]))
-        cluster = (votes[(peak - 1) % _SHADOW_BINS] + votes[peak]
-                   + votes[(peak + 1) % _SHADOW_BINS])
-        if cluster >= 0.5 * total_votes:
-            bearing = peak
+
+    def _vote(span):
+        votes = [0.0] * _SHADOW_BINS
+        n_voters = 0
+        for c in edge_cands:
+            best_bin, best_frac = None, 0.0
+            for k in range(_SHADOW_BINS):
+                if not _bearing_allowed(k, clat):
+                    continue
+                f = _shadow_frac(shadow, w, h, c["x"], c["y"], c["r"], k,
+                                 span)
+                if f > best_frac:
+                    best_frac, best_bin = f, k
+            if best_bin is not None and best_frac >= _SHADOW_VOTE_FRAC:
+                votes[best_bin] += best_frac
+                n_voters += 1
+        total = sum(votes)
+        if n_voters >= 3 and n_voters >= 0.1 * max(1, len(cands)) \
+                and total > 0:
+            peak = max(range(_SHADOW_BINS),
+                       key=lambda k: (votes[(k - 1) % _SHADOW_BINS]
+                                      + votes[k]
+                                      + votes[(k + 1) % _SHADOW_BINS]))
+            cluster = (votes[(peak - 1) % _SHADOW_BINS] + votes[peak]
+                       + votes[(peak + 1) % _SHADOW_BINS])
+            if cluster >= 0.5 * total:
+                return peak
+        return None
+
+    # Standard band first; a near-noon capture leaves only a thin shadow
+    # fringe, so retry with a tight band before declaring "no shadows".
+    vote_span = None
+    bearing = _vote(None)
+    if bearing is None:
+        bearing = _vote(_SHADOW_SHORT_SPAN_PX)
+        if bearing is not None:
+            vote_span = _SHADOW_SHORT_SPAN_PX
 
     # Verdicts. Stand interiors can't be judged individually (their shadow
     # falls on the neighbouring crown, their ring is more canopy) — they
     # inherit their blob's edge verdict: a real stand has verified edges,
-    # a mis-masked grass expanse doesn't.
+    # a mis-masked grass expanse doesn't. With NO legible shadows the
+    # remaining evidence is thinner, so the bar rises everywhere: stronger
+    # internal contrast required, and interiors need a much stronger edge
+    # verdict to inherit (degrade toward caution, never permissiveness).
     blob_edge: dict = {}
     for c in cands:
         if c["ring"] == "interior":
@@ -882,7 +909,8 @@ def detect_trees(bbox: dict, *,
         if not keep:
             dropped["ring"] += 1
         elif bearing is not None:
-            f = max(_shadow_frac(shadow, w, h, c["x"], c["y"], c["r"], k)
+            f = max(_shadow_frac(shadow, w, h, c["x"], c["y"], c["r"], k,
+                                 vote_span)
                     for k in ((bearing - 1) % _SHADOW_BINS, bearing,
                               (bearing + 1) % _SHADOW_BINS))
             if f < _MIN_SHADOW_FRAC:
@@ -890,14 +918,18 @@ def detect_trees(bbox: dict, *,
                 dropped["shadow"] += 1
             else:
                 c["verified"] = True
+        elif c["contrast"] < _CROWN_CONTRAST_STRICT:
+            keep = False
+            dropped["weak"] += 1
         c["keep"] = keep
         if keep:
             stats[0] += 1
+    inherit_ratio = 0.3 if bearing is not None else 0.6
     for c in cands:
         if c["ring"] != "interior":
             continue
         kept_e, total_e = blob_edge.get(c["blob"], (0, 0))
-        if total_e == 0 or kept_e / total_e >= 0.3:
+        if total_e == 0 or kept_e / total_e >= inherit_ratio:
             c["keep"] = True
             c["inherited"] = True
         else:
@@ -955,11 +987,16 @@ def detect_trees(bbox: dict, *,
                 tan_elev = ratios[len(ratios) // 2]
                 anchor = {"type": "allometry"}
 
+    # Emit, strongest first: with the physics gates in front, hitting the
+    # cap means a genuinely tree-dense area (or a hard photo) — keep the
+    # best-evidenced crowns rather than refusing wholesale.
+    final = [c for c in cands if c.get("keep")]
+    final.sort(key=lambda c: (not c.get("verified"),
+                              -c.get("contrast", 0)))
+    capped = len(final) > _MAX_TREES
+    final = final[:_MAX_TREES]
     trees = []
-    capped = False
-    for c in cands:
-        if not c.get("keep"):
-            continue
+    for c in final:
         lat, lng = _global_px_to_latlng(origin_x + c["x"] + 0.5,
                                         origin_y + c["y"] + 0.5, zoom)
         # Keep only crowns whose centre falls in the requested bbox —
@@ -1007,9 +1044,6 @@ def detect_trees(bbox: dict, *,
             # same tree — scale the dedupe distance with crown size.
             "dedupe_m": max(2.0, 0.8 * radius_m),
         })
-        if len(trees) >= _MAX_TREES:
-            capped = True
-            break
     return {**base, "trees": trees, "capped": capped, "dropped": dropped,
             "shadow_bearing": (_bearing_name(bearing)
                                if bearing is not None else None),
@@ -1052,16 +1086,6 @@ def import_detected_trees(res: Optional[dict], project_dict: dict, *,
                             "the tile server refused) — nothing was imported. "
                             "Try again in a minute, or mark trees by hand "
                             "below.")}
-    if res.get("capped"):
-        # Hitting the safety cap has only ever meant one thing in the field:
-        # the photo is being misread wholesale. Flooding the map with 400
-        # features the user must undo helps nobody — import nothing, say why.
-        return {"added": 0, "kept": 0, "found": len(res.get("trees") or []),
-                "message": ("Detection hit its safety cap — the photo is "
-                            "probably being misread here (unusual ground "
-                            "cover or lighting), so nothing was imported. "
-                            "Try a tighter boundary, or mark the trees that "
-                            "matter by hand below.")}
     items = []
     for t in res.get("trees", []):
         lat, lng = _shift_latlng(t["lat"], t["lng"],
@@ -1084,6 +1108,9 @@ def import_detected_trees(res: Optional[dict], project_dict: dict, *,
     if res.get("partial"):
         msg += (" (The boundary is larger than one scan covers — only the "
                 "central area was scanned.)")
+    if res.get("capped"):
+        msg += (" (Very busy photo — kept only the strongest reads at the "
+                "safety cap.)")
     d = res.get("dropped") or {}
     n_dropped = sum(d.values())
     bearing = res.get("shadow_bearing")
@@ -1113,9 +1140,9 @@ def import_detected_trees(res: Optional[dict], project_dict: dict, *,
             msg += (" Shadow lengths weren't readable enough to measure "
                     "heights, so they're rough estimates from crown size.")
         else:
-            msg += (" No legible shadows in this photo, so heights are "
-                    "rough estimates from crown size and confidence is "
-                    "lower.")
+            msg += (" No legible shadows in this photo (even after a "
+                    "high-sun retry) — only the strongest reads were kept; "
+                    "heights are rough estimates from crown size.")
         n_ev = sum(1 for t in kept if t.get("foliage") == "evergreen")
         n_de = sum(1 for t in kept if t.get("foliage") == "deciduous")
         n_un = len(kept) - n_ev - n_de
