@@ -90,7 +90,10 @@ class TestStructuralCeilings(unittest.TestCase):
         (_HTML / "map" / "02-boundary.js", 750),       # ~623 now
         (_HTML / "map" / "03-plants.js", 950),         # ~931 now
         (_HTML / "map" / "04-tools.js", 450),          # ~367 now
-        (_HTML / "map" / "05-features.js", 1100),      # ~1008 now
+        # V2.26: +editable existing features (drag + scroll-resize of detected/
+        # marked trees & buildings) — in-domain growth for the features file,
+        # kept together to avoid the cross-chunk load-order traps a split adds.
+        (_HTML / "map" / "05-features.js", 1200),      # ~1120 now
         # V2.13: + water flow & accumulation overlay (raster + arrow lattice).
         (_HTML / "map" / "06-overlays.js", 1560),      # ~1490 now
         # V2.24: scene3d.html was a single ~4,200-line <script> — the exact

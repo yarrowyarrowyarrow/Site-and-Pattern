@@ -671,6 +671,14 @@ class MainWindow(QMainWindow):
         # Map → structures/hedgerows/shapes
         b.structure_placed.connect(self._on_structure_placed)
         b.structure_removed.connect(self._on_structure_removed)
+        # Drag / scroll-resize of existing tree & building marks (V2.26) —
+        # straight to the flow via lambdas (map controller + MainWindow both
+        # at their guard ceilings).
+        from src import tree_edit_flow
+        b.existing_feature_moved.connect(
+            lambda *a: tree_edit_flow.on_existing_feature_moved(self, *a))
+        b.existing_feature_resized.connect(
+            lambda *a: tree_edit_flow.on_existing_feature_resized(self, *a))
         b.hedgerow_complete.connect(self._on_hedgerow_complete)
         b.hedgerow_removed.connect(self._on_hedgerow_removed)
         b.shape_complete.connect(self._on_shape_complete)

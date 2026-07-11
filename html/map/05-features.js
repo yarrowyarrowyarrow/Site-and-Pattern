@@ -78,7 +78,7 @@
         iconSize: [0, 0],
         iconAnchor: [0, 12]
       });
-      L.marker([lat, lng], { icon: labelIcon, interactive: false }).addTo(group);
+      var labelMarker = L.marker([lat, lng], { icon: labelIcon, interactive: false }).addTo(group);
 
       // Tooltip on hover
       mainLayer.bindTooltip(
@@ -114,7 +114,113 @@
       // find this exact marker by (structId, lat, lng) later.
       group._pdStruct = { structId: structDef.id, lat: lat, lng: lng };
       structureMarkers[id] = group;
+
+      // Existing tree/building marks are editable like plants (V2.26): drag
+      // to the real spot, scroll to match the crown size. Gated to the
+      // 'Existing' category so decorative structures stay fixed.
+      if (structDef.category === 'Existing') {
+        _makeExistingEditable(group, mainLayer, labelMarker, id,
+                              structDef.id, lat, lng, sizeM, shape, widthM);
+      }
       return id;
+    }
+
+    // ── Editable existing features (drag + scroll-resize, V2.26) ─────────────
+    // Detected/marked trees & buildings can be dragged to their true spot and
+    // scroll-resized to match the satellite photo. Persisted via the bridge
+    // (src/tree_edit_flow.py); the marker itself moves/resizes live here.
+    var _existingWheelReady = false;
+    var _existingResizeTimer = null, _existingResizePending = null;
+
+    function _moveExistingLayer(st) {
+      if (st.layer.setLatLng) {                 // circle (trees)
+        st.layer.setLatLng([st.lat, st.lng]);
+      } else if (st.layer.setBounds) {          // rectangle (marked building)
+        var dLat = (st.sizeM / 2) / 111320;
+        var dLng = (st.widthM / 2) / (111320 * Math.cos(st.lat * Math.PI / 180));
+        st.layer.setBounds([[st.lat - dLat, st.lng - dLng],
+                            [st.lat + dLat, st.lng + dLng]]);
+      }
+      if (st.label && st.label.setLatLng) st.label.setLatLng([st.lat, st.lng]);
+    }
+
+    function _makeExistingEditable(group, layer, label, id, structId,
+                                   lat, lng, sizeM, shape, widthM) {
+      var st = { id: id, structId: structId, lat: lat, lng: lng,
+                 sizeM: sizeM, widthM: widthM || sizeM, layer: layer,
+                 label: label, group: group };
+      group._pdExisting = st;                   // read by the wheel handler
+      var el = layer.getElement && layer.getElement();
+      if (el) el.style.cursor = 'move';
+      var dragging = false, moved = false;
+      function onMove(e) {
+        moved = true;
+        st.lat = e.latlng.lat; st.lng = e.latlng.lng;
+        _moveExistingLayer(st);
+      }
+      function onUp() {
+        if (!dragging) return;
+        dragging = false;
+        map.off('mousemove', onMove); map.off('mouseup', onUp);
+        try { map.dragging.enable(); } catch (_) {}
+        if (moved && bridge && bridge.onExistingFeatureMoved) {
+          bridge.onExistingFeatureMoved(st.id, st.structId,
+                                        st._baseLat, st._baseLng,
+                                        st.lat, st.lng);
+        }
+        st._baseLat = st.lat; st._baseLng = st.lng;
+        group._pdStruct.lat = st.lat; group._pdStruct.lng = st.lng;
+      }
+      st._baseLat = lat; st._baseLng = lng;
+      layer.on('mousedown', function(e) {
+        if (currentMode !== 'none' && currentMode !== 'select') return;
+        var oe = e.originalEvent;
+        if (oe && oe.button !== undefined && oe.button !== 0) return;
+        L.DomEvent.stop(e);
+        dragging = true; moved = false;
+        try { map.dragging.disable(); } catch (_) {}
+        map.on('mousemove', onMove); map.on('mouseup', onUp);
+      });
+      _initExistingWheel();
+    }
+
+    // One container-level wheel handler resizes the existing-feature circle
+    // under the cursor (instead of zooming). When the cursor isn't over one,
+    // it does nothing and Leaflet zooms as normal.
+    function _initExistingWheel() {
+      if (_existingWheelReady) return;
+      _existingWheelReady = true;
+      map.getContainer().addEventListener('wheel', function(ev) {
+        var st = _existingCircleUnderCursor(ev);
+        if (!st) return;                        // not over a tree → zoom
+        ev.preventDefault(); ev.stopPropagation();
+        var newR = Math.max(0.5, st.layer.getRadius() +
+                            (ev.deltaY < 0 ? 0.5 : -0.5));
+        st.layer.setRadius(newR);
+        st.sizeM = newR * 2;
+        _existingResizePending = st;
+        if (_existingResizeTimer) clearTimeout(_existingResizeTimer);
+        _existingResizeTimer = setTimeout(function() {
+          var p = _existingResizePending; _existingResizePending = null;
+          if (p && bridge && bridge.onExistingFeatureResized)
+            bridge.onExistingFeatureResized(p.id, p.structId, p.lat, p.lng,
+                                            p.sizeM);
+        }, 350);
+      }, { passive: false, capture: true });
+    }
+
+    function _existingCircleUnderCursor(ev) {
+      var pt;
+      try { pt = map.mouseEventToLatLng(ev); } catch (_) { return null; }
+      var best = null, bestR = Infinity;
+      Object.keys(structureMarkers).forEach(function(sid) {
+        var st = structureMarkers[sid] && structureMarkers[sid]._pdExisting;
+        if (!st || !st.layer.getRadius) return;    // circles (trees) only
+        var d = map.distance(pt, st.layer.getLatLng());
+        var r = st.layer.getRadius();
+        if (d <= r && r < bestR) { best = st; bestR = r; }
+      });
+      return best;
     }
 
     // Load a structure from saved project
@@ -924,6 +1030,14 @@
       } else {
         map.removeLayer(plantLayerGroup);
       }
+      // Existing trees now live with the plants (V2.26): a tree IS a plant,
+      // so it toggles here, not with Structures. Buildings stay under
+      // Structures (see map_js.set_structures_visible, which skips trees).
+      Object.keys(structureMarkers).forEach(function(sid) {
+        var g = structureMarkers[sid];
+        if (!g._pdStruct || g._pdStruct.structId !== 'existing_tree') return;
+        if (visible) g.addTo(map); else map.removeLayer(g);
+      });
     }
 
     // ── Project load/clear ────────────────────────────────────────────────────

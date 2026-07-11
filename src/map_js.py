@@ -110,10 +110,12 @@ def set_satellite_offset(east_m: float, north_m: float) -> str:
 def set_structures_visible(visible: bool) -> str:
     """Toggle the *combined* layer group for structures + hedgerows +
     shapes. No JS function exists for this — the call inlines the loop
-    over the three global marker dicts."""
+    over the three global marker dicts. Existing *trees* are skipped: they
+    toggle with the Plants layer now (V2.26), since a tree is a plant."""
     v = _jsbool(visible)
     return (
         "Object.values(structureMarkers).forEach(function(g) {"
+        "  if (g._pdStruct && g._pdStruct.structId === 'existing_tree') return;"
         f"  if ({v}) g.addTo(map); else map.removeLayer(g);"
         "});"
         "Object.values(hedgerowLayers).forEach(function(g) {"

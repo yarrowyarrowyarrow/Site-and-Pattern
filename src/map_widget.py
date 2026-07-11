@@ -110,6 +110,11 @@ class MapBridge(QObject):
     # Structure signals
     structure_placed = pyqtSignal(str, str, float, float, float)  # structId, name, lat, lng, sizeM
     structure_removed = pyqtSignal(str, str, float, float)        # markerId, structId, lat, lng
+    # Existing tree/building marks are draggable + scroll-resizable (V2.26).
+    existing_feature_moved = pyqtSignal(str, str, float, float, float, float)
+        # markerId, structId, oldLat, oldLng, newLat, newLng
+    existing_feature_resized = pyqtSignal(str, str, float, float, float)
+        # markerId, structId, lat, lng, newDiameterM
 
     # Hedgerow signals
     hedgerow_complete = pyqtSignal(str, str, str, str, float, int)  # id, pointsJson, species, style, lengthM, numPlants
@@ -279,6 +284,19 @@ class MapBridge(QObject):
     @pyqtSlot(str, str, float, float)
     def onStructureRemoved(self, marker_id: str, struct_id: str, lat: float, lng: float):
         self.structure_removed.emit(marker_id, struct_id, lat, lng)
+
+    @pyqtSlot(str, str, float, float, float, float)
+    def onExistingFeatureMoved(self, marker_id: str, struct_id: str,
+                               old_lat: float, old_lng: float,
+                               new_lat: float, new_lng: float):
+        self.existing_feature_moved.emit(marker_id, struct_id, old_lat,
+                                         old_lng, new_lat, new_lng)
+
+    @pyqtSlot(str, str, float, float, float)
+    def onExistingFeatureResized(self, marker_id: str, struct_id: str,
+                                 lat: float, lng: float, new_diameter_m: float):
+        self.existing_feature_resized.emit(marker_id, struct_id, lat, lng,
+                                           new_diameter_m)
 
     # ── Hedgerow slots ────────────────────────────────────────────────────────
 
