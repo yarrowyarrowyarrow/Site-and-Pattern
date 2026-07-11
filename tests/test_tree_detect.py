@@ -24,12 +24,37 @@ DARK_LAWN = CROWN           # dark but *smooth* — lawn in shade / lush park
 ROOF = (120, 120, 125)      # building:    ExG = −5 → not vegetation
 
 
+SHADOW = (55, 62, 52)       # cast shadow: dark (lum 57), ExG 17 → not veg
+
+
 def crown_texture(gx, gy):
     """A real crown at yard scale: dark green with strong pixel-to-pixel
     brightness swings (sunlit tufts + self-shadow). Equal-channel jitter
     keeps ExG and hue identical to CROWN while the texture gate sees ±18."""
     j = ((gx * 31 + gy * 17) % 37) - 18
     return (CROWN[0] + j, CROWN[1] + j, CROWN[2] + j)
+
+
+def deciduous_texture(gx, gy):
+    """A leafed-out broadleaf crown: brighter, saturated green (lum ≈ 91,
+    ExG ≈ 115, g−b ≈ 65), still rough."""
+    j = ((gx * 31 + gy * 17) % 29) - 14
+    return (70 + j, 120 + j, 55 + j)
+
+
+def _shadow_band(cx, cy, r, length, disk_r=None):
+    """Disks painting a northward cast shadow for a crown/building at
+    (cx, cy) of radius r: a contiguous dark band from just past the edge to
+    ``length`` px beyond it (screen north = −y; bearing bin 0)."""
+    rr = disk_r if disk_r is not None else max(3, int(0.7 * r))
+    return [(cx, cy - (r + k), rr, SHADOW) for k in range(2, length + 1, 2)]
+
+
+def _shadowed_crown(cx, cy, r, shadow_len):
+    """A textured crown plus its northward shadow. Shadow disks first would
+    overpaint the crown, so crown goes first in the disk list (first match
+    wins in _disk_scene)."""
+    return [(cx, cy, r, crown_texture)] + _shadow_band(cx, cy, r, shadow_len)
 
 
 def _center_px():
@@ -223,6 +248,112 @@ class TestDetection(unittest.TestCase):
         self.assertIsNone(tree_detect.detect_trees(
             _bbox_around(_LAT, _LNG, 30.0),
             _fetch_tile=_fetch_key, _decode=None))
+
+
+class TestShadowPhysics(unittest.TestCase):
+    """The V2.26 second-pass gates: grass can mimic canopy colour, darkness
+    and texture, but it can't cast a consistent shadow or be darker than
+    its own surroundings."""
+
+    def test_shadowless_dark_patches_culled_by_consensus(self):
+        # Park regression v2: textured dark patches (mottled grass) pass the
+        # colour/darkness/texture gates — but four real crowns agree on a
+        # northward shadow bearing, and the patches have no such shadow.
+        cx, cy = _center_px()
+        disks = []
+        crowns = [(cx - 80, cy - 40, 11), (cx - 30, cy - 55, 12),
+                  (cx + 40, cy - 35, 11), (cx + 85, cy + 10, 12)]
+        for (x, y, r) in crowns:
+            disks += _shadowed_crown(x, y, r, 2 * r)
+        fakes = [(cx - 70, cy + 55, 12), (cx + 5, cy + 65, 11),
+                 (cx + 70, cy + 60, 12)]
+        disks += [(x, y, r, crown_texture) for (x, y, r) in fakes]
+        res = tree_detect.detect_trees(
+            _bbox_around(_LAT, _LNG, 30.0),
+            _fetch_tile=_fetch_key, _decode=_scene_decoder(_disk_scene(disks)))
+        self.assertIsNotNone(res)
+        self.assertEqual(res["shadow_bearing"], "N")
+        self.assertEqual(len(res["trees"]), len(crowns))
+        mpp = res["m_per_px"]
+        for (gx, gy, _r) in crowns:
+            tlat, tlng = tree_detect._global_px_to_latlng(gx + 0.5, gy + 0.5,
+                                                          _Z)
+            best = min(_dist_m(tlat, tlng, t["lat"], t["lng"])
+                       for t in res["trees"])
+            self.assertLess(best, 3.5 * mpp)
+        self.assertEqual(res["dropped"]["shadow"], len(fakes))
+        for t in res["trees"]:
+            self.assertIn("shadow-verified", t["detect_confidence"])
+
+    def test_building_shadow_anchors_tree_heights(self):
+        # The creative anchor: a building of KNOWN height casts a shadow in
+        # the same photo — tan(sun elevation) = height / shadow length turns
+        # every tree's shadow into a measured height. Two trees, one with a
+        # shadow twice as long, must come out ≈ twice as tall.
+        cx, cy = _center_px()
+        r = 10
+        disks = _shadowed_crown(cx - 70, cy, r, 24)      # short shadow
+        disks += _shadowed_crown(cx + 70, cy, r, 48)     # double shadow
+        disks += _shadowed_crown(cx - 20, cy + 50, r, 24)  # 3rd voter
+        # Building: 20×16 px roof + a 40 px northward shadow band.
+        bx0, by0, bx1, by1 = cx - 10, cy - 60, cx + 10, cy - 44
+        bcx, bcy = (bx0 + bx1) // 2, (by0 + by1) // 2
+        extras = [(bx0, by0, bx1, by1, ROOF)]
+        disks += _shadow_band(bcx, by0, 0, 40, disk_r=6)
+        ring = []
+        for (vx, vy) in ((bx0, by0), (bx1, by0), (bx1, by1), (bx0, by1)):
+            vlat, vlng = tree_detect._global_px_to_latlng(vx, vy, _Z)
+            ring.append([vlng, vlat])
+        blat, blng = tree_detect._global_px_to_latlng(bcx + 0.5, bcy + 0.5,
+                                                      _Z)
+        res = tree_detect.detect_trees(
+            _bbox_around(_LAT, _LNG, 30.0),
+            buildings=[{"lat": blat, "lng": blng, "height_m": 5.0,
+                        "ring": ring}],
+            _fetch_tile=_fetch_key,
+            _decode=_scene_decoder(_disk_scene(disks, extras=extras)))
+        self.assertIsNotNone(res)
+        self.assertIsNotNone(res["shadow_bearing"])
+        self.assertEqual((res["anchor"] or {}).get("type"), "building")
+        self.assertEqual(len(res["trees"]), 3)
+        short = [t for t in res["trees"] if abs(t["lng"] - blng) > 0
+                 and t["lng"] < blng and abs(t["lat"] - blat) < 1e-4]
+        tall = [t for t in res["trees"] if t["lng"] > blng]
+        self.assertEqual(len(tall), 1)
+        self.assertTrue(short)
+        ratio = tall[0]["height_m"] / max(t["height_m"] for t in short)
+        self.assertGreater(ratio, 1.5)      # double shadow ≈ double height
+        self.assertLess(ratio, 2.6)
+        for t in res["trees"]:              # sane absolute range
+            self.assertGreaterEqual(t["height_m"], 3.0)
+            self.assertLessEqual(t["height_m"], 25.0)
+
+    def test_foliage_tagging(self):
+        cx, cy = _center_px()
+        res = tree_detect.detect_trees(
+            _bbox_around(_LAT, _LNG, 30.0), _fetch_tile=_fetch_key,
+            _decode=_scene_decoder(_disk_scene(
+                [(cx, cy, 14, crown_texture)])))
+        self.assertEqual(len(res["trees"]), 1)
+        self.assertEqual(res["trees"][0]["foliage"], "evergreen")
+        res2 = tree_detect.detect_trees(
+            _bbox_around(_LAT, _LNG, 30.0), _fetch_tile=_fetch_key,
+            _decode=_scene_decoder(_disk_scene(
+                [(cx, cy, 14, deciduous_texture)])))
+        self.assertEqual(len(res2["trees"]), 1)
+        self.assertEqual(res2["trees"][0]["foliage"], "deciduous")
+
+    def test_capped_result_imports_nothing(self):
+        res = {"trees": [{"kind": "tree", "lat": _LAT, "lng": _LNG,
+                          "radius_m": 3.0, "height_m": 8.0}] * 400,
+               "capped": True, "m_per_px": 0.36, "zoom": 18,
+               "tiles_ok": 9, "tiles_failed": 0, "partial": False}
+        project = {"features": []}
+        out = tree_detect.import_detected_trees(res, project)
+        self.assertEqual(out["added"], 0)
+        self.assertEqual(project["features"], [])
+        self.assertIn("safety cap", out["message"])
+        self.assertIn("nothing was imported", out["message"])
 
 
 class TestCanopyMaskGuards(unittest.TestCase):

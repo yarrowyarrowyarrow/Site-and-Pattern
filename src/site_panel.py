@@ -2036,13 +2036,16 @@ class SitePanel(QWidget):
             "Scans the satellite photo shown on the map for tree crowns — "
             "OpenStreetMap rarely maps individual trees outside cities, so "
             "this fills the gap on treed and rural properties.\n"
-            "Crown positions and sizes are measured from the photo; heights "
-            "are rough estimates from crown size — select any tree and press "
-            "Delete to drop false hits. Uses your boundary plus the "
-            "neighbour margin below, like the import above.\n"
-            "Detection sees what the photo saw: conifers and leafed-out "
-            "crowns read best; leaf-off deciduous trees may be missed. "
-            "Needs internet (fetches imagery tiles).")
+            "Crowns are cross-checked against the shadows they cast (all "
+            "trees in one photo shade the same way — grass can't fake "
+            "that), and shadow lengths give measured heights: import your "
+            "building first and its known height calibrates the sun. "
+            "Obvious conifers/broadleafs are tagged for honest winter "
+            "shade; ambiguous crowns stay 'unknown'.\n"
+            "Uses your boundary plus the neighbour margin below, like the "
+            "import above. Select any tree and press Delete to drop false "
+            "hits. Detection sees what the photo saw: leaf-off deciduous "
+            "trees may be missed. Needs internet (fetches imagery tiles).")
         btn_trees.clicked.connect(self.tree_detect_requested.emit)
         v.addWidget(btn_trees)
 

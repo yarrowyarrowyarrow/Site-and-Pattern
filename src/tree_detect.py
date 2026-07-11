@@ -83,6 +83,16 @@ _ALL_FOREST_MEAN = 95   # uniformly dark vegetation ⇒ treat all of it as canop
 # this scale (incl. JPEG noise) ranges ~2–8; crowns 15–40. Smooth dark lawn
 # was the V2.26 over-detection failure — the park that hit the safety cap.
 _MIN_CANOPY_TEXTURE = 10
+# Physics gates (V2.26 second field run: mottled park grass beat both the
+# darkness split AND the texture gate — but grass can't fake these two):
+_RING_CONTRAST_MIN = 10     # a crown is darker than the sunlit ground *around*
+#                             it; a "tree" inside a big grassy expanse isn't.
+_SHADOW_LUM_FACTOR = 0.6    # shadow pixels: darker than 0.6 × scene median…
+_SHADOW_LUM_CAP = 110       # …and dark in absolute terms.
+_MIN_SHADOW_FRAC = 0.25     # aligned-shadow coverage that verifies a crown
+_SHADOW_VOTE_FRAC = 0.30    # a candidate votes only with a clear best bearing
+_SHADOW_BINS = 16           # compass resolution of the consensus vote
+_SHADOW_SEARCH_MAX_M = 30.0
 _MIN_CROWN_RADIUS_M = 0.9   # smaller blobs are shrubs/noise — skip
 _MAX_CROWN_RADIUS_M = 12.0
 _MAX_TREES = 400        # flood guard for a bad threshold day
@@ -90,6 +100,20 @@ _MAX_TREES = 400        # flood guard for a bad threshold day
 # (~2×) allometry — a stated mid-range estimate, clamped to yard-tree reality.
 _HEIGHT_PER_RADIUS = 2.6
 _HEIGHT_MIN_M, _HEIGHT_MAX_M = 3.0, 18.0
+# Foliage-aware allometry (fallback when the photo yields no usable shadows):
+# open-grown conifers run tall-narrow, broadleaf wide-round. Stated rough
+# estimates (P9) — the shadow-measured path replaces them when available.
+_HEIGHT_PER_RADIUS_BY_FOLIAGE = {"evergreen": 4.0, "deciduous": 2.2,
+                                 None: _HEIGHT_PER_RADIUS}
+_HEIGHT_MAX_MEASURED_M = 25.0   # shadow-measured heights may exceed the
+#                                 allometric clamp — a real 22 m spruce is real
+# Confident-only foliage tells from crown colour (leaf-on imagery): conifers
+# image dark, muted blue-green; broadleaf bright saturated green. Anything in
+# between stays None = unknown = year-round shade (the app's honest default).
+_EVERGREEN_LUM_MAX = 75
+_EVERGREEN_GB_MAX = 35          # g − b stays muted on conifers
+_DECIDUOUS_LUM_MIN = 80
+_DECIDUOUS_EXG_MIN = 90
 
 
 # ── Web-Mercator tile / pixel math ───────────────────────────────────────────
@@ -156,16 +180,19 @@ def _vegetation_and_brightness(rgb: bytes, w: int, h: int) -> tuple:
     smoothed values (:func:`_smooth_brightness`)."""
     veg = bytearray(w * h)
     bright = bytearray(w * h)
+    hist_all = [0] * 256
     idx = 0
     for i in range(w * h):
         r = rgb[idx]
         g = rgb[idx + 1]
         b = rgb[idx + 2]
         idx += 3
-        bright[i] = (r + 2 * g + b) >> 2
+        lum = (r + 2 * g + b) >> 2
+        bright[i] = lum
+        hist_all[lum] += 1
         if g >= _G_MIN and (2 * g - r - b) >= _EXG_MIN and g > b:
             veg[i] = 1
-    return veg, bright
+    return veg, bright, hist_all
 
 
 def _smooth_brightness(veg: bytearray, bright: bytearray,
@@ -196,6 +223,44 @@ def _smooth_brightness(veg: bytearray, bright: bytearray,
         smooth[i] = v
         hist[v] += 1
     return smooth, hist
+
+
+def _otsu_two_thresholds(hist: list) -> Optional[tuple]:
+    """Two-threshold (3-class) Otsu via prefix sums. Returns ``(t1, t2)``
+    maximizing between-class variance, or ``None`` on a thin histogram.
+    Needed because a real yard often has THREE brightness modes — dry grass,
+    green grass, tree canopy — and a 2-class split happily puts the line
+    between the grasses, labelling every green lawn pixel 'canopy' (the
+    second park failure)."""
+    total = sum(hist)
+    if total < 192:
+        return None
+    cw = [0] * 257
+    cm = [0.0] * 257
+    for i in range(256):
+        cw[i + 1] = cw[i] + hist[i]
+        cm[i + 1] = cm[i] + i * hist[i]
+    m_all = cm[256] / total
+    best, best_var = None, -1.0
+    for t1 in range(255):
+        w0 = cw[t1 + 1]
+        if w0 == 0:
+            continue
+        m0 = cm[t1 + 1] / w0
+        for t2 in range(t1 + 1, 255):
+            w1 = cw[t2 + 1] - cw[t1 + 1]
+            w2 = total - cw[t2 + 1]
+            if w1 == 0:
+                continue
+            if w2 == 0:
+                break
+            m1 = (cm[t2 + 1] - cm[t1 + 1]) / w1
+            m2 = (cm[256] - cm[t2 + 1]) / w2
+            var = (w0 * (m0 - m_all) ** 2 + w1 * (m1 - m_all) ** 2
+                   + w2 * (m2 - m_all) ** 2)
+            if var > best_var:
+                best_var, best = var, (t1, t2)
+    return best
 
 
 def _otsu_threshold(hist: list) -> Optional[int]:
@@ -236,6 +301,24 @@ def _canopy_mask(veg: bytearray, bright: bytearray, hist: list,
     total = sum(hist)
     if total == 0:
         return None
+    # Tri-modal first (dry grass / green grass / canopy): when the darkest
+    # of three classes separates cleanly from BOTH grasses, it is the canopy.
+    tt = _otsu_two_thresholds(hist)
+    if tt is not None:
+        t1, t2 = tt
+        n0 = sum(hist[:t1 + 1])
+        n1 = sum(hist[t1 + 1:t2 + 1])
+        n2 = total - n0 - n1
+        if n0 >= 64 and n1 and n2:
+            m0 = sum(i * hist[i] for i in range(t1 + 1)) / n0
+            m1 = sum(i * hist[i] for i in range(t1 + 1, t2 + 1)) / n1
+            m2 = sum(i * hist[i] for i in range(t2 + 1, 256)) / n2
+            if (m1 - m0) >= _OTSU_MIN_SEPARATION and (m2 - m1) >= 12:
+                mask = bytearray(w * h)
+                for i in range(w * h):
+                    if veg[i] and bright[i] <= t1:
+                        mask[i] = 1
+                return mask
     t = _otsu_threshold(hist)
     if t is not None:
         n_dark = sum(hist[:t + 1])
@@ -301,6 +384,175 @@ def _texture_mask(mask: bytearray, bright: bytearray, w: int, h: int,
                 out[i] = 1
                 break
     return out
+
+
+# ── Shadow + contrast physics (V2.26 second pass) ───────────────────────────
+# Grass can mimic canopy in colour, darkness and even texture (mottled park
+# lawn), but it cannot fake two physical facts: a crown is darker than the
+# sunlit ground AROUND it, and a real tree casts a shadow in the SAME compass
+# direction as every other tree in the photo.
+
+def _hist_median(hist: list) -> int:
+    total = sum(hist)
+    acc = 0
+    for i in range(256):
+        acc += hist[i]
+        if acc * 2 >= total:
+            return i
+    return 255
+
+
+def _shadow_mask_for(mask: bytearray, bright: bytearray, hist_all: list,
+                     w: int, h: int) -> bytearray:
+    """Pixels dark enough to be cast shadow (well below the scene's median
+    brightness), excluding canopy-mask pixels — a crown is dark but is not
+    its own shadow."""
+    thr = min(int(_SHADOW_LUM_FACTOR * _hist_median(hist_all)),
+              _SHADOW_LUM_CAP)
+    shadow = bytearray(w * h)
+    for i in range(w * h):
+        if bright[i] <= thr and not mask[i]:
+            shadow[i] = 1
+    return shadow
+
+
+def _bearing_vec(bin_idx: int) -> tuple:
+    """Unit pixel-space vector for compass bearing bin (0 = north = −y)."""
+    b = math.radians(bin_idx * (360.0 / _SHADOW_BINS))
+    return math.sin(b), -math.cos(b)
+
+
+def _bearing_allowed(bin_idx: int, lat: float) -> bool:
+    """Hemisphere prior: away from the tropics the sun is on the equator
+    side, so shadows point poleward — a 'shadow' pointing the wrong way is
+    dark grass, not a shadow."""
+    b = math.radians(bin_idx * (360.0 / _SHADOW_BINS))
+    if lat > 30.0:
+        return math.cos(b) >= -1e-9          # northern half-plane
+    if lat < -30.0:
+        return math.cos(b) <= 1e-9           # southern half-plane
+    return True
+
+
+def _shadow_frac(shadow: bytearray, w: int, h: int,
+                 px: float, py: float, r_px: float, bin_idx: int) -> float:
+    """Fraction of sample points just beyond the crown edge, along one
+    bearing, that land on shadow."""
+    dx, dy = _bearing_vec(bin_idx)
+    span = max(8.0, 2.0 * r_px)
+    hits = n = 0
+    for k in range(8):
+        d = r_px + 1.0 + span * k / 7.0
+        x = int(px + dx * d)
+        y = int(py + dy * d)
+        if x < 0 or x >= w or y < 0 or y >= h:
+            continue
+        n += 1
+        if shadow[y * w + x]:
+            hits += 1
+    return hits / n if n else 0.0
+
+
+def _shadow_run_m(shadow: bytearray, w: int, h: int, px: float, py: float,
+                  start_d: float, bin_idx: int, mpp: float) -> float:
+    """Length (metres) of the contiguous shadow run along a bearing, starting
+    ``start_d`` px from ``(px, py)``. Tolerates 2-px gaps (crown-edge
+    scatter); ends after 3 consecutive misses or the search cap."""
+    dx, dy = _bearing_vec(bin_idx)
+    max_d = start_d + _SHADOW_SEARCH_MAX_M / mpp
+    misses = 0
+    last_hit = None
+    d = start_d
+    while d <= max_d:
+        x = int(px + dx * d)
+        y = int(py + dy * d)
+        if 0 <= x < w and 0 <= y < h and shadow[y * w + x]:
+            last_hit = d
+            misses = 0
+        elif last_hit is not None:
+            misses += 1
+            if misses >= 3:
+                break
+        elif d - start_d > 6.0:
+            break               # never reached shadow near the edge — none
+        # Leading misses are tolerated: JPEG smears the crown/shadow
+        # boundary into a collar of pixels the canopy mask claims, so the
+        # run may only start a few px past the geometric edge.
+        d += 1.0
+    if last_hit is None:
+        return 0.0
+    return max(0.0, (last_hit - start_d + 1.0)) * mpp
+
+
+def _ring_contrast(mask: bytearray, shadow: bytearray, bright: bytearray,
+                   w: int, h: int, px: int, py: int, r_px: float) -> str:
+    """'pass' when the crown is darker than the sunlit ground around it,
+    'fail' when its surroundings look just like it (a patch inside a big
+    grassy expanse), 'interior' when there's no visible ground around to
+    compare against (a crown inside a closed stand — can't judge here)."""
+    r_in = max(1, int(r_px))
+    crown_sum = crown_n = 0
+    ring_sum = ring_n = 0
+    r_out = r_in + 4
+    for y in range(max(0, py - r_out), min(h, py + r_out + 1)):
+        for x in range(max(0, px - r_out), min(w, px + r_out + 1)):
+            d2 = (x - px) ** 2 + (y - py) ** 2
+            i = y * w + x
+            if d2 <= r_in * r_in:
+                if mask[i]:
+                    crown_sum += bright[i]
+                    crown_n += 1
+            elif d2 >= (r_in + 2) ** 2 and d2 <= r_out * r_out:
+                # Sunlit surroundings only: other canopy and cast shadow
+                # tell us nothing about ground contrast.
+                if not mask[i] and not shadow[i]:
+                    ring_sum += bright[i]
+                    ring_n += 1
+    if crown_n == 0:
+        return "fail"
+    if ring_n < 8:
+        return "interior"
+    if (ring_sum / ring_n) - (crown_sum / crown_n) >= _RING_CONTRAST_MIN:
+        return "pass"
+    return "fail"
+
+
+def _classify_foliage(mosaic: bytes, mask: bytearray, w: int, h: int,
+                      px: int, py: int, r_px: float) -> Optional[str]:
+    """Confident-only conifer/broadleaf tell from crown colour: conifers
+    image dark, muted blue-green; leafed-out broadleaf bright saturated
+    green. Anything ambiguous stays None (= unknown = year-round shade,
+    the app's honest convention — never invent a winter sun break)."""
+    r_in = max(1, int(r_px))
+    rs = gs = bs = n = 0
+    for y in range(max(0, py - r_in), min(h, py + r_in + 1)):
+        for x in range(max(0, px - r_in), min(w, px + r_in + 1)):
+            if (x - px) ** 2 + (y - py) ** 2 > r_in * r_in:
+                continue
+            i = y * w + x
+            if not mask[i]:
+                continue
+            rs += mosaic[i * 3]
+            gs += mosaic[i * 3 + 1]
+            bs += mosaic[i * 3 + 2]
+            n += 1
+    if n < 4:
+        return None
+    r_m, g_m, b_m = rs / n, gs / n, bs / n
+    lum = (r_m + 2 * g_m + b_m) / 4.0
+    if lum < _EVERGREEN_LUM_MAX and (g_m - b_m) < _EVERGREEN_GB_MAX:
+        return "evergreen"
+    if lum >= _DECIDUOUS_LUM_MIN and (2 * g_m - r_m - b_m) >= _DECIDUOUS_EXG_MIN:
+        return "deciduous"
+    return None
+
+
+_COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+            "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+
+
+def _bearing_name(bin_idx: int) -> str:
+    return _COMPASS[bin_idx % _SHADOW_BINS]
 
 
 # ── Blob analysis ────────────────────────────────────────────────────────────
@@ -404,10 +656,17 @@ def _pack_crowns(comp: list, dist: dict, w: int, min_r_px: float) -> list:
 # ── Detection pipeline ───────────────────────────────────────────────────────
 
 def detect_trees(bbox: dict, *,
+                 buildings: Optional[list] = None,
                  _fetch_tile: Optional[Callable] = None,
                  _decode: Optional[Callable] = None,
                  max_tiles: int = _MAX_TILES) -> Optional[dict]:
     """Detect tree crowns in the satellite imagery covering ``bbox``.
+
+    ``buildings`` (optional) are already-known structures — dicts with
+    ``lat``/``lng``/``height_m`` and ideally a ``ring`` of [lng, lat] pairs
+    and/or ``radius_m`` — used as photogrammetric scale anchors: a building
+    of known height with a legible shadow calibrates the sun's elevation,
+    turning every tree's shadow length into a *measured* height.
 
     ``_fetch_tile(zoom, x, y) -> bytes | None`` and ``_decode(data) ->
     (w, h, rgb_bytes) | None`` are injectable (GUI: HTTP + QImage; tests:
@@ -416,10 +675,14 @@ def detect_trees(bbox: dict, *,
     0 trees". Otherwise::
 
         {"trees": [{"kind": "tree", "lat", "lng", "radius_m", "height_m",
-                    "label": "Tree (detected)", "source": "imagery",
-                    "dedupe_m": …}, …],
+                    "foliage": "evergreen"|"deciduous"|None,
+                    "detect_confidence": str, "label": "Tree (detected)",
+                    "source": "imagery", "dedupe_m": …}, …],
          "zoom": int, "m_per_px": float,
-         "tiles_ok": int, "tiles_failed": int, "capped": bool}
+         "tiles_ok": int, "tiles_failed": int, "capped": bool,
+         "partial": bool, "shadow_bearing": "NNE"|None,
+         "anchor": {"type": "building"|"allometry", …}|None,
+         "dropped": {"ring": int, "shadow": int, "stand": int}}
     """
     if _decode is None:
         return None                  # no codec available — honest failure
@@ -468,52 +731,208 @@ def detect_trees(bbox: dict, *,
     min_r_px = _MIN_CROWN_RADIUS_M / mpp
     min_area_px = max(4, int(math.pi * min_r_px * min_r_px))
 
-    veg, bright = _vegetation_and_brightness(bytes(mosaic), w, h)
+    veg, bright, hist_all = _vegetation_and_brightness(bytes(mosaic), w, h)
     smooth, hist = _smooth_brightness(veg, bright, w, h)
     mask = _canopy_mask(veg, smooth, hist, w, h)
     base = {"zoom": zoom, "m_per_px": mpp, "tiles_ok": tiles_ok,
-            "tiles_failed": tiles_failed, "capped": False,
-            "partial": partial}
+            "tiles_failed": tiles_failed, "capped": False, "partial": partial,
+            "shadow_bearing": None, "anchor": None,
+            "dropped": {"ring": 0, "shadow": 0, "stand": 0}}
     if mask is None:
         return {**base, "trees": []}
     mask = _texture_mask(mask, bright, w, h)
+    shadow = _shadow_mask_for(mask, bright, hist_all, w, h)
 
-    origin_x = tx0 * _TILE_PX       # mosaic (0,0) in global pixel coords
-    origin_y = ty0 * _TILE_PX
-    trees = []
-    capped = False
-    for comp in _components(mask, w, h, min_area_px):
+    # Candidate crowns (colour + darkness + texture say "tree-ish"); the
+    # physics gates below decide which ones actually are.
+    cands = []
+    for blob_idx, comp in enumerate(_components(mask, w, h, min_area_px)):
         dist = _chamfer(comp, w)
         for (px, py, r_px) in _pack_crowns(comp, dist, w, min_r_px):
-            lat, lng = _global_px_to_latlng(origin_x + px + 0.5,
-                                            origin_y + py + 0.5, zoom)
-            # Keep only crowns whose centre falls in the requested bbox —
-            # whole-tile overflow shouldn't leak trees the user never asked
-            # about (precise boundary clipping happens downstream).
-            if not (bbox["south"] <= lat <= bbox["north"]
-                    and bbox["west"] <= lng <= bbox["east"]):
+            cands.append({"blob": blob_idx, "x": px, "y": py, "r": r_px})
+
+    # Gate 1 — ring contrast: darker than the visible sunlit ground around
+    # it, or 'interior' when a closed stand leaves no ground to compare.
+    for c in cands:
+        c["ring"] = _ring_contrast(mask, shadow, bright, w, h,
+                                   c["x"], c["y"], c["r"])
+
+    # Gate 2 — shadow consensus. Ring-passing candidates vote on a shadow
+    # bearing (hemisphere prior applied); a coherent peak means the photo
+    # has legible shadows, and every kept crown must then agree with it.
+    votes = [0.0] * _SHADOW_BINS
+    n_voters = 0
+    edge_cands = [c for c in cands if c["ring"] == "pass"]
+    for c in edge_cands:
+        best_bin, best_frac = None, 0.0
+        for k in range(_SHADOW_BINS):
+            if not _bearing_allowed(k, clat):
                 continue
-            radius_m = max(_MIN_CROWN_RADIUS_M,
-                           min(_MAX_CROWN_RADIUS_M, r_px * mpp))
+            f = _shadow_frac(shadow, w, h, c["x"], c["y"], c["r"], k)
+            if f > best_frac:
+                best_frac, best_bin = f, k
+        if best_bin is not None and best_frac >= _SHADOW_VOTE_FRAC:
+            votes[best_bin] += best_frac
+            n_voters += 1
+    bearing = None
+    total_votes = sum(votes)
+    if n_voters >= 3 and n_voters >= 0.1 * max(1, len(cands)) \
+            and total_votes > 0:
+        peak = max(range(_SHADOW_BINS),
+                   key=lambda k: (votes[(k - 1) % _SHADOW_BINS] + votes[k]
+                                  + votes[(k + 1) % _SHADOW_BINS]))
+        cluster = (votes[(peak - 1) % _SHADOW_BINS] + votes[peak]
+                   + votes[(peak + 1) % _SHADOW_BINS])
+        if cluster >= 0.5 * total_votes:
+            bearing = peak
+
+    # Verdicts. Stand interiors can't be judged individually (their shadow
+    # falls on the neighbouring crown, their ring is more canopy) — they
+    # inherit their blob's edge verdict: a real stand has verified edges,
+    # a mis-masked grass expanse doesn't.
+    dropped = {"ring": 0, "shadow": 0, "stand": 0}
+    blob_edge: dict = {}
+    for c in cands:
+        if c["ring"] == "interior":
+            continue
+        stats = blob_edge.setdefault(c["blob"], [0, 0])
+        stats[1] += 1
+        keep = c["ring"] == "pass"
+        if not keep:
+            dropped["ring"] += 1
+        elif bearing is not None:
+            f = max(_shadow_frac(shadow, w, h, c["x"], c["y"], c["r"], k)
+                    for k in ((bearing - 1) % _SHADOW_BINS, bearing,
+                              (bearing + 1) % _SHADOW_BINS))
+            if f < _MIN_SHADOW_FRAC:
+                keep = False
+                dropped["shadow"] += 1
+            else:
+                c["verified"] = True
+        c["keep"] = keep
+        if keep:
+            stats[0] += 1
+    for c in cands:
+        if c["ring"] != "interior":
+            continue
+        kept_e, total_e = blob_edge.get(c["blob"], (0, 0))
+        if total_e == 0 or kept_e / total_e >= 0.3:
+            c["keep"] = True
+            c["inherited"] = True
+        else:
+            c["keep"] = False
+            dropped["stand"] += 1
+
+    # Sun-elevation anchor for shadow→height: prefer a building of known
+    # height (its shadow in the same photo calibrates tan(elevation)
+    # absolutely); else the median allometric ratio over verified crowns.
+    origin_x = tx0 * _TILE_PX       # mosaic (0,0) in global pixel coords
+    origin_y = ty0 * _TILE_PX
+    tan_elev = None
+    anchor = None
+    if bearing is not None:
+        dxb, dyb = _bearing_vec(bearing)
+        best = None
+        for bld in buildings or []:
+            b_lat, b_lng = bld.get("lat"), bld.get("lng")
+            h_b = bld.get("height_m")
+            if b_lat is None or b_lng is None or not h_b:
+                continue
+            gx, gy = _latlng_to_global_px(b_lat, b_lng, zoom)
+            bx, by = gx - origin_x, gy - origin_y
+            if not (0 <= bx < w and 0 <= by < h):
+                continue
+            # Start the march at the building's far edge along the bearing.
+            extent = (float(bld.get("radius_m") or 4.0)) / mpp
+            ring = bld.get("ring") or []
+            proj = 0.0
+            for p in ring:                     # ring is [lng, lat] pairs
+                vgx, vgy = _latlng_to_global_px(p[1], p[0], zoom)
+                proj = max(proj, (vgx - gx) * dxb + (vgy - gy) * dyb)
+            if proj > 0:
+                extent = proj
+            length = _shadow_run_m(shadow, w, h, bx, by, extent + 1.0,
+                                   bearing, mpp)
+            if length >= 1.0 and (best is None or length > best[1]):
+                best = (float(h_b), length)
+        if best is not None:
+            tan_elev = best[0] / best[1]
+            anchor = {"type": "building", "height_m": round(best[0], 1),
+                      "shadow_m": round(best[1], 1)}
+        else:
+            ratios = []
+            for c in cands:
+                if not c.get("verified"):
+                    continue
+                c["shadow_m"] = _shadow_run_m(shadow, w, h, c["x"], c["y"],
+                                              c["r"] + 1.0, bearing, mpp)
+                if c["shadow_m"] >= 1.0:
+                    r_m = min(_MAX_CROWN_RADIUS_M, c["r"] * mpp)
+                    ratios.append((_HEIGHT_PER_RADIUS * r_m) / c["shadow_m"])
+            if len(ratios) >= 3:
+                ratios.sort()
+                tan_elev = ratios[len(ratios) // 2]
+                anchor = {"type": "allometry"}
+
+    trees = []
+    capped = False
+    for c in cands:
+        if not c.get("keep"):
+            continue
+        lat, lng = _global_px_to_latlng(origin_x + c["x"] + 0.5,
+                                        origin_y + c["y"] + 0.5, zoom)
+        # Keep only crowns whose centre falls in the requested bbox —
+        # whole-tile overflow shouldn't leak trees the user never asked
+        # about (precise boundary clipping happens downstream).
+        if not (bbox["south"] <= lat <= bbox["north"]
+                and bbox["west"] <= lng <= bbox["east"]):
+            continue
+        radius_m = max(_MIN_CROWN_RADIUS_M,
+                       min(_MAX_CROWN_RADIUS_M, c["r"] * mpp))
+        foliage = _classify_foliage(mosaic, mask, w, h,
+                                    c["x"], c["y"], c["r"])
+        # Height: measured from the crown's own shadow when the photo gives
+        # us one and a calibration exists; else foliage-aware allometry.
+        height_m = None
+        if c.get("verified") and tan_elev is not None:
+            if "shadow_m" not in c:
+                c["shadow_m"] = _shadow_run_m(shadow, w, h, c["x"], c["y"],
+                                              c["r"] + 1.0, bearing, mpp)
+            if c["shadow_m"] >= 1.0:
+                height_m = max(_HEIGHT_MIN_M,
+                               min(_HEIGHT_MAX_MEASURED_M,
+                                   c["shadow_m"] * tan_elev))
+        if height_m is None:
+            per_r = _HEIGHT_PER_RADIUS_BY_FOLIAGE.get(
+                foliage, _HEIGHT_PER_RADIUS)
             height_m = max(_HEIGHT_MIN_M,
-                           min(_HEIGHT_MAX_M, _HEIGHT_PER_RADIUS * radius_m))
-            trees.append({
-                "kind": "tree",
-                "lat": lat, "lng": lng,
-                "radius_m": round(radius_m, 1),
-                "height_m": round(height_m, 1),
-                "label": "Tree (detected)",
-                "source": "imagery",
-                # A detection landing inside an already-known crown is the
-                # same tree — scale the dedupe distance with crown size.
-                "dedupe_m": max(2.0, 0.8 * radius_m),
-            })
-            if len(trees) >= _MAX_TREES:
-                capped = True
-                break
-        if capped:
+                           min(_HEIGHT_MAX_M, per_r * radius_m))
+        if c.get("verified"):
+            confidence = "high (shadow-verified)"
+        elif c.get("inherited"):
+            confidence = "medium (stand interior)"
+        else:
+            confidence = "medium (no shadow consensus in photo)"
+        trees.append({
+            "kind": "tree",
+            "lat": lat, "lng": lng,
+            "radius_m": round(radius_m, 1),
+            "height_m": round(height_m, 1),
+            "label": "Tree (detected)",
+            "source": "imagery",
+            "foliage": foliage,
+            "detect_confidence": confidence,
+            # A detection landing inside an already-known crown is the
+            # same tree — scale the dedupe distance with crown size.
+            "dedupe_m": max(2.0, 0.8 * radius_m),
+        })
+        if len(trees) >= _MAX_TREES:
+            capped = True
             break
-    return {**base, "trees": trees, "capped": capped}
+    return {**base, "trees": trees, "capped": capped, "dropped": dropped,
+            "shadow_bearing": (_bearing_name(bearing)
+                               if bearing is not None else None),
+            "anchor": anchor}
 
 
 # ── Import tail (mirrors osm_features.import_osm_result) ─────────────────────
@@ -552,6 +971,16 @@ def import_detected_trees(res: Optional[dict], project_dict: dict, *,
                             "the tile server refused) — nothing was imported. "
                             "Try again in a minute, or mark trees by hand "
                             "below.")}
+    if res.get("capped"):
+        # Hitting the safety cap has only ever meant one thing in the field:
+        # the photo is being misread wholesale. Flooding the map with 400
+        # features the user must undo helps nobody — import nothing, say why.
+        return {"added": 0, "kept": 0, "found": len(res.get("trees") or []),
+                "message": ("Detection hit its safety cap — the photo is "
+                            "probably being misread here (unusual ground "
+                            "cover or lighting), so nothing was imported. "
+                            "Try a tighter boundary, or mark the trees that "
+                            "matter by hand below.")}
     items = []
     for t in res.get("trees", []):
         lat, lng = _shift_latlng(t["lat"], t["lng"],
@@ -574,14 +1003,45 @@ def import_detected_trees(res: Optional[dict], project_dict: dict, *,
     if res.get("partial"):
         msg += (" (The boundary is larger than one scan covers — only the "
                 "central area was scanned.)")
-    if res.get("capped"):
-        msg += (" Detection stopped at the safety cap — the photo may be "
-                "too busy for a clean read here.")
+    d = res.get("dropped") or {}
+    n_dropped = sum(d.values())
+    bearing = res.get("shadow_bearing")
+    if bearing:
+        msg += (f" Crowns were cross-checked against their cast shadows "
+                f"(pointing ≈{bearing})")
+        if n_dropped:
+            msg += (f"; {n_dropped} look-alike patch"
+                    f"{'es' if n_dropped != 1 else ''} (grass/shrub — no "
+                    "matching shadow or ground contrast) dropped")
+        msg += "."
+    elif n_dropped:
+        msg += (f" {n_dropped} look-alike patch"
+                f"{'es' if n_dropped != 1 else ''} without ground contrast "
+                "dropped.")
     if added:
-        msg += (" Positions and crown sizes are measured from the photo; "
-                "heights are rough estimates from crown size. Click a tree "
-                "and press Delete to drop any false hits (shrub beds, "
-                "shadows).")
+        anchor = res.get("anchor") or {}
+        if anchor.get("type") == "building":
+            msg += (f" Heights are measured from each tree's shadow, scaled "
+                    f"by your {anchor['height_m']:g} m building's "
+                    f"{anchor['shadow_m']:g} m shadow.")
+        elif anchor.get("type") == "allometry":
+            msg += (" Heights are estimated from shadow lengths (scale from "
+                    "typical crown proportions — import a building for a "
+                    "true reference).")
+        elif bearing:
+            msg += (" Shadow lengths weren't readable enough to measure "
+                    "heights, so they're rough estimates from crown size.")
+        else:
+            msg += (" No legible shadows in this photo, so heights are "
+                    "rough estimates from crown size and confidence is "
+                    "lower.")
+        n_ev = sum(1 for t in kept if t.get("foliage") == "evergreen")
+        n_de = sum(1 for t in kept if t.get("foliage") == "deciduous")
+        n_un = len(kept) - n_ev - n_de
+        msg += (f" Foliage: {n_ev} conifer-like (year-round shade), "
+                f"{n_de} broadleaf-like (bare in winter), {n_un} unknown "
+                "(treated as year-round shade). Click a tree and press "
+                "Delete to drop any false hits.")
     elif not items:
         msg += (" Crowns need to read as darker, textured green blobs "
                 "against the ground — leaf-off deciduous trees may be "

@@ -50,6 +50,39 @@ def _qimage_decode(data: bytes):
     return (w, h, bytes(packed))
 
 
+def _building_anchors(project: dict) -> list:
+    """Already-known buildings (imported/drawn/marked) with heights — the
+    photogrammetric scale references for shadow→height calibration. Drawn
+    tree canopies (caster_kind == 'tree') are excluded: a tree can't anchor
+    the sun for other trees."""
+    out = []
+    for f in (project.get("features") or []):
+        p = f.get("properties") or {}
+        geom = f.get("geometry") or {}
+        et = p.get("element_type")
+        if et == "existing_building" and p.get("height_m"):
+            c = geom.get("coordinates") or []
+            if len(c) >= 2:
+                out.append({"lat": c[1], "lng": c[0],
+                            "height_m": p["height_m"],
+                            "radius_m": p.get("canopy_radius_m")})
+        elif (et == "canopy_footprint" and p.get("caster_kind") != "tree"
+                and p.get("height_m")):
+            ring = (geom.get("coordinates") or [None])[0]
+            lat, lng = p.get("lat"), p.get("lng")
+            if (lat is None or lng is None) and ring:
+                from src.osm_features import ring_centroid
+                cc = ring_centroid(ring)
+                if cc:
+                    lat, lng = cc
+            if lat is not None and lng is not None:
+                out.append({"lat": lat, "lng": lng,
+                            "height_m": p["height_m"],
+                            "radius_m": p.get("canopy_radius_m"),
+                            "ring": ring})
+    return out
+
+
 def detect_trees_for_site(main) -> None:
     """Detect existing tree crowns from the satellite imagery over the drawn
     boundary (or ≈60 m around the pin), off-thread, and import them as
@@ -70,7 +103,7 @@ def detect_trees_for_site(main) -> None:
 
     from PyQt6.QtCore import QThread
     thread = QThread(main)
-    worker = _TreeDetectWorker(bbox)
+    worker = _TreeDetectWorker(bbox, _building_anchors(main._project))
     worker.moveToThread(thread)
     main._tree_detect_thread = thread
     main._tree_detect_worker = worker
@@ -107,13 +140,15 @@ if _HAVE_QT:
     class _TreeDetectWorker(QObject):
         done = pyqtSignal(object)     # tree_detect.detect_trees result | None
 
-        def __init__(self, bbox):
+        def __init__(self, bbox, buildings=None):
             super().__init__()
             self._bbox = bbox
+            self._buildings = buildings or []
 
         def run(self):
             try:
                 res = tree_detect.detect_trees(self._bbox,
+                                               buildings=self._buildings,
                                                _decode=_qimage_decode)
             except Exception:  # noqa: BLE001 — never crash the worker thread
                 res = None
