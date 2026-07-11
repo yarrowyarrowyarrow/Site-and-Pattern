@@ -50,6 +50,10 @@ terrain = ["numpy>=1.21"]
 # only numpy + shapely; rasterio (+ pyproj for reprojection) is needed only to
 # READ the GeoTIFF. All optional — the feature hides itself when absent.
 extract = ["shapely>=2.0", "numpy>=1.21", "rasterio>=1.3", "pyproj>=3.4"]
+# Automatic tree detection from the Meta/WRI 1 m canopy-height map (V2.26). The
+# local-maxima algorithm needs only numpy; rasterio (+ pyproj) reads/reprojects
+# the remote GeoTIFF window. Absent → the RGB-photo fallback runs instead.
+canopy = ["numpy>=1.21", "rasterio>=1.3", "pyproj>=3.4"]
 full = ["PyQt6>=6.6.0", "PyQt6-WebEngine>=6.6.0", "python-docx>=1.1", "mcp>=1.0", "pyproj>=3.4", "shapely>=2.0", "numpy>=1.21", "rasterio>=1.3"]
 
 [project.scripts]

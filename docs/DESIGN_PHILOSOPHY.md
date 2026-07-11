@@ -183,9 +183,11 @@ Kintsugi philosophy, Cradle to Cradle design, regenerative landscaping, and myco
 > a near-zero-value lawn; and the V2.24 **gap recruitment** in `src/succession_engine.py` models the
 > system repairing *itself* — self-seeding natives recolonising the openings the maturing canopy
 > leaves, so restoration is shown as an ongoing process rather than a one-time install. Repair
-> starts from an honest inventory of what's already there: V2.26's **satellite tree detection**
-> (`src/tree_detect.py`) fills the site inventory on the treed/rural properties OSM knows nothing
-> about, so the shade map reflects the real site anywhere in the world. **State: strong.**
+> starts from an honest inventory of what's already there: V2.26's **automatic tree detection**
+> reads the free Meta/WRI global 1 m canopy-height map (`src/tree_detect_chm.py`, variable-window
+> local-maxima on real heights — the industry method) to fill the site inventory on the treed/rural
+> properties OSM knows nothing about, with *measured* tree heights (±≈3 m) rather than guesses, so
+> the shade map reflects the real site anywhere in the world. **State: strong.**
 
 ### 9. Uncertainty is a feature, not a bug
 

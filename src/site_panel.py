@@ -2030,22 +2030,19 @@ class SitePanel(QWidget):
         # zero outside city cores, so treed acreages got nothing from the
         # import above — this reads crowns off the same satellite photo the
         # map displays, anywhere in the world.
-        btn_trees = QPushButton("Detect trees from the satellite photo")
+        btn_trees = QPushButton("Detect trees automatically")
         btn_trees.setStyleSheet(_BTN_SECONDARY)
         btn_trees.setToolTip(
-            "Scans the satellite photo shown on the map for tree crowns — "
-            "OpenStreetMap rarely maps individual trees outside cities, so "
-            "this fills the gap on treed and rural properties.\n"
-            "Crowns are cross-checked against the shadows they cast (all "
-            "trees in one photo shade the same way — grass can't fake "
-            "that), and shadow lengths give measured heights: import your "
-            "building first and its known height calibrates the sun. "
-            "Obvious conifers/broadleafs are tagged for honest winter "
-            "shade; ambiguous crowns stay 'unknown'.\n"
-            "Uses your boundary plus the neighbour margin below, like the "
-            "import above. Select any tree and press Delete to drop false "
-            "hits. Detection sees what the photo saw: leaf-off deciduous "
-            "trees may be missed. Needs internet (fetches imagery tiles).")
+            "Finds individual trees on the property so the shade map has real "
+            "casters — OpenStreetMap rarely maps trees outside cities.\n"
+            "Reads the free global 1 m canopy-height map (Meta/WRI): each "
+            "tree's position and HEIGHT are measured from real height data "
+            "(±≈3 m), and crown size is estimated from height — the same "
+            "method professional forestry tools use.\n"
+            "Uses your boundary plus the neighbour margin below. Select any "
+            "tree and press Delete to remove it. Needs internet; falls back "
+            "to reading the satellite photo (less reliable) when height data "
+            "can't be reached.")
         btn_trees.clicked.connect(self.tree_detect_requested.emit)
         v.addWidget(btn_trees)
 

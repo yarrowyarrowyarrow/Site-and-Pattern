@@ -1,16 +1,21 @@
 """
-tree_detect_flow.py — orchestration for satellite tree detection (V2.26).
+tree_detect_flow.py — orchestration for tree detection (V2.26).
 
 Free functions taking ``main`` (kept off MainWindow/controller, like
-``wind_flow``/``building_flow``). Fetches + scans the property's imagery tiles
-off the UI thread (``src/tree_detect.py``), then applies the result on the main
-thread through the shared OSM-import tail: satellite-alignment correction,
-boundary/margin clipping, dedupe against OSM/hand-marked trees, one undo
-checkpoint, map refresh, honest status line.
+``wind_flow``/``building_flow``). Runs detection off the UI thread, then applies
+the result on the main thread: boundary/margin clipping, dedupe against
+OSM/hand-marked trees, one undo checkpoint, map refresh, honest status line.
+
+**Two detection paths, height first.** The primary method reads the free Meta/WRI
+1 m canopy-height map (``src/tree_detect_chm.py``) and runs the industry-standard
+variable-window local-maxima on real heights — robust and location-independent.
+When that's unavailable (no ``rasterio``, offline, or no coverage) it falls back
+to the RGB-from-basemap heuristic (``src/tree_detect.py``), which needs the
+satellite-alignment correction and building anchors the height path doesn't.
 
 The JPEG tile decoder lives here (not in the Qt-free core) because decoding
 needs a codec: ``QImage`` ships with the app and is documented thread-safe off
-the GUI thread (unlike ``QPixmap``), so the worker decodes as it fetches.
+the GUI thread (unlike ``QPixmap``), so the RGB worker decodes as it fetches.
 """
 
 from __future__ import annotations
@@ -18,6 +23,7 @@ from __future__ import annotations
 from contextlib import nullcontext
 
 from src import tree_detect
+from src import tree_detect_chm
 
 try:
     from PyQt6.QtCore import QObject, pyqtSignal
@@ -84,10 +90,10 @@ def _building_anchors(project: dict) -> list:
 
 
 def detect_trees_for_site(main) -> None:
-    """Detect existing tree crowns from the satellite imagery over the drawn
-    boundary (or ≈60 m around the pin), off-thread, and import them as
-    ``existing_tree`` shade casters. Status lands in the same line the OSM
-    import uses; the whole import is one undo step."""
+    """Detect existing trees over the drawn boundary (or ≈60 m around the pin)
+    off-thread and import them as ``existing_tree`` shade casters. Tries the
+    canopy-height map first, falls back to the satellite photo. Status lands in
+    the same line the OSM import uses; the whole import is one undo step."""
     from src.osm_features import bbox_with_area_note
 
     sc = dict(main._project.get("properties", {}).get("site_config", {}) or {})
@@ -99,7 +105,7 @@ def detect_trees_for_site(main) -> None:
         main.site_panel.set_osm_status("Drop a pin or draw a boundary first.")
         return
     main.site_panel.set_osm_status(
-        "Scanning the satellite photo for tree crowns… (~10–30 s)")
+        "Detecting trees from the canopy-height map… (~10–30 s)")
 
     from PyQt6.QtCore import QThread
     thread = QThread(main)
@@ -108,16 +114,35 @@ def detect_trees_for_site(main) -> None:
     main._tree_detect_thread = thread
     main._tree_detect_worker = worker
 
-    def _apply(res):
-        east, north = main.site_panel.satellite_offset()
+    def _apply(payload):
+        mode = (payload or {}).get("mode")
+        res = (payload or {}).get("res")
         persistence = getattr(main, "_persistence", None)
         cm = (persistence.checkpoint("detect trees") if persistence is not None
               else nullcontext())
         with cm:
-            out = tree_detect.import_detected_trees(
-                res, main._project, boundary=boundary, margin_m=margin,
-                offset_east_m=east, offset_north_m=north,
-                area_note=area_note)
+            if mode == "chm":
+                out = tree_detect_chm.import_chm_result(
+                    res, main._project, boundary=boundary, margin_m=margin,
+                    area_note=area_note)
+            else:
+                # RGB fallback: needs the satellite-alignment correction (its
+                # positions are read off the displayed basemap, not true coords).
+                east, north = main.site_panel.satellite_offset()
+                out = tree_detect.import_detected_trees(
+                    res, main._project, boundary=boundary, margin_m=margin,
+                    offset_east_m=east, offset_north_m=north,
+                    area_note=area_note)
+                if res is None:
+                    out["message"] = (
+                        "Couldn't get tree data — the canopy-height map and "
+                        "the satellite imagery were both unreachable (offline, "
+                        "or this build lacks the 'rasterio' package for height "
+                        "data). Nothing was imported; mark trees by hand below.")
+                else:
+                    out["message"] = ("Couldn't reach the canopy-height map, "
+                                      "so read the satellite photo instead "
+                                      "(less reliable). " + out["message"])
         if out["added"]:
             main._mark_modified()
             main._map_events._reload_existing_features()
@@ -138,7 +163,8 @@ def detect_trees_for_site(main) -> None:
 
 if _HAVE_QT:
     class _TreeDetectWorker(QObject):
-        done = pyqtSignal(object)     # tree_detect.detect_trees result | None
+        # {"mode": "chm"|"rgb", "res": detector result | None}
+        done = pyqtSignal(object)
 
         def __init__(self, bbox, buildings=None):
             super().__init__()
@@ -146,10 +172,20 @@ if _HAVE_QT:
             self._buildings = buildings or []
 
         def run(self):
+            # Height first: measured, location-independent, no per-photo tuning.
+            try:
+                res = tree_detect_chm.detect_trees_chm(self._bbox)
+            except Exception:  # noqa: BLE001 — never crash the worker thread
+                res = None
+            if res is not None:
+                self.done.emit({"mode": "chm", "res": res})
+                return
+            # Fallback: the RGB-from-basemap heuristic (no rasterio / offline /
+            # no canopy-height coverage here).
             try:
                 res = tree_detect.detect_trees(self._bbox,
                                                buildings=self._buildings,
                                                _decode=_qimage_decode)
-            except Exception:  # noqa: BLE001 — never crash the worker thread
+            except Exception:  # noqa: BLE001
                 res = None
-            self.done.emit(res)
+            self.done.emit({"mode": "rgb", "res": res})
