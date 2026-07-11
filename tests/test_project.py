@@ -149,6 +149,29 @@ class TestProjectToMapData(unittest.TestCase):
         # Backward-compat alias points at the first boundary's points.
         self.assertEqual(out["boundary"], bd["points"])
 
+    def test_existing_tree_foliage_reaches_map_and_colours(self):
+        # V2.26: tree_foliage must survive project_to_map_data (it was
+        # dropped, so 2D markers never differed by conifer/deciduous) and
+        # drive the crown colour.
+        def _tree(foliage):
+            props = {"element_type": "existing_tree", "height_m": 12.0,
+                     "canopy_radius_m": 3.0, "label": "Tree (detected)"}
+            if foliage:
+                props["tree_foliage"] = foliage
+            return {"type": "Feature",
+                    "geometry": {"type": "Point",
+                                 "coordinates": [-113.3, 53.5]},
+                    "properties": props}
+        out = project_to_map_data(self._make(
+            _tree("evergreen"), _tree("deciduous"), _tree("")))
+        defs = [s["struct_def"] for s in out["structures"]]
+        self.assertEqual(defs[0].get("tree_foliage"), "evergreen")
+        self.assertEqual(defs[0]["color"], "#1b5e20")     # conifer blue-green
+        self.assertEqual(defs[1].get("tree_foliage"), "deciduous")
+        self.assertEqual(defs[1]["color"], "#8d6e00")     # broadleaf warm
+        # Unknown foliage → neutral, distinct from both tagged colours.
+        self.assertNotIn(defs[2]["color"], ("#1b5e20", "#8d6e00"))
+
     def test_plant_assigns_placement_group_when_missing(self):
         p = self._make({
             "type": "Feature",

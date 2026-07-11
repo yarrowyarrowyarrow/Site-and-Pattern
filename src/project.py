@@ -273,8 +273,13 @@ def project_to_map_data(project: dict) -> dict:
             size_m = props.get("size_m")
             if not size_m:
                 size_m = float(props.get("canopy_radius_m", 3.0)) * 2.0
+            # Forward the crown's foliage so the map can colour conifer vs
+            # deciduous (and so it survives a save/reload) — previously
+            # dropped here, which is why detected/marked trees all looked
+            # identical on the 2D map regardless of type (V2.26).
             sd = existing_feature_def(sid, size_m=size_m,
-                                      height_m=props.get("height_m") or 6.0)
+                                      height_m=props.get("height_m") or 6.0,
+                                      foliage=props.get("tree_foliage") or "")
             sd["name"] = props.get("label", sd["name"])
             result["structures"].append({
                 "lat": lat, "lng": lng, "struct_def": sd,

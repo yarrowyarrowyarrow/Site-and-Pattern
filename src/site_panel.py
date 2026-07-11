@@ -2012,7 +2012,7 @@ class SitePanel(QWidget):
         v.addWidget(slow_note)
         # The section's one primary action — the partner of "Show shade".
         # "&&": a single "&" is a Qt mnemonic marker and vanishes from view.
-        btn = QPushButton("Import building && tree outlines")
+        btn = QPushButton("Import Building Outlines")
         btn.setStyleSheet(_BTN_PRIMARY)
         btn.setToolTip(
             "Traces nearby building perimeters — with heights from "
@@ -2030,8 +2030,8 @@ class SitePanel(QWidget):
         # zero outside city cores, so treed acreages got nothing from the
         # import above — this reads crowns off the same satellite photo the
         # map displays, anywhere in the world.
-        btn_trees = QPushButton("Detect trees automatically")
-        btn_trees.setStyleSheet(_BTN_SECONDARY)
+        btn_trees = QPushButton("Import Tree Outlines")
+        btn_trees.setStyleSheet(_BTN_PRIMARY)
         btn_trees.setToolTip(
             "Finds individual trees on the property so the shade map has real "
             "casters — OpenStreetMap rarely maps trees outside cities.\n"

@@ -318,10 +318,21 @@ def existing_feature_def(feature_id: str, *, size_m: float,
     trees only, V2.13) rides along so winter shade knows whether the crown is
     bare at the solstice."""
     if feature_id == EXISTING_TREE_ID:
-        out = {"id": EXISTING_TREE_ID, "name": "Existing tree", "icon": "🌳",
+        # Colour the crown by foliage so conifer vs deciduous is visible on
+        # the 2D map (not just in the winter-shade weighting): a deep blue-
+        # green conifer, a lighter/warmer broadleaf, a neutral green when the
+        # type is unknown. Icon follows suit (🌲 vs 🌳).
+        fol = (foliage or "").lower()
+        if fol == "evergreen":
+            color, fill, icon = "#1b5e20", "#2e7d32", "🌲"
+        elif fol == "deciduous":
+            color, fill, icon = "#8d6e00", "#c0ca33", "🌳"
+        else:
+            color, fill, icon = "#33691e", "#7cb342", "🌳"
+        out = {"id": EXISTING_TREE_ID, "name": "Existing tree", "icon": icon,
                "shape": "circle", "size_m": float(size_m),
-               "color": "#33691e", "fill_color": "#7cb342",
-               "fill_opacity": 0.25, "height_m": float(height_m),
+               "color": color, "fill_color": fill,
+               "fill_opacity": 0.3, "height_m": float(height_m),
                "category": "Existing"}
         if foliage:
             out["tree_foliage"] = foliage
