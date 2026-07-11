@@ -89,8 +89,11 @@ class TestMainWindowSmoke(unittest.TestCase):
 
     def test_constructed(self):
         self.assertIsNotNone(self._win)
-        self.assertEqual(self._win.windowTitle(),
-                         "PermaDesign — Native Habitat Designer")
+        # Against branding.APP_TITLE (what app.py sets), not a literal: the
+        # old literal went stale at the V1.69 rebrand and nobody noticed
+        # because this module only runs on a full Qt stack (CI skips it).
+        from src.branding import APP_TITLE
+        self.assertEqual(self._win.windowTitle(), APP_TITLE)
 
     def test_initial_project_state(self):
         self.assertEqual(self._win._project["type"], "FeatureCollection")
