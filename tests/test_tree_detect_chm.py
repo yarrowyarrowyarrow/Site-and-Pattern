@@ -133,6 +133,63 @@ class TestDetectTreetops(unittest.TestCase):
 
 
 @unittest.skipUnless(_HAVE_NUMPY, "numpy not installed")
+@unittest.skipUnless(_HAVE_NUMPY, "numpy not installed")
+class TestHybridAugment(unittest.TestCase):
+    """The CHM+RGB hybrid: photo crowns split the clusters the smooth height
+    map merges, each inheriting the nearest CHM top's measured height; crowns
+    that are the same tree, or off confirmed canopy, are dropped."""
+
+    def _m_east(self, lng, metres):
+        return lng + metres / (111320.0 * math.cos(math.radians(_LAT)))
+
+    def test_near_distinct_crown_is_added_with_chm_height(self):
+        chm_tops = [{"lat": _LAT, "lng": _LNG, "height_m": 12.0,
+                     "radius_m": 3.0}]
+        # An RGB crown 5 m east — same cluster, distinct tree the CHM merged.
+        rgb = [{"lat": _LAT, "lng": self._m_east(_LNG, 5.0), "radius_m": 2.5}]
+        extra = chm._augment_with_rgb(chm_tops, rgb)
+        self.assertEqual(len(extra), 1)
+        self.assertEqual(extra[0]["height_m"], 12.0)      # measured from CHM
+        self.assertIn("photo-split", extra[0]["detect_confidence"])
+
+    def test_coincident_crown_is_dropped_as_same_tree(self):
+        chm_tops = [{"lat": _LAT, "lng": _LNG, "height_m": 12.0,
+                     "radius_m": 3.0}]
+        rgb = [{"lat": _LAT, "lng": self._m_east(_LNG, 1.0), "radius_m": 2.5}]
+        self.assertEqual(chm._augment_with_rgb(chm_tops, rgb), [])
+
+    def test_far_crown_is_dropped_as_off_canopy(self):
+        chm_tops = [{"lat": _LAT, "lng": _LNG, "height_m": 12.0,
+                     "radius_m": 3.0}]
+        rgb = [{"lat": _LAT, "lng": self._m_east(_LNG, 30.0), "radius_m": 2.5}]
+        self.assertEqual(chm._augment_with_rgb(chm_tops, rgb), [])
+
+    def test_detect_chm_runs_augmenter_and_reports_count(self):
+        gt, to_ll = _geo()
+        arr = np.zeros((60, 60))
+        _cone(arr, 30, 30, 12.0, 9)
+        bbox = self._bbox()
+
+        def rgb_augment():
+            # Place an RGB crown ~5 m east of the single CHM treetop.
+            res = chm.detect_trees_chm(bbox, _reader=lambda b: (arr, gt, to_ll))
+            t = res["trees"][0]
+            return {"trees": [{"lat": t["lat"],
+                               "lng": self._m_east(t["lng"], 5.0),
+                               "radius_m": 2.5}]}
+
+        res = chm.detect_trees_chm(bbox, _reader=lambda b: (arr, gt, to_ll),
+                                   _rgb_augment=rgb_augment)
+        self.assertEqual(res["hybrid_added"], 1)
+        self.assertEqual(len(res["trees"]), 2)
+
+    def _bbox(self):
+        gt, to_ll = _geo()
+        lng_w, lat_s = to_ll(-30, -90)
+        lng_e, lat_n = to_ll(90, 30)
+        return {"west": lng_w, "south": lat_s, "east": lng_e, "north": lat_n}
+
+
 class TestTileIndex(unittest.TestCase):
     def _index(self):
         return {"type": "FeatureCollection", "features": [

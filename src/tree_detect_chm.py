@@ -356,15 +356,69 @@ def _pixel_size_from(gt: tuple, to_lnglat: Callable) -> float:
     return d if d > 1e-6 else 1.0
 
 
+# Hybrid crown-splitting: how the photo augments the height map.
+_HYBRID_SAME_M = 2.5     # an RGB crown this close to a CHM top is the same tree
+_HYBRID_NEAR_M = 9.0     # …and beyond this from every CHM top it's not on
+#                          confirmed canopy (a false positive) — dropped.
+
+
+def _augment_with_rgb(chm_trees: list, rgb_trees: list) -> list:
+    """The hybrid's crown-splitting. The canopy-height map is a smooth model
+    output that renders a tree cluster as one mound, so ``detect_treetops``
+    under-counts clusters; the finer satellite photo resolves the individual
+    crowns. This keeps each RGB crown that sits *within* a CHM-confirmed
+    canopy cluster (near a CHM treetop) but is a *distinct* crown (not the
+    same tree), giving it the nearest treetop's **measured** height. RGB
+    crowns coincident with a CHM top (same tree) or far from every CHM top
+    (not on confirmed canopy — the false positives the height map filters)
+    are dropped. Returns the extra crowns to add."""
+    if not chm_trees or not rgb_trees:
+        return []
+    extra: list = []
+    added: list = []
+    for c in rgb_trees:
+        clat, clng = c.get("lat"), c.get("lng")
+        if clat is None or clng is None:
+            continue
+        best_d = 1e9
+        best = None
+        for t in chm_trees:
+            d = _ground_m(clat, clng, t["lat"], t["lng"])
+            if d < best_d:
+                best_d, best = d, t
+        if best is None or best_d <= _HYBRID_SAME_M or best_d > _HYBRID_NEAR_M:
+            continue
+        if any(_ground_m(clat, clng, a[0], a[1]) <= _HYBRID_SAME_M
+               for a in added):
+            continue
+        radius_m = float(c.get("radius_m") or best.get("radius_m") or 2.0)
+        extra.append({
+            "kind": "tree", "lat": clat, "lng": clng,
+            "height_m": best["height_m"],       # measured height from the CHM
+            "radius_m": round(radius_m, 1),
+            "label": "Tree (detected)", "source": "canopy-height",
+            "foliage": None,
+            "detect_confidence": "medium (photo-split within canopy)",
+            "dedupe_m": max(1.5, 0.6 * radius_m),
+        })
+        added.append((clat, clng))
+    return extra
+
+
 def detect_trees_chm(bbox: dict, *, min_height_m: float = _MIN_TREE_HEIGHT_M,
-                     _reader: Optional[Callable] = None) -> Optional[dict]:
+                     _reader: Optional[Callable] = None,
+                     _rgb_augment: Optional[Callable] = None) -> Optional[dict]:
     """Detect trees over ``bbox`` from the canopy-height map. ``_reader(bbox) ->
     (chm_array, gt, to_lnglat) | None`` is injectable (real: Meta CHM via
     rasterio; tests: synthetic). Returns ``None`` when no height data could be
     read (caller falls back / reports honestly); otherwise::
 
         {"trees": [...], "m_per_px": float, "source": "canopy-height",
-         "mae_m": 2.8, "min_height_m": float}
+         "mae_m": 2.8, "min_height_m": float, "hybrid_added": int}
+
+    ``_rgb_augment() -> tree_detect.detect_trees result | None`` (optional)
+    enables the **hybrid**: the photo resolves individual crowns inside the
+    canopy clusters the smooth height map merges (see ``_augment_with_rgb``).
     """
     reader = _reader or _default_reader
     res = reader(bbox)
@@ -377,9 +431,19 @@ def detect_trees_chm(bbox: dict, *, min_height_m: float = _MIN_TREE_HEIGHT_M,
     trees = [t for t in tops
              if bbox["south"] <= t["lat"] <= bbox["north"]
              and bbox["west"] <= t["lng"] <= bbox["east"]]
+    hybrid_added = 0
+    if _rgb_augment is not None:
+        try:
+            rgb = _rgb_augment()
+        except Exception:  # noqa: BLE001 — the photo is a bonus, never fatal
+            rgb = None
+        if rgb and rgb.get("trees"):
+            extra = _augment_with_rgb(trees, rgb["trees"])
+            trees = trees + extra
+            hybrid_added = len(extra)
     return {"trees": trees, "m_per_px": round(pixel_size_m, 2),
             "source": "canopy-height", "mae_m": _CHM_MAE_M,
-            "min_height_m": min_height_m}
+            "min_height_m": min_height_m, "hybrid_added": hybrid_added}
 
 
 # ── Import tail (reuses the OSM/RGB filter + insert; CHM-specific message) ────
@@ -415,7 +479,12 @@ def import_chm_result(res: Optional[dict], project_dict: dict, *,
         n_un = len(kept) - n_ev - n_de
         msg += (f" Heights are measured from the map "
                 f"(±≈{res.get('mae_m', _CHM_MAE_M):.0f} m); crown sizes are "
-                "estimated from height. Foliage (from the photo's colour): "
+                "estimated from height.")
+        if res.get("hybrid_added"):
+            msg += (f" {res['hybrid_added']} extra crown"
+                    f"{'s' if res['hybrid_added'] != 1 else ''} split out of "
+                    "dense clusters using the photo.")
+        msg += (" Foliage (from the photo's colour): "
                 f"{n_ev} conifer-like, {n_de} broadleaf-like, {n_un} unknown "
                 "(treated as year-round shade). Click a tree and press Delete "
                 "to remove any you don't want.")

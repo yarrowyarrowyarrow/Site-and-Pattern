@@ -177,11 +177,22 @@ if _HAVE_QT:
             self._min_height_m = min_height_m
 
         def run(self):
-            # Height first: measured, location-independent, no per-photo tuning.
+            # Height first: measured, location-independent, no per-photo
+            # tuning. The photo then augments it — the hybrid: RGB crown
+            # detection splits the tree clusters the smooth height map merges,
+            # each crown keeping the map's measured height. RGB false
+            # positives are filtered by the map's canopy confirmation.
             kw = ({} if self._min_height_m is None
                   else {"min_height_m": self._min_height_m})
+
+            def _rgb_augment():
+                return tree_detect.detect_trees(
+                    self._bbox, buildings=self._buildings,
+                    _decode=_qimage_decode)
+
             try:
-                res = tree_detect_chm.detect_trees_chm(self._bbox, **kw)
+                res = tree_detect_chm.detect_trees_chm(
+                    self._bbox, _rgb_augment=_rgb_augment, **kw)
             except Exception:  # noqa: BLE001 — never crash the worker thread
                 res = None
             if res is not None:
