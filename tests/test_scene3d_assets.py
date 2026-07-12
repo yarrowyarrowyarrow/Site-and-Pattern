@@ -103,6 +103,10 @@ class SceneViewerAssetsTest(unittest.TestCase):
             ("three", "addons", "controls", "OrbitControls.js"),
             ("three", "addons", "utils", "BufferGeometryUtils.js"),
             ("three", "addons", "postprocessing", "Pass.js"),
+            # V2.27: Blender GLB model assets (09-models.js) — the loader's
+            # '../utils/BufferGeometryUtils.js' import resolves to the vendored
+            # file above (test_vendored_imports_resolve walks it).
+            ("three", "addons", "loaders", "GLTFLoader.js"),
             ("spark", "spark.module.js"),
         ]
         for parts in required:

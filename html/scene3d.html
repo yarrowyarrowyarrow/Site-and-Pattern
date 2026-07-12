@@ -240,6 +240,7 @@ The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 // If we got here the static three.js imports resolved & executed.
 // Expose the vendored three.js API as globals so the ordered classic
 // viewer chunks (html/scene3d/*.js) can use it without each being a
@@ -247,6 +248,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 window.THREE = THREE;
 window.OrbitControls = OrbitControls;
 window.mergeGeometries = mergeGeometries;
+window.GLTFLoader = GLTFLoader;
 window._pinglog && window._pinglog('module-eval-start (three OK)');
 // Load the viewer chunks in order; each onload triggers the next so
 // the global-scope declarations accumulate in the same order the old
@@ -261,6 +263,7 @@ window._pinglog && window._pinglog('module-eval-start (three OK)');
     'scene3d/06-fly.js',
     'scene3d/07-wildlife.js',
     'scene3d/08-modes.js',
+    'scene3d/09-models.js',
   ];
   let i = 0;
   (function next() {

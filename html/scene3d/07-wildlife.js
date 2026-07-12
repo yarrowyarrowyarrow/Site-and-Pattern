@@ -258,8 +258,10 @@ function rebuildWildlife() {
   for (const spec of WILDLIFE) {
     const app = spec.app || { kind: spec.kind };
     const make = _CRITTER_FACTORY[spec.kind] || _CRITTER_FACTORY[app.kind];
-    if (!make) continue;
-    let obj; try { obj = make(app); } catch (e) { continue; }
+    let obj;   // Blender GLB critter first (09-models.js), procedural fallback.
+    try { obj = (window.glbCritter && window.glbCritter(spec.kind, app)) || (make && make(app)); }
+    catch (e) { continue; }
+    if (!obj) continue;
     // At night, lift each critter's self-illumination so the moths & bats read
     // against the dark instead of disappearing.
     if (sceneNight) obj.traverse(o => {

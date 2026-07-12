@@ -268,15 +268,19 @@ function getTreeArch(cls, prof, form, tier, sub) {
   const key = cls + '_' + ck + '_' + prof.id + '_' + form + '_' + tier + '_' + sub + '_q' + QUALITY;
   let a = TREE_CACHE.get(key);
   if (a) return a;
-  if (cls === 'conifer') {
-    const seed = 5000 + (_FORM_SEED[form] || 0) + tier * 11 + sub * 191 + (_CK_SEED[ck] || 0);
-    a = ck === 'pine' ? buildPineGeo(form, tier, mulberry32(seed))
-                      : buildConiferGeo(form, tier, mulberry32(seed), ck);
-  } else {
-    const cfg = decidCfg(form, tier, prof);
-    const seed = 100 + (_FORM_SEED[form] || 0) + tier * 11 + sub * 191 + prof.id.charCodeAt(0);
-    a = treeToGeometry(generateDaVinciTree(0.06, 0.42, 0, cfg, mulberry32(seed)),
-                       cfg, mulberry32(seed + 7));
+  // Blender GLB archetype first (09-models.js), procedural as the fallback.
+  a = (window.glbTreeArch && window.glbTreeArch(cls, ck, prof.id, form, tier)) || null;
+  if (!a) {
+    if (cls === 'conifer') {
+      const seed = 5000 + (_FORM_SEED[form] || 0) + tier * 11 + sub * 191 + (_CK_SEED[ck] || 0);
+      a = ck === 'pine' ? buildPineGeo(form, tier, mulberry32(seed))
+                        : buildConiferGeo(form, tier, mulberry32(seed), ck);
+    } else {
+      const cfg = decidCfg(form, tier, prof);
+      const seed = 100 + (_FORM_SEED[form] || 0) + tier * 11 + sub * 191 + prof.id.charCodeAt(0);
+      a = treeToGeometry(generateDaVinciTree(0.06, 0.42, 0, cfg, mulberry32(seed)),
+                         cfg, mulberry32(seed + 7));
+    }
   }
   TREE_CACHE.set(key, a);
   return a;
@@ -287,10 +291,15 @@ function buildArchetypes() {
   // Shrubs (SHRUB_CACHE) and herbs (HERB_CACHE) are built per-profile on demand;
   // the rest are the cheap shared variant arrays.
   const ground = [], grass = [], aquatic = [], vine = [];
-  for (const sd of [331, 379]) ground.push(buildGroundcoverGeo(mulberry32(sd)));
-  for (const sd of [421, 457, 503]) grass.push(buildGrassGeo(mulberry32(sd)));
-  for (const sd of [541, 587, 631]) aquatic.push(buildAquaticGeo(mulberry32(sd)));
-  for (const sd of [661, 707, 743]) vine.push(buildVineGeo(mulberry32(sd)));
+  const glb = (kind, i) => window.glbLayerArch && window.glbLayerArch(kind, i);
+  [331, 379].forEach((sd, i) =>
+    ground.push(glb('groundcover', i) || buildGroundcoverGeo(mulberry32(sd))));
+  [421, 457, 503].forEach((sd, i) =>
+    grass.push(glb('grass', i) || buildGrassGeo(mulberry32(sd))));
+  [541, 587, 631].forEach((sd, i) =>
+    aquatic.push(glb('aquatic', i) || buildAquaticGeo(mulberry32(sd))));
+  [661, 707, 743].forEach((sd, i) =>
+    vine.push(glb('vine', i) || buildVineGeo(mulberry32(sd))));
   ARCH = { ground, grass, aquatic, vine };
 }
 
@@ -408,7 +417,8 @@ function getShrubArch(prof, v) {
   const key = prof.id + '_' + v + '_q' + QUALITY;
   let a = SHRUB_CACHE.get(key);
   if (a) return a;
-  a = buildShrubGeo(mulberry32(13 + v * 97 + prof.id.charCodeAt(0) * 7), prof);
+  a = (window.glbShrubArch && window.glbShrubArch(prof.form)) ||
+      buildShrubGeo(mulberry32(13 + v * 97 + prof.id.charCodeAt(0) * 7), prof);
   SHRUB_CACHE.set(key, a);
   return a;
 }
@@ -422,7 +432,8 @@ function getHerbArch(formName, v) {
   const key = formName + '_' + v + '_q' + QUALITY;
   let a = HERB_CACHE.get(key);
   if (a) return a;
-  a = buildPerennialGeo(mulberry32(29 + v * 89 + formName.charCodeAt(0) * 7),
+  a = (window.glbHerbArch && window.glbHerbArch(formName)) ||
+      buildPerennialGeo(mulberry32(29 + v * 89 + formName.charCodeAt(0) * 7),
                         HERB_FORMS[formName]);
   HERB_CACHE.set(key, a);
   return a;
@@ -478,7 +489,8 @@ function buildShrubLayer(list, month, year, terrain) {
     const places = items.map(p => spreadPlacements(p, year));
     const total = places.reduce((s, pl) => s + pl.length, 0);
     const foliage = instancedMesh(arch.foliageGeo, total, MATS.shrubFoliage);
-    const stems = arch.stemGeo ? instancedMesh(arch.stemGeo, total, MATS.branch) : null;
+    const stems = arch.stemGeo
+      ? instancedMesh(arch.stemGeo, total, arch.stemMat || MATS.branch) : null;
     // Woody stems are bark-brown, except red-osier dogwood's signature red.
     const stemHex = prof.redStems ? '#b5402e' : '#6b5236';
     const names = new Array(total);
@@ -550,7 +562,7 @@ function buildPlants(group, plants, month, year, terrain) {
       const arch = getTreeArch(cls, prof, form, t, sub);
       const places = items.map(p => spreadPlacements(p, year));
       const total = places.reduce((s, pl) => s + pl.length, 0);
-      const branch = instancedMesh(arch.branchGeo, total, MATS.branch);
+      const branch = instancedMesh(arch.branchGeo, total, arch.branchMat || MATS.branch);
       const foliage = instancedMesh(arch.foliageGeo, total, MATS.foliage);
       const names = new Array(total);
       let idx = 0;

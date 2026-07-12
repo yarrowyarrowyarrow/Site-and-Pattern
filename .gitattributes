@@ -1,0 +1,2 @@
+# Blender-exported 3D model assets (html/assets/models/) are binary blobs.
+*.glb binary

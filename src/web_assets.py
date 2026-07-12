@@ -82,6 +82,8 @@ _MIME = {
     ".gif": "image/gif",
     ".svg": "image/svg+xml",
     ".ply": "application/octet-stream",
+    ".glb": "model/gltf-binary",
+    ".gltf": "model/gltf+json",
 }
 
 

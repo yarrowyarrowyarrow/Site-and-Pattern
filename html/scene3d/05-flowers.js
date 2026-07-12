@@ -458,6 +458,9 @@ function disposeDesignGroup(group) {
   }
   for (const g of HERB_CACHE.values()) sharedGeo.add(g);
   for (const k in GEO) sharedGeo.add(GEO[k]);
+  // GLB master geometries (09-models.js) survive cache clears — a quality (or
+  // models-ready) rebuild clears the caches above, but the masters are re-served.
+  if (window.glbSharedGeos) for (const g of window.glbSharedGeos()) sharedGeo.add(g);
   const sharedMat = new Set(MATS ? Object.values(MATS) : []);
   if (GROUND_MAT) sharedMat.add(GROUND_MAT);   // shared meadow texture lives on
   group.traverse(obj => {

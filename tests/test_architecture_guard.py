@@ -111,6 +111,10 @@ class TestStructuralCeilings(unittest.TestCase):
         (_HTML / "scene3d" / "06-fly.js", 950),        # ~732 now
         (_HTML / "scene3d" / "07-wildlife.js", 800),   # ~550 now
         (_HTML / "scene3d" / "08-modes.js", 600),      # ~286 now
+        # V2.27: Blender GLB model assets — manifest fetch + GLTF part
+        # extraction + fauna clone/tint. When this trips, split the fauna
+        # half into 10-models-fauna.js.
+        (_HTML / "scene3d" / "09-models.js", 650),     # ~330 now
     ]
 
     def test_module_line_ceilings(self):
