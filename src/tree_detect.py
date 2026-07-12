@@ -138,6 +138,12 @@ _EVERGREEN_LUM_MAX = 75
 _EVERGREEN_GB_MAX = 35          # g − b stays muted on conifers
 _DECIDUOUS_LUM_MIN = 80
 _DECIDUOUS_EXG_MIN = 90
+# Confirmed-tree (CHM) foliage: the height map already says "tall tree here",
+# so colour can be read decisively. Green enough to be foliage vs a bare,
+# leaf-off deciduous crown (grey/brown in spring/fall imagery — the ideal
+# conifer-vs-deciduous signal).
+_GREEN_FOLIAGE_EXG = 25
+_FOLIAGE_SHADOW_LUM = 28        # below this = deep shadow, can't call it
 
 
 # ── Web-Mercator tile / pixel math ───────────────────────────────────────────
@@ -1207,14 +1213,51 @@ def classify_foliage_at_points(trees: list, bbox: dict, *,
     w, h, mosaic = mos["w"], mos["h"], mos["mosaic"]
     zoom, mpp = mos["zoom"], mos["mpp"]
     ox, oy = mos["origin_x"], mos["origin_y"]
-    veg, _bright, _hist = _vegetation_and_brightness(mosaic, w, h)
     for t in trees:
         gx, gy = _latlng_to_global_px(t["lat"], t["lng"], zoom)
         px, py = int(gx - ox), int(gy - oy)
         if not (0 <= px < w and 0 <= py < h):
             continue
         r_px = max(2, int((t.get("radius_m") or 2.0) / mpp))
-        fol = _classify_foliage(mosaic, veg, w, h, px, py, r_px)
+        fol = _foliage_confirmed_tree(mosaic, w, h, px, py, r_px)
         if fol:
             t["foliage"] = fol
     return trees
+
+
+def _foliage_confirmed_tree(mosaic: bytes, w: int, h: int,
+                            px: int, py: int, r_px: float) -> Optional[str]:
+    """Foliage of a CHM-confirmed tree from the photo's colour at its crown.
+    Because the height map already says a tall tree is here, colour reads
+    decisively (unlike detection, which must first reject grass):
+
+      * green crown → leaf-on: dark & muted = conifer (evergreen);
+        bright/saturated = broadleaf (deciduous);
+      * NOT green → a bare, leaf-off deciduous crown (grey/brown in
+        spring/fall imagery) = deciduous — the strongest tell in the very
+        imagery that made RGB *detection* hard.
+
+    ``None`` only for a crown too dark to read (deep shadow)."""
+    r_in = max(1, int(r_px))
+    rs = gs = bs = n = 0
+    for y in range(max(0, py - r_in), min(h, py + r_in + 1)):
+        for x in range(max(0, px - r_in), min(w, px + r_in + 1)):
+            if (x - px) ** 2 + (y - py) ** 2 > r_in * r_in:
+                continue
+            i = y * w + x
+            rs += mosaic[i * 3]
+            gs += mosaic[i * 3 + 1]
+            bs += mosaic[i * 3 + 2]
+            n += 1
+    if n < 4:
+        return None
+    r_m, g_m, b_m = rs / n, gs / n, bs / n
+    lum = (r_m + 2 * g_m + b_m) / 4.0
+    exg = 2 * g_m - r_m - b_m
+    if exg >= _GREEN_FOLIAGE_EXG:                    # green foliage (leaf-on)
+        if lum < _EVERGREEN_LUM_MAX and (g_m - b_m) < _EVERGREEN_GB_MAX:
+            return "evergreen"
+        return "deciduous"
+    if lum < _FOLIAGE_SHADOW_LUM:                    # too dark to call
+        return None
+    return "deciduous"                              # bare/brown = leaf-off decid

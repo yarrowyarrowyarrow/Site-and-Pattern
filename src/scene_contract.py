@@ -421,25 +421,23 @@ def build_scene(project: dict, *, year: int = 0,
                            or (props.get("size_m") or 6.0) / 2.0) * 2.0
             # Foliage drives BOTH the 3D crown shape (the viewer keys conifer
             # off genus AND foliage_type — 04-quality.js) and its seasonal
-            # colour / winter bareness (foliage_type). Rule: an explicitly
-            # deciduous crown is broadleaf-and-bare-in-winter; everything else
-            # — evergreen OR unknown — renders as a conifer, matching the
-            # shade model (which treats unknown foliage as year-round shade)
-            # and the conifer-dominated sites this serves. Setting foliage_type
-            # was the fix for "conifers showed as deciduous in 3D": genus alone
-            # gave a conifer shape but _isDecid(undefined) still coloured and
-            # bared it like a broadleaf.
+            # colour / winter bareness (foliage_type). An ACCURATE per-tree
+            # reflection: a tree renders as what it's tagged — evergreen →
+            # conifer, deciduous → broadleaf. Unknown carries no foliage_type
+            # (viewer default = generic broadleaf) rather than being forced
+            # either way — so a mostly-unknown scene isn't uniformly conifer
+            # *or* deciduous. Setting foliage_type for the known cases was the
+            # fix for conifers rendering deciduous (genus alone gave a conifer
+            # shape but _isDecid(undefined) still coloured/bared it broadleaf).
             _foliage = (props.get("tree_foliage") or "").lower()
-            _ft = "deciduous" if _foliage == "deciduous" else "evergreen"
-            plants.append({
+            _plant = {
                 "plant_id": None,
                 "common_name": props.get("label", "Existing tree"),
                 "x": round(x, 2), "y": round(y, 2),
                 "height_m": float(props.get("height_m") or 6.0),
                 "canopy_m": canopy,
                 "plant_type": "tree",
-                "genus": "spruce" if _ft == "evergreen" else "",
-                "foliage_type": _ft,
+                "genus": "spruce" if _foliage == "evergreen" else "",
                 # Existing trees are mature with no modelled colony spread.
                 "scale_factor": 1.0,
                 "spread_factor": 1.0,
@@ -452,7 +450,11 @@ def build_scene(project: dict, *, year: int = 0,
                 "bloom_end": 0,
                 "opacity": 1.0,
                 "existing": True,
-            })
+            }
+            # Known foliage only — unknown stays untyped (generic broadleaf).
+            if _foliage in ("evergreen", "deciduous"):
+                _plant["foliage_type"] = _foliage
+            plants.append(_plant)
 
         elif etype == "existing_building" and geom.get("type") == "Point":
             lng, lat = geom["coordinates"]

@@ -113,16 +113,17 @@ class TestExistingTreeFoliageShape(unittest.TestCase):
         self.assertEqual(p["genus"], "spruce")
         self.assertEqual(p["foliage_type"], "evergreen")
 
-    def test_unknown_defaults_to_conifer(self):
-        # Conifer-dominated sites + shade model treats unknown as year-round.
-        p = self._tree_plant("")
-        self.assertEqual(p["genus"], "spruce")
-        self.assertEqual(p["foliage_type"], "evergreen")
-
     def test_explicit_deciduous_is_broadleaf(self):
         p = self._tree_plant("deciduous")
         self.assertEqual(p["genus"], "")
         self.assertEqual(p["foliage_type"], "deciduous")
+
+    def test_unknown_is_untyped_not_forced(self):
+        # Accurate reflection: an untagged tree isn't forced conifer OR
+        # deciduous — no genus, no foliage_type (viewer's generic default).
+        p = self._tree_plant("")
+        self.assertEqual(p["genus"], "")
+        self.assertNotIn("foliage_type", p)
 
 
 class TestSceneBasics(unittest.TestCase):

@@ -605,6 +605,23 @@ class TestFoliageAtPoints(unittest.TestCase):
         self.assertEqual(trees[0]["foliage"], "evergreen")
         self.assertEqual(trees[1]["foliage"], "deciduous")
 
+    def test_leaf_off_bare_crown_is_deciduous(self):
+        # The user's spring/fall imagery: a bare deciduous crown is grey/brown
+        # (not green). Because the height map already confirmed a tall tree
+        # here, a non-green crown reads decisively as deciduous — the signal
+        # that made RGB *detection* hard is the *classification* win.
+        def bare(gx, gy):
+            j = ((gx * 13 + gy * 7) % 21) - 10
+            return (120 + j, 112 + j, 96 + j)   # grey-brown, ExG≈8
+        cx, cy = _center_px()
+        scene = _disk_scene([(cx, cy, 14, bare)])
+        le, ne = tree_detect._global_px_to_latlng(cx + 0.5, cy + 0.5, _Z)
+        trees = [{"lat": le, "lng": ne, "radius_m": 2.5, "foliage": None}]
+        tree_detect.classify_foliage_at_points(
+            trees, _bbox_around(_LAT, _LNG, 30.0),
+            _fetch_tile=_fetch_key, _decode=_scene_decoder(scene))
+        self.assertEqual(trees[0]["foliage"], "deciduous")
+
     def test_no_decoder_leaves_foliage_unchanged(self):
         trees = [{"lat": _LAT, "lng": _LNG, "radius_m": 2.0, "foliage": None}]
         tree_detect.classify_foliage_at_points(
