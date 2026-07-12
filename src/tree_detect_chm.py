@@ -73,15 +73,16 @@ _USER_AGENT = "PermaDesign/1.0 (https://github.com/yarrowyarrowyarrow/permadesig
 _MIN_TREE_HEIGHT_M = 2.0
 # Open-grown crown radius ≈ base + slope × height (a mid-range allometry between
 # narrow conifers and broad broadleaf). Clamped to yard-tree reality.
-_CROWN_BASE_M = 1.4
+_CROWN_BASE_M = 1.1
 _CROWN_SLOPE = 0.16
 _CROWN_MIN_M, _CROWN_MAX_M = 0.9, 10.0
-# Crown separation. Kept deliberately loose so distinct-but-near trees on a
-# spaced acreage each register (the under-count fix); a genuinely dense stand
-# still merges. Decoupled from the *reported* crown size, which stays the honest
-# allometric estimate.
-_MIN_SEP_M = 1.5             # two distinct treetops are at least this far apart
-_SUPPRESS_FACTOR = 0.5       # crowns closer than this × radius are one tree
+# Crown separation, biased toward catching MORE trees (the repeated under-count
+# report — the user would rather delete an occasional over-split than miss real
+# trees): distinct treetops as close as ~1 m each register, while a genuinely
+# dense stand still merges. Decoupled from the *reported* crown size, which
+# stays the honest allometric estimate.
+_MIN_SEP_M = 1.2             # two distinct treetops are at least this far apart
+_SUPPRESS_FACTOR = 0.4       # crowns closer than this × radius are one tree
 _HEIGHT_MAX_M = 40.0         # sanity clamp (a bad nodata cell can't be a 300 m tree)
 _CHM_MAE_M = 2.8             # published mean absolute error, surfaced honestly
 
@@ -202,7 +203,7 @@ def detect_treetops(chm, gt: tuple, to_lnglat: Callable, *,
             "source": "canopy-height",
             "foliage": None,      # no spectral data in a height map
             "detect_confidence": "high (canopy-height map)",
-            "dedupe_m": max(2.0, 0.8 * crown_r_m),
+            "dedupe_m": max(1.5, 0.6 * crown_r_m),
         })
     return tops
 
