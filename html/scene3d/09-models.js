@@ -260,7 +260,11 @@ function _glbFaunaMat(name, app, kind) {
   switch (name) {
     case 'MatFuzz': return _cmat(app.fuzz || '#d99b26', met);
     case 'MatDark': return _cmat(app.dark || '#201a14', met);
-    case 'MatWing': return _wingMat(app.wing);
+    case 'MatWing':
+      // Bird wings/tail are solid feather colour (procedural uses _cmat);
+      // insect wings are the translucent membrane material.
+      return kind === 'bird' ? _cmat(app.wing || '#6b7686', { flat: true })
+                             : _wingMat(app.wing);
     case 'MatBody': return _cmat(app.body || '#5b6675',
       { flat: true, metal: kind === 'beetle' || (kind === 'fly' && !app.elongate) });
     case 'MatBelly': return _cmat(app.belly || '#e8e2d4', { flat: true });
@@ -321,6 +325,13 @@ function glbCritter(kind, app) {
   if (spots) spots.visible = !!app.spots;
   const beak = byName('Beak');
   if (beak && app.hummer) beak.scale.z *= 2.4;
+  // Bee body form: the GLB abdomen is authored 'round'; slender/stout are
+  // relative rescales (ratios from makeBeeAvatar's shape table, 06-fly.js).
+  const abd = byName('Abdomen');
+  if (abd && kind === 'bee' && app.shape && app.shape !== 'round') {
+    const r = app.shape === 'slender' ? [0.89, 0.91, 1.17] : [1.11, 1.08, 0.83];
+    abd.scale.set(abd.scale.x * r[0], abd.scale.y * r[1], abd.scale.z * r[2]);
+  }
   // Wing pivots: wrap each wing node in a fresh Group at its position, so
   // flapWings' pivot.rotation.z drives a clean roll in the critter's frame
   // regardless of any rotation the exporter baked onto the node itself.
