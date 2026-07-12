@@ -20,7 +20,9 @@ from .mesh_ops import tri_count, wipe_collection
 
 
 def status():
-    """{asset key: triangle count} for everything currently built."""
+    """{asset key: triangle count} for what is currently built. Note that
+    build() keeps ONE asset resident at a time (object names are global to
+    the .blend and the viewer looks nodes up by exact name)."""
     table = asset_table()
     out = {}
     for key in table:

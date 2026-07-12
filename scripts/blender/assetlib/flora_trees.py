@@ -113,23 +113,24 @@ def _build_pine(tier, rng):
     fol = bmesh.new()
     H = 1.0
     add_cone(bark, 0.034, 0.010, H * 0.96, 6, Matrix())
-    clumps = 3 + tier * 2
+    clumps = 4 + tier * 2
     z_base = 0.48
     for i in range(clumps):
         f = i / max(1, clumps - 1)
         z = z_base + (0.88 - z_base) * f + (rng.random() - 0.5) * 0.05
         az = rng.random() * math.tau
-        reach = (0.17 + rng.random() * 0.12) * (1 - f * 0.45)
+        reach = (0.18 + rng.random() * 0.13) * (1 - f * 0.45)
         # Visible branch out to the tuft (also the winter skeleton).
         add_cone(bark, 0.014, 0.006, reach + 0.05, 4,
                  place(z=z - 0.02, rot_z=az, tilt_y=1.05))
-        # Flattened needle pad at the branch tip.
+        # Flat, wide needle pad at the branch tip — the open, scraggly
+        # jack/lodgepole look, not a deciduous blob.
         tip = Vector((math.cos(az) * reach, math.sin(az) * reach, z))
-        r = (0.13 + rng.random() * 0.07) * (1 - f * 0.25)
-        add_ellipsoid(fol, r, (1.25, 1.25, 0.55),
+        r = (0.10 + rng.random() * 0.05) * (1 - f * 0.20)
+        add_ellipsoid(fol, r, (1.5, 1.5, 0.42),
                       Matrix.Translation(tip), subdiv=1)
-    add_ellipsoid(fol, 0.12, (1.1, 1.1, 0.6),
-                  Matrix.Translation(Vector((0, 0, 0.92))), subdiv=1)
+    add_ellipsoid(fol, 0.10, (1.3, 1.3, 0.45),
+                  Matrix.Translation(Vector((0, 0, 0.93))), subdiv=1)
     return bark, fol
 
 

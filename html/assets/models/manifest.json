@@ -1,0 +1,393 @@
+{
+ "fauna": {
+  "bat": {
+   "file": "fauna_bat.glb",
+   "materials": [
+    "MatFur",
+    "MatMembrane"
+   ],
+   "nodes": [
+    "Body",
+    "Head",
+    "EarL",
+    "EarR",
+    "WingL",
+    "WingR"
+   ],
+   "nominal_size": 1.0
+  },
+  "bee": {
+   "file": "fauna_bee.glb",
+   "materials": [
+    "MatFuzz",
+    "MatDark",
+    "MatWing"
+   ],
+   "nodes": [
+    "Body",
+    "Head",
+    "Abdomen",
+    "WingL",
+    "WingR",
+    "Band0",
+    "Band1",
+    "Band2"
+   ],
+   "nominal_size": 1.0
+  },
+  "beetle": {
+   "file": "fauna_beetle.glb",
+   "materials": [
+    "MatBody",
+    "MatDark"
+   ],
+   "nodes": [
+    "Body",
+    "Head",
+    "Spots"
+   ],
+   "nominal_size": 1.0
+  },
+  "bird": {
+   "file": "fauna_bird.glb",
+   "materials": [
+    "MatBody",
+    "MatBelly",
+    "MatWing",
+    "MatDark"
+   ],
+   "nodes": [
+    "Body",
+    "Head",
+    "Beak",
+    "Tail",
+    "WingL",
+    "WingR"
+   ],
+   "nominal_size": 1.0
+  },
+  "fly": {
+   "file": "fauna_fly.glb",
+   "materials": [
+    "MatBody",
+    "MatDark",
+    "MatWing"
+   ],
+   "nodes": [
+    "hover",
+    "darner"
+   ],
+   "nominal_size": 1.0
+  },
+  "lep": {
+   "file": "fauna_lep.glb",
+   "materials": [
+    "MatFore",
+    "MatHind",
+    "MatEdge",
+    "MatDark"
+   ],
+   "nodes": [
+    "Body",
+    "Head",
+    "Abdomen",
+    "WingL",
+    "WingR"
+   ],
+   "nominal_size": 1.0
+  },
+  "mammal": {
+   "file": "fauna_mammal.glb",
+   "materials": [
+    "MatFur",
+    "MatDark"
+   ],
+   "nodes": [
+    "Body",
+    "Head",
+    "Tail",
+    "EarL",
+    "EarR"
+   ],
+   "nominal_size": 1.0
+  }
+ },
+ "generator": "assetlib 1 / Blender 4.2.22",
+ "plants": {
+  "herb.clump": {
+   "file": "herb_clump.glb",
+   "parts": [
+    "foliage"
+   ]
+  },
+  "herb.erect": {
+   "file": "herb_erect.glb",
+   "parts": [
+    "foliage"
+   ]
+  },
+  "herb.fern": {
+   "file": "herb_fern.glb",
+   "parts": [
+    "foliage"
+   ]
+  },
+  "herb.ferny": {
+   "file": "herb_ferny.glb",
+   "parts": [
+    "foliage"
+   ]
+  },
+  "herb.grassy": {
+   "file": "herb_grassy.glb",
+   "parts": [
+    "foliage"
+   ]
+  },
+  "herb.mat": {
+   "file": "herb_mat.glb",
+   "parts": [
+    "foliage"
+   ]
+  },
+  "herb.rosette": {
+   "file": "herb_rosette.glb",
+   "parts": [
+    "foliage"
+   ]
+  },
+  "layer.aquatic": {
+   "file": "layer_aquatic.glb",
+   "parts": [
+    "foliage"
+   ],
+   "variants": 3
+  },
+  "layer.grass": {
+   "file": "layer_grass.glb",
+   "parts": [
+    "foliage"
+   ],
+   "variants": 3
+  },
+  "layer.groundcover": {
+   "file": "layer_groundcover.glb",
+   "parts": [
+    "foliage"
+   ],
+   "variants": 2
+  },
+  "layer.vine": {
+   "file": "layer_vine.glb",
+   "parts": [
+    "foliage"
+   ],
+   "variants": 3
+  },
+  "shrub.irregular": {
+   "file": "shrub_irregular.glb",
+   "parts": [
+    "bark",
+    "foliage"
+   ]
+  },
+  "shrub.mound": {
+   "file": "shrub_mound.glb",
+   "parts": [
+    "bark",
+    "foliage"
+   ]
+  },
+  "shrub.spreading": {
+   "file": "shrub_spreading.glb",
+   "parts": [
+    "bark",
+    "foliage"
+   ]
+  },
+  "shrub.thicket": {
+   "file": "shrub_thicket.glb",
+   "parts": [
+    "bark",
+    "foliage"
+   ]
+  },
+  "shrub.vase": {
+   "file": "shrub_vase.glb",
+   "parts": [
+    "bark",
+    "foliage"
+   ]
+  },
+  "tree.apple": {
+   "file": "tree_apple.glb",
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "tiers": [
+    0,
+    1,
+    2
+   ]
+  },
+  "tree.aspen": {
+   "file": "tree_aspen.glb",
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "tiers": [
+    0,
+    1,
+    2
+   ]
+  },
+  "tree.birch": {
+   "file": "tree_birch.glb",
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "tiers": [
+    0,
+    1,
+    2
+   ]
+  },
+  "tree.cherry": {
+   "file": "tree_cherry.glb",
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "tiers": [
+    0,
+    1,
+    2
+   ]
+  },
+  "tree.def_conifer": {
+   "file": "tree_def_conifer.glb",
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "tiers": [
+    0,
+    1,
+    2
+   ]
+  },
+  "tree.def_oval": {
+   "file": "tree_def_oval.glb",
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "tiers": [
+    0,
+    1,
+    2
+   ]
+  },
+  "tree.def_slender": {
+   "file": "tree_def_slender.glb",
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "tiers": [
+    0,
+    1,
+    2
+   ]
+  },
+  "tree.def_spreading": {
+   "file": "tree_def_spreading.glb",
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "tiers": [
+    0,
+    1,
+    2
+   ]
+  },
+  "tree.fir": {
+   "file": "tree_fir.glb",
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "tiers": [
+    0,
+    1,
+    2
+   ]
+  },
+  "tree.larch": {
+   "file": "tree_larch.glb",
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "tiers": [
+    0,
+    1,
+    2
+   ]
+  },
+  "tree.oak": {
+   "file": "tree_oak.glb",
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "tiers": [
+    0,
+    1,
+    2
+   ]
+  },
+  "tree.pine": {
+   "file": "tree_pine.glb",
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "tiers": [
+    0,
+    1,
+    2
+   ]
+  },
+  "tree.spruce": {
+   "file": "tree_spruce.glb",
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "tiers": [
+    0,
+    1,
+    2
+   ]
+  },
+  "tree.willow": {
+   "file": "tree_willow.glb",
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "tiers": [
+    0,
+    1,
+    2
+   ]
+  }
+ },
+ "unit_frame": "base y=0, height 1, half-width 0.5 (re-normalised on load)",
+ "version": 1
+}

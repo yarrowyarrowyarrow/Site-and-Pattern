@@ -20,7 +20,7 @@ from .flora_shrubs import build_shrub
 from .flora_trees import build_tree
 from .manifest import asset_table, write_manifest
 from .mesh_ops import decimate_to_budget, get_collection, make_empty, \
-    tri_count, unit_frame
+    tri_count, unit_frame, wipe_collection
 
 # Grid spacing when building many assets in one scene (MCP inspection).
 _GRID = 2.5
@@ -41,9 +41,18 @@ def _check_budget(key, objs, budget):
 
 
 def build_asset(key, spec=None, seed_salt=""):
-    """(Re)build one asset into collection `key`; returns {unit: tris}."""
-    spec = spec or asset_table()[key]
-    coll = get_collection(key, wipe=True)
+    """(Re)build one asset into collection `key`; returns {unit: tris}.
+
+    Wipes EVERY generated collection first: Blender object names are global
+    to the .blend, and the viewer looks parts/nodes up by exact name — a
+    second asset using 'Body' or 'tier0_bark' would get renamed 'Body.001'
+    and silently fail to load. One asset is resident at a time.
+    """
+    table = asset_table()
+    spec = spec or table[key]
+    for k in table:
+        wipe_collection(k)
+    coll = get_collection(key, wipe=False)
     rng = random.Random(C.seed_for(key + seed_salt))
     tris = {}
 

@@ -1,0 +1,112 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+  html,body{margin:0;background:#101815;color:#dfe;font:14px system-ui}
+  iframe{width:1280px;height:800px;border:0;display:block}
+  #status{position:fixed;left:8px;top:8px;background:#000a;padding:6px 10px;
+          z-index:99;font-weight:600}
+</style></head><body>
+<div id="status">booting…</div>
+<iframe id="v" src="scene3d.html"></iframe>
+<script>
+// Temporary verification probe (not shipped): pushes a synthetic scene that
+// exercises every archetype family, then reports whether the GLB model
+// registry went active — via the window.glb* functions (let-globals inside
+// the iframe aren't reachable, the functions are).
+const plants = [];
+let pid = 1;
+function add(x, y, p) {
+  plants.push(Object.assign({
+    plant_id: pid++, common_name: p.g || 'plant', x: x, y: y,
+    height_m: 1, canopy_m: 1, plant_type: 'wildflower', genus: '',
+    foliage_type: 'herbaceous', scale_factor: 1, spread_factor: 1,
+    spread_rate: 0, growth_curve: 'steady', color: '#5a8f4e',
+    flower_color: '', flower_form: 'none', bloom_start: 0, bloom_end: 0,
+    fruit_color: '', fruit_start: 0, fruit_end: 0, opacity: 1, health: 1,
+    health_state: 'healthy',
+  }, p));
+}
+// trees: conifer kinds + deciduous genus profiles + def forms
+add(-12, 8, {plant_type:'tree', genus:'picea', foliage_type:'evergreen', height_m:9, canopy_m:4, g:'spruce'});
+add(-6, 8,  {plant_type:'tree', genus:'pinus', foliage_type:'evergreen', height_m:8, canopy_m:5, g:'pine'});
+add(0, 8,   {plant_type:'tree', genus:'larix', foliage_type:'deciduous', height_m:9, canopy_m:4, g:'larch'});
+add(6, 8,   {plant_type:'tree', genus:'populus', foliage_type:'deciduous', height_m:10, canopy_m:4, g:'aspen'});
+add(12, 8,  {plant_type:'tree', genus:'quercus', foliage_type:'deciduous', height_m:8, canopy_m:8, g:'oak'});
+add(18, 8,  {plant_type:'tree', genus:'betula', foliage_type:'deciduous', height_m:9, canopy_m:5, g:'birch'});
+// shrubs: the five silhouettes
+add(-12, 2, {plant_type:'shrub', genus:'amelanchier', foliage_type:'deciduous', height_m:3, canopy_m:2.5, g:'saskatoon(vase)'});
+add(-7, 2,  {plant_type:'shrub', genus:'cornus', foliage_type:'deciduous', height_m:2.5, canopy_m:3, g:'dogwood(spreading)'});
+add(-2, 2,  {plant_type:'shrub', genus:'rosa', foliage_type:'deciduous', height_m:1.5, canopy_m:1.8, g:'rose(mound)'});
+add(2, 2,   {plant_type:'shrub', genus:'ribes', foliage_type:'deciduous', height_m:1.5, canopy_m:1.5, g:'currant(thicket)'});
+add(6, 2,   {plant_type:'shrub', genus:'artemisia', foliage_type:'semi-evergreen', height_m:1.2, canopy_m:1.4, g:'sage(irregular)'});
+// herbs: the seven forms
+add(-12, -3, {genus:'chamaenerion', height_m:1.2, canopy_m:0.5, g:'fireweed(erect)'});
+add(-9, -3,  {genus:'achillea', height_m:0.6, canopy_m:0.5, g:'yarrow(ferny)'});
+add(-6, -3,  {genus:'erigeron', height_m:0.5, canopy_m:0.4, g:'fleabane(rosette)'});
+add(-3, -3,  {genus:'monarda', height_m:0.8, canopy_m:0.6, g:'beebalm(clump)'});
+add(0, -3,   {genus:'allium', height_m:0.5, canopy_m:0.3, g:'onion(grassy)'});
+add(3, -3,   {genus:'antennaria', height_m:0.15, canopy_m:0.4, g:'pussytoes(mat)'});
+add(6, -3,   {plant_type:'fern', genus:'athyrium', height_m:0.7, canopy_m:0.8, g:'fern'});
+// layers
+add(10, -3,  {plant_type:'grass', genus:'bouteloua', height_m:0.5, canopy_m:0.5, g:'grass'});
+add(13, -3,  {plant_type:'aquatic', genus:'typha', height_m:1.5, canopy_m:0.6, g:'cattail'});
+add(16, -3,  {plant_type:'vine', genus:'clematis', height_m:1.5, canopy_m:1.2, g:'vine'});
+add(19, -3,  {plant_type:'groundcover', genus:'fragaria', height_m:0.1, canopy_m:0.8, g:'strawberry'});
+
+const q = new URLSearchParams(location.search);
+const month = parseInt(q.get('month') || '7', 10);
+const close = q.get('close') === '1';
+const B = close ? {min_x: -5, min_y: -5, max_x: 7, max_y: 9}
+                : {min_x: -16, min_y: -8, max_x: 24, max_y: 14};
+const scene = {
+  version: 1, origin: {lat: 51.05, lng: -114.07},
+  bounds: B,
+  boundary: [[B.min_x,B.min_y],[B.max_x,B.min_y],[B.max_x,B.max_y],[B.min_x,B.max_y]],
+  month: month, year: 30, is_night: false,
+  sun: {azimuth_deg: 200, altitude_deg: 48},
+  plants: plants, buildings: [], structures: [], scan_points: [], splat: null,
+  terrain: null,
+};
+const wildlife = [
+  {kind:'bee', name:'Bumble bee', x:-2, y:5, h:1.4, seed:11, route:[[-2,5,1.4],[4,4,1.2]],
+   app:{kind:'bee', fuzz:'#e0a428', dark:'#241c12', bands:2, shape:'round', size:1.1}},
+  {kind:'butterfly', name:'Monarch', x:2, y:0, h:1.2, seed:23, route:[[2,0,1.2],[-6,1,1.0]],
+   app:{kind:'butterfly', fore:'#e58121', hind:'#c96a12', edge:'#2a1c10', size:1.1}},
+  {kind:'bird', name:'Chickadee', x:6, y:7, h:2.4, seed:31, route:[[6,7,2.4]],
+   app:{kind:'bird', body:'#8a8f96', belly:'#e8e2d4', wing:'#5b6675', size:0.9}},
+  {kind:'beetle', name:'Ladybug', x:-4, y:-3, h:0.3, seed:41, route:[[-4,-3,0.3]],
+   app:{kind:'beetle', body:'#c23b2a', spots:true, size:1}},
+  {kind:'fly', name:'Hover fly', x:0, y:-1, h:0.8, seed:51, route:[[0,-1,0.8]],
+   app:{kind:'fly', body:'#c9a52e', wing:'#eef4f8', elongate:false, size:1}},
+];
+
+const v = document.getElementById('v');
+const status = document.getElementById('status');
+let pushed = false, t0 = performance.now();
+const timer = setInterval(() => {
+  const w = v.contentWindow;
+  if (!w) return;
+  if (!pushed && typeof w.permaSetScene === 'function') {
+    w.permaSetScene(scene);
+    if (typeof w.permaSetWildlife === 'function') w.permaSetWildlife(wildlife, null);
+    pushed = true;
+  }
+  if (pushed && typeof w.glbTreeArch === 'function') {
+    const arch = w.glbTreeArch('conifer', 'spruce', 'spruce', 'slender', 2);
+    const n = w.glbSharedGeos ? w.glbSharedGeos().length : -1;
+    if (arch) {
+      status.textContent = 'MODELS ACTIVE masters=' + n;
+      document.title = 'MODELS_ACTIVE_' + n;
+      // one more scene push so everything rebuilds from GLBs deterministically
+      w.permaSetScene(scene);
+      if (typeof w.permaSetWildlife === 'function') w.permaSetWildlife(wildlife, null);
+      clearInterval(timer);
+      return;
+    }
+  }
+  if (performance.now() - t0 > 20000) {
+    status.textContent = 'TIMEOUT: procedural fallback only';
+    document.title = 'MODELS_FALLBACK';
+    clearInterval(timer);
+  }
+}, 250);
+</script></body></html>
