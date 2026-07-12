@@ -5,6 +5,13 @@ families: **plant-body geometry archetypes** (procedural meshes) and **flower
 billboard sprites** (camera-facing textured points). This doc is the catalogue;
 the **live gallery** below lets you rotate and inspect each one.
 
+> **Since V2.27** the procedural plant/wildlife geometry documented here is the
+> **built-in fallback set**: when Blender-generated GLB archetypes exist under
+> `html/assets/models/`, the viewer renders those instead, per archetype, and
+> falls back to these forms for anything missing. The GLB pipeline and its
+> generator↔viewer contract live in [`3D_ASSETS.md`](3D_ASSETS.md). Flower and
+> berry sprites below are unaffected — they layer on top of either geometry.
+
 ## See them live
 
 **In the app:** **View → 3D Sprite Gallery…** — a native window that drives the

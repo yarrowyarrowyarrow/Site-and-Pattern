@@ -160,6 +160,31 @@ builder-function names (`buildConiferGeo`, `generateDaVinciTree`,
   the docs image) whenever sprite forms or exemplar seed data change.
 - `tests/test_sprite_gallery.py` guards the scene set.
 
+## GLB model assets (09-models.js, V2.27)
+
+Blender-generated low-poly GLB archetypes under `html/assets/models/`
+(manifest + 37 files) render **in place of** the procedural geometry above,
+per archetype, with the procedural builders as the **permanent fallback** —
+never delete them. Chunk `html/scene3d/09-models.js` fetches the manifest at
+boot (fire-and-forget, the Spark idiom), and on ready clears the archetype
+caches + re-pushes `lastSceneObj` (the `permaSetQuality` idiom). The lookups
+(`window.glbTreeArch/glbShrubArch/glbHerbArch/glbLayerArch/glbCritter`) are
+consumed GLB-first in `04-quality.js` and `07-wildlife.js`.
+
+Rules that keep it green:
+- **09 registers NO `window.perma*` hooks** (the bridge contract is
+  bidirectional); the `window.glb*` functions are invisible to it.
+- Imported GLB **materials are discarded**; geometry joins the viewer's own
+  `plantMaterial`s. `COLOR_0` is grayscale AO — all seasonal/health tints
+  multiply through. Fauna materials are swapped by NAME (`MatFuzz`…).
+- GLB master geometries are protected from `disposeDesignGroup` via
+  `window.glbSharedGeos` (05-flowers.js) — keep that hook if you touch
+  disposal.
+- The generator lives in `scripts/blender/assetlib` (headless + Blender-MCP,
+  one shared build path); contract + regen commands: `docs/3D_ASSETS.md` and
+  `scripts/blender/README.md`. Smoke probe: `html/model_probe.html`
+  (`?month=1` winter bareness, `?close=1` critters).
+
 ## Gaussian-splat photoreal backdrop (V1.65)
 
 Pipeline, end to end — Qt-free core in `src/splat_backdrop.py`, glue in
@@ -228,6 +253,8 @@ persisted — the footprints are). Dialog/wiring: `src/scan_import_dialog.py`.
 | `src/scan_import.py` | `tests/test_scan_import.py`, `tests/test_footprint_ndsm.py`, `tests/test_footprint_extract.py` |
 | `src/scene_wildlife.py` | `tests/test_scene_wildlife.py` |
 | `src/sprite_gallery.py` / sprite forms | `tests/test_sprite_gallery.py` (+ regenerate the gallery JSON) |
+| `html/scene3d/09-models.js` / `html/assets/models/` | `tests/test_model_assets.py` + `tests/test_scene3d_assets.py` + `tests/test_bridge_contract.py` |
+| `scripts/blender/assetlib` generators | regenerate (`docs/3D_ASSETS.md`), then `tests/test_model_assets.py` + the model_probe screenshots |
 | `src/scene3d_window.py` / `src/map3d_widget.py` | `tests/test_scene3d_window.py`, `tests/test_map3d_widget.py` (Qt-gated; self-skip headless) |
 
 ## Validation

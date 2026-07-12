@@ -8,10 +8,13 @@
 <div id="status">booting…</div>
 <iframe id="v" src="scene3d.html"></iframe>
 <script>
-// Temporary verification probe (not shipped): pushes a synthetic scene that
-// exercises every archetype family, then reports whether the GLB model
-// registry went active — via the window.glb* functions (let-globals inside
-// the iframe aren't reachable, the functions are).
+// GLB model smoke probe (dev page, sprite_gallery.html precedent): pushes a
+// synthetic scene exercising every archetype family + five critter kinds,
+// then reports whether the GLB registry went active — via the window.glb*
+// functions (let-globals inside the iframe aren't reachable; functions are).
+// Query params: ?month=1 winter-bareness check · ?close=1 critter close-up.
+// Headless commands: docs/3D_ASSETS.md "Smoke probe". Rename the
+// html/assets/models dir and reload to prove the procedural fallback.
 const plants = [];
 let pid = 1;
 function add(x, y, p) {
