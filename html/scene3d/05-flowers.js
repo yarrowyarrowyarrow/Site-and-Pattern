@@ -337,6 +337,13 @@ function buildScanPoints(group, pts) {
 
 function buildStructures(group, structures) {
   for (const s of structures || []) {
+    // Blender GLB structure first (09-models.js), box as the fallback.
+    const glb = window.glbStructure && window.glbStructure(s);
+    if (glb) {
+      glb.position.set(s.x, terrainHeightAt(s.x, s.y, lastTerrain), -s.y);
+      group.add(glb);
+      continue;
+    }
     const size = Math.max(0.3, s.size_m || 1), h = Math.max(0.3, s.height_m || 1);
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(size, h, size),

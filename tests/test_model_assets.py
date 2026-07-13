@@ -35,7 +35,8 @@ _SCENE3D = os.path.join(_ROOT, "html", "scene3d")
 
 # Mirrors assetlib/conventions.py TRI_BUDGETS (comment there points here).
 _TRI_BUDGETS = {"tree_tier0": 1200, "tree_tier1": 2200, "tree_tier2": 3500,
-                "shrub": 2000, "herb": 1200, "layer": 900, "fauna": 1500}
+                "shrub": 2000, "herb": 1200, "layer": 900, "fauna": 1500,
+                "structure": 1500}
 
 
 def _read(path):
@@ -105,7 +106,7 @@ class ModelAssetsTest(unittest.TestCase):
     def setUpClass(cls):
         cls.mf = json.loads(_read(_MANIFEST))
         cls.gltf = {}
-        for section in ("plants", "fauna"):
+        for section in ("plants", "fauna", "structures"):
             for key, entry in cls.mf.get(section, {}).items():
                 path = os.path.join(_MODELS, entry["file"])
                 if os.path.isfile(path):
@@ -115,14 +116,14 @@ class ModelAssetsTest(unittest.TestCase):
 
     def test_manifest_version_and_files(self):
         self.assertEqual(self.mf.get("version"), 1)
-        for section in ("plants", "fauna"):
+        for section in ("plants", "fauna", "structures"):
             for key, entry in self.mf.get(section, {}).items():
                 path = os.path.join(_MODELS, entry["file"])
                 self.assertTrue(os.path.isfile(path),
                                 f"{section}.{key}: missing {entry['file']}")
 
     def test_no_orphan_glbs(self):
-        referenced = {e["file"] for s in ("plants", "fauna")
+        referenced = {e["file"] for s in ("plants", "fauna", "structures")
                       for e in self.mf.get(s, {}).values()}
         on_disk = {f for f in os.listdir(_MODELS) if f.endswith(".glb")}
         self.assertEqual(on_disk - referenced, set(),
@@ -240,6 +241,49 @@ class ModelAssetsTest(unittest.TestCase):
                 if node in ("WingL2", "WingR2"):
                     found = any(p + node in names for p in ["darner_", ""])
                 self.assertTrue(found, f"fauna.{key}: node {node} missing")
+
+    def test_structure_keys_match_catalogue(self):
+        # The placeable ids are string literals in src/db/structures.py;
+        # the existing_* ids use constants, so this regex excludes them.
+        src = _read(os.path.join(_ROOT, "src", "db", "structures.py"))
+        ids = set(re.findall(r'"id":\s*"(\w+)"', src))
+        section = self.mf.get("structures", {})
+        if not section:
+            self.skipTest("manifest has no structures section yet")
+        self.assertEqual(set(section), ids,
+                         "manifest structure keys != placeable catalogue ids")
+        for key, entry in section.items():
+            self.assertIn(entry.get("scale_mode"), ("uniform", "footprint"),
+                          f"structure.{key}: bad scale_mode")
+            self.assertGreater(entry.get("size_m", 0), 0)
+            self.assertGreater(entry.get("height_m", 0), 0)
+
+    def test_structure_glbs_sane(self):
+        for key, entry in self.mf.get("structures", {}).items():
+            gltf, _ = self.gltf[entry["file"]]
+            half_max = entry["size_m"] * 0.60      # authored long side / 2 + slack
+            lo_y, hi_y, half = None, 0.0, 0.0
+            for mesh in gltf.get("meshes", []):
+                for prim in mesh.get("primitives", []):
+                    attrs = prim.get("attributes", {})
+                    self.assertIn("COLOR_0", attrs,
+                                  f"structure.{key}: no baked AO")
+                    acc = gltf["accessors"][attrs["POSITION"]]
+                    mn, mx = acc["min"], acc["max"]
+                    lo_y = mn[1] if lo_y is None else min(lo_y, mn[1])
+                    hi_y = max(hi_y, mx[1])
+                    half = max(half, abs(mn[0]), abs(mx[0]),
+                               abs(mn[2]), abs(mx[2]))
+            # Stones/berms seat INTO the ground by design — allow a
+            # shallow burial, but catch a whole sunken asset.
+            self.assertGreaterEqual(lo_y, -0.15, f"{key}: below ground")
+            self.assertLessEqual(half, half_max,
+                                 f"{key}: wider than authored size_m")
+            self.assertLessEqual(hi_y, entry["height_m"] * 1.3 + 0.15,
+                                 f"{key}: taller than authored height_m")
+            self.assertLessEqual(_tri_count(gltf),
+                                 _TRI_BUDGETS["structure"],
+                                 f"structure.{key}: over triangle budget")
 
     def test_fauna_materials_present(self):
         for key, entry in self.mf["fauna"].items():

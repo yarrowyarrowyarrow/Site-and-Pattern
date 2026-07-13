@@ -388,6 +388,98 @@
    ]
   }
  },
+ "structures": {
+  "bee_hotel": {
+   "file": "struct_bee_hotel.glb",
+   "height_m": 1.6,
+   "scale_mode": "uniform",
+   "size_m": 0.6
+  },
+  "brush_pile": {
+   "file": "struct_brush_pile.glb",
+   "height_m": 1.0,
+   "scale_mode": "uniform",
+   "size_m": 2.5
+  },
+  "compost_bin": {
+   "file": "struct_compost_bin.glb",
+   "height_m": 1.0,
+   "scale_mode": "uniform",
+   "size_m": 1.5
+  },
+  "fence": {
+   "file": "struct_fence.glb",
+   "height_m": 1.25,
+   "scale_mode": "footprint",
+   "size_m": 5.0
+  },
+  "fire_pit": {
+   "file": "struct_fire_pit.glb",
+   "height_m": 0.45,
+   "scale_mode": "footprint",
+   "size_m": 2.0
+  },
+  "native_bee_log": {
+   "file": "struct_native_bee_log.glb",
+   "height_m": 0.45,
+   "scale_mode": "uniform",
+   "size_m": 1.2
+  },
+  "native_lawn_patch": {
+   "file": "struct_native_lawn_patch.glb",
+   "height_m": 0.1,
+   "scale_mode": "footprint",
+   "size_m": 6.0
+  },
+  "pond": {
+   "file": "struct_pond.glb",
+   "height_m": 0.35,
+   "scale_mode": "footprint",
+   "size_m": 6.0
+  },
+  "rain_barrel": {
+   "file": "struct_rain_barrel.glb",
+   "height_m": 1.3,
+   "scale_mode": "uniform",
+   "size_m": 0.8
+  },
+  "rain_garden": {
+   "file": "struct_rain_garden.glb",
+   "height_m": 0.35,
+   "scale_mode": "footprint",
+   "size_m": 4.0
+  },
+  "raised_bed": {
+   "file": "struct_raised_bed.glb",
+   "height_m": 0.45,
+   "scale_mode": "footprint",
+   "size_m": 3.0
+  },
+  "rock_xeriscape": {
+   "file": "struct_rock_xeriscape.glb",
+   "height_m": 0.6,
+   "scale_mode": "footprint",
+   "size_m": 3.0
+  },
+  "shed": {
+   "file": "struct_shed.glb",
+   "height_m": 2.4,
+   "scale_mode": "uniform",
+   "size_m": 3.0
+  },
+  "snag": {
+   "file": "struct_snag.glb",
+   "height_m": 3.5,
+   "scale_mode": "uniform",
+   "size_m": 1.0
+  },
+  "swale": {
+   "file": "struct_swale.glb",
+   "height_m": 0.4,
+   "scale_mode": "footprint",
+   "size_m": 10.0
+  }
+ },
  "unit_frame": "base y=0, height 1, half-width 0.5 (re-normalised on load)",
  "version": 1
 }

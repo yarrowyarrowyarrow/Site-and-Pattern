@@ -180,6 +180,9 @@ Rules that keep it green:
 - GLB master geometries are protected from `disposeDesignGroup` via
   `window.glbSharedGeos` (05-flowers.js) — keep that hook if you touch
   disposal.
+- Structures (`glbStructure`, consumed in 05-flowers.js buildStructures)
+  are the one family that KEEPS its GLB materials — real-metre assets,
+  cloned per placement, footprint-scaled by size_m; box fallback stays.
 - The generator lives in `scripts/blender/assetlib` (headless + Blender-MCP,
   one shared build path); contract + regen commands: `docs/3D_ASSETS.md` and
   `scripts/blender/README.md`. Smoke probe: `html/model_probe.html`

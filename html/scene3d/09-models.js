@@ -28,6 +28,7 @@
 let MODEL_STATE = 'loading';        // 'loading' | 'ready' | 'absent'
 const MODEL_PLANTS = new Map();     // manifest key → {tiers:{n:{bark,foliage}}} | {parts} | {variants:[geo]}
 const MODEL_FAUNA = new Map();      // fauna key → {template, spec}
+const MODEL_STRUCTS = new Map();    // struct_id → {template, spec}
 let MODEL_COUNTS = null;            // {plants, fauna} once ready (for the log line)
 
 // Every GLB master geometry, so disposeDesignGroup can protect them the same
@@ -127,6 +128,16 @@ function _glbLoadFauna(loader, key, spec) {
   });
 }
 
+// Structures keep their authored GLB materials (fixed real-world colours —
+// wood/stone/water; nothing seasonal), so the template is stored whole and
+// cloned per placement.
+function _glbLoadStruct(loader, key, spec) {
+  return loader.loadAsync('./assets/models/' + spec.file).then((gltf) => {
+    gltf.scene.updateMatrixWorld(true);
+    MODEL_STRUCTS.set(key, { template: gltf.scene, spec });
+  });
+}
+
 // Fire-and-forget boot load (the Spark idiom from 01-core.js): the first
 // render never waits on models. When everything settles and at least one
 // asset loaded, drop the archetype caches and re-push the last scene — the
@@ -144,14 +155,20 @@ function _glbLoadFauna(loader, key, spec) {
       for (const [key, spec] of Object.entries(mf.fauna || {}))
         jobs.push(_glbLoadFauna(loader, key, spec)
           .catch((e) => console.info('[models] fauna ' + key + ' skipped: ' + e.message)));
+      for (const [key, spec] of Object.entries(mf.structures || {}))
+        jobs.push(_glbLoadStruct(loader, key, spec)
+          .catch((e) => console.info('[models] structure ' + key + ' skipped: ' + e.message)));
       return Promise.allSettled(jobs);
     })
     .then(() => {
-      if (!MODEL_PLANTS.size && !MODEL_FAUNA.size) throw new Error('nothing loaded');
+      if (!MODEL_PLANTS.size && !MODEL_FAUNA.size && !MODEL_STRUCTS.size)
+        throw new Error('nothing loaded');
       MODEL_STATE = 'ready';
-      MODEL_COUNTS = { plants: MODEL_PLANTS.size, fauna: MODEL_FAUNA.size };
+      MODEL_COUNTS = { plants: MODEL_PLANTS.size, fauna: MODEL_FAUNA.size,
+                       structs: MODEL_STRUCTS.size };
       console.info('[models] GLB assets active: ' + MODEL_COUNTS.plants
-        + ' plant archetypes, ' + MODEL_COUNTS.fauna + ' fauna kinds');
+        + ' plant archetypes, ' + MODEL_COUNTS.fauna + ' fauna kinds, '
+        + MODEL_COUNTS.structs + ' structures');
       // Rebuild with models (permaSetQuality idiom — camera stays put).
       TREE_CACHE.clear(); SHRUB_CACHE.clear(); HERB_CACHE.clear(); ARCH = null;
       if (lastSceneObj) window.permaSetScene(lastSceneObj);
@@ -355,5 +372,29 @@ function glbCritter(kind, app) {
   if (flap) g.userData.flap = flap;
   g.userData.anim = typeof spec.anim === 'function' ? spec.anim(app) : spec.anim;
   g.scale.setScalar(spec.scale(app));
+  return g;
+}
+
+// ── structures (called from 05-flowers.js buildStructures, GLB-first) ───────
+
+// One placed structure as a clone of its GLB template — geometry AND
+// materials cloned so disposeDesignGroup's per-rebuild dispose stays correct.
+// Scaled uniformly in XZ by the placement's size_m over the authored size;
+// 'footprint' assets (ponds, lawns, fences) keep their authored height,
+// 'uniform' objects scale with it. `s` is the scene structure record.
+function glbStructure(s) {
+  if (MODEL_STATE !== 'ready' || !s || !s.struct_id) return null;
+  const rec = MODEL_STRUCTS.get(s.struct_id);
+  if (!rec) return null;
+  const g = rec.template.clone(true);
+  g.traverse((o) => {
+    if (!o.isMesh) return;
+    o.geometry = o.geometry.clone();
+    o.material = o.material.clone();
+    o.castShadow = o.receiveShadow = true;
+  });
+  const sxz = Math.max(0.05, (s.size_m || rec.spec.size_m) / rec.spec.size_m);
+  const sy = rec.spec.scale_mode === 'footprint' ? 1 : sxz;
+  g.scale.set(sxz, sy, sxz);
   return g;
 }

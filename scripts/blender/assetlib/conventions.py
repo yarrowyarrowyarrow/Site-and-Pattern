@@ -65,6 +65,7 @@ TRI_BUDGETS = {
     "herb": 1200,
     "layer": 900,
     "fauna": 1500,
+    "structure": 1500,
 }
 
 # Fauna node names (the JS animation/appearance contract).

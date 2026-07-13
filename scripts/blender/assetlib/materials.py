@@ -69,3 +69,36 @@ def fauna_material(name):
         if "Alpha" in bsdf.inputs:
             bsdf.inputs["Alpha"].default_value = 0.3
     return mat
+
+
+# Structure materials are KEPT by the viewer (structures have fixed real-world
+# colours — wood, stone, water — with no seasonal tinting), so unlike flora
+# these colours ship. Values are sRGB (converted to linear at material build);
+# baked COLOR_0 AO multiplies through in three.js.
+_STRUCTURE_PALETTE = {
+    "MatWood":     ((0.42, 0.32, 0.21, 1.0), 0.85, 0.0),
+    "MatWoodDark": ((0.28, 0.21, 0.14, 1.0), 0.9, 0.0),
+    "MatStone":    ((0.53, 0.52, 0.49, 1.0), 0.95, 0.0),
+    "MatGravel":   ((0.42, 0.39, 0.33, 1.0), 1.0, 0.0),
+    "MatWater":    ((0.20, 0.42, 0.53, 1.0), 0.25, 0.0),
+    "MatSoil":     ((0.27, 0.20, 0.13, 1.0), 1.0, 0.0),
+    "MatTurf":     ((0.30, 0.42, 0.23, 1.0), 1.0, 0.0),
+    "MatMetal":    ((0.42, 0.45, 0.47, 1.0), 0.45, 0.6),
+    "MatAsh":      ((0.21, 0.20, 0.19, 1.0), 1.0, 0.0),
+    "MatHole":     ((0.12, 0.09, 0.07, 1.0), 1.0, 0.0),
+    "MatBark":     ((0.33, 0.26, 0.18, 1.0), 0.95, 0.0),
+}
+
+
+def _srgb_to_linear(c):
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def structure_material(name):
+    # The palette above is authored in sRGB (what the eye expects); glTF
+    # baseColorFactor is LINEAR — without this conversion everything ships
+    # ~1.5 stops too bright and washes out under the viewer's ACES pass.
+    rgba, rough, metal = _STRUCTURE_PALETTE.get(
+        name, ((0.5, 0.5, 0.5, 1.0), 0.9, 0.0))
+    lin = tuple(_srgb_to_linear(c) for c in rgba[:3]) + (rgba[3],)
+    return _new_principled(name, lin, rough, metal)

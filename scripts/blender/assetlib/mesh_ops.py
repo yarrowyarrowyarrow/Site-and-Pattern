@@ -93,6 +93,12 @@ def add_uv_ball(bm, radius, scale_xyz, matrix, u=10, v=8):
         bm, u_segments=u, v_segments=v, radius=radius, matrix=m, calc_uvs=False)
 
 
+def add_box(bm, size_xyz, matrix):
+    """An axis-aligned box of the given (x, y, z) size, centred by `matrix`."""
+    m = matrix @ Matrix.Diagonal((size_xyz[0], size_xyz[1], size_xyz[2], 1.0))
+    bmesh.ops.create_cube(bm, size=1.0, matrix=m, calc_uvs=False)
+
+
 def place(x=0.0, y=0.0, z=0.0, rot_z=0.0, tilt_y=0.0):
     """Translation @ RotZ(azimuth) @ RotY(tilt) — the builders' one idiom."""
     return (Matrix.Translation((x, y, z))
@@ -190,6 +196,26 @@ def unit_frame(objs):
             v.co.x *= s_xy
             v.co.y *= s_xy
             v.co.z = (v.co.z - lo.z) * s_z
+        me.update()
+
+
+def clamp_footprint(objs, max_half):
+    """Scale XZ (Blender XY) down so the joint footprint fits max_half.
+    Structures promise their authored size_m; a randomised builder (brush
+    pile branches) can sprawl past it — this reins the geometry back in."""
+    objs = [o for o in objs if o is not None]
+    if not objs:
+        return
+    lo, hi = _joint_bounds(objs)
+    half = max(abs(lo.x), abs(hi.x), abs(lo.y), abs(hi.y))
+    if half <= max_half:
+        return
+    f = max_half / half * 0.98
+    for obj in objs:
+        me = obj.data
+        for v in me.vertices:
+            v.co.x *= f
+            v.co.y *= f
         me.update()
 
 

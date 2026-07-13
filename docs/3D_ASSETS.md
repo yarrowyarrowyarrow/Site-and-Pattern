@@ -24,8 +24,9 @@ withering, and presence fades all keep working (P4, P5); silhouettes aim for
 | Herbs | erect, ferny, rosette, clump, grassy, mat, fern | `HERB_FORMS` growth form |
 | Layers | grass ×3, aquatic ×3, vine ×3, groundcover ×2 variants | plant_type bucket |
 | Fauna | bee, lep (butterfly+moth), bird, fly (hover+darner), beetle, bat, mammal | critter kind; species looks are tints |
+| Structures | all 15 placeables (pond, swale, rain garden, rain barrel, bee log, bee hotel, brush pile, snag, rock xeriscape, lawn patch, raised bed, compost bin, shed, fence, fire pit) | `struct_id` |
 
-37 GLBs + `manifest.json` under `html/assets/models/` — ~3.6 MB total, every
+52 GLBs + `manifest.json` under `html/assets/models/` — ~4 MB total, every
 asset within the triangle budgets in
 `scripts/blender/assetlib/conventions.py`.
 
@@ -85,6 +86,13 @@ Defined once in `scripts/blender/assetlib/conventions.py`; the loader side is
   (`hover_WingL`).
 - **Growth tiers:** trees ship `tier0/1/2` matching `tierFor(scale_factor)`;
   the young-tree structural simplification is authored, not decimated.
+- **Structures:** authored at REAL METRES (no unit frame) with their aspect
+  baked in (the scene sends `size_m` only — no rotation/width), and their
+  authored materials are KEPT (fixed real-world colours; the palette is
+  sRGB, converted to linear at export — glTF `baseColorFactor` is linear).
+  The viewer clones per placement and scales uniformly in XZ by
+  `size_m / authored size_m`; `scale_mode: "footprint"` (ponds, lawns,
+  fences, swales, beds) keeps the authored height, `"uniform"` scales it.
 
 ## Regenerating
 
@@ -128,9 +136,9 @@ Prove the fallback by renaming `html/assets/models/` and reloading — the
 viewer must render today's procedural look with one `console.info` and no
 error overlay.
 
-## Follow-ups (out of v1 scope)
+## Follow-ups (out of scope so far)
 
-The 15 habitat **structures** (`buildStructures` still extrudes plain boxes) —
-one GLB each keyed by `struct_id` is the natural next increment; the fly-mode
-avatar and spotlight critter stay procedural (camera-tuned); an `accent`
-third part (e.g. separate red dogwood canes) is reserved in the conventions.
+The fly-mode avatar and spotlight critter stay procedural (camera-tuned); an
+`accent` third part (e.g. separate red dogwood canes) is reserved in the
+conventions; structure rotation awaits a scene-contract field (the 2D map
+doesn't orient placeables either — parity).

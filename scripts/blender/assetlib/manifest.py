@@ -10,6 +10,7 @@ from . import conventions as C
 from .flora_herbs import HERB_FORMS, LAYER_KINDS
 from .flora_shrubs import SHRUB_FORMS
 from .flora_trees import TREE_ARCHETYPES
+from .structures import STRUCTURE_SPECS
 
 MANIFEST_NAME = "manifest.json"
 
@@ -61,17 +62,25 @@ def asset_table():
             "variants": variants, "parts": [C.PART_FOLIAGE]}
     for key, spec in FAUNA_TABLE.items():
         table[f"fauna.{key}"] = dict(spec, kind="fauna")
+    for sid, (size_m, height_m, scale_mode) in STRUCTURE_SPECS.items():
+        table[f"structure.{sid}"] = {
+            "kind": "structure", "file": f"struct_{sid}.glb",
+            "size_m": size_m, "height_m": height_m, "scale_mode": scale_mode}
     return table
 
 
 def manifest_dict(generator=""):
-    plants, fauna = {}, {}
+    plants, fauna, structures = {}, {}, {}
     for key, spec in asset_table().items():
         if spec["kind"] == "fauna":
             fauna[key.split(".", 1)[1]] = {
                 "file": spec["file"], "nodes": spec["nodes"],
                 "materials": spec["materials"],
                 "nominal_size": C.FAUNA_NOMINAL_SIZE}
+        elif spec["kind"] == "structure":
+            structures[key.split(".", 1)[1]] = {
+                "file": spec["file"], "size_m": spec["size_m"],
+                "height_m": spec["height_m"], "scale_mode": spec["scale_mode"]}
         else:
             entry = {"file": spec["file"], "parts": spec["parts"]}
             if "tiers" in spec:
@@ -85,6 +94,7 @@ def manifest_dict(generator=""):
         "unit_frame": "base y=0, height 1, half-width 0.5 (re-normalised on load)",
         "plants": plants,
         "fauna": fauna,
+        "structures": structures,
     }
 
 
@@ -93,7 +103,7 @@ def write_manifest(out_dir, generator=""):
     import os
     mf = manifest_dict(generator)
     missing = []
-    for section in ("plants", "fauna"):
+    for section in ("plants", "fauna", "structures"):
         for key, entry in mf[section].items():
             if not os.path.isfile(os.path.join(str(out_dir), entry["file"])):
                 missing.append(f"{section}.{key} -> {entry['file']}")

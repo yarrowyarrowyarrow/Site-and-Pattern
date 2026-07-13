@@ -18,9 +18,10 @@ from .fauna import build_critter
 from .flora_herbs import build_herb, build_layer
 from .flora_shrubs import build_shrub
 from .flora_trees import build_tree
+from .structures import build_structure
 from .manifest import asset_table, write_manifest
-from .mesh_ops import decimate_to_budget, get_collection, make_empty, \
-    tri_count, unit_frame, wipe_collection
+from .mesh_ops import clamp_footprint, decimate_to_budget, get_collection, \
+    make_empty, tri_count, unit_frame, wipe_collection
 
 # Grid spacing when building many assets in one scene (MCP inspection).
 _GRID = 2.5
@@ -115,6 +116,15 @@ def build_asset(key, spec=None, seed_salt=""):
         objs = build_critter(kind, rng, coll)
         tris["unit"] = _check_budget(
             key, objs, C.TRI_BUDGETS["fauna"])          # no AO (tinted flat)
+    elif spec["kind"] == "structure":
+        sid = key.split(".", 1)[1]
+        objs = build_structure(sid, rng, coll)          # REAL metres, no frame
+        clamp_footprint(objs, spec["size_m"] / 2)       # keep the size promise
+        for o in objs:
+            decimate_to_budget(o, C.TRI_BUDGETS["structure"])
+        bake_ao(objs, gradient=False, strength=0.6, max_dist=1.2,
+                seed_key=key)
+        tris["unit"] = _check_budget(key, objs, C.TRI_BUDGETS["structure"])
     else:
         raise KeyError(f"unknown asset kind for {key}")
     return tris

@@ -24,6 +24,7 @@ _SUBMODULES = (
     "flora_shrubs",
     "flora_herbs",
     "fauna",
+    "structures",
     "export_glb",
     "manifest",
     "build_all",
