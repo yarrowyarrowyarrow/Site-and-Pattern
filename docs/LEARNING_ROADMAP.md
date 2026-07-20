@@ -23,6 +23,25 @@ worse than gaps — but the phase order reflects real dependencies.
 
 ---
 
+## The workbook: lessons and live progress
+
+This document is the *map* — the why, the shape of the journey, the
+resources. The *trail* is the workbook in [`docs/learning/`](learning/):
+the same six phases cut into **33 numbered lessons**, each with an explicit
+Purpose, a concrete Aim, exact Steps, and a checkable "Done when" finish
+line. Progress is visible in real time:
+
+- tick lessons off in [`docs/learning/PROGRESS.md`](learning/PROGRESS.md),
+- run `python scripts/learning_progress.py` to see per-phase progress bars
+  and the next lesson queued up,
+- commit each tick (`Learning: L1.3 complete`) so `git log` becomes the
+  long-term record of the journey.
+
+Start at [`docs/learning/README.md`](learning/README.md). Read the rest of
+this page first, though — especially the next section.
+
+---
+
 ## How to use AI while you learn (read this first)
 
 The goal is less reliance, not zero contact. The trap isn't using AI — it's
