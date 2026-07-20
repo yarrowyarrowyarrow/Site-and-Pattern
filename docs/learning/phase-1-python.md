@@ -7,6 +7,23 @@ below); this repo is your field site, where every concept gets spotted in
 the wild within days of learning it. **Time:** ~25–30 hours across 6–10
 weeks. **Lessons:** 10.
 
+**Transferable skill:** core Python — the world's most-used programming
+language. Every hour here pays off in any codebase, notebook, or script
+you ever touch, not just this one.
+
+**Review gate** (retrieval practice — journal your answers from memory
+*before* looking anything up, then check): the command that runs a single
+test module; what `OK (skipped=202)` at the end of a suite run means; and
+the three git commands that show what changed, what's committed, and the
+recent history.
+
+Three phase-wide rules, straight from the method section of
+[README.md](README.md): **one course** — ATBS is the track, resist
+tutorial-hopping; **type everything** — no pasted code, ever; and consider
+keeping simple flashcards (paper or [Anki](https://apps.ankiweb.net)) for
+syntax you keep forgetting — three cards per lesson, reviewed at each
+session's warm-up, is plenty.
+
 Two standing tools for the whole phase:
 
 - **The REPL** — run `python` with no arguments from the repo folder and

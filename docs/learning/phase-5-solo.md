@@ -6,6 +6,15 @@ ladder). Each lesson follows the full professional loop: branch → change →
 test → commit → push. **Time:** open-ended — this phase *is* the practice
 of being this codebase's developer. **Lessons:** 5.
 
+**Transferable skill:** the professional change loop — branch, test-first,
+commit, push, review, and the scientific method of debugging. This
+workflow is near-identical on every software team in the world.
+
+**Review gate** (from memory, in the journal, then check): the triad
+pattern's three roles and which one is allowed to import Qt; the
+single-write-path rule and the guard that enforces it; and the wind
+call-map, hop by hop.
+
 Before starting, read two short house documents: the "Branch naming
 convention" section of `CLAUDE.md` (branches are `V<major>.<minor>`; a
 hook enforces it) and `.claude/skills/start-work/SKILL.md` (the

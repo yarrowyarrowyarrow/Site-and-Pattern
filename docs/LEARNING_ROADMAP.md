@@ -38,7 +38,31 @@ line. Progress is visible in real time:
   long-term record of the journey.
 
 Start at [`docs/learning/README.md`](learning/README.md). Read the rest of
-this page first, though — especially the next section.
+this page first, though — especially the next two sections.
+
+---
+
+## The practices that make it stick
+
+The curriculum is built on the same practices programming is learned with
+everywhere — none of them special to this repo, all of them applied to it.
+The workbook's README spells out the full method; the headlines:
+
+- **Type everything yourself** — never paste code you're learning from.
+- **Predict before you run** — a written wrong guess teaches more than a
+  lucky right one.
+- **Retrieve, don't reread** — explain from memory (journal, review gates);
+  struggling to recall is the learning happening.
+- **Short and often** — three or four 30–60 minute sessions a week beat a
+  Saturday marathon; spacing is when knowledge consolidates.
+- **Struggle 20 minutes, then ask small** — a hint, not an answer.
+- **Park downhill** — end each session by noting the exact next step.
+
+The lessons follow the PRIMM shape (Predict → Run → Investigate → Modify →
+Make), the standard progression for learning *from existing code* — which
+is precisely what learning a codebase is. And everything taught — terminal,
+git, Python, testing, SQL, debugging, code reading — is the portable,
+industry-standard toolkit; this repo is the field site, not the boundary.
 
 ---
 

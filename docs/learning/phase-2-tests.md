@@ -6,6 +6,15 @@ tests as worked examples, use failures as information, and finally add a
 test of your own to the real suite. **Time:** ~8 hours across 2–4 weeks.
 **Lessons:** 4.
 
+**Transferable skill:** reading and writing automated tests — the habit
+that separates professional code from hopeful code, in every language and
+every team.
+
+**Review gate** (from memory, in the journal, then check): the difference
+between `plant["key"]` and `plant.get("key")` on a missing key; what the
+*bottom* line of a traceback tells you versus the lines above it; and what
+`self` holds in a class method, in one sentence.
+
 Ritual: tick [PROGRESS.md](PROGRESS.md) → `python scripts/learning_progress.py`
 → commit `Learning: Lx.y complete`.
 

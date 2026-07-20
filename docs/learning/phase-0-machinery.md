@@ -4,6 +4,10 @@
 the app, the tests, and git. Everything later stands on these four skills.
 **Time:** ~5 hours across 1–2 weeks. **Lessons:** 4.
 
+**Transferable skill:** the universal developer cockpit. Terminal, git, and
+a test runner look essentially identical in every codebase on earth — what
+you learn this phase transfers to any software project, forever.
+
 After each lesson: tick its box in [PROGRESS.md](PROGRESS.md) and run
 `python scripts/learning_progress.py` to watch the bar move. (Committing
 your ticks starts in L0.4 — that lesson teaches you how.)

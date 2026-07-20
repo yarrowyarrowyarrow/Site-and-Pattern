@@ -37,6 +37,61 @@ the same way the rest of the repo is kept honest: if a lesson goes missing
 from the checklist, or a lesson loses its Purpose/Aim/Done-when, the test
 suite fails. The curriculum can't silently rot.
 
+## The method: practices these lessons are built on
+
+None of this is invented here — it's how programming is learned everywhere,
+applied to this codebase. Six practices carry the whole curriculum; the
+lessons assume you're using them even when they don't say so:
+
+1. **Type everything yourself.** Never copy-paste code you're learning
+   from — not from lessons, books, or AI. Typing is where syntax moves into
+   your fingers, and mistyping is where you meet the error messages you
+   need to know. (Copy-pasting *data* like coordinates is fine.)
+2. **Predict before you run.** Before running anything — a function, a
+   test, a query — write down what you expect. A confirmed prediction
+   builds confidence; a wrong one is a precision-guided lesson showing
+   exactly where your mental model differs from reality. Wrong predictions
+   are the most valuable thing this curriculum produces.
+3. **Retrieval beats rereading.** You learn when you pull knowledge *out*,
+   not when you put it in front of your eyes again. Hence the journal's
+   close-the-book rule, the "from memory" in so many Done-whens, and the
+   review gate at the top of every phase. Rereading feels productive and
+   isn't; struggling to remember feels unproductive and is.
+4. **Short and often beats long and rare.** Three or four 30–60 minute
+   sessions a week outperform one Saturday marathon — spacing is when the
+   brain consolidates. Programming is a physical skill in this respect;
+   nobody learns piano in monthly six-hour blocks.
+5. **Struggle for twenty minutes, then ask small.** Being stuck is where
+   learning happens — sit with a problem for ~20 minutes before seeking
+   help. Then ask for the *smallest* useful thing: a hint, a where-to-look,
+   an explanation of one line — never the whole answer. Log what unstuck
+   you; it's usually the thing to check first next time.
+6. **Park downhill.** End every session by writing tomorrow's first step in
+   the journal while it's obvious ("next: run the JOIN query on the fauna
+   table"). Restarting is the highest-friction moment in self-study — 
+   leave yourself a running start.
+
+Most lessons here follow the **PRIMM** cycle — Predict, Run, Investigate,
+Modify, Make — a sequence designed specifically for learning *from existing
+code*, which is exactly what learning a codebase is. You'll feel it: read
+and predict (L1.2), run and check (everywhere), investigate by stepping
+through (L1.4), modify and watch tests react (L2.2), make your own
+(L1.10, L2.3, all of Phase 5).
+
+**The session ritual** that stitches it together:
+
+- *Warm-up (3 min):* before opening anything, write in the journal what you
+  remember from last session — then check yourself.
+- *Work:* the lesson, with the six practices above.
+- *Wind-down (5 min):* journal what clicked and what's foggy, tick any
+  finished lesson, run the tracker, commit, park downhill.
+
+And one scope note: everything this curriculum teaches — terminal, git,
+Python, testing, SQL, debugging, code reading — is the standard, portable
+developer toolkit. You're learning it *on* Site & Pattern because owning
+this app is the goal, but nothing here is only true here. Each phase file
+names the transferable skill it builds.
+
 ## Anatomy of a lesson
 
 ```

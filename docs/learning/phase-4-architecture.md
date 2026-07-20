@@ -6,6 +6,16 @@ files in `src/` collapse into a handful of shapes. This phase is mostly
 *reading with intent*, and it ends with you drawing the whole app from
 memory. **Time:** ~12 hours across 4–6 weeks. **Lessons:** 5.
 
+**Transferable skill:** reading an unfamiliar codebase — navigating by
+search and pattern instead of scrolling, tracing behaviour across files,
+building a mental model you can draw. This is the skill senior developers
+actually get paid for, and it works on any repo.
+
+**Review gate** (from memory, in the journal, then check): sketch the
+plants / plant_fauna / fauna triangle and say why the middle table must
+exist; the change → bump → reseed chain in one sentence; and what a JOIN
+does, explained to someone who gardens but doesn't code.
+
 Ritual: tick [PROGRESS.md](PROGRESS.md) → `python scripts/learning_progress.py`
 → commit `Learning: Lx.y complete`.
 

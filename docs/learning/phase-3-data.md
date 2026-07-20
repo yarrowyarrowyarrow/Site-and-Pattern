@@ -6,6 +6,15 @@ phase teaches you SQL, the schema, and the full pipeline from JSON to
 screen, ending with a safe practice run of the repo's most important
 convention. **Time:** ~12 hours across 3–5 weeks. **Lessons:** 5.
 
+**Transferable skill:** SQL and data modelling. Nearly every serious
+application has a data layer, and SQL has outlived fifty years of
+languages that were going to replace it.
+
+**Review gate** (from memory, in the journal, then check): write the
+skeleton of a unittest test method — class line, method line, one
+assertion; the break-it game's five-beat rhythm; and the names of the
+three guard tests from L2.4 with one clause each on what they protect.
+
 Ritual: tick [PROGRESS.md](PROGRESS.md) → `python scripts/learning_progress.py`
 → commit `Learning: Lx.y complete`.
 
