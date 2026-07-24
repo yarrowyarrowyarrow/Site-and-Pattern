@@ -112,52 +112,78 @@
    "nominal_size": 1.0
   }
  },
- "generator": "assetlib 1 / Blender 4.2.22",
+ "generator": "assetlib 1 / Blender 4.2.23",
  "plants": {
   "herb.clump": {
    "file": "herb_clump.glb",
+   "half_width": {
+    "unit": 0.45045
+   },
    "parts": [
     "foliage"
    ]
   },
   "herb.erect": {
    "file": "herb_erect.glb",
+   "half_width": {
+    "unit": 0.41667
+   },
    "parts": [
     "foliage"
    ]
   },
   "herb.fern": {
    "file": "herb_fern.glb",
+   "half_width": {
+    "unit": 0.5
+   },
    "parts": [
     "foliage"
    ]
   },
   "herb.ferny": {
    "file": "herb_ferny.glb",
+   "half_width": {
+    "unit": 0.42017
+   },
    "parts": [
     "foliage"
    ]
   },
   "herb.grassy": {
    "file": "herb_grassy.glb",
+   "half_width": {
+    "unit": 0.37594
+   },
    "parts": [
     "foliage"
    ]
   },
   "herb.mat": {
    "file": "herb_mat.glb",
+   "half_width": {
+    "unit": 1.19048
+   },
    "parts": [
     "foliage"
    ]
   },
   "herb.rosette": {
    "file": "herb_rosette.glb",
+   "half_width": {
+    "unit": 0.60241
+   },
    "parts": [
     "foliage"
    ]
   },
   "layer.aquatic": {
    "file": "layer_aquatic.glb",
+   "half_width": {
+    "v0": 0.41667,
+    "v1": 0.41667,
+    "v2": 0.41667
+   },
    "parts": [
     "foliage"
    ],
@@ -165,6 +191,11 @@
   },
   "layer.grass": {
    "file": "layer_grass.glb",
+   "half_width": {
+    "v0": 0.38168,
+    "v1": 0.38168,
+    "v2": 0.38168
+   },
    "parts": [
     "foliage"
    ],
@@ -172,6 +203,10 @@
   },
   "layer.groundcover": {
    "file": "layer_groundcover.glb",
+   "half_width": {
+    "v0": 0.95348,
+    "v1": 1.06462
+   },
    "parts": [
     "foliage"
    ],
@@ -179,6 +214,11 @@
   },
   "layer.vine": {
    "file": "layer_vine.glb",
+   "half_width": {
+    "v0": 0.2907,
+    "v1": 0.2907,
+    "v2": 0.2907
+   },
    "parts": [
     "foliage"
    ],
@@ -186,6 +226,9 @@
   },
   "shrub.irregular": {
    "file": "shrub_irregular.glb",
+   "half_width": {
+    "unit": 0.4487
+   },
    "parts": [
     "bark",
     "foliage"
@@ -193,6 +236,9 @@
   },
   "shrub.mound": {
    "file": "shrub_mound.glb",
+   "half_width": {
+    "unit": 0.62321
+   },
    "parts": [
     "bark",
     "foliage"
@@ -200,6 +246,9 @@
   },
   "shrub.spreading": {
    "file": "shrub_spreading.glb",
+   "half_width": {
+    "unit": 0.59657
+   },
    "parts": [
     "bark",
     "foliage"
@@ -207,6 +256,9 @@
   },
   "shrub.thicket": {
    "file": "shrub_thicket.glb",
+   "half_width": {
+    "unit": 0.58201
+   },
    "parts": [
     "bark",
     "foliage"
@@ -214,6 +266,9 @@
   },
   "shrub.vase": {
    "file": "shrub_vase.glb",
+   "half_width": {
+    "unit": 0.45986
+   },
    "parts": [
     "bark",
     "foliage"
@@ -221,6 +276,11 @@
   },
   "tree.apple": {
    "file": "tree_apple.glb",
+   "half_width": {
+    "tier0": 0.39858,
+    "tier1": 0.39103,
+    "tier2": 0.35844
+   },
    "parts": [
     "bark",
     "foliage"
@@ -233,6 +293,11 @@
   },
   "tree.aspen": {
    "file": "tree_aspen.glb",
+   "half_width": {
+    "tier0": 0.20232,
+    "tier1": 0.17809,
+    "tier2": 0.19817
+   },
    "parts": [
     "bark",
     "foliage"
@@ -245,6 +310,11 @@
   },
   "tree.birch": {
    "file": "tree_birch.glb",
+   "half_width": {
+    "tier0": 0.19599,
+    "tier1": 0.22133,
+    "tier2": 0.20398
+   },
    "parts": [
     "bark",
     "foliage"
@@ -257,6 +327,11 @@
   },
   "tree.cherry": {
    "file": "tree_cherry.glb",
+   "half_width": {
+    "tier0": 0.24357,
+    "tier1": 0.26223,
+    "tier2": 0.26255
+   },
    "parts": [
     "bark",
     "foliage"
@@ -269,6 +344,11 @@
   },
   "tree.def_conifer": {
    "file": "tree_def_conifer.glb",
+   "half_width": {
+    "tier0": 0.16451,
+    "tier1": 0.16474,
+    "tier2": 0.16388
+   },
    "parts": [
     "bark",
     "foliage"
@@ -281,6 +361,11 @@
   },
   "tree.def_oval": {
    "file": "tree_def_oval.glb",
+   "half_width": {
+    "tier0": 0.26196,
+    "tier1": 0.23531,
+    "tier2": 0.25577
+   },
    "parts": [
     "bark",
     "foliage"
@@ -293,6 +378,11 @@
   },
   "tree.def_slender": {
    "file": "tree_def_slender.glb",
+   "half_width": {
+    "tier0": 0.18294,
+    "tier1": 0.18667,
+    "tier2": 0.18712
+   },
    "parts": [
     "bark",
     "foliage"
@@ -305,6 +395,11 @@
   },
   "tree.def_spreading": {
    "file": "tree_def_spreading.glb",
+   "half_width": {
+    "tier0": 0.39166,
+    "tier1": 0.39805,
+    "tier2": 0.40735
+   },
    "parts": [
     "bark",
     "foliage"
@@ -317,6 +412,11 @@
   },
   "tree.fir": {
    "file": "tree_fir.glb",
+   "half_width": {
+    "tier0": 0.15198,
+    "tier1": 0.15093,
+    "tier2": 0.15205
+   },
    "parts": [
     "bark",
     "foliage"
@@ -329,6 +429,11 @@
   },
   "tree.larch": {
    "file": "tree_larch.glb",
+   "half_width": {
+    "tier0": 0.14226,
+    "tier1": 0.14352,
+    "tier2": 0.14413
+   },
    "parts": [
     "bark",
     "foliage"
@@ -341,6 +446,11 @@
   },
   "tree.oak": {
    "file": "tree_oak.glb",
+   "half_width": {
+    "tier0": 0.40291,
+    "tier1": 0.39593,
+    "tier2": 0.40088
+   },
    "parts": [
     "bark",
     "foliage"
@@ -353,6 +463,11 @@
   },
   "tree.pine": {
    "file": "tree_pine.glb",
+   "half_width": {
+    "tier0": 0.12515,
+    "tier1": 0.129,
+    "tier2": 0.12551
+   },
    "parts": [
     "bark",
     "foliage"
@@ -365,6 +480,11 @@
   },
   "tree.spruce": {
    "file": "tree_spruce.glb",
+   "half_width": {
+    "tier0": 0.15089,
+    "tier1": 0.15177,
+    "tier2": 0.1528
+   },
    "parts": [
     "bark",
     "foliage"
@@ -377,6 +497,11 @@
   },
   "tree.willow": {
    "file": "tree_willow.glb",
+   "half_width": {
+    "tier0": 0.26256,
+    "tier1": 0.25441,
+    "tier2": 0.2502
+   },
    "parts": [
     "bark",
     "foliage"
@@ -480,6 +605,6 @@
    "size_m": 10.0
   }
  },
- "unit_frame": "base y=0, height 1, half-width 0.5 (re-normalised on load)",
+ "unit_frame": "base y=0, height 1, scaled UNIFORMLY so the authored aspect survives; each unit's half_width is published below and re-measured on load",
  "version": 1
 }

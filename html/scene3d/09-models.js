@@ -70,9 +70,11 @@ function _glbBakedGeo(mesh) {
 
 // Extract named part meshes under `root` into {partName: BufferGeometry},
 // re-normalised as one unit (same frame as the procedural archetypes: base
-// y=0, height 1, half-width 0.5 — normalizeUnit from 03-herbs.js). Blender
-// object names are unique per file, so parts inside a tier/variant node are
-// prefixed ('tier0_bark', 'v1_foliage'); bare names cover flat assets.
+// y=0, height 1, scaled uniformly so the asset's authored aspect survives —
+// normalizeUnit from 03-herbs.js, which stamps the measured half-width on each
+// geometry for instancing to divide by). Blender object names are unique per
+// file, so parts inside a tier/variant node are prefixed ('tier0_bark',
+// 'v1_foliage'); bare names cover flat assets.
 function _glbParts(root, partNames, prefix) {
   const out = {};
   for (const name of partNames) {

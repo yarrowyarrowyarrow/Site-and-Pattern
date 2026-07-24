@@ -69,7 +69,14 @@ def asset_table():
     return table
 
 
-def manifest_dict(generator=""):
+def manifest_dict(generator="", half_widths=None):
+    """The manifest as a dict. ``half_widths`` is ``{key: {unit: half_width}}``
+    measured by ``mesh_ops.unit_frame`` during the build — each flora unit's
+    authored horizontal half-extent at height 1. The viewer re-measures the same
+    number off the loaded geometry (it is the geometry's own property); the
+    manifest carries it so ``tests/test_model_assets.py`` can check the shipped
+    files really were authored at their species' aspect."""
+    half_widths = half_widths or {}
     plants, fauna, structures = {}, {}, {}
     for key, spec in asset_table().items():
         if spec["kind"] == "fauna":
@@ -87,21 +94,25 @@ def manifest_dict(generator=""):
                 entry["tiers"] = spec["tiers"]
             if "variants" in spec:
                 entry["variants"] = spec["variants"]
+            if key in half_widths:
+                entry["half_width"] = half_widths[key]
             plants[key] = entry
     return {
         "version": 1,
         "generator": generator,
-        "unit_frame": "base y=0, height 1, half-width 0.5 (re-normalised on load)",
+        "unit_frame": ("base y=0, height 1, scaled UNIFORMLY so the authored "
+                       "aspect survives; each unit's half_width is published "
+                       "below and re-measured on load"),
         "plants": plants,
         "fauna": fauna,
         "structures": structures,
     }
 
 
-def write_manifest(out_dir, generator=""):
+def write_manifest(out_dir, generator="", half_widths=None):
     """Write manifest.json and verify every referenced file exists."""
     import os
-    mf = manifest_dict(generator)
+    mf = manifest_dict(generator, half_widths)
     missing = []
     for section in ("plants", "fauna", "structures"):
         for key, entry in mf[section].items():

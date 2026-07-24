@@ -14,8 +14,12 @@ import math
 import bmesh
 from mathutils import Matrix, Vector
 
-from .mesh_ops import add_cone, add_ellipsoid, bm_to_object
+from .mesh_ops import (add_cone_between, add_ellipsoid, bm_to_object,
+                       shape_to_aspect)
 
+# Each form is shaped to its real height ÷ canopy, which lives with the rest of
+# the contract in conventions.SHRUB_ASPECT, so the instance transform stays
+# undistorted — see the unit-frame note there.
 SHRUB_FORMS = {
     "vase":      {"stems": (4, 6), "splay": 0.26, "stem_h": (0.78, 1.0),
                   "masses": (2, 3), "start": 0.45, "mass_r": (0.16, 0.24),
@@ -47,6 +51,10 @@ def build_shrub(form, rng, coll, name_prefix=""):
     bark = bmesh.new()
     fol = bmesh.new()
 
+    # Lay the clump out in the builder's natural frame, collecting every point,
+    # then pull it to the form's real aspect before stamping — stems shorten or
+    # splay wider, leaf masses keep their authored size and stay round.
+    stems, masses, pts = [], [], []
     n_stems = _rint(rng, *F["stems"])
     for i in range(n_stems):
         az = i / n_stems * math.tau + rng.random() * 0.7
@@ -54,7 +62,10 @@ def build_shrub(form, rng, coll, name_prefix=""):
         h = F["stem_h"][0] + rng.random() * (F["stem_h"][1] - F["stem_h"][0])
         rad = 0.016 + rng.random() * 0.012
         rot = Matrix.Rotation(az, 4, "Z") @ Matrix.Rotation(splay, 4, "Y")
-        add_cone(bark, rad, rad * 0.4, h, 4, rot)
+        base = Vector((0, 0, 0))
+        tip = rot @ Vector((0, 0, h))
+        stems.append((base, tip, rad))
+        pts.extend((base, tip))
         n_mass = _rint(rng, *F["masses"])
         for j in range(n_mass):
             t = F["start"] + (1 - F["start"]) * (
@@ -63,18 +74,34 @@ def build_shrub(form, rng, coll, name_prefix=""):
             r = F["mass_r"][0] + rng.random() * (F["mass_r"][1] - F["mass_r"][0])
             jitter = Vector(((rng.random() - 0.5) * 0.08,
                              (rng.random() - 0.5) * 0.08, 0))
-            m = Matrix.Translation(at + jitter) @ Matrix.Rotation(
-                rng.random() * math.pi, 4, "Z")
+            centre = at + jitter
             sc = tuple(F["shape"][k] * (0.85 + rng.random() * 0.3)
                        for k in range(3))
-            add_ellipsoid(fol, r, sc, m, subdiv=1)
+            masses.append((centre, r, sc, rng.random() * math.pi))
+            pts.append(centre)
     if F["basal"]:
         for _ in range(2 + int(rng.random() * 2)):
             r = 0.15 + rng.random() * 0.08
-            m = Matrix.Translation(((rng.random() - 0.5) * 0.34,
-                                    (rng.random() - 0.5) * 0.34,
-                                    0.10 + rng.random() * 0.12))
-            add_ellipsoid(fol, r, F["shape"], m, subdiv=1)
+            centre = Vector(((rng.random() - 0.5) * 0.34,
+                             (rng.random() - 0.5) * 0.34,
+                             0.10 + rng.random() * 0.12))
+            masses.append((centre, r, F["shape"], 0.0))
+            pts.append(centre)
+
+    # The leaf masses overhang the outermost stem tip, and on a shrub they are a
+    # large share of the silhouette — so each carries its own reach into the
+    # shaping solve (mesh_ops.shape_to_aspect).
+    shape_to_aspect(pts, C.SHRUB_ASPECT[form],
+                    radii=[0.0] * (2 * len(stems))
+                          + [r * max(sc[0], sc[1]) for _c, r, sc, _s in masses],
+                    radii_z=[0.0] * (2 * len(stems))
+                            + [r * sc[2] for _c, r, sc, _s in masses])
+
+    for base, tip, rad in stems:
+        add_cone_between(bark, base, tip, rad, rad * 0.4, 4)
+    for centre, r, sc, spin in masses:
+        m = Matrix.Translation(centre) @ Matrix.Rotation(spin, 4, "Z")
+        add_ellipsoid(fol, r, sc, m, subdiv=1)
 
     mat = preview_material()
     return {

@@ -6,10 +6,30 @@ is defined HERE, not scattered through the builders:
 Unit frame (flora)
     Blender is Z-up; the glTF exporter converts to Y-up (export_yup).
     Every flora asset unit (one tier of a tree, one variant of a layer, one
-    shrub/herb) is normalised to: base at z=0, total height exactly 1.0,
-    horizontal half-extent 0.5. The viewer re-normalises with the same math
-    (normalizeUnit) as belt-and-braces, then scales instances by
-    (canopy_m, height_m, canopy_m) — identical to the procedural archetypes.
+    shrub/herb) is normalised to: base at z=0, total height exactly 1.0 —
+    scaled UNIFORMLY, so the authored proportions survive. The resulting
+    horizontal half-extent is the asset's own, published per unit as
+    ``half_width`` in the manifest; the viewer measures the same number off
+    the loaded geometry and scales instances by
+    (canopy_m / (2·half_width), height_m, canopy_m / (2·half_width)) — which
+    still lands the instance on exactly (canopy_m wide, height_m tall).
+
+    WHY THIS IS NOT A FLAT 0.5 (the V2.29 fix). Until V2.28 every flora asset
+    was squashed to a 1×1×1 box and then instanced by
+    (canopy_m, height_m, canopy_m). Those are two different factors whenever a
+    species is not as wide as it is tall — and prairie trees are emphatically
+    not: height/canopy runs 1.2 (bur oak) to 4.2 (lodgepole pine) in
+    data/plants_master.json. The mismatch stretched every sub-feature by that
+    ratio, so a poplar's ~0.2-unit foliage clump rendered as a mass 6 m wide
+    and 13 m tall — the "handful of giant leaves on a pole" look.
+
+    The two transforms cancel — and clumps stay round — exactly when the
+    asset's authored width/height equals the instance's canopy_m/height_m.
+    So each archetype is now AUTHORED at the real aspect ratio of the species
+    that map to it (CROWN_ASPECT below and the per-form tables in the flora
+    builders), and normalisation is uniform so that authoring survives.
+    Residual mismatch (one archetype serves several species, and colony
+    spread widens canopy_m over time) is small and reads as natural variation.
 
 Part names (flora)
     Woody assets carry exactly two mesh parts: PART_BARK and PART_FOLIAGE.
@@ -47,7 +67,65 @@ docs/3D_ASSETS.md and docs/DESIGN_PHILOSOPHY.md.
 import zlib
 
 UNIT_HEIGHT = 1.0          # normalised asset height (Blender Z)
-UNIT_HALF_WIDTH = 0.5      # normalised horizontal half-extent (X and Y)
+# The authored half-extent is whatever the archetype's real proportions give
+# (see the unit-frame note above); this is only a sanity bound so a runaway
+# builder can't ship a 40:1 pancake that the viewer would then divide by.
+UNIT_HALF_WIDTH_MAX = 2.5
+
+# Authored crown aspect (height ÷ full width) per tree archetype, and the same
+# for the other flora families in their builder modules. Derived from the
+# species that map to each archetype in data/plants_master.json:
+# mature_height_m ÷ mature_canopy_m, where canopy defaults to 1.5 × spacing_m
+# (db.plants.get_plant). Medians, rounded — an archetype serves several species,
+# so this is a representative proportion, not a per-species claim (P9).
+CROWN_ASPECT = {
+    # conifers — narrow spires
+    "spruce": 3.3,        # Picea glauca 25/7.5, P. mariana 15/4.5
+    "fir": 3.3,           # Abies balsamea 20/7.5, Pseudotsuga menziesii 30/7.5
+    "pine": 3.7,          # Pinus banksiana 15/4.5, P. contorta 25/6
+    "larch": 3.3,         # Larix laricina 20/6
+    "def_conifer": 3.0,
+    # deciduous
+    "aspen": 2.4,         # Populus tremuloides 20/7.5, P. balsamifera 25/12
+    "birch": 2.2,         # Betula papyrifera 20/7.5, B. occidentalis 8/4.5
+    "oak": 1.2,           # Quercus macrocarpa 18/15 — the broad one
+    "willow": 1.8,        # Salix bebbiana 8/4.5
+    "cherry": 1.8,        # Prunus pensylvanica 8/4.5
+    "apple": 1.2,         # orchard apple — broad, low-branched
+    "def_slender": 2.6,
+    "def_oval": 1.8,
+    "def_spreading": 1.2,
+}
+
+# The same figure for the other flora families, by the archetype key each maps
+# to in the viewer (02-plants.js _SPROF genus→form, 03-herbs.js _HPROF, and the
+# plant_type buckets). Medians over data/plants_master.json as above. They live
+# here rather than beside their builders so tests/test_model_assets.py can check
+# the shipped GLBs against them without importing bpy.
+SHRUB_ASPECT = {
+    "vase": 1.11,        # saskatoon, willow, hazelnut, alder, hawthorn, cherry
+    "spreading": 0.80,   # dogwood, viburnum
+    "mound": 0.73,       # rose, spirea, snowberry, blueberry
+    "thicket": 0.83,     # currant, raspberry
+    "irregular": 0.96,   # sagebrush, buffaloberry
+}
+
+HERB_ASPECT = {
+    "erect": 1.20, "ferny": 1.19, "rosette": 0.83, "clump": 1.11,
+    "grassy": 1.33, "mat": 0.42, "fern": 1.00,
+}
+
+# grass/sedge/rush share the grass tuft, so its figure is theirs pooled.
+LAYER_ASPECT = {"grass": 1.31, "aquatic": 1.20, "vine": 1.72,
+                "groundcover": 0.42}
+
+
+def aspect_for(key):
+    """Target aspect for a manifest plant key ('tree.spruce', 'herb.mat', …),
+    or None for a family that doesn't declare one."""
+    fam, _, name = str(key).partition(".")
+    return {"tree": CROWN_ASPECT, "shrub": SHRUB_ASPECT,
+            "herb": HERB_ASPECT, "layer": LAYER_ASPECT}.get(fam, {}).get(name)
 
 PART_BARK = "bark"
 PART_FOLIAGE = "foliage"

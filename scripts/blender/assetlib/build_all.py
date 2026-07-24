@@ -15,13 +15,13 @@ from . import conventions as C
 from .ao_bake import bake_ao
 from .export_glb import export_glb
 from .fauna import build_critter
-from .flora_herbs import build_herb, build_layer
+from .flora_herbs import FLAT_LEAF_LAYERS, build_herb, build_layer
 from .flora_shrubs import build_shrub
 from .flora_trees import build_tree
 from .structures import build_structure
 from .manifest import asset_table, write_manifest
 from .mesh_ops import clamp_footprint, decimate_to_budget, get_collection, \
-    make_empty, tri_count, unit_frame, wipe_collection
+    make_empty, squash_to_aspect, tri_count, unit_frame, wipe_collection
 
 # Grid spacing when building many assets in one scene (MCP inspection).
 _GRID = 2.5
@@ -41,13 +41,17 @@ def _check_budget(key, objs, budget):
     return n
 
 
-def build_asset(key, spec=None, seed_salt=""):
+def build_asset(key, spec=None, seed_salt="", half_widths=None):
     """(Re)build one asset into collection `key`; returns {unit: tris}.
 
     Wipes EVERY generated collection first: Blender object names are global
     to the .blend, and the viewer looks parts/nodes up by exact name — a
     second asset using 'Body' or 'tier0_bark' would get renamed 'Body.001'
     and silently fail to load. One asset is resident at a time.
+
+    ``half_widths`` (optional) is filled with ``{unit: half_width}`` per flora
+    unit as measured by unit_frame — the authored aspect, published in the
+    manifest and re-measured by the viewer (see conventions.py).
     """
     table = asset_table()
     spec = spec or table[key]
@@ -56,6 +60,7 @@ def build_asset(key, spec=None, seed_salt=""):
     coll = get_collection(key, wipe=False)
     rng = random.Random(C.seed_for(key + seed_salt))
     tris = {}
+    halves = half_widths if half_widths is not None else {}
 
     if spec["kind"] == "tree":
         arch = key.split(".", 1)[1]
@@ -64,7 +69,7 @@ def build_asset(key, spec=None, seed_salt=""):
             root = make_empty(prefix, coll)
             parts = build_tree(arch, t, rng, coll, name_prefix=prefix)
             objs = list(parts.values())
-            unit_frame(objs)
+            halves[prefix] = unit_frame(objs)
             budget = _budget_for(spec, t)
             for o in objs:
                 decimate_to_budget(o, budget)
@@ -79,7 +84,7 @@ def build_asset(key, spec=None, seed_salt=""):
     elif spec["kind"] == "shrub":
         parts = build_shrub(key.split(".", 1)[1], rng, coll)
         objs = list(parts.values())
-        unit_frame(objs)
+        halves["unit"] = unit_frame(objs)
         for o in objs:
             decimate_to_budget(o, _budget_for(spec))
         bake_ao([parts[C.PART_BARK]], gradient=False, strength=0.7,
@@ -88,9 +93,12 @@ def build_asset(key, spec=None, seed_salt=""):
                 seed_key=key)
         tris["unit"] = _check_budget(key, objs, _budget_for(spec))
     elif spec["kind"] == "herb":
-        parts = build_herb(key.split(".", 1)[1], rng, coll)
+        form = key.split(".", 1)[1]
+        parts = build_herb(form, rng, coll)
         objs = list(parts.values())
-        unit_frame(objs)
+        # Flat-leaf geometry: finish on the exact measured correction.
+        squash_to_aspect(objs, C.HERB_ASPECT[form])
+        halves["unit"] = unit_frame(objs)
         for o in objs:
             decimate_to_budget(o, _budget_for(spec))
         bake_ao(objs, gradient=True, strength=0.7, seed_key=key)
@@ -102,7 +110,9 @@ def build_asset(key, spec=None, seed_salt=""):
             root = make_empty(prefix, coll)
             parts = build_layer(kind, rng, coll, name_prefix=prefix)
             objs = list(parts.values())
-            unit_frame(objs)
+            if kind in FLAT_LEAF_LAYERS:
+                squash_to_aspect(objs, C.LAYER_ASPECT[kind])
+            halves[prefix] = unit_frame(objs)
             for o in objs:
                 decimate_to_budget(o, _budget_for(spec))
             bake_ao(objs, gradient=True, strength=0.6, seed_key=key + prefix)
@@ -136,20 +146,26 @@ def _match(key, only):
     return any(key == o or key.startswith(o.rstrip("*")) for o in only)
 
 
-def build_all(out_dir=None, only=None, check_only=False):
+def build_all(out_dir=None, only=None, check_only=False, half_widths=None):
     """Build every (matching) asset; export + manifest when out_dir given.
 
     only  : iterable of keys / 'prefix*' patterns (e.g. ['tree.spruce',
             'fauna*']). None = everything.
+    half_widths : optional dict filled with {key: {unit: half_width}} — the
+            authored aspect each flora unit came out at (see conventions.py).
     Returns {key: {unit: tris}}.
     """
     import os
     table = asset_table()
     summary = {}
+    halves = {} if half_widths is None else half_widths
     for key, spec in table.items():
         if not _match(key, only):
             continue
-        summary[key] = build_asset(key, spec)
+        per_unit = {}
+        summary[key] = build_asset(key, spec, half_widths=per_unit)
+        if per_unit:
+            halves[key] = per_unit
         if out_dir and not check_only:
             os.makedirs(str(out_dir), exist_ok=True)
             coll = bpy.data.collections[key]
@@ -167,7 +183,7 @@ def build_all(out_dir=None, only=None, check_only=False):
     if out_dir and not check_only and not only:
         gen = "assetlib %s / Blender %s" % (
             _asset_version(), ".".join(map(str, bpy.app.version)))
-        write_manifest(out_dir, generator=gen)
+        write_manifest(out_dir, generator=gen, half_widths=halves)
     return summary
 
 

@@ -346,6 +346,18 @@ function buildPineGeo(form, tier, rng) {
 // Rescale a set of geometries (in place, sharing one frame) to base y = 0,
 // height 1, horizontal half-width 0.5 — so per-instance scale is [canopy,
 // height, canopy], matching the rest of the plant pipeline.
+// Normalise a set of geometries jointly to the archetype frame: base y=0 and
+// height 1, scaled UNIFORMLY so the authored proportions survive. Returns the
+// resulting horizontal half-extent and stamps it on each geometry's userData —
+// instancing divides the canopy scale by it (unitXZ in 04-quality.js), so the
+// plant still lands on exactly (canopy_m wide, height_m tall).
+//
+// It used to squash to half-width 0.5, which made every archetype 1:1 and left
+// the instance transform to stretch it back out by the species' real
+// height/canopy — 3.3× on a white spruce, 4.2× on a lodgepole pine. That is
+// what turned a poplar's foliage clumps into metre-wide "leaves" (V2.29). The
+// same reasoning and the generator's half of the contract are in
+// scripts/blender/assetlib/conventions.py.
 function normalizeUnit(geos) {
   const box = new THREE.Box3();
   for (const g of geos) {
@@ -355,13 +367,16 @@ function normalizeUnit(geos) {
   const sizeY = Math.max(1e-3, box.max.y - box.min.y);
   const halfXZ = Math.max(1e-3, Math.abs(box.min.x), Math.abs(box.max.x),
                           Math.abs(box.min.z), Math.abs(box.max.z));
-  const sy = 1 / sizeY, sxz = 0.5 / halfXZ;
+  const s = 1 / sizeY;
+  const hw = halfXZ * s;
   for (const g of geos) {
     if (!g) continue;
     g.translate(0, -box.min.y, 0);
-    g.scale(sxz, sy, sxz);
+    g.scale(s, s, s);
     g.computeVertexNormals();
+    g.userData.unitHalfWidth = hw;
   }
+  return hw;
 }
 
 // Multi-tone canopy gradient (spec idea 8): a warm, brighter sunlit crown up

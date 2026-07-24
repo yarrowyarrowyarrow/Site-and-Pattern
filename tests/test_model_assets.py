@@ -39,6 +39,20 @@ _TRI_BUDGETS = {"tree_tier0": 1200, "tree_tier1": 2200, "tree_tier2": 3500,
                 "structure": 1500}
 
 
+def _assetlib_conventions():
+    """assetlib.conventions, or None if it can't be imported.
+
+    It is deliberately bpy-free (the whole generator↔viewer contract in one
+    importable place), so the aspect targets can be read here without Blender.
+    """
+    try:
+        sys.path.insert(0, os.path.join(_ROOT, "scripts", "blender"))
+        from assetlib import conventions           # noqa: PLC0415
+        return conventions
+    except Exception:                              # noqa: BLE001
+        return None
+
+
 def _read(path):
     with open(path, "r", encoding="utf-8") as fh:
         return fh.read()
@@ -188,26 +202,76 @@ class ModelAssetsTest(unittest.TestCase):
                                   f"{key}: no COLOR_0 (AO) — vertexColors "
                                   f"materials would render black")
 
+    def _plant_bounds(self, key, entry):
+        """(lo_y, hi_y, half_width) over every primitive in a plant GLB."""
+        gltf, _ = self.gltf[entry["file"]]
+        lo_y, hi_y, half = None, None, 0.0
+        for mesh in gltf.get("meshes", []):
+            for prim in mesh.get("primitives", []):
+                acc = gltf["accessors"][prim["attributes"]["POSITION"]]
+                mn, mx = acc.get("min"), acc.get("max")
+                self.assertIsNotNone(mn, f"{key}: POSITION without min")
+                lo_y = mn[1] if lo_y is None else min(lo_y, mn[1])
+                hi_y = mx[1] if hi_y is None else max(hi_y, mx[1])
+                half = max(half, abs(mn[0]), abs(mx[0]),
+                           abs(mn[2]), abs(mx[2]))
+        return lo_y, hi_y, half
+
     def test_plant_glbs_satisfy_unit_frame(self):
         for key, entry in self.mf["plants"].items():
-            gltf, _ = self.gltf[entry["file"]]
-            lo_y, hi_y, half = None, None, 0.0
-            for mesh in gltf.get("meshes", []):
-                for prim in mesh.get("primitives", []):
-                    acc = gltf["accessors"][prim["attributes"]["POSITION"]]
-                    mn, mx = acc.get("min"), acc.get("max")
-                    self.assertIsNotNone(mn, f"{key}: POSITION without min")
-                    lo_y = mn[1] if lo_y is None else min(lo_y, mn[1])
-                    hi_y = mx[1] if hi_y is None else max(hi_y, mx[1])
-                    half = max(half, abs(mn[0]), abs(mx[0]),
-                               abs(mn[2]), abs(mx[2]))
-            # Loose bounds: the viewer re-normalises; this catches metre- or
-            # centimetre-scale exports and off-origin assets outright.
+            lo_y, hi_y, _half = self._plant_bounds(key, entry)
+            # Catches metre- or centimetre-scale exports and off-origin assets.
             self.assertGreaterEqual(lo_y, -0.05, f"{key}: base below y=0")
             self.assertLessEqual(lo_y, 0.35, f"{key}: floats above ground")
             self.assertAlmostEqual(hi_y, 1.0, delta=0.1,
                                    msg=f"{key}: height {hi_y} != ~1.0")
-            self.assertLessEqual(half, 0.75, f"{key}: wider than unit frame")
+
+    def test_plant_glbs_are_authored_at_their_species_aspect(self):
+        """Each archetype's height ÷ width must match the real proportions of
+        the species that map to it (assetlib.conventions).
+
+        This is the guard the V2.29 fix needed and didn't have: assets were
+        authored 1:1 and instanced by (canopy_m, height_m, canopy_m), so a
+        3.3:1 spruce or 4.2:1 pine had every foliage clump stretched by that
+        factor — and *every* existing check passed, because triangle counts,
+        node names and materials were all still correct. Proportion is the
+        thing a silhouette regression shows up in first.
+        """
+        conventions = _assetlib_conventions()
+        if conventions is None:
+            self.skipTest("assetlib.conventions not importable")
+        checked = 0
+        for key, entry in self.mf["plants"].items():
+            target = conventions.aspect_for(key)
+            if target is None:
+                continue
+            _lo, hi_y, half = self._plant_bounds(key, entry)
+            got = hi_y / max(1e-6, 2 * half)
+            # 35%: one archetype serves several species, and the builders shape
+            # to the target rather than solving for it exactly. The failure this
+            # guards against is a factor of 2–4, not a fifth.
+            self.assertAlmostEqual(
+                got / target, 1.0, delta=0.35,
+                msg=f"{key}: aspect {got:.2f} vs {target:.2f} for its species "
+                    f"— the archetype is being authored at the wrong "
+                    f"proportions, which the instance transform will turn into "
+                    f"stretched foliage")
+            checked += 1
+        self.assertGreater(checked, 20, "aspect targets stopped resolving")
+
+    def test_manifest_half_widths_match_the_shipped_geometry(self):
+        """The published half_width is what the viewer divides the canopy scale
+        by, so a stale manifest silently mis-sizes every plant."""
+        for key, entry in self.mf["plants"].items():
+            declared = entry.get("half_width")
+            if not declared:
+                continue
+            _lo, _hi, half = self._plant_bounds(key, entry)
+            widest = max(declared.values())
+            self.assertAlmostEqual(
+                widest, half, delta=0.05,
+                msg=f"{key}: manifest half_width {widest} != geometry {half} "
+                    f"— regenerate the manifest with the GLBs")
 
     def test_declared_nodes_exist(self):
         for key, entry in self.mf["plants"].items():

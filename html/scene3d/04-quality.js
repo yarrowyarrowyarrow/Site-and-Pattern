@@ -250,6 +250,17 @@ function tierFor(scaleFactor) {
   return s < 0.35 ? 0 : (s < 0.7 ? 1 : 2);
 }
 
+// Horizontal instance scale for an archetype whose authored proportions were
+// preserved by normalizeUnit: its geometry is `2·unitHalfWidth` wide at height
+// 1, so dividing lands the instance on exactly canopy_m across — and the two
+// axes only agree (leaving foliage clumps round) when the archetype was
+// authored at the species' real height/canopy. 0.5 is the pre-V2.29 squashed
+// frame, so an archetype without the mark behaves exactly as it always did.
+function unitXZ(geo, canopy_m) {
+  const hw = (geo && geo.userData && geo.userData.unitHalfWidth) || 0.5;
+  return canopy_m / (2 * hw);
+}
+
 // Per-individual sub-variation from position (+ species id): two trees of the
 // same species standing apart get different branchings, so a grove looks
 // natural rather than procedurally stamped.
@@ -384,11 +395,15 @@ function buildLayer(list, variants, mat, archOf, scaleOf, month, year, noRot, te
     if (!items.length) return;
     const places = items.map(p => spreadPlacements(p, year));
     const total = places.reduce((s, pl) => s + pl.length, 0);
-    const mesh = instancedMesh(archOf(v), total, mat);
+    const arch = archOf(v);
+    const mesh = instancedMesh(arch, total, mat);
     const names = new Array(total);
     let idx = 0;
     items.forEach((p, ii) => {
-      const [sx, sy, sz] = scaleOf(p);
+      // scaleOf gives [canopy_m, height_m, canopy_m]; the horizontal pair is
+      // divided by the archetype's authored width (unitXZ).
+      const [cx, sy, cz] = scaleOf(p);
+      const sx = unitXZ(arch, cx), sz = unitXZ(arch, cz);
       const rotY0 = noRot ? 0 : (indHash(p) % 628) / 100;
       const col = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month), p.health), p.opacity);
       places[ii].forEach((pl, k) => {
@@ -457,7 +472,8 @@ function buildHerbLayer(list, month, year, terrain) {
     const names = new Array(total);
     let idx = 0;
     items.forEach((p, ii) => {
-      const c = Math.max(0.15, p.canopy_m), h = Math.max(0.08, p.height_m);
+      const c = unitXZ(arch, Math.max(0.15, p.canopy_m));
+      const h = Math.max(0.08, p.height_m);
       const rotY0 = (indHash(p) % 628) / 100;
       const col = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month), p.health), p.opacity);
       places[ii].forEach((pl, k) => {
@@ -496,7 +512,8 @@ function buildShrubLayer(list, month, year, terrain) {
     const names = new Array(total);
     let idx = 0;
     items.forEach((p, ii) => {
-      const c = Math.max(0.25, p.canopy_m), h = Math.max(0.2, p.height_m);
+      const c = unitXZ(arch.foliageGeo, Math.max(0.25, p.canopy_m));
+      const h = Math.max(0.2, p.height_m);
       const rotY0 = (indHash(p) % 628) / 100;
       const col = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month), p.health), p.opacity);
       const scol = fadeToward(stemHex, p.opacity);
@@ -567,7 +584,8 @@ function buildPlants(group, plants, month, year, terrain) {
       const names = new Array(total);
       let idx = 0;
       items.forEach((p, ii) => {
-        const h = Math.max(0.4, p.height_m), c = Math.max(0.4, p.canopy_m);
+        const h = Math.max(0.4, p.height_m);
+        const c = unitXZ(arch.foliageGeo, Math.max(0.4, p.canopy_m));
         const rotY0 = (indHash(p) % 628) / 100;
         const bare = _isDecid(p.foliage_type) && _bareMonth(month);
         const bcol = fadeToward(prof.bark || '#5d4433', p.opacity);

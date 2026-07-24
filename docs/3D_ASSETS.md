@@ -62,11 +62,44 @@ MCP bootstrap cell and the iterate→screenshot→export loop.
 Defined once in `scripts/blender/assetlib/conventions.py`; the loader side is
 `html/scene3d/09-models.js`. In brief:
 
-- **Unit frame (flora):** base y=0, height 1.0, half-width 0.5 (the exporter
-  converts Blender Z-up → glTF Y-up). The viewer re-normalises with the same
-  `normalizeUnit` the procedural builders use, then scales instances by
-  `(canopy_m, height_m, canopy_m)` — so growth-year and spread math are
+- **Unit frame (flora):** base y=0, height 1.0, scaled **uniformly** so the
+  authored proportions survive (the exporter converts Blender Z-up → glTF
+  Y-up). Each unit's resulting half-width is published as `half_width` in the
+  manifest; the viewer re-normalises with the same `normalizeUnit` the
+  procedural builders use, reads the half-width off the geometry, and scales
+  instances by `(canopy_m / 2·half_width, height_m, canopy_m / 2·half_width)`
+  — landing on exactly canopy_m across, so growth-year and spread math are
   untouched.
+
+  **Archetypes are authored at their species' real aspect ratio**
+  (`conventions.CROWN_ASPECT` / `SHRUB_ASPECT` / `HERB_ASPECT` /
+  `LAYER_ASPECT`, all medians over `data/plants_master.json`). This is not
+  cosmetic. Until V2.29 every asset was squashed to a 1×1×1 box and then
+  instanced by `(canopy_m, height_m, canopy_m)` — two different factors
+  whenever a species isn't as wide as it is tall, which prairie trees are
+  emphatically not (height ÷ canopy runs 1.2 for bur oak to 4.2 for lodgepole
+  pine). Every sub-feature was stretched by that ratio, so a poplar's foliage
+  clump rendered as a mass 6 m wide and 13 m tall — the "handful of giant
+  leaves on a pole" look. The two transforms cancel, and clumps stay round,
+  exactly when authored width/height equals canopy_m/height_m.
+
+  Builders shape to the target by moving *anchor points* only
+  (`mesh_ops.shape_to_aspect`), never by scaling finished geometry — a branch
+  is re-stamped between its corrected endpoints (`add_cone_between`), so
+  narrowing a crown shortens boughs instead of squashing them. Flat-leaf
+  families (herbs, grass/reed tufts, vines) finish on the exact measured
+  correction instead (`mesh_ops.squash_to_aspect`): a leaf is a flat ribbon,
+  so a horizontal scale makes it a slightly narrower leaf rather than a
+  deformed one, and predicting a leafy plant's extent from its parameters is
+  biased ~30% narrow. Groundcover keeps anchor shaping — its domes are round.
+
+- **Foliage granularity:** leaf-mass radius is a fraction of the crown's
+  half-width, not of the asset height (`FOLIAGE_FRAC`), and the fraction
+  *shrinks* with the size tier while the count grows (`CLUMPS_PER_TIP`,
+  `DECID_MIN_R`). So a big tree carries many fine masses and a sapling a few
+  coarse ones — structural detail tracks absolute size, not just growth year.
+  Masses are 20-triangle icosahedra (subdiv 0), matching the viewer's own
+  `makeFoliageMass`, which is what pays for the extra count.
 - **Parts (flora):** meshes named `bark` + `foliage` (herb/layer assets:
   `foliage` only). Inside a tier/variant node the names are prefixed
   (`tier0_bark`, `v1_foliage`) because Blender object names are unique per
@@ -111,7 +144,11 @@ Commit the changed GLBs + `manifest.json` (`.gitattributes` marks `*.glb`
 binary). `tests/test_model_assets.py` (stdlib-only — parses the GLB
 containers directly) guards: manifest↔file consistency, key parity with the
 viewer's own archetype vocabularies, no textures, `POSITION`+`COLOR_0`
-present, unit-frame bounds, declared nodes/materials, triangle budgets.
+present, unit-frame bounds, declared nodes/materials, triangle budgets, that
+each archetype is authored **at its species' aspect ratio**, and that the
+manifest's `half_width` still matches the shipped geometry. The aspect check
+is the one that would have caught the V2.29 deformation: triangle counts,
+node names and materials were all correct while every tree was stretched 2–4×.
 
 ## Smoke probe
 
