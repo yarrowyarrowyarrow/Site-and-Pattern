@@ -427,7 +427,7 @@ function updateBeeHud(t) {
   if (beeMsg && (t ?? performance.now()) < beeMsgUntil) { h.innerHTML = beeMsg; return; }
   const icon = _CREATURE_ICON[beeKind] || '🐝';
   const who = _esc(beeLabel) || 'this pollinator';
-  const controls = 'WASD fly · Q/E up-down · drag to look';
+  const controls = 'WASD fly · Q/E up-down · drag to look · click a plant to learn';
   const hostHint = beeHosts.length ? ' · 🌿 green = caterpillar host' : '';
   const total = beeBeacons.length;
   const got = beeBeacons.filter(b => b.visited).length;

@@ -258,6 +258,15 @@ function buildFlowers(plants, month, terrain) {
     const isCattail = form === 'cattail';
     const att0 = _FLOWER_ATTITUDE[form] || _FLOWER_ATTITUDE_DEF;
     const pos = [], col = [], siz = [], tilts = [], spins = [];
+    // Per-bloom pick data — the flower quads carried none, so a bloom was the
+    // one part of a plant that could not be clicked.
+    // Measured honestly (inspect_probe.html?sweep=1): on a 588-point grid this
+    // changes the hit rate by ZERO, because a bloom sits above a body that is
+    // already pickable and resolves to the same plant. What it fixes is the
+    // narrower case of a head held clear of its own foliage — a nodding onion
+    // or blazingstar scape — where the flower really is the only target. The
+    // tolerance spiral in 01-core.js is what fixed the general complaint.
+    const names = [], ids = [];
     for (const p of list) {
       const gy = terrainHeightAt(p.x, p.y, terrain);
       const h = Math.max(0.1, p.height_m);
@@ -295,6 +304,8 @@ function buildFlowers(plants, month, terrain) {
         // plant's centre — `a` is the bloom's own bearing from that centre, and
         // +π aligns the card's outward normal with it. The rest get a free spin.
         spins.push(att0.spin ? a + Math.PI : j4 * Math.PI * 2);
+        names.push(p.common_name || '');
+        ids.push(p.plant_id);
       }
     }
     // Oriented quads, not camera-facing points: each head is placed with the
@@ -338,6 +349,10 @@ function buildFlowers(plants, month, terrain) {
     }
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    // Same contract the plant-body layers use (04-quality.js): `pick` names the
+    // instance for the hover tip, `pickId` keys it for the dossier card.
+    mesh.userData.pick = names;
+    mesh.userData.pickId = ids;
     plantsGroup.add(mesh);
   }
 }

@@ -112,7 +112,8 @@ function setWalkHintUI(on) {
   if (!h) return;
   h.style.display = on ? 'block' : 'none';
   if (on) h.innerHTML = '🚶 <b>Walk the garden</b> — WASD / arrows to walk · '
-    + 'drag to look around · the creatures are the wildlife your plants support';
+    + 'drag to look around · <b>click a plant</b> to learn about it · '
+    + 'the creatures are the wildlife your plants support';
 }
 
 function enterWalkMode() {

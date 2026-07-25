@@ -22,9 +22,6 @@ let DOSSIER = { plants: {}, fauna: {} };
 let selection = null;             // {type:'plant'|'fauna', key, x, y}
 let threadGroup = null;
 
-const _iRay = new THREE.Raycaster();
-const _iPtr = new THREE.Vector2();
-
 function inspectCard() { return document.getElementById('inspect-card'); }
 
 // ── the food-web threads ────────────────────────────────────────────────────
@@ -327,53 +324,33 @@ function clearSelection() {
 
 // ── picking ─────────────────────────────────────────────────────────────────
 
-function pickAt(clientX, clientY) {
-  const r = renderer.domElement.getBoundingClientRect();
-  _iPtr.x = ((clientX - r.left) / r.width) * 2 - 1;
-  _iPtr.y = -((clientY - r.top) / r.height) * 2 + 1;
-  _iRay.setFromCamera(_iPtr, camera);
-  // Creatures first — they sit in front of the plants they're using, and a
-  // click that lands on a bee should be about the bee.
-  if (wildlifeGroup && wildlifeGroup.visible) {
-    const meshes = [];
-    wildlifeGroup.traverse((o) => {
-      if (o.isMesh && _critterAt(o)) meshes.push(o);
-    });
-    const hit = _iRay.intersectObjects(meshes, false);
-    if (hit.length) {
-      const info = _critterAt(hit[0].object);
-      if (info && info.name) return { type: 'fauna', key: info.name };
-    }
-  }
-  if (plantsGroup) {
-    const meshes = [];
-    plantsGroup.traverse((o) => {
-      if (o.isInstancedMesh && o.userData.pickId) meshes.push(o);
-    });
-    const hits = _iRay.intersectObjects(meshes, false);
-    for (const h of hits) {
-      const pid = h.object.userData.pickId[h.instanceId];
-      if (pid != null) return { type: 'plant', key: pid };
-    }
-  }
-  return null;
-}
+// Picking itself lives in 01-core.js as `scenePick` — one implementation shared
+// with the hover tip, which had drifted into a near-duplicate raycaster with a
+// different mesh filter. It also carries the hit tolerance that makes small
+// plants clickable at all.
 
 // A click is only an inspect click when the pointer didn't travel — otherwise
-// every camera drag that happens to end on a plant would open a card.
+// every camera drag that happens to end on a plant would open a card. That test
+// is ALSO what makes this work while flying or walking: in both first-person
+// modes the mouse only turns the camera, so a click that doesn't drag is
+// unambiguously "tell me about this". It used to bail out on `beeMode`
+// entirely, which cost the educational card exactly where a user is closest to
+// the plants.
 let _downX = 0, _downY = 0, _downT = 0;
 renderer.domElement.addEventListener('pointerdown', (e) => {
   _downX = e.clientX; _downY = e.clientY; _downT = performance.now();
 });
 renderer.domElement.addEventListener('pointerup', (e) => {
-  if (beeMode) return;                       // flying: the click is the controls
   if (Math.abs(e.clientX - _downX) > 4 || Math.abs(e.clientY - _downY) > 4) return;
   if (performance.now() - _downT > 700) return;
-  const hit = pickAt(e.clientX, e.clientY);
+  const hit = scenePick(e.clientX, e.clientY);
   if (!hit) { clearSelection(); return; }
   const entry = hit.type === 'fauna'
     ? DOSSIER.fauna[hit.key] : DOSSIER.plants[String(hit.key)];
-  if (!entry) { clearSelection(); return; }
+  // A hit we have no dossier entry for is NOT a miss — keep whatever card is
+  // open rather than closing it out from under the user, which is what a
+  // near-miss used to do.
+  if (!entry) return;
   selection = hit;
   showCard(entry);
   buildThreads();

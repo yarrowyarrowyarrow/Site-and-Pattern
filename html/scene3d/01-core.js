@@ -152,6 +152,75 @@ function _critterAt(object) {
   while (o) { if (o.userData && o.userData.critterInfo) return o.userData.critterInfo; o = o.parent; }
   return null;
 }
+// The ONE scene pick, shared by the hover tip here and the click-to-learn card
+// in 10-inspect.js. They used to be two near-identical raycasters that had
+// drifted apart — one filtered on `userData.pick` (names) and the other on
+// `userData.pickId` (dossier keys), so a mesh could be hoverable and not
+// clickable. Returns {type:'fauna'|'plant', info|key, name} or null.
+//
+// TOLERANCE. A single exact ray against alpha-tested leaf ribbons means a small
+// herb or a groundcover leaf is a few tens of pixels of hittable geometry at
+// orbit distance, and clicks on it simply do nothing — the reported "sometimes
+// I press a plant and it does not select". So the pick is a short spiral of
+// sample rays: dead centre first (an exact hit always wins), then two rings of
+// four. Picking is not per-frame work, so the extra casts are free, and keeping
+// the offsets small means it forgives a near miss without ever selecting a
+// plant that isn't under the cursor.
+const _PICK_RINGS = [0, 7, 14];       // CSS px from the pointer
+const _PICK_SPOKES = 4;
+function _pickOffsets() {
+  const out = [[0, 0]];
+  for (let i = 1; i < _PICK_RINGS.length; i++) {
+    const rad = _PICK_RINGS[i];
+    for (let s = 0; s < _PICK_SPOKES; s++) {
+      const a = (s / _PICK_SPOKES) * Math.PI * 2 + (i === 2 ? Math.PI / 4 : 0);
+      out.push([Math.cos(a) * rad, Math.sin(a) * rad]);
+    }
+  }
+  return out;
+}
+const _PICK_OFFSETS = _pickOffsets();
+
+function scenePick(clientX, clientY, opts) {
+  const wantPlants = !opts || opts.plants !== false;
+  const rect = renderer.domElement.getBoundingClientRect();
+  // Gather once, not per sample ray.
+  const critters = [];
+  if (wildlifeGroup && wildlifeGroup.visible) {
+    wildlifeGroup.traverse(o => { if (o.isMesh && _critterAt(o)) critters.push(o); });
+  }
+  const plants = [];
+  if (wantPlants && plantsGroup) {
+    plantsGroup.traverse(o => {
+      if (o.isInstancedMesh && (o.userData.pick || o.userData.pickId)) plants.push(o);
+    });
+  }
+  for (const [dx, dy] of _PICK_OFFSETS) {
+    _ptr.x = ((clientX + dx - rect.left) / rect.width) * 2 - 1;
+    _ptr.y = -((clientY + dy - rect.top) / rect.height) * 2 + 1;
+    _ray.setFromCamera(_ptr, camera);
+    // Creatures first — they sit in front of the plants they're using, and a
+    // click that lands on a bee should be about the bee.
+    if (critters.length) {
+      const ch = _ray.intersectObjects(critters, false);
+      if (ch.length) {
+        const info = _critterAt(ch[0].object);
+        if (info && info.name) return { type: 'fauna', key: info.name, info };
+      }
+    }
+    if (plants.length) {
+      const hits = _ray.intersectObjects(plants, false);
+      for (const h of hits) {
+        const ud = h.object.userData;
+        const id = ud.pickId && ud.pickId[h.instanceId];
+        const nm = ud.pick && ud.pick[h.instanceId];
+        if (id != null || nm) return { type: 'plant', key: id, name: nm || '' };
+      }
+    }
+  }
+  return null;
+}
+
 renderer.domElement.addEventListener('pointermove', (ev) => {
   const tip = document.getElementById('plant-tip');
   if (!tip) return;
@@ -159,34 +228,15 @@ renderer.domElement.addEventListener('pointermove', (ev) => {
   const now = performance.now();
   if (now - _lastPick < 45) return;             // throttle the raycast
   _lastPick = now;
-  const r = renderer.domElement.getBoundingClientRect();
-  _ptr.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
-  _ptr.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
-  _ray.setFromCamera(_ptr, camera);
+  const hit = scenePick(ev.clientX, ev.clientY);
   let html = '';
-  // 1) A creature under the cursor — name + what it uses this plant for.
-  if (wildlifeGroup && wildlifeGroup.visible) {
-    const cw = [];
-    wildlifeGroup.traverse(o => { if (o.isMesh && _critterAt(o)) cw.push(o); });
-    const ch = _ray.intersectObjects(cw, false);
-    if (ch.length) {
-      const info = _critterAt(ch[0].object);
-      if (info) {
-        const verb = _REL_WORDS[info.rel] || 'uses';
-        html = '🐾 <b>' + info.name + '</b>'
-          + (info.on ? ' · ' + verb + ' ' + info.on : '');
-      }
-    }
-  }
-  // 2) Otherwise the plant under the cursor.
-  if (!html && plantsGroup) {
-    const meshes = [];
-    plantsGroup.traverse(o => { if (o.isInstancedMesh && o.userData.pick) meshes.push(o); });
-    const hits = _ray.intersectObjects(meshes, false);
-    for (const h of hits) {
-      const nm = h.object.userData.pick[h.instanceId];
-      if (nm) { html = nm; break; }
-    }
+  if (hit && hit.type === 'fauna') {
+    const info = hit.info;
+    const verb = _REL_WORDS[info.rel] || 'uses';
+    html = '🐾 <b>' + info.name + '</b>'
+      + (info.on ? ' · ' + verb + ' ' + info.on : '');
+  } else if (hit) {
+    html = hit.name || '';
   }
   tip.innerHTML = html;
   tip.style.display = html ? 'block' : 'none';

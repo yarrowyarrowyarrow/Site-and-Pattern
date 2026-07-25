@@ -79,9 +79,43 @@ fetch('./inspect_probe_data.json').then(r => r.json()).then((D) => {
         document.title = 'INSPECT_OK';
       }, 1200);
     };
-    setTimeout(() => {
+    // Wait for the baked GLB archetypes before clicking. They load
+    // asynchronously and RE-PUSH the scene when they land, so a probe that
+    // clicks on a fixed timer hits procedural geometry on a slow run and GLB
+    // geometry on a fast one — different shapes at the same screen point. That
+    // made this harness silently non-deterministic: the same coordinate hit and
+    // missed across runs, which is worse than useless when you are using it to
+    // compare two picking configurations.
+    const afterModels = (fn) => {
+      let waited = 0;
+      const tick = () => {
+        if ((w.permaModelsReady && w.permaModelsReady()) || waited > 12000) {
+          setTimeout(fn, 600);            // one settle beat after the rebuild
+          return;
+        }
+        waited += 100;
+        setTimeout(tick, 100);
+      };
+      tick();
+    };
+    afterModels(() => {
       const cv = w.document.querySelector('canvas');
       const r = cv.getBoundingClientRect();
+      // ?sweep=1 — click a fixed grid and report how many points hit a plant.
+      // This is the honest way to compare picking configurations: a single
+      // coordinate says nothing, a hit RATE over the same grid says everything.
+      if (q.get('sweep')) {
+        let hits = 0, total = 0;
+        for (let gy = 0.28; gy <= 0.70; gy += 0.02) {
+          for (let gx = 0.24; gx <= 0.80; gx += 0.02) {
+            total++;
+            if (click(cv, r.left + r.width * gx, r.top + r.height * gy)) hits++;
+          }
+        }
+        status.textContent = 'SWEEP ' + hits + '/' + total + ' points hit';
+        document.title = 'INSPECT_OK';
+        return;
+      }
       if (q.get('click')) {
         const p = q.get('click').split(',').map(Number);
         if (click(cv, r.left + r.width * p[0], r.top + r.height * p[1])) {
@@ -117,7 +151,7 @@ fetch('./inspect_probe_data.json').then(r => r.json()).then((D) => {
       }
       status.textContent = 'no plant found anywhere in the sweep';
       document.title = 'INSPECT_MISS';
-    }, 2500);
+    });
   }, 250);
 });
 </script></body></html>
