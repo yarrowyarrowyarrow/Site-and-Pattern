@@ -1,11 +1,16 @@
 """
 tests/test_scan_import_dialog.py — the scan-alignment GUI (V1.63).
 
-ScanAlignSession (the Qt-free core) is tested without a display: pairing
-state machine, preview-pixel→scan-coordinate mapping, readiness, and a
-full run_import against a synthetic yard. The Qt dialog gets a smoke test
-(construct, simulate preview + map clicks, import button gating) that
-skips when Qt can't run here.
+ScanAlignSession (the Qt-free core, src/scan_align.py) is tested without a
+display: pairing state machine, preview-pixel→scan-coordinate mapping,
+readiness, and a full run_import against a synthetic yard. The Qt dialog gets
+a smoke test (construct, simulate preview + map clicks, import button gating)
+that skips when Qt can't run here.
+
+The core tests import src.scan_align directly. Importing them through
+src.scan_import_dialog is what made them ERROR rather than run wherever PyQt6
+is absent: that module imports Qt at the top level, so "the Qt-free core" was
+only conceptually Qt-free until V2.29 moved it out.
 """
 
 import math
@@ -54,7 +59,7 @@ def _latlng(x, y):
 class TestScanAlignSession(unittest.TestCase):
 
     def _session(self):
-        from src.scan_import_dialog import ScanAlignSession
+        from src.scan_align import ScanAlignSession
         return ScanAlignSession(_yard())
 
     def test_pairing_state_machine(self):
@@ -90,7 +95,7 @@ class TestScanAlignSession(unittest.TestCase):
             s.run_import({"features": []})
 
     def test_backdrop_feature_from_splat_session(self):
-        from src.scan_import_dialog import ScanAlignSession
+        from src.scan_align import ScanAlignSession
         s = ScanAlignSession(_yard(), file_path="/tmp/yard.ply",
                              is_splat=True, up="z")
         with self.assertRaises(ValueError):
