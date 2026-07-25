@@ -134,6 +134,30 @@ LEAF_CM = {
     "irregular": 4.0,
 }
 
+# The blade OUTLINE for each deciduous tree archetype — the mode of
+# `leaf_shape` over the species that map to it in data/plants_master.json,
+# exactly as LEAF_CM is their median leaf length.
+#
+# Since V2.29 a deciduous crown's outermost clumps are stamped as real leaf
+# cards rather than faceted ellipsoids, so this is what puts a species' leaf
+# into its SILHOUETTE. It is the difference the audit found missing between
+# aspen, birch, cherry and apple, which until now differed only in bark hex
+# and crown proportion — a genuine "grown, not designed" tell (P2), and one a
+# viewer at yard distance can actually resolve, because the crown edge is where
+# a tree is read from.
+#
+# Conifers are absent on purpose: their foliage is needle skirts, not clumps,
+# and a needle card at crown scale is a sub-pixel sliver.
+DECID_LEAF_SHAPE = {
+    "aspen": "ovate",        # Populus tremuloides / balsamifera
+    "birch": "ovate",        # Betula papyrifera / occidentalis
+    "oak": "lobed",          # Quercus macrocarpa — the deep-lobed one
+    "willow": "elliptic",    # Salix bebbiana (narrow for a broadleaf)
+    "cherry": "lanceolate",  # Prunus pensylvanica
+    "apple": "elliptic",     # Malus domestica
+    "def_slender": "ovate", "def_oval": "ovate", "def_spreading": "ovate",
+}
+
 # A leaf mass in this visual language is a branch-end CLUSTER, not one leaf, so
 # it tracks leaf length sub-linearly — and the reference is the median woody
 # leaf (7 cm), which keeps the existing look as the centre of the range. The

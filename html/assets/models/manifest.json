@@ -472,9 +472,9 @@
   "tree.apple": {
    "file": "tree_apple.glb",
    "half_width": {
-    "tier0": 0.4059,
-    "tier1": 0.39531,
-    "tier2": 0.3959
+    "tier0": 0.51745,
+    "tier1": 0.469,
+    "tier2": 0.46836
    },
    "parts": [
     "bark",
@@ -489,9 +489,9 @@
   "tree.aspen": {
    "file": "tree_aspen.glb",
    "half_width": {
-    "tier0": 0.20092,
-    "tier1": 0.17094,
-    "tier2": 0.18666
+    "tier0": 0.21953,
+    "tier1": 0.18801,
+    "tier2": 0.19391
    },
    "parts": [
     "bark",
@@ -506,9 +506,9 @@
   "tree.birch": {
    "file": "tree_birch.glb",
    "half_width": {
-    "tier0": 0.19869,
-    "tier1": 0.22101,
-    "tier2": 0.21464
+    "tier0": 0.23104,
+    "tier1": 0.21525,
+    "tier2": 0.20428
    },
    "parts": [
     "bark",
@@ -523,9 +523,9 @@
   "tree.cherry": {
    "file": "tree_cherry.glb",
    "half_width": {
-    "tier0": 0.25327,
-    "tier1": 0.25363,
-    "tier2": 0.26337
+    "tier0": 0.31711,
+    "tier1": 0.27429,
+    "tier2": 0.26309
    },
    "parts": [
     "bark",
@@ -557,9 +557,9 @@
   "tree.def_oval": {
    "file": "tree_def_oval.glb",
    "half_width": {
-    "tier0": 0.26233,
-    "tier1": 0.26906,
-    "tier2": 0.22829
+    "tier0": 0.27965,
+    "tier1": 0.27851,
+    "tier2": 0.27835
    },
    "parts": [
     "bark",
@@ -574,9 +574,9 @@
   "tree.def_slender": {
    "file": "tree_def_slender.glb",
    "half_width": {
-    "tier0": 0.18222,
-    "tier1": 0.16772,
-    "tier2": 0.17889
+    "tier0": 0.19314,
+    "tier1": 0.1954,
+    "tier2": 0.18585
    },
    "parts": [
     "bark",
@@ -591,9 +591,9 @@
   "tree.def_spreading": {
    "file": "tree_def_spreading.glb",
    "half_width": {
-    "tier0": 0.39606,
-    "tier1": 0.37605,
-    "tier2": 0.40198
+    "tier0": 0.50691,
+    "tier1": 0.4859,
+    "tier2": 0.43345
    },
    "parts": [
     "bark",
@@ -642,9 +642,9 @@
   "tree.oak": {
    "file": "tree_oak.glb",
    "half_width": {
-    "tier0": 0.40989,
-    "tier1": 0.3931,
-    "tier2": 0.40661
+    "tier0": 0.51259,
+    "tier1": 0.49961,
+    "tier2": 0.49139
    },
    "parts": [
     "bark",
@@ -693,9 +693,9 @@
   "tree.willow": {
    "file": "tree_willow.glb",
    "half_width": {
-    "tier0": 0.26599,
-    "tier1": 0.27242,
-    "tier2": 0.26614
+    "tier0": 0.28796,
+    "tier1": 0.25526,
+    "tier2": 0.28481
    },
    "parts": [
     "bark",

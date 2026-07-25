@@ -370,6 +370,12 @@ def build_scene(project: dict, *, year: int = 0,
             "mature_height_m": st["mature_height_m"],
             "leaf_shape": plant.get("leaf_shape") or "",
             "leaf_arrangement": plant.get("leaf_arrangement") or "",
+            # Woody habit (schema v47): excurrent (one leader) / decurrent
+            # (spreading, no leader) / multi_stem / suckering / arching /
+            # prostrate / rosette. Authored since V2.29 and read by nothing
+            # until now, which is why a multi-stemmed water birch and a
+            # single-leadered paper birch were the same sprite.
+            "branching": plant.get("branching") or "",
             "growth_form": plant.get("growth_form") or "",
             "opacity": opacity,
             "health": health,

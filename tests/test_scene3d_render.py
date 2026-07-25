@@ -175,8 +175,11 @@ class FlatLeafMaterialsTest(unittest.TestCase):
     """
 
     # Materials applied to meshes built from flat ribbons: herb leaves and
-    # grass/reed blades have always been flat, shrub foliage is since V2.29.
-    _FLAT_LEAF_MATERIALS = ("leaf", "blade", "shrubFoliage")
+    # grass/reed blades have always been flat; shrub foliage became ribbons in
+    # V2.29, and tree `foliage` is mixed since the crown's outer clumps became
+    # leaf cards. It caught the tree case for real — the first build with cards
+    # on FrontSide drew every broadleaf crown almost black.
+    _FLAT_LEAF_MATERIALS = ("leaf", "blade", "shrubFoliage", "foliage")
 
     def test_flat_leaf_materials_are_double_sided(self):
         src = _read_js("04-quality.js")

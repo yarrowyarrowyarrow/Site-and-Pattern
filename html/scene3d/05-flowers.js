@@ -5,10 +5,11 @@
 // are globals set by the bootstrap), so load ORDER is dependency
 // order. Do not add ES `import`/`export` here.
 
-// ── Flowers (V1.90) ──────────────────────────────────────────────────────────
-// Camera-facing point sprites in each plant's real flower colour, shaped by a
-// per-form canvas texture so different flowers read differently. Shown only when
-// the scene's month falls inside the plant's bloom window.
+// ── Flowers (V1.90; oriented V2.29) ─────────────────────────────────────────
+// One instanced quad per bloom, in the plant's real flower colour, shaped by a
+// per-form canvas texture and — since V2.29 — HELD AT THE ATTITUDE ITS FORM
+// ACTUALLY HOLDS (_FLOWER_ATTITUDE below) rather than turned to face the
+// camera. Shown only when the scene's month falls inside the bloom window.
 const FLOWER_FORMS = ['daisy', 'rays', 'spike', 'plume', 'umbel', 'globe',
                       'cluster', 'bell', 'trumpet', 'cattail', 'pea', 'whorl',
                       'star', 'cross', 'lily'];
@@ -169,21 +170,6 @@ function clampPointSize(mat, px) {
   return mat;
 }
 
-// Like clampPointSize, but each point also carries a per-sprite size multiplier
-// (a required `aSize` attribute). Varying bloom sizes is the other half of the
-// de-blob fix (V2.13): a plant reads as several distinct flowers of different
-// sizes rather than one uniform coloured disc.
-function flowerPointSize(mat, px) {
-  mat.onBeforeCompile = (shader) => {
-    shader.vertexShader = 'attribute float aSize;\n' + shader.vertexShader.replace(
-      'gl_PointSize *= ( scale / - mvPosition.z );',
-      'gl_PointSize *= ( scale / - mvPosition.z ) * aSize; '
-      + 'gl_PointSize = min( gl_PointSize, ' + px.toFixed(1) + ' );');
-  };
-  mat.customProgramCacheKey = () => 'fsize' + px;
-  return mat;
-}
-
 // Per-form bloom size — the LARGEST a head of this form is drawn — plus how many
 // sprites to scatter per plant (denser = the plant reads as its flower colour
 // when in bloom). Deliberately bigger than life: a real 3 cm aster disc would be
@@ -201,6 +187,56 @@ const _FLOWER_SIZE = { rays: 0.42, plume: 0.34, spike: 0.34, umbel: 0.30,
 // visible at scene distance rather than shrinking it back out of existence.
 const _FLOWER_REF_CANOPY = 1.1;      // the canopy _FLOWER_SIZE was tuned against
 const _FLOWER_MIN_SCALE = 0.28;
+
+// ── how a head is PRESENTED (V2.29) ─────────────────────────────────────────
+// Blooms used to be camera-facing point sprites, so every flower in the scene
+// always looked straight at you: a bed of asters was a wall of identical discs,
+// a nodding onion never nodded, a lupine spike lay flat instead of standing up,
+// and orbiting the view slid the whole meadow around like decals. Which way a
+// flower faces is not decoration — it is a large part of how a species reads,
+// and for a pollinator garden it is the functional bit (P5): a bee approaches an
+// upturned daisy differently from a hanging bell.
+//
+// Heads are now real oriented quads. `tilt` is radians from straight-up, so 0 is
+// face-to-the-sky and π is fully nodding; `jitter` is how much that varies bloom
+// to bloom; `spin` faces the head outward from the plant's centre rather than
+// at the camera.
+// The card's attitude is decided by the VIEWPOINT ITS TEXTURE IS DRAWN FROM,
+// not by a free reading of the flower. makeFlowerTexture draws some forms
+// face-on (petals radiating from a centre — daisy, rays, star) and others in
+// PROFILE, as a vertical arrangement seen from the side (spike, plume, pea,
+// cattail, and bell, whose hanging shape is already drawn into the image). A
+// profile drawing laid face-up is a flower lying on its back; a face-on drawing
+// stood vertical is a disc edge-on to the sky. Getting this backwards for the
+// bell was the first thing the render showed.
+const _FLOWER_ATTITUDE = {
+  // ── drawn FACE-ON: the card presents its face ────────────────────────────
+  // Flat-topped inflorescences present upward — that is what makes them
+  // landing platforms for the flies and short-tongued bees that use them.
+  umbel:   { tilt: 0.12, jitter: 0.18 },
+  cluster: { tilt: 0.22, jitter: 0.30 },
+  globe:   { tilt: 0.10, jitter: 0.35 },
+  // Composites track the light: mostly up, tipped outward.
+  daisy:   { tilt: 0.42, jitter: 0.28 },
+  rays:    { tilt: 0.50, jitter: 0.22 },
+  cross:   { tilt: 0.35, jitter: 0.30 },
+  star:    { tilt: 0.38, jitter: 0.30 },
+  whorl:   { tilt: 0.55, jitter: 0.25 },
+  // Tubular faces look outward and slightly down — how a columbine or a
+  // honeysuckle actually meets a hovering pollinator.
+  trumpet: { tilt: 1.05, jitter: 0.35, spin: true },
+  lily:    { tilt: 0.95, jitter: 0.40, spin: true },
+  // ── drawn in PROFILE: the card stands vertical, turned outward ───────────
+  spike:   { tilt: 1.50, jitter: 0.16, spin: true },
+  pea:     { tilt: 1.50, jitter: 0.16, spin: true },
+  plume:   { tilt: 1.48, jitter: 0.22, spin: true },
+  cattail: { tilt: 1.57, jitter: 0.05, spin: true },
+  // The harebell/nodding-onion hang is IN the texture, so the card that shows
+  // it is the vertical one; tipping the card down as well hides the shape.
+  bell:    { tilt: 1.52, jitter: 0.20, spin: true },
+};
+const _FLOWER_ATTITUDE_DEF = { tilt: 0.5, jitter: 0.3 };
+let FLOWER_QUAD = null;              // shared 2-triangle plane, +Z is the face
 
 function buildFlowers(plants, month, terrain) {
   if (!FLOWER_TEX) {
@@ -220,7 +256,8 @@ function buildFlowers(plants, month, terrain) {
     const list = byForm[form];
     if (!list.length) continue;
     const isCattail = form === 'cattail';
-    const pos = [], col = [], siz = [];
+    const att0 = _FLOWER_ATTITUDE[form] || _FLOWER_ATTITUDE_DEF;
+    const pos = [], col = [], siz = [], tilts = [], spins = [];
     for (const p of list) {
       const gy = terrainHeightAt(p.x, p.y, terrain);
       const h = Math.max(0.1, p.height_m);
@@ -251,21 +288,57 @@ function buildFlowers(plants, month, terrain) {
         col.push(_fc.r, _fc.g, _fc.b);
         siz.push(isCattail ? 1
                  : pscale * (0.6 + 0.85 * (((seed + k * 17) % 100) / 100)));
+        // Attitude, jittered per bloom so a plant is not a rank of clones.
+        const j4 = ((seed + k * 41) % 977) / 977;
+        tilts.push(att0.tilt + (j4 - 0.5) * 2 * att0.jitter);
+        // `spin: true` forms are read from the side, so face them AWAY from the
+        // plant's centre — `a` is the bloom's own bearing from that centre, and
+        // +π aligns the card's outward normal with it. The rest get a free spin.
+        spins.push(att0.spin ? a + Math.PI : j4 * Math.PI * 2);
       }
     }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-    geo.setAttribute('aSize', new THREE.Float32BufferAttribute(siz, 1));
-    const mat = flowerPointSize(new THREE.PointsMaterial({
-      map: FLOWER_TEX[form], color: 0xffffff, vertexColors: true,
+    // Oriented quads, not camera-facing points: each head is placed with the
+    // attitude its form actually holds (see _FLOWER_ATTITUDE).
+    if (!FLOWER_QUAD) FLOWER_QUAD = new THREE.PlaneGeometry(1, 1);
+    const base = (_FLOWER_SIZE[form] || 0.24) * (sceneNight ? 1.25 : 1);
+    const mat = new THREE.MeshBasicMaterial({
+      map: FLOWER_TEX[form], color: 0xffffff,
+      // NOT vertexColors. The per-bloom colour rides on InstancedMesh's
+      // instanceColor, which three.js multiplies in on its own. Asking for
+      // vertexColors as well makes the shader read a `color` ATTRIBUTE that a
+      // plain PlaneGeometry does not have — it comes through as zero and every
+      // flower in the scene renders black.
       transparent: true, alphaTest: 0.4, depthWrite: false,
+      side: THREE.DoubleSide,
       // At night the blooms softly luminesce (additive) so they read like
       // moonlit / moth-pollinated flowers instead of vanishing into the dark.
       blending: sceneNight ? THREE.AdditiveBlending : THREE.NormalBlending,
-      sizeAttenuation: true, size: (_FLOWER_SIZE[form] || 0.24) * (sceneNight ? 1.25 : 1),
-    }), 96);
-    plantsGroup.add(new THREE.Points(geo, mat));
+    });
+    // MeshBasic, deliberately: a flower's colour is its whole point, and
+    // shading a two-triangle card by a normal it does not really have made
+    // half of every bed read as grey. Points were unlit too, so this keeps
+    // the look while gaining the orientation.
+    const mesh = instancedMesh(FLOWER_QUAD, pos.length / 3, mat, false);
+    const q = new THREE.Quaternion(), e = new THREE.Euler();
+    const v = new THREE.Vector3(), s = new THREE.Vector3(), m = new THREE.Matrix4();
+    const c = new THREE.Color();
+    for (let i = 0; i < siz.length; i++) {
+      const size = base * siz[i];
+      v.set(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
+      s.set(size, size, size);
+      // The plane's face is +Z, so rotating X by -π/2 puts it face-up; adding
+      // the form's tilt from there leans or nods it. Y spins it about the
+      // stem — outward from the plant for the forms read from the side, and
+      // free for the rest so a bed is not a rank of clones.
+      e.set(-Math.PI / 2 + tilts[i], spins[i], 0, 'YXZ');
+      q.setFromEuler(e);
+      m.compose(v, q, s);
+      mesh.setMatrixAt(i, m);
+      mesh.setColorAt(i, c.setRGB(col[i * 3], col[i * 3 + 1], col[i * 3 + 2]));
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    plantsGroup.add(mesh);
   }
 }
 

@@ -20,9 +20,27 @@ import math
 import bmesh
 from mathutils import Matrix, Vector
 
-from .mesh_ops import (ICO_TRIS, add_cone, add_cone_between, add_ellipsoid,
-                       bm_to_object, place, shape_to_aspect,
+from .mesh_ops import (ICO_TRIS, add_blade_or_leaf, add_cone, add_cone_between,
+                       add_ellipsoid, bm_to_object, leaf_extent, leaf_tris,
+                       leaf_width_for, place, shape_to_aspect,
                        thin_groups_to_budget)
+
+# A deciduous crown's OUTERMOST clumps are stamped as a rosette of real leaf
+# cards instead of a faceted ellipsoid. The crown edge is where a tree is read
+# from at yard distance, and until V2.29 every broadleaf's edge was the same
+# ball of facets — aspen, birch, cherry and apple differed only in bark hex and
+# crown proportion, which the sprite audit scored 3/10 for distinctness.
+#
+# Interior clumps stay ellipsoids: they are hidden inside the canopy, where a
+# sphere is the cheapest way to buy volume and shadow. So this costs almost
+# nothing — five 4-triangle leaves is the same 20 triangles as the icosahedron
+# they replace.
+CROWN_LEAF_SEGMENTS = 2                   # 4 triangles a leaf
+LEAVES_PER_TIP_CLUMP = 5
+# Leaf card length as a multiple of the clump radius it replaces. The clump
+# radius already tracks the species' real leaf length (conventions.grain_for),
+# so a bur oak's cards come out coarse and a birch's fine for free.
+CROWN_LEAF_SCALE = 1.7
 
 # ── parameter tables (echo 02-plants.js) ─────────────────────────────────────
 
@@ -316,13 +334,13 @@ def _build_deciduous(genus, tier, rng, aspect, grain):
             # radius they stopped covering the tips they hang off, and a birch grew
             # four bare pale sticks out of the top of its crown — which reads as
             # damage, not as fine twigs.
-            blobs.append([tip.copy(), base_r, tip.z])
+            blobs.append([tip.copy(), base_r, tip.z, True])
             for _ in range(n - 1):
                 c = tip + Vector(((rng.random() - 0.5) * spread,
                                   (rng.random() - 0.5) * spread,
                                   dz + base_r * 0.35
                                   + (rng.random() - 0.2) * clump_r * 0.5))
-                blobs.append([c, base_r, tip.z])
+                blobs.append([c, base_r, tip.z, True])
         elif depth >= 1:
             # Foliage ALONG the bough, not only at its tip. Tip-only clumps can
             # never put a leaf below the outermost twigs, so the crown collapsed
@@ -337,23 +355,44 @@ def _build_deciduous(genus, tier, rng, aspect, grain):
                 c = at + Vector(((rng.random() - 0.5) * clump_r * 0.8,
                                  (rng.random() - 0.5) * clump_r * 0.8,
                                  clump_r * 0.25 - droop_outer * 0.05))
-                blobs.append([c, clump_r * (0.62 + rng.random() * 0.33), at.z])
+                blobs.append([c, clump_r * (0.62 + rng.random() * 0.33), at.z,
+                              False])
+
+    # The species' blade outline, and how many cards buy the same triangles the
+    # ellipsoid they replace would have cost. A lobed bur oak leaf needs four
+    # ribbon segments (mesh_ops.blade_segments refuses to flatten a cut leaf on
+    # one vertex), so it gets fewer, larger cards — which is also how the tree
+    # itself resolves the same constraint.
+    leaf_shape = C.DECID_LEAF_SHAPE.get(genus, "ovate")
+    one_leaf = leaf_tris(leaf_shape, CROWN_LEAF_SEGMENTS)
+    leaves_per = max(2, round(ICO_TRIS / one_leaf))
+    outer_cost = leaves_per * one_leaf
 
     # Fit the crown to the tier's triangle budget before anything is stamped.
     # A branch cross-section is 5 segments capped both ends; the crown is what
     # has to give, and thinning it evenly just makes the canopy slightly airier
-    # (mesh_ops.thin_groups_to_budget).
+    # (mesh_ops.thin_groups_to_budget). Cost per clump is the DEARER of the two
+    # kinds, so the budget can never be under-counted by a crown that happens to
+    # be mostly leaf cards.
     bark_tris = len(segs) * (5 * 2 + 5 * 2)
     blobs = [b for group in thin_groups_to_budget(
-        [[b] for b in blobs], ICO_TRIS, C.TRI_BUDGETS[f"tree_tier{tier}"],
-        bark_tris) for b in group]
+        [[b] for b in blobs], max(ICO_TRIS, outer_cost),
+        C.TRI_BUDGETS[f"tree_tier{tier}"], bark_tris) for b in group]
 
     # Narrow (or widen) the whole crown to the species' real aspect BEFORE
     # stamping: branch endpoints and clump centres move, clump radii and branch
     # cross-sections don't. An aspen crown gets tall and tight with the same
     # sized leaf masses, instead of the same crown with stretched ones.
     pts = [p for s in segs for p in (s[0], s[1])] + [b[0] for b in blobs]
-    rads = [0.0] * (2 * len(segs)) + [b[1] for b in blobs]
+    # An outer clump's geometry is a leaf ROSETTE, and a leaf card reaches
+    # CROWN_LEAF_SCALE times the clump radius and then some — so declaring the
+    # clump radius here under-states the crown's real extent and the solve lets
+    # it grow past its species' aspect (an apple came out 0.77 against a target
+    # of 1.20, i.e. half again too wide). leaf_extent is the same reach model
+    # add_leaf is built from, so this is exact rather than a fudge.
+    rads = [0.0] * (2 * len(segs)) + [
+        (leaf_extent(b[1] * CROWN_LEAF_SCALE, 1.4, leaf_shape)[0] if b[3]
+         else b[1]) for b in blobs]
     shape_to_aspect(pts, aspect, radii=rads)
 
     for start, end, r_bot, r_top, _depth, _terminal in segs:
@@ -362,11 +401,29 @@ def _build_deciduous(genus, tier, rng, aspect, grain):
     # Clear bole: no foliage below clear_bole × crown height.
     max_z = max((b[2] for b in blobs), default=1.0)
     gate = form["clear_bole"] * max_z
-    for center, radius, tip_z in blobs:
+    for center, radius, tip_z, outer in blobs:
         if tip_z < gate:
             continue
-        add_ellipsoid(fol, radius, (1.0, 1.0, 0.72 + rng.random() * 0.2),
-                      Matrix.Translation(center), subdiv=FOLIAGE_SUBDIV)
+        if not outer:
+            # Inside the canopy, where a sphere is the cheapest volume there is
+            # and nobody can see its silhouette anyway.
+            add_ellipsoid(fol, radius, (1.0, 1.0, 0.72 + rng.random() * 0.2),
+                          Matrix.Translation(center), subdiv=FOLIAGE_SUBDIV)
+            continue
+        # On the crown's outer surface: a rosette of real leaf cards, fanning
+        # out and down off the twig end, so the silhouette is made of THIS
+        # species' leaves.
+        ln = radius * CROWN_LEAF_SCALE
+        wd = leaf_width_for(leaf_shape, ln)
+        az0 = rng.random() * math.tau
+        for k in range(leaves_per):
+            add_blade_or_leaf(
+                fol, rng, ln, wd,
+                # Fanned from near-horizontal to drooping past it, which is what
+                # gives a crown edge its ragged, un-spherical outline.
+                1.05 + (k / max(1, leaves_per - 1)) * 0.75 + rng.random() * 0.2,
+                az0 + k * 2.39996 + rng.random() * 0.35,
+                center, leaf_shape, CROWN_LEAF_SEGMENTS)
     return bark, fol
 
 

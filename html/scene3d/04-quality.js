@@ -401,7 +401,15 @@ function ensurePlantMats() {
   if (!SHADOW_TEX) SHADOW_TEX = makeShadowTexture();
   MATS = {
     branch:  plantMaterial({ roughness: 0.92, wind: 0.015 }),
-    foliage: plantMaterial({ roughness: 0.85, wind: 0.07, vertexColors: true }),
+    // Tree crowns became part-ribbon in V2.29: the OUTERMOST clumps are now
+    // rosettes of real leaf cards (assetlib/flora_trees.py) so a birch's
+    // silhouette is made of birch leaves, while interior clumps stay closed
+    // ellipsoids. Mixed geometry, so it takes the ribbon's rule — the first
+    // build with cards on FrontSide drew every broadleaf crown almost black,
+    // which is the same bug the shrubs had, one archetype family later. When
+    // geometry changes KIND, every material applied to it is unreviewed.
+    foliage: plantMaterial({ roughness: 0.85, wind: 0.07, vertexColors: true,
+               doubleSide: true }),
     shrub:   plantMaterial({ roughness: 0.85, wind: 0.06, vertexColors: true }),
     // Shrub foliage is now REAL LEAVES — flat ribbons (V2.29) — where the older
     // faceted masses were closed icosahedra. A solid can be FrontSide, which is
@@ -703,7 +711,7 @@ function buildPlants(group, plants, month, year, terrain) {
       // A genus profile may force a needle crown (larch keeps deciduous needle-
       // drop) or a crown form, so a species reads right regardless of dimensions.
       const cls = (p.foliage_type === 'evergreen' || prof.conifer) ? 'conifer' : 'deciduous';
-      const form = prof.formBias || formOf(p);
+      const form = treeFormFor(p, prof);
       const t = tierFor(p);
       const sub = indHash(p) % TREE_SUBVARS;
       const ck = cls === 'conifer' ? (prof.conifer || 'standard') : 'd';

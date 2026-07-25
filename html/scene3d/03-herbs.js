@@ -266,6 +266,31 @@ function formOf(p) {
   return aspect >= 2.0 ? 'slender' : (aspect <= 1.1 ? 'spreading' : 'oval');
 }
 
+// Which crown form a TREE gets, preferring what its own record says over what
+// its genus does.
+//
+// `prof.formBias` exists (per its own note in 02-plants.js) "so a species reads
+// right even when its dimensions are ambiguous" — but it was applied as an
+// OVERRIDE, so every Betula got `oval` whether it was a 20 m paper birch
+// (aspect 2.7, slender) or an 8 m water birch (1.8, oval), and every Prunus and
+// every Malus was one shape. That is most of why the sprite audit scored
+// deciduous trees 3/10 for distinctness. It is a fallback now, as written.
+//
+// `branching` (schema v47) is the other species character, and nothing read it
+// until V2.29: a multi_stem tree — water birch, Bebb's willow, alder — is a
+// broad low clump of stems, not a single-leadered spire, and reading the column
+// is the whole fix.
+function treeFormFor(p, prof) {
+  if (p.branching === 'multi_stem') return 'spreading';
+  if (p.branching === 'excurrent' && (p.height_m || 0) > 0) {
+    // One dominant leader: never draw it as the broad no-leader form.
+    const f = formOf(p);
+    return f === 'spreading' ? 'oval' : f;
+  }
+  const known = (p.height_m || 0) > 0 && (p.canopy_m || 0) > 0;
+  return known ? formOf(p) : ((prof && prof.formBias) || formOf(p));
+}
+
 function decidCfg(form, tier, prof) {
   const cfg = Object.assign({}, DECID_CFG, DECID_FORMS[form], { maxDepth: DECID_DEPTH[tier] });
   if (prof) {
