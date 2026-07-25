@@ -177,7 +177,17 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # since the builder shipped). _migrate_to_v46 adds the column to old DBs and
 # stamps the shipped examples by name so the first v46 reseed doesn't
 # duplicate them.
-_SCHEMA_VERSION = 49
+# v50 (V2.30): no DDL — reseed for the morphology of data/garden_plants.json.
+# Those five rows (both apples, Evans and Nanking cherry, bee balm) were the
+# ONLY species in the catalogue with no leaf_shape / leaf_size_cm / bark_color:
+# the two morphology scripts both target plants_master.json and nothing covered
+# the garden file. Since V2.29 a plant's recorded leaf characters select its
+# baked archetype variant and put its blade outline into a tree crown's
+# silhouette, so those five fell back to neutral defaults — and three of them
+# are trees sitting next to each other, which a user picked out of the sprite
+# contact sheet as "three near-identical green blobs".
+# See scripts/seed_garden_morphology.py for the values and their sourcing.
+_SCHEMA_VERSION = 50
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
