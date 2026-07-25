@@ -292,35 +292,53 @@ def leaf_tris(shape):
     return _SIMPLE_LEAF_TRIS
 
 
-def thin_leaf_nodes(nodes, shape, budget, structural_tris, headroom=0.94):
-    """Evenly drop whole nodes from ``nodes`` until the foliage fits ``budget``
-    triangles alongside ``structural_tris`` of stem/cane geometry.
+ICO_TRIS = 20                             # add_ellipsoid(subdiv=0) foliage mass
 
-    ``nodes`` is a list of lists: one entry per leaf node, holding the 1 (spiral),
-    2 (opposite) or 3 (whorled) leaves attached there. Thinning by node rather
-    than by leaf keeps pairs and whorls intact — the arrangement is the field
-    mark the leaves exist to show, so halving a pair would misdraw the species.
+
+def thin_groups_to_budget(groups, cost_each, budget, structural_tris,
+                          headroom=0.94):
+    """Evenly drop whole GROUPS until their contents fit ``budget`` triangles
+    alongside ``structural_tris`` of stem/branch geometry.
+
+    A builder's element counts are tuned for one species and then asked to serve
+    a family, so they have to be derived from the budget rather than fixed — and
+    deriving them here means a builder can be made denser or a species coarser
+    without anyone re-tuning a magic number per tier. Every flora builder thins
+    through this: an over-budget asset is a hard export failure, and discovering
+    that at export time is how three separate builders got hand-tuned counts that
+    were wrong for most of the species they served.
+
+    Groups, not items, because the grouping is meaningful: a leaf node's opposite
+    pair or whorl of three must stay intact (the arrangement is the field mark the
+    leaves exist to show, so halving a pair would misdraw the species), and a
+    branch tip's cluster reads as one tuft.
+    """
+    allow = max(1, int((budget * headroom - structural_tris) / max(1, cost_each)))
+    total = sum(len(g) for g in groups)
+    if not groups or total <= allow:
+        return groups
+    step = len(groups) / max(1, int(len(groups) * allow / total))
+    kept, spent, i = [], 0, 0.0
+    while i < len(groups):
+        group = groups[int(i)]
+        if kept and spent + len(group) > allow:
+            break
+        kept.append(group)
+        spent += len(group)
+        i += step
+    return kept
+
+
+def thin_leaf_nodes(nodes, shape, budget, structural_tris, headroom=0.94):
+    """:func:`thin_groups_to_budget` for leaf nodes, costed by blade outline.
 
     A compound leaf costs 3-9x a simple blade (a rachis plus 2n+1 leaflets), so
     this is what lets a rose and a dogwood share one builder: the rose ends up
     with fewer, larger leaves, which is also how the plants themselves resolve
     the same constraint.
     """
-    per = leaf_tris(shape)
-    allow = max(1, int((budget * headroom - structural_tris) / per))
-    total = sum(len(n) for n in nodes)
-    if not nodes or total <= allow:
-        return nodes
-    step = len(nodes) / max(1, int(len(nodes) * allow / total))
-    kept, spent, i = [], 0, 0.0
-    while i < len(nodes):
-        node = nodes[int(i)]
-        if kept and spent + len(node) > allow:
-            break
-        kept.append(node)
-        spent += len(node)
-        i += step
-    return kept
+    return thin_groups_to_budget(nodes, leaf_tris(shape), budget,
+                                 structural_tris, headroom)
 
 
 def add_leaf(bm, rng, length, width, tilt, azimuth, at, shape):

@@ -96,7 +96,7 @@ Defined once in `scripts/blender/assetlib/conventions.py`; the loader side is
 - **Foliage granularity:** leaf-mass radius is a fraction of the crown's
   half-width, not of the asset height (`FOLIAGE_FRAC`), and the fraction
   *shrinks* with the size tier while the count grows (`CLUMPS_PER_TIP`,
-  `DECID_MIN_R`). So a big tree carries many fine masses and a sapling a few
+  `DECID_MIN_R_FRAC`). So a big tree carries many fine masses and a sapling a few
   coarse ones — structural detail tracks absolute size, not just growth year.
   Masses are 20-triangle icosahedra (subdiv 0), matching the viewer's own
   `makeFoliageMass`, which is what pays for the extra count.
@@ -152,6 +152,24 @@ Defined once in `scripts/blender/assetlib/conventions.py`; the loader side is
   of wildflowers drew leaves 3.7x too narrow. Note the asymmetry with the
   procedural fallback, which uses each species' *exact* recorded `leaf_shape`
   and so was never affected: baking can only afford one outline per class.
+- **Trunks are authored at real girth, and crowns are not tufts.** `trunk_r` in
+  `DECID_FORMS`/`DECID_GENERA` is the trunk's radius as a fraction of tree
+  height, from real figures (aspen ~0.4 m at 20 m → 2% diameter; open-grown bur
+  oak ~1.0 m at 14 m → 7%). One shared value of 0.055 previously made every
+  trunk 11-13% thick — a 20 m aspen with a 2.6 m bole. `DECID_MIN_R_FRAC` is
+  relative to `trunk_r` for the same reason: an absolute twig cutoff thinned out
+  the crown of any species whose trunk was thinned to its real girth.
+
+  Foliage clumps also sit ALONG the boughs, not only at branch tips. Tip-only
+  clumps cannot place a leaf below the outermost twigs, so the live crown
+  collapsed to the top 24-27% of a slender tree whatever the trunk did.
+  `CROWN_FRAC` records the target per form and
+  `tests/test_model_assets.py` enforces a 40% floor — a floor rather than a
+  target, because species and saplings vary either side of it while the failure
+  being guarded (a tuft on a pole) is unambiguous. The first clump of a terminal
+  cluster is centred exactly on the tip so the twig end is buried in its own
+  foliage; once masses shrank to a seventh of the crown radius they stopped
+  covering their tips, and a birch grew bare pale sticks out of its crown.
 - **Foliage must reach the tip.** A woody unit's `foliage` part has to top out
   within 10% of its `bark` part, checked per unit by
   `tests/test_model_assets.py`. The first cut of the V2.29 shrub rebuild hung

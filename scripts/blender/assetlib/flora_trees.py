@@ -20,8 +20,9 @@ import math
 import bmesh
 from mathutils import Matrix, Vector
 
-from .mesh_ops import (add_cone, add_cone_between, add_ellipsoid, bm_to_object,
-                       place, shape_to_aspect)
+from .mesh_ops import (ICO_TRIS, add_cone, add_cone_between, add_ellipsoid,
+                       bm_to_object, place, shape_to_aspect,
+                       thin_groups_to_budget)
 
 # ── parameter tables (echo 02-plants.js) ─────────────────────────────────────
 
@@ -46,34 +47,60 @@ CONIFER_KINDS = {
                     "crown_base": (0.05, 0.10, 0.18)},
 }
 
+# `bole` is the first trunk segment's length and `len_scale` the exponent that
+# shortens each child, so together they set how much of the tree is bare trunk
+# versus crown. Both were tuned for a look, and the look was wrong: a user's
+# screenshot showed an aspen whose live crown was the top 27% of its height above
+# a trunk like a concrete pillar. Real open-grown prairie trees carry a live
+# crown over 50-70% of their height, so the branch cloud has to START low and
+# the children have to stay long enough to fill it. CROWN_FRAC below records the
+# target each form is tuned against, and a test holds the built assets to it.
 DECID_FORMS = {
-    "slender":   {"angle": 0.46, "len_scale": 0.84, "clear_bole": 0.52,
-                  "foliage_scale": 0.72, "split_bias": 0.15},
-    "oval":      {"angle": 0.62, "len_scale": 0.70, "clear_bole": 0.38,
-                  "foliage_scale": 0.90, "split_bias": 0.2},
-    "spreading": {"angle": 0.85, "len_scale": 0.64, "clear_bole": 0.28,
-                  "foliage_scale": 1.00, "split_bias": 0.3},
+    "slender":   {"angle": 0.52, "len_scale": 0.58, "clear_bole": 0.30,
+                  "foliage_scale": 0.72, "split_bias": 0.15,
+                  "bole": 0.26, "trunk_r": 0.013},
+    "oval":      {"angle": 0.66, "len_scale": 0.54, "clear_bole": 0.24,
+                  "foliage_scale": 0.90, "split_bias": 0.2,
+                  "bole": 0.24, "trunk_r": 0.016},
+    "spreading": {"angle": 0.85, "len_scale": 0.52, "clear_bole": 0.18,
+                  "foliage_scale": 1.00, "split_bias": 0.3,
+                  "bole": 0.22, "trunk_r": 0.030},
 }
 
+# Live crown ÷ total height that each form is tuned to, from open-grown prairie
+# trees. tests/test_model_assets.py checks the shipped GLBs against these.
+CROWN_FRAC = {"slender": 0.58, "oval": 0.60, "spreading": 0.68}
+
+# `trunk_r` is the trunk's radius in unit-frame terms, i.e. HALF its diameter as
+# a fraction of the tree's height. The previous single value of 0.055 made every
+# trunk 11% of the tree's height thick — a 20 m aspen with a 2.6 m bole. Real
+# figures: trembling aspen ~0.4 m at 20 m (2%), paper birch ~0.4 m at 16 m
+# (2.5%), open-grown bur oak ~1.0 m at 14 m (7%), shrub willow ~0.3 m at 7 m (4%).
 DECID_GENERA = {
-    "aspen":         {"form": "slender", "foliage_scale": 0.90},
-    "birch":         {"form": "oval", "droop_outer": 0.55, "foliage_scale": 0.82},
-    "oak":           {"form": "spreading", "foliage_scale": 1.06},
-    "willow":        {"form": "slender", "droop_outer": 0.70, "foliage_scale": 0.85},
-    "cherry":        {"form": "oval"},
-    "apple":         {"form": "spreading"},
+    "aspen":         {"form": "slender", "foliage_scale": 0.90,
+                      "trunk_r": 0.011},
+    "birch":         {"form": "oval", "droop_outer": 0.55, "foliage_scale": 0.82,
+                      "trunk_r": 0.013},
+    "oak":           {"form": "spreading", "foliage_scale": 1.06,
+                      "trunk_r": 0.035},
+    "willow":        {"form": "slender", "droop_outer": 0.70,
+                      "foliage_scale": 0.85, "trunk_r": 0.020},
+    "cherry":        {"form": "oval", "trunk_r": 0.018},
+    "apple":         {"form": "spreading", "trunk_r": 0.026},
     "def_slender":   {"form": "slender"},
     "def_oval":      {"form": "oval"},
     "def_spreading": {"form": "spreading"},
 }
 
-DECID_DEPTH = (2, 4, 5)                  # skeleton depth by maturity tier
-# Minimum branch radius before a limb is called terminal, by tier. This — not
-# the depth cap — is what actually decides how many branch ends a crown has:
-# each split takes a limb to ~0.55 of its parent, so a fixed cutoff stops the
-# walk after three levels no matter how deep it is allowed to go. A larger tree
-# carries finer twigs, hence more tips to hang the (now smaller) leaf masses on.
-DECID_MIN_R = (0.020, 0.016, 0.011)
+DECID_DEPTH = (3, 5, 6)                  # skeleton depth by maturity tier
+# Minimum branch radius before a limb is called terminal, as a FRACTION of the
+# trunk's radius. This — not the depth cap — is what actually decides how many
+# branch ends a crown has: each split takes a limb to ~0.55 of its parent, so a
+# cutoff stops the walk after a fixed number of levels no matter how deep it is
+# allowed to go. Expressed relatively so thinning a species' trunk to its real
+# girth doesn't also thin out its crown (an absolute cutoff did exactly that).
+# A larger tree carries finer twigs, hence more tips to hang leaf masses on.
+DECID_MIN_R_FRAC = (0.34, 0.20, 0.12)
 
 # Foliage-clump radius as a fraction of the crown's HALF-WIDTH, by size tier.
 # Two things fall out of keying it to the crown rather than to the asset height:
@@ -82,13 +109,17 @@ DECID_MIN_R = (0.020, 0.016, 0.011)
 #   * bigger trees get relatively finer foliage — a 20 m aspen carries many
 #     branch-end masses, a 4 m sapling a few — so structural detail tracks
 #     absolute size, not just growth year (04-quality.js tierFor).
-FOLIAGE_FRAC = (0.40, 0.30, 0.23)
+# Reduced in V2.29 after a user's screenshot: at a quarter of the crown radius
+# each, the masses read as boulders stacked on a stick rather than as foliage.
+# They are now ~1/7 of the crown radius, arriving in greater numbers, which is
+# what the triangle budget affords (a mass is a 20-triangle icosahedron).
+FOLIAGE_FRAC = (0.30, 0.22, 0.155)
 # Clumps per terminal branch by tier. Finer masses have to arrive in greater
 # numbers or the crown goes see-through — the first cut of the aspect fix left
 # an aspen as a bare pole with a few crumbs at the top. Affordable because a
 # foliage mass is a 20-triangle icosahedron (subdiv 0, matching the viewer's own
 # makeFoliageMass), not an 80-triangle one.
-CLUMPS_PER_TIP = (4, 6, 7)
+CLUMPS_PER_TIP = (5, 7, 8)
 FOLIAGE_SUBDIV = 0
 
 TREE_ARCHETYPES = ("spruce", "fir", "pine", "larch", "def_conifer",
@@ -217,7 +248,7 @@ def _build_pine(tier, rng, aspect, grain):
 
 # ── deciduous ────────────────────────────────────────────────────────────────
 
-def _decid_skeleton(rng, form, max_depth, min_r):
+def _decid_skeleton(rng, form, max_depth, min_r, trunk_r, bole):
     """Recursive da Vinci skeleton as explicit segments:
     [[start, end, r_bot, r_top, depth, terminal]] — radius² conserved across
     splits, child length scaling. Endpoints (not matrices) so the crown can be
@@ -248,11 +279,12 @@ def _decid_skeleton(rng, form, max_depth, min_r):
                    @ Matrix.Rotation(spread, 4, "X"))
             walk(tip_mat @ rot, r_child, l_child, depth + 1)
 
-    walk(Matrix(), 0.055, 0.40, 0)
+    walk(Matrix(), trunk_r, bole, 0)
     return segs
 
 
 def _build_deciduous(genus, tier, rng, aspect, grain):
+    from . import conventions as C           # tier triangle budget
     g = DECID_GENERA[genus]
     form = dict(DECID_FORMS[g["form"]])
     f_scale = form["foliage_scale"] * g.get("foliage_scale", 1.0)
@@ -267,8 +299,11 @@ def _build_deciduous(genus, tier, rng, aspect, grain):
     crown_half = 0.5 / aspect
     clump_r = crown_half * FOLIAGE_FRAC[tier] * f_scale * grain
 
-    segs = _decid_skeleton(rng, form, DECID_DEPTH[tier], DECID_MIN_R[tier])
-    blobs = []          # [center, radius, z_of_tip] — clear-bole gated below
+    trunk_r = g.get("trunk_r", form["trunk_r"])
+    segs = _decid_skeleton(rng, form, DECID_DEPTH[tier],
+                           trunk_r * DECID_MIN_R_FRAC[tier], trunk_r,
+                           form["bole"])
+    blobs = []          # [center, radius, z_of_anchor] — clear-bole gated below
     for start, end, r_bot, r_top, depth, terminal in segs:
         tip = end
         if terminal:
@@ -276,17 +311,42 @@ def _build_deciduous(genus, tier, rng, aspect, grain):
             base_r = clump_r * (0.85 + 0.3 * rng.random())
             spread = clump_r * (1 + droop_outer * 0.4)
             dz = -droop_outer * 0.11
-            for _ in range(n):
+            # The FIRST clump sits exactly on the tip, so the twig end is buried
+            # in its own foliage. Once the masses shrank to a seventh of the crown
+            # radius they stopped covering the tips they hang off, and a birch grew
+            # four bare pale sticks out of the top of its crown — which reads as
+            # damage, not as fine twigs.
+            blobs.append([tip.copy(), base_r, tip.z])
+            for _ in range(n - 1):
                 c = tip + Vector(((rng.random() - 0.5) * spread,
                                   (rng.random() - 0.5) * spread,
                                   dz + base_r * 0.35
                                   + (rng.random() - 0.2) * clump_r * 0.5))
                 blobs.append([c, base_r, tip.z])
-        elif depth >= 2:
-            c = tip + Vector(((rng.random() - 0.5) * clump_r * 0.6,
-                              (rng.random() - 0.5) * clump_r * 0.6,
-                              clump_r * 0.3))
-            blobs.append([c, clump_r * (0.6 + rng.random() * 0.35), tip.z])
+        elif depth >= 1:
+            # Foliage ALONG the bough, not only at its tip. Tip-only clumps can
+            # never put a leaf below the outermost twigs, so the crown collapsed
+            # into the top quarter of the tree however low the first split was —
+            # the pole-with-a-tuft aspen in a user's screenshot. A real crown is
+            # leafy over the whole outer surface of the branch cloud, lower
+            # boughs included, and this is what fills it downward.
+            n = 2 if depth >= 2 else 1
+            for j in range(n):
+                t = 0.45 + 0.55 * ((j + rng.random()) / n)
+                at = start.lerp(end, t)
+                c = at + Vector(((rng.random() - 0.5) * clump_r * 0.8,
+                                 (rng.random() - 0.5) * clump_r * 0.8,
+                                 clump_r * 0.25 - droop_outer * 0.05))
+                blobs.append([c, clump_r * (0.62 + rng.random() * 0.33), at.z])
+
+    # Fit the crown to the tier's triangle budget before anything is stamped.
+    # A branch cross-section is 5 segments capped both ends; the crown is what
+    # has to give, and thinning it evenly just makes the canopy slightly airier
+    # (mesh_ops.thin_groups_to_budget).
+    bark_tris = len(segs) * (5 * 2 + 5 * 2)
+    blobs = [b for group in thin_groups_to_budget(
+        [[b] for b in blobs], ICO_TRIS, C.TRI_BUDGETS[f"tree_tier{tier}"],
+        bark_tris) for b in group]
 
     # Narrow (or widen) the whole crown to the species' real aspect BEFORE
     # stamping: branch endpoints and clump centres move, clump radii and branch

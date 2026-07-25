@@ -470,6 +470,64 @@ class ModelAssetsTest(unittest.TestCase):
                 checked += 1
         self.assertGreater(checked, 20, "woody units stopped resolving")
 
+    # A deciduous crown must cover at least this fraction of the tree's height.
+    # A FLOOR, not a target: an open-grown prairie tree carries a live crown over
+    # 50-70% of its height, saplings and species vary either side of that, and the
+    # failure this guards is unambiguous — the crown collapsing into a tuft at the
+    # apex. Aspen measured 27% and willow 24% when a user's screenshot caught it.
+    _MIN_CROWN_FRAC = 0.40
+
+    def test_deciduous_crowns_are_not_tufts_on_a_pole(self):
+        """Foliage must span a real crown, not just the branch tips.
+
+        The V2.29 crown hung clumps only on terminal tips, which cannot put a leaf
+        below the outermost twigs however low the trunk splits — so an aspen was a
+        pole with foliage in its top quarter. Nothing caught it: the per-unit
+        aspect was right (that measures overall height vs overall width), the
+        budgets were right, and the render gate measures the union of all parts.
+        """
+        conventions = _assetlib_conventions()
+        if conventions is None:
+            self.skipTest("assetlib.conventions not importable")
+        checked = 0
+        for key, entry in self.mf["plants"].items():
+            if not key.startswith("tree."):
+                continue
+            # Conifers are foliated nearly to the ground by design; the crown-base
+            # question is a deciduous one (CONIFER_KINDS carries its own
+            # crown_base per tier).
+            if conventions.aspect_for(key) is None:
+                continue
+            gltf, _ = self.gltf[entry["file"]]
+            for t in entry.get("tiers", []):
+                unit = f"tier{t}"
+                base = self._part_base(gltf, unit, "foliage")
+                top = self._part_top(gltf, unit, "foliage")
+                if base is None or not top:
+                    continue
+                frac = (top - base) / top
+                self.assertGreaterEqual(
+                    frac, self._MIN_CROWN_FRAC,
+                    f"{key}/{unit}: foliage spans only {frac:.0%} of the tree's "
+                    f"height (from {base:.2f} to {top:.2f}) — the crown has "
+                    f"collapsed into a tuft on a pole.")
+                checked += 1
+        self.assertGreater(checked, 20, "tree tiers stopped resolving")
+
+    def _part_base(self, gltf, unit, part):
+        """Lowest y of one named part of one unit, or None if absent."""
+        nodes = gltf.get("nodes", [])
+        idx = {n.get("name", ""): i for i, n in enumerate(nodes)}
+        i = idx.get(f"{unit}_{part}")
+        if i is None or "mesh" not in nodes[i]:
+            return None
+        lo = None
+        for prim in gltf["meshes"][nodes[i]["mesh"]].get("primitives", []):
+            acc = gltf["accessors"][prim["attributes"]["POSITION"]]
+            bottom = acc.get("min", [0, 0, 0])[1]
+            lo = bottom if lo is None else min(lo, bottom)
+        return lo
+
     def test_declared_nodes_exist(self):
         for key, entry in self.mf["plants"].items():
             gltf, _ = self.gltf[entry["file"]]
