@@ -131,6 +131,40 @@ def working_tree_dirty(git_runner: Callable[..., object]) -> Optional[bool]:
     return bool((getattr(res, "stdout", "") or "").strip())
 
 
+def unmerged_paths(git_runner: Callable[..., object]) -> Optional[list]:
+    """Files sitting in a conflicted (unmerged) state, or ``None`` when git
+    itself failed.
+
+    This state BLOCKS every update path — git refuses to merge, switch branches
+    or stash while the index has unmerged entries — so both paths check it before
+    attempting anything. Reporting "merge is not possible because you have
+    unmerged files" and then suggesting a command that fails identically is how
+    the updater stranded a real install (see abort_conflicted_state)."""
+    res = git_runner("diff", "--name-only", "--diff-filter=U")
+    if getattr(res, "returncode", 1) != 0:
+        return None
+    return [ln.strip() for ln in (getattr(res, "stdout", "") or "").splitlines()
+            if ln.strip()]
+
+
+def abort_conflicted_state(git_runner: Callable[..., object]) -> Tuple[bool, str]:
+    """Clear a conflicted index with ``git reset --merge``, leaving the working
+    tree clean. Returns ``(ok, detail)``.
+
+    Deliberately NOT ``reset --hard`` (which the architecture guard forbids, and
+    rightly): ``--merge`` resets only paths that differ between HEAD and the
+    index and refuses outright if that would clobber unrelated local edits, so
+    committed work and untracked files are untouchable. What it does discard is a
+    half-applied merge — which is exactly what a conflicting ``git stash pop``
+    leaves behind, and the user's changes are still in the stash at that point.
+    Because it can also discard a conflict the user is part-way through resolving
+    by hand, callers must ask first."""
+    res = git_runner("reset", "--merge")
+    if getattr(res, "returncode", 1) != 0:
+        return False, "git reset --merge failed:\n" + _run_detail(res)
+    return True, ""
+
+
 def update_to_branch(
     git_runner: Callable[..., object],
     branch: str,
@@ -165,10 +199,21 @@ def update_to_branch(
     if stash_label:
         pop = git_runner("stash", "pop")
         if getattr(pop, "returncode", 1) != 0:
-            return True, ("Updated — but restoring your local changes hit a "
-                          "conflict, so they were kept safe in the stash "
-                          f"('{stash_label}'). Restore them with: "
-                          "git stash pop")
+            # A conflicting `stash pop` keeps the stash (good) but leaves the
+            # working tree FULL OF UNMERGED FILES (bad) — and git then refuses
+            # every later merge, switch and stash, so the next Check for Updates
+            # died on "Merging is not possible because you have unmerged files"
+            # and advised a command that failed the same way. Undo the half
+            # application so the checkout is left clean and updatable; the user's
+            # work is in the stash, which is where this note points them.
+            cleaned, _detail = abort_conflicted_state(git_runner)
+            note = ("Updated — but restoring your local changes hit a conflict, "
+                    f"so they were kept safe in the stash ('{stash_label}'). "
+                    "Restore them with: git stash pop")
+            if not cleaned:
+                note += ("\n\nThe checkout still has conflicted files. Clear "
+                         "them from a terminal with: git reset --merge")
+            return True, note
     return True, ""
 
 

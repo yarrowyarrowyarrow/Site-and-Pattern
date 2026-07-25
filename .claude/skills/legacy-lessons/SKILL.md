@@ -265,6 +265,45 @@ criterion explicit. And test the *shape* of an output (spans, spacing,
 distribution), not just its validity; "all plants inside the boundary"
 was green while the feature was visibly broken. (See `generate-design`.)
 
+## 17. The updater's self-made dead end (V2.29)
+
+A user screenshot: **"Update failed — git merge --ff-only failed: error:
+Merging is not possible because you have unmerged files"**, followed by
+the dialog's advice, *"You can finish from a terminal instead: `git pull
+--ff-only`"* — which fails with the **identical** error. The app had
+painted itself into a corner and then handed the user a map back to the
+same corner.
+
+It had also *built* the corner. `update_to_branch` stashes local edits,
+switches branch, then pops. A conflicting `git stash pop` keeps the stash
+(good) but leaves the working tree **full of unmerged files** (bad), and
+the old code returned `(True, "kept safe in the stash")` — truthful about
+the stash, silent about the wreckage. git then refuses every merge,
+switch *and* stash, so every later Check for Updates hit the same wall.
+Reproduced in six lines of git; the tests had covered the
+successful-stash-and-restore path and the diverged-branch path, but never
+a **conflicting** pop.
+
+**Scar:** `version_branch.unmerged_paths` +
+`abort_conflicted_state` (`git reset --merge` — *not* `--hard`: it resets
+only paths differing between HEAD and index and refuses rather than
+clobbering unrelated edits); `update_to_branch` now aborts the half
+application so the checkout it hands back is always updatable;
+`update_flow._clear_conflicts_if_any` runs before both update paths and
+offers the way out *with consent* (a conflict the user is hand-resolving
+must never be discarded silently); and the failure text only suggests a
+terminal command when that command can actually work.
+`tests/test_version_branch.py:TestConflictedCheckoutRecovery` pins the
+symptom itself — including that `git pull --ff-only` cannot fix it — and
+`test_architecture_guard.py` pins the wiring plus a **tightened**
+destructive-git check: exact-token matching (so the files may keep
+documenting the `--hard` they must not run), now covering `clean`, `-f`,
+`--force` and `version_branch.py` as well.
+**Rule:** an error message is a dead end unless it names a command that
+works *from the state the user is actually in*. Check the state, then
+advise. And when a recovery path can conflict, test the conflict — the
+happy path proves nothing about the corner your code leaves behind.
+
 ## The meta-lessons
 
 1. **Silence is the enemy.** Nearly every entry above failed *silently*:

@@ -35,12 +35,14 @@ from PyQt6.QtWidgets import QInputDialog, QMessageBox, QProgressDialog
 from src.app_version import build_version
 from src.branding import APP_NAME
 from src.version_branch import (
+    abort_conflicted_state,
     fast_forward_upstream,
     is_newer_version,
     list_remote_version_branches,
     newest_remote_version_branch,
     normalize_branch_ref,
     parse_version_branch,
+    unmerged_paths,
     update_to_branch,
     working_tree_dirty,
 )
@@ -348,22 +350,86 @@ class UpdateFlowController:
         )
         if prompt != QMessageBox.StandardButton.Yes:
             return
+        if not self._clear_conflicts_if_any(_git):
+            return
         ok, detail = fast_forward_upstream(_git)
         if not ok:
+            # Only suggest the terminal equivalent when it can actually work.
+            # `git pull --ff-only` fails on a conflicted index with the very
+            # error we just showed, so pointing at it there sent users in a
+            # circle; _clear_conflicts_if_any above handles that state instead.
+            still_conflicted = unmerged_paths(_git)
+            hint = ("    git reset --merge     (then: git pull --ff-only)"
+                    if still_conflicted else "    git pull --ff-only")
             QMessageBox.warning(
                 self._main, "Update failed",
                 detail + "\n\nYou can finish from a terminal instead:\n\n"
-                "    git pull --ff-only")
+                + hint)
             return
         self._offer_restart(f"the latest {current}")
 
     # ── One-click source update (V2.25) ───────────────────────────────────────
+
+    def _clear_conflicts_if_any(self, git_runner) -> bool:
+        """Get past a conflicted checkout, or explain why we can't. ``True`` when
+        the tree is clear to update.
+
+        Every update path is blocked while the index holds unmerged files: git
+        refuses to merge, switch branches or stash. The app used to attempt the
+        merge anyway and then advise `git pull --ff-only`, which fails with the
+        identical error — a dead end the app had usually created itself, by a
+        `git stash pop` that conflicted during an earlier update. So offer the
+        way out here, with consent, and never touch a resolution in progress
+        without asking: `git reset --merge` discards a half-finished merge, and
+        for all we know the user is mid-way through fixing it by hand.
+        """
+        paths = unmerged_paths(git_runner)
+        if paths is None or not paths:
+            return True             # clean, or git unavailable — let it proceed
+        listed = "\n".join(f"    {p}" for p in paths[:10])
+        if len(paths) > 10:
+            listed += f"\n    … and {len(paths) - 10} more"
+        stash = git_runner("stash", "list")
+        has_stash = bool((getattr(stash, "stdout", "") or "").strip())
+        where = (" Your earlier local edits are still safe in the git stash "
+                 "(git stash list), so discarding these leaves nothing lost."
+                 if has_stash else "")
+        box = QMessageBox(
+            QMessageBox.Icon.Warning, "Update blocked by a conflict",
+            "This checkout has files left in a conflicted state, and git won't "
+            "update, switch branches or stash until they're dealt with:\n\n"
+            f"{listed}\n\n"
+            "That is usually left behind by an earlier update whose changes "
+            f"couldn't be replayed cleanly.{where}\n\n"
+            "Discarding clears the half-applied merge (git reset --merge) — but "
+            "if you have been resolving these conflicts by hand, keep them "
+            "instead and finish in a terminal with: git add <file>",
+            QMessageBox.StandardButton.NoButton, self._main,
+        )
+        discard = box.addButton("Discard and continue",
+                                QMessageBox.ButtonRole.DestructiveRole)
+        box.addButton("Keep them (cancel update)",
+                      QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if box.clickedButton() is not discard:
+            return False
+        ok, detail = abort_conflicted_state(git_runner)
+        if not ok:
+            QMessageBox.warning(
+                self._main, "Update failed",
+                detail + "\n\nClear it from a terminal instead:\n\n"
+                "    git reset --merge")
+            return False
+        self._main.statusBar().showMessage("Conflicted files cleared.", 4000)
+        return True
 
     def _perform_source_update(self, git_runner, target: str):
         """Switch the checkout to origin/<target> in-app. Local tracked
         changes are stashed (with consent) and restored after — the V2.22
         lesson kept: nothing here can destroy work, and there is no
         reset-hard path."""
+        if not self._clear_conflicts_if_any(git_runner):
+            return
         dirty = working_tree_dirty(git_runner)
         if dirty is None:
             QMessageBox.warning(

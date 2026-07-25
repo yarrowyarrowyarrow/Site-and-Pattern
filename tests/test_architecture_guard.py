@@ -175,14 +175,79 @@ class TestUpdaterStaysNonDestructive(unittest.TestCase):
     it. Local changes may be stashed — recoverable by design — but the
     updater must never be able to destroy work."""
 
-    def test_no_destructive_git_in_update_flow(self):
-        src = (_SRC / "controllers" / "update_flow.py").read_text(
-            encoding="utf-8")
-        for banned in ("--hard", "git clean", '"clean"'):
-            self.assertNotIn(
-                banned, src,
-                f"update_flow.py contains {banned!r} — the one-click updater "
-                "must stay non-destructive (stash, never discard).")
+    # V2.29: version_branch.py joined the list. It is where the updater's git
+    # commands actually live, and it gained a `git reset --merge` (to clear the
+    # conflicted index a failed stash-pop leaves behind) — one keystroke from the
+    # `--hard` this guard exists to keep out. `--merge` refuses rather than
+    # clobbering unrelated local edits; `--hard` does not, which is the whole
+    # difference and why only one of them is allowed.
+    _FILES = [("controllers", "update_flow.py"), (None, "version_branch.py")]
+
+    # Exact-match, not substring: both files legitimately *discuss* `reset
+    # --hard` in prose (the module comment records that the path stays dead, and
+    # abort_conflicted_state explains why it uses --merge instead). A git
+    # argument is exactly the token; a sentence mentioning it never is. Banning
+    # the substring would force the code to stop documenting its own history.
+    _BANNED = {"--hard", "clean", "-f", "--force"}
+
+    def _command_strings(self, src):
+        """Every string literal the module could pass to a subprocess, i.e. all
+        of them except docstrings."""
+        tree = ast.parse(src)
+        docstrings = set()
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef,
+                                 ast.AsyncFunctionDef)):
+                doc = ast.get_docstring(node, clean=False)
+                if doc is not None:
+                    docstrings.add(doc)
+        return [n.value for n in ast.walk(tree)
+                if isinstance(n, ast.Constant) and isinstance(n.value, str)
+                and n.value not in docstrings]
+
+    def test_no_destructive_git_in_the_update_path(self):
+        for subdir, name in self._FILES:
+            path = (_SRC / subdir / name) if subdir else (_SRC / name)
+            for literal in self._command_strings(path.read_text(
+                    encoding="utf-8")):
+                self.assertNotIn(
+                    literal.strip(), self._BANNED,
+                    f"{name} passes {literal!r} to git — the one-click updater "
+                    "must stay non-destructive (stash, never discard).")
+
+    def test_both_update_paths_check_for_conflicts_first(self):
+        """V2.29 — a field report: "Merging is not possible because you have
+        unmerged files", from a checkout the updater itself had left conflicted.
+
+        git refuses to merge, switch branches OR stash while the index holds
+        unmerged entries, so an update attempted in that state cannot succeed,
+        and the failure text pointed at `git pull --ff-only`, which fails
+        identically. Both paths must therefore establish a clean index BEFORE
+        touching the repo. AST-only — the flow needs Qt to run, and this is
+        exactly the wiring a refactor drops silently.
+        """
+        tree = ast.parse((_SRC / "controllers" / "update_flow.py").read_text(
+            encoding="utf-8"))
+        found = {}
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef):
+                continue
+            if node.name not in ("_on_check_for_updates",
+                                 "_perform_source_update"):
+                continue
+            found[node.name] = any(
+                isinstance(c.func, ast.Attribute)
+                and c.func.attr == "_clear_conflicts_if_any"
+                for c in ast.walk(node) if isinstance(c, ast.Call))
+        self.assertEqual(sorted(found), ["_on_check_for_updates",
+                                         "_perform_source_update"],
+                         "an update path went missing from update_flow.py")
+        for name, checks in found.items():
+            self.assertTrue(
+                checks,
+                f"{name} no longer calls _clear_conflicts_if_any — a checkout "
+                "with unmerged files would strand the user again, with advice "
+                "that fails the same way.")
 
 
 class TestAnalysisPanelTabsRegistered(unittest.TestCase):
