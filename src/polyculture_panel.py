@@ -27,7 +27,7 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QSlider,
     QSpinBox,
-    QSplitter,
+    QSizePolicy,
     QTextBrowser,
     QToolButton,
     QTreeWidget,
@@ -106,7 +106,17 @@ from src.plant_conditions import condition_matches
 # description card below. _TREE_EXPANDED_MAX is Qt's QWIDGETSIZE_MAX; the
 # collapsed height is computed from the live row height × _TREE_COLLAPSED_ROWS.
 _TREE_EXPANDED_MAX = 16_777_215
-_TREE_COLLAPSED_ROWS = 7
+# Raised from 7 in V2.30. The cap hands room to the members list + description
+# card, which is right — but it was also the binding constraint once the mix
+# stopped stealing space, so the library showed seven rows of sixty on a tall
+# window for no reason.
+_TREE_COLLAPSED_ROWS = 10
+# ...and a FLOOR, which the panel never had. The tree was the only stretch
+# child with no minimum height, so it was the only widget in the column that
+# could be squeezed, and everything that grew below it grew at its expense.
+_TREE_MIN_ROWS = 6
+# The community mix scrolls past this many rows instead of growing without end.
+_MIX_ROWS_VISIBLE = 4
 
 # "Group By" lenses for the community library (V1.88). Each key (other than
 # "none") matches a facet from polycultures.get_community_facets(); the panel
@@ -1328,6 +1338,10 @@ class PolyculturePanel(QWidget):
         # sees as many communities as fit; once a community is selected it
         # shrinks to ~7 rows and the members list + description card take over.
         self.polyculture_tree.setMaximumHeight(_TREE_EXPANDED_MAX)
+        # A real floor: whatever else the panel wants to show, the library keeps
+        # at least this many rows. Applied again after the first layout pass in
+        # _apply_tree_floor(), when sizeHintForRow() finally knows the metrics.
+        self.polyculture_tree.setMinimumHeight(_TREE_MIN_ROWS * 19)
         layout.addWidget(self.polyculture_tree, 1)
 
         # Community-mix stack — populated by right-click → "Add to Mix".
@@ -1468,6 +1482,13 @@ class PolyculturePanel(QWidget):
         placement_layout.setSpacing(0)
         self._build_community_pattern_controls(placement_layout)
         self._build_community_mix_controls(placement_layout)
+        # Minimum vertical policy, the call src/plant_panel.py:519-521 makes and
+        # this panel never did: it tells the layout the pane will accept its
+        # sizeHint but must not be handed more, so a growing mix stops
+        # out-competing the stretch children above it.
+        placement_body.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self._placement_body = placement_body
         self._placement_panel = CollapsiblePanel(
             "Placement", panel_id="poly_placement", expanded=False
         )
@@ -1504,7 +1525,19 @@ class PolyculturePanel(QWidget):
         self._mix_community_layout.setContentsMargins(0, 2, 0, 2)
         self._mix_community_layout.setSpacing(2)
         self._mix_community_rows.setVisible(False)
-        ml.addWidget(self._mix_community_rows)
+        # The rows scroll past four. Un-capped, eight communities added ~200 px
+        # of hard, non-shrinkable content to a pane that sits at stretch 0, and
+        # a QVBoxLayout gives a stretch-0 child its whole sizeHint before the
+        # stretch children get anything — so every row added came straight out
+        # of the community list above, which is the reported bug: the library
+        # collapsed to about three visible rows out of sixty.
+        self._mix_community_scroll = QScrollArea()
+        self._mix_community_scroll.setWidgetResizable(True)
+        self._mix_community_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._mix_community_scroll.setWidget(self._mix_community_rows)
+        self._mix_community_scroll.setMaximumHeight(_MIX_ROWS_VISIBLE * 26 + 8)
+        self._mix_community_scroll.setVisible(False)
+        ml.addWidget(self._mix_community_scroll)
 
         btn_row = QHBoxLayout()
         btn_row.setSpacing(4)
@@ -1618,6 +1651,7 @@ class PolyculturePanel(QWidget):
                 "Drag or right-click communities here to build a mix."
             )
             self._mix_community_rows.setVisible(False)
+            self._mix_community_scroll.setVisible(False)
             self._mix_community_place_btn.setEnabled(False)
             self._mix_community_clear_btn.setEnabled(False)
             return
@@ -1632,12 +1666,42 @@ class PolyculturePanel(QWidget):
                 f"Pick Row/Grid/Circle and click Place Mix on Map."
             )
         self._mix_community_rows.setVisible(True)
+        self._mix_community_scroll.setVisible(True)
         self._mix_community_clear_btn.setEnabled(True)
         self._mix_community_place_btn.setEnabled(n >= 2)
 
         for idx, c in enumerate(self._mix_communities):
             row = self._build_community_mix_row(idx, c)
             self._mix_community_layout.addWidget(row)
+        # Ask Qt to recompute geometry once the new rows have been laid out and
+        # contribute to sizeHint (src/plant_panel.py:948-962 does the same).
+        QTimer.singleShot(0, self._refit_placement_pane)
+
+    def _refit_placement_pane(self):
+        """Recompute the placement pane's geometry after the mix grows/shrinks.
+
+        The pane holds its content directly and its rows now scroll past
+        _MIX_ROWS_VISIBLE, so it settles at a bounded height; this just asks Qt
+        to notice promptly rather than on the next unrelated resize.
+        """
+        if hasattr(self, "_placement_body"):
+            self._placement_body.updateGeometry()
+        if hasattr(self, "_placement_panel"):
+            self._placement_panel.updateGeometry()
+        self._apply_tree_floor()
+
+    def _apply_tree_floor(self):
+        """Hold the community list to _TREE_MIN_ROWS of real rows.
+
+        Derived from the live row height rather than a fixed pixel count, the
+        same way the collapsed maximum is — before the first layout pass
+        sizeHintForRow() returns 0, hence the 19 px fallback the build-time call
+        also uses.
+        """
+        row_h = self.polyculture_tree.sizeHintForRow(0)
+        if row_h <= 0:
+            row_h = 19
+        self.polyculture_tree.setMinimumHeight(row_h * _TREE_MIN_ROWS + 4)
 
     def _build_community_mix_row(self, idx: int, community: dict) -> QFrame:
         row = QFrame()
@@ -2074,6 +2138,7 @@ class PolyculturePanel(QWidget):
         if row_h <= 0:
             row_h = 19  # fallback before first layout
         self.polyculture_tree.setMaximumHeight(row_h * _TREE_COLLAPSED_ROWS + 4)
+        self._apply_tree_floor()
 
         polyculture = polycultures.get_polyculture_by_id(current_id)
         if not polyculture:
@@ -2146,7 +2211,12 @@ class PolyculturePanel(QWidget):
         ceiling = 300
         desired = min(ceiling, n * 26 + 6) if n else 0
         self._members_scroll.setMaximumHeight(desired)
-        self._members_scroll.setMinimumHeight(desired)
+        # The floor is BELOW the ceiling, not equal to it. Pinning min == max
+        # made this pane perfectly rigid up to 300 px, so on a short window it
+        # was another block of space the community list had to surrender. It now
+        # yields down to about four rows and scrolls, and the list keeps its own
+        # floor (_apply_tree_floor).
+        self._members_scroll.setMinimumHeight(min(desired, 4 * 26 + 6))
 
     def _build_member_row(self, member: dict) -> QFrame:
         row = QFrame()
