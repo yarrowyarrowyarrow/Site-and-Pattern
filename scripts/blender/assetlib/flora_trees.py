@@ -17,7 +17,13 @@ parenting, unit_frame, AO and export).
 
 import math
 
-import bmesh
+# `bpy` MUST be imported before `bmesh` and `mathutils`. Under the standalone
+# bpy wheel those are C extensions that only become importable once bpy's
+# __init__ has run its path setup, so the alphabetical order isort wants makes
+# this module unimportable on its own — it works only because build_all imports
+# bpy first. Same fix, same reason, as the note in mesh_ops.py.
+import bpy                                        # isort: skip
+import bmesh                                      # noqa: I001
 from mathutils import Matrix, Vector
 
 from .mesh_ops import (ICO_TRIS, add_blade_or_leaf, add_cone, add_cone_between,
@@ -97,6 +103,10 @@ CROWN_FRAC = {"slender": 0.58, "oval": 0.60, "spreading": 0.68}
 DECID_GENERA = {
     "aspen":         {"form": "slender", "foliage_scale": 0.90,
                       "trunk_r": 0.011},
+    # Balsam poplar: bigger, broader and coarser than an aspen, on a thicker
+    # trunk with dark furrowed bark rather than chalky green-white.
+    "poplar":        {"form": "oval", "foliage_scale": 1.02,
+                      "trunk_r": 0.018},
     "birch":         {"form": "oval", "droop_outer": 0.55, "foliage_scale": 0.82,
                       "trunk_r": 0.013},
     "oak":           {"form": "spreading", "foliage_scale": 1.06,
@@ -140,9 +150,16 @@ FOLIAGE_FRAC = (0.30, 0.22, 0.155)
 CLUMPS_PER_TIP = (5, 7, 8)
 FOLIAGE_SUBDIV = 0
 
+# `poplar` is split from `aspen` (V2.30). They are one genus but not one tree:
+# a trembling aspen's leaf is ORBICULAR — round, on a flat petiole, which is why
+# it trembles — and a balsam poplar's is ovate and half again as long, on a much
+# broader crown. Splitting the archetype rather than adding a blade-class
+# variant AXIS to trees is deliberate: with only 17 tree species in the whole
+# catalogue, a variant axis would need a new manifest schema and four changed
+# code paths to express what one more flat key already does, for +3 units.
 TREE_ARCHETYPES = ("spruce", "fir", "pine", "larch", "def_conifer",
-                   "aspen", "birch", "oak", "willow", "cherry", "apple",
-                   "def_slender", "def_oval", "def_spreading")
+                   "aspen", "poplar", "birch", "oak", "willow", "cherry",
+                   "apple", "def_slender", "def_oval", "def_spreading")
 
 
 # ── conifers ─────────────────────────────────────────────────────────────────
@@ -235,7 +252,10 @@ def _build_pine(tier, rng, aspect, grain):
     # more of them on a bigger tree.
     crown_half = 0.5 / aspect
     pad_r = crown_half * (0.62, 0.5, 0.42)[tier] * grain
-    clumps = 6 + tier * 4
+    # Fourteen needle tufts at tier2 left daylight between them and the crown
+    # read as sparse; a tuft is 72 triangles, so the 3500 budget affords more
+    # than twice that and the crown can actually be a crown.
+    clumps = 9 + tier * 7
     z_base = 0.48
     tufts, pts = [], []
     for i in range(clumps):
@@ -255,13 +275,48 @@ def _build_pine(tier, rng, aspect, grain):
     for base, tip, r in tufts:
         # Visible branch out to the tuft (also the winter skeleton).
         add_cone_between(bark, base, tip, 0.014, 0.006, 4)
-        # Flat, wide needle pad at the branch tip — the open, scraggly
-        # jack/lodgepole look, not a deciduous blob.
-        add_ellipsoid(fol, r, (1.5, 1.5, 0.42),
-                      Matrix.Translation(tip), subdiv=FOLIAGE_SUBDIV)
-    add_ellipsoid(fol, pad_r, (1.3, 1.3, 0.45),
-                  Matrix.Translation(Vector((0, 0, 0.93))), subdiv=FOLIAGE_SUBDIV)
+        _needle_tuft(fol, rng, tip, r)
+    _needle_tuft(fol, rng, Vector((0, 0, 0.93)), pad_r)
     return bark, fol
+
+
+# A pine's foliage is NEEDLES IN FASCICLES bunched at the ends of its shoots —
+# that spiky, open, scraggly look is the whole reason a jack pine reads as a
+# jack pine. It was drawn as a flat 1.5:1.5:0.42 ellipsoid per branch end: a
+# stack of smooth hexagonal plates on a bare pole, which the sprite audit scored
+# 4/10 and called a pagoda.
+#
+# It was also spending almost nothing: tier2 came in at 548 triangles against a
+# 3500 budget. A needle at two ribbon segments is 4 triangles, so a tuft of
+# eighteen is 72, and twenty-odd tufts still leave the tier inside its
+# allowance.
+NEEDLES_PER_TUFT = 18
+NEEDLE_SEGMENTS = 2
+
+# One ribbon here stands for a SHOOT'S SPRAY of needles, not a single needle.
+# Drawn at true proportion (leaf_width_for('needle') is 3% of length) a jack
+# pine's needle is a few millimetres on a 15 m tree — far under a pixel at any
+# distance the viewer is ever at, so it aliases to a dark wire and the crown
+# renders as a bottle brush on a pole. That is exactly what the first cut of
+# this builder did, and it was worse than the flat pads it replaced. Widening
+# the ribbon is what makes a mass of needles read AS a mass.
+NEEDLE_FASCICLE_GAIN = 4.0
+
+
+def _needle_tuft(fol, rng, at, r):
+    """A bunch of needle sprays radiating from one shoot end."""
+    ln = r * 2.4                     # needles overshoot the old pad's radius
+    wd = leaf_width_for("needle", ln) * NEEDLE_FASCICLE_GAIN
+    az0 = rng.random() * math.tau
+    for i in range(NEEDLES_PER_TUFT):
+        # Golden-angle spiral out from the shoot, splayed from nearly along the
+        # branch to nearly perpendicular — a fascicle sprays, it does not sit
+        # flat like the disc this replaces.
+        add_blade_or_leaf(
+            fol, rng, ln, wd,
+            0.45 + (i / NEEDLES_PER_TUFT) * 1.25 + rng.random() * 0.25,
+            az0 + i * 2.39996 + rng.random() * 0.3,
+            at, "needle", NEEDLE_SEGMENTS)
 
 
 # ── deciduous ────────────────────────────────────────────────────────────────

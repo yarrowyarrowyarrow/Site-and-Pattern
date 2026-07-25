@@ -13,13 +13,19 @@ build_layer(kind, variant_rng) → {'foliage': obj}
 
 import math
 
-import bmesh
+# `bpy` MUST be imported before `bmesh` and `mathutils`. Under the standalone
+# bpy wheel those are C extensions that only become importable once bpy's
+# __init__ has run its path setup, so the alphabetical order isort wants makes
+# this module unimportable on its own — it works only because build_all imports
+# bpy first. Same fix, same reason, as the note in mesh_ops.py.
+import bpy                                        # isort: skip
+import bmesh                                      # noqa: I001
 from mathutils import Matrix, Vector
 
 from . import conventions as C
 from .conventions import GRAIN_LEAF_SCALE, HERB_ASPECT, LAYER_ASPECT
 from .mesh_ops import (COMPOUND_SHAPES, CONE_TRIS, add_blade, add_blade_or_leaf,
-                       add_cone_between, add_ellipsoid, add_leaf,
+                       add_cone_between, add_ellipsoid, add_leaf, arc_extent,
                        bm_to_object, leaf_extent, leaf_width_for,
                        shape_to_aspect, thin_leaf_nodes)
 
@@ -60,9 +66,31 @@ HERB_FORMS = {
                 "leaf": (0.14, 0.075), "shape": "ovate", "per_stem": None,
                 "leaf_tilt": 1.45, "stalks": (2, 4), "basal": (40, 62),
                 "fine": False, "low": True},
+    # A fern's whole identity is that its fronds are DIVIDED and ARCHED, and
+    # this form drew them as undivided lance blades — the sprite audit scored it
+    # 3/10 for exactly that. add_blade_or_leaf has carried a compound primitive
+    # since the pea/rose leaves needed one; at seven leaflet pairs a frond costs
+    # 68 triangles, so sixteen of them fit the 1200 budget. The pair count is
+    # overridden because `compound_pinnate` defaults to the THREE pairs a rose
+    # really has, and three big paddles on a stick is not a frond.
+    #
+    # Dividing the frond alone still rendered a bundle of uprights, because a
+    # compound rachis was a straight stick and tilting it only fanned the sticks
+    # out. `leaf_arch` bends it: an ostrich fern's frond leaves the crown almost
+    # vertical and flares near the top, which is the shuttlecock silhouette the
+    # whole plant is known for (RACHIS_EASE puts the turn at the tip).
+    #
+    # The tilt is nearly zero on purpose. A fern's leaves all rise from one
+    # crown, so shape_to_aspect has no anchors to move and the aspect is settled
+    # entirely by squash_to_aspect scaling XY at the end. Tilting the fronds out
+    # made the plant 3x wider than HERB_ASPECT allows, so the squash pulled it
+    # back by a third — which is what flattened the fronds into vertical spikes
+    # in the render, and it was doing that to the undivided blades before them
+    # too. Arching to a natural aspect of ~1.05 leaves almost nothing to squash.
     "fern":    {"stems": None, "splay": 0, "leaf_from": 0,
-                "leaf": (0.95, 0.11), "shape": "lance", "per_stem": None,
-                "leaf_tilt": 0.5, "stalks": None, "basal": (14, 20),
+                "leaf": (0.95, 0.11), "shape": "compound_pinnate",
+                "per_stem": None, "leaf_arch": 0.65, "leaflet_pairs": 7,
+                "leaf_tilt": 0.05, "stalks": None, "basal": (14, 20),
                 "fine": False},
 }
 
@@ -181,8 +209,10 @@ def build_herb(form, rng, coll, name_prefix="", grain=1, leaf_shape=None,
     # Leaf counts here are tuned for a simple blade; a lupine's palmate one costs
     # five times as much, so the population is thinned to what the budget affords
     # before anything is stamped (mesh_ops.thin_leaf_nodes).
+    pairs = F.get("leaflet_pairs")
+    arch = F.get("leaf_arch", 0.0)
     nodes = thin_leaf_nodes(nodes, shape, C.TRI_BUDGETS["herb"],
-                            len(stems) * CONE_TRIS)
+                            len(stems) * CONE_TRIS, pairs=pairs, arch=arch)
     leaves = [leaf for node in nodes for leaf in node]
 
     # Shape the SKELETON AND THE LEAF ANCHORS TOGETHER, the way the tree, shrub
@@ -199,7 +229,8 @@ def build_herb(form, rng, coll, name_prefix="", grain=1, leaf_shape=None,
     # leaves keep their authored size — build_all finishes on the exact measured
     # correction (squash_to_aspect), which scales the whole mesh at once and so
     # cannot detach anything.
-    ext = [leaf_extent(ln, t, shape) for _a, ln, _w, t, _az in leaves]
+    ext = [leaf_extent(ln, t, shape, arch, pairs)
+           for _a, ln, _w, t, _az in leaves]
     pts = [s[1] for s in stems] + [lf[0] for lf in leaves]
     shape_to_aspect(
         pts, HERB_ASPECT[form],
@@ -209,7 +240,8 @@ def build_herb(form, rng, coll, name_prefix="", grain=1, leaf_shape=None,
     for base, tip, r_bot, r_top in stems:
         add_cone_between(bm, base, tip, r_bot, r_top, 4)
     for at, ln, wd, tilt, az in leaves:
-        add_blade_or_leaf(bm, rng, ln, wd, tilt, az, at, shape)
+        add_blade_or_leaf(bm, rng, ln, wd, tilt, az, at, shape, arch=arch,
+                          pairs=pairs)
 
     mat = preview_material()
     return {C.PART_FOLIAGE: bm_to_object(
@@ -218,34 +250,66 @@ def build_herb(form, rng, coll, name_prefix="", grain=1, leaf_shape=None,
 
 # ── simple layers ────────────────────────────────────────────────────────────
 
-def _blades(bm, rng, n, height_fn, hw_fn, lean_fn, erect, aspect):
+def _blades(bm, rng, n, length_fn, hw_fn, arch_fn, ease, aspect):
     """Stamp a tuft of arched blades shaped to ``aspect``.
 
-    A blade's horizontal reach is its lean, so the tuft is generated first and
-    every lean scaled by one factor — the blades bend out further or stand
-    tighter, rather than the whole tuft being stretched by the instance
-    transform.
+    Every blade's authored arch is scaled by ONE factor, so the tuft opens or
+    closes as a whole rather than being stretched by the instance transform.
+    Arching both widens the tuft and lowers it, so the factor is solved by
+    bisection on the real extent (mesh_ops.arc_extent) instead of the old
+    closed form, which assumed a blade's height was its length — true only
+    while blades were straight.
     """
-    specs = [(height_fn(), hw_fn(), lean_fn()) for _ in range(n)]
-    tallest = max([h for h, _w, _l in specs] + [1e-6])
-    reach = max([ln for _h, _w, ln in specs] + [1e-6])
-    k = (tallest / aspect / 2.0) / reach
-    for h, hw, ln in specs:
-        add_blade(bm, rng, h, hw, ln * k, erect)
+    specs = [(length_fn(), hw_fn(), arch_fn()) for _ in range(n)]
+
+    def aspect_at(k):
+        w = h = 1e-6
+        for ln, _hw, arch in specs:
+            fwd, up = arc_extent(ln, arch * k, ease)
+            w, h = max(w, fwd), max(h, up)
+        return h / (2.0 * w)
+
+    # aspect_at falls monotonically as k opens the tuft: at k=0 the blades are
+    # vertical and the tuft has no width at all. If even fully arched it is
+    # still too tall and narrow, take everything the authored range allows.
+    if aspect_at(1.0) > aspect:
+        k = 1.0
+    else:
+        lo, hi = 0.0, 1.0
+        for _ in range(30):
+            mid = (lo + hi) * 0.5
+            lo, hi = (mid, hi) if aspect_at(mid) > aspect else (lo, mid)
+        k = (lo + hi) * 0.5
+    for ln, hw, arch in specs:
+        add_blade(bm, rng, ln, hw, arch * k, ease)
 
 
 def _layer_grass(bm, rng):
+    # A real bunchgrass FOUNTAINS: the blades rise, tip over and hang. This drew
+    # straight blades leaned sideways, which is why it read as a shaving brush
+    # and the audit scored it 4/10 — and why widening the lean range alone did
+    # nothing, since a leaned straight line is still a straight line. The arch
+    # is authored NARROW and high rather than wide: `_blades` normalises the
+    # tuft's spread against LAYER_ASPECT off its WIDEST blade, so a range open
+    # at the bottom buys a couple of splayed outliers and leaves the median
+    # blade nearly upright — the brush again. Clustering the range puts every
+    # blade on the arc (25-44 deg of turn after the solve) instead of a few.
+    # `ease` below 1 puts the bend low down, where a grass blade bends. Blades
+    # are also thicker than they were (1.6-3.4% of height), since a blade under
+    # a pixel wide at scene distance just disappears.
     _blades(bm, rng, 46 + int(rng.random() * 22),       # thick meadow clump
-            lambda: 0.62 + rng.random() * 0.5,
-            lambda: 0.016 + rng.random() * 0.018,
-            lambda: 0.22 + rng.random() * 0.7, 1.5, LAYER_ASPECT["grass"])
+            lambda: 0.66 + rng.random() * 0.54,
+            lambda: 0.026 + rng.random() * 0.026,
+            lambda: 1.05 + rng.random() * 0.90, 0.85, LAYER_ASPECT["grass"])
 
 
 def _layer_aquatic(bm, rng):
+    # Bulrush and cattail leaves stand stiff and only nod at the tip, so the
+    # bend is pushed to the top (ease > 1) and the total turn kept small.
     _blades(bm, rng, 30 + int(rng.random() * 16),       # stiff strap reeds
             lambda: 0.85 + rng.random() * 0.35,
             lambda: 0.03 + rng.random() * 0.028,
-            lambda: 0.06 + rng.random() * 0.32, 2.4, LAYER_ASPECT["aquatic"])
+            lambda: 0.05 + rng.random() * 0.70, 1.9, LAYER_ASPECT["aquatic"])
 
 
 def _layer_vine(bm, rng):

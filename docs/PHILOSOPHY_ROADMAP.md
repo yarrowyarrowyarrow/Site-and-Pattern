@@ -617,8 +617,9 @@ plant-use knowledge; Principle 12).
 | ✅ F57 | Species characters over genus tables (branching, formBias as fallback) | L | Med — authoring | P2, P9 |
 | ✅ F58 | Species leaf silhouettes in tree crowns | M | Low | P2, P5 |
 | ✅ F59 | Procedural bark/foliage surface detail | M | Low | P2, P5 |
-| F60 | Blade-class variant axis on tree archetypes (per-SPECIES crown leaves) | L | Med — asset size | P2, P9 |
-| F61 | Rebuild the fern and grass archetypes | M | Low | P2, P5 |
+| ◐ F60 | Blade-class variant axis on tree archetypes (per-SPECIES crown leaves) — poplar/aspen split done, rest open | L | Med — asset size | P2, P9 |
+| ✅ F61 | Rebuild the fern, grass and pine archetypes (arc primitive) | M | Low | P2, P5 |
+| F62 | Aspect variant axis on layer archetypes (a fescue is not a wild rye) | M | Med — asset size | P2, P9 |
 
 ### ✅ F46 · Pull-a-plant impact simulator — *Shipped · was Impact High · Effort M · Risk Low (P3, P5, P10)*
 **Shipped** in `src/plant_impact.py` (`pull_plant_impact`), surfaced in the Analysis → Habitat tab

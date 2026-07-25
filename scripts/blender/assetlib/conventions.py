@@ -86,7 +86,8 @@ CROWN_ASPECT = {
     "larch": 3.3,         # Larix laricina 20/6
     "def_conifer": 3.0,
     # deciduous
-    "aspen": 2.4,         # Populus tremuloides 20/7.5, P. balsamifera 25/12
+    "aspen": 2.7,         # Populus tremuloides 20/7.5
+    "poplar": 2.1,        # Populus balsamifera 25/12 — broader
     "birch": 2.2,         # Betula papyrifera 20/7.5, B. occidentalis 8/4.5
     "oak": 1.2,           # Quercus macrocarpa 18/15 — the broad one
     "willow": 1.8,        # Salix bebbiana 8/4.5
@@ -128,7 +129,8 @@ LAYER_ASPECT = {"grass": 1.31, "aquatic": 1.20, "vine": 1.72,
 # stopped at colour.
 LEAF_CM = {
     "spruce": 1.5, "fir": 2.2, "pine": 4.0, "larch": 2.5, "def_conifer": 2.0,
-    "aspen": 8.0, "birch": 6.0, "oak": 20.0, "willow": 6.0, "cherry": 8.0,
+    "aspen": 6.0, "poplar": 10.0, "birch": 6.0, "oak": 20.0, "willow": 6.0,
+    "cherry": 8.0,
     "apple": 8.0, "def_slender": 7.0, "def_oval": 7.0, "def_spreading": 7.0,
     "vase": 8.0, "spreading": 6.0, "mound": 5.5, "thicket": 6.0,
     "irregular": 4.0,
@@ -149,7 +151,8 @@ LEAF_CM = {
 # Conifers are absent on purpose: their foliage is needle skirts, not clumps,
 # and a needle card at crown scale is a sub-pixel sliver.
 DECID_LEAF_SHAPE = {
-    "aspen": "ovate",        # Populus tremuloides / balsamifera
+    "aspen": "orbicular",    # Populus tremuloides — the ROUND one
+    "poplar": "ovate",       # Populus balsamifera
     "birch": "ovate",        # Betula papyrifera / occidentalis
     "oak": "lobed",          # Quercus macrocarpa — the deep-lobed one
     "willow": "elliptic",    # Salix bebbiana (narrow for a broadleaf)

@@ -1,9 +1,11 @@
 # Sprite accuracy audit — V2.29
 
-> **Status: all five ranked improvements below have since been built.** The
-> scores and per-archetype notes are kept as written, as the record of what was
-> wrong and why — see [What changed](#what-changed-after-this-audit) at the
-> bottom for what each fix actually did and what is still open.
+> **Status: all five ranked improvements below have since been built, plus a
+> second pass on grass, fern, pine and the poplar/aspen split.** The scores and
+> per-archetype notes are kept as written, as the record of what was wrong and
+> why — see [What changed](#what-changed-after-this-audit) and
+> [Second pass](#second-pass--grass-fern-pine-poplar) for what each fix actually
+> did, what regressed on the way, and what is still open.
 
 An honest, per-archetype assessment of how well the 3D preview's plant sprites
 represent the species they stand for, what is wrong with each, and what it would
@@ -34,12 +36,12 @@ Two numbers, because they fail independently:
 | | Fidelity | Distinctness |
 |---|---|---|
 | Deciduous trees | 6 | **3** |
-| Conifers | 6 | 5 |
+| Conifers | 6 *(pine →6)* | 5 *(pine →7)* |
 | Shrubs | 6 | 5 |
 | Wildflower bodies | 6 | 6 |
 | Flower heads | 6 | 7 |
-| Grasses / sedges | 4 | **2** |
-| Ferns | 3 | 5 |
+| Grasses / sedges | 4 *(→6 mesh)* | **2** |
+| Ferns | 3 *(→6)* | 5 *(→6)* |
 | **Groundcover** | **1** | **1** |
 | Fruit *(after this release)* | 7 | 7 |
 | Creatures | 5 | 6 |
@@ -102,7 +104,7 @@ sprites differentiate them at all.
 strawberry is *trifoliate* and *basal* and the data already says so; nothing
 reads it. This is the highest value-per-hour fix in the library.
 
-### Grass / sedge / rush tuft — fidelity 4 · distinctness 2
+### Grass / sedge / rush tuft — fidelity 4 · distinctness 2 *(→ 6 · 2, see second pass)*
 A narrow, near-vertical paintbrush of blades. Big bluestem is 1.6 m and should
 arch out into a broad fan; this barely spreads. Blades are sub-pixel thin at
 scene distance, so a tussock reads as a dark smudge. 51 grass + 20 sedge + 8
@@ -111,14 +113,14 @@ rush species share it, separated only by height and (in season) a `plume`.
 *rhizomatous* vs *sedge triangular-culm* habits. Seed heads matter more than
 blades for ID and are currently one generic plume.
 
-### Fern — fidelity 3 · distinctness 5
+### Fern — fidelity 3 · distinctness 5 *(→ 6 · 6, see second pass)*
 Fronds are undivided lance blades, so the one thing that makes a fern a fern —
 pinnate division — is absent. Too dark and too vertical; ostrich fern is a
 broad arching vase.
 **Fix:** `add_compound_leaf` already exists in the generator and is used for
 pea/rose leaves. Ferns should use it (bipinnate), arch harder, and lighten.
 
-### Pine — fidelity 4 · distinctness 6
+### Pine — fidelity 4 · distinctness 6 *(→ 6 · 7, see second pass)*
 Flat hexagonal plates stacked on a bare pole. Jack pine's actual character —
 irregular open tufts at branch ends, scraggly asymmetry — is not there; the
 plates read as a pagoda.
@@ -264,19 +266,66 @@ per-instance offset. Procedural rather than UV-mapped images because the baked
 GLBs carry no texture coordinates and a test forbids them embedding textures —
 and because instanced meshes would repeat one UV set identically anyway.
 
+## Second pass — grass, fern, pine, poplar
+
+**6 · The blade primitive could not arch.** `add_blade` climbed at a constant
+rate (`z = height * t`) and displaced sideways: that is a *lean*, and no
+authored value bends a straight line. This is why the tuft read as a shaving
+brush and the fern as a bundle of uprights, and why the first attempt at
+fixing the grass — widening the authored lean range — changed nothing visible.
+Worse, it made the median blade *straighter*, because `_blades` normalises the
+tuft against its widest member. `mesh_ops` now integrates a turning tangent
+(`_arc_table` / `arc_extent`), `_blades` bisects the tuft's spread on the real
+extent, and the same arc bends a compound rachis. Guarded by
+`tests/test_model_assets.py:ArcBladeTest`, which fails on the old lean.
+
+**7 · Grass — 4/10 → 6/10 for the mesh, unchanged on screen for tall species.**
+The unit is now a genuine fountain (measured aspect 1.40 against a 1.31
+target) and a species whose real proportions match it, like prairie dropseed
+at 0.7 m × 0.9 m, renders as one. Big Bluestem still renders narrow, and that
+is *correct*: it is recorded 1.6 m × 0.5 m, so the instance transform stretches
+the 1.31 unit to 3.2. See "Still open" — this is an archetype/species mismatch,
+not a builder bug, and no amount of tuft authoring fixes it.
+
+**8 · Fern — 3/10 → ~6/10.** Fronds are divided (seven pinna pairs, overriding
+the three that `compound_pinnate` means for a rose) and arched. Two things had
+to change beyond dividing them: the rachis needed the arc, and the pinnae
+needed to stand out square from it (`leaflet_flare`) — at the rose's forward
+angle a divided frond is still a narrow brush, because leaflets pointing where
+the rachis points add nothing to the silhouette. The plant is still thin: 16
+fronds is what the 1200-triangle herb budget buys at 68 triangles a frond.
+
+**9 · Pine — 4/10 → ~6/10, after a regression.** Needle fascicles replaced the
+flat ellipsoid pads, and the first cut was *worse than what it replaced*: at
+true proportion (3% of length) a jack pine's needle is sub-pixel on a 15 m tree,
+so the crown aliased into a bottle brush of dark wires. One ribbon now stands
+for a shoot's spray of needles (`NEEDLE_FASCICLE_GAIN`), and the crown carries
+23 tufts instead of 14. 2120 triangles against a 3500 budget.
+
+**10 · Poplar split from aspen** — the one genuinely unambiguous win here.
+`tree.poplar` is its own archetype with its own crown aspect (2.1 vs the aspen's
+2.7) and leaf (ovate 10 cm vs orbicular 6 cm), reached by species rather than
+genus. Balsam poplar is now a broad dense crown and trembling aspen a slender
+open one; they were pixel-identical before.
+
 ### Still open
 
-- **Per-species leaf outlines on trees** are archetype-level, not species-level:
-  `DECID_LEAF_SHAPE` is the mode over the species mapping to each archetype, so
-  a trembling aspen (*orbicular*) and a balsam poplar (*ovate*) still share
-  "ovate". Fixing it properly means a blade-class variant axis on the tree
-  archetypes, the way shrubs and herbs already have — roughly doubling the baked
-  tree units.
-- **Grasses and ferns** were rated 4/10 and 3/10 and are untouched by this pass.
-  The fern needs `add_compound_leaf` (which already exists, for pea and rose
-  leaves) instead of undivided lance blades; the grass tuft needs a wider arch
-  and real seed heads.
-- **Pine** is still flat plates on a pole.
+- **Archetype aspect vs species aspect.** `LAYER_ASPECT["grass"]` is 1.31, the
+  pooled figure for grasses, sedges and rushes; the catalogue's grasses run from
+  0.67 (Rocky Mountain fescue) to 2.67 (Canada wild rye). The instance transform
+  makes up the difference by stretching, which is exactly the distortion the
+  unit frame exists to prevent — up to 2.4× on Big Bluestem. `conventions.py`
+  calls the residual "small ... natural variation"; at this spread it is not.
+  The fix is an aspect variant axis on the layers, like the grain axis
+  groundcover already has.
+- **Fern density** is budget-bound, not shape-bound. A lusher crown needs either
+  a higher herb budget or a cheaper frond.
+- **Per-species leaf outlines on trees** are still archetype-level everywhere
+  except the poplar/aspen split done here: `DECID_LEAF_SHAPE` is the mode over
+  the species mapping to each archetype. Doing it generally means a blade-class
+  variant axis on the tree archetypes, roughly doubling the baked tree units.
+- **Grass seed heads** — a big bluestem's turkey-foot inflorescence is most of
+  how it is identified in the field, and there is no geometry for it at all.
 - **Creature variety within a kind** — a bumblebee is not a honeybee.
 
 ## Verification note

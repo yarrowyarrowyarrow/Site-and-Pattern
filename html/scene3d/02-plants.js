@@ -485,7 +485,8 @@ const _PROF = {
   fir:    { id: 'fir',    conifer: 'fir',    bark: '#3f3022' },   // Abies / Pseudotsuga
   pine:   { id: 'pine',   conifer: 'pine',   bark: '#6b4a2e' },   // Pinus
   larch:  { id: 'larch',  conifer: 'larch',  bark: '#5a4632' },   // Larix (deciduous needles)
-  aspen:  { id: 'aspen',  bark: '#cfcab4', formBias: 'slender', foliageScale: 0.9 },  // Populus
+  aspen:  { id: 'aspen',  bark: '#cfcab4', formBias: 'slender', foliageScale: 0.9 },  // Populus tremuloides
+  poplar: { id: 'poplar', bark: '#7d7a70', formBias: 'oval', foliageScale: 1.02 },   // P. balsamifera
   birch:  { id: 'birch',  bark: '#e8e6df', formBias: 'oval', droopOuter: 0.55, foliageScale: 0.82 }, // Betula
   oak:    { id: 'oak',    bark: '#463524', formBias: 'spreading', foliageScale: 1.06 }, // Quercus
   willow: { id: 'willow', bark: '#8a8a6a', formBias: 'slender', droopOuter: 0.7, foliageScale: 0.85 }, // Salix
@@ -498,8 +499,19 @@ const TREE_PROFILES = {
   larix: _PROF.larch, populus: _PROF.aspen, betula: _PROF.birch, quercus: _PROF.oak,
   salix: _PROF.willow, prunus: _PROF.cherry, malus: _PROF.apple,
 };
+// A genus is not always one tree. Trembling aspen and balsam poplar are both
+// Populus and share almost nothing about their crowns: the aspen's leaf is
+// ORBICULAR — round, on a flat petiole, which is why it trembles — on a narrow
+// 2.7:1 crown, while the poplar's is ovate, half again as long, on a much
+// broader 2.1:1 one. Anything not listed falls back to its genus, so this table
+// only has to carry the species that genuinely diverge.
+const TREE_SPECIES_PROFILES = {
+  'populus balsamifera': _PROF.poplar,
+};
 function profileFor(p) {
-  return TREE_PROFILES[(p.genus || '').toLowerCase()] || _PROF.def;
+  return TREE_SPECIES_PROFILES[(p.species || '').toLowerCase()]
+    || TREE_PROFILES[(p.genus || '').toLowerCase()]
+    || _PROF.def;
 }
 // Needle-crown kinds layered on top of the form's CONIFER_FORMS params: spruce =
 // narrow dense bluish spire; fir = narrower, very dense, sharp tall summit; larch

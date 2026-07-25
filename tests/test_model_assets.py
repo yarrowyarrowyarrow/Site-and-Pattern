@@ -724,6 +724,82 @@ class LeafCostModelTest(unittest.TestCase):
             self.assertEqual(self.ops.blade_segments(shape, 2), 4, shape)
         self.assertEqual(self.ops.blade_segments("ovate", 2), 2)
 
+    def test_an_arched_rachis_costs_what_it_stamps(self):
+        """The arched rachis takes five samples where a straight one takes
+        three. A builder that budgets the straight cost and stamps the arched
+        one overruns, which is a hard export failure."""
+        import bmesh                               # noqa: PLC0415
+        import random                              # noqa: PLC0415
+        for arch in (0.0, 0.65):
+            for pairs in (None, 7):
+                with self.subTest(arch=arch, pairs=pairs):
+                    bm = bmesh.new()
+                    self.ops.add_blade_or_leaf(
+                        bm, random.Random(3), 0.9, 0.11, 0.05, 0.0, None,
+                        "compound_pinnate", 2, arch, pairs)
+                    got = sum(max(0, len(f.verts) - 2) for f in bm.faces)
+                    bm.free()
+                    self.assertEqual(
+                        got,
+                        self.ops.leaf_tris("compound_pinnate", 2, pairs, arch),
+                        "leaf_tris disagrees with add_blade_or_leaf")
+
+
+class ArcBladeTest(unittest.TestCase):
+    """A blade has to ARCH, not lean.
+
+    The old primitive climbed at a constant rate (``z = height * t``) and slid
+    sideways, so no authored value could tip a blade over: a bunchgrass read as
+    a shaving brush and a fern as a bundle of uprights, and every attempt to fix
+    it by widening the authored lean range changed nothing anyone could see.
+    Two properties pin the replacement down.
+    """
+
+    def setUp(self):
+        self.ops = _assetlib_mesh_ops()
+        if self.ops is None:
+            self.skipTest("assetlib.mesh_ops needs bpy")
+
+    def test_a_blade_past_ninety_degrees_comes_back_down(self):
+        """Turning more than a right angle must LOWER the tip below the top of
+        the arc. A lean can never do this, and it is the whole silhouette."""
+        tab = self.ops._arc_table(2.4, 0.85)
+        top = max(up for _fwd, up in tab)
+        self.assertLess(
+            tab[-1][1], top * 0.9,
+            "the tip of a 137-degree arc sits at the top of the curve, so the "
+            "blade is still climbing — this is a lean, not an arch")
+
+    def test_arching_trades_height_for_reach_monotonically(self):
+        """``_blades`` solves the tuft's spread by bisecting on this, so it has
+        to be monotonic or the solve lands anywhere."""
+        prev_h, prev_v = -1.0, 99.0
+        for arch in (0.0, 0.3, 0.6, 0.9, 1.2, 1.5, 1.8):
+            h, v = self.ops.arc_extent(1.0, arch, 0.85)
+            self.assertGreater(h, prev_h, f"reach fell at arch={arch}")
+            self.assertLess(v, prev_v + 1e-9, f"rise grew at arch={arch}")
+            prev_h, prev_v = h, v
+
+    def test_arc_extent_matches_the_stamped_blade(self):
+        """The builders shape a plant to its species' aspect from this
+        prediction before any geometry exists; if it disagrees with the stamp,
+        the aspect correction is applied to a shape that was never built."""
+        import bmesh                               # noqa: PLC0415
+        import random                              # noqa: PLC0415
+        for arch in (0.3, 0.9, 1.6):
+            with self.subTest(arch=arch):
+                bm = bmesh.new()
+                self.ops.add_blade(bm, random.Random(1), 0.8, 0.02, arch,
+                                   0.85, azimuth=0.0)
+                xs = [v.co.x for v in bm.verts]
+                zs = [v.co.z for v in bm.verts]
+                bm.free()
+                h, v = self.ops.arc_extent(0.8, arch, 0.85)
+                # The ribbon has width, so the stamp reaches a hair past the
+                # centre line the prediction traces.
+                self.assertAlmostEqual(max(xs), h, delta=0.03)
+                self.assertAlmostEqual(max(zs), v, delta=0.03)
+
 
 if __name__ == "__main__":
     unittest.main()

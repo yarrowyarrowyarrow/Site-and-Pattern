@@ -16,7 +16,13 @@ build_shrub(form, rng, grain=, leaf_shape=, arrangement=)
 
 import math
 
-import bmesh
+# `bpy` MUST be imported before `bmesh` and `mathutils`. Under the standalone
+# bpy wheel those are C extensions that only become importable once bpy's
+# __init__ has run its path setup, so the alphabetical order isort wants makes
+# this module unimportable on its own — it works only because build_all imports
+# bpy first. Same fix, same reason, as the note in mesh_ops.py.
+import bpy                                        # isort: skip
+import bmesh                                      # noqa: I001
 from mathutils import Matrix, Vector
 
 from .mesh_ops import (COMPOUND_SHAPES, CONE_TRIS, add_blade_or_leaf,

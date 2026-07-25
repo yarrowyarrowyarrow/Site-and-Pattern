@@ -126,17 +126,73 @@ def add_ribbon(bm, points, half_widths, width_dir):
         bm.faces.new((left[i], right[i], right[i + 1], left[i + 1]))
 
 
-def add_blade(bm, rng, height, base_half_width, lean, erect, azimuth=None):
-    """One arched, tapering grass/reed blade (port of makeBlade, Z-up)."""
+# ── arcs (the shape a blade or a frond actually makes) ──────────────────────
+#
+# A blade was drawn as `z = height * t` with a sideways offset added on top: the
+# tip could reach a long way out while still climbing as steeply as the base
+# did. That is a LEAN, not an arch, and it is why a bunchgrass tuft rendered as
+# a shaving brush and an ostrich fern as a bundle of uprights however hard the
+# authored numbers were pushed — no value of the offset makes a straight line
+# bend. An arch is a turning tangent, so it has to be integrated: the stalk
+# leaves the base vertical, turns through `arch` radians by the tip, and past
+# 90 deg it tips over and comes back down, which is the whole silhouette.
+_ARC_STEPS = 48
+
+
+@functools.lru_cache(maxsize=512)
+def _arc_table(arch, ease):
+    """Cumulative (forward, up) of a unit-length stalk turning ``arch`` radians.
+
+    ``ease`` shapes WHERE the turning happens: below 1 the stalk bends low down
+    and arches over (grass, fern), above 1 it stays stiff and flicks near the
+    tip (bulrush, cattail).
+    """
+    fwd = up = 0.0
+    tab = [(0.0, 0.0)]
+    for i in range(_ARC_STEPS):
+        phi = arch * (((i + 0.5) / _ARC_STEPS) ** ease)
+        fwd += math.sin(phi) / _ARC_STEPS
+        up += math.cos(phi) / _ARC_STEPS
+        tab.append((fwd, up))
+    return tuple(tab)
+
+
+def arc_point(tab, t):
+    """Point at arc-length fraction ``t`` along an :func:`_arc_table` stalk."""
+    x = min(1.0, max(0.0, t)) * (len(tab) - 1)
+    i = min(len(tab) - 2, int(x))
+    f = x - i
+    a, b = tab[i], tab[i + 1]
+    return (a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f)
+
+
+def arc_extent(length, arch, ease, tilt=0.0):
+    """``(horizontal, vertical)`` reach of that stalk, tilted from vertical.
+
+    Builders need this before any geometry exists, and an arched stalk's rise
+    is NOT ``length * cos(tilt)`` — it tips over, so the top of the arc can sit
+    well below the tip and the tip can even hang below the base.
+    """
+    tab = _arc_table(round(arch, 4), ease)
+    h = v = 0.0
+    for fwd, up in tab:
+        h = max(h, abs(fwd * math.cos(tilt) + up * math.sin(tilt)))
+        v = max(v, up * math.cos(tilt) - fwd * math.sin(tilt))
+    return (h * length, max(0.0, v) * length)
+
+
+def add_blade(bm, rng, length, base_half_width, arch, ease, azimuth=None):
+    """One arched, tapering grass/reed blade of arc length ``length`` (Z-up)."""
     segs = 5
     az = rng.random() * math.tau if azimuth is None else azimuth
     d = Vector((math.cos(az), math.sin(az), 0))
     perp = Vector((-d.y, d.x, 0))
+    tab = _arc_table(round(arch, 4), ease)
     pts, hws = [], []
     for s in range(segs + 1):
         t = s / segs
-        off = lean * (t ** erect)
-        pts.append(d * off + Vector((0, 0, height * t)))
+        fwd, up = arc_point(tab, t)
+        pts.append(d * (fwd * length) + Vector((0, 0, up * length)))
         hws.append(base_half_width * (1 - t * 0.92) + 0.0015)
     add_ribbon(bm, pts, hws, perp)
 
@@ -199,13 +255,41 @@ _LEAFLET_PAIRS = {"trifoliate": 1, "compound_pinnate": 3,
                   "compound_palmate": 2, "bipinnate": 4}
 
 
+def leaflet_frac(shape, pairs):
+    """Leaflet length as a fraction of the rachis, for ``pairs`` pairs.
+
+    Leaflets have to get shorter as they get more numerous or a finely divided
+    frond fuses back into one blob — the thing dividing it was meant to avoid.
+    """
+    if shape == "compound_palmate":
+        return 0.42
+    # 1.15/pairs puts the longest leaflet at about a sixth of the rachis on a
+    # seven-pair frond, which is where a real fern's widest pinnae sit.
+    return min(0.30, 1.15 / max(1, pairs))
+
+
+def leaflet_flare(pairs):
+    """How far a leaflet swings away from the rachis, in radians.
+
+    A rose's three big leaflets angle FORWARD along the rachis; a fern's many
+    small pinnae stand out square from it. Drawing the fern at the rose's angle
+    made each frond a narrow bottle-brush, because leaflets pointing the same
+    way the rachis points add nothing to the frond's width — the division was
+    there in the geometry and invisible in the silhouette.
+    """
+    return 0.55 + 0.70 * min(1.0, max(0.0, (pairs - 3) / 4.0))
+
+
 def leaf_width_for(shape, length):
     """Natural blade width for a leaf of ``length`` with this outline."""
     return length * LEAF_WIDTH_RATIO.get(shape, 0.3)
 
 
+RACHIS_EASE = 1.25            # arched rachis: turns gently, hardest near the tip
+
+
 def add_compound_leaf(bm, rng, length, width, tilt, azimuth, at, shape,
-                      segments=4):
+                      segments=4, arch=0.0, pairs=None):
     """One compound leaf: a slim rachis carrying paired leaflets and a terminal.
 
     A third of the catalogue's leaves are compound — every pea (lupine,
@@ -213,22 +297,45 @@ def add_compound_leaf(bm, rng, length, width, tilt, azimuth, at, shape,
     ash — and drawing them as a single ribbon is what made a lupine and a
     fireweed differ only in size. ``compound_palmate`` fans its leaflets from
     one point (lupine); the rest run up the rachis.
+
+    ``arch`` bends the rachis through that many radians (:func:`_arc_table`)
+    and carries the leaflets around with it. A rose leaflet is centimetres on a
+    shrub that is metres, so the default 0.0 keeps the straight rachis those
+    leaves have always had; a fern frond is nearly as long as the whole plant,
+    and there the arch is the difference between a fern and a bundle of sticks.
+
+    ``pairs`` overrides the outline's default leaflet count. A rose and an
+    ostrich fern both record ``compound_pinnate``, but the rose really does
+    carry three pairs while the fern carries dozens, and at three the frond
+    reads as a row of paddles rather than as a divided frond.
     """
-    pairs = _LEAFLET_PAIRS.get(shape, 3)
+    pairs = _LEAFLET_PAIRS.get(shape, 3) if pairs is None else pairs
     ln = length * (_LEAF_LEN_MAX - 0.4 + rng.random() * 0.4)
     droop = 0.10 + rng.random() * _LEAF_DROOP_MAX
     mat = Matrix.Rotation(azimuth, 4, "Z") @ Matrix.Rotation(tilt, 4, "Y")
     if at is not None:
         mat = Matrix.Translation(Vector(at)) @ mat
     palmate = shape == "compound_palmate"
+    tab = _arc_table(round(arch, 4), RACHIS_EASE) if arch else None
+
+    def along(u):
+        """Rachis point, and its tangent's angle away from the base direction."""
+        if tab is None:
+            return mat @ Vector((droop * (u ** 1.4) * ln, 0, ln * u)), 0.0
+        fwd, up = arc_point(tab, u)
+        return (mat @ Vector((fwd * ln, 0, up * ln)),
+                arch * (u ** RACHIS_EASE))
+
     # Rachis: a thin two-point ribbon, so it merges with the leaflets' attributes.
     r_from = 0.0 if palmate else 0.12
-    stalk = [mat @ Vector((droop * (u ** 1.4) * ln, 0, ln * u))
-             for u in (0.0, 0.55, 1.0)]
-    add_ribbon(bm, stalk, [ln * 0.012, ln * 0.009, ln * 0.006],
+    us = (0.0, 0.55, 1.0) if tab is None else (0.0, 0.25, 0.5, 0.75, 1.0)
+    stalk = [along(u)[0] for u in us]
+    add_ribbon(bm, stalk,
+               [ln * (0.012 - 0.006 * u) for u in us],
                (mat.to_3x3() @ Vector((0, 1, 0))).normalized())
-    leaflet_len = ln * (0.42 if palmate else 0.30)
+    leaflet_len = ln * leaflet_frac(shape, pairs)
     leaflet_w = leaflet_len * (0.5 if palmate else 0.42)
+    flare = 0.55 if palmate else leaflet_flare(pairs)
     n = pairs * 2 + 1
     for i in range(n):
         if palmate:
@@ -237,9 +344,9 @@ def add_compound_leaf(bm, rng, length, width, tilt, azimuth, at, shape,
         else:
             frac = r_from + (1 - r_from) * (i // 2) / max(1, pairs)
             spread = (-0.95 if i % 2 else 0.95) * (0.0 if i == n - 1 else 1.0)
-        base = mat @ Vector((droop * (frac ** 1.4) * ln, 0, ln * frac))
+        base, phi = along(frac)
         add_leaf(bm, rng, leaflet_len, leaflet_w,
-                 tilt * 0.45 + abs(spread) * 0.55,
+                 tilt * 0.45 + abs(spread) * flare + phi,
                  azimuth + spread, base, "elliptic", segments)
 
 
@@ -249,7 +356,7 @@ _LEAF_LEN_MAX = 1.2                       # length × (0.8 + rand·0.4)
 _LEAF_DROOP_MAX = 0.18                    # droop = base + rand·0.18
 
 
-def leaf_extent(length, tilt, shape="lance"):
+def leaf_extent(length, tilt, shape="lance", arch=0.0, pairs=None):
     """Worst-case ``(horizontal, vertical)`` reach of a leaf :func:`add_leaf`
     would stamp at the origin.
 
@@ -260,25 +367,34 @@ def leaf_extent(length, tilt, shape="lance"):
     for the rise puts the aspect out by 40%.
     """
     ln = length * _LEAF_LEN_MAX
-    droop = (0.05 if shape in ("strap", "linear") else 0.12) + _LEAF_DROOP_MAX
-    h = ln * (math.sin(tilt) + droop * math.cos(tilt))
-    v = ln * max(0.0, math.cos(tilt) - droop * math.sin(tilt))
+    if arch:
+        # An arched rachis reaches further out and rises less than its tilt
+        # alone implies, and past 90 deg of turning its tip hangs below the top
+        # of the arc — so the reach comes from the integrated curve, not trig.
+        h, v = arc_extent(ln, arch, RACHIS_EASE, tilt)
+    else:
+        droop = ((0.05 if shape in ("strap", "linear") else 0.12)
+                 + _LEAF_DROOP_MAX)
+        h = ln * (math.sin(tilt) + droop * math.cos(tilt))
+        v = ln * max(0.0, math.cos(tilt) - droop * math.sin(tilt))
     if shape in COMPOUND_SHAPES:
         # A compound leaf's leaflets stick out sideways from the rachis, so it
         # is wider than a simple blade of the same length and no taller. The
         # aspect fixed point and shape_to_aspect both trust this figure.
-        h += ln * (0.42 if shape == "compound_palmate" else 0.30) * 0.8
+        h += ln * leaflet_frac(
+            shape, _LEAFLET_PAIRS.get(shape, 3) if pairs is None else pairs
+        ) * 0.8
     return (h, v)
 
 
 def add_blade_or_leaf(bm, rng, length, width, tilt, azimuth, at, shape,
-                      segments=4):
+                      segments=4, arch=0.0, pairs=None):
     """Stamp the right primitive for ``shape`` — one ribbon, or a rachis with
     leaflets. The single entry point builders should call so a new compound
     outline never needs another branch at every call site."""
     if shape in COMPOUND_SHAPES:
         add_compound_leaf(bm, rng, length, width, tilt, azimuth, at, shape,
-                          segments)
+                          segments, arch, pairs)
     else:
         add_leaf(bm, rng, length, width, tilt, azimuth, at, shape, segments)
 
@@ -289,23 +405,33 @@ def add_blade_or_leaf(bm, rng, length, width, tilt, azimuth, at, shape,
 # moment the species turns out to carry compound ones, so the counts have to be
 # derived from the outline rather than fixed — see thin_leaf_nodes.
 CONE_TRIS = 16                            # add_cone(segments=4), fan-capped
-_RACHIS_TRIS = 4                          # add_compound_leaf's 3-point stalk
+# add_compound_leaf's stalk: 3 points straight, 5 arched (it needs the extra
+# samples to draw a curve). Budgeting the arched cost for BOTH looked safe and
+# is not free — it over-counts every compound leaf in the catalogue by 4
+# triangles, and the thinning that follows paid for it by dropping 6-8% of the
+# leaves off every rose, lupine and cinquefoil variant. So the cost is exact
+# and the caller says which rachis it is stamping.
+_RACHIS_TRIS = 4
+_RACHIS_TRIS_ARCHED = 8
 
 
-def leaf_tris(shape, segments=4):
+def leaf_tris(shape, segments=4, pairs=None, arch=0.0):
     """Triangles one :func:`add_blade_or_leaf` stamp costs for this outline.
 
     ``segments`` must be whatever the builder will pass to the stamp — the two
     go through :func:`blade_segments` together so the budget can never disagree
-    with the geometry.
+    with the geometry, and so must ``pairs`` and ``arch`` — they change how
+    many leaflets get stamped and how many samples the rachis takes.
     """
     simple = 2 * blade_segments(shape, segments)
     if shape in COMPOUND_SHAPES:
-        pairs = _LEAFLET_PAIRS.get(shape, 3)
+        if pairs is None:
+            pairs = _LEAFLET_PAIRS.get(shape, 3)
         # Leaflets are stamped as "elliptic", so they take the requested
         # segment count even when the compound outline itself is detailed.
         leaflet = 2 * blade_segments("elliptic", segments)
-        return _RACHIS_TRIS + (pairs * 2 + 1) * leaflet
+        rachis = _RACHIS_TRIS_ARCHED if arch else _RACHIS_TRIS
+        return rachis + (pairs * 2 + 1) * leaflet
     return simple
 
 
@@ -347,7 +473,7 @@ def thin_groups_to_budget(groups, cost_each, budget, structural_tris,
 
 
 def thin_leaf_nodes(nodes, shape, budget, structural_tris, headroom=0.94,
-                    segments=4):
+                    segments=4, pairs=None, arch=0.0):
     """:func:`thin_groups_to_budget` for leaf nodes, costed by blade outline.
 
     A compound leaf costs 3-9x a simple blade (a rachis plus 2n+1 leaflets), so
@@ -358,8 +484,9 @@ def thin_leaf_nodes(nodes, shape, budget, structural_tris, headroom=0.94,
     ``segments`` is the blade tessellation the caller will stamp with; pass the
     same value to :func:`add_blade_or_leaf` or the budget is a fiction.
     """
-    return thin_groups_to_budget(nodes, leaf_tris(shape, segments), budget,
-                                 structural_tris, headroom)
+    return thin_groups_to_budget(nodes,
+                                 leaf_tris(shape, segments, pairs, arch),
+                                 budget, structural_tris, headroom)
 
 
 def add_leaf(bm, rng, length, width, tilt, azimuth, at, shape, segments=4):

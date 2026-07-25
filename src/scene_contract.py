@@ -146,6 +146,20 @@ def _genus_of(plant: dict) -> str:
     species-specific geometry/colour. Empty when unknown."""
     return (plant.get("scientific_name") or "").split(" ")[0].lower()
 
+
+def _species_of(plant: dict) -> str:
+    """``genus species``, lowercased, cultivar and authority dropped.
+
+    A genus is not always one tree. Trembling aspen and balsam poplar are both
+    Populus and share nothing about their crowns — the aspen's leaf is round on
+    a flat petiole, the poplar's ovate and half again as long on a much broader
+    tree — so the viewer needs the epithet to tell them apart. Cultivars are
+    dropped deliberately: 'Goodland' and 'Norland' apples are the same tree to
+    a renderer.
+    """
+    parts = (plant.get("scientific_name") or "").replace("'", " ").split()
+    return " ".join(parts[:2]).lower() if len(parts) >= 2 else ""
+
 _MONTHS = {
     "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6, "jul": 7,
     "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
@@ -342,6 +356,9 @@ def build_scene(project: dict, *, year: int = 0,
             "height_m": st["height_m"], "canopy_m": st["canopy_m"],
             "plant_type": st["plant_type"] or "herb",
             "genus": _genus_of(plant),
+            # Additive (schema-free): the viewer prefers a species
+            # profile and falls back to the genus one.
+            "species": _species_of(plant),
             "foliage_type": st.get("foliage_type", "herbaceous"),
             "scale_factor": st["scale_factor"],
             "spread_factor": st["spread_factor"],

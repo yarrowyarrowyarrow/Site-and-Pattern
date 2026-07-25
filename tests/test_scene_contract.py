@@ -439,5 +439,55 @@ class TestTerrainAndSun(unittest.TestCase):
         self.assertTrue(night["is_night"])
 
 
+class TestSpeciesField(unittest.TestCase):
+    """The scene carries `species`, not just `genus`.
+
+    A genus is not always one tree. Trembling aspen and balsam poplar are both
+    *Populus* and were byte-identical geometry because the viewer only ever saw
+    "populus" — a 20 m tree with a round trembling leaf on a narrow crown drawn
+    as a 25 m one with an ovate leaf on a broad crown. The epithet is what lets
+    the viewer's species table override the genus fallback, so if this field
+    stops being emitted the split silently collapses back to one sprite.
+    """
+
+    def test_species_is_genus_plus_epithet(self):
+        self.assertEqual(_species("Populus tremuloides"), "populus tremuloides")
+        self.assertEqual(_species("Populus balsamifera"), "populus balsamifera")
+
+    def test_cultivar_and_authority_are_dropped(self):
+        # 'Goodland' and 'Norland' apples are the same tree to a renderer, and
+        # an authority is not part of the name the viewer keys on.
+        self.assertEqual(_species("Malus domestica 'Goodland'"),
+                         "malus domestica")
+        self.assertEqual(_species("Picea glauca (Moench) Voss"), "picea glauca")
+
+    def test_a_bare_genus_yields_no_species(self):
+        self.assertEqual(_species("Salix"), "")
+        self.assertEqual(_species(""), "")
+
+    def test_the_viewer_prefers_species_over_genus(self):
+        """`profileFor` must consult the species table FIRST — reversed, every
+        Populus falls into the genus entry and the split does nothing."""
+        js = _read_plants_js()
+        body = js[js.index("function profileFor(p)"):]
+        body = body[:body.index("}")]
+        self.assertLess(
+            body.index("TREE_SPECIES_PROFILES"), body.index("TREE_PROFILES["),
+            "profileFor checks the genus table before the species one, so a "
+            "species profile can never win")
+
+
+def _species(scientific_name):
+    from src.scene_contract import _species_of        # noqa: PLC0415
+    return _species_of({"scientific_name": scientific_name})
+
+
+def _read_plants_js():
+    path = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), "html", "scene3d", "02-plants.js")
+    with open(path, encoding="utf-8") as fh:
+        return fh.read()
+
+
 if __name__ == "__main__":
     unittest.main()
