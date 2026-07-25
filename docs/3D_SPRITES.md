@@ -68,6 +68,32 @@ real viewer; pick any sprite from the sidebar, and set a **Detail** level
 **Standalone (browser):** the same gallery as a web page — drag to orbit, scroll
 to zoom, pick any item from the sidebar.
 
+**Contact sheet (V2.29).** Both galleries have a **▦ Contact sheet** toggle that
+renders every listed sprite to a thumbnail and lays them out in a grid. Single
+view is for studying one plant; the sheet is for judging the *library*, because
+you cannot see that two sprites are the same sprite until they are next to each
+other. It honours the search box — type `Ribes` and get a sheet of just the
+currants — and clicking a tile opens it. Every tile is drawn by the real viewer
+(`window.permaSnapshot`), so the sheet can never drift from what the app renders;
+both views wait on `window.permaModelsReady` first, since a sheet built before
+the baked GLBs land is a sheet of the procedural fallback geometry.
+
+The standalone page takes `?sheet=1` and `?q=`, so a sheet of one genus is a
+shareable link:
+`sprite_gallery.html?sheet=1&q=Ribes`.
+
+**Groups worth knowing.** *Plant-body geometry* is the labelled archetype
+reference; *Species* is every seeded plant; and **Body × flower combos** is the
+deduplicated vocabulary — one specimen per (growth form × flower form) pair the
+catalogue actually uses, 75 of them across 436 species. A sprite here is a body
+wearing a bloom, so that group is the honest answer to "how many different things
+can this app draw". If two combos look alike there, every species built from them
+looks alike in a design.
+
+**How good are they, really?** [`SPRITE_AUDIT.md`](SPRITE_AUDIT.md) scores every
+archetype for fidelity *and* distinctness, names what is wrong with each, and
+ranks what it would cost to improve them.
+
 ```bash
 # from the repo root
 python -m http.server 8000

@@ -611,6 +611,10 @@ plant-use knowledge; Principle 12).
 | ✅ F51 | Phenology "what's happening now" dashboard | M | Low | P4, P11 |
 | ✅ F52 | Docent / presentation mode | M | Med — capture plumbing | P5 |
 | ✅ F53 | Guided lesson track | M | Low | P5, P7 |
+| ✅ F54 | Species-shaped fruit in the 3D preview | S–M | Med — schema v49 + seed | P5, P9 |
+| F55 | Groundcover archetype with real leaves | S | Low | P5, P2 |
+| F56 | Oriented (non-billboard) flower heads | M | Low | P5, P2 |
+| F57 | Species-level tree/shrub profiles (break the genus tables) | L | Med — authoring | P2, P9 |
 
 ### ✅ F46 · Pull-a-plant impact simulator — *Shipped · was Impact High · Effort M · Risk Low (P3, P5, P10)*
 **Shipped** in `src/plant_impact.py` (`pull_plant_impact`), surfaced in the Analysis → Habitat tab
