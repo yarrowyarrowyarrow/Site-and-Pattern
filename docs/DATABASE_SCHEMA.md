@@ -12,7 +12,7 @@ seeded reference data every project draws from.
   [`recipes.py`](../src/db/recipes.py),
   [`structures.py`](../src/db/structures.py),
   [`fauna.py`](../src/db/fauna.py)
-- **Current schema version:** `47` (`src/db/plants.py:_SCHEMA_VERSION` — the
+- **Current schema version:** `48` (`src/db/plants.py:_SCHEMA_VERSION` — the
   authoritative value; this doc's narrative may lag, the code wins)
 - **Location:**
   - Linux: `~/.local/share/Site & Pattern/permadesign.db`
@@ -50,12 +50,19 @@ One row per species. Key columns (full list in the DDL):
 | `ab_ecoregion` | comma-separated AB ecoregion tags |
 | `leaf_shape`, `leaf_size_cm`, `leaf_arrangement` | botanical morphology (v47). `leaf_size_cm` sets 3D foliage grain in real metres — a 20 cm bur oak leaf reads coarse, a 2 cm dwarf-birch leaf fine, at the same crown size |
 | `bark_color`, `fall_color` | hex (v47). The species' real trunk colour and autumn colour; `fall_color` empty = evergreen or no colouring, an honest empty rather than a guess |
-| `branching` | excurrent \| decurrent \| multi_stem \| suckering \| arching \| prostrate \| rosette (v47) |
+| `branching` | excurrent \| decurrent \| multi_stem \| suckering \| arching \| prostrate \| rosette (v47) — woody habit |
+| `growth_form` | herbaceous habit (v48). The **source of truth** for which 3D archetype a non-woody plant gets; the viewer's genus table is now only a fallback |
 
-The v47 morphology columns are authored for the 69 woody species in
-[`scripts/seed_woody_morphology.py`](../scripts/seed_woody_morphology.py),
-which documents each field and where its values come from; they are empty
-elsewhere and every consumer falls back to its previous behaviour.
+Morphology is authored in two companion scripts, each documenting its fields
+and where the values come from:
+[`scripts/seed_woody_morphology.py`](../scripts/seed_woody_morphology.py) for the
+69 trees and shrubs (v47), and
+[`scripts/seed_non_woody_morphology.py`](../scripts/seed_non_woody_morphology.py)
+for the 365 wildflowers, herbs, graminoids, aquatics, groundcovers and vines
+(v48). Between them every species in the catalogue has morphology. Woody rows
+carry `bark_color`/`fall_color`/`branching` and non-woody rows carry
+`growth_form`; each leaves the other empty, because a plant has one habit or the
+other and an honest empty beats an invented value.
 
 ### `companion_friends` / `companion_enemies`
 Symmetric plant↔plant companion relationships (`plant_id_a`, `plant_id_b`).

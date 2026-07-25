@@ -45,7 +45,11 @@
     "image_license": "cc-by",
     "flower_color": "#6f8fd6",
     "flower_form": "bell",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 4.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "grassy"
   },
   {
     "common_name": "Alberta Penstemon",
@@ -93,7 +97,11 @@
     "image_license": "cc0",
     "flower_color": "#8e6fc4",
     "flower_form": "spike",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Alder-leaved Buckthorn",
@@ -192,7 +200,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 60.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "emergent"
   },
   {
     "common_name": "Alkali Cord Grass",
@@ -237,7 +249,11 @@
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 40.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Alpine Aster",
@@ -285,7 +301,11 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "daisy",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Alpine Bistort",
@@ -333,7 +353,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Alpine Bluegrass",
@@ -381,7 +405,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Alpine Forget-me-not",
@@ -429,7 +457,11 @@
     "image_license": "cc-by",
     "flower_color": "#6f8fd6",
     "flower_form": "cluster",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 3.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "mat"
   },
   {
     "common_name": "Alpine Hedysarum (Bear Root)",
@@ -474,7 +506,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#d6457e",
     "flower_form": "pea",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Alpine Rock Jasmine",
@@ -522,7 +558,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 1.5,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "American Brooklime",
@@ -570,7 +610,11 @@
     "image_license": "cc-by",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "sprawling"
   },
   {
     "common_name": "Arctic Aster",
@@ -615,7 +659,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Arum-leaved Arrowhead",
@@ -663,7 +711,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "sagittate",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "emergent"
   },
   {
     "common_name": "Ascending Milkvetch",
@@ -714,7 +766,11 @@
     "image_license": "cc0",
     "flower_color": "#8e6fc4",
     "flower_form": "pea",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Awned Sedge",
@@ -762,7 +818,11 @@
     "image_license": "cc0",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Ball Cactus",
@@ -810,7 +870,11 @@
     "image_license": "cc0",
     "flower_color": "#e58fb0",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "scale",
+    "leaf_size_cm": 0.5,
+    "leaf_arrangement": "alternate",
+    "growth_form": "succulent"
   },
   {
     "common_name": "Balsam Fir",
@@ -963,7 +1027,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "rays",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "sagittate",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Basket Willow",
@@ -1119,7 +1187,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Bearberry",
@@ -1168,7 +1240,11 @@
     "flower_color": "#e58fb0",
     "flower_form": "bell",
     "fruit_color": "#c1271d",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "obovate",
+    "leaf_size_cm": 2.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "mat"
   },
   {
     "common_name": "Bebb's Sedge",
@@ -1213,7 +1289,11 @@
     "sourcing_notes": "Estimate (sedge default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Bebb's Willow",
@@ -1309,7 +1389,11 @@
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 40.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Big Sagebrush",
@@ -1411,7 +1495,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Birch-leaved Spirea",
@@ -1513,7 +1601,11 @@
     "image_license": "cc-by",
     "flower_color": "#ece6c8",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "cordate",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Black Hawthorn",
@@ -1670,7 +1762,11 @@
     "image_license": "cc0",
     "flower_color": "#f2c11e",
     "flower_form": "rays",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Blanketflower",
@@ -1716,7 +1812,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#e07020",
     "flower_form": "rays",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Blue Clematis",
@@ -1761,7 +1861,11 @@
     "sourcing_notes": "Estimate (vine default); AB retail as of 2026",
     "flower_color": "#b07fc0",
     "flower_form": "bell",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "vining"
   },
   {
     "common_name": "Blue Columbine",
@@ -1809,7 +1913,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#d6453a",
     "flower_form": "trumpet",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 6.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Blue Grama Grass",
@@ -1857,7 +1965,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Blue-eyed Grass",
@@ -1905,7 +2017,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#6f8fd6",
     "flower_form": "lily",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "grassy"
   },
   {
     "common_name": "Bluebunch Fescue",
@@ -1953,7 +2069,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Bluejoint Reed Grass",
@@ -2001,7 +2121,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Bog Blueberry",
@@ -2105,7 +2229,11 @@
     "flower_color": "#e58fb0",
     "flower_form": "bell",
     "fruit_color": "#b3122a",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "elliptic",
+    "leaf_size_cm": 1.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "mat"
   },
   {
     "common_name": "Boreal Yarrow",
@@ -2156,7 +2284,11 @@
     "image_license": "cc0",
     "flower_color": "#f2f2ea",
     "flower_form": "umbel",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "bipinnate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Boreale Oxytropis",
@@ -2207,7 +2339,11 @@
     "image_license": "cc0",
     "flower_color": "#8e6fc4",
     "flower_form": "pea",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Bracted Honeysuckle",
@@ -2367,7 +2503,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "scale",
+    "leaf_size_cm": 0.3,
+    "leaf_arrangement": "alternate",
+    "growth_form": "succulent"
   },
   {
     "common_name": "Broad-leaved Arrowhead",
@@ -2415,7 +2555,11 @@
     "image_license": "cc0",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "sagittate",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "emergent"
   },
   {
     "common_name": "Broad-leaved Water-plantain",
@@ -2460,7 +2604,11 @@
     "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "emergent"
   },
   {
     "common_name": "Bronze Bells",
@@ -2511,7 +2659,11 @@
     "image_license": "cc0",
     "flower_color": "#ece6c8",
     "flower_form": "lily",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "grassy"
   },
   {
     "common_name": "Broomweed",
@@ -2614,7 +2766,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "trifoliate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "emergent"
   },
   {
     "common_name": "Bunchberry",
@@ -2660,7 +2816,11 @@
     "flower_color": "#f2f2ea",
     "flower_form": "umbel",
     "fruit_color": "#cc2e2e",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "whorled",
+    "growth_form": "mat"
   },
   {
     "common_name": "Bur Oak",
@@ -2759,7 +2919,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Canada Anemone",
@@ -2807,7 +2971,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lobed",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "whorled",
+    "growth_form": "clump"
   },
   {
     "common_name": "Canada Buffaloberry",
@@ -2913,7 +3081,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Canada Milk Vetch",
@@ -2964,7 +3136,11 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "pea",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Canada Rice Grass",
@@ -3009,7 +3185,11 @@
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 25.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Canada Waterweed",
@@ -3057,7 +3237,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 1.5,
+    "leaf_arrangement": "whorled",
+    "growth_form": "floating"
   },
   {
     "common_name": "Canada Wild Rye",
@@ -3105,7 +3289,11 @@
     "image_license": "cc0",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 25.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Cattail",
@@ -3153,7 +3341,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#7a5230",
     "flower_form": "cattail",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 100.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "emergent"
   },
   {
     "common_name": "Chokecherry",
@@ -3260,7 +3452,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#ece6c8",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lobed",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Common Bladderwort",
@@ -3308,7 +3504,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 2.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "floating"
   },
   {
     "common_name": "Common Horsetail",
@@ -3357,7 +3557,11 @@
     "image_license": "cc-by",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "scale",
+    "leaf_size_cm": 1.0,
+    "leaf_arrangement": "whorled",
+    "growth_form": "emergent"
   },
   {
     "common_name": "Common Juniper",
@@ -3456,7 +3660,11 @@
     "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 3.0,
+    "leaf_arrangement": "whorled",
+    "growth_form": "emergent"
   },
   {
     "common_name": "Common Scouring-rush",
@@ -3502,7 +3710,11 @@
     "sourcing_notes": "Estimate (rush default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "scale",
+    "leaf_size_cm": 1.0,
+    "leaf_arrangement": "whorled",
+    "growth_form": "emergent"
   },
   {
     "common_name": "Common Snowberry",
@@ -3608,7 +3820,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "rays",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "clump"
   },
   {
     "common_name": "Common Tall Manna Grass",
@@ -3656,7 +3872,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Common Twinpod",
@@ -3704,7 +3924,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "cluster",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 4.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Cream-Coloured Peavine",
@@ -3756,7 +3980,11 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "pea",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "vining"
   },
   {
     "common_name": "Creeping Juniper",
@@ -3804,7 +4032,11 @@
     "image_license": "cc0",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "awl",
+    "leaf_size_cm": 0.8,
+    "leaf_arrangement": "whorled",
+    "growth_form": "mat"
   },
   {
     "common_name": "Creeping Oregon Grape",
@@ -3904,7 +4136,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "cluster",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "trifoliate",
+    "leaf_size_cm": 2.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "mat"
   },
   {
     "common_name": "Creeping Spikerush",
@@ -3952,7 +4188,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "scale",
+    "leaf_size_cm": 1.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Crowfoot Violet",
@@ -4000,7 +4240,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#8e6fc4",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "reniform",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Cushion Umbrella Plant",
@@ -4048,7 +4292,11 @@
     "image_license": "cc-by",
     "flower_color": "#ece6c8",
     "flower_form": "umbel",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 3.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "mat"
   },
   {
     "common_name": "Cut-leaved Anemone",
@@ -4097,7 +4345,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2f2ea",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lobed",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "whorled",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Cut-leaved Nightshade",
@@ -4148,7 +4400,11 @@
     "image_license": "cc-by",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lobed",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "sprawling"
   },
   {
     "common_name": "Cyperus-like Sedge",
@@ -4193,7 +4449,11 @@
     "sourcing_notes": "Estimate (sedge default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Desert Shooting Star",
@@ -4241,7 +4501,11 @@
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
     "flower_form": "cluster",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Dewberry",
@@ -4291,7 +4555,11 @@
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
     "fruit_color": "#a82a47",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "trifoliate",
+    "leaf_size_cm": 6.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "sprawling"
   },
   {
     "common_name": "Dotted Blazingstar",
@@ -4339,7 +4607,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#d6457e",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Douglas Fir",
@@ -4495,7 +4767,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Drummond's Milkvetch",
@@ -4546,7 +4822,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#8e6fc4",
     "flower_form": "pea",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Drummond's Rush",
@@ -4594,7 +4874,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Dwarf Birch",
@@ -4698,7 +4982,11 @@
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
     "fruit_color": "#a82a47",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "trifoliate",
+    "leaf_size_cm": 6.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "sprawling"
   },
   {
     "common_name": "Early Blue Violet",
@@ -4746,7 +5034,11 @@
     "image_license": "cc0",
     "flower_color": "#8e6fc4",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "reniform",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Early Yellow Oxytropis",
@@ -4794,7 +5086,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
     "flower_form": "pea",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Eastern Red Columbine",
@@ -4845,7 +5141,11 @@
     "image_license": "cc-by",
     "flower_color": "#d6453a",
     "flower_form": "trumpet",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 6.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Elegant Goldenrod",
@@ -4890,7 +5190,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Evening Primrose",
@@ -4939,7 +5243,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "False Box (Mountain Boxwood)",
@@ -5039,7 +5347,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#e58fb0",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "False Dragonhead (Western Obedient Plant)",
@@ -5085,7 +5397,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#e58fb0",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "False Solomon's Seal",
@@ -5137,7 +5453,11 @@
     "flower_color": "#f2f2ea",
     "flower_form": "spike",
     "fruit_color": "#b81f2a",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Field Chickweed",
@@ -5185,7 +5505,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 2.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "mat"
   },
   {
     "common_name": "Field Pussytoes",
@@ -5233,7 +5557,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 3.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "mat"
   },
   {
     "common_name": "Fireweed",
@@ -5281,7 +5609,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#d6457e",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Flat-topped Goldenrod",
@@ -5329,7 +5661,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Flat-topped White Aster",
@@ -5378,7 +5714,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Floating Marsh-marigold",
@@ -5429,7 +5769,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "reniform",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "floating"
   },
   {
     "common_name": "Foothills Rough Fescue",
@@ -5477,7 +5821,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Fowl Manna Grass",
@@ -5525,7 +5873,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Fragrant Sumac",
@@ -5628,7 +5980,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 25.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Fringed Loosestrife",
@@ -5676,7 +6032,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "star",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Fuzzy-tongue Penstemon",
@@ -5721,7 +6081,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Giant Bur-reed",
@@ -5766,7 +6130,11 @@
     "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 60.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "emergent"
   },
   {
     "common_name": "Giant Hyssop",
@@ -5814,7 +6182,11 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 7.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Giant Sunflower",
@@ -5862,7 +6234,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "rays",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "clump"
   },
   {
     "common_name": "Giant Wild Rye",
@@ -5910,7 +6286,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 35.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Glacier Lily",
@@ -5955,7 +6335,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
     "flower_form": "lily",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "grassy"
   },
   {
     "common_name": "Golden Bean",
@@ -6006,7 +6390,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "trifoliate",
+    "leaf_size_cm": 6.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Golden Currant (Buffalo Currant)",
@@ -6110,7 +6498,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "cross",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 2.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Golden Sedge",
@@ -6158,7 +6550,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Golden Tickseed",
@@ -6206,7 +6602,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
     "flower_form": "rays",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Gray Goldenrod",
@@ -6254,7 +6654,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Great Bulrush",
@@ -6302,7 +6706,11 @@
     "image_license": "cc-by",
     "flower_color": "#8a6f3c",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 60.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "emergent"
   },
   {
     "common_name": "Greater Northern Aster",
@@ -6348,7 +6756,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Green Alder",
@@ -6450,7 +6862,11 @@
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
     "flower_form": "globe",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "elliptic",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "clump"
   },
   {
     "common_name": "Green Needle Grass",
@@ -6499,7 +6915,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 25.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Ground Plum",
@@ -6550,7 +6970,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#8e6fc4",
     "flower_form": "pea",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Gumweed",
@@ -6595,7 +7019,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Hairy Arnica",
@@ -6643,7 +7071,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Hairy Golden Aster",
@@ -6691,7 +7123,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Hairy Wild Rye",
@@ -6739,7 +7175,11 @@
     "image_license": "cc0",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 35.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Harebell",
@@ -6784,7 +7224,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#6f8fd6",
     "flower_form": "bell",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 4.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "grassy"
   },
   {
     "common_name": "Heart-leaved Alexanders (Golden Alexanders)",
@@ -6833,7 +7277,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
     "flower_form": "umbel",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Heart-leaved Arnica",
@@ -6878,7 +7326,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Highbush Cranberry",
@@ -6981,7 +7433,11 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 6.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Hooded Ladies' Tresses",
@@ -7030,7 +7486,11 @@
     "image_license": "cc0",
     "flower_color": "#f2f2ea",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "grassy"
   },
   {
     "common_name": "Hooker's Oat Grass",
@@ -7075,7 +7535,11 @@
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Indigenous Ricegrass",
@@ -7123,7 +7587,11 @@
     "image_license": "cc0",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Ivy-leaved Duckweed",
@@ -7168,7 +7636,11 @@
     "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "orbicular",
+    "leaf_size_cm": 0.5,
+    "leaf_arrangement": "basal",
+    "growth_form": "floating"
   },
   {
     "common_name": "Jack Pine",
@@ -7270,7 +7742,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
     "flower_form": "rays",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "clump"
   },
   {
     "common_name": "Joe-Pye Weed",
@@ -7318,7 +7794,11 @@
     "image_license": "cc0",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "whorled",
+    "growth_form": "erect"
   },
   {
     "common_name": "June Grass",
@@ -7367,7 +7847,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Knotted Rush",
@@ -7412,7 +7896,11 @@
     "sourcing_notes": "Estimate (rush default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Labrador Tea",
@@ -7511,7 +7999,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Lance-leaved Stonecrop",
@@ -7560,7 +8052,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 2.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "succulent"
   },
   {
     "common_name": "Large-leaved Avens",
@@ -7609,7 +8105,11 @@
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
     "flower_form": "star",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Late Goldenrod",
@@ -7657,7 +8157,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Late Yellow Oxytropis",
@@ -7705,7 +8209,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
     "flower_form": "pea",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Leafy Arnica",
@@ -7754,7 +8262,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Leafy Aster",
@@ -7802,7 +8314,11 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Lilac Penstemon",
@@ -7850,7 +8366,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#8e6fc4",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Lindley's Aster",
@@ -7899,7 +8419,11 @@
     "image_license": "cc0",
     "flower_color": "#8e6fc4",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Little Bluestem",
@@ -7947,7 +8471,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Little-leaved Alumroot",
@@ -7995,7 +8523,11 @@
     "image_license": "cc-by",
     "flower_color": "#ece6c8",
     "flower_form": "spike",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "lobed",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Lodgepole Pine",
@@ -8101,7 +8633,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lobed",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "whorled",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Low Bilberry",
@@ -8204,7 +8740,11 @@
     "image_license": "cc-by",
     "flower_color": "#b07fc0",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 3.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Low-bush Cranberry",
@@ -8304,7 +8844,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
     "flower_form": "spike",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "MacKenzie's Hedysarum",
@@ -8349,7 +8893,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "",
     "flower_form": "pea",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Many-flowered Aster (Tufted White Prairie Aster)",
@@ -8395,7 +8943,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Marsh Aster",
@@ -8443,7 +8995,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#8e6fc4",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Marsh Cinquefoil",
@@ -8492,7 +9048,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#8a3a44",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Marsh Hedge Nettle",
@@ -8540,7 +9100,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#8e6fc4",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Marsh Hedge Nettle (Marsh Woundwort)",
@@ -8589,7 +9153,11 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Marsh Marigold",
@@ -8640,7 +9208,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "reniform",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Marsh Skullcap",
@@ -8689,7 +9261,11 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 4.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Marsh Violet",
@@ -8734,7 +9310,11 @@
     "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "reniform",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Maximilian Sunflower",
@@ -8779,7 +9359,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
     "flower_form": "rays",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "clump"
   },
   {
     "common_name": "Meadow Arnica",
@@ -8828,7 +9412,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Meadow Blazingstar",
@@ -8877,7 +9465,11 @@
     "image_license": "cc-by",
     "flower_color": "#d6457e",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Meadow Sedge",
@@ -8925,7 +9517,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Meadowsweet",
@@ -9030,7 +9626,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#8e6fc4",
     "flower_form": "pea",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Moss Campion",
@@ -9078,7 +9678,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "star",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 1.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "cushion"
   },
   {
     "common_name": "Moss Phlox",
@@ -9123,7 +9727,11 @@
     "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026",
     "flower_color": "#e58fb0",
     "flower_form": "star",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 1.5,
+    "leaf_arrangement": "opposite",
+    "growth_form": "cushion"
   },
   {
     "common_name": "Mountain Brome",
@@ -9171,7 +9779,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 25.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Mountain Gentian",
@@ -9219,7 +9831,11 @@
     "image_license": "cc-by",
     "flower_color": "#6f8fd6",
     "flower_form": "bell",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 4.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Mountain Hollyhock",
@@ -9264,7 +9880,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#e58fb0",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lobed",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Mountain Sweet Cicely",
@@ -9312,7 +9932,11 @@
     "image_license": "cc-by",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Narrow-leaf Willow",
@@ -9411,7 +10035,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Narrowleaf Cotton-grass",
@@ -9456,7 +10084,11 @@
     "sourcing_notes": "Estimate (sedge default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 25.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Needle and Thread Grass",
@@ -9504,7 +10136,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 25.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Needle Spike-rush",
@@ -9549,7 +10185,11 @@
     "sourcing_notes": "Estimate (rush default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "scale",
+    "leaf_size_cm": 1.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Nodding Onion",
@@ -9600,7 +10240,11 @@
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
     "flower_form": "globe",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 25.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "grassy"
   },
   {
     "common_name": "Northern Bedstraw",
@@ -9648,7 +10292,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 3.0,
+    "leaf_arrangement": "whorled",
+    "growth_form": "sprawling"
   },
   {
     "common_name": "Northern Black Currant",
@@ -9749,7 +10397,11 @@
     "image_license": "cc-by",
     "flower_color": "#6f8fd6",
     "flower_form": "bell",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 3.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Northern Hedysarum",
@@ -9797,7 +10449,11 @@
     "image_license": "cc-by",
     "flower_color": "#d6457e",
     "flower_form": "pea",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Northern Wheat Grass",
@@ -9845,7 +10501,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 25.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Nuttall's Sunflower",
@@ -9894,7 +10554,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "rays",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "clump"
   },
   {
     "common_name": "Old Man's Whiskers (Prairie Smoke)",
@@ -9943,7 +10607,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#e58fb0",
     "flower_form": "star",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Ostrich Fern",
@@ -9991,7 +10659,11 @@
     "image_license": "cc-by",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 90.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "fern"
   },
   {
     "common_name": "Pale Agoseris",
@@ -10040,7 +10712,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Palmate-leaved Coltsfoot",
@@ -10089,7 +10765,11 @@
     "image_license": "cc-by",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lobed",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Paper Birch",
@@ -10191,7 +10871,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Parry's Townsendia",
@@ -10236,7 +10920,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#b07fc0",
     "flower_form": "daisy",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 3.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Pearly Everlasting",
@@ -10285,7 +10973,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Philadelphia Fleabane",
@@ -10334,7 +11026,11 @@
     "image_license": "cc0",
     "flower_color": "#b07fc0",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Pin Cherry",
@@ -10437,7 +11133,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Pink Monkey Flower",
@@ -10485,7 +11185,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "trumpet",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "clump"
   },
   {
     "common_name": "Pink Pussytoes",
@@ -10534,7 +11238,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 3.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "mat"
   },
   {
     "common_name": "Pink Pyrola",
@@ -10583,7 +11291,11 @@
     "image_license": "cc0",
     "flower_color": "#f2f2ea",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "orbicular",
+    "leaf_size_cm": 4.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Pink Spirea",
@@ -10737,7 +11449,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Plains Prickly Pear Cactus",
@@ -10785,7 +11501,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "scale",
+    "leaf_size_cm": 0.3,
+    "leaf_arrangement": "alternate",
+    "growth_form": "succulent"
   },
   {
     "common_name": "Plains Wormwood",
@@ -10833,7 +11553,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "pinnatifid",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Porcupine Grass",
@@ -10881,7 +11605,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 25.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Porcupine Sedge",
@@ -10929,7 +11657,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Poverty Oat Grass",
@@ -10977,7 +11709,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Prairie Buttercup",
@@ -11029,7 +11765,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lobed",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Prairie Cinquefoil",
@@ -11077,7 +11817,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Prairie Cinquefoil (Tall Cinquefoil)",
@@ -11126,7 +11870,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Prairie Coneflower",
@@ -11174,7 +11922,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
     "flower_form": "rays",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "pinnatifid",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Prairie Cord Grass",
@@ -11219,7 +11971,11 @@
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 40.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Prairie Crocus",
@@ -11270,7 +12026,11 @@
     "image_license": "cc-by",
     "flower_color": "#b07fc0",
     "flower_form": "bell",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "pinnatifid",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Prairie Dropseed",
@@ -11318,7 +12078,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 25.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Prairie Gentian",
@@ -11366,7 +12130,11 @@
     "image_license": "cc-by",
     "flower_color": "#6f8fd6",
     "flower_form": "bell",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 4.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Prairie Goldenrod",
@@ -11411,7 +12179,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Prairie Onion (Textile Onion)",
@@ -11463,7 +12235,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#e58fb0",
     "flower_form": "globe",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 25.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "grassy"
   },
   {
     "common_name": "Prairie Rose",
@@ -11567,7 +12343,11 @@
     "image_license": "cc-by",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Prairie Sagewort",
@@ -11612,7 +12392,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "pinnatifid",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Prairie Smoke",
@@ -11661,7 +12445,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#e58fb0",
     "flower_form": "star",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Prairie Thistle",
@@ -11707,7 +12495,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "pinnatifid",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Prairie Turnip",
@@ -11752,7 +12544,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_palmate",
+    "leaf_size_cm": 6.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Prairie Wedge Grass",
@@ -11800,7 +12596,11 @@
     "image_license": "cc0",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Prickly Wild Rose",
@@ -11905,7 +12705,11 @@
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
     "flower_form": "star",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Purple Coneflower",
@@ -11950,7 +12754,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#e58fb0",
     "flower_form": "rays",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Purple Oat Grass",
@@ -11995,7 +12803,11 @@
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Purple Peavine",
@@ -12043,7 +12855,11 @@
     "sourcing_notes": "Estimate (vine default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
     "flower_form": "pea",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "vining"
   },
   {
     "common_name": "Purple Prairie Clover",
@@ -12088,7 +12904,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
     "flower_form": "globe",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 4.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Purple Reed Grass",
@@ -12133,7 +12953,11 @@
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Purple-stemmed Tall Aster (Swamp Aster)",
@@ -12182,7 +13006,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#8e6fc4",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Pussy Willow",
@@ -12338,7 +13166,11 @@
     "image_license": "cc0",
     "flower_color": "#a89a3c",
     "flower_form": "cattail",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 60.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "emergent"
   },
   {
     "common_name": "Raymond's Sedge",
@@ -12383,7 +13215,11 @@
     "sourcing_notes": "Estimate (sedge default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Red Baneberry",
@@ -12435,7 +13271,11 @@
     "flower_color": "#f2f2ea",
     "flower_form": "spike",
     "fruit_color": "#b81f2a",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 25.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Red Columbine",
@@ -12486,7 +13326,11 @@
     "image_license": "cc-by",
     "flower_color": "#d6453a",
     "flower_form": "trumpet",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 6.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Common Paintbrush",
@@ -12534,7 +13378,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#d6453a",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 6.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Red Osier Dogwood",
@@ -12635,7 +13483,11 @@
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "River Beauty",
@@ -12683,7 +13535,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#d6457e",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "River Bulrush",
@@ -12731,7 +13587,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 60.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "emergent"
   },
   {
     "common_name": "Roadside Agrimony (Woodland Agrimony)",
@@ -12780,7 +13640,11 @@
     "image_license": "cc0",
     "flower_color": "#f2c11e",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Rocky Mountain Beeplant",
@@ -12825,7 +13689,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
     "flower_form": "cluster",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "compound_palmate",
+    "leaf_size_cm": 6.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Rocky Mountain Fescue",
@@ -12873,7 +13741,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Rocky-Ledge Beardtongue",
@@ -12921,7 +13793,11 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "spike",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Roseroot",
@@ -12969,7 +13845,11 @@
     "image_license": "cc0",
     "flower_color": "#f2c11e",
     "flower_form": "cluster",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 3.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "succulent"
   },
   {
     "common_name": "Rosy Pussytoes (Littleleaf Pussytoes)",
@@ -13018,7 +13898,11 @@
     "image_license": "cc0",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 3.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "mat"
   },
   {
     "common_name": "Rough Fescue",
@@ -13063,7 +13947,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Rough-fruited Fairy Bells",
@@ -13112,7 +14000,11 @@
     "image_license": "cc-by",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Round-leaved Alumroot",
@@ -13158,7 +14050,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#ece6c8",
     "flower_form": "spike",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "lobed",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Round-leaved Sundew",
@@ -13207,7 +14103,11 @@
     "image_license": "cc-by",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "orbicular",
+    "leaf_size_cm": 1.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Round-leaved Yellow Violet",
@@ -13252,7 +14152,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
     "flower_form": "cluster",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "reniform",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Sago Pondweed",
@@ -13300,7 +14204,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "floating"
   },
   {
     "common_name": "Saline Shooting Star",
@@ -13348,7 +14256,11 @@
     "image_license": "cc0",
     "flower_color": "#e58fb0",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Saltgrass",
@@ -13396,7 +14308,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Sand Grass",
@@ -13441,7 +14357,11 @@
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Sandbar Willow",
@@ -13543,7 +14463,11 @@
     "image_license": "cc0",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Sartwell's Sedge",
@@ -13588,7 +14512,11 @@
     "sourcing_notes": "Estimate (sedge default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Saskatoon Berry",
@@ -13691,7 +14619,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Scorpion Weed",
@@ -13736,7 +14668,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#7e7fc4",
     "flower_form": "cluster",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "pinnatifid",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Self-heal",
@@ -13784,7 +14720,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#8e6fc4",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "mat"
   },
   {
     "common_name": "Seneca Snakeroot",
@@ -13829,7 +14769,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 4.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Sheep Fescue",
@@ -13877,7 +14821,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Shooting Star",
@@ -13922,7 +14870,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#d6457e",
     "flower_form": "trumpet",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Short-beaked Agoseris",
@@ -13970,7 +14922,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Short-capsuled Willow",
@@ -14066,7 +15022,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Showy Fleabane",
@@ -14114,7 +15074,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#b07fc0",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Showy Jacob's-ladder",
@@ -14162,7 +15126,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#6f8fd6",
     "flower_form": "cluster",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Showy Locoweed",
@@ -14210,7 +15178,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
     "flower_form": "pea",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Showy Milkweed",
@@ -14261,7 +15233,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#e58fb0",
     "flower_form": "globe",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "elliptic",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "clump"
   },
   {
     "common_name": "Showy Pussytoes",
@@ -14309,7 +15285,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 3.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "mat"
   },
   {
     "common_name": "Shrubby Cinquefoil",
@@ -14408,7 +15388,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Silky Lupine",
@@ -14459,7 +15443,11 @@
     "image_license": "cc-by",
     "flower_color": "#7e7fc4",
     "flower_form": "pea",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "compound_palmate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Silver Buffaloberry",
@@ -14669,7 +15657,11 @@
     "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026",
     "flower_color": "#f2c11e",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "mat"
   },
   {
     "common_name": "Silvery Lupine",
@@ -14720,7 +15712,11 @@
     "image_license": "cc-by",
     "flower_color": "#7e7fc4",
     "flower_form": "pea",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "compound_palmate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Sitka Valerian",
@@ -14768,7 +15764,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "clump"
   },
   {
     "common_name": "Skunk Currant",
@@ -14868,7 +15868,11 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Slender Cinquefoil (Graceful Cinquefoil)",
@@ -14917,7 +15921,11 @@
     "image_license": "cc0",
     "flower_color": "#f2c11e",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Slender Nettle",
@@ -14963,7 +15971,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Slender Wheatgrass",
@@ -15011,7 +16023,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 25.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Slough Grass",
@@ -15059,7 +16075,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 25.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Small Bottle Sedge",
@@ -15104,7 +16124,11 @@
     "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Small-fruited Bulrush",
@@ -15152,7 +16176,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 40.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Small-leaved Everlasting (Small-leaved Pussytoes)",
@@ -15198,7 +16226,11 @@
     "sourcing_notes": "Estimate (groundcover default); AB retail as of 2026",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 3.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "mat"
   },
   {
     "common_name": "Smooth Aster",
@@ -15246,7 +16278,11 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Smooth Blue Beardtongue",
@@ -15294,7 +16330,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#8e6fc4",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Smooth Fleabane (Streamside Fleabane)",
@@ -15340,7 +16380,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#b07fc0",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Smooth Sweet Cicely",
@@ -15388,7 +16432,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2f2ea",
     "flower_form": "umbel",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Smooth Wild Rye",
@@ -15436,7 +16484,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 25.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Sneezeweed",
@@ -15481,7 +16533,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f0a818",
     "flower_form": "rays",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Soapweed Yucca",
@@ -15580,7 +16636,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Spike Trisetum",
@@ -15628,7 +16688,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Spiked Water-milfoil",
@@ -15676,7 +16740,11 @@
     "image_license": "cc0",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "pinnatifid",
+    "leaf_size_cm": 3.0,
+    "leaf_arrangement": "whorled",
+    "growth_form": "floating"
   },
   {
     "common_name": "Spreading Dogbane",
@@ -15728,7 +16796,11 @@
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Sprengel's Sedge",
@@ -15776,7 +16848,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Spring Beauty",
@@ -15824,7 +16900,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "grassy"
   },
   {
     "common_name": "Square-stem Monkeyflower",
@@ -15872,7 +16952,11 @@
     "image_license": "cc0",
     "flower_color": "#f2c11e",
     "flower_form": "trumpet",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 7.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "clump"
   },
   {
     "common_name": "Star-flowered Solomon's Seal",
@@ -15924,7 +17008,11 @@
     "flower_color": "",
     "flower_form": "none",
     "fruit_color": "#b81f2a",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Sticky Goldenrod",
@@ -15969,7 +17057,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
     "flower_form": "plume",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Sticky Goldenrod (Mount Albert Goldenrod)",
@@ -16018,7 +17110,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "plume",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Sticky Purple Geranium",
@@ -16066,7 +17162,11 @@
     "image_license": "cc0",
     "flower_color": "#e58fb0",
     "flower_form": "star",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lobed",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "clump"
   },
   {
     "common_name": "Stiff Goldenrod",
@@ -16114,7 +17214,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Stiff Sunflower (Rhombic-leaved Sunflower)",
@@ -16160,7 +17264,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
     "flower_form": "rays",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "clump"
   },
   {
     "common_name": "Stinging Nettle",
@@ -16209,7 +17317,11 @@
     "image_license": "cc0",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Strawberry Spinach",
@@ -16257,7 +17369,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "sagittate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Sulphur Hedysarum",
@@ -16305,7 +17421,11 @@
     "image_license": "cc-by",
     "flower_color": "#d6457e",
     "flower_form": "pea",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Swamp Horsetail",
@@ -16354,7 +17474,11 @@
     "image_license": "cc-by",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "scale",
+    "leaf_size_cm": 1.0,
+    "leaf_arrangement": "whorled",
+    "growth_form": "emergent"
   },
   {
     "common_name": "Sweet Broom (Alpine Sweetvetch)",
@@ -16400,7 +17524,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#d6457e",
     "flower_form": "pea",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Sweet-scented Bedstraw",
@@ -16448,7 +17576,11 @@
     "image_license": "cc0",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 3.0,
+    "leaf_arrangement": "whorled",
+    "growth_form": "sprawling"
   },
   {
     "common_name": "Sweetgrass",
@@ -16496,7 +17628,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 25.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Switchgrass",
@@ -16544,7 +17680,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 40.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Tall Anemone (Thimbleweed)",
@@ -16596,7 +17736,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lobed",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "whorled",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Tall Goldenrod",
@@ -16644,7 +17788,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Tall Jacob's Ladder",
@@ -16693,7 +17841,11 @@
     "image_license": "cc-by",
     "flower_color": "#6f8fd6",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Tall Larkspur",
@@ -16744,7 +17896,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#6f8fd6",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lobed",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Tall Lungwort (Blue Bells)",
@@ -16793,7 +17949,11 @@
     "image_license": "cc-by",
     "flower_color": "#6f8fd6",
     "flower_form": "bell",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Tall Meadow Rue",
@@ -16841,7 +18001,11 @@
     "image_license": "cc-by",
     "flower_color": "#ece6c8",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Tall Showy Yarrow",
@@ -16892,7 +18056,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "umbel",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "bipinnate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Tamarack",
@@ -17104,7 +18272,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 60.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "emergent"
   },
   {
     "common_name": "Ticklegrass",
@@ -17152,7 +18324,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Torrey's Rush",
@@ -17200,7 +18376,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Trailing Raspberry",
@@ -17247,7 +18427,11 @@
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
     "fruit_color": "#a82a47",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "trifoliate",
+    "leaf_size_cm": 6.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "sprawling"
   },
   {
     "common_name": "Trembling Aspen",
@@ -17346,7 +18530,11 @@
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Tufted Tall Manna Grass",
@@ -17394,7 +18582,11 @@
     "image_license": "cc0",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Turned Sedge",
@@ -17439,7 +18631,11 @@
     "sourcing_notes": "Estimate (sedge default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Twin Arnica",
@@ -17487,7 +18683,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Twinflower",
@@ -17535,7 +18735,11 @@
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
     "flower_form": "bell",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "orbicular",
+    "leaf_size_cm": 1.5,
+    "leaf_arrangement": "opposite",
+    "growth_form": "mat"
   },
   {
     "common_name": "Twining Honeysuckle (Limber Honeysuckle)",
@@ -17585,7 +18789,11 @@
     "flower_color": "#f0a818",
     "flower_form": "trumpet",
     "fruit_color": "#c1271d",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "elliptic",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "vining"
   },
   {
     "common_name": "Umbrella Buckwheat",
@@ -17630,7 +18838,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#ece6c8",
     "flower_form": "umbel",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 3.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "mat"
   },
   {
     "common_name": "Valerian",
@@ -17678,7 +18890,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "clump"
   },
   {
     "common_name": "Variegated Horsetail",
@@ -17727,7 +18943,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "scale",
+    "leaf_size_cm": 1.0,
+    "leaf_arrangement": "whorled",
+    "growth_form": "emergent"
   },
   {
     "common_name": "Veiny Meadow-Rue",
@@ -17776,7 +18996,11 @@
     "image_license": "cc-by",
     "flower_color": "#ece6c8",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Velvet-leaf Blueberry",
@@ -17880,7 +19104,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "cordate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "emergent"
   },
   {
     "common_name": "Water Birch",
@@ -17979,7 +19207,11 @@
     "sourcing_notes": "Estimate (aquatic default); AB retail as of 2026",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "emergent"
   },
   {
     "common_name": "Water Sedge",
@@ -18027,7 +19259,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Water Smartweed",
@@ -18076,7 +19312,11 @@
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Western Blue Iris",
@@ -18127,7 +19367,11 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 45.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "grassy"
   },
   {
     "common_name": "Western Canada Violet",
@@ -18175,7 +19419,11 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "reniform",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Western Fescue",
@@ -18223,7 +19471,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Western Meadow Aster",
@@ -18271,7 +19523,11 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Western Meadowrue",
@@ -18319,7 +19575,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#ece6c8",
     "flower_form": "cluster",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Western Mountain Ash",
@@ -18420,7 +19680,11 @@
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 25.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Western Snowberry",
@@ -18523,7 +19787,11 @@
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 20.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Western Willow Aster",
@@ -18569,7 +19837,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#8e6fc4",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Western Wood Lily",
@@ -18614,7 +19886,11 @@
     "sourcing_notes": "Estimate (specialist / rare); AB retail as of 2026",
     "flower_color": "#e07020",
     "flower_form": "lily",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "whorled",
+    "growth_form": "grassy"
   },
   {
     "common_name": "White Camas",
@@ -18665,7 +19941,11 @@
     "image_license": "cc-by",
     "flower_color": "#ece6c8",
     "flower_form": "lily",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "grassy"
   },
   {
     "common_name": "White Evening Primrose",
@@ -18710,7 +19990,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "White Geranium",
@@ -18759,7 +20043,11 @@
     "image_license": "cc0",
     "flower_color": "#e58fb0",
     "flower_form": "star",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lobed",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "clump"
   },
   {
     "common_name": "White Mountain Avens",
@@ -18807,7 +20095,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "daisy",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "elliptic",
+    "leaf_size_cm": 2.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "mat"
   },
   {
     "common_name": "White Prairie Clover",
@@ -18855,7 +20147,11 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "globe",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 4.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "White Spruce",
@@ -18954,7 +20250,11 @@
     "sourcing_notes": "Estimate (grass default); AB retail as of 2026",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Wild Bergamot",
@@ -19003,7 +20303,11 @@
     "image_license": "cc-by",
     "flower_color": "#b07fc0",
     "flower_form": "whorl",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "clump"
   },
   {
     "common_name": "Wild Black Currant",
@@ -19103,7 +20407,11 @@
     "image_license": "cc-by",
     "flower_color": "#6f8fd6",
     "flower_form": "star",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 2.5,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Wild Chives",
@@ -19154,7 +20462,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#e58fb0",
     "flower_form": "globe",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 25.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "grassy"
   },
   {
     "common_name": "Wild Clematis",
@@ -19202,7 +20514,11 @@
     "image_license": "cc-by",
     "flower_color": "#b07fc0",
     "flower_form": "bell",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "vining"
   },
   {
     "common_name": "Wild Gooseberry",
@@ -19304,7 +20620,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#ece6c8",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Wild Lily-of-the-valley",
@@ -19357,7 +20677,11 @@
     "flower_color": "#f2f2ea",
     "flower_form": "spike",
     "fruit_color": "#b81f2a",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "mat"
   },
   {
     "common_name": "Wild Mint",
@@ -19403,7 +20727,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#b07fc0",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Wild Raspberry",
@@ -19562,7 +20890,11 @@
     "image_license": "cc-by",
     "flower_color": "",
     "flower_form": "none",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "clump"
   },
   {
     "common_name": "Wild Strawberry",
@@ -19612,7 +20944,11 @@
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
     "fruit_color": "#cc2e2e",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "trifoliate",
+    "leaf_size_cm": 4.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "mat"
   },
   {
     "common_name": "Wild Vetch",
@@ -19663,7 +20999,11 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "pea",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "vining"
   },
   {
     "common_name": "Willow Aster",
@@ -19711,7 +21051,11 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Winterfat",
@@ -19813,7 +21157,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Wood Betony (Bracted Lousewort)",
@@ -19862,7 +21210,11 @@
     "image_license": "cc-by",
     "flower_color": "#e58fb0",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "pinnatifid",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Woodland Strawberry",
@@ -19912,7 +21264,11 @@
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
     "fruit_color": "#cc2e2e",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "trifoliate",
+    "leaf_size_cm": 4.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "mat"
   },
   {
     "common_name": "Woods' Rose",
@@ -20016,7 +21372,11 @@
     "image_license": "cc0",
     "flower_color": "#f2c11e",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Woolly Sedge",
@@ -20064,7 +21424,11 @@
     "image_license": "cc-by",
     "flower_color": "#cbbd80",
     "flower_form": "plume",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "tussock"
   },
   {
     "common_name": "Yarrow",
@@ -20116,7 +21480,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2f2ea",
     "flower_form": "umbel",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "bipinnate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Yellow Angelica",
@@ -20161,7 +21529,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2f2ea",
     "flower_form": "umbel",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Yellow Avens",
@@ -20210,7 +21582,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#e58fb0",
     "flower_form": "star",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Yellow Beardtongue",
@@ -20258,7 +21634,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#8e6fc4",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Yellow Buckwheat",
@@ -20306,7 +21686,11 @@
     "image_license": "cc0",
     "flower_color": "#ece6c8",
     "flower_form": "umbel",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 3.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "mat"
   },
   {
     "common_name": "Yellow Columbine",
@@ -20358,7 +21742,11 @@
     "image_license": "cc-by",
     "flower_color": "#d6453a",
     "flower_form": "trumpet",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 6.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "ferny"
   },
   {
     "common_name": "Yellow Flax",
@@ -20406,7 +21794,11 @@
     "image_license": "cc-by",
     "flower_color": "#6f8fd6",
     "flower_form": "star",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 2.5,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Yellow Lady's Slipper",
@@ -20454,7 +21846,11 @@
     "image_license": "cc0",
     "flower_color": "#f2c11e",
     "flower_form": "bell",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "elliptic",
+    "leaf_size_cm": 15.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Yellow Monkey Flower",
@@ -20502,7 +21898,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "trumpet",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "ovate",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "clump"
   },
   {
     "common_name": "Yellow Mountain Avens",
@@ -20550,7 +21950,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2f2ea",
     "flower_form": "daisy",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "elliptic",
+    "leaf_size_cm": 2.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "mat"
   },
   {
     "common_name": "Yellow Owl Clover",
@@ -20598,7 +22002,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f2c11e",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 4.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Yellow Paintbrush",
@@ -20643,7 +22051,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#d6453a",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 6.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Yellow Pond-lily",
@@ -20691,7 +22103,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "globe",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "cordate",
+    "leaf_size_cm": 30.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "floating"
   },
   {
     "common_name": "Yellow Pucoon",
@@ -20739,7 +22155,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f0a818",
     "flower_form": "cluster",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 6.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Yellow Rattle",
@@ -20788,7 +22208,11 @@
     "image_license": "cc-by",
     "flower_color": "#f2c11e",
     "flower_form": "spike",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 4.0,
+    "leaf_arrangement": "opposite",
+    "growth_form": "erect"
   },
   {
     "common_name": "Yellow-flowered Locoweed",
@@ -20840,7 +22264,11 @@
     "image_license": "cc-by",
     "flower_color": "#8e6fc4",
     "flower_form": "pea",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "compound_pinnate",
+    "leaf_size_cm": 10.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Yellowbells",
@@ -20888,7 +22316,11 @@
     "image_license": "cc-by-sa",
     "flower_color": "#f0a818",
     "flower_form": "lily",
-    "native_provinces": "AB,SK"
+    "native_provinces": "AB,SK",
+    "leaf_shape": "linear",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "grassy"
   },
   {
     "common_name": "Yellowstone Draba",
@@ -20933,7 +22365,11 @@
     "sourcing_notes": "Estimate (herb default); AB retail as of 2026",
     "flower_color": "#f2c11e",
     "flower_form": "cross",
-    "native_provinces": "AB"
+    "native_provinces": "AB",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 2.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Scarlet Globemallow",
@@ -20978,7 +22414,11 @@
     "cal_sep": "dormant",
     "cal_oct": "dormant",
     "cal_nov": "dormant",
-    "cal_dec": "dormant"
+    "cal_dec": "dormant",
+    "leaf_shape": "lobed",
+    "leaf_size_cm": 5.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Bastard Toadflax",
@@ -21023,7 +22463,11 @@
     "cal_sep": "dormant",
     "cal_oct": "dormant",
     "cal_nov": "dormant",
-    "cal_dec": "dormant"
+    "cal_dec": "dormant",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 3.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "Stiff Goldenrod",
@@ -21068,7 +22512,11 @@
     "cal_sep": "harvest",
     "cal_oct": "dormant",
     "cal_nov": "dormant",
-    "cal_dec": "dormant"
+    "cal_dec": "dormant",
+    "leaf_shape": "elliptic",
+    "leaf_size_cm": 12.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "erect"
   },
   {
     "common_name": "White Prairie Aster",
@@ -21113,7 +22561,11 @@
     "cal_sep": "harvest",
     "cal_oct": "dormant",
     "cal_nov": "dormant",
-    "cal_dec": "dormant"
+    "cal_dec": "dormant",
+    "leaf_shape": "lanceolate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "alternate",
+    "growth_form": "clump"
   },
   {
     "common_name": "Woolly Groundsel",
@@ -21158,7 +22610,11 @@
     "cal_sep": "dormant",
     "cal_oct": "dormant",
     "cal_nov": "dormant",
-    "cal_dec": "dormant"
+    "cal_dec": "dormant",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 6.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   },
   {
     "common_name": "Tufted Fleabane",
@@ -21203,6 +22659,10 @@
     "cal_sep": "dormant",
     "cal_oct": "dormant",
     "cal_nov": "dormant",
-    "cal_dec": "dormant"
+    "cal_dec": "dormant",
+    "leaf_shape": "spatulate",
+    "leaf_size_cm": 8.0,
+    "leaf_arrangement": "basal",
+    "growth_form": "rosette"
   }
 ]

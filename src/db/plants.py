@@ -177,7 +177,7 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # since the builder shipped). _migrate_to_v46 adds the column to old DBs and
 # stamps the shipped examples by name so the first v46 reseed doesn't
 # duplicate them.
-_SCHEMA_VERSION = 47
+_SCHEMA_VERSION = 48
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -436,6 +436,16 @@ def _migrate_to_v42(conn: sqlite3.Connection):
             conn.execute(f"ALTER TABLE {table} ADD COLUMN native_provinces TEXT")
         except sqlite3.OperationalError:
             pass  # column already present
+    conn.commit()
+
+
+def _migrate_to_v48(conn: sqlite3.Connection):
+    """Herbaceous growth-form column (V2.29). Additive and nullable, filled by
+    the reseed that follows the version bump; empty for woody plants."""
+    try:
+        conn.execute("ALTER TABLE plants ADD COLUMN growth_form TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass          # already present → fresh install / already migrated
     conn.commit()
 
 
@@ -979,6 +989,7 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("bark_color", ""),
             p.get("fall_color", ""),
             p.get("branching", ""),
+            p.get("growth_form", ""),
         ))
 
     conn.executemany(
@@ -999,9 +1010,9 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             sourcing_notes, flower_color, flower_form, fruit_color,
             image_url, image_attribution, image_license,
             leaf_shape, leaf_size_cm, leaf_arrangement,
-            bark_color, fall_color, branching)
+            bark_color, fall_color, branching, growth_form)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -1098,6 +1109,8 @@ def init_db() -> None:
             _migrate_to_v46(conn)
         if current_version < 47:
             _migrate_to_v47(conn)
+        if current_version < 48:
+            _migrate_to_v48(conn)
 
         # Add parent_id to polycultures if missing
         try:

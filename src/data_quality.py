@@ -99,10 +99,25 @@ FLOWER_FORMS      = {"daisy", "rays", "spike", "plume", "umbel", "globe",
 LEAF_SHAPES       = {"needle", "awl", "scale", "linear", "lanceolate",
                      "elliptic", "ovate", "obovate", "orbicular", "cordate",
                      "lobed", "trifoliate", "compound_pinnate",
-                     "compound_palmate"}
+                     "compound_palmate",
+                     # Herbaceous profiles (v48): the woody set had no way to
+                     # say "spoon-shaped basal rosette" (pussytoes, fleabane),
+                     # "kidney-shaped" (violets, marsh marigold), "arrowhead"
+                     # (balsamroot, arrowhead), "deeply cut but not compound"
+                     # (prairie crocus, thistle) or "twice-divided" (yarrow,
+                     # meadow rue) — between them a large share of the flora.
+                     "spatulate", "reniform", "sagittate", "pinnatifid",
+                     "bipinnate"}
 LEAF_ARRANGEMENTS = {"alternate", "opposite", "whorled", "fascicled", "basal"}
 BRANCHING_HABITS  = {"excurrent", "decurrent", "multi_stem", "suckering",
                      "arching", "prostrate", "rosette"}
+# Herbaceous habit (schema v48). Kept separate from BRANCHING_HABITS, which
+# describes woody architecture: a plant has one or the other, not both. The
+# first seven mirror the viewer's herb archetypes (03-herbs.js HERB_FORMS) so
+# the data can select the 3D form directly instead of a genus table guessing it.
+GROWTH_FORMS      = {"erect", "ferny", "rosette", "clump", "grassy", "mat",
+                     "fern", "vining", "tussock", "emergent", "floating",
+                     "cushion", "succulent", "sprawling"}
 
 # ── Soft enum allowlists (drift here is a WARNING) ──────────────────────────
 
@@ -272,6 +287,7 @@ def validate_plant(
         ("leaf_shape",          LEAF_SHAPES),
         ("leaf_arrangement",    LEAF_ARRANGEMENTS),
         ("branching",           BRANCHING_HABITS),
+        ("growth_form",         GROWTH_FORMS),
     ):
         if field in _MULTI_VALUE_ENUM_FIELDS:
             for tok in condition_tokens(record.get(field)):

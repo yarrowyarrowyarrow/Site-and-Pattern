@@ -89,8 +89,18 @@ CREATE TABLE IF NOT EXISTS plants (
                                         -- red, aspen chalky green-white)
     fall_color TEXT DEFAULT '',         -- hex autumn foliage; '' = evergreen or no
                                         -- colouring (an honest empty, not a guess)
-    branching TEXT DEFAULT ''           -- excurrent|decurrent|multi_stem|suckering|
-                                        -- arching|prostrate|rosette
+    branching TEXT DEFAULT '',          -- excurrent|decurrent|multi_stem|suckering|
+                                        -- arching|prostrate|rosette (woody habit)
+    -- Herbaceous habit (schema v48, V2.29). The SOURCE OF TRUTH for which 3D
+    -- archetype a non-woody plant gets: the viewer's hardcoded genus table
+    -- (03-herbs.js _HPROF) named only 65 genera, so 64 of the 211 wildflowers
+    -- had their form guessed from flower shape and aspect — and two thirds of
+    -- those collapsed onto one generic bush. Authored in
+    -- scripts/seed_non_woody_morphology.py; empty for woody plants, which use
+    -- `branching` instead.
+    growth_form TEXT DEFAULT ''         -- erect|ferny|rosette|clump|grassy|mat|fern|
+                                        -- vining|tussock|emergent|floating|cushion|
+                                        -- succulent|sprawling
 );
 
 CREATE TABLE IF NOT EXISTS companion_friends (

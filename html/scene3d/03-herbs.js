@@ -62,8 +62,25 @@ const _HPROF = {
   lilium: 'grassy', zigadenus: 'grassy', viola: 'mat', eriogonum: 'mat',
   fragaria: 'mat', silene: 'mat', phlox: 'mat',
 };
+// Habits the seed data records that this viewer has no distinct archetype for;
+// each maps onto its nearest built form. tussock/emergent/floating never reach
+// here (plant_type routes those to the grass/aquatic layers), but a herbaceous
+// row carrying one should still land somewhere sensible.
+const _FORM_ALIAS = {
+  cushion: 'mat', succulent: 'mat', sprawling: 'mat', vining: 'clump',
+  tussock: 'grassy', emergent: 'grassy', floating: 'mat',
+};
 function herbFormFor(p) {
   if (p.plant_type === 'fern') return 'fern';
+  // The species' own recorded habit wins (schema v48). Before it existed, form
+  // came from the genus table below, which named 65 genera — so 64 of the 211
+  // wildflowers had their shape guessed from flower form and aspect ratio, and
+  // two thirds of those guesses collapsed onto one generic bushy clump.
+  const recorded = (p.growth_form || '').toLowerCase();
+  if (recorded) {
+    if (HERB_FORMS[recorded]) return recorded;
+    if (_FORM_ALIAS[recorded]) return _FORM_ALIAS[recorded];
+  }
   const named = _HPROF[(p.genus || '').toLowerCase()];
   if (named) return named;
   // Fall back from the flower form + aspect (height/canopy).

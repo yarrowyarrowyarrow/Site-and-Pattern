@@ -20,7 +20,7 @@ Use this skill when you:
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
 **Current facts (verify before quoting):** branch `V2.29`,
-`_SCHEMA_VERSION = 47` (in `src/db/plants.py`) — v47 added the botanical
+`_SCHEMA_VERSION = 48` (in `src/db/plants.py`) — v47 added the botanical
 morphology columns; `scripts/seed_woody_morphology.py` is the worked example of
 authoring seed values alongside a bump. The code always wins over the docs; the
 inline changelog comments in `plants.py` lag the constant. `tests/test_skill_library.py`

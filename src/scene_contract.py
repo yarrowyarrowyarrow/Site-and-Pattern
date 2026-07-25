@@ -24,6 +24,7 @@ Scene schema (``SCENE_VERSION`` = 1)::
                   foliage_type, scale_factor, spread_factor, spread_rate,
                   growth_curve, color, opacity, health, health_state,
                   common_name, bark_color, fall_color, leaf_size_cm,
+                  leaf_shape, leaf_arrangement, growth_form,
                   existing?, recruit?}, ...],
                                        # bark_color / fall_color / leaf_size_cm:
                                        #   botanical morphology (schema v47) —
@@ -32,6 +33,10 @@ Scene schema (``SCENE_VERSION`` = 1)::
                                        #   colouring), and its typical leaf
                                        #   length. Additive; the viewer falls
                                        #   back to per-genus defaults when empty
+                                       # growth_form (schema v48): the species'
+                                       #   habit, and the viewer's first choice
+                                       #   of herb archetype — the hardcoded
+                                       #   genus table is the fallback
                                        # recruit: true = a self-seeded gap
                                        #   coloniser that grew in where a plant
                                        #   was shaded out (V2.24 regeneration);
@@ -355,6 +360,9 @@ def build_scene(project: dict, *, year: int = 0,
             "bark_color": plant.get("bark_color") or "",
             "fall_color": plant.get("fall_color") or "",
             "leaf_size_cm": plant.get("leaf_size_cm"),
+            "leaf_shape": plant.get("leaf_shape") or "",
+            "leaf_arrangement": plant.get("leaf_arrangement") or "",
+            "growth_form": plant.get("growth_form") or "",
             "opacity": opacity,
             "health": health,
             "health_state": health_state,
