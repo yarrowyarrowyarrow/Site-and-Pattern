@@ -14,6 +14,67 @@ from .structures import STRUCTURE_SPECS
 
 MANIFEST_NAME = "manifest.json"
 
+# Which (blade class, grain class) archetype variants the herb and shrub families
+# need. Read from the shipped catalogue rather than generated as a full cross
+# product: of the 84 possible herb combinations only 49 occur, and of the 60
+# shrub ones only 29 — so building the product would nearly double the asset
+# payload with archetypes no plant in the app can ever select.
+_CATALOGUE = None
+
+
+def _catalogue():
+    """data/plants_master.json, or [] if unavailable (the generator still
+    builds a sensible default set without it)."""
+    global _CATALOGUE
+    if _CATALOGUE is None:
+        import json
+        import os
+        # assetlib → blender → scripts → repo root.
+        root = os.path.abspath(__file__)
+        for _ in range(4):
+            root = os.path.dirname(root)
+        path = os.path.join(root, "data", "plants_master.json")
+        try:
+            with open(path, encoding="utf-8") as fh:
+                _CATALOGUE = json.load(fh)
+        except (OSError, ValueError):
+            _CATALOGUE = []
+    return _CATALOGUE
+
+
+def _variants_for(kind_forms, family):
+    """{form: [variant_key, ...]} for every combination the catalogue uses.
+
+    Which plant_types a family covers and how a record maps to a form both live
+    in conventions.FAMILY_FORMS, so the viewer, the generator and the guard tests
+    all read one definition.
+    """
+    plant_types, form_of = C.FAMILY_FORMS[family]
+    out = {form: set() for form in kind_forms}
+    for rec in _catalogue():
+        if rec.get("plant_type") not in plant_types:
+            continue
+        form = form_of(rec)
+        if form not in out:
+            continue
+        out[form].add(C.variant_key(
+            C.blade_class(rec.get("leaf_shape")),
+            C.grain_class(rec.get("leaf_size_cm"),
+                          rec.get("mature_height_m"), family)))
+    # Always include the neutral variant so there is a guaranteed fallback.
+    default = C.variant_key("broad", 1)
+    for form in out:
+        out[form].add(default)
+    return {form: sorted(keys) for form, keys in out.items()}
+
+
+def herb_variants():
+    return _variants_for(HERB_FORMS, "herb")
+
+
+def shrub_variants():
+    return _variants_for(SHRUB_FORMS, "shrub")
+
 # Fauna: manifest key → (nodes documented for the loader, materials used).
 FAUNA_TABLE = {
     "bee":    {"file": "fauna_bee.glb",
@@ -48,14 +109,17 @@ def asset_table():
         table[f"tree.{arch}"] = {
             "kind": "tree", "file": f"tree_{arch}.glb", "tiers": [0, 1, 2],
             "parts": [C.PART_BARK, C.PART_FOLIAGE]}
+    shrub_vars = shrub_variants()
     for form in SHRUB_FORMS:
         table[f"shrub.{form}"] = {
             "kind": "shrub", "file": f"shrub_{form}.glb",
+            "variant_keys": shrub_vars[form],
             "parts": [C.PART_BARK, C.PART_FOLIAGE]}
+    herb_vars = herb_variants()
     for form in HERB_FORMS:
         table[f"herb.{form}"] = {
             "kind": "herb", "file": f"herb_{form}.glb",
-            "parts": [C.PART_FOLIAGE]}
+            "variant_keys": herb_vars[form], "parts": [C.PART_FOLIAGE]}
     for kind, variants in LAYER_KINDS.items():
         table[f"layer.{kind}"] = {
             "kind": "layer", "file": f"layer_{kind}.glb",
@@ -94,6 +158,11 @@ def manifest_dict(generator="", half_widths=None):
                 entry["tiers"] = spec["tiers"]
             if "variants" in spec:
                 entry["variants"] = spec["variants"]
+            if "variant_keys" in spec:
+                # {"broad_1": 0, "narrow_2": 1, …} — the viewer looks a plant's
+                # (blade class, grain class) up here to pick its archetype.
+                entry["variant_keys"] = {k: i for i, k
+                                         in enumerate(spec["variant_keys"])}
             if key in half_widths:
                 entry["half_width"] = half_widths[key]
             plants[key] = entry

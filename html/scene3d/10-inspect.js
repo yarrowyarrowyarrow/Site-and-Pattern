@@ -391,7 +391,7 @@ function stepThreads(t) {
 // Not a permaSet* name on purpose: nothing in map3d_js drives it (the bridge
 // contract test would flag it), the same way window.glb* is invisible there.
 window.permaMeasure = function () {
-  const out = { plants: {}, groups: 0 };
+  const out = { plants: {}, groups: 0, verts: [] };
   if (!plantsGroup) return out;
   const box = new THREE.Box3();
   const tmp = new THREE.Box3();
@@ -419,8 +419,15 @@ window.permaMeasure = function () {
     }
     tmp.applyMatrix4(o.matrixWorld);
     box.union(tmp);
+    // The archetype's own vertex count. Bounds alone cannot show that a species'
+    // recorded leaf outline actually selected a different baked variant — two
+    // variants of one form are shaped to the SAME aspect on purpose, so they
+    // differ in their mesh, not their box.
+    const pos = o.geometry.getAttribute && o.geometry.getAttribute('position');
+    if (pos) out.verts.push(pos.count);
     out.groups++;
   });
+  out.verts.sort((a, b) => a - b);
   if (out.groups) {
     out.height_m = +(box.max.y - box.min.y).toFixed(3);
     out.width_m = +Math.max(box.max.x - box.min.x,

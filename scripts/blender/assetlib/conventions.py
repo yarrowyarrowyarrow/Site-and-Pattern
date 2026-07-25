@@ -156,6 +156,125 @@ def grain_for(archetype):
     return round(max(GRAIN_RANGE[0], min(GRAIN_RANGE[1], g)), 3)
 
 
+# Herb/shrub archetypes are shared across every species that maps to them, so a
+# per-species leaf size cannot be a per-instance scale (instancing gives one
+# 3-component scale, and using it would stretch the whole plant, not the leaves).
+# Instead each family ships three GRAIN CLASSES and a species picks one from its
+# leaf length relative to its own height — the ratio the renderer can actually
+# show. Thresholds are the tertiles of leaf_size_cm / mature_height_m across the
+# catalogue's herbaceous rows.
+GRAIN_CLASSES = 3
+# Tertiles of leaf_size_cm / mature_height_m across the catalogue, PER FAMILY.
+# A shrub is a metre or three tall with leaves a few centimetres long, so its
+# ratios sit an order of magnitude below a forb's: one shared threshold put 52
+# of 55 shrubs in the same class and made the whole mechanism a no-op for them.
+_GRAIN_BREAKS = {
+    "herb":  (0.133, 0.200),      # 229 rows, ratios 0.025 – 1.00
+    "shrub": (0.027, 0.047),      # 55 rows,  ratios 0.008 – 0.56
+}
+# Leaf-size multiplier applied to a form's authored blade for each class.
+GRAIN_LEAF_SCALE = (0.62, 1.0, 1.55)
+
+
+# How a blade is BUILT, as opposed to its exact outline. Fourteen leaf shapes
+# cannot each get a baked archetype, but they collapse cleanly into four
+# construction classes, and that is what a viewer at yard scale can show.
+BLADE_CLASSES = ("narrow", "broad", "cut", "compound")
+
+
+def blade_class(leaf_shape):
+    """Construction class for a recorded ``leaf_shape``. Unknown → 'broad',
+    which is the profile the herb forms carried before there was any data."""
+    sh = (leaf_shape or "").lower()
+    if sh in ("trifoliate", "compound_pinnate", "compound_palmate", "bipinnate"):
+        return "compound"
+    if sh in ("linear", "strap", "needle", "awl", "scale", "lanceolate"):
+        return "narrow"
+    if sh in ("lobed", "pinnatifid", "sagittate"):
+        return "cut"
+    return "broad"
+
+
+# The representative outline each class is baked with — one blade profile per
+# class, since the class is what the geometry actually differs by.
+BLADE_SHAPE = {"narrow": "linear", "broad": "ovate", "cut": "lobed",
+               "compound": "compound_pinnate"}
+
+
+def variant_key(blade, grain):
+    """Stable name for one (blade class, grain class) archetype variant."""
+    return f"{blade}_{int(grain)}"
+
+
+def grain_class(leaf_size_cm, height_m, family="herb"):
+    """0 fine · 1 medium · 2 coarse, from a species' leaf length against its own
+    height — the ratio the renderer can actually show. Unknown data lands on
+    medium, i.e. exactly today's look."""
+    try:
+        cm = float(leaf_size_cm or 0)
+        h = float(height_m or 0)
+    except (TypeError, ValueError):
+        return 1
+    if cm <= 0 or h <= 0:
+        return 1
+    lo, hi = _GRAIN_BREAKS.get(family, _GRAIN_BREAKS["herb"])
+    ratio = (cm / 100.0) / h
+    if ratio < lo:
+        return 0
+    return 1 if ratio < hi else 2
+
+
+# ── which archetype a catalogue record maps to ───────────────────────────────
+#
+# The generator's copy of the viewer's herbFormFor() / shrubProfileFor(), living
+# here beside the aspect tables (whose keys ARE the form vocabulary) rather than
+# beside the builders — it is bpy-free record-reading, and putting it in a module
+# that imports bmesh would make the "every species has a baked variant" guard in
+# tests/test_model_assets.py unrunnable without Blender.
+
+# Habits the seed data records that this archetype set has no distinct form for.
+# Mirrors _FORM_ALIAS in html/scene3d/03-herbs.js and flora_herbs.
+HERB_FORM_ALIAS = {"cushion": "mat", "succulent": "mat", "sprawling": "mat",
+                   "vining": "clump", "tussock": "grassy", "emergent": "grassy",
+                   "floating": "mat"}
+
+
+def herb_form_for(rec):
+    """Herb archetype for a catalogue record. The species' own recorded habit
+    wins (schema v48); ferns are their own form; anything unrecorded lands on the
+    generic clump."""
+    if rec.get("plant_type") == "fern":
+        return "fern"
+    gf = (rec.get("growth_form") or "").lower()
+    if gf in HERB_ASPECT:
+        return gf
+    return HERB_FORM_ALIAS.get(gf, "clump")
+
+
+# Genus → silhouette, mirroring _SPROF in html/scene3d/02-plants.js.
+SHRUB_GENUS_FORM = {
+    "cornus": "spreading", "salix": "vase", "amelanchier": "vase",
+    "prunus": "vase", "corylus": "vase", "alnus": "vase", "crataegus": "vase",
+    "viburnum": "spreading", "rosa": "mound", "spiraea": "mound",
+    "symphoricarpos": "mound", "vaccinium": "mound", "ribes": "thicket",
+    "rubus": "thicket", "artemisia": "irregular", "shepherdia": "irregular",
+}
+
+
+def shrub_form_for(rec):
+    """Shrub silhouette for a catalogue record; unknown genera spread."""
+    genus = (rec.get("scientific_name") or "").split(" ")[0].lower()
+    return SHRUB_GENUS_FORM.get(genus, "spreading")
+
+
+# family name → (the plant_type values it covers, its form resolver). One place
+# for "what does this record map to", so a consumer never re-derives the pairing.
+FAMILY_FORMS = {
+    "herb": (("wildflower", "herb", "fern"), herb_form_for),
+    "shrub": (("shrub",), shrub_form_for),
+}
+
+
 def aspect_for(key):
     """Target aspect for a manifest plant key ('tree.spruce', 'herb.mat', …),
     or None for a family that doesn't declare one."""

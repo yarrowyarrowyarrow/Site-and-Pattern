@@ -13,7 +13,7 @@ Blender, no Qt, no three.js:
 - every GLB is structurally sound via a ~40-line GLB/JSON-chunk parser:
   no textures/images, plant primitives carry POSITION + COLOR_0, POSITION
   bounds satisfy the unit frame, declared tier/variant/part and fauna node
-  names exist, triangle budgets hold (mirrors assetlib/conventions.py).
+  names exist, per-unit triangle budgets hold (mirrors assetlib/conventions.py).
 
 Skips while html/assets/models/manifest.json does not exist (the plumbing
 ships before the first generated assets do).
@@ -83,19 +83,20 @@ def parse_glb(path):
     return js, has_bin
 
 
+def _prim_tris(gltf, prim):
+    if prim.get("mode", 4) != 4:                  # TRIANGLES
+        return 0
+    accessors = gltf.get("accessors", [])
+    if "indices" in prim:
+        return accessors[prim["indices"]]["count"] // 3
+    return accessors[prim["attributes"]["POSITION"]]["count"] // 3
+
+
 def _tri_count(gltf):
     """Total triangles across all mesh primitives (indexed or not)."""
-    total = 0
-    accessors = gltf.get("accessors", [])
-    for mesh in gltf.get("meshes", []):
-        for prim in mesh.get("primitives", []):
-            if prim.get("mode", 4) != 4:          # TRIANGLES
-                continue
-            if "indices" in prim:
-                total += accessors[prim["indices"]]["count"] // 3
-            else:
-                total += accessors[prim["attributes"]["POSITION"]]["count"] // 3
-    return total
+    return sum(_prim_tris(gltf, prim)
+               for mesh in gltf.get("meshes", [])
+               for prim in mesh.get("primitives", []))
 
 
 def _node_names(gltf):
@@ -111,6 +112,29 @@ def _mesh_nodes_under(gltf, root_idx):
         out.append(i)
         stack.extend(nodes[i].get("children", []))
     return out
+
+
+def _tri_count_under(gltf, root_idx):
+    """Triangles in the meshes parented under one unit root.
+
+    A tier or a variant is what the viewer instances, so the budget belongs to
+    the unit; the whole file only bounds their sum, and a file holding eleven
+    variants would let any one of them balloon unnoticed.
+    """
+    nodes = gltf.get("nodes", [])
+    total = 0
+    for i in _mesh_nodes_under(gltf, root_idx):
+        if "mesh" not in nodes[i]:
+            continue
+        for prim in gltf["meshes"][nodes[i]["mesh"]].get("primitives", []):
+            total += _prim_tris(gltf, prim)
+    return total
+
+
+def _unit_count(entry):
+    """How many variant units a manifest entry declares — a plain count for the
+    layer kinds, one per (blade class, grain class) for herbs and shrubs."""
+    return entry.get("variants", 0) or len(entry.get("variant_keys", {}))
 
 
 @unittest.skipUnless(os.path.isfile(_MANIFEST),
@@ -169,6 +193,78 @@ class ModelAssetsTest(unittest.TestCase):
         self.assertEqual(
             {k.split(".", 1)[1] for k in self.mf["plants"]
              if k.startswith("herb.")}, herb_forms)
+
+    def test_viewer_leaf_classifiers_match_the_generator(self):
+        """The viewer picks a plant's baked archetype by (blade class, grain
+        class); the generator decides which of those to bake. Two independent
+        implementations of the same classification is the whole risk: drift one
+        break and a species silently falls back to the neutral variant, losing
+        exactly the identity this machinery exists to give it. So extract the
+        viewer's real tables and compare, rather than restating them here.
+        """
+        conventions = _assetlib_conventions()
+        if conventions is None:
+            self.skipTest("assetlib.conventions not importable")
+        src = _read(os.path.join(_SCENE3D, "02-plants.js"))
+
+        def js_list(name):
+            m = re.search(r"const " + name + r" = \[(.*?)\];", src, re.S)
+            self.assertIsNotNone(m, f"02-plants.js: {name} not found")
+            return re.findall(r"'([\w]+)'", m.group(1))
+
+        self.assertEqual(js_list("BLADE_CLASSES"),
+                         list(conventions.BLADE_CLASSES))
+        # Each shape list feeds one class; walking them proves the whole mapping
+        # agrees, including which shapes are absent (→ 'broad').
+        for name, cls in (("_COMPOUND_SHAPES", "compound"),
+                          ("_NARROW_SHAPES", "narrow"),
+                          ("_CUT_SHAPES", "cut")):
+            for shape in js_list(name):
+                self.assertEqual(conventions.blade_class(shape), cls,
+                                 f"{shape}: viewer says {cls}, generator "
+                                 f"says {conventions.blade_class(shape)}")
+        m = re.search(r"const GRAIN_LEAF_SCALE = \[([^\]]*)\]", src)
+        self.assertIsNotNone(m, "02-plants.js: GRAIN_LEAF_SCALE not found")
+        self.assertEqual([float(x) for x in m.group(1).split(",")],
+                         list(conventions.GRAIN_LEAF_SCALE))
+        m = re.search(r"const _GRAIN_BREAKS = \{(.*?)\};", src, re.S)
+        self.assertIsNotNone(m, "02-plants.js: _GRAIN_BREAKS not found")
+        breaks = {fam: (float(lo), float(hi)) for fam, lo, hi in re.findall(
+            r"(\w+):\s*\[([\d.]+),\s*([\d.]+)\]", m.group(1))}
+        self.assertEqual(breaks, {k: tuple(v) for k, v in
+                                  conventions._GRAIN_BREAKS.items()})
+
+    def test_every_catalogue_species_resolves_to_a_baked_variant(self):
+        """No herb or shrub in the shipped catalogue may ask for a variant the
+        manifest doesn't carry. The generator reads the same catalogue, so this
+        holds by construction — until someone adds a species and forgets to
+        rebuild the assets, which is precisely when it should fail."""
+        conventions = _assetlib_conventions()
+        if conventions is None:
+            self.skipTest("assetlib.conventions not importable")
+        path = os.path.join(_ROOT, "data", "plants_master.json")
+        catalogue = json.loads(_read(path))
+        checked = 0
+        for family, (types, form_of) in conventions.FAMILY_FORMS.items():
+            for rec in catalogue:
+                if rec.get("plant_type") not in types:
+                    continue
+                entry = self.mf["plants"].get(f"{family}.{form_of(rec)}")
+                self.assertIsNotNone(entry, f"{family}.{form_of(rec)} missing")
+                want = conventions.variant_key(
+                    conventions.blade_class(rec.get("leaf_shape")),
+                    conventions.grain_class(rec.get("leaf_size_cm"),
+                                            rec.get("mature_height_m"), family))
+                self.assertIn(
+                    want, entry.get("variant_keys", {}),
+                    f"{rec.get('scientific_name')}: no baked {want} variant "
+                    f"for {family}.{form_of(rec)} — rebuild html/assets/models")
+                checked += 1
+        # 284 today (229 herbaceous + 55 shrubs). The grass/sedge/vine/aquatic/
+        # groundcover types are deliberately outside this guard: they map to the
+        # layer.* archetypes, which carry plain variants rather than morphology
+        # ones. The floor only has to catch the lookup silently going empty.
+        self.assertGreater(checked, 250, "catalogue stopped resolving")
 
     def test_layer_and_fauna_keys_match_viewer(self):
         layers = {k.split(".", 1)[1]: e for k, e in self.mf["plants"].items()
@@ -282,11 +378,14 @@ class ModelAssetsTest(unittest.TestCase):
                 for part in entry["parts"]:
                     self.assertIn(f"tier{t}_{part}", names,
                                   f"{key}: tier{t}_{part} missing")
-            for v in range(entry.get("variants", 0)):
+            for v in range(_unit_count(entry)):
                 self.assertIn(f"v{v}", names, f"{key}: v{v} missing")
-                self.assertIn(f"v{v}_foliage", names,
-                              f"{key}: v{v}_foliage missing")
-            if "tiers" not in entry and "variants" not in entry:
+                # Every declared part, not just foliage: a shrub variant carries
+                # its own canes, and _glbLoadPlant looks them up by exact name.
+                for part in entry["parts"]:
+                    self.assertIn(f"v{v}_{part}", names,
+                                  f"{key}: v{v}_{part} missing")
+            if not entry.get("tiers") and not _unit_count(entry):
                 for part in entry["parts"]:
                     self.assertIn(part, names, f"{key}: part {part} missing")
         for key, entry in self.mf["fauna"].items():
@@ -357,19 +456,25 @@ class ModelAssetsTest(unittest.TestCase):
                 self.assertIn(mat, names, f"fauna.{key}: material {mat}")
 
     def test_triangle_budgets(self):
+        """Per unit, matching what the builder enforces (see _tri_count_under)."""
         for key, entry in self.mf["plants"].items():
             gltf, _ = self.gltf[entry["file"]]
             kind = key.split(".", 1)[0]
-            if kind == "tree":
-                # Whole file = 3 tiers; bound by the sum of tier budgets.
-                budget = sum(_TRI_BUDGETS[f"tree_tier{t}"]
-                             for t in entry["tiers"])
-            elif kind == "layer":
-                budget = _TRI_BUDGETS["layer"] * entry.get("variants", 1)
-            else:
-                budget = _TRI_BUDGETS[kind]
-            self.assertLessEqual(_tri_count(gltf), budget,
-                                 f"{key}: over triangle budget")
+            idx = {n.get("name", ""): i
+                   for i, n in enumerate(gltf.get("nodes", []))}
+            units = [(f"tier{t}", _TRI_BUDGETS[f"tree_tier{t}"])
+                     for t in entry.get("tiers", [])]
+            units += [(f"v{v}", _TRI_BUDGETS[kind])
+                      for v in range(_unit_count(entry))]
+            if not units:                       # single-unit file
+                self.assertLessEqual(_tri_count(gltf), _TRI_BUDGETS[kind],
+                                     f"{key}: over triangle budget")
+                continue
+            for name, budget in units:
+                self.assertIn(name, idx, f"{key}: unit {name} missing")
+                self.assertLessEqual(
+                    _tri_count_under(gltf, idx[name]), budget,
+                    f"{key}/{name}: over triangle budget")
         for key, entry in self.mf["fauna"].items():
             gltf, _ = self.gltf[entry["file"]]
             budget = _TRI_BUDGETS["fauna"] * (2 if key == "fly" else 1)

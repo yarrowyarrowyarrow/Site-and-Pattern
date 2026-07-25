@@ -95,13 +95,72 @@ function herbFormFor(p) {
 }
 
 // A flat leaf with a real width profile (V1.99) so foliage reads as leaves, not
-// threads: `lance` widest near the base tapering to a point (fireweed/willow),
-// `ovate` widest in the middle (aster/milkweed), `strap` near-constant (onion/
-// iris). Position-only indexed geometry so it merges with the (stripped) stems.
+// threads. The three original profiles (lance widest at the base — fireweed /
+// willow; ovate widest at the middle — aster / milkweed; strap near-constant —
+// onion / iris) are joined by the outlines the seed data actually records
+// (schema v47/v48 `leaf_shape`), so a species' blade is drawn rather than
+// approximated by whichever of three its growth form happened to carry.
+// This is the mirror of mesh_ops._leaf_width — the procedural path is the
+// permanent fallback, so the two have to draw the same leaf.
+// Position-only indexed geometry so it merges with the (stripped) stems.
 function _leafWidth(shape, t) {
-  if (shape === 'ovate') return Math.pow(Math.sin(Math.PI * Math.min(0.96, Math.max(0.06, t))), 0.7);
-  if (shape === 'strap') return t < 0.9 ? 1 : Math.max(0.15, (1 - t) / 0.1);
-  return Math.max(0.05, 1 - 0.9 * t);          // lance / default
+  const tc = Math.min(0.96, Math.max(0.06, t));
+  const sinp = (e) => Math.pow(Math.sin(Math.PI * tc), e);
+  if (shape === 'ovate' || shape === 'elliptic') return sinp(0.7);
+  // Widest ABOVE the middle — a pussytoes or fleabane rosette leaf, which the
+  // ovate profile draws upside down.
+  if (shape === 'obovate' || shape === 'spatulate') return sinp(0.7) * (0.35 + 0.9 * tc);
+  if (shape === 'orbicular') return sinp(0.45);
+  if (shape === 'reniform') return sinp(0.4) * (1.25 - 0.45 * tc);        // kidney
+  if (shape === 'cordate') return sinp(0.55) * (1.35 - 0.6 * tc);         // heart
+  // Arrowhead: flared basal lobes, then a long taper.
+  if (shape === 'sagittate') return t < 0.16 ? 1.15 : Math.max(0.08, sinp(0.9) * 0.95);
+  if (shape === 'lobed' || shape === 'pinnatifid' || shape === 'bipinnate') {
+    // Deeply cut blades read as a lobed silhouette on a flat ribbon: a sinusoid
+    // on the base profile. True notches would need a triangulated outline, which
+    // costs 2-3x the triangles for a sub-centimetre effect.
+    const lobes = shape === 'lobed' ? 3 : (shape === 'pinnatifid' ? 5 : 7);
+    const wobble = 1 - (shape === 'bipinnate' ? 0.45 : 0.32)
+      * (0.5 - 0.5 * Math.cos(2 * Math.PI * lobes * tc));
+    return Math.max(0.06, sinp(0.7) * wobble);
+  }
+  if (shape === 'strap' || shape === 'linear') return t < 0.9 ? 1 : Math.max(0.15, (1 - t) / 0.1);
+  if (shape === 'needle' || shape === 'awl' || shape === 'scale') return Math.max(0.08, 1 - 0.55 * t);
+  return Math.max(0.05, 1 - 0.9 * t);          // lance / lanceolate / default
+}
+
+// Natural width ÷ length per outline (mesh_ops.LEAF_WIDTH_RATIO). Once a
+// species' leaf_size_cm sets the LENGTH, the width has to come from the shape:
+// a 20 cm balsamroot arrowhead and a 20 cm iris strap are not the same leaf.
+const LEAF_WIDTH_RATIO = {
+  needle: 0.03, awl: 0.05, scale: 0.25, linear: 0.06, lanceolate: 0.22,
+  elliptic: 0.45, ovate: 0.62, obovate: 0.55, spatulate: 0.40, orbicular: 0.95,
+  cordate: 0.85, reniform: 1.25, sagittate: 0.55, lobed: 0.75,
+  pinnatifid: 0.42, bipinnate: 0.35, trifoliate: 0.85, compound_pinnate: 0.45,
+  compound_palmate: 0.9, strap: 0.06,
+};
+function leafWidthFor(shape, len) {
+  const r = LEAF_WIDTH_RATIO[shape];
+  return len * (r == null ? 0.3 : r);
+}
+
+// Blades stamped as a rachis carrying leaflets rather than one ribbon, and the
+// leaflet pairs (plus a terminal) each carries (mesh_ops COMPOUND_SHAPES /
+// _LEAFLET_PAIRS).
+const LEAFLET_PAIRS = { trifoliate: 1, compound_pinnate: 3, compound_palmate: 2,
+                        bipinnate: 4 };
+function isCompoundShape(shape) { return LEAFLET_PAIRS[shape] != null; }
+
+// A compound leaf is a rachis plus 2n+1 leaflets, so it costs 3-9x a simple
+// blade. Scale the leaf COUNT by the inverse rather than letting a lupine cost
+// nine times a fireweed — which is also how the plants themselves resolve the
+// same constraint: compound-leaved species carry fewer, larger leaves. The
+// generator does this against a hard triangle budget (mesh_ops.thin_leaf_nodes);
+// here there is no budget to enforce, only a frame time to protect.
+function leafCountScale(shape) {
+  const pairs = LEAFLET_PAIRS[shape];
+  if (pairs == null) return 1;
+  return 8 / (4 + (pairs * 2 + 1) * 8);
 }
 function makeLeafBlade(rng, len, wid, shape) {
   const segs = 4, dir = rng() * Math.PI * 2;
@@ -134,6 +193,70 @@ function makeLeaf(rng, len, wid, tilt, az, at, shape) {
     .multiply(new THREE.Matrix4().makeRotationZ(tilt)));
   if (at) blade.translate(at.x, at.y, at.z);
   return blade;
+}
+
+// A straight tapering strip along +Y — the spine a compound leaf hangs from.
+// Position-only indexed geometry, matching makeLeafBlade so the two merge.
+function _rachis(len, halfWidth) {
+  const pos = [], idx = [], segs = 2;
+  for (let s = 0; s <= segs; s++) {
+    const t = s / segs, hw = halfWidth * (1 - 0.5 * t) + 0.0005;
+    pos.push(-hw, len * t, 0, hw, len * t, 0);
+  }
+  for (let s = 0; s < segs; s++) {
+    const a = s * 2;
+    idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  return g;
+}
+
+// One compound leaf: a slim rachis carrying paired leaflets and a terminal one
+// (mesh_ops.add_compound_leaf). A third of the catalogue's leaves are compound —
+// every pea (lupine, milkvetch, hedysarum), rose, cinquefoil, columbine, meadow
+// rue and mountain ash — and drawing them as a single ribbon is what made a
+// lupine and a fireweed differ only in size. `compound_palmate` fans its leaflets
+// from one point (lupine); the rest run up the rachis.
+function makeCompoundLeaf(rng, len, wid, tilt, az, at, shape) {
+  const pairs = LEAFLET_PAIRS[shape] || 3;
+  const ln = len * (0.8 + rng() * 0.4);
+  const palmate = shape === 'compound_palmate';
+  // A straight rachis, not a makeLeafBlade one: that primitive leans in a random
+  // horizontal direction, which would leave the leaflets attached to nothing.
+  const parts = [_rachis(ln, ln * 0.012)];
+  const lLen = ln * (palmate ? 0.42 : 0.30);
+  const n = pairs * 2 + 1;
+  const rFrom = palmate ? 0 : 0.12;
+  for (let i = 0; i < n; i++) {
+    let frac, spread;
+    if (palmate) {                       // a fan from the rachis tip
+      frac = 1; spread = (i / (n - 1) - 0.5) * 2.2;
+    } else {
+      frac = rFrom + (1 - rFrom) * Math.floor(i / 2) / Math.max(1, pairs);
+      spread = (i % 2 ? -0.95 : 0.95) * (i === n - 1 ? 0 : 1);
+    }
+    const lf = makeLeaf(rng, lLen, lLen * 0.42,
+                        tilt * 0.45 + Math.abs(spread) * 0.55, spread, null,
+                        'elliptic');
+    lf.translate(0, ln * frac, 0);
+    parts.push(lf);
+  }
+  const leaf = mergeGeometries(parts, false);
+  for (const p of parts) p.dispose();
+  leaf.applyMatrix4(new THREE.Matrix4().makeRotationY(az)
+    .multiply(new THREE.Matrix4().makeRotationZ(tilt)));
+  if (at) leaf.translate(at.x, at.y, at.z);
+  return leaf;
+}
+
+// The single entry point the builders call, so a new compound outline never needs
+// another branch at every call site (mesh_ops.add_blade_or_leaf).
+function makeBladeOrLeaf(rng, len, wid, tilt, az, at, shape) {
+  return isCompoundShape(shape)
+    ? makeCompoundLeaf(rng, len, wid, tilt, az, at, shape)
+    : makeLeaf(rng, len, wid, tilt, az, at, shape);
 }
 
 // Crown form from the (already-scaled) height/canopy aspect ratio.

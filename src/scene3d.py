@@ -117,6 +117,11 @@ def plant_3d_state(plant: dict, lat: float, lng: float, year: int) -> dict:
         # Growth scales the whole plant; spread additionally widens the ground
         # footprint (canopy) as the colony fills in — height is unaffected.
         "height_m": round(float(mature_h) * factor, 3),
+        # The species' mature stature, resolved defaults included, so consumers
+        # can express a character as a fraction of it without re-deriving the
+        # fallbacks: leaf size relative to mature height is what picks a plant's
+        # baked leaf archetype, and it must not change as the plant grows.
+        "mature_height_m": round(float(mature_h), 3),
         "canopy_m": round(float(mature_c) * factor * spread, 3),
         "presence_opacity": round(presence_factor(role, year, ytm), 3),
     }

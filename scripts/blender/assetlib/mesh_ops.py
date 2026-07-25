@@ -135,12 +135,105 @@ def add_blade(bm, rng, height, base_half_width, lean, erect, azimuth=None):
     add_ribbon(bm, pts, hws, perp)
 
 
+# Width profile along a blade, t = 0 at the base to 1 at the tip. The three
+# original entries (ovate / strap / lance) are joined by the shapes the seed data
+# actually records (schema v47/v48 `leaf_shape`), so a species' blade outline is
+# drawn rather than approximated by whichever of three its form happened to pick.
 def _leaf_width(shape, t):
-    if shape == "ovate":
-        return math.sin(math.pi * min(0.96, max(0.06, t))) ** 0.7
-    if shape == "strap":
+    tc = min(0.96, max(0.06, t))
+    if shape in ("ovate", "elliptic"):
+        return math.sin(math.pi * tc) ** 0.7          # widest at/below middle
+    if shape in ("obovate", "spatulate"):
+        # Widest ABOVE the middle — a pussytoes or fleabane rosette leaf, which
+        # the ovate profile draws upside down.
+        return math.sin(math.pi * tc) ** 0.7 * (0.35 + 0.9 * tc)
+    if shape == "orbicular":
+        return math.sin(math.pi * tc) ** 0.45         # near-round
+    if shape == "reniform":
+        return math.sin(math.pi * tc) ** 0.4 * (1.25 - 0.45 * tc)   # kidney
+    if shape == "cordate":
+        return math.sin(math.pi * tc) ** 0.55 * (1.35 - 0.6 * tc)   # heart
+    if shape == "sagittate":
+        # Arrowhead: flared basal lobes, then a long taper.
+        return (1.15 if t < 0.16 else
+                max(0.08, math.sin(math.pi * tc) ** 0.9 * 0.95))
+    if shape in ("lobed", "pinnatifid", "bipinnate"):
+        # Deeply cut blades read as a lobed silhouette on a flat ribbon: a
+        # sinusoid on the base profile. True notches would need a triangulated
+        # outline, which costs 2-3x the triangles for a sub-centimetre effect.
+        lobes = 3 if shape == "lobed" else (5 if shape == "pinnatifid" else 7)
+        wobble = 1.0 - (0.45 if shape == "bipinnate" else 0.32) * (
+            0.5 - 0.5 * math.cos(2 * math.pi * lobes * tc))
+        return max(0.06, math.sin(math.pi * tc) ** 0.7 * wobble)
+    if shape in ("strap", "linear"):
         return 1.0 if t < 0.9 else max(0.15, (1 - t) / 0.1)
-    return max(0.05, 1 - 0.9 * t)          # lance / default
+    if shape in ("needle", "awl", "scale"):
+        return max(0.08, 1 - 0.55 * t)
+    return max(0.05, 1 - 0.9 * t)          # lance / lanceolate / default
+
+
+# Natural width ÷ length for each blade outline. Once `leaf_size_cm` sets the
+# LENGTH from data, the width has to come from the shape or every species would
+# be drawn at whatever ratio its growth form happened to carry — a 20 cm
+# balsamroot arrowhead and a 20 cm iris strap are not the same leaf.
+LEAF_WIDTH_RATIO = {
+    "needle": 0.03, "awl": 0.05, "scale": 0.25, "linear": 0.06,
+    "lanceolate": 0.22, "elliptic": 0.45, "ovate": 0.62, "obovate": 0.55,
+    "spatulate": 0.40, "orbicular": 0.95, "cordate": 0.85, "reniform": 1.25,
+    "sagittate": 0.55, "lobed": 0.75, "pinnatifid": 0.42, "bipinnate": 0.35,
+    "trifoliate": 0.85, "compound_pinnate": 0.45, "compound_palmate": 0.9,
+    "strap": 0.06,
+}
+
+# Blades stamped as a rachis carrying leaflets rather than one ribbon.
+COMPOUND_SHAPES = frozenset({"trifoliate", "compound_pinnate",
+                             "compound_palmate", "bipinnate"})
+# Leaflet pairs (plus a terminal leaflet) per compound outline.
+_LEAFLET_PAIRS = {"trifoliate": 1, "compound_pinnate": 3,
+                  "compound_palmate": 2, "bipinnate": 4}
+
+
+def leaf_width_for(shape, length):
+    """Natural blade width for a leaf of ``length`` with this outline."""
+    return length * LEAF_WIDTH_RATIO.get(shape, 0.3)
+
+
+def add_compound_leaf(bm, rng, length, width, tilt, azimuth, at, shape):
+    """One compound leaf: a slim rachis carrying paired leaflets and a terminal.
+
+    A third of the catalogue's leaves are compound — every pea (lupine,
+    milkvetch, hedysarum), rose, cinquefoil, columbine, meadow rue and mountain
+    ash — and drawing them as a single ribbon is what made a lupine and a
+    fireweed differ only in size. ``compound_palmate`` fans its leaflets from
+    one point (lupine); the rest run up the rachis.
+    """
+    pairs = _LEAFLET_PAIRS.get(shape, 3)
+    ln = length * (_LEAF_LEN_MAX - 0.4 + rng.random() * 0.4)
+    droop = 0.10 + rng.random() * _LEAF_DROOP_MAX
+    mat = Matrix.Rotation(azimuth, 4, "Z") @ Matrix.Rotation(tilt, 4, "Y")
+    if at is not None:
+        mat = Matrix.Translation(Vector(at)) @ mat
+    palmate = shape == "compound_palmate"
+    # Rachis: a thin two-point ribbon, so it merges with the leaflets' attributes.
+    r_from = 0.0 if palmate else 0.12
+    stalk = [mat @ Vector((droop * (u ** 1.4) * ln, 0, ln * u))
+             for u in (0.0, 0.55, 1.0)]
+    add_ribbon(bm, stalk, [ln * 0.012, ln * 0.009, ln * 0.006],
+               (mat.to_3x3() @ Vector((0, 1, 0))).normalized())
+    leaflet_len = ln * (0.42 if palmate else 0.30)
+    leaflet_w = leaflet_len * (0.5 if palmate else 0.42)
+    n = pairs * 2 + 1
+    for i in range(n):
+        if palmate:
+            # A fan from the rachis tip.
+            frac, spread = 1.0, (i / (n - 1) - 0.5) * 2.2
+        else:
+            frac = r_from + (1 - r_from) * (i // 2) / max(1, pairs)
+            spread = (-0.95 if i % 2 else 0.95) * (0.0 if i == n - 1 else 1.0)
+        base = mat @ Vector((droop * (frac ** 1.4) * ln, 0, ln * frac))
+        add_leaf(bm, rng, leaflet_len, leaflet_w,
+                 tilt * 0.45 + abs(spread) * 0.55,
+                 azimuth + spread, base, "elliptic")
 
 
 # add_leaf randomises a blade's length and droop; the upper bounds live here so
@@ -160,9 +253,74 @@ def leaf_extent(length, tilt, shape="lance"):
     for the rise puts the aspect out by 40%.
     """
     ln = length * _LEAF_LEN_MAX
-    droop = (0.05 if shape == "strap" else 0.12) + _LEAF_DROOP_MAX
-    return (ln * (math.sin(tilt) + droop * math.cos(tilt)),
-            ln * max(0.0, math.cos(tilt) - droop * math.sin(tilt)))
+    droop = (0.05 if shape in ("strap", "linear") else 0.12) + _LEAF_DROOP_MAX
+    h = ln * (math.sin(tilt) + droop * math.cos(tilt))
+    v = ln * max(0.0, math.cos(tilt) - droop * math.sin(tilt))
+    if shape in COMPOUND_SHAPES:
+        # A compound leaf's leaflets stick out sideways from the rachis, so it
+        # is wider than a simple blade of the same length and no taller. The
+        # aspect fixed point and shape_to_aspect both trust this figure.
+        h += ln * (0.42 if shape == "compound_palmate" else 0.30) * 0.8
+    return (h, v)
+
+
+def add_blade_or_leaf(bm, rng, length, width, tilt, azimuth, at, shape):
+    """Stamp the right primitive for ``shape`` — one ribbon, or a rachis with
+    leaflets. The single entry point builders should call so a new compound
+    outline never needs another branch at every call site."""
+    if shape in COMPOUND_SHAPES:
+        add_compound_leaf(bm, rng, length, width, tilt, azimuth, at, shape)
+    else:
+        add_leaf(bm, rng, length, width, tilt, azimuth, at, shape)
+
+
+# ── triangle cost, so leaf counts can be budgeted before anything is stamped ──
+
+# What each stamp costs. A builder tuned for simple blades blows its budget the
+# moment the species turns out to carry compound ones, so the counts have to be
+# derived from the outline rather than fixed — see thin_leaf_nodes.
+CONE_TRIS = 16                            # add_cone(segments=4), fan-capped
+_SIMPLE_LEAF_TRIS = 8                     # add_leaf: 4 ribbon segments
+_RACHIS_TRIS = 4                          # add_compound_leaf's 3-point stalk
+
+
+def leaf_tris(shape):
+    """Triangles one :func:`add_blade_or_leaf` stamp costs for this outline."""
+    if shape in COMPOUND_SHAPES:
+        pairs = _LEAFLET_PAIRS.get(shape, 3)
+        return _RACHIS_TRIS + (pairs * 2 + 1) * _SIMPLE_LEAF_TRIS
+    return _SIMPLE_LEAF_TRIS
+
+
+def thin_leaf_nodes(nodes, shape, budget, structural_tris, headroom=0.94):
+    """Evenly drop whole nodes from ``nodes`` until the foliage fits ``budget``
+    triangles alongside ``structural_tris`` of stem/cane geometry.
+
+    ``nodes`` is a list of lists: one entry per leaf node, holding the 1 (spiral),
+    2 (opposite) or 3 (whorled) leaves attached there. Thinning by node rather
+    than by leaf keeps pairs and whorls intact — the arrangement is the field
+    mark the leaves exist to show, so halving a pair would misdraw the species.
+
+    A compound leaf costs 3-9x a simple blade (a rachis plus 2n+1 leaflets), so
+    this is what lets a rose and a dogwood share one builder: the rose ends up
+    with fewer, larger leaves, which is also how the plants themselves resolve
+    the same constraint.
+    """
+    per = leaf_tris(shape)
+    allow = max(1, int((budget * headroom - structural_tris) / per))
+    total = sum(len(n) for n in nodes)
+    if not nodes or total <= allow:
+        return nodes
+    step = len(nodes) / max(1, int(len(nodes) * allow / total))
+    kept, spent, i = [], 0, 0.0
+    while i < len(nodes):
+        node = nodes[int(i)]
+        if kept and spent + len(node) > allow:
+            break
+        kept.append(node)
+        spent += len(node)
+        i += step
+    return kept
 
 
 def add_leaf(bm, rng, length, width, tilt, azimuth, at, shape):

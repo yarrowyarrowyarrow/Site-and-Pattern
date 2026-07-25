@@ -208,18 +208,41 @@ def _scene_for(plant, pid, name, i):
     return sc
 
 
+# Fields the specimens borrow from the real seed row for their scientific name.
+# Since V2.29 a plant's leaf characters SELECT its geometry (blade class × grain
+# class pick one of the baked archetype variants), so a gallery specimen without
+# them would show the neutral fallback and quietly stop being a catalogue of what
+# the app renders. The synthetic dicts stay hand-written for the dimensions the
+# gallery frames on; only the recorded morphology is borrowed.
+_MORPH_FIELDS = ("leaf_shape", "leaf_size_cm", "leaf_arrangement",
+                 "growth_form", "bark_color", "fall_color")
+
+
+def _with_morphology(plant, by_sci):
+    row = by_sci.get((plant.get("scientific_name") or "").lower())
+    if not row:
+        return plant
+    merged = dict(plant)
+    for field in _MORPH_FIELDS:
+        if row.get(field) not in (None, "") and not merged.get(field):
+            merged[field] = row[field]
+    return merged
+
+
 def _specimens():
     rows = _seed_rows()
+    by_sci = {(r.get("scientific_name") or "").lower(): r for r in rows}
     out = []
     for key, name, desc, example, plant in GEOMETRY:
-        out.append((key, name, desc, example, plant))
+        out.append((key, name, desc, example, _with_morphology(plant, by_sci)))
     for form in FORMS:
         p = _pick_flower(form, rows)
         if not p:
             continue
         out.append((f"flower_{form}", f"Flower — {form}",
                     f"The '{form}' flower sprite, in its real colour, atop the plant's body.",
-                    p.get("common_name", ""), _flower_specimen(p)))
+                    p.get("common_name", ""),
+                    _with_morphology(_flower_specimen(p), by_sci)))
     return out
 
 

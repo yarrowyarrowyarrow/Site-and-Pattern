@@ -117,65 +117,176 @@
   "herb.clump": {
    "file": "herb_clump.glb",
    "half_width": {
-    "unit": 0.45045
+    "v0": 0.45045,
+    "v1": 0.45045,
+    "v10": 0.45045,
+    "v2": 0.45045,
+    "v3": 0.45045,
+    "v4": 0.45045,
+    "v5": 0.45045,
+    "v6": 0.45045,
+    "v7": 0.45045,
+    "v8": 0.45045,
+    "v9": 0.45045
    },
    "parts": [
     "foliage"
-   ]
+   ],
+   "variant_keys": {
+    "broad_0": 0,
+    "broad_1": 1,
+    "broad_2": 2,
+    "compound_0": 3,
+    "compound_1": 4,
+    "compound_2": 5,
+    "cut_1": 6,
+    "cut_2": 7,
+    "narrow_0": 8,
+    "narrow_1": 9,
+    "narrow_2": 10
+   }
   },
   "herb.erect": {
    "file": "herb_erect.glb",
    "half_width": {
-    "unit": 0.41667
+    "v0": 0.41667,
+    "v1": 0.41667,
+    "v10": 0.41667,
+    "v11": 0.41667,
+    "v2": 0.41667,
+    "v3": 0.41667,
+    "v4": 0.41667,
+    "v5": 0.41667,
+    "v6": 0.41667,
+    "v7": 0.41667,
+    "v8": 0.41667,
+    "v9": 0.41667
    },
    "parts": [
     "foliage"
-   ]
+   ],
+   "variant_keys": {
+    "broad_0": 0,
+    "broad_1": 1,
+    "broad_2": 2,
+    "compound_0": 3,
+    "compound_1": 4,
+    "compound_2": 5,
+    "cut_0": 6,
+    "cut_1": 7,
+    "cut_2": 8,
+    "narrow_0": 9,
+    "narrow_1": 10,
+    "narrow_2": 11
+   }
   },
   "herb.fern": {
    "file": "herb_fern.glb",
    "half_width": {
-    "unit": 0.5
+    "v0": 0.5,
+    "v1": 0.5
    },
    "parts": [
     "foliage"
-   ]
+   ],
+   "variant_keys": {
+    "broad_1": 0,
+    "compound_2": 1
+   }
   },
   "herb.ferny": {
    "file": "herb_ferny.glb",
    "half_width": {
-    "unit": 0.42017
+    "v0": 0.42017,
+    "v1": 0.42017,
+    "v2": 0.42017,
+    "v3": 0.42017,
+    "v4": 0.42017,
+    "v5": 0.42017
    },
    "parts": [
     "foliage"
-   ]
+   ],
+   "variant_keys": {
+    "broad_1": 0,
+    "compound_0": 1,
+    "compound_1": 2,
+    "compound_2": 3,
+    "cut_0": 4,
+    "cut_1": 5
+   }
   },
   "herb.grassy": {
    "file": "herb_grassy.glb",
    "half_width": {
-    "unit": 0.37594
+    "v0": 0.37594,
+    "v1": 0.37594,
+    "v2": 0.37594,
+    "v3": 0.37594,
+    "v4": 0.37594
    },
    "parts": [
     "foliage"
-   ]
+   ],
+   "variant_keys": {
+    "broad_1": 0,
+    "broad_2": 1,
+    "narrow_0": 2,
+    "narrow_1": 3,
+    "narrow_2": 4
+   }
   },
   "herb.mat": {
    "file": "herb_mat.glb",
    "half_width": {
-    "unit": 1.19048
+    "v0": 1.19048,
+    "v1": 1.19048,
+    "v2": 1.19048,
+    "v3": 1.19048,
+    "v4": 1.19048,
+    "v5": 1.19048
    },
    "parts": [
     "foliage"
-   ]
+   ],
+   "variant_keys": {
+    "broad_0": 0,
+    "broad_1": 1,
+    "broad_2": 2,
+    "cut_1": 3,
+    "narrow_0": 4,
+    "narrow_1": 5
+   }
   },
   "herb.rosette": {
    "file": "herb_rosette.glb",
    "half_width": {
-    "unit": 0.60241
+    "v0": 0.60241,
+    "v1": 0.60241,
+    "v2": 0.60241,
+    "v3": 0.60241,
+    "v4": 0.60241,
+    "v5": 0.60241,
+    "v6": 0.60241,
+    "v7": 0.60241,
+    "v8": 0.60241,
+    "v9": 0.60241
    },
    "parts": [
     "foliage"
-   ]
+   ],
+   "variant_keys": {
+    "broad_0": 0,
+    "broad_1": 1,
+    "broad_2": 2,
+    "compound_1": 3,
+    "compound_2": 4,
+    "cut_1": 5,
+    "cut_2": 6,
+    "narrow_0": 7,
+    "narrow_1": 8,
+    "narrow_2": 9
+   }
   },
   "layer.aquatic": {
    "file": "layer_aquatic.glb",
@@ -227,52 +338,119 @@
   "shrub.irregular": {
    "file": "shrub_irregular.glb",
    "half_width": {
-    "unit": 0.43881
+    "v0": 0.47329,
+    "v1": 0.37766,
+    "v2": 0.45725,
+    "v3": 0.40209
    },
    "parts": [
     "bark",
     "foliage"
-   ]
+   ],
+   "variant_keys": {
+    "broad_0": 0,
+    "broad_1": 1,
+    "cut_0": 2,
+    "narrow_1": 3
+   }
   },
   "shrub.mound": {
    "file": "shrub_mound.glb",
    "half_width": {
-    "unit": 0.61925
+    "v0": 0.52584,
+    "v1": 0.60663,
+    "v2": 0.51765,
+    "v3": 0.52894,
+    "v4": 0.55302,
+    "v5": 0.57576,
+    "v6": 0.63274
    },
    "parts": [
     "bark",
     "foliage"
-   ]
+   ],
+   "variant_keys": {
+    "broad_0": 0,
+    "broad_1": 1,
+    "broad_2": 2,
+    "compound_1": 3,
+    "compound_2": 4,
+    "narrow_1": 5,
+    "narrow_2": 6
+   }
   },
   "shrub.spreading": {
    "file": "shrub_spreading.glb",
    "half_width": {
-    "unit": 0.59943
+    "v0": 0.51998,
+    "v1": 0.45133,
+    "v10": 0.47523,
+    "v2": 0.53399,
+    "v3": 0.42974,
+    "v4": 0.44618,
+    "v5": 0.49745,
+    "v6": 0.49231,
+    "v7": 0.47958,
+    "v8": 0.51388,
+    "v9": 0.52698
    },
    "parts": [
     "bark",
     "foliage"
-   ]
+   ],
+   "variant_keys": {
+    "broad_0": 0,
+    "broad_1": 1,
+    "broad_2": 2,
+    "compound_0": 3,
+    "compound_1": 4,
+    "compound_2": 5,
+    "cut_0": 6,
+    "cut_1": 7,
+    "narrow_0": 8,
+    "narrow_1": 9,
+    "narrow_2": 10
+   }
   },
   "shrub.thicket": {
    "file": "shrub_thicket.glb",
    "half_width": {
-    "unit": 0.58067
+    "v0": 0.48878,
+    "v1": 0.49096,
+    "v2": 0.51014,
+    "v3": 0.44552,
+    "v4": 0.52951
    },
    "parts": [
     "bark",
     "foliage"
-   ]
+   ],
+   "variant_keys": {
+    "broad_1": 0,
+    "compound_2": 1,
+    "cut_0": 2,
+    "cut_1": 3,
+    "cut_2": 4
+   }
   },
   "shrub.vase": {
    "file": "shrub_vase.glb",
    "half_width": {
-    "unit": 0.46133
+    "v0": 0.37997,
+    "v1": 0.33511,
+    "v2": 0.3771,
+    "v3": 0.32357
    },
    "parts": [
     "bark",
     "foliage"
-   ]
+   ],
+   "variant_keys": {
+    "broad_0": 0,
+    "broad_1": 1,
+    "narrow_0": 2,
+    "narrow_1": 3
+   }
   },
   "tree.apple": {
    "file": "tree_apple.glb",

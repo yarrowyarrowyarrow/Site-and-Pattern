@@ -23,6 +23,18 @@ the **live gallery** below lets you rotate and inspect each one.
 > at the same crown size. Clicking any plant or creature opens a card built from
 > the app's sourced ecology (`src/scene_dossier.py` →
 > `html/scene3d/10-inspect.js`).
+>
+> **Also since V2.29**, a shrub or herb archetype is no longer one shape per
+> growth form. Each form ships one baked unit per **(blade class × grain class)**
+> its species actually use — so a rose's alternate compound leaves, a dogwood's
+> opposite ovate ones and a blue-eyed grass's linear ones are different geometry
+> rather than the same form at three sizes. The classes come from the species'
+> own `leaf_shape` / `leaf_size_cm` / `leaf_arrangement` (schema v47/v48); the
+> viewer's classifier is `bladeClassFor` / `grainClassFor` / `variantKeyFor` in
+> `02-plants.js`, and the shrub builders now grow a branching **cane skeleton
+> clothed in real leaves** instead of ellipsoids on straight stems. Where a
+> species records nothing, the neutral variant and the tuned form defaults apply
+> — an honest empty rather than an invented leaf (P9).
 
 ## See them live
 

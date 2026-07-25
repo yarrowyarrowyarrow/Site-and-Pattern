@@ -42,7 +42,10 @@ window.glbSharedGeos = function () {
       if (t.bark) out.push(t.bark);
       if (t.foliage) out.push(t.foliage);
     }
-    if (rec.variants) for (const g of rec.variants) out.push(g);
+    if (rec.variants) for (const p of rec.variants) {
+      if (p.bark) out.push(p.bark);
+      if (p.foliage) out.push(p.foliage);
+    }
     if (rec.parts) {
       if (rec.parts.bark) out.push(rec.parts.bark);
       if (rec.parts.foliage) out.push(rec.parts.foliage);
@@ -106,15 +109,19 @@ function _glbLoadPlant(loader, key, spec) {
       }
       if (!Object.keys(tiers).length) throw new Error('no tier nodes');
       MODEL_PLANTS.set(key, { tiers });
-    } else if (spec.variants) {
+    } else if (spec.variants || spec.variant_keys) {
+      // Herb/shrub variants are one unit per (blade class, grain class) the
+      // catalogue uses, so the whole parts bag is kept — a shrub variant carries
+      // its own canes, and dropping them left a bare winter shrub invisible.
+      const n = spec.variants || Object.keys(spec.variant_keys).length;
       const variants = [];
-      for (let v = 0; v < spec.variants; v++) {
+      for (let v = 0; v < n; v++) {
         const node = scn.getObjectByName('v' + v);
         const p = node && _glbParts(node, parts, 'v' + v);
-        if (p && p.foliage) variants.push(p.foliage);
+        if (p && p.foliage) variants.push(p);
       }
       if (!variants.length) throw new Error('no variant nodes');
-      MODEL_PLANTS.set(key, { variants });
+      MODEL_PLANTS.set(key, { variants, variantKeys: spec.variant_keys || null });
     } else {
       const p = _glbParts(scn, parts, '');
       if (!p || !p.foliage) throw new Error('no named parts');
@@ -213,26 +220,42 @@ function glbTreeArch(cls, ck, profId, form, tier) {
   return { branchGeo: t.bark, foliageGeo: t.foliage, branchMat: MATS.glbBark };
 }
 
-function glbShrubArch(form) {
+// The parts bag for one (form, variant key) unit, or the neutral 'broad_1' unit
+// the generator always emits. Shared by the herb and shrub lookups: both files
+// hold one unit per (blade class, grain class) the catalogue actually uses, so a
+// key the manifest doesn't carry means the two classifiers have drifted apart
+// (02-plants.js variantKeyFor ↔ assetlib/conventions.py) — degrade to neutral
+// rather than dropping the plant.
+function _glbVariant(key, vkey) {
+  const rec = MODEL_PLANTS.get(key);
+  if (!rec || !rec.variants || !rec.variants.length) return null;
+  const map = rec.variantKeys;
+  let i = map && vkey != null && map[vkey] != null ? map[vkey]
+        : (map ? map.broad_1 : null);
+  if (i == null) i = 0;
+  return rec.variants[i % rec.variants.length] || null;
+}
+
+function glbShrubArch(form, vkey) {
   if (MODEL_STATE !== 'ready') return null;
-  const rec = MODEL_PLANTS.get('shrub.' + form);
-  const p = rec && rec.parts;
+  const p = _glbVariant('shrub.' + form, vkey);
   if (!p || !p.bark || !p.foliage) return null;
   _ensureModelMats();
   return { foliageGeo: p.foliage, stemGeo: p.bark, stemMat: MATS.glbBark };
 }
 
-function glbHerbArch(formName) {
+function glbHerbArch(formName, vkey) {
   if (MODEL_STATE !== 'ready') return null;
-  const rec = MODEL_PLANTS.get('herb.' + formName);
-  return (rec && rec.parts && rec.parts.foliage) || null;
+  const p = _glbVariant('herb.' + formName, vkey);
+  return (p && p.foliage) || null;
 }
 
 function glbLayerArch(kind, v) {
   if (MODEL_STATE !== 'ready') return null;
   const rec = MODEL_PLANTS.get('layer.' + kind);
   if (!rec || !rec.variants || !rec.variants.length) return null;
-  return rec.variants[v % rec.variants.length];
+  const p = rec.variants[v % rec.variants.length];
+  return (p && p.foliage) || null;
 }
 
 // ── fauna (called from 07-wildlife.js rebuildWildlife, GLB-first) ───────────

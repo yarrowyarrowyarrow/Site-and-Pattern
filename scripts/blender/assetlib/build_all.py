@@ -82,27 +82,51 @@ def build_asset(key, spec=None, seed_salt="", half_widths=None):
                 o.parent = root
             root.location.x = t * _GRID          # side by side for inspection
     elif spec["kind"] == "shrub":
-        parts = build_shrub(key.split(".", 1)[1], rng, coll)
-        objs = list(parts.values())
-        halves["unit"] = unit_frame(objs)
-        for o in objs:
-            decimate_to_budget(o, _budget_for(spec))
-        bake_ao([parts[C.PART_BARK]], gradient=False, strength=0.7,
-                seed_key=key + "bark")
-        bake_ao([parts[C.PART_FOLIAGE]], gradient=True, strength=0.85,
-                seed_key=key)
-        tris["unit"] = _check_budget(key, objs, _budget_for(spec))
+        form = key.split(".", 1)[1]
+        # One unit per (blade class, grain class) the catalogue actually uses,
+        # so a dogwood's paired broad leaves and a rose's alternate compound
+        # ones are different geometry rather than the same faceted blob.
+        for v, vkey in enumerate(spec["variant_keys"]):
+            prefix = f"{C.VARIANT_PREFIX}{v}"
+            root = make_empty(prefix, coll)
+            blade, grain = vkey.rsplit("_", 1)
+            parts = build_shrub(form, rng, coll, name_prefix=prefix,
+                                grain=int(grain), leaf_shape=C.BLADE_SHAPE[blade],
+                                arrangement="opposite" if v % 2 else "alternate")
+            objs = list(parts.values())
+            halves[prefix] = unit_frame(objs)
+            for o in objs:
+                decimate_to_budget(o, _budget_for(spec))
+            bake_ao([parts[C.PART_BARK]], gradient=False, strength=0.7,
+                    seed_key=key + prefix + "bark")
+            bake_ao([parts[C.PART_FOLIAGE]], gradient=True, strength=0.85,
+                    seed_key=key + prefix)
+            tris[prefix] = _check_budget(f"{key}/{prefix}", objs,
+                                         _budget_for(spec))
+            for o in objs:
+                o.parent = root
+            root.location.x = v * _GRID
     elif spec["kind"] == "herb":
         form = key.split(".", 1)[1]
-        parts = build_herb(form, rng, coll)
-        objs = list(parts.values())
-        # Flat-leaf geometry: finish on the exact measured correction.
-        squash_to_aspect(objs, C.HERB_ASPECT[form])
-        halves["unit"] = unit_frame(objs)
-        for o in objs:
-            decimate_to_budget(o, _budget_for(spec))
-        bake_ao(objs, gradient=True, strength=0.7, seed_key=key)
-        tris["unit"] = _check_budget(key, objs, _budget_for(spec))
+        for v, vkey in enumerate(spec["variant_keys"]):
+            prefix = f"{C.VARIANT_PREFIX}{v}"
+            root = make_empty(prefix, coll)
+            blade, grain = vkey.rsplit("_", 1)
+            parts = build_herb(form, rng, coll, name_prefix=prefix,
+                               grain=int(grain), leaf_shape=C.BLADE_SHAPE[blade],
+                               arrangement="opposite" if v % 2 else "alternate")
+            objs = list(parts.values())
+            # Flat-leaf geometry: finish on the exact measured correction.
+            squash_to_aspect(objs, C.HERB_ASPECT[form])
+            halves[prefix] = unit_frame(objs)
+            for o in objs:
+                decimate_to_budget(o, _budget_for(spec))
+            bake_ao(objs, gradient=True, strength=0.7, seed_key=key + prefix)
+            tris[prefix] = _check_budget(f"{key}/{prefix}", objs,
+                                         _budget_for(spec))
+            for o in objs:
+                o.parent = root
+            root.location.x = v * _GRID
     elif spec["kind"] == "layer":
         kind = key.split(".", 1)[1]
         for v in range(spec["variants"]):

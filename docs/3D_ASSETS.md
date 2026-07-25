@@ -20,15 +20,15 @@ withering, and presence fades all keep working (P4, P5); silhouettes aim for
 | Family | Archetypes | Keyed by |
 |--------|-----------|----------|
 | Trees (×3 growth tiers each) | spruce, fir, pine, larch, def_conifer; aspen, birch, oak, willow, cherry, apple; def_slender/oval/spreading | genus profile (`02-plants.js _PROF`) / conifer kind / crown form |
-| Shrubs | vase, spreading, mound, thicket, irregular | `SHRUB_FORMS` silhouette |
-| Herbs | erect, ferny, rosette, clump, grassy, mat, fern | `HERB_FORMS` growth form |
+| Shrubs (31 morphology variants) | vase, spreading, mound, thicket, irregular | `SHRUB_FORMS` silhouette × leaf variant |
+| Herbs (52 morphology variants) | erect, ferny, rosette, clump, grassy, mat, fern | `HERB_FORMS` growth form × leaf variant |
 | Layers | grass ×3, aquatic ×3, vine ×3, groundcover ×2 variants | plant_type bucket |
 | Fauna | bee, lep (butterfly+moth), bird, fly (hover+darner), beetle, bat, mammal | critter kind; species looks are tints |
 | Structures | all 15 placeables (pond, swale, rain garden, rain barrel, bee log, bee hotel, brush pile, snag, rock xeriscape, lawn patch, raised bed, compost bin, shed, fence, fire pit) | `struct_id` |
 
-52 GLBs + `manifest.json` under `html/assets/models/` — ~4 MB total, every
-asset within the triangle budgets in
-`scripts/blender/assetlib/conventions.py`.
+52 GLBs + `manifest.json` under `html/assets/models/` — ~11 MB total, every
+**unit** (a tier or a variant, which is what gets instanced) within the triangle
+budgets in `scripts/blender/assetlib/conventions.py`.
 
 ## The pipeline
 
@@ -119,6 +119,27 @@ Defined once in `scripts/blender/assetlib/conventions.py`; the loader side is
   (`hover_WingL`).
 - **Growth tiers:** trees ship `tier0/1/2` matching `tierFor(scale_factor)`;
   the young-tree structural simplification is authored, not decimated.
+- **Leaf variants (V2.29):** a herb or shrub file ships one unit per **(blade
+  class × grain class)** its family's species actually use, and the manifest
+  publishes the mapping as `variant_keys: {"broad_1": 0, "compound_2": 3, …}`.
+  Instancing gives one 3-component scale per plant, so a species' leaf size and
+  outline cannot be a per-instance transform — they have to be baked. The
+  fourteen recorded `leaf_shape` values collapse into four construction classes
+  (`narrow` / `broad` / `cut` / `compound`) and `leaf_size_cm ÷ mature_height_m`
+  into three size classes. The generator reads `data/plants_master.json` and
+  builds only the combinations that occur — 49 of 84 possible herb pairs, 29 of
+  60 shrub ones — so the payload carries no archetype the app can select. Both
+  files always include the neutral `broad_1` unit as the fallback. The viewer's
+  copy of the classification is `02-plants.js` `bladeClassFor` / `grainClassFor`
+  / `variantKeyFor`; `tests/test_model_assets.py` extracts those tables and
+  compares them against `conventions.py`, because two independent
+  implementations of one classification is the whole risk.
+- **Leaf counts are budgeted, not fixed:** a compound leaf is a rachis plus
+  `2n+1` leaflets, so it costs 3–9× a simple blade. `mesh_ops.thin_leaf_nodes`
+  drops whole nodes — never half a pair, since opposite-vs-alternate is the field
+  mark the leaves exist to show — until the foliage fits alongside the skeleton.
+  A rose therefore ends up with fewer, larger leaves than a dogwood, which is
+  also how the plants themselves resolve the same constraint.
 - **Structures:** authored at REAL METRES (no unit frame) with their aspect
   baked in (the scene sends `size_m` only — no rotation/width), and their
   authored materials are KEPT (fixed real-world colours; the palette is

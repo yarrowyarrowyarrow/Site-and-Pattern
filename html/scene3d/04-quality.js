@@ -30,15 +30,49 @@ function makeFoliageMass(rng, r, shape) {
 }
 
 // A shrub as a multi-stem woody clump (V1.96): a few ascending stems splayed
-// from a shared base, each clothed with faceted foliage masses along its upper
-// length, the whole silhouette set by the species' growth form (vase / spreading
-// / mound / thicket / irregular). Returns {foliageGeo, stemGeo} so the woody
-// stems carry their own bark (or red-osier) colour — no more generic dome.
-function buildShrubGeo(rng, profile) {
+// from a shared base, each clothed with foliage along its upper length, the whole
+// silhouette set by the species' growth form (vase / spreading / mound / thicket
+// / irregular). Returns {foliageGeo, stemGeo} so the woody stems carry their own
+// bark (or red-osier) colour — no more generic dome.
+//
+// V2.29: where the species records its own leaf characters, each foliage position
+// becomes a small cluster of REAL leaves of that outline and size instead of a
+// faceted icosahedron — the "lollipop" look in the shrub screenshots was those
+// ellipsoids. Without morphology it stays on the tuned masses, which is honest:
+// no data, no invented detail.
+const _CLUSTER_LEAVES = 7;         // per foliage position, before quality/cost
+function buildShrubGeo(rng, profile, morph) {
   const prof = profile || {};
+  const m = morph || {};
   const F = SHRUB_FORMS[prof.form] || SHRUB_FORMS.spreading;
   const fineMul = prof.fine ? 0.82 : 1;
   const stemGeos = [], foliageGeos = [];
+  const shape = m.shape || '';
+  // A shrub is metres tall with centimetre leaves, so these are far smaller
+  // fractions of the unit frame than a forb's (flora_shrubs.build_shrub).
+  const leafLen = [0.055, 0.085, 0.13][Math.max(0, Math.min(2, m.grain == null ? 1 : m.grain))]
+    * (isCompoundShape(shape) ? 1.5 : 1);
+  const nCluster = shape
+    ? qn(Math.round(_CLUSTER_LEAVES * leafCountScale(shape))) : 0;
+  // A cluster of leaves radiating from one attachment point, filling the volume
+  // the faceted mass used to occupy.
+  const foliageAt = (at, r) => {
+    if (!shape) {
+      const mass = makeFoliageMass(rng, r, F.shape);
+      mass.translate(at.x, at.y, at.z);
+      return [mass];
+    }
+    const out = [];
+    for (let i = 0; i < nCluster; i++) {
+      const az = i * 2.39996 + rng() * 0.4;
+      const lf = makeBladeOrLeaf(rng, leafLen, leafWidthFor(shape, leafLen),
+                                 0.7 + rng() * 0.6, az, null, shape);
+      lf.translate(at.x + Math.cos(az) * r * 0.5, at.y + (rng() - 0.5) * r,
+                   at.z + Math.sin(az) * r * 0.5);
+      out.push(lf);
+    }
+    return out;
+  };
 
   const nStems = qn(F.stems[0] + Math.floor(rng() * (F.stems[1] - F.stems[0] + 1)));
   for (let i = 0; i < nStems; i++) {
@@ -58,9 +92,8 @@ function buildShrubGeo(rng, profile) {
       const t = F.start + (1 - F.start) * (nMass === 1 ? 0.7 : j / (nMass - 1));
       const at = new THREE.Vector3(0, h * t, 0).applyMatrix4(rot);
       const r = (F.massR[0] + rng() * (F.massR[1] - F.massR[0])) * fineMul;
-      const mass = makeFoliageMass(rng, r, F.shape);
-      mass.translate(at.x + (rng() - 0.5) * 0.08, at.y, at.z + (rng() - 0.5) * 0.08);
-      foliageGeos.push(mass);
+      at.x += (rng() - 0.5) * 0.08; at.z += (rng() - 0.5) * 0.08;
+      for (const g of foliageAt(at, r)) foliageGeos.push(g);
     }
   }
   // A low basal mound fills the bottom of dense forms (mound/spreading/thicket).
@@ -68,9 +101,9 @@ function buildShrubGeo(rng, profile) {
     const nb = qn(2 + Math.floor(rng() * 2));
     for (let i = 0; i < nb; i++) {
       const r = (0.15 + rng() * 0.08) * fineMul;
-      const mass = makeFoliageMass(rng, r, F.shape);
-      mass.translate((rng() - 0.5) * 0.34, 0.1 + rng() * 0.12, (rng() - 0.5) * 0.34);
-      foliageGeos.push(mass);
+      const at = new THREE.Vector3((rng() - 0.5) * 0.34, 0.1 + rng() * 0.12,
+                                   (rng() - 0.5) * 0.34);
+      for (const g of foliageAt(at, r)) foliageGeos.push(g);
     }
   }
 
@@ -96,10 +129,25 @@ function _stem(rBot, rTop, h, rot) {
   s.deleteAttribute('normal'); s.deleteAttribute('uv');
   return s;
 }
-function buildPerennialGeo(rng, form) {
+// `morph` is the species' own leaf characters (schema v47/v48): `shape` its blade
+// outline, `grain` its leaf size against its mature height, `arrangement` whether
+// leaves sit in opposite pairs, whorls of three, or a spiral. Omit it and the
+// form's authored defaults apply, which is exactly the pre-V2.29 look.
+function buildPerennialGeo(rng, form, morph) {
   const F = form || HERB_FORMS.clump;
+  const m = morph || {};
   const geos = [];
-  const lL = F.leaf[0], lW = F.leaf[1];
+  const shape = m.shape || F.shape;
+  const lL = F.leaf[0] * GRAIN_LEAF_SCALE[Math.max(0, Math.min(2, m.grain == null ? 1 : m.grain))];
+  // Width follows the OUTLINE, not the form: a 20 cm arrowhead balsamroot leaf
+  // and a 20 cm iris strap are the same length and nothing like the same leaf.
+  const lW = m.shape ? leafWidthFor(shape, lL) : F.leaf[1];
+  // Opposite leaves come in pairs at one node and whorled in rings of three;
+  // alternate ones spiral by the golden angle. That is the field mark separating
+  // a penstemon from a goldenrod at a glance.
+  const perNode = m.arrangement === 'opposite' ? 2
+    : (m.arrangement === 'whorled' ? 3 : 1);
+  const cost = leafCountScale(shape);
 
   // Leafy stems: a stem cylinder with leaves spaced up its upper length.
   const nStems = F.stems[1] ? qn(_rint(rng, F.stems[0], F.stems[1])) : 0;
@@ -110,21 +158,26 @@ function buildPerennialGeo(rng, form) {
     const rot = new THREE.Matrix4().makeRotationY(az0)
       .multiply(new THREE.Matrix4().makeRotationZ(splay));
     geos.push(_stem(0.012, 0.006, h, rot));
-    const nLeaf = qn(_rint(rng, F.perStem[0], F.perStem[1]));
-    for (let j = 0; j < nLeaf; j++) {
-      const t = F.leafFrom + (1 - F.leafFrom) * (j / Math.max(1, nLeaf - 1));
+    const nLeaf = qn(_rint(rng, F.perStem[0], F.perStem[1]) * cost);
+    const nodes = Math.max(1, Math.round(nLeaf / perNode));
+    for (let j = 0; j < nodes; j++) {
+      const t = F.leafFrom + (1 - F.leafFrom) * (j / Math.max(1, nodes - 1));
       const at = new THREE.Vector3(0, h * t, 0).applyMatrix4(rot);
-      geos.push(makeLeaf(rng, lL, lW, F.leafTilt, j * 2.39996 + az0, at, F.shape));
+      const baseAz = (perNode > 1 ? j * 1.5708 : j * 2.39996) + az0;
+      for (let k = 0; k < perNode; k++)
+        geos.push(makeBladeOrLeaf(rng, lL, lW, F.leafTilt,
+                                  baseAz + k * Math.PI * 2 / perNode, at, shape));
     }
   }
 
   // Basal leaves: a rosette / ferny mound / strap tuft / mat at the ground.
   if (F.basal) {
-    const nb = qn(_rint(rng, F.basal[0], F.basal[1]));
+    const nb = qn(_rint(rng, F.basal[0], F.basal[1]) * cost);
     for (let i = 0; i < nb; i++) {
       const az = rng() * Math.PI * 2;
       const len = lL * (F.fine ? 0.6 + rng() * 0.5 : 1);
-      const lf = makeLeaf(rng, len, lW, F.leafTilt * (0.8 + rng() * 0.4), az, null, F.shape);
+      const lf = makeBladeOrLeaf(rng, len, lW, F.leafTilt * (0.8 + rng() * 0.4),
+                                 az, null, shape);
       const rr = (F.low ? 0.18 : 0.1) * rng();
       lf.translate(Math.cos(az) * rr, (F.low ? 0.01 : 0.02), Math.sin(az) * rr);
       geos.push(lf);
@@ -442,12 +495,17 @@ function buildLayer(list, variants, mat, archOf, scaleOf, month, year, noRot, te
 // faceted leaf masses and the woody stems, each shaded/coloured separately.
 const SHRUB_VARIANTS = 3;
 const SHRUB_CACHE = new Map();
-function getShrubArch(prof, v) {
-  const key = prof.id + '_' + v + '_q' + QUALITY;
+// `morph` is the species' leaf characters and `vkey` their baked-variant name
+// (02-plants.js variantKeyFor). Both belong in the cache key: they select a
+// DIFFERENT geometry, so leaving them out would hand a rose the dogwood's leaves
+// whenever the two shared a profile and variant.
+function getShrubArch(prof, v, vkey, morph) {
+  const key = prof.id + '_' + v + '_' + vkey + '_q' + QUALITY;
   let a = SHRUB_CACHE.get(key);
   if (a) return a;
-  a = (window.glbShrubArch && window.glbShrubArch(prof.form)) ||
-      buildShrubGeo(mulberry32(13 + v * 97 + prof.id.charCodeAt(0) * 7), prof);
+  a = (window.glbShrubArch && window.glbShrubArch(prof.form, vkey)) ||
+      buildShrubGeo(mulberry32(13 + v * 97 + prof.id.charCodeAt(0) * 7), prof,
+                    morph);
   SHRUB_CACHE.set(key, a);
   return a;
 }
@@ -457,15 +515,27 @@ function getShrubArch(prof, v) {
 // stalks are all herbaceous).
 const HERB_VARIANTS = 3;
 const HERB_CACHE = new Map();
-function getHerbArch(formName, v) {
-  const key = formName + '_' + v + '_q' + QUALITY;
+function getHerbArch(formName, v, vkey, morph) {
+  const key = formName + '_' + v + '_' + vkey + '_q' + QUALITY;
   let a = HERB_CACHE.get(key);
   if (a) return a;
-  a = (window.glbHerbArch && window.glbHerbArch(formName)) ||
+  a = (window.glbHerbArch && window.glbHerbArch(formName, vkey)) ||
       buildPerennialGeo(mulberry32(29 + v * 89 + formName.charCodeAt(0) * 7),
-                        HERB_FORMS[formName]);
+                        HERB_FORMS[formName], morph);
   HERB_CACHE.set(key, a);
   return a;
+}
+
+// The leaf characters both procedural builders read, gathered in one place so the
+// scene-record field names appear once. `arrangement`/`shape` stay empty where
+// the seed data has nothing to say, and the builders keep their tuned defaults —
+// an honest empty beats an invented leaf.
+function morphOf(p, family) {
+  return {
+    shape: p.leaf_shape || '',
+    arrangement: (p.leaf_arrangement || '').toLowerCase(),
+    grain: grainClassFor(p.leaf_size_cm, p.mature_height_m || p.height_m, family),
+  };
 }
 
 function buildHerbLayer(list, month, year, terrain) {
@@ -474,12 +544,17 @@ function buildHerbLayer(list, month, year, terrain) {
   for (const p of list) {
     const formName = herbFormFor(p);
     const v = hashPid(p.plant_id) % HERB_VARIANTS;
-    (buckets[formName + '_' + v] = buckets[formName + '_' + v]
-      || { formName, v, items: [] }).items.push(p);
+    // The variant key is part of the bucket key because it changes the geometry:
+    // two species sharing a form but not a leaf would otherwise be instanced from
+    // whichever of them the bucket happened to build first.
+    const vkey = variantKeyFor(p, 'herb');
+    const bk = formName + '_' + v + '_' + vkey;
+    (buckets[bk] = buckets[bk]
+      || { formName, v, vkey, morph: morphOf(p, 'herb'), items: [] }).items.push(p);
   }
   for (const key in buckets) {
-    const { formName, v, items } = buckets[key];
-    const arch = getHerbArch(formName, v);
+    const { formName, v, vkey, morph, items } = buckets[key];
+    const arch = getHerbArch(formName, v, vkey, morph);
     const places = items.map(p => spreadPlacements(p, year));
     const total = places.reduce((s, pl) => s + pl.length, 0);
     const mesh = instancedMesh(arch, total, MATS.leaf);
@@ -512,12 +587,14 @@ function buildShrubLayer(list, month, year, terrain) {
   for (const p of list) {
     const prof = shrubProfileFor(p);
     const v = hashPid(p.plant_id) % SHRUB_VARIANTS;
-    (buckets[prof.id + '_' + v] = buckets[prof.id + '_' + v]
-      || { prof, v, items: [] }).items.push(p);
+    const vkey = variantKeyFor(p, 'shrub');
+    const bk = prof.id + '_' + v + '_' + vkey;
+    (buckets[bk] = buckets[bk]
+      || { prof, v, vkey, morph: morphOf(p, 'shrub'), items: [] }).items.push(p);
   }
   for (const key in buckets) {
-    const { prof, v, items } = buckets[key];
-    const arch = getShrubArch(prof, v);
+    const { prof, v, vkey, morph, items } = buckets[key];
+    const arch = getShrubArch(prof, v, vkey, morph);
     const places = items.map(p => spreadPlacements(p, year));
     const total = places.reduce((s, pl) => s + pl.length, 0);
     const foliage = instancedMesh(arch.foliageGeo, total, MATS.shrubFoliage);

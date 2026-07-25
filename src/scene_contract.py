@@ -360,6 +360,11 @@ def build_scene(project: dict, *, year: int = 0,
             "bark_color": plant.get("bark_color") or "",
             "fall_color": plant.get("fall_color") or "",
             "leaf_size_cm": plant.get("leaf_size_cm"),
+            # Leaf size is only meaningful against the plant's own stature, and
+            # `height_m` above is this YEAR's height — so the baked leaf
+            # archetype is chosen against the mature figure, or a plant's leaves
+            # would change size class as it grew.
+            "mature_height_m": st["mature_height_m"],
             "leaf_shape": plant.get("leaf_shape") or "",
             "leaf_arrangement": plant.get("leaf_arrangement") or "",
             "growth_form": plant.get("growth_form") or "",

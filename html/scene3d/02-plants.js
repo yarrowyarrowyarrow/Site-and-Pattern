@@ -537,3 +537,50 @@ function shrubProfileFor(p) {
   return _SPROF[(p.genus || '').toLowerCase()] || _SPROF.def;
 }
 
+// ── leaf morphology → archetype variant (V2.29) ──────────────────────────────
+//
+// The mirror of assetlib/conventions.py blade_class / grain_class / variant_key.
+// Instancing gives one 3-component scale per plant, so a species' leaf size and
+// outline cannot be a per-instance transform — they have to be baked, and the
+// fourteen recorded leaf_shape values collapse into four construction classes
+// crossed with three size classes. The generator reads the same catalogue and
+// builds exactly the combinations that occur, so these two must agree: a
+// mismatch here asks for a variant the manifest does not carry (which falls back
+// to the neutral one, silently losing the species' identity).
+const BLADE_CLASSES = ['narrow', 'broad', 'cut', 'compound'];
+const _COMPOUND_SHAPES = ['trifoliate', 'compound_pinnate', 'compound_palmate',
+                          'bipinnate'];
+const _NARROW_SHAPES = ['linear', 'strap', 'needle', 'awl', 'scale',
+                        'lanceolate'];
+const _CUT_SHAPES = ['lobed', 'pinnatifid', 'sagittate'];
+function bladeClassFor(leafShape) {
+  const sh = (leafShape || '').toLowerCase();
+  if (_COMPOUND_SHAPES.indexOf(sh) >= 0) return 'compound';
+  if (_NARROW_SHAPES.indexOf(sh) >= 0) return 'narrow';
+  if (_CUT_SHAPES.indexOf(sh) >= 0) return 'cut';
+  return 'broad';                    // the profile every form carried pre-data
+}
+
+// Leaf length against the plant's OWN height — the ratio a viewer at yard scale
+// can actually show. Shrub ratios sit an order of magnitude below forb ones (a
+// shrub is metres tall with centimetre leaves), so the breaks are per family or
+// the classes collapse. Unknown data lands on medium, i.e. exactly today's look.
+const _GRAIN_BREAKS = { herb: [0.133, 0.200], shrub: [0.027, 0.047] };
+// Leaf-size multiplier per class (conventions.GRAIN_LEAF_SCALE).
+const GRAIN_LEAF_SCALE = [0.62, 1.0, 1.55];
+function grainClassFor(leafSizeCm, heightM, family) {
+  const cm = Number(leafSizeCm) || 0, h = Number(heightM) || 0;
+  if (cm <= 0 || h <= 0) return 1;
+  const br = _GRAIN_BREAKS[family] || _GRAIN_BREAKS.herb;
+  const ratio = (cm / 100) / h;
+  return ratio < br[0] ? 0 : (ratio < br[1] ? 1 : 2);
+}
+
+// 'broad_1' etc. — the manifest's variant_keys are indexed by exactly this.
+// Against MATURE height, not this year's: leaf size is a fixed species character,
+// so a seedling's leaves must not sit in a different class from the adult's.
+function variantKeyFor(p, family) {
+  return bladeClassFor(p.leaf_shape) + '_'
+    + grainClassFor(p.leaf_size_cm, p.mature_height_m || p.height_m, family);
+}
+

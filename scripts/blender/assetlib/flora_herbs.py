@@ -16,9 +16,11 @@ import math
 import bmesh
 from mathutils import Matrix, Vector
 
-from .conventions import HERB_ASPECT, LAYER_ASPECT
-from .mesh_ops import (add_blade, add_cone, add_cone_between, add_ellipsoid,
-                       add_leaf, bm_to_object, leaf_extent, shape_to_aspect)
+from .conventions import GRAIN_LEAF_SCALE, HERB_ASPECT, LAYER_ASPECT
+from .mesh_ops import (COMPOUND_SHAPES, CONE_TRIS, add_blade, add_blade_or_leaf,
+                       add_cone, add_cone_between, add_ellipsoid, add_leaf,
+                       bm_to_object, leaf_extent, leaf_width_for,
+                       shape_to_aspect, thin_leaf_nodes)
 
 # Each form is shaped to its real height ÷ canopy, which lives with the rest of
 # the contract in conventions.HERB_ASPECT / LAYER_ASPECT — shaping to it keeps
@@ -72,19 +74,36 @@ def _rint(rng, lo, hi):
     return lo + int(rng.random() * (hi - lo + 1))
 
 
-def build_herb(form, rng, coll, name_prefix=""):
+def build_herb(form, rng, coll, name_prefix="", grain=1, leaf_shape=None,
+               arrangement=None):
+    """One herbaceous archetype.
+
+    ``grain`` (0 fine · 1 medium · 2 coarse) scales the blade: a species' leaf
+    length relative to its own height, bucketed, because instancing can only
+    scale a whole plant and not its leaves (conventions.grain_class).
+    ``leaf_shape`` is the species' recorded blade outline (schema v48) and
+    ``arrangement`` where the leaves sit — opposite leaves are stamped in pairs
+    rather than spiralled, which is most of what separates a penstemon from a
+    goldenrod at a glance.
+    """
     from . import conventions as C
     from .materials import preview_material
 
     F = HERB_FORMS[form]
     bm = bmesh.new()
-    lL, lW = F["leaf"]
+    shape = leaf_shape or F["shape"]
+    lL = F["leaf"][0] * GRAIN_LEAF_SCALE[max(0, min(2, int(grain)))]
+    # Width follows the OUTLINE, not the form: a 20 cm arrowhead balsamroot leaf
+    # and a 20 cm iris strap are the same length and nothing like the same leaf.
+    lW = leaf_width_for(shape, lL)
+    opposite = (arrangement or "") == "opposite"
+    whorled = (arrangement or "") == "whorled"
 
     # Collect the plant in its natural frame first (leaves are what set an
     # herb's width, so they carry a scale factor of their own), then shape the
     # whole thing to the form's real aspect before stamping — a pussytoes mat
     # spreads flat instead of being stretched upright by the instance transform.
-    leaves = []          # [anchor Vector, length, width, tilt, azimuth]
+    nodes = []           # per node: [[anchor Vector, length, width, tilt, az], …]
     stems = []           # (rot, h, r_bot, r_top) — axial, unaffected by shaping
     if F["stems"]:                      # leafy stems, leaves spiralling up
         n_stems = _rint(rng, *F["stems"])
@@ -96,11 +115,18 @@ def build_herb(form, rng, coll, name_prefix=""):
                    @ Matrix.Rotation(splay, 4, "Y"))
             stems.append((rot, h, 0.012, 0.006))
             n_leaf = _rint(rng, *F["per_stem"])
-            for j in range(n_leaf):
+            # Alternate leaves spiral by the golden angle; opposite ones come in
+            # pairs at the same node and whorled in rings of three.
+            per_node = 2 if opposite else (3 if whorled else 1)
+            n_nodes = max(1, n_leaf // per_node)
+            for j in range(n_nodes):
                 t = F["leaf_from"] + (1 - F["leaf_from"]) * (
-                    j / max(1, n_leaf - 1))
+                    j / max(1, n_nodes - 1))
                 at = rot @ Vector((0, 0, h * t))
-                leaves.append([at, lL, lW, F["leaf_tilt"], j * 2.39996 + az0])
+                base_az = (j * 1.5708 if per_node > 1 else j * 2.39996) + az0
+                nodes.append([[at, lL, lW, F["leaf_tilt"],
+                               base_az + k * math.tau / per_node]
+                              for k in range(per_node)])
 
     if F["basal"]:                      # rosette / mound / tuft at the ground
         nb = _rint(rng, *F["basal"])
@@ -110,8 +136,8 @@ def build_herb(form, rng, coll, name_prefix=""):
             rr = (0.18 if F.get("low") else 0.10) * rng.random()
             at = Vector((math.cos(az) * rr, math.sin(az) * rr,
                          0.01 if F.get("low") else 0.02))
-            leaves.append([at, ln, lW,
-                           F["leaf_tilt"] * (0.8 + rng.random() * 0.4), az])
+            nodes.append([[at, ln, lW,
+                           F["leaf_tilt"] * (0.8 + rng.random() * 0.4), az]])
 
     if F["stalks"]:                     # bare flower stalks rising above
         for _ in range(_rint(rng, *F["stalks"])):
@@ -121,13 +147,20 @@ def build_herb(form, rng, coll, name_prefix=""):
             stems.append(((Matrix.Rotation(az, 4, "Z")
                            @ Matrix.Rotation(splay, 4, "Y")), h, 0.008, 0.005))
 
+    # Leaf counts here are tuned for a simple blade; a lupine's palmate one costs
+    # five times as much, so the population is thinned to what the budget affords
+    # before anything is stamped (mesh_ops.thin_leaf_nodes).
+    nodes = thin_leaf_nodes(nodes, shape, C.TRI_BUDGETS["herb"],
+                            len(stems) * CONE_TRIS)
+    leaves = [leaf for node in nodes for leaf in node]
+
     # A leaf's own length is most of the horizontal reach, so the shaping factor
     # applies to the blade as well as its anchor — the leaf keeps its shape.
     # That couples the two axes: shrinking a rosette's leaves lowers the plant
     # as well as narrowing it, so the factor is found by iterating to a fixed
     # point rather than divided out once (a single pass lands ~35% off on the
     # basal forms, where leaves are the whole plant).
-    ext = [leaf_extent(ln, t, F["shape"]) for _a, ln, _w, t, _az in leaves]
+    ext = [leaf_extent(ln, t, shape) for _a, ln, _w, t, _az in leaves]
     stem_h = max([h for _r, h, _a, _b in stems] + [1e-6])
     reach = max([math.hypot(a.x, a.y) + e[0]
                  for (a, *_r), e in zip(leaves, ext)] + [1e-6])
@@ -144,7 +177,7 @@ def build_herb(form, rng, coll, name_prefix=""):
     for rot, h, r_bot, r_top in stems:
         add_cone(bm, r_bot, r_top, h, 4, rot)
     for at, ln, wd, tilt, az in leaves:
-        add_leaf(bm, rng, ln, wd, tilt, az, at, F["shape"])
+        add_blade_or_leaf(bm, rng, ln, wd, tilt, az, at, shape)
 
     mat = preview_material()
     return {C.PART_FOLIAGE: bm_to_object(
