@@ -19,12 +19,13 @@ Use this skill when you:
 - need a value change to reach users who already have a DB;
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
-**Current facts (verify before quoting):** branch `V2.19`,
-`_SCHEMA_VERSION = 46` (in `src/db/plants.py`). CLAUDE.md and
-`docs/DATABASE_SCHEMA.md` lag the code — the code wins. `docs/DATABASE_SCHEMA.md`
-still says version 17; the inline changelog comments in `plants.py` stop at v41
-even though the constant is 45. Treat those docs as stale and fix them as part
-of your change (see step 6).
+**Current facts (verify before quoting):** branch `V2.29`,
+`_SCHEMA_VERSION = 47` (in `src/db/plants.py`) — v47 added the botanical
+morphology columns; `scripts/seed_woody_morphology.py` is the worked example of
+authoring seed values alongside a bump. The code always wins over the docs; the
+inline changelog comments in `plants.py` lag the constant. `tests/test_skill_library.py`
+fails the build when a skill quotes a stale version, so update this line as part
+of your bump (see step 6).
 
 ## The mental model: two independent mechanisms
 
@@ -80,7 +81,7 @@ existing installs.
 2. **Write a migration helper if you added a column/table to an existing
    table.** Follow `_migrate_to_v31`:
    ```python
-   def _migrate_to_v46(conn):
+   def _migrate_to_v47(conn):
        for col_name, col_def in (("my_col", "TEXT DEFAULT ''"),):
            try:
                conn.execute(f"ALTER TABLE plants ADD COLUMN {col_name} {col_def}")
@@ -88,7 +89,8 @@ existing installs.
                pass  # column already present (fresh install got it from schema.sql)
        conn.commit()
    ```
-   Then wire it into `init_db`: `if current_version < 46: _migrate_to_v46(conn)`.
+   Then wire it into `init_db`: `if current_version < 47: _migrate_to_v47(conn)`.
+   (Mind the variable name — it is `current_version`, not `current`.)
    A brand-new `CREATE TABLE IF NOT EXISTS` needs **no** migration helper — the
    `executescript(schema.sql)` at the top of `init_db` creates it. (That is why
    `shade_zone_cache`/`wind_cache` had "no ALTER migration needed" — see the v21
