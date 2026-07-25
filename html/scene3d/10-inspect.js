@@ -468,6 +468,19 @@ window.permaMeasure = function () {
     out.groups++;
   });
   out.verts.sort((a, b) => a - b);
+  // How much of the frame the camera is actually giving the design. "The plant
+  // looks wrong" is sometimes "the plant is 4% of the viewport", which no amount
+  // of geometry measuring can show — and `camera` is a const in a classic script,
+  // so a probe page cannot reach it any other way.
+  if (typeof camera !== "undefined" && controls) {
+    const dist = camera.position.distanceTo(controls.target);
+    out.view = {
+      dist_m: +dist.toFixed(2),
+      fov: camera.fov,
+      // The world height the frame spans at the orbit target.
+      visible_h_m: +(2 * dist * Math.tan(camera.fov * Math.PI / 360)).toFixed(2),
+    };
+  }
   if (out.groups) {
     out.height_m = +(box.max.y - box.min.y).toFixed(3);
     out.width_m = +Math.max(box.max.x - box.min.x,

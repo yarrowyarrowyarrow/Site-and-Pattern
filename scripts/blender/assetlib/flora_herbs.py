@@ -117,8 +117,15 @@ def build_herb(form, rng, coll, name_prefix="", grain=1, leaf_shape=None,
             h = 0.7 + rng.random() * 0.3
             rot = (Matrix.Rotation(az0, 4, "Z")
                    @ Matrix.Rotation(splay, 4, "Y"))
+            # Radii are HALF the stem's diameter as a fraction of the plant's
+            # height. Real herbaceous stems are fine: a fireweed's is ~4 mm on a
+            # 1.4 m plant (0.3% of height), a yarrow's flowering stem ~2 mm on
+            # 0.5 m (0.4%). The old 0.012/0.008 drew them at 2.4%/1.6% — the same
+            # 3-5x error that made the tree trunks read as concrete pillars, and
+            # it is why the stalks, not the leaves, dominated every rosette and
+            # mat specimen in the gallery.
             stems.append([Vector((0, 0, 0)), rot @ Vector((0, 0, h)),
-                          0.012, 0.006])
+                          0.005, 0.003])
             n_leaf = _rint(rng, *F["per_stem"])
             # Alternate leaves spiral by the golden angle; opposite ones come in
             # pairs at the same node and whorled in rings of three.
@@ -152,7 +159,7 @@ def build_herb(form, rng, coll, name_prefix="", grain=1, leaf_shape=None,
             rot = (Matrix.Rotation(az, 4, "Z")
                    @ Matrix.Rotation(splay, 4, "Y"))
             stems.append([Vector((0, 0, 0)), rot @ Vector((0, 0, h)),
-                          0.008, 0.005])
+                          0.0035, 0.0022])
             # A naked scape is right for a rosette (fleabane, pussytoes) and
             # wrong for a yarrow, whose flowering stems carry leaves the whole
             # way up. Forms say which they are.

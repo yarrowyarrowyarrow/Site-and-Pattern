@@ -56,6 +56,22 @@ python -m http.server 8000
 #   http://localhost:8000/html/sprite_gallery.html
 ```
 
+**Wildflower specimens are paired.** Five of the herb entries exist to make the
+V2.29 morphology work visible: they hold the growth form constant and vary only
+the leaf character, so the difference is attributable. Fireweed (erect ·
+lanceolate) against Lupine (erect · palmate compound); Smooth Aster (clump ·
+alternate) against Bergamot (clump · **opposite**, same leaf shape); Yarrow
+(ferny · bipinnate) against Columbine (ferny · pinnate compound); Fleabane
+(rosette · spatulate) against Prairie Crocus (rosette · deeply cut); Pussytoes
+(mat · spatulate) against Bedstraw (mat · **whorled**). One example per form
+could not show any of this — there are 46 baked wildflower archetypes.
+
+Each specimen is framed to fill the same share of the view. The framing box used
+to have a 0.7 m floor, which only ever applied to plants shorter and narrower
+than that — most wildflowers — so pussytoes filled 12% of the frame while every
+tree filled 43%: the gallery was worst at exactly the species it was most needed
+for (`src/sprite_gallery.py:_scene_for`).
+
 Deep-link a single sprite with `?sprite=KEY`, e.g.
 `…/sprite_gallery.html?sprite=conifer_pine` or `?sprite=shrub_dogwood`.
 

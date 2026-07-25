@@ -135,6 +135,27 @@ GEOMETRY = [
      "Nodding Onion",     _plain("wildflower", "Allium cernuum", 0.4, 0.3, "Nodding Onion")),
     ("herb_pussytoes", "Pussytoes (mat)", "Low cushion of spoon-shaped basal leaves (Antennaria).",
      "Rosy Pussytoes",    _plain("wildflower", "Antennaria rosea", 0.2, 0.4, "Rosy Pussytoes")),
+    # A second specimen for five herb forms, chosen so the form is HELD CONSTANT
+    # and only the leaf character changes. That is what the V2.29 variant work
+    # actually does — 46 baked archetypes across the 211 wildflowers, keyed by
+    # (blade class x grain class) with the arrangement stamped in — and with one
+    # example per form the gallery could not show any of it. Pair each of these
+    # with the entry above it: same silhouette, different leaf.
+    ("herb_lupine",    "Lupine (erect · palmate compound)",
+     "Same erect form as fireweed, but whorls of leaflets fanning from one point (Lupinus).",
+     "Silky Lupine",      _plain("wildflower", "Lupinus sericeus", 0.6, 0.4, "Silky Lupine")),
+    ("herb_bergamot",  "Bergamot (clump · OPPOSITE leaves)",
+     "Same clump form and lance leaf as the aster — but paired at each node, not spiralled (Monarda).",
+     "Wild Bergamot",     _plain("wildflower", "Monarda fistulosa", 0.8, 0.5, "Wild Bergamot")),
+    ("herb_crocus",    "Prairie Crocus (rosette · deeply cut)",
+     "A rosette of finely dissected leaves, and one of the smallest plants here (Pulsatilla).",
+     "Prairie Crocus",    _plain("wildflower", "Pulsatilla nuttalliana", 0.2, 0.25, "Prairie Crocus")),
+    ("herb_bedstraw",  "Bedstraw (mat · WHORLED leaves)",
+     "Same low mat as pussytoes, with narrow leaves in rings of three (Galium).",
+     "Northern Bedstraw", _plain("wildflower", "Galium boreale", 0.5, 0.5, "Northern Bedstraw")),
+    ("herb_columbine", "Columbine (ferny · pinnate compound)",
+     "Same ferny mound as yarrow, built from leaflets rather than dissected blades (Aquilegia).",
+     "Blue Columbine",    _plain("wildflower", "Aquilegia brevistyla", 0.5, 0.35, "Blue Columbine")),
     ("fern",           "Fern", "Arching divided fronds from a crown.",
      "Ostrich Fern",      _plain("fern", "Matteuccia struthiopteris", 1.2, 0.9, "Ostrich Fern")),
     ("grass",          "Grass / sedge / rush tuft", "Dense fan of flat arching blades.",
@@ -201,7 +222,16 @@ def _scene_for(plant, pid, name, i):
     p0 = sc["plants"][0] if sc["plants"] else {}
     h = float(p0.get("height_m") or 1.0)
     c = float(p0.get("canopy_m") or 0.5)
-    half = round(max(1.0 * h, 1.2 * c, 0.7), 2)
+    # Frame the box on the SPECIMEN, so every sprite fills the same ~43% of the
+    # view whether it is a 20 m aspen or a 20 cm pussytoes (the viewer's
+    # frameCamera derives its distance from these bounds). The floor used to be
+    # 0.7 m, which only ever bit plants shorter and narrower than that — i.e. most
+    # wildflowers — and pulled the camera back to frame a 1.4 m box around a 20 cm
+    # plant: pussytoes filled 12% of the frame and yarrow 31% while everything
+    # else filled 43%. The gallery exists to show the sprite, so it was worst at
+    # exactly the species this page is most needed for. The remaining floor only
+    # guards against a degenerate box for a 5 cm plant.
+    half = round(max(1.0 * h, 1.2 * c, 0.30), 2)
     sc["bounds"] = {"min_x": -half, "max_x": half, "min_y": -half, "max_y": half}
     sc["origin"] = {"lat": LAT0 + i * 0.001, "lng": LNG0}   # unique → reframe on switch
     sc["boundary"] = []
@@ -231,7 +261,19 @@ def _with_morphology(plant, by_sci):
 
 def _specimens():
     rows = _seed_rows()
-    by_sci = {(r.get("scientific_name") or "").lower(): r for r in rows}
+    # A species can appear in BOTH seed files — Monarda fistulosa is "Wild
+    # Bergamot" in plants_master and "Bee Balm" in garden_plants — and only one of
+    # the two rows carries the morphology. Last-one-wins silently handed the
+    # gallery the empty row, so a specimen lost its leaves for no visible reason.
+    # Prefer whichever row actually describes its leaves.
+    by_sci = {}
+    for r in rows:
+        key = (r.get("scientific_name") or "").lower()
+        if not key:
+            continue
+        if key not in by_sci or (r.get("leaf_shape")
+                                 and not by_sci[key].get("leaf_shape")):
+            by_sci[key] = r
     out = []
     for key, name, desc, example, plant in GEOMETRY:
         out.append((key, name, desc, example, _with_morphology(plant, by_sci)))
