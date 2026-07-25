@@ -286,6 +286,15 @@ class Scene3DWindow(QWidget):
                                      support_by_taxon(pids))
         except Exception:      # noqa: BLE001
             self.viewer.set_wildlife([])
+        # Click-to-inspect content (V2.29): the sourced ecology behind every
+        # species on screen, pushed with the scene so a click opens a card with
+        # no round trip. Re-pushed each time because the growth/season sliders
+        # change what the card says ("size over time" marks the current year).
+        try:
+            from src.scene_dossier import build_dossier
+            self.viewer.set_dossier(build_dossier(scene))
+        except Exception:      # noqa: BLE001 — the card is a read nicety
+            self.viewer.set_dossier({})
         # Keep an active "show its plants" spotlight in sync with the new scene.
         if getattr(self, "_spot_btn", None) is not None and self._spot_btn.isChecked():
             self._push_spotlight()

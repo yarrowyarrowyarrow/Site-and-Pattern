@@ -411,6 +411,11 @@ def wildlife_for_scene(scene: dict, *,
             "h": round(base_h + ((seed >> 6) % 20 - 10) / 100.0 * base_h, 2),
             "name": r.get("common_name", ""),
             "on": p.get("common_name", ""),
+            # The anchor plant's id as well as its name: the 3D inspector draws
+            # food-web threads from a clicked plant to the animals that use it,
+            # and matching on a display name would tie two plantings of the same
+            # species together (V2.29).
+            "on_id": pid,
             "rel": r.get("relationship", ""),
             "seed": seed % 100000,
             "app": app,

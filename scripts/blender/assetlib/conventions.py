@@ -136,7 +136,11 @@ VARIANT_PREFIX = "v"                          # layer variants: v0, v1, ...
 # Triangle budgets per asset unit (a tier / variant counts alone).
 # Enforced by build_all (raises) and re-checked by tests/test_model_assets.py.
 TRI_BUDGETS = {
-    "tree_tier0": 1200,
+    # tier0 was 1200 when a tier meant "how grown", and a young tree was drawn
+    # as a sparse adult. Tiers are size classes now, and a small conifer is a
+    # DENSE little cone foliated to the ground — the opposite of sparse — so the
+    # young tier needs more geometry than it used to, not less.
+    "tree_tier0": 1500,
     "tree_tier1": 2200,
     "tree_tier2": 3500,
     "shrub": 2000,

@@ -25,16 +25,25 @@ from .mesh_ops import (add_cone, add_cone_between, add_ellipsoid, bm_to_object,
 
 # ── parameter tables (echo 02-plants.js) ─────────────────────────────────────
 
+# Whorls by tier are DENSE AT EVERY AGE. A young spruce is not a sparse adult —
+# it is a small dense cone foliated to the ground, and the thing that actually
+# changes with age is how far up the clear bole reaches and how open the crown
+# gets. Tier 0 used to carry 3–5 whorls, which on a narrow (3.3:1) crown drew a
+# 5 m sapling as a bare mast with a few twigs.
 CONIFER_KINDS = {
-    # whorls by tier          baseR  droop  spire  boughs  lift
-    "spruce":      {"whorls": (4, 7, 10), "base_r": 0.34, "droop": 0.16,
-                    "spire": 1.15, "boughs": 8, "lift": 0.04},
-    "fir":         {"whorls": (5, 8, 11), "base_r": 0.30, "droop": 0.08,
-                    "spire": 1.4, "boughs": 8, "lift": 0.02},
-    "larch":       {"whorls": (3, 5, 7), "base_r": 0.36, "droop": 0.22,
-                    "spire": 0.7, "boughs": 6, "lift": 0.05},
-    "def_conifer": {"whorls": (3, 5, 8), "base_r": 0.40, "droop": 0.14,
-                    "spire": 1.0, "boughs": 7, "lift": 0.05},
+    # whorls by tier          baseR  droop  spire  boughs  lift  base of crown
+    "spruce":      {"whorls": (9, 12, 15), "base_r": 0.34, "droop": 0.16,
+                    "spire": 1.15, "boughs": 9, "lift": 0.04,
+                    "crown_base": (0.04, 0.08, 0.14)},
+    "fir":         {"whorls": (10, 13, 16), "base_r": 0.30, "droop": 0.08,
+                    "spire": 1.4, "boughs": 9, "lift": 0.02,
+                    "crown_base": (0.04, 0.08, 0.16)},
+    "larch":       {"whorls": (6, 8, 10), "base_r": 0.36, "droop": 0.22,
+                    "spire": 0.7, "boughs": 7, "lift": 0.05,
+                    "crown_base": (0.06, 0.14, 0.26)},
+    "def_conifer": {"whorls": (8, 10, 13), "base_r": 0.40, "droop": 0.14,
+                    "spire": 1.0, "boughs": 7, "lift": 0.05,
+                    "crown_base": (0.05, 0.10, 0.18)},
 }
 
 DECID_FORMS = {
@@ -111,12 +120,15 @@ def _build_conifer(kind, tier, rng, aspect):
     fol = bmesh.new()
     H = 1.0
     whorls = max(2, p["whorls"][tier])
-    z0, z1 = 0.10, 0.90
+    # A sapling's lowest boughs sweep the ground; an old tree has self-pruned a
+    # clear bole. That, not sparseness, is what makes a young conifer read young.
+    z0, z1 = p["crown_base"][tier], 0.90
     # Lay the whorls out in the builder's natural frame first, collecting every
     # point; shape_to_aspect then pulls them in to the species' real crown width
     # before anything is stamped, so the boughs shorten and the needle planes
     # keep their authored thickness.
     boughs, stubs, pts = [], [], []
+    bare_in_winter = kind == "larch"
     for i in range(whorls):
         f = i / max(1, whorls - 1)                      # 0 base … 1 top
         z = z0 + (z1 - z0) * f
@@ -130,11 +142,18 @@ def _build_conifer(kind, tier, rng, aspect):
             tip = origin + Vector((math.cos(az) * reach, math.sin(az) * reach,
                                    -math.sin(droop) * reach))
             boughs.append((origin, tip, girth))
+            pts.extend((origin, tip))
             # Short bare branch stub under the bough — the winter skeleton.
-            s0 = Vector((0, 0, z))
-            s1 = s0 + (tip - origin) * 0.55
-            stubs.append((s0, s1))
-            pts.extend((origin, tip, s0, s1))
+            # Only the larch needs one: it is the one conifer here that drops its
+            # needles, and the viewer hides the foliage part for nothing else, so
+            # on a spruce or fir these stubs are permanently buried under the
+            # boughs while costing as much geometry as the boughs themselves.
+            # Reclaiming that is what pays for a properly dense young crown.
+            if bare_in_winter:
+                s0 = Vector((0, 0, z))
+                s1 = s0 + (tip - origin) * 0.55
+                stubs.append((s0, s1))
+                pts.extend((s0, s1))
     # The finished height is the trunk or the spire tip, whichever is taller —
     # not the nominal H, or the aspect lands a few percent narrow.
     shape_to_aspect(pts, aspect,

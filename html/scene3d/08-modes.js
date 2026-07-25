@@ -282,6 +282,9 @@ renderer.setAnimationLoop((t) => {
   else { if (cinematic) cineStep(t); controls.update(); }   // dolly, then auto-orbit
   animateWildlife(t);               // ambient life (no-op when the group is hidden)
   if (!beeMode) stepSpotlight(t);   // "show its plants" tour (orbit/walk overlay)
+  // 10-inspect.js loads after this chunk, and the loop is already running by
+  // then — same forward-reference hazard as wildlifeGroup in 01-core.js.
+  if (typeof stepThreads === 'function') stepThreads(t);   // food-web threads
   updatePrecip(t);                  // falling snow in winter (no-op otherwise)
   renderer.render(scene, camera);
 });

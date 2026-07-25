@@ -115,6 +115,7 @@ class TestStructuralCeilings(unittest.TestCase):
         # extraction + fauna clone/tint. When this trips, split the fauna
         # half into 10-models-fauna.js.
         (_HTML / "scene3d" / "09-models.js", 650),     # ~330 now
+        (_HTML / "scene3d" / "10-inspect.js", 600),    # ~330 now
     ]
 
     def test_module_line_ceilings(self):

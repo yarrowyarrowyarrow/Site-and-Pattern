@@ -143,6 +143,19 @@ def set_plant_spotlight(items: list, appearance: dict = None) -> str:
             f"{json.dumps(items or [])}, {json.dumps(appearance or None)});")
 
 
+def set_dossier(dossier: dict) -> str:
+    """JS to hand the viewer the learning content behind a click (V2.29) —
+    ``src.scene_dossier.build_dossier`` output, ``{plants: {...}, fauna: {...}}``.
+
+    Pushed alongside each scene so a click needs no round trip: the 3D bridge is
+    one-directional (no QWebChannel), and shipping the card's content with the
+    geometry is what lets the inspector work in walk / fly / bee modes too.
+    Guarded with ``&&`` so it's a no-op until the viewer registers
+    ``window.permaSetDossier``."""
+    return ("window.permaSetDossier && window.permaSetDossier("
+            f"{json.dumps(dossier or {})});")
+
+
 def set_wildlife_labels(on: bool) -> str:
     """JS to toggle the "who lives here" roster + always-on name labels over the
     ambient wildlife (V2.13) — identify the scene without hovering. Guarded with

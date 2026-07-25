@@ -346,8 +346,8 @@
    "file": "tree_def_conifer.glb",
    "half_width": {
     "tier0": 0.16451,
-    "tier1": 0.16474,
-    "tier2": 0.16388
+    "tier1": 0.16453,
+    "tier2": 0.16423
    },
    "parts": [
     "bark",
@@ -413,9 +413,9 @@
   "tree.fir": {
    "file": "tree_fir.glb",
    "half_width": {
-    "tier0": 0.15198,
-    "tier1": 0.15093,
-    "tier2": 0.15205
+    "tier0": 0.14695,
+    "tier1": 0.15218,
+    "tier2": 0.15207
    },
    "parts": [
     "bark",
@@ -430,9 +430,9 @@
   "tree.larch": {
    "file": "tree_larch.glb",
    "half_width": {
-    "tier0": 0.14226,
-    "tier1": 0.14352,
-    "tier2": 0.14413
+    "tier0": 0.14373,
+    "tier1": 0.14414,
+    "tier2": 0.14404
    },
    "parts": [
     "bark",
@@ -481,9 +481,9 @@
   "tree.spruce": {
    "file": "tree_spruce.glb",
    "half_width": {
-    "tier0": 0.15089,
-    "tier1": 0.15177,
-    "tier2": 0.1528
+    "tier0": 0.15279,
+    "tier1": 0.15255,
+    "tier2": 0.15192
    },
    "parts": [
     "bark",

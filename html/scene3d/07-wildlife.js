@@ -273,7 +273,8 @@ function rebuildWildlife() {
     obj.position.set(anchor.x, gy + (spec.h || 0.3), anchor.z);
     // Backref so hover can name the creature + the plant it's using.
     obj.userData.critterInfo = { name: spec.name || '', on: spec.on || '',
-                                 rel: spec.rel || '', kind: spec.kind };
+                                 rel: spec.rel || '', kind: spec.kind,
+                                 onId: spec.on_id };
     const flier = obj.userData.anim === 'flier' || obj.userData.anim === 'hover';
     const shadow = makeCritShadow(flier ? 0.5 : 0.4);
     shadow.position.set(anchor.x, gy + 0.02, anchor.z);

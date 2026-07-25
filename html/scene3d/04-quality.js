@@ -244,10 +244,22 @@ let SHADOW_TEX = null;
 const TREE_SUBVARS = 3;    // distinct random branchings per species, so a stand
                            // of one species reads as individuals, not clones
 
-// scale_factor (0.1–1.0 growth maturity) → structural tier.
-function tierFor(scaleFactor) {
-  const s = scaleFactor == null ? 1 : scaleFactor;
-  return s < 0.35 ? 0 : (s < 0.7 ? 1 : 2);
+// A tree's structural tier — which is a SIZE class, not a growth stage. The
+// asset set carries three builds per species and this picks between them from
+// the plant's height right now (which already folds the growth year in, since
+// height_m = mature height x the year's growth factor).
+//
+// It used to key off scale_factor alone, i.e. "how far along is this tree", so
+// every mature tree got the most complex build and every young one the
+// sparsest — regardless of whether "mature" meant a 3 m pin cherry or a 25 m
+// white spruce. That reads especially wrong on conifers: a young spruce is not
+// a sparse adult, it is a small DENSE cone foliated to the ground, and the
+// sparse build drew a 5 m sapling as a bare mast (V2.29). Growth still moves a
+// tree up through the tiers — it just arrives there by getting bigger.
+const _TIER_H_M = [3, 9];        // <3 m small · 3–9 m medium · >9 m large
+function tierFor(p) {
+  const h = (p && p.height_m) || 0;
+  return h < _TIER_H_M[0] ? 0 : (h < _TIER_H_M[1] ? 1 : 2);
 }
 
 // Horizontal instance scale for an archetype whose authored proportions were
@@ -397,7 +409,7 @@ function buildLayer(list, variants, mat, archOf, scaleOf, month, year, noRot, te
     const total = places.reduce((s, pl) => s + pl.length, 0);
     const arch = archOf(v);
     const mesh = instancedMesh(arch, total, mat);
-    const names = new Array(total);
+    const names = new Array(total), ids = new Array(total);
     let idx = 0;
     items.forEach((p, ii) => {
       // scaleOf gives [canopy_m, height_m, canopy_m]; the horizontal pair is
@@ -414,10 +426,12 @@ function buildLayer(list, variants, mat, archOf, scaleOf, month, year, noRot, te
         setInst2(mesh, idx, wx, gy, -wy,
                  sx * m, sy * (noRot ? 1 : m), sz * m, rotY, col);
         names[idx] = p.common_name || '';
+        ids[idx] = p.plant_id;
         idx++;
       });
     });
     mesh.userData.pick = names;
+    mesh.userData.pickId = ids;
     plantsGroup.add(mesh);
   });
 }
@@ -469,7 +483,7 @@ function buildHerbLayer(list, month, year, terrain) {
     const places = items.map(p => spreadPlacements(p, year));
     const total = places.reduce((s, pl) => s + pl.length, 0);
     const mesh = instancedMesh(arch, total, MATS.leaf);
-    const names = new Array(total);
+    const names = new Array(total), ids = new Array(total);
     let idx = 0;
     items.forEach((p, ii) => {
       const c = unitXZ(arch, Math.max(0.15, p.canopy_m));
@@ -482,10 +496,12 @@ function buildHerbLayer(list, month, year, terrain) {
         const gy = terrainHeightAt(x, wy, terrain);
         setInst2(mesh, idx, x, gy, -wy, c * m, h * m, c * m, rotY, col);
         names[idx] = p.common_name || '';
+        ids[idx] = p.plant_id;
         idx++;
       });
     });
     mesh.userData.pick = names;
+    mesh.userData.pickId = ids;
     plantsGroup.add(mesh);
   }
 }
@@ -509,7 +525,7 @@ function buildShrubLayer(list, month, year, terrain) {
       ? instancedMesh(arch.stemGeo, total, arch.stemMat || MATS.branch) : null;
     // Woody stems are bark-brown, except red-osier dogwood's signature red.
     const stemHex = prof.redStems ? '#b5402e' : '#6b5236';
-    const names = new Array(total);
+    const names = new Array(total), ids = new Array(total);
     let idx = 0;
     items.forEach((p, ii) => {
       const c = unitXZ(arch.foliageGeo, Math.max(0.25, p.canopy_m));
@@ -524,10 +540,12 @@ function buildShrubLayer(list, month, year, terrain) {
         setInst2(foliage, idx, x, gy, -wy, c * m, h * m, c * m, rotY, col);
         if (stems) setInst2(stems, idx, x, gy, -wy, c * m, h * m, c * m, rotY, scol);
         names[idx] = p.common_name || '';
+        ids[idx] = p.plant_id;
         idx++;
       });
     });
     foliage.userData.pick = names;
+    foliage.userData.pickId = ids;
     plantsGroup.add(foliage);
     if (stems) plantsGroup.add(stems);
   }
@@ -568,7 +586,7 @@ function buildPlants(group, plants, month, year, terrain) {
       // drop) or a crown form, so a species reads right regardless of dimensions.
       const cls = (p.foliage_type === 'evergreen' || prof.conifer) ? 'conifer' : 'deciduous';
       const form = prof.formBias || formOf(p);
-      const t = tierFor(p.scale_factor);
+      const t = tierFor(p);
       const sub = indHash(p) % TREE_SUBVARS;
       const ck = cls === 'conifer' ? (prof.conifer || 'standard') : 'd';
       const key = cls + '_' + ck + '_' + prof.id + '_' + form + '_' + t + '_' + sub;
@@ -581,7 +599,7 @@ function buildPlants(group, plants, month, year, terrain) {
       const total = places.reduce((s, pl) => s + pl.length, 0);
       const branch = instancedMesh(arch.branchGeo, total, arch.branchMat || MATS.branch);
       const foliage = instancedMesh(arch.foliageGeo, total, MATS.foliage);
-      const names = new Array(total);
+      const names = new Array(total), ids = new Array(total);
       let idx = 0;
       items.forEach((p, ii) => {
         const h = Math.max(0.4, p.height_m);
@@ -598,11 +616,13 @@ function buildPlants(group, plants, month, year, terrain) {
           if (bare) setInst2(foliage, idx, x, gy, z, 0.001, 0.001, 0.001, rotY, _white);
           else setInst2(foliage, idx, x, gy, z, c * m, h * m, c * m, rotY, fcol);
           names[idx] = p.common_name || '';
+          ids[idx] = p.plant_id;
           idx++;
         });
       });
       // Pick from the trunk too, so a bare-winter tree still names on hover.
       branch.userData.pick = names; foliage.userData.pick = names;
+      branch.userData.pickId = ids; foliage.userData.pickId = ids;
       plantsGroup.add(branch, foliage);
     }
   }
