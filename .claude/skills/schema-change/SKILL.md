@@ -20,9 +20,10 @@ Use this skill when you:
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
 **Current facts (verify before quoting):** branch `V2.29`,
-`_SCHEMA_VERSION = 48` (in `src/db/plants.py`) — v47 added the botanical
-morphology columns; `scripts/seed_woody_morphology.py` is the worked example of
-authoring seed values alongside a bump. The code always wins over the docs; the
+`_SCHEMA_VERSION = 49` (in `src/db/plants.py`) — v49 added `fruit_form`, the
+shape half of `fruit_color`; v47/v48 added the botanical morphology columns.
+`scripts/seed_fruit_morphology.py` and `scripts/seed_woody_morphology.py` are the
+worked examples of authoring seed values alongside a bump. The code always wins over the docs; the
 inline changelog comments in `plants.py` lag the constant. `tests/test_skill_library.py`
 fails the build when a skill quotes a stale version, so update this line as part
 of your bump (see step 6).

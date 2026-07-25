@@ -1244,7 +1244,8 @@
     "leaf_shape": "obovate",
     "leaf_size_cm": 2.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "fruit_form": "berry"
   },
   {
     "common_name": "Bebb's Sedge",
@@ -1659,7 +1660,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6f665a",
     "fall_color": "#c07a34",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "fruit_form": "pome"
   },
   {
     "common_name": "Black Spruce",
@@ -2180,7 +2182,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6a5a48",
     "fall_color": "#b0402e",
-    "branching": "decurrent"
+    "branching": "decurrent",
+    "fruit_form": "berry"
   },
   {
     "common_name": "Bog Cranberry",
@@ -2233,7 +2236,8 @@
     "leaf_shape": "elliptic",
     "leaf_size_cm": 1.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "fruit_form": "berry"
   },
   {
     "common_name": "Boreal Yarrow",
@@ -2399,7 +2403,8 @@
     "leaf_arrangement": "opposite",
     "bark_color": "#75695a",
     "fall_color": "#cbb44a",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "fruit_form": "berry"
   },
   {
     "common_name": "Bristly Black Currant",
@@ -2455,7 +2460,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6a5644",
     "fall_color": "#b8703a",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "fruit_form": "strig"
   },
   {
     "common_name": "Brittle Prickly-pear",
@@ -2820,7 +2826,8 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "whorled",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "fruit_form": "flat_cluster"
   },
   {
     "common_name": "Bur Oak",
@@ -3031,7 +3038,8 @@
     "leaf_arrangement": "opposite",
     "bark_color": "#7a7264",
     "fall_color": "#a89e80",
-    "branching": "decurrent"
+    "branching": "decurrent",
+    "fruit_form": "berry"
   },
   {
     "common_name": "Canada Goldenrod",
@@ -3403,7 +3411,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6f6252",
     "fall_color": "#d0932e",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "fruit_form": "raceme"
   },
   {
     "common_name": "Common Alumroot",
@@ -3772,7 +3781,8 @@
     "leaf_arrangement": "opposite",
     "bark_color": "#75695c",
     "fall_color": "#b8a860",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "fruit_form": "berry"
   },
   {
     "common_name": "Common Sunflower",
@@ -4088,7 +4098,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6a5a48",
     "fall_color": "#a8402e",
-    "branching": "prostrate"
+    "branching": "prostrate",
+    "fruit_form": "berry"
   },
   {
     "common_name": "Creeping Sibbaldia",
@@ -4559,7 +4570,8 @@
     "leaf_shape": "trifoliate",
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "sprawling"
+    "growth_form": "sprawling",
+    "fruit_form": "aggregate"
   },
   {
     "common_name": "Dotted Blazingstar",
@@ -4986,7 +4998,8 @@
     "leaf_shape": "trifoliate",
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "sprawling"
+    "growth_form": "sprawling",
+    "fruit_form": "aggregate"
   },
   {
     "common_name": "Early Blue Violet",
@@ -5457,7 +5470,8 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "fruit_form": "berry"
   },
   {
     "common_name": "Field Chickweed",
@@ -5932,7 +5946,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6e5c46",
     "fall_color": "#c5442a",
-    "branching": "decurrent"
+    "branching": "decurrent",
+    "fruit_form": "flat_cluster"
   },
   {
     "common_name": "Fringed Brome",
@@ -6450,7 +6465,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#7a5a42",
     "fall_color": "#c8503a",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "fruit_form": "strig"
   },
   {
     "common_name": "Golden Draba",
@@ -7385,7 +7401,8 @@
     "leaf_arrangement": "opposite",
     "bark_color": "#75695c",
     "fall_color": "#b8402e",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "fruit_form": "flat_cluster"
   },
   {
     "common_name": "Hoary Aster",
@@ -8692,7 +8709,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6e6a4a",
     "fall_color": "#b5402e",
-    "branching": "decurrent"
+    "branching": "decurrent",
+    "fruit_form": "berry"
   },
   {
     "common_name": "Low Townsendia",
@@ -8799,7 +8817,8 @@
     "leaf_arrangement": "opposite",
     "bark_color": "#75695c",
     "fall_color": "#c04a2e",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "fruit_form": "flat_cluster"
   },
   {
     "common_name": "Lyalls Penstemon",
@@ -10348,7 +10367,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6e6254",
     "fall_color": "#c8853a",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "fruit_form": "strig"
   },
   {
     "common_name": "Northern Gentian",
@@ -11081,14 +11101,15 @@
     "image_license": "cc-by",
     "flower_color": "#f2f2ea",
     "flower_form": "cluster",
-    "fruit_color": "#3a1426",
+    "fruit_color": "#d8322b",
     "native_provinces": "AB,SK",
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
     "bark_color": "#7a4630",
     "fall_color": "#d9622e",
-    "branching": "decurrent"
+    "branching": "decurrent",
+    "fruit_form": "cherry"
   },
   {
     "common_name": "Pink Corydalis",
@@ -12295,7 +12316,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#8a5442",
     "fall_color": "#c07a3a",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "fruit_form": "hip"
   },
   {
     "common_name": "Prairie Sage",
@@ -12656,7 +12678,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#8a5442",
     "fall_color": "#c07a3a",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "fruit_form": "hip"
   },
   {
     "common_name": "Purple Avens (Water Avens)",
@@ -13275,7 +13298,8 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "fruit_form": "berry"
   },
   {
     "common_name": "Red Columbine",
@@ -13438,7 +13462,8 @@
     "leaf_arrangement": "opposite",
     "bark_color": "#b5402e",
     "fall_color": "#a83c2e",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "fruit_form": "flat_cluster"
   },
   {
     "common_name": "Richardson's Needlegrass",
@@ -14571,7 +14596,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#7d7a72",
     "fall_color": "#d1762e",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "fruit_form": "pome"
   },
   {
     "common_name": "Scarlet Butterfly Plant",
@@ -15503,7 +15529,8 @@
     "leaf_arrangement": "opposite",
     "bark_color": "#8a8578",
     "fall_color": "#b0aa8c",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "fruit_form": "berry"
   },
   {
     "common_name": "Silver Sagebrush",
@@ -15820,7 +15847,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6a5c4a",
     "fall_color": "#c07a3a",
-    "branching": "arching"
+    "branching": "arching",
+    "fruit_form": "strig"
   },
   {
     "common_name": "Slender Blue Beardtongue",
@@ -17012,7 +17040,8 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "fruit_form": "berry"
   },
   {
     "common_name": "Sticky Goldenrod",
@@ -18170,7 +18199,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#9a8a72",
     "fall_color": "#c8a03a",
-    "branching": "arching"
+    "branching": "arching",
+    "fruit_form": "aggregate"
   },
   {
     "common_name": "Thinleaf Alder",
@@ -18431,7 +18461,8 @@
     "leaf_shape": "trifoliate",
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "sprawling"
+    "growth_form": "sprawling",
+    "fruit_form": "aggregate"
   },
   {
     "common_name": "Trembling Aspen",
@@ -18793,7 +18824,8 @@
     "leaf_shape": "elliptic",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "vining"
+    "growth_form": "vining",
+    "fruit_form": "berry"
   },
   {
     "common_name": "Umbrella Buckwheat",
@@ -19055,7 +19087,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6a5a48",
     "fall_color": "#b5402e",
-    "branching": "decurrent"
+    "branching": "decurrent",
+    "fruit_form": "berry"
   },
   {
     "common_name": "Water Arum (Wild Calla)",
@@ -19635,7 +19668,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#7d7a72",
     "fall_color": "#d05a2e",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "fruit_form": "flat_cluster"
   },
   {
     "common_name": "Western Porcupine Grass",
@@ -19742,7 +19776,8 @@
     "leaf_arrangement": "opposite",
     "bark_color": "#75695c",
     "fall_color": "#b8a860",
-    "branching": "suckering"
+    "branching": "suckering",
+    "fruit_form": "berry"
   },
   {
     "common_name": "Western Wheatgrass",
@@ -20359,7 +20394,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6e6254",
     "fall_color": "#c8703a",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "fruit_form": "strig"
   },
   {
     "common_name": "Wild Blue Flax",
@@ -20571,7 +20607,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#75695c",
     "fall_color": "#c08a3a",
-    "branching": "arching"
+    "branching": "arching",
+    "fruit_form": "berry"
   },
   {
     "common_name": "Wild Licorice",
@@ -20681,7 +20718,8 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "fruit_form": "berry"
   },
   {
     "common_name": "Wild Mint",
@@ -20787,7 +20825,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#9a8a72",
     "fall_color": "#c08a3a",
-    "branching": "arching"
+    "branching": "arching",
+    "fruit_form": "aggregate"
   },
   {
     "common_name": "Wild Red Currant",
@@ -20842,7 +20881,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6a5c4a",
     "fall_color": "#c05a3a",
-    "branching": "arching"
+    "branching": "arching",
+    "fruit_form": "strig"
   },
   {
     "common_name": "Wild Sarsaparilla",
@@ -20948,7 +20988,8 @@
     "leaf_shape": "trifoliate",
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "basal",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "fruit_form": "strawberry"
   },
   {
     "common_name": "Wild Vetch",
@@ -21268,7 +21309,8 @@
     "leaf_shape": "trifoliate",
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "basal",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "fruit_form": "strawberry"
   },
   {
     "common_name": "Woods' Rose",
@@ -21324,7 +21366,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#85604a",
     "fall_color": "#c07a3a",
-    "branching": "suckering"
+    "branching": "suckering",
+    "fruit_form": "hip"
   },
   {
     "common_name": "Woolly Cinquefoil",

@@ -65,6 +65,10 @@ CREATE TABLE IF NOT EXISTS plants (
     flower_color TEXT DEFAULT '',       -- hex like '#f2c11e' or '' (no showy flower)
     flower_form TEXT DEFAULT 'none',    -- daisy | spike | umbel | cluster | bell | none
     fruit_color TEXT DEFAULT '',        -- berry hex (v35, V2.0); '' = dry/non-fruiting
+    -- Fruit SHAPE (v49, V2.29) — the companion to fruit_color. Every fleshy
+    -- fruit used to draw as the same sphere sprite, which made a strawberry, a
+    -- rose hip and a chokecherry raceme all "red dot".
+    fruit_form TEXT DEFAULT '',         -- berry | strig | raceme | cherry | pome | hip | strawberry | aggregate | flat_cluster | ''
     -- Imagery (schema v24, V1.60). An OPENLY-licensed photo + its citation;
     -- NULL/empty until the dataset workflow fills them. The app caches the URL
     -- locally and shows the attribution beside the photo (src/image_cache.py).

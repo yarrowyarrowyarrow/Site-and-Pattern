@@ -352,6 +352,9 @@ def build_scene(project: dict, *, year: int = 0,
             "flower_form": plant.get("flower_form") or "none",
             **_bloom_window(plant),
             "fruit_color": plant.get("fruit_color") or "",
+            # Fruit SHAPE (schema v49) — additive, so no SCENE_VERSION bump. The
+            # viewer falls back to the round `berry` sprite when it is empty.
+            "fruit_form": plant.get("fruit_form") or "",
             **_fruit_window(plant),
             # Botanical morphology (schema v47, V2.29) — additive fields the
             # viewer feature-checks, so no SCENE_VERSION bump. Empty for every

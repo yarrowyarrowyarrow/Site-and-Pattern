@@ -12,7 +12,7 @@ seeded reference data every project draws from.
   [`recipes.py`](../src/db/recipes.py),
   [`structures.py`](../src/db/structures.py),
   [`fauna.py`](../src/db/fauna.py)
-- **Current schema version:** `48` (`src/db/plants.py:_SCHEMA_VERSION` — the
+- **Current schema version:** `49` (`src/db/plants.py:_SCHEMA_VERSION` — the
   authoritative value; this doc's narrative may lag, the code wins)
 - **Location:**
   - Linux: `~/.local/share/Site & Pattern/permadesign.db`
@@ -52,6 +52,7 @@ One row per species. Key columns (full list in the DDL):
 | `bark_color`, `fall_color` | hex (v47). The species' real trunk colour and autumn colour; `fall_color` empty = evergreen or no colouring, an honest empty rather than a guess |
 | `branching` | excurrent \| decurrent \| multi_stem \| suckering \| arching \| prostrate \| rosette (v47) — woody habit |
 | `growth_form` | herbaceous habit (v48). The **source of truth** for which 3D archetype a non-woody plant gets; the viewer's genus table is now only a fallback |
+| `fruit_form` | fruit SHAPE (v49) — berry \| strig \| raceme \| cherry \| pome \| hip \| strawberry \| aggregate \| flat_cluster. The companion to `fruit_color`: before it, every fleshy fruit in the catalogue drew as the same sphere sprite, so a strawberry, a rose hip and a chokecherry raceme were all "red dot". Empty on dry-fruited species, which draw nothing |
 
 Morphology is authored in two companion scripts, each documenting its fields
 and where the values come from:

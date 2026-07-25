@@ -93,6 +93,11 @@ AVAILABILITY_CLASSES = {"big_box", "garden_centre", "native_specialist",
 FLOWER_FORMS      = {"daisy", "rays", "spike", "plume", "umbel", "globe",
                      "cluster", "bell", "trumpet", "cattail", "pea", "whorl",
                      "star", "cross", "lily", "none"}
+# Fruit SHAPE (schema v49) — the companion to fruit_color, authored in
+# scripts/seed_fruit_morphology.py. Empty on dry-fruited species, which draw no
+# fruit at all; '' is therefore valid and means "nothing to draw".
+FRUIT_FORMS       = {"berry", "strig", "raceme", "cherry", "pome", "hip",
+                     "strawberry", "aggregate", "flat_cluster", ""}
 # Botanical morphology (schema v47) — authored for the woody species in
 # scripts/seed_woody_morphology.py; empty everywhere else, hence no "missing"
 # error, only a check that what IS there is spelled canonically.
@@ -284,6 +289,7 @@ def validate_plant(
         ("spread_habit",        SPREAD_HABITS),
         ("availability_class",  AVAILABILITY_CLASSES),
         ("flower_form",         FLOWER_FORMS),
+        ("fruit_form",          FRUIT_FORMS),
         ("leaf_shape",          LEAF_SHAPES),
         ("leaf_arrangement",    LEAF_ARRANGEMENTS),
         ("branching",           BRANCHING_HABITS),

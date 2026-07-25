@@ -61,7 +61,7 @@ def _fc(features):
 
 def _tree(sci, h, c, *, evergreen=False, name=""):
     """A synthetic woody specimen — genus (from scientific_name) drives the
-    viewer's species geometry; flowers suppressed so the body reads cleanly."""
+    viewer's species geometry."""
     return {"plant_type": "tree", "scientific_name": sci,
             "deciduous_evergreen": "evergreen" if evergreen else "deciduous",
             "mature_height_meters": h, "mature_canopy_m": c,
@@ -87,6 +87,31 @@ def _plain(ptype, sci, h, c, name=""):
             "growth_curve": "steady", "spread_habit": "clumping",
             "years_to_maturity": 3, "flower_color": "", "flower_form": "none",
             "bloom_period": "", "common_name": name}
+
+
+# Fields the archetype specimens borrow from their real species so the body is
+# shown WEARING its flower and fruit. They were suppressed originally, on the
+# reasoning that a bare body reads more cleanly as a geometry reference — but
+# what a user sees is a menu entry called "Fireweed" with no fireweed flowers on
+# it, which reads as a bug, not as a decision. A sprite in this app is a body
+# plus a bloom, and hiding half of it hides half of what there is to judge.
+_BLOOM_FIELDS = ("flower_color", "flower_form", "bloom_period",
+                 "fruit_color", "fruit_form", "fruit_period")
+
+
+def _with_bloom(plant, by_sci):
+    """Restore the species' real flower/fruit onto a hand-written specimen."""
+    row = by_sci.get((plant.get("scientific_name") or "").lower())
+    if not row:
+        return plant
+    merged = dict(plant)
+    for field in _BLOOM_FIELDS:
+        value = row.get(field)
+        if value in (None, "", "none"):
+            continue
+        if not merged.get(field) or merged.get(field) == "none":
+            merged[field] = value
+    return merged
 
 
 # Geometry specimens — genus chosen so the viewer's species profiles are exercised
@@ -277,7 +302,8 @@ def _specimens():
             by_sci[key] = r
     out = []
     for key, name, desc, example, plant in GEOMETRY:
-        out.append((key, name, desc, example, _with_morphology(plant, by_sci)))
+        out.append((key, name, desc, example,
+                    _with_bloom(_with_morphology(plant, by_sci), by_sci)))
     for form in FORMS:
         p = _pick_flower(form, rows)
         if not p:
@@ -294,6 +320,7 @@ def _specimens():
 # key prefixes — which stopped scaling the moment "every species" was 436 entries.
 GROUP_GEOMETRY = "Plant-body geometry"
 GROUP_FLOWER = "Flower sprites"
+GROUP_COMBO = "Body × flower combos"
 # One heading per plant_type inside the species list, in the order the layers
 # stack: canopy down to ground.
 SPECIES_GROUP_ORDER = ["tree", "shrub", "wildflower", "herb", "fern", "grass",
@@ -324,6 +351,51 @@ def _species_specimen(row: dict) -> dict:
     return dict(row,
                 mature_height_meters=row.get("mature_height_m"),
                 mature_canopy_m=canopy)
+
+
+def _combo_specs():
+    """One specimen per (growth form × flower form) pair the catalogue actually
+    uses — 75 of them across 436 species.
+
+    A sprite in this app is a **combination**: a plant body from one small set
+    of growth forms, wearing a flower head from another small set. Neither list
+    on its own tells you what the app looks like, and the full species list is
+    436 entries of mostly-repeats. This is the real vocabulary, deduplicated:
+    if two combos look the same here, every species built from them looks the
+    same in a design, which is exactly the kind of thing that is invisible until
+    you put them side by side.
+
+    The exemplar for each pair is the species with the least dull flower colour
+    (a white-on-green sprite shows nothing), tie-broken by name for stability.
+    """
+    rows = _seed_rows()
+    seen, uniq = set(), []
+    for r in rows:
+        sci = (r.get("scientific_name") or "").strip().lower()
+        if sci and sci not in seen and r.get("common_name"):
+            seen.add(sci)
+            uniq.append(r)
+    by_pair: dict = {}
+    for r in uniq:
+        gf = (r.get("growth_form") or r.get("plant_type") or "other").strip()
+        ff = (r.get("flower_form") or "none").strip()
+        by_pair.setdefault((gf, ff), []).append(r)
+    out = []
+    for (gf, ff) in sorted(by_pair, key=lambda k: (k[0], k[1])):
+        cands = sorted(by_pair[(gf, ff)], key=lambda p: (
+            (p.get("flower_color", "") or "").lower() in _DULL,
+            not (p.get("flower_color") or ""),
+            (p.get("common_name") or "").lower()))
+        p = cands[0]
+        n = len(by_pair[(gf, ff)])
+        out.append((
+            f"combo_{gf}_{ff}",
+            f"{gf} × {ff}",
+            f"{n} species share this body-and-bloom combination"
+            + (f" — e.g. {p.get('common_name')}" if n > 1 else ""),
+            p.get("scientific_name") or "",
+            _species_specimen(p)))
+    return out
 
 
 def _species_specs():
@@ -395,6 +467,15 @@ def gallery_scenes(include_species: bool = True) -> dict:
     out["all"] = {"name": "All sprites (grid)",
                   "desc": "One of every archetype + flower form, on a grid.",
                   "example": "", "group": GROUP_GEOMETRY, "scene": all_scene}
+
+    # The real sprite vocabulary: every body × bloom pair the catalogue uses,
+    # once each, so repeats across 436 species collapse to the ~75 things that
+    # are actually distinguishable.
+    cbase = len(out) + 1
+    for j, (key, name, desc, example, plant) in enumerate(_combo_specs()):
+        out[key] = {"name": name, "desc": desc, "example": example,
+                    "group": GROUP_COMBO,
+                    "scene": _scene_for(plant, cbase + j, name, cbase + j)}
 
     if include_species:
         # Every seeded species, so a user can look up the plant they are about to

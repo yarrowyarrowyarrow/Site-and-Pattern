@@ -177,7 +177,7 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # since the builder shipped). _migrate_to_v46 adds the column to old DBs and
 # stamps the shipped examples by name so the first v46 reseed doesn't
 # duplicate them.
-_SCHEMA_VERSION = 48
+_SCHEMA_VERSION = 49
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -436,6 +436,18 @@ def _migrate_to_v42(conn: sqlite3.Connection):
             conn.execute(f"ALTER TABLE {table} ADD COLUMN native_provinces TEXT")
         except sqlite3.OperationalError:
             pass  # column already present
+    conn.commit()
+
+
+def _migrate_to_v49(conn: sqlite3.Connection):
+    """Fruit SHAPE column (V2.29). Additive and nullable, filled by the reseed
+    that follows the version bump; empty on dry-fruited species, which draw no
+    fruit at all. The viewer falls back to the round `berry` sprite where it is
+    empty, so an upgraded DB is never in a broken intermediate state."""
+    try:
+        conn.execute("ALTER TABLE plants ADD COLUMN fruit_form TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass          # already present → fresh install / already migrated
     conn.commit()
 
 
@@ -980,6 +992,7 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("flower_color", ""),
             p.get("flower_form", "none"),
             p.get("fruit_color", ""),
+            p.get("fruit_form", ""),
             p.get("image_url", ""),
             p.get("image_attribution", ""),
             p.get("image_license", ""),
@@ -1007,12 +1020,12 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             toxicity_pets, toxicity_humans, has_thorns,
             spread_habit, safety_source,
             price_low_cad, price_high_cad, availability_class,
-            sourcing_notes, flower_color, flower_form, fruit_color,
+            sourcing_notes, flower_color, flower_form, fruit_color, fruit_form,
             image_url, image_attribution, image_license,
             leaf_shape, leaf_size_cm, leaf_arrangement,
             bark_color, fall_color, branching, growth_form)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -1111,6 +1124,8 @@ def init_db() -> None:
             _migrate_to_v47(conn)
         if current_version < 48:
             _migrate_to_v48(conn)
+        if current_version < 49:
+            _migrate_to_v49(conn)
 
         # Add parent_id to polycultures if missing
         try:
