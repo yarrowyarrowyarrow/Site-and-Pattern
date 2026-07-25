@@ -177,6 +177,17 @@
     color: #9fb096; font-size: 20px; line-height: 1; cursor: pointer; padding: 2px 5px;
   }
   #inspect-close:hover { color: #eaf1e6; }
+  /* Species photo. The caption is not decoration: an open-licensed photo may
+     only be shown with its credit, so the two are one <figure> and the caption
+     has no state in which it is hidden. */
+  #inspect-card .iphoto { margin: 0 0 10px; }
+  #inspect-card .iphoto img {
+    display: block; width: 100%; height: 148px; object-fit: cover;
+    border-radius: 7px; background: #223126;
+  }
+  #inspect-card .iphoto figcaption {
+    margin-top: 4px; font-size: 10px; line-height: 1.35; color: #90a389;
+  }
   #inspect-card .ihead { margin-right: 22px; }
   #inspect-card .iname { font-size: 16px; font-weight: 700; }
   #inspect-card .isci { font-style: italic; color: #a9bda2; font-size: 12px; }

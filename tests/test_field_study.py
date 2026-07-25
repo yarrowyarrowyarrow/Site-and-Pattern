@@ -16,6 +16,7 @@ Logic tests inject ``plants`` / ``specialists`` / ``image_available``
 """
 
 import os
+import pathlib
 import sys
 import tempfile
 import unittest
@@ -26,6 +27,11 @@ _TMP_DIR = tempfile.mkdtemp(prefix="permadesign_quiz_test_")
 import src.db.plants as _plants_mod  # noqa: E402
 _plants_mod._DATA_DIR = _TMP_DIR
 _plants_mod._DB_PATH = os.path.join(_TMP_DIR, "permadesign_test.db")
+# The image cache lives under _user_data_dir, NOT _DATA_DIR, so redirecting the
+# DB alone left the cold-cache test reading the developer's real photo cache —
+# it passed only while that happened to be empty, and started failing the moment
+# anything warmed it. Same rule as the DB: a test must never read user state.
+_plants_mod._user_data_dir = lambda: pathlib.Path(_TMP_DIR)
 
 from src.field_study import generate_quiz  # noqa: E402
 

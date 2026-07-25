@@ -72,6 +72,72 @@ class TestImageCache(unittest.TestCase):
         self.assertEqual(meta["license"], "CC0")
 
 
+class TestCacheKeyAddressing(unittest.TestCase):
+    """The key is how a cached photo reaches the 3D viewer without its URL
+    leaving the app (src/web_assets.py `/__image`)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.mkdtemp(prefix="permadesign_imgkey_")
+        cls._orig = _plants_mod._user_data_dir
+        _plants_mod._user_data_dir = lambda: pathlib.Path(cls._tmp)
+        src_png = os.path.join(cls._tmp, "keyed.png")
+        with open(src_png, "wb") as fh:
+            fh.write(_PNG)
+        cls.url = pathlib.Path(src_png).as_uri()
+        cls.path = ic.fetch_and_cache_image(cls.url, "© Tester", "CC0")
+
+    @classmethod
+    def tearDownClass(cls):
+        _plants_mod._user_data_dir = cls._orig
+
+    def test_key_round_trips_to_the_cached_file(self):
+        self.assertEqual(ic.cached_path_for_key(ic.cache_key(self.url)),
+                         self.path)
+
+    def test_key_is_stable_and_opaque(self):
+        key = ic.cache_key(self.url)
+        self.assertEqual(key, ic.cache_key(self.url))
+        self.assertTrue(key.isalnum() and len(key) == 16)
+        self.assertNotIn("/", key)
+
+    def test_unknown_or_hostile_keys_resolve_to_nothing(self):
+        # Anything that isn't a known cache stem must return None — the route
+        # that serves these is the only thing standing between a URL parameter
+        # and the filesystem.
+        for bad in ("", "nope", "../../etc/passwd", "a/b", "..",
+                    os.path.basename(self.path)):
+            self.assertIsNone(ic.cached_path_for_key(bad), bad)
+
+    def test_credit_line_needs_no_placeholder_when_half_the_data_is_missing(self):
+        self.assertEqual(ic.credit_line("© A", "cc-by"), "© A · cc-by")
+        self.assertEqual(ic.credit_line("© A", ""), "© A")
+        self.assertEqual(ic.credit_line("", "cc-by"), "cc-by")
+        self.assertEqual(ic.credit_line("", ""), "")
+
+    def test_credit_line_does_not_state_the_licence_twice(self):
+        """Every seeded iNaturalist attribution already names its licence in
+        prose, so pasting the slug after it says the same thing in two
+        notations."""
+        inat = ("(c) Rob Foster, some rights reserved (CC BY), "
+                "uploaded by Rob Foster")
+        self.assertEqual(ic.credit_line(inat, "cc-by"), inat)
+        for attribution, licence in (
+                ("(c) X, some rights reserved (CC BY-SA)", "cc-by-sa"),
+                ("(c) X, some rights reserved (CC BY-NC)", "cc-by-nc"),
+                ("Public domain, via Wikimedia Commons", "cc0"),
+                ("Creative Commons Attribution 4.0", "cc-by")):
+            self.assertEqual(ic.credit_line(attribution, licence), attribution)
+
+    def test_a_licence_that_is_not_already_stated_is_still_appended(self):
+        """Broad on purpose: a doubled credit is cosmetic, a missing one is a
+        licence violation, so anything uncertain keeps the slug."""
+        self.assertEqual(ic.credit_line("Photo by A. Person", "cc-by-sa"),
+                         "Photo by A. Person · cc-by-sa")
+        self.assertEqual(ic.credit_line("© Someone 2019", "GFDL"),
+                         "© Someone 2019 · GFDL")
+
+
 class TestImageSchema(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

@@ -219,8 +219,28 @@ function growthStrip(entry) {
   return html + '</div>';
 }
 
+// The species' own photo, above the card, with its credit ALWAYS beneath it.
+// The photo is an open-licensed iNaturalist observation, and the licence is only
+// honoured if the person who made it is named — so the credit is not optional
+// styling, and the dossier refuses to send a photo it cannot attribute
+// (scene_dossier._photo). `key` is an opaque cache handle served by the app's
+// own loopback route; no remote URL ever reaches this page. If the file has gone
+// missing, collapse to no photo rather than showing a broken frame.
+function photoBlock(e) {
+  const p = e.photo;
+  if (!p || !p.key || !p.credit) return '';
+  // Not loading="lazy": the card is built only when it opens, so the image is in
+  // view the moment it exists — deferring it just delays the photo the user is
+  // looking at (and never resolves at all under a headless virtual clock).
+  return '<figure class="iphoto"><img src="/__image?k=' + encodeURIComponent(p.key)
+    + '" alt="' + esc(e.name) + '" decoding="async"'
+    + ' onerror="this.closest(\'figure\').remove()">'
+    + '<figcaption>' + esc(p.credit) + '</figcaption></figure>';
+}
+
 function plantCardHtml(e) {
-  let h = '<div class="ihead"><div class="iname">' + esc(e.name) + '</div>'
+  let h = photoBlock(e);
+  h += '<div class="ihead"><div class="iname">' + esc(e.name) + '</div>'
     + '<div class="isci">' + esc(e.scientific_name) + '</div></div>';
   h += chips(e.badges, 'good');
   const bits = [];
@@ -264,7 +284,8 @@ function plantCardHtml(e) {
 }
 
 function faunaCardHtml(e) {
-  let h = '<div class="ihead"><div class="iname">' + esc(e.name) + '</div>'
+  let h = photoBlock(e);
+  h += '<div class="ihead"><div class="iname">' + esc(e.name) + '</div>'
     + '<div class="isci">' + esc(e.scientific_name)
     + (e.taxon_label ? ' · ' + esc(e.taxon_label) : '') + '</div></div>';
   if (e.status) h += chips([e.status], 'warn');

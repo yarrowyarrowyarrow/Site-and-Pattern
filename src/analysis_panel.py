@@ -919,8 +919,10 @@ class AnalysisPanel(QWidget):
         cr = getattr(self, "_bee_photo_credit", None)
         if cr is None:
             return
+        from src.image_cache import credit_line
         bee = (getattr(self, "_bee_plan", None) and self._bee_plan.bee) or {}
-        txt = bee.get("image_attribution", "") if on else ""
+        txt = credit_line(bee.get("image_attribution", ""),
+                          bee.get("image_license", "")) if on else ""
         cr.setText(txt or "")
         cr.setVisible(bool(txt))
 
@@ -1384,9 +1386,10 @@ class AnalysisPanel(QWidget):
         return out[:12]
 
     def _make_species_card(self, name: str, path: str,
-                           attribution: str = "") -> QWidget:
-        """A small thumbnail + caption card for one species. ``attribution`` is
-        shown as the thumbnail's tooltip so CC-BY photos carry a visible credit."""
+                           attribution: str = "", license_str: str = "") -> QWidget:
+        """A small thumbnail + caption card for one species. The photo credit is
+        shown as the thumbnail's tooltip so CC-BY photos carry a visible credit,
+        formatted by the one shared formatter (src/image_cache.credit_line)."""
         card = QWidget()
         v = QVBoxLayout(card)
         v.setContentsMargins(0, 0, 0, 0)
@@ -1397,8 +1400,10 @@ class AnalysisPanel(QWidget):
         pm = QPixmap(path)
         if not pm.isNull():
             thumb.setPixmap(pm)
-        if attribution:
-            thumb.setToolTip(attribution)
+        from src.image_cache import credit_line
+        credit = credit_line(attribution, license_str)
+        if credit:
+            thumb.setToolTip(credit)
         thumb.setStyleSheet("border: 1px solid #2e4a2e; border-radius: 3px;")
         cap = QLabel(name)
         cap.setWordWrap(True)
@@ -1447,7 +1452,7 @@ class AnalysisPanel(QWidget):
         for name, path, url, attr, lic in items:
             if path:
                 row.insertWidget(row.count() - 1,
-                                 self._make_species_card(name, path, attr))
+                                 self._make_species_card(name, path, attr, lic))
                 shown += 1
             elif url and url not in self._gallery_warmed:
                 pending.append((url, attr, lic))

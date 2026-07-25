@@ -22,7 +22,11 @@ the **live gallery** below lets you rotate and inspect each one.
 > length** (`leaf_size_cm`, schema v47) — a bur oak reads coarse beside an aspen
 > at the same crown size. Clicking any plant or creature opens a card built from
 > the app's sourced ecology (`src/scene_dossier.py` →
-> `html/scene3d/10-inspect.js`).
+> `html/scene3d/10-inspect.js`), topped by the species' own open-licensed
+> iNaturalist photograph with its credit — so the card shows both the model and
+> the real thing, which is the fastest way to judge whether the model is any
+> good. Photos are warmed into the local cache in the background
+> (`src/photo_warm.py`); until one lands, the card simply has no photo.
 >
 > **Also since V2.29**, a shrub or herb archetype is no longer one shape per
 > growth form. Each form ships one baked unit per **(blade class × grain class)**

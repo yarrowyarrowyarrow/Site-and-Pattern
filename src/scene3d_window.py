@@ -21,6 +21,7 @@ the architecture guard's method ceiling stays meaningful).
 
 from __future__ import annotations
 
+import threading
 from datetime import datetime
 
 from PyQt6.QtCore import Qt, QObject, QThread, QSettings, pyqtSignal
@@ -60,6 +61,42 @@ class _TerrainWorker(QObject):
         self.done.emit(elev)
 
 
+class _PhotoWarmWorker(QObject):
+    """Fill the species-photo cache off the UI thread (src/photo_warm.py).
+
+    Emits ``batch`` every so often rather than per photo: the only thing the
+    window does with it is re-push the dossier so newly-cached photos appear, and
+    doing that ~380 times would rebuild the whole dossier for each one.
+    """
+    batch = pyqtSignal()
+    done = pyqtSignal()
+    _BATCH = 12
+
+    def __init__(self):
+        super().__init__()
+        # Owned here, not by the warmer: closeEvent can fire before run() has
+        # built one (the catalogue query happens first), and a cancel that landed
+        # in that window would be lost.
+        self._cancel = threading.Event()
+
+    def run(self):
+        try:
+            from src.photo_warm import PhotoWarmer, catalogue_photo_rows
+            rows = catalogue_photo_rows()
+            PhotoWarmer(rows, on_progress=self._progress,
+                        cancel_event=self._cancel).run()
+        except Exception:      # noqa: BLE001 — photos are a nicety, never a dep
+            pass
+        self.done.emit()
+
+    def _progress(self, done, _total, newly_cached):
+        if newly_cached and done % self._BATCH == 0:
+            self.batch.emit()
+
+    def cancel(self):
+        self._cancel.set()
+
+
 class Scene3DWindow(QWidget):
     """3D preview of the current design (growth year + sun controls)."""
 
@@ -69,6 +106,8 @@ class Scene3DWindow(QWidget):
         self._elevation = None
         self._thread = None
         self._worker = None
+        self._photo_thread = None
+        self._photo_worker = None
         self.setWindowTitle(f"{APP_NAME}: 3D Preview")
         self.resize(960, 700)
 
@@ -607,6 +646,7 @@ class Scene3DWindow(QWidget):
             feature_from_project(self._main._project) is not None)
         if self._elevation is None and self._thread is None:
             self._start_terrain_fetch()
+        self._start_photo_warm()
 
     # ── terrain (cache-first, off-thread) ─────────────────────────────────
 
@@ -634,6 +674,42 @@ class Scene3DWindow(QWidget):
             self._elevation = elevation
             self._push_scene()
 
+    # ── species photos (cache warm, off-thread) ───────────────────────────────
+
+    def _start_photo_warm(self):
+        """Warm the whole catalogue's photos in the background.
+
+        The dossier only ever sends photos that are already cached (it must not
+        block a push), so without this the first click on a species shows no
+        photo and the second one does. Runs once per window; failures are silent.
+        """
+        if self._photo_thread is not None:
+            return
+        self._photo_thread = QThread(self)
+        self._photo_worker = _PhotoWarmWorker()
+        self._photo_worker.moveToThread(self._photo_thread)
+        self._photo_thread.started.connect(self._photo_worker.run)
+        self._photo_worker.batch.connect(self._on_photos_warmed)
+        self._photo_worker.done.connect(self._photo_thread.quit)
+        self._photo_thread.finished.connect(self._cleanup_photo_thread)
+        self._photo_thread.start()
+
+    def _on_photos_warmed(self):
+        """Re-push the dossier so photos that just landed show on the next click."""
+        try:
+            from src.scene_dossier import build_dossier
+            scene = getattr(self, "_scene", None)
+            if scene:
+                self.viewer.set_dossier(build_dossier(scene))
+        except Exception:      # noqa: BLE001 — the card is a read nicety
+            pass
+
+    def _cleanup_photo_thread(self):
+        if self._photo_thread is not None:
+            self._photo_thread.deleteLater()
+        self._photo_thread = None
+        self._photo_worker = None
+
     def _cleanup_thread(self):
         if self._thread is not None:
             self._thread.deleteLater()
@@ -649,6 +725,14 @@ class Scene3DWindow(QWidget):
         if t is not None and t.isRunning():
             t.quit()
             t.wait(2000)
+        # The warmer sleeps between requests on a cancellable wait, so this
+        # returns promptly rather than blocking on an in-flight download.
+        if self._photo_worker is not None:
+            self._photo_worker.cancel()
+        pt = self._photo_thread
+        if pt is not None and pt.isRunning():
+            pt.quit()
+            pt.wait(3000)
         super().closeEvent(event)
 
 

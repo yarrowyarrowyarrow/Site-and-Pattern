@@ -696,7 +696,12 @@ class PlantRowDelegate(QStyledItemDelegate):
         painter.drawPixmap(detail.left(), detail.top(), scaled)
         y = detail.top() + scaled.height() + 2
         fm_s = QFontMetrics(self._small_font)
-        attr = (plant.get("image_attribution") or "").strip()
+        # One shared formatter (src/image_cache.credit_line) so every surface
+        # that shows a photo shows the same credit — this one used to print the
+        # attribution and drop the licence.
+        from src.image_cache import credit_line
+        attr = credit_line(plant.get("image_attribution") or "",
+                           plant.get("image_license") or "")
         if attr:
             painter.setPen(QColor("#78909c"))
             painter.setFont(self._small_font)

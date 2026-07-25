@@ -224,5 +224,87 @@ class ResilienceTest(unittest.TestCase):
         self.assertEqual(len(calls), 1, "edges must be fetched once for the design")
 
 
+class PhotoTest(unittest.TestCase):
+    """The first UI-side guard on a rule the data layer already enforces
+    (src/data_quality.py): a photo may only be shown WITH its credit."""
+
+    def _with_photo(self, **fields):
+        plant = dict(_PLANTS[1], **fields)
+        return build_dossier(
+            _scene(1), get_plant=lambda pid: plant if pid == 1 else None,
+            fauna_edges=lambda _p: [], fauna_attrs=lambda _t, _i: {},
+            plant_3d_state=_state)["plants"]["1"]
+
+    def test_every_entry_that_carries_a_photo_carries_its_credit(self):
+        from src import image_cache
+        real = image_cache.get_cached_image
+        image_cache.get_cached_image = lambda url: "/tmp/fake.jpg" if url else None
+        photo = {"image_url": "https://example.test/p.jpg",
+                 "image_attribution": "© A Photographer",
+                 "image_license": "CC BY-NC 4.0"}
+        plants = {pid: dict(row, **photo) for pid, row in _PLANTS.items()}
+        try:
+            d = _build(scene=_scene(1, 2),
+                       get_plant=lambda pid: plants.get(pid),
+                       fauna_attrs=lambda taxon, fid: _attrs(taxon, fid))
+            seen = 0
+            for section in ("plants", "fauna"):
+                for key, entry in d[section].items():
+                    shot = entry.get("photo")
+                    if shot is None:
+                        continue
+                    seen += 1
+                    self.assertTrue(shot.get("key"), f"{section}.{key}: no key")
+                    self.assertTrue(
+                        shot.get("credit"),
+                        f"{section}.{key}: a photo without a credit — showing an "
+                        f"open-licensed image obliges us to name its source")
+            self.assertGreater(seen, 0, "no entry carried a photo — the check "
+                                        "above would pass vacuously")
+        finally:
+            image_cache.get_cached_image = real
+
+    def test_a_photo_we_cannot_attribute_is_not_shown_at_all(self):
+        from src import image_cache
+        real = image_cache.get_cached_image
+        image_cache.get_cached_image = lambda url: "/tmp/fake.jpg" if url else None
+        try:
+            entry = self._with_photo(image_url="https://example.test/a.jpg",
+                                     image_attribution="", image_license="")
+            self.assertNotIn("photo", entry)
+        finally:
+            image_cache.get_cached_image = real
+
+    def test_an_uncached_photo_is_absent_rather_than_fetched(self):
+        """_photo runs while building a push, so it must never block."""
+        from src import image_cache
+        real = image_cache.get_cached_image
+        image_cache.get_cached_image = lambda _url: None
+        try:
+            entry = self._with_photo(image_url="https://example.test/a.jpg",
+                                     image_attribution="© Someone",
+                                     image_license="CC BY 4.0")
+            self.assertNotIn("photo", entry)
+        finally:
+            image_cache.get_cached_image = real
+
+    def test_the_url_never_reaches_the_viewer(self):
+        """Only an opaque cache key travels; the loopback /__image route
+        resolves it inside the cache dir and nowhere else."""
+        from src import image_cache
+        real = image_cache.get_cached_image
+        url = "https://inaturalist-open-data.s3.amazonaws.com/photos/1/medium.jpg"
+        image_cache.get_cached_image = lambda _u: "/tmp/fake.jpg"
+        try:
+            entry = self._with_photo(image_url=url,
+                                     image_attribution="© Someone",
+                                     image_license="CC BY 4.0")
+            blob = json.dumps(entry)
+            self.assertNotIn("http", blob)
+            self.assertEqual(entry["photo"]["key"], image_cache.cache_key(url))
+        finally:
+            image_cache.get_cached_image = real
+
+
 if __name__ == "__main__":
     unittest.main()

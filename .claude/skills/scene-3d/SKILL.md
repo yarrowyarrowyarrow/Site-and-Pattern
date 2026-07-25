@@ -168,6 +168,37 @@ Things that will bite you:
   reports as unassessed, prices are labelled estimates, and "only source" is
   relative to the design on screen.
 
+### Species photos on the card
+
+The card shows the species' own open-licensed iNaturalist photo. Four rules,
+each with a test:
+
+- **The URL never reaches the browser.** `_photo()` emits
+  `{key, credit}` where `key` is an opaque `image_cache.cache_key` handle; the
+  viewer fetches `/__image?k=<key>` from the app's own loopback server, and that
+  route (`src/web_assets.py`) resolves keys **inside the photo cache directory
+  and nowhere else**. It is deliberately narrower than the neighbouring
+  `/__localfile`, which takes a path. `tests/test_web_assets.py` drives the real
+  server and asserts what it refuses.
+- **A photo without a credit is not shown at all.** Showing an open-licensed
+  image obliges us to name its author, so `_photo()` returns `None` when it
+  cannot build a credit line, and `10-inspect.js` puts the `<img>` and its
+  `<figcaption>` in one `<figure>` with no state where the caption is hidden.
+  Use the single shared formatter `image_cache.credit_line` — it also avoids
+  restating a licence the attribution already names in prose.
+- **Cache-only on the push path.** `_photo()` calls `get_cached_image`, never
+  `resolve_image`: it runs while building a scene push and must not block.
+  Photos that are not cached yet are simply absent.
+- **`src/photo_warm.py` fills the cache** (Qt-free, cancellable, resumable) on a
+  worker `QThread` started by `scene3d_window._start_photo_warm`, which re-pushes
+  the dossier every dozen photos so they appear as they land.
+
+Visual check: serve `inspect_probe.html` from the **app's own** server
+(`web_assets._ensure_server()`), not `python -m http.server` — the latter has no
+`/__image`, so the figure removes itself via `onerror` and the probe reports
+`photo=dropped` (that is the graceful path working, not a failure). Against the
+app server it reports `photo=<W>x<H> · <name> · <credit>`.
+
 ## Aspect ratio: the V2.29 trap
 
 Flora assets are authored at their species' **real height ÷ canopy** and

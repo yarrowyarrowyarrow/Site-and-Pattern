@@ -162,6 +162,36 @@ def _timeline(plant: dict, scene_year: int, plant_3d_state=None) -> list[dict]:
     return out
 
 
+def _photo(row: dict) -> Optional[dict]:
+    """``{key, credit}`` for a row's photo, or ``None``.
+
+    Cache-only on purpose: this runs while building a push, so it must never
+    block on the network. A photo the warmer hasn't reached yet is simply absent
+    and appears on the next push.
+
+    ``key`` is an opaque cache handle, not the URL — the viewer fetches it from
+    the loopback server's ``/__image`` route, which resolves keys inside the
+    cache directory and nowhere else. ``credit`` is never empty when ``key`` is
+    present: showing an open-licensed photo obliges us to say whose it is, so an
+    entry that cannot name its source carries no photo at all.
+    """
+    url = (row.get("image_url") or "").strip()
+    if not url:
+        return None
+    try:
+        from src.image_cache import (cache_key, credit_line,   # noqa: PLC0415
+                                     get_cached_image)
+        if not get_cached_image(url):
+            return None
+        credit = credit_line(row.get("image_attribution") or "",
+                             row.get("image_license") or "")
+        if not credit:
+            return None
+        return {"key": cache_key(url), "credit": credit}
+    except Exception:                              # noqa: BLE001 — graceful
+        return None
+
+
 def _plant_entry(plant: dict, edges: list, only_source: list,
                  scene_year: int, plant_3d_state=None) -> dict:
     """One plant's card. ``edges`` are its documented fauna rows; ``only_source``
@@ -211,6 +241,9 @@ def _plant_entry(plant: dict, edges: list, only_source: list,
         "notes": plant.get("notes") or "",
         "edible_parts": plant.get("edible_parts") or "",
     }
+    photo = _photo(plant)
+    if photo:
+        entry["photo"] = photo
     return entry
 
 
@@ -291,7 +324,7 @@ def _fauna_entry(row: dict, uses: list, attrs: dict) -> dict:
         if attrs.get("nectar_flower_genera") is None and attrs:
             facts.append("does not feed as an adult")
 
-    return {
+    entry = {
         "kind": "fauna",
         "name": row.get("common_name") or "",
         "scientific_name": row.get("scientific_name") or "",
@@ -304,6 +337,10 @@ def _fauna_entry(row: dict, uses: list, attrs: dict) -> dict:
         "uses": uses,
         "range_notes": row.get("range_notes") or "",
     }
+    photo = _photo(row)
+    if photo:
+        entry["photo"] = photo
+    return entry
 
 
 def build_dossier(scene: dict, *,

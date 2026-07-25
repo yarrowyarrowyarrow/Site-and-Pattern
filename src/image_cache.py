@@ -19,6 +19,7 @@ import hashlib
 import json
 import os
 import pathlib
+import re
 import urllib.error
 import urllib.request
 from typing import Optional
@@ -63,6 +64,66 @@ def _save_meta(meta: dict) -> None:
 
 def _is_local_file(url: str) -> bool:
     return bool(url) and "://" not in url and os.path.exists(url)
+
+
+def cache_key(url: str) -> str:
+    """Stable opaque handle for a photo's cache entry.
+
+    The same sha256 stem :func:`fetch_and_cache_image` names files with, exposed
+    so a consumer can *address* a cached image without holding its URL. That is
+    what lets the 3D viewer show a photo: the loopback server resolves a key
+    inside the cache directory only (``web_assets`` ``/__image``), so no remote
+    URL ever reaches the browser and nothing outside the cache is addressable.
+    """
+    return hashlib.sha256((url or "").encode("utf-8")).hexdigest()[:16]
+
+
+def cached_path_for_key(key: str) -> Optional[str]:
+    """Local path for a :func:`cache_key`, or ``None``. Never touches the
+    network, and never returns anything outside the cache directory."""
+    if not key or not key.isalnum():
+        return None
+    cache = _cache_dir()
+    for entry in _load_meta().values():
+        filename = entry.get("filename", "")
+        if filename and os.path.splitext(filename)[0] == key:
+            p = cache / filename
+            if p.exists():
+                return str(p)
+    return None
+
+
+def credit_line(attribution: str = "", license_str: str = "") -> str:
+    """The one-line photo credit, formatted the same way everywhere.
+
+    Showing an open-licensed photo obliges us to show who made it and under what
+    licence; three call sites used to build this string separately, dropping the
+    licence, which is how a credit goes missing from one of them.
+
+    The licence is appended only when the attribution does not already name one.
+    iNaturalist's attribution reads "(c) Someone, some rights reserved (CC BY),
+    uploaded by Someone", so pasting the ``cc-by`` slug after it says the same
+    thing twice in two notations.
+    """
+    attribution = (attribution or "").strip()
+    license_str = (license_str or "").strip()
+    if attribution and license_str and _names_a_licence(attribution):
+        license_str = ""
+    return " · ".join(p for p in (attribution, license_str) if p)
+
+
+# Enough to recognise "this text already states the licence". Deliberately broad:
+# a doubled credit is cosmetic, a missing one is a licence violation, so anything
+# uncertain falls through to appending the slug.
+_LICENCE_WORDS = ("cc0", "public domain", "creative commons")
+
+
+def _names_a_licence(text: str) -> bool:
+    low = text.lower()
+    if any(w in low for w in _LICENCE_WORDS):
+        return True
+    # "CC BY", "CC BY-SA", "CC-BY-NC" … — 'cc' followed by a licence letter code.
+    return bool(re.search(r"\bcc[\s-]?(by|nd|sa|nc|zero)\b", low))
 
 
 def get_cached_image(url: str) -> Optional[str]:

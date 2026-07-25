@@ -48,26 +48,72 @@ fetch('./inspect_probe_data.json').then(r => r.json()).then((D) => {
       const card = w.document.getElementById('inspect-card');
       return card && card.style.display === 'block';
     };
+    // The species photo is part of the card, so the probe reports on it. Decoding
+    // is async and the route only exists on the app's own loopback server, so the
+    // distinction matters: served from a plain `python -m http.server`, /__image
+    // 404s and the figure removes itself — which is the graceful path, not a bug.
+    //   photo=none      the dossier sent no photo (nothing cached yet)
+    //   photo=WxH       decoded and on screen
+    //   photo=pending   still loading
+    //   photo=dropped   onerror fired — no /__image route here
+    const photoState = () => {
+      const card = w.document.getElementById('inspect-card');
+      const entry = card && card.querySelector('.iname');
+      const fig = card && card.querySelector('.iphoto');
+      if (!fig) return _hadFigure ? 'dropped' : 'none';
+      const img = fig.querySelector('img');
+      const cap = fig.querySelector('figcaption');
+      if (!cap || !cap.textContent.trim()) return 'NO CREDIT — must never happen';
+      if (!img || !img.naturalWidth) return 'pending';
+      return img.naturalWidth + 'x' + img.naturalHeight
+        + ' · ' + (entry ? entry.textContent + ' · ' : '')
+        + cap.textContent.slice(0, 40);
+    };
+    let _hadFigure = false;
+    const report = (label, extra) => {
+      // Give the image a moment to decode before reporting on it.
+      const card = w.document.getElementById('inspect-card');
+      _hadFigure = !!(card && card.querySelector('.iphoto'));
+      setTimeout(() => {
+        status.textContent = label + (extra || '') + ' · photo=' + photoState();
+        document.title = 'INSPECT_OK';
+      }, 1200);
+    };
     setTimeout(() => {
       const cv = w.document.querySelector('canvas');
       const r = cv.getBoundingClientRect();
       if (q.get('click')) {
         const p = q.get('click').split(',').map(Number);
-        const hit = click(cv, r.left + r.width * p[0], r.top + r.height * p[1]);
-        status.textContent = hit ? 'CARD OPEN' : 'no hit at that point';
-        document.title = hit ? 'INSPECT_OK' : 'INSPECT_MISS';
+        if (click(cv, r.left + r.width * p[0], r.top + r.height * p[1])) {
+          report('CARD OPEN');
+        } else {
+          status.textContent = 'no hit at that point';
+          document.title = 'INSPECT_MISS';
+        }
         return;
       }
       // Sweep a grid until something is picked — the camera frames the design
-      // automatically, so hard-coding a screen point would be brittle.
+      // automatically, so hard-coding a screen point would be brittle. Prefer a
+      // plant whose card carries a photo, so the probe exercises that path when
+      // the cache has anything in it; fall back to the first hit either way.
+      let first = null;
       for (let gy = 0.25; gy <= 0.72; gy += 0.03) {
         for (let gx = 0.2; gx <= 0.85; gx += 0.03) {
-          if (click(cv, r.left + r.width * gx, r.top + r.height * gy)) {
-            status.textContent = 'CARD OPEN at ' + gx.toFixed(2) + ',' + gy.toFixed(2);
-            document.title = 'INSPECT_OK';
+          if (!click(cv, r.left + r.width * gx, r.top + r.height * gy)) continue;
+          const at = gx.toFixed(2) + ',' + gy.toFixed(2);
+          if (first === null) first = at;
+          const card = w.document.getElementById('inspect-card');
+          if (card && card.querySelector('.iphoto')) {
+            report('CARD OPEN at ', at);
             return;
           }
         }
+      }
+      if (first !== null) {
+        click(cv, r.left + r.width * Number(first.split(',')[0]),
+              r.top + r.height * Number(first.split(',')[1]));
+        report('CARD OPEN at ', first);
+        return;
       }
       status.textContent = 'no plant found anywhere in the sweep';
       document.title = 'INSPECT_MISS';
