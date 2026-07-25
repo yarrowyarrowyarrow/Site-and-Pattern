@@ -308,6 +308,25 @@ const _WILD_MOVE = {
   crawl:  { spd: 0.25, dwell: 2.5, bob: 0.0 },   // beetles: slow amble
 };
 const _WV = new THREE.Vector3();
+
+// Yaw that points a critter's NOSE along (dx, dz).
+//
+// Every critter model in this app faces -Z: the procedural builders put the
+// beak/nose/head at negative z and the tail/abdomen at positive z, and the
+// baked GLBs follow the same rule (assetlib/fauna.py: "forward = +Y in Blender
+// = -Z in the viewer"). A three.js Y-rotation of θ sends local (0,0,-1) to
+// (-sinθ, -cosθ), so the yaw that lands it on (dx, dz) is atan2(-dx, -dz).
+//
+// This used to be atan2(dx, dz) — which orients +Z, i.e. the TAIL, along the
+// travel vector, so every bee, bird, butterfly and hare in the preview flew
+// exactly backwards. It is one sign, invisible in a still frame and obvious the
+// moment anything moves; a user's eye caught it, no test did. Both call sites
+// go through here now so they cannot drift apart again (the spotlight bee had
+// its own third variant, atan2(dx, -dz), which mirrored the heading instead).
+function critterHeading(dx, dz) {
+  return Math.atan2(-dx, -dz);
+}
+
 function animateWildlife(t) {
   if (!wildlifeGroup || !wildlifeGroup.visible) return;
   const dt = _wildDt(t);
@@ -338,7 +357,7 @@ function animateWildlife(t) {
           c.pos.y = tgt.y + Math.sin(t * 0.009 + ph) * 0.25;   // bob up & down
         }
         o.position.copy(c.pos);
-        o.rotation.y = Math.atan2(_WV.x, _WV.z);
+        o.rotation.y = critterHeading(_WV.x, _WV.z);
       }
     }
     // Height + local idle motion by kind.
@@ -547,7 +566,7 @@ function stepSpotlight(t) {
     else {
       spotCritter.position.addScaledVector(d.multiplyScalar(1 / dist),
                                            Math.min(dist, (BEE_SPEED * 0.8) * dt));
-      spotCritter.rotation.y = Math.atan2(d.x, -d.z);
+      spotCritter.rotation.y = critterHeading(d.x, d.z);
     }
   }
   spotCritter.position.y = tgt.y + Math.sin(t * 0.005 + spotIdx) * 0.06;

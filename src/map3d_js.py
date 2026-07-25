@@ -71,6 +71,29 @@ def capture_ortho(rect: dict, width: int = 2048) -> str:
             f"{json.dumps(opts)});")
 
 
+def snapshot(px: int = 320) -> str:
+    """JS to render the CURRENT scene from the CURRENT camera into a ``px``-square
+    frame and return a JPEG data URL.
+
+    Drives the sprite gallery's contact sheet: push a specimen, snapshot it,
+    repeat. Every thumbnail is drawn by the real viewer, so the sheet can never
+    drift from what the app renders — which is the whole point of looking at
+    them side by side. Guarded with ``&&`` so it's a no-op (undefined → ``''``
+    via the caller) until the viewer registers ``permaSnapshot``."""
+    opts = {"width": int(px), "height": int(px)}
+    return ("(window.permaSnapshot ? window.permaSnapshot("
+            f"{json.dumps(opts)}) : '');")
+
+
+def models_ready() -> str:
+    """JS asking whether the baked GLB archetypes have finished loading.
+
+    The contact sheet waits on this: models load asynchronously and rebuild the
+    scene when they land, so thumbnails taken too early would be a sheet of the
+    procedural *fallback* geometry presented as the finished article."""
+    return "(window.permaModelsReady ? window.permaModelsReady() : true);"
+
+
 def clear_splat() -> str:
     """JS to remove the Gaussian-splat backdrop from the scene. Guarded with
     ``&&`` so it's a no-op until the viewer registers ``permaClearSplat``."""

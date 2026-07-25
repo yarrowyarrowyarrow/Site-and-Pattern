@@ -454,6 +454,60 @@ window.permaCaptureOrtho = function (opts) {
   return url;
 };
 
+// Render the CURRENT scene from the CURRENT camera into an off-size frame and
+// hand back a data URL. This is what lets the sprite gallery build a contact
+// sheet: push a specimen, snapshot it, repeat — every tile drawn by the real
+// viewer with the real geometry, materials, lighting and season, each framed to
+// its own plant. Comparing sprites side by side is the only way to notice that
+// two of them are the same sprite, which is a thing a one-at-a-time menu hides
+// completely.
+//
+// JPEG by default: a 480-tile sheet of PNGs is tens of megabytes of data URL and
+// the sky means there is no transparency to preserve.
+window.permaSnapshot = function (opts) {
+  opts = opts || {};
+  const w = Math.max(16, Math.min(2048, Math.round(opts.width || 320)));
+  const h = Math.max(16, Math.min(2048, Math.round(opts.height || w)));
+  const prev = new THREE.Vector2();
+  renderer.getSize(prev);
+  const prevAspect = camera.aspect;
+  let url = '';
+  try {
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.render(scene, camera);
+    url = renderer.domElement.toDataURL(opts.mime || 'image/jpeg',
+                                        opts.quality || 0.82);
+  } catch (e) {
+    url = '';
+  }
+  // Always restore, even if toDataURL threw — a half-resized renderer would
+  // leave the live view stretched for the rest of the session.
+  renderer.setSize(prev.x, prev.y, false);
+  camera.aspect = prevAspect;
+  camera.updateProjectionMatrix();
+  renderer.render(scene, camera);
+  return url;
+};
+
+// Whether the baked GLB archetypes have finished loading. The gallery waits on
+// this before snapshotting: models arrive asynchronously and trigger their own
+// scene rebuild, so a contact sheet built too early would be a sheet of the
+// procedural FALLBACK geometry, silently mislabelled as what the app renders.
+// MODEL_STATE is a `let` in 09-models.js, which loads AFTER this chunk. Classic
+// scripts share one global lexical scope, so it is readable here at call time —
+// but a top-level `let` is in its temporal dead zone until its own script
+// evaluates, and `typeof` on a TDZ binding throws rather than saying
+// 'undefined'. try/catch is the honest guard.
+window.permaModelsReady = function () {
+  try {
+    return MODEL_STATE !== 'loading';
+  } catch (e) {
+    return false;                 // 09-models.js has not evaluated yet
+  }
+};
+
 // ── hooks ───────────────────────────────────────────────────────────────────
 
 // Free the GPU resources a scene rebuild leaves behind. Without this the

@@ -158,6 +158,23 @@ class Map3DWidget(QWebEngineView):
             return
         self.page().runJavaScript(map3d_js.capture_ortho(rect, width), callback)
 
+    def snapshot(self, callback, *, px: int = 320):
+        """Render the current scene to a JPEG data URL and hand it to
+        ``callback``. Used by the sprite gallery's contact sheet."""
+        if not self._loaded:
+            callback("")
+            return
+        self.page().runJavaScript(map3d_js.snapshot(px), callback)
+
+    def models_ready(self, callback):
+        """Ask whether the baked GLB archetypes have loaded (``bool`` to
+        ``callback``). Snapshotting before this is true captures the procedural
+        fallback geometry instead of what the app actually draws."""
+        if not self._loaded:
+            callback(False)
+            return
+        self.page().runJavaScript(map3d_js.models_ready(), callback)
+
     def set_quality(self, level: int):
         """Set the viewer's geometry detail (0 Low · 1 Medium · 2 High)."""
         self.run_js(map3d_js.set_quality(level))
