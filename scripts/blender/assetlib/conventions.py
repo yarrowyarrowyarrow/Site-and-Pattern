@@ -140,7 +140,10 @@ LEAF_CM = {
 # clamp stops a 50 cm yucca blade or a 1.2 cm juniper scale from producing a
 # mass that is all crown or invisible.
 LEAF_REFERENCE_CM = 7.0
-GRAIN_RANGE = (0.62, 1.55)
+# The upper bound is held at 1.35 rather than following the curve to 1.7 for a
+# bur oak: past that the masses stop reading as coarse foliage and start reading
+# as boulders in the crown. The coarse-vs-fine signal survives the cap.
+GRAIN_RANGE = (0.62, 1.35)
 
 
 def grain_for(archetype):

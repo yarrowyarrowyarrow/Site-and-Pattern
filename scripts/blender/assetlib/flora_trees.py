@@ -82,13 +82,13 @@ DECID_MIN_R = (0.020, 0.016, 0.011)
 #   * bigger trees get relatively finer foliage — a 20 m aspen carries many
 #     branch-end masses, a 4 m sapling a few — so structural detail tracks
 #     absolute size, not just growth year (04-quality.js tierFor).
-FOLIAGE_FRAC = (0.46, 0.36, 0.28)
+FOLIAGE_FRAC = (0.40, 0.30, 0.23)
 # Clumps per terminal branch by tier. Finer masses have to arrive in greater
 # numbers or the crown goes see-through — the first cut of the aspect fix left
 # an aspen as a bare pole with a few crumbs at the top. Affordable because a
 # foliage mass is a 20-triangle icosahedron (subdiv 0, matching the viewer's own
 # makeFoliageMass), not an 80-triangle one.
-CLUMPS_PER_TIP = (3, 4, 5)
+CLUMPS_PER_TIP = (4, 6, 7)
 FOLIAGE_SUBDIV = 0
 
 TREE_ARCHETYPES = ("spruce", "fir", "pine", "larch", "def_conifer",
