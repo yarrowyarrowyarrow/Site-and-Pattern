@@ -300,8 +300,12 @@ const _GLB_CRITTER = {
                flap: { base: -0.45, amp: 0.75, speed: 0.055 },
                scale: () => 0.42 * 1.15 },
   bird:      { key: 'bird', anim: (a) => a.hummer ? 'hover' : 'perch',
+               // Matches the procedural bird in 07-wildlife.js — a slow deep
+               // beat, folded on the perch by animateWildlife's gain. Was
+               // amp 0.0 here too, so the baked bird was as motionless as the
+               // procedural one.
                flap: (a) => a.hummer ? { base: 0, amp: 1.1, speed: 0.4 }
-                                     : { base: -0.2, amp: 0.0, speed: 0.05 },
+                                     : { base: -0.15, amp: 0.9, speed: 0.22 },
                scale: (a) => 0.9 * (a.size || 1) },
   fly:       { key: 'fly', node: (a) => a.elongate ? 'darner' : 'hover',
                anim: (a) => a.elongate ? 'hover' : 'flier',

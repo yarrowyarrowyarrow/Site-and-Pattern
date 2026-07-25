@@ -269,17 +269,32 @@ def _active_now(taxon: str, name: str, fid: int, month: int, is_night: bool,
 # ── Placement height above the anchor plant's base (metres) ───────────────────
 
 def _perch_height(kind: str, height_m: float, rel: str) -> float:
+    """Where on the plant this kind sits, in metres above the plant's base.
+
+    The plant's rendered top is exactly ``ground + height_m`` (the archetypes are
+    normalised to height 1 and scaled by it), so anything returned here that is
+    ``>= height_m`` puts the animal in open air ABOVE the plant. That is what the
+    old formulas did for small plants — bird ``h * 1.05`` and bee ``h * 0.9 +
+    0.15`` both exceed ``h`` under ~1.5 m — and it is why a user saw creatures
+    hovering well clear of the flowers they are supposed to be using.
+
+    Everything is now clamped strictly inside the plant.
+    """
     h = max(0.1, height_m)
     if kind == "bird":
-        return h * (0.72 if h > 1.0 else 1.05)      # in the crown, or just above a herb
+        # Perched IN the crown: the upper-middle of a tree, and low enough on a
+        # herb that the bird is among the stems rather than balanced on the tip.
+        return h * (0.72 if h > 1.0 else 0.80)
     if kind == "beetle":
         return h * 0.45
     if kind == "mammal":
         return 0.06                                  # on the ground
+    # Flower visitors sit AT the bloom, which is the top of the plant — just
+    # inside it, never floating over it.
     if kind in ("bee", "fly"):
-        return h * 0.9 + 0.15                         # hovering at the flowers
+        return min(h * 0.95, h - 0.02)
     # butterfly / moth
-    return h * 0.92 + 0.1
+    return min(h * 0.93, h - 0.02)
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -299,7 +314,11 @@ def wildlife_for_scene(scene: dict, *,
     by_id = {p["plant_id"]: p for p in plants}
     # Every plant position in the design — a ranger's home-range patrol samples
     # these so it forages across the whole yard, not just its anchor's bed.
-    all_xy = [(pp["x"], pp["y"]) for pp in plants]
+    # The whole plant record, not just its position: a patrol waypoint's HEIGHT
+    # has to come from the plant it is over. Keeping only (x, y) here is what
+    # made a bird anchored on a 5 m saskatoon rest 3.6 m above a 0.4 m
+    # coneflower — it carried its anchor's perch height to every waypoint.
+    all_pl = list(plants)
     if fauna_edges is None:
         from src.db.fauna import fauna_for_plants as fauna_edges
 
@@ -364,10 +383,13 @@ def wildlife_for_scene(scene: dict, *,
         p = by_id[pid]
         canopy = max(0.3, float(p.get("canopy_m") or 0.5))
         ang = (seed % 360) * math.pi / 180.0
-        # A wider ring with a real floor so animals sit *around* the plant, not
-        # inside it; the k-th animal on a plant steps further out.
+        # A ring INSIDE the crown, so an animal sits among the foliage it is
+        # there to use. `canopy_m` is the full width, so the old `canopy * 0.55`
+        # was 1.1x the crown RADIUS — always just outside the leaves — and its
+        # flat 0.7 m floor put a bee that far from a 0.3 m aster. The k-th
+        # animal on one plant still steps outward so they don't stack.
         k = load[pid] - 1
-        rad = max(0.7, canopy * 0.55) + 0.5 * k
+        rad = max(0.15, canopy * 0.30) + 0.35 * k
         def _ph(pl):
             bh = _perch_height(app["kind"], float(pl.get("height_m") or 0.5),
                                r.get("relationship", ""))
@@ -391,15 +413,18 @@ def wildlife_for_scene(scene: dict, *,
         # instead of orbiting its anchor — the fix for wildlife clumping in one
         # bed. Walk the plant list at a seed-dependent stride so different
         # creatures head to different corners rather than all to the same plant.
-        if app["kind"] in _RANGING and len(all_xy) > 2:
-            stride = 1 + (seed % (len(all_xy) - 1))
-            j = seed % len(all_xy)
+        if app["kind"] in _RANGING and len(all_pl) > 2:
+            stride = 1 + (seed % (len(all_pl) - 1))
+            j = seed % len(all_pl)
             added = 0
-            for _ in range(len(all_xy)):
-                qx, qy = all_xy[j]
-                j = (j + stride) % len(all_xy)
+            for _ in range(len(all_pl)):
+                pq = all_pl[j]
+                qx, qy = pq["x"], pq["y"]
+                j = (j + stride) % len(all_pl)
                 if (qx - p["x"]) ** 2 + (qy - p["y"]) ** 2 >= _PATROL_MIN_M ** 2:
-                    route.append([round(qx, 2), round(qy, 2), round(base_h, 2)])
+                    # _ph of the plant being VISITED — same as the host loop
+                    # above. Using base_h (the anchor's) here was the bug.
+                    route.append([round(qx, 2), round(qy, 2), round(_ph(pq), 2)])
                     added += 1
                     if added >= _PATROL_WAYPOINTS:
                         break
@@ -407,8 +432,11 @@ def wildlife_for_scene(scene: dict, *,
             "kind": app["kind"],
             "x": round(p["x"] + math.cos(ang) * rad, 2),
             "y": round(p["y"] + math.sin(ang) * rad, 2),
-            # Small per-animal height jitter separates same-plant, same-band animals.
-            "h": round(base_h + ((seed >> 6) % 20 - 10) / 100.0 * base_h, 2),
+            # Small per-animal height jitter separates same-plant, same-band
+            # animals — but only DOWNWARD. A symmetric ±10% put a bee 1.03 m up
+            # a 1.0 m cinquefoil, undoing the clamp _perch_height just applied;
+            # there is room below a perch and never any above it.
+            "h": round(base_h * (1.0 - ((seed >> 6) % 20) / 100.0), 2),
             "name": r.get("common_name", ""),
             "on": p.get("common_name", ""),
             # The anchor plant's id as well as its name: the 3D inspector draws

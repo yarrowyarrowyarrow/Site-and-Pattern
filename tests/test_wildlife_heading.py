@@ -106,6 +106,79 @@ console.log(JSON.stringify(out));
                 f"(nose·travel = {dot:.2f}; -1 means exactly tail-first)")
 
 
+class BirdFlightTest(unittest.TestCase):
+    """A bird must actually beat its wings, in both the procedural and the baked
+    path.
+
+    It didn't, for two independently sufficient reasons, which is why fixing
+    either alone would have looked like no change at all:
+      1. ``animateWildlife``'s ``perch`` branch — every non-hummingbird bird —
+         never called ``flapWings``; only the flier/hover branch did.
+      2. the bird's flap amplitude was ``0.0`` in BOTH the procedural table
+         (07-wildlife.js) and the GLB table (09-models.js), so a call would have
+         produced a constant angle anyway.
+    The wing pivots were registered correctly the whole time and fauna_bird.glb
+    exports WingL/WingR — only the animation was dead. A user watching the
+    preview noticed; nothing in the suite did.
+    """
+
+    def test_the_procedural_bird_has_a_real_wingbeat(self):
+        src = _read(_WILDLIFE)
+        m = re.search(r"} else \{\s*(?://[^\n]*\n\s*)*"
+                      r"g\.userData\.flap = \{([^}]*)\};\s*\n\s*"
+                      r"g\.userData\.anim = 'perch';", src)
+        self.assertIsNotNone(
+            m, "07-wildlife.js: the perching bird's flap config moved")
+        amp = re.search(r"amp:\s*([0-9.]+)", m.group(1))
+        self.assertIsNotNone(amp, "no amp in the bird's flap config")
+        self.assertGreater(
+            float(amp.group(1)), 0.1,
+            "the perching bird's wingbeat amplitude is ~0 — its wings cannot "
+            "move however often flapWings is called")
+
+    def test_the_baked_bird_matches(self):
+        src = _read(os.path.join(_ROOT, "html", "scene3d", "09-models.js"))
+        m = re.search(r"bird:\s*\{.*?\n\s*scale:", src, re.S)
+        self.assertIsNotNone(m, "09-models.js: the _GLB_CRITTER bird entry moved")
+        amps = [float(a) for a in re.findall(r"amp:\s*([0-9.]+)", m.group(0))]
+        self.assertTrue(amps, "no flap amplitudes in the GLB bird entry")
+        self.assertGreater(
+            min(amps), 0.1,
+            "the baked bird has a zero-amplitude wingbeat — the GLB path "
+            "repeated the procedural bug verbatim, so fixing one is not enough")
+
+    def test_the_perch_branch_flaps(self):
+        # Anchored to the 4-space indent on purpose: there are TWO
+        # `else if (c.anim === 'perch')` blocks — the travel one nested inside
+        # the movement branch, and this one in the per-kind height section. An
+        # unanchored pattern matches the travel block and then runs on THROUGH
+        # the flier branch, whose own flapWings call makes the assertion pass
+        # with the perch call deleted. It did, until I checked.
+        src = _read(_WILDLIFE)
+        m = re.search(r"\n    \} else if \(c\.anim === 'perch'\) \{(.*?)"
+                      r"\n    \} else if", src, re.S)
+        self.assertIsNotNone(m, "the perch branch of animateWildlife moved")
+        # Comments stripped first. The branch carries a comment EXPLAINING the
+        # bug, which contains the word flapWings — so a naive substring check
+        # passes with the call deleted. It did.
+        code = re.sub(r"//[^\n]*", "", m.group(1))
+        self.assertIn(
+            "flapWings(", code,
+            "the perch branch never calls flapWings, so every bird in the app "
+            "sits with its wings locked in the authored rest pose")
+
+    def test_a_travelling_bird_faces_where_it_is_going(self):
+        """The perch TRAVEL branch had no heading call, unlike every other
+        travel branch — a gap the V2.29 nose-first fix left behind, so birds
+        crossed the yard sideways."""
+        src = _read(_WILDLIFE)
+        m = re.search(r"\} else if \(c\.anim === 'perch'\) \{(.*?)\n      \} else \{",
+                      src, re.S)
+        self.assertIsNotNone(m, "the perch travel branch moved")
+        self.assertIn("critterHeading", m.group(1),
+                      "a travelling bird never sets its heading")
+
+
 class CritterHeadingWiringTest(unittest.TestCase):
     """No browser, never skipped: every heading in the wildlife animator must go
     through the shared helper. Three different formulas existed at once before

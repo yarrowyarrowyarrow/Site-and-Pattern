@@ -30,10 +30,14 @@ function _wingMat(hex) {
   return new THREE.MeshBasicMaterial({ color: new THREE.Color(hex || 0xeef4f8),
     transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false });
 }
-function flapWings(obj, t) {
+// `gain` scales the beat: 1 is full flight, 0 folds the wings to their resting
+// `base` angle. Birds use it to fold on the perch and beat while crossing the
+// yard; everything else leaves it at 1 and flaps continuously.
+function flapWings(obj, t, gain) {
   const fp = obj.userData.flap;
   if (!fp || !obj.userData.wings) return;
-  const w = fp.base + (0.5 + 0.5 * Math.sin(t * fp.speed)) * fp.amp;
+  const g = gain == null ? 1 : gain;
+  const w = fp.base + (0.5 + 0.5 * Math.sin(t * fp.speed)) * fp.amp * g;
   for (const { pivot, sign } of obj.userData.wings) pivot.rotation.z = sign * w;
 }
 
@@ -77,7 +81,12 @@ function makeBirdCritter(app) {
     g.userData.flap = { base: 0, amp: 1.1, speed: 0.4 };   // blur
     g.userData.anim = 'hover';
   } else {
-    g.userData.flap = { base: -0.2, amp: 0.0, speed: 0.05 };  // folded
+    // A real wingbeat: slow and deep, nothing like a bee's blur. `amp` was 0.0
+    // — the comment said "folded", but with the perch branch never calling
+    // flapWings either, it meant a bird's wings never moved at all. Both had to
+    // change. animateWildlife folds them to `base` on the perch by passing
+    // gain 0, so the settled pose the old config wanted is still there.
+    g.userData.flap = { base: -0.15, amp: 0.9, speed: 0.22 };
     g.userData.anim = 'perch';
   }
   g.scale.setScalar(0.9 * (app.size || 1));
@@ -343,12 +352,23 @@ function animateWildlife(t) {
       if (flat < 0.25) {                          // arrived → dwell
         c.dwell = mv.dwell * (0.6 + (c.seed % 40) / 50);
       } else if (c.anim === 'perch') {
-        // Birds hop discretely between perches: brief hold, then jump.
+        // Birds fly between perches: a quick direct flight, then a long sit.
         c.pos.lerp(tgt, Math.min(1, dt * 3.0));
         o.position.copy(c.pos);
+        // Face the way it is going. Every other travel branch does this; this
+        // one never did, so a bird crossed the yard sideways — a gap the V2.29
+        // heading fix left because it only touched the generic branch.
+        o.rotation.y = critterHeading(tgt.x - c.pos.x, tgt.z - c.pos.z);
       } else {
         _WV.multiplyScalar(1 / flat);
         c.pos.addScaledVector(_WV, Math.min(flat, mv.spd * c.speed * dt));
+        // Climb or descend toward the waypoint's own height. Without this a
+        // flier keeps the altitude it SPAWNED at for the whole cruise (the
+        // horizontal step above deliberately zeroes _WV.y), so a bee that
+        // started on a 3 m shrub crossed the yard 3 m over the asters it was
+        // heading for. Butterflies used to be the only ones that escaped, via
+        // their own bob below.
+        c.pos.y += (tgt.y - c.pos.y) * Math.min(1, dt * 1.6);
         // Butterflies/moths flutter: weave sideways off the straight line.
         if (c.anim === 'flier' && (o.userData.critterInfo &&
             (o.userData.critterInfo.kind === 'butterfly' || o.userData.critterInfo.kind === 'moth'))) {
@@ -371,12 +391,20 @@ function animateWildlife(t) {
     } else if (c.anim === 'perch') {
       o.position.y = tgt.y + Math.sin(t * 0.003 + ph) * mv.bob;
       if (c.dwell > 0) o.rotation.y = ph + Math.sin(t * 0.0009 + ph) * 0.4;   // look around
+      // Wings BEAT in flight and fold on the perch. This branch never called
+      // flapWings at all, so every bird in the app sat with its wings locked in
+      // the authored rest pose — sticking straight out sideways — and crossed
+      // the yard without moving them, while every insect flapped. One of the
+      // two independent reasons; the other was an amplitude of zero.
+      flapWings(o, t, c.dwell > 0 ? 0 : 1);
+      if (c.shadow) c.shadow.position.set(o.position.x, c.anchor.y + 0.02, o.position.z);
     } else if (c.anim === 'ground') {
       const hop = c.dwell > 0 ? 0 : Math.abs(Math.sin(t * 0.02 + ph)) * 0.06;
       o.position.y = c.anchor.y + 0.02 + hop;
       if (c.shadow) c.shadow.position.set(o.position.x, c.anchor.y + 0.02, o.position.z);
     } else {                                       // crawl (beetle)
       o.position.y = tgt.y + Math.sin(t * 0.001 + ph) * 0.01;
+      if (c.shadow) c.shadow.position.set(o.position.x, c.anchor.y + 0.02, o.position.z);
     }
     // Always-on name label: small, constant on-screen size, and only for
     // creatures within ~13 m (the roster is the full list) so distant labels
