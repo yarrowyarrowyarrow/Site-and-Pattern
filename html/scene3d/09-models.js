@@ -197,7 +197,9 @@ function _glbLoadStruct(loader, key, spec) {
 function _ensureModelMats() {
   ensurePlantMats();
   if (!MATS.glbBark)
-    MATS.glbBark = plantMaterial({ roughness: 0.92, wind: 0.015, vertexColors: true });
+    MATS.glbBark = plantMaterial({ roughness: 0.92, wind: 0.015, vertexColors: true,
+                                   detail: 'bark', detailScale: 1.0,
+                                   detailAmount: 0.5 });
 }
 
 // Tree archetype for (crown class, conifer kind, genus profile, form, tier).

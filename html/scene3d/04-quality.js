@@ -400,7 +400,8 @@ function ensurePlantMats() {
   if (MATS) return;
   if (!SHADOW_TEX) SHADOW_TEX = makeShadowTexture();
   MATS = {
-    branch:  plantMaterial({ roughness: 0.92, wind: 0.015 }),
+    branch:  plantMaterial({ roughness: 0.92, wind: 0.015,
+               detail: 'bark', detailScale: 1.0, detailAmount: 0.5 }),
     // Tree crowns became part-ribbon in V2.29: the OUTERMOST clumps are now
     // rosettes of real leaf cards (assetlib/flora_trees.py) so a birch's
     // silhouette is made of birch leaves, while interior clumps stay closed
@@ -409,8 +410,10 @@ function ensurePlantMats() {
     // which is the same bug the shrubs had, one archetype family later. When
     // geometry changes KIND, every material applied to it is unreviewed.
     foliage: plantMaterial({ roughness: 0.85, wind: 0.07, vertexColors: true,
-               doubleSide: true }),
-    shrub:   plantMaterial({ roughness: 0.85, wind: 0.06, vertexColors: true }),
+               doubleSide: true, detail: 'leaf', detailScale: 9.0,
+               detailAmount: 0.34 }),
+    shrub:   plantMaterial({ roughness: 0.85, wind: 0.06, vertexColors: true,
+               detail: 'leaf', detailScale: 11.0, detailAmount: 0.30 }),
     // Shrub foliage is now REAL LEAVES — flat ribbons (V2.29) — where the older
     // faceted masses were closed icosahedra. A solid can be FrontSide, which is
     // what this material was; a flat ribbon under backface culling is INVISIBLE
@@ -421,15 +424,18 @@ function ensurePlantMats() {
     // Flat-shaded still, so the procedural fallback's faceted masses (used where
     // a species records no leaf shape) stay crisp low-poly clumps (V1.96).
     shrubFoliage: plantMaterial({ roughness: 0.82, wind: 0.06, vertexColors: true,
-                    flatShading: true, doubleSide: true }),
+                    flatShading: true, doubleSide: true, detail: 'leaf',
+                    detailScale: 12.0, detailAmount: 0.30 }),
     // Flat leaf blades for herbaceous plants (V1.98) — double-sided so a leaf
     // shows from both faces, gentle sway.
     leaf:    plantMaterial({ roughness: 0.8, wind: 0.09, vertexColors: true,
-               doubleSide: true }),
+               doubleSide: true, detail: 'leaf', detailScale: 14.0,
+               detailAmount: 0.28 }),
     // Flat grass/reed blades read from both sides and catch top light via
     // lifted normals (V1.92) — lush tufts rather than thin spindly stalks.
     blade:   plantMaterial({ roughness: 0.72, wind: 0.11, vertexColors: true,
-               doubleSide: true }),
+               doubleSide: true, detail: 'leaf', detailScale: 16.0,
+               detailAmount: 0.26 }),
     simple:  plantMaterial({ roughness: 0.9, wind: 0.06 }),
     ground:  plantMaterial({ roughness: 0.95, wind: 0.02, vertexColors: true }),
     // Slightly lighter than pre-V2.12 — ACES tone mapping deepens darks.

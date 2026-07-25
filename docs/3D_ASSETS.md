@@ -218,6 +218,28 @@ manifest's `half_width` still matches the shipped geometry. The aspect check
 is the one that would have caught the V2.29 deformation: triangle counts,
 node names and materials were all correct while every tree was stretched 2–4×.
 
+## Surface detail (V2.29)
+
+The GLBs stay **texture-free and UV-free** — `POSITION`, `NORMAL`, `COLOR_0`
+and nothing else — and `test_model_assets.py` fails the build if one embeds an
+image, texture or sampler. Bark grain and foliage mottle are added instead in
+the *viewer*, procedurally: `02-plants.js:makeDetailTexture` draws one shared
+canvas per kind at runtime (no asset files, nothing to fetch) and
+`plantMaterial({ detail: 'bark' | 'leaf', detailScale, detailAmount })` injects
+a lookup into the fragment shader.
+
+It samples **object space**, not UVs, for two reasons that are contract rather
+than preference: the baked geometry has no texture coordinates to sample, and
+these are instanced meshes, so one per-archetype UV set would repeat identically
+across every copy anyway. A per-instance offset (taken from the instance
+matrix's translation) keeps two neighbouring aspens from being stamped with the
+same grain, and sampling in object space means the pattern rides the geometry
+rather than swimming when a plant sways.
+
+If you add another injected-shader option to `plantMaterial`, add it to
+`customProgramCacheKey` too — three.js will otherwise hand two materials with
+genuinely different shaders the same compiled program.
+
 ## Render gate
 
 `tests/test_scene3d_render.py` boots the real viewer in headless Chromium via

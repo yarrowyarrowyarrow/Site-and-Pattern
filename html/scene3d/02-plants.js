@@ -253,6 +253,72 @@ function fadeColor(col, opacity) {
 // and instancing all stay intact — we only nudge `transformed` in local space
 // (so the per-instance matrix scales the sway by canopy size) before three
 // applies the instance/model matrices in <project_vertex>.
+// ── surface detail (V2.29) ──────────────────────────────────────────────────
+// Everything in this viewer was flat-shaded vertex colour: no bark texture, no
+// leaf texture, so a trunk was one brown and a crown one green, and the app read
+// as a diagram rather than an illustration. The sprite audit put texture last on
+// the list of improvements precisely because it multiplies whatever variety is
+// already there — worth doing only after the library HAS distinct looks.
+//
+// It is applied procedurally rather than as UV-mapped images, for two reasons
+// that are contract, not preference:
+//   * the baked GLBs carry POSITION, NORMAL and COLOR_0 and NO texture
+//     coordinates, and tests/test_model_assets.py forbids them embedding
+//     textures at all;
+//   * these are INSTANCED meshes, so a per-archetype UV set would repeat
+//     identically across every instance anyway.
+// So the pattern is sampled from OBJECT space in the fragment shader, offset per
+// instance so two neighbouring aspens are not stamped from the same grain. One
+// shared canvas per kind, generated at runtime like the flower sprites — no new
+// asset files, nothing to fetch.
+let DETAIL_TEX = null;
+
+function makeDetailTexture(kind) {
+  const s = 256, cv = document.createElement('canvas');
+  cv.width = cv.height = s;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#808080';                  // mid grey = "leave the colour be"
+  g.fillRect(0, 0, s, s);
+  const rnd = (n => () => (n = (n * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)(7);
+  if (kind === 'bark') {
+    // Vertical fissures: the one thing that reads as bark at any distance.
+    for (let i = 0; i < 150; i++) {
+      const x = rnd() * s, w = 1 + rnd() * 5, dark = rnd() < 0.55;
+      g.strokeStyle = dark ? `rgba(40,40,40,${0.10 + rnd() * 0.22})`
+                           : `rgba(230,230,230,${0.06 + rnd() * 0.14})`;
+      g.lineWidth = w;
+      g.beginPath();
+      let y = 0, xx = x;
+      g.moveTo(xx, y);
+      while (y < s) { y += 8 + rnd() * 22; xx += (rnd() - 0.5) * 7; g.lineTo(xx, y); }
+      g.stroke();
+    }
+  } else {
+    // Foliage: a soft mottle so a leaf card or a clump is not a flat chip of
+    // colour. Deliberately low-contrast — this is a break-up, not a pattern.
+    for (let i = 0; i < 220; i++) {
+      const x = rnd() * s, y = rnd() * s, r = 4 + rnd() * 26;
+      const dark = rnd() < 0.5;
+      const grd = g.createRadialGradient(x, y, 0, x, y, r);
+      const a = 0.05 + rnd() * 0.13;
+      grd.addColorStop(0, dark ? `rgba(30,45,25,${a})` : `rgba(235,245,215,${a})`);
+      grd.addColorStop(1, 'rgba(128,128,128,0)');
+      g.fillStyle = grd;
+      g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+    }
+  }
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.needsUpdate = true;
+  return t;
+}
+
+function detailTexture(kind) {
+  if (!DETAIL_TEX) DETAIL_TEX = {};
+  if (!DETAIL_TEX[kind]) DETAIL_TEX[kind] = makeDetailTexture(kind);
+  return DETAIL_TEX[kind];
+}
+
 function plantMaterial(opts = {}) {
   const mat = new THREE.MeshStandardMaterial({
     roughness: opts.roughness ?? 0.9,
@@ -261,8 +327,57 @@ function plantMaterial(opts = {}) {
     flatShading: !!opts.flatShading,
   });
   const strength = opts.wind || 0;
-  if (strength > 0) {
+  const detail = opts.detail || '';
+  const dscale = opts.detailScale || 1.0;
+  const damount = opts.detailAmount ?? 0.55;
+  if (strength > 0 || detail) {
     mat.onBeforeCompile = (shader) => {
+      if (detail) {
+        shader.uniforms.uDetail = { value: detailTexture(detail) };
+        // Object-space position + a per-instance offset, so the grain follows
+        // the geometry (it does not swim when a plant sways or the camera
+        // moves) but neighbouring copies of one archetype are not identical.
+        shader.vertexShader = 'varying vec3 vDetailPos;\n' + shader.vertexShader;
+        shader.vertexShader = shader.vertexShader.replace(
+          '#include <begin_vertex>',
+          ['#include <begin_vertex>',
+           '{',
+           '  #ifdef USE_INSTANCING',
+           '  vec3 dOff = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);',
+           '  #else',
+           '  vec3 dOff = vec3(0.0);',
+           '  #endif',
+           '  vDetailPos = position + fract(dOff * 0.37) * 3.1;',
+           '}'].join('\n'));
+        shader.fragmentShader = 'uniform sampler2D uDetail;\nvarying vec3 vDetailPos;\n'
+          + shader.fragmentShader;
+        // Bark is roughly a vertical cylinder, so its grain runs up the trunk:
+        // sample (around, along). Foliage has no axis worth respecting, so it
+        // takes a cheap two-plane blend that avoids the streaking a single
+        // planar projection gives on near-vertical leaf cards.
+        const uv = detail === 'bark'
+          ? ['vec2 dUV = vec2(atan(vDetailPos.x, vDetailPos.z) * 0.6,',
+             '                vDetailPos.y * ' + (dscale * 3.0).toFixed(3) + ');'].join('\n')
+          : ['vec2 dUV = mix(vDetailPos.xz, vDetailPos.xy, 0.5) * '
+             + dscale.toFixed(3) + ';'].join('\n');
+        shader.fragmentShader = shader.fragmentShader.replace(
+          '#include <color_fragment>',
+          ['#include <color_fragment>',
+           '{',
+           '  ' + uv,
+           '  float d = texture2D(uDetail, dUV).r;',
+           // 0.5 in the texture is "unchanged"; the amount sets how far the
+           // light and dark halves can pull the base colour.
+           '  diffuseColor.rgb *= 1.0 + (d - 0.5) * 2.0 * '
+             + damount.toFixed(3) + ';',
+           '}'].join('\n'));
+      }
+    };
+  }
+  if (strength > 0) {
+    const withDetail = mat.onBeforeCompile;
+    mat.onBeforeCompile = (shader) => {
+      withDetail(shader);
       shader.uniforms.uTime = windUniforms.uTime;
       shader.vertexShader = 'uniform float uTime;\n' + shader.vertexShader;
       shader.vertexShader = shader.vertexShader.replace(
@@ -285,8 +400,13 @@ function plantMaterial(opts = {}) {
           '}',
         ].join('\n'));
     };
+  }
+  // The cache key has to name every branch of the injection above, or three.js
+  // reuses one compiled program for materials whose shaders differ.
+  if (strength > 0 || detail) {
     mat.customProgramCacheKey = () =>
-      'windplant' + strength.toFixed(4) + (opts.vertexColors ? 'c' : '');
+      'plant' + strength.toFixed(4) + (opts.vertexColors ? 'c' : '')
+      + '|' + detail + dscale.toFixed(2) + damount.toFixed(2);
   }
   return mat;
 }

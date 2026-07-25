@@ -1,5 +1,10 @@
 # Sprite accuracy audit — V2.29
 
+> **Status: all five ranked improvements below have since been built.** The
+> scores and per-archetype notes are kept as written, as the record of what was
+> wrong and why — see [What changed](#what-changed-after-this-audit) at the
+> bottom for what each fix actually did and what is still open.
+
 An honest, per-archetype assessment of how well the 3D preview's plant sprites
 represent the species they stand for, what is wrong with each, and what it would
 take to fix it.
@@ -221,6 +226,58 @@ better than a detailed one. The gap between the preview and reality is currently
 about **variety and structure**, and no amount of polygons closes it.
 
 ---
+
+## What changed after this audit
+
+All five, in the order ranked above.
+
+**1 · Groundcover rebuilt** (`assetlib/flora_herbs.py:_layer_groundcover`).
+Stolons radiating from a crown, 150–350 real leaves per mat, basal rosettes
+distinguished from trailing carpets, morphology-keyed into 9 units so a
+strawberry gets a trifoliate mat and a bearberry an elliptic one. Its own
+triangle budget (1600) because it is the only layer you look straight down at.
+**1/10 → ~6/10**, and 32 species with it.
+
+**2 · Tree crowns carry their species' leaf**
+(`assetlib/flora_trees.py`, `conventions.DECID_LEAF_SHAPE`). The outermost
+clumps — the ones that make the silhouette — are rosettes of real leaf cards
+instead of faceted ellipsoids; interior clumps stay spheres, where nobody can
+see them and volume is cheapest. Cost-neutral by construction. Oak, birch,
+aspen and cherry now differ in outline, not just bark hex.
+
+**3 · Flower heads are oriented** (`05-flowers.js:_FLOWER_ATTITUDE`). Instanced
+quads, each held at the attitude its form actually holds, with the attitude
+decided by the viewpoint its texture is drawn from. Spikes stand, umbels
+present upward, bells hang. Orbiting the view no longer slides the meadow
+around like decals.
+
+**4 · Species characters beat genus tables** (`03-herbs.js:treeFormFor`).
+`formBias` became the fallback its own docstring always said it was rather than
+an override, so a 20 m paper birch and an 8 m water birch stop being the same
+shape; and `branching` (schema v47) is finally emitted and read, so a
+multi-stemmed water birch or Bebb's willow is a broad clump rather than a
+single-leadered spire.
+
+**5 · Surface detail** (`02-plants.js:makeDetailTexture` / `plantMaterial`).
+Procedural bark fissures and foliage mottle, sampled in object space with a
+per-instance offset. Procedural rather than UV-mapped images because the baked
+GLBs carry no texture coordinates and a test forbids them embedding textures —
+and because instanced meshes would repeat one UV set identically anyway.
+
+### Still open
+
+- **Per-species leaf outlines on trees** are archetype-level, not species-level:
+  `DECID_LEAF_SHAPE` is the mode over the species mapping to each archetype, so
+  a trembling aspen (*orbicular*) and a balsam poplar (*ovate*) still share
+  "ovate". Fixing it properly means a blade-class variant axis on the tree
+  archetypes, the way shrubs and herbs already have — roughly doubling the baked
+  tree units.
+- **Grasses and ferns** were rated 4/10 and 3/10 and are untouched by this pass.
+  The fern needs `add_compound_leaf` (which already exists, for pea and rose
+  leaves) instead of undivided lance blades; the grass tuft needs a wider arch
+  and real seed heads.
+- **Pine** is still flat plates on a pole.
+- **Creature variety within a kind** — a bumblebee is not a honeybee.
 
 ## Verification note
 
