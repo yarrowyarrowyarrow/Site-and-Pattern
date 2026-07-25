@@ -184,12 +184,23 @@ function flowerPointSize(mat, px) {
   return mat;
 }
 
-// Per-form bloom size + how many sprites to scatter per plant (denser = the
-// plant reads as its flower colour when in bloom).
+// Per-form bloom size — the LARGEST a head of this form is drawn — plus how many
+// sprites to scatter per plant (denser = the plant reads as its flower colour
+// when in bloom). Deliberately bigger than life: a real 3 cm aster disc would be
+// invisible from across a yard, and a bloom you cannot see teaches nothing (P5).
 const _FLOWER_SIZE = { rays: 0.42, plume: 0.34, spike: 0.34, umbel: 0.30,
                        globe: 0.32, trumpet: 0.30, bell: 0.24, daisy: 0.24,
                        cluster: 0.26, cattail: 0.7, pea: 0.34, whorl: 0.30,
                        star: 0.28, cross: 0.22, lily: 0.34 };
+// …but a head must stay a fraction of its own plant. These were fixed metres per
+// FORM, so a 0.6 m blanketflower and a 3 m sunflower both wore a 42 cm head: on
+// the small one the bloom was 70% of the plant, a floating orange blob that made
+// every small forb look broken in the species gallery. The per-sprite `aSize`
+// attribute already exists for bloom-to-bloom variation, so scaling by the
+// plant's own canopy costs nothing. The floor keeps a tiny alpine's flower
+// visible at scene distance rather than shrinking it back out of existence.
+const _FLOWER_REF_CANOPY = 1.1;      // the canopy _FLOWER_SIZE was tuned against
+const _FLOWER_MIN_SCALE = 0.28;
 
 function buildFlowers(plants, month, terrain) {
   if (!FLOWER_TEX) {
@@ -215,6 +226,9 @@ function buildFlowers(plants, month, terrain) {
       const h = Math.max(0.1, p.height_m);
       const top = gy + h * (isCattail ? 0.96 : 0.9);
       const rad = Math.max(0.12, p.canopy_m * 0.5);
+      // How big this species' heads are relative to the form's maximum.
+      const pscale = Math.max(_FLOWER_MIN_SCALE,
+                              Math.min(1, (p.canopy_m || 0.5) / _FLOWER_REF_CANOPY));
       _fc.set(p.flower_color);
       const seed = hashPid(p.plant_id || 1);
       // Fewer, better-spread heads than before: they used to pile into one
@@ -235,7 +249,8 @@ function buildFlowers(plants, month, terrain) {
         const dy = isCattail ? 0 : (j3 - 0.5) * Math.max(0.14, h * 0.3);
         pos.push(p.x + Math.cos(a) * rr, top + dy, -(p.y + Math.sin(a) * rr));
         col.push(_fc.r, _fc.g, _fc.b);
-        siz.push(isCattail ? 1 : 0.6 + 0.85 * (((seed + k * 17) % 100) / 100));
+        siz.push(isCattail ? 1
+                 : pscale * (0.6 + 0.85 * (((seed + k * 17) % 100) / 100)));
       }
     }
     const geo = new THREE.BufferGeometry();

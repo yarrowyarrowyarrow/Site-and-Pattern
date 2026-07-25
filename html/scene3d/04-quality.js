@@ -386,10 +386,17 @@ function ensurePlantMats() {
     branch:  plantMaterial({ roughness: 0.92, wind: 0.015 }),
     foliage: plantMaterial({ roughness: 0.85, wind: 0.07, vertexColors: true }),
     shrub:   plantMaterial({ roughness: 0.85, wind: 0.06, vertexColors: true }),
-    // Flat-shaded so the faceted shrub leaf masses read as crisp low-poly
-    // clumps, not smooth blobs (V1.96).
+    // Shrub foliage is now REAL LEAVES — flat ribbons (V2.29) — where the older
+    // faceted masses were closed icosahedra. A solid can be FrontSide, which is
+    // what this material was; a flat ribbon under backface culling is INVISIBLE
+    // from behind, so the V2.29 shrub rebuild silently deleted most of every
+    // shrub's foliage and the whole family rendered as bare wiry canes in
+    // midsummer. Every geometry check passed — the leaves were built, budgeted,
+    // sized and positioned correctly, and simply not drawn.
+    // Flat-shaded still, so the procedural fallback's faceted masses (used where
+    // a species records no leaf shape) stay crisp low-poly clumps (V1.96).
     shrubFoliage: plantMaterial({ roughness: 0.82, wind: 0.06, vertexColors: true,
-                    flatShading: true }),
+                    flatShading: true, doubleSide: true }),
     // Flat leaf blades for herbaceous plants (V1.98) — double-sided so a leaf
     // shows from both faces, gentle sway.
     leaf:    plantMaterial({ roughness: 0.8, wind: 0.09, vertexColors: true,

@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from PyQt6.QtCore import Qt, QSettings
 from PyQt6.QtWidgets import (
-    QComboBox, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
+    QComboBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
     QVBoxLayout, QWidget,
 )
 
@@ -32,7 +32,10 @@ _DETAIL_LABELS = ["Low", "Medium", "High"]
 
 
 class SpriteGalleryWindow(QWidget):
-    """Browse the 3D sprite library — one specimen per archetype / flower form."""
+    """Browse the 3D sprite library: one labelled specimen per archetype and
+    flower form, then EVERY seeded species rendered as the sprite a design
+    containing it would actually show. Grouped by section, with a search box —
+    the list is ~480 entries."""
 
     def __init__(self, main=None):
         super().__init__(None)             # top-level window
@@ -61,6 +64,13 @@ class SpriteGalleryWindow(QWidget):
         self._detail.setCurrentIndex(max(0, min(2, lvl)))
         self._detail.currentIndexChanged.connect(self._on_detail)
 
+        # ~480 entries once every seeded species is listed, so a search box is
+        # not a nicety — it is how you find the plant you came here for.
+        self._search = QLineEdit()
+        self._search.setPlaceholderText("Search name or Latin…")
+        self._search.setClearButtonEnabled(True)
+        self._search.textChanged.connect(self._on_filter)
+
         self._populate_list()
 
         left = QVBoxLayout()
@@ -68,6 +78,7 @@ class SpriteGalleryWindow(QWidget):
         dl.addWidget(QLabel("Detail:"))
         dl.addWidget(self._detail, 1)
         left.addLayout(dl)
+        left.addWidget(self._search)
         left.addWidget(self._list, 1)
         left_box = QWidget()
         left_box.setLayout(left)
@@ -86,11 +97,22 @@ class SpriteGalleryWindow(QWidget):
 
         # Apply the saved detail level, then show the first specimen.
         self._push_quality(self._detail.currentIndex())
-        if self._list.count():
-            self._list.setCurrentRow(0)
+        for row in range(self._list.count()):
+            if self._list.item(row).data(Qt.ItemDataRole.UserRole):
+                self._list.setCurrentRow(row)
+                break
 
     # ── list ──────────────────────────────────────────────────────────────
-    def _populate_list(self):
+    def _populate_list(self, filter_text: str = ""):
+        """Rebuild the sidebar, optionally narrowed to a search term.
+
+        Headings come from each entry's own ``group`` rather than from sniffing
+        key prefixes — the list is ~480 items once every seeded species is in it,
+        so it needs real sections and a filter to be usable at all.
+        """
+        self._list.clear()
+        needle = (filter_text or "").strip().lower()
+
         def section(title):
             it = QListWidgetItem(title)
             it.setFlags(Qt.ItemFlag.NoItemFlags)            # unselectable header
@@ -102,17 +124,36 @@ class SpriteGalleryWindow(QWidget):
             it.setData(Qt.ItemDataRole.UserRole, key)
             self._list.addItem(it)
 
-        keys = list(self._scenes.keys())
-        geom = [k for k in keys if k != "all" and not k.startswith("flower_")]
-        flowers = [k for k in keys if k.startswith("flower_")]
-        if "all" in self._scenes:
-            entry("all")
-        section("Plant-body geometry")
-        for k in geom:
-            entry(k)
-        section("Flower sprites")
-        for k in flowers:
-            entry(k)
+        def matches(key, e):
+            if not needle:
+                return True
+            # Scientific name lives in `example`, so a search for "Populus"
+            # finds the aspens even though the label is the common name.
+            return needle in " ".join((
+                e.get("name", ""), e.get("example", ""),
+                e.get("desc", ""))).lower()
+
+        group = None
+        shown = 0
+        for key, e in self._scenes.items():
+            if not matches(key, e):
+                continue
+            if e.get("group") and e["group"] != group:
+                group = e["group"]
+                section(group)
+            entry(key)
+            shown += 1
+        if not shown:
+            section("no sprite matches that search")
+        return shown
+
+    def _on_filter(self, text: str):
+        self._populate_list(text)
+        # Select the first real entry so the view follows the search.
+        for row in range(self._list.count()):
+            if self._list.item(row).data(Qt.ItemDataRole.UserRole):
+                self._list.setCurrentRow(row)
+                break
 
     def _on_select(self, item, _prev=None):
         if item is None:

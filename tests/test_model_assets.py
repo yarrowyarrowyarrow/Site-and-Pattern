@@ -35,7 +35,7 @@ _SCENE3D = os.path.join(_ROOT, "html", "scene3d")
 
 # Mirrors assetlib/conventions.py TRI_BUDGETS (comment there points here).
 _TRI_BUDGETS = {"tree_tier0": 1500, "tree_tier1": 2200, "tree_tier2": 3500,
-                "shrub": 2000, "herb": 1200, "layer": 900, "fauna": 1500,
+                "shrub": 2600, "herb": 1200, "layer": 900, "fauna": 1500,
                 "structure": 1500}
 
 

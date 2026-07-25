@@ -75,7 +75,7 @@ def _canes(rng, F, n_stems):
         # read as dead sticks above a small green base, which is what a user's
         # screenshot caught. The foliage envelope has to span the crown the same
         # way the ellipsoid masses it replaced did (start → tip).
-        n_twig = 3 + int(rng.random() * 3)
+        n_twig = 4 + int(rng.random() * 4)
         for k in range(n_twig):
             t = 0.12 + 0.88 * (k / max(1, n_twig - 1))
             at = fork.lerp(tip, t)
@@ -122,7 +122,7 @@ def build_shrub(form, rng, coll, name_prefix="", grain=1, leaf_shape=None,
     for start, end, _rb, _rt, is_twig in segs:
         if not is_twig:
             continue
-        n_nodes = 3 + int(rng.random() * 3)
+        n_nodes = 4 + int(rng.random() * 4)
         for j in range(n_nodes):
             t = 0.25 + 0.75 * (j / max(1, n_nodes - 1))
             at = start.lerp(end, t)
@@ -133,8 +133,15 @@ def build_shrub(form, rng, coll, name_prefix="", grain=1, leaf_shape=None,
     # A rose's compound leaf costs nine times a dogwood's simple one, so the leaf
     # population is sized to what the budget affords rather than fixed — bare
     # twigs read as a real shrub, a blown budget fails the export.
+    top_node = max(nodes, key=lambda n: n[0][0].z) if nodes else None
     nodes = thin_leaf_nodes(nodes, shape, C.TRI_BUDGETS["shrub"],
                             len(segs) * CONE_TRIS)
+    # Thinning strides through the node list, which is in cane order, not height
+    # order — so the highest node on the plant can be one of the ones it drops,
+    # and the shrub grows a bare top again. Put it back: it is one node, and a
+    # bare crown is the exact failure tests/test_model_assets.py guards.
+    if top_node is not None and top_node not in nodes:
+        nodes.append(top_node)
     leaves = [leaf for node in nodes for leaf in node]
 
     # Narrow (or widen) the clump to the form's real aspect before stamping —

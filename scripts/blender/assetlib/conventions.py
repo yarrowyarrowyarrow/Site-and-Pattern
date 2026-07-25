@@ -307,7 +307,13 @@ TRI_BUDGETS = {
     "tree_tier0": 1500,
     "tree_tier1": 2200,
     "tree_tier2": 3500,
-    "shrub": 2000,
+    # A shrub is ONE unit serving 0.3 m sagewort to 5 m chokecherry, with no
+    # size tiers to spread the cost over, and since V2.29 its foliage is real
+    # leaves at ~8 triangles each rather than 20-triangle masses. At 2000 the
+    # vase/spreading/irregular forms could only afford ~180 leaves, which on a
+    # 4 m saskatoon reads as bare canes with flecks on them. A tree of that
+    # size gets tree_tier1 = 2200.
+    "shrub": 2600,
     "herb": 1200,
     "layer": 900,
     "fauna": 1500,

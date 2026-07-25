@@ -66,12 +66,23 @@
     justify-content: center; color: var(--dim); font-size: 14px;
     pointer-events: none; text-align: center; padding: 0 20px;
   }
+  /* ~480 entries once every seeded species is listed, so the list needs a
+     filter to be usable at all. */
+  #search {
+    width: 100%; box-sizing: border-box; margin: 6px 0 4px; padding: 6px 8px;
+    background: #16211a; color: #e8f0e4; border: 1px solid #2e4a34;
+    border-radius: 5px; font: inherit;
+  }
+  #search::placeholder { color: #7d8f77; }
 </style>
 </head>
 <body>
   <div id="sidebar">
     <h1>3D Sprite Gallery</h1>
-    <div class="sub">Every plant-body archetype &amp; flower sprite the viewer can render. Drag to orbit · scroll to zoom.</div>
+    <div class="sub">Every plant-body archetype, flower sprite and seeded species
+      the viewer can render. Drag to orbit · scroll to zoom.</div>
+    <input id="search" type="search" placeholder="Search name or Latin…"
+           oninput="onFilter(this.value)" autocomplete="off">
     <div id="menu"></div>
   </div>
   <div id="stage">
@@ -106,11 +117,13 @@ async function init() {
   waitForViewer();
 }
 
-function buildMenu() {
+// Headings come from each entry's own `group` (src/sprite_gallery.py), so the
+// menu never has to sniff key prefixes — which stopped working the moment "every
+// seeded species" made this a ~480-entry list. Hence the search box too.
+function buildMenu(filter) {
   const menu = document.getElementById('menu');
-  const keys = Object.keys(SCENES);
-  const geom = keys.filter(k => k !== 'all' && !k.startsWith('flower_'));
-  const flowers = keys.filter(k => k.startsWith('flower_'));
+  menu.textContent = '';
+  const needle = (filter || '').trim().toLowerCase();
 
   const addItem = (k) => {
     const b = document.createElement('button');
@@ -122,12 +135,27 @@ function buildMenu() {
     const d = document.createElement('div'); d.className = 'group-label';
     d.textContent = label; menu.appendChild(d);
   };
+  // The scientific name is in `example`, so searching "Populus" finds the aspens
+  // even though every label is a common name.
+  const matches = (e) => !needle || [e.name, e.example, e.desc]
+    .join(' ').toLowerCase().includes(needle);
 
-  if (SCENES.all) addItem('all');
-  addGroup('Plant-body geometry');
-  geom.forEach(addItem);
-  addGroup('Flower sprites');
-  flowers.forEach(addItem);
+  let group = null, shown = 0;
+  for (const k of Object.keys(SCENES)) {
+    const e = SCENES[k];
+    if (!matches(e)) continue;
+    if (e.group && e.group !== group) { group = e.group; addGroup(e.group); }
+    addItem(k);
+    shown++;
+  }
+  if (!shown) addGroup('no sprite matches that search');
+  return shown;
+}
+
+function onFilter(text) {
+  buildMenu(text);
+  const first = document.querySelector('#menu .item');
+  if (first) show(first.dataset.key);
 }
 
 function waitForViewer() {

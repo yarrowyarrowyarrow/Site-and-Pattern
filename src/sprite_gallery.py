@@ -24,6 +24,7 @@ from __future__ import annotations
 import datetime
 import json
 import math
+import re
 from pathlib import Path
 
 from src.scene_contract import build_scene
@@ -288,13 +289,90 @@ def _specimens():
     return out
 
 
-def gallery_scenes() -> dict:
-    """Ordered ``{key: {name, desc, example, scene}}`` — geometry specimens, then
-    flower-form specimens, then an "all" grid. Built with the real build_scene."""
+# Display order and headings for the sidebar. Every entry carries its `group`, so
+# a consumer inserts a heading whenever the group changes and never has to sniff
+# key prefixes — which stopped scaling the moment "every species" was 436 entries.
+GROUP_GEOMETRY = "Plant-body geometry"
+GROUP_FLOWER = "Flower sprites"
+# One heading per plant_type inside the species list, in the order the layers
+# stack: canopy down to ground.
+SPECIES_GROUP_ORDER = ["tree", "shrub", "wildflower", "herb", "fern", "grass",
+                       "sedge", "rush", "vine", "groundcover", "aquatic"]
+
+
+def _species_group(ptype: str) -> str:
+    return "Species · " + (ptype or "other").replace("_", " ")
+
+
+def _species_specimen(row: dict) -> dict:
+    """A seed row as a renderable specimen.
+
+    Keeps the whole row (build_scene reads everything with ``.get``, so the real
+    flower form, bloom window, morphology, bark and autumn colour all come along)
+    and adds the two fields the 3D state layer names differently. Canopy is
+    derived the way ``db.plants`` derives it — 1.5x the planting spacing — so a
+    species with no measured spread is as wide here as it is in a real design.
+
+    Deliberately reads the shipped JSON, not the database: this module is Qt-free
+    and DB-free so ``scripts/make_gallery_scene.py`` can build the standalone page
+    offline and deterministically. The one visible cost is berries, whose
+    ``fruit_color`` is curated in the DB rather than the seed files, so only the
+    hand-authored specimens above fruit.
+    """
+    spacing = row.get("spacing_m")
+    canopy = float(spacing) * 1.5 if spacing else None
+    return dict(row,
+                mature_height_meters=row.get("mature_height_m"),
+                mature_canopy_m=canopy)
+
+
+def _species_specs():
+    """``(key, name, desc, example, plant)`` for every seeded species, grouped by
+    plant_type and alphabetical within each group."""
+    seen, rows = set(), []
+    for row in _seed_rows():
+        sci = (row.get("scientific_name") or "").strip()
+        name = (row.get("common_name") or "").strip()
+        if not sci or not name or sci.lower() in seen:
+            continue
+        seen.add(sci.lower())
+        rows.append(row)
+    order = {t: i for i, t in enumerate(SPECIES_GROUP_ORDER)}
+    rows.sort(key=lambda r: (order.get(r.get("plant_type"), 99),
+                             (r.get("common_name") or "").lower()))
+    out = []
+    for row in rows:
+        slug = re.sub(r"[^a-z0-9]+", "_",
+                      (row.get("scientific_name") or "").lower()).strip("_")
+        bits = [row.get("plant_type") or "plant"]
+        if row.get("mature_height_m"):
+            bits.append(f"{row['mature_height_m']} m")
+        if row.get("leaf_shape"):
+            bits.append(str(row["leaf_shape"]).replace("_", " "))
+        if row.get("leaf_arrangement"):
+            bits.append(str(row["leaf_arrangement"]))
+        if row.get("bloom_period"):
+            bits.append(f"blooms {row['bloom_period']}")
+        out.append((f"species_{slug}", row["common_name"], " · ".join(bits),
+                    row.get("scientific_name") or "",
+                    _species_specimen(row)))
+    return out
+
+
+def gallery_scenes(include_species: bool = True) -> dict:
+    """Ordered ``{key: {name, desc, example, group, scene}}`` — geometry
+    specimens, flower-form specimens, an "all" grid, then EVERY seeded species.
+
+    Built with the real build_scene, so a species entry renders exactly the sprite
+    a design containing that plant would. ``include_species=False`` returns only
+    the archetype specimens (a fast path for callers that just want those).
+    """
     specs = _specimens()
     out: dict = {}
     for i, (key, name, desc, example, plant) in enumerate(specs, start=1):
         out[key] = {"name": name, "desc": desc, "example": example,
+                    "group": (GROUP_FLOWER if key.startswith("flower_")
+                              else GROUP_GEOMETRY),
                     "scene": _scene_for(plant, i, example or name, i)}
 
     # "All" — every specimen on a grid (natural bounds; trees dominate, small
@@ -316,5 +394,16 @@ def gallery_scenes() -> dict:
                             get_plant=lambda pid: plant_by_id.get(pid, {}))
     out["all"] = {"name": "All sprites (grid)",
                   "desc": "One of every archetype + flower form, on a grid.",
-                  "example": "", "scene": all_scene}
+                  "example": "", "group": GROUP_GEOMETRY, "scene": all_scene}
+
+    if include_species:
+        # Every seeded species, so a user can look up the plant they are about to
+        # place rather than inferring it from an archetype. The archetype
+        # specimens above stay: they are the labelled reference for what the
+        # builder can draw, and they are what the docs point at.
+        base = len(out) + 1
+        for j, (key, name, desc, example, plant) in enumerate(_species_specs()):
+            out[key] = {"name": name, "desc": desc, "example": example,
+                        "group": _species_group(plant.get("plant_type")),
+                        "scene": _scene_for(plant, base + j, name, base + j)}
     return out

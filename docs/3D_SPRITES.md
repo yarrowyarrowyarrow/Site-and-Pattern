@@ -56,6 +56,20 @@ python -m http.server 8000
 #   http://localhost:8000/html/sprite_gallery.html
 ```
 
+**Every seeded species has a page.** Alongside the labelled archetype specimens,
+the gallery lists all ~436 seeded species, grouped by plant type, each rendered
+from its own seed record — so the sprite you see is exactly the one a design
+containing that plant shows, with its real growth form, leaf shape and
+arrangement, flower form and bloom window. There is a search box; it matches
+common names, Latin names and the descriptions, so "Populus" finds the aspens.
+The archetype specimens stay: they are the labelled reference for what the
+builders can draw, and they are what this doc points at.
+
+Berries are the one thing a species page can miss. `fruit_color` is curated in
+the database rather than the seed JSON, and `src/sprite_gallery.py` is
+deliberately DB-free so `scripts/make_gallery_scene.py` can build the standalone
+page offline; only the hand-authored specimens fruit.
+
 **Wildflower specimens are paired.** Five of the herb entries exist to make the
 V2.29 morphology work visible: they hold the growth form constant and vary only
 the leaf character, so the difference is attributable. Fireweed (erect ·

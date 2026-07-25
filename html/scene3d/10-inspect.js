@@ -489,6 +489,54 @@ window.permaMeasure = function () {
   return out;
 };
 
+// Does every mesh the viewer builds actually put PIXELS on the screen?
+//
+// Three separate V2.29 bugs were invisible to every geometry-level check because
+// the geometry was right and the image was wrong: shrub foliage that stopped
+// partway up the plant, an aster's leaves detached from their stems, and — the
+// one this exists for — shrub leaves that were built, budgeted, sized, placed and
+// then NOT DRAWN, because the rebuild changed them from closed icosahedra to flat
+// ribbons while their material stayed single-sided. Backface culling deleted the
+// whole family's foliage in midsummer and no assertion could see it.
+//
+// So: hide one mesh, re-render, count the pixels that changed. A mesh carrying
+// thousands of vertices that changes almost nothing is being culled, occluded, or
+// drawn transparent — all bugs. Returns [{verts, n, pixels}] per plant mesh.
+//
+// Not a permaSet* name, same as permaMeasure: nothing in map3d_js drives it.
+window.permaVisibility = function () {
+  const out = [];
+  if (!plantsGroup || !renderer) return out;
+  const gl = renderer.getContext();
+  const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+  const shot = () => {
+    renderer.render(scene, camera);
+    const buf = new Uint8Array(w * h * 4);
+    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+    return buf;
+  };
+  const meshes = [];
+  plantsGroup.traverse((o) => {
+    if (o.geometry && o.userData && o.userData.pick) meshes.push(o);
+  });
+  const base = shot();
+  for (const m of meshes) {
+    m.visible = false;
+    const off = shot();
+    m.visible = true;
+    let changed = 0;
+    for (let i = 0; i < base.length; i += 4) {
+      if (base[i] !== off[i] || base[i + 1] !== off[i + 1]
+          || base[i + 2] !== off[i + 2]) changed++;
+    }
+    const pos = m.geometry.getAttribute && m.geometry.getAttribute('position');
+    out.push({ verts: pos ? pos.count : 0,
+               n: m.isInstancedMesh ? m.count : 1, pixels: changed });
+  }
+  renderer.render(scene, camera);          // leave the canvas as we found it
+  return out;
+};
+
 // ── host hook ───────────────────────────────────────────────────────────────
 // Pushed alongside each scene by src/scene3d_window.py. Re-selecting after a
 // push keeps the card live while the year / season sliders move underneath it.

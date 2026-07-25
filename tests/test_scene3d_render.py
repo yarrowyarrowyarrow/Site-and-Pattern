@@ -21,6 +21,11 @@ guarded against is a factor of two to four.
 Self-skips when there is no Chromium binary or no free port, so the ordinary
 suite is unaffected; the harness page is ``html/aspect_probe.html``, which
 doubles as a hand-run dev page.
+
+The module also holds the source-level APPEARANCE invariants (no browser needed,
+never skipped) — see FlatLeafMaterialsTest. They live here because they guard the
+same thing the render gate does: what ends up on the screen, as opposed to what
+ends up in the geometry.
 """
 
 import json
@@ -149,6 +154,57 @@ class Scene3DRenderTest(unittest.TestCase):
         # Surfaced on success too: a creeping worst case is the early warning.
         print(f"\n  worst rendered aspect error: {worst['err'] * 100:.0f}% "
               f"({worst['genus']})")
+
+
+class FlatLeafMaterialsTest(unittest.TestCase):
+    """Every material used for FLAT leaf geometry must be double-sided.
+
+    This is the guard for a bug that no geometry check could see. The V2.29 shrub
+    rebuild replaced closed 20-triangle icosahedra with flat leaf ribbons, but
+    ``MATS.shrubFoliage`` stayed on ``FrontSide`` — correct and cheaper for a
+    solid, fatal for a ribbon, which is simply not drawn from behind. Every shrub
+    in the app lost 44% of its foliage pixels and the family read as bare wiry
+    canes in midsummer, while the leaves were provably built, budgeted, sized and
+    positioned. A user's screenshot caught it.
+
+    Note what this does NOT do, honestly: the loss was 44%, not 100%, so a
+    render-level "does this mesh draw any pixels" assertion would have passed —
+    ``window.permaVisibility`` measured 9,492 pixels for the culled foliage
+    against 16,782 fixed. Half a leaf's faces still point at the camera. The
+    invariant that actually catches it is the one below, at the source.
+    """
+
+    # Materials applied to meshes built from flat ribbons: herb leaves and
+    # grass/reed blades have always been flat, shrub foliage is since V2.29.
+    _FLAT_LEAF_MATERIALS = ("leaf", "blade", "shrubFoliage")
+
+    def test_flat_leaf_materials_are_double_sided(self):
+        src = _read_js("04-quality.js")
+        table = re.search(r"MATS = \{(.*?)\n  \};", src, re.S)
+        self.assertIsNotNone(table, "04-quality.js: the MATS table moved")
+        body = table.group(1)
+        for name in self._FLAT_LEAF_MATERIALS:
+            # The entry runs from its key to the next key or the table's end.
+            entry = re.search(name + r":\s*plantMaterial\(\{(.*?)\}\)", body, re.S)
+            self.assertIsNotNone(entry, f"MATS.{name} not found")
+            self.assertIn(
+                "doubleSide: true", entry.group(1),
+                f"MATS.{name} is applied to FLAT leaf ribbons but is not "
+                f"double-sided — a ribbon is invisible from behind, so this "
+                f"silently deletes about half the foliage it is used for.")
+
+    def test_plant_material_honours_the_flag(self):
+        """The flag has to reach three.js, or the check above proves nothing."""
+        src = _read_js("02-plants.js")
+        self.assertRegex(
+            src,
+            r"side:\s*opts\.doubleSide\s*\?\s*THREE\.DoubleSide\s*:\s*THREE\.FrontSide",
+            "plantMaterial no longer maps opts.doubleSide onto THREE.DoubleSide")
+
+
+def _read_js(name):
+    with open(os.path.join(_HTML, "scene3d", name), encoding="utf-8") as fh:
+        return fh.read()
 
 
 if __name__ == "__main__":
