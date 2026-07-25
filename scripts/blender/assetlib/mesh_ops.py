@@ -428,7 +428,18 @@ def shape_to_aspect(points, aspect, height=None, radii=None, radii_z=None):
     # k so that every point's stamped extent fits, with the outermost touching.
     ks = [(target - r) / d for d, r in zip(dists, rads) if d > 1e-6]
     k = max(0.02, min(ks)) if ks else 1.0
+    # Scale each DISTINCT vector once. Callers legitimately pass the same object
+    # more than once — a cane's fork is the end of one segment and the start of
+    # the next and of every twig on it; a node's opposite leaves share one
+    # anchor — and scaling in list order would move those points by k², k³, k⁴,
+    # collapsing exactly the joints that hold a plant together. Duplicates still
+    # count toward the solve above (they are the same constraint), so only the
+    # mutation needs to be unique.
+    seen = set()
     for p in points:
+        if id(p) in seen:
+            continue
+        seen.add(id(p))
         p.x *= k
         p.y *= k
     return k

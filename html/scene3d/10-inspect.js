@@ -412,7 +412,7 @@ function stepThreads(t) {
 // Not a permaSet* name on purpose: nothing in map3d_js drives it (the bridge
 // contract test would flag it), the same way window.glb* is invisible there.
 window.permaMeasure = function () {
-  const out = { plants: {}, groups: 0, verts: [] };
+  const out = { plants: {}, groups: 0, verts: [], parts: [] };
   if (!plantsGroup) return out;
   const box = new THREE.Box3();
   const tmp = new THREE.Box3();
@@ -446,6 +446,25 @@ window.permaMeasure = function () {
     // differ in their mesh, not their box.
     const pos = o.geometry.getAttribute && o.geometry.getAttribute('position');
     if (pos) out.verts.push(pos.count);
+    // Per-mesh, because a plant is built from several (a shrub's canes and its
+    // foliage are separate InstancedMeshes) and "the plant looks wrong" is
+    // usually ONE of them being the wrong size, empty, or not reaching the top —
+    // none of which the union box above can show.
+    //
+    // Report `top` and `base`, not only the height: the bare-shrub regression
+    // was foliage that stopped partway UP a full-height plant, and a part's
+    // height alone cannot distinguish that from a part that legitimately spans
+    // less (a vase shrub's leaves start above its bare lower canes). Measuring
+    // the extent instead of the top is what made the first read of that bug
+    // look like a partial fix.
+    out.parts.push({
+      verts: pos ? pos.count : 0,
+      n: o.isInstancedMesh ? o.count : 1,
+      w: +Math.max(tmp.max.x - tmp.min.x, tmp.max.z - tmp.min.z).toFixed(3),
+      h: +(tmp.max.y - tmp.min.y).toFixed(3),
+      base: +tmp.min.y.toFixed(3),
+      top: +tmp.max.y.toFixed(3),
+    });
     out.groups++;
   });
   out.verts.sort((a, b) => a - b);

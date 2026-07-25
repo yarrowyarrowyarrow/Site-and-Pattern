@@ -197,7 +197,16 @@ def blade_class(leaf_shape):
 
 # The representative outline each class is baked with — one blade profile per
 # class, since the class is what the geometry actually differs by.
-BLADE_SHAPE = {"narrow": "linear", "broad": "ovate", "cut": "lobed",
+#
+# Each entry MUST be the member whose width/length sits at the class median
+# (tests/test_model_assets.py checks this against the catalogue). Getting it
+# wrong is not a rounding error: 'narrow' was baked as `linear` (width/length
+# 0.06) while 65 of its 100 species are `lanceolate` (0.22) and only 22 truly
+# linear — so the largest group of wildflowers, asters and goldenrods and
+# penstemons among them, drew leaves 3.7x too narrow and rendered as thick bare
+# stems with invisible threads on them. A class stands for its members, so its
+# representative has to be typical of them, not the extreme of the range.
+BLADE_SHAPE = {"narrow": "lanceolate", "broad": "ovate", "cut": "lobed",
                "compound": "compound_pinnate"}
 
 

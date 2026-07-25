@@ -234,6 +234,54 @@ class ModelAssetsTest(unittest.TestCase):
         self.assertEqual(breaks, {k: tuple(v) for k, v in
                                   conventions._GRAIN_BREAKS.items()})
 
+    def test_each_blade_class_is_baked_as_a_typical_member(self):
+        """A blade class stands for its species, so the outline it is baked with
+        must be typical of them — specifically the member whose width/length sits
+        at the class median.
+
+        This is the check the aster regression needed. 'narrow' was baked as
+        `linear` (width/length 0.06) while 65 of its 100 species are `lanceolate`
+        (0.22) and only 22 truly linear, so the largest group of wildflowers drew
+        leaves 3.7x too narrow — thick bare stems with invisible threads on them.
+        Nothing caught it: the geometry was valid, budgeted, correctly
+        proportioned overall, and the right variant was being selected. Only the
+        blade WIDTH was wrong, and no test looked at width.
+        """
+        conventions = _assetlib_conventions()
+        if conventions is None:
+            self.skipTest("assetlib.conventions not importable")
+        # LEAF_WIDTH_RATIO lives in the bpy-importing mesh_ops; read it as data
+        # rather than dragging Blender into the ordinary suite.
+        src = _read(os.path.join(_ROOT, "scripts", "blender", "assetlib",
+                                 "mesh_ops.py"))
+        blob = re.search(r"LEAF_WIDTH_RATIO = \{(.*?)\}", src, re.S)
+        self.assertIsNotNone(blob, "mesh_ops.LEAF_WIDTH_RATIO not found")
+        ratio = {k: float(v) for k, v in
+                 re.findall(r'"(\w+)":\s*([\d.]+)', blob.group(1))}
+        catalogue = json.loads(_read(os.path.join(_ROOT, "data",
+                                                 "plants_master.json")))
+        served = set()
+        for types, _form_of in conventions.FAMILY_FORMS.values():
+            served |= set(types)
+        for cls in conventions.BLADE_CLASSES:
+            members = [r.get("leaf_shape") for r in catalogue
+                       if r.get("plant_type") in served
+                       and conventions.blade_class(r.get("leaf_shape")) == cls]
+            ratios = sorted(ratio[s] for s in members if s in ratio)
+            if not ratios:
+                continue
+            median = ratios[len(ratios) // 2] if len(ratios) % 2 else (
+                (ratios[len(ratios) // 2 - 1] + ratios[len(ratios) // 2]) / 2)
+            baked = conventions.BLADE_SHAPE[cls]
+            self.assertIn(baked, ratio, f"{cls}: baked shape {baked} has no ratio")
+            self.assertAlmostEqual(
+                ratio[baked], median, delta=0.08,
+                msg=f"blade class '{cls}' is baked as '{baked}' "
+                    f"(width/length {ratio[baked]}) but its {len(ratios)} "
+                    f"species run {ratios[0]}–{ratios[-1]} with median {median} "
+                    f"— the class is being drawn at the edge of its range "
+                    f"instead of the middle of it.")
+
     def test_every_catalogue_species_resolves_to_a_baked_variant(self):
         """No herb or shrub in the shipped catalogue may ask for a variant the
         manifest doesn't carry. The generator reads the same catalogue, so this
@@ -368,6 +416,59 @@ class ModelAssetsTest(unittest.TestCase):
                 widest, half, delta=0.05,
                 msg=f"{key}: manifest half_width {widest} != geometry {half} "
                     f"— regenerate the manifest with the GLBs")
+
+    def _part_top(self, gltf, unit, part):
+        """Highest y of one named part of one unit, or None if absent."""
+        nodes = gltf.get("nodes", [])
+        idx = {n.get("name", ""): i for i, n in enumerate(nodes)}
+        i = idx.get(f"{unit}_{part}")
+        if i is None or "mesh" not in nodes[i]:
+            return None
+        hi = None
+        for prim in gltf["meshes"][nodes[i]["mesh"]].get("primitives", []):
+            acc = gltf["accessors"][prim["attributes"]["POSITION"]]
+            top = acc.get("max", [0, 0, 0])[1]
+            hi = top if hi is None else max(hi, top)
+        return hi
+
+    def test_foliage_reaches_the_top_of_every_woody_unit(self):
+        """A woody plant's leaves must clothe it to the tip.
+
+        The regression a user's screenshot caught in V2.29: the rebuilt shrub
+        builder hung leaves only on twigs and sprouted every twig from one node,
+        so foliage stopped at 78% of a vase shrub's height and 54% of a spreading
+        one — half the plant was naked cane in midsummer, reading as a dead bush.
+        Every existing guard passed: triangle budgets, node names, unit-frame
+        bounds, the manifest, and the authored ASPECT (which compares the plant's
+        overall height to its overall width, and so is blind to *which part* is
+        up there). The render gate was blind too — it measures the union of all
+        parts, and the bark reached full height the whole time.
+
+        So the missing check is per-part vertical coverage. Deliberately loose at
+        90%: a bare lower cane is correct (that is what a vase shrub IS), and the
+        topmost twig may sit slightly under the tallest stem. What it catches is
+        a fifth or more of the plant going bare.
+        """
+        checked = 0
+        for key, entry in self.mf["plants"].items():
+            if "bark" not in entry.get("parts", []):
+                continue                       # herbs/layers are one green part
+            gltf, _ = self.gltf[entry["file"]]
+            units = [f"tier{t}" for t in entry.get("tiers", [])]
+            units += [f"v{v}" for v in range(_unit_count(entry))]
+            for unit in units:
+                foliage = self._part_top(gltf, unit, "foliage")
+                bark = self._part_top(gltf, unit, "bark")
+                if foliage is None or not bark:
+                    continue
+                self.assertGreaterEqual(
+                    foliage, bark * 0.90,
+                    f"{key}/{unit}: foliage tops out at {foliage:.2f} while the "
+                    f"bark reaches {bark:.2f} — the upper "
+                    f"{(1 - foliage / bark) * 100:.0f}% of this plant is bare "
+                    f"wood in midsummer.")
+                checked += 1
+        self.assertGreater(checked, 20, "woody units stopped resolving")
 
     def test_declared_nodes_exist(self):
         for key, entry in self.mf["plants"].items():

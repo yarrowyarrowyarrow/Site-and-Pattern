@@ -69,14 +69,24 @@ def _canes(rng, F, n_stems):
         tip = rot @ Vector((0, 0, h))
         segs.append((base, fork, rad, rad * 0.7, False))
         segs.append((fork, tip, rad * 0.7, rad * 0.4, False))
-        # Twigs off the fork — where the leaves actually hang.
-        for k in range(2 + int(rng.random() * 2)):
-            spread = 0.5 + rng.random() * 0.7
-            twig_rot = (Matrix.Rotation(az + (k - 1) * 1.2 + rng.random(), 4, "Z")
+        # Twigs ALONG the upper cane — fork to tip — because the leaves hang on
+        # twigs and nowhere else. Sprouting them all at the fork (the first cut
+        # of this builder) left the top two thirds of a 5 m chokecherry bare: it
+        # read as dead sticks above a small green base, which is what a user's
+        # screenshot caught. The foliage envelope has to span the crown the same
+        # way the ellipsoid masses it replaced did (start → tip).
+        n_twig = 3 + int(rng.random() * 3)
+        for k in range(n_twig):
+            t = 0.12 + 0.88 * (k / max(1, n_twig - 1))
+            at = fork.lerp(tip, t)
+            spread = 0.45 + rng.random() * 0.6
+            twig_rot = (Matrix.Rotation(az + k * 2.39996 + rng.random() * 0.4,
+                                        4, "Z")
                         @ Matrix.Rotation(splay + spread, 4, "Y"))
-            length = h * (0.25 + rng.random() * 0.3)
-            segs.append((fork, fork + (twig_rot @ Vector((0, 0, length))),
-                         rad * 0.45, rad * 0.2, True))
+            # Shorter toward the tip, so the crown tapers instead of flaring.
+            length = h * (0.16 + rng.random() * 0.20) * (1.0 - 0.35 * t)
+            segs.append((at, at + (twig_rot @ Vector((0, 0, length))),
+                         rad * 0.4, rad * 0.18, True))
     return segs
 
 

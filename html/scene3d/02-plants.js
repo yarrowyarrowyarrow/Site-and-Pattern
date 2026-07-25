@@ -153,109 +153,16 @@ function buildGround(group, sc) {
   group.add(apron);
 }
 
-// ── ground-cover relief (V2.29) ─────────────────────────────────────────────
-// The ground was a painted plane, so a 119-plant meadow read as scattered
-// sticks standing on a texture. This scatters short tufts over the design area
-// so the surface has real relief and the plantings sit IN something.
+// The ground stays a PAINTED plane (makeMeadowTexture / makeSnowTexture).
 //
-// WHAT IT IS AND IS NOT (P9). These tufts are the ground surface — the lawn or
-// meadow matrix that is already there and is being converted — drawn in three
-// dimensions instead of only painted. They are deliberately anonymous: no
-// species, no identity, not pickable, not counted anywhere, and they carry no
-// flowers. They are the 3D counterpart of makeMeadowTexture, not extra plants.
-// The design says what is planted; this says what the ground is.
-// Two populations, because a converted yard has two ground conditions and
-// spending the same triangles on both would be wrong in each direction:
-//   * the BED — dense matrix between and under the plantings, which is what
-//     makes a meadow read as continuous cover rather than sticks in a lawn;
-//   * the LAWN — everything else, a thin scatter over the painted meadow so the
-//     surface has grain without pretending the whole property is planted.
-const _TUFT_PER_PLANT = 30;      // bed matrix ringing each planting
-const _TUFT_PER_M2 = 1.1;        // open ground, thin on purpose
-const _TUFT_CAP = 6000;          // one InstancedMesh, bounded on a big property
-let TUFT_GEO = null;
-let TUFT_MAT = null;
-// One material for every rebuild (like GROUND_MAT); only its colour changes
-// with the season. Both it and TUFT_GEO are registered as shared in
-// disposeDesignGroup so a scene rebuild doesn't free them.
-function ensureTuftMat() {
-  if (!TUFT_MAT)
-    TUFT_MAT = plantMaterial({ roughness: 0.85, wind: 0.13,
-                               vertexColors: false, doubleSide: true });
-  return TUFT_MAT;
-}
-function ensureTuftGeo() {
-  if (TUFT_GEO) return TUFT_GEO;
-  const rng = mulberry32(90210);
-  const blades = [];
-  for (let i = 0; i < 6; i++) {
-    blades.push(makeBlade(rng, 0.55 + rng() * 0.55, 0.06 + rng() * 0.04,
-                          0.18 + rng() * 0.3, 1.4));
-  }
-  TUFT_GEO = mergeGeometries(blades, false);
-  normalizeUnit([TUFT_GEO]);
-  return TUFT_GEO;
-}
-
-// Point-in-polygon so the tufts stop at the property line when there is one —
-// the ground beyond the boundary isn't this design's to dress.
-function _inRing(ring, x, y) {
-  let inside = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
-    if ((yi > y) !== (yj > y)
-        && x < ((xj - xi) * (y - yi)) / ((yj - yi) || 1e-9) + xi) inside = !inside;
-  }
-  return inside;
-}
-
-function buildGroundCover(group, sc) {
-  // Deep winter is under snow; the shoulder months keep a thinner, strawy mat
-  // (the same seasonal signal groundMatFor uses, so ground and tufts agree).
-  const m = sc.month || 6;
-  if (m >= 11 || m <= 3) return;
-  const b = sc.bounds;
-  const w = b.max_x - b.min_x, d = b.max_y - b.min_y;
-  if (w <= 0 || d <= 0) return;
-  const ring = (sc.boundary && sc.boundary.length >= 3) ? sc.boundary : null;
-  const q = QUALITY === 0 ? 0.45 : (QUALITY === 2 ? 1.5 : 1);
-  const live = (sc.plants || []).filter(p => p.health_state !== 'dead'
-                                             && (p.opacity ?? 1) >= 0.2);
-  const bed = Math.round(live.length * _TUFT_PER_PLANT * q);
-  const open = Math.round(w * d * _TUFT_PER_M2 * q);
-  const total = Math.min(_TUFT_CAP, bed + open);
-  if (total < 8) return;
-  const geo = ensureTuftGeo();
-  const rng = mulberry32(1337);
-  const mat = ensureTuftMat();
-  mat.color.set(m === 10 ? 0xa89a62 : (m === 4 ? 0x9aa870 : 0x87a05e));
-  const mesh = instancedMesh(geo, total, mat, false);
-  let idx = 0;
-  const put = (x, y, lo, hi) => {
-    if (idx >= total) return;
-    if (ring && !_inRing(ring, x, y)) return;
-    const gy = terrainHeightAt(x, y, sc.terrain);
-    const s = lo + rng() * (hi - lo);
-    setInst2(mesh, idx++, x, gy, -y, s, s * (0.8 + rng() * 0.5), s,
-             rng() * 6.28, _white);
-  };
-  // Bed matrix: a jittered ring around each planting, out to a little past its
-  // canopy, so beds close up as the design grows instead of staying bare.
-  const perPlant = Math.round(_TUFT_PER_PLANT * q);
-  for (const p of live) {
-    const reach = Math.max(0.45, (p.canopy_m || 0.5) * 0.85);
-    for (let k = 0; k < perPlant; k++) {
-      const a = rng() * 6.28, r = reach * Math.sqrt(rng());
-      put(p.x + Math.cos(a) * r, p.y + Math.sin(a) * r, 0.2, 0.34);
-    }
-  }
-  // Open ground: shorter, as if mown or grazed.
-  for (let i = 0; i < open && idx < total; i++)
-    put(b.min_x + rng() * w, b.min_y + rng() * d, 0.13, 0.22);
-  mesh.count = idx;              // tufts rejected by the boundary go unused
-  mesh.instanceMatrix.needsUpdate = true;
-  if (idx) group.add(mesh);
-}
+// V2.29 briefly scattered thousands of short anonymous grass tufts here to give
+// the surface relief. It was removed after the first user look: at yard scale
+// the tufts read as small green specks indistinguishable from the real forbs, so
+// the scene stopped saying clearly which plants the design actually contains —
+// "it muddles the real plants from these fake ones". The lesson is the honest
+// one (P9): the 3D view shows what is planted, and inventing ground vegetation
+// to make it look full works against the thing the view is for. Texture is the
+// right place to say "there is lawn here"; geometry is not.
 
 function buildBoundary(group, ring) {
   if (!ring || ring.length < 3) return;

@@ -134,6 +134,35 @@ Defined once in `scripts/blender/assetlib/conventions.py`; the loader side is
   / `variantKeyFor`; `tests/test_model_assets.py` extracts those tables and
   compares them against `conventions.py`, because two independent
   implementations of one classification is the whole risk.
+- **Shape the skeleton and the leaves together.** Every builder narrows a plant
+  to its species' aspect by moving *anchor points* through one
+  `mesh_ops.shape_to_aspect` call that includes the stem/cane endpoints as well
+  as the leaf anchors, then re-stamps the stems between their corrected
+  endpoints (`add_cone_between`). The herb builder briefly used a fixed-point
+  solve that scaled leaf anchors and blade sizes but left the stems at full
+  splay — a clump's factor is ~0.53, so every leaf was pulled halfway to the
+  axis and halved while the stem it hung on stayed put. The leaves came off
+  their stems and an aster rendered as a spray of bare stalks with a thin column
+  of shrunken leaves up the middle. `shape_to_aspect` scales each DISTINCT
+  vector once, so a shared joint (a cane's fork, an opposite pair's anchor) is
+  not moved by k² or k³.
+- **A blade class is baked as its median member**, checked by
+  `tests/test_model_assets.py`. `narrow` was baked as `linear` (width/length
+  0.06) while 65 of its 100 species are `lanceolate` (0.22) — the largest group
+  of wildflowers drew leaves 3.7x too narrow. Note the asymmetry with the
+  procedural fallback, which uses each species' *exact* recorded `leaf_shape`
+  and so was never affected: baking can only afford one outline per class.
+- **Foliage must reach the tip.** A woody unit's `foliage` part has to top out
+  within 10% of its `bark` part, checked per unit by
+  `tests/test_model_assets.py`. The first cut of the V2.29 shrub rebuild hung
+  leaves only on twigs and sprouted every twig from a single node, so foliage
+  stopped at 78% of a vase shrub's height and 54% of a spreading one — half the
+  plant was naked cane in midsummer. Every other guard passed: budgets, node
+  names, unit-frame bounds, the manifest, and the authored aspect (which
+  compares overall height to overall width and is therefore blind to *which
+  part* is up there). The render gate was blind too — it measures the union of
+  all parts, and the bark reached full height throughout. A bare LOWER cane is
+  correct; a bare top is not.
 - **Leaf counts are budgeted, not fixed:** a compound leaf is a rachis plus
   `2n+1` leaflets, so it costs 3–9× a simple blade. `mesh_ops.thin_leaf_nodes`
   drops whole nodes — never half a pair, since opposite-vs-alternate is the field
