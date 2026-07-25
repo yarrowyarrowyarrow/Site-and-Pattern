@@ -549,6 +549,10 @@ function buildShrubLayer(list, month, year, terrain) {
     });
     foliage.userData.pick = names;
     foliage.userData.pickId = ids;
+    // Pick from the stems too, the way trees already do from the trunk: a
+    // deciduous shrub in winter is nothing BUT stems, and it should still name
+    // and open on a click.
+    if (stems) { stems.userData.pick = names; stems.userData.pickId = ids; }
     plantsGroup.add(foliage);
     if (stems) plantsGroup.add(stems);
   }

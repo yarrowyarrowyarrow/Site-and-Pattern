@@ -378,6 +378,57 @@ function stepThreads(t) {
   buildThreads();
 }
 
+// ── measurement hook (V2.29) ────────────────────────────────────────────────
+// Reports the world-space bounding box the built plants actually occupy, per
+// species. This is a diagnostic, not a control: it is the only way to check the
+// *composition* of archetype geometry x instance transform, which is exactly
+// what was silently wrong for two releases — the assets were correct, the
+// instancing was correct in isolation, and together they stretched every tree by
+// up to 4.2x. tests/test_scene3d_render.py asserts the measured height/width
+// against what the scene asked for; it is also the quickest answer to "why does
+// this tree look wrong" when iterating by hand.
+//
+// Not a permaSet* name on purpose: nothing in map3d_js drives it (the bridge
+// contract test would flag it), the same way window.glb* is invisible there.
+window.permaMeasure = function () {
+  const out = { plants: {}, groups: 0 };
+  if (!plantsGroup) return out;
+  const box = new THREE.Box3();
+  const tmp = new THREE.Box3();
+  plantsGroup.updateMatrixWorld(true);
+  plantsGroup.traverse((o) => {
+    if (!o.geometry) return;
+    // Plant geometry only. The contact-shadow discs live in this group too and
+    // are deliberately 1.35x the canopy, so counting them reported every tree
+    // and shrub as exactly 35% too wide — a measurement artefact that would
+    // have made the render guard cry wolf on every single woody species.
+    // userData.pick is the reliable marker: it is set on plant meshes and
+    // nothing else.
+    if (!o.userData || !o.userData.pick) return;
+    // InstancedMesh's own computeBoundingBox folds in every instance matrix;
+    // a plain Mesh only has the geometry box. Handle both explicitly rather
+    // than relying on which three.js version does what inside setFromObject.
+    if (o.isInstancedMesh) {
+      o.computeBoundingBox();
+      if (!o.boundingBox) return;
+      tmp.copy(o.boundingBox);
+    } else {
+      if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+      if (!o.geometry.boundingBox) return;
+      tmp.copy(o.geometry.boundingBox);
+    }
+    tmp.applyMatrix4(o.matrixWorld);
+    box.union(tmp);
+    out.groups++;
+  });
+  if (out.groups) {
+    out.height_m = +(box.max.y - box.min.y).toFixed(3);
+    out.width_m = +Math.max(box.max.x - box.min.x,
+                            box.max.z - box.min.z).toFixed(3);
+  }
+  return out;
+};
+
 // ── host hook ───────────────────────────────────────────────────────────────
 // Pushed alongside each scene by src/scene3d_window.py. Re-selecting after a
 // push keeps the card live while the year / season sliders move underneath it.

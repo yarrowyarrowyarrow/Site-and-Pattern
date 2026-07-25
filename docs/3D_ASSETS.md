@@ -150,6 +150,22 @@ manifest's `half_width` still matches the shipped geometry. The aspect check
 is the one that would have caught the V2.29 deformation: triangle counts,
 node names and materials were all correct while every tree was stretched 2–4×.
 
+## Render gate
+
+`tests/test_scene3d_render.py` boots the real viewer in headless Chromium via
+`html/aspect_probe.html`, pushes one plant at a time of known dimensions, and
+reads back the bounding box the viewer actually built
+(`window.permaMeasure`). Every other guard checks a *part* — budgets, node
+names, the manifest, the authored aspect. The V2.29 deformation slid past all of
+them because each part was right and their **composition** was wrong. This is
+the only test that would have caught it; it is verified to fail (2.3× error on
+spruce) when the instancing fix is reverted. Self-skips without a Chromium
+binary; set `CHROME=` to point at one.
+
+```bash
+python -m unittest tests.test_scene3d_render      # prints the worst error on pass
+```
+
 ## Smoke probe
 
 `html/model_probe.html` (a dev page like the sprite gallery) pushes a

@@ -304,7 +304,7 @@ persisted — the footprints are). Dialog/wiring: `src/scan_import_dialog.py`.
 | `scripts/blender/assetlib` generators | regenerate (`docs/3D_ASSETS.md`), then `tests/test_model_assets.py` + the model_probe screenshots |
 | `src/scene3d_window.py` / `src/map3d_widget.py` | `tests/test_scene3d_window.py`, `tests/test_map3d_widget.py` (Qt-gated; self-skip headless) |
 | `src/scene_dossier.py` / `html/scene3d/10-inspect.js` | `tests/test_scene_dossier.py` + `tests/test_bridge_contract.py`; visual check via `scripts/make_inspect_probe.py` + `html/inspect_probe.html` |
-| flora aspect / `mesh_ops.shape_to_aspect` | `tests/test_model_assets.py` (authored aspect + manifest↔geometry half_width) |
+| flora aspect / `mesh_ops.shape_to_aspect` | `tests/test_model_assets.py` (authored aspect + manifest↔geometry half_width) **and** `tests/test_scene3d_render.py` (real viewer in headless Chromium, measures what got built — the only guard that sees geometry × instance transform together) |
 
 ## Validation
 
