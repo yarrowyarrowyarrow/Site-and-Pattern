@@ -472,7 +472,8 @@ function bladeClassFor(leafShape) {
 // can actually show. Shrub ratios sit an order of magnitude below forb ones (a
 // shrub is metres tall with centimetre leaves), so the breaks are per family or
 // the classes collapse. Unknown data lands on medium, i.e. exactly today's look.
-const _GRAIN_BREAKS = { herb: [0.133, 0.200], shrub: [0.027, 0.047] };
+const _GRAIN_BREAKS = { herb: [0.133, 0.200], shrub: [0.027, 0.047],
+                        groundcover: [0.120, 0.300] };
 // Leaf-size multiplier per class (conventions.GRAIN_LEAF_SCALE).
 const GRAIN_LEAF_SCALE = [0.62, 1.0, 1.55];
 function grainClassFor(leafSizeCm, heightM, family) {

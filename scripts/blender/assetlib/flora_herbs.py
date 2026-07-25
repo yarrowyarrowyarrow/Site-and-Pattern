@@ -16,8 +16,9 @@ import math
 import bmesh
 from mathutils import Matrix, Vector
 
+from . import conventions as C
 from .conventions import GRAIN_LEAF_SCALE, HERB_ASPECT, LAYER_ASPECT
-from .mesh_ops import (CONE_TRIS, add_blade, add_blade_or_leaf,
+from .mesh_ops import (COMPOUND_SHAPES, CONE_TRIS, add_blade, add_blade_or_leaf,
                        add_cone_between, add_ellipsoid, add_leaf,
                        bm_to_object, leaf_extent, leaf_width_for,
                        shape_to_aspect, thin_leaf_nodes)
@@ -66,12 +67,20 @@ HERB_FORMS = {
 }
 
 LAYER_KINDS = {"grass": 3, "aquatic": 3, "vine": 3, "groundcover": 2}
+# Layers whose units are keyed by (blade class × grain class) like herbs and
+# shrubs, rather than being N interchangeable random draws. Groundcover earned
+# it: its 32 species carry 14 distinct leaf outlines and four arrangements, and
+# they are looked at from a metre away.
+VARIANT_LAYERS = frozenset({"groundcover"})
 
 # Layers built entirely from flat blades and leaves, so build_all can finish
 # them with the exact mesh-measuring correction (mesh_ops.squash_to_aspect).
-# Groundcover is deliberately absent — it is round domes, which that correction
-# would flatten into discs; it stays on anchor shaping.
-FLAT_LEAF_LAYERS = frozenset({"grass", "aquatic", "vine"})
+# Groundcover was deliberately absent while it was round domes, which that
+# correction would have flattened into discs. Since V2.29 it is flat leaves like
+# the rest, and it NEEDS the measured pass: its leaves lie nearly horizontal, so
+# their reach — not the runner anchors — is what sets the mat's width, and
+# anchor shaping alone landed it at aspect 0.24 against a target of 0.42.
+FLAT_LEAF_LAYERS = frozenset({"grass", "aquatic", "vine", "groundcover"})
 
 
 def _rint(rng, lo, hi):
@@ -269,36 +278,102 @@ def _layer_vine(bm, rng):
         add_leaf(bm, rng, leaf_len, leaf_wid, leaf_tilt, az, at, "ovate")
 
 
-def _layer_groundcover(bm, rng):
-    domes, pts = [], []
-    for _ in range(10 + int(rng.random() * 7)):         # low textured mat
-        r = 0.08 + rng.random() * 0.07
-        az = rng.random() * math.tau
-        rad = rng.random() * 0.42
-        ys = 0.5 + rng.random() * 0.5
-        centre = Vector((math.cos(az) * rad, math.sin(az) * rad, r * ys * 0.5))
-        domes.append((centre, r, ys))
-        pts.append(centre)
-    # Domes keep their authored size; only how far they sprawl is shaped, so a
-    # groundcover reads as a low mat rather than a stretched hummock.
-    shape_to_aspect(pts, LAYER_ASPECT["groundcover"],
-                    radii=[r for _c, r, _ys in domes],
-                    radii_z=[r * ys for _c, r, ys in domes])
-    for centre, r, ys in domes:
-        add_ellipsoid(bm, r, (1.0, 1.0, ys), Matrix.Translation(centre),
-                      subdiv=1)
+# A groundcover leaf is seen from almost directly above, at close range, and its
+# outline is most of what there is to see — but there are a lot of them, so two
+# ribbon segments (4 triangles) buys the count that reads as a MAT.
+GC_LEAF_SEGMENTS = 2
+
+
+def _layer_groundcover(bm, rng, grain=1, leaf_shape=None, arrangement=None):
+    """A creeping mat of real leaves on runners.
+
+    Until V2.29 this was ten to seventeen faceted ellipsoids — a lump of green
+    boulders with no leaves, no stems and no structure, identical for all 32
+    groundcover species in the catalogue. It was the one archetype the V2.29 leaf
+    work never reached, and it is what a wild strawberry, a bearberry, a
+    bunchberry and five creeping Rubus all rendered as.
+
+    A groundcover is a *creeping* plant: stolons or trailing woody stems radiate
+    from a crown and root as they go, carrying leaves at nodes along their
+    length. That is the structure built here — and because these species are
+    looked at from above at close range, the leaf outline (`leaf_shape`) and the
+    arrangement (`basal` rosettes vs leaves spaced along a runner) are the two
+    things actually visible. Both come from the species' own record.
+    """
+    shape = leaf_shape or "ovate"
+    # Basal species (strawberry, violet, pussytoes) hold their leaves on erect
+    # petioles from a crown; trailing ones (bearberry, twinflower, creeping
+    # Rubus) space them along the runner. That is the difference between a
+    # rosette-studded mat and an even carpet, and it is the field mark here.
+    basal = (arrangement or "") == "basal"
+    per_node = 2 if (arrangement or "") == "opposite" else (
+        3 if (arrangement or "") == "whorled" else 1)
+    # Leaf length as a fraction of the mat's own (tiny) height. Groundcovers are
+    # centimetres tall with centimetre leaves, so unlike a shrub these fractions
+    # are LARGE — a strawberry leaf is a third of the plant's height.
+    leaf_len = (0.30, 0.42, 0.62)[max(0, min(2, int(grain)))]
+    if shape in COMPOUND_SHAPES:
+        leaf_len *= 1.25
+    leaf_wid = leaf_width_for(shape, leaf_len)
+
+    segs, nodes = [], []
+    n_run = 8 + int(rng.random() * 6)
+    for i in range(n_run):
+        az = i / n_run * math.tau + rng.random() * 0.6
+        reach = 0.55 + rng.random() * 0.45
+        rise = 0.12 + rng.random() * 0.10          # runners hug the ground
+        start = Vector((0, 0, 0.02))
+        end = Vector((math.cos(az) * reach, math.sin(az) * reach, rise))
+        segs.append((start, end))
+        n_nodes = 7 + int(rng.random() * 6)
+        for j in range(n_nodes):
+            t = 0.2 + 0.8 * (j / max(1, n_nodes - 1))
+            at = start.lerp(end, t)
+            if basal:
+                # Held up off the runner on a petiole, fanning from the node.
+                at = at + Vector((0, 0, 0.10 + rng.random() * 0.10))
+            base_az = az + (0 if per_node > 1 else j * 2.39996)
+            nodes.append([[at,
+                           # Basal leaves stand up and out; trailing ones lie
+                           # nearly flat, which is what makes a carpet a carpet.
+                           (0.75 if basal else 1.15) + rng.random() * 0.35,
+                           base_az + k * math.tau / per_node + rng.random() * 0.4]
+                          for k in range(per_node)])
+
+    structural = len(segs) * CONE_TRIS
+    nodes = thin_leaf_nodes(nodes, shape, C.TRI_BUDGETS["groundcover"],
+                            structural, segments=GC_LEAF_SEGMENTS)
+    leaves = [leaf for node in nodes for leaf in node]
+
+    pts = [p for s in segs for p in s] + [l[0] for l in leaves]
+    reach = [leaf_extent(leaf_len, l[1], shape) for l in leaves]
+    shape_to_aspect(
+        pts, LAYER_ASPECT["groundcover"],
+        radii=[0.0] * (2 * len(segs)) + [r[0] for r in reach],
+        radii_z=[0.0] * (2 * len(segs)) + [r[1] for r in reach])
+
+    for start, end in segs:
+        add_cone_between(bm, start, end, 0.012, 0.006, 3)
+    for at, tilt, az in leaves:
+        add_blade_or_leaf(bm, rng, leaf_len, leaf_wid, tilt, az, at, shape,
+                          GC_LEAF_SEGMENTS)
 
 
 _LAYER_BUILDERS = {"grass": _layer_grass, "aquatic": _layer_aquatic,
                    "vine": _layer_vine, "groundcover": _layer_groundcover}
 
 
-def build_layer(kind, rng, coll, name_prefix=""):
-    from . import conventions as C
+def build_layer(kind, rng, coll, name_prefix="", **morph):
+    """One layer archetype. ``morph`` (grain / leaf_shape / arrangement) is
+    passed only to the builders in VARIANT_LAYERS; the rest take none, so a
+    caller can hand the same bag to every kind."""
     from .materials import preview_material
 
     bm = bmesh.new()
-    _LAYER_BUILDERS[kind](bm, rng)
+    if kind in VARIANT_LAYERS:
+        _LAYER_BUILDERS[kind](bm, rng, **morph)
+    else:
+        _LAYER_BUILDERS[kind](bm, rng)
     mat = preview_material()
     return {C.PART_FOLIAGE: bm_to_object(
         bm, C.part_name(name_prefix, C.PART_FOLIAGE), coll, mat)}

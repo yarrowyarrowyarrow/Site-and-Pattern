@@ -7,7 +7,7 @@ against the files and against the viewer's own archetype vocabularies.
 import json
 
 from . import conventions as C
-from .flora_herbs import HERB_FORMS, LAYER_KINDS
+from .flora_herbs import HERB_FORMS, LAYER_KINDS, VARIANT_LAYERS
 from .flora_shrubs import SHRUB_FORMS
 from .flora_trees import TREE_ARCHETYPES
 from .structures import STRUCTURE_SPECS
@@ -49,7 +49,7 @@ def _variants_for(kind_forms, family):
     in conventions.FAMILY_FORMS, so the viewer, the generator and the guard tests
     all read one definition.
     """
-    plant_types, form_of = C.FAMILY_FORMS[family]
+    plant_types, form_of, _prefix = C.FAMILY_FORMS[family]
     out = {form: set() for form in kind_forms}
     for rec in _catalogue():
         if rec.get("plant_type") not in plant_types:
@@ -74,6 +74,11 @@ def herb_variants():
 
 def shrub_variants():
     return _variants_for(SHRUB_FORMS, "shrub")
+
+
+def groundcover_variants():
+    """Variant keys for the groundcover mat — one form, many leaf outlines."""
+    return _variants_for(["groundcover"], "groundcover")["groundcover"]
 
 # Fauna: manifest key → (nodes documented for the loader, materials used).
 FAUNA_TABLE = {
@@ -121,9 +126,15 @@ def asset_table():
             "kind": "herb", "file": f"herb_{form}.glb",
             "variant_keys": herb_vars[form], "parts": [C.PART_FOLIAGE]}
     for kind, variants in LAYER_KINDS.items():
-        table[f"layer.{kind}"] = {
-            "kind": "layer", "file": f"layer_{kind}.glb",
-            "variants": variants, "parts": [C.PART_FOLIAGE]}
+        spec = {"kind": "layer", "file": f"layer_{kind}.glb",
+                "parts": [C.PART_FOLIAGE]}
+        if kind in VARIANT_LAYERS:
+            # Morphology-keyed like herbs and shrubs: this layer bakes one unit
+            # per (blade class × grain class) its species actually use.
+            spec["variant_keys"] = groundcover_variants()
+        else:
+            spec["variants"] = variants
+        table[f"layer.{kind}"] = spec
     for key, spec in FAUNA_TABLE.items():
         table[f"fauna.{key}"] = dict(spec, kind="fauna")
     for sid, (size_m, height_m, scale_mode) in STRUCTURE_SPECS.items():

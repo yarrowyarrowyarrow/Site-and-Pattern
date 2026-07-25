@@ -171,6 +171,10 @@ GRAIN_CLASSES = 3
 _GRAIN_BREAKS = {
     "herb":  (0.133, 0.200),      # 229 rows, ratios 0.025 – 1.00
     "shrub": (0.027, 0.047),      # 55 rows,  ratios 0.008 – 0.56
+    # 32 rows, ratios 0.010 – 1.50 (median 0.200). A groundcover's leaf is a
+    # LARGE fraction of its height — a strawberry leaf is a third of the plant —
+    # so its breaks sit an order of magnitude above a shrub's.
+    "groundcover": (0.120, 0.300),
 }
 # Leaf-size multiplier applied to a form's authored blade for each class.
 GRAIN_LEAF_SCALE = (0.62, 1.0, 1.55)
@@ -278,9 +282,19 @@ def shrub_form_for(rec):
 
 # family name → (the plant_type values it covers, its form resolver). One place
 # for "what does this record map to", so a consumer never re-derives the pairing.
+# family -> (plant_types it covers, record -> form, manifest key prefix).
+# The prefix is here rather than assumed to equal the family name because
+# groundcover's units live under `layer.groundcover` (it is a layer archetype)
+# while its variant axis is a family's (blade × grain). Both the manifest
+# builder and tests/test_model_assets.py read this one definition, so a
+# family whose assets live somewhere unexpected cannot silently look up a
+# key that was never baked.
 FAMILY_FORMS = {
-    "herb": (("wildflower", "herb", "fern"), herb_form_for),
-    "shrub": (("shrub",), shrub_form_for),
+    "herb": (("wildflower", "herb", "fern"), herb_form_for, "herb"),
+    "shrub": (("shrub",), shrub_form_for, "shrub"),
+    # One form, but 32 species with 14 distinct leaf outlines between them, so
+    # the variant axis that matters here is blade × grain, not silhouette.
+    "groundcover": (("groundcover",), lambda _rec: "groundcover", "layer"),
 }
 
 
@@ -319,6 +333,12 @@ TRI_BUDGETS = {
     "shrub": 3600,
     "herb": 1200,
     "layer": 900,
+    # Groundcover is its own budget because it is the only layer you look
+    # straight DOWN at from a metre away — it carpets the front of a bed, so its
+    # leaves are the closest geometry in the scene. At the shared 900 it was
+    # ~17 faceted domes; at 1600, with 4-triangle blades, it is ~350 real
+    # leaves, which is what makes a mat read as a mat.
+    "groundcover": 1600,
     "fauna": 1500,
     "structure": 1500,
 }

@@ -35,7 +35,8 @@ _SCENE3D = os.path.join(_ROOT, "html", "scene3d")
 
 # Mirrors assetlib/conventions.py TRI_BUDGETS (comment there points here).
 _TRI_BUDGETS = {"tree_tier0": 1500, "tree_tier1": 2200, "tree_tier2": 3500,
-                "shrub": 3600, "herb": 1200, "layer": 900, "fauna": 1500,
+                "shrub": 3600, "herb": 1200, "layer": 900, "groundcover": 1600,
+                "fauna": 1500,
                 "structure": 1500}
 
 
@@ -261,7 +262,7 @@ class ModelAssetsTest(unittest.TestCase):
         catalogue = json.loads(_read(os.path.join(_ROOT, "data",
                                                  "plants_master.json")))
         served = set()
-        for types, _form_of in conventions.FAMILY_FORMS.values():
+        for types, _form_of, _prefix in conventions.FAMILY_FORMS.values():
             served |= set(types)
         for cls in conventions.BLADE_CLASSES:
             members = [r.get("leaf_shape") for r in catalogue
@@ -293,12 +294,12 @@ class ModelAssetsTest(unittest.TestCase):
         path = os.path.join(_ROOT, "data", "plants_master.json")
         catalogue = json.loads(_read(path))
         checked = 0
-        for family, (types, form_of) in conventions.FAMILY_FORMS.items():
+        for family, (types, form_of, prefix) in conventions.FAMILY_FORMS.items():
             for rec in catalogue:
                 if rec.get("plant_type") not in types:
                     continue
-                entry = self.mf["plants"].get(f"{family}.{form_of(rec)}")
-                self.assertIsNotNone(entry, f"{family}.{form_of(rec)} missing")
+                entry = self.mf["plants"].get(f"{prefix}.{form_of(rec)}")
+                self.assertIsNotNone(entry, f"{prefix}.{form_of(rec)} missing")
                 want = conventions.variant_key(
                     conventions.blade_class(rec.get("leaf_shape")),
                     conventions.grain_class(rec.get("leaf_size_cm"),
@@ -306,20 +307,24 @@ class ModelAssetsTest(unittest.TestCase):
                 self.assertIn(
                     want, entry.get("variant_keys", {}),
                     f"{rec.get('scientific_name')}: no baked {want} variant "
-                    f"for {family}.{form_of(rec)} — rebuild html/assets/models")
+                    f"for {prefix}.{form_of(rec)} — rebuild html/assets/models")
                 checked += 1
-        # 284 today (229 herbaceous + 55 shrubs). The grass/sedge/vine/aquatic/
-        # groundcover types are deliberately outside this guard: they map to the
-        # layer.* archetypes, which carry plain variants rather than morphology
-        # ones. The floor only has to catch the lookup silently going empty.
-        self.assertGreater(checked, 250, "catalogue stopped resolving")
+        # 316 today (229 herbaceous + 55 shrubs + 32 groundcover). Grass, sedge,
+        # vine and aquatic stay outside this guard: they map to layer.*
+        # archetypes carrying plain interchangeable variants rather than
+        # morphology ones. The floor only has to catch the lookup going empty.
+        self.assertGreater(checked, 300, "catalogue stopped resolving")
 
     def test_layer_and_fauna_keys_match_viewer(self):
         layers = {k.split(".", 1)[1]: e for k, e in self.mf["plants"].items()
                   if k.startswith("layer.")}
         self.assertEqual(set(layers), {"grass", "aquatic", "vine",
                                        "groundcover"})
-        self.assertEqual(layers["groundcover"].get("variants"), 2)
+        # Groundcover is morphology-keyed (V2.29): its 32 species carry 14 leaf
+        # outlines, so it ships one unit per (blade × grain) like a herb rather
+        # than N interchangeable draws.
+        self.assertGreaterEqual(len(layers["groundcover"].get("variant_keys", {})), 4)
+        self.assertIsNone(layers["groundcover"].get("variants"))
         for kind in ("grass", "aquatic", "vine"):
             self.assertEqual(layers[kind].get("variants"), 3)
         # Fauna keys must cover what 09-models.js maps critter kinds onto.
@@ -618,7 +623,12 @@ class ModelAssetsTest(unittest.TestCase):
         """Per unit, matching what the builder enforces (see _tri_count_under)."""
         for key, entry in self.mf["plants"].items():
             gltf, _ = self.gltf[entry["file"]]
-            kind = key.split(".", 1)[0]
+            family, _, name = key.partition(".")
+            # An archetype may carry its OWN budget under its bare name, which
+            # then wins over its family's — groundcover is a `layer.*` key but
+            # is the only one you look straight down at, so it gets more.
+            # Mirrors build_all's C.TRI_BUDGETS.get(kind, _budget_for(spec)).
+            kind = name if name in _TRI_BUDGETS else family
             idx = {n.get("name", ""): i
                    for i, n in enumerate(gltf.get("nodes", []))}
             units = [(f"tier{t}", _TRI_BUDGETS[f"tree_tier{t}"])

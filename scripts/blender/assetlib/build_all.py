@@ -129,19 +129,30 @@ def build_asset(key, spec=None, seed_salt="", half_widths=None):
             root.location.x = v * _GRID
     elif spec["kind"] == "layer":
         kind = key.split(".", 1)[1]
-        for v in range(spec["variants"]):
+        # A variant-keyed layer (groundcover) bakes one unit per (blade × grain)
+        # its species use, exactly like a herb; the rest are N random draws.
+        vkeys = spec.get("variant_keys")
+        for v in range(len(vkeys) if vkeys else spec["variants"]):
             prefix = f"{C.VARIANT_PREFIX}{v}"
             root = make_empty(prefix, coll)
-            parts = build_layer(kind, rng, coll, name_prefix=prefix)
+            morph = {}
+            if vkeys:
+                blade, grain = vkeys[v].rsplit("_", 1)
+                morph = {"grain": int(grain),
+                         "leaf_shape": C.BLADE_SHAPE[blade],
+                         # Basal rosettes vs leaves spaced along a runner is the
+                         # groundcover field mark, so alternate the two.
+                         "arrangement": "basal" if v % 2 else "alternate"}
+            parts = build_layer(kind, rng, coll, name_prefix=prefix, **morph)
             objs = list(parts.values())
             if kind in FLAT_LEAF_LAYERS:
                 squash_to_aspect(objs, C.LAYER_ASPECT[kind])
             halves[prefix] = unit_frame(objs)
+            budget = C.TRI_BUDGETS.get(kind, _budget_for(spec))
             for o in objs:
-                decimate_to_budget(o, _budget_for(spec))
+                decimate_to_budget(o, budget)
             bake_ao(objs, gradient=True, strength=0.6, seed_key=key + prefix)
-            tris[prefix] = _check_budget(f"{key}/{prefix}", objs,
-                                         _budget_for(spec))
+            tris[prefix] = _check_budget(f"{key}/{prefix}", objs, budget)
             for o in objs:
                 o.parent = root
             root.location.x = v * _GRID

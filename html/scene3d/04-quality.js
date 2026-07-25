@@ -362,14 +362,31 @@ function getTreeArch(cls, prof, form, tier, sub) {
   return a;
 }
 
+// Which groundcover unit a species gets: its own (blade class × grain class),
+// looked up in the manifest. Falls back to the plant-id hash when there are no
+// baked models, where the units really are interchangeable procedural draws.
+function groundcoverBucket(p) {
+  const i = window.glbLayerVariantIndex
+    ? window.glbLayerVariantIndex('groundcover', variantKeyFor(p, 'groundcover'))
+    : null;
+  return i == null ? hashPid(p.plant_id) : i;
+}
+
 function buildArchetypes() {
   if (ARCH) return;
   // Shrubs (SHRUB_CACHE) and herbs (HERB_CACHE) are built per-profile on demand;
   // the rest are the cheap shared variant arrays.
   const ground = [], grass = [], aquatic = [], vine = [];
   const glb = (kind, i) => window.glbLayerArch && window.glbLayerArch(kind, i);
-  [331, 379].forEach((sd, i) =>
-    ground.push(glb('groundcover', i) || buildGroundcoverGeo(mulberry32(sd))));
+  // Groundcover ships one unit per (blade class × grain class) its 32 species
+  // use, so the count comes from the manifest rather than a hard-coded 2. Two
+  // procedural seeds remain the fallback when there are no baked models.
+  const nGround = (window.glbLayerCount && window.glbLayerCount('groundcover')) || 0;
+  if (nGround) {
+    for (let i = 0; i < nGround; i++) ground.push(glb('groundcover', i));
+  } else {
+    [331, 379].forEach((sd) => ground.push(buildGroundcoverGeo(mulberry32(sd))));
+  }
   [421, 457, 503].forEach((sd, i) =>
     grass.push(glb('grass', i) || buildGrassGeo(mulberry32(sd))));
   [541, 587, 631].forEach((sd, i) =>
@@ -459,10 +476,20 @@ function spreadPlacements(p, year) {
 // Build one simple plant layer: bucket items across `variants` archetypes,
 // instance each bucket (including spread offspring), scale per item via
 // scaleOf(p) → [sx, sy, sz]. `noRot` keeps groundcover flat with no Y spin.
-function buildLayer(list, variants, mat, archOf, scaleOf, month, year, noRot, terrain) {
+// `bucketOf(p)` optionally decides which archetype unit a plant gets. Without
+// it, layers spread over their variants by plant-id hash — right for grass,
+// aquatic and vine, whose units are interchangeable random draws. Groundcover
+// units are NOT interchangeable: each carries a different leaf outline, so its
+// bucket is the species' own (blade × grain) key. Passing a hash there would
+// hand a strawberry a linear-leaved mat.
+function buildLayer(list, variants, mat, archOf, scaleOf, month, year, noRot,
+                    terrain, bucketOf) {
   if (!list || !list.length) return;
   const buckets = Array.from({ length: variants }, () => []);
-  for (const p of list) buckets[hashPid(p.plant_id) % variants].push(p);
+  for (const p of list) {
+    const b = bucketOf ? bucketOf(p) : hashPid(p.plant_id) % variants;
+    buckets[((b % variants) + variants) % variants].push(p);
+  }
   buckets.forEach((items, v) => {
     if (!items.length) return;
     const places = items.map(p => spreadPlacements(p, year));
@@ -743,11 +770,14 @@ function buildPlants(group, plants, month, year, terrain) {
              (p) => [Math.max(0.25, p.canopy_m), Math.max(0.2, p.height_m),
                      Math.max(0.25, p.canopy_m)], month, year, false, terrain);
 
-  // Groundcover — low textured dome mats (no flat discs), gentle sway.
-  buildLayer(byKind.groundcover, 2, MATS.ground, (v) => ARCH.ground[v],
+  // Groundcover — a creeping mat of REAL leaves since V2.29 (it was faceted
+  // domes), so each species gets the unit carrying its own leaf outline.
+  buildLayer(byKind.groundcover, ARCH.ground.length, MATS.leaf,
+             (v) => ARCH.ground[v],
              (p) => [Math.max(0.18, p.canopy_m),
                      Math.min(0.18, Math.max(0.05, p.height_m)),
-                     Math.max(0.18, p.canopy_m)], month, year, true, terrain);
+                     Math.max(0.18, p.canopy_m)], month, year, true, terrain,
+             groundcoverBucket);
 
   // Contact shadows under trees and tall shrubs (skip near-vanished plants).
   const shadowed = byKind.tree

@@ -315,13 +315,30 @@
   "layer.groundcover": {
    "file": "layer_groundcover.glb",
    "half_width": {
-    "v0": 1.01145,
-    "v1": 0.97396
+    "v0": 1.19048,
+    "v1": 1.19048,
+    "v2": 1.19048,
+    "v3": 1.19048,
+    "v4": 1.19048,
+    "v5": 1.19048,
+    "v6": 1.19048,
+    "v7": 1.19048,
+    "v8": 1.19048
    },
    "parts": [
     "foliage"
    ],
-   "variants": 2
+   "variant_keys": {
+    "broad_0": 0,
+    "broad_1": 1,
+    "broad_2": 2,
+    "compound_1": 3,
+    "compound_2": 4,
+    "cut_1": 5,
+    "narrow_0": 6,
+    "narrow_1": 7,
+    "narrow_2": 8
+   }
   },
   "layer.vine": {
    "file": "layer_vine.glb",

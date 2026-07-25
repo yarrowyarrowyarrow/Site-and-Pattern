@@ -258,6 +258,29 @@ function glbLayerArch(kind, v) {
   return (p && p.foliage) || null;
 }
 
+// How many units a layer archetype actually ships. Groundcover is variant-keyed
+// like herbs and shrubs (one unit per blade × grain its 32 species use), so the
+// count is not the hard-coded 2 the viewer used to assume — asking the manifest
+// is what lets a species pick the mat with ITS leaf on it.
+function glbLayerCount(kind) {
+  if (MODEL_STATE !== 'ready') return 0;
+  const rec = MODEL_PLANTS.get('layer.' + kind);
+  return (rec && rec.variants && rec.variants.length) || 0;
+}
+
+// Manifest index of a layer unit by variant key ('trifoliate' → 'broad_2'…),
+// or null when this layer is not variant-keyed (grass/aquatic/vine).
+function glbLayerVariantIndex(kind, vkey) {
+  if (MODEL_STATE !== 'ready') return null;
+  const rec = MODEL_PLANTS.get('layer.' + kind);
+  const map = rec && rec.variantKeys;
+  if (!map) return null;
+  const i = vkey != null && map[vkey] != null ? map[vkey] : map.broad_1;
+  return i == null ? null : i;
+}
+window.glbLayerCount = glbLayerCount;
+window.glbLayerVariantIndex = glbLayerVariantIndex;
+
 // ── fauna (called from 07-wildlife.js rebuildWildlife, GLB-first) ───────────
 
 // Per-kind animation + scale constants, copied from the procedural critter
