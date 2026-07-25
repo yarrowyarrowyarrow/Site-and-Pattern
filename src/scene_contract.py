@@ -23,7 +23,15 @@ Scene schema (``SCENE_VERSION`` = 1)::
       "plants": [{plant_id, x, y, height_m, canopy_m, plant_type,
                   foliage_type, scale_factor, spread_factor, spread_rate,
                   growth_curve, color, opacity, health, health_state,
-                  common_name, existing?, recruit?}, ...],
+                  common_name, bark_color, fall_color, leaf_size_cm,
+                  existing?, recruit?}, ...],
+                                       # bark_color / fall_color / leaf_size_cm:
+                                       #   botanical morphology (schema v47) —
+                                       #   the species' real trunk colour, its
+                                       #   autumn colour ('' = evergreen or no
+                                       #   colouring), and its typical leaf
+                                       #   length. Additive; the viewer falls
+                                       #   back to per-genus defaults when empty
                                        # recruit: true = a self-seeded gap
                                        #   coloniser that grew in where a plant
                                        #   was shaded out (V2.24 regeneration);
@@ -340,6 +348,13 @@ def build_scene(project: dict, *, year: int = 0,
             **_bloom_window(plant),
             "fruit_color": plant.get("fruit_color") or "",
             **_fruit_window(plant),
+            # Botanical morphology (schema v47, V2.29) — additive fields the
+            # viewer feature-checks, so no SCENE_VERSION bump. Empty for every
+            # species the seed data doesn't describe yet, and the viewer falls
+            # back to its per-genus defaults, so this can only add fidelity.
+            "bark_color": plant.get("bark_color") or "",
+            "fall_color": plant.get("fall_color") or "",
+            "leaf_size_cm": plant.get("leaf_size_cm"),
             "opacity": opacity,
             "health": health,
             "health_state": health_state,

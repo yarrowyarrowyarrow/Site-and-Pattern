@@ -45,7 +45,13 @@ function hashPid(pid) {
 // ── seasonal color modifier ─────────────────────────────────────────────────
 const _skyCol = new THREE.Color(SKY);
 
-function seasonalColor(hex, foliageType, month) {
+// `fallHex` (V2.29) is the species' own autumn colour from the seed data
+// (schema v47 fall_color) — an aspen's clear yellow, a dogwood's red, a
+// tamarack's gold. Empty means either an evergreen or a species that does not
+// colour up, and the generic amber is used, which is what every plant got
+// before there was any data to do better with.
+const _FALL_GENERIC = '#d4a030';
+function seasonalColor(hex, foliageType, month, fallHex) {
   const c = new THREE.Color(hex || '#66bb6a');
   const ft = (foliageType || '').toLowerCase();
   if (ft === 'evergreen') {
@@ -56,7 +62,9 @@ function seasonalColor(hex, foliageType, month) {
     if (month >= 4 && month <= 5)
       c.lerp(new THREE.Color('#c8e06a'), 0.3);
     else if (month >= 9 && month <= 10)
-      c.lerp(new THREE.Color('#d4a030'), 0.55);
+      // A species with a recorded autumn colour goes most of the way to it;
+      // without one it takes the old generic amber shift.
+      c.lerp(new THREE.Color(fallHex || _FALL_GENERIC), fallHex ? 0.8 : 0.55);
     else if (month >= 11 || month <= 3)
       c.set('#8b7355');
     return c;

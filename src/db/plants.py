@@ -177,7 +177,7 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # since the builder shipped). _migrate_to_v46 adds the column to old DBs and
 # stamps the shipped examples by name so the first v46 reseed doesn't
 # duplicate them.
-_SCHEMA_VERSION = 46
+_SCHEMA_VERSION = 47
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -436,6 +436,30 @@ def _migrate_to_v42(conn: sqlite3.Connection):
             conn.execute(f"ALTER TABLE {table} ADD COLUMN native_provinces TEXT")
         except sqlite3.OperationalError:
             pass  # column already present
+    conn.commit()
+
+
+def _migrate_to_v47(conn: sqlite3.Connection):
+    """Botanical morphology columns (V2.29) — what a species looks like.
+
+    Additive and nullable: the reseed that follows the version bump fills them
+    for the woody species, and every consumer falls back to its previous
+    behaviour where they are empty, so an upgraded DB is never in a broken
+    intermediate state. See scripts/seed_woody_morphology.py for the fields and
+    where their values come from.
+    """
+    for ddl in (
+        "ALTER TABLE plants ADD COLUMN leaf_shape TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN leaf_size_cm REAL",
+        "ALTER TABLE plants ADD COLUMN leaf_arrangement TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN bark_color TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN fall_color TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN branching TEXT DEFAULT ''",
+    ):
+        try:
+            conn.execute(ddl)
+        except sqlite3.OperationalError:
+            pass          # already present → fresh install / already migrated
     conn.commit()
 
 
@@ -949,6 +973,12 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("image_url", ""),
             p.get("image_attribution", ""),
             p.get("image_license", ""),
+            p.get("leaf_shape", ""),
+            p.get("leaf_size_cm"),
+            p.get("leaf_arrangement", ""),
+            p.get("bark_color", ""),
+            p.get("fall_color", ""),
+            p.get("branching", ""),
         ))
 
     conn.executemany(
@@ -967,8 +997,11 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             spread_habit, safety_source,
             price_low_cad, price_high_cad, availability_class,
             sourcing_notes, flower_color, flower_form, fruit_color,
-            image_url, image_attribution, image_license)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            image_url, image_attribution, image_license,
+            leaf_shape, leaf_size_cm, leaf_arrangement,
+            bark_color, fall_color, branching)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
+                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -1063,6 +1096,8 @@ def init_db() -> None:
             _migrate_to_v42(conn)
         if current_version < 46:
             _migrate_to_v46(conn)
+        if current_version < 47:
+            _migrate_to_v47(conn)
 
         # Add parent_id to polycultures if missing
         try:

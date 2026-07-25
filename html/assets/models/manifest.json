@@ -227,7 +227,7 @@
   "shrub.irregular": {
    "file": "shrub_irregular.glb",
    "half_width": {
-    "unit": 0.4487
+    "unit": 0.43881
    },
    "parts": [
     "bark",
@@ -237,7 +237,7 @@
   "shrub.mound": {
    "file": "shrub_mound.glb",
    "half_width": {
-    "unit": 0.62321
+    "unit": 0.61925
    },
    "parts": [
     "bark",
@@ -247,7 +247,7 @@
   "shrub.spreading": {
    "file": "shrub_spreading.glb",
    "half_width": {
-    "unit": 0.59657
+    "unit": 0.59943
    },
    "parts": [
     "bark",
@@ -257,7 +257,7 @@
   "shrub.thicket": {
    "file": "shrub_thicket.glb",
    "half_width": {
-    "unit": 0.58201
+    "unit": 0.58067
    },
    "parts": [
     "bark",
@@ -267,7 +267,7 @@
   "shrub.vase": {
    "file": "shrub_vase.glb",
    "half_width": {
-    "unit": 0.45986
+    "unit": 0.46133
    },
    "parts": [
     "bark",
@@ -277,9 +277,9 @@
   "tree.apple": {
    "file": "tree_apple.glb",
    "half_width": {
-    "tier0": 0.39858,
-    "tier1": 0.39103,
-    "tier2": 0.35844
+    "tier0": 0.39882,
+    "tier1": 0.39035,
+    "tier2": 0.35891
    },
    "parts": [
     "bark",
@@ -294,9 +294,9 @@
   "tree.aspen": {
    "file": "tree_aspen.glb",
    "half_width": {
-    "tier0": 0.20232,
-    "tier1": 0.17809,
-    "tier2": 0.19817
+    "tier0": 0.20211,
+    "tier1": 0.17811,
+    "tier2": 0.19812
    },
    "parts": [
     "bark",
@@ -311,9 +311,9 @@
   "tree.birch": {
    "file": "tree_birch.glb",
    "half_width": {
-    "tier0": 0.19599,
-    "tier1": 0.22133,
-    "tier2": 0.20398
+    "tier0": 0.19614,
+    "tier1": 0.22152,
+    "tier2": 0.20413
    },
    "parts": [
     "bark",
@@ -328,9 +328,9 @@
   "tree.cherry": {
    "file": "tree_cherry.glb",
    "half_width": {
-    "tier0": 0.24357,
-    "tier1": 0.26223,
-    "tier2": 0.26255
+    "tier0": 0.24351,
+    "tier1": 0.26244,
+    "tier2": 0.26278
    },
    "parts": [
     "bark",
@@ -447,9 +447,9 @@
   "tree.oak": {
    "file": "tree_oak.glb",
    "half_width": {
-    "tier0": 0.40291,
-    "tier1": 0.39593,
-    "tier2": 0.40088
+    "tier0": 0.40272,
+    "tier1": 0.37963,
+    "tier2": 0.39446
    },
    "parts": [
     "bark",
@@ -464,9 +464,9 @@
   "tree.pine": {
    "file": "tree_pine.glb",
    "half_width": {
-    "tier0": 0.12515,
-    "tier1": 0.129,
-    "tier2": 0.12551
+    "tier0": 0.12446,
+    "tier1": 0.13136,
+    "tier2": 0.12744
    },
    "parts": [
     "bark",
@@ -498,9 +498,9 @@
   "tree.willow": {
    "file": "tree_willow.glb",
    "half_width": {
-    "tier0": 0.26256,
-    "tier1": 0.25441,
-    "tier2": 0.2502
+    "tier0": 0.26315,
+    "tier1": 0.2542,
+    "tier2": 0.24863
    },
    "parts": [
     "bark",

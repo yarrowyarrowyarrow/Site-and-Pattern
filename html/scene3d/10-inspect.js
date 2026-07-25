@@ -229,6 +229,10 @@ function plantCardHtml(e) {
   if (e.water) bits.push(esc(e.water) + ' water');
   if (e.native) bits.push('native to ' + esc(e.native));
   if (bits.length) h += '<div class="ifacts">' + bits.join(' · ') + '</div>';
+  // What it looks like — the same morphology that shapes the model on screen.
+  if (e.morphology && e.morphology.length) {
+    h += '<div class="ifacts">' + esc(e.morphology.join(' · ')) + '</div>';
+  }
 
   h += seasonBar(e);
   h += growthStrip(e);

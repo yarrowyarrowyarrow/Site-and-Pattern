@@ -120,6 +120,39 @@ LAYER_ASPECT = {"grass": 1.31, "aquatic": 1.20, "vine": 1.72,
                 "groundcover": 0.42}
 
 
+# Typical leaf (or needle) length in cm for the species that map to each
+# archetype — the median of their `leaf_size_cm` in data/plants_master.json,
+# authored in scripts/seed_woody_morphology.py. This is what lets a bur oak's
+# foliage read coarse and a spruce's fine at the same crown size: without it,
+# every archetype carried identically-sized leaf masses and species identity
+# stopped at colour.
+LEAF_CM = {
+    "spruce": 1.5, "fir": 2.2, "pine": 4.0, "larch": 2.5, "def_conifer": 2.0,
+    "aspen": 8.0, "birch": 6.0, "oak": 20.0, "willow": 6.0, "cherry": 8.0,
+    "apple": 8.0, "def_slender": 7.0, "def_oval": 7.0, "def_spreading": 7.0,
+    "vase": 8.0, "spreading": 6.0, "mound": 5.5, "thicket": 6.0,
+    "irregular": 4.0,
+}
+
+# A leaf mass in this visual language is a branch-end CLUSTER, not one leaf, so
+# it tracks leaf length sub-linearly — and the reference is the median woody
+# leaf (7 cm), which keeps the existing look as the centre of the range. The
+# clamp stops a 50 cm yucca blade or a 1.2 cm juniper scale from producing a
+# mass that is all crown or invisible.
+LEAF_REFERENCE_CM = 7.0
+GRAIN_RANGE = (0.62, 1.55)
+
+
+def grain_for(archetype):
+    """Foliage-mass size multiplier for an archetype, from its species' leaf
+    length. 1.0 is the median woody leaf; bigger is coarser."""
+    cm = LEAF_CM.get(archetype)
+    if not cm:
+        return 1.0
+    g = (cm / LEAF_REFERENCE_CM) ** 0.5
+    return round(max(GRAIN_RANGE[0], min(GRAIN_RANGE[1], g)), 3)
+
+
 def aspect_for(key):
     """Target aspect for a manifest plant key ('tree.spruce', 'herb.mat', …),
     or None for a family that doesn't declare one."""

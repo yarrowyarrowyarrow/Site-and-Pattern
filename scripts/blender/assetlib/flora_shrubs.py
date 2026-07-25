@@ -48,6 +48,9 @@ def build_shrub(form, rng, coll, name_prefix=""):
     from .materials import preview_material
 
     F = SHRUB_FORMS[form]
+    # Leaf-mass size follows the species' real leaf length (conventions.LEAF_CM):
+    # a saskatoon or hazelnut clump is coarser than a sagebrush's.
+    grain = C.grain_for(form)
     bark = bmesh.new()
     fol = bmesh.new()
 
@@ -71,7 +74,8 @@ def build_shrub(form, rng, coll, name_prefix=""):
             t = F["start"] + (1 - F["start"]) * (
                 0.7 if n_mass == 1 else j / (n_mass - 1))
             at = rot @ Vector((0, 0, h * t))
-            r = F["mass_r"][0] + rng.random() * (F["mass_r"][1] - F["mass_r"][0])
+            r = (F["mass_r"][0]
+                 + rng.random() * (F["mass_r"][1] - F["mass_r"][0])) * grain
             jitter = Vector(((rng.random() - 0.5) * 0.08,
                              (rng.random() - 0.5) * 0.08, 0))
             centre = at + jitter
@@ -81,7 +85,7 @@ def build_shrub(form, rng, coll, name_prefix=""):
             pts.append(centre)
     if F["basal"]:
         for _ in range(2 + int(rng.random() * 2)):
-            r = 0.15 + rng.random() * 0.08
+            r = (0.15 + rng.random() * 0.08) * grain
             centre = Vector(((rng.random() - 0.5) * 0.34,
                              (rng.random() - 0.5) * 0.34,
                              0.10 + rng.random() * 0.12))

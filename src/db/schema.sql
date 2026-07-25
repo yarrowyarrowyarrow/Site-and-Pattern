@@ -70,7 +70,27 @@ CREATE TABLE IF NOT EXISTS plants (
     -- locally and shows the attribution beside the photo (src/image_cache.py).
     image_url TEXT DEFAULT '',          -- http(s) URL or local path to an open-licensed photo
     image_attribution TEXT DEFAULT '',  -- e.g. "© Photographer, CC BY-SA 4.0 (via Wikimedia)"
-    image_license TEXT DEFAULT ''       -- e.g. CC0 / CC BY / CC BY-SA / public domain
+    image_license TEXT DEFAULT '',      -- e.g. CC0 / CC BY / CC BY-SA / public domain
+    -- Botanical morphology (schema v47, V2.29). What a species LOOKS like, so
+    -- the 3D archetypes can read as themselves instead of as a generic member
+    -- of their growth form. Authored for the woody species in
+    -- scripts/seed_woody_morphology.py (which documents the fields and their
+    -- sourcing); empty/NULL everywhere else, and every consumer falls back to
+    -- the old behaviour, so this is additive.
+    leaf_shape TEXT DEFAULT '',         -- needle|awl|scale|linear|lanceolate|elliptic|
+                                        -- ovate|obovate|orbicular|cordate|lobed|
+                                        -- trifoliate|compound_pinnate|compound_palmate
+    leaf_size_cm REAL,                  -- typical mature blade (or needle) length, cm.
+                                        -- Sets 3D foliage-mass grain in REAL metres:
+                                        -- a 20 cm bur oak leaf reads coarse, a 2 cm
+                                        -- dwarf-birch leaf fine, at the same crown size.
+    leaf_arrangement TEXT DEFAULT '',   -- alternate|opposite|whorled|fascicled|basal
+    bark_color TEXT DEFAULT '',         -- hex; the trunk/stem colour (red-osier dogwood
+                                        -- red, aspen chalky green-white)
+    fall_color TEXT DEFAULT '',         -- hex autumn foliage; '' = evergreen or no
+                                        -- colouring (an honest empty, not a guess)
+    branching TEXT DEFAULT ''           -- excurrent|decurrent|multi_stem|suckering|
+                                        -- arching|prostrate|rosette
 );
 
 CREATE TABLE IF NOT EXISTS companion_friends (

@@ -93,6 +93,16 @@ AVAILABILITY_CLASSES = {"big_box", "garden_centre", "native_specialist",
 FLOWER_FORMS      = {"daisy", "rays", "spike", "plume", "umbel", "globe",
                      "cluster", "bell", "trumpet", "cattail", "pea", "whorl",
                      "star", "cross", "lily", "none"}
+# Botanical morphology (schema v47) — authored for the woody species in
+# scripts/seed_woody_morphology.py; empty everywhere else, hence no "missing"
+# error, only a check that what IS there is spelled canonically.
+LEAF_SHAPES       = {"needle", "awl", "scale", "linear", "lanceolate",
+                     "elliptic", "ovate", "obovate", "orbicular", "cordate",
+                     "lobed", "trifoliate", "compound_pinnate",
+                     "compound_palmate"}
+LEAF_ARRANGEMENTS = {"alternate", "opposite", "whorled", "fascicled", "basal"}
+BRANCHING_HABITS  = {"excurrent", "decurrent", "multi_stem", "suckering",
+                     "arching", "prostrate", "rosette"}
 
 # ── Soft enum allowlists (drift here is a WARNING) ──────────────────────────
 
@@ -259,6 +269,9 @@ def validate_plant(
         ("spread_habit",        SPREAD_HABITS),
         ("availability_class",  AVAILABILITY_CLASSES),
         ("flower_form",         FLOWER_FORMS),
+        ("leaf_shape",          LEAF_SHAPES),
+        ("leaf_arrangement",    LEAF_ARRANGEMENTS),
+        ("branching",           BRANCHING_HABITS),
     ):
         if field in _MULTI_VALUE_ENUM_FIELDS:
             for tok in condition_tokens(record.get(field)):
@@ -278,6 +291,22 @@ def validate_plant(
     frc = (record.get("fruit_color") or "").strip()
     if frc and not re.fullmatch(r"#[0-9a-fA-F]{6}", frc):
         err(f"fruit_color={frc!r} is not a #rrggbb hex")
+
+    # bark_color / fall_color: empty or #rrggbb (schema v47). An empty
+    # fall_color is meaningful — an evergreen, or a species that doesn't colour
+    # up — so it is never filled in with a guess.
+    for field in ("bark_color", "fall_color"):
+        val = (record.get(field) or "").strip()
+        if val and not re.fullmatch(r"#[0-9a-fA-F]{6}", val):
+            err(f"{field}={val!r} is not a #rrggbb hex")
+
+    # leaf_size_cm: a positive length when present. The upper bound catches a
+    # millimetre/centimetre unit slip, which would silently change 3D grain.
+    leaf_cm = _to_float(record.get("leaf_size_cm"))
+    if record.get("leaf_size_cm") not in (None, "") and leaf_cm is None:
+        err(f"leaf_size_cm={record.get('leaf_size_cm')!r} is not a number")
+    elif leaf_cm is not None and not (0.1 <= leaf_cm <= 120):
+        err(f"leaf_size_cm={leaf_cm} out of range 0.1–120 cm")
 
     # ── Soft enums (deviations = warning) ────────────────────────────────
     val = (record.get("growth_curve") or "").strip()

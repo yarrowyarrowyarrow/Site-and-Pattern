@@ -197,6 +197,9 @@ def _plant_entry(plant: dict, edges: list, only_source: list,
         "bloom_color": plant.get("flower_color") or "",
         "fruit": _month_span(*_fruit_pair(plant)),
         "fruit_color": plant.get("fruit_color") or "",
+        # What it looks like (schema v47) — the same fields that shape the 3D
+        # model, said in words, so the card explains the thing on screen.
+        "morphology": _morphology(plant),
         "mature_height_m": plant.get("mature_height_meters"),
         "mature_canopy_m": plant.get("mature_canopy_m"),
         "years_to_maturity": plant.get("years_to_maturity"),
@@ -209,6 +212,46 @@ def _plant_entry(plant: dict, edges: list, only_source: list,
         "edible_parts": plant.get("edible_parts") or "",
     }
     return entry
+
+
+_LEAF_SHAPE_LABEL = {
+    "needle": "needles", "awl": "sharp awl-shaped leaves",
+    "scale": "scale-like leaves", "linear": "narrow linear leaves",
+    "lanceolate": "lance-shaped leaves", "elliptic": "elliptic leaves",
+    "ovate": "egg-shaped leaves", "obovate": "spoon-shaped leaves",
+    "orbicular": "round leaves", "cordate": "heart-shaped leaves",
+    "lobed": "lobed leaves", "trifoliate": "leaves in threes",
+    "compound_pinnate": "feather-compound leaves",
+    "compound_palmate": "hand-compound leaves",
+}
+_BRANCHING_LABEL = {
+    "excurrent": "a single straight leader",
+    "decurrent": "a spreading, branching crown",
+    "multi_stem": "several stems from the base",
+    "suckering": "spreads by suckers into a colony",
+    "arching": "arching canes",
+    "prostrate": "low and ground-hugging",
+    "rosette": "a basal rosette of stiff leaves",
+}
+
+
+def _morphology(plant: dict) -> list[str]:
+    """Plain-language description of the species' form — the same fields the 3D
+    archetype is shaped by, so the card explains what you are looking at."""
+    out = []
+    shape = _LEAF_SHAPE_LABEL.get(plant.get("leaf_shape") or "")
+    size = plant.get("leaf_size_cm")
+    if shape and size:
+        arrangement = plant.get("leaf_arrangement") or ""
+        pair = " in opposite pairs" if arrangement == "opposite" else (
+            " in bundles" if arrangement == "fascicled" else "")
+        out.append(f"{shape} about {float(size):g} cm long{pair}")
+    elif shape:
+        out.append(shape)
+    branch = _BRANCHING_LABEL.get(plant.get("branching") or "")
+    if branch:
+        out.append(branch)
+    return out
 
 
 def _bloom_pair(plant: dict):

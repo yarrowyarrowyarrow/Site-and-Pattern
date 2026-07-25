@@ -12,7 +12,7 @@ seeded reference data every project draws from.
   [`recipes.py`](../src/db/recipes.py),
   [`structures.py`](../src/db/structures.py),
   [`fauna.py`](../src/db/fauna.py)
-- **Current schema version:** `46` (`src/db/plants.py:_SCHEMA_VERSION` — the
+- **Current schema version:** `47` (`src/db/plants.py:_SCHEMA_VERSION` — the
   authoritative value; this doc's narrative may lag, the code wins)
 - **Location:**
   - Linux: `~/.local/share/Site & Pattern/permadesign.db`
@@ -48,6 +48,14 @@ One row per species. Key columns (full list in the DDL):
 | `marker_color` | custom map-marker hex |
 | `growth_rate`, `years_to_maturity`, `growth_curve` | succession/timeline (curve: fast_early \| steady \| slow_start) |
 | `ab_ecoregion` | comma-separated AB ecoregion tags |
+| `leaf_shape`, `leaf_size_cm`, `leaf_arrangement` | botanical morphology (v47). `leaf_size_cm` sets 3D foliage grain in real metres — a 20 cm bur oak leaf reads coarse, a 2 cm dwarf-birch leaf fine, at the same crown size |
+| `bark_color`, `fall_color` | hex (v47). The species' real trunk colour and autumn colour; `fall_color` empty = evergreen or no colouring, an honest empty rather than a guess |
+| `branching` | excurrent \| decurrent \| multi_stem \| suckering \| arching \| prostrate \| rosette (v47) |
+
+The v47 morphology columns are authored for the 69 woody species in
+[`scripts/seed_woody_morphology.py`](../scripts/seed_woody_morphology.py),
+which documents each field and where its values come from; they are empty
+elsewhere and every consumer falls back to its previous behaviour.
 
 ### `companion_friends` / `companion_enemies`
 Symmetric plant↔plant companion relationships (`plant_id_a`, `plant_id_b`).

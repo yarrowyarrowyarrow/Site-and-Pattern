@@ -176,7 +176,7 @@ def _build_conifer(kind, tier, rng, aspect):
     return bark, fol
 
 
-def _build_pine(tier, rng, aspect):
+def _build_pine(tier, rng, aspect, grain):
     """Pinus: clear lower trunk, tufted open upper crown, flattish top."""
     bark = bmesh.new()
     fol = bmesh.new()
@@ -185,7 +185,7 @@ def _build_pine(tier, rng, aspect):
     # sized off the crown width like the deciduous leaf masses — and there are
     # more of them on a bigger tree.
     crown_half = 0.5 / aspect
-    pad_r = crown_half * (0.62, 0.5, 0.42)[tier]
+    pad_r = crown_half * (0.62, 0.5, 0.42)[tier] * grain
     clumps = 6 + tier * 4
     z_base = 0.48
     tufts, pts = [], []
@@ -252,7 +252,7 @@ def _decid_skeleton(rng, form, max_depth, min_r):
     return segs
 
 
-def _build_deciduous(genus, tier, rng, aspect):
+def _build_deciduous(genus, tier, rng, aspect, grain):
     g = DECID_GENERA[genus]
     form = dict(DECID_FORMS[g["form"]])
     f_scale = form["foliage_scale"] * g.get("foliage_scale", 1.0)
@@ -261,9 +261,11 @@ def _build_deciduous(genus, tier, rng, aspect):
     fol = bmesh.new()
 
     # Leaf masses are sized off the crown's own width, so a narrow species gets
-    # small masses and a broad one big ones — see FOLIAGE_FRAC.
+    # small masses and a broad one big ones (FOLIAGE_FRAC) — and then off the
+    # species' real leaf length, so a bur oak (20 cm leaves) reads coarse beside
+    # an aspen (8 cm) at the same crown size (conventions.grain_for).
     crown_half = 0.5 / aspect
-    clump_r = crown_half * FOLIAGE_FRAC[tier] * f_scale
+    clump_r = crown_half * FOLIAGE_FRAC[tier] * f_scale * grain
 
     segs = _decid_skeleton(rng, form, DECID_DEPTH[tier], DECID_MIN_R[tier])
     blobs = []          # [center, radius, z_of_tip] — clear-bole gated below
@@ -319,12 +321,13 @@ def build_tree(archetype, tier, rng, coll, name_prefix=""):
     # shaped to it so the instance transform stays undistorted (see the
     # unit-frame note in conventions.py).
     aspect = C.CROWN_ASPECT.get(archetype, 1.8)
+    grain = C.grain_for(archetype)
     if archetype == "pine":
-        bark_bm, fol_bm = _build_pine(tier, rng, aspect)
+        bark_bm, fol_bm = _build_pine(tier, rng, aspect, grain)
     elif archetype in CONIFER_KINDS:
         bark_bm, fol_bm = _build_conifer(archetype, tier, rng, aspect)
     elif archetype in DECID_GENERA:
-        bark_bm, fol_bm = _build_deciduous(archetype, tier, rng, aspect)
+        bark_bm, fol_bm = _build_deciduous(archetype, tier, rng, aspect, grain)
     else:
         raise KeyError(f"unknown tree archetype: {archetype}")
     mat = preview_material()

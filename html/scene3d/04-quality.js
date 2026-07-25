@@ -417,7 +417,7 @@ function buildLayer(list, variants, mat, archOf, scaleOf, month, year, noRot, te
       const [cx, sy, cz] = scaleOf(p);
       const sx = unitXZ(arch, cx), sz = unitXZ(arch, cz);
       const rotY0 = noRot ? 0 : (indHash(p) % 628) / 100;
-      const col = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month), p.health), p.opacity);
+      const col = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month, p.fall_color), p.health), p.opacity);
       places[ii].forEach((pl, k) => {
         const m = pl.mul;
         const wx = p.x + pl.dx, wy = p.y + pl.dz;
@@ -489,7 +489,7 @@ function buildHerbLayer(list, month, year, terrain) {
       const c = unitXZ(arch, Math.max(0.15, p.canopy_m));
       const h = Math.max(0.08, p.height_m);
       const rotY0 = (indHash(p) % 628) / 100;
-      const col = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month), p.health), p.opacity);
+      const col = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month, p.fall_color), p.health), p.opacity);
       places[ii].forEach((pl, k) => {
         const m = pl.mul, x = p.x + pl.dx, wy = p.y + pl.dz;
         const rotY = rotY0 + (k ? pl.dx : 0);
@@ -523,15 +523,18 @@ function buildShrubLayer(list, month, year, terrain) {
     const foliage = instancedMesh(arch.foliageGeo, total, MATS.shrubFoliage);
     const stems = arch.stemGeo
       ? instancedMesh(arch.stemGeo, total, arch.stemMat || MATS.branch) : null;
-    // Woody stems are bark-brown, except red-osier dogwood's signature red.
-    const stemHex = prof.redStems ? '#b5402e' : '#6b5236';
+    // Woody stems take the species' own bark colour where the seed data has
+    // one — which is how red-osier dogwood gets its red, generalised from the
+    // genus special case that used to be the only way to say so.
+    const stemHex = items.length && items[0].bark_color
+      ? items[0].bark_color : (prof.redStems ? '#b5402e' : '#6b5236');
     const names = new Array(total), ids = new Array(total);
     let idx = 0;
     items.forEach((p, ii) => {
       const c = unitXZ(arch.foliageGeo, Math.max(0.25, p.canopy_m));
       const h = Math.max(0.2, p.height_m);
       const rotY0 = (indHash(p) % 628) / 100;
-      const col = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month), p.health), p.opacity);
+      const col = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month, p.fall_color), p.health), p.opacity);
       const scol = fadeToward(stemHex, p.opacity);
       places[ii].forEach((pl, k) => {
         const m = pl.mul, x = p.x + pl.dx, wy = p.y + pl.dz;
@@ -606,8 +609,10 @@ function buildPlants(group, plants, month, year, terrain) {
         const c = unitXZ(arch.foliageGeo, Math.max(0.4, p.canopy_m));
         const rotY0 = (indHash(p) % 628) / 100;
         const bare = _isDecid(p.foliage_type) && _bareMonth(month);
-        const bcol = fadeToward(prof.bark || '#5d4433', p.opacity);
-        const fcol = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month), p.health), p.opacity);
+        // The species' own bark colour (schema v47) if the seed data has it,
+        // else the genus default the viewer has always used.
+        const bcol = fadeToward(p.bark_color || prof.bark || '#5d4433', p.opacity);
+        const fcol = fadeColor(witherColor(seasonalColor(p.color, p.foliage_type, month, p.fall_color), p.health), p.opacity);
         places[ii].forEach((pl, k) => {
           const m = pl.mul, x = p.x + pl.dx, wy = p.y + pl.dz, z = -wy;
           const rotY = rotY0 + (k ? pl.dx + pl.dz : 0);
