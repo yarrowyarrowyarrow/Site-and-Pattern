@@ -468,8 +468,11 @@ function disposeDesignGroup(group) {
   // GLB master geometries (09-models.js) survive cache clears — a quality (or
   // models-ready) rebuild clears the caches above, but the masters are re-served.
   if (window.glbSharedGeos) for (const g of window.glbSharedGeos()) sharedGeo.add(g);
+  if (TUFT_GEO) sharedGeo.add(TUFT_GEO);      // shared ground-cover tuft
   const sharedMat = new Set(MATS ? Object.values(MATS) : []);
   if (GROUND_MAT) sharedMat.add(GROUND_MAT);   // shared meadow texture lives on
+  if (GROUND_SNOW_MAT) sharedMat.add(GROUND_SNOW_MAT);   // and its winter twin
+  if (TUFT_MAT) sharedMat.add(TUFT_MAT);
   group.traverse(obj => {
     if (obj.isInstancedMesh) obj.dispose();             // frees instance buffers only
     if (obj.geometry && !sharedGeo.has(obj.geometry)) obj.geometry.dispose();
@@ -501,6 +504,7 @@ window.permaSetScene = function (sc) {
   lastTerrain = sc.terrain || null;
 
   buildGround(designGroup, sc);
+  buildGroundCover(designGroup, sc);
   buildBoundary(designGroup, sc.boundary);
   buildBuildings(designGroup, sc.buildings);
   buildPlants(designGroup, sc.plants, sc.month, sc.year, sc.terrain);

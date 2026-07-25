@@ -143,7 +143,42 @@ The teaching tools live on their own top-level **Learn** tab (V2.25):
 
 ---
 
-## 11. Save & share
+## 11. See it in 3D (View → 3D Preview)
+
+The 3D preview is where the design stops being a plan and starts being a place.
+
+- **Year slider** — drag it to watch the design grow. Year 0 is the mature
+  reference; drag right and you see year 1, 5, 15, 25. Plants that the closing
+  canopy shades past their tolerance decline and drop out, and self-seeding
+  natives fill the gaps, so a late year shows the community that actually
+  survives rather than everything you ever planted.
+- **Time of year** — foliage colour, bloom, berries and snow all follow the
+  month. Each species turns its own autumn colour.
+- **Time of day** — drives the sun and the shadows (the same engine as the 2D
+  shade map, so the two always agree). Drag past dusk for a moonlit scene with
+  moths and bats instead of the day's bees and butterflies.
+- **Click any plant or creature** to open its card: what it is, when it blooms
+  and fruits, how big it gets at years 1 / 5 / 15 / 25, every animal documented
+  to use it and how — and, when it applies, *"pull this plant and N species lose
+  their only support here"*. Clicking also draws threads from the plant to each
+  creature in the scene that uses it, labelled with the relationship. Click a
+  bee and you get the reverse: which of your plants it visits. Esc or the ×
+  closes the card.
+- **Creature + Fly as a bee / Tour the year / Show its plants** — pick a native
+  bee, butterfly or moth, then either fly it yourself (WASD, F to snap to the
+  nearest flower), let it tour the season hands-free, or light up the plants in
+  your design that feed it.
+- **Walk the garden** — third-person stroll among the wildlife. **Flyover** —
+  a hands-free ~60 s cinematic: the design grows, the seasons turn, night falls.
+- **Identify** — labels every creature and lists who lives here.
+- **Detail** — lower it if the view is sluggish on your machine.
+
+Nothing in 3D is invented: a creature only appears if there is a documented
+relationship between it and a plant you actually placed.
+
+---
+
+## 12. Save & share
 
 - **File → Save** (Ctrl+S) writes a `.perma.geojson` file — the whole design.
 - **File → Open** (Ctrl+O) loads one.
@@ -154,7 +189,7 @@ The teaching tools live on their own top-level **Learn** tab (V2.25):
 
 ---
 
-## 12. Keyboard shortcuts
+## 13. Keyboard shortcuts
 
 | Shortcut | Action |
 |----------|--------|
@@ -170,7 +205,7 @@ The teaching tools live on their own top-level **Learn** tab (V2.25):
 
 ---
 
-## 13. Tips that aren't obvious
+## 14. Tips that aren't obvious
 
 - **Click a boundary's area label** to cycle units (m² → ha → acres → km²).
 - The expanded plant calendar's colours map to life stages: **purple** = start indoors, **teal** = direct sow, **blue** = transplant, **green** = growing, **orange** = harvest, **brown** = pruning, **grey** = dormant. The current month gets a yellow ring.

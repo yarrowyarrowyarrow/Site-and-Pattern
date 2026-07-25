@@ -141,6 +141,50 @@ above horizon; `map3d_js.set_sun_for` applies the same `-lng/15 h` local-solar
 shift as the 2D shade engine, so 2D shade and 3D shadows agree by
 construction.
 
+## Click to inspect: the dossier (V2.29)
+
+Clicking a plant or creature opens an in-viewer card. The learning content is
+built **in Python** by `src/scene_dossier.py` (Qt-free, every collaborator
+injectable) and pushed with each scene via `map3d_js.set_dossier` →
+`window.permaSetDossier`; `html/scene3d/10-inspect.js` renders it and draws the
+food-web threads. The bridge stays **one-directional** — that is the whole
+reason the content ships with the geometry rather than being fetched on click,
+and it is why the card works in walk / fly / bee modes.
+
+Things that will bite you:
+
+- `userData.pick` is the hover NAME; `userData.pickId` is the plant id. Both are
+  parallel arrays per InstancedMesh — a new plant family must set both or it
+  will hover but not open.
+- Creatures carry `on_id` (the anchor plant's id) from
+  `src/scene_wildlife.py`; threads bind on that, not on the display name, so
+  two plantings of one species don't merge.
+- The dossier is keyed `{plants: {id-as-string: …}, fauna: {common_name: …}}` —
+  ids for plants, names for creatures, because that is what a click has in hand.
+- Every collaborator is called **once per design**, not per plant, and "only
+  source here" is a set operation over the same edge query — never recompute a
+  habitat score per plant here.
+- `tests/test_scene_dossier.py` pins the honesty rules: unassessed toxicity
+  reports as unassessed, prices are labelled estimates, and "only source" is
+  relative to the design on screen.
+
+## Aspect ratio: the V2.29 trap
+
+Flora assets are authored at their species' **real height ÷ canopy** and
+normalised **uniformly**; the instance scale divides the canopy by the measured
+`half_width` (`unitXZ` in `04-quality.js`). Before this, assets were squashed to
+1×1×1 and instanced by `(canopy_m, height_m, canopy_m)` — two different factors
+— which stretched every foliage clump by the species' aspect (up to 4.2× on a
+lodgepole pine). If you add a flora builder: shape it with
+`mesh_ops.shape_to_aspect` (moves anchor points; branches re-stamped between
+corrected ends) for anything with round foliage masses, or
+`mesh_ops.squash_to_aspect` (exact, measured) for flat-leaf geometry only.
+`tests/test_model_assets.py` fails the build if an archetype's authored aspect
+drifts from its species' proportions — the guard that was missing when this bug
+shipped, since triangle counts and node names were all correct throughout.
+
+Also: `tierFor` is a **size** class (reads `height_m`), not a growth stage.
+
 ## Sprites and the sprite gallery
 
 Plants render as instanced procedural archetypes in `html/scene3d.html`:
@@ -259,6 +303,8 @@ persisted — the footprints are). Dialog/wiring: `src/scan_import_dialog.py`.
 | `html/scene3d/09-models.js` / `html/assets/models/` | `tests/test_model_assets.py` + `tests/test_scene3d_assets.py` + `tests/test_bridge_contract.py` |
 | `scripts/blender/assetlib` generators | regenerate (`docs/3D_ASSETS.md`), then `tests/test_model_assets.py` + the model_probe screenshots |
 | `src/scene3d_window.py` / `src/map3d_widget.py` | `tests/test_scene3d_window.py`, `tests/test_map3d_widget.py` (Qt-gated; self-skip headless) |
+| `src/scene_dossier.py` / `html/scene3d/10-inspect.js` | `tests/test_scene_dossier.py` + `tests/test_bridge_contract.py`; visual check via `scripts/make_inspect_probe.py` + `html/inspect_probe.html` |
+| flora aspect / `mesh_ops.shape_to_aspect` | `tests/test_model_assets.py` (authored aspect + manifest↔geometry half_width) |
 
 ## Validation
 

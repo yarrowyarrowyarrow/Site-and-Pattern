@@ -11,6 +11,18 @@ the **live gallery** below lets you rotate and inspect each one.
 > falls back to these forms for anything missing. The GLB pipeline and its
 > generator↔viewer contract live in [`3D_ASSETS.md`](3D_ASSETS.md). Flower and
 > berry sprites below are unaffected — they layer on top of either geometry.
+>
+> **Since V2.29** archetypes are authored at each species' **real aspect ratio**
+> and normalised uniformly, so the instance transform no longer stretches
+> foliage (see the unit-frame note in
+> [`3D_ASSETS.md`](3D_ASSETS.md#the-generatorviewer-contract)). Two consequences
+> for the tables below: a tree's **tier is a size class, not a growth stage**
+> (`tierFor` reads `height_m`, so a young conifer is a small dense cone rather
+> than a sparse adult), and **foliage grain comes from the species' leaf
+> length** (`leaf_size_cm`, schema v47) — a bur oak reads coarse beside an aspen
+> at the same crown size. Clicking any plant or creature opens a card built from
+> the app's sourced ecology (`src/scene_dossier.py` →
+> `html/scene3d/10-inspect.js`).
 
 ## See them live
 

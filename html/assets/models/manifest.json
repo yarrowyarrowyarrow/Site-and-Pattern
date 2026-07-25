@@ -204,8 +204,8 @@
   "layer.groundcover": {
    "file": "layer_groundcover.glb",
    "half_width": {
-    "v0": 0.95348,
-    "v1": 1.06462
+    "v0": 1.01145,
+    "v1": 0.97396
    },
    "parts": [
     "foliage"

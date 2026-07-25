@@ -23,33 +23,39 @@ from .mesh_ops import (add_blade, add_cone, add_cone_between, add_ellipsoid,
 # Each form is shaped to its real height ÷ canopy, which lives with the rest of
 # the contract in conventions.HERB_ASPECT / LAYER_ASPECT — shaping to it keeps
 # the instance transform undistorted (see the unit-frame note there).
+# Leaf and stem counts are ~3x what they were before V2.29. 211 of the 434
+# species in the catalogue are wildflowers, and a 119-plant meadow was reading
+# as scattered sticks on painted ground: each plant carried a dozen leaves at
+# 130-380 triangles against a 1200 budget, so four fifths of the allowance was
+# going unspent while the app's main subject looked sparse. This is the same
+# plant drawn properly, not more plants (the design says how many there are).
 HERB_FORMS = {
-    "erect":   {"stems": (1, 3), "splay": 0.1, "leaf_from": 0.22,
-                "leaf": (0.2, 0.04), "shape": "lance", "per_stem": (6, 10),
+    "erect":   {"stems": (2, 4), "splay": 0.1, "leaf_from": 0.22,
+                "leaf": (0.2, 0.04), "shape": "lance", "per_stem": (16, 26),
                 "leaf_tilt": 1.1, "stalks": None, "basal": None, "fine": False},
     "ferny":   {"stems": None, "splay": 0, "leaf_from": 0,
                 "leaf": (0.13, 0.02), "shape": "lance", "per_stem": None,
-                "leaf_tilt": 1.3, "stalks": (3, 5), "basal": (20, 34),
+                "leaf_tilt": 1.3, "stalks": (4, 6), "basal": (56, 92),
                 "fine": True},
     "rosette": {"stems": None, "splay": 0, "leaf_from": 0,
                 "leaf": (0.26, 0.085), "shape": "ovate", "per_stem": None,
-                "leaf_tilt": 1.32, "stalks": (3, 6), "basal": (8, 13),
+                "leaf_tilt": 1.32, "stalks": (4, 7), "basal": (26, 40),
                 "fine": False},
-    "clump":   {"stems": (3, 6), "splay": 0.42, "leaf_from": 0.12,
-                "leaf": (0.22, 0.1), "shape": "ovate", "per_stem": (4, 7),
-                "leaf_tilt": 0.95, "stalks": None, "basal": (2, 3),
+    "clump":   {"stems": (4, 7), "splay": 0.42, "leaf_from": 0.12,
+                "leaf": (0.22, 0.1), "shape": "ovate", "per_stem": (11, 18),
+                "leaf_tilt": 0.95, "stalks": None, "basal": (5, 8),
                 "fine": False},
     "grassy":  {"stems": None, "splay": 0, "leaf_from": 0,
                 "leaf": (0.9, 0.035), "shape": "strap", "per_stem": None,
-                "leaf_tilt": 0.16, "stalks": (2, 4), "basal": (6, 9),
+                "leaf_tilt": 0.16, "stalks": (3, 5), "basal": (20, 30),
                 "fine": False},
     "mat":     {"stems": None, "splay": 0, "leaf_from": 0,
                 "leaf": (0.14, 0.075), "shape": "ovate", "per_stem": None,
-                "leaf_tilt": 1.45, "stalks": (2, 4), "basal": (14, 22),
+                "leaf_tilt": 1.45, "stalks": (2, 4), "basal": (40, 62),
                 "fine": False, "low": True},
     "fern":    {"stems": None, "splay": 0, "leaf_from": 0,
                 "leaf": (0.95, 0.11), "shape": "lance", "per_stem": None,
-                "leaf_tilt": 0.5, "stalks": None, "basal": (6, 9),
+                "leaf_tilt": 0.5, "stalks": None, "basal": (14, 20),
                 "fine": False},
 }
 
@@ -164,21 +170,21 @@ def _blades(bm, rng, n, height_fn, hw_fn, lean_fn, erect, aspect):
 
 
 def _layer_grass(bm, rng):
-    _blades(bm, rng, 26 + int(rng.random() * 16),       # thick meadow clump
+    _blades(bm, rng, 46 + int(rng.random() * 22),       # thick meadow clump
             lambda: 0.62 + rng.random() * 0.5,
             lambda: 0.016 + rng.random() * 0.018,
             lambda: 0.22 + rng.random() * 0.7, 1.5, LAYER_ASPECT["grass"])
 
 
 def _layer_aquatic(bm, rng):
-    _blades(bm, rng, 16 + int(rng.random() * 12),       # stiff strap reeds
+    _blades(bm, rng, 30 + int(rng.random() * 16),       # stiff strap reeds
             lambda: 0.85 + rng.random() * 0.35,
             lambda: 0.03 + rng.random() * 0.028,
             lambda: 0.06 + rng.random() * 0.32, 2.4, LAYER_ASPECT["aquatic"])
 
 
 def _layer_vine(bm, rng):
-    n_stems = 4 + int(rng.random() * 3)                 # sprawling tangle
+    n_stems = 7 + int(rng.random() * 4)                 # sprawling tangle
     stems, leaves, pts = [], [], []
     for i in range(n_stems):
         az = i / n_stems * math.tau + rng.random() * 0.8
@@ -189,7 +195,7 @@ def _layer_vine(bm, rng):
         tip = rot @ Vector((0, 0, h))
         stems.append((base, tip))
         pts.extend((base, tip))
-        n_leaf = 4 + int(rng.random() * 3)
+        n_leaf = 7 + int(rng.random() * 4)
         for j in range(n_leaf):
             t = 0.3 + 0.65 * (j / max(1, n_leaf - 1))
             at = rot @ Vector((0, 0, h * t))
@@ -209,7 +215,7 @@ def _layer_vine(bm, rng):
 
 def _layer_groundcover(bm, rng):
     domes, pts = [], []
-    for _ in range(5 + int(rng.random() * 4)):          # low textured mat
+    for _ in range(10 + int(rng.random() * 7)):         # low textured mat
         r = 0.08 + rng.random() * 0.07
         az = rng.random() * math.tau
         rad = rng.random() * 0.42
