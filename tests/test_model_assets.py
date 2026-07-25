@@ -35,7 +35,7 @@ _SCENE3D = os.path.join(_ROOT, "html", "scene3d")
 
 # Mirrors assetlib/conventions.py TRI_BUDGETS (comment there points here).
 _TRI_BUDGETS = {"tree_tier0": 1500, "tree_tier1": 2200, "tree_tier2": 3500,
-                "shrub": 2600, "herb": 1200, "layer": 900, "fauna": 1500,
+                "shrub": 3600, "herb": 1200, "layer": 900, "fauna": 1500,
                 "structure": 1500}
 
 
@@ -639,6 +639,80 @@ class ModelAssetsTest(unittest.TestCase):
             budget = _TRI_BUDGETS["fauna"] * (2 if key == "fly" else 1)
             self.assertLessEqual(_tri_count(gltf), budget,
                                  f"fauna.{key}: over triangle budget")
+
+
+def _assetlib_mesh_ops():
+    """assetlib.mesh_ops, or None when Blender's bpy is not installed."""
+    try:
+        sys.path.insert(0, os.path.join(_ROOT, "scripts", "blender"))
+        from assetlib import mesh_ops             # noqa: PLC0415
+        return mesh_ops
+    except Exception:                            # noqa: BLE001
+        return None
+
+
+class LeafCostModelTest(unittest.TestCase):
+    """``leaf_tris`` must predict exactly what ``add_blade_or_leaf`` stamps.
+
+    Every flora builder sizes its leaf population by dividing its remaining
+    budget by this number, so an under-estimate is not a rounding error — it is
+    an over-budget asset, which is a hard export failure discovered only at
+    build time. The two drifted apart the moment blades became tessellation-
+    configurable (V2.29's 4-triangle shrub leaf), because the cost was a
+    module constant and the geometry was a loop.
+    """
+
+    def setUp(self):
+        self.ops = _assetlib_mesh_ops()
+        if self.ops is None:
+            self.skipTest("assetlib.mesh_ops needs bpy")
+
+    def _stamp(self, shape, segments):
+        import bmesh                             # noqa: PLC0415
+        import random                            # noqa: PLC0415
+        bm = bmesh.new()
+        self.ops.add_blade_or_leaf(
+            bm, random.Random(7), 0.2, 0.08, 0.9, 1.3, None, shape, segments)
+        n = sum(max(0, len(f.verts) - 2) for f in bm.faces)
+        bm.free()
+        return n
+
+    def test_cost_matches_the_geometry_for_every_outline(self):
+        shapes = sorted(set(self.ops.LEAF_WIDTH_RATIO) | {"lance"})
+        for shape in shapes:
+            for segments in (2, 3, 4):
+                with self.subTest(shape=shape, segments=segments):
+                    self.assertEqual(
+                        self._stamp(shape, segments),
+                        self.ops.leaf_tris(shape, segments),
+                        f"leaf_tris({shape!r}, {segments}) disagrees with what "
+                        f"add_blade_or_leaf actually stamps — every builder "
+                        f"budgets its leaf count with this number")
+
+    def test_a_coarse_blade_still_states_its_outline(self):
+        """A two-segment ribbon has ONE interior vertex, so where it sits is the
+        entire difference between a leaf and a rhombus. It must land on the
+        blade's widest point: that is what keeps a lanceolate willow leaf (widest
+        near the base, long taper) distinct from an ovate dogwood one."""
+        for shape in ("lanceolate", "ovate", "obovate", "elliptic",
+                      "orbicular", "cordate"):
+            with self.subTest(shape=shape):
+                grid = [i / 200 for i in range(201)]
+                peak = max(self.ops._leaf_width(shape, t) for t in grid)
+                coarse = max(self.ops._leaf_width(shape, t)
+                             for t in self.ops._blade_samples(shape, 2))
+                self.assertGreaterEqual(
+                    coarse, peak * 0.99,
+                    f"a 2-segment {shape} blade never samples its widest point, "
+                    f"so it is drawn narrower than the species' leaf")
+
+    def test_detailed_outlines_keep_their_tessellation(self):
+        """The lobed family's width profile is a 3-7 cycle sinusoid; one interior
+        vertex cannot carry it, so a coarse request must be refused rather than
+        silently flattening a cut leaf into a diamond."""
+        for shape in ("lobed", "pinnatifid", "bipinnate", "sagittate"):
+            self.assertEqual(self.ops.blade_segments(shape, 2), 4, shape)
+        self.assertEqual(self.ops.blade_segments("ovate", 2), 2)
 
 
 if __name__ == "__main__":

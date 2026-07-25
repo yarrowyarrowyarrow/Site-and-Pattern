@@ -23,6 +23,21 @@ from .mesh_ops import (COMPOUND_SHAPES, CONE_TRIS, add_blade_or_leaf,
                        add_cone_between, bm_to_object, leaf_extent,
                        leaf_width_for, shape_to_aspect, thin_leaf_nodes)
 
+# A shrub leaf is centimetres on a plant that is metres, so it draws at a few
+# dozen pixels even when the camera is in the bed — nowhere near enough to
+# resolve a four-segment blade's curve. Two segments halve the cost and buy
+# twice the leaves, and leaf COUNT is what reads as leafy at yard distance.
+# mesh_ops.blade_segments keeps the lobed family at four regardless, since a
+# currant's cut leaf has nowhere to put its lobes on a single interior vertex.
+LEAF_SEGMENTS = 2
+
+# A cane is stamped as a 4-sided cone (mesh_ops.CONE_TRIS); a TWIG is a pencil
+# lead a few millimetres across that is never seen in cross-section, so it gets
+# three sides. Twigs outnumber canes six to one, so that is ~25% of the whole
+# skeleton handed back to the leaves.
+TWIG_SEGMENTS = 3
+TWIG_TRIS = 4 * TWIG_SEGMENTS             # create_cone: 2n sides + 2n cap fan
+
 # Each form is shaped to its real height ÷ canopy, which lives with the rest of
 # the contract in conventions.SHRUB_ASPECT, so the instance transform stays
 # undistorted — see the unit-frame note there.
@@ -75,7 +90,7 @@ def _canes(rng, F, n_stems):
         # read as dead sticks above a small green base, which is what a user's
         # screenshot caught. The foliage envelope has to span the crown the same
         # way the ellipsoid masses it replaced did (start → tip).
-        n_twig = 4 + int(rng.random() * 4)
+        n_twig = 6 + int(rng.random() * 5)
         for k in range(n_twig):
             t = 0.12 + 0.88 * (k / max(1, n_twig - 1))
             at = fork.lerp(tip, t)
@@ -122,7 +137,7 @@ def build_shrub(form, rng, coll, name_prefix="", grain=1, leaf_shape=None,
     for start, end, _rb, _rt, is_twig in segs:
         if not is_twig:
             continue
-        n_nodes = 4 + int(rng.random() * 4)
+        n_nodes = 7 + int(rng.random() * 6)
         for j in range(n_nodes):
             t = 0.25 + 0.75 * (j / max(1, n_nodes - 1))
             at = start.lerp(end, t)
@@ -134,8 +149,10 @@ def build_shrub(form, rng, coll, name_prefix="", grain=1, leaf_shape=None,
     # population is sized to what the budget affords rather than fixed — bare
     # twigs read as a real shrub, a blown budget fails the export.
     top_node = max(nodes, key=lambda n: n[0][0].z) if nodes else None
+    n_twigs = sum(1 for s in segs if s[4])
+    structural = (len(segs) - n_twigs) * CONE_TRIS + n_twigs * TWIG_TRIS
     nodes = thin_leaf_nodes(nodes, shape, C.TRI_BUDGETS["shrub"],
-                            len(segs) * CONE_TRIS)
+                            structural, segments=LEAF_SEGMENTS)
     # Thinning strides through the node list, which is in cane order, not height
     # order — so the highest node on the plant can be one of the ones it drops,
     # and the shrub grows a bare top again. Put it back: it is one node, and a
@@ -153,10 +170,12 @@ def build_shrub(form, rng, coll, name_prefix="", grain=1, leaf_shape=None,
         radii=[0.0] * (2 * len(segs)) + [r[0] for r in reach],
         radii_z=[0.0] * (2 * len(segs)) + [r[1] for r in reach])
 
-    for start, end, r_bot, r_top, _twig in segs:
-        add_cone_between(bark, start, end, r_bot, r_top, 4)
+    for start, end, r_bot, r_top, is_twig in segs:
+        add_cone_between(bark, start, end, r_bot, r_top,
+                         TWIG_SEGMENTS if is_twig else 4)
     for at, tilt, az in leaves:
-        add_blade_or_leaf(fol, rng, leaf_len, leaf_wid, tilt, az, at, shape)
+        add_blade_or_leaf(fol, rng, leaf_len, leaf_wid, tilt, az, at, shape,
+                          LEAF_SEGMENTS)
 
     mat = preview_material()
     return {

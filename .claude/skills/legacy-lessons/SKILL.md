@@ -304,6 +304,42 @@ works *from the state the user is actually in*. Check the state, then
 advise. And when a recovery path can conflict, test the conflict — the
 happy path proves nothing about the corner your code leaves behind.
 
+## 18. The half-deleted foliage (V2.29)
+
+Another user screenshot: every shrub in the app a bundle of dark wiry
+canes, in midsummer, described as *"still looking wirey and bare year
+round"*. Every guard was green. The leaves were provably built, budgeted
+under their triangle ceiling, sized from each species' `leaf_size_cm`,
+shaped by its `leaf_shape`, arranged opposite-vs-alternate by its
+`leaf_arrangement`, and positioned across the whole crown — a test even
+pinned that foliage reaches 90% of every woody unit's height.
+
+None of that is what draws pixels. The V2.29 rebuild replaced the shrubs'
+closed 20-triangle icosahedral leaf blobs with **flat leaf ribbons**, and
+`MATS.shrubFoliage` stayed on `THREE.FrontSide` — correct and cheaper for
+a solid, fatal for a ribbon, which simply is not drawn from behind. About
+half of every shrub's foliage rendered as nothing at all.
+
+The interesting part is the guard that *would not* have worked. The
+obvious instinct is a render-level check: boot the viewer, hide the mesh,
+count the pixels that change. Built it (`window.permaVisibility`) and
+measured — the culled foliage still drew **9,492 pixels against 16,782**
+fixed, because half of a leaf's faces do point at the camera. A
+"does this draw anything" assertion sails straight past a 44% loss. The
+invariant that actually bites is a source-level one:
+`tests/test_scene3d_render.py:FlatLeafMaterialsTest` — every material
+applied to flat leaf geometry must be double-sided, plus a check that
+`plantMaterial` still maps the flag onto `THREE.DoubleSide` so the first
+check means something.
+
+**Scar:** `doubleSide: true` on `MATS.shrubFoliage`, joining `leaf` and
+`blade`, which had always been ribbons.
+**Rule:** when geometry changes *kind* — solid to ribbon, closed to open,
+opaque to alpha — every material applied to it is now unreviewed. And
+before trusting a proposed guard, measure what it would actually have
+reported on the real bug; a guard that would have passed is worse than
+none, because it will be believed.
+
 ## The meta-lessons
 
 1. **Silence is the enemy.** Nearly every entry above failed *silently*:

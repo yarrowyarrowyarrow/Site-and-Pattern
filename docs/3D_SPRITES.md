@@ -39,6 +39,25 @@ the **live gallery** below lets you rotate and inspect each one.
 > clothed in real leaves** instead of ellipsoids on straight stems. Where a
 > species records nothing, the neutral variant and the tuned form defaults apply
 > — an honest empty rather than an invented leaf (P9).
+>
+> **Shrub density.** Real leaves cost triangles, and the first cut of that
+> rebuild bought only ~180 of them per shrub, which on a 4 m saskatoon reads as
+> bare canes with green flecks. Three changes brought it to **~600**: a shrub
+> blade is stamped as a **2-segment ribbon** (4 triangles, not 8) whose single
+> interior vertex sits on the blade's *widest point*, so the outline still
+> separates a lanceolate willow leaf from an ovate dogwood one at a fraction of
+> the cost; twigs are stamped as 3-sided rather than 4-sided cones, handing a
+> quarter of the skeleton back to the foliage; and `TRI_BUDGETS["shrub"]` went
+> to 3600, since shrubs sit at the fringe of a bed where they are looked *at*
+> rather than under. The lobed family (currant, gooseberry, hawthorn) keeps
+> 4-segment blades — a cut leaf has nowhere to put its lobes on one vertex.
+> `mesh_ops.leaf_tris` and `add_blade_or_leaf` share `blade_segments` so the
+> budget can never disagree with what is actually stamped
+> (`tests/test_model_assets.py:LeafCostModelTest`).
+>
+> Even so, this is a **stylised** shrub, not a census: a real saskatoon carries
+> thousands of leaves and this one carries hundreds, so it reads airier than the
+> plant does in a hedge. The honest trade is legibility per triangle.
 
 ## See them live
 

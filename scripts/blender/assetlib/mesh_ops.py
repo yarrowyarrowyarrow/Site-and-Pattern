@@ -7,10 +7,16 @@ object. Placement matrices are mathutils.Matrix composed by the callers.
 Blender frame: Z-up, ground plane XY. The glTF exporter converts to Y-up.
 """
 
+import functools
 import math
 
-import bmesh
-import bpy
+# `bpy` MUST be imported before `bmesh` and `mathutils`. Under the standalone
+# bpy wheel (as opposed to inside Blender) those are C extensions that only
+# become importable once bpy's __init__ has run its path setup, so the
+# alphabetical order isort wants makes this module unimportable on its own —
+# it happened to work only because build_all imports bpy several lines earlier.
+import bpy                                        # isort: skip
+import bmesh                                      # noqa: I001
 from mathutils import Matrix, Vector
 
 from . import conventions as C
@@ -198,7 +204,8 @@ def leaf_width_for(shape, length):
     return length * LEAF_WIDTH_RATIO.get(shape, 0.3)
 
 
-def add_compound_leaf(bm, rng, length, width, tilt, azimuth, at, shape):
+def add_compound_leaf(bm, rng, length, width, tilt, azimuth, at, shape,
+                      segments=4):
     """One compound leaf: a slim rachis carrying paired leaflets and a terminal.
 
     A third of the catalogue's leaves are compound — every pea (lupine,
@@ -233,7 +240,7 @@ def add_compound_leaf(bm, rng, length, width, tilt, azimuth, at, shape):
         base = mat @ Vector((droop * (frac ** 1.4) * ln, 0, ln * frac))
         add_leaf(bm, rng, leaflet_len, leaflet_w,
                  tilt * 0.45 + abs(spread) * 0.55,
-                 azimuth + spread, base, "elliptic")
+                 azimuth + spread, base, "elliptic", segments)
 
 
 # add_leaf randomises a blade's length and droop; the upper bounds live here so
@@ -264,14 +271,16 @@ def leaf_extent(length, tilt, shape="lance"):
     return (h, v)
 
 
-def add_blade_or_leaf(bm, rng, length, width, tilt, azimuth, at, shape):
+def add_blade_or_leaf(bm, rng, length, width, tilt, azimuth, at, shape,
+                      segments=4):
     """Stamp the right primitive for ``shape`` — one ribbon, or a rachis with
     leaflets. The single entry point builders should call so a new compound
     outline never needs another branch at every call site."""
     if shape in COMPOUND_SHAPES:
-        add_compound_leaf(bm, rng, length, width, tilt, azimuth, at, shape)
+        add_compound_leaf(bm, rng, length, width, tilt, azimuth, at, shape,
+                          segments)
     else:
-        add_leaf(bm, rng, length, width, tilt, azimuth, at, shape)
+        add_leaf(bm, rng, length, width, tilt, azimuth, at, shape, segments)
 
 
 # ── triangle cost, so leaf counts can be budgeted before anything is stamped ──
@@ -280,16 +289,24 @@ def add_blade_or_leaf(bm, rng, length, width, tilt, azimuth, at, shape):
 # moment the species turns out to carry compound ones, so the counts have to be
 # derived from the outline rather than fixed — see thin_leaf_nodes.
 CONE_TRIS = 16                            # add_cone(segments=4), fan-capped
-_SIMPLE_LEAF_TRIS = 8                     # add_leaf: 4 ribbon segments
 _RACHIS_TRIS = 4                          # add_compound_leaf's 3-point stalk
 
 
-def leaf_tris(shape):
-    """Triangles one :func:`add_blade_or_leaf` stamp costs for this outline."""
+def leaf_tris(shape, segments=4):
+    """Triangles one :func:`add_blade_or_leaf` stamp costs for this outline.
+
+    ``segments`` must be whatever the builder will pass to the stamp — the two
+    go through :func:`blade_segments` together so the budget can never disagree
+    with the geometry.
+    """
+    simple = 2 * blade_segments(shape, segments)
     if shape in COMPOUND_SHAPES:
         pairs = _LEAFLET_PAIRS.get(shape, 3)
-        return _RACHIS_TRIS + (pairs * 2 + 1) * _SIMPLE_LEAF_TRIS
-    return _SIMPLE_LEAF_TRIS
+        # Leaflets are stamped as "elliptic", so they take the requested
+        # segment count even when the compound outline itself is detailed.
+        leaflet = 2 * blade_segments("elliptic", segments)
+        return _RACHIS_TRIS + (pairs * 2 + 1) * leaflet
+    return simple
 
 
 ICO_TRIS = 20                             # add_ellipsoid(subdiv=0) foliage mass
@@ -329,25 +346,32 @@ def thin_groups_to_budget(groups, cost_each, budget, structural_tris,
     return kept
 
 
-def thin_leaf_nodes(nodes, shape, budget, structural_tris, headroom=0.94):
+def thin_leaf_nodes(nodes, shape, budget, structural_tris, headroom=0.94,
+                    segments=4):
     """:func:`thin_groups_to_budget` for leaf nodes, costed by blade outline.
 
     A compound leaf costs 3-9x a simple blade (a rachis plus 2n+1 leaflets), so
     this is what lets a rose and a dogwood share one builder: the rose ends up
     with fewer, larger leaves, which is also how the plants themselves resolve
     the same constraint.
+
+    ``segments`` is the blade tessellation the caller will stamp with; pass the
+    same value to :func:`add_blade_or_leaf` or the budget is a fiction.
     """
-    return thin_groups_to_budget(nodes, leaf_tris(shape), budget,
+    return thin_groups_to_budget(nodes, leaf_tris(shape, segments), budget,
                                  structural_tris, headroom)
 
 
-def add_leaf(bm, rng, length, width, tilt, azimuth, at, shape):
+def add_leaf(bm, rng, length, width, tilt, azimuth, at, shape, segments=4):
     """One flat leaf with a real width profile (port of makeLeaf, Z-up).
 
     Built along +Z, tilted `tilt` from vertical about Y, spun to `azimuth`
     about Z, then translated to `at` (a Vector or tuple, may be None).
+
+    ``segments`` trades outline fidelity for leaf COUNT — see
+    :func:`blade_segments`. Cost is ``2 * segments`` triangles.
     """
-    segs = 4
+    segs = blade_segments(shape, segments)
     ln = length * (_LEAF_LEN_MAX - 0.4 + rng.random() * 0.4)
     droop = ((0.05 if shape == "strap" else 0.12)
              + rng.random() * _LEAF_DROOP_MAX)
@@ -355,13 +379,64 @@ def add_leaf(bm, rng, length, width, tilt, azimuth, at, shape):
     if at is not None:
         mat = Matrix.Translation(Vector(at)) @ mat
     pts, hws = [], []
-    for s in range(segs + 1):
-        t = s / segs
+    for t in _blade_samples(shape, segs):
         bend = droop * (t ** 1.4)
         pts.append(mat @ Vector((bend * ln, 0, ln * t)))
         hws.append(width * 0.5 * _leaf_width(shape, t) + 0.0008)
     wd = (mat.to_3x3() @ Vector((0, 1, 0))).normalized()
     add_ribbon(bm, pts, hws, wd)
+
+
+# Outlines whose width profile carries fine structure a coarse ribbon cannot
+# represent at all: the lobed family is a 3-7 cycle sinusoid, and a sagittate
+# blade's flare is a step at t<0.16. Everything else is a single smooth hump,
+# which two segments reproduce well when the joint sits on the hump.
+_DETAILED_PROFILES = frozenset({"lobed", "pinnatifid", "bipinnate",
+                                "sagittate"})
+
+
+def blade_segments(shape, segments):
+    """The ribbon segment count :func:`add_leaf` will actually use.
+
+    Public because the budget has to agree with the geometry: ``leaf_tris`` and
+    the builder both go through this, so asking for a cheaper leaf can never
+    quietly under-count what gets stamped.
+    """
+    if shape in _DETAILED_PROFILES:
+        return 4
+    return max(2, min(4, int(segments)))
+
+
+@functools.lru_cache(maxsize=None)
+def _blade_samples(shape, segs):
+    """Where along the blade to sample its width, as a tuple of ``t``.
+
+    Uniform, except that the interior sample nearest the blade's WIDEST point is
+    snapped onto it. At four segments this barely moves anything; at two it is
+    the whole difference between a leaf and a rhombus, because the one interior
+    vertex is the only place the outline can be stated. Snapping puts it where
+    the shape actually differs: t=0.06 for a lanceolate willow leaf (a long
+    taper to the tip), 0.5 for an ovate dogwood, 0.6 for an obovate pussytoes.
+
+    Halving a leaf from 8 triangles to 4 is what lets a shrub carry twice the
+    leaves inside the same budget, and leaf count is what reads as "leafy" at
+    yard distance — far more than the outline of any one blade does.
+    """
+    ts = [s / segs for s in range(segs + 1)]
+    if segs >= 4:
+        return tuple(ts)
+    # Widest t, tie-broken toward mid-blade so a flat profile (a strap/linear
+    # blade is full width for 90% of its length) does not snap to an arbitrary
+    # end of its plateau.
+    grid = [i / 100 for i in range(101)]
+    widths = [_leaf_width(shape, t) for t in grid]
+    peak = max(widths)
+    flat = [t for t, w in zip(grid, widths) if w >= peak * 0.995]
+    t_wide = flat[len(flat) // 2]
+    interior = range(1, segs)
+    j = min(interior, key=lambda i: abs(ts[i] - t_wide))
+    ts[j] = t_wide
+    return tuple(ts)
 
 
 # ── normalisation / budgets ──────────────────────────────────────────────────
