@@ -215,13 +215,23 @@ class ProjectStore:
                   polyculture_center_lat=None,
                   polyculture_center_lng=None,
                   pattern_kind: str = "",
-                  quantity: int = 1) -> dict:
+                  quantity: int = 1,
+                  feature_id: str = "") -> dict:
         """Append one placed plant to both structures. Returns the index
-        record (callers feed it to the map widget / panels)."""
+        record (callers feed it to the map widget / panels).
+
+        ``feature_id`` **restores** a known identity instead of minting a new
+        one — for redo, which must put back the plant that was removed, not an
+        identical-looking new one. Anything holding the old id (a selection, a
+        pending edit) would otherwise dangle after an undo/redo round-trip.
+        Omit it for genuine placements.
+        """
         record = {
             "plant_id": plant_id, "common_name": common_name,
             "lat": lat, "lng": lng,
         }
+        if feature_id:
+            record["feature_id"] = feature_id
         if polyculture_name:
             record["polyculture_name"] = polyculture_name
         if polyculture_center_lat is not None:

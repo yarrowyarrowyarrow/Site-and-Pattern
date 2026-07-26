@@ -527,6 +527,10 @@ class AnalysisPanel(QWidget):
         layout.addWidget(info)
 
         btn = QPushButton("Calculate Habitat Value")
+        btn.setToolTip(
+            "Score what this design actually provides for wildlife, out of 100,\n"
+            "and list what would raise it. Needs at least one placed plant."
+        )
         btn.setStyleSheet(
             "QPushButton { background: #2e7d32; color: #e8f5e9; border: 1px solid #43a047; "
             "border-radius: 4px; padding: 6px; font-weight: bold; }"

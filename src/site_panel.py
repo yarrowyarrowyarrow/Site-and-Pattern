@@ -302,6 +302,25 @@ class SitePanel(QWidget):
         self._build_ui()
         self._set_empty_state()
 
+    def set_first_step(self, text: str):
+        """Show the current getting-started step at the top of the Site tab
+        (F45). Empty text hides the line."""
+        lbl = getattr(self, "_first_step", None)
+        if lbl is None:
+            return
+        lbl.setText(text or "")
+        lbl.setVisible(bool(text))
+
+    def focus_address_search(self):
+        """Put the cursor in the address box (F44 — 'Start from my yard' and
+        the step-1 chip both land here). Selects any existing text so typing
+        replaces it."""
+        try:
+            self._addr_input.setFocus(Qt.FocusReason.OtherFocusReason)
+            self._addr_input.selectAll()
+        except (AttributeError, RuntimeError):
+            pass
+
     def attach_map_widget(self, map_widget):
         """Wire the panel to the map widget so the address finder can
         bias its query against the map's current view centre."""
@@ -355,6 +374,18 @@ class SitePanel(QWidget):
 
     def _build_info_page(self, layout):
         """Site Information sub-tab: property pin/address + climate + soil."""
+        # F45: the current step, stated before anything else on the panel the
+        # user lands on first. Text comes from src/onboarding.first_step_line,
+        # so this and the getting-started strip always say the same thing.
+        self._first_step = QLabel("")
+        self._first_step.setWordWrap(True)
+        self._first_step.setVisible(False)
+        self._first_step.setStyleSheet(
+            "color: #dcedc8; font-size: 11px; font-weight: bold; "
+            "padding: 6px 8px; background: #1e3320; "
+            "border: 1px solid #3e5c3e; border-radius: 4px;")
+        layout.addWidget(self._first_step)
+
         info = QLabel(
             "Search an Alberta address below to drop a property pin and "
             "auto-fill site data from public sources. Drag the pin to refine; "
@@ -385,6 +416,10 @@ class SitePanel(QWidget):
         search_row.addWidget(self._addr_input, 1)
 
         self._btn_search = QPushButton("Find")
+        self._btn_search.setToolTip(
+            "Look the address up and list matches below — click one to drop\n"
+            "the property pin there. No internet? Use “Use Pin Drop…” instead."
+        )
         self._btn_search.setStyleSheet(_BTN_PRIMARY)
         self._btn_search.clicked.connect(self._on_address_search)
         search_row.addWidget(self._btn_search)
@@ -424,11 +459,20 @@ class SitePanel(QWidget):
         btn_row.addWidget(self._btn_drop)
 
         self._btn_refresh = QPushButton("Refresh data")
+        self._btn_refresh.setToolTip(
+            "Re-fetch this site's climate, soil, elevation and frost dates.\n"
+            "Results are cached with the project, so this is only needed if\n"
+            "you moved the pin or were offline the first time."
+        )
         self._btn_refresh.setStyleSheet(_BTN_SECONDARY)
         self._btn_refresh.clicked.connect(self._refresh_clicked)
         btn_row.addWidget(self._btn_refresh)
 
         self._btn_clear = QPushButton("Clear pin")
+        self._btn_clear.setToolTip(
+            "Remove the property pin and the site data fetched for it.\n"
+            "Your boundary and plants are not affected."
+        )
         self._btn_clear.setStyleSheet(_BTN_SECONDARY)
         self._btn_clear.clicked.connect(self.pin_clear_requested.emit)
         btn_row.addWidget(self._btn_clear)
@@ -1011,6 +1055,10 @@ class SitePanel(QWidget):
 
         slope_btn_row = QHBoxLayout()
         btn_auto = QPushButton("Generate")
+        btn_auto.setToolTip(
+            "Download elevation data for this area and draw contour lines +\n"
+            "a slope map. Needs a property pin (or a boundary) first."
+        )
         btn_auto.setStyleSheet(_BTN_PRIMARY)
         btn_auto.clicked.connect(self._on_auto_terrain_generate)
         slope_btn_row.addWidget(btn_auto)
@@ -2327,8 +2375,15 @@ class SitePanel(QWidget):
         worker.moveToThread(thread)
         thread.started.connect(worker.run)
         worker.results.connect(self._on_geocode_results)
+        # F45: a dead end is where a beginner gives up, so the failure names
+        # the way through instead of only the problem. Address search is the
+        # app's only networked *entry* point — offline, pin-drop is not a
+        # workaround, it is the supported path.
         worker.failed.connect(
-            lambda msg: self._lbl_status.setText(f"Search failed: {msg}")
+            lambda msg: self._lbl_status.setText(
+                f"Search failed ({msg}). Address lookup needs the internet — "
+                f"use “Use Pin Drop…” below and click your yard "
+                f"on the map instead.")
         )
         # Auto-teardown chain — see _start_fetch for why we don't delete
         # threads synchronously.
@@ -2345,7 +2400,11 @@ class SitePanel(QWidget):
         self._addr_results.clear()
         if not hits:
             self._addr_results.setVisible(False)
-            self._lbl_status.setText("No Alberta results.")
+            # F45: say what to try next, not just that nothing was found.
+            self._lbl_status.setText(
+                "No Alberta results. Try a nearby intersection or town name — "
+                "or click “Use Pin Drop…” and click your yard on "
+                "the map.")
             return
         for h in hits:
             item = QListWidgetItem(h["label"])

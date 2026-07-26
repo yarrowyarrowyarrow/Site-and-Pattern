@@ -320,6 +320,41 @@ class TestFeatureIdentity(unittest.TestCase):
                          "record and feature must share one identity")
         self.assertFalse(s.check_consistency())
 
+    def test_add_plant_restores_a_given_feature_id(self):
+        """Redo must put back the plant that was removed, not an
+        identical-looking new one.
+
+        The Qt round-trip test in tests/test_undo_redo.py caught this, but only
+        where PyQt6 is installed — it had been skipping everywhere else while
+        redo quietly minted a fresh id, dangling anything that held the old one.
+        Guarded here too, at the store level, where it needs no Qt.
+        """
+        s = self._store()
+        rec = s.add_plant(1, "Saskatoon", 53.5, -113.5)
+        original = rec["feature_id"]
+        s.remove_plant(1, 53.5, -113.5, newest_first=True)
+        back = s.add_plant(1, "Saskatoon", 53.5, -113.5,
+                           feature_id=original)
+        self.assertEqual(back["feature_id"], original)
+        self.assertEqual(s.features[0]["properties"]["feature_id"], original)
+        self.assertFalse(s.check_consistency())
+
+    def test_add_plant_still_mints_when_no_id_is_given(self):
+        s = self._store()
+        a = s.add_plant(1, "Saskatoon", 53.5, -113.5)
+        b = s.add_plant(1, "Saskatoon", 53.6, -113.6)
+        self.assertTrue(a["feature_id"] and b["feature_id"])
+        self.assertNotEqual(a["feature_id"], b["feature_id"])
+
+    def test_remove_plant_returns_the_record_redo_needs(self):
+        # The undo handler reads feature_id off this return value; a None or a
+        # stripped record would silently disable the restore above.
+        s = self._store()
+        rec = s.add_plant(1, "Saskatoon", 53.5, -113.5)
+        removed = s.remove_plant(1, 53.5, -113.5, newest_first=True)
+        self.assertIsNotNone(removed)
+        self.assertEqual(removed["feature_id"], rec["feature_id"])
+
     def test_ids_unique_for_duplicate_position_plants(self):
         s = self._store()
         a = s.add_plant(1, "Yarrow", 53.5, -113.5)

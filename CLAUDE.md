@@ -150,6 +150,7 @@ only, doesn't affect real commits.
 | `src/db/fauna.py` | Query API for the fauna registry and plant↔fauna junction (V1.31+). |
 | `src/db/relationships.py` | **The unified edges layer (F7, V2.31).** One query API + one edge vocabulary (`EDGE_KINDS`) over the schema-v51 `relationship_edges` view, which unions `plant_fauna`, both companion tables and shared polyculture membership. Ask "what is connected to this plant?" here, not table by table. Every edge carries `evidence` — `documented` (seeded record + `source`) vs `derived` (computed, e.g. two plants feeding the same animal). |
 | `src/relationship_graph.py` | Relationship-web overlay core (F5, V2.31): the design as a drawable graph — species at their planting centroid, wildlife on a ring outside it. All geometry Python-side; `html/map/07-network.js` only renders. |
+| `src/onboarding.py` + `src/onboarding_flow.py` | Cold-start path (F44/F45, V2.31): the three-step progress model (pin → boundary → plants) read from the project, the beginner Generate defaults, and the worked example — authored as species *names* + metre offsets and resolved against the live catalogue at open time (never a shipped `.perma.geojson`, because plant ids aren't stable across reseeds). Surfaced by `src/welcome_dialog.py` + `src/first_step_bar.py`. |
 | `src/db/polycultures.py` | Polyculture CRUD + seeded example communities. |
 | `src/db/recipes.py` | Ratio-only polyculture recipes (separate from spatial polycultures). |
 | `src/db/structures.py` | Hard-coded list of habitat structures (bee hotels, brush piles, etc.). |

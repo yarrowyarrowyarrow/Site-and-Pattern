@@ -46,8 +46,12 @@ Complex ecological order emerges from simple rules applied locally, not from top
 > framing (roadmap F4, shipped); and the design now *self-heals* over time — the V2.24 gap
 > recruitment in `src/succession_engine.py` lets self-seeding natives colonise the openings the
 > closing canopy leaves, an emergent bottom-up behaviour rather than a stamped layout. The
-> remaining gap is that the placement rules themselves are still implicit in
-> `placement_score`/`llm_design` rather than declared and tweakable (F23).
+> **worked example** (`src/onboarding.py`, roadmap F44) follows the same discipline where it would
+> have been easiest not to: it is authored as species names plus offsets and *resolved against the
+> live catalogue* at open time, so the app's showcase design is a rule set rather than a frozen
+> file — and can never name a plant the catalogue doesn't have. The remaining gap is that the
+> placement rules themselves are still implicit in `placement_score`/`llm_design` rather than
+> declared and tweakable (F23).
 
 ### 2. The best designs disappear into their context
 

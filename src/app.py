@@ -49,6 +49,7 @@ from src.controllers.map_events import MapEventRouter
 from src.controllers.generation import GenerationController
 from src.controllers.area_fill_controller import AreaFillController
 from src.project_store import ProjectStore
+from src import onboarding_flow
 from src.scan_import_dialog import start_scan_import as _start_scan_import
 from src.scene3d_window import open_3d_view as _open_3d_view
 from src.reference_ecosystem_window import (
@@ -172,6 +173,12 @@ class MainWindow(QMainWindow):
         self._connect_signals()
         self._start_autosave()
 
+        # Cold start (F44): paint the three-step strip for the empty project,
+        # then offer the welcome on the first launch only. Both are flow
+        # functions — see src/onboarding_flow.py.
+        onboarding_flow.refresh(self)
+        onboarding_flow.maybe_show_welcome(self)
+
     # ── UI construction ───────────────────────────────────────────────────────
 
     def _build_ui(self):
@@ -262,6 +269,12 @@ class MainWindow(QMainWindow):
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(0)
         self.toolbar.attach_to_layout(left_layout)
+        # Getting-started strip (F44) — the map's empty state, as app chrome
+        # rather than JS inside the QWebEngineView. Hides itself once the
+        # three-step path is walked; see src/onboarding_flow.py:refresh.
+        from src.first_step_bar import FirstStepBar
+        self.first_step_bar = FirstStepBar(self)
+        left_layout.addWidget(self.first_step_bar)
         left_layout.addWidget(self.map_widget, 1)
 
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -504,6 +517,20 @@ class MainWindow(QMainWindow):
         )
         self._act_show_sidebar.triggered.connect(self._on_toggle_sidebar)
 
+        # F44: the getting-started strip retires itself once you have a pin, a
+        # boundary and plants — but a user who dismissed it early (or who wants
+        # it back on a new design) needs a way to say so.
+        self._act_step_bar = view_menu.addAction("&Getting-started strip")
+        self._act_step_bar.setCheckable(True)
+        self._act_step_bar.setChecked(True)
+        self._act_step_bar.setStatusTip(
+            "Show the three-step strip above the map (pin → boundary → plants)")
+        # Lambda → flow function: the behaviour is in src/onboarding_flow.py,
+        # off MainWindow's method ledger.
+        self._act_step_bar.triggered.connect(
+            lambda checked: onboarding_flow.set_step_bar_hidden(
+                self, not checked))
+
         view_menu.addSeparator()
         act_3d = view_menu.addAction("&3D Preview…")
         act_3d.setStatusTip(
@@ -562,6 +589,26 @@ class MainWindow(QMainWindow):
         # Frozen builds have no git; the version is baked in at build time.
         current_branch = build_version() or self._current_branch_name() or ""
         version_disp = current_branch if parse_version_branch(current_branch) else "dev"
+        # F44: the welcome shows once, so it needs a way back — both for
+        # someone who dismissed it and for anyone looking for the example
+        # design later.
+        act_welcome = help_menu.addAction("&Welcome / Getting Started…")
+        act_welcome.setStatusTip(
+            "Re-open the welcome: generate a design, start from your yard, "
+            "or open the worked example")
+        # Lambda → flow function; see the 3D Preview note above.
+        act_welcome.triggered.connect(
+            lambda: onboarding_flow.show_welcome(self))
+
+        act_example = help_menu.addAction("Open the &Example Design")
+        act_example.setStatusTip(
+            "Open a worked front-yard lawn conversion — a finished design to "
+            "score, walk in 3D, and take apart")
+        act_example.triggered.connect(
+            lambda: onboarding_flow.open_example(self))
+
+        help_menu.addSeparator()
+
         act_about = help_menu.addAction(f"&About / Version: {version_disp}")
         act_about.setStatusTip(
             "Show the current Site & Pattern version, schema version, and "
@@ -611,7 +658,17 @@ class MainWindow(QMainWindow):
         self.toolbar.annotate_requested.connect(self._enter_annotate_mode)
         self.toolbar.select_requested.connect(self._enter_select_mode)
         self.toolbar.cancel_draw_requested.connect(self._cancel_draw)
+        self.toolbar.generate_requested.connect(self._on_generate_design)
         self.toolbar.undo_requested.connect(self._do_undo)
+
+        # Getting-started strip (F44). Lambdas → src/onboarding_flow.py so no
+        # new MainWindow methods are needed; the strip is a control, not a
+        # poster — its chips navigate to where each step happens.
+        self.first_step_bar.generate_requested.connect(self._on_generate_design)
+        self.first_step_bar.step_clicked.connect(
+            lambda key: onboarding_flow.on_step_clicked(self, key))
+        self.first_step_bar.dismissed.connect(
+            lambda: onboarding_flow.set_step_bar_hidden(self, True))
         self.toolbar.redo_requested.connect(self._do_redo)
 
         self.toolbar.satellite_toggled.connect(self.map_widget.set_satellite_visible)
@@ -1716,6 +1773,8 @@ class MainWindow(QMainWindow):
         site_photo_flow.restore_site_photo(self)
         self.setWindowTitle(f"{APP_NAME} — {name}")
         self._set_mode_label("Ready")
+        # Back to an empty project — step 1 again (F44).
+        onboarding_flow.refresh(self)
 
     def _on_open(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -1777,6 +1836,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"{APP_NAME} — {name}")
 
         self._sync_planning_panel()
+        # A load bypasses _mark_modified (the project is clean), so the
+        # getting-started strip is refreshed here explicitly (F44).
+        onboarding_flow.refresh(self)
 
     def _on_save(self):
         # Shim → PersistenceController; see src/controllers/persistence.py.

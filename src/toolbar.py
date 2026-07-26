@@ -19,7 +19,7 @@ colour. The main click on Grid still toggles the snap on/off.
 from PyQt6.QtWidgets import (
     QToolBar, QLabel, QComboBox, QToolButton, QMenu, QWidget,
     QVBoxLayout, QHBoxLayout, QSlider, QPushButton, QColorDialog,
-    QWidgetAction,
+    QWidgetAction, QSizePolicy,
 )
 from PyQt6.QtGui import QAction, QActionGroup, QColor
 from PyQt6.QtCore import pyqtSignal, Qt
@@ -150,6 +150,8 @@ class MainToolbar(QToolBar):
     annotate_requested        = pyqtSignal()
     select_requested          = pyqtSignal()
     cancel_draw_requested     = pyqtSignal()
+    # F44: Generate Design, promoted from File → Ctrl+G onto the Draw row.
+    generate_requested        = pyqtSignal()
     undo_requested            = pyqtSignal()
     redo_requested            = pyqtSignal()
 
@@ -267,6 +269,27 @@ class MainToolbar(QToolBar):
         )
         act_cancel.triggered.connect(self._on_cancel)
         self.addAction(act_cancel)
+
+        # F44: Generate Design was reachable only from File → Ctrl+G — the
+        # easiest path into the app, hidden in a menu. It gets a permanent,
+        # right-aligned home on the toolbar the user is already looking at.
+        spacer = QWidget(self)
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding,
+                             QSizePolicy.Policy.Preferred)
+        self.addWidget(spacer)
+
+        self._act_generate_design = QAction("✨ Generate Design", self)
+        self._act_generate_design.setStatusTip(
+            "Fill your boundary with native plants chosen from your goals "
+            "(Ctrl+G)")
+        self._act_generate_design.setToolTip(
+            "Pick a few goals and let the app place a starting design.\n"
+            "It plants inside your boundary, avoiding buildings and existing\n"
+            "trees. Everything it places is editable — drag, delete, add.\n"
+            "Shortcut: Ctrl+G"
+        )
+        self._act_generate_design.triggered.connect(self.generate_requested)
+        self.addAction(self._act_generate_design)
 
     def set_undo_redo_enabled(self, undo: bool, redo: bool):
         """Grey out the toolbar Undo / Redo buttons when their stack is empty.
@@ -475,6 +498,19 @@ class MainToolbar(QToolBar):
         self.zoom_step_changed.emit(level)
 
     # ── Public helpers ────────────────────────────────────────────────────────
+
+    def set_generate_enabled(self, enabled: bool):
+        """Grey the toolbar's Generate button while a generation run is in
+        flight, in step with the File-menu action (GenerationController)."""
+        self._act_generate_design.setEnabled(bool(enabled))
+
+    def activate_boundary_tool(self):
+        """Turn on the boundary tool from outside the toolbar (F44 — the
+        getting-started strip's step-2 chip). Goes through the same handler a
+        click does, so the mutual-exclusion and the mode signal both fire."""
+        if not self._act_boundary.isChecked():
+            self._act_boundary.setChecked(True)
+            self._on_boundary_toggled(True)
 
     def reset_draw_buttons(self):
         """Uncheck all drawing buttons (called when a draw operation completes)."""

@@ -701,6 +701,10 @@ class PlantPanel(QWidget):
             "QPushButton:hover { border-color: #8a4a4a; }"
             "QPushButton:disabled { color: #455a64; border-color: #2e4a2e; }"
         )
+        self._mix_clear_btn.setToolTip(
+            "Empty the current mix. Plants already placed on the map stay\n"
+            "where they are — use Undo (Ctrl+Z) to take those back."
+        )
         self._mix_clear_btn.clicked.connect(self._clear_mix)
         self._mix_clear_btn.setEnabled(False)
         btn_row.addWidget(self._mix_clear_btn)

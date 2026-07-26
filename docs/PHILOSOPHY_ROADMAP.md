@@ -79,6 +79,8 @@ These started life as entries below and have since landed — the State markers 
 | F11 | Value-vs-price framing — the habitat value a design's spend *creates*, read together with its cost | `src/habitat_score.py` (`habitat_nudges`), surfaced in `src/on_this_design_panel.py` (Stats: habitat value → "where to grow next" → cost → "what your spend creates") | P6 |
 | F7 | Relationship-first data model — one queryable edges layer over all four edge shapes | `src/db/relationships.py` + the schema-v51 `relationship_edges` view | P3, P10 |
 | F5 | Relationship graph overlay — the design drawn as a living network on the map | `src/relationship_graph.py` + `html/map/07-network.js`, surfaced in Analysis → Habitat | P3, P5, P10 |
+| F44 | First-run activation pack — welcome, three-step strip, worked example, Generate on the toolbar | `src/onboarding.py` + `src/onboarding_flow.py` + `src/welcome_dialog.py` + `src/first_step_bar.py` | P1, P9 |
+| F45 | In-context guidance — first-step line, dead-end copy that names the way through, tooltips | `src/site_panel.py`, `src/plant_panel.py`, `src/analysis_panel.py`, `src/toolbar.py` | P5 |
 | — | **Temporal succession engine** — the growing overstory shades the understory year by year, so sun-lovers over-topped past their tolerance decline and die and the year-N scene shows the *climax community* (survivors), not every plant frozen healthy | `src/succession_engine.py` (Qt-free growth-matrix + point-sampled dynamic shade + cumulative-stress survival evaluator), folded into `src/scene_contract.py` (health/opacity) and `html/scene3d.html` (withered render) | P4, P3, P9 |
 | — | **Succession honesty + regeneration pass (V2.24)** — leaf-off-aware mortality (a deciduous crown shades only its leaf-on season, so part-shade plants survive under it), canopy trees *suppressed* not culled, and **gap recruitment** (self-seeding natives recolonise the openings the closing canopy leaves — the design self-heals). Also: woody plants no longer scatter clonal colonies in the scene, and ambient wildlife forages the whole yard instead of clumping in one bed | `src/succession_engine.py` (`recruits`, leaf weighting, tree floor), `src/scene3d.py` (woody spread gate), `src/scene_wildlife.py` (home-range patrol), `src/scene_contract.py` | P4, P1, P8, P9 |
 | — | **3D viewer split + winter atmosphere (V2.24)** — the ~4,200-line `scene3d.html` monolith is split into an HTML shell + a bootstrap module + eight ordered `html/scene3d/*.js` classic chunks (shared-global, like the 2D map), unblocking further viewer work; plus **seasonal ground** (winter snow cover + straw/waking shoulder tints) and **falling snow** in winter. Snow, not invented rain (P9). Verified with a headless-Chromium render harness | `html/scene3d.html` + `html/scene3d/*.js`, guards in `tests/test_architecture_guard.py` / `test_bridge_contract.py` / `test_scene3d_assets.py` | P5, P4 |
@@ -620,8 +622,8 @@ roadmap now — novices first, depth deferred (not dropped).
 | F41 | Numbered plant-by-numbers map | ACT | M | Med | P5, P11 |
 | F42 | Design-specific maintenance calendar | ACT / MAINTAIN | S–M | Low | P4, P9 |
 | F43 | Site-prep & soil-amendment sheet | ACT | M | Med | P8, P11 |
-| F44 | First-run activation pack | ONBOARD | M | Low | P1, P9 |
-| F45 | In-context guidance | ONBOARD | S | Low | P5 |
+| ✅ F44 | First-run activation pack | ONBOARD | M | Low | P1, P9 |
+| ✅ F45 | In-context guidance | ONBOARD | S | Low | P5 |
 
 ### ✅ F40 · Planting Plan — buy-it / plant-it sheet — *Shipped · was Impact High / Effort M / Risk Low (P8, P4, P11, P6, P9)*
 **Shipped** in `src/planting_plan.py`, surfaced in the text export (`app.py`) and the PDF
@@ -650,18 +652,67 @@ Turn measured site data into a do-this-first prep step (the repair sequence *bef
 needs, emit "this bed reads heavy clay → loosen and top with 5–8 cm compost" into the plan. Pairs
 with F18.
 
-### F44 · First-run activation pack — *Impact High · Effort M · Risk Low (P1, P9)*
-The biggest ONBOARD gap: the app opens to a silent blank map and the easy path ("Generate
-Design") is buried in File → Ctrl+G. **How:** a first-run welcome (QSettings flag) offering
-*Generate / Start blank / Open example*; an empty-state map hint ("drop a pin → draw a boundary →
-Generate"); surface **"Generate Design ✨"** as a visible button; ship a sample `.perma.geojson`;
-pre-check sensible Generate defaults (budget-friendly, won't-take-over). Reuses
-`generate_design_dialog`, `design_goals`.
+### ✅ F44 · First-run activation pack — *Shipped (V2.31) · was Impact High / Effort M / Risk Low (P1, P9)*
+**Shipped** as the Qt-free `src/onboarding.py` plus `src/onboarding_flow.py`,
+`src/welcome_dialog.py` and `src/first_step_bar.py`. The binding constraint the funnel review
+named: everything else this app has built is worth nothing to somebody who never reaches a first
+design.
 
-### F45 · In-context guidance — *Impact Med · Effort S · Risk Low (P5)*
-Lower the learning curve in place: tooltips on the boundary tool, placement modes and plant
-filters; a geocode-failure toast that points to pin-drop; a bolded first-step line in the Site
-panel. **How:** small, local UI additions — no new surfaces.
+**How (as built), against the five items the card asked for:**
+
+- **A first-run welcome** (QSettings-flagged) offering *Generate a design / Start from my yard /
+  Open the example*. Dismissing it counts as an answer — a user who closed it does not want it
+  again next launch — and Help → Welcome brings it back, which is also where the example lives
+  for anyone who wants it later.
+- **The empty-state hint became a strip above the map, not JS inside it.** The map is a
+  QWebEngineView; drawing the hint into it would have meant new JS on a chunk already near its
+  guard ceiling, for a hint with nothing to do with Leaflet. A slim Qt strip between the toolbars
+  and the map costs no JS and cannot be repainted away by a map redraw. It shows the three steps
+  with the live one highlighted, and **its chips are controls, not a poster**: clicking one raises
+  the Site tab and focuses the address box, or arms the boundary tool, or opens the Plants tab.
+  It **retires itself** once you have a pin, a boundary and plants — guidance that outstays its
+  welcome becomes furniture — and a View-menu toggle brings it back.
+- **"✨ Generate Design" is now a visible button**, right-aligned on the Draw toolbar *and* in the
+  strip, in step with the File-menu action while a run is in flight.
+- **The example is a spec, not a shipped file.** A `.perma.geojson` would bake in plant ids, and
+  ids are not stable across reseeds — a shipped example would silently rot into pointing at the
+  wrong species on some future schema bump. The layout is authored as species *names* plus offsets
+  in metres and resolved against the live catalogue at open time, the same trick `F50`'s reference
+  communities use, so it can never name a plant the app doesn't have and improves as the seed data
+  does. It is written to the user's data dir and opened through `MainWindow._load_from_path` — the
+  same path File → Open uses, rather than a second near-identical path that would rot. What it
+  opens is a real design, not a token: an 88 m² front-yard conversion, 19 plants, three fruiting
+  shrubs for structure and a spring→fall nectar relay, scoring **54/100 "Solid habitat"**, with its
+  project notes listing what to try on it (score it, pull the milkweed, run the year slider).
+  Anything unresolvable is reported in the status bar rather than quietly producing a thinner
+  design than the one described (P9). A test asserts every authored name resolves against the
+  shipped catalogue, so a seed-data change that breaks the example fails the build instead of a
+  user finding it.
+- **Generate's defaults are pre-checked for a first-timer** — native, feeds something, stays in its
+  bed, buyable at an actual Alberta nursery — but only when the project has no goals of its own,
+  so a user who deliberately cleared every goal keeps that choice.
+
+Written as a flow module, so **no new MainWindow methods** (still 125/140) and `app.py` carries
+only lambdas. Verified end-to-end on a real Qt stack, not just statically: MainWindow builds, the
+example loads through the real path with a consistent ProjectStore, the strip retires itself, and
+the step chips actually navigate.
+
+### ✅ F45 · In-context guidance — *Shipped (V2.31) · was Impact Med / Effort S / Risk Low (P5)*
+**Shipped** alongside F44. Two of the three items were real gaps; the third was mostly already
+done, and saying so is more useful than manufacturing work.
+
+- **A bolded first-step line at the top of the Site panel**, drawn from the same
+  `onboarding.first_step_line` the strip uses — one source, so the two surfaces cannot drift into
+  giving different instructions about the same state.
+- **Dead ends now name the way through.** A failed address search said "Search failed: …" and a
+  fruitless one said "No Alberta results." — both true, both a place a beginner gives up. They now
+  point at "Use Pin Drop…", which offline is not a workaround but *the* supported path: address
+  search is the app's only networked entry point.
+- **Tooltips: mostly already there.** An audit found the boundary tool, the five placement modes
+  and every plant filter already carried one. What was genuinely missing were the first-contact
+  buttons — Find, Refresh data, Clear pin, terrain Generate, Clear mix, Calculate Habitat Value —
+  which now say what they do *and* what they don't touch ("Clear pin … your boundary and plants
+  are not affected").
 
 ---
 
@@ -828,15 +879,23 @@ ranking, and one thing didn't change and should have.
    afternoon's work went up a lot — and P9 is the principle the app most often *claims* in its
    own copy.
 
-**What didn't change, and should have.** The funnel lens above concluded, in writing, *"lead with
-ACTION and ACTIVATION; keep but defer the DEPTH."* Since then the shipped work has been: 3D
-succession, a 3D viewer split, a Blender asset pipeline, aspect/morphology realism, click-to-learn,
-the teaching layer, and now the relationship web. Every one of those is DESIGN or LEGIBILITY. The
-ONBOARD column still contains **one** entry (F44) and it is still unbuilt: the app opens to a
-silent blank map and "Generate Design" is behind File → Ctrl+G. That is not a criticism of the
-depth work — the depth is what makes this app worth opening — but it means the roadmap's own
-stated priority has now lost seven consecutive increments, and the honest recommendation is to
-stop the run.
+**What didn't change, and should have — now addressed.** The funnel lens above concluded, in
+writing, *"lead with ACTION and ACTIVATION; keep but defer the DEPTH."* Since then the shipped work
+had been: 3D succession, a 3D viewer split, a Blender asset pipeline, aspect/morphology realism,
+click-to-learn, the teaching layer, and the relationship web. Every one of those is DESIGN or
+LEGIBILITY. The ONBOARD column held **one** entry (F44), unbuilt: the app opened to a silent blank
+map with "Generate Design" behind File → Ctrl+G. That was not a criticism of the depth work — the
+depth is what makes this app worth opening — but the roadmap's own stated priority had lost seven
+consecutive increments.
+
+> **✅ Acted on in V2.31.** F44 and F45 shipped immediately after this review: a welcome with three
+> doors, a three-step strip above the map whose chips navigate, Generate promoted onto the toolbar,
+> a worked 19-plant example that scores 54/100, and dead-end copy that names the way through.
+> **ONBOARD is now clear.** The next unbuilt stage is ACT/OUTPUT — F41, the numbered planting map
+> that finishes F40.
+
+The rest of this review stands as written; the tiers below are unchanged apart from Tier 1's first
+two entries having landed.
 
 Updated funnel counts. Unshipped **F1–F49** only, by the stage each primarily serves — the
 retire/merge candidates below are still counted here, and the 3D-asset cards (F60/F62) are not,
@@ -848,8 +907,8 @@ since they serve the viewer rather than a funnel stage:
 | LEGIBILITY / EDUCATE | 6 | F15, F19, F21, F29, F30, F31 | well served by what shipped |
 | DECIDE / CONFIDENCE | 5 | F8, F12, F13, F14, F28 | all cheap, all unbuilt |
 | MAINTAIN | 3 | F20, F33, F42 | F42 is the one that saves plantings |
-| **ACT / OUTPUT** | **3** | **F32, F41, F43** | **F41 is the missing half of shipped F40** |
-| **ONBOARD / ACTIVATE** | **2** | **F44, F45** | **still the binding constraint** |
+| **ACT / OUTPUT** | **3** | **F32, F41, F43** | **now the front line — F41 is the missing half of shipped F40** |
+| ~~ONBOARD / ACTIVATE~~ | ~~2~~ | ✅ F44, ✅ F45 | **cleared in V2.31** |
 
 (F34 belongs in `data_quality.py` rather than any column, and F49 straddles LEGIBILITY and ACT —
 both are discussed below.)
@@ -858,12 +917,13 @@ both are discussed below.)
 
 | # | ID | Why it's first |
 |---|----|----|
-| 1 | **F44 · First-run activation pack** *(M · Low)* | Everything else on this roadmap is worth exactly zero to someone who never reaches a first design. A welcome offering *Generate / Start blank / Open example*, an empty-state map hint, a visible **Generate Design ✨** button and one shipped sample project. Highest value per hour of anything remaining, and it is not close. |
-| 2 | **F45 · In-context guidance** *(S · Low)* | Same stage, a day's work, compounds directly with F44. Tooltips on the boundary tool and placement modes; a geocode-failure toast that points at pin-drop. |
-| 3 | **F41 · Numbered plant-by-numbers map** *(M · Med)* | F40 shipped "buy 3 Saskatoon" without ever saying *where hole #7 is*. This isn't a new feature so much as the **missing half of a shipped one** — the highest completion value in the list. |
+| ✅ 1 | **F44 · First-run activation pack** *(M · Low)* | **Shipped V2.31.** Everything else on this roadmap is worth exactly zero to someone who never reaches a first design. |
+| ✅ 2 | **F45 · In-context guidance** *(S · Low)* | **Shipped V2.31**, alongside F44 — same stage, and the two share their copy. |
+| 3 | **F41 · Numbered plant-by-numbers map** *(M · Med)* | **Next.** F40 shipped "buy 3 Saskatoon" without ever saying *where hole #7 is*. This isn't a new feature so much as the **missing half of a shipped one** — the highest completion value in the list. |
 | 4 | **F42 · Design-specific maintenance calendar** *(S–M · Low)* | The commonest way a native planting dies is year-one drought while the user believes natives need no water. This is the cheapest entry with a direct survival effect on plants actually in the ground. |
 
-That's roughly two increments, and it moves both starved funnel stages at once.
+Half of that landed in V2.31; F41 → F42 is the remaining increment, and it is now ACT/OUTPUT's
+turn to be the front line.
 
 ### Tier 2 — the confidence block (cheap, and all one theme)
 
@@ -929,14 +989,14 @@ the deformation out).
 ## How to choose
 
 Sequenced for **more ecosystems created** — the short version of the V2.31 review above:
-- **Now — get people to a first design (ACTIVATION):** **F44** → **F45**. The binding constraint,
-  and the priority this roadmap has stated and skipped for seven increments.
-- **Then — close the loop to the ground (ACTION):** ✅ F40 → ✅ F17 → **F41** (the missing half of
+- ✅ **Done — get people to a first design (ACTIVATION):** ✅ F44 → ✅ F45 (V2.31). The binding
+  constraint, and the priority this roadmap had stated and skipped for seven increments.
+- **Now — close the loop to the ground (ACTION):** ✅ F40 → ✅ F17 → **F41** (the missing half of
   F40) → **F42** (the calendar that keeps year-one plants alive) → F43.
 - **Then — build the trust to act (CONFIDENCE):** F8 / F12 / F28 / F14 / F13 as **one** block,
   not five cards.
-- **Depth is now optional, not owed.** ✅ F1/F2/F3/F4/F5/F6/F7/F9/F10/F16/F17/F22/F24/F35/F40 have
-  shipped; P1–P11 all read *strong* or better than they did. Remaining depth (F23, F33, F49) is
+- **Depth is now optional, not owed.** ✅ F1/F2/F3/F4/F5/F6/F7/F9/F10/F16/F17/F22/F24/F35/F40/F44/F45
+  have shipped; P1–P11 all read *strong* or better than they did. Remaining depth (F23, F33, F49) is
   worth building when the funnel is healthy, not before.
 - **Defer:** F21, F25, F26, F27, F36, F39. **Merge/retire:** F15 and F30 into F5, F31 into F45,
   F19 scoped down, F34 into `data_quality.py`.

@@ -76,6 +76,14 @@ class PersistenceController:
             self._main.site_panel.update_caster_summary(self._main._project)
         except Exception:  # noqa: BLE001 — a status line must never block a save flag
             pass
+        # Getting-started guidance (F44): the same reasoning — every feature
+        # mutation lands here, so dropping a pin, closing a boundary or
+        # placing a plant ticks its step off without each call site knowing.
+        try:
+            from src import onboarding_flow
+            onboarding_flow.refresh(self._main)
+        except Exception:  # noqa: BLE001 — guidance must never block a save flag
+            pass
 
     # ── Save / Save As ────────────────────────────────────────────────────────
 
@@ -555,7 +563,13 @@ class PersistenceController:
         m = self._main
         pid, lat, lng = entry["plant_id"], entry["lat"], entry["lng"]
         m.map_widget.undo_place_plant(pid, lat, lng)
-        m._store.remove_plant(pid, lat, lng, newest_first=True)
+        removed = m._store.remove_plant(pid, lat, lng, newest_first=True)
+        # Carry the removed plant's identity on the undo entry so redo can put
+        # THAT plant back rather than an identical-looking new one. Without
+        # this the feature_id changes across an undo/redo round-trip and
+        # anything holding it dangles.
+        if removed and removed.get("feature_id"):
+            entry["feature_id"] = removed["feature_id"]
         m.plant_panel.on_plant_removed(pid)
         m.statusBar().showMessage("Undo: removed plant", 2000)
 
@@ -569,7 +583,8 @@ class PersistenceController:
             pid, name, lat, lng, spacing_m, plant_type, custom_color,
             group_id)
         m._store.add_plant(pid, name, lat, lng,
-                           placement_group_id=group_id)
+                           placement_group_id=group_id,
+                           feature_id=entry.get("feature_id", ""))
         m.plant_panel.on_plant_placed(pid, name)
         m.statusBar().showMessage("Redo: placed plant", 2000)
 

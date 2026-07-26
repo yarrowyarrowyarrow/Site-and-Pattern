@@ -145,6 +145,8 @@ Features for long-term planning and tracking.
 | Design notes / journal (per-project, timestamps, saved in GeoJSON) | Done |
 | Unified relationship-edges layer (`relationship_edges` view + `src/db/relationships.py`; one query API over plant↔fauna, companion and shared-community edges, each tagged documented vs derived) | Done |
 | Relationship web map overlay (the design drawn as a network: species at their planting centroid, wildlife on a ring outside it, layer filter + legend) | Done |
+| First-run welcome (Generate / start from your yard / open the example), three-step getting-started strip above the map, Generate Design on the toolbar, beginner-default design goals | Done |
+| Worked example design — a front-yard lawn conversion built from an authored spec against the live catalogue (Help → Open the Example Design) | Done |
 
 ---
 
