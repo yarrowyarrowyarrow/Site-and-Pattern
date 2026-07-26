@@ -134,6 +134,30 @@ for (`src/sprite_gallery.py:_scene_for`).
 Deep-link a single sprite with `?sprite=KEY`, e.g.
 `…/sprite_gallery.html?sprite=conifer_pine` or `?sprite=shrub_dogwood`.
 
+### The flower-tuning bench (V2.34)
+
+```bash
+python scripts/tune_morphology.py          # → http://127.0.0.1:8756
+```
+
+The gallery shows you what is wrong; this is where you fix it. The real viewer
+on the left rendering the species at year 6 in July, its reference photograph on
+the right, eight sliders between them, `←`/`→` to page the catalogue and `S` to
+write straight to `data/plants_master.json`.
+
+It exists because the preview's remaining fidelity gap is **not a code gap**: it
+is roughly ten characters × 434 species, and for most of them no single flora
+records all ten. Flower diameter in cm, ray count, how far the bloom sits above
+the leaves and how many flowering stems a mature plant carries are exactly the
+numbers floras skip — and they are the four the generator most needs. Someone
+who knows these plants can fix a wrong value faster than anyone can look it up.
+
+`--report` prints every shipped value that differs from what the family-first
+seeder (`scripts/seed_flower_morphology.py`) would produce, so hand-tuned
+species can be folded back into its `SPECIES_OVERRIDE` and survive a re-seed.
+A dev tool, not an app panel: the seed catalogue is the project's, not the end
+user's.
+
 ![All archetypes in the gallery](3d/sprite_gallery_overview.png)
 
 ## Flower sprites

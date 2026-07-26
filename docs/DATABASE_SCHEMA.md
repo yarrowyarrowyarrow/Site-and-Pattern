@@ -56,6 +56,16 @@ One row per species. Key columns (full list in the DDL):
 | `bark_texture` | smooth \| furrowed \| papery \| shaggy \| scaly (v52). Which procedural bark grain the 3D viewer draws. Bark is how a woody plant is identified in winter, and one grain served all of them; note that within *Betula* only paper birch is `papery` — the kind of difference a genus table cannot hold. Seeded in `scripts/seed_surface_morphology.py` |
 | `leaf_surface` | matte \| glossy \| pubescent \| glaucous (v52). Recorded only where the character is distinctive enough to draw — a silvery wolf-willow, a waxy bog blueberry, a glossy Oregon-grape. Empty is the common case and the honest default |
 | `inflorescence_form` | turkey_foot \| one_sided_raceme \| open_panicle \| contracted_spike \| nodding_raceme \| bristly \| sedge_cluster \| rush_umbel \| cattail_spike (v52). **The graminoid field mark.** All 79 grasses, sedges and rushes carried `flower_form: plume` and drew one generic spray, while a grass is identified by its seed head — a big bluestem is *named* for its turkey-foot. Deliberately separate from `flower_form`, which stays `plume` because it feeds pollinator logic where a wind-pollinated grass correctly offers a bee nothing. Seeded in `scripts/seed_inflorescence_morphology.py`, so a strawberry, a rose hip and a chokecherry raceme were all "red dot". Empty on dry-fruited species, which draw nothing |
+| `flower_arch` | solitary \| raceme \| spike \| panicle \| corymb \| umbel \| head \| cyme \| whorl (v53). **Where the florets sit in space**, which is most of a forb's silhouette — a goldenrod's plume, a yarrow's flat corymb and a lupine's spike are three architectures, not three textures. Drives `html/scene3d/15-florets.js`; empty falls back to the flat billboard |
+| `flower_symmetry` | radial \| bilateral (v53). A pea and a daisy are not the same flower, and drawing a bilateral one radially is the commonest way a generated flower gives itself away |
+| `petal_shape` | narrow \| oval \| notched \| tubular \| lipped (v53) |
+| `petal_count` | Rays or petals on ONE floret (v53). **0 is a real value** — the rayless composites (thistle, sage, pussytoes) have none, and drawing them five is invented detail |
+| `florets_per_head` | How many florets the drawn unit carries (v53): 40 on a daisy's head, 12 up a spike, and for the rayless composites whose drawn unit is the whole spray, the hundreds of heads in a goldenrod plume |
+| `flower_diameter_cm` | ONE floret across (v53). The most valuable number the catalogue was missing: bloom size used to be derived from *canopy*, so a pasqueflower and a sunflower scaled with the plant rather than with the flower |
+| `flower_center_color` | The disc/eye (v53). A black-eyed Susan **is** its dark disc; it was a yellow blob |
+| `flower_height_frac` | How far the bloom is held above the foliage, as a fraction of height (v53) |
+| `stem_branching` | unbranched \| branched_above \| branched_throughout (v53). Recorded ahead of the builder that will read it — forb stems are still single straight rods |
+| `basal_rosette` | 0/1 (v53) |
 
 Morphology is authored in two companion scripts, each documenting its fields
 and where the values come from:

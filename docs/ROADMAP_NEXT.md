@@ -4,7 +4,7 @@
 principle-by-principle map and the shipped record of F1–F62 — read it for *why* the app is
 shaped the way it is and what has already landed. This file is what comes next, and why.
 
-Feature IDs continue the same stable-handle sequence (F63, F64, …) so "let's do F70" keeps
+Feature IDs continue the same stable-handle sequence (F63, F64, …, F80) so "let's do F70" keeps
 working across both documents.
 
 ---
@@ -104,9 +104,22 @@ was actually built, what it cost and what it left open is in
 decision: *a native planting has to be loved to survive*. Nassauer 1995 is in
 [`REFERENCES.md`](REFERENCES.md); `tests/test_philosophy.py` now guards thirteen.
 
-Theme A's remaining gaps — herb and within-silhouette shrub aspect, fern
-density, billboard fruit — are listed at the end of the sprite audit rather than
-re-opened here.
+**V2.34 — the uncanny valley (F78–F80).** Prompted by the observation that the
+preview read as "a really low quality video game" and that the *old polyhedrons
+were more forgiving*. Both halves were right, and the second one is the
+diagnosis: geometry that attempts realism invites a comparison that everything
+still abstract in the scene then loses.
+
+| ID | What landed | Where |
+|----|-------------|-------|
+| **F78** | **Herb aspect axis** — the gap F65 left. Three classes per growth form at the median of each tertile of the real spread; 169 of 228 species move off their form's single authored figure and the median proportion error falls **28% → 11%**. 52 units → 96, 2.5 → 4.4 MB | `conventions.HERB_ASPECT_CLASSES`, `manifest._variants_for` |
+| **F79** | **Stylised is a style, not a thinning** — level 0 skips the baked models and the surface grain, flat-shades, and builds forbs as faceted masses. Levels renamed **Stylised / Balanced / Lifelike** | `html/scene3d/13-stylised.js`, `01b-surface.js:setStylised` |
+| **F80** | **The bloom is geometry** — a floret from petal count × shape × symmetry plus a separate disc, placed by one of nine inflorescence architectures, and **lit**. 307 of 311 flowering species described | `html/scene3d/15-florets.js`, ten columns at schema v53, `scripts/seed_flower_morphology.py` |
+
+Theme A's remaining gaps — within-silhouette shrub aspect, fern density,
+billboard fruit, and now **branched forb stems** (`stem_branching` is recorded
+for all 307 species and nothing reads it) — are listed at the end of the sprite
+audit rather than re-opened here.
 
 ---
 
@@ -116,6 +129,9 @@ re-opened here.
 
 | ID | Feature | Impact | Effort | Risk | Principle | Status |
 |----|---------|--------|--------|------|-----------|--------|
+| F78 | Herb aspect axis — the gap F65 left | **High** | S | Low | P5, P9 | ✅ V2.34 |
+| F79 | Stylised / Balanced / Lifelike — level 0 as a style | **High** | S | Low | P5, P13 | ✅ V2.34 |
+| F80 | The bloom as geometry — florets + nine architectures | **High** | L | Med — schema v53 | P5, P13 | ✅ V2.34 |
 | F63 | Shared surface atlas — bark / leaf / needle | **High** | M | Low–Med | P5, P2 | ✅ V2.33 |
 | F64 | Species tables where genus tables lie (absorbs F60) | **High** | L | Med — asset size | P2, P9 | ✅ V2.33 |
 | F65 | Aspect variant axis on layer archetypes (was F62) | Med | M | Med — asset size | P2, P9 | ✅ V2.33 |

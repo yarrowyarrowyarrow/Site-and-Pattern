@@ -480,15 +480,71 @@ stamp in one of nineteen flat colours.** The body underneath it now carries real
 leaves at 1,200 triangles. That gap — realistic body, cartoon bloom, unlit — is
 what reads as a cheap video game, and no further work on leaves will move it.
 
+**20 · The bloom is geometry (schema v53).** The gap above, closed in the same
+release. A flower is now built from the characters someone standing in front of
+it would name — **petal count × petal shape × radial/bilateral symmetry**, plus
+a **separate disc in its own colour** — and placed by one of **nine
+inflorescence architectures** (solitary · raceme · spike · panicle · corymb ·
+umbel · head · cyme · whorl) rather than as seven identical quads scattered in a
+disc. **307 of 311 flowering species (99%)** are described, family-first, in
+`scripts/seed_flower_morphology.py`.
+
+Three things this fixes that no amount of leaf work could:
+
+- **The bloom takes light.** It was on `MeshBasicMaterial`, which is unlit — a
+  bed of flowers was the same flat colour at noon, at dusk and in the shade of
+  the tree beside it.
+- **A bloom is its own size.** `flower_diameter_cm` is the most valuable number
+  the catalogue was missing: bloom size used to be derived from the plant's
+  CANOPY, so a pasqueflower and a sunflower scaled with the plant rather than
+  with the flower. A black-eyed Susan head is now 7 cm across because a
+  black-eyed Susan head is 7 cm across.
+- **A pea is not a daisy.** Bilateral flowers get a banner, two wings and a keel.
+  Drawing them radially is the commonest way a generated flower gives itself
+  away, and 40-odd Fabaceae and Lamiaceae species were doing exactly that.
+
+`flower_form` is untouched and is **not** widened: it feeds
+`bee_habitat.tongue_form_fit` and `forage_calendar`, where it is a
+pollinator-access statement rather than a picture. Same separation
+`inflorescence_form` took in v52. Where the new fields are empty the viewer
+draws the old billboard, so partial coverage degrades to the previous release
+rather than to a hole (P9).
+
+![The same twenty-species bed before and after](3d/meadow_before_after_v234.png)
+
+*The same 121-plant, 20-species bed, same camera, year 3, July. Top: V2.33's
+billboards — flat orange and yellow plates lying in the air, taking no light.
+Middle: Lifelike — lupine racemes on their stems, yarrow corymbs as flat white
+plates, black-eyed Susans at their real 7 cm with a dark disc. Bottom: Stylised,
+which is not the middle one degraded but a different answer to the same scene.*
+
 ### Still open after the fourth pass
 
-- **The bloom is still a billboard.** The next increment: a floret built from
-  real characters (petal count, petal shape, symmetry, a separate disc in its own
-  colour) placed by a real inflorescence architecture (raceme · spike · panicle ·
-  corymb · umbel · head · cyme · whorl) instead of seven quads in a disc — and
-  lit, so it takes the sun.
 - **Forb stems are single straight rods.** `flora_herbs.build_herb` stamps each
-  stem as one segment. Real forbs branch, and a goldenrod's silhouette *is* its
-  branching.
+  stem as one segment. `stem_branching` is recorded for all 307 described
+  species and **nothing reads it yet** — real forbs branch, and a goldenrod's
+  silhouette *is* its branching. This is the next clear win.
+- **No species records how many flowering stems it carries.** Head counts are
+  scaled off canopy, which is the closest honest proxy and not the real number.
+  It is one of the four things worth going out and counting (below).
+- **A tuning tool.** Ten characters × 434 species is the bottleneck, and it is
+  not a coding bottleneck. A live-render-beside-reference-photo panel with ~8
+  sliders, writing straight to `data/plants_master.json`, is what makes the
+  catalogue finishable by someone who knows the plants.
 - **Shrub aspect within a silhouette**, unchanged from the third pass.
 - **Fern density**, unchanged.
+
+### What would move fidelity fastest from here (not code)
+
+Ranked by value per hour, because the bottleneck is data, not geometry:
+
+1. **Tune species against reference photos.** The generator is only as good as
+   its numbers, and someone who knows these plants can fix a wrong one in the
+   time it takes to look one up.
+2. **Field-measure the four numbers floras omit**: flower diameter in cm,
+   petal/ray count, *flowering stems on a mature plant*, and how far the flowers
+   sit above the leaves. Floras give ranges for height and skip all four.
+3. **Score renders blind** — "would you recognise this? 1–10" — so the audit's
+   numbers are measured per release instead of argued about.
+4. **Licence-clean photographs**, which the tuning in (1) needs as its
+   reference and which roadmap F72 wants anyway.

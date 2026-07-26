@@ -49,7 +49,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "grassy"
+    "growth_form": "grassy",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Alberta Penstemon",
@@ -101,7 +111,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "tubular",
+    "petal_count": 5,
+    "florets_per_head": 24,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Alder-leaved Buckthorn",
@@ -308,7 +328,17 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 25,
+    "florets_per_head": 45,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8b93a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Alpine Bistort",
@@ -465,7 +495,17 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 5,
+    "florets_per_head": 25,
+    "flower_diameter_cm": 0.7,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Alpine Hedysarum (Bear Root)",
@@ -514,7 +554,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Alpine Rock Jasmine",
@@ -567,7 +617,17 @@
     "leaf_size_cm": 1.5,
     "leaf_arrangement": "basal",
     "growth_form": "rosette",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "umbel",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 12,
+    "flower_diameter_cm": 0.4,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "American Brooklime",
@@ -668,7 +728,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 15,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#e8b93a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Arum-leaved Arrowhead",
@@ -721,7 +791,17 @@
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
     "growth_form": "emergent",
-    "leaf_surface": "glossy"
+    "leaf_surface": "glossy",
+    "flower_arch": "whorl",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 3,
+    "florets_per_head": 9,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Ascending Milkvetch",
@@ -776,7 +856,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 18,
+    "flower_diameter_cm": 1.4,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Awned Sedge",
@@ -881,7 +971,17 @@
     "leaf_shape": "scale",
     "leaf_size_cm": 0.5,
     "leaf_arrangement": "alternate",
-    "growth_form": "succulent"
+    "growth_form": "succulent",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 20,
+    "florets_per_head": 2,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Balsam Fir",
@@ -1040,7 +1140,17 @@
     "leaf_shape": "sagittate",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 14,
+    "florets_per_head": 80,
+    "flower_diameter_cm": 8.0,
+    "flower_center_color": "#c58b2a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Basket Willow",
@@ -1095,7 +1205,17 @@
     "bark_color": "#7d7466",
     "fall_color": "#cbbb50",
     "branching": "multi_stem",
-    "bark_texture": "smooth"
+    "bark_texture": "smooth",
+    "flower_arch": "spike",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 0,
+    "florets_per_head": 80,
+    "flower_diameter_cm": 0.3,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Beaked Hazelnut",
@@ -1258,7 +1378,17 @@
     "leaf_arrangement": "alternate",
     "growth_form": "mat",
     "fruit_form": "berry",
-    "leaf_surface": "glossy"
+    "leaf_surface": "glossy",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 10,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Bebb's Sedge",
@@ -1360,7 +1490,17 @@
     "bark_color": "#7a7264",
     "fall_color": "#d3c04a",
     "branching": "multi_stem",
-    "bark_texture": "furrowed"
+    "bark_texture": "furrowed",
+    "flower_arch": "spike",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 0,
+    "florets_per_head": 80,
+    "flower_diameter_cm": 0.3,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Big Bluestem",
@@ -1466,7 +1606,17 @@
     "fall_color": "",
     "branching": "decurrent",
     "bark_texture": "shaggy",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "tubular",
+    "petal_count": 0,
+    "florets_per_head": 70,
+    "flower_diameter_cm": 0.3,
+    "flower_center_color": "#b7bc86",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Big-head Rush",
@@ -1574,7 +1724,17 @@
     "bark_color": "#6e5f4c",
     "fall_color": "#c8703a",
     "branching": "multi_stem",
-    "bark_texture": "shaggy"
+    "bark_texture": "shaggy",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 120,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Bishop's Cap",
@@ -1627,7 +1787,17 @@
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "basal",
     "growth_form": "rosette",
-    "leaf_surface": "glossy"
+    "leaf_surface": "glossy",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 5,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 0.4,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Black Hawthorn",
@@ -1683,7 +1853,17 @@
     "fall_color": "#c07a34",
     "branching": "multi_stem",
     "fruit_form": "pome",
-    "bark_texture": "scaly"
+    "bark_texture": "scaly",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "#d8b8a0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Black Spruce",
@@ -1791,7 +1971,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 12,
+    "florets_per_head": 70,
+    "flower_diameter_cm": 7.0,
+    "flower_center_color": "#3b2412",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Blanketflower",
@@ -1841,7 +2031,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 13,
+    "florets_per_head": 90,
+    "flower_diameter_cm": 7.0,
+    "flower_center_color": "#7d2b1c",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Blue Clematis",
@@ -1890,7 +2090,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "vining"
+    "growth_form": "vining",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 4,
+    "florets_per_head": 3,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Blue Columbine",
@@ -1943,7 +2153,17 @@
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "basal",
     "growth_form": "ferny",
-    "leaf_surface": "glaucous"
+    "leaf_surface": "glaucous",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "tubular",
+    "petal_count": 5,
+    "florets_per_head": 3,
+    "flower_diameter_cm": 4.0,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Blue Grama Grass",
@@ -2048,7 +2268,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
-    "growth_form": "grassy"
+    "growth_form": "grassy",
+    "flower_arch": "umbel",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 6,
+    "florets_per_head": 4,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Bluebunch Fescue",
@@ -2212,7 +2442,17 @@
     "branching": "decurrent",
     "fruit_form": "berry",
     "bark_texture": "smooth",
-    "leaf_surface": "glaucous"
+    "leaf_surface": "glaucous",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Bog Cranberry",
@@ -2266,7 +2506,17 @@
     "leaf_size_cm": 1.0,
     "leaf_arrangement": "alternate",
     "growth_form": "mat",
-    "fruit_form": "berry"
+    "fruit_form": "berry",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Boreal Yarrow",
@@ -2321,7 +2571,17 @@
     "leaf_shape": "bipinnate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "ferny"
+    "growth_form": "ferny",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 200,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Boreale Oxytropis",
@@ -2376,7 +2636,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Bracted Honeysuckle",
@@ -2434,7 +2704,17 @@
     "fall_color": "#cbb44a",
     "branching": "multi_stem",
     "fruit_form": "berry",
-    "bark_texture": "shaggy"
+    "bark_texture": "shaggy",
+    "flower_arch": "cyme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "tubular",
+    "petal_count": 5,
+    "florets_per_head": 4,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Bristly Black Currant",
@@ -2492,7 +2772,17 @@
     "fall_color": "#b8703a",
     "branching": "multi_stem",
     "fruit_form": "strig",
-    "bark_texture": "shaggy"
+    "bark_texture": "shaggy",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 12,
+    "flower_diameter_cm": 0.8,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Brittle Prickly-pear",
@@ -2544,7 +2834,17 @@
     "leaf_shape": "scale",
     "leaf_size_cm": 0.3,
     "leaf_arrangement": "alternate",
-    "growth_form": "succulent"
+    "growth_form": "succulent",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 10,
+    "florets_per_head": 3,
+    "flower_diameter_cm": 6.0,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Broad-leaved Arrowhead",
@@ -2597,7 +2897,17 @@
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
     "growth_form": "emergent",
-    "leaf_surface": "glossy"
+    "leaf_surface": "glossy",
+    "flower_arch": "whorl",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 3,
+    "florets_per_head": 9,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Broad-leaved Water-plantain",
@@ -2646,7 +2956,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "basal",
-    "growth_form": "emergent"
+    "growth_form": "emergent",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 3,
+    "florets_per_head": 60,
+    "flower_diameter_cm": 0.8,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Bronze Bells",
@@ -2701,7 +3021,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "grassy"
+    "growth_form": "grassy",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 6,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 1.2,
+    "flower_center_color": "#c8d86a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Broomweed",
@@ -2756,7 +3086,17 @@
     "bark_color": "#7a6a52",
     "fall_color": "",
     "branching": "decurrent",
-    "bark_texture": "shaggy"
+    "bark_texture": "shaggy",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 6,
+    "florets_per_head": 90,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Buckbean",
@@ -2810,7 +3150,17 @@
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "basal",
     "growth_form": "emergent",
-    "leaf_surface": "glossy"
+    "leaf_surface": "glossy",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 5,
+    "florets_per_head": 12,
+    "flower_diameter_cm": 1.5,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Bunchberry",
@@ -2861,7 +3211,17 @@
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "whorled",
     "growth_form": "mat",
-    "fruit_form": "flat_cluster"
+    "fruit_form": "flat_cluster",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 4,
+    "florets_per_head": 60,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Bur Oak",
@@ -2965,7 +3325,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "spike",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 4,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 5.0,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Canada Anemone",
@@ -3017,7 +3387,17 @@
     "leaf_shape": "lobed",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "whorled",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "umbel",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 4,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Canada Buffaloberry",
@@ -3130,7 +3510,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 10,
+    "florets_per_head": 160,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Canada Milk Vetch",
@@ -3185,7 +3575,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 18,
+    "flower_diameter_cm": 1.4,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Canada Rice Grass",
@@ -3287,7 +3687,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 1.5,
     "leaf_arrangement": "whorled",
-    "growth_form": "floating"
+    "growth_form": "floating",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 3,
+    "florets_per_head": 1,
+    "flower_diameter_cm": 0.8,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Canada Wild Rye",
@@ -3453,7 +3863,17 @@
     "fall_color": "#d0932e",
     "branching": "multi_stem",
     "fruit_form": "raceme",
-    "bark_texture": "smooth"
+    "bark_texture": "smooth",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 1.2,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Common Alumroot",
@@ -3506,7 +3926,17 @@
     "leaf_shape": "lobed",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 5,
+    "florets_per_head": 80,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Common Bladderwort",
@@ -3558,7 +3988,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 2.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "floating"
+    "growth_form": "floating",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 1.0,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Common Horsetail",
@@ -3715,7 +4155,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "whorled",
-    "growth_form": "emergent"
+    "growth_form": "emergent",
+    "flower_arch": "whorl",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 0,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 0.2,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Common Scouring-rush",
@@ -3825,7 +4275,17 @@
     "fall_color": "#b8a860",
     "branching": "multi_stem",
     "fruit_form": "berry",
-    "bark_texture": "shaggy"
+    "bark_texture": "shaggy",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Common Sunflower",
@@ -3877,7 +4337,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 22,
+    "florets_per_head": 200,
+    "flower_diameter_cm": 14.0,
+    "flower_center_color": "#5a3a12",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Common Tall Manna Grass",
@@ -3983,7 +4453,17 @@
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "basal",
     "growth_form": "rosette",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 4,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 1.0,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Cream-Coloured Peavine",
@@ -4039,7 +4519,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "vining"
+    "growth_form": "vining",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Creeping Juniper",
@@ -4146,7 +4636,17 @@
     "branching": "prostrate",
     "fruit_form": "berry",
     "bark_texture": "smooth",
-    "leaf_surface": "glossy"
+    "leaf_surface": "glossy",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 6,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 0.8,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Creeping Sibbaldia",
@@ -4198,7 +4698,17 @@
     "leaf_shape": "trifoliate",
     "leaf_size_cm": 2.0,
     "leaf_arrangement": "basal",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Creeping Spikerush",
@@ -4303,7 +4813,17 @@
     "leaf_shape": "reniform",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "solitary",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 4,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Cushion Umbrella Plant",
@@ -4356,7 +4876,17 @@
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "basal",
     "growth_form": "mat",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "umbel",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 6,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 0.4,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Cut-leaved Anemone",
@@ -4409,7 +4939,17 @@
     "leaf_shape": "lobed",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "whorled",
-    "growth_form": "ferny"
+    "growth_form": "ferny",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 2,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Cut-leaved Nightshade",
@@ -4566,7 +5106,17 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "umbel",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 5,
+    "florets_per_head": 10,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Dewberry",
@@ -4621,7 +5171,17 @@
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "alternate",
     "growth_form": "sprawling",
-    "fruit_form": "aggregate"
+    "fruit_form": "aggregate",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Dotted Blazingstar",
@@ -4673,7 +5233,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "spike",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 8,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 1.4,
+    "flower_center_color": "#7b3f98",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Douglas Fir",
@@ -4892,7 +5462,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 18,
+    "flower_diameter_cm": 1.4,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Drummond's Rush",
@@ -5055,7 +5635,17 @@
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "alternate",
     "growth_form": "sprawling",
-    "fruit_form": "aggregate"
+    "fruit_form": "aggregate",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Early Blue Violet",
@@ -5107,7 +5697,17 @@
     "leaf_shape": "reniform",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "solitary",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 4,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Early Yellow Oxytropis",
@@ -5160,7 +5760,17 @@
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "basal",
     "growth_form": "rosette",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Eastern Red Columbine",
@@ -5216,7 +5826,17 @@
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "basal",
     "growth_form": "ferny",
-    "leaf_surface": "glaucous"
+    "leaf_surface": "glaucous",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "tubular",
+    "petal_count": 5,
+    "florets_per_head": 3,
+    "flower_diameter_cm": 4.0,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Elegant Goldenrod",
@@ -5265,7 +5885,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 10,
+    "florets_per_head": 160,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Evening Primrose",
@@ -5318,7 +5948,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "spike",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 4,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 5.0,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "False Box (Mountain Boxwood)",
@@ -5375,7 +6015,17 @@
     "fall_color": "",
     "branching": "prostrate",
     "bark_texture": "smooth",
-    "leaf_surface": "glossy"
+    "leaf_surface": "glossy",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 4,
+    "florets_per_head": 6,
+    "flower_diameter_cm": 0.3,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "False Dragonhead",
@@ -5424,7 +6074,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "spike",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 24,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "False Dragonhead (Western Obedient Plant)",
@@ -5474,7 +6134,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "spike",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 24,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "False Solomon's Seal",
@@ -5532,7 +6202,17 @@
     "leaf_arrangement": "alternate",
     "growth_form": "erect",
     "fruit_form": "berry",
-    "leaf_surface": "glossy"
+    "leaf_surface": "glossy",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 6,
+    "florets_per_head": 60,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Field Chickweed",
@@ -5584,7 +6264,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 2.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 5,
+    "florets_per_head": 10,
+    "flower_diameter_cm": 1.2,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Field Pussytoes",
@@ -5637,7 +6327,17 @@
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "basal",
     "growth_form": "mat",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "tubular",
+    "petal_count": 0,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 0.7,
+    "flower_center_color": "#efe6d8",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Fireweed",
@@ -5689,7 +6389,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 4,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#c86a9a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Flat-topped Goldenrod",
@@ -5741,7 +6451,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 12,
+    "florets_per_head": 130,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Flat-topped White Aster",
@@ -5794,7 +6514,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 8,
+    "florets_per_head": 35,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Floating Marsh-marigold",
@@ -5850,7 +6580,17 @@
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "basal",
     "growth_form": "floating",
-    "leaf_surface": "glossy"
+    "leaf_surface": "glossy",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 6,
+    "florets_per_head": 4,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Foothills Rough Fescue",
@@ -6119,7 +6859,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 1.2,
+    "flower_center_color": "#c86a3a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Fuzzy-tongue Penstemon",
@@ -6168,7 +6918,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "tubular",
+    "petal_count": 5,
+    "florets_per_head": 24,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Giant Bur-reed",
@@ -6217,7 +6977,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 60.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "emergent"
+    "growth_form": "emergent",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 0,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 1.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Giant Hyssop",
@@ -6269,7 +7039,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 7.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "spike",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 60,
+    "flower_diameter_cm": 1.0,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Giant Sunflower",
@@ -6321,7 +7101,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 18,
+    "florets_per_head": 120,
+    "flower_diameter_cm": 8.0,
+    "flower_center_color": "#6d4a1c",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Giant Wild Rye",
@@ -6423,7 +7213,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
-    "growth_form": "grassy"
+    "growth_form": "grassy",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 6,
+    "florets_per_head": 1,
+    "flower_diameter_cm": 4.0,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Golden Bean",
@@ -6478,7 +7278,17 @@
     "leaf_shape": "trifoliate",
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 25,
+    "flower_diameter_cm": 2.2,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Golden Currant (Buffalo Currant)",
@@ -6536,7 +7346,17 @@
     "fall_color": "#c8503a",
     "branching": "multi_stem",
     "fruit_form": "strig",
-    "bark_texture": "shaggy"
+    "bark_texture": "shaggy",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 12,
+    "flower_diameter_cm": 0.8,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Golden Draba",
@@ -6588,7 +7408,17 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 2.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 4,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "#d8d86a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Golden Sedge",
@@ -6693,7 +7523,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 8,
+    "florets_per_head": 50,
+    "flower_diameter_cm": 5.0,
+    "flower_center_color": "#7d4a1c",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Gray Goldenrod",
@@ -6745,7 +7585,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 10,
+    "florets_per_head": 160,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Great Bulrush",
@@ -6847,7 +7697,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 25,
+    "florets_per_head": 45,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8b93a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Green Alder",
@@ -6955,7 +7815,17 @@
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "opposite",
     "growth_form": "clump",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "umbel",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 60,
+    "flower_diameter_cm": 1.0,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Green Needle Grass",
@@ -7063,7 +7933,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 18,
+    "flower_diameter_cm": 1.4,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Gumweed",
@@ -7112,7 +7992,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 26,
+    "florets_per_head": 100,
+    "flower_diameter_cm": 3.5,
+    "flower_center_color": "#d9a63a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Hairy Arnica",
@@ -7164,7 +8054,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 12,
+    "florets_per_head": 50,
+    "flower_diameter_cm": 5.0,
+    "flower_center_color": "#d9a63a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Hairy Golden Aster",
@@ -7217,7 +8117,17 @@
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "alternate",
     "growth_form": "clump",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 18,
+    "florets_per_head": 45,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#d9a63a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Hairy Wild Rye",
@@ -7319,7 +8229,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "grassy"
+    "growth_form": "grassy",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Heart-leaved Alexanders (Golden Alexanders)",
@@ -7373,7 +8293,17 @@
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
     "growth_form": "erect",
-    "leaf_surface": "glossy"
+    "leaf_surface": "glossy",
+    "flower_arch": "umbel",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 100,
+    "flower_diameter_cm": 0.3,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Heart-leaved Arnica",
@@ -7422,7 +8352,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 12,
+    "florets_per_head": 50,
+    "flower_diameter_cm": 5.0,
+    "flower_center_color": "#d9a63a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Highbush Cranberry",
@@ -7479,7 +8419,17 @@
     "fall_color": "#b8402e",
     "branching": "multi_stem",
     "fruit_form": "flat_cluster",
-    "bark_texture": "smooth"
+    "bark_texture": "smooth",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 120,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Hoary Aster",
@@ -7532,7 +8482,17 @@
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "alternate",
     "growth_form": "clump",
-    "leaf_surface": "glaucous"
+    "leaf_surface": "glaucous",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 22,
+    "florets_per_head": 45,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#e8b93a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Hooded Ladies' Tresses",
@@ -7585,7 +8545,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "basal",
-    "growth_form": "grassy"
+    "growth_form": "grassy",
+    "flower_arch": "spike",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 3,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 0.8,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Hooker's Oat Grass",
@@ -7737,7 +8707,17 @@
     "leaf_shape": "orbicular",
     "leaf_size_cm": 0.5,
     "leaf_arrangement": "basal",
-    "growth_form": "floating"
+    "growth_form": "floating",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 0,
+    "florets_per_head": 1,
+    "flower_diameter_cm": 0.1,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Jack Pine",
@@ -7844,7 +8824,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 18,
+    "florets_per_head": 120,
+    "flower_diameter_cm": 8.0,
+    "flower_center_color": "#6d4a1c",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Joe-Pye Weed",
@@ -7896,7 +8886,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "whorled",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "tubular",
+    "petal_count": 0,
+    "florets_per_head": 60,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "#c9a0c9",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "June Grass",
@@ -8052,7 +9052,17 @@
     "fall_color": "",
     "branching": "decurrent",
     "bark_texture": "shaggy",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 1.2,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Lakeshore Sedge",
@@ -8159,7 +9169,17 @@
     "leaf_size_cm": 2.0,
     "leaf_arrangement": "alternate",
     "growth_form": "succulent",
-    "leaf_surface": "glaucous"
+    "leaf_surface": "glaucous",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 5,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 1.0,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Large-leaved Avens",
@@ -8212,7 +9232,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 6,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Late Goldenrod",
@@ -8264,7 +9294,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 10,
+    "florets_per_head": 160,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Late Yellow Oxytropis",
@@ -8316,7 +9356,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Leafy Arnica",
@@ -8369,7 +9419,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 12,
+    "florets_per_head": 50,
+    "flower_diameter_cm": 5.0,
+    "flower_center_color": "#d9a63a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Leafy Aster",
@@ -8421,7 +9481,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 25,
+    "florets_per_head": 45,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8b93a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Lilac Penstemon",
@@ -8473,7 +9543,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "tubular",
+    "petal_count": 5,
+    "florets_per_head": 24,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Lindley's Aster",
@@ -8526,7 +9606,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 25,
+    "florets_per_head": 45,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8b93a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Little Bluestem",
@@ -8631,7 +9721,17 @@
     "leaf_shape": "lobed",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 5,
+    "florets_per_head": 80,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Lodgepole Pine",
@@ -8742,7 +9842,17 @@
     "leaf_shape": "lobed",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "whorled",
-    "growth_form": "ferny"
+    "growth_form": "ferny",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 2,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Low Bilberry",
@@ -8800,7 +9910,17 @@
     "branching": "decurrent",
     "fruit_form": "berry",
     "bark_texture": "smooth",
-    "leaf_surface": "glossy"
+    "leaf_surface": "glossy",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Low Townsendia",
@@ -8853,7 +9973,17 @@
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "basal",
     "growth_form": "rosette",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 30,
+    "florets_per_head": 60,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#e5c65a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Low-bush Cranberry",
@@ -8910,7 +10040,17 @@
     "fall_color": "#c04a2e",
     "branching": "multi_stem",
     "fruit_form": "flat_cluster",
-    "bark_texture": "smooth"
+    "bark_texture": "smooth",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 120,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Lyalls Penstemon",
@@ -8959,7 +10099,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "tubular",
+    "petal_count": 5,
+    "florets_per_head": 24,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "MacKenzie's Hedysarum",
@@ -9008,7 +10158,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Many-flowered Aster (Tufted White Prairie Aster)",
@@ -9058,7 +10218,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 25,
+    "florets_per_head": 45,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8b93a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Marsh Aster",
@@ -9110,7 +10280,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 25,
+    "florets_per_head": 45,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8b93a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Marsh Cinquefoil",
@@ -9163,7 +10343,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 6,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "#7d2b3a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Marsh Hedge Nettle",
@@ -9215,7 +10405,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "whorl",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 1.2,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Marsh Hedge Nettle (Marsh Woundwort)",
@@ -9268,7 +10468,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "whorl",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 1.2,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Marsh Marigold",
@@ -9324,7 +10534,17 @@
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "basal",
     "growth_form": "rosette",
-    "leaf_surface": "glossy"
+    "leaf_surface": "glossy",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 6,
+    "florets_per_head": 4,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Marsh Skullcap",
@@ -9377,7 +10597,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 12,
+    "flower_diameter_cm": 1.8,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Marsh Violet",
@@ -9426,7 +10656,17 @@
     "leaf_shape": "reniform",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "solitary",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 4,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Maximilian Sunflower",
@@ -9475,7 +10715,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 18,
+    "florets_per_head": 120,
+    "flower_diameter_cm": 8.0,
+    "flower_center_color": "#6d4a1c",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Meadow Arnica",
@@ -9528,7 +10778,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 12,
+    "florets_per_head": 50,
+    "flower_diameter_cm": 5.0,
+    "flower_center_color": "#d9a63a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Meadow Blazingstar",
@@ -9581,7 +10841,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "spike",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 8,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 1.4,
+    "flower_center_color": "#7b3f98",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Meadow Sedge",
@@ -9689,7 +10959,17 @@
     "bark_color": "#6e5f4c",
     "fall_color": "#c8a03a",
     "branching": "multi_stem",
-    "bark_texture": "shaggy"
+    "bark_texture": "shaggy",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 120,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Missouri Milkvetch",
@@ -9744,7 +11024,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 18,
+    "flower_diameter_cm": 1.4,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Moss Campion",
@@ -9797,7 +11087,17 @@
     "leaf_size_cm": 1.0,
     "leaf_arrangement": "opposite",
     "growth_form": "cushion",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 5,
+    "florets_per_head": 6,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Moss Phlox",
@@ -9846,7 +11146,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 1.5,
     "leaf_arrangement": "opposite",
-    "growth_form": "cushion"
+    "growth_form": "cushion",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 1
   },
   {
     "common_name": "Mountain Brome",
@@ -9951,7 +11261,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 6,
+    "flower_diameter_cm": 3.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Mountain Hollyhock",
@@ -10000,7 +11320,17 @@
     "leaf_shape": "lobed",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 5,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 5.0,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Mountain Sweet Cicely",
@@ -10108,7 +11438,17 @@
     "fall_color": "#cbbb50",
     "branching": "suckering",
     "bark_texture": "smooth",
-    "leaf_surface": "glaucous"
+    "leaf_surface": "glaucous",
+    "flower_arch": "spike",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 0,
+    "florets_per_head": 80,
+    "flower_diameter_cm": 0.3,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Narrow-leaved Hawkweed",
@@ -10157,7 +11497,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 40,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 2.2,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Narrowleaf Cotton-grass",
@@ -10365,7 +11715,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "basal",
-    "growth_form": "grassy"
+    "growth_form": "grassy",
+    "flower_arch": "umbel",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 6,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 0.7,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Northern Bedstraw",
@@ -10417,7 +11777,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "whorled",
-    "growth_form": "sprawling"
+    "growth_form": "sprawling",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 4,
+    "florets_per_head": 60,
+    "flower_diameter_cm": 0.3,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Northern Black Currant",
@@ -10471,7 +11841,17 @@
     "fall_color": "#c8853a",
     "branching": "multi_stem",
     "fruit_form": "strig",
-    "bark_texture": "shaggy"
+    "bark_texture": "shaggy",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 12,
+    "flower_diameter_cm": 0.8,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Northern Gentian",
@@ -10524,7 +11904,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 4,
+    "florets_per_head": 10,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Northern Hedysarum",
@@ -10576,7 +11966,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Northern Wheat Grass",
@@ -10682,7 +12082,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 18,
+    "florets_per_head": 120,
+    "flower_diameter_cm": 8.0,
+    "flower_center_color": "#6d4a1c",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Old Man's Whiskers (Prairie Smoke)",
@@ -10735,7 +12145,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 3,
+    "flower_diameter_cm": 1.4,
+    "flower_center_color": "#a05a4a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Ostrich Fern",
@@ -10841,7 +12261,17 @@
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "basal",
     "growth_form": "rosette",
-    "leaf_surface": "glaucous"
+    "leaf_surface": "glaucous",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 40,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Palmate-leaved Coltsfoot",
@@ -11053,7 +12483,17 @@
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "basal",
     "growth_form": "rosette",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 30,
+    "florets_per_head": 60,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#e5c65a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Pearly Everlasting",
@@ -11107,7 +12547,17 @@
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
     "growth_form": "erect",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "tubular",
+    "petal_count": 0,
+    "florets_per_head": 60,
+    "flower_diameter_cm": 0.9,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Philadelphia Fleabane",
@@ -11160,7 +12610,17 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 60,
+    "florets_per_head": 90,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e5c65a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Pin Cherry",
@@ -11220,7 +12680,17 @@
     "fall_color": "#d9622e",
     "branching": "decurrent",
     "fruit_form": "cherry",
-    "bark_texture": "smooth"
+    "bark_texture": "smooth",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 1.2,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Pink Corydalis",
@@ -11269,7 +12739,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "ferny"
+    "growth_form": "ferny",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "tubular",
+    "petal_count": 4,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 1.2,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Pink Monkey Flower",
@@ -11321,7 +12801,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 12,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#c8a03a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Pink Pussytoes",
@@ -11375,7 +12865,17 @@
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "basal",
     "growth_form": "mat",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "tubular",
+    "petal_count": 0,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 0.7,
+    "flower_center_color": "#efe6d8",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Pink Pyrola",
@@ -11429,7 +12929,17 @@
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "basal",
     "growth_form": "rosette",
-    "leaf_surface": "glossy"
+    "leaf_surface": "glossy",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 12,
+    "flower_diameter_cm": 1.2,
+    "flower_center_color": "#c8c86a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Pink Spirea",
@@ -11484,7 +12994,17 @@
     "bark_color": "#6e5f4c",
     "fall_color": "#c8903a",
     "branching": "suckering",
-    "bark_texture": "shaggy"
+    "bark_texture": "shaggy",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 120,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Pink Spirea (Rose Meadowsweet)",
@@ -11537,7 +13057,17 @@
     "bark_color": "#6e5f4c",
     "fall_color": "#c8a03a",
     "branching": "multi_stem",
-    "bark_texture": "shaggy"
+    "bark_texture": "shaggy",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 120,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Plains Muhly",
@@ -11642,7 +13172,17 @@
     "leaf_shape": "scale",
     "leaf_size_cm": 0.3,
     "leaf_arrangement": "alternate",
-    "growth_form": "succulent"
+    "growth_form": "succulent",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 10,
+    "florets_per_head": 3,
+    "flower_diameter_cm": 6.0,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Plains Wormwood",
@@ -11695,7 +13235,17 @@
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "alternate",
     "growth_form": "ferny",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "tubular",
+    "petal_count": 0,
+    "florets_per_head": 70,
+    "flower_diameter_cm": 0.3,
+    "flower_center_color": "#b7bc86",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Porcupine Grass",
@@ -11910,7 +13460,17 @@
     "leaf_shape": "lobed",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 6,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Prairie Cinquefoil",
@@ -11962,7 +13522,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 12,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Prairie Cinquefoil (Tall Cinquefoil)",
@@ -12015,7 +13585,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 14,
+    "flower_diameter_cm": 1.8,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Prairie Coneflower",
@@ -12067,7 +13647,17 @@
     "leaf_shape": "pinnatifid",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 6,
+    "florets_per_head": 60,
+    "flower_diameter_cm": 5.0,
+    "flower_center_color": "#6b4a20",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Prairie Cord Grass",
@@ -12173,7 +13763,17 @@
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "basal",
     "growth_form": "rosette",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 6,
+    "florets_per_head": 1,
+    "flower_diameter_cm": 6.5,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Prairie Dropseed",
@@ -12278,7 +13878,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 6,
+    "flower_diameter_cm": 3.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Prairie Goldenrod",
@@ -12327,7 +13937,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 10,
+    "florets_per_head": 160,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Prairie Onion (Textile Onion)",
@@ -12383,7 +14003,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "basal",
-    "growth_form": "grassy"
+    "growth_form": "grassy",
+    "flower_arch": "umbel",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 6,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 0.8,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Prairie Rose",
@@ -12441,7 +14071,17 @@
     "fall_color": "#c07a3a",
     "branching": "multi_stem",
     "fruit_form": "hip",
-    "bark_texture": "smooth"
+    "bark_texture": "smooth",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 5,
+    "florets_per_head": 3,
+    "flower_diameter_cm": 5.0,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Prairie Sage",
@@ -12544,7 +14184,17 @@
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "alternate",
     "growth_form": "ferny",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "tubular",
+    "petal_count": 0,
+    "florets_per_head": 70,
+    "flower_diameter_cm": 0.3,
+    "flower_center_color": "#b7bc86",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Prairie Smoke",
@@ -12597,7 +14247,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 3,
+    "flower_diameter_cm": 1.4,
+    "flower_center_color": "#a05a4a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Prairie Thistle",
@@ -12647,7 +14307,17 @@
     "leaf_shape": "pinnatifid",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "tubular",
+    "petal_count": 0,
+    "florets_per_head": 120,
+    "flower_diameter_cm": 3.5,
+    "flower_center_color": "#a05aa8",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Prairie Turnip",
@@ -12696,7 +14366,17 @@
     "leaf_shape": "compound_palmate",
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 25,
+    "flower_diameter_cm": 1.2,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Prairie Wedge Grass",
@@ -12807,7 +14487,17 @@
     "fall_color": "#c07a3a",
     "branching": "multi_stem",
     "fruit_form": "hip",
-    "bark_texture": "smooth"
+    "bark_texture": "smooth",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 5,
+    "florets_per_head": 3,
+    "flower_diameter_cm": 5.0,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Purple Avens (Water Avens)",
@@ -12860,7 +14550,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 6,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Purple Coneflower",
@@ -12909,7 +14609,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 15,
+    "florets_per_head": 90,
+    "flower_diameter_cm": 8.0,
+    "flower_center_color": "#a4622a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Purple Oat Grass",
@@ -13011,7 +14721,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "vining"
+    "growth_form": "vining",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Purple Prairie Clover",
@@ -13060,7 +14780,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "spike",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 50,
+    "flower_diameter_cm": 0.7,
+    "flower_center_color": "#e8a63a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Purple Reed Grass",
@@ -13163,7 +14893,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 25,
+    "florets_per_head": 45,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8b93a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Pussy Willow",
@@ -13218,7 +14958,17 @@
     "bark_color": "#75695c",
     "fall_color": "#cbbb50",
     "branching": "multi_stem",
-    "bark_texture": "smooth"
+    "bark_texture": "smooth",
+    "flower_arch": "spike",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 0,
+    "florets_per_head": 80,
+    "flower_diameter_cm": 0.3,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Rabbitbrush",
@@ -13274,7 +15024,17 @@
     "fall_color": "",
     "branching": "decurrent",
     "bark_texture": "shaggy",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 5,
+    "florets_per_head": 90,
+    "flower_diameter_cm": 0.7,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Rat Root",
@@ -13326,7 +15086,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 60.0,
     "leaf_arrangement": "basal",
-    "growth_form": "emergent"
+    "growth_form": "emergent",
+    "flower_arch": "spike",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 0,
+    "florets_per_head": 100,
+    "flower_diameter_cm": 0.2,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Raymond's Sedge",
@@ -13433,7 +15203,17 @@
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "alternate",
     "growth_form": "clump",
-    "fruit_form": "berry"
+    "fruit_form": "berry",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 4,
+    "florets_per_head": 60,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Red Columbine",
@@ -13489,7 +15269,17 @@
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "basal",
     "growth_form": "ferny",
-    "leaf_surface": "glaucous"
+    "leaf_surface": "glaucous",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "tubular",
+    "petal_count": 5,
+    "florets_per_head": 3,
+    "flower_diameter_cm": 4.0,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Common Paintbrush",
@@ -13541,7 +15331,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "spike",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Red Osier Dogwood",
@@ -13600,7 +15400,17 @@
     "branching": "multi_stem",
     "fruit_form": "flat_cluster",
     "bark_texture": "smooth",
-    "leaf_surface": "glossy"
+    "leaf_surface": "glossy",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 4,
+    "florets_per_head": 60,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Richardson's Needlegrass",
@@ -13702,7 +15512,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 4,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#c86a9a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "River Bulrush",
@@ -13808,7 +15628,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "spike",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 0.7,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Rocky Mountain Beeplant",
@@ -13857,7 +15687,17 @@
     "leaf_shape": "compound_palmate",
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "narrow",
+    "petal_count": 4,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 1.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Rocky Mountain Fescue",
@@ -13962,7 +15802,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "tubular",
+    "petal_count": 5,
+    "florets_per_head": 24,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Roseroot",
@@ -14015,7 +15865,17 @@
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "alternate",
     "growth_form": "succulent",
-    "leaf_surface": "glaucous"
+    "leaf_surface": "glaucous",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 4,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Rosy Pussytoes (Littleleaf Pussytoes)",
@@ -14069,7 +15929,17 @@
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "basal",
     "growth_form": "mat",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "tubular",
+    "petal_count": 0,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 0.7,
+    "flower_center_color": "#efe6d8",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Rough Fescue",
@@ -14223,7 +16093,17 @@
     "leaf_shape": "lobed",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 5,
+    "florets_per_head": 80,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Round-leaved Sundew",
@@ -14325,7 +16205,17 @@
     "leaf_shape": "reniform",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "solitary",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 4,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Sago Pondweed",
@@ -14378,7 +16268,17 @@
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
     "growth_form": "floating",
-    "leaf_surface": "glaucous"
+    "leaf_surface": "glaucous",
+    "flower_arch": "spike",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 0,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 0.2,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Saline Shooting Star",
@@ -14430,7 +16330,17 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "umbel",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 5,
+    "florets_per_head": 10,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Saltgrass",
@@ -14589,7 +16499,17 @@
     "fall_color": "#cbbb50",
     "branching": "suckering",
     "bark_texture": "smooth",
-    "leaf_surface": "glaucous"
+    "leaf_surface": "glaucous",
+    "flower_arch": "spike",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 0,
+    "florets_per_head": 80,
+    "flower_diameter_cm": 0.3,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Sandberg Bluegrass",
@@ -14749,7 +16669,17 @@
     "fall_color": "#d1762e",
     "branching": "multi_stem",
     "fruit_form": "pome",
-    "bark_texture": "smooth"
+    "bark_texture": "smooth",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 5,
+    "florets_per_head": 12,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Scarlet Butterfly Plant",
@@ -14801,7 +16731,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "spike",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 4,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 5.0,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Scorpion Weed",
@@ -14851,7 +16791,17 @@
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
     "growth_form": "clump",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 0.8,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Self-heal",
@@ -14903,7 +16853,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "flower_arch": "spike",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 25,
+    "flower_diameter_cm": 1.2,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Seneca Snakeroot",
@@ -15054,7 +17014,17 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "umbel",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "narrow",
+    "petal_count": 5,
+    "florets_per_head": 10,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "#8a5a1e",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Short-beaked Agoseris",
@@ -15106,7 +17076,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 40,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Short-capsuled Willow",
@@ -15159,7 +17139,17 @@
     "fall_color": "#cbbb50",
     "branching": "multi_stem",
     "bark_texture": "smooth",
-    "leaf_surface": "glaucous"
+    "leaf_surface": "glaucous",
+    "flower_arch": "spike",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 0,
+    "florets_per_head": 80,
+    "flower_diameter_cm": 0.3,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Showy Aster",
@@ -15208,7 +17198,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 15,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#e8b93a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Showy Fleabane",
@@ -15260,7 +17260,17 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 60,
+    "florets_per_head": 90,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e5c65a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Showy Jacob's-ladder",
@@ -15312,7 +17322,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "ferny"
+    "growth_form": "ferny",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Showy Locoweed",
@@ -15365,7 +17385,17 @@
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "basal",
     "growth_form": "rosette",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Showy Milkweed",
@@ -15421,7 +17451,17 @@
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "opposite",
     "growth_form": "clump",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "umbel",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 60,
+    "flower_diameter_cm": 1.0,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Showy Pussytoes",
@@ -15474,7 +17514,17 @@
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "basal",
     "growth_form": "mat",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "tubular",
+    "petal_count": 0,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 0.7,
+    "flower_center_color": "#efe6d8",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Shrubby Cinquefoil",
@@ -15526,7 +17576,17 @@
     "bark_color": "#8a6a52",
     "fall_color": "#c8b04a",
     "branching": "decurrent",
-    "bark_texture": "shaggy"
+    "bark_texture": "shaggy",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 10,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Sideoats Grama",
@@ -15635,7 +17695,17 @@
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
     "growth_form": "erect",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Silver Buffaloberry",
@@ -15750,7 +17820,17 @@
     "fall_color": "",
     "branching": "decurrent",
     "bark_texture": "shaggy",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "tubular",
+    "petal_count": 0,
+    "florets_per_head": 70,
+    "flower_diameter_cm": 0.3,
+    "flower_center_color": "#b7bc86",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Silverberry",
@@ -15856,7 +17936,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "basal",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 12,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Silvery Lupine",
@@ -15912,7 +18002,17 @@
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
     "growth_form": "erect",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Sitka Valerian",
@@ -15964,7 +18064,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 80,
+    "flower_diameter_cm": 0.4,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Skunk Currant",
@@ -16018,7 +18128,17 @@
     "fall_color": "#c07a3a",
     "branching": "arching",
     "fruit_form": "strig",
-    "bark_texture": "smooth"
+    "bark_texture": "smooth",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 12,
+    "flower_diameter_cm": 0.8,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Slender Blue Beardtongue",
@@ -16070,7 +18190,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "tubular",
+    "petal_count": 5,
+    "florets_per_head": 24,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Slender Cinquefoil (Graceful Cinquefoil)",
@@ -16123,7 +18253,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 12,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Slender Nettle",
@@ -16433,7 +18573,17 @@
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "basal",
     "growth_form": "mat",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "tubular",
+    "petal_count": 0,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 0.7,
+    "flower_center_color": "#efe6d8",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Smooth Aster",
@@ -16485,7 +18635,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 25,
+    "florets_per_head": 45,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8b93a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Smooth Blue Beardtongue",
@@ -16537,7 +18697,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "tubular",
+    "petal_count": 5,
+    "florets_per_head": 24,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Smooth Fleabane (Streamside Fleabane)",
@@ -16587,7 +18757,17 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 60,
+    "florets_per_head": 90,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e5c65a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Smooth Sweet Cicely",
@@ -16639,7 +18819,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "ferny"
+    "growth_form": "ferny",
+    "flower_arch": "umbel",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 0.3,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Smooth Wild Rye",
@@ -16741,7 +18931,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 13,
+    "florets_per_head": 90,
+    "flower_diameter_cm": 4.0,
+    "flower_center_color": "#8a6a22",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Soapweed Yucca",
@@ -16796,7 +18996,17 @@
     "bark_color": "#8a8570",
     "fall_color": "",
     "branching": "rosette",
-    "leaf_surface": "glaucous"
+    "leaf_surface": "glaucous",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 6,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 5.0,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Spear-leaved Arnica",
@@ -16845,7 +19055,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 12,
+    "florets_per_head": 50,
+    "flower_diameter_cm": 5.0,
+    "flower_center_color": "#d9a63a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Spike Trisetum",
@@ -16950,7 +19170,17 @@
     "leaf_shape": "pinnatifid",
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "whorled",
-    "growth_form": "floating"
+    "growth_form": "floating",
+    "flower_arch": "spike",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 4,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 0.2,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Spreading Dogbane",
@@ -17006,7 +19236,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Sprengel's Sedge",
@@ -17163,7 +19403,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 7.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 12,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#c8a03a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Star-flowered Solomon's Seal",
@@ -17270,7 +19520,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 10,
+    "florets_per_head": 160,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Sticky Goldenrod (Mount Albert Goldenrod)",
@@ -17323,7 +19583,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 10,
+    "florets_per_head": 160,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Sticky Purple Geranium",
@@ -17375,7 +19645,17 @@
     "leaf_shape": "lobed",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 5,
+    "florets_per_head": 6,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Stiff Goldenrod",
@@ -17427,7 +19707,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 10,
+    "florets_per_head": 160,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Stiff Sunflower (Rhombic-leaved Sunflower)",
@@ -17477,7 +19767,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 18,
+    "florets_per_head": 120,
+    "flower_diameter_cm": 8.0,
+    "flower_center_color": "#6d4a1c",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Stinging Nettle",
@@ -17635,7 +19935,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Swamp Horsetail",
@@ -17738,7 +20048,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Sweet-scented Bedstraw",
@@ -17790,7 +20110,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "whorled",
-    "growth_form": "sprawling"
+    "growth_form": "sprawling",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 4,
+    "florets_per_head": 60,
+    "flower_diameter_cm": 0.3,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Sweetgrass",
@@ -17952,7 +20282,17 @@
     "leaf_shape": "lobed",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "whorled",
-    "growth_form": "ferny"
+    "growth_form": "ferny",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 2,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Tall Goldenrod",
@@ -18004,7 +20344,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 10,
+    "florets_per_head": 160,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Tall Jacob's Ladder",
@@ -18057,7 +20407,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "ferny"
+    "growth_form": "ferny",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Tall Larkspur",
@@ -18112,7 +20472,17 @@
     "leaf_shape": "lobed",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8e8f0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Tall Lungwort (Blue Bells)",
@@ -18165,7 +20535,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "tubular",
+    "petal_count": 5,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 1.4,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Tall Meadow Rue",
@@ -18218,7 +20598,17 @@
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "alternate",
     "growth_form": "ferny",
-    "leaf_surface": "glaucous"
+    "leaf_surface": "glaucous",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 0,
+    "florets_per_head": 80,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Tall Showy Yarrow",
@@ -18273,7 +20663,17 @@
     "leaf_shape": "bipinnate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "ferny"
+    "growth_form": "ferny",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 200,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Tamarack",
@@ -18386,7 +20786,17 @@
     "fall_color": "#c8a03a",
     "branching": "arching",
     "fruit_form": "aggregate",
-    "bark_texture": "shaggy"
+    "bark_texture": "shaggy",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Thinleaf Alder",
@@ -18652,7 +21062,17 @@
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "alternate",
     "growth_form": "sprawling",
-    "fruit_form": "aggregate"
+    "fruit_form": "aggregate",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Trembling Aspen",
@@ -18912,7 +21332,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 12,
+    "florets_per_head": 50,
+    "flower_diameter_cm": 5.0,
+    "flower_center_color": "#d9a63a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Twinflower",
@@ -18965,7 +21395,17 @@
     "leaf_size_cm": 1.5,
     "leaf_arrangement": "opposite",
     "growth_form": "mat",
-    "leaf_surface": "glossy"
+    "leaf_surface": "glossy",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "tubular",
+    "petal_count": 5,
+    "florets_per_head": 2,
+    "flower_diameter_cm": 1.0,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Twining Honeysuckle (Limber Honeysuckle)",
@@ -19020,7 +21460,17 @@
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
     "growth_form": "vining",
-    "fruit_form": "berry"
+    "fruit_form": "berry",
+    "flower_arch": "cyme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "tubular",
+    "petal_count": 5,
+    "florets_per_head": 4,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Umbrella Buckwheat",
@@ -19069,7 +21519,17 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "basal",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "flower_arch": "umbel",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 6,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 0.4,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Valerian",
@@ -19121,7 +21581,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 80,
+    "flower_diameter_cm": 0.4,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Variegated Horsetail",
@@ -19228,7 +21698,17 @@
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "alternate",
     "growth_form": "ferny",
-    "leaf_surface": "glaucous"
+    "leaf_surface": "glaucous",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 0,
+    "florets_per_head": 80,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Velvet-leaf Blueberry",
@@ -19286,7 +21766,17 @@
     "branching": "decurrent",
     "fruit_form": "berry",
     "bark_texture": "smooth",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Water Arum (Wild Calla)",
@@ -19339,7 +21829,17 @@
     "leaf_shape": "cordate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "basal",
-    "growth_form": "emergent"
+    "growth_form": "emergent",
+    "flower_arch": "spike",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 1,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 5.0,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Water Birch",
@@ -19443,7 +21943,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "emergent"
+    "growth_form": "emergent",
+    "flower_arch": "umbel",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 120,
+    "flower_diameter_cm": 0.3,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Water Sedge",
@@ -19549,7 +22059,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "spike",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 5,
+    "florets_per_head": 60,
+    "flower_diameter_cm": 0.4,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Western Blue Iris",
@@ -19604,7 +22124,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 45.0,
     "leaf_arrangement": "basal",
-    "growth_form": "grassy"
+    "growth_form": "grassy",
+    "flower_arch": "solitary",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "oval",
+    "petal_count": 6,
+    "florets_per_head": 2,
+    "flower_diameter_cm": 8.0,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Western Canada Violet",
@@ -19656,7 +22186,17 @@
     "leaf_shape": "reniform",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "solitary",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 4,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Western Fescue",
@@ -19761,7 +22301,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 25,
+    "florets_per_head": 45,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8b93a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Western Meadowrue",
@@ -19814,7 +22364,17 @@
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "alternate",
     "growth_form": "ferny",
-    "leaf_surface": "glaucous"
+    "leaf_surface": "glaucous",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 0,
+    "florets_per_head": 80,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Western Mountain Ash",
@@ -19872,7 +22432,17 @@
     "fall_color": "#d05a2e",
     "branching": "multi_stem",
     "fruit_form": "flat_cluster",
-    "bark_texture": "smooth"
+    "bark_texture": "smooth",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 150,
+    "flower_diameter_cm": 0.8,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Western Porcupine Grass",
@@ -19982,7 +22552,17 @@
     "fall_color": "#b8a860",
     "branching": "suckering",
     "fruit_form": "berry",
-    "bark_texture": "shaggy"
+    "bark_texture": "shaggy",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Western Wheatgrass",
@@ -20082,7 +22662,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 25,
+    "florets_per_head": 45,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8b93a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Western Wood Lily",
@@ -20131,7 +22721,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "whorled",
-    "growth_form": "grassy"
+    "growth_form": "grassy",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 6,
+    "florets_per_head": 2,
+    "flower_diameter_cm": 7.0,
+    "flower_center_color": "#8a5a1e",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "White Camas",
@@ -20186,7 +22786,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "grassy"
+    "growth_form": "grassy",
+    "flower_arch": "panicle",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 6,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 1.2,
+    "flower_center_color": "#c8d86a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "White Evening Primrose",
@@ -20235,7 +22845,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "spike",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 4,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 5.0,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "White Geranium",
@@ -20288,7 +22908,17 @@
     "leaf_shape": "lobed",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 5,
+    "florets_per_head": 6,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "White Mountain Avens",
@@ -20341,7 +22971,17 @@
     "leaf_size_cm": 2.0,
     "leaf_arrangement": "alternate",
     "growth_form": "mat",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 8,
+    "florets_per_head": 1,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "White Prairie Clover",
@@ -20393,7 +23033,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "spike",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 50,
+    "flower_diameter_cm": 0.7,
+    "flower_center_color": "#e8a63a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "White Spruce",
@@ -20552,7 +23202,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 28,
+    "flower_diameter_cm": 3.2,
+    "flower_center_color": "#b06a9a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Wild Black Currant",
@@ -20606,7 +23266,17 @@
     "fall_color": "#c8703a",
     "branching": "multi_stem",
     "fruit_form": "strig",
-    "bark_texture": "shaggy"
+    "bark_texture": "shaggy",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 12,
+    "flower_diameter_cm": 0.8,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Wild Blue Flax",
@@ -20658,7 +23328,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 2.5,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Wild Chives",
@@ -20713,7 +23393,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "basal",
-    "growth_form": "grassy"
+    "growth_form": "grassy",
+    "flower_arch": "umbel",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 6,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 0.8,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Wild Clematis",
@@ -20765,7 +23455,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "vining"
+    "growth_form": "vining",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 4,
+    "florets_per_head": 3,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Wild Gooseberry",
@@ -20820,7 +23520,17 @@
     "fall_color": "#c08a3a",
     "branching": "arching",
     "fruit_form": "berry",
-    "bark_texture": "shaggy"
+    "bark_texture": "shaggy",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 12,
+    "flower_diameter_cm": 0.8,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Wild Licorice",
@@ -20873,7 +23583,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 1.2,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Wild Lily-of-the-valley",
@@ -20932,7 +23652,17 @@
     "leaf_arrangement": "alternate",
     "growth_form": "mat",
     "fruit_form": "berry",
-    "leaf_surface": "glossy"
+    "leaf_surface": "glossy",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 6,
+    "florets_per_head": 60,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Wild Mint",
@@ -20982,7 +23712,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "whorl",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 4,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Wild Raspberry",
@@ -21040,7 +23780,17 @@
     "fall_color": "#c08a3a",
     "branching": "arching",
     "fruit_form": "aggregate",
-    "bark_texture": "shaggy"
+    "bark_texture": "shaggy",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Wild Red Currant",
@@ -21097,7 +23847,17 @@
     "fall_color": "#c05a3a",
     "branching": "arching",
     "fruit_form": "strig",
-    "bark_texture": "shaggy"
+    "bark_texture": "shaggy",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 12,
+    "flower_diameter_cm": 0.8,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Wild Sarsaparilla",
@@ -21204,7 +23964,17 @@
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "basal",
     "growth_form": "mat",
-    "fruit_form": "strawberry"
+    "fruit_form": "strawberry",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 6,
+    "flower_diameter_cm": 1.8,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Wild Vetch",
@@ -21259,7 +24029,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "vining"
+    "growth_form": "vining",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 14,
+    "flower_diameter_cm": 1.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Willow Aster",
@@ -21311,7 +24091,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 25,
+    "florets_per_head": 45,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8b93a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Winterfat",
@@ -21473,7 +24263,17 @@
     "leaf_shape": "pinnatifid",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "spike",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 25,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Woodland Strawberry",
@@ -21528,7 +24328,17 @@
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "basal",
     "growth_form": "mat",
-    "fruit_form": "strawberry"
+    "fruit_form": "strawberry",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 6,
+    "flower_diameter_cm": 1.8,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Woods' Rose",
@@ -21586,7 +24396,17 @@
     "fall_color": "#c07a3a",
     "branching": "suckering",
     "fruit_form": "hip",
-    "bark_texture": "smooth"
+    "bark_texture": "smooth",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 5,
+    "florets_per_head": 3,
+    "flower_diameter_cm": 5.0,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Woolly Cinquefoil",
@@ -21639,7 +24459,17 @@
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
     "growth_form": "clump",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 12,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Woolly Sedge",
@@ -21748,7 +24578,17 @@
     "leaf_shape": "bipinnate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "ferny"
+    "growth_form": "ferny",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 200,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "#e8e0c0",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Yellow Angelica",
@@ -21797,7 +24637,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "umbel",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 200,
+    "flower_diameter_cm": 0.3,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Yellow Avens",
@@ -21850,7 +24700,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 6,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "#d8b83a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Yellow Beardtongue",
@@ -21902,7 +24762,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "tubular",
+    "petal_count": 5,
+    "florets_per_head": 24,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Yellow Buckwheat",
@@ -21955,7 +24825,17 @@
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "basal",
     "growth_form": "mat",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "umbel",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 6,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 0.4,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Yellow Columbine",
@@ -22012,7 +24892,17 @@
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "basal",
     "growth_form": "ferny",
-    "leaf_surface": "glaucous"
+    "leaf_surface": "glaucous",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "tubular",
+    "petal_count": 5,
+    "florets_per_head": 3,
+    "flower_diameter_cm": 4.0,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Yellow Flax",
@@ -22064,7 +24954,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 2.5,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 5,
+    "florets_per_head": 8,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8d76a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Yellow Lady's Slipper",
@@ -22116,7 +25016,17 @@
     "leaf_shape": "elliptic",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "solitary",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 3,
+    "florets_per_head": 1,
+    "flower_diameter_cm": 5.0,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Yellow Monkey Flower",
@@ -22168,7 +25078,17 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 12,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#c8a03a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Yellow Mountain Avens",
@@ -22221,7 +25141,17 @@
     "leaf_size_cm": 2.0,
     "leaf_arrangement": "alternate",
     "growth_form": "mat",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 8,
+    "florets_per_head": 1,
+    "flower_diameter_cm": 3.0,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Yellow Owl Clover",
@@ -22273,7 +25203,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "spike",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 1.2,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Yellow Paintbrush",
@@ -22322,7 +25262,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "spike",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 30,
+    "flower_diameter_cm": 2.0,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Yellow Pond-lily",
@@ -22375,7 +25325,17 @@
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
     "growth_form": "floating",
-    "leaf_surface": "glossy"
+    "leaf_surface": "glossy",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 6,
+    "florets_per_head": 1,
+    "flower_diameter_cm": 6.0,
+    "flower_center_color": "#c8a03a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Yellow Pucoon",
@@ -22427,7 +25387,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "tubular",
+    "petal_count": 5,
+    "florets_per_head": 15,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Yellow Rattle",
@@ -22480,7 +25450,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 16,
+    "flower_diameter_cm": 1.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Yellow-flowered Locoweed",
@@ -22536,7 +25516,17 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "raceme",
+    "flower_symmetry": "bilateral",
+    "petal_shape": "lipped",
+    "petal_count": 5,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 1.6,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 1
   },
   {
     "common_name": "Yellowbells",
@@ -22588,7 +25578,17 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "grassy"
+    "growth_form": "grassy",
+    "flower_arch": "solitary",
+    "flower_symmetry": "radial",
+    "petal_shape": "oval",
+    "petal_count": 6,
+    "florets_per_head": 2,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#8a7a3a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "unbranched",
+    "basal_rosette": 0
   },
   {
     "common_name": "Yellowstone Draba",
@@ -22637,7 +25637,17 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 2.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 4,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "#d8d86a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Scarlet Globemallow",
@@ -22686,7 +25696,17 @@
     "leaf_shape": "lobed",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "raceme",
+    "flower_symmetry": "radial",
+    "petal_shape": "notched",
+    "petal_count": 5,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Bastard Toadflax",
@@ -22736,7 +25756,17 @@
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "alternate",
     "growth_form": "erect",
-    "leaf_surface": "glaucous"
+    "leaf_surface": "glaucous",
+    "flower_arch": "cyme",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 5,
+    "florets_per_head": 20,
+    "flower_diameter_cm": 0.5,
+    "flower_center_color": "",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "Stiff Goldenrod",
@@ -22785,7 +25815,17 @@
     "leaf_shape": "elliptic",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "flower_arch": "corymb",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 10,
+    "florets_per_head": 130,
+    "flower_diameter_cm": 0.6,
+    "flower_center_color": "#e8c552",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 0
   },
   {
     "common_name": "White Prairie Aster",
@@ -22834,7 +25874,17 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 25,
+    "florets_per_head": 45,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e8b93a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_throughout",
+    "basal_rosette": 0
   },
   {
     "common_name": "Woolly Groundsel",
@@ -22884,7 +25934,17 @@
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "basal",
     "growth_form": "rosette",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 10,
+    "florets_per_head": 40,
+    "flower_diameter_cm": 2.2,
+    "flower_center_color": "#e8b93a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   },
   {
     "common_name": "Tufted Fleabane",
@@ -22934,6 +25994,16 @@
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "basal",
     "growth_form": "rosette",
-    "leaf_surface": "pubescent"
+    "leaf_surface": "pubescent",
+    "flower_arch": "head",
+    "flower_symmetry": "radial",
+    "petal_shape": "narrow",
+    "petal_count": 60,
+    "florets_per_head": 90,
+    "flower_diameter_cm": 2.5,
+    "flower_center_color": "#e5c65a",
+    "flower_height_frac": 1.0,
+    "stem_branching": "branched_above",
+    "basal_rosette": 1
   }
 ]

@@ -394,6 +394,19 @@ def build_scene(project: dict, *, year: int = 0,
             # feeds the pollinator logic, where a wind-pollinated grass
             # correctly offers a bee nothing.
             "inflorescence_form": plant.get("inflorescence_form") or "",
+            # The bloom as characters rather than as one of fifteen 64px
+            # pictures (schema v53, V2.34). Additive like the rest of this
+            # block — the viewer feature-checks `flower_arch` and falls back to
+            # the billboard where it is empty, so a species the seed data does
+            # not describe renders exactly as it did before.
+            "flower_arch": plant.get("flower_arch") or "",
+            "flower_symmetry": plant.get("flower_symmetry") or "",
+            "petal_shape": plant.get("petal_shape") or "",
+            "petal_count": plant.get("petal_count"),
+            "florets_per_head": plant.get("florets_per_head"),
+            "flower_diameter_cm": plant.get("flower_diameter_cm"),
+            "flower_center_color": plant.get("flower_center_color") or "",
+            "flower_height_frac": plant.get("flower_height_frac"),
             **_fruit_window(plant),
             # Botanical morphology (schema v47, V2.29) — additive fields the
             # viewer feature-checks, so no SCENE_VERSION bump. Empty for every

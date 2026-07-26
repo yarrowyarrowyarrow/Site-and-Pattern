@@ -140,6 +140,10 @@ class TestStructuralCeilings(unittest.TestCase):
         # V2.34: the four procedural layer tufts, moved out of
         # 04-quality.js when the Stylised switch took it past 900.
         (_HTML / "scene3d" / "14-layers.js", 400),     # ~101 now
+        # V2.34: the bloom as geometry — florets, discs and the nine
+        # inflorescence architectures. 05-flowers.js was at 737 of its
+        # 800 and this is a different thing from a canvas drawing.
+        (_HTML / "scene3d" / "15-florets.js", 500),    # ~429 now
     ]
 
     def test_module_line_ceilings(self):

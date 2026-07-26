@@ -1,0 +1,265 @@
+<!doctype html>
+<!--
+  html/tune_morphology.html — the flower-tuning bench (V2.34).
+
+  Served by scripts/tune_morphology.py, which also provides the tiny JSON API
+  (/api/species, /api/scene/<sci>, POST /api/species/<sci>). Opening this file
+  directly will not work: it needs that server, and the viewer needs an http
+  origin anyway.
+
+  The left pane is the REAL viewer (scene3d.html in an iframe, fed through
+  window.permaSetScene), so what you tune is what the app draws — never a
+  preview of a preview. The right pane is the species' reference photograph,
+  which is the whole point: the numbers are only worth anything against a
+  picture of the actual plant.
+
+  A DEV tool, not an app panel. The seed catalogue is the project's, not the
+  end user's.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<title>Flower tuning bench — Site &amp; Pattern</title>
+<style>
+  :root { --bg:#151a15; --panel:#1e261e; --line:#33422f; --ink:#e8f0e2;
+          --dim:#9fb198; --accent:#8fce7a; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--ink);
+               font-family: system-ui, sans-serif; font-size:13px; }
+  #wrap { display:grid; grid-template-columns: 240px 1fr 320px 300px; height:100%; }
+  .pane { min-width:0; height:100%; overflow:auto; border-right:1px solid var(--line); }
+  #list { background:var(--panel); padding:8px; }
+  #list input { width:100%; padding:6px 8px; margin-bottom:8px; background:#0e130e;
+                border:1px solid var(--line); color:var(--ink); border-radius:6px; }
+  .row { padding:5px 8px; border-radius:5px; cursor:pointer; line-height:1.3; }
+  .row:hover { background:#26311f; }
+  .row.on { background:#33472c; }
+  .row .sci { color:var(--dim); font-style:italic; font-size:11.5px; }
+  .row.done .sci::after { content:' ✓'; color:var(--accent); font-style:normal; }
+  #viewer { border:0; width:100%; height:100%; }
+  #controls { background:var(--panel); padding:12px; }
+  #photo { background:#0e130e; padding:12px; border-right:0; }
+  #photo img { width:100%; border-radius:8px; display:block; }
+  h2 { margin:0 0 2px; font-size:15px; }
+  .sub { color:var(--dim); margin-bottom:10px; font-style:italic; }
+  label { display:block; margin:9px 0 2px; color:var(--dim); font-size:11.5px;
+          text-transform:uppercase; letter-spacing:.04em; }
+  select, input[type=number], input[type=color], input[type=text] {
+    width:100%; padding:5px 7px; background:#0e130e; border:1px solid var(--line);
+    color:var(--ink); border-radius:5px; }
+  input[type=range] { width:100%; }
+  .val { float:right; color:var(--accent); text-transform:none; letter-spacing:0; }
+  .btn { margin-top:14px; width:100%; padding:8px; background:#3d5c34;
+         border:1px solid #56763f; color:var(--ink); border-radius:6px;
+         cursor:pointer; font-size:13px; }
+  .btn:hover { background:#4a6d3f; }
+  .hint { color:var(--dim); line-height:1.5; margin-top:12px; font-size:11.5px; }
+  #status { color:var(--accent); min-height:16px; margin-top:6px; }
+  .miss { color:#c9a24a; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div class="pane" id="list"><input id="q" placeholder="Search…" autofocus></div>
+  <div class="pane" style="overflow:hidden"><iframe id="viewer" src="scene3d.html"></iframe></div>
+  <div class="pane" id="controls">
+    <h2 id="name">…</h2>
+    <div class="sub" id="sci"></div>
+
+    <label>Inflorescence architecture</label>
+    <select id="flower_arch">
+      <option value="">— not described —</option>
+      <option>solitary</option><option>raceme</option><option>spike</option>
+      <option>panicle</option><option>corymb</option><option>umbel</option>
+      <option>head</option><option>cyme</option><option>whorl</option>
+    </select>
+
+    <label>Symmetry</label>
+    <select id="flower_symmetry">
+      <option value="">—</option><option>radial</option><option>bilateral</option>
+    </select>
+
+    <label>Petal shape</label>
+    <select id="petal_shape">
+      <option value="">—</option><option>narrow</option><option>oval</option>
+      <option>notched</option><option>tubular</option><option>lipped</option>
+    </select>
+
+    <label>Petals / rays on ONE floret <span class="val" id="v_petal_count"></span></label>
+    <input type="range" id="petal_count" min="0" max="40" step="1">
+
+    <label>Florets in the drawn unit <span class="val" id="v_florets_per_head"></span></label>
+    <input type="range" id="florets_per_head" min="1" max="250" step="1">
+
+    <label>One floret across, cm <span class="val" id="v_flower_diameter_cm"></span></label>
+    <input type="range" id="flower_diameter_cm" min="0.1" max="15" step="0.1">
+
+    <label>Held above the foliage <span class="val" id="v_flower_height_frac"></span></label>
+    <input type="range" id="flower_height_frac" min="0.3" max="1.3" step="0.01">
+
+    <label>Disc / eye colour</label>
+    <input type="color" id="flower_center_color">
+
+    <label>Stem branching</label>
+    <select id="stem_branching">
+      <option value="">—</option><option>unbranched</option>
+      <option>branched_above</option><option>branched_throughout</option>
+    </select>
+
+    <label>Basal rosette</label>
+    <select id="basal_rosette">
+      <option value="">—</option><option value="0">no</option><option value="1">yes</option>
+    </select>
+
+    <button class="btn" id="save">Save to plants_master.json &nbsp;(S)</button>
+    <div id="status"></div>
+    <div class="hint">
+      ← / → pages species. The render is the real viewer at year 6, July.
+      Judge <em>flower diameter</em> and <em>petals</em> against the photo
+      first — they are the two the floras most often omit and the two the eye
+      counts first.
+    </div>
+  </div>
+  <div class="pane" id="photo">
+    <div class="sub" id="cap">no reference photo for this species</div>
+    <img id="img" alt="" style="display:none">
+    <div class="hint" id="notes"></div>
+  </div>
+</div>
+
+<script>
+const FIELDS = ['flower_arch','flower_symmetry','petal_shape','petal_count',
+  'florets_per_head','flower_diameter_cm','flower_center_color',
+  'flower_height_frac','stem_branching','basal_rosette'];
+const RANGES = ['petal_count','florets_per_head','flower_diameter_cm',
+                'flower_height_frac'];
+let SPECIES = [], shown = [], idx = 0, dirty = false;
+
+const $ = (id) => document.getElementById(id);
+const status = (m, cls) => { $('status').textContent = m;
+                             $('status').className = cls || ''; };
+
+function vwin() { const f = $('viewer'); return f && f.contentWindow; }
+
+async function boot() {
+  SPECIES = await (await fetch('/api/species')).json();
+  $('q').addEventListener('input', render);
+  render();
+  select(0);
+}
+
+function render() {
+  const q = ($('q').value || '').toLowerCase();
+  shown = SPECIES.filter(s => !q
+    || s.common_name.toLowerCase().includes(q)
+    || s.scientific_name.toLowerCase().includes(q));
+  const list = $('list');
+  [...list.querySelectorAll('.row')].forEach(n => n.remove());
+  shown.forEach((s, i) => {
+    const d = document.createElement('div');
+    d.className = 'row' + (s.flower_arch ? ' done' : '') + (i === idx ? ' on' : '');
+    d.innerHTML = '<div>' + s.common_name + '</div><div class="sci">'
+      + s.scientific_name + '</div>';
+    d.onclick = () => select(i);
+    list.appendChild(d);
+  });
+}
+
+function select(i) {
+  if (!shown.length) return;
+  idx = Math.max(0, Math.min(shown.length - 1, i));
+  const s = shown[idx];
+  $('name').textContent = s.common_name;
+  $('sci').textContent = s.scientific_name + ' · ' + s.plant_type
+    + (s.height_m ? ' · ' + s.height_m + ' m' : '');
+  for (const f of FIELDS) {
+    const el = $(f);
+    if (f === 'flower_center_color') el.value = s[f] || '#e8c552';
+    else el.value = s[f] == null ? '' : s[f];
+  }
+  RANGES.forEach(showVal);
+  $('cap').textContent = s.image_attribution || (s.image_url ? '' :
+    'no reference photo for this species — this is where F70–F72 pay off');
+  $('cap').className = 'sub' + (s.image_url ? '' : ' miss');
+  $('img').style.display = s.image_url ? 'block' : 'none';
+  if (s.image_url) $('img').src = s.image_url;
+  $('notes').textContent = s.notes || '';
+  dirty = false;
+  render();
+  pushScene(s.scientific_name);
+}
+
+function showVal(f) {
+  const el = $('v_' + f);
+  if (el) el.textContent = $(f).value === '' ? '—' : $(f).value;
+}
+
+// Push the field values into the scene record before rendering, so a slider
+// moves the flower without a round-trip to disk. The scene itself comes from
+// the server (the real build_scene), so everything else about the plant is
+// exactly what the app would draw.
+let sceneCache = null;
+async function pushScene(sci) {
+  const w = vwin();
+  if (!w || !w.permaSetScene) { setTimeout(() => pushScene(sci), 150); return; }
+  const sc = await (await fetch('/api/scene/' + encodeURIComponent(sci))).json();
+  sceneCache = sc;
+  repaint();
+}
+
+function repaint() {
+  const w = vwin();
+  if (!w || !w.permaSetScene || !sceneCache || !sceneCache.plants) return;
+  for (const p of sceneCache.plants) {
+    for (const f of FIELDS) {
+      const raw = $(f).value;
+      if (raw === '') { p[f] = f.endsWith('_color') ? '' : null; continue; }
+      p[f] = RANGES.includes(f) ? Number(raw) : raw;
+    }
+  }
+  w.permaSetScene(sceneCache);
+}
+
+for (const f of FIELDS) {
+  $(f).addEventListener('input', () => {
+    dirty = true; showVal(f); repaint();
+    status('unsaved — press S', 'miss');
+  });
+}
+
+$('save').onclick = save;
+async function save() {
+  const s = shown[idx];
+  const patch = {};
+  for (const f of FIELDS) {
+    const raw = $(f).value;
+    patch[f] = raw === '' ? null : (RANGES.includes(f) ? Number(raw) : raw);
+  }
+  const r = await fetch('/api/species/' + encodeURIComponent(s.scientific_name),
+    { method: 'POST', body: JSON.stringify(patch) });
+  const out = await r.json();
+  Object.assign(s, patch);
+  const master = SPECIES.find(x => x.scientific_name === s.scientific_name);
+  if (master) Object.assign(master, patch);
+  dirty = false;
+  status(out.saved ? 'saved ' + Object.keys(out.changed).join(', ')
+                   : 'no change', '');
+  render();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)
+      && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  if (e.key === 'ArrowRight') { select(idx + 1); e.preventDefault(); }
+  else if (e.key === 'ArrowLeft') { select(idx - 1); e.preventDefault(); }
+  else if (e.key === 's' || e.key === 'S') { save(); e.preventDefault(); }
+});
+
+window.addEventListener('beforeunload', (e) => {
+  if (dirty) { e.preventDefault(); e.returnValue = ''; }
+});
+
+boot();
+</script>
+</body>
+</html>

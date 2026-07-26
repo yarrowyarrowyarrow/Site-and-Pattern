@@ -119,9 +119,43 @@ CREATE TABLE IF NOT EXISTS plants (
     -- bluestem is NAMED for its turkey-foot. Separate from flower_form on
     -- purpose: that column feeds pollinator logic (bee_habitat.tongue_form_fit,
     -- forage_calendar) where a grass is wind-pollinated and must stay 'plume'.
-    inflorescence_form TEXT DEFAULT ''  -- turkey_foot|open_panicle|contracted_spike|
+    inflorescence_form TEXT DEFAULT '', -- turkey_foot|open_panicle|contracted_spike|
                                         -- nodding_raceme|one_sided_raceme|bristly|
                                         -- sedge_cluster|rush_umbel|cattail_spike
+    -- The bloom, as something to BUILD (schema v53, V2.34). Until now a flower
+    -- was one 64x64 image per `flower_form` — fifteen pictures for 228
+    -- wildflowers, unlit, seven quads in a disc at 90% of height. A forb in
+    -- bloom is 60-80% flower to the eye, so that single fact was most of why a
+    -- planting read as a cheap video game while its leaves were modelled at
+    -- 1,200 triangles.
+    --
+    -- Separate from flower_form on exactly the grounds inflorescence_form took
+    -- in v52: flower_form is a POLLINATOR-ACCESS statement (it feeds
+    -- bee_habitat.tongue_form_fit and forage_calendar) and is not widened here.
+    -- These columns are the picture.
+    --
+    -- Authored in scripts/seed_flower_morphology.py, family-first. Empty
+    -- everywhere the character isn't known and the viewer falls back to the
+    -- billboard it drew before, so partial coverage is never a broken plant
+    -- (P9 — ranges and honest gaps, never false precision).
+    flower_arch TEXT DEFAULT '',        -- solitary|raceme|spike|panicle|corymb|
+                                        -- umbel|head|cyme|whorl
+    flower_symmetry TEXT DEFAULT '',    -- radial|bilateral
+    petal_shape TEXT DEFAULT '',        -- narrow|oval|notched|tubular|lipped
+    petal_count INTEGER,                -- rays/petals per floret (5, 8, 21...)
+    florets_per_head INTEGER,           -- florets on one head/spike/umbel
+    flower_diameter_cm REAL,            -- ONE floret across. The most valuable
+                                        -- missing number: bloom size is
+                                        -- currently derived from canopy, so a
+                                        -- pasqueflower and a sunflower scale
+                                        -- with the plant instead of the flower.
+    flower_center_color TEXT DEFAULT '',-- the disc/eye. A black-eyed Susan IS
+                                        -- its dark disc; it was a yellow blob.
+    flower_height_frac REAL,            -- how far the bloom is held above the
+                                        -- foliage, as a fraction of height
+    stem_branching TEXT DEFAULT '',     -- unbranched|branched_above|
+                                        -- branched_throughout
+    basal_rosette INTEGER DEFAULT 0     -- 0/1
 );
 
 CREATE TABLE IF NOT EXISTS companion_friends (

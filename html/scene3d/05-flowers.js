@@ -284,6 +284,7 @@ function buildFlowers(plants, month, terrain) {
     FLOWER_TEX.cattail_spike = FLOWER_TEX.cattail;
   }
   const byForm = {}; ALL_FORMS.forEach(f => byForm[f] = []);
+  const modelled = [];
   for (const p of plants || []) {
     // A grass's inflorescence_form (schema v52) supersedes its flower_form,
     // which stays 'plume' for every graminoid because that column feeds the
@@ -300,8 +301,18 @@ function buildFlowers(plants, month, terrain) {
     const be = p.inflorescence_form
       ? Math.max(p.bloom_end || 0, p.fruit_end || 0, 12) : (p.bloom_end || 0);
     if (!bs || month < bs || month > be) continue;     // out of season
+    // A species that records its flower as CHARACTERS gets built rather than
+    // stamped (15-florets.js, schema v53). Everything else — 4 flowering
+    // species the seed data doesn't describe, every graminoid seed head, and
+    // the whole scene at Stylised — keeps the billboard below, which is why
+    // partial coverage of the new fields is never a broken plant (P9).
+    if (window.floretsApply && window.floretsApply(p)) {
+      modelled.push(p);
+      continue;
+    }
     byForm[form].push(p);
   }
+  if (modelled.length) window.buildFlorets(modelled, month, terrain);
   const _fc = new THREE.Color();
   for (const form of ALL_FORMS) {
     const list = byForm[form];

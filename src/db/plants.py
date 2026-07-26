@@ -194,7 +194,7 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # reseed wipe entry, and no second copy to drift. schema.sql DROPs and recreates
 # it on every init_db, so the definition can evolve without a migration; the
 # version bump is here because schema.sql changed, per CLAUDE.md.
-_SCHEMA_VERSION = 52
+_SCHEMA_VERSION = 53
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -453,6 +453,34 @@ def _migrate_to_v42(conn: sqlite3.Connection):
             conn.execute(f"ALTER TABLE {table} ADD COLUMN native_provinces TEXT")
         except sqlite3.OperationalError:
             pass  # column already present
+    conn.commit()
+
+
+def _migrate_to_v53(conn: sqlite3.Connection):
+    """The bloom as something to build (V2.34).
+
+    Ten columns describing a flower as characters rather than as one of fifteen
+    64x64 pictures. Additive and nullable, filled by the reseed that follows the
+    version bump; where a species records nothing the viewer draws exactly the
+    billboard it drew before, so partial coverage degrades to today rather than
+    to a hole. See scripts/seed_flower_morphology.py.
+    """
+    for ddl in (
+        "ALTER TABLE plants ADD COLUMN flower_arch TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN flower_symmetry TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN petal_shape TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN petal_count INTEGER",
+        "ALTER TABLE plants ADD COLUMN florets_per_head INTEGER",
+        "ALTER TABLE plants ADD COLUMN flower_diameter_cm REAL",
+        "ALTER TABLE plants ADD COLUMN flower_center_color TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN flower_height_frac REAL",
+        "ALTER TABLE plants ADD COLUMN stem_branching TEXT DEFAULT ''",
+        "ALTER TABLE plants ADD COLUMN basal_rosette INTEGER DEFAULT 0",
+    ):
+        try:
+            conn.execute(ddl)
+        except sqlite3.OperationalError:
+            pass          # already present -> fresh install / already migrated
     conn.commit()
 
 
@@ -1045,6 +1073,16 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("bark_texture", ""),
             p.get("leaf_surface", ""),
             p.get("inflorescence_form", ""),
+            p.get("flower_arch", ""),
+            p.get("flower_symmetry", ""),
+            p.get("petal_shape", ""),
+            p.get("petal_count"),
+            p.get("florets_per_head"),
+            p.get("flower_diameter_cm"),
+            p.get("flower_center_color", ""),
+            p.get("flower_height_frac"),
+            p.get("stem_branching", ""),
+            1 if p.get("basal_rosette") else 0,
         ))
 
     conn.executemany(
@@ -1066,9 +1104,13 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             image_url, image_attribution, image_license,
             leaf_shape, leaf_size_cm, leaf_arrangement,
             bark_color, fall_color, branching, growth_form,
-            bark_texture, leaf_surface, inflorescence_form)
+            bark_texture, leaf_surface, inflorescence_form,
+            flower_arch, flower_symmetry, petal_shape, petal_count,
+            florets_per_head, flower_diameter_cm, flower_center_color,
+            flower_height_frac, stem_branching, basal_rosette)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
+                   ?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -1171,6 +1213,9 @@ def init_db() -> None:
             _migrate_to_v49(conn)
         if current_version < 52:
             _migrate_to_v52(conn)
+
+        if current_version < 53:
+            _migrate_to_v53(conn)
 
         # Add parent_id to polycultures if missing
         try:
