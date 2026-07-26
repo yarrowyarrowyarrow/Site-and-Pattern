@@ -81,6 +81,10 @@ These started life as entries below and have since landed — the State markers 
 | F5 | Relationship graph overlay — the design drawn as a living network on the map | `src/relationship_graph.py` + `html/map/07-network.js`, surfaced in Analysis → Habitat | P3, P5, P10 |
 | F44 | First-run activation pack — welcome, three-step strip, worked example, Generate on the toolbar | `src/onboarding.py` + `src/onboarding_flow.py` + `src/welcome_dialog.py` + `src/first_step_bar.py` | P1, P9 |
 | F45 | In-context guidance — first-step line, dead-end copy that names the way through, tooltips | `src/site_panel.py`, `src/plant_panel.py`, `src/analysis_panel.py`, `src/toolbar.py` | P5 |
+| F41 | Numbered plant-by-numbers map — a scale plan drawing, keyed to the buy list | `src/planting_map.py`, drawn in `src/pdf_export.py` | P5, P11 |
+| F42 | Design-specific maintenance calendar — the work falling year by year | `src/maintenance_calendar.py` | P4, P9 |
+| F43 | Site-prep & soil-amendment sheet — decompact, don't enrich | `src/site_prep.py` | P8, P11, P9 |
+| — | **The planting document assembled in job order** — prep → buy → dig → phase → maintain, in the text export and the PDF | `src/planting_plan_export.py` | P8, P11 |
 | — | **Temporal succession engine** — the growing overstory shades the understory year by year, so sun-lovers over-topped past their tolerance decline and die and the year-N scene shows the *climax community* (survivors), not every plant frozen healthy | `src/succession_engine.py` (Qt-free growth-matrix + point-sampled dynamic shade + cumulative-stress survival evaluator), folded into `src/scene_contract.py` (health/opacity) and `html/scene3d.html` (withered render) | P4, P3, P9 |
 | — | **Succession honesty + regeneration pass (V2.24)** — leaf-off-aware mortality (a deciduous crown shades only its leaf-on season, so part-shade plants survive under it), canopy trees *suppressed* not culled, and **gap recruitment** (self-seeding natives recolonise the openings the closing canopy leaves — the design self-heals). Also: woody plants no longer scatter clonal colonies in the scene, and ambient wildlife forages the whole yard instead of clumping in one bed | `src/succession_engine.py` (`recruits`, leaf weighting, tree floor), `src/scene3d.py` (woody spread gate), `src/scene_wildlife.py` (home-range patrol), `src/scene_contract.py` | P4, P1, P8, P9 |
 | — | **3D viewer split + winter atmosphere (V2.24)** — the ~4,200-line `scene3d.html` monolith is split into an HTML shell + a bootstrap module + eight ordered `html/scene3d/*.js` classic chunks (shared-global, like the 2D map), unblocking further viewer work; plus **seasonal ground** (winter snow cover + straw/waking shoulder tints) and **falling snow** in winter. Snow, not invented rain (P9). Verified with a headless-Chromium render harness | `html/scene3d.html` + `html/scene3d/*.js`, guards in `tests/test_architecture_guard.py` / `test_bridge_contract.py` / `test_scene3d_assets.py` | P5, P4 |
@@ -619,9 +623,9 @@ roadmap now — novices first, depth deferred (not dropped).
 | ID | Feature | Stage | Effort | Risk | Principle |
 |----|---------|-------|--------|------|-----------|
 | ✅ F40 | Planting Plan (buy-it / plant-it sheet) | ACT | M | Low | P8, P4, P11, P6, P9 |
-| F41 | Numbered plant-by-numbers map | ACT | M | Med | P5, P11 |
-| F42 | Design-specific maintenance calendar | ACT / MAINTAIN | S–M | Low | P4, P9 |
-| F43 | Site-prep & soil-amendment sheet | ACT | M | Med | P8, P11 |
+| ✅ F41 | Numbered plant-by-numbers map | ACT | M | Med | P5, P11 |
+| ✅ F42 | Design-specific maintenance calendar | ACT / MAINTAIN | S–M | Low | P4, P9 |
+| ✅ F43 | Site-prep & soil-amendment sheet | ACT | M | Med | P8, P11 |
 | ✅ F44 | First-run activation pack | ONBOARD | M | Low | P1, P9 |
 | ✅ F45 | In-context guidance | ONBOARD | S | Low | P5 |
 
@@ -634,23 +638,67 @@ structure → matrix → fill schedule), and *how far apart* (spacing from `plan
 Reuses `sourcing`, `planting_spacing`, `succession`, `calendar_data`; Qt-free and unit-tested;
 consolidated the 165-line in-`MainWindow` order-list builder into the testable module.
 
-### F41 · Numbered plant-by-numbers map — *Impact High · Effort M · Risk Med — map capture (P5, P11)*
-The companion to F40: a keyed, numbered planting map so "buy 3 Saskatoon" becomes "dig holes 7,
-8, 9 — here." **How:** number the placed plants in the same order as the F40 list, draw numbered
-markers onto the captured map image (the offscreen capture path the PDF / yard-photo bake already
-uses), and key them to the plan table. Watch the map-capture / coordinate plumbing.
+### ✅ F41 · Numbered plant-by-numbers map — *Shipped (V2.31) · was Impact High / Effort M / Risk Med (P5, P11)*
+**Shipped** as the Qt-free `src/planting_map.py`, drawn as a PDF page by `pdf_export._draw_planting_map`
+and carried in the text export as a key plus per-plant offsets. F40 answered *what to buy*; this
+answers **where each one goes**, which is the question standing between a nursery receipt and a
+planted bed.
 
-### F42 · Design-specific maintenance calendar — *Impact Med · Effort S–M · Risk Low (P4, P9)*
-Extends F20 from a curve into an actionable cadence: "Year 1 — water weekly to establish, mulch in
-October; Year 2 — taper water; Year 5+ — annual cut-back, no irrigation." **How:** derive stages
-from `succession.restoration_stage` + structures' `maintenance_hours_year`, rendered into the
-Planting Plan output as honest *ranges*, not false precision (P9).
+Three decisions went against the card, each deliberately:
 
-### F43 · Site-prep & soil-amendment sheet — *Impact Med · Effort M · Risk Med (P8, P11)*
-Turn measured site data into a do-this-first prep step (the repair sequence *before* planting).
-**How:** from `property_data.fetch_soil` (`ph_top`, `texture_class`) + the design's plant soil
-needs, emit "this bed reads heavy clay → loosen and top with 5–8 cm compost" into the plan. Pairs
-with F18.
+- **A drawing, not a screenshot.** The card proposed numbering the captured map image. A satellite
+  capture is the worst possible background for a document used outdoors with a tape measure: dark,
+  busy, prints badly, and has *no scale*. A clean scale drawing of the boundary with numbered
+  positions, a **scale bar** and a **north arrow** is what a planting plan has looked like for a
+  century — and it costs no capture plumbing, no coordinate round-trip through the browser, and no
+  map-JS, which also retires the card's "watch the map-capture plumbing" risk flag entirely.
+- **Numbers are per SPECIES, not per hole.** "Dig holes 7, 8, 9" sounds right and is unusable at
+  119 plants — a key of 119 entries is not a key. Every Saskatoon is a **7**, and the key reads
+  *7 — Saskatoon Berry ×3 · 3.8 m apart*. A test pins the numbering to the F40 item order, so a
+  number on the drawing and a number on the buy list can never disagree.
+- **Positions come out in metres.** The core returns a local east/north frame, so the renderer only
+  picks a scale — the geometry stays in Python where it can be tested, and the text export can list
+  offsets for someone laying the bed out with a tape and no printer.
+
+### ✅ F42 · Design-specific maintenance calendar — *Shipped (V2.31) · was Impact Med / Effort S–M / Risk Low (P4, P9)*
+**Shipped** as the Qt-free `src/maintenance_calendar.py`, in the text export and as a PDF page.
+Four bands aligned to `succession.restoration_stage` (so the calendar and the 3D year slider tell
+the same story about the same years), each with tasks and an hours **range**, plus a month-by-month
+first season.
+
+The numbers carry the argument: on the example design the work falls **36–76 → 18–38 → 9–19 → 6–11
+hours a year**. That curve *is* P4, and a test asserts it stays monotonic — if the ramp-down ever
+flattens, the design's central promise has stopped being true on paper.
+
+Two pieces of content a generic garden calendar gets wrong, and this one gets right because the app
+has the data: **year one is about water** (deep weekly watering is what native plantings die
+without, and "natives don't need water" is true of an established planting and false of a new one);
+and **cut back in spring, not fall** — the October tidy-up removes exactly the overwintering habitat
+the rest of the app spends its time modelling, so the note names the species *in your design* with
+documented nesting or cover edges. `PLANT_MAINTENANCE_HOURS` moved here from `planning_panel.py`,
+which now imports it, so the Effort tab and the calendar cannot quote different hours.
+
+### ✅ F43 · Site-prep & soil-amendment sheet — *Shipped (V2.31) · was Impact Med / Effort M / Risk Med (P8, P11, P9)*
+**Shipped** as the Qt-free `src/site_prep.py`, leading the document because it is the work that
+happens first. Two things make it more than generic garden advice.
+
+**It tells you not to amend.** The card's own example — "heavy clay → loosen and top with 5–8 cm
+compost" — is half right and half the exact mistake: dig-in-compost is imported from vegetable
+growing and works *against* a native planting, because a fertility spike favours the weeds that
+outcompete young natives, which are adapted to the soil already there. The sheet's spine is
+**decompact, don't enrich**, which is the supported restoration position and also the one that
+saves the user money. Compost appears only as *surface* mulch, sized as a range from the bed area.
+
+**It says how sure it is.** `fetch_soil` returns a real raster sample where the pack is installed
+and a **regional approximation** otherwise, and flags which. Turning a regional guess into "buy 7 m³
+of compost" would be inventing precision worth real dollars, so the sheet reads its own `fallback`
+flag and, when the figure is regional, says so and points at the two things that settle it — the jar
+test you can do this afternoon, and a lab test for about the price of one shrub (P9). It also flags
+species whose recorded pH bracket doesn't suit the site, with the same 0.5-unit slack the plant
+search uses, and says to **swap the species rather than treat the bed**.
+
+Also included, because the app knows it matters and every mulch guide forgets it: leave a patch of
+bare ground for the ~70% of native bees that nest in soil.
 
 ### ✅ F44 · First-run activation pack — *Shipped (V2.31) · was Impact High / Effort M / Risk Low (P1, P9)*
 **Shipped** as the Qt-free `src/onboarding.py` plus `src/onboarding_flow.py`,
@@ -888,14 +936,16 @@ map with "Generate Design" behind File → Ctrl+G. That was not a criticism of t
 depth is what makes this app worth opening — but the roadmap's own stated priority had lost seven
 consecutive increments.
 
-> **✅ Acted on in V2.31.** F44 and F45 shipped immediately after this review: a welcome with three
-> doors, a three-step strip above the map whose chips navigate, Generate promoted onto the toolbar,
-> a worked 19-plant example that scores 54/100, and dead-end copy that names the way through.
-> **ONBOARD is now clear.** The next unbuilt stage is ACT/OUTPUT — F41, the numbered planting map
-> that finishes F40.
+> **✅ Acted on in V2.31 — Tier 1 is done.** F44 and F45 shipped immediately after this review (a
+> welcome with three doors, a three-step strip whose chips navigate, Generate promoted onto the
+> toolbar, a worked 19-plant example scoring 54/100, and dead-end copy that names the way through),
+> followed by **F41, F42 and F43** — which turned the Planting Plan from a buy list into the whole
+> take-it-outside document: prep the ground → buy it → dig it in the right places → phase it → keep
+> it alive. **ONBOARD and ACT/OUTPUT are both clear.** F32 (a printable field-walk sheet) is all
+> that remains of ACT, and Tier 2's confidence block is the next coherent increment.
 
-The rest of this review stands as written; the tiers below are unchanged apart from Tier 1's first
-two entries having landed.
+The rest of this review stands as written; the tiers below are unchanged apart from Tier 1 having
+landed in full.
 
 Updated funnel counts. Unshipped **F1–F49** only, by the stage each primarily serves — the
 retire/merge candidates below are still counted here, and the 3D-asset cards (F60/F62) are not,
@@ -906,8 +956,8 @@ since they serve the viewer rather than a funnel stage:
 | DESIGN | 7 | F18, F23, F25, F26, F27, F36, F38 | still the deepest column |
 | LEGIBILITY / EDUCATE | 6 | F15, F19, F21, F29, F30, F31 | well served by what shipped |
 | DECIDE / CONFIDENCE | 5 | F8, F12, F13, F14, F28 | all cheap, all unbuilt |
-| MAINTAIN | 3 | F20, F33, F42 | F42 is the one that saves plantings |
-| **ACT / OUTPUT** | **3** | **F32, F41, F43** | **now the front line — F41 is the missing half of shipped F40** |
+| MAINTAIN | 2 | F20, F33 · ✅ F42 | F42 shipped — the one that saves plantings |
+| ~~ACT / OUTPUT~~ | 1 | F32 · ✅ F41, ✅ F43 | **cleared in V2.31** bar the printable field sheet |
 | ~~ONBOARD / ACTIVATE~~ | ~~2~~ | ✅ F44, ✅ F45 | **cleared in V2.31** |
 
 (F34 belongs in `data_quality.py` rather than any column, and F49 straddles LEGIBILITY and ACT —
@@ -919,11 +969,10 @@ both are discussed below.)
 |---|----|----|
 | ✅ 1 | **F44 · First-run activation pack** *(M · Low)* | **Shipped V2.31.** Everything else on this roadmap is worth exactly zero to someone who never reaches a first design. |
 | ✅ 2 | **F45 · In-context guidance** *(S · Low)* | **Shipped V2.31**, alongside F44 — same stage, and the two share their copy. |
-| 3 | **F41 · Numbered plant-by-numbers map** *(M · Med)* | **Next.** F40 shipped "buy 3 Saskatoon" without ever saying *where hole #7 is*. This isn't a new feature so much as the **missing half of a shipped one** — the highest completion value in the list. |
-| 4 | **F42 · Design-specific maintenance calendar** *(S–M · Low)* | The commonest way a native planting dies is year-one drought while the user believes natives need no water. This is the cheapest entry with a direct survival effect on plants actually in the ground. |
+| ✅ 3 | **F41 · Numbered plant-by-numbers map** *(M · Med)* | **Shipped V2.31.** F40 shipped "buy 3 Saskatoon" without ever saying *where hole #7 is* — the missing half of a shipped feature. |
+| ✅ 4 | **F42 · Design-specific maintenance calendar** *(S–M · Low)* | **Shipped V2.31**, with **F43** alongside it. The commonest way a native planting dies is year-one drought while the user believes natives need no water. |
 
-Half of that landed in V2.31; F41 → F42 is the remaining increment, and it is now ACT/OUTPUT's
-turn to be the front line.
+All of Tier 1 landed in V2.31, in two increments. **Tier 2 — the confidence block — is next.**
 
 ### Tier 2 — the confidence block (cheap, and all one theme)
 
@@ -991,11 +1040,12 @@ the deformation out).
 Sequenced for **more ecosystems created** — the short version of the V2.31 review above:
 - ✅ **Done — get people to a first design (ACTIVATION):** ✅ F44 → ✅ F45 (V2.31). The binding
   constraint, and the priority this roadmap had stated and skipped for seven increments.
-- **Now — close the loop to the ground (ACTION):** ✅ F40 → ✅ F17 → **F41** (the missing half of
-  F40) → **F42** (the calendar that keeps year-one plants alive) → F43.
-- **Then — build the trust to act (CONFIDENCE):** F8 / F12 / F28 / F14 / F13 as **one** block,
-  not five cards.
-- **Depth is now optional, not owed.** ✅ F1/F2/F3/F4/F5/F6/F7/F9/F10/F16/F17/F22/F24/F35/F40/F44/F45
+- ✅ **Done — close the loop to the ground (ACTION):** ✅ F40 → ✅ F17 → ✅ F41 (the missing half of
+  F40) → ✅ F42 (the calendar that keeps year-one plants alive) → ✅ F43. Only **F32** (a printable
+  field-walk sheet) is left in this stage.
+- **Now — build the trust to act (CONFIDENCE):** the Tier 2 block below.
+  F8 / F12 / F28 / F14 / F13 as **one** block, not five cards.
+- **Depth is now optional, not owed.** ✅ F1–F7/F9/F10/F16/F17/F22/F24/F35/F40–F45
   have shipped; P1–P11 all read *strong* or better than they did. Remaining depth (F23, F33, F49) is
   worth building when the funnel is healthy, not before.
 - **Defer:** F21, F25, F26, F27, F36, F39. **Merge/retire:** F15 and F30 into F5, F31 into F45,

@@ -20,17 +20,25 @@ from PyQt6.QtPrintSupport import QPrinter
 from src.branding import APP_NAME
 
 
-def _safe_size(n) -> int:
-    """Clamp a computed font size to a minimum of 1.
+def _font(px, bold: bool = False, family: str = "Arial") -> QFont:
+    """A font sized in DEVICE PIXELS, not points.
 
-    Qt prints ``QFont::setPointSize: Point size <= 0 (-1), must be
-    greater than 0`` (and ignores the call) whenever a non-positive
-    size lands in QFont. With a low ``dpi_scale`` the ``int(N * scale)``
-    expressions below can collapse to 0; clamping to 1 keeps Qt quiet
-    without hiding genuine bugs (there are no callers that *want* a
-    sub-1 pt font).
+    Every layout figure in this module is ``N * dpi_scale`` — a device-pixel
+    measurement, because the page is designed at 96 DPI and scaled up to the
+    printer's. Feeding that same number to ``QFont(family, pointSize)`` was a
+    category error: a point size is *physical*, so Qt scaled it by the device
+    DPI a second time. On a 1200-DPI PDF printer (``dpi_scale`` = 12.5) a
+    "9 pt" body font became 112 pt — about 2,100 device pixels tall, drawn into
+    a rect 175 pixels high. Qt clipped it, and every text page of the export
+    came out blank while the boxes and rules around it drew correctly.
+
+    ``setPixelSize`` takes device pixels, which is exactly what the call sites
+    already compute, so the intended 96-DPI design renders at any resolution.
     """
-    return max(1, int(n))
+    f = QFont(family)
+    f.setPixelSize(max(1, int(px)))
+    f.setBold(bold)
+    return f
 
 
 def export_pdf(
@@ -96,7 +104,7 @@ def export_pdf(
         else:
             # Placeholder
             painter.setPen(QPen(QColor("#546e7a")))
-            painter.setFont(QFont("Arial", _safe_size(10 * dpi_scale)))
+            painter.setFont(_font(10 * dpi_scale))
             painter.drawText(
                 QRectF(0, y, w, 30 * dpi_scale),
                 Qt.AlignmentFlag.AlignCenter,
@@ -126,7 +134,29 @@ def export_pdf(
         y = _draw_summary(painter, w, y, placed_plants, structures, dpi_scale,
                           score, cost)
 
-        # ── Page 2: Planting Plan ─────────────────────────────────────────
+        # ── Page 2: Site prep (F43) ───────────────────────────────────────
+        # Ahead of the buy list on purpose: this is the work that happens
+        # first, and a document ordered by module history rather than by the
+        # order of the job is a document people read out of order.
+        try:
+            from src.lawn_zones import conversion_summary
+            from src.site_prep import build_site_prep
+            prep_bed_area = sum(
+                float(f.get("properties", {}).get("area_m2") or 0.0)
+                for f in project.get("features", [])
+                if f.get("properties", {}).get("element_type") == "custom_shape"
+            )
+            prep = build_site_prep(
+                project.get("properties", {}).get("site_config") or {},
+                placed_plants, bed_area_m2=prep_bed_area,
+                lawn_summary=conversion_summary(project.get("features", [])))
+        except Exception:
+            prep = None
+        if prep is not None and prep.steps:
+            printer.newPage()
+            _draw_site_prep(painter, w, h, prep, dpi_scale)
+
+        # ── Page 3: Planting Plan ─────────────────────────────────────────
         # The buy-it / plant-it plan (F40) — quantities, form, spacing, when, and
         # cost, plus a phased schedule. Falls back to the bare plant list if the
         # plan can't be built for any reason.
@@ -153,7 +183,19 @@ def export_pdf(
         else:
             _draw_plant_list(painter, w, h, placed_plants, dpi_scale)
 
-        # ── Page 3: Phased conversion schedule (F17) ──────────────────────
+        # ── Page 4: The numbered planting map (F41) ───────────────────────
+        # A scale drawing, not the satellite capture on page 1: this is the
+        # page that goes outside with a tape measure.
+        try:
+            from src.planting_map import build_planting_map
+            pmap = build_planting_map(placed_plants, project, plan=plan)
+        except Exception:
+            pmap = None
+        if pmap is not None and pmap.placements:
+            printer.newPage()
+            _draw_planting_map(painter, w, h, pmap, dpi_scale)
+
+        # ── Page 5: Phased conversion schedule (F17) ──────────────────────
         # Year-by-year "remove this / plant that, when" — only when there is a
         # design (or drawn lawn zones) to schedule.
         try:
@@ -167,7 +209,23 @@ def export_pdf(
             printer.newPage()
             _draw_conversion_schedule(painter, w, h, schedule, dpi_scale)
 
-        # ── Page 4: Notes (if any) ────────────────────────────────────────
+        # ── Page 6: Maintenance calendar (F42) ────────────────────────────
+        try:
+            from src.maintenance_calendar import build_maintenance_calendar
+            structs_for_cal = [
+                f["properties"]["struct_def"]
+                for f in project.get("features", [])
+                if f.get("properties", {}).get("element_type") == "structure"
+                and f.get("properties", {}).get("struct_def")
+            ]
+            cal = build_maintenance_calendar(placed_plants, structs_for_cal)
+        except Exception:
+            cal = None
+        if cal is not None and placed_plants:
+            printer.newPage()
+            _draw_maintenance(painter, w, h, cal, dpi_scale)
+
+        # ── Page 7: Notes (if any) ────────────────────────────────────────
         if notes.strip():
             printer.newPage()
             _draw_notes_page(painter, w, h, notes, dpi_scale)
@@ -184,12 +242,12 @@ def _draw_title_block(painter: QPainter, w: float, name: str,
 
     # Title
     painter.setPen(QColor("#a5d6a7"))
-    painter.setFont(QFont("Arial", _safe_size(18 * s), QFont.Weight.Bold))
+    painter.setFont(_font(18 * s, bold=True))
     painter.drawText(QRectF(15 * s, 8 * s, w - 30 * s, 30 * s),
                      Qt.AlignmentFlag.AlignLeft, f"{APP_NAME} — {name}")
 
     # Subtitle
-    painter.setFont(QFont("Arial", _safe_size(9 * s)))
+    painter.setFont(_font(9 * s))
     painter.setPen(QColor("#78909c"))
     zone_str = f"Zone {zone}" if zone else "Zone: —"
     date_str = datetime.now().strftime("%Y-%m-%d")
@@ -207,12 +265,12 @@ def _draw_summary(painter: QPainter, w: float, y: float,
                   score=None, cost=None) -> float:
     """Draw a quick design summary (counts + habitat score + cost)."""
     painter.setPen(QColor("#a5d6a7"))
-    painter.setFont(QFont("Arial", _safe_size(12 * s), QFont.Weight.Bold))
+    painter.setFont(_font(12 * s, bold=True))
     painter.drawText(QRectF(15 * s, y, w, 20 * s),
                      Qt.AlignmentFlag.AlignLeft, "Design Summary")
     y += 22 * s
 
-    painter.setFont(QFont("Arial", _safe_size(9 * s)))
+    painter.setFont(_font(9 * s))
     painter.setPen(QColor("#c8e6c9"))
 
     # Count by type
@@ -270,7 +328,7 @@ def _draw_plant_list(painter: QPainter, w: float, h: float,
     # Title
     painter.fillRect(QRectF(0, 0, w, 35 * s), QColor("#1b3a1b"))
     painter.setPen(QColor("#a5d6a7"))
-    painter.setFont(QFont("Arial", _safe_size(14 * s), QFont.Weight.Bold))
+    painter.setFont(_font(14 * s, bold=True))
     painter.drawText(QRectF(15 * s, 8 * s, w, 25 * s),
                      Qt.AlignmentFlag.AlignLeft, "Plant List")
 
@@ -293,7 +351,7 @@ def _draw_plant_list(painter: QPainter, w: float, h: float,
         get_plant = lambda pid: None
 
     # Table header
-    painter.setFont(QFont("Arial", _safe_size(8 * s), QFont.Weight.Bold))
+    painter.setFont(_font(8 * s, bold=True))
     painter.setPen(QColor("#a5d6a7"))
     col_x = [15 * s, 200 * s, 350 * s, 430 * s, 510 * s]
     headers = ["Plant", "Scientific Name", "Type", "Qty", "Water"]
@@ -309,7 +367,7 @@ def _draw_plant_list(painter: QPainter, w: float, h: float,
     y += 4 * s
 
     # Rows
-    painter.setFont(QFont("Arial", _safe_size(8 * s)))
+    painter.setFont(_font(8 * s))
     painter.setPen(QColor("#c8e6c9"))
 
     sorted_pids = sorted(counts.keys(), key=lambda pid: names.get(pid, ""))
@@ -337,13 +395,13 @@ def _draw_plant_list(painter: QPainter, w: float, h: float,
     # Alberta native sourcing footer (mirrors the plant-order export).
     if y < h - 50 * s:
         y += 14 * s
-        painter.setFont(QFont("Arial", _safe_size(7 * s), QFont.Weight.Bold))
+        painter.setFont(_font(7 * s, bold=True))
         painter.setPen(QColor("#a5d6a7"))
         painter.drawText(QRectF(15 * s, y, w - 30 * s, 12 * s),
                          Qt.AlignmentFlag.AlignLeft,
                          "Alberta native plant / seed sources")
         y += 13 * s
-        painter.setFont(QFont("Arial", _safe_size(7 * s)))
+        painter.setFont(_font(7 * s))
         painter.setPen(QColor("#78909c"))
         for src_line in (
             "ALCLA Native Plants · Bow Valley Habitat Development",
@@ -381,12 +439,14 @@ def _draw_planting_plan(painter: QPainter, w: float, h: float, plan, s: float) -
     # Title bar
     painter.fillRect(QRectF(0, 0, w, 35 * s), QColor("#1b3a1b"))
     painter.setPen(QColor("#a5d6a7"))
-    painter.setFont(QFont("Arial", _safe_size(14 * s), QFont.Weight.Bold))
+    painter.setFont(_font(14 * s, bold=True))
     painter.drawText(QRectF(15 * s, 8 * s, w, 25 * s),
                      Qt.AlignmentFlag.AlignLeft, "Planting Plan")
 
     y = 45 * s
-    col_x = [15 * s, 200 * s, 280 * s, 320 * s, 380 * s, 480 * s]
+    # 'When' carries a phrase ('Late spring, after the last frost'), so it
+    # gets the slack the narrow Price column was hoarding.
+    col_x = [15 * s, 195 * s, 275 * s, 315 * s, 375 * s, 570 * s]
     headers = ["Species", "Form", "Qty", "Space", "When", "Price"]
     sections = [
         ("native_woody", "Native trees & shrubs"),
@@ -398,13 +458,13 @@ def _draw_planting_plan(painter: QPainter, w: float, h: float, plan, s: float) -
         items = plan.items_by_source(bucket)
         if not items or y > h - 60 * s:
             continue
-        painter.setFont(QFont("Arial", _safe_size(9 * s), QFont.Weight.Bold))
+        painter.setFont(_font(9 * s, bold=True))
         painter.setPen(QColor("#a5d6a7"))
         painter.drawText(QRectF(15 * s, y, w - 30 * s, 14 * s),
                          Qt.AlignmentFlag.AlignLeft, label)
         y += 15 * s
 
-        painter.setFont(QFont("Arial", _safe_size(7 * s), QFont.Weight.Bold))
+        painter.setFont(_font(7 * s, bold=True))
         painter.setPen(QColor("#78909c"))
         for i, head in enumerate(headers):
             painter.drawText(QRectF(col_x[i], y, 120 * s, 12 * s),
@@ -414,7 +474,7 @@ def _draw_planting_plan(painter: QPainter, w: float, h: float, plan, s: float) -
         painter.drawLine(int(15 * s), int(y), int(w - 15 * s), int(y))
         y += 4 * s
 
-        painter.setFont(QFont("Arial", _safe_size(7 * s)))
+        painter.setFont(_font(7 * s))
         painter.setPen(QColor("#c8e6c9"))
         for it in items:
             if y > h - 40 * s:
@@ -436,7 +496,7 @@ def _draw_planting_plan(painter: QPainter, w: float, h: float, plan, s: float) -
 
     # Phased planting schedule
     if y < h - 90 * s:
-        painter.setFont(QFont("Arial", _safe_size(9 * s), QFont.Weight.Bold))
+        painter.setFont(_font(9 * s, bold=True))
         painter.setPen(QColor("#a5d6a7"))
         painter.drawText(QRectF(15 * s, y, w - 30 * s, 14 * s),
                          Qt.AlignmentFlag.AlignLeft,
@@ -446,12 +506,12 @@ def _draw_planting_plan(painter: QPainter, w: float, h: float, plan, s: float) -
             pit = plan.items_by_phase(phase)
             if not pit or y > h - 40 * s:
                 continue
-            painter.setFont(QFont("Arial", _safe_size(7 * s), QFont.Weight.Bold))
+            painter.setFont(_font(7 * s, bold=True))
             painter.setPen(QColor("#a5d6a7"))
             painter.drawText(QRectF(15 * s, y, w - 30 * s, 12 * s),
                              Qt.AlignmentFlag.AlignLeft, f"{phase}  ·  {season}")
             y += 11 * s
-            painter.setFont(QFont("Arial", _safe_size(7 * s)))
+            painter.setFont(_font(7 * s))
             painter.setPen(QColor("#c8e6c9"))
             names = ", ".join(f"{it.common_name} ×{it.qty}" for it in pit)
             for line in _wrap(names, 95):
@@ -465,13 +525,13 @@ def _draw_planting_plan(painter: QPainter, w: float, h: float, plan, s: float) -
     # Alberta native sourcing footer
     if y < h - 45 * s:
         y += 6 * s
-        painter.setFont(QFont("Arial", _safe_size(7 * s), QFont.Weight.Bold))
+        painter.setFont(_font(7 * s, bold=True))
         painter.setPen(QColor("#a5d6a7"))
         painter.drawText(QRectF(15 * s, y, w - 30 * s, 12 * s),
                          Qt.AlignmentFlag.AlignLeft,
                          "Alberta native plant / seed sources")
         y += 12 * s
-        painter.setFont(QFont("Arial", _safe_size(7 * s)))
+        painter.setFont(_font(7 * s))
         painter.setPen(QColor("#78909c"))
         for nm, url in NURSERIES:
             if y > h - 20 * s:
@@ -490,7 +550,7 @@ def _draw_conversion_schedule(painter: QPainter, w: float, h: float,
     # Title bar
     painter.fillRect(QRectF(0, 0, w, 35 * s), QColor("#1b3a1b"))
     painter.setPen(QColor("#a5d6a7"))
-    painter.setFont(QFont("Arial", _safe_size(14 * s), QFont.Weight.Bold))
+    painter.setFont(_font(14 * s, bold=True))
     painter.drawText(QRectF(15 * s, 8 * s, w, 25 * s),
                      Qt.AlignmentFlag.AlignLeft, "Phased Conversion")
 
@@ -500,7 +560,7 @@ def _draw_conversion_schedule(painter: QPainter, w: float, h: float,
         sub = f"Converting ~{_area_str(schedule.target_m2)} of lawn to habitat"
         if schedule.converted_m2 > 0:
             sub += f" ({_area_str(schedule.converted_m2)} already underway)"
-        painter.setFont(QFont("Arial", _safe_size(8 * s)))
+        painter.setFont(_font(8 * s))
         painter.setPen(QColor("#90a4ae"))
         painter.drawText(QRectF(15 * s, y, w - 30 * s, 12 * s),
                          Qt.AlignmentFlag.AlignLeft, sub + ".")
@@ -509,12 +569,12 @@ def _draw_conversion_schedule(painter: QPainter, w: float, h: float,
     for st in schedule.stages:
         if y > h - 50 * s:
             break
-        painter.setFont(QFont("Arial", _safe_size(9 * s), QFont.Weight.Bold))
+        painter.setFont(_font(9 * s, bold=True))
         painter.setPen(QColor("#a5d6a7"))
         painter.drawText(QRectF(15 * s, y, w - 30 * s, 14 * s),
                          Qt.AlignmentFlag.AlignLeft, f"{st.year_label} · {st.stage}")
         y += 14 * s
-        painter.setFont(QFont("Arial", _safe_size(7 * s)))
+        painter.setFont(_font(7 * s))
         painter.setPen(QColor("#c8e6c9"))
         for task in st.tasks:
             for i, line in enumerate(_wrap(task, 95)):
@@ -534,12 +594,12 @@ def _draw_notes_page(painter: QPainter, w: float, h: float,
     """Draw the design notes page."""
     painter.fillRect(QRectF(0, 0, w, 35 * s), QColor("#1b3a1b"))
     painter.setPen(QColor("#a5d6a7"))
-    painter.setFont(QFont("Arial", _safe_size(14 * s), QFont.Weight.Bold))
+    painter.setFont(_font(14 * s, bold=True))
     painter.drawText(QRectF(15 * s, 8 * s, w, 25 * s),
                      Qt.AlignmentFlag.AlignLeft, "Design Notes")
 
     y = 45 * s
-    painter.setFont(QFont("Consolas", _safe_size(8 * s)))
+    painter.setFont(_font(8 * s, family="Consolas"))
     painter.setPen(QColor("#c8e6c9"))
 
     for line in notes.split("\n"):
@@ -548,3 +608,265 @@ def _draw_notes_page(painter: QPainter, w: float, h: float,
         painter.drawText(QRectF(15 * s, y, w - 30 * s, 14 * s),
                          Qt.AlignmentFlag.AlignLeft, line)
         y += 12 * s
+
+
+# ── Site prep (F43) ─────────────────────────────────────────────────────────
+
+def _page_title(painter: QPainter, w: float, s: float, title: str,
+                subtitle: str = "") -> float:
+    """Shared page header. Returns the Y to start the body at."""
+    painter.fillRect(QRectF(0, 0, w, 35 * s), QColor("#1b3a1b"))
+    painter.setPen(QColor("#a5d6a7"))
+    painter.setFont(_font(14 * s, bold=True))
+    painter.drawText(QRectF(15 * s, 8 * s, w, 25 * s),
+                     Qt.AlignmentFlag.AlignLeft, title)
+    if subtitle:
+        painter.setFont(_font(8 * s))
+        painter.drawText(QRectF(15 * s, 8 * s, w - 30 * s, 25 * s),
+                         Qt.AlignmentFlag.AlignRight, subtitle)
+    return 48 * s
+
+
+def _draw_site_prep(painter: QPainter, w: float, h: float, prep, s: float) -> float:
+    """Do-this-first page (F43): the soil reading, the numbered prep steps, and
+    an explicit statement of how much the soil figures can be trusted."""
+    y = _page_title(painter, w, s, "Site Prep — do this first")
+
+    painter.setPen(QColor("#333333"))
+    painter.setFont(_font(9 * s))
+    head = f"Soil: {prep.soil_line}"
+    if prep.ph_line:
+        head += f"   ·   {prep.ph_line}"
+    if prep.lawn_line:
+        head += f"   ·   {prep.lawn_line}"
+    painter.drawText(QRectF(15 * s, y, w - 30 * s, 14 * s),
+                     Qt.AlignmentFlag.AlignLeft, head)
+    y += 18 * s
+    if prep.mulch_m3_low:
+        painter.drawText(
+            QRectF(15 * s, y, w - 30 * s, 14 * s), Qt.AlignmentFlag.AlignLeft,
+            f"Mulch to buy: {prep.mulch_m3_low:.1f}–{prep.mulch_m3_high:.1f} m³ "
+            f"of wood chip")
+        y += 18 * s
+    y += 4 * s
+
+    for step in prep.steps:
+        if y > h - 70 * s:
+            break
+        painter.setPen(QColor("#1b5e20"))
+        painter.setFont(_font(10 * s, bold=True))
+        painter.drawText(QRectF(15 * s, y, w - 30 * s, 14 * s),
+                         Qt.AlignmentFlag.AlignLeft,
+                         f"{step.order}.  {step.title}")
+        y += 14 * s
+        painter.setPen(QColor("#333333"))
+        painter.setFont(_font(8.5 * s))
+        for line in _wrap(step.detail, 96):
+            if y > h - 60 * s:
+                break
+            painter.drawText(QRectF(28 * s, y, w - 45 * s, 12 * s),
+                             Qt.AlignmentFlag.AlignLeft, line)
+            y += 11 * s
+        if step.when:
+            painter.setPen(QColor("#666666"))
+            painter.drawText(QRectF(28 * s, y, w - 45 * s, 12 * s),
+                             Qt.AlignmentFlag.AlignLeft, f"When: {step.when}")
+            y += 11 * s
+        y += 6 * s
+
+    # The honesty block gets its own tinted box — it is the part a user is most
+    # likely to skip and most likely to need (P9).
+    if prep.caveats and y < h - 40 * s:
+        box_top = y
+        painter.setPen(QColor("#333333"))
+        painter.setFont(_font(8 * s))
+        lines = []
+        for caveat in prep.caveats:
+            lines.extend(_wrap(caveat, 104))
+            lines.append("")
+        box_h = min((len(lines) + 2) * 10 * s, h - box_top - 15 * s)
+        painter.fillRect(QRectF(15 * s, box_top, w - 30 * s, box_h),
+                         QColor("#fff8e1"))
+        yy = box_top + 8 * s
+        painter.setPen(QColor("#5d4037"))
+        painter.setFont(_font(8.5 * s, bold=True))
+        painter.drawText(QRectF(22 * s, yy, w - 44 * s, 12 * s),
+                         Qt.AlignmentFlag.AlignLeft, "How sure is this?")
+        yy += 12 * s
+        painter.setFont(_font(8 * s))
+        for line in lines:
+            if yy > box_top + box_h - 8 * s:
+                break
+            painter.drawText(QRectF(22 * s, yy, w - 44 * s, 11 * s),
+                             Qt.AlignmentFlag.AlignLeft, line)
+            yy += 10 * s
+        y = box_top + box_h + 10 * s
+    return y
+
+
+# ── The numbered planting map (F41) ─────────────────────────────────────────
+
+def _draw_planting_map(painter: QPainter, w: float, h: float, pmap,
+                       s: float) -> float:
+    """A scale plan drawing with numbered positions and a key.
+
+    Deliberately a drawing rather than the page-1 satellite capture: this is the
+    page that goes outside. Numbers key straight to the buy list on the Planting
+    Plan page — every plant of one species carries the same number.
+    """
+    y = _page_title(painter, w, s, "Planting Map",
+                    pmap.north_note)
+
+    # Frame: fit the plot into the upper ~55% of the page, preserving aspect.
+    frame_x, frame_y = 20 * s, y
+    frame_w = w - 40 * s
+    frame_h = h * 0.52
+    plot_w = max(pmap.width_m, 0.001)
+    plot_h = max(pmap.height_m, 0.001)
+    scale = min(frame_w / plot_w, frame_h / plot_h)     # page units per metre
+    draw_w, draw_h = plot_w * scale, plot_h * scale
+    ox = frame_x + (frame_w - draw_w) / 2.0
+    oy = frame_y + draw_h                                # y grows downward
+
+    def to_page(x_m, y_m):
+        return (ox + x_m * scale, oy - y_m * scale)
+
+    painter.fillRect(QRectF(ox, frame_y, draw_w, draw_h), QColor("#fbfdf9"))
+
+    # Boundary.
+    if len(pmap.boundary) >= 3:
+        painter.setPen(QPen(QColor("#2e7d32"), max(1.0, 1.5 * s)))
+        prev = None
+        for pt in pmap.boundary:
+            cur = to_page(*pt)
+            if prev is not None:
+                painter.drawLine(int(prev[0]), int(prev[1]),
+                                 int(cur[0]), int(cur[1]))
+            prev = cur
+
+    # Numbered positions. Radius is fixed on the page, not scaled with the
+    # plot — a legible marker matters more than a true-to-scale dot.
+    r = max(4.0, 7 * s)
+    painter.setFont(_font(7 * s, bold=True))
+    for mp in pmap.placements:
+        cx, cy = to_page(mp.x_m, mp.y_m)
+        painter.setPen(QPen(QColor("#33691e"), max(1.0, 1.0 * s)))
+        painter.setBrush(QColor("#dcedc8"))
+        painter.drawEllipse(QRectF(cx - r, cy - r, r * 2, r * 2))
+        painter.setPen(QColor("#1b5e20"))
+        painter.drawText(QRectF(cx - r, cy - r, r * 2, r * 2),
+                         Qt.AlignmentFlag.AlignCenter, str(mp.number))
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+
+    # Scale bar + north arrow — what makes this usable with a tape measure.
+    bar_m = pmap.scale_bar_m()
+    bar_px = bar_m * scale
+    bar_y = frame_y + draw_h + 12 * s
+    painter.setPen(QPen(QColor("#333333"), max(1.0, 1.2 * s)))
+    painter.drawLine(int(ox), int(bar_y), int(ox + bar_px), int(bar_y))
+    painter.drawLine(int(ox), int(bar_y - 4 * s), int(ox), int(bar_y + 4 * s))
+    painter.drawLine(int(ox + bar_px), int(bar_y - 4 * s),
+                     int(ox + bar_px), int(bar_y + 4 * s))
+    painter.setFont(_font(8 * s))
+    painter.drawText(QRectF(ox, bar_y + 5 * s, bar_px, 12 * s),
+                     Qt.AlignmentFlag.AlignCenter, f"{bar_m} m")
+
+    nx = ox + draw_w - 14 * s
+    painter.drawLine(int(nx), int(bar_y + 2 * s), int(nx), int(bar_y - 12 * s))
+    painter.drawLine(int(nx), int(bar_y - 12 * s),
+                     int(nx - 3 * s), int(bar_y - 7 * s))
+    painter.drawLine(int(nx), int(bar_y - 12 * s),
+                     int(nx + 3 * s), int(bar_y - 7 * s))
+    painter.drawText(QRectF(nx - 10 * s, bar_y + 5 * s, 20 * s, 12 * s),
+                     Qt.AlignmentFlag.AlignCenter, "N")
+
+    # Key — two columns so a 20-species design still fits one page.
+    y = bar_y + 24 * s
+    painter.setPen(QColor("#1b5e20"))
+    painter.setFont(_font(10 * s, bold=True))
+    painter.drawText(QRectF(15 * s, y, w - 30 * s, 14 * s),
+                     Qt.AlignmentFlag.AlignLeft, "Key")
+    y += 16 * s
+    painter.setPen(QColor("#333333"))
+    painter.setFont(_font(8 * s))
+    col_w = (w - 30 * s) / 2.0
+    rows_per_col = max(1, int((h - y - 20 * s) / (11 * s)))
+    for i, entry in enumerate(pmap.key):
+        col, row = divmod(i, rows_per_col)
+        if col > 1:
+            break
+        ky = y + row * 11 * s
+        text = (f"{entry.number}.  {entry.common_name}  "
+                f"×{entry.qty}"
+                + (f"  ·  {entry.spacing_m:.1f} m apart"
+                   if entry.spacing_m else ""))
+        painter.drawText(QRectF(15 * s + col * col_w, ky, col_w - 10 * s,
+                                11 * s),
+                         Qt.AlignmentFlag.AlignLeft, text)
+    return h
+
+
+# ── Maintenance calendar (F42) ──────────────────────────────────────────────
+
+def _draw_maintenance(painter: QPainter, w: float, h: float, cal,
+                      s: float) -> float:
+    """Year-by-year cadence, with the hours falling as the natives establish."""
+    y = _page_title(painter, w, s, "Maintenance — year by year")
+
+    for band in cal.bands:
+        if y > h - 70 * s:
+            break
+        painter.setPen(QColor("#1b5e20"))
+        painter.setFont(_font(10 * s, bold=True))
+        painter.drawText(QRectF(15 * s, y, w - 30 * s, 14 * s),
+                         Qt.AlignmentFlag.AlignLeft,
+                         f"{band.label} — {band.headline}")
+        painter.setPen(QColor("#666666"))
+        painter.setFont(_font(8 * s))
+        painter.drawText(
+            QRectF(15 * s, y, w - 30 * s, 14 * s),
+            Qt.AlignmentFlag.AlignRight,
+            f"{band.hours_low:.0f}–{band.hours_high:.0f} h/yr  ·  {band.stage}")
+        y += 15 * s
+        painter.setPen(QColor("#333333"))
+        painter.setFont(_font(8.5 * s))
+        for task in band.tasks:
+            for i, line in enumerate(_wrap(task, 100)):
+                if y > h - 60 * s:
+                    break
+                painter.drawText(
+                    QRectF(24 * s, y, w - 40 * s, 12 * s),
+                    Qt.AlignmentFlag.AlignLeft,
+                    ("•  " if i == 0 else "    ") + line)
+                y += 10.5 * s
+        y += 6 * s
+
+    # The spring-cut-back note, boxed, because it is the instruction most often
+    # got backwards and the one that costs the most habitat when it is.
+    if y < h - 50 * s:
+        lines = _wrap(cal.overwintering_note, 104)
+        if cal.overwintering_species:
+            shown = ", ".join(cal.overwintering_species[:8])
+            lines.append("")
+            lines.extend(_wrap(
+                f"In this design, documented nesting or cover: {shown}.", 104))
+        box_h = min((len(lines) + 2) * 10.5 * s, h - y - 15 * s)
+        painter.fillRect(QRectF(15 * s, y, w - 30 * s, box_h),
+                         QColor("#e8f5e9"))
+        yy = y + 8 * s
+        painter.setPen(QColor("#1b5e20"))
+        painter.setFont(_font(9 * s, bold=True))
+        painter.drawText(QRectF(22 * s, yy, w - 44 * s, 12 * s),
+                         Qt.AlignmentFlag.AlignLeft,
+                         "Cut back in spring, not fall")
+        yy += 13 * s
+        painter.setPen(QColor("#333333"))
+        painter.setFont(_font(8 * s))
+        for line in lines:
+            if yy > y + box_h - 8 * s:
+                break
+            painter.drawText(QRectF(22 * s, yy, w - 44 * s, 11 * s),
+                             Qt.AlignmentFlag.AlignLeft, line)
+            yy += 10 * s
+        y += box_h + 8 * s
+    return y

@@ -1867,14 +1867,14 @@ class MainWindow(QMainWindow):
     def _on_export_shopping_list(self):
         """Export the design as a buy-it / plant-it Planting Plan (F40).
 
-        All the assembly lives in the Qt-free :mod:`src.planting_plan` so it can
-        be unit-tested and shared with the PDF export; this is just the file
-        plumbing."""
+        Assembly lives in the Qt-free :mod:`src.planting_plan_export`, which
+        orders the whole document (prep → buy → dig → phase → maintain) and is
+        shared with the PDF export; this is just the file plumbing."""
         if not self._placed_plants:
             QMessageBox.information(self, "Planting Plan", "No plants placed yet.")
             return
 
-        from src.planting_plan import build_planting_plan, render_plan_text
+        from src.planting_plan import build_planting_plan
 
         structs = [
             f["properties"]["struct_def"]
@@ -1889,20 +1889,15 @@ class MainWindow(QMainWindow):
         )
         plan = build_planting_plan(self._placed_plants, structures=structs,
                                    bed_area_m2=bed_area)
-        text = render_plan_text(plan)
 
-        # Year-by-year conversion schedule (F17): remove-this / plant-that, when.
-        try:
-            from src.conversion_plan import (
-                build_conversion_schedule, render_schedule_text)
-            from src.lawn_zones import conversion_summary
-            schedule = build_conversion_schedule(
-                self._placed_plants,
-                summary=conversion_summary(self._project.get("features", [])),
-            )
-            text += "\n\n" + render_schedule_text(schedule)
-        except Exception:  # noqa: BLE001 — the schedule augments the plan, never blocks it
-            pass
+        # The document reads in the order the work happens: prep the ground
+        # (F43) → buy it (F40) → dig it in the right places (F41) → phase it
+        # (F17) → keep it alive (F42). Each section is best-effort: a section
+        # that can't be built must never cost the user the rest of the sheet.
+        from src import planting_plan_export
+        text = planting_plan_export.assemble(
+            self._project, self._placed_plants, structs, plan,
+            bed_area_m2=bed_area)
 
         path, _ = QFileDialog.getSaveFileName(
             self, "Export Planting Plan", "planting_plan.txt",

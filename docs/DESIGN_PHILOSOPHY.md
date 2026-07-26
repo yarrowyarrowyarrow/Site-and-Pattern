@@ -198,7 +198,14 @@ Kintsugi philosophy, Cradle to Cradle design, regenerative landscaping, and myco
 > reads the free Meta/WRI global 1 m canopy-height map (`src/tree_detect_chm.py`, variable-window
 > local-maxima on real heights — the industry method) to fill the site inventory on the treed/rural
 > properties OSM knows nothing about, with *measured* tree heights (±≈3 m) rather than guesses, so
-> the shade map reflects the real site anywhere in the world. **State: strong.**
+> the shade map reflects the real site anywhere in the world. The conversion now begins where it
+> actually begins — the ground: the **site-prep sheet** (`src/site_prep.py`, roadmap F43) sizes the
+> lawn removal and, against the reflex, tells the user **not to enrich** (a fertility spike favours
+> the weeds that outcompete young natives, which are adapted to the soil already there), so prep is
+> repair of soil *structure* rather than a shopping list; and the **maintenance calendar**
+> (`src/maintenance_calendar.py`, roadmap F42) carries the restoration past install day — including
+> cutting back in spring rather than fall, so the overwintering habitat the rest of the app models
+> is not tidied away every October. **State: strong.**
 
 ### 9. Uncertainty is a feature, not a bug
 
@@ -251,9 +258,14 @@ Knowledge lives in hands, soil, wind, and direct observation — not only in abs
 > into a standing invitation to walk the ground and confirm it ("is it early, late, on time?").
 > **State: strong (was a gap)** — the app now *fetches* site data, *hands the user a field plan*,
 > *captures their own on-site observation*, *reads the winter the plants will actually face*, and
-> *sends the user out to verify its predictions*. The remaining reach: pinning individual
-> observations to map points and feeding them back into generation as soft constraints (the
-> "pinned" slice of F6).
+> *sends the user out to verify its predictions*. V2.31 finished the artifact that goes outside:
+> the Planting Plan became a whole document — prep, buy list, a **numbered scale plan drawing**
+> with a scale bar and north arrow (`src/planting_map.py`, roadmap F41), the phased schedule, and
+> the maintenance cadence — assembled in the order the work happens
+> (`src/planting_plan_export.py`). The drawing is deliberately *not* the satellite capture: a
+> screenshot is unusable in a yard with a tape measure, and a keyed plan at a stated scale is what
+> you can lay out from. The remaining reach: pinning individual observations to map points and
+> feeding them back into generation as soft constraints (the "pinned" slice of F6).
 
 ### 12. Indigenous knowledge is honoured through relationship, not extraction
 

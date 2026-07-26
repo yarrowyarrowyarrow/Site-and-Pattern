@@ -28,15 +28,10 @@ from src.plant_conditions import condition_tokens
 
 
 # ── Maintenance hours estimates for plant types ──────────────────────────────
-
-_PLANT_MAINTENANCE_HOURS: dict[str, float] = {
-    "tree":        3.0,   # pruning, watering establishment
-    "shrub":       2.5,   # pruning, mulching
-    "herb":        1.5,   # dividing, weeding
-    "groundcover": 0.5,   # minimal once established
-    "vine":        3.0,   # training, pruning
-    "root":        1.0,   # harvest, replant
-}
+# The numbers now live in the Qt-free src/maintenance_calendar.py (F42), which
+# needs them too; imported here under the historical name so the Effort tab and
+# the year-by-year calendar can never quote different hours for the same design.
+from src.maintenance_calendar import PLANT_MAINTENANCE_HOURS as _PLANT_MAINTENANCE_HOURS
 
 # Month names
 _MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",

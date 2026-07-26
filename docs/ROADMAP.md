@@ -147,6 +147,10 @@ Features for long-term planning and tracking.
 | Relationship web map overlay (the design drawn as a network: species at their planting centroid, wildlife on a ring outside it, layer filter + legend) | Done |
 | First-run welcome (Generate / start from your yard / open the example), three-step getting-started strip above the map, Generate Design on the toolbar, beginner-default design goals | Done |
 | Worked example design — a front-yard lawn conversion built from an authored spec against the live catalogue (Help → Open the Example Design) | Done |
+| Site-prep sheet (lawn-removal methods sized to the area, decompact-don't-enrich advice keyed to soil texture, mulch volume, pH mismatches) | Done |
+| Numbered planting map — a scale plan drawing with scale bar, north arrow and a key that matches the buy list | Done |
+| Maintenance calendar — four year-bands with falling hour ranges, a first-season month-by-month, and the spring-not-fall cut-back rule | Done |
+| PDF export text fix — font sizes were set in points from a device-pixel figure, so every text page rendered blank at printer resolution | Done |
 
 ---
 

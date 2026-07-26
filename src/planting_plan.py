@@ -150,14 +150,25 @@ def _source_bucket(native: bool, ptype: str) -> str:
 
 def _spacing_for(plant: dict) -> float:
     """Centre-to-centre spacing (m): the plant's own ``spacing_m`` when present,
-    else the naturalistic layer/spread-aware estimate."""
+    else the naturalistic layer/spread-aware estimate.
+
+    Rounded to 5 cm. ``plant_spacing`` returns an unrounded figure derived from
+    canopy width and spread habit; printing "0.878 m apart" on a sheet somebody
+    plants from claims a precision the estimate does not have, and nobody
+    spaces plants to the millimetre anyway (P9).
+    """
     explicit = plant.get("spacing_m")
     if explicit:
         try:
-            return round(float(explicit), 2)
+            return _round_spacing(float(explicit))
         except (TypeError, ValueError):
             pass
-    return planting_spacing.plant_spacing(plant, base_m=0.45)
+    return _round_spacing(planting_spacing.plant_spacing(plant, base_m=0.45))
+
+
+def _round_spacing(metres: float) -> float:
+    """Spacing to the nearest 5 cm, with a 5 cm floor."""
+    return max(0.05, round(float(metres) * 20.0) / 20.0)
 
 
 def _phase_for(plant: dict) -> str:
