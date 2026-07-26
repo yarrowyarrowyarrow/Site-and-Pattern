@@ -122,6 +122,14 @@ def plant_3d_state(plant: dict, lat: float, lng: float, year: int) -> dict:
         # fallbacks: leaf size relative to mature height is what picks a plant's
         # baked leaf archetype, and it must not change as the plant grows.
         "mature_height_m": round(float(mature_h), 3),
+        # The species' RECORDED mature spread — deliberately without the
+        # per-type default `mature_c` applies below. Height ÷ this is what picks
+        # a herb's baked aspect unit (V2.34), and the asset generator reads the
+        # same figure straight off the catalogue; a default invented on one side
+        # only would put the two classifiers in different classes for exactly
+        # the species that have no data. Absent means absent, and both ends then
+        # land on the neutral middle class.
+        "mature_canopy_m": round(float(plant.get("mature_canopy_m") or 0), 3),
         "canopy_m": round(float(mature_c) * factor * spread, 3),
         "presence_opacity": round(presence_factor(role, year, ytm), 3),
     }

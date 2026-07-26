@@ -406,10 +406,7 @@ stiffness class — a spruce barely moves in wind that has a grass lying flat.
 
 ### Still open after the third pass
 
-- **Herb aspect.** The layers got the axis; the herb archetypes still have the
-  same disease (`herb.erect` runs 0.44 to 3.33 against an authored 1.20). It is
-  the same fix, but ×52 units rather than ×3 at zero cost, so it is an
-  asset-size decision rather than a free one.
+- ~~**Herb aspect.**~~ Closed in the fourth pass below.
 - **Shrub aspect within a silhouette.** `arching` spans 0.4 (skunk currant) to
   1.67 (raspberry); the median serves neither end well.
 - **Fern density**, unchanged from above.
@@ -425,3 +422,73 @@ dogwood, currant, rose, strawberry, chokecherry and pin cherry; plus the full
 from the contact sheet alone, at thumbnail scale — adequate for distinctness,
 weaker evidence for fidelity, and flagged here rather than presented as equally
 grounded.
+
+## Fourth pass — V2.34 (herb aspect · Stylised · the uncanny valley)
+
+This pass started from a user observation that turned out to be the most useful
+diagnostic note in the whole audit: **the preview reads as "a really low quality
+video game", and the old polyhedrons were *more forgiving*.** Both halves are
+correct, and together they explain the shape of the problem.
+
+The polyhedrons were **coherent**. A faceted green mass is a confident
+abstraction — it says "this is a diagram of a shrub" and the eye accepts it.
+What V2.29–V2.33 built is geometry that *attempts* realism: real leaf blades,
+real branch skeletons, real bark grain. The moment a scene claims realism, the
+eye starts grading it against a real plant — and then everything still abstract
+reads as **broken rather than stylised**. That is the uncanny valley, and the
+scene had walked into it.
+
+**18 · Herb aspect axis.** The item left open above, closed. `HERB_ASPECT_CLASSES`
+gives the six aspect-carrying growth forms three classes each at the median of
+each tertile of their species' real height ÷ canopy, and the herb variant key
+grew a third segment (`broad_1_a2`). **169 of the 228 species on the axis move
+off their form's single authored figure, and the median proportion error falls
+from 28% to 11%** — a creeping phlox at 0.11 and a blazingstar at 3.33 were both
+being drawn at four and three times the wrong shape. 52 units → 96, 2.5 MB →
+4.4 MB, because only the (blade × grain × aspect) triples the catalogue actually
+uses get baked. `fern` is deliberately left off the axis: one species maps to it,
+and a class it cannot fill would be a fabricated difference (P9).
+
+**19 · Stylised is a style, not a thinning.** Detail level 0 no longer means
+"the same look with fewer triangles" — it skips the baked model library, drops
+the surface textures, flat-shades everything and builds forbs as faceted masses,
+so it is diagrammatic all the way down. The three levels are now **Stylised /
+Balanced / Lifelike**, because "Low" told the user it was worse when it is a
+choice — and it remains by far the cheapest scene the app can draw. Herbs needed
+a new builder (`13-stylised.js`) because `buildPerennialGeo` had no faceted path
+at all: all level 0 ever did to a forb was build it out of fewer blades, which is
+the sparse-realism failure this mode exists to avoid.
+
+### Where the remaining gap actually is
+
+Measured rather than argued, because the instinct is to keep working on leaves:
+
+| | |
+|---|---|
+| Wildflower + herb species | **228** |
+| Distinct `(growth_form × flower_form)` looks | **51** |
+| Species sharing "erect × spike" | **31** |
+| Wildflowers in a bucket of 5+ identical looks | **154 of 228** |
+| Distinct `flower_color` values across all of them | **19** |
+| Flower images in the whole app | **15**, one per form |
+| Resolution of each | **64 × 64 px** |
+| Flower material | `MeshBasicMaterial` — **unlit** |
+| Bloom quads per plant | 7, sqrt-spaced in a disc at 90% height |
+
+**A forb in bloom is 60–80% flower to the eye, and the flower is a 64-pixel
+stamp in one of nineteen flat colours.** The body underneath it now carries real
+leaves at 1,200 triangles. That gap — realistic body, cartoon bloom, unlit — is
+what reads as a cheap video game, and no further work on leaves will move it.
+
+### Still open after the fourth pass
+
+- **The bloom is still a billboard.** The next increment: a floret built from
+  real characters (petal count, petal shape, symmetry, a separate disc in its own
+  colour) placed by a real inflorescence architecture (raceme · spike · panicle ·
+  corymb · umbel · head · cyme · whorl) instead of seven quads in a disc — and
+  lit, so it takes the sun.
+- **Forb stems are single straight rods.** `flora_herbs.build_herb` stamps each
+  stem as one segment. Real forbs branch, and a goldenrod's silhouette *is* its
+  branching.
+- **Shrub aspect within a silhouette**, unchanged from the third pass.
+- **Fern density**, unchanged.

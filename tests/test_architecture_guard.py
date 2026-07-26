@@ -134,6 +134,12 @@ class TestStructuralCeilings(unittest.TestCase):
         # 05-flowers.js to 799 of its 800, so they went into their own chunk —
         # the split this ceiling asks for rather than a bigger number.
         (_HTML / "scene3d" / "12-seedheads.js", 400),  # ~125 now
+        # V2.34: the Stylised body builders. 04-quality.js was at 885 of its 900
+        # and this is a self-contained second look, not more of the first one.
+        (_HTML / "scene3d" / "13-stylised.js", 400),   # ~115 now
+        # V2.34: the four procedural layer tufts, moved out of
+        # 04-quality.js when the Stylised switch took it past 900.
+        (_HTML / "scene3d" / "14-layers.js", 400),     # ~101 now
     ]
 
     def test_module_line_ceilings(self):

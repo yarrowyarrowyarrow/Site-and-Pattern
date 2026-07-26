@@ -406,6 +406,104 @@ def variant_key(blade, grain):
     return f"{blade}_{int(grain)}"
 
 
+# ── the herb aspect axis (V2.34) ────────────────────────────────────────────
+#
+# F65 gave grass, aquatic and vine an aspect axis and left the HERB archetypes
+# with the same disease, recorded at the time as an asset-size decision. It is a
+# worse case than the one that got fixed:
+#
+#     form      authored   species range   worst stretch
+#     mat         0.42      0.11 - 1.67        4.0x
+#     rosette     0.83      0.27 - 2.50        3.0x
+#     erect       1.20      0.44 - 3.33        2.8x
+#     clump       1.11      0.56 - 3.33        2.8x
+#
+# 228 wildflowers were being squashed or stretched to one of seven single
+# figures — a creeping phlox mat and an upright blazingstar are both `mat`-ish
+# and `erect`-ish respectively at four and three times the wrong proportion.
+#
+# Unlike the layer axis this one is NOT free, but it is far cheaper than the 3x
+# it looks: only the (blade, grain, aspect) triples the catalogue actually uses
+# get baked — the discipline manifest._variants_for has always applied — so it
+# is 52 units to 96, about 2.5 MB to 4.6 MB.
+#
+# Class targets are the MEDIAN of each tertile of the real spread and the breaks
+# are the tertile boundaries, so each class stands for a third of its form's
+# species. `fern` is deliberately absent: one species maps to it, and a class it
+# cannot fill would be a fabricated difference rather than a recorded one (P9).
+HERB_ASPECT_CLASSES = {
+    "erect":   (0.80, 1.11, 1.78),
+    "clump":   (0.78, 1.33, 1.78),
+    "rosette": (0.44, 0.83, 1.33),
+    "ferny":   (0.81, 1.19, 1.33),
+    "grassy":  (0.89, 1.11, 1.50),
+    "mat":     (0.30, 0.58, 1.00),
+}
+HERB_ASPECT_BREAKS = {
+    "erect":   (1.00, 1.33),
+    "clump":   (1.11, 1.50),
+    "rosette": (0.67, 1.00),
+    "ferny":   (1.00, 1.33),
+    "grassy":  (1.11, 1.33),
+    "mat":     (0.44, 0.89),
+}
+ASPECT_HERB_FORMS = tuple(HERB_ASPECT_CLASSES)
+
+
+def herb_aspect_class(form, height_m, canopy_m):
+    """0 low · 1 medium · 2 tall, from a species' own height ÷ canopy.
+
+    Unknown dimensions — or a form with no axis — land on the middle class,
+    which is the single figure the archetype carried before the axis existed.
+    """
+    breaks = HERB_ASPECT_BREAKS.get(form)
+    if not breaks:
+        return 1
+    try:
+        h = float(height_m or 0)
+        c = float(canopy_m or 0)
+    except (TypeError, ValueError):
+        return 1
+    if h <= 0 or c <= 0:
+        return 1
+    ratio = h / c
+    return 0 if ratio < breaks[0] else (1 if ratio < breaks[1] else 2)
+
+
+def herb_variant_key(blade, grain, aspect):
+    """Stable name for one (blade × grain × aspect) herb variant.
+
+    The aspect segment carries an `a` prefix so a key stays unambiguously
+    parseable by rsplit and a two-part shrub/groundcover key can never be
+    mistaken for a three-part herb one.
+    """
+    return f"{blade}_{int(grain)}_a{int(aspect)}"
+
+
+def parse_herb_variant_key(vkey):
+    """('broad', 1, 2) from 'broad_1_a2'. Tolerates the pre-axis two-part key,
+    which lands on the middle aspect class — i.e. exactly the old geometry."""
+    parts = str(vkey).split("_")
+    if len(parts) >= 3 and parts[-1].startswith("a"):
+        try:
+            return parts[0], int(parts[-2]), int(parts[-1][1:])
+        except ValueError:
+            pass
+    blade, _, grain = str(vkey).rpartition("_")
+    try:
+        return blade, int(grain), 1
+    except ValueError:
+        return "broad", 1, 1
+
+
+def herb_aspect_for(form, vkey):
+    """The aspect one baked herb unit is authored at."""
+    classes = HERB_ASPECT_CLASSES.get(form)
+    if not classes:
+        return HERB_ASPECT.get(form)
+    return classes[max(0, min(len(classes) - 1, parse_herb_variant_key(vkey)[2]))]
+
+
 def grain_class(leaf_size_cm, height_m, family="herb"):
     """0 fine · 1 medium · 2 coarse, from a species' leaf length against its own
     height — the ratio the renderer can actually show. Unknown data lands on
@@ -529,9 +627,9 @@ def aspect_for(key, unit=None):
     """Target aspect for a manifest plant key ('tree.spruce', 'herb.mat', …),
     or None for a family that doesn't declare one.
 
-    ``unit`` is a variant key ('aspect_2', 'broad_1', 'tier0'): on a layer
-    carrying the aspect axis the target is that unit's own class, since the
-    whole point of the axis is that the three units are DIFFERENT shapes.
+    ``unit`` is a variant key ('aspect_2', 'broad_1_a0', 'tier0'): on a family
+    carrying an aspect axis the target is that unit's own class, since the whole
+    point of the axis is that the units are DIFFERENT shapes.
     """
     fam, _, name = str(key).partition(".")
     if fam == "layer" and name in LAYER_ASPECT_CLASSES and unit:
@@ -540,6 +638,9 @@ def aspect_for(key, unit=None):
                 return LAYER_ASPECT_CLASSES[name][int(str(unit).split("_")[1])]
             except (ValueError, IndexError):
                 pass
+    if fam == "herb" and name in HERB_ASPECT_CLASSES and unit \
+            and not str(unit).startswith("tier"):
+        return herb_aspect_for(name, unit)
     return {"tree": CROWN_ASPECT, "shrub": SHRUB_ASPECT,
             "herb": HERB_ASPECT, "layer": LAYER_ASPECT}.get(fam, {}).get(name)
 

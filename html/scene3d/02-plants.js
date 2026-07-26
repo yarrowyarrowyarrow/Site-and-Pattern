@@ -539,11 +539,49 @@ function aspectVariantKeyFor(p, kind) {
   return 'aspect_' + aspectClassFor(p, kind);
 }
 
+// ── herb aspect axis (V2.34) ────────────────────────────────────────────────
+// The mirror of assetlib/conventions.py HERB_ASPECT_BREAKS / herb_aspect_class,
+// and the same argument as the layer axis above applied where it matters most:
+// 228 wildflowers were being squashed or stretched into one of seven single
+// figures. A creeping phlox recorded at 0.11 and an upright blazingstar at 3.33
+// were both being drawn at their form's one authored aspect — four and three
+// times wrong. Breaks are the tertile boundaries of each form's real spread, so
+// every class stands for a third of its species.
+//
+// `fern` is deliberately absent: one species maps to it, and a class it cannot
+// fill would be a fabricated difference rather than a recorded one (P9). Forms
+// missing here fall through to the middle class, which is the single figure the
+// archetype carried before the axis existed.
+const HERB_ASPECT_BREAKS = {
+  erect: [1.00, 1.33], clump: [1.11, 1.50], rosette: [0.67, 1.00],
+  ferny: [1.00, 1.33], grassy: [1.11, 1.33], mat: [0.44, 0.89],
+};
+function herbAspectClassFor(p, form) {
+  const br = HERB_ASPECT_BREAKS[form];
+  if (!br) return 1;
+  // Mature ÷ mature, for the reason variantKeyFor gives below: a young plant
+  // must not sit in a different aspect class from the adult it becomes. The
+  // generator reads the catalogue's own figures, so no default may be invented
+  // here — an unrecorded spread lands on the neutral class at BOTH ends.
+  const h = Number(p.mature_height_m || p.height_m) || 0;
+  const c = Number(p.mature_canopy_m) || 0;
+  if (h <= 0 || c <= 0) return 1;
+  const ratio = h / c;
+  return ratio < br[0] ? 0 : (ratio < br[1] ? 1 : 2);
+}
+
 // 'broad_1' etc. — the manifest's variant_keys are indexed by exactly this.
 // Against MATURE height, not this year's: leaf size is a fixed species character,
 // so a seedling's leaves must not sit in a different class from the adult's.
-function variantKeyFor(p, family) {
-  return bladeClassFor(p.leaf_shape) + '_'
+// Herbs carry a third segment ('broad_1_a2'), so `form` is passed in by the herb
+// caller; without it a herb key stays the two-part pre-axis shape, which the
+// generator still parses (conventions.parse_herb_variant_key) as the middle
+// aspect — i.e. exactly the old geometry rather than a missing lookup.
+function variantKeyFor(p, family, form) {
+  const base = bladeClassFor(p.leaf_shape) + '_'
     + grainClassFor(p.leaf_size_cm, p.mature_height_m || p.height_m, family);
+  if (family === 'herb' && form && HERB_ASPECT_BREAKS[form])
+    return base + '_a' + herbAspectClassFor(p, form);
+  return base;
 }
 

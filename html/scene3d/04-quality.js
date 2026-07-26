@@ -7,15 +7,25 @@
 
 // ── Detail / quality (V1.94) ────────────────────────────────────────────────
 // One global knob scales BUILD-TIME geometry density only (blade/blob/tier/tuft
-// counts) — never per-frame work, which stays instanced. Default 1 (Medium) ≈
-// the historical look; Low thins geometry for weak machines, High enriches it.
-// permaSetQuality() flips it and clears the archetype caches so the next scene
-// rebuilds at the new density.
-let QUALITY = 1;                      // 0 Low · 1 Medium · 2 High
+// counts) — never per-frame work, which stays instanced.
+//
+// V2.34 renamed the three levels Stylised / Balanced / Lifelike, because level 0
+// stopped being "the same look, thinner" and became a style of its own (see
+// 01b-surface.js setStylised for the argument). "Low" implied worse; Stylised is
+// a choice, and on a weak machine it is also by far the cheapest scene the app
+// can draw.
+let QUALITY = 1;                      // 0 Stylised · 1 Balanced · 2 Lifelike
 function qn(n) {                      // scale + round a count, never below 1
   const f = QUALITY === 0 ? 0.6 : (QUALITY === 2 ? 1.35 : 1.0);
   return Math.max(1, Math.round(n * f));
 }
+
+// Whether to reach for the baked GLB library at all. Stylised deliberately does
+// not: the GLB set IS the realism (real leaf cards, branch skeletons, bark
+// grain), so the mode is expressed by falling back to the procedural builders —
+// which have always been the library's fallback path and are therefore always
+// exercised, never a second renderer that rots.
+function useGLB() { return !STYLISED; }
 
 // One low-poly foliage mass — a faceted icosahedron (not a smooth sphere)
 // squashed to an ellipsoid by `shape`, so a clump reads as angular leaf masses
@@ -136,6 +146,7 @@ function _stem(rBot, rTop, h, rot) {
 function buildPerennialGeo(rng, form, morph) {
   const F = form || HERB_FORMS.clump;
   const m = morph || {};
+  if (STYLISED) return stylisedHerbGeo(rng, F);
   const geos = [];
   const shape = m.shape || F.shape;
   const lL = F.leaf[0] * GRAIN_LEAF_SCALE[Math.max(0, Math.min(2, m.grain == null ? 1 : m.grain))];
@@ -202,92 +213,6 @@ function buildPerennialGeo(rng, form, morph) {
   return g;
 }
 
-// A groundcover mat: a scatter of small low domes filling a unit circle — a
-// textured plant carpet rather than a flat disc.
-function buildGroundcoverGeo(rng) {
-  const geos = [];
-  const n = qn(5 + Math.floor(rng() * 4));   // 5–8 tufts
-  for (let i = 0; i < n; i++) {
-    const r = 0.08 + rng() * 0.07;
-    const ang = rng() * Math.PI * 2, rad = rng() * 0.42;
-    const ys = 0.5 + rng() * 0.5;
-    const s = new THREE.SphereGeometry(r, 5, 3);
-    s.scale(1, ys, 1);
-    s.translate(Math.cos(ang) * rad, r * ys * 0.5, Math.sin(ang) * rad);
-    geos.push(s);
-  }
-  const g = mergeGeometries(geos, false);
-  normalizeUnit([g]);
-  applyFoliageGradient(g);
-  return g;
-}
-
-// A grass / sedge / rush tuft: a dense fan of flat, arching blades from a shared
-// base — full and lush rather than a few thin spindly stalks (V1.92). Flat
-// ribbons (double-sided material) read as real blades with width; lifted
-// normals let the whole tuft catch top light as one soft mound.
-function buildGrassGeo(rng) {
-  const geos = [];
-  const blades = qn(26 + Math.floor(rng() * 16));   // 26–41 blades — a thick clump
-  for (let i = 0; i < blades; i++) {
-    const h = 0.62 + rng() * 0.5;
-    const wb = 0.016 + rng() * 0.018;            // base half-width (real blade)
-    const lean = 0.22 + rng() * 0.7;             // arching meadow sweep
-    geos.push(makeBlade(rng, h, wb, lean, 1.5));
-  }
-  const g = mergeGeometries(geos, false);
-  normalizeUnit([g]);
-  applyFoliageGradient(g);
-  liftNormals(g, 0.8);
-  return g;
-}
-
-// An aquatic / emergent tuft (cattail, bulrush, reed leaves): taller, stiffer,
-// broader, more erect blades than meadow grass — so marsh plants stop rendering
-// as the round-leaf perennial clump (V1.92). The brown cattail spike itself is
-// drawn by the flower layer (the "cattail" form).
-function buildAquaticGeo(rng) {
-  const geos = [];
-  const blades = qn(16 + Math.floor(rng() * 12));   // 16–27 broad upright leaves
-  for (let i = 0; i < blades; i++) {
-    const h = 0.85 + rng() * 0.35;
-    const wb = 0.03 + rng() * 0.028;             // wide strap leaves
-    const lean = 0.06 + rng() * 0.32;            // mostly vertical, slight nod
-    geos.push(makeBlade(rng, h, wb, lean, 2.4)); // bend held high → stiff reed
-  }
-  const g = mergeGeometries(geos, false);
-  normalizeUnit([g]);
-  applyFoliageGradient(g);
-  liftNormals(g, 0.85);
-  return g;
-}
-
-// A vine (V1.99): several slender stems sprawling/twining out and up from a low
-// base, clothed with broad leaves — a leafy tangle, not a cone. Reads as a
-// climbing/trailing plant (clematis, vetch, peavine, hops).
-function buildVineGeo(rng) {
-  const geos = [];
-  const stems = qn(4 + Math.floor(rng() * 3));   // 4–6 trailing/twining stems
-  for (let i = 0; i < stems; i++) {
-    const az = (i / stems) * Math.PI * 2 + rng() * 0.8;
-    const splay = 0.6 + rng() * 0.55;            // lean far out — sprawling
-    const h = 0.7 + rng() * 0.35;
-    const rot = new THREE.Matrix4().makeRotationY(az)
-      .multiply(new THREE.Matrix4().makeRotationZ(splay));
-    geos.push(_stem(0.013, 0.007, h, rot));
-    const nL = qn(4 + Math.floor(rng() * 3));
-    for (let j = 0; j < nL; j++) {
-      const t = 0.3 + 0.65 * (j / Math.max(1, nL - 1));
-      const at = new THREE.Vector3(0, h * t, 0).applyMatrix4(rot);
-      geos.push(makeLeaf(rng, 0.16, 0.1, 1.05, j * 2.39996 + az, at, 'ovate'));
-    }
-  }
-  const g = mergeGeometries(geos, false);
-  normalizeUnit([g]);
-  applyFoliageGradient(g);
-  return g;
-}
-
 // Built once, reused across every scene rebuild (deterministic seeds).
 // ARCH holds the cheap shrub/peren/ground variant arrays; trees are built
 // lazily and memoised by (class, form, tier, sub) in TREE_CACHE.
@@ -345,7 +270,8 @@ function getTreeArch(cls, prof, form, tier, sub) {
   let a = TREE_CACHE.get(key);
   if (a) return a;
   // Blender GLB archetype first (09-models.js), procedural as the fallback.
-  a = (window.glbTreeArch && window.glbTreeArch(cls, ck, prof.id, form, tier)) || null;
+  a = (useGLB() && window.glbTreeArch
+       && window.glbTreeArch(cls, ck, prof.id, form, tier)) || null;
   if (!a) {
     if (cls === 'conifer') {
       const seed = 5000 + (_FORM_SEED[form] || 0) + tier * 11 + sub * 191 + (_CK_SEED[ck] || 0);
@@ -375,14 +301,14 @@ function getTreeArch(cls, prof, form, tier, sub) {
 // baked models — the procedural fallback really does draw three interchangeable
 // random tufts, so a hash is the honest answer there.
 function aspectBucket(p, kind) {
-  const i = window.glbLayerVariantIndex
+  const i = useGLB() && window.glbLayerVariantIndex
     ? window.glbLayerVariantIndex(kind, aspectVariantKeyFor(p, kind))
     : null;
   return i == null ? hashPid(p.plant_id) : i;
 }
 
 function groundcoverBucket(p) {
-  const i = window.glbLayerVariantIndex
+  const i = useGLB() && window.glbLayerVariantIndex
     ? window.glbLayerVariantIndex('groundcover', variantKeyFor(p, 'groundcover'))
     : null;
   return i == null ? hashPid(p.plant_id) : i;
@@ -393,11 +319,13 @@ function buildArchetypes() {
   // Shrubs (SHRUB_CACHE) and herbs (HERB_CACHE) are built per-profile on demand;
   // the rest are the cheap shared variant arrays.
   const ground = [], grass = [], aquatic = [], vine = [];
-  const glb = (kind, i) => window.glbLayerArch && window.glbLayerArch(kind, i);
+  const glb = (kind, i) =>
+    useGLB() && window.glbLayerArch && window.glbLayerArch(kind, i);
   // Groundcover ships one unit per (blade class × grain class) its 32 species
   // use, so the count comes from the manifest rather than a hard-coded 2. Two
   // procedural seeds remain the fallback when there are no baked models.
-  const nGround = (window.glbLayerCount && window.glbLayerCount('groundcover')) || 0;
+  const nGround = (useGLB() && window.glbLayerCount
+                   && window.glbLayerCount('groundcover')) || 0;
   if (nGround) {
     for (let i = 0; i < nGround; i++) ground.push(glb('groundcover', i));
   } else {
@@ -593,7 +521,7 @@ function getShrubArch(prof, v, vkey, morph) {
   const key = prof.id + '_' + v + '_' + vkey + '_q' + QUALITY;
   let a = SHRUB_CACHE.get(key);
   if (a) return a;
-  a = (window.glbShrubArch && window.glbShrubArch(prof.form, vkey)) ||
+  a = (useGLB() && window.glbShrubArch && window.glbShrubArch(prof.form, vkey)) ||
       buildShrubGeo(mulberry32(13 + v * 97 + prof.id.charCodeAt(0) * 7), prof,
                     morph);
   SHRUB_CACHE.set(key, a);
@@ -609,7 +537,7 @@ function getHerbArch(formName, v, vkey, morph) {
   const key = formName + '_' + v + '_' + vkey + '_q' + QUALITY;
   let a = HERB_CACHE.get(key);
   if (a) return a;
-  a = (window.glbHerbArch && window.glbHerbArch(formName, vkey)) ||
+  a = (useGLB() && window.glbHerbArch && window.glbHerbArch(formName, vkey)) ||
       buildPerennialGeo(mulberry32(29 + v * 89 + formName.charCodeAt(0) * 7),
                         HERB_FORMS[formName], morph);
   HERB_CACHE.set(key, a);
@@ -620,10 +548,15 @@ function getHerbArch(formName, v, vkey, morph) {
 // scene-record field names appear once. `arrangement`/`shape` stay empty where
 // the seed data has nothing to say, and the builders keep their tuned defaults —
 // an honest empty beats an invented leaf.
+// Stylised passes NO shape, which is the same switch a species with no recorded
+// morphology already takes: the builders fall back to their form's tuned
+// defaults, and buildShrubGeo's foliage positions become faceted masses again
+// (makeFoliageMass) rather than clusters of real leaves. Grain still varies,
+// because a plant with big leaves reads bigger-leaved even as a diagram.
 function morphOf(p, family) {
   return {
-    shape: p.leaf_shape || '',
-    arrangement: (p.leaf_arrangement || '').toLowerCase(),
+    shape: STYLISED ? '' : (p.leaf_shape || ''),
+    arrangement: STYLISED ? '' : (p.leaf_arrangement || '').toLowerCase(),
     grain: grainClassFor(p.leaf_size_cm, p.mature_height_m || p.height_m, family),
   };
 }
@@ -637,7 +570,7 @@ function buildHerbLayer(list, month, year, terrain) {
     // The variant key is part of the bucket key because it changes the geometry:
     // two species sharing a form but not a leaf would otherwise be instanced from
     // whichever of them the bucket happened to build first.
-    const vkey = variantKeyFor(p, 'herb');
+    const vkey = variantKeyFor(p, 'herb', formName);
     // Leaf surface joins the key for the same reason it does on trees: one mesh,
     // one material. It pays off most here — the woolly and silvery forbs
     // (pussytoes, pearly everlasting, the sages, silky lupine) are where a

@@ -188,7 +188,7 @@ class Map3DWidget(QWebEngineView):
         self.page().runJavaScript(map3d_js.models_ready(), callback)
 
     def set_quality(self, level: int):
-        """Set the viewer's geometry detail (0 Low · 1 Medium · 2 High)."""
+        """Set the viewer's geometry detail (0 Stylised · 1 Balanced · 2 Lifelike)."""
         self.run_js(map3d_js.set_quality(level))
 
     def set_bee_mode(self, on: bool):

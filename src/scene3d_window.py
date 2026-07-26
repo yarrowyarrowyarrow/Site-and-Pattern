@@ -38,8 +38,14 @@ _MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 _MONTH_FULL = ["January", "February", "March", "April", "May", "June",
                "July", "August", "September", "October", "November", "December"]
-_DETAIL_KEY = "viewer3d/detail"            # 0 Low · 1 Medium · 2 High (shared w/ gallery)
-_DETAIL_LABELS = ["Low", "Medium", "High"]
+# 0 Stylised · 1 Balanced · 2 Lifelike (shared with the sprite gallery).
+# Renamed from Low/Medium/High in V2.34: level 0 stopped being a thinned copy
+# of the same look and became a coherent low-poly STYLE — faceted foliage
+# masses, no baked models, no surface grain — so "Low" was telling the user
+# it was worse when it is a choice. The stored VALUE is unchanged, so an
+# existing setting carries over.
+_DETAIL_KEY = "viewer3d/detail"
+_DETAIL_LABELS = ["Stylised", "Balanced", "Lifelike"]
 
 
 class _TerrainWorker(QObject):
@@ -160,7 +166,11 @@ class Scene3DWindow(QWidget):
         self._detail = QComboBox()
         self._detail.addItems(_DETAIL_LABELS)
         self._detail.setToolTip(
-            "Geometry detail — lower it if the 3D view is sluggish on this machine")
+            "Stylised — faceted low-poly plants: a clear diagram of the "
+            "planting, and by far the fastest\n"
+            "Balanced — the built-in geometry\n"
+            "Lifelike — the full modelled library: real leaves, bark grain "
+            "and species silhouettes")
         self._detail.setCurrentIndex(
             max(0, min(2, int(QSettings().value(_DETAIL_KEY, 1)))))
         self._detail.currentIndexChanged.connect(self._on_detail)

@@ -8,7 +8,7 @@ iframe, or CORS dance. Scenes come from :func:`src.sprite_gallery.gallery_scenes
 (shared with the standalone ``html/sprite_gallery.html`` generator), so the app
 and the web gallery always show the same specimens.
 
-A Detail [Low · Medium · High] combo drives ``window.permaSetQuality`` so the
+A Detail [Stylised · Balanced · Lifelike] combo drives ``window.permaSetQuality`` so the
 view stays snappy on weak hardware; the choice persists via QSettings.
 
 **Contact sheet** (V2.29): a toggle that renders every listed sprite to a
@@ -38,8 +38,10 @@ from PyQt6.QtWidgets import (
 from src.map3d_widget import Map3DWidget
 from src.branding import APP_NAME
 
-_DETAIL_KEY = "viewer3d/detail"            # 0 Low · 1 Medium · 2 High (shared with 3D Preview)
-_DETAIL_LABELS = ["Low", "Medium", "High"]
+# 0 Stylised · 1 Balanced · 2 Lifelike (shared with 3D Preview; see
+# src/scene3d_window.py for why the labels changed in V2.34).
+_DETAIL_KEY = "viewer3d/detail"
+_DETAIL_LABELS = ["Stylised", "Balanced", "Lifelike"]
 _THUMB_PX = 240                            # rendered size; also the grid cell size
 
 

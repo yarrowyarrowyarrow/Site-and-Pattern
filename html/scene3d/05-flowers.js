@@ -700,13 +700,20 @@ window.permaSetScene = function (sc) {
 
 window.permaSetSun = function (azDeg, altDeg) { setSun(azDeg, altDeg); };
 
-// Detail / quality knob (V1.94): 0 Low · 1 Medium · 2 High. Drops the cached
-// archetypes (their density depends on QUALITY) and re-renders the current scene
-// at the new detail. Build-time only — per-frame cost is unchanged.
+// Detail / quality knob (V1.94): 0 Stylised · 1 Balanced · 2 Lifelike. Drops the
+// cached archetypes (their density AND, at level 0, their whole construction
+// depend on QUALITY) and re-renders the current scene. Build-time only —
+// per-frame cost is unchanged.
 window.permaSetQuality = function (level) {
   const q = Math.max(0, Math.min(2, level | 0));
   if (q === QUALITY) return;
   QUALITY = q;
+  // Level 0 is a STYLE, not a thinning (V2.34) — it skips the baked GLB library
+  // and the surface textures, so the shared materials have to go with the
+  // archetypes. Leaving MATS standing was the bug this line exists to prevent:
+  // the scene would rebuild as faceted masses still wearing veined leaf shaders.
+  setStylised(q === 0);
+  MATS = null;
   TREE_CACHE.clear();
   SHRUB_CACHE.clear();
   HERB_CACHE.clear();

@@ -215,6 +215,59 @@ class FlatLeafMaterialsTest(unittest.TestCase):
             "plantMaterial no longer maps opts.doubleSide onto THREE.DoubleSide")
 
 
+class StylisedModeTest(unittest.TestCase):
+    """Detail level 0 must be a coherent STYLE, not a thinned copy (V2.34).
+
+    The reason this is guarded at the source rather than in a render: every
+    piece of Stylised is a *negative* — no baked models, no morphology, no
+    surface texture — and a negative that quietly stops applying looks like a
+    slightly different scene, not like a broken one. The mode would rot back
+    into "level 1 with fewer triangles" and nobody would see it happen.
+    """
+
+    def test_every_glb_lookup_is_gated(self):
+        """A single ungated lookup puts a modelled tree in a faceted meadow."""
+        src = _read_js("04-quality.js")
+        for line_no, line in enumerate(src.splitlines(), 1):
+            for hook in ("glbTreeArch", "glbShrubArch", "glbHerbArch",
+                         "glbLayerArch", "glbLayerCount", "glbLayerVariantIndex"):
+                if "window." + hook + "(" not in line:
+                    continue
+                window = "\n".join(src.splitlines()[max(0, line_no - 4):line_no])
+                self.assertIn(
+                    "useGLB()", window,
+                    f"04-quality.js:{line_no} calls {hook} without a useGLB() "
+                    f"gate — Stylised would draw baked models it is defined as "
+                    f"not using")
+
+    def test_the_mode_reaches_geometry_materials_and_the_caches(self):
+        quality = _read_js("04-quality.js")
+        self.assertIn("if (STYLISED) return stylisedHerbGeo(", quality,
+                      "buildPerennialGeo lost its faceted path — level 0 would "
+                      "go back to building the same forb out of fewer blades")
+        self.assertIn("shape: STYLISED ? ''", quality,
+                      "morphOf stopped suppressing morphology, so buildShrubGeo "
+                      "would keep building real leaf clusters at level 0")
+        surface = _read_js("01b-surface.js")
+        self.assertIn("STYLISED ? '|s' : ''", surface,
+                      "surfaceMaterial's cache key stopped naming the mode, so "
+                      "one style would be served the other's materials")
+        flowers = _read_js("05-flowers.js")
+        self.assertIn("setStylised(q === 0)", flowers,
+                      "permaSetQuality no longer flips the style")
+        self.assertIn("MATS = null", flowers,
+                      "permaSetQuality drops the archetype caches but not MATS "
+                      "— the scene would rebuild as faceted masses still "
+                      "wearing veined leaf shaders")
+
+    def test_the_app_offers_the_style_by_name(self):
+        """'Low' told the user it was worse. It is a choice."""
+        with open(os.path.join(_ROOT, "src", "scene3d_window.py"),
+                  encoding="utf-8") as fh:
+            src = fh.read()
+        self.assertIn('_DETAIL_LABELS = ["Stylised", "Balanced", "Lifelike"]', src)
+
+
 def _read_js(name):
     with open(os.path.join(_HTML, "scene3d", name), encoding="utf-8") as fh:
         return fh.read()

@@ -58,15 +58,37 @@ def _variants_for(kind_forms, family):
         form = form_of(rec)
         if form not in out:
             continue
-        out[form].add(C.variant_key(
-            C.blade_class(rec.get("leaf_shape")),
-            C.grain_class(rec.get("leaf_size_cm"),
-                          rec.get("mature_height_m"), family)))
+        blade = C.blade_class(rec.get("leaf_shape"))
+        grain = C.grain_class(rec.get("leaf_size_cm"),
+                              rec.get("mature_height_m"), family)
+        # Herbs carry a third axis (V2.34): a species' own height ÷ canopy. Only
+        # the triples the catalogue USES are baked, which is what keeps a third
+        # axis from tripling the payload — 52 units to 96 rather than to 156.
+        if family == "herb" and form in C.ASPECT_HERB_FORMS:
+            out[form].add(C.herb_variant_key(
+                blade, grain,
+                C.herb_aspect_class(form, rec.get("mature_height_m"),
+                                    _canopy_m(rec))))
+        else:
+            out[form].add(C.variant_key(blade, grain))
     # Always include the neutral variant so there is a guaranteed fallback.
-    default = C.variant_key("broad", 1)
     for form in out:
-        out[form].add(default)
+        out[form].add(C.herb_variant_key("broad", 1, 1)
+                      if (family == "herb" and form in C.ASPECT_HERB_FORMS)
+                      else C.variant_key("broad", 1))
     return {form: sorted(keys) for form, keys in out.items()}
+
+
+def _canopy_m(rec):
+    """Mature canopy, defaulting to 1.5 x spacing exactly as db.plants does."""
+    for key, mul in (("mature_canopy_m", 1.0), ("spacing_m", 1.5)):
+        try:
+            v = float(rec.get(key) or 0)
+        except (TypeError, ValueError):
+            v = 0.0
+        if v > 0:
+            return v * mul
+    return 0.0
 
 
 def herb_variants():

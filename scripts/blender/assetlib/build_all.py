@@ -111,13 +111,14 @@ def build_asset(key, spec=None, seed_salt="", half_widths=None):
         for v, vkey in enumerate(spec["variant_keys"]):
             prefix = f"{C.VARIANT_PREFIX}{v}"
             root = make_empty(prefix, coll)
-            blade, grain = vkey.rsplit("_", 1)
+            blade, grain, _aspect = C.parse_herb_variant_key(vkey)
             parts = build_herb(form, rng, coll, name_prefix=prefix,
                                grain=int(grain), leaf_shape=C.BLADE_SHAPE[blade],
                                arrangement="opposite" if v % 2 else "alternate")
             objs = list(parts.values())
-            # Flat-leaf geometry: finish on the exact measured correction.
-            squash_to_aspect(objs, C.HERB_ASPECT[form])
+            # Flat-leaf geometry: finish on the exact measured correction — at
+            # THIS unit's aspect class (V2.34), not at one figure for the form.
+            squash_to_aspect(objs, C.herb_aspect_for(form, vkey))
             halves[prefix] = unit_frame(objs)
             for o in objs:
                 decimate_to_budget(o, _budget_for(spec))

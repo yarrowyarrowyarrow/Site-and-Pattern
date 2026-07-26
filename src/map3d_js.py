@@ -242,7 +242,7 @@ def set_bee_tour(on: bool) -> str:
 
 
 def set_quality(level: int) -> str:
-    """JS to set the viewer's geometry detail (0 Low · 1 Medium · 2 High). The
+    """JS to set the viewer's geometry detail (0 Stylised · 1 Balanced · 2 Lifelike). The
     viewer drops its archetype caches and re-renders the current scene at the new
     density (build-time only). Guarded with ``&&`` so it's a no-op until the scene
     registers ``window.permaSetQuality``."""

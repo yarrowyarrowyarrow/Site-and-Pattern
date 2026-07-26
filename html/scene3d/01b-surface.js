@@ -456,12 +456,49 @@ const _MAT_CACHE = {};
 // black. The two paths have always needed two materials for this reason; the
 // flag is what keeps that true now that the material is also per-surface-class.
 function surfaceMaterial(preset, cls, vc) {
-  const key = preset.key + '|' + cls + '|' + (vc ? 'c' : '');
+  const key = preset.key + '|' + cls + '|' + (vc ? 'c' : '') + (STYLISED ? '|s' : '');
   if (!_MAT_CACHE[key]) {
-    _MAT_CACHE[key] = plantMaterial(Object.assign({}, preset, {
-      vertexColors: !!vc,
-      detail: cls ? preset.detailKind + '.' + cls : preset.detailKind,
-    }));
+    _MAT_CACHE[key] = plantMaterial(Object.assign({}, preset, STYLISED
+      // Stylised drops the whole surface layer: no bark grain, no leaf veining,
+      // no stomatal band, and every face flat-shaded so the facets READ as
+      // facets. Half-measures are what this mode exists to avoid — a procedural
+      // vein pattern on a twenty-face icosahedron is neither a leaf nor a
+      // confident abstraction, it is a smudge.
+      ? { vertexColors: !!vc, detail: '', flatShading: true }
+      : { vertexColors: !!vc,
+          detail: cls ? preset.detailKind + '.' + cls : preset.detailKind }));
   }
   return _MAT_CACHE[key];
 }
+
+// ── Stylised (V2.34) ────────────────────────────────────────────────────────
+// Detail level 0 stopped being "the same look with fewer triangles" and became a
+// STYLE. The reason is an observation from the field: the faceted low-poly
+// plants that V2.29–V2.33 replaced read BETTER than what came after them at the
+// same distance — and that is not nostalgia, it is the uncanny valley. A faceted
+// green mass is a confident abstraction; the eye accepts it as a diagram of a
+// shrub and stops grading it. The moment geometry claims realism — real leaf
+// blades, real bark grain — the eye starts comparing it to an actual plant, and
+// everything still abstract (a 64-pixel unlit bloom, a straight stem) flips from
+// "stylised" to "broken".
+//
+// So the two ends are each internally coherent rather than one being a degraded
+// copy of the other: Stylised is diagrammatic all the way down, Lifelike is
+// specific all the way down, and Balanced is the middle the app shipped. This
+// also gives weak machines a real answer, which is what level 0 was for.
+//
+// Everything Stylised needs already existed — the procedural builders are the
+// permanent GLB fallback and makeFoliageMass survived at one call site — so the
+// mode is a switch, not a second renderer.
+let STYLISED = false;
+function setStylised(on) {
+  const v = !!on;
+  if (v === STYLISED) return false;
+  STYLISED = v;
+  // Materials are cached per (preset × class × vertex-colour) and the mode is
+  // now part of that identity; without the flush the scene would rebuild its
+  // geometry in the new style wearing the old style's materials.
+  for (const k in _MAT_CACHE) delete _MAT_CACHE[k];
+  return true;
+}
+window.permaStylised = () => STYLISED;

@@ -161,6 +161,20 @@ def _tri_count_under(gltf, root_idx):
     return total
 
 
+def _catalogue_canopy_m(rec):
+    """The mature spread a catalogue row implies — the mirror of
+    assetlib/manifest._canopy_m and of src/db/plants._row_to_dict, which both
+    default an unrecorded canopy to 1.5x the planting spacing."""
+    for key, mul in (("mature_canopy_m", 1.0), ("spacing_m", 1.5)):
+        try:
+            v = float(rec.get(key) or 0)
+        except (TypeError, ValueError):
+            v = 0.0
+        if v > 0:
+            return v * mul
+    return 0.0
+
+
 def _unit_count(entry):
     """How many variant units a manifest entry declares — a plain count for the
     layer kinds, one per (blade class, grain class) for herbs and shrubs."""
@@ -327,12 +341,22 @@ class ModelAssetsTest(unittest.TestCase):
             for rec in catalogue:
                 if rec.get("plant_type") not in types:
                     continue
-                entry = self.mf["plants"].get(f"{prefix}.{form_of(rec)}")
-                self.assertIsNotNone(entry, f"{prefix}.{form_of(rec)} missing")
-                want = conventions.variant_key(
-                    conventions.blade_class(rec.get("leaf_shape")),
-                    conventions.grain_class(rec.get("leaf_size_cm"),
-                                            rec.get("mature_height_m"), family))
+                form = form_of(rec)
+                entry = self.mf["plants"].get(f"{prefix}.{form}")
+                self.assertIsNotNone(entry, f"{prefix}.{form} missing")
+                blade = conventions.blade_class(rec.get("leaf_shape"))
+                grain = conventions.grain_class(rec.get("leaf_size_cm"),
+                                                rec.get("mature_height_m"),
+                                                family)
+                # Herbs carry the third (aspect) segment since V2.34.
+                if family == "herb" and form in conventions.ASPECT_HERB_FORMS:
+                    want = conventions.herb_variant_key(
+                        blade, grain,
+                        conventions.herb_aspect_class(
+                            form, rec.get("mature_height_m"),
+                            _catalogue_canopy_m(rec)))
+                else:
+                    want = conventions.variant_key(blade, grain)
                 self.assertIn(
                     want, entry.get("variant_keys", {}),
                     f"{rec.get('scientific_name')}: no baked {want} variant "
@@ -386,6 +410,64 @@ class ModelAssetsTest(unittest.TestCase):
         wanted = set(re.findall(r"key:\s*'(\w+)'", src))
         self.assertEqual(set(self.mf["fauna"]), wanted,
                          "manifest fauna keys != _GLB_CRITTER keys")
+
+    def test_herb_archetypes_carry_the_aspect_axis(self):
+        """The forms with an aspect axis must ship three-part keys, and the
+        viewer's breaks must be the generator's.
+
+        F65 gave grass/aquatic/vine an aspect axis and left the herbs with the
+        same disease, which is the worse case: 228 wildflowers whose real
+        height ÷ canopy runs 0.11 to 3.33 were all being drawn at one of seven
+        single figures, so a creeping phlox and an upright blazingstar came out
+        four and three times the wrong proportion. Getting the two classifiers
+        out of step is silent — the lookup falls back to the neutral unit and
+        the species just quietly loses its shape again (09-models.js
+        _glbVariant).
+        """
+        conventions = _assetlib_conventions()
+        if conventions is None:
+            self.skipTest("assetlib.conventions not importable")
+        herbs = {k.split(".", 1)[1]: e for k, e in self.mf["plants"].items()
+                 if k.startswith("herb.")}
+        self.assertTrue(herbs, "no herb archetypes in the manifest")
+        for form in conventions.ASPECT_HERB_FORMS:
+            self.assertIn(form, herbs, f"herb.{form} missing from the manifest")
+            keys = sorted(herbs[form].get("variant_keys", {}))
+            self.assertTrue(keys, f"herb.{form} has no variant keys")
+            for vkey in keys:
+                self.assertRegex(
+                    vkey, r"^[a-z]+_\d_a\d$",
+                    f"herb.{form}/{vkey} is not a (blade × grain × aspect) key "
+                    f"— rebuild html/assets/models")
+            aspects = {conventions.parse_herb_variant_key(k)[2] for k in keys}
+            self.assertTrue(
+                aspects <= {0, 1, 2},
+                f"herb.{form} bakes aspect classes {sorted(aspects)}")
+        # `fern` is deliberately OUTSIDE the axis: one species maps to it, and a
+        # class it cannot fill would be a fabricated difference, not a recorded
+        # one (P9). It must keep the two-part key.
+        for vkey in herbs.get("fern", {}).get("variant_keys", {}):
+            self.assertNotRegex(vkey, r"_a\d$",
+                                "herb.fern gained an aspect axis it has no "
+                                "species to fill")
+        # The viewer's copy of the breaks must agree with the generator's.
+        src = _read(os.path.join(_SCENE3D, "02-plants.js"))
+        block = re.search(r"const HERB_ASPECT_BREAKS = \{(.*?)\};", src, re.S)
+        self.assertIsNotNone(block, "02-plants.js lost HERB_ASPECT_BREAKS")
+        for form, (lo, hi) in conventions.HERB_ASPECT_BREAKS.items():
+            found = re.search(form + r":\s*\[([\d.]+),\s*([\d.]+)\]",
+                              block.group(1))
+            self.assertIsNotNone(found, f"viewer has no {form} aspect breaks")
+            self.assertAlmostEqual(float(found.group(1)), lo, places=3)
+            self.assertAlmostEqual(float(found.group(2)), hi, places=3)
+        self.assertEqual(
+            len(re.findall(r"(\w+):\s*\[", block.group(1))),
+            len(conventions.HERB_ASPECT_BREAKS),
+            "the viewer classifies a herb form the generator does not bake")
+        # …and the key the viewer builds must be the shape the generator parses.
+        self.assertIn("'_a' + herbAspectClassFor(", src,
+                      "02-plants.js variantKeyFor stopped emitting the aspect "
+                      "segment for herbs")
 
     # ── GLB structure ───────────────────────────────────────────────────────
 
@@ -513,13 +595,17 @@ class ModelAssetsTest(unittest.TestCase):
             self.skipTest("assetlib.conventions not importable")
         checked = 0
         for key, entry in self.mf["plants"].items():
-            # A layer carrying the aspect axis has three units at three DIFFERENT
+            # An archetype carrying the aspect axis holds units at DIFFERENT
             # target aspects, so measuring the file's union would compare the
             # widest unit against the pooled figure and prove nothing. Check each
-            # unit against its own class.
+            # unit against its own class. Two axes reach here: the layer one
+            # ('aspect_0'…, F65) and the herb one ('broad_1_a2', V2.34).
+            fam, _, form = key.partition(".")
+            per_unit = ((fam == "layer" and form in conventions.LAYER_ASPECT_CLASSES)
+                        or (fam == "herb" and form in conventions.ASPECT_HERB_FORMS))
             units = [(u, conventions.aspect_for(key, u))
-                     for u in sorted(entry.get("variant_keys", {}))
-                     if str(u).startswith("aspect_")]
+                     for u in sorted(entry.get("variant_keys", {}))] if per_unit else []
+            units = [(u, t) for u, t in units if t is not None]
             if units:
                 for unit, target in units:
                     hi_y, half = self._unit_bounds(entry, unit)

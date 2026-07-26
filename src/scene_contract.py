@@ -413,6 +413,11 @@ def build_scene(project: dict, *, year: int = 0,
             # archetype is chosen against the mature figure, or a plant's leaves
             # would change size class as it grew.
             "mature_height_m": st["mature_height_m"],
+            # …and the same argument for spread: a herb's baked aspect unit is
+            # chosen from mature height ÷ mature canopy (V2.34), so it must not
+            # change class as the colony fills in. `canopy_m` above is this
+            # year's footprint; this one is the species' figure.
+            "mature_canopy_m": st.get("mature_canopy_m") or 0,
             "leaf_shape": plant.get("leaf_shape") or "",
             "leaf_arrangement": plant.get("leaf_arrangement") or "",
             # Woody habit (schema v47): excurrent (one leader) / decurrent
