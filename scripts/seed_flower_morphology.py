@@ -58,6 +58,13 @@ THE FIELDS
   stem_branching       unbranched · branched_above · branched_throughout —
                        the fix for every forb stem being one straight rod.
   basal_rosette        0/1.
+  flowering_stems      How many inflorescences a MATURE plant carries (v54).
+                       Bloom display used to be sized off the plant's CANOPY,
+                       which is a proxy for spread and not for flowering: a
+                       pasqueflower holds two and a mature bergamot thirty, and
+                       "in full bloom" is mostly that number. No flora records
+                       it — the estimates here follow from the branching habit
+                       and are meant to be corrected in the field.
 
 SOURCING (P9)
 Assignment is BY GENUS, from the standard floral formulae and inflorescence
@@ -93,17 +100,30 @@ BRANCHINGS = ("unbranched", "branched_above", "branched_throughout")
 
 FIELDS = ("flower_arch", "flower_symmetry", "petal_shape", "petal_count",
           "florets_per_head", "flower_diameter_cm", "flower_center_color",
-          "flower_height_frac", "stem_branching", "basal_rosette")
+          "flower_height_frac", "stem_branching", "basal_rosette",
+          "flowering_stems")
 
 
 def F(arch, sym, shape, petals, florets, dia, centre,
-      height_frac=1.0, branching="branched_above", rosette=0):
-    """One flower description. Positional in the order the eye reads it."""
+      height_frac=1.0, branching="branched_above", rosette=0, stems=None):
+    """One flower description. Positional in the order the eye reads it.
+
+    ``stems`` is how many inflorescences a MATURE plant carries (schema v54).
+    It defaults from the branching habit, because that is a real structural
+    relationship — an unbranched forb holds one head per stem and a plant that
+    branches throughout holds one per branch tip — and because NO FLORA RECORDS
+    THE NUMBER. Where a genus is conspicuously more or less floriferous than its
+    habit implies, it is given explicitly. Every value here is an estimate meant
+    to be corrected in the field with scripts/tune_morphology.py.
+    """
+    if stems is None:
+        stems = {"unbranched": 4, "branched_above": 8,
+                 "branched_throughout": 14}.get(branching, 6)
     return {"flower_arch": arch, "flower_symmetry": sym, "petal_shape": shape,
             "petal_count": petals, "florets_per_head": florets,
             "flower_diameter_cm": dia, "flower_center_color": centre,
             "flower_height_frac": height_frac, "stem_branching": branching,
-            "basal_rosette": rosette}
+            "basal_rosette": rosette, "flowering_stems": stems}
 
 
 # ── Asteraceae ──────────────────────────────────────────────────────────────
@@ -115,7 +135,7 @@ _DAISY_YELLOW = F("head", "radial", "oval", 13, 60, 5.0, "#8a5a1e")
 GENUS = {
     # — Asteraceae, ray + disc —
     "Echinacea":     F("head", "radial", "narrow", 15, 90, 8.0, "#a4622a",
-                       branching="unbranched", rosette=1),
+                       branching="unbranched", rosette=1, stems=5),
     "Rudbeckia":     F("head", "radial", "oval", 12, 70, 7.0, "#3b2412",
                        branching="branched_above", rosette=1),
     "Ratibida":      F("head", "radial", "narrow", 6, 60, 5.0, "#6b4a20",
@@ -132,7 +152,7 @@ GENUS = {
     "Erigeron":      F("head", "radial", "narrow", 60, 90, 2.5, "#e5c65a",
                        branching="branched_above", rosette=1),
     "Symphyotrichum": F("head", "radial", "narrow", 25, 45, 2.5, "#e8b93a",
-                        branching="branched_throughout"),
+                        branching="branched_throughout", stems=40),
     "Aster":         F("head", "radial", "narrow", 25, 45, 2.5, "#e8b93a",
                        branching="branched_throughout"),
     "Eurybia":       F("head", "radial", "narrow", 15, 40, 3.0, "#e8b93a",
@@ -159,7 +179,7 @@ GENUS = {
                        branching="branched_above", rosette=1),
     # — Asteraceae, disc-only or rayless: no ray petals to draw —
     "Solidago":      F("panicle", "radial", "narrow", 10, 160, 0.6, "#e8c552",
-                       branching="branched_above"),
+                       branching="branched_above", stems=5),
     "Oligoneuron":   F("corymb", "radial", "narrow", 10, 130, 0.6, "#e8c552",
                        branching="branched_above"),
     "Euthamia":      F("corymb", "radial", "narrow", 12, 130, 0.5, "#e8c552",
@@ -169,7 +189,7 @@ GENUS = {
     "Gutierrezia":   F("panicle", "radial", "narrow", 6, 90, 0.6, "#e8c552",
                        branching="branched_throughout"),
     "Liatris":       F("spike", "radial", "narrow", 8, 30, 1.4, "#7b3f98",
-                       branching="unbranched"),
+                       branching="unbranched", stems=5),
     "Cirsium":       F("head", "radial", "tubular", 0, 120, 3.5, "#a05aa8",
                        branching="branched_above", rosette=1),
     "Antennaria":    F("corymb", "radial", "tubular", 0, 30, 0.7, "#efe6d8",
@@ -183,7 +203,7 @@ GENUS = {
 
     # — Fabaceae: the pea flower, bilateral, on a raceme —
     "Lupinus":       F("raceme", "bilateral", "lipped", 5, 40, 1.6, "",
-                       branching="unbranched"),
+                       branching="unbranched", stems=6),
     "Astragalus":    F("raceme", "bilateral", "lipped", 5, 18, 1.4, "",
                        branching="branched_above"),
     "Oxytropis":     F("raceme", "bilateral", "lipped", 5, 20, 1.6, "",
@@ -373,7 +393,7 @@ GENUS = {
 
     # — the rest, by genus —
     "Achillea":      F("corymb", "radial", "oval", 5, 200, 0.5, "#e8e0c0",
-                       branching="branched_above"),
+                       branching="branched_above", stems=16),
     "Asclepias":     F("umbel", "radial", "oval", 5, 60, 1.0, "",
                        branching="branched_above"),
     "Apocynum":      F("cyme", "radial", "oval", 5, 30, 0.6, "",
@@ -485,17 +505,18 @@ SPECIES_OVERRIDE = {
     # The sunflowers split hard on architecture: the annual holds ONE big head,
     # Maximilian's and the Jerusalem artichoke carry many up a branched stem.
     "Helianthus annuus": F("solitary", "radial", "oval", 22, 200, 14.0,
-                           "#5a3a12", branching="unbranched"),
+                           "#5a3a12", branching="unbranched", stems=1),
     # Wild bergamot's head is the classic ragged crown; horsemint is denser.
     "Monarda fistulosa": F("head", "bilateral", "lipped", 5, 28, 3.2, "#b06a9a",
-                           branching="branched_above"),
+                           branching="branched_above", stems=28),
     # Three-flowered avens is famous for its NODDING trio of closed bells, not
     # for an open five-petalled rose flower.
     "Geum triflorum": F("cyme", "radial", "oval", 5, 3, 1.4, "#a05a4a",
                         branching="unbranched", rosette=1),
     # Prairie crocus opens before its leaves, held alone on a hairy scape.
     "Pulsatilla nuttalliana": F("solitary", "radial", "oval", 6, 1, 6.5,
-                                "#e8c552", branching="unbranched", rosette=1),
+                                "#e8c552", branching="unbranched", rosette=1,
+                                stems=3),
     # Nodding onion is the one that nods; the others hold their umbels up.
     "Allium cernuum": F("umbel", "radial", "oval", 6, 40, 0.7, "",
                         branching="unbranched", rosette=1),

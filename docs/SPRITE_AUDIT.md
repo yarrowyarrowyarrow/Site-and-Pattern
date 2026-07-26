@@ -518,21 +518,52 @@ Middle: Lifelike — lupine racemes on their stems, yarrow corymbs as flat white
 plates, black-eyed Susans at their real 7 cm with a dark disc. Bottom: Stylised,
 which is not the middle one degraded but a different answer to the same scene.*
 
+**21 · Forb stems fork (V2.35).** `stem_branching` had been recorded on every
+described species since v53 and **nothing read it**: `flora_herbs.build_herb`
+stamped each stem as one `rot @ Vector((0,0,h))` segment. A goldenrod's
+silhouette *is* its two orders of branching, and drawn as a single pole it
+becomes a blazingstar. The stem is a skeleton now — forking low and wide for
+`branched_throughout` (an aster, a sunflower), holding a clean stem and opening
+only at the top for `branched_above` (a goldenrod, a bergamot), staying a rod
+for `unbranched` — and leaves are distributed along it in proportion to segment
+length, so a plant that puts most of its length into three top branches gets
+most of its leaves there.
+
+Only `erect` and `clump` take the axis; the other five forms are basal-leaved
+with bare scapes and have nothing to fork (P9). 96 units → 112, 4.4 → 5.5 MB.
+
+The one non-obvious cost: **a stem segment and a leaf come out of the same
+1,200-triangle allowance**, and `thin_leaf_nodes` spends stems first. The first
+build let a six-stemmed clump fork twice per stem, put ~40 cones on the plant
+and thinned its foliage to 328 triangles — which renders as a bare wire spray.
+Branching is budgeted per plant now, so a clump of six gets a simpler skeleton
+each than a single erect stem does. The spray is the whole plant, not each stem
+of it.
+
+**22 · A bloom count that comes from the plant (schema v54).** How many
+inflorescences a mature plant carries is most of what "in full bloom" looks
+like, and the viewer was deriving it from CANOPY — a proxy for spread, not for
+flowering. `flowering_stems` records it; where it is empty the fallback is now
+the **branching habit** (one head per stem when the stem doesn't fork, one per
+branch tip when it does), which is at least a structural consequence rather than
+a guess. Both are scaled by the plant's own growth, so a first-year plug does
+not flower like an established clump.
+
+No flora records this number. The seeded values follow from the branching habit
+with per-genus corrections where a plant is conspicuously more or less
+floriferous than its habit implies — a pasqueflower holds three, a mature
+bergamot twenty-eight, an annual sunflower exactly one. **They are estimates,
+and the tuning bench exists to correct them.**
+
 ### Still open after the fourth pass
 
-- **Forb stems are single straight rods.** `flora_herbs.build_herb` stamps each
-  stem as one segment. `stem_branching` is recorded for all 307 described
-  species and **nothing reads it yet** — real forbs branch, and a goldenrod's
-  silhouette *is* its branching. This is the next clear win.
-- **No species records how many flowering stems it carries.** Head counts are
-  scaled off canopy, which is the closest honest proxy and not the real number.
-  It is one of the four things worth going out and counting (below).
-- **A tuning tool.** Ten characters × 434 species is the bottleneck, and it is
-  not a coding bottleneck. A live-render-beside-reference-photo panel with ~8
-  sliders, writing straight to `data/plants_master.json`, is what makes the
-  catalogue finishable by someone who knows the plants.
 - **Shrub aspect within a silhouette**, unchanged from the third pass.
 - **Fern density**, unchanged.
+- **Fruit is still a billboard**, unchanged.
+- **The four field numbers.** `flower_diameter_cm`, `petal_count`,
+  `flowering_stems` and `flower_height_frac` are seeded from genus-level
+  botanical judgement, not measured. They are the four floras skip and the four
+  the generator most needs — see below.
 
 ### What would move fidelity fastest from here (not code)
 

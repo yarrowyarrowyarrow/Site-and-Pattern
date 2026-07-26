@@ -194,7 +194,7 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # reseed wipe entry, and no second copy to drift. schema.sql DROPs and recreates
 # it on every init_db, so the definition can evolve without a migration; the
 # version bump is here because schema.sql changed, per CLAUDE.md.
-_SCHEMA_VERSION = 53
+_SCHEMA_VERSION = 54
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -453,6 +453,20 @@ def _migrate_to_v42(conn: sqlite3.Connection):
             conn.execute(f"ALTER TABLE {table} ADD COLUMN native_provinces TEXT")
         except sqlite3.OperationalError:
             pass  # column already present
+    conn.commit()
+
+
+def _migrate_to_v54(conn: sqlite3.Connection):
+    """How many inflorescences a mature plant carries (V2.35).
+
+    Additive and nullable. Empty falls back to a count derived from
+    stem_branching and stature in the viewer, so an unmigrated or unseeded
+    install draws a sensible plant rather than a bare one.
+    """
+    try:
+        conn.execute("ALTER TABLE plants ADD COLUMN flowering_stems INTEGER")
+    except sqlite3.OperationalError:
+        pass              # already present -> fresh install / already migrated
     conn.commit()
 
 
@@ -1083,6 +1097,7 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("flower_height_frac"),
             p.get("stem_branching", ""),
             1 if p.get("basal_rosette") else 0,
+            p.get("flowering_stems"),
         ))
 
     conn.executemany(
@@ -1107,10 +1122,11 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             bark_texture, leaf_surface, inflorescence_form,
             flower_arch, flower_symmetry, petal_shape, petal_count,
             florets_per_head, flower_diameter_cm, flower_center_color,
-            flower_height_frac, stem_branching, basal_rosette)
+            flower_height_frac, stem_branching, basal_rosette,
+            flowering_stems)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
                    ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-                   ?,?,?,?,?,?,?,?,?,?)""",
+                   ?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -1216,6 +1232,9 @@ def init_db() -> None:
 
         if current_version < 53:
             _migrate_to_v53(conn)
+
+        if current_version < 54:
+            _migrate_to_v54(conn)
 
         # Add parent_id to polycultures if missing
         try:

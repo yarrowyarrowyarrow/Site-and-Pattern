@@ -348,13 +348,16 @@ class ModelAssetsTest(unittest.TestCase):
                 grain = conventions.grain_class(rec.get("leaf_size_cm"),
                                                 rec.get("mature_height_m"),
                                                 family)
-                # Herbs carry the third (aspect) segment since V2.34.
+                # Herbs carry the third (aspect) segment since V2.34, and the
+                # two forms with a stem a fourth (branch) since V2.35.
                 if family == "herb" and form in conventions.ASPECT_HERB_FORMS:
                     want = conventions.herb_variant_key(
                         blade, grain,
                         conventions.herb_aspect_class(
                             form, rec.get("mature_height_m"),
-                            _catalogue_canopy_m(rec)))
+                            _catalogue_canopy_m(rec)),
+                        conventions.branch_class(rec.get("stem_branching"))
+                        if form in conventions.BRANCH_HERB_FORMS else None)
                 else:
                     want = conventions.variant_key(blade, grain)
                 self.assertIn(
@@ -434,11 +437,14 @@ class ModelAssetsTest(unittest.TestCase):
             self.assertIn(form, herbs, f"herb.{form} missing from the manifest")
             keys = sorted(herbs[form].get("variant_keys", {}))
             self.assertTrue(keys, f"herb.{form} has no variant keys")
+            stemmed = form in conventions.BRANCH_HERB_FORMS
+            pattern = r"^[a-z]+_\d_a\d_b\d$" if stemmed else r"^[a-z]+_\d_a\d$"
             for vkey in keys:
                 self.assertRegex(
-                    vkey, r"^[a-z]+_\d_a\d$",
-                    f"herb.{form}/{vkey} is not a (blade × grain × aspect) key "
-                    f"— rebuild html/assets/models")
+                    vkey, pattern,
+                    f"herb.{form}/{vkey} is not a (blade × grain × aspect"
+                    + (" × branch)" if stemmed else ")")
+                    + " key — rebuild html/assets/models")
             aspects = {conventions.parse_herb_variant_key(k)[2] for k in keys}
             self.assertTrue(
                 aspects <= {0, 1, 2},
@@ -468,6 +474,54 @@ class ModelAssetsTest(unittest.TestCase):
         self.assertIn("'_a' + herbAspectClassFor(", src,
                       "02-plants.js variantKeyFor stopped emitting the aspect "
                       "segment for herbs")
+
+    def test_stemmed_herb_forms_carry_the_branching_axis(self):
+        """`stem_branching` was recorded at schema v53 and read by nothing.
+
+        Every forb stem was one straight rod, so a goldenrod — whose silhouette
+        IS two orders of branching — came out as a blazingstar. Only the two
+        forms that HAVE a stem take the axis; the rest are basal-leaved with
+        bare scapes and a class they cannot fill would be a fabricated
+        difference (P9). The failure mode is the usual silent one: a key the
+        manifest doesn't carry degrades to the neutral unit, which is the
+        straight rod again.
+        """
+        conventions = _assetlib_conventions()
+        if conventions is None:
+            self.skipTest("assetlib.conventions not importable")
+        herbs = {k.split(".", 1)[1]: e for k, e in self.mf["plants"].items()
+                 if k.startswith("herb.")}
+        for form in conventions.BRANCH_HERB_FORMS:
+            self.assertIn(form, herbs)
+            keys = sorted(herbs[form].get("variant_keys", {}))
+            classes = {conventions.parse_herb_branch(k) for k in keys}
+            self.assertGreater(
+                len(classes), 1,
+                f"herb.{form} bakes only branch class {classes} — every one of "
+                f"its species would be drawn with the same stem")
+            self.assertTrue(classes <= {0, 1, 2})
+            # The neutral fallback must be the STRAIGHT rod, so a species with
+            # no recorded branching gets exactly the pre-axis geometry.
+            self.assertIn(conventions.herb_variant_key("broad", 1, 1, 0), keys,
+                          f"herb.{form} lost its unbranched neutral unit")
+        for form, entry in herbs.items():
+            if form in conventions.BRANCH_HERB_FORMS:
+                continue
+            for vkey in entry.get("variant_keys", {}):
+                self.assertNotRegex(
+                    vkey, r"_b\d$",
+                    f"herb.{form} gained a branching axis but has no stem")
+        # The viewer's copy of the vocabulary must be the generator's, in order
+        # — the class is an INDEX into it at both ends.
+        src = _read(os.path.join(_SCENE3D, "02-plants.js"))
+        block = re.search(r"const BRANCH_CLASSES = \[(.*?)\];", src, re.S)
+        self.assertIsNotNone(block, "02-plants.js lost BRANCH_CLASSES")
+        self.assertEqual(re.findall(r"'(\w+)'", block.group(1)),
+                         list(conventions.BRANCH_CLASSES))
+        forms = re.search(r"const BRANCH_HERB_FORMS = \[(.*?)\];", src, re.S)
+        self.assertIsNotNone(forms, "02-plants.js lost BRANCH_HERB_FORMS")
+        self.assertEqual(set(re.findall(r"'(\w+)'", forms.group(1))),
+                         set(conventions.BRANCH_HERB_FORMS))
 
     # ── GLB structure ───────────────────────────────────────────────────────
 

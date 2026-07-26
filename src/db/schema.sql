@@ -155,7 +155,17 @@ CREATE TABLE IF NOT EXISTS plants (
                                         -- foliage, as a fraction of height
     stem_branching TEXT DEFAULT '',     -- unbranched|branched_above|
                                         -- branched_throughout
-    basal_rosette INTEGER DEFAULT 0     -- 0/1
+    basal_rosette INTEGER DEFAULT 0,    -- 0/1
+    -- How many inflorescences a MATURE plant carries (schema v54, V2.35). The
+    -- 3D viewer sized its bloom display off the plant's canopy, which is a
+    -- proxy for spread and not for flowering: a pasqueflower holds two flowers
+    -- and a mature bergamot thirty, and "in full bloom" is mostly that number.
+    -- No flora records it — it is one of the four things worth going out and
+    -- counting (see docs/SPRITE_AUDIT.md), so these are genus-level estimates
+    -- meant to be corrected with scripts/tune_morphology.py. Empty falls back
+    -- to a count derived from stem_branching + stature, which is at least a
+    -- structural consequence rather than a guess.
+    flowering_stems INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS companion_friends (

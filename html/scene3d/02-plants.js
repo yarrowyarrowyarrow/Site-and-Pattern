@@ -570,18 +570,38 @@ function herbAspectClassFor(p, form) {
   return ratio < br[0] ? 0 : (ratio < br[1] ? 1 : 2);
 }
 
+// ── stem branching (V2.35) ──────────────────────────────────────────────────
+// The mirror of assetlib/conventions.branch_class. Recorded since schema v53
+// and read by nothing until now: every forb stem was one straight rod, so a
+// goldenrod — whose silhouette IS its two orders of branching — came out as a
+// blazingstar. Only `erect` and `clump` have a stem to fork; the rest are
+// basal-leaved with bare scapes, and a class they cannot fill would be a
+// fabricated difference (P9).
+//
+// Unknown lands on 0 (unbranched), which is exactly the pre-axis geometry —
+// NOT on the commonest recorded value, which would put invented branching on
+// the eight species that record none.
+const BRANCH_CLASSES = ['unbranched', 'branched_above', 'branched_throughout'];
+const BRANCH_HERB_FORMS = ['erect', 'clump'];
+function branchClassFor(p) {
+  const i = BRANCH_CLASSES.indexOf((p.stem_branching || '').toLowerCase());
+  return i < 0 ? 0 : i;
+}
+
 // 'broad_1' etc. — the manifest's variant_keys are indexed by exactly this.
 // Against MATURE height, not this year's: leaf size is a fixed species character,
 // so a seedling's leaves must not sit in a different class from the adult's.
-// Herbs carry a third segment ('broad_1_a2'), so `form` is passed in by the herb
-// caller; without it a herb key stays the two-part pre-axis shape, which the
-// generator still parses (conventions.parse_herb_variant_key) as the middle
-// aspect — i.e. exactly the old geometry rather than a missing lookup.
+// Herbs carry a third segment ('broad_1_a2') and, on the two forms with a stem,
+// a fourth ('broad_1_a2_b1'), so `form` is passed in by the herb caller; without
+// it a herb key stays the two-part pre-axis shape, which the generator still
+// parses (conventions.parse_herb_variant_key) as the middle aspect — i.e.
+// exactly the old geometry rather than a missing lookup.
 function variantKeyFor(p, family, form) {
   const base = bladeClassFor(p.leaf_shape) + '_'
     + grainClassFor(p.leaf_size_cm, p.mature_height_m || p.height_m, family);
-  if (family === 'herb' && form && HERB_ASPECT_BREAKS[form])
-    return base + '_a' + herbAspectClassFor(p, form);
-  return base;
+  if (family !== 'herb' || !form || !HERB_ASPECT_BREAKS[form]) return base;
+  const key = base + '_a' + herbAspectClassFor(p, form);
+  return BRANCH_HERB_FORMS.indexOf(form) >= 0
+    ? key + '_b' + branchClassFor(p) : key;
 }
 

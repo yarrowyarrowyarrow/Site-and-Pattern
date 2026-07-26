@@ -65,17 +65,27 @@ def _variants_for(kind_forms, family):
         # the triples the catalogue USES are baked, which is what keeps a third
         # axis from tripling the payload — 52 units to 96 rather than to 156.
         if family == "herb" and form in C.ASPECT_HERB_FORMS:
+            # ...and a fourth on the two forms that HAVE a stem to fork
+            # (V2.35). A goldenrod's plume is two orders of branching and was
+            # being drawn as a pole. Same discipline again: only the quadruples
+            # the catalogue uses get baked, and branching correlates hard with
+            # the other three, so it is 96 units to ~110 rather than to 288.
             out[form].add(C.herb_variant_key(
                 blade, grain,
                 C.herb_aspect_class(form, rec.get("mature_height_m"),
-                                    _canopy_m(rec))))
+                                    _canopy_m(rec)),
+                C.branch_class(rec.get("stem_branching"))
+                if form in C.BRANCH_HERB_FORMS else None))
         else:
             out[form].add(C.variant_key(blade, grain))
-    # Always include the neutral variant so there is a guaranteed fallback.
+    # Always include the neutral variant so there is a guaranteed fallback. Its
+    # branch class is 0 — one straight rod, i.e. exactly the pre-axis geometry.
     for form in out:
-        out[form].add(C.herb_variant_key("broad", 1, 1)
-                      if (family == "herb" and form in C.ASPECT_HERB_FORMS)
-                      else C.variant_key("broad", 1))
+        if family == "herb" and form in C.ASPECT_HERB_FORMS:
+            out[form].add(C.herb_variant_key(
+                "broad", 1, 1, 0 if form in C.BRANCH_HERB_FORMS else None))
+        else:
+            out[form].add(C.variant_key("broad", 1))
     return {form: sorted(keys) for form, keys in out.items()}
 
 

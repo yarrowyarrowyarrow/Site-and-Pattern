@@ -609,3 +609,71 @@ function makeBlade(rng, h, wb, lean, erect) {
   return g;
 }
 
+
+// ── forked forb stems (V2.35) ───────────────────────────────────────────────
+// The viewer's copy of assetlib/flora_herbs._branch_skeleton, for the procedural
+// path (the baked GLB units carry the fork in their geometry). `stem_branching`
+// has been in the catalogue since schema v53 and nothing read it: every forb
+// stem was one straight rod, so a goldenrod — two orders of branching, which is
+// most of what its silhouette IS — came out as a blazingstar.
+//
+// Returns spans in the stem's own frame (+Y up, base at the origin); the caller
+// rotates them into place. Anything but a recognised branching value gives one
+// straight span, which is exactly the pre-axis geometry (P9: no data, no
+// invented fork).
+function branchSpans(rng, h, branching, budget) {
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  const base = V(0, 0, 0);
+  if (branching !== 'branched_above' && branching !== 'branched_throughout')
+    return [[base, V(0, h, 0)]];
+  const deep = branching === 'branched_throughout';
+  // A plant that branches throughout forks LOW and spreads wide (an aster, a
+  // sunflower); one that branches above holds a clean stem and opens only at
+  // the top (a goldenrod, a bergamot).
+  const first = deep ? 0.34 : 0.60, spread = deep ? 0.26 : 0.17;
+  const fork = V(0, h * first, 0);
+  const out = [[base, fork]];
+  // `budget` caps the segments, because each one costs geometry the LEAVES
+  // come from: an unbudgeted six-stemmed clump forking twice put forty cones on
+  // the plant and thinned its foliage to a bare wire spray. The spray is the
+  // whole plant, not each stem of it.
+  const b = Math.max(2, budget || 12);
+  let n = Math.max(1, Math.min(deep ? 4 : 3, b - 1));
+  if (deep) n = Math.max(1, Math.min(n, Math.floor((b - 1) / 2)));
+  for (let i = 0; i < n; i++) {
+    const az = (i / n) * Math.PI * 2 + rng() * 0.8;
+    const r = spread * h * (0.6 + rng() * 0.8);
+    const top = h * first + h * (1 - first) * (0.70 + rng() * 0.45);
+    const tip = V(Math.cos(az) * r, top, Math.sin(az) * r);
+    if (!deep) { out.push([fork, tip]); continue; }
+    // A second order, because one order reads as a candelabra and a
+    // branched-throughout forb is a spray.
+    const mid = fork.clone().lerp(tip, 0.45 + rng() * 0.2);
+    out.push([fork, mid]);
+    const subs = Math.max(1, Math.min(3,
+      Math.floor((b - out.length) / Math.max(1, n - i))));
+    for (let j = 0; j < subs; j++) {
+      const az2 = az + (j - 0.5) * 0.9 + (rng() - 0.5) * 0.5;
+      const r2 = spread * h * 0.5 * (0.6 + rng() * 0.7);
+      out.push([mid, V(mid.x + Math.cos(az2) * r2,
+                       mid.y + (tip.y - mid.y) * (0.7 + rng() * 0.5),
+                       mid.z + Math.sin(az2) * r2)]);
+    }
+  }
+  return out;
+}
+
+// A point at fraction `t` of the way along the whole skeleton, so leaves are
+// distributed in proportion to segment length: a plant that puts most of its
+// length into three top branches gets most of its leaves there.
+function alongSpans(spans, total, t) {
+  let d = Math.max(0, Math.min(1, t)) * (total || 1), run = 0;
+  for (let i = 0; i < spans.length; i++) {
+    const [a, b] = spans[i];
+    const ln = a.distanceTo(b);
+    if (d <= run + ln || i === spans.length - 1)
+      return a.clone().lerp(b, ln > 1e-6 ? Math.min(1, (d - run) / ln) : 0);
+    run += ln;
+  }
+  return spans[0][0].clone();
+}

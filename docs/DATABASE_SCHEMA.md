@@ -64,8 +64,9 @@ One row per species. Key columns (full list in the DDL):
 | `flower_diameter_cm` | ONE floret across (v53). The most valuable number the catalogue was missing: bloom size used to be derived from *canopy*, so a pasqueflower and a sunflower scaled with the plant rather than with the flower |
 | `flower_center_color` | The disc/eye (v53). A black-eyed Susan **is** its dark disc; it was a yellow blob |
 | `flower_height_frac` | How far the bloom is held above the foliage, as a fraction of height (v53) |
-| `stem_branching` | unbranched \| branched_above \| branched_throughout (v53). Recorded ahead of the builder that will read it — forb stems are still single straight rods |
+| `stem_branching` | unbranched \| branched_above \| branched_throughout (v53). **Read since V2.35**: the stem is a forked skeleton, and a goldenrod's silhouette IS its two orders of branching. Only the `erect` and `clump` growth forms have a stem to fork |
 | `basal_rosette` | 0/1 (v53) |
+| `flowering_stems` | How many inflorescences a MATURE plant carries (v54). Bloom display used to be sized off the plant's *canopy*, which is a proxy for spread and not for flowering: a pasqueflower holds three and a mature bergamot twenty-eight. **No flora records this** — the seeded values follow from the branching habit and are meant to be corrected in the field with `scripts/tune_morphology.py`. Empty falls back to a count derived from `stem_branching` |
 
 Morphology is authored in two companion scripts, each documenting its fields
 and where the values come from:

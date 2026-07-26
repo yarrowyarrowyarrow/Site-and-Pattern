@@ -470,30 +470,87 @@ def herb_aspect_class(form, height_m, canopy_m):
     return 0 if ratio < breaks[0] else (1 if ratio < breaks[1] else 2)
 
 
-def herb_variant_key(blade, grain, aspect):
-    """Stable name for one (blade × grain × aspect) herb variant.
+# ── the stem-branching axis (V2.35) ─────────────────────────────────────────
+#
+# `stem_branching` has been recorded on every described species since schema v53
+# and nothing read it: every forb stem was one straight rod
+# (`rot @ Vector((0,0,h))`). But a goldenrod's silhouette IS its branching — the
+# plume is two orders of forking, and drawn as a single pole it becomes a
+# blazingstar. 126 species carry a stem to branch and they split three ways:
+#
+#     erect   unbranched 29 · branched_above 44 · branched_throughout  2
+#     clump   unbranched  2 · branched_above 18 · branched_throughout 23
+#
+# Only the two forms with stems take the axis. `ferny`, `rosette`, `grassy`,
+# `mat` and `fern` are basal-leaved with bare scapes — they have nothing to
+# fork, and a class they cannot fill is a fabricated difference (P9).
+#
+# Cost is small for the usual reason: only the (blade × grain × aspect × branch)
+# quadruples the catalogue actually uses are baked, and branching correlates
+# hard with the other three. 96 units → ~110, about 4.4 → 5.1 MB.
+BRANCH_CLASSES = ("unbranched", "branched_above", "branched_throughout")
+# Which forms have a stem at all (HERB_FORMS[...]["stems"] is non-empty).
+BRANCH_HERB_FORMS = ("erect", "clump")
 
-    The aspect segment carries an `a` prefix so a key stays unambiguously
-    parseable by rsplit and a two-part shrub/groundcover key can never be
-    mistaken for a three-part herb one.
+
+def branch_class(stem_branching):
+    """0 unbranched · 1 branched above · 2 branched throughout.
+
+    Unknown lands on 0, which is EXACTLY the single straight rod every forb was
+    built as before the axis existed. Defaulting to the commonest recorded value
+    instead would put invented branching on the eight species that record none
+    (P9 — an honest empty, never a plausible guess)."""
+    try:
+        return BRANCH_CLASSES.index((stem_branching or "").strip().lower())
+    except ValueError:
+        return 0
+
+
+def herb_variant_key(blade, grain, aspect, branch=None):
+    """Stable name for one (blade × grain × aspect [× branch]) herb variant.
+
+    The aspect and branch segments carry `a`/`b` prefixes so a key stays
+    unambiguously parseable by rsplit and a two-part shrub/groundcover key can
+    never be mistaken for a herb one. `branch` is omitted on the forms with no
+    stem to fork, so those keys keep their three-part shape.
     """
-    return f"{blade}_{int(grain)}_a{int(aspect)}"
+    key = f"{blade}_{int(grain)}_a{int(aspect)}"
+    return key if branch is None else f"{key}_b{int(branch)}"
 
 
 def parse_herb_variant_key(vkey):
-    """('broad', 1, 2) from 'broad_1_a2'. Tolerates the pre-axis two-part key,
-    which lands on the middle aspect class — i.e. exactly the old geometry."""
-    parts = str(vkey).split("_")
+    """('broad', 1, 2) from 'broad_1_a2' or 'broad_1_a2_b1'.
+
+    Deliberately still a 3-tuple: the branch class is read separately by
+    :func:`parse_herb_branch`, so every existing caller keeps working. Tolerates
+    the pre-axis two-part key, which lands on the middle aspect class — i.e.
+    exactly the old geometry."""
+    parts = [p for p in str(vkey).split("_") if not p.startswith("b")
+             or not p[1:].isdigit()]
     if len(parts) >= 3 and parts[-1].startswith("a"):
         try:
             return parts[0], int(parts[-2]), int(parts[-1][1:])
         except ValueError:
             pass
-    blade, _, grain = str(vkey).rpartition("_")
+    blade, _, grain = "_".join(parts).rpartition("_")
     try:
         return blade, int(grain), 1
     except ValueError:
         return "broad", 1, 1
+
+
+def parse_herb_branch(vkey):
+    """The branch class one baked herb unit is authored at, or 0 (a straight
+    rod) for a key that carries no branch segment."""
+    tail = str(vkey).rsplit("_", 1)[-1]
+    if tail.startswith("b") and tail[1:].isdigit():
+        return max(0, min(len(BRANCH_CLASSES) - 1, int(tail[1:])))
+    return 0
+
+
+def herb_branching_for(vkey):
+    """The `stem_branching` value one baked herb unit is authored at."""
+    return BRANCH_CLASSES[parse_herb_branch(vkey)]
 
 
 def herb_aspect_for(form, vkey):

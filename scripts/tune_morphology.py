@@ -30,6 +30,13 @@ seeder only if you also record it there. **Values you tune here are yours, not
 the seeder's** — see `--report`, which prints the diff so it can be folded back
 into SPECIES_OVERRIDE.
 
+THE FOUR NUMBERS WORTH GOING OUTSIDE FOR
+Floras give ranges for height and skip these entirely, and they are the four the
+generator most needs: **flower diameter in cm**, **petals or rays on one
+floret**, **flowering stems on a mature plant**, and **how far the flowers sit
+above the leaves**. A tape measure and a plant in bloom beat any amount of
+reading.
+
 P12: nothing here asks for or stores traditional, cultural or Indigenous
 knowledge of a plant. It records the botanical description of a flower.
 """
@@ -54,7 +61,8 @@ _HTML = os.path.join(_ROOT, "html")
 # The columns this tool edits. Everything else in the record is left alone.
 FIELDS = ("flower_arch", "flower_symmetry", "petal_shape", "petal_count",
           "florets_per_head", "flower_diameter_cm", "flower_center_color",
-          "flower_height_frac", "stem_branching", "basal_rosette")
+          "flower_height_frac", "stem_branching", "basal_rosette",
+          "flowering_stems")
 
 
 def _load():
@@ -176,7 +184,8 @@ class _Handler(SimpleHTTPRequestHandler):
             if f not in patch:
                 continue
             v = patch[f]
-            if f in ("petal_count", "florets_per_head", "basal_rosette"):
+            if f in ("petal_count", "florets_per_head", "basal_rosette",
+                     "flowering_stems"):
                 v = None if v in ("", None) else int(v)
             elif f in ("flower_diameter_cm", "flower_height_frac"):
                 v = None if v in ("", None) else round(float(v), 3)

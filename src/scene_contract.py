@@ -407,6 +407,13 @@ def build_scene(project: dict, *, year: int = 0,
             "flower_diameter_cm": plant.get("flower_diameter_cm"),
             "flower_center_color": plant.get("flower_center_color") or "",
             "flower_height_frac": plant.get("flower_height_frac"),
+            # How many inflorescences a mature plant carries (schema
+            # v54) — the number "in full bloom" mostly IS, and the one
+            # the viewer used to derive from canopy.
+            "flowering_stems": plant.get("flowering_stems"),
+            # …and how the stem forks (v53), read since V2.35 by both
+            # the baked units and the procedural builder.
+            "stem_branching": plant.get("stem_branching") or "",
             **_fruit_window(plant),
             # Botanical morphology (schema v47, V2.29) — additive fields the
             # viewer feature-checks, so no SCENE_VERSION bump. Empty for every

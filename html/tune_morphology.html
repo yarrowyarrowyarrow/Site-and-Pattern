@@ -97,6 +97,9 @@
     <label>Held above the foliage <span class="val" id="v_flower_height_frac"></span></label>
     <input type="range" id="flower_height_frac" min="0.3" max="1.3" step="0.01">
 
+    <label>Flowering stems on a mature plant <span class="val" id="v_flowering_stems"></span></label>
+    <input type="range" id="flowering_stems" min="1" max="60" step="1">
+
     <label>Disc / eye colour</label>
     <input type="color" id="flower_center_color">
 
@@ -115,9 +118,10 @@
     <div id="status"></div>
     <div class="hint">
       ← / → pages species. The render is the real viewer at year 6, July.
-      Judge <em>flower diameter</em> and <em>petals</em> against the photo
-      first — they are the two the floras most often omit and the two the eye
-      counts first.
+      The four floras skip — and the four this most needs — are
+      <em>flower diameter</em>, <em>petals</em>, <em>flowering stems</em> and
+      <em>height above the foliage</em>. A tape measure and a plant in bloom
+      beat any amount of reading.
     </div>
   </div>
   <div class="pane" id="photo">
@@ -130,9 +134,9 @@
 <script>
 const FIELDS = ['flower_arch','flower_symmetry','petal_shape','petal_count',
   'florets_per_head','flower_diameter_cm','flower_center_color',
-  'flower_height_frac','stem_branching','basal_rosette'];
+  'flower_height_frac','stem_branching','basal_rosette','flowering_stems'];
 const RANGES = ['petal_count','florets_per_head','flower_diameter_cm',
-                'flower_height_frac'];
+                'flower_height_frac','flowering_stems'];
 let SPECIES = [], shown = [], idx = 0, dirty = false;
 
 const $ = (id) => document.getElementById(id);

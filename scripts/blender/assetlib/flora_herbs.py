@@ -119,8 +119,123 @@ def _rint(rng, lo, hi):
     return lo + int(rng.random() * (hi - lo + 1))
 
 
+# ── stem branching (V2.35) ──────────────────────────────────────────────────
+#
+# Every forb stem used to be ONE straight rod, `rot @ Vector((0, 0, h))`. That
+# is right for a blazingstar and wrong for most of the catalogue: a goldenrod's
+# silhouette IS its branching — the plume is two orders of forking — and drawn
+# as a single pole it becomes a blazingstar. `stem_branching` has been recorded
+# on every described species since schema v53 and nothing read it.
+#
+# Radii per branching order. Real herbaceous stems are FINE (a fireweed's is
+# ~4 mm on a 1.4 m plant), and each order is thinner than the one it left.
+_ORDER_RADII = ((0.0050, 0.0035), (0.0035, 0.0024), (0.0024, 0.0017))
+
+
+def _branch_skeleton(rng, h, branching, budget=12):
+    """One stem's skeleton in its own frame (+Z up, base at the origin).
+
+    ``budget`` caps the segment count, because a stem segment and a leaf come
+    out of the same triangle allowance (see the note at the fork below).
+
+    Returns ``(points, segments)`` where a segment is
+    ``(i_base, i_tip, order)`` indexing ``points``. Joints are SHARED indices on
+    purpose: ``shape_to_aspect`` scales each distinct point object once, so a
+    fork moves as one and the branches stay attached to the stem they left. A
+    fork built as two independent endpoints comes apart under that solve, which
+    is the same failure the shrub canes had in V2.33.
+    """
+    pts = [Vector((0.0, 0.0, 0.0))]
+    segs = []
+    if branching not in ("branched_above", "branched_throughout"):
+        pts.append(Vector((0.0, 0.0, h)))
+        segs.append((0, 1, 0))
+        return pts, segs
+
+    deep = branching == "branched_throughout"
+    # Where the stem first forks, and how far the branches lean out. A plant
+    # that branches throughout forks LOW and spreads wide (an aster, a
+    # sunflower); one that branches above holds a clean stem and opens only at
+    # the top (a goldenrod, a bergamot).
+    first = 0.34 if deep else 0.60
+    spread = 0.26 if deep else 0.17
+    pts.append(Vector((0.0, 0.0, h * first)))
+    fork = len(pts) - 1
+    segs.append((0, fork, 0))
+
+    # `budget` is what stops branching eating the plant. Every segment costs
+    # CONE_TRIS out of the same 1,200-triangle allowance the LEAVES come from,
+    # and thin_leaf_nodes spends stems first: an unbudgeted six-stemmed clump
+    # forking twice put ~40 cones on the plant and thinned it to 328 triangles
+    # of foliage, which renders as a bare wire spray. A six-stemmed clump does
+    # not need every stem to be a full panicle anyway — the SPRAY is the whole
+    # plant, not each stem of it.
+    n = max(1, min(4 if deep else 3, budget - 1))
+    if deep:
+        n = max(1, min(n, (budget - 1) // 2))       # each primary costs 1 + subs
+    for i in range(max(1, n)):
+        az = i / n * math.tau + rng.random() * 0.8
+        r = spread * h * (0.6 + rng.random() * 0.8)
+        top = h * first + h * (1 - first) * (0.70 + rng.random() * 0.45)
+        tip = Vector((math.cos(az) * r, math.sin(az) * r, top))
+        if not deep:
+            pts.append(tip)
+            segs.append((fork, len(pts) - 1, 1))
+            continue
+        # A second order, because one order reads as a candelabra and a
+        # branched-throughout forb is a spray.
+        mid = pts[fork].lerp(tip, 0.45 + rng.random() * 0.2)
+        pts.append(mid)
+        i_mid = len(pts) - 1
+        segs.append((fork, i_mid, 1))
+        subs = max(1, min(3, (budget - len(segs)) // max(1, n - i)))
+        for j in range(subs):
+            az2 = az + (j - 0.5) * 0.9 + (rng.random() - 0.5) * 0.5
+            r2 = spread * h * 0.5 * (0.6 + rng.random() * 0.7)
+            pts.append(Vector((mid.x + math.cos(az2) * r2,
+                               mid.y + math.sin(az2) * r2,
+                               mid.z + (tip.z - mid.z)
+                               * (0.7 + rng.random() * 0.5))))
+            segs.append((i_mid, len(pts) - 1, 2))
+    return pts, segs
+
+
+def _leaf_stations(pts, segs, leaf_from, n_nodes):
+    """Where the leaf nodes sit on a branched stem, bottom to top.
+
+    Leaves are distributed along the segments in proportion to length, so a
+    plant that puts most of its length into three top branches gets most of its
+    leaves there. The caller keeps the phyllotaxis (golden angle, or pairs for
+    opposite leaves) running continuously over the returned list, because that
+    spiral is the field mark — losing it to branching would trade one character
+    for another.
+    """
+    spans = []
+    for i, j, _order in segs:
+        a, b = pts[i], pts[j]
+        ln = (b - a).length
+        if ln > 1e-6:
+            spans.append((a, b, ln))
+    total = sum(s[2] for s in spans) or 1.0
+    # `leaf_from` is the fraction of the stem left bare at the bottom, measured
+    # along the whole skeleton rather than up the main axis — otherwise a
+    # low-forking plant strips its branches instead of its base.
+    start = leaf_from * total
+    out = []
+    for k in range(max(1, n_nodes)):
+        d = start + (total - start) * (k / max(1, n_nodes - 1)
+                                       if n_nodes > 1 else 0.7)
+        run = 0.0
+        for s, (a, b, ln) in enumerate(spans):
+            if d <= run + ln or s == len(spans) - 1:
+                out.append(a.lerp(b, min(1.0, max(0.0, (d - run) / ln))))
+                break
+            run += ln
+    return out
+
+
 def build_herb(form, rng, coll, name_prefix="", grain=1, leaf_shape=None,
-               arrangement=None):
+               arrangement=None, branching="unbranched"):
     """One herbaceous archetype.
 
     ``grain`` (0 fine · 1 medium · 2 coarse) scales the blade: a species' leaf
@@ -129,7 +244,8 @@ def build_herb(form, rng, coll, name_prefix="", grain=1, leaf_shape=None,
     ``leaf_shape`` is the species' recorded blade outline (schema v48) and
     ``arrangement`` where the leaves sit — opposite leaves are stamped in pairs
     rather than spiralled, which is most of what separates a penstemon from a
-    goldenrod at a glance.
+    goldenrod at a glance. ``branching`` (schema v53) forks the stem: a
+    goldenrod's plume is two orders of branching and was being drawn as a pole.
     """
     from . import conventions as C
     from .materials import preview_material
@@ -158,24 +274,35 @@ def build_herb(form, rng, coll, name_prefix="", grain=1, leaf_shape=None,
             h = 0.7 + rng.random() * 0.3
             rot = (Matrix.Rotation(az0, 4, "Z")
                    @ Matrix.Rotation(splay, 4, "Y"))
+            # The stem is a SKELETON now, not a rod: `branching` forks it, and
+            # the fork points are shared Vector objects so the aspect solve
+            # below moves a joint once and the branches stay attached.
+            #
             # Radii are HALF the stem's diameter as a fraction of the plant's
             # height. Real herbaceous stems are fine: a fireweed's is ~4 mm on a
             # 1.4 m plant (0.3% of height), a yarrow's flowering stem ~2 mm on
             # 0.5 m (0.4%). The old 0.012/0.008 drew them at 2.4%/1.6% — the same
             # 3-5x error that made the tree trunks read as concrete pillars, and
             # it is why the stalks, not the leaves, dominated every rosette and
-            # mat specimen in the gallery.
-            stems.append([Vector((0, 0, 0)), rot @ Vector((0, 0, h)),
-                          0.005, 0.003])
+            # mat specimen in the gallery. Each branching order is finer again.
+            # Stems share one triangle allowance, so a clump of six gets a
+            # simpler skeleton each than a single erect stem does.
+            pts, segs = _branch_skeleton(rng, h, branching,
+                                         budget=max(2, 14 // max(1, n_stems)))
+            # Rotating into a NEW list keeps the topology (segments index into
+            # it) while leaving each joint one object, which is what the aspect
+            # solve below needs.
+            pts = [rot @ p for p in pts]
+            for a, b, order in segs:
+                r_bot, r_top = _ORDER_RADII[min(order, len(_ORDER_RADII) - 1)]
+                stems.append([pts[a], pts[b], r_bot, r_top])
             n_leaf = _rint(rng, *F["per_stem"])
             # Alternate leaves spiral by the golden angle; opposite ones come in
             # pairs at the same node and whorled in rings of three.
             per_node = 2 if opposite else (3 if whorled else 1)
             n_nodes = max(1, n_leaf // per_node)
-            for j in range(n_nodes):
-                t = F["leaf_from"] + (1 - F["leaf_from"]) * (
-                    j / max(1, n_nodes - 1))
-                at = rot @ Vector((0, 0, h * t))
+            for j, at in enumerate(_leaf_stations(pts, segs, F["leaf_from"],
+                                                  n_nodes)):
                 base_az = (j * 1.5708 if per_node > 1 else j * 2.39996) + az0
                 nodes.append([[at, lL, lW, F["leaf_tilt"],
                                base_az + k * math.tau / per_node]

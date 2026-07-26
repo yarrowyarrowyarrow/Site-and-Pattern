@@ -114,7 +114,8 @@ def build_asset(key, spec=None, seed_salt="", half_widths=None):
             blade, grain, _aspect = C.parse_herb_variant_key(vkey)
             parts = build_herb(form, rng, coll, name_prefix=prefix,
                                grain=int(grain), leaf_shape=C.BLADE_SHAPE[blade],
-                               arrangement="opposite" if v % 2 else "alternate")
+                               arrangement="opposite" if v % 2 else "alternate",
+                               branching=C.herb_branching_for(vkey))
             objs = list(parts.values())
             # Flat-leaf geometry: finish on the exact measured correction — at
             # THIS unit's aspect class (V2.34), not at one figure for the form.

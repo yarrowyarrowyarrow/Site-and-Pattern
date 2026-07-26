@@ -139,6 +139,22 @@ function _stem(rBot, rTop, h, rot) {
   s.deleteAttribute('normal'); s.deleteAttribute('uv');
   return s;
 }
+// One segment of a forked stem, between two points already in the plant's
+// frame. Radii taper with the segment's length so a second-order branch is
+// finer than the stem it left, which is what stops a branched forb reading as
+// a candelabra of equal poles.
+const _UP = new THREE.Vector3(0, 1, 0);
+function _stemBetween(a, b, rBot, rTop) {
+  const d = new THREE.Vector3().subVectors(b, a);
+  const len = Math.max(1e-4, d.length());
+  const s = new THREE.CylinderGeometry(rTop, rBot, len, 4, 1);
+  s.translate(0, len / 2, 0);
+  s.applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(
+    new THREE.Quaternion().setFromUnitVectors(_UP, d.normalize())));
+  s.translate(a.x, a.y, a.z);
+  s.deleteAttribute('normal'); s.deleteAttribute('uv');
+  return s;
+}
 // `morph` is the species' own leaf characters (schema v47/v48): `shape` its blade
 // outline, `grain` its leaf size against its mature height, `arrangement` whether
 // leaves sit in opposite pairs, whorls of three, or a spiral. Omit it and the
@@ -160,7 +176,9 @@ function buildPerennialGeo(rng, form, morph) {
     : (m.arrangement === 'whorled' ? 3 : 1);
   const cost = leafCountScale(shape);
 
-  // Leafy stems: a stem cylinder with leaves spaced up its upper length.
+  // Leafy stems: a forked skeleton with leaves spaced along it (V2.35 — the
+  // stem used to be one straight rod, which is right for a blazingstar and
+  // wrong for a goldenrod, whose silhouette IS its branching).
   const nStems = F.stems[1] ? qn(_rint(rng, F.stems[0], F.stems[1])) : 0;
   for (let i = 0; i < nStems; i++) {
     const az0 = (i / Math.max(1, nStems)) * Math.PI * 2 + rng() * 0.7;
@@ -168,12 +186,19 @@ function buildPerennialGeo(rng, form, morph) {
     const h = 0.7 + rng() * 0.3;
     const rot = new THREE.Matrix4().makeRotationY(az0)
       .multiply(new THREE.Matrix4().makeRotationZ(splay));
-    geos.push(_stem(0.012, 0.006, h, rot));
+    const spans = branchSpans(rng, h, m.branching,
+                              Math.max(2, Math.floor(14 / Math.max(1, nStems)))).map(
+      s => s.map(v => v.clone().applyMatrix4(rot)));
+    let run = 0;
+    for (const [a, b] of spans) {
+      geos.push(_stemBetween(a, b, 0.012, 0.006));
+      run += a.distanceTo(b);
+    }
     const nLeaf = qn(_rint(rng, F.perStem[0], F.perStem[1]) * cost);
     const nodes = Math.max(1, Math.round(nLeaf / perNode));
     for (let j = 0; j < nodes; j++) {
-      const t = F.leafFrom + (1 - F.leafFrom) * (j / Math.max(1, nodes - 1));
-      const at = new THREE.Vector3(0, h * t, 0).applyMatrix4(rot);
+      const at = alongSpans(spans, run, F.leafFrom
+        + (1 - F.leafFrom) * (j / Math.max(1, nodes - 1)));
       const baseAz = (perNode > 1 ? j * 1.5708 : j * 2.39996) + az0;
       for (let k = 0; k < perNode; k++)
         geos.push(makeBladeOrLeaf(rng, lL, lW, F.leafTilt,
@@ -557,6 +582,9 @@ function morphOf(p, family) {
   return {
     shape: STYLISED ? '' : (p.leaf_shape || ''),
     arrangement: STYLISED ? '' : (p.leaf_arrangement || '').toLowerCase(),
+    // How the stem forks (schema v53). Suppressed at Stylised for the same
+    // reason as the leaf characters: a faceted mound has no stem to fork.
+    branching: STYLISED ? '' : (p.stem_branching || '').toLowerCase(),
     grain: grainClassFor(p.leaf_size_cm, p.mature_height_m || p.height_m, family),
   };
 }

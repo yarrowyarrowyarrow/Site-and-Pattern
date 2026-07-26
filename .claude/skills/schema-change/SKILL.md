@@ -20,7 +20,8 @@ Use this skill when you:
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
 **Current facts (verify before quoting):** branch `V2.33`,
-`_SCHEMA_VERSION = 53` (in `src/db/plants.py`) — v53 added ten
+`_SCHEMA_VERSION = 54` (in `src/db/plants.py`) — v54 added
+`flowering_stems`; v53 added ten
 flower-morphology columns; v52 added three
 renderer-facing morphology columns in one bump (`bark_texture`,
 `leaf_surface`, `inflorescence_form`; F63/F66), which is the pattern to copy

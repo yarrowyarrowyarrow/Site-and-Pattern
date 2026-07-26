@@ -276,6 +276,12 @@ function floretPlacements(arch, count, rnd) {
 const _ARCH_REACH = { raceme: 2.6, spike: 2.6, panicle: 3.4, corymb: 1.7,
                       umbel: 1.6, whorl: 2.4, cyme: 1.7 };
 
+// Fallback head count from the branching habit, for a species with no recorded
+// flowering_stems. One head per stem when the stem does not fork; one per
+// branch tip when it does — the same skeleton 03-herbs.js:branchSpans builds.
+const _BRANCH_HEADS = { unbranched: 4, branched_above: 8,
+                        branched_throughout: 14 };
+
 function _headSize(p, arch, drawn) {
   const dia = Math.max(0.15, Math.min(20, p.flower_diameter_cm || 2)) / 100;
   // A head and a solitary flower are drawn at their TRUE diameter, and that is
@@ -329,15 +335,23 @@ function buildFlorets(plants, month, terrain) {
       if (hasDisc) _cc.set(p.flower_center_color);
       const drawn = _drawnFlorets(p.florets_per_head);
       const size = _headSize(p, b.arch, drawn);
-      // How many inflorescences the plant carries. The billboard used a flat
-      // seven for every forb; a mature bergamot holds thirty heads and a
-      // pasqueflower holds two, and the difference is most of what "in full
-      // bloom" looks like. Nothing in the catalogue records flowering stems (it
-      // is on the list of things worth going out and counting), so this is
-      // scaled off the plant's spread, which is the closest honest proxy.
-      const heads = qn(p.plant_type === 'tree' ? 10
-                     : p.plant_type === 'shrub' ? 9
-                     : Math.max(3, Math.min(16, Math.round(3 + 11 * rad))));
+      // How many inflorescences the plant carries — most of what "in full
+      // bloom" looks like. The billboard used a flat seven for every forb; a
+      // mature bergamot holds thirty heads and a pasqueflower holds two.
+      //
+      // The species' own figure (flowering_stems, schema v54) wins. Failing
+      // that, derive it from HOW THE STEM FORKS rather than from canopy: an
+      // unbranched forb holds one head per stem, a plant that branches
+      // throughout holds one per branch tip, and that is a real structural
+      // relationship where canopy was only a proxy for spread. Scaled by the
+      // plant's own growth so a first-year plug does not flower like a clump.
+      const grown = Math.max(0.25, Math.min(1, p.scale_factor == null
+                                              ? 1 : p.scale_factor));
+      const heads = qn(Math.max(1, Math.round(grown * (
+        p.flowering_stems > 0 ? p.flowering_stems
+        : p.plant_type === 'tree' ? 10
+        : p.plant_type === 'shrub' ? 9
+        : _BRANCH_HEADS[p.stem_branching] || 6))));
       // Flowers are held on STEMS, and stems converge on one crown: they do not
       // fill the canopy disc the way leaves do. The billboard spread its quads
       // right out to the canopy edge (sqrt-spaced for even areal density, which

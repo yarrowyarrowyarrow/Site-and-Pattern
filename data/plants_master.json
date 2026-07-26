@@ -59,7 +59,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Alberta Penstemon",
@@ -121,7 +122,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Alder-leaved Buckthorn",
@@ -338,7 +340,8 @@
     "flower_center_color": "#e8b93a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Alpine Bistort",
@@ -505,7 +508,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Alpine Hedysarum (Bear Root)",
@@ -564,7 +568,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Alpine Rock Jasmine",
@@ -627,7 +632,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "American Brooklime",
@@ -738,7 +744,8 @@
     "flower_center_color": "#e8b93a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Arum-leaved Arrowhead",
@@ -801,7 +808,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Ascending Milkvetch",
@@ -866,7 +874,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Awned Sedge",
@@ -981,7 +990,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Balsam Fir",
@@ -1150,7 +1160,8 @@
     "flower_center_color": "#c58b2a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Basket Willow",
@@ -1215,7 +1226,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Beaked Hazelnut",
@@ -1388,7 +1400,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Bebb's Sedge",
@@ -1500,7 +1513,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Big Bluestem",
@@ -1616,7 +1630,8 @@
     "flower_center_color": "#b7bc86",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Big-head Rush",
@@ -1734,7 +1749,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Bishop's Cap",
@@ -1797,7 +1813,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Black Hawthorn",
@@ -1863,7 +1880,8 @@
     "flower_center_color": "#d8b8a0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Black Spruce",
@@ -1981,7 +1999,8 @@
     "flower_center_color": "#3b2412",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Blanketflower",
@@ -2041,7 +2060,8 @@
     "flower_center_color": "#7d2b1c",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Blue Clematis",
@@ -2100,7 +2120,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Blue Columbine",
@@ -2163,7 +2184,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Blue Grama Grass",
@@ -2278,7 +2300,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Bluebunch Fescue",
@@ -2452,7 +2475,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Bog Cranberry",
@@ -2516,7 +2540,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Boreal Yarrow",
@@ -2581,7 +2606,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 16
   },
   {
     "common_name": "Boreale Oxytropis",
@@ -2646,7 +2672,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Bracted Honeysuckle",
@@ -2714,7 +2741,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Bristly Black Currant",
@@ -2782,7 +2810,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Brittle Prickly-pear",
@@ -2844,7 +2873,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Broad-leaved Arrowhead",
@@ -2907,7 +2937,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Broad-leaved Water-plantain",
@@ -2966,7 +2997,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Bronze Bells",
@@ -3031,7 +3063,8 @@
     "flower_center_color": "#c8d86a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Broomweed",
@@ -3096,7 +3129,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Buckbean",
@@ -3160,7 +3194,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Bunchberry",
@@ -3221,7 +3256,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Bur Oak",
@@ -3335,7 +3371,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Canada Anemone",
@@ -3397,7 +3434,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Canada Buffaloberry",
@@ -3520,7 +3558,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 5
   },
   {
     "common_name": "Canada Milk Vetch",
@@ -3585,7 +3624,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Canada Rice Grass",
@@ -3697,7 +3737,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Canada Wild Rye",
@@ -3873,7 +3914,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Common Alumroot",
@@ -3936,7 +3978,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Common Bladderwort",
@@ -3998,7 +4041,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Common Horsetail",
@@ -4165,7 +4209,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Common Scouring-rush",
@@ -4285,7 +4330,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Common Sunflower",
@@ -4347,7 +4393,8 @@
     "flower_center_color": "#5a3a12",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 1
   },
   {
     "common_name": "Common Tall Manna Grass",
@@ -4463,7 +4510,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Cream-Coloured Peavine",
@@ -4529,7 +4577,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Creeping Juniper",
@@ -4646,7 +4695,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Creeping Sibbaldia",
@@ -4708,7 +4758,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Creeping Spikerush",
@@ -4823,7 +4874,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Cushion Umbrella Plant",
@@ -4886,7 +4938,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Cut-leaved Anemone",
@@ -4949,7 +5002,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Cut-leaved Nightshade",
@@ -5116,7 +5170,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Dewberry",
@@ -5181,7 +5236,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Dotted Blazingstar",
@@ -5243,7 +5299,8 @@
     "flower_center_color": "#7b3f98",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 5
   },
   {
     "common_name": "Douglas Fir",
@@ -5472,7 +5529,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Drummond's Rush",
@@ -5645,7 +5703,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Early Blue Violet",
@@ -5707,7 +5766,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Early Yellow Oxytropis",
@@ -5770,7 +5830,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Eastern Red Columbine",
@@ -5836,7 +5897,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Elegant Goldenrod",
@@ -5895,7 +5957,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 5
   },
   {
     "common_name": "Evening Primrose",
@@ -5958,7 +6021,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "False Box (Mountain Boxwood)",
@@ -6025,7 +6089,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "False Dragonhead",
@@ -6084,7 +6149,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "False Dragonhead (Western Obedient Plant)",
@@ -6144,7 +6210,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "False Solomon's Seal",
@@ -6212,7 +6279,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Field Chickweed",
@@ -6274,7 +6342,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Field Pussytoes",
@@ -6337,7 +6406,8 @@
     "flower_center_color": "#efe6d8",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Fireweed",
@@ -6399,7 +6469,8 @@
     "flower_center_color": "#c86a9a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Flat-topped Goldenrod",
@@ -6461,7 +6532,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Flat-topped White Aster",
@@ -6524,7 +6596,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Floating Marsh-marigold",
@@ -6590,7 +6663,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Foothills Rough Fescue",
@@ -6869,7 +6943,8 @@
     "flower_center_color": "#c86a3a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Fuzzy-tongue Penstemon",
@@ -6928,7 +7003,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Giant Bur-reed",
@@ -6987,7 +7063,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Giant Hyssop",
@@ -7049,7 +7126,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Giant Sunflower",
@@ -7111,7 +7189,8 @@
     "flower_center_color": "#6d4a1c",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Giant Wild Rye",
@@ -7223,7 +7302,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Golden Bean",
@@ -7288,7 +7368,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Golden Currant (Buffalo Currant)",
@@ -7356,7 +7437,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Golden Draba",
@@ -7418,7 +7500,8 @@
     "flower_center_color": "#d8d86a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Golden Sedge",
@@ -7533,7 +7616,8 @@
     "flower_center_color": "#7d4a1c",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Gray Goldenrod",
@@ -7595,7 +7679,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 5
   },
   {
     "common_name": "Great Bulrush",
@@ -7707,7 +7792,8 @@
     "flower_center_color": "#e8b93a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Green Alder",
@@ -7825,7 +7911,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Green Needle Grass",
@@ -7943,7 +8030,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Gumweed",
@@ -8002,7 +8090,8 @@
     "flower_center_color": "#d9a63a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Hairy Arnica",
@@ -8064,7 +8153,8 @@
     "flower_center_color": "#d9a63a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Hairy Golden Aster",
@@ -8127,7 +8217,8 @@
     "flower_center_color": "#d9a63a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Hairy Wild Rye",
@@ -8239,7 +8330,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Heart-leaved Alexanders (Golden Alexanders)",
@@ -8303,7 +8395,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Heart-leaved Arnica",
@@ -8362,7 +8455,8 @@
     "flower_center_color": "#d9a63a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Highbush Cranberry",
@@ -8429,7 +8523,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Hoary Aster",
@@ -8492,7 +8587,8 @@
     "flower_center_color": "#e8b93a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Hooded Ladies' Tresses",
@@ -8555,7 +8651,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Hooker's Oat Grass",
@@ -8717,7 +8814,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Jack Pine",
@@ -8834,7 +8932,8 @@
     "flower_center_color": "#6d4a1c",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Joe-Pye Weed",
@@ -8896,7 +8995,8 @@
     "flower_center_color": "#c9a0c9",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "June Grass",
@@ -9062,7 +9162,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Lakeshore Sedge",
@@ -9179,7 +9280,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Large-leaved Avens",
@@ -9242,7 +9344,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Late Goldenrod",
@@ -9304,7 +9407,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 5
   },
   {
     "common_name": "Late Yellow Oxytropis",
@@ -9366,7 +9470,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Leafy Arnica",
@@ -9429,7 +9534,8 @@
     "flower_center_color": "#d9a63a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Leafy Aster",
@@ -9491,7 +9597,8 @@
     "flower_center_color": "#e8b93a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 40
   },
   {
     "common_name": "Lilac Penstemon",
@@ -9553,7 +9660,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Lindley's Aster",
@@ -9616,7 +9724,8 @@
     "flower_center_color": "#e8b93a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 40
   },
   {
     "common_name": "Little Bluestem",
@@ -9731,7 +9840,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Lodgepole Pine",
@@ -9852,7 +9962,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Low Bilberry",
@@ -9920,7 +10031,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Low Townsendia",
@@ -9983,7 +10095,8 @@
     "flower_center_color": "#e5c65a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Low-bush Cranberry",
@@ -10050,7 +10163,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Lyalls Penstemon",
@@ -10109,7 +10223,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "MacKenzie's Hedysarum",
@@ -10168,7 +10283,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Many-flowered Aster (Tufted White Prairie Aster)",
@@ -10228,7 +10344,8 @@
     "flower_center_color": "#e8b93a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 40
   },
   {
     "common_name": "Marsh Aster",
@@ -10290,7 +10407,8 @@
     "flower_center_color": "#e8b93a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 40
   },
   {
     "common_name": "Marsh Cinquefoil",
@@ -10353,7 +10471,8 @@
     "flower_center_color": "#7d2b3a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Marsh Hedge Nettle",
@@ -10415,7 +10534,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Marsh Hedge Nettle (Marsh Woundwort)",
@@ -10478,7 +10598,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Marsh Marigold",
@@ -10544,7 +10665,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Marsh Skullcap",
@@ -10607,7 +10729,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Marsh Violet",
@@ -10666,7 +10789,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Maximilian Sunflower",
@@ -10725,7 +10849,8 @@
     "flower_center_color": "#6d4a1c",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Meadow Arnica",
@@ -10788,7 +10913,8 @@
     "flower_center_color": "#d9a63a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Meadow Blazingstar",
@@ -10851,7 +10977,8 @@
     "flower_center_color": "#7b3f98",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 5
   },
   {
     "common_name": "Meadow Sedge",
@@ -10969,7 +11096,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Missouri Milkvetch",
@@ -11034,7 +11162,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Moss Campion",
@@ -11097,7 +11226,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Moss Phlox",
@@ -11156,7 +11286,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 14
   },
   {
     "common_name": "Mountain Brome",
@@ -11271,7 +11402,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Mountain Hollyhock",
@@ -11330,7 +11462,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Mountain Sweet Cicely",
@@ -11448,7 +11581,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Narrow-leaved Hawkweed",
@@ -11507,7 +11641,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Narrowleaf Cotton-grass",
@@ -11725,7 +11860,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Northern Bedstraw",
@@ -11787,7 +11923,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Northern Black Currant",
@@ -11851,7 +11988,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Northern Gentian",
@@ -11914,7 +12052,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Northern Hedysarum",
@@ -11976,7 +12115,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Northern Wheat Grass",
@@ -12092,7 +12232,8 @@
     "flower_center_color": "#6d4a1c",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Old Man's Whiskers (Prairie Smoke)",
@@ -12155,7 +12296,8 @@
     "flower_center_color": "#a05a4a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Ostrich Fern",
@@ -12271,7 +12413,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Palmate-leaved Coltsfoot",
@@ -12493,7 +12636,8 @@
     "flower_center_color": "#e5c65a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Pearly Everlasting",
@@ -12557,7 +12701,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Philadelphia Fleabane",
@@ -12620,7 +12765,8 @@
     "flower_center_color": "#e5c65a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Pin Cherry",
@@ -12690,7 +12836,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Pink Corydalis",
@@ -12749,7 +12896,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Pink Monkey Flower",
@@ -12811,7 +12959,8 @@
     "flower_center_color": "#c8a03a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Pink Pussytoes",
@@ -12875,7 +13024,8 @@
     "flower_center_color": "#efe6d8",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Pink Pyrola",
@@ -12939,7 +13089,8 @@
     "flower_center_color": "#c8c86a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Pink Spirea",
@@ -13004,7 +13155,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Pink Spirea (Rose Meadowsweet)",
@@ -13067,7 +13219,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Plains Muhly",
@@ -13182,7 +13335,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Plains Wormwood",
@@ -13245,7 +13399,8 @@
     "flower_center_color": "#b7bc86",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Porcupine Grass",
@@ -13470,7 +13625,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Prairie Cinquefoil",
@@ -13532,7 +13688,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Prairie Cinquefoil (Tall Cinquefoil)",
@@ -13595,7 +13752,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Prairie Coneflower",
@@ -13657,7 +13815,8 @@
     "flower_center_color": "#6b4a20",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Prairie Cord Grass",
@@ -13773,7 +13932,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 3
   },
   {
     "common_name": "Prairie Dropseed",
@@ -13888,7 +14048,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Prairie Goldenrod",
@@ -13947,7 +14108,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 5
   },
   {
     "common_name": "Prairie Onion (Textile Onion)",
@@ -14013,7 +14175,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Prairie Rose",
@@ -14081,7 +14244,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Prairie Sage",
@@ -14194,7 +14358,8 @@
     "flower_center_color": "#b7bc86",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Prairie Smoke",
@@ -14257,7 +14422,8 @@
     "flower_center_color": "#a05a4a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Prairie Thistle",
@@ -14317,7 +14483,8 @@
     "flower_center_color": "#a05aa8",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Prairie Turnip",
@@ -14376,7 +14543,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Prairie Wedge Grass",
@@ -14497,7 +14665,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Purple Avens (Water Avens)",
@@ -14560,7 +14729,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Purple Coneflower",
@@ -14619,7 +14789,8 @@
     "flower_center_color": "#a4622a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 5
   },
   {
     "common_name": "Purple Oat Grass",
@@ -14731,7 +14902,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Purple Prairie Clover",
@@ -14790,7 +14962,8 @@
     "flower_center_color": "#e8a63a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Purple Reed Grass",
@@ -14903,7 +15076,8 @@
     "flower_center_color": "#e8b93a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 40
   },
   {
     "common_name": "Pussy Willow",
@@ -14968,7 +15142,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Rabbitbrush",
@@ -15034,7 +15209,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Rat Root",
@@ -15096,7 +15272,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Raymond's Sedge",
@@ -15213,7 +15390,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Red Columbine",
@@ -15279,7 +15457,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Common Paintbrush",
@@ -15341,7 +15520,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Red Osier Dogwood",
@@ -15410,7 +15590,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Richardson's Needlegrass",
@@ -15522,7 +15703,8 @@
     "flower_center_color": "#c86a9a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "River Bulrush",
@@ -15638,7 +15820,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Rocky Mountain Beeplant",
@@ -15697,7 +15880,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Rocky Mountain Fescue",
@@ -15812,7 +15996,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Roseroot",
@@ -15875,7 +16060,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Rosy Pussytoes (Littleleaf Pussytoes)",
@@ -15939,7 +16125,8 @@
     "flower_center_color": "#efe6d8",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Rough Fescue",
@@ -16103,7 +16290,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Round-leaved Sundew",
@@ -16215,7 +16403,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Sago Pondweed",
@@ -16278,7 +16467,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Saline Shooting Star",
@@ -16340,7 +16530,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Saltgrass",
@@ -16509,7 +16700,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Sandberg Bluegrass",
@@ -16679,7 +16871,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Scarlet Butterfly Plant",
@@ -16741,7 +16934,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Scorpion Weed",
@@ -16801,7 +16995,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Self-heal",
@@ -16863,7 +17058,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Seneca Snakeroot",
@@ -17024,7 +17220,8 @@
     "flower_center_color": "#8a5a1e",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Short-beaked Agoseris",
@@ -17086,7 +17283,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Short-capsuled Willow",
@@ -17149,7 +17347,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Showy Aster",
@@ -17208,7 +17407,8 @@
     "flower_center_color": "#e8b93a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Showy Fleabane",
@@ -17270,7 +17470,8 @@
     "flower_center_color": "#e5c65a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Showy Jacob's-ladder",
@@ -17332,7 +17533,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Showy Locoweed",
@@ -17395,7 +17597,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Showy Milkweed",
@@ -17461,7 +17664,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Showy Pussytoes",
@@ -17524,7 +17728,8 @@
     "flower_center_color": "#efe6d8",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Shrubby Cinquefoil",
@@ -17586,7 +17791,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Sideoats Grama",
@@ -17705,7 +17911,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 6
   },
   {
     "common_name": "Silver Buffaloberry",
@@ -17830,7 +18037,8 @@
     "flower_center_color": "#b7bc86",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Silverberry",
@@ -17946,7 +18154,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Silvery Lupine",
@@ -18012,7 +18221,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 6
   },
   {
     "common_name": "Sitka Valerian",
@@ -18074,7 +18284,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Skunk Currant",
@@ -18138,7 +18349,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Slender Blue Beardtongue",
@@ -18200,7 +18412,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Slender Cinquefoil (Graceful Cinquefoil)",
@@ -18263,7 +18476,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Slender Nettle",
@@ -18583,7 +18797,8 @@
     "flower_center_color": "#efe6d8",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Smooth Aster",
@@ -18645,7 +18860,8 @@
     "flower_center_color": "#e8b93a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 40
   },
   {
     "common_name": "Smooth Blue Beardtongue",
@@ -18707,7 +18923,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Smooth Fleabane (Streamside Fleabane)",
@@ -18767,7 +18984,8 @@
     "flower_center_color": "#e5c65a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Smooth Sweet Cicely",
@@ -18829,7 +19047,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Smooth Wild Rye",
@@ -18941,7 +19160,8 @@
     "flower_center_color": "#8a6a22",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Soapweed Yucca",
@@ -19006,7 +19226,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Spear-leaved Arnica",
@@ -19065,7 +19286,8 @@
     "flower_center_color": "#d9a63a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Spike Trisetum",
@@ -19180,7 +19402,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Spreading Dogbane",
@@ -19246,7 +19469,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Sprengel's Sedge",
@@ -19413,7 +19637,8 @@
     "flower_center_color": "#c8a03a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Star-flowered Solomon's Seal",
@@ -19530,7 +19755,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 5
   },
   {
     "common_name": "Sticky Goldenrod (Mount Albert Goldenrod)",
@@ -19593,7 +19819,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 5
   },
   {
     "common_name": "Sticky Purple Geranium",
@@ -19655,7 +19882,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Stiff Goldenrod",
@@ -19717,7 +19945,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 5
   },
   {
     "common_name": "Stiff Sunflower (Rhombic-leaved Sunflower)",
@@ -19777,7 +20006,8 @@
     "flower_center_color": "#6d4a1c",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Stinging Nettle",
@@ -19945,7 +20175,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Swamp Horsetail",
@@ -20058,7 +20289,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Sweet-scented Bedstraw",
@@ -20120,7 +20352,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Sweetgrass",
@@ -20292,7 +20525,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Tall Goldenrod",
@@ -20354,7 +20588,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 5
   },
   {
     "common_name": "Tall Jacob's Ladder",
@@ -20417,7 +20652,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Tall Larkspur",
@@ -20482,7 +20718,8 @@
     "flower_center_color": "#e8e8f0",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Tall Lungwort (Blue Bells)",
@@ -20545,7 +20782,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Tall Meadow Rue",
@@ -20608,7 +20846,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Tall Showy Yarrow",
@@ -20673,7 +20912,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 16
   },
   {
     "common_name": "Tamarack",
@@ -20796,7 +21036,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Thinleaf Alder",
@@ -21072,7 +21313,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Trembling Aspen",
@@ -21342,7 +21584,8 @@
     "flower_center_color": "#d9a63a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Twinflower",
@@ -21405,7 +21648,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Twining Honeysuckle (Limber Honeysuckle)",
@@ -21470,7 +21714,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Umbrella Buckwheat",
@@ -21529,7 +21774,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Valerian",
@@ -21591,7 +21837,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Variegated Horsetail",
@@ -21708,7 +21955,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Velvet-leaf Blueberry",
@@ -21776,7 +22024,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Water Arum (Wild Calla)",
@@ -21839,7 +22088,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Water Birch",
@@ -21953,7 +22203,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Water Sedge",
@@ -22069,7 +22320,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Western Blue Iris",
@@ -22134,7 +22386,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Western Canada Violet",
@@ -22196,7 +22449,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Western Fescue",
@@ -22311,7 +22565,8 @@
     "flower_center_color": "#e8b93a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 40
   },
   {
     "common_name": "Western Meadowrue",
@@ -22374,7 +22629,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Western Mountain Ash",
@@ -22442,7 +22698,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Western Porcupine Grass",
@@ -22562,7 +22819,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Western Wheatgrass",
@@ -22672,7 +22930,8 @@
     "flower_center_color": "#e8b93a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 40
   },
   {
     "common_name": "Western Wood Lily",
@@ -22731,7 +22990,8 @@
     "flower_center_color": "#8a5a1e",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "White Camas",
@@ -22796,7 +23056,8 @@
     "flower_center_color": "#c8d86a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "White Evening Primrose",
@@ -22855,7 +23116,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "White Geranium",
@@ -22918,7 +23180,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "White Mountain Avens",
@@ -22981,7 +23244,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "White Prairie Clover",
@@ -23043,7 +23307,8 @@
     "flower_center_color": "#e8a63a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "White Spruce",
@@ -23212,7 +23477,8 @@
     "flower_center_color": "#b06a9a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 28
   },
   {
     "common_name": "Wild Black Currant",
@@ -23276,7 +23542,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Wild Blue Flax",
@@ -23338,7 +23605,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Wild Chives",
@@ -23403,7 +23671,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Wild Clematis",
@@ -23465,7 +23734,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Wild Gooseberry",
@@ -23530,7 +23800,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Wild Licorice",
@@ -23593,7 +23864,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Wild Lily-of-the-valley",
@@ -23662,7 +23934,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Wild Mint",
@@ -23722,7 +23995,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Wild Raspberry",
@@ -23790,7 +24064,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Wild Red Currant",
@@ -23857,7 +24132,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Wild Sarsaparilla",
@@ -23974,7 +24250,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Wild Vetch",
@@ -24039,7 +24316,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Willow Aster",
@@ -24101,7 +24379,8 @@
     "flower_center_color": "#e8b93a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 40
   },
   {
     "common_name": "Winterfat",
@@ -24273,7 +24552,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Woodland Strawberry",
@@ -24338,7 +24618,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Woods' Rose",
@@ -24406,7 +24687,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Woolly Cinquefoil",
@@ -24469,7 +24751,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 14
   },
   {
     "common_name": "Woolly Sedge",
@@ -24588,7 +24871,8 @@
     "flower_center_color": "#e8e0c0",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 16
   },
   {
     "common_name": "Yellow Angelica",
@@ -24647,7 +24931,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Yellow Avens",
@@ -24710,7 +24995,8 @@
     "flower_center_color": "#d8b83a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Yellow Beardtongue",
@@ -24772,7 +25058,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Yellow Buckwheat",
@@ -24835,7 +25122,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Yellow Columbine",
@@ -24902,7 +25190,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Yellow Flax",
@@ -24964,7 +25253,8 @@
     "flower_center_color": "#e8d76a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Yellow Lady's Slipper",
@@ -25026,7 +25316,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Yellow Monkey Flower",
@@ -25088,7 +25379,8 @@
     "flower_center_color": "#c8a03a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Yellow Mountain Avens",
@@ -25151,7 +25443,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Yellow Owl Clover",
@@ -25213,7 +25506,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Yellow Paintbrush",
@@ -25272,7 +25566,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Yellow Pond-lily",
@@ -25335,7 +25630,8 @@
     "flower_center_color": "#c8a03a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Yellow Pucoon",
@@ -25397,7 +25693,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Yellow Rattle",
@@ -25460,7 +25757,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Yellow-flowered Locoweed",
@@ -25526,7 +25824,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 4
   },
   {
     "common_name": "Yellowbells",
@@ -25588,7 +25887,8 @@
     "flower_center_color": "#8a7a3a",
     "flower_height_frac": 1.0,
     "stem_branching": "unbranched",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 4
   },
   {
     "common_name": "Yellowstone Draba",
@@ -25647,7 +25947,8 @@
     "flower_center_color": "#d8d86a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Scarlet Globemallow",
@@ -25706,7 +26007,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Bastard Toadflax",
@@ -25766,7 +26068,8 @@
     "flower_center_color": "",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "Stiff Goldenrod",
@@ -25825,7 +26128,8 @@
     "flower_center_color": "#e8c552",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 8
   },
   {
     "common_name": "White Prairie Aster",
@@ -25884,7 +26188,8 @@
     "flower_center_color": "#e8b93a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_throughout",
-    "basal_rosette": 0
+    "basal_rosette": 0,
+    "flowering_stems": 40
   },
   {
     "common_name": "Woolly Groundsel",
@@ -25944,7 +26249,8 @@
     "flower_center_color": "#e8b93a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   },
   {
     "common_name": "Tufted Fleabane",
@@ -26004,6 +26310,7 @@
     "flower_center_color": "#e5c65a",
     "flower_height_frac": 1.0,
     "stem_branching": "branched_above",
-    "basal_rosette": 1
+    "basal_rosette": 1,
+    "flowering_stems": 8
   }
 ]
