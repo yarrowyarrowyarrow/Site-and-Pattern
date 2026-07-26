@@ -1,5 +1,11 @@
 # Site & Pattern — Philosophy-Driven Feature Roadmap
 
+> **What's next now lives in [`ROADMAP_NEXT.md`](ROADMAP_NEXT.md)** (V2.32 →). That document
+> carries the forward plan — the 3D-preview and photography work (F63–F74), the WANT/SHOW
+> features, the designer workflow, and a proposed thirteenth principle. **This** file remains the
+> principle-by-principle map and the shipped record of F1–F62: read it for *why* the app is shaped
+> the way it is and what has already landed. Feature IDs are one continuous sequence across both.
+
 A catalogue of what the design philosophy ([`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md))
 makes *possible*, grounded in what the codebase already does — and **ranked by impact** so
 the next move can be chosen deliberately. Each entry states **Impact / Effort / Risk**,
@@ -79,7 +85,7 @@ These started life as entries below and have since landed — the State markers 
 | F11 | Value-vs-price framing — the habitat value a design's spend *creates*, read together with its cost | `src/habitat_score.py` (`habitat_nudges`), surfaced in `src/on_this_design_panel.py` (Stats: habitat value → "where to grow next" → cost → "what your spend creates") | P6 |
 | F7 | Relationship-first data model — one queryable edges layer over all four edge shapes | `src/db/relationships.py` + the schema-v51 `relationship_edges` view | P3, P10 |
 | F5 | Relationship graph overlay — the design drawn as a living network on the map | `src/relationship_graph.py` + `html/map/07-network.js`, surfaced in Analysis → Habitat | P3, P5, P10 |
-| F44 | First-run activation pack — welcome, three-step strip, worked example, Generate on the toolbar | `src/onboarding.py` + `src/onboarding_flow.py` + `src/welcome_dialog.py` + `src/first_step_bar.py` | P1, P9 |
+| F44 | First-run activation pack — welcome, three-step strip, worked example, Generate promoted out of the File menu (onto the toolbar *and* the strip; the toolbar half was reverted in V2.32 — see below) | `src/onboarding.py` + `src/onboarding_flow.py` + `src/welcome_dialog.py` + `src/first_step_bar.py` | P1, P9 |
 | F45 | In-context guidance — first-step line, dead-end copy that names the way through, tooltips | `src/site_panel.py`, `src/plant_panel.py`, `src/analysis_panel.py`, `src/toolbar.py` | P5 |
 | F41 | Numbered plant-by-numbers map — a scale plan drawing, keyed to the buy list | `src/planting_map.py`, drawn in `src/pdf_export.py` | P5, P11 |
 | F42 | Design-specific maintenance calendar — the work falling year by year | `src/maintenance_calendar.py` | P4, P9 |
@@ -722,6 +728,12 @@ design.
   welcome becomes furniture — and a View-menu toggle brings it back.
 - **"✨ Generate Design" is now a visible button**, right-aligned on the Draw toolbar *and* in the
   strip, in step with the File-menu action while a run is in flight.
+  *(V2.32: the toolbar half was reverted. Promoting it fixed a real cold-start problem, but the
+  permanent home it took on the Draw row did not survive use — that row is for the tools you reach
+  for **while working**, and a once-per-project action sitting in it is furniture. The strip keeps
+  it, which is the surface that appears exactly while a first-timer needs it and then retires
+  itself, and File → Generate Design… / Ctrl+G is unchanged. The grey-out-while-running invariant
+  moved to the strip's button with it.)*
 - **The example is a spec, not a shipped file.** A `.perma.geojson` would bake in plant ids, and
   ids are not stable across reseeds — a shipped example would silently rot into pointing at the
   wrong species on some future schema bump. The layout is authored as species *names* plus offsets

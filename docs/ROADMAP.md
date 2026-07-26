@@ -145,7 +145,8 @@ Features for long-term planning and tracking.
 | Design notes / journal (per-project, timestamps, saved in GeoJSON) | Done |
 | Unified relationship-edges layer (`relationship_edges` view + `src/db/relationships.py`; one query API over plant↔fauna, companion and shared-community edges, each tagged documented vs derived) | Done |
 | Relationship web map overlay (the design drawn as a network: species at their planting centroid, wildlife on a ring outside it, layer filter + legend) | Done |
-| First-run welcome (Generate / start from your yard / open the example), three-step getting-started strip above the map, Generate Design on the toolbar, beginner-default design goals | Done |
+| First-run welcome (Generate / start from your yard / open the example), three-step getting-started strip above the map, beginner-default design goals | Done |
+| Generate Design removed from the Draw toolbar (V2.32) — a once-per-project action does not belong among the drawing tools. It stays on File → Generate Design… (Ctrl+G) and on the getting-started strip, which retires itself once the user no longer needs it | Done |
 | Worked example design — a front-yard lawn conversion built from an authored spec against the live catalogue (Help → Open the Example Design) | Done |
 | Site-prep sheet (lawn-removal methods sized to the area, decompact-don't-enrich advice keyed to soil texture, mulch volume, pH mismatches) | Done |
 | Numbered planting map — a scale plan drawing with scale bar, north arrow and a key that matches the buy list | Done |

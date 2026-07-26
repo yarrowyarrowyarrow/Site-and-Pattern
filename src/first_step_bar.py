@@ -95,6 +95,13 @@ class FirstStepBar(QWidget):
 
     # ── Update ───────────────────────────────────────────────────────────────
 
+    def set_generate_enabled(self, enabled: bool):
+        """Grey the strip's Generate button while a run is in flight, in step
+        with the File-menu action (GenerationController). This strip is now the
+        only Generate button on the main window — the Draw-toolbar one was
+        removed — so without this a second run could be started mid-flight."""
+        self._generate.setEnabled(bool(enabled))
+
     def set_progress(self, steps: list, current: dict):
         """Render ``src.onboarding.steps_progress`` output plus the
         ``first_step`` dict that says which one is live."""

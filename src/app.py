@@ -658,7 +658,6 @@ class MainWindow(QMainWindow):
         self.toolbar.annotate_requested.connect(self._enter_annotate_mode)
         self.toolbar.select_requested.connect(self._enter_select_mode)
         self.toolbar.cancel_draw_requested.connect(self._cancel_draw)
-        self.toolbar.generate_requested.connect(self._on_generate_design)
         self.toolbar.undo_requested.connect(self._do_undo)
 
         # Getting-started strip (F44). Lambdas → src/onboarding_flow.py so no

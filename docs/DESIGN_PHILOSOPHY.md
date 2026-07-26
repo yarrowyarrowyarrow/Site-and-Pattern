@@ -14,7 +14,11 @@
 > **Companion documents:**
 > - [`REFERENCES.md`](REFERENCES.md) — the complete bibliography (every source text).
 > - [`PHILOSOPHY_ROADMAP.md`](PHILOSOPHY_ROADMAP.md) — an in-depth, in-breadth map of
->   the features this framework makes possible, organized by principle.
+>   the features this framework makes possible, organized by principle (and the shipped
+>   record of F1–F62).
+> - [`ROADMAP_NEXT.md`](ROADMAP_NEXT.md) — the forward roadmap (V2.32 →), including a
+>   **proposed thirteenth principle** on beauty as the mechanism by which a native planting
+>   survives contact with people. Proposed, not adopted — this document still carries twelve.
 >
 > **A note on the name.** The application is **Site & Pattern** (formerly PermaDesign).
 > What users see now reads "Site & Pattern"; a few internal identifiers keep the legacy
@@ -146,11 +150,17 @@ Yong's Umwelt research, Deutscher's linguistic relativity, Berger's visual cultu
 > ranges-not-certainties — each step read back against the user's own design; and **docent /
 > presentation mode** (`src/docent.py`, roadmap F52) turns the design into a narrated tour built
 > from its own facts, so the user can teach *others* to see it (a neighbour, an HOA board, a class).
-> **State: partial** — site forces, seasonality, the real site, winter snow microsites, a single
-> bee's world, active recall, a guided course and a presentable tour are made visible, but
-> ecological *relationships* (pollinator
-> pathways, mycorrhizal networks, succession trajectories) are still not drawn as networks
-> (roadmap F5, F15).
+> Since V2.31 the ecological *relationships* are drawn too: the **relationship web overlay**
+> (`src/relationship_graph.py` + `html/map/07-network.js`, roadmap F5 — see principle #3) puts the
+> design's food web on the real map, and F15's pollinator-pathway idea was merged into it as a month
+> filter rather than shipped as a third overlay saying the same thing.
+> **State: strong** — site forces, seasonality, the real site, winter snow microsites, a single
+> bee's world, the food web itself, active recall, a guided course and a presentable tour are all
+> made visible. What is *not* yet visible is the thing the eye judges first: the app can show you
+> what a design **means** far better than it can show you what it will **look like**. The 3D preview
+> resolves 434 species into ~75 distinguishable looks (`docs/SPRITE_AUDIT.md`) and each species
+> carries a single photograph chosen by licence order rather than usefulness — so the ecology is
+> legible and the *place* is not (roadmap F63–F74 in [`ROADMAP_NEXT.md`](ROADMAP_NEXT.md)).
 
 ### 6. Conventional value metrics miss ecological value
 
@@ -218,7 +228,8 @@ Ecological succession, Buddhist impermanence, Taleb's antifragility, Carse's inf
 > growing-season rain from delayed snowmelt water (both as honest liquid-water equivalent, with
 > *no* false snow-depth precision) rather than letting one "precipitation" number imply more
 > growing-season water than a site gets. **State: strong** (language); **partial** (placement is
-> still point-wise/deterministic once generated — see roadmap item C).
+> still point-wise/deterministic once generated — see roadmap F14, the establishment-likelihood
+> band).
 
 ### 10. Design for relationships, not objects
 

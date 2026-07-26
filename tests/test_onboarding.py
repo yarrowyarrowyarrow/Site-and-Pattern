@@ -355,17 +355,29 @@ class TestWiringContract(unittest.TestCase):
             app.count("onboarding_flow.refresh(self)"), 3,
             "expected refresh on construction, on load, and on new project")
 
-    def test_generate_is_reachable_from_the_toolbar(self):
-        # F44's whole point: the easiest path out of a blank map stopped being
-        # menu-only.
-        self.assertIn("generate_requested", self._src("src/toolbar.py"))
-        self.assertIn("toolbar.generate_requested.connect",
+    def test_generate_is_reachable_without_opening_a_menu(self):
+        # F44's point stands — the easiest path out of a blank map must not be
+        # menu-only — but the surface changed: the permanent Draw-toolbar
+        # button was removed (a once-per-project action does not belong among
+        # the drawing tools), leaving the getting-started strip, which shows
+        # exactly while a user still needs it and then retires itself.
+        self.assertIn("generate_requested", self._src("src/first_step_bar.py"))
+        self.assertIn("first_step_bar.generate_requested.connect",
                       self._src("src/app.py"))
+
+    def test_generate_is_not_on_the_draw_toolbar(self):
+        # Removing it is the point; a future "promote it back" would silently
+        # undo a deliberate decision, so pin it.
+        toolbar = self._src("src/toolbar.py")
+        self.assertNotIn("generate_requested", toolbar)
+        self.assertNotIn("Generate Design\"", toolbar)
+        self.assertNotIn("toolbar.generate_requested.connect",
+                         self._src("src/app.py"))
 
     def test_both_generate_actions_are_disabled_together(self):
         gen = self._src("src/controllers/generation.py")
         self.assertEqual(gen.count("set_generate_enabled"), 2,
-                         "the toolbar button must grey out with the menu "
+                         "the strip's button must grey out with the menu "
                          "action while a run is in flight")
 
     def test_flow_exposes_what_app_and_menus_call(self):

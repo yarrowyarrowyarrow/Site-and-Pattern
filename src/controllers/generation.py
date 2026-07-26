@@ -85,9 +85,10 @@ class GenerationController:
         main = self._main
         if hasattr(main, "_act_generate"):
             main._act_generate.setEnabled(False)
-        # F44 promoted Generate onto the toolbar too — keep the two in step.
+        # The getting-started strip carries the other visible Generate button —
+        # keep the two in step so a run can't be started twice.
         try:
-            main.toolbar.set_generate_enabled(False)
+            main.first_step_bar.set_generate_enabled(False)
         except AttributeError:
             pass
         main.statusBar().showMessage("Generating design…")
@@ -136,7 +137,7 @@ class GenerationController:
         if hasattr(main, "_act_generate"):
             main._act_generate.setEnabled(True)
         try:
-            main.toolbar.set_generate_enabled(True)
+            main.first_step_bar.set_generate_enabled(True)
         except AttributeError:
             pass
         self._thread = None
