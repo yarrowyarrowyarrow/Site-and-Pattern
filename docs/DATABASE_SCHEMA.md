@@ -12,7 +12,7 @@ seeded reference data every project draws from.
   [`recipes.py`](../src/db/recipes.py),
   [`structures.py`](../src/db/structures.py),
   [`fauna.py`](../src/db/fauna.py)
-- **Current schema version:** `50` (`src/db/plants.py:_SCHEMA_VERSION` — the
+- **Current schema version:** `51` (`src/db/plants.py:_SCHEMA_VERSION` — the
   authoritative value; this doc's narrative may lag, the code wins)
 - **Location:**
   - Linux: `~/.local/share/Site & Pattern/permadesign.db`
@@ -97,6 +97,24 @@ tagged by `relationship` (`larval_host, nectar, pollen, seed_food,
 fruit_food, nesting, cover`) and `specificity` (`specialist`/`generalist`).
 Powers the wildlife column in the plant browser and the
 lepidoptera-supported count in the habitat score.
+
+### `relationship_edges` — a VIEW, not a table (schema v51, F7)
+The unified edges layer. One `UNION ALL` over `plant_fauna` (kind = the
+`relationship` value), `companion_friends`, `companion_enemies` and shared
+`polyculture_members` (kind `co_planted`, one row per unordered pair), giving
+`(kind, a_type, a_id, b_type, b_id, directed, detail, source)`. Read through
+the query API in [`relationships.py`](../src/db/relationships.py) — never
+queried directly by feature code.
+
+Deliberately a **view**: the per-relationship tables stay the single source of
+truth, so there is no second copy to drift, no seeder to change and nothing new
+for the reseed to wipe. `schema.sql` DROPs and recreates it on every `init_db`,
+so the definition can evolve without a migration — only the `_SCHEMA_VERSION`
+bump that any `schema.sql` change requires.
+
+Derived edges (`shared_fauna` — two plants that feed the same animal) are
+computed in Python and carry `evidence='derived'`; only documented records
+appear in the view.
 
 ### `climate_cache` (schema v14)
 One row per ~1 km² (`lat_q`, `lng_q` = lat/lng × 100, rounded) caching

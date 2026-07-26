@@ -50,6 +50,12 @@ class AnalysisPanel(QWidget):
     bee_map_overlay_requested = pyqtSignal(dict)   # {"bee": name, "styles": {pid: fit}}
     bee_map_overlay_cleared = pyqtSignal()
 
+    # F5: relationship web — a whole graph payload from
+    # src.relationship_graph.build_relationship_graph, drawn by
+    # html/map/07-network.js.
+    relationship_overlay_requested = pyqtSignal(dict)
+    relationship_overlay_cleared = pyqtSignal()
+
     # A cached species photo finished downloading off-thread — re-render the
     # Habitat tab's species gallery (F11 / I1). Emitted from a worker thread;
     # Qt delivers it to the GUI thread.
@@ -597,6 +603,9 @@ class AnalysisPanel(QWidget):
         self._habitat_breakdown.setMinimumHeight(220)
         layout.addWidget(self._habitat_breakdown)
 
+        # ── Relationship web (F5) — the design drawn as a living network ───
+        self._build_relationship_web_block(layout)
+
         # ── Pull-a-plant impact simulator (F46) — learn by breaking it ─────
         pull_label = QLabel("Pull-a-plant — what does each plant hold up?")
         pull_label.setStyleSheet(
@@ -685,6 +694,119 @@ class AnalysisPanel(QWidget):
         # Short tab label so all five fit the strip even with macOS's wider
         # font; the page itself carries the full "Habitat Value" wording.
         self._habitat_tab_index = self._tabs.addTab(page, "Habitat")
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  Relationship web (F5) — P3/P5/P10
+    # ═════════════════════════════════════════════════════════════════════════
+
+    # Layer name → the edge kinds it turns on (src.db.relationships.EDGE_KINDS).
+    # Grouped rather than listed one-per-kind: seven trophic checkboxes is a
+    # database schema wearing a UI, and the useful question is "show me the food
+    # web" / "show me the horticulture", not "show me seed_food".
+    _WEB_LAYERS = [
+        ("food", "Food web — who eats, sips and lays eggs here", True,
+         ("larval_host", "nectar", "pollen", "fruit_food", "seed_food")),
+        ("shelter", "Shelter — nest sites and cover", True,
+         ("nesting", "cover")),
+        ("companion", "Companion pairings — good together / keep apart", False,
+         ("companion_friend", "companion_enemy")),
+        ("community", "Shares an authored plant community", False,
+         ("co_planted",)),
+        ("derived", "Inferred: plants feeding the same wildlife", False,
+         ("shared_fauna",)),
+    ]
+
+    def _build_relationship_web_block(self, layout):
+        """The relationship-web controls on the Habitat tab.
+
+        The overlay itself is the feature; this block is a toggle, a layer
+        filter and an honest read-out of what the picture contains.
+        """
+        head = QLabel("Relationship web — the design as a network")
+        head.setStyleSheet(
+            "color: #a5d6a7; font-size: 12px; font-weight: bold; "
+            "padding: 6px 0 2px 0;")
+        layout.addWidget(head)
+
+        hint = QLabel(
+            "Draw the invisible half of the design on the map: which plants "
+            "feed, host and shelter which animals, and which plants are tied "
+            "to each other. Wildlife sit on a ring outside the planting — a "
+            "diagram, not a place, because an animal has no address in your "
+            "yard.")
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        layout.addWidget(hint)
+
+        self._web_toggle = QCheckBox("Show the relationship web on the map")
+        self._web_toggle.setStyleSheet("color: #c8e6c9; font-size: 12px;")
+        self._web_toggle.toggled.connect(self._on_web_toggled)
+        layout.addWidget(self._web_toggle)
+
+        self._web_layer_boxes = {}
+        for key, label, on, _kinds in self._WEB_LAYERS:
+            box = QCheckBox(label)
+            box.setChecked(on)
+            box.setStyleSheet(
+                "color: #b0bec5; font-size: 11px; padding-left: 16px;")
+            box.toggled.connect(self._on_web_layers_changed)
+            layout.addWidget(box)
+            self._web_layer_boxes[key] = box
+
+        self._web_summary = QLabel("")
+        self._web_summary.setWordWrap(True)
+        self._web_summary.setVisible(False)
+        self._web_summary.setStyleSheet(
+            "color: #c8e6c9; font-size: 11px; padding: 8px; "
+            "background: #16221f; border: 1px solid #2e4a4a; "
+            "border-radius: 4px;")
+        layout.addWidget(self._web_summary)
+
+    def _web_kinds(self) -> tuple:
+        """The edge kinds the current layer checkboxes select."""
+        kinds: list[str] = []
+        for key, _label, _on, kind_names in self._WEB_LAYERS:
+            box = self._web_layer_boxes.get(key)
+            if box is not None and box.isChecked():
+                kinds.extend(kind_names)
+        return tuple(kinds)
+
+    def _on_web_toggled(self, on: bool):
+        if on:
+            self._refresh_relationship_web()
+        else:
+            self._web_summary.setVisible(False)
+            self.relationship_overlay_cleared.emit()
+
+    def _on_web_layers_changed(self, _checked: bool):
+        if getattr(self, "_web_toggle", None) is not None \
+                and self._web_toggle.isChecked():
+            self._refresh_relationship_web()
+
+    def _refresh_relationship_web(self):
+        """Rebuild and re-emit the graph. Never raises — the web is a lens on
+        the design, and a lens that can crash the panel is worse than no lens."""
+        if getattr(self, "_web_toggle", None) is None \
+                or not self._web_toggle.isChecked():
+            return
+        kinds = self._web_kinds()
+        try:
+            from src.relationship_graph import (build_relationship_graph,
+                                                summary_lines)
+            graph = build_relationship_graph(self._placed_plants or [],
+                                             kinds=kinds)
+            lines = summary_lines(graph)
+        except Exception as exc:  # noqa: BLE001
+            self._web_summary.setText(
+                f"Relationship web unavailable: {exc}")
+            self._web_summary.setVisible(True)
+            self.relationship_overlay_cleared.emit()
+            return
+        if not kinds:
+            lines = ["Pick at least one layer to draw."]
+        self._web_summary.setText("<br>".join(lines))
+        self._web_summary.setVisible(True)
+        self.relationship_overlay_requested.emit(graph)
 
     def show_habitat_tab(self):
         """Raise the Habitat Value tab (On This Design → habitat-value
@@ -1168,6 +1290,9 @@ class AnalysisPanel(QWidget):
         # Phenology dashboard likewise reads the live design.
         if hasattr(self, "_phenology"):
             self._phenology.refresh()
+        # The relationship web is a view of the design, so it follows every
+        # edit — placing a keystone shrub should visibly grow the network (F5).
+        self._refresh_relationship_web()
 
     def set_structures(self, structures: list[dict]):
         """Update the list of placed structures (from app.py)."""

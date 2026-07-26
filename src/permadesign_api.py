@@ -58,6 +58,8 @@ __all__ = [
     "run_analysis",
     "pull_plant_impact",
     "chickadee_provision",
+    "relationship_web",
+    "plant_relationships",
     "phenology",
     "lesson_track",
     "reference_community",
@@ -334,6 +336,52 @@ def chickadee_provision(project: Project) -> dict:
         return _provision(project.placed_plants)
     except Exception as exc:      # noqa: BLE001
         raise AnalysisError(f"Chickadee scenario unavailable: {exc}") from exc
+
+
+def relationship_web(project: Project,
+                     kinds: Optional[list] = None) -> dict:
+    """``project`` drawn as a network — the relationship web (F5), over the
+    unified edges layer (F7, :mod:`src.db.relationships`).
+
+    Returns the JSON-friendly graph from
+    :func:`src.relationship_graph.build_relationship_graph` — species nodes at
+    their planting centroid, wildlife nodes on a ring outside it, one edge per
+    documented relationship (plus derived plant↔plant links when asked for),
+    a legend and honest stats (specialists, single-support animals, anything
+    the readability cap dropped). ``kinds`` narrows the edge vocabulary; the
+    default shows the food web and shelter.
+
+    Raises:
+        AnalysisError: if the plant/fauna database can't be read.
+    """
+    _ensure_db()
+    from src.relationship_graph import build_relationship_graph
+    try:
+        return build_relationship_graph(project.placed_plants, kinds=kinds)
+    except Exception as exc:      # noqa: BLE001
+        raise AnalysisError(f"Relationship web unavailable: {exc}") from exc
+
+
+def plant_relationships(plant_id: int) -> dict:
+    """Everything connected to one plant, across the whole catalogue (F7).
+
+    The question the unified edges layer exists to answer: returns the
+    JSON-friendly dict from :func:`src.db.relationships.neighbourhood` —
+    the plant's documented relationships grouped by kind (caterpillar hosting,
+    nectar, fruit, nest sites, cover, companion pairings, shared communities),
+    each resolved to names, each carrying its evidence.
+
+    Unlike :func:`relationship_web` this is not scoped to a design.
+
+    Raises:
+        AnalysisError: if the plant database can't be read.
+    """
+    _ensure_db()
+    from src.db.relationships import neighbourhood
+    try:
+        return neighbourhood(int(plant_id))
+    except Exception as exc:      # noqa: BLE001
+        raise AnalysisError(f"Relationships unavailable: {exc}") from exc
 
 
 def phenology(project: Project, month: Optional[int] = None) -> dict:

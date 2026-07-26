@@ -96,6 +96,12 @@ class TestStructuralCeilings(unittest.TestCase):
         (_HTML / "map" / "05-features.js", 1200),      # ~1120 now
         # V2.13: + water flow & accumulation overlay (raster + arrow lattice).
         (_HTML / "map" / "06-overlays.js", 1560),      # ~1490 now
+        # V2.31 (F5): the relationship-web overlay went into its own chunk
+        # rather than onto 06-overlays.js, which was already the biggest of
+        # the six. Geometry stays in src/relationship_graph.py — if this file
+        # grows past its ceiling the cause is almost certainly ecology logic
+        # that belongs in Python.
+        (_HTML / "map" / "07-network.js", 400),        # ~200 now
         # V2.24: scene3d.html was a single ~4,200-line <script> — the exact
         # monolith shape the V1.64 split killed. It is now the HTML shell + a
         # bootstrap module; the viewer lives in html/scene3d/*.js loaded in
@@ -320,6 +326,8 @@ class TestAgentApiContract(unittest.TestCase):
         "run_analysis": ["project"],
         "pull_plant_impact": ["project", "plant_id"],   # F46 (V2.13)
         "chickadee_provision": ["project"],             # F47 (V2.13)
+        "relationship_web": ["project", "kinds"],       # F5  (V2.31)
+        "plant_relationships": ["plant_id"],            # F7  (V2.31)
         "phenology": ["project", "month"],              # F51 (V2.13)
         "lesson_track": ["project"],                    # F53 (V2.13)
         "reference_community": ["ecoregion"],           # F50 (V2.13)

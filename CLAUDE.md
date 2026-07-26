@@ -148,6 +148,8 @@ only, doesn't affect real commits.
 | `src/db/schema.sql` | Authoritative DDL. Loaded on every `init_db`. |
 | `src/db/plants.py` | Database access layer + migration logic + seed helpers. |
 | `src/db/fauna.py` | Query API for the fauna registry and plant↔fauna junction (V1.31+). |
+| `src/db/relationships.py` | **The unified edges layer (F7, V2.31).** One query API + one edge vocabulary (`EDGE_KINDS`) over the schema-v51 `relationship_edges` view, which unions `plant_fauna`, both companion tables and shared polyculture membership. Ask "what is connected to this plant?" here, not table by table. Every edge carries `evidence` — `documented` (seeded record + `source`) vs `derived` (computed, e.g. two plants feeding the same animal). |
+| `src/relationship_graph.py` | Relationship-web overlay core (F5, V2.31): the design as a drawable graph — species at their planting centroid, wildlife on a ring outside it. All geometry Python-side; `html/map/07-network.js` only renders. |
 | `src/db/polycultures.py` | Polyculture CRUD + seeded example communities. |
 | `src/db/recipes.py` | Ratio-only polyculture recipes (separate from spatial polycultures). |
 | `src/db/structures.py` | Hard-coded list of habitat structures (bee hotels, brush piles, etc.). |
@@ -159,7 +161,7 @@ only, doesn't affect real commits.
 | `src/polyculture_panel.py` | Polyculture/community builder UI. |
 | `src/analysis_panel.py` | Site analysis + Habitat Value Score breakdown. |
 | `src/learn_panel.py` | Learn side tab: Field Study quiz, guided Lessons, Present/docent mode (V2.25). |
-| `src/map_widget.py` + `html/map.html` + `html/map/*.js` | Leaflet map embedded via QWebEngineView. The JS is split into six sequential classic scripts (V1.64) — shared-global model, NOT ES modules; load order matters. |
+| `src/map_widget.py` + `html/map.html` + `html/map/*.js` | Leaflet map embedded via QWebEngineView. The JS is split into seven sequential classic scripts (V1.64, +`07-network.js` in V2.31) — shared-global model, NOT ES modules; load order matters. |
 | `src/llm_design.py` | Generate Design: LLM spec → deterministic placement (scored cells, zones, keep-out, density). |
 | `src/design_critic.py` | Evaluate→revise→repair loop for generated designs (V1.62). |
 | `src/placement_score.py` | Per-cell ecological scoring + aesthetic composition terms (V1.62). |

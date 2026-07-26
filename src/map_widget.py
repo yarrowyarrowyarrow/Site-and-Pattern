@@ -869,9 +869,27 @@ class MapWidget(QWebEngineView):
         """Leave the "what the bee sees" map view (F37 increment 3)."""
         self.run_js(map_js.clear_bee_forage_view())
 
+    def clear_relationship_graph(self):
+        """Remove the relationship-web overlay (F5)."""
+        self.run_js(map_js.clear_relationship_graph())
+
     def clear_selection(self):
         """Clear the current map selection (no delete)."""
         self.run_js(map_js.clear_selection())
+
+    def draw_relationship_graph(self, payload: dict):
+        """Draw the design's relationship web (F5). ``payload`` comes straight
+        from ``relationship_graph.build_relationship_graph`` — an empty graph
+        clears the overlay rather than drawing nothing over a stale one."""
+        payload = payload or {}
+        if not payload.get("nodes"):
+            self.run_js(map_js.clear_relationship_graph())
+            return
+        self.run_js(map_js.draw_relationship_graph(payload))
+
+    def set_relationship_graph_visible(self, visible: bool):
+        """Show/hide the relationship web without rebuilding it (F5)."""
+        self.run_js(map_js.set_relationship_graph_visible(bool(visible)))
 
     def set_bee_forage_view(self, payload: dict):
         """Recolour the map as the chosen bee's floral-resource map

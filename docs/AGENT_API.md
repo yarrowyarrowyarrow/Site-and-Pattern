@@ -23,6 +23,7 @@ the reference behind it.
 from src.permadesign_api import (
     Project, query_plants, list_polycultures, list_structures,
     run_analysis, export_plant_catalogue_docx,
+    relationship_web, plant_relationships,
 )
 ```
 
@@ -109,6 +110,58 @@ Returns:
 }
 ```
 Raises `AnalysisError` if the plant DB can't be read.
+
+### Relationships (F5 / F7)
+
+```python
+relationship_web(project: Project, kinds: list | None = None) -> dict
+plant_relationships(plant_id: int) -> dict
+```
+
+`relationship_web` returns the design as a graph — species nodes at their
+planting centroid, wildlife nodes on a ring outside it, one edge per
+relationship, plus a legend and stats:
+
+```jsonc
+{
+  "nodes": [
+    {"id": "p12", "type": "plant", "plant_id": 12, "label": "Wild Bergamot",
+     "lat": 51.05, "lng": -114.07, "count": 4, "degree": 6, "on_ring": false},
+    {"id": "f88", "type": "fauna", "fauna_id": 88, "label": "Monarch",
+     "taxon": "lepidoptera", "lat": ..., "lng": ..., "on_ring": true,
+     "specialist": true, "only_source": true}
+  ],
+  "edges": [{"a": "p12", "b": "f88", "kind": "larval_host",
+             "phrase": "caterpillar host for", "strength": 1.0,
+             "evidence": "documented", "a_lat": ..., "b_lng": ...}],
+  "legend": [{"kind": "larval_host", "label": "Caterpillar host", "count": 9}],
+  "ring":  {"lat": ..., "lng": ..., "radius_m": 27.6, "lanes": 2},
+  "stats": {"species": 8, "wildlife": 24, "edges": 27, "specialists": 3,
+            "single_support": 21, "isolated": [], "dropped_fauna": 0,
+            "derived_edges": 0}
+}
+```
+
+`kinds` narrows the edge vocabulary (`src.db.relationships.EDGE_KINDS`);
+the default draws the food web and shelter. `stats.dropped_fauna` is what the
+readability cap left out — it is reported, never silently thinned.
+
+`plant_relationships` is the catalogue-wide version for one species — the
+"show me everything connected to this plant" query — grouped by kind and
+resolved to names:
+
+```jsonc
+{"plant_id": 12, "total": 9,
+ "groups": [{"kind": "larval_host", "label": "Caterpillar host",
+             "phrase": "caterpillar host for", "color": "#8bc34a",
+             "items": [{"id": 88, "type": "fauna", "name": "Monarch",
+                        "detail": "specialist", "strength": 1.0,
+                        "evidence": "documented"}]}]}
+```
+
+Every edge carries `evidence`: `documented` (a seeded record with a `source`)
+or `derived` (computed — e.g. two plants that feed the same animal). Both raise
+`AnalysisError` if the DB can't be read.
 
 ### Export
 

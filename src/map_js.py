@@ -407,6 +407,27 @@ def clear_bee_forage_view() -> str:
     return "clearBeeForageView();"
 
 
+def draw_relationship_graph(payload: dict) -> str:
+    """Draw the design as a living network — the relationship-web overlay (F5).
+
+    ``payload`` is a whole graph from
+    :func:`src.relationship_graph.build_relationship_graph`: nodes already
+    carrying lat/lng (species at their planting centroid, wildlife on a ring
+    outside it), edges already carrying both endpoints, colour and weight, plus
+    a legend and stats. The JS decides nothing — see html/map/07-network.js."""
+    return f"drawRelationshipGraph({_jsobj(payload)});"
+
+
+def set_relationship_graph_visible(visible: bool) -> str:
+    """Show/hide an already-drawn relationship web without rebuilding it (F5)."""
+    return f"setRelationshipGraphVisible({_jsbool(visible)});"
+
+
+def clear_relationship_graph() -> str:
+    """Remove the relationship web and its legend (F5)."""
+    return "clearRelationshipGraph();"
+
+
 def set_timeline_year_by_plant_id(year: int, pid_factors: dict,
                                   pid_presence: dict | None = None,
                                   pid_spread: dict | None = None) -> str:

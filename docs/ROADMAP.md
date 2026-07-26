@@ -143,6 +143,8 @@ Features for long-term planning and tracking.
 | Water budget calculator (demand vs rainfall + catchment) | Done |
 | Print / PDF export (map screenshot, plant list, notes, title block) | Done |
 | Design notes / journal (per-project, timestamps, saved in GeoJSON) | Done |
+| Unified relationship-edges layer (`relationship_edges` view + `src/db/relationships.py`; one query API over plant↔fauna, companion and shared-community edges, each tagged documented vs derived) | Done |
+| Relationship web map overlay (the design drawn as a network: species at their planting centroid, wildlife on a ring outside it, layer filter + legend) | Done |
 
 ---
 

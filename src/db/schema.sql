@@ -373,6 +373,58 @@ CREATE TABLE IF NOT EXISTS shade_zone_cache (
 );
 CREATE INDEX IF NOT EXISTS idx_shade_zone_project ON shade_zone_cache(project_key);
 
+-- ── The unified relationship-edges layer (schema v51, F7) ────────────────────
+-- Design principle P3 (relationships matter more than components) and P10
+-- (plants are nodes in a network) — see docs/DESIGN_PHILOSOPHY.md.
+--
+-- The app's ecology has always been stored as edges, but in four unrelated
+-- shapes: plant_fauna carries trophic/shelter relationships, companion_friends
+-- and companion_enemies carry horticultural affinity, and shared membership in
+-- a polyculture carries "these grow together". Every consumer that wanted to
+-- ask "what is connected to this plant?" had to know all four and join them by
+-- hand. This VIEW is the single queryable answer, read by src/db/relationships.py.
+--
+-- Deliberately a VIEW, not a table: the per-relationship tables remain the
+-- single source of truth and the seeders stay untouched, so there is no second
+-- copy to drift and nothing extra for the reseed to wipe. Only DOCUMENTED edges
+-- appear here — derived/second-order edges (two plants that feed the same
+-- animal) are computed in Python and carry evidence='derived', so a caller can
+-- always tell a record from an inference (P9).
+--
+-- `kind` is the vocabulary in src/db/relationships.py:EDGE_KINDS. `directed`
+-- marks plant→fauna edges, which read one way ("nectar for"); plant↔plant edges
+-- are symmetric and stored once per unordered pair.
+DROP VIEW IF EXISTS relationship_edges;
+CREATE VIEW relationship_edges AS
+    SELECT pf.relationship            AS kind,
+           'plant'                    AS a_type,
+           pf.plant_id                AS a_id,
+           'fauna'                    AS b_type,
+           pf.fauna_id                AS b_id,
+           1                          AS directed,
+           COALESCE(pf.specificity, '') AS detail,
+           COALESCE(pf.source, '')      AS source
+      FROM plant_fauna pf
+    UNION ALL
+    SELECT 'companion_friend', 'plant', cf.plant_id_a, 'plant', cf.plant_id_b,
+           0, '', ''
+      FROM companion_friends cf
+    UNION ALL
+    SELECT 'companion_enemy', 'plant', ce.plant_id_a, 'plant', ce.plant_id_b,
+           0, '', ''
+      FROM companion_enemies ce
+    UNION ALL
+    -- Co-membership in an authored plant community. m2.plant_id > m1.plant_id
+    -- keeps one row per unordered pair and drops self-pairs; DISTINCT collapses
+    -- a pair that appears in several communities into one edge (the community
+    -- names are re-gathered by the query API when a caller wants them).
+    SELECT DISTINCT 'co_planted', 'plant', m1.plant_id, 'plant', m2.plant_id,
+           0, '', 'polyculture'
+      FROM polyculture_members m1
+      JOIN polyculture_members m2
+        ON m2.polyculture_id = m1.polyculture_id
+       AND m2.plant_id > m1.plant_id;
+
 CREATE INDEX IF NOT EXISTS idx_plants_type    ON plants(plant_type);
 CREATE INDEX IF NOT EXISTS idx_plants_zone    ON plants(hardiness_zone_min, hardiness_zone_max);
 CREATE INDEX IF NOT EXISTS idx_plants_native  ON plants(native_to_alberta);

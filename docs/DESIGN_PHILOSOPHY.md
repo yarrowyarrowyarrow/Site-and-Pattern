@@ -79,10 +79,17 @@ Simard's mycorrhizal networks, Lowenfels' soil food web, Sheldrake's fungal conn
 > plant and see which species lose all support and whether the food-web chain snaps; and the
 > **feed-a-chickadee scenario** (`src/chickadee_scenario.py`, roadmap F47) walks one edge all
 > the way up — host plant → caterpillar → nestling — weighing the design's caterpillar capacity
-> against the 6,000–9,000 a brood needs. **State: partial (strengthening)** — the relationships
-> are increasingly *scored*, now *testable by removal*, and now *followed up the chain to a
-> fledged bird*, but not yet drawn as a network (F5) or unified into one edges layer (F7);
-> mycorrhizal/symbiosis links still live only in plant `notes` text.
+> against the 6,000–9,000 a brood needs. The four edge shapes are now **one queryable layer**
+> (`src/db/relationships.py` over the schema-v51 `relationship_edges` view, roadmap F7), which
+> answers "show me everything connected to this plant" in a single call and can see the
+> second-order edge no individual table holds — two plants tied together by an animal they both
+> feed; and a design is finally **drawn as the network it is** (`src/relationship_graph.py` +
+> `html/map/07-network.js`, roadmap F5), over the real map, with species at their planting
+> centroid and wildlife on a ring outside it. **State: strong** — the relationships are modeled,
+> scored, testable by removal, followed up the chain to a fledged bird, queryable as one layer,
+> and visible as a graph. Still absent: mycorrhizal/symbiosis links (F25) and successional
+> edges (F26) — they live only in plant `notes` text and inferred roles, and the edges layer
+> now has a shape ready for both.
 
 ### 4. Time is the most undervalued design variable
 
@@ -213,9 +220,15 @@ This is the synthesis of all preceding themes. Every other landscape application
 > labels** (`src/ecological_role.py`, roadmap F1) now read those plant↔fauna edges back to the
 > user per plant ("hosts 7 caterpillars", "specialist host"); the **native-bee habitat builder**
 > (`src/bee_habitat.py`, F37) reads the same bee↔plant edges *forward* into "design for this
-> species" guidance. **State: partial** — the edges are
-> modeled in data, increasingly scored, summarised per node, and now actionable per target
-> species, but not yet drawn as a first-class relationship network in the UI (roadmap F5, F7).
+> species" guidance; and the **unified edges layer** (`src/db/relationships.py`, F7) plus the
+> **relationship web overlay** (`src/relationship_graph.py` + `html/map/07-network.js`, F5)
+> finally make the network first-class — one vocabulary of edge kinds behind one query API,
+> and a map layer that draws the design as the graph it always was.
+> **State: strong** — the edges are modeled in data, scored, summarised per node, actionable
+> per target species, queryable as a single layer, and drawn. What is still object-shaped is
+> *generation*: `llm_design` picks a species list and `placement_score` scores cells, neither
+> reasoning over the edge graph directly — placing for the network rather than for the site is
+> the next honest step.
 
 ### 11. The body and the site know things the screen does not
 

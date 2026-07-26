@@ -187,7 +187,14 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # are trees sitting next to each other, which a user picked out of the sprite
 # contact sheet as "three near-identical green blobs".
 # See scripts/seed_garden_morphology.py for the values and their sourcing.
-_SCHEMA_VERSION = 50
+# v51 (V2.31, F7): the `relationship_edges` VIEW — one queryable edges layer over
+# plant_fauna + companion_friends + companion_enemies + shared polyculture
+# membership, read by src/db/relationships.py. A VIEW, not a table: the
+# per-relationship tables stay the source of truth, so no seeder changes, no new
+# reseed wipe entry, and no second copy to drift. schema.sql DROPs and recreates
+# it on every init_db, so the definition can evolve without a migration; the
+# version bump is here because schema.sql changed, per CLAUDE.md.
+_SCHEMA_VERSION = 51
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

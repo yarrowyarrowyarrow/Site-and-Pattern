@@ -801,6 +801,13 @@ class MainWindow(QMainWindow):
             self.map_widget.set_bee_forage_view)
         self.analysis_panel.bee_map_overlay_cleared.connect(
             self.map_widget.clear_bee_forage_view)
+        # Relationship web (F5): same shape — the whole graph is built
+        # panel-side by src/relationship_graph.py, so this is a direct hand-off
+        # to the map widget with no MainWindow method in between.
+        self.analysis_panel.relationship_overlay_requested.connect(
+            self.map_widget.draw_relationship_graph)
+        self.analysis_panel.relationship_overlay_cleared.connect(
+            self.map_widget.clear_relationship_graph)
 
         # Map → polyculture removal
         b.polyculture_removed.connect(self._on_polyculture_removed)

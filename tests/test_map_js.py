@@ -113,6 +113,8 @@ class TestJsEntryPointsExist(unittest.TestCase):
         "drawWindOverlay", "clearWindOverlay",
         "setTimelineYearByPlantId",
         "setBeeForageView", "clearBeeForageView",
+        "drawRelationshipGraph", "setRelationshipGraphVisible",
+        "clearRelationshipGraph",
         "clearContours", "undoLastContour", "finishContour",
         "emitTerrainBboxFromViewport", "emitTerrainBboxFromBoundary",
         "drawAutoContours", "drawSlopeOverlay", "setSlopeOverlayOpacity",
@@ -586,6 +588,48 @@ class TestBeeForageView(unittest.TestCase):
         # A quote in the bee name must not break out of the JS string literal.
         js = mj.set_bee_forage_view('a "cuckoo" bee', {})
         self.assertIn('\\"cuckoo\\"', js)
+
+
+class TestRelationshipGraph(unittest.TestCase):
+    """F5 — the whole graph goes over as one JSON literal."""
+
+    _GRAPH = {
+        "nodes": [{"id": "p1", "type": "plant", "label": "Wild Bergamot",
+                   "lat": 51.0, "lng": -114.0}],
+        "edges": [{"a": "p1", "b": "f2", "kind": "nectar",
+                   "phrase": "nectar for", "color": "#ffb300"}],
+        "legend": [], "ring": {"lat": 51.0, "lng": -114.0, "radius_m": 12.0},
+        "stats": {"species": 1},
+    }
+
+    @staticmethod
+    def _payload(js: str) -> dict:
+        """Undo the JSON.parse("…") double-encoding _jsobj emits."""
+        inner = js[len('drawRelationshipGraph(JSON.parse('):-len('));')]
+        return json.loads(json.loads(inner))
+
+    def test_draw_emits_call_with_payload(self):
+        js = mj.draw_relationship_graph(self._GRAPH)
+        self.assertTrue(js.startswith("drawRelationshipGraph(JSON.parse("))
+        self.assertTrue(js.strip().endswith(");"))
+        payload = self._payload(js)
+        self.assertEqual(payload["edges"][0]["kind"], "nectar")
+        self.assertEqual(payload["ring"]["radius_m"], 12.0)
+
+    def test_labels_survive_quotes_intact(self):
+        # A quote-bearing plant name must round-trip, not break the literal.
+        graph = json.loads(json.dumps(self._GRAPH))
+        graph["nodes"][0]["label"] = 'Bee "balm"'
+        js = mj.draw_relationship_graph(graph)
+        self.assertEqual(self._payload(js)["nodes"][0]["label"], 'Bee "balm"')
+
+    def test_visibility_and_clear(self):
+        self.assertEqual(mj.set_relationship_graph_visible(True),
+                         "setRelationshipGraphVisible(true);")
+        self.assertEqual(mj.set_relationship_graph_visible(False),
+                         "setRelationshipGraphVisible(false);")
+        self.assertEqual(mj.clear_relationship_graph(),
+                         "clearRelationshipGraph();")
 
 
 if __name__ == "__main__":
