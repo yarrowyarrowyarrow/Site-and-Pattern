@@ -196,10 +196,6 @@ function _glbLoadStruct(loader, key, spec) {
 // protected by disposeDesignGroup's shared-material set automatically.
 function _ensureModelMats() {
   ensurePlantMats();
-  if (!MATS.glbBark)
-    MATS.glbBark = plantMaterial({ roughness: 0.92, wind: 0.015, vertexColors: true,
-                                   detail: 'bark', detailScale: 1.0,
-                                   detailAmount: 0.5 });
 }
 
 // Tree archetype for (crown class, conifer kind, genus profile, form, tier).
@@ -219,7 +215,10 @@ function glbTreeArch(cls, ck, profId, form, tier) {
   const t = rec && rec.tiers && (rec.tiers[tier] || rec.tiers[2]);
   if (!t || !t.bark || !t.foliage) return null;
   _ensureModelMats();
-  return { branchGeo: t.bark, foliageGeo: t.foliage, branchMat: MATS.glbBark };
+  // `vertexColorBark` rather than a material: since F63 the bark material also
+  // depends on the species' bark class, so the caller picks it — but only the
+  // loader knows these parts carry COLOR_0, which the procedural bark does not.
+  return { branchGeo: t.bark, foliageGeo: t.foliage, vertexColorBark: true };
 }
 
 // The parts bag for one (form, variant key) unit, or the neutral 'broad_1' unit
@@ -243,7 +242,7 @@ function glbShrubArch(form, vkey) {
   const p = _glbVariant('shrub.' + form, vkey);
   if (!p || !p.bark || !p.foliage) return null;
   _ensureModelMats();
-  return { foliageGeo: p.foliage, stemGeo: p.bark, stemMat: MATS.glbBark };
+  return { foliageGeo: p.foliage, stemGeo: p.bark, vertexColorBark: true };
 }
 
 function glbHerbArch(formName, vkey) {
@@ -290,13 +289,20 @@ window.glbLayerVariantIndex = glbLayerVariantIndex;
 // (makeBeeAvatar/makeButterflyAvatar in 06-fly.js; makeBirdCritter etc. in
 // 07-wildlife.js). Scale formulas match each factory's final setScalar.
 const _GLB_CRITTER = {
+  // `node` picks the BUILD inside a multi-variant file (V2.33, F67) — the
+  // mechanism the fly's hover/darner pair established. A build the file does
+  // not carry falls back to the first, which is the honest degradation: the
+  // creature still flies, in the wrong silhouette, rather than vanishing.
   bee:       { key: 'bee', anim: 'flier',
+               node: (a) => a.build || a.shape || 'stout',
                flap: { base: 0.2, amp: 0.75, speed: 0.09 },
                scale: (a) => 0.2 * (0.82 + 0.32 * (a.size || 1)) * 0.85 },
   butterfly: { key: 'lep', anim: 'flier',
+               node: (a) => a.build || 'butterfly',
                flap: { base: -0.6, amp: 1.05, speed: 0.028 },
                scale: () => 0.46 * 1.15 },
   moth:      { key: 'lep', anim: 'flier',
+               node: (a) => a.build || 'moth',
                flap: { base: -0.45, amp: 0.75, speed: 0.055 },
                scale: () => 0.42 * 1.15 },
   bird:      { key: 'bird', anim: (a) => a.hummer ? 'hover' : 'perch',
@@ -371,7 +377,14 @@ function glbCritter(kind, app) {
   if (!rec) return null;
   let root = rec.template;
   if (spec.node) {
-    root = root.getObjectByName(spec.node(app));
+    const want = spec.node(app);
+    root = root.getObjectByName(want)
+      // A build this file doesn't carry means the appearance layer and the
+      // generator's variant list have drifted (src/scene_wildlife.py ↔
+      // assetlib/fauna_variants.py). Degrade to the first build rather than
+      // dropping the creature out of the scene entirely.
+      || ((rec.spec && rec.spec.nodes && rec.spec.nodes.length)
+          ? root.getObjectByName(rec.spec.nodes[0]) : null);
     if (!root) return null;
   }
   const g = root.clone(true);

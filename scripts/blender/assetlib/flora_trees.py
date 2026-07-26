@@ -31,22 +31,38 @@ from .mesh_ops import (ICO_TRIS, add_blade_or_leaf, add_cone, add_cone_between,
                        leaf_width_for, place, shape_to_aspect,
                        thin_groups_to_budget)
 
-# A deciduous crown's OUTERMOST clumps are stamped as a rosette of real leaf
-# cards instead of a faceted ellipsoid. The crown edge is where a tree is read
-# from at yard distance, and until V2.29 every broadleaf's edge was the same
-# ball of facets — aspen, birch, cherry and apple differed only in bark hex and
-# crown proportion, which the sprite audit scored 3/10 for distinctness.
-#
-# Interior clumps stay ellipsoids: they are hidden inside the canopy, where a
-# sphere is the cheapest way to buy volume and shadow. So this costs almost
-# nothing — five 4-triangle leaves is the same 20 triangles as the icosahedron
-# they replace.
+# A deciduous crown is stamped as rosettes of real leaf cards. The crown edge is
+# where a tree is read from at yard distance, and until V2.29 every broadleaf's
+# edge was the same ball of facets — aspen, birch, cherry and apple differed only
+# in bark hex and crown proportion, which the sprite audit scored 3/10 for
+# distinctness.
 CROWN_LEAF_SEGMENTS = 2                   # 4 triangles a leaf
-LEAVES_PER_TIP_CLUMP = 5
-# Leaf card length as a multiple of the clump radius it replaces. The clump
-# radius already tracks the species' real leaf length (conventions.grain_for),
-# so a bur oak's cards come out coarse and a birch's fine for free.
-CROWN_LEAF_SCALE = 1.7
+
+# How densely a rosette fills the clump it stands in, and the bounds on how many
+# cards that is worth. Card length comes from the species' real leaf
+# (conventions.crown_card_length) rather than from the clump radius, so the
+# count has to make up the coverage the old oversized cards got for free: a card
+# a quarter as long covers a sixteenth of the area. Squared, therefore, not
+# linear. The cap is what stops a 25 m poplar (fine leaves, wide crown) asking
+# for four hundred cards on one branch tip and starving the rest of the crown.
+CROWN_LEAF_COVER = 1.5
+CROWN_LEAVES_PER_CLUMP = (5, 11)
+# A deciduous crown is ALL leaves now — no faceted filler ellipsoids anywhere in
+# it. They existed because leaves used to be scarce and expensive, and they were
+# invisible only because the oversized leaf paddles hung in front of them: take
+# the paddles away and the crown turns out to have been a stack of 20-triangle
+# boulders the whole time, and they render lighter than the leaves so they read
+# as geometric blocks in the canopy. At life-sized leaves the budget buys 600+
+# of them, which is enough to fill the volume as well as clothe the surface, so
+# the sphere has nothing left to do. Interior clumps keep a tighter, less drooped
+# fan than the crown edge — inside a canopy leaves are packed, not hanging.
+INNER_FAN_TILT = (0.75, 0.55)             # base tilt, fan spread (rad)
+OUTER_FAN_TILT = (1.05, 0.75)
+INNER_MASS_PULL = 0.35                    # toward the bough, away from the edge
+# Card origins are jittered inside the clump rather than all radiating from its
+# centre, so a rosette of small leaves still fills the volume the clump stands
+# for. Fraction of the clump radius.
+CROWN_LEAF_SCATTER = 0.62
 
 # ── parameter tables (echo 02-plants.js) ─────────────────────────────────────
 
@@ -63,6 +79,13 @@ CONIFER_KINDS = {
     "fir":         {"whorls": (10, 13, 16), "base_r": 0.30, "droop": 0.08,
                     "spire": 1.4, "boughs": 9, "lift": 0.02,
                     "crown_base": (0.04, 0.08, 0.16)},
+    # Douglas-fir: half again as tall as a balsam fir on the same footprint
+    # (30 m against 20 m), so a tighter, denser, more sharply-spired column with
+    # a longer clear bole. Split from `fir` in V2.33 because pooling them put
+    # both at a 3.3 aspect and neither is 3.3.
+    "douglas":     {"whorls": (12, 16, 20), "base_r": 0.26, "droop": 0.06,
+                    "spire": 1.5, "boughs": 8, "lift": 0.02,
+                    "crown_base": (0.05, 0.12, 0.24)},
     "larch":       {"whorls": (6, 8, 10), "base_r": 0.36, "droop": 0.22,
                     "spire": 0.7, "boughs": 7, "lift": 0.05,
                     "crown_base": (0.06, 0.14, 0.26)},
@@ -103,6 +126,16 @@ CROWN_FRAC = {"slender": 0.58, "oval": 0.60, "spreading": 0.68}
 DECID_GENERA = {
     "aspen":         {"form": "slender", "foliage_scale": 0.90,
                       "trunk_r": 0.011},
+    # Water birch: an 8 m MULTI-STEMMED clump with red-brown non-peeling bark,
+    # against paper birch's 20 m single-leadered white spire. One genus, two
+    # trees — the same call the poplar/aspen split made in V2.30, and the reason
+    # `branching` was seeded in the first place.
+    "birch_water":   {"form": "spreading", "droop_outer": 0.35,
+                      "foliage_scale": 0.86, "trunk_r": 0.022},
+    # Evans cherry: a 4 m orchard tree, low and broad, against pin cherry's
+    # 8 m slender wild form.
+    "cherry_orchard": {"form": "spreading", "foliage_scale": 1.0,
+                       "trunk_r": 0.030},
     # Balsam poplar: bigger, broader and coarser than an aspen, on a thicker
     # trunk with dark furrowed bark rather than chalky green-white.
     "poplar":        {"form": "oval", "foliage_scale": 1.02,
@@ -147,7 +180,10 @@ FOLIAGE_FRAC = (0.30, 0.22, 0.155)
 # an aspen as a bare pole with a few crumbs at the top. Affordable because a
 # foliage mass is a 20-triangle icosahedron (subdiv 0, matching the viewer's own
 # makeFoliageMass), not an 80-triangle one.
-CLUMPS_PER_TIP = (5, 7, 8)
+# Raised in V2.33: with life-sized leaves the SILHOUETTE is made of many small
+# rosettes rather than a few big paddles, and covering the crown's outer surface
+# matters more than density at any one point.
+CLUMPS_PER_TIP = (6, 9, 12)
 FOLIAGE_SUBDIV = 0
 
 # `poplar` is split from `aspen` (V2.30). They are one genus but not one tree:
@@ -157,9 +193,11 @@ FOLIAGE_SUBDIV = 0
 # variant AXIS to trees is deliberate: with only 17 tree species in the whole
 # catalogue, a variant axis would need a new manifest schema and four changed
 # code paths to express what one more flat key already does, for +3 units.
-TREE_ARCHETYPES = ("spruce", "fir", "pine", "larch", "def_conifer",
-                   "aspen", "poplar", "birch", "oak", "willow", "cherry",
-                   "apple", "def_slender", "def_oval", "def_spreading")
+TREE_ARCHETYPES = ("spruce", "fir", "douglas", "pine", "pine_jack", "larch",
+                   "def_conifer",
+                   "aspen", "poplar", "birch", "birch_water", "oak", "willow",
+                   "cherry", "cherry_orchard", "apple",
+                   "def_slender", "def_oval", "def_spreading")
 
 
 # ── conifers ─────────────────────────────────────────────────────────────────
@@ -242,8 +280,27 @@ def _build_conifer(kind, tier, rng, aspect):
     return bark, fol
 
 
-def _build_pine(tier, rng, aspect, grain):
+# Both pines are built by _build_pine; the kind decides how ORDERLY it is.
+# Lodgepole is the fire-regenerated pole — a dense narrow spire, almost a mast.
+# Jack pine is the scraggly one: a short, irregular, open crown with tufts at
+# odd angles and gaps between them, which is most of how it is recognised
+# (`decurrent` in the seed data, against lodgepole's `excurrent`).
+# `clumps` rose sharply in V2.33 with the tier budgets: a tuft is 72 triangles
+# (18 needle ribbons at 4 each), so tier2's old 23 tufts spent 1,656 of a 3,500
+# budget and the new 6,000 buys a crown that is actually opaque. A pine crown
+# being SEE-THROUGH was the last of the "bottle brush on a pole" look left after
+# V2.30 rebuilt the fascicles.
+PINE_KINDS = {
+    "pine":      {"clumps": (14, 26, 44), "z_base": 0.52, "reach": (0.16, 0.10),
+                  "jitter": 0.04, "taper": 0.45, "pad": 1.0},
+    "pine_jack": {"clumps": (11, 20, 32), "z_base": 0.42, "reach": (0.20, 0.20),
+                  "jitter": 0.11, "taper": 0.20, "pad": 1.35},
+}
+
+
+def _build_pine(kind, tier, rng, aspect, grain):
     """Pinus: clear lower trunk, tufted open upper crown, flattish top."""
+    K = PINE_KINDS.get(kind, PINE_KINDS["pine"])
     bark = bmesh.new()
     fol = bmesh.new()
     H = 1.0
@@ -251,26 +308,35 @@ def _build_pine(tier, rng, aspect, grain):
     # sized off the crown width like the deciduous leaf masses — and there are
     # more of them on a bigger tree.
     crown_half = 0.5 / aspect
-    pad_r = crown_half * (0.62, 0.5, 0.42)[tier] * grain
+    pad_r = crown_half * (0.62, 0.5, 0.42)[tier] * grain * K.get("pad", 1.0)
     # Fourteen needle tufts at tier2 left daylight between them and the crown
     # read as sparse; a tuft is 72 triangles, so the 3500 budget affords more
     # than twice that and the crown can actually be a crown.
-    clumps = 9 + tier * 7
-    z_base = 0.48
+    clumps = K["clumps"][tier]
+    z_base = K["z_base"]
     tufts, pts = [], []
     for i in range(clumps):
         f = i / max(1, clumps - 1)
-        z = z_base + (0.88 - z_base) * f + (rng.random() - 0.5) * 0.05
+        z = z_base + (0.88 - z_base) * f + (rng.random() - 0.5) * K["jitter"]
         az = rng.random() * math.tau
-        reach = (0.18 + rng.random() * 0.13) * (1 - f * 0.45)
+        reach = (K["reach"][0] + rng.random() * K["reach"][1]) \
+            * (1 - f * K["taper"])
         base = Vector((0, 0, z - 0.02))
         tip = Vector((math.cos(az) * reach, math.sin(az) * reach, z))
         r = pad_r * (0.8 + rng.random() * 0.4) * (1 - f * 0.20)
         tufts.append((base, tip, r))
         pts.extend((base, tip))
-    # A needle pad is stamped 1.5× wide in XY, so that is its horizontal reach.
+    # A tuft's real horizontal reach is what its NEEDLES span, not what the pad
+    # it replaced did. The 1.5x figure here was inherited from the flat elliptic
+    # pads and never updated when V2.30 turned them into needle fascicles that
+    # overshoot the pad radius (`ln = r * 2.4` in _needle_tuft) — so the solve
+    # was told the crown was 40% narrower than it is and let it grow wider than
+    # the species' aspect. Invisible at a 3.7 target, a failure at lodgepole's
+    # 4.2. leaf_extent is the same reach model add_leaf is built from.
+    reach = leaf_extent(pad_r * NEEDLE_LEN_GAIN, 1.1, "needle")[0] / max(
+        1e-6, pad_r)
     shape_to_aspect(pts, aspect, height=H,
-                    radii=[v for _b, _t, r in tufts for v in (0.0, r * 1.5)])
+                    radii=[v for _b, _t, r in tufts for v in (0.0, r * reach)])
     add_cone(bark, 0.034, 0.010, H * 0.96, 6, Matrix())
     for base, tip, r in tufts:
         # Visible branch out to the tuft (also the winter skeleton).
@@ -303,9 +369,14 @@ NEEDLE_SEGMENTS = 2
 NEEDLE_FASCICLE_GAIN = 4.0
 
 
+# How far a needle spray overshoots the pad radius it is stamped at. Named
+# because the aspect solve has to declare the same reach the stamp produces.
+NEEDLE_LEN_GAIN = 2.4
+
+
 def _needle_tuft(fol, rng, at, r):
     """A bunch of needle sprays radiating from one shoot end."""
-    ln = r * 2.4                     # needles overshoot the old pad's radius
+    ln = r * NEEDLE_LEN_GAIN         # needles overshoot the old pad's radius
     wd = leaf_width_for("needle", ln) * NEEDLE_FASCICLE_GAIN
     az0 = rng.random() * math.tau
     for i in range(NEEDLES_PER_TUFT):
@@ -407,31 +478,46 @@ def _build_deciduous(genus, tier, rng, aspect, grain):
             for j in range(n):
                 t = 0.45 + 0.55 * ((j + rng.random()) / n)
                 at = start.lerp(end, t)
+                # Pulled back down the bough, so a filler mass sits inside the
+                # branch cloud rather than out at the tip where the leaf shell is.
+                at = at.lerp(start, INNER_MASS_PULL)
                 c = at + Vector(((rng.random() - 0.5) * clump_r * 0.8,
                                  (rng.random() - 0.5) * clump_r * 0.8,
                                  clump_r * 0.25 - droop_outer * 0.05))
-                blobs.append([c, clump_r * (0.62 + rng.random() * 0.33), at.z,
-                              False])
+                blobs.append([c, clump_r * (0.62 + rng.random() * 0.33),
+                              at.z, False])
 
-    # The species' blade outline, and how many cards buy the same triangles the
-    # ellipsoid they replace would have cost. A lobed bur oak leaf needs four
+    # The species' blade outline, and the size ONE leaf card is drawn at — which
+    # comes from the species' real leaf against its own stature, not from the
+    # clump radius (conventions.crown_card_length, and the long note there for
+    # what keying it to the crown did to the bur oak). A lobed leaf needs four
     # ribbon segments (mesh_ops.blade_segments refuses to flatten a cut leaf on
-    # one vertex), so it gets fewer, larger cards — which is also how the tree
-    # itself resolves the same constraint.
+    # one vertex), so an oak's cards cost twice an aspen's and it carries
+    # correspondingly fewer — which is also how the tree resolves the same
+    # constraint.
     leaf_shape = C.DECID_LEAF_SHAPE.get(genus, "ovate")
     one_leaf = leaf_tris(leaf_shape, CROWN_LEAF_SEGMENTS)
-    leaves_per = max(2, round(ICO_TRIS / one_leaf))
+    bark_tris = len(segs) * (5 * 2 + 5 * 2)
+    card_len = C.crown_card_length(
+        genus, crown_half=crown_half, crown_frac=CROWN_FRAC[g["form"]],
+        leaf_cost=one_leaf, width_ratio=leaf_width_for(leaf_shape, 1.0),
+        foliage_budget=max(1.0, C.TRI_BUDGETS[f"tree_tier{tier}"] * 0.94
+                           - bark_tris))
+    lo, hi = CROWN_LEAVES_PER_CLUMP
+    leaves_per = int(max(lo, min(hi, round(
+        CROWN_LEAF_COVER * (clump_r / max(1e-6, card_len)) ** 2))))
     outer_cost = leaves_per * one_leaf
+    card_reach = clump_r * CROWN_LEAF_SCATTER + leaf_extent(
+        card_len, 1.4, leaf_shape)[0]
 
     # Fit the crown to the tier's triangle budget before anything is stamped.
     # A branch cross-section is 5 segments capped both ends; the crown is what
     # has to give, and thinning it evenly just makes the canopy slightly airier
-    # (mesh_ops.thin_groups_to_budget). Cost per clump is the DEARER of the two
-    # kinds, so the budget can never be under-counted by a crown that happens to
-    # be mostly leaf cards.
-    bark_tris = len(segs) * (5 * 2 + 5 * 2)
+    # (mesh_ops.thin_groups_to_budget). Every clump is a leaf rosette now, so
+    # there is one cost and no way for a cheap kind to be billed at an expensive
+    # kind's rate.
     blobs = [b for group in thin_groups_to_budget(
-        [[b] for b in blobs], max(ICO_TRIS, outer_cost),
+        [[b] for b in blobs], outer_cost,
         C.TRI_BUDGETS[f"tree_tier{tier}"], bark_tris) for b in group]
 
     # Narrow (or widen) the whole crown to the species' real aspect BEFORE
@@ -439,15 +525,13 @@ def _build_deciduous(genus, tier, rng, aspect, grain):
     # cross-sections don't. An aspen crown gets tall and tight with the same
     # sized leaf masses, instead of the same crown with stretched ones.
     pts = [p for s in segs for p in (s[0], s[1])] + [b[0] for b in blobs]
-    # An outer clump's geometry is a leaf ROSETTE, and a leaf card reaches
-    # CROWN_LEAF_SCALE times the clump radius and then some — so declaring the
-    # clump radius here under-states the crown's real extent and the solve lets
-    # it grow past its species' aspect (an apple came out 0.77 against a target
-    # of 1.20, i.e. half again too wide). leaf_extent is the same reach model
-    # add_leaf is built from, so this is exact rather than a fudge.
-    rads = [0.0] * (2 * len(segs)) + [
-        (leaf_extent(b[1] * CROWN_LEAF_SCALE, 1.4, leaf_shape)[0] if b[3]
-         else b[1]) for b in blobs]
+    # An outer clump's geometry is a leaf ROSETTE scattered inside the clump, so
+    # its real reach is the scatter plus one card — not the clump radius, which
+    # under-states it and lets the solve grow the crown past its species' aspect
+    # (an apple came out 0.77 against a target of 1.20, i.e. half again too
+    # wide). leaf_extent is the same reach model add_leaf is built from, so this
+    # is exact rather than a fudge.
+    rads = [0.0] * (2 * len(segs)) + [card_reach] * len(blobs)
     shape_to_aspect(pts, aspect, radii=rads)
 
     for start, end, r_bot, r_top, _depth, _terminal in segs:
@@ -456,29 +540,28 @@ def _build_deciduous(genus, tier, rng, aspect, grain):
     # Clear bole: no foliage below clear_bole × crown height.
     max_z = max((b[2] for b in blobs), default=1.0)
     gate = form["clear_bole"] * max_z
+    wd = leaf_width_for(leaf_shape, card_len)
     for center, radius, tip_z, outer in blobs:
         if tip_z < gate:
             continue
-        if not outer:
-            # Inside the canopy, where a sphere is the cheapest volume there is
-            # and nobody can see its silhouette anyway.
-            add_ellipsoid(fol, radius, (1.0, 1.0, 0.72 + rng.random() * 0.2),
-                          Matrix.Translation(center), subdiv=FOLIAGE_SUBDIV)
-            continue
-        # On the crown's outer surface: a rosette of real leaf cards, fanning
-        # out and down off the twig end, so the silhouette is made of THIS
-        # species' leaves.
-        ln = radius * CROWN_LEAF_SCALE
-        wd = leaf_width_for(leaf_shape, ln)
+        # A rosette of real leaf cards at the species' own leaf size, scattered
+        # through the clump rather than all radiating from its centre, so the
+        # mass reads as foliage instead of as a handful of paddles on a twig.
+        # Crown-edge rosettes fan wide and droop past the horizontal, which is
+        # what gives a silhouette its ragged, un-spherical outline; interior
+        # ones sit tighter, because inside a canopy leaves are packed.
+        tilt0, fan = OUTER_FAN_TILT if outer else INNER_FAN_TILT
+        scatter = radius * CROWN_LEAF_SCATTER
         az0 = rng.random() * math.tau
         for k in range(leaves_per):
+            at = center + Vector(((rng.random() - 0.5) * 2 * scatter,
+                                  (rng.random() - 0.5) * 2 * scatter,
+                                  (rng.random() - 0.5) * 1.4 * scatter))
             add_blade_or_leaf(
-                fol, rng, ln, wd,
-                # Fanned from near-horizontal to drooping past it, which is what
-                # gives a crown edge its ragged, un-spherical outline.
-                1.05 + (k / max(1, leaves_per - 1)) * 0.75 + rng.random() * 0.2,
+                fol, rng, card_len, wd,
+                tilt0 + (k / max(1, leaves_per - 1)) * fan + rng.random() * 0.2,
                 az0 + k * 2.39996 + rng.random() * 0.35,
-                center, leaf_shape, CROWN_LEAF_SEGMENTS)
+                at, leaf_shape, CROWN_LEAF_SEGMENTS)
     return bark, fol
 
 
@@ -494,8 +577,8 @@ def build_tree(archetype, tier, rng, coll, name_prefix=""):
     # unit-frame note in conventions.py).
     aspect = C.CROWN_ASPECT.get(archetype, 1.8)
     grain = C.grain_for(archetype)
-    if archetype == "pine":
-        bark_bm, fol_bm = _build_pine(tier, rng, aspect, grain)
+    if archetype in PINE_KINDS:
+        bark_bm, fol_bm = _build_pine(archetype, tier, rng, aspect, grain)
     elif archetype in CONIFER_KINDS:
         bark_bm, fol_bm = _build_conifer(archetype, tier, rng, aspect)
     elif archetype in DECID_GENERA:

@@ -187,9 +187,19 @@ class FlatLeafMaterialsTest(unittest.TestCase):
         self.assertIsNotNone(table, "04-quality.js: the MATS table moved")
         body = table.group(1)
         for name in self._FLAT_LEAF_MATERIALS:
-            # The entry runs from its key to the next key or the table's end.
+            # An entry is built either inline or from a shared preset (F63 gave
+            # bark and foliage a per-species surface class, so most of them come
+            # from MAT_PRESETS now). Follow whichever it is — the flag has to be
+            # true wherever it is actually written.
             entry = re.search(name + r":\s*plantMaterial\(\{(.*?)\}\)", body, re.S)
-            self.assertIsNotNone(entry, f"MATS.{name} not found")
+            if entry is None:
+                preset = re.search(
+                    name + r":\s*surfaceMaterial\(MAT_PRESETS\.(\w+)", body)
+                self.assertIsNotNone(preset, f"MATS.{name} not found")
+                entry = re.search(
+                    r"\n  " + preset.group(1) + r":\s*\{(.*?)\},\n", src, re.S)
+                self.assertIsNotNone(
+                    entry, f"MAT_PRESETS.{preset.group(1)} not found")
             self.assertIn(
                 "doubleSide: true", entry.group(1),
                 f"MATS.{name} is applied to FLAT leaf ribbons but is not "
@@ -198,7 +208,7 @@ class FlatLeafMaterialsTest(unittest.TestCase):
 
     def test_plant_material_honours_the_flag(self):
         """The flag has to reach three.js, or the check above proves nothing."""
-        src = _read_js("02-plants.js")
+        src = _read_js("01b-surface.js")
         self.assertRegex(
             src,
             r"side:\s*opts\.doubleSide\s*\?\s*THREE\.DoubleSide\s*:\s*THREE\.FrontSide",

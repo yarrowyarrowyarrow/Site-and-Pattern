@@ -303,12 +303,25 @@ def _terrain_block(elevation: Optional[dict], proj: Projector) -> Optional[dict]
     }
 
 
+def _wind_block(project, when, year, bounds, proj):
+    """The scene's wind, or None. Isolated so one bad cache row or a missing
+    shapely can never take the whole scene down with it — a swaying preview
+    with generic wind is a far better failure than no preview."""
+    try:
+        from src.wind_scene import wind_block
+        return wind_block(project, month=when.month, year=year,
+                          bounds=bounds, origin=proj)
+    except Exception:                                  # noqa: BLE001
+        return None
+
+
 def build_scene(project: dict, *, year: int = 0,
                 get_plant: Optional[Callable] = None,
                 elevation: Optional[dict] = None,
                 when: Optional[datetime] = None,
                 scan: Optional[dict] = None,
-                splat: Optional[dict] = None) -> dict:
+                splat: Optional[dict] = None,
+                wind: Optional[bool] = True) -> dict:
     """Build the Scene JSON for ``project`` at growth-timeline ``year``.
 
     ``get_plant`` is injectable for tests (defaults to the DB);
@@ -321,6 +334,9 @@ def build_scene(project: dict, *, year: int = 0,
     (a Gaussian-splat photoreal backdrop); when omitted it is auto-detected
     from ``project`` and exposed as ``scene["splat"]`` ({path, matrix,
     opacity}) so the 3D viewer can place it behind the design.
+    ``wind`` set False skips the site's wind block (:mod:`src.wind_scene`),
+    which is the one part of the scene that can touch the DB cache — tests and
+    headless callers that want a pure function pass False.
     """
     if get_plant is None:
         from src.db.plants import get_plant as _gp
@@ -372,6 +388,12 @@ def build_scene(project: dict, *, year: int = 0,
             # Fruit SHAPE (schema v49) — additive, so no SCENE_VERSION bump. The
             # viewer falls back to the round `berry` sprite when it is empty.
             "fruit_form": plant.get("fruit_form") or "",
+            # The graminoid field mark (schema v52) — additive, and it
+            # SUPERSEDES flower_form in the viewer for grasses, sedges and
+            # rushes. flower_form stays 'plume' for all of them because it
+            # feeds the pollinator logic, where a wind-pollinated grass
+            # correctly offers a bee nothing.
+            "inflorescence_form": plant.get("inflorescence_form") or "",
             **_fruit_window(plant),
             # Botanical morphology (schema v47, V2.29) — additive fields the
             # viewer feature-checks, so no SCENE_VERSION bump. Empty for every
@@ -379,6 +401,12 @@ def build_scene(project: dict, *, year: int = 0,
             # back to its per-genus defaults, so this can only add fidelity.
             "bark_color": plant.get("bark_color") or "",
             "fall_color": plant.get("fall_color") or "",
+            # Surface character (schema v52) — which procedural bark grain and
+            # leaf surface the viewer draws (01b-surface.js). Additive like the
+            # rest of this block; empty falls back to a per-genus bark default
+            # and a matte leaf.
+            "bark_texture": plant.get("bark_texture") or "",
+            "leaf_surface": plant.get("leaf_surface") or "",
             "leaf_size_cm": plant.get("leaf_size_cm"),
             # Leaf size is only meaningful against the plant's own stature, and
             # `height_m` above is this YEAR's height — so the baked leaf
@@ -628,4 +656,10 @@ def build_scene(project: dict, *, year: int = 0,
         # Night when the sun is down (V2.12): the 3D view renders a moonlit
         # scene and swaps day pollinators for nocturnal moths & bats.
         "is_night": _is_night(lat0, lng0, when or _DEFAULT_WHEN),
+        # The site's REAL prevailing wind for this month, plus the lee of the
+        # design's own windbreaks as a coverage grid (V2.33, F68). Additive and
+        # feature-checked by the viewer, so no SCENE_VERSION bump; None when the
+        # site's wind is unknown, and the viewer keeps its generic sway.
+        "wind": _wind_block(project, when or _DEFAULT_WHEN, year, bounds, proj)
+        if wind else None,
     }

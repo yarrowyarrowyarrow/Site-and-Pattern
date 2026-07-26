@@ -43,6 +43,15 @@ Ranked by direct relevance to the application's architecture, data modeling, UX,
 - Adrian Bejan — *Design in Nature* (2012)
 - David Epstein — *Range* (2019)
 
+### Social Licence & the Aesthetics of Ecological Planting
+*Principle 13's foundation — see [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md#13-a-native-planting-has-to-be-loved-to-survive).*
+- Joan Iverson Nassauer — *Messy Ecosystems, Orderly Frames*, Landscape Journal 14(2), 161–170 (1995)
+  The finding the app's ecological case needs and cannot supply itself: ecological quality
+  and legible human care are not in tension, and a mown edge, a crisp border, a path, a sign
+  or a deliberate repeat are **cues to care** that buy an ecologically messy planting its
+  social licence. Tallamy's whole strategy — suburban neighbours tolerating and then copying
+  each other's yards — depends on it.
+
 ### Ecological Design & Native Plant Science
 - Christopher Alexander — *A Pattern Language* (1977)
 - Christopher Alexander — *The Timeless Way of Building* (1979)

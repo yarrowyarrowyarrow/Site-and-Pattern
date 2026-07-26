@@ -439,6 +439,75 @@ class TestTerrainAndSun(unittest.TestCase):
         self.assertTrue(night["is_night"])
 
 
+class TestSceneWind(unittest.TestCase):
+    """F68 — the site's real wind reaches the 3D scene.
+
+    Before this the viewer swayed in a hard-coded diagonal at a fixed
+    amplitude, while src/wind.py had known the site's seasonal prevailing wind
+    since V1.67 and src/wind_shadow.py had known the design's own lee since
+    V1.68. Neither reached the one surface where a person would believe it.
+    """
+
+    def _project(self, **site):
+        cfg = {"latitude": 51.05, "longitude": -114.07}
+        cfg.update(site)
+        return {"type": "FeatureCollection", "features": [],
+                "properties": {"site_config": cfg}}
+
+    def test_wind_block_from_the_projects_stored_figure(self):
+        sc = build_scene(self._project(wind_prevailing_deg=292.5,
+                                       wind_mean_kmh=17.4),
+                         get_plant=lambda _i: {})
+        self.assertIsNotNone(sc["wind"])
+        self.assertAlmostEqual(sc["wind"]["from_deg"], 292.5)
+        self.assertAlmostEqual(sc["wind"]["mean_kmh"], 17.4)
+        # Honest about where it came from — a stored annual figure is not a
+        # fetched seasonal rose (P9).
+        self.assertTrue(sc["wind"]["approximate"])
+
+    def test_no_wind_block_when_the_site_wind_is_unknown(self):
+        sc = build_scene(self._project(), get_plant=lambda _i: {})
+        self.assertIsNone(sc["wind"],
+                          "a site with no known wind must not get a fabricated "
+                          "one — the viewer keeps its generic sway")
+
+    def test_season_follows_the_scene_month(self):
+        from src.wind_scene import season_for_month
+        self.assertEqual(season_for_month(1), "winter")
+        self.assertEqual(season_for_month(7), "summer")
+        self.assertEqual(season_for_month(10), "fall")
+
+    def test_seasonal_rose_beats_the_stored_annual_figure(self):
+        """The four seasonal blocks have been computed and cached since V1.67
+        and read from exactly one place. A prairie yard's January wind is not
+        its July wind, and the 3D view is where that shows."""
+        from src.wind_scene import wind_block
+        rose = {"annual": {"prevailing_deg": 270.0, "mean_speed": 15.0},
+                "seasons": {"winter": {"prevailing_deg": 315.0,
+                                       "mean_speed": 28.0}}}
+        got = wind_block(self._project(wind_prevailing_deg=200.0),
+                         month=1, get_rose=lambda _a, _b: rose)
+        self.assertAlmostEqual(got["from_deg"], 315.0)
+        self.assertAlmostEqual(got["mean_kmh"], 28.0)
+        self.assertEqual(got["season"], "winter")
+
+    def test_viewer_reads_the_block(self):
+        """A contract test, not a style one: the scene can carry wind all day
+        and change nothing if the viewer never applies it."""
+        src = _read_scene3d("01b-surface.js")
+        for token in ("uWindDir", "uShelter", "applySceneWind"):
+            self.assertIn(token, src, f"01b-surface.js lost {token}")
+        self.assertIn("applySceneWind(sc.wind)", _read_scene3d("05-flowers.js"),
+                      "permaSetScene never applies the scene's wind block")
+
+
+def _read_scene3d(name):
+    path = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), "html", "scene3d", name)
+    with open(path, encoding="utf-8") as fh:
+        return fh.read()
+
+
 class TestSpeciesField(unittest.TestCase):
     """The scene carries `species`, not just `genus`.
 

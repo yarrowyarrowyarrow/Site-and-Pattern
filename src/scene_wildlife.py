@@ -60,6 +60,15 @@ def _hash(*parts) -> int:
 # Each returns a compact dict the viewer turns into low-poly geometry. Colours
 # encode the real look; the viewer never hard-codes a species.
 
+# Which BODY PLAN a genus is modelled with (F67). `shape` was already a
+# round/stout/slender word but nothing baked it — every bee was one mesh in a
+# different colour. It is the mesh now (assetlib/fauna_variants.BEE_VARIANTS),
+# and this is the one place a genus needs a build that is not just its shape:
+# a leafcutter's broad head and flat scopa-bearing abdomen is the build a
+# non-specialist actually notices, and "stout" does not say it.
+_BEE_BUILD = {"megachile": "leafcutter"}
+
+
 def _bee_appearance(genus: str, name: str) -> dict:
     """Bee look by genus — the field marks that separate our native bees."""
     g = (genus or "").lower()
@@ -80,21 +89,32 @@ def _bee_appearance(genus: str, name: str) -> dict:
     }
     cuckoo = {"nomada", "triepeolus", "epeolus", "melecta", "xeromelecta", "zacosmia"}
     if g in cuckoo:
+        # Cuckoo bees are nearly hairless and wasp-like — narrow, and the one
+        # group where "not furry" is itself the field mark.
         return {"kind": "bee", "fuzz": "#b5462e", "dark": "#241a16", "bands": 2,
-                "shape": "slender", "size": 0.6, "metallic": False, "cuckoo": True}
+                "shape": "slender", "build": "slender", "size": 0.6,
+                "metallic": False, "cuckoo": True}
     fuzz, dark, bands, shape, size, metallic = table.get(
         g, ("#e0a92a", "#2a231c", 2, "round", 0.7, False))       # generic bee
     return {"kind": "bee", "fuzz": fuzz, "dark": dark, "bands": bands,
-            "shape": shape, "size": size, "metallic": metallic}
+            "shape": shape, "build": _BEE_BUILD.get(g, shape), "size": size,
+            "metallic": metallic}
 
 
 def _lep_appearance(name: str, sci: str, kind: str) -> dict:
     """Butterfly/moth wing colourway keyed off the well-known species."""
     n = (name or "").lower()
-    def spec(fore, hind, edge, size=1.0):
-        return {"kind": kind, "fore": fore, "hind": hind, "edge": edge, "size": size}
+
+    def spec(fore, hind, edge, size=1.0, build=None):
+        # `build` is the silhouette (assetlib/fauna_variants.LEP_VARIANTS);
+        # `kind` stays the day/night behaviour the roster and the flight code
+        # already use. A skipper flies by day like a butterfly and looks
+        # nothing like one, which is exactly why they are two fields.
+        return {"kind": kind, "fore": fore, "hind": hind, "edge": edge,
+                "size": size,
+                "build": build or ("moth" if kind == "moth" else "butterfly")}
     if "monarch" in n:                 return spec("#e2711d", "#e2711d", "#1c140e", 1.2)
-    if "swallowtail" in n:             return spec("#f2d64b", "#f2d64b", "#1c140e", 1.25)
+    if "swallowtail" in n:             return spec("#f2d64b", "#f2d64b", "#1c140e", 1.25, "swallowtail")
     if "mourning cloak" in n:          return spec("#5a3420", "#5a3420", "#e8d18a", 1.1)
     if "tortoiseshell" in n:           return spec("#c9531f", "#3a2414", "#e0b25a", 0.95)
     if "painted lady" in n:            return spec("#d98a3d", "#caa06a", "#2a1c12", 0.95)
@@ -105,18 +125,30 @@ def _lep_appearance(name: str, sci: str, kind: str) -> dict:
     if "azure" in n or "blue" in n:    return spec("#7fa6e0", "#9fc0ea", "#2a2c34", 0.6)
     if "sulphur" in n:                 return spec("#eddc4b", "#e6d24a", "#3a3a1e", 0.75)
     if "crescent" in n:                return spec("#d0782c", "#a85f24", "#2a1c10", 0.7)
-    if "skipper" in n:                 return spec("#c08a3a", "#7a5228", "#2a1c10", 0.7)
+    if "skipper" in n:                 return spec("#c08a3a", "#7a5228", "#2a1c10", 0.7, "skipper")
     if "clearwing" in n or "hummingbird" in n: return spec("#5a7a3a", "#8a5a3a", "#2a1c12", 0.85)
     if "sphinx" in n or "hawk" in n or "white-lined" in n: return spec("#7a6a4a", "#b06a4a", "#2a1c12", 1.1)
     if kind == "moth":                 return spec("#8a7a5a", "#6a5a44", "#3a3020", 1.0)
     return spec("#c88a3a", "#a8702c", "#2a1c10", 0.9)
 
 
+# Body plan by name (assetlib/fauna_variants.BIRD_VARIANTS). A woodpecker
+# propped on a trunk by its stiff tail and a chickadee on a twig are not the
+# same bird, and the roster routinely holds both.
+_BIRD_BUILD_WORDS = (("woodpecker", "woodpecker"), ("sapsucker", "woodpecker"),
+                     ("flicker", "woodpecker"), ("hummingbird", "hummer"))
+
+
 def _bird_appearance(name: str) -> dict:
     n = (name or "").lower()
     def spec(body, belly, wing, size=1.0, hummer=False):
+        build = "passerine"
+        for word, plan in _BIRD_BUILD_WORDS:
+            if word in n:
+                build = plan
+                break
         return {"kind": "bird", "body": body, "belly": belly, "wing": wing,
-                "size": size, "hummer": hummer}
+                "size": size, "hummer": hummer, "build": build}
     if "hummingbird" in n:          return spec("#2f7d4f", "#d8cbb0", "#3a2a20", 0.5, True)
     if "goldfinch" in n:            return spec("#e8c72e", "#f0e6b0", "#1c1c14", 0.7)
     if "waxwing" in n:              return spec("#b79a72", "#d8c8a0", "#3a2c22", 0.85)

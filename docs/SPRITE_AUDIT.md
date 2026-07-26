@@ -1,11 +1,23 @@
 # Sprite accuracy audit — V2.29
 
 > **Status: all five ranked improvements below have since been built, plus a
-> second pass on grass, fern, pine and the poplar/aspen split.** The scores and
-> per-archetype notes are kept as written, as the record of what was wrong and
-> why — see [What changed](#what-changed-after-this-audit) and
-> [Second pass](#second-pass--grass-fern-pine-poplar) for what each fix actually
+> second pass on grass, fern, pine and the poplar/aspen split, and a third pass
+> (V2.33) that closed everything the second left open — and found the worst
+> defect in the library, which this audit missed and a user did not.** The
+> scores and per-archetype notes are kept as written, as the record of what was
+> wrong and why — see [What changed](#what-changed-after-this-audit),
+> [Second pass](#second-pass--grass-fern-pine-poplar) and
+> [Third pass](#third-pass--v233-roadmap-f63f69) for what each fix actually
 > did, what regressed on the way, and what is still open.
+>
+> The headline of the third pass is worth stating up front, because it is a
+> lesson about this audit as much as about the geometry: **every broadleaf's
+> crown was built out of leaf cards 13–15× life size, and no check anywhere
+> looked at how big one leaf was.** Triangle budgets, node names, the manifest,
+> the unit frame, the authored aspect and the headless render gate all passed
+> throughout. The bur oak — widest crown, largest leaf, and the only *lobed*
+> outline in the table — drew 2.6 m leaves on an 18 m tree, and a user described
+> it in one word.
 
 An honest, per-archetype assessment of how well the 3D preview's plant sprites
 represent the species they stand for, what is wrong with each, and what it would
@@ -308,25 +320,101 @@ for a shoot's spray of needles (`NEEDLE_FASCICLE_GAIN`), and the crown carries
 genus. Balsam poplar is now a broad dense crown and trembling aspen a slender
 open one; they were pixel-identical before.
 
-### Still open
+### Still open *(after this audit — see the third pass below for what closed)*
 
-- **Archetype aspect vs species aspect.** `LAYER_ASPECT["grass"]` is 1.31, the
-  pooled figure for grasses, sedges and rushes; the catalogue's grasses run from
-  0.67 (Rocky Mountain fescue) to 2.67 (Canada wild rye). The instance transform
-  makes up the difference by stretching, which is exactly the distortion the
-  unit frame exists to prevent — up to 2.4× on Big Bluestem. `conventions.py`
-  calls the residual "small ... natural variation"; at this spread it is not.
-  The fix is an aspect variant axis on the layers, like the grain axis
-  groundcover already has.
 - **Fern density** is budget-bound, not shape-bound. A lusher crown needs either
   a higher herb budget or a cheaper frond.
-- **Per-species leaf outlines on trees** are still archetype-level everywhere
-  except the poplar/aspen split done here: `DECID_LEAF_SHAPE` is the mode over
-  the species mapping to each archetype. Doing it generally means a blade-class
-  variant axis on the tree archetypes, roughly doubling the baked tree units.
-- **Grass seed heads** — a big bluestem's turkey-foot inflorescence is most of
-  how it is identified in the field, and there is no geometry for it at all.
-- **Creature variety within a kind** — a bumblebee is not a honeybee.
+
+## Third pass — V2.33 (roadmap F63–F69)
+
+Every remaining item on the list above closed, and one defect this audit never
+caught was found by a user and measured.
+
+**11 · The leaf cards were 13-15x life size, and the bur oak was the worst
+case.** A user reported the oak "looking ridiculous". It was: measured off the
+shipped GLB, its crown-edge cards ran **2.6 m on an 18 m tree** against a real
+bur oak leaf of 0.20 m. The cause was in `flora_trees._build_deciduous` — a
+card's length came from the CLUMP RADIUS it replaced and nothing tied it to
+`leaf_size_cm` — and the oak maximised every term at once: the widest crown
+(aspect 1.2, so the largest `crown_half`), the largest leaf (20 cm, pinning
+`grain_for` at its cap), and the only `lobed` outline in the table. A rounded
+aspen blob at the same 14x error still reads as *foliage*; an unmistakably lobed
+oak leaf at 2.6 m reads as a green oven mitt.
+
+It had a second symptom nobody had connected to it. `half_width` is measured off
+the widest geometry and the viewer divides the instance by it, so a sparse
+fringe of outsized cards set the divisor while the dense crown sat well inside
+it: the oak's p90 foliage radius was **58% of its half-width**, so an 18 m bur
+oak with a 15 m canopy rendered about 8.7 m across — a narrow column, not the
+broad spreading oak the archetype is authored as. One cause, two symptoms, and
+the fix moved the dense-crown figure to 69-75% across the family.
+
+Cards are now `LEAF_CLUSTER_GAIN` real leaves long — a leafy SHOOT, the same
+trade the pine's needle fascicles make — with a legibility floor *solved* from
+the crown's surface area and the tier's triangle budget rather than guessed, so
+raising the budget automatically buys finer leaves. The faceted filler
+ellipsoids went with them: they were invisible only because the paddles hung in
+front of them, and at life-sized leaves the budget buys 600+ per crown, which
+fills the volume as well as it clothes the surface. Tree budgets rose 3500 →
+6000 at tier2, which the audit's own conclusion says was always affordable.
+**Guarded**: `test_crown_leaf_cards_stay_in_scale_with_the_species_leaf`,
+verified to fail on 5 of the 7 pre-V2.33 broadleaf archetypes (oak 14.1x,
+poplar 19.8x, aspen 14.9x, birch 12.0x, cherry 10.2x) and pass on all 7 after.
+
+**12 · Textures — the audit's item 5, the "real level up".** Ten procedural
+surface classes instead of two (F63): bark smooth / furrowed / papery / shaggy /
+scaly, leaf matte / glossy / pubescent / glaucous, and needle. A species picks
+its class from the catalogue (`bark_texture`, `leaf_surface`, schema v52), so a
+paper birch peels horizontally, a bur oak furrows vertically and a wolf-willow
+reads silver. Foliage sampling went triplanar; the two-plane blend smeared on
+any leaf card facing the third axis, which is most of them.
+
+**13 · Species tables where genus tables lied (item 4, finished).** Jack pine
+split from lodgepole, water birch from paper birch, pin cherry from Evans,
+Douglas-fir from balsam. Shrubs resolve their silhouette from the species' own
+`branching` — 100% seeded and read by nothing — with three new forms the genus
+table could not express: `prostrate` (creeping juniper and Oregon-grape were
+drawing as UPRIGHT bushes, a correctness bug), `arching`, `upright`. White and
+black spruce are deliberately NOT split: their recorded aspects are both 3.3, so
+a separate archetype would be a fabricated difference (P9). 11 genus profiles
+→ 19 tree archetypes, 5 shrub silhouettes → 8.
+
+**14 · The archetype-vs-species aspect gap, closed for layers.** grass, aquatic
+and vine always shipped three units and the three were random draws of one shape
+picked by a plant-id hash. They are three real aspect classes now, chosen by the
+species' own height ÷ canopy — **at zero payload cost**. Big Bluestem's residual
+stretch fell from 1.53x to 1.12x.
+
+**15 · Grass seed heads.** Eight inflorescence forms (`inflorescence_form`,
+schema v52) across 78 of the 79 graminoids: turkey-foot, one-sided raceme, open
+panicle, contracted spike, nodding raceme, bristly, sedge cluster, rush umbel.
+Drawn rather than baked, because a seed head is seasonal — and held from
+flowering through winter, which is most of what a prairie grass contributes to a
+yard from October to April.
+
+**16 · Creature variety within a kind.** Four bee body plans, four lepidopteran
+wing plans, three bird outlines. The reason this outranks its cosmetic
+appearance: **62 of the 69 native bees have no photograph** and will not get one
+under the licence policy, so where there is no photo the model is the whole
+identification.
+
+**17 · Wind that blows from where the wind blows.** The site's real seasonal
+prevailing wind drives sway direction and amplitude; the design's own windbreaks
+damp the plants standing in their lee, via a shelter grid rasterised Python-side
+and sampled as one shared texture. A material's wind constant became an explicit
+stiffness class — a spruce barely moves in wind that has a grass lying flat.
+
+### Still open after the third pass
+
+- **Herb aspect.** The layers got the axis; the herb archetypes still have the
+  same disease (`herb.erect` runs 0.44 to 3.33 against an authored 1.20). It is
+  the same fix, but ×52 units rather than ×3 at zero cost, so it is an
+  asset-size decision rather than a free one.
+- **Shrub aspect within a silhouette.** `arching` spans 0.4 (skunk currant) to
+  1.67 (raspberry); the median serves neither end well.
+- **Fern density**, unchanged from above.
+- **Fruit and flower sprites are still flat billboards**, oriented since V2.29
+  but not modelled.
 
 ## Verification note
 

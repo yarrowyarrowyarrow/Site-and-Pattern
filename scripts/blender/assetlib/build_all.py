@@ -136,7 +136,9 @@ def build_asset(key, spec=None, seed_salt="", half_widths=None):
             prefix = f"{C.VARIANT_PREFIX}{v}"
             root = make_empty(prefix, coll)
             morph = {}
-            if vkeys:
+            if kind in C.ASPECT_LAYERS:
+                morph = {"aspect": C.LAYER_ASPECT_CLASSES[kind][v]}
+            elif vkeys:
                 blade, grain = vkeys[v].rsplit("_", 1)
                 morph = {"grain": int(grain),
                          "leaf_shape": C.BLADE_SHAPE[blade],
@@ -146,7 +148,8 @@ def build_asset(key, spec=None, seed_salt="", half_widths=None):
             parts = build_layer(kind, rng, coll, name_prefix=prefix, **morph)
             objs = list(parts.values())
             if kind in FLAT_LEAF_LAYERS:
-                squash_to_aspect(objs, C.LAYER_ASPECT[kind])
+                squash_to_aspect(objs, morph.get("aspect")
+                                 or C.LAYER_ASPECT[kind])
             halves[prefix] = unit_frame(objs)
             budget = C.TRI_BUDGETS.get(kind, _budget_for(spec))
             for o in objs:
@@ -158,9 +161,20 @@ def build_asset(key, spec=None, seed_salt="", half_widths=None):
             root.location.x = v * _GRID
     elif spec["kind"] == "fauna":
         kind = key.split(".", 1)[1]
-        objs = build_critter(kind, rng, coll)
-        tris["unit"] = _check_budget(
-            key, objs, C.TRI_BUDGETS["fauna"])          # no AO (tinted flat)
+        objs = build_critter(kind, rng, coll)           # no AO (tinted flat)
+        # The budget belongs to the UNIT the viewer instances, not to the file.
+        # bee, lep, bird and fly each hold several builds (F67), and billing the
+        # file for their sum would force every build to be a quarter of a
+        # critter. Same rule as a tree's tiers and a shrub's variants.
+        roots = [o for o in objs if o.name in spec.get("nodes", [])
+                 and o.type == "EMPTY"]
+        if roots:
+            for root in roots:
+                unit = [root] + [o for o in objs if o.parent is root]
+                tris[root.name] = _check_budget(
+                    f"{key}/{root.name}", unit, C.TRI_BUDGETS["fauna"])
+        else:
+            tris["unit"] = _check_budget(key, objs, C.TRI_BUDGETS["fauna"])
     elif spec["kind"] == "structure":
         sid = key.split(".", 1)[1]
         objs = build_structure(sid, rng, coll)          # REAL metres, no frame

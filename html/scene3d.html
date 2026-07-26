@@ -341,6 +341,9 @@ window._pinglog && window._pinglog('module-eval-start (three OK)');
 (function () {
   const FILES = [
     'scene3d/01-core.js',
+    // Surfaces + plantMaterial: before 02-plants because everything downstream
+    // of it builds geometry that wants a material.
+    'scene3d/01b-surface.js',
     'scene3d/02-plants.js',
     'scene3d/03-herbs.js',
     'scene3d/04-quality.js',
@@ -351,6 +354,7 @@ window._pinglog && window._pinglog('module-eval-start (three OK)');
     'scene3d/09-models.js',
     'scene3d/10-inspect.js',
     'scene3d/11-fruit.js',
+    'scene3d/12-seedheads.js',
   ];
   let i = 0;
   (function next() {

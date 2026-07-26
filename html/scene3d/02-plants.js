@@ -248,168 +248,10 @@ function fadeColor(col, opacity) {
   return col.clone().lerp(_skyCol, 1 - o);
 }
 
-// MeshStandardMaterial with an optional GPU wind sway injected into the
-// vertex stage (the first custom shader work in the app). Lighting, shadows
-// and instancing all stay intact — we only nudge `transformed` in local space
-// (so the per-instance matrix scales the sway by canopy size) before three
-// applies the instance/model matrices in <project_vertex>.
-// ── surface detail (V2.29) ──────────────────────────────────────────────────
-// Everything in this viewer was flat-shaded vertex colour: no bark texture, no
-// leaf texture, so a trunk was one brown and a crown one green, and the app read
-// as a diagram rather than an illustration. The sprite audit put texture last on
-// the list of improvements precisely because it multiplies whatever variety is
-// already there — worth doing only after the library HAS distinct looks.
-//
-// It is applied procedurally rather than as UV-mapped images, for two reasons
-// that are contract, not preference:
-//   * the baked GLBs carry POSITION, NORMAL and COLOR_0 and NO texture
-//     coordinates, and tests/test_model_assets.py forbids them embedding
-//     textures at all;
-//   * these are INSTANCED meshes, so a per-archetype UV set would repeat
-//     identically across every instance anyway.
-// So the pattern is sampled from OBJECT space in the fragment shader, offset per
-// instance so two neighbouring aspens are not stamped from the same grain. One
-// shared canvas per kind, generated at runtime like the flower sprites — no new
-// asset files, nothing to fetch.
-let DETAIL_TEX = null;
-
-function makeDetailTexture(kind) {
-  const s = 256, cv = document.createElement('canvas');
-  cv.width = cv.height = s;
-  const g = cv.getContext('2d');
-  g.fillStyle = '#808080';                  // mid grey = "leave the colour be"
-  g.fillRect(0, 0, s, s);
-  const rnd = (n => () => (n = (n * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)(7);
-  if (kind === 'bark') {
-    // Vertical fissures: the one thing that reads as bark at any distance.
-    for (let i = 0; i < 150; i++) {
-      const x = rnd() * s, w = 1 + rnd() * 5, dark = rnd() < 0.55;
-      g.strokeStyle = dark ? `rgba(40,40,40,${0.10 + rnd() * 0.22})`
-                           : `rgba(230,230,230,${0.06 + rnd() * 0.14})`;
-      g.lineWidth = w;
-      g.beginPath();
-      let y = 0, xx = x;
-      g.moveTo(xx, y);
-      while (y < s) { y += 8 + rnd() * 22; xx += (rnd() - 0.5) * 7; g.lineTo(xx, y); }
-      g.stroke();
-    }
-  } else {
-    // Foliage: a soft mottle so a leaf card or a clump is not a flat chip of
-    // colour. Deliberately low-contrast — this is a break-up, not a pattern.
-    for (let i = 0; i < 220; i++) {
-      const x = rnd() * s, y = rnd() * s, r = 4 + rnd() * 26;
-      const dark = rnd() < 0.5;
-      const grd = g.createRadialGradient(x, y, 0, x, y, r);
-      const a = 0.05 + rnd() * 0.13;
-      grd.addColorStop(0, dark ? `rgba(30,45,25,${a})` : `rgba(235,245,215,${a})`);
-      grd.addColorStop(1, 'rgba(128,128,128,0)');
-      g.fillStyle = grd;
-      g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
-    }
-  }
-  const t = new THREE.CanvasTexture(cv);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.needsUpdate = true;
-  return t;
-}
-
-function detailTexture(kind) {
-  if (!DETAIL_TEX) DETAIL_TEX = {};
-  if (!DETAIL_TEX[kind]) DETAIL_TEX[kind] = makeDetailTexture(kind);
-  return DETAIL_TEX[kind];
-}
-
-function plantMaterial(opts = {}) {
-  const mat = new THREE.MeshStandardMaterial({
-    roughness: opts.roughness ?? 0.9,
-    vertexColors: !!opts.vertexColors,
-    side: opts.doubleSide ? THREE.DoubleSide : THREE.FrontSide,
-    flatShading: !!opts.flatShading,
-  });
-  const strength = opts.wind || 0;
-  const detail = opts.detail || '';
-  const dscale = opts.detailScale || 1.0;
-  const damount = opts.detailAmount ?? 0.55;
-  if (strength > 0 || detail) {
-    mat.onBeforeCompile = (shader) => {
-      if (detail) {
-        shader.uniforms.uDetail = { value: detailTexture(detail) };
-        // Object-space position + a per-instance offset, so the grain follows
-        // the geometry (it does not swim when a plant sways or the camera
-        // moves) but neighbouring copies of one archetype are not identical.
-        shader.vertexShader = 'varying vec3 vDetailPos;\n' + shader.vertexShader;
-        shader.vertexShader = shader.vertexShader.replace(
-          '#include <begin_vertex>',
-          ['#include <begin_vertex>',
-           '{',
-           '  #ifdef USE_INSTANCING',
-           '  vec3 dOff = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);',
-           '  #else',
-           '  vec3 dOff = vec3(0.0);',
-           '  #endif',
-           '  vDetailPos = position + fract(dOff * 0.37) * 3.1;',
-           '}'].join('\n'));
-        shader.fragmentShader = 'uniform sampler2D uDetail;\nvarying vec3 vDetailPos;\n'
-          + shader.fragmentShader;
-        // Bark is roughly a vertical cylinder, so its grain runs up the trunk:
-        // sample (around, along). Foliage has no axis worth respecting, so it
-        // takes a cheap two-plane blend that avoids the streaking a single
-        // planar projection gives on near-vertical leaf cards.
-        const uv = detail === 'bark'
-          ? ['vec2 dUV = vec2(atan(vDetailPos.x, vDetailPos.z) * 0.6,',
-             '                vDetailPos.y * ' + (dscale * 3.0).toFixed(3) + ');'].join('\n')
-          : ['vec2 dUV = mix(vDetailPos.xz, vDetailPos.xy, 0.5) * '
-             + dscale.toFixed(3) + ';'].join('\n');
-        shader.fragmentShader = shader.fragmentShader.replace(
-          '#include <color_fragment>',
-          ['#include <color_fragment>',
-           '{',
-           '  ' + uv,
-           '  float d = texture2D(uDetail, dUV).r;',
-           // 0.5 in the texture is "unchanged"; the amount sets how far the
-           // light and dark halves can pull the base colour.
-           '  diffuseColor.rgb *= 1.0 + (d - 0.5) * 2.0 * '
-             + damount.toFixed(3) + ';',
-           '}'].join('\n'));
-      }
-    };
-  }
-  if (strength > 0) {
-    const withDetail = mat.onBeforeCompile;
-    mat.onBeforeCompile = (shader) => {
-      withDetail(shader);
-      shader.uniforms.uTime = windUniforms.uTime;
-      shader.vertexShader = 'uniform float uTime;\n' + shader.vertexShader;
-      shader.vertexShader = shader.vertexShader.replace(
-        '#include <begin_vertex>',
-        [
-          '#include <begin_vertex>',
-          '{',
-          '  #ifdef USE_INSTANCING',
-          '  vec3 iPos = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);',
-          '  #else',
-          '  vec3 iPos = vec3(0.0);',
-          '  #endif',
-          '  float hf = clamp(transformed.y, 0.0, 1.2);',           // taller verts sway more
-          '  float ph = iPos.x * 0.35 + iPos.z * 0.35;',            // per-plant phase
-          '  float wv = sin(uTime * 1.3 + ph + position.x * 1.1 + position.z * 0.8) * 0.6',
-          '           + sin(uTime * 2.6 + ph * 1.7) * 0.4;',
-          '  float amp = ' + strength.toFixed(4) + ' * hf * hf;',
-          '  transformed.x += wv * amp;',
-          '  transformed.z += wv * 0.7 * amp;',
-          '}',
-        ].join('\n'));
-    };
-  }
-  // The cache key has to name every branch of the injection above, or three.js
-  // reuses one compiled program for materials whose shaders differ.
-  if (strength > 0 || detail) {
-    mat.customProgramCacheKey = () =>
-      'plant' + strength.toFixed(4) + (opts.vertexColors ? 'c' : '')
-      + '|' + detail + dscale.toFixed(2) + damount.toFixed(2);
-  }
-  return mat;
-}
+// Plant materials, their GPU wind sway and their surface detail (bark grain,
+// foliage break-up) live in 01b-surface.js, which loads before this file — so
+// plantMaterial() / surfaceMaterial() / detailTexture() are already on the
+// shared global scope here.
 
 // A soft radial "contact shadow" stamp — a dark blob under big plants that
 // grounds them without leaning on the directional shadow map's resolution.
@@ -482,15 +324,19 @@ const _FORM_SEED = { slender: 0, oval: 17, spreading: 31 };
 // trunk; `droopOuter`/`foliageScale` shape the broadleaf crown.
 const _PROF = {
   spruce: { id: 'spruce', conifer: 'spruce', bark: '#4b3a2a' },   // Picea
-  fir:    { id: 'fir',    conifer: 'fir',    bark: '#3f3022' },   // Abies / Pseudotsuga
-  pine:   { id: 'pine',   conifer: 'pine',   bark: '#6b4a2e' },   // Pinus
+  fir:    { id: 'fir',    conifer: 'fir',    bark: '#3f3022' },   // Abies balsamea
+  douglas:{ id: 'douglas', conifer: 'douglas', bark: '#6a4a34' }, // Pseudotsuga menziesii
+  pine:   { id: 'pine',   conifer: 'pine',   bark: '#8a6a4a' },   // Pinus contorta
+  pine_jack: { id: 'pine_jack', conifer: 'pine_jack', bark: '#6f6154' }, // P. banksiana
   larch:  { id: 'larch',  conifer: 'larch',  bark: '#5a4632' },   // Larix (deciduous needles)
   aspen:  { id: 'aspen',  bark: '#cfcab4', formBias: 'slender', foliageScale: 0.9 },  // Populus tremuloides
   poplar: { id: 'poplar', bark: '#7d7a70', formBias: 'oval', foliageScale: 1.02 },   // P. balsamifera
-  birch:  { id: 'birch',  bark: '#e8e6df', formBias: 'oval', droopOuter: 0.55, foliageScale: 0.82 }, // Betula
+  birch:  { id: 'birch',  bark: '#e8e6df', formBias: 'slender', droopOuter: 0.55, foliageScale: 0.82 }, // Betula papyrifera
+  birch_water: { id: 'birch_water', bark: '#6b4230', formBias: 'spreading', droopOuter: 0.35, foliageScale: 0.86 }, // B. occidentalis
   oak:    { id: 'oak',    bark: '#463524', formBias: 'spreading', foliageScale: 1.06 }, // Quercus
   willow: { id: 'willow', bark: '#8a8a6a', formBias: 'slender', droopOuter: 0.7, foliageScale: 0.85 }, // Salix
-  cherry: { id: 'cherry', bark: '#5a4636', formBias: 'oval' },    // Prunus
+  cherry: { id: 'cherry', bark: '#7a4630', formBias: 'oval' },    // Prunus pensylvanica
+  cherry_orchard: { id: 'cherry_orchard', bark: '#7a5140', formBias: 'spreading' }, // P. cerasus
   apple:  { id: 'apple',  bark: '#6a5238', formBias: 'spreading' }, // Malus
   def:    { id: 'def',    bark: '#5d4433' },
 };
@@ -505,8 +351,23 @@ const TREE_PROFILES = {
 // 2.7:1 crown, while the poplar's is ovate, half again as long, on a much
 // broader 2.1:1 one. Anything not listed falls back to its genus, so this table
 // only has to carry the species that genuinely diverge.
+// V2.33 (F64) widens this from the one poplar to every genus in the catalogue
+// that holds two genuinely different trees. Each of these differs in aspect AND
+// in a field mark, and each was previously drawing as the pooled median of a
+// pair, which is a shape neither of them has:
+//   jack pine 15 m decurrent and scraggly  vs  lodgepole 25 m excurrent spire
+//   water birch 8 m multi-stemmed red-brown  vs  paper birch 20 m white spire
+//   pin cherry 8 m lanceolate wild  vs  Evans cherry 4 m ovate orchard tree
+//   Douglas-fir 30 m  vs  balsam fir 20 m
+// White and black spruce are deliberately NOT split: they differ in height and
+// needle length but their recorded aspects are both 3.3, so a separate
+// archetype would be a fabricated difference rather than a recorded one (P9).
 const TREE_SPECIES_PROFILES = {
   'populus balsamifera': _PROF.poplar,
+  'pinus banksiana': _PROF.pine_jack,
+  'betula occidentalis': _PROF.birch_water,
+  'prunus cerasus': _PROF.cherry_orchard,
+  'pseudotsuga menziesii': _PROF.douglas,
 };
 function profileFor(p) {
   return TREE_SPECIES_PROFILES[(p.species || '').toLowerCase()]
@@ -520,9 +381,11 @@ const CONIFER_KINDS = {
   standard: { baseRMul: 1.0,  tiersAdd: 0,  droopAdd: 0.0,  spire: 1.0, segMul: 1.0 },
   spruce:   { baseRMul: 0.82, tiersAdd: 1,  droopAdd: 0.03, spire: 1.15, segMul: 1.0 },
   fir:      { baseRMul: 0.72, tiersAdd: 2,  droopAdd: -0.04, spire: 1.4, segMul: 1.0 },
+  douglas:  { baseRMul: 0.62, tiersAdd: 3,  droopAdd: -0.06, spire: 1.5, segMul: 1.0 },
   larch:    { baseRMul: 0.92, tiersAdd: -1, droopAdd: 0.0,  spire: 0.7, segMul: 0.7 },
 };
-const _CK_SEED = { standard: 0, spruce: 3, fir: 7, pine: 11, larch: 17 };
+const _CK_SEED = { standard: 0, spruce: 3, fir: 7, pine: 11, larch: 17,
+                   douglas: 23, pine_jack: 29 };
 
 // Shrub growth-form silhouettes (V1.96): instead of one blobby dome, a shrub is
 // a multi-stem woody clump whose foliage is distributed along ascending stems —
@@ -547,6 +410,21 @@ const SHRUB_FORMS = {
                start: 0.34, massR: [0.11, 0.17], shape: [0.9, 1.0, 0.9], basal: true },
   irregular: { stems: [3, 6], splay: 0.5, stemH: [0.5, 0.98], masses: [1, 3],
                start: 0.3, massR: [0.12, 0.2], shape: [1.0, 0.9, 1.0], basal: false },
+  // V2.33 (F64): three silhouettes the genus table could not express, selected
+  // from the species' own `branching` (shrubFormFor below).
+  //   arching   — canes that rise then bow back to the ground (raspberry,
+  //               thimbleberry, gooseberry, the bowing currants)
+  //   prostrate — ground-hugging woody mats (creeping juniper, creeping
+  //               Oregon-grape, false box); these were drawing as an UPRIGHT
+  //               spreading bush, which is a correctness bug, not polish
+  //   upright   — a tall multi-stemmed shrub that reads as a small tree
+  //               (pussy willow 2:1, hawthorn and thinleaf alder 1.33:1)
+  arching:   { stems: [5, 8], splay: 0.30, stemH: [0.72, 1.0], masses: [2, 3],
+               start: 0.42, massR: [0.12, 0.19], shape: [1.1, 0.85, 1.1], basal: true },
+  prostrate: { stems: [7, 11], splay: 1.26, stemH: [0.75, 1.0], masses: [2, 3],
+               start: 0.25, massR: [0.13, 0.20], shape: [1.4, 0.5, 1.4], basal: true },
+  upright:   { stems: [3, 5], splay: 0.13, stemH: [0.86, 1.0], masses: [2, 3],
+               start: 0.48, massR: [0.14, 0.21], shape: [0.85, 1.15, 0.85], basal: false },
 };
 
 // Genus → shrub profile. `form` picks a silhouette; `redStems` paints the woody
@@ -572,8 +450,30 @@ const _SPROF = {
   shepherdia:     { id: 'shep', form: 'irregular' },                    // buffaloberry (silver)
   def:            { id: 'sdef', form: 'spreading' },
 };
+// The species' own recorded habit beats its genus — the same demotion
+// treeFormFor (03-herbs.js) applied to formBias, and the mirror of
+// assetlib/conventions.py:shrub_form_for. `branching` (schema v47) is seeded for
+// every shrub in the catalogue, so this is reading data rather than guessing.
+const _UPRIGHT_ASPECT = 1.25;
+function shrubFormFor(p) {
+  const habit = (p.branching || '').toLowerCase();
+  if (habit === 'prostrate') return 'prostrate';
+  if (habit === 'arching') return 'arching';
+  if (habit === 'multi_stem') {
+    const h = p.mature_height_m || p.height_m || 0;
+    const c = p.canopy_m || 0;
+    if (c > 0 && h / c >= _UPRIGHT_ASPECT) return 'upright';
+  }
+  return null;
+}
 function shrubProfileFor(p) {
-  return _SPROF[(p.genus || '').toLowerCase()] || _SPROF.def;
+  const prof = _SPROF[(p.genus || '').toLowerCase()] || _SPROF.def;
+  const form = shrubFormFor(p);
+  // Keep the profile's other characters (red stems, fine masses, its id for
+  // bucketing) and override only the silhouette.
+  return form && form !== prof.form
+    ? Object.assign({}, prof, { form: form, id: prof.id + '_' + form })
+    : prof;
 }
 
 // ── leaf morphology → archetype variant (V2.29) ──────────────────────────────
@@ -614,6 +514,29 @@ function grainClassFor(leafSizeCm, heightM, family) {
   const br = _GRAIN_BREAKS[family] || _GRAIN_BREAKS.herb;
   const ratio = (cm / 100) / h;
   return ratio < br[0] ? 0 : (ratio < br[1] ? 1 : 2);
+}
+
+// ── layer aspect axis (V2.33, F65) ──────────────────────────────────────────
+// The mirror of assetlib/conventions.py LAYER_ASPECT_BREAKS / layer_aspect_class.
+// grass, aquatic and vine each bake three units at three real aspects; a species
+// picks its own from height ÷ canopy instead of the three being random draws of
+// one shape selected by a plant-id hash. Getting these breaks out of step with
+// the generator's asks for an aspect the manifest doesn't carry, which degrades
+// to the neutral middle unit (09-models.js _glbVariant) — a silent loss of the
+// thing the axis exists for.
+const LAYER_ASPECT_BREAKS = { grass: [1.17, 1.50], aquatic: [0.67, 1.33],
+                              vine: [1.67, 2.00] };
+function aspectClassFor(p, kind) {
+  const br = LAYER_ASPECT_BREAKS[kind];
+  if (!br) return 1;
+  const h = Number(p.mature_height_m || p.height_m) || 0;
+  const c = Number(p.canopy_m) || 0;
+  if (h <= 0 || c <= 0) return 1;
+  const ratio = h / c;
+  return ratio < br[0] ? 0 : (ratio < br[1] ? 1 : 2);
+}
+function aspectVariantKeyFor(p, kind) {
+  return 'aspect_' + aspectClassFor(p, kind);
 }
 
 // 'broad_1' etc. — the manifest's variant_keys are indexed by exactly this.

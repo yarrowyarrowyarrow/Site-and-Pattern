@@ -134,6 +134,18 @@ def export_pdf(
         y = _draw_summary(painter, w, y, placed_plants, structures, dpi_scale,
                           score, cost)
 
+        # ── Presentation still (F69) ──────────────────────────────────────
+        # The design as a picture, at the year it has become itself. A map
+        # screenshot says where things go; this says what it will look like,
+        # and it is the page a client, a spouse or a board actually reads
+        # (P13 — a native planting has to be loved to survive). Rendered by
+        # the 3D window and passed in, because export is synchronous and the
+        # viewer's capture is a callback.
+        if still_pixmap is not None and not still_pixmap.isNull():
+            printer.newPage()
+            _draw_presentation_still(painter, w, h, dpi_scale, still_pixmap,
+                                     still_caption)
+
         # ── Page 2: Site prep (F43) ───────────────────────────────────────
         # Ahead of the buy list on purpose: this is the work that happens
         # first, and a document ordered by module history rather than by the
@@ -625,6 +637,26 @@ def _page_title(painter: QPainter, w: float, s: float, title: str,
         painter.drawText(QRectF(15 * s, 8 * s, w - 30 * s, 25 * s),
                          Qt.AlignmentFlag.AlignRight, subtitle)
     return 48 * s
+
+
+def _draw_presentation_still(painter, w, h, s, pixmap, caption):
+    """A full-page render of the design, with its caption underneath."""
+    y = _page_title(painter, w, s, "What it will look like",
+                    caption.split(".")[0][:90] if caption else "")
+    avail_h = h - y - 70 * s
+    scaled = pixmap.scaled(
+        int(w), int(avail_h),
+        Qt.AspectRatioMode.KeepAspectRatio,
+        Qt.TransformationMode.SmoothTransformation)
+    painter.drawPixmap(int((w - scaled.width()) / 2), int(y), scaled)
+    y += scaled.height() + 14 * s
+    if caption:
+        painter.setPen(QPen(QColor("#37474f")))
+        painter.setFont(_font(9 * s))
+        for line in _wrap(caption, 105)[:4]:
+            painter.drawText(QRectF(0, y, w, 14 * s),
+                             Qt.AlignmentFlag.AlignLeft, line)
+            y += 13 * s
 
 
 def _draw_site_prep(painter: QPainter, w: float, h: float, prep, s: float) -> float:

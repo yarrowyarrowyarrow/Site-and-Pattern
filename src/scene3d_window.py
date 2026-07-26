@@ -97,6 +97,23 @@ class _PhotoWarmWorker(QObject):
         self._cancel.set()
 
 
+_MONTHS = ("January", "February", "March", "April", "May", "June", "July",
+           "August", "September", "October", "November", "December")
+
+
+def _save_data_url(url: str, path: str) -> bool:
+    """Write a ``data:image/...;base64,`` URL to disk. False if there isn't one."""
+    import base64
+    if not url or "," not in url:
+        return False
+    try:
+        with open(path, "wb") as fh:
+            fh.write(base64.b64decode(url.split(",", 1)[1]))
+        return True
+    except (OSError, ValueError):
+        return False
+
+
 class Scene3DWindow(QWidget):
     """3D preview of the current design (growth year + sun controls)."""
 
@@ -167,6 +184,16 @@ class Scene3DWindow(QWidget):
             "as a personal satellite layer")
         self._bake_btn.setEnabled(False)
         self._bake_btn.clicked.connect(self._on_bake_yard_photo)
+
+        # A render you can put in a proposal (F69). The docent's beats have
+        # carried a camera, a year and a season since V2.13 and nothing read
+        # them; this places the camera at the beat's own preset, renders the
+        # real viewer offscreen at print resolution, and saves a PNG.
+        self._still_btn = QPushButton("🖼 Presentation still…")
+        self._still_btn.setToolTip(
+            "Render this design at print resolution — pick the moment and the "
+            "viewpoint, and save an image for a proposal or a printout")
+        self._still_btn.clicked.connect(self._on_presentation_still)
 
         # "Fly as a pollinator" — first-person fly-through (F37 increment 2; V2.12
         # adds butterflies & moths). Pick a native bee, butterfly or moth, then
@@ -264,6 +291,7 @@ class Scene3DWindow(QWidget):
         bar.addWidget(reset_view)
         bar.addWidget(refresh)
         bar.addWidget(self._bake_btn)
+        bar.addWidget(self._still_btn)
 
         # Row 2 — pick a creature, then the view modes + overlays. Grouped and
         # labelled so seven controls don't read as one undifferentiated strip.
@@ -361,6 +389,79 @@ class Scene3DWindow(QWidget):
                     "3D, then try again.", 6000)
 
         self.viewer.capture_ortho(rect, _done)
+
+    # ── the presentation still (F69) ────────────────────────────────────────
+
+    def _on_presentation_still(self):
+        """Render the design at print resolution and save it.
+
+        The stills come from the docent script, so the choices on offer are the
+        ones the app already knows how to narrate — "the design at year 12, in
+        August, from the sidewalk" — rather than a bare year/month/camera form.
+        """
+        from PyQt6.QtWidgets import QFileDialog, QInputDialog
+        from src import presentation_still as ps
+
+        stills = ps.presentation_stills(self._main._project)
+        cover = ps.cover_still(self._main._project)
+        options, specs = [], []
+        for st in ([cover] if cover else []) + stills:
+            label = (f"{st['title']} — year {st['year']}, "
+                     f"{_MONTHS[st['month'] - 1]}, {st['camera']}")
+            if label in options:
+                continue
+            options.append(label)
+            specs.append(st)
+        if not options:
+            return
+        choice, ok = QInputDialog.getItem(
+            self, "Presentation still", "Moment and viewpoint:",
+            options, 0, False)
+        if not ok:
+            return
+        spec = specs[options.index(choice)]
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save presentation still",
+            f"design-year{spec['year']}.png", "PNG image (*.png)")
+        if not path:
+            return
+        self._render_still(spec, path)
+
+    def _render_still(self, spec, path):
+        """Set the scene to the still's moment, then capture it.
+
+        Two QTimer hops rather than one call: the sliders have to re-push the
+        scene and the camera preset has to land in the viewer before the
+        renderer is asked for a frame, and the bridge is one-directional so
+        there is nothing to await. The sprite gallery's contact sheet chains
+        the same way.
+        """
+        from PyQt6.QtCore import QTimer
+        from src import presentation_still as ps
+        req = ps.render_request(spec)
+        for widget, value in ((self._year, spec["year"]),
+                              (self._month, spec["month"])):
+            widget.blockSignals(True)
+            widget.setValue(value)
+            widget.blockSignals(False)
+        self._update_labels()
+        self._push_scene()
+        self.viewer.set_camera_preset(req["camera"])
+
+        def _capture():
+            def _done(url):
+                if _save_data_url(url, path):
+                    self._main.statusBar().showMessage(
+                        f"Presentation still saved to {path}", 6000)
+                else:
+                    self._main.statusBar().showMessage(
+                        "Could not render the still — let the 3D view finish "
+                        "loading and try again.", 6000)
+            self.viewer.snapshot(_done, px=req["width"], height=req["height"],
+                                 pixel_ratio=req["pixel_ratio"],
+                                 mime="image/png", quality=1.0)
+
+        QTimer.singleShot(450, _capture)
 
     def _on_controls_changed(self, *_):
         self._update_labels()

@@ -99,7 +99,11 @@ LAYER_KINDS = {"grass": 3, "aquatic": 3, "vine": 3, "groundcover": 2}
 # shrubs, rather than being N interchangeable random draws. Groundcover earned
 # it: its 32 species carry 14 distinct leaf outlines and four arrangements, and
 # they are looked at from a metre away.
-VARIANT_LAYERS = frozenset({"groundcover"})
+# Layers whose units are morphology-keyed rather than N interchangeable draws.
+# groundcover varies by (blade class × grain class); grass/aquatic/vine vary by
+# ASPECT CLASS (conventions.LAYER_ASPECT_CLASSES, F65) — the axis that stops a
+# 2.67:1 mountain brome being stretched out of a 1.31:1 archetype.
+VARIANT_LAYERS = frozenset({"groundcover"}) | frozenset(C.ASPECT_LAYERS)
 
 # Layers built entirely from flat blades and leaves, so build_all can finish
 # them with the exact mesh-measuring correction (mesh_ops.squash_to_aspect).
@@ -284,7 +288,7 @@ def _blades(bm, rng, n, length_fn, hw_fn, arch_fn, ease, aspect):
         add_blade(bm, rng, ln, hw, arch * k, ease)
 
 
-def _layer_grass(bm, rng):
+def _layer_grass(bm, rng, aspect=None):
     # A real bunchgrass FOUNTAINS: the blades rise, tip over and hang. This drew
     # straight blades leaned sideways, which is why it read as a shaving brush
     # and the audit scored it 4/10 — and why widening the lean range alone did
@@ -300,19 +304,21 @@ def _layer_grass(bm, rng):
     _blades(bm, rng, 46 + int(rng.random() * 22),       # thick meadow clump
             lambda: 0.66 + rng.random() * 0.54,
             lambda: 0.026 + rng.random() * 0.026,
-            lambda: 1.05 + rng.random() * 0.90, 0.85, LAYER_ASPECT["grass"])
+            lambda: 1.05 + rng.random() * 0.90, 0.85,
+            aspect or LAYER_ASPECT["grass"])
 
 
-def _layer_aquatic(bm, rng):
+def _layer_aquatic(bm, rng, aspect=None):
     # Bulrush and cattail leaves stand stiff and only nod at the tip, so the
     # bend is pushed to the top (ease > 1) and the total turn kept small.
     _blades(bm, rng, 30 + int(rng.random() * 16),       # stiff strap reeds
             lambda: 0.85 + rng.random() * 0.35,
             lambda: 0.03 + rng.random() * 0.028,
-            lambda: 0.05 + rng.random() * 0.70, 1.9, LAYER_ASPECT["aquatic"])
+            lambda: 0.05 + rng.random() * 0.70, 1.9,
+            aspect or LAYER_ASPECT["aquatic"])
 
 
-def _layer_vine(bm, rng):
+def _layer_vine(bm, rng, aspect=None):
     n_stems = 7 + int(rng.random() * 4)                 # sprawling tangle
     stems, leaves, pts = [], [], []
     for i in range(n_stems):
@@ -333,7 +339,7 @@ def _layer_vine(bm, rng):
     # A vine's leaves reach well past the stem tips, so they are the overhang.
     leaf_len, leaf_wid, leaf_tilt = 0.16, 0.1, 1.05
     lr, lz = leaf_extent(leaf_len, leaf_tilt, "ovate")
-    shape_to_aspect(pts, LAYER_ASPECT["vine"],
+    shape_to_aspect(pts, aspect or LAYER_ASPECT["vine"],
                     radii=[0.0] * (2 * len(stems)) + [lr] * len(leaves),
                     radii_z=[0.0] * (2 * len(stems)) + [lz] * len(leaves))
     for base, tip in stems:
@@ -428,9 +434,9 @@ _LAYER_BUILDERS = {"grass": _layer_grass, "aquatic": _layer_aquatic,
 
 
 def build_layer(kind, rng, coll, name_prefix="", **morph):
-    """One layer archetype. ``morph`` (grain / leaf_shape / arrangement) is
-    passed only to the builders in VARIANT_LAYERS; the rest take none, so a
-    caller can hand the same bag to every kind."""
+    """One layer archetype. ``morph`` (grain / leaf_shape / arrangement for
+    groundcover, aspect for the aspect-axis layers) is passed only to the
+    builders that take it, so a caller can hand the same bag to every kind."""
     from .materials import preview_material
 
     bm = bmesh.new()

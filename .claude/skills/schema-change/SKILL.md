@@ -19,15 +19,23 @@ Use this skill when you:
 - need a value change to reach users who already have a DB;
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
-**Current facts (verify before quoting):** branch `V2.31`,
-`_SCHEMA_VERSION = 51` (in `src/db/plants.py`) — v51 added the
-`relationship_edges` VIEW (F7, the unified edges layer; a view rather than a
-table, so no seeder and no reseed-wipe entry, and `schema.sql` DROPs/recreates
-it on every `init_db`); v50 was a reseed-only bump for the garden-plant
-morphology; v49 added `fruit_form`, the shape half of `fruit_color`; v47/v48
-added the botanical morphology columns.
-`scripts/seed_fruit_morphology.py` and `scripts/seed_woody_morphology.py` are the
-worked examples of authoring seed values alongside a bump. The code always wins over the docs; the
+**Current facts (verify before quoting):** branch `V2.33`,
+`_SCHEMA_VERSION = 52` (in `src/db/plants.py`) — v52 added three
+renderer-facing morphology columns in one bump (`bark_texture`,
+`leaf_surface`, `inflorescence_form`; F63/F66), which is the pattern to copy
+when several columns land together: one migration, one reseed, one version.
+Note `inflorescence_form` sits BESIDE `flower_form` rather than extending it,
+because `flower_form` feeds pollinator logic and must stay `plume` for the
+wind-pollinated grasses — a column's consumers decide whether you may widen its
+vocabulary. v51 added the `relationship_edges` VIEW (F7, the unified edges
+layer; a view rather than a table, so no seeder and no reseed-wipe entry, and
+`schema.sql` DROPs/recreates it on every `init_db`); v50 was a reseed-only bump
+for the garden-plant morphology; v49 added `fruit_form`, the shape half of
+`fruit_color`; v47/v48 added the botanical morphology columns.
+`scripts/seed_surface_morphology.py`,
+`scripts/seed_inflorescence_morphology.py`, `scripts/seed_fruit_morphology.py`
+and `scripts/seed_woody_morphology.py` are the worked examples of authoring
+seed values alongside a bump. The code always wins over the docs; the
 inline changelog comments in `plants.py` lag the constant. `tests/test_skill_library.py`
 fails the build when a skill quotes a stale version, so update this line as part
 of your bump (see step 6).

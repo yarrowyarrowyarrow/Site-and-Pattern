@@ -22,7 +22,23 @@ const SKY = 0xcfe3f2, GROUND = 0x8aa86f;
 
 // ── wind + time ─────────────────────────────────────────────────────────────
 const clock = new THREE.Clock();
-const windUniforms = { uTime: { value: 0 } };
+// Wind (V2.33, F68). Shared by reference into every plant material, so one
+// assignment per scene reaches them all. Defaults are the pre-F68 look: the old
+// hard-coded (1.0, 0.7) diagonal at unit amplitude, which is what a site with no
+// known wind still gets.
+const windUniforms = {
+  uTime: { value: 0 },
+  uWindDir: { value: new THREE.Vector2(0.82, 0.57) },
+  uWindAmp: { value: 1.0 },
+  uGust: { value: 0.35 },
+  // A 0-255 coverage grid of the design's own wind shadow, rasterised
+  // Python-side (src/wind_scene.py) because a vertex shader cannot test
+  // point-in-polygon. One shared texture sampled by world XZ — no per-instance
+  // attribute, and it works for baked and procedural plants alike.
+  uShelter: { value: null },
+  uShelterRect: { value: new THREE.Vector4(0, 0, 1, 1) },
+  uHasShelter: { value: 0 },
+};
 
 // ── seeded PRNG (mulberry32) ────────────────────────────────────────────────
 function mulberry32(a) {

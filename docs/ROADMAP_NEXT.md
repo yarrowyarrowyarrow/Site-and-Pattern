@@ -83,19 +83,46 @@ items on the roadmap. The rest of this document sequences them and says what els
 
 ---
 
+## Shipped
+
+**V2.33 — Theme A, the whole of it (F63–F69).** The 3D preview stopped being a
+diagram. Detail entries below are kept as the record of what was asked for; what
+was actually built, what it cost and what it left open is in
+[`SPRITE_AUDIT.md`](SPRITE_AUDIT.md#third-pass--v233-roadmap-f63f69).
+
+| ID | What landed | Where |
+|----|-------------|-------|
+| **F63** | Ten procedural surface classes (bark smooth/furrowed/papery/shaggy/scaly, leaf matte/glossy/pubescent/glaucous, needle), picked per species from the catalogue; triplanar foliage sampling | `html/scene3d/01b-surface.js`, `bark_texture` + `leaf_surface` (schema v52) |
+| **F64** | Species profiles where the genus lied (jack pine, water birch, Evans cherry, Douglas-fir); shrub silhouettes resolved from the species' own `branching`, +`arching`/`prostrate`/`upright`; **and the oak** — crown leaf cards were 13–15× life size | `assetlib/flora_trees.py`, `flora_shrubs.py`, `conventions.crown_card_length` |
+| **F65** | Aspect axis on grass / aquatic / vine — three real shapes instead of three random draws, at **zero payload cost** | `conventions.LAYER_ASPECT_CLASSES` |
+| **F66** | Eight graminoid seed heads across 78 of 79 species — the field mark a grass is identified by | `inflorescence_form` (schema v52), `html/scene3d/12-seedheads.js` |
+| **F67** | Four bee builds, four lepidopteran, three bird — the identification for the 62 native bees that have no photograph | `assetlib/fauna_variants.py`, `src/scene_wildlife.py` |
+| **F68** | Sway follows the site's real seasonal wind and is damped inside the design's own windbreak lee | `src/wind_scene.py`, `01b-surface.js:applySceneWind` |
+| **F69** | Presentation still — the docent's beats finally drive a camera; print-resolution render, a PDF page, and a sidewalk preset that is **F77** for free | `src/presentation_still.py`, `permaSetCameraPreset` |
+
+**Principle 13 was adopted** (the proposal in Theme C below), on the owner's
+decision: *a native planting has to be loved to survive*. Nassauer 1995 is in
+[`REFERENCES.md`](REFERENCES.md); `tests/test_philosophy.py` now guards thirteen.
+
+Theme A's remaining gaps — herb and within-silhouette shrub aspect, fern
+density, billboard fruit — are listed at the end of the sprite audit rather than
+re-opened here.
+
+---
+
 ## Ranked summary
 
-**Theme A — LOOK: the 3D preview** *(WANT)*
+**Theme A — LOOK: the 3D preview** *(WANT)* — ✅ **all shipped in V2.33**
 
-| ID | Feature | Impact | Effort | Risk | Principle |
-|----|---------|--------|--------|------|-----------|
-| F63 | Shared surface atlas — bark / leaf / needle | **High** | M | Low–Med | P5, P2 |
-| F64 | Species tables where genus tables lie (absorbs F60) | **High** | L | Med — asset size | P2, P9 |
-| F65 | Aspect variant axis on layer archetypes (was F62) | Med | M | Med — asset size | P2, P9 |
-| F66 | Seed heads & inflorescences — the graminoid field mark | Med | M | Med — schema + seed | P5, P2 |
-| F67 | Creature variety within a kind | Med | M | Low | P5, P3 |
-| F68 | Wind that blows from where the wind blows | Med | S–M | Low | P5, P11 |
-| F69 | Presentation still — a render you can put in a proposal | **High** | M | Med | P5 |
+| ID | Feature | Impact | Effort | Risk | Principle | Status |
+|----|---------|--------|--------|------|-----------|--------|
+| F63 | Shared surface atlas — bark / leaf / needle | **High** | M | Low–Med | P5, P2 | ✅ V2.33 |
+| F64 | Species tables where genus tables lie (absorbs F60) | **High** | L | Med — asset size | P2, P9 | ✅ V2.33 |
+| F65 | Aspect variant axis on layer archetypes (was F62) | Med | M | Med — asset size | P2, P9 | ✅ V2.33 |
+| F66 | Seed heads & inflorescences — the graminoid field mark | Med | M | Med — schema + seed | P5, P2 | ✅ V2.33 |
+| F67 | Creature variety within a kind | Med | M | Low | P5, P3 | ✅ V2.33 |
+| F68 | Wind that blows from where the wind blows | Med | S–M | Low | P5, P11 | ✅ V2.33 |
+| F69 | Presentation still — a render you can put in a proposal | **High** | M | Med | P5 → **P13** | ✅ V2.33 |
 
 **Theme B — RECOGNISE: the photographs** *(RECOGNISE)*
 
@@ -410,9 +437,16 @@ persona.
 
 ## Theme C — WANT / SHOW: the argument the app doesn't make
 
-### A proposal: Principle 13 — *a native planting has to be loved to survive*
+### ✅ ADOPTED in V2.33: Principle 13 — *a native planting has to be loved to survive*
 
-**This is a proposal for the owner to accept or reject, not a change already made.** The philosophy
+**Accepted by the owner and now core principle #13** in
+[`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md#13-a-native-planting-has-to-be-loved-to-survive);
+Nassauer 1995 is in [`REFERENCES.md`](REFERENCES.md) and
+`tests/test_philosophy.py` guards thirteen themes and the P1–P13 anchor range.
+F69 is anchored to it. The original proposal is kept below as the record of the
+argument.
+
+**This was a proposal for the owner to accept or reject.** The philosophy
 document is the founding text and P12 is the only principle ever promoted into it; adding a
 thirteenth is the owner's call. But the review turned up a real hole, and it sits directly under
 the two priorities that prompted this roadmap.

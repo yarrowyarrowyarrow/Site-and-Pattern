@@ -152,7 +152,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6e6458",
     "fall_color": "#c8a842",
-    "branching": "decurrent"
+    "branching": "decurrent",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Alkali Bulrush",
@@ -204,7 +205,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 60.0,
     "leaf_arrangement": "basal",
-    "growth_form": "emergent"
+    "growth_form": "emergent",
+    "inflorescence_form": "sedge_cluster"
   },
   {
     "common_name": "Alkali Cord Grass",
@@ -253,7 +255,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 40.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "one_sided_raceme"
   },
   {
     "common_name": "Alpine Aster",
@@ -409,7 +412,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "open_panicle"
   },
   {
     "common_name": "Alpine Forget-me-not",
@@ -562,7 +566,8 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 1.5,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "American Brooklime",
@@ -715,7 +720,8 @@
     "leaf_shape": "sagittate",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
-    "growth_form": "emergent"
+    "growth_form": "emergent",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "Ascending Milkvetch",
@@ -822,7 +828,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "sedge_cluster"
   },
   {
     "common_name": "Ball Cactus",
@@ -928,7 +935,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#8a8d86",
     "fall_color": "",
-    "branching": "excurrent"
+    "branching": "excurrent",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Balsam Poplar",
@@ -979,7 +987,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#7d7a70",
     "fall_color": "#d8b83e",
-    "branching": "excurrent"
+    "branching": "excurrent",
+    "bark_texture": "furrowed"
   },
   {
     "common_name": "Balsamroot",
@@ -1085,7 +1094,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#7d7466",
     "fall_color": "#cbbb50",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Beaked Hazelnut",
@@ -1139,7 +1149,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#786a58",
     "fall_color": "#d0a83c",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Beaked Sedge",
@@ -1191,7 +1202,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "sedge_cluster"
   },
   {
     "common_name": "Bearberry",
@@ -1245,7 +1257,8 @@
     "leaf_size_cm": 2.0,
     "leaf_arrangement": "alternate",
     "growth_form": "mat",
-    "fruit_form": "berry"
+    "fruit_form": "berry",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "Bebb's Sedge",
@@ -1294,7 +1307,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "sedge_cluster"
   },
   {
     "common_name": "Bebb's Willow",
@@ -1345,7 +1359,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#7a7264",
     "fall_color": "#d3c04a",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "bark_texture": "furrowed"
   },
   {
     "common_name": "Big Bluestem",
@@ -1394,7 +1409,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 40.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "turkey_foot"
   },
   {
     "common_name": "Big Sagebrush",
@@ -1448,7 +1464,9 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#7a7060",
     "fall_color": "",
-    "branching": "decurrent"
+    "branching": "decurrent",
+    "bark_texture": "shaggy",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Big-head Rush",
@@ -1500,7 +1518,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "rush_umbel"
   },
   {
     "common_name": "Birch-leaved Spirea",
@@ -1554,7 +1573,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6e5f4c",
     "fall_color": "#c8703a",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "bark_texture": "shaggy"
   },
   {
     "common_name": "Bishop's Cap",
@@ -1606,7 +1626,8 @@
     "leaf_shape": "cordate",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "Black Hawthorn",
@@ -1661,7 +1682,8 @@
     "bark_color": "#6f665a",
     "fall_color": "#c07a34",
     "branching": "multi_stem",
-    "fruit_form": "pome"
+    "fruit_form": "pome",
+    "bark_texture": "scaly"
   },
   {
     "common_name": "Black Spruce",
@@ -1715,7 +1737,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6b6258",
     "fall_color": "",
-    "branching": "excurrent"
+    "branching": "excurrent",
+    "bark_texture": "scaly"
   },
   {
     "common_name": "Black-eyed Susan",
@@ -1919,7 +1942,8 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "basal",
-    "growth_form": "ferny"
+    "growth_form": "ferny",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "Blue Grama Grass",
@@ -1971,7 +1995,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "one_sided_raceme"
   },
   {
     "common_name": "Blue-eyed Grass",
@@ -2075,7 +2100,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Bluejoint Reed Grass",
@@ -2127,7 +2153,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Bog Blueberry",
@@ -2183,7 +2210,9 @@
     "bark_color": "#6a5a48",
     "fall_color": "#b0402e",
     "branching": "decurrent",
-    "fruit_form": "berry"
+    "fruit_form": "berry",
+    "bark_texture": "smooth",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "Bog Cranberry",
@@ -2404,7 +2433,8 @@
     "bark_color": "#75695a",
     "fall_color": "#cbb44a",
     "branching": "multi_stem",
-    "fruit_form": "berry"
+    "fruit_form": "berry",
+    "bark_texture": "shaggy"
   },
   {
     "common_name": "Bristly Black Currant",
@@ -2461,7 +2491,8 @@
     "bark_color": "#6a5644",
     "fall_color": "#b8703a",
     "branching": "multi_stem",
-    "fruit_form": "strig"
+    "fruit_form": "strig",
+    "bark_texture": "shaggy"
   },
   {
     "common_name": "Brittle Prickly-pear",
@@ -2565,7 +2596,8 @@
     "leaf_shape": "sagittate",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
-    "growth_form": "emergent"
+    "growth_form": "emergent",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "Broad-leaved Water-plantain",
@@ -2723,7 +2755,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#7a6a52",
     "fall_color": "",
-    "branching": "decurrent"
+    "branching": "decurrent",
+    "bark_texture": "shaggy"
   },
   {
     "common_name": "Buckbean",
@@ -2776,7 +2809,8 @@
     "leaf_shape": "trifoliate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "basal",
-    "growth_form": "emergent"
+    "growth_form": "emergent",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "Bunchberry",
@@ -2881,7 +2915,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#5f584c",
     "fall_color": "#a8823a",
-    "branching": "decurrent"
+    "branching": "decurrent",
+    "bark_texture": "furrowed"
   },
   {
     "common_name": "Butte Primrose",
@@ -3039,7 +3074,9 @@
     "bark_color": "#7a7264",
     "fall_color": "#a89e80",
     "branching": "decurrent",
-    "fruit_form": "berry"
+    "fruit_form": "berry",
+    "bark_texture": "smooth",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Canada Goldenrod",
@@ -3197,7 +3234,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "open_panicle"
   },
   {
     "common_name": "Canada Waterweed",
@@ -3301,7 +3339,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Cattail",
@@ -3353,7 +3392,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 100.0,
     "leaf_arrangement": "basal",
-    "growth_form": "emergent"
+    "growth_form": "emergent",
+    "inflorescence_form": "cattail_spike"
   },
   {
     "common_name": "Chokecherry",
@@ -3412,7 +3452,8 @@
     "bark_color": "#6f6252",
     "fall_color": "#d0932e",
     "branching": "multi_stem",
-    "fruit_form": "raceme"
+    "fruit_form": "raceme",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Common Alumroot",
@@ -3624,7 +3665,8 @@
     "leaf_arrangement": "whorled",
     "bark_color": "#7a5a44",
     "fall_color": "",
-    "branching": "prostrate"
+    "branching": "prostrate",
+    "bark_texture": "shaggy"
   },
   {
     "common_name": "Common Mare's-tail",
@@ -3782,7 +3824,8 @@
     "bark_color": "#75695c",
     "fall_color": "#b8a860",
     "branching": "multi_stem",
-    "fruit_form": "berry"
+    "fruit_form": "berry",
+    "bark_texture": "shaggy"
   },
   {
     "common_name": "Common Sunflower",
@@ -3886,7 +3929,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "open_panicle"
   },
   {
     "common_name": "Common Twinpod",
@@ -3938,7 +3982,8 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Cream-Coloured Peavine",
@@ -4099,7 +4144,9 @@
     "bark_color": "#6a5a48",
     "fall_color": "#a8402e",
     "branching": "prostrate",
-    "fruit_form": "berry"
+    "fruit_form": "berry",
+    "bark_texture": "smooth",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "Creeping Sibbaldia",
@@ -4203,7 +4250,8 @@
     "leaf_shape": "scale",
     "leaf_size_cm": 1.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Crowfoot Violet",
@@ -4307,7 +4355,8 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "basal",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Cut-leaved Anemone",
@@ -4464,7 +4513,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "sedge_cluster"
   },
   {
     "common_name": "Desert Shooting Star",
@@ -4677,7 +4727,9 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6a4a34",
     "fall_color": "",
-    "branching": "excurrent"
+    "branching": "excurrent",
+    "bark_texture": "furrowed",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "Douglas Maple",
@@ -4731,7 +4783,8 @@
     "leaf_arrangement": "opposite",
     "bark_color": "#6e6258",
     "fall_color": "#d1502e",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Drooping Wood-reed",
@@ -4783,7 +4836,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "nodding_raceme"
   },
   {
     "common_name": "Drummond's Milkvetch",
@@ -4890,7 +4944,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "rush_umbel"
   },
   {
     "common_name": "Dwarf Birch",
@@ -4944,7 +4999,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#5f4a3a",
     "fall_color": "#d8a83c",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Dwarf Raspberry",
@@ -5103,7 +5159,8 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Eastern Red Columbine",
@@ -5158,7 +5215,8 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "basal",
-    "growth_form": "ferny"
+    "growth_form": "ferny",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "Elegant Goldenrod",
@@ -5315,7 +5373,9 @@
     "leaf_arrangement": "opposite",
     "bark_color": "#6a5a48",
     "fall_color": "",
-    "branching": "prostrate"
+    "branching": "prostrate",
+    "bark_texture": "smooth",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "False Dragonhead",
@@ -5471,7 +5531,8 @@
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
     "growth_form": "erect",
-    "fruit_form": "berry"
+    "fruit_form": "berry",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "Field Chickweed",
@@ -5575,7 +5636,8 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "basal",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Fireweed",
@@ -5787,7 +5849,8 @@
     "leaf_shape": "reniform",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "basal",
-    "growth_form": "floating"
+    "growth_form": "floating",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "Foothills Rough Fescue",
@@ -5839,7 +5902,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Fowl Manna Grass",
@@ -5891,7 +5955,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "open_panicle"
   },
   {
     "common_name": "Fragrant Sumac",
@@ -5947,7 +6012,9 @@
     "bark_color": "#6e5c46",
     "fall_color": "#c5442a",
     "branching": "decurrent",
-    "fruit_form": "flat_cluster"
+    "fruit_form": "flat_cluster",
+    "bark_texture": "smooth",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "Fringed Brome",
@@ -5999,7 +6066,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "nodding_raceme"
   },
   {
     "common_name": "Fringed Loosestrife",
@@ -6305,7 +6373,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 35.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Glacier Lily",
@@ -6466,7 +6535,8 @@
     "bark_color": "#7a5a42",
     "fall_color": "#c8503a",
     "branching": "multi_stem",
-    "fruit_form": "strig"
+    "fruit_form": "strig",
+    "bark_texture": "shaggy"
   },
   {
     "common_name": "Golden Draba",
@@ -6570,7 +6640,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "sedge_cluster"
   },
   {
     "common_name": "Golden Tickseed",
@@ -6827,7 +6898,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6f6a60",
     "fall_color": "#9a8a3e",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Green Milkweed",
@@ -6882,7 +6954,8 @@
     "leaf_shape": "elliptic",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Green Needle Grass",
@@ -7143,7 +7216,8 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Hairy Wild Rye",
@@ -7195,7 +7269,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 35.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Harebell",
@@ -7297,7 +7372,8 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "Heart-leaved Arnica",
@@ -7402,7 +7478,8 @@
     "bark_color": "#75695c",
     "fall_color": "#b8402e",
     "branching": "multi_stem",
-    "fruit_form": "flat_cluster"
+    "fruit_form": "flat_cluster",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Hoary Aster",
@@ -7454,7 +7531,8 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "Hooded Ladies' Tresses",
@@ -7556,7 +7634,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Indigenous Ricegrass",
@@ -7608,7 +7687,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "open_panicle"
   },
   {
     "common_name": "Ivy-leaved Duckweed",
@@ -7711,7 +7791,8 @@
     "leaf_arrangement": "fascicled",
     "bark_color": "#6f6154",
     "fall_color": "",
-    "branching": "decurrent"
+    "branching": "decurrent",
+    "bark_texture": "scaly"
   },
   {
     "common_name": "Jerusalem Artichoke",
@@ -7917,7 +7998,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "rush_umbel"
   },
   {
     "common_name": "Labrador Tea",
@@ -7968,7 +8050,9 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6e5a44",
     "fall_color": "",
-    "branching": "decurrent"
+    "branching": "decurrent",
+    "bark_texture": "shaggy",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Lakeshore Sedge",
@@ -8020,7 +8104,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "sedge_cluster"
   },
   {
     "common_name": "Lance-leaved Stonecrop",
@@ -8073,7 +8158,8 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 2.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "succulent"
+    "growth_form": "succulent",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "Large-leaved Avens",
@@ -8492,7 +8578,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "turkey_foot"
   },
   {
     "common_name": "Little-leaved Alumroot",
@@ -8598,7 +8685,8 @@
     "leaf_arrangement": "fascicled",
     "bark_color": "#8a6a4a",
     "fall_color": "",
-    "branching": "excurrent"
+    "branching": "excurrent",
+    "bark_texture": "scaly"
   },
   {
     "common_name": "Long-fruited Anemone",
@@ -8710,7 +8798,9 @@
     "bark_color": "#6e6a4a",
     "fall_color": "#b5402e",
     "branching": "decurrent",
-    "fruit_form": "berry"
+    "fruit_form": "berry",
+    "bark_texture": "smooth",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "Low Townsendia",
@@ -8762,7 +8852,8 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Low-bush Cranberry",
@@ -8818,7 +8909,8 @@
     "bark_color": "#75695c",
     "fall_color": "#c04a2e",
     "branching": "multi_stem",
-    "fruit_form": "flat_cluster"
+    "fruit_form": "flat_cluster",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Lyalls Penstemon",
@@ -9231,7 +9323,8 @@
     "leaf_shape": "reniform",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "Marsh Skullcap",
@@ -9540,7 +9633,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "sedge_cluster"
   },
   {
     "common_name": "Meadowsweet",
@@ -9594,7 +9688,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6e5f4c",
     "fall_color": "#c8a03a",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "bark_texture": "shaggy"
   },
   {
     "common_name": "Missouri Milkvetch",
@@ -9701,7 +9796,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 1.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "cushion"
+    "growth_form": "cushion",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Moss Phlox",
@@ -9802,7 +9898,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "nodding_raceme"
   },
   {
     "common_name": "Mountain Gentian",
@@ -10009,7 +10106,9 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#7d7466",
     "fall_color": "#cbbb50",
-    "branching": "suckering"
+    "branching": "suckering",
+    "bark_texture": "smooth",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "Narrow-leaved Hawkweed",
@@ -10107,7 +10206,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "bristly"
   },
   {
     "common_name": "Needle and Thread Grass",
@@ -10159,7 +10259,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "bristly"
   },
   {
     "common_name": "Needle Spike-rush",
@@ -10208,7 +10309,8 @@
     "leaf_shape": "scale",
     "leaf_size_cm": 1.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Nodding Onion",
@@ -10368,7 +10470,8 @@
     "bark_color": "#6e6254",
     "fall_color": "#c8853a",
     "branching": "multi_stem",
-    "fruit_form": "strig"
+    "fruit_form": "strig",
+    "bark_texture": "shaggy"
   },
   {
     "common_name": "Northern Gentian",
@@ -10525,7 +10628,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Nuttall's Sunflower",
@@ -10736,7 +10840,8 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "Palmate-leaved Coltsfoot",
@@ -10789,7 +10894,8 @@
     "leaf_shape": "lobed",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Paper Birch",
@@ -10843,7 +10949,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#e8e4d8",
     "fall_color": "#edc84e",
-    "branching": "excurrent"
+    "branching": "excurrent",
+    "bark_texture": "papery"
   },
   {
     "common_name": "Parry's Oatgrass",
@@ -10895,7 +11002,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "open_panicle"
   },
   {
     "common_name": "Parry's Townsendia",
@@ -10944,7 +11052,8 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Pearly Everlasting",
@@ -10997,7 +11106,8 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Philadelphia Fleabane",
@@ -11109,7 +11219,8 @@
     "bark_color": "#7a4630",
     "fall_color": "#d9622e",
     "branching": "decurrent",
-    "fruit_form": "cherry"
+    "fruit_form": "cherry",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Pink Corydalis",
@@ -11263,7 +11374,8 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "basal",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Pink Pyrola",
@@ -11316,7 +11428,8 @@
     "leaf_shape": "orbicular",
     "leaf_size_cm": 4.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "Pink Spirea",
@@ -11370,7 +11483,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6e5f4c",
     "fall_color": "#c8903a",
-    "branching": "suckering"
+    "branching": "suckering",
+    "bark_texture": "shaggy"
   },
   {
     "common_name": "Pink Spirea (Rose Meadowsweet)",
@@ -11422,7 +11536,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6e5f4c",
     "fall_color": "#c8a03a",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "bark_texture": "shaggy"
   },
   {
     "common_name": "Plains Muhly",
@@ -11474,7 +11589,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Plains Prickly Pear Cactus",
@@ -11578,7 +11694,8 @@
     "leaf_shape": "pinnatifid",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "ferny"
+    "growth_form": "ferny",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Porcupine Grass",
@@ -11630,7 +11747,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "bristly"
   },
   {
     "common_name": "Porcupine Sedge",
@@ -11682,7 +11800,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "sedge_cluster"
   },
   {
     "common_name": "Poverty Oat Grass",
@@ -11734,7 +11853,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "open_panicle"
   },
   {
     "common_name": "Prairie Buttercup",
@@ -11996,7 +12116,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 40.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "one_sided_raceme"
   },
   {
     "common_name": "Prairie Crocus",
@@ -12051,7 +12172,8 @@
     "leaf_shape": "pinnatifid",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Prairie Dropseed",
@@ -12103,7 +12225,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "open_panicle"
   },
   {
     "common_name": "Prairie Gentian",
@@ -12317,7 +12440,8 @@
     "bark_color": "#8a5442",
     "fall_color": "#c07a3a",
     "branching": "multi_stem",
-    "fruit_form": "hip"
+    "fruit_form": "hip",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Prairie Sage",
@@ -12369,7 +12493,8 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Prairie Sagewort",
@@ -12418,7 +12543,8 @@
     "leaf_shape": "pinnatifid",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "ferny"
+    "growth_form": "ferny",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Prairie Smoke",
@@ -12622,7 +12748,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Prickly Wild Rose",
@@ -12679,7 +12806,8 @@
     "bark_color": "#8a5442",
     "fall_color": "#c07a3a",
     "branching": "multi_stem",
-    "fruit_form": "hip"
+    "fruit_form": "hip",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Purple Avens (Water Avens)",
@@ -12830,7 +12958,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "nodding_raceme"
   },
   {
     "common_name": "Purple Peavine",
@@ -12980,7 +13109,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Purple-stemmed Tall Aster (Swamp Aster)",
@@ -13087,7 +13217,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#75695c",
     "fall_color": "#cbbb50",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Rabbitbrush",
@@ -13141,7 +13272,9 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#9aa08c",
     "fall_color": "",
-    "branching": "decurrent"
+    "branching": "decurrent",
+    "bark_texture": "shaggy",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Rat Root",
@@ -13242,7 +13375,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "sedge_cluster"
   },
   {
     "common_name": "Red Baneberry",
@@ -13354,7 +13488,8 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "basal",
-    "growth_form": "ferny"
+    "growth_form": "ferny",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "Common Paintbrush",
@@ -13463,7 +13598,9 @@
     "bark_color": "#b5402e",
     "fall_color": "#a83c2e",
     "branching": "multi_stem",
-    "fruit_form": "flat_cluster"
+    "fruit_form": "flat_cluster",
+    "bark_texture": "smooth",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "Richardson's Needlegrass",
@@ -13512,7 +13649,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "bristly"
   },
   {
     "common_name": "River Beauty",
@@ -13616,7 +13754,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 60.0,
     "leaf_arrangement": "basal",
-    "growth_form": "emergent"
+    "growth_form": "emergent",
+    "inflorescence_form": "sedge_cluster"
   },
   {
     "common_name": "Roadside Agrimony (Woodland Agrimony)",
@@ -13770,7 +13909,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Rocky-Ledge Beardtongue",
@@ -13874,7 +14014,8 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "succulent"
+    "growth_form": "succulent",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "Rosy Pussytoes (Littleleaf Pussytoes)",
@@ -13927,7 +14068,8 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "basal",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Rough Fescue",
@@ -13976,7 +14118,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Rough-fruited Fairy Bells",
@@ -14029,7 +14172,8 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "Round-leaved Alumroot",
@@ -14233,7 +14377,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "floating"
+    "growth_form": "floating",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "Saline Shooting Star",
@@ -14337,7 +14482,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Sand Grass",
@@ -14386,7 +14532,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "open_panicle"
   },
   {
     "common_name": "Sandbar Willow",
@@ -14440,7 +14587,9 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#7d7466",
     "fall_color": "#cbbb50",
-    "branching": "suckering"
+    "branching": "suckering",
+    "bark_texture": "smooth",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "Sandberg Bluegrass",
@@ -14492,7 +14641,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "open_panicle"
   },
   {
     "common_name": "Sartwell's Sedge",
@@ -14541,7 +14691,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "sedge_cluster"
   },
   {
     "common_name": "Saskatoon Berry",
@@ -14597,7 +14748,8 @@
     "bark_color": "#7d7a72",
     "fall_color": "#d1762e",
     "branching": "multi_stem",
-    "fruit_form": "pome"
+    "fruit_form": "pome",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Scarlet Butterfly Plant",
@@ -14698,7 +14850,8 @@
     "leaf_shape": "pinnatifid",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Self-heal",
@@ -14851,7 +15004,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Shooting Star",
@@ -15003,7 +15157,9 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#7d7466",
     "fall_color": "#cbbb50",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "bark_texture": "smooth",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "Showy Aster",
@@ -15208,7 +15364,8 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Showy Milkweed",
@@ -15263,7 +15420,8 @@
     "leaf_shape": "elliptic",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Showy Pussytoes",
@@ -15315,7 +15473,8 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "basal",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Shrubby Cinquefoil",
@@ -15366,7 +15525,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#8a6a52",
     "fall_color": "#c8b04a",
-    "branching": "decurrent"
+    "branching": "decurrent",
+    "bark_texture": "shaggy"
   },
   {
     "common_name": "Sideoats Grama",
@@ -15418,7 +15578,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "one_sided_raceme"
   },
   {
     "common_name": "Silky Lupine",
@@ -15473,7 +15634,8 @@
     "leaf_shape": "compound_palmate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Silver Buffaloberry",
@@ -15530,7 +15692,9 @@
     "bark_color": "#8a8578",
     "fall_color": "#b0aa8c",
     "branching": "multi_stem",
-    "fruit_form": "berry"
+    "fruit_form": "berry",
+    "bark_texture": "shaggy",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Silver Sagebrush",
@@ -15584,7 +15748,9 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#7a7060",
     "fall_color": "",
-    "branching": "decurrent"
+    "branching": "decurrent",
+    "bark_texture": "shaggy",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Silverberry",
@@ -15639,7 +15805,9 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#7a5a42",
     "fall_color": "#b7ab7c",
-    "branching": "suckering"
+    "branching": "suckering",
+    "bark_texture": "shaggy",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Silverweed",
@@ -15743,7 +15911,8 @@
     "leaf_shape": "compound_palmate",
     "leaf_size_cm": 10.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Sitka Valerian",
@@ -15848,7 +16017,8 @@
     "bark_color": "#6a5c4a",
     "fall_color": "#c07a3a",
     "branching": "arching",
-    "fruit_form": "strig"
+    "fruit_form": "strig",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Slender Blue Beardtongue",
@@ -16003,7 +16173,8 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Slender Wheatgrass",
@@ -16055,7 +16226,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Slough Grass",
@@ -16107,7 +16279,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Small Bottle Sedge",
@@ -16208,7 +16381,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 40.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "sedge_cluster"
   },
   {
     "common_name": "Small-leaved Everlasting (Small-leaved Pussytoes)",
@@ -16258,7 +16432,8 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "basal",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Smooth Aster",
@@ -16516,7 +16691,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Sneezeweed",
@@ -16619,7 +16795,8 @@
     "leaf_arrangement": "basal",
     "bark_color": "#8a8570",
     "fall_color": "",
-    "branching": "rosette"
+    "branching": "rosette",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "Spear-leaved Arnica",
@@ -16720,7 +16897,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Spiked Water-milfoil",
@@ -16880,7 +17058,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "sedge_cluster"
   },
   {
     "common_name": "Spring Beauty",
@@ -17041,7 +17220,8 @@
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "alternate",
     "growth_form": "erect",
-    "fruit_form": "berry"
+    "fruit_form": "berry",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "Sticky Goldenrod",
@@ -17350,7 +17530,8 @@
     "leaf_shape": "ovate",
     "leaf_size_cm": 12.0,
     "leaf_arrangement": "opposite",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Strawberry Spinach",
@@ -17661,7 +17842,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Switchgrass",
@@ -17713,7 +17895,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 40.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "open_panicle"
   },
   {
     "common_name": "Tall Anemone (Thimbleweed)",
@@ -18034,7 +18217,8 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "ferny"
+    "growth_form": "ferny",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "Tall Showy Yarrow",
@@ -18143,7 +18327,8 @@
     "leaf_arrangement": "fascicled",
     "bark_color": "#7a5238",
     "fall_color": "#d9a72e",
-    "branching": "excurrent"
+    "branching": "excurrent",
+    "bark_texture": "scaly"
   },
   {
     "common_name": "Thimbleberry",
@@ -18200,7 +18385,8 @@
     "bark_color": "#9a8a72",
     "fall_color": "#c8a03a",
     "branching": "arching",
-    "fruit_form": "aggregate"
+    "fruit_form": "aggregate",
+    "bark_texture": "shaggy"
   },
   {
     "common_name": "Thinleaf Alder",
@@ -18254,7 +18440,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6f6a60",
     "fall_color": "#9a8a3e",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Three-square Rush",
@@ -18306,7 +18493,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 60.0,
     "leaf_arrangement": "basal",
-    "growth_form": "emergent"
+    "growth_form": "emergent",
+    "inflorescence_form": "sedge_cluster"
   },
   {
     "common_name": "Ticklegrass",
@@ -18358,7 +18546,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "open_panicle"
   },
   {
     "common_name": "Torrey's Rush",
@@ -18410,7 +18599,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "rush_umbel"
   },
   {
     "common_name": "Trailing Raspberry",
@@ -18516,7 +18706,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#cfd2c4",
     "fall_color": "#e8c33a",
-    "branching": "excurrent"
+    "branching": "excurrent",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Tufted Hairgrass",
@@ -18565,7 +18756,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "open_panicle"
   },
   {
     "common_name": "Tufted Tall Manna Grass",
@@ -18617,7 +18809,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "open_panicle"
   },
   {
     "common_name": "Turned Sedge",
@@ -18666,7 +18859,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "sedge_cluster"
   },
   {
     "common_name": "Twin Arnica",
@@ -18770,7 +18964,8 @@
     "leaf_shape": "orbicular",
     "leaf_size_cm": 1.5,
     "leaf_arrangement": "opposite",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "Twining Honeysuckle (Limber Honeysuckle)",
@@ -19032,7 +19227,8 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "ferny"
+    "growth_form": "ferny",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "Velvet-leaf Blueberry",
@@ -19088,7 +19284,9 @@
     "bark_color": "#6a5a48",
     "fall_color": "#b5402e",
     "branching": "decurrent",
-    "fruit_form": "berry"
+    "fruit_form": "berry",
+    "bark_texture": "smooth",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Water Arum (Wild Calla)",
@@ -19195,7 +19393,8 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#6b4230",
     "fall_color": "#e8c34a",
-    "branching": "multi_stem"
+    "branching": "multi_stem",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Water Parsnip",
@@ -19296,7 +19495,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "sedge_cluster"
   },
   {
     "common_name": "Water Smartweed",
@@ -19508,7 +19708,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Western Meadow Aster",
@@ -19612,7 +19813,8 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 5.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "ferny"
+    "growth_form": "ferny",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "Western Mountain Ash",
@@ -19669,7 +19871,8 @@
     "bark_color": "#7d7a72",
     "fall_color": "#d05a2e",
     "branching": "multi_stem",
-    "fruit_form": "flat_cluster"
+    "fruit_form": "flat_cluster",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Western Porcupine Grass",
@@ -19718,7 +19921,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 25.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "bristly"
   },
   {
     "common_name": "Western Snowberry",
@@ -19777,7 +19981,8 @@
     "bark_color": "#75695c",
     "fall_color": "#b8a860",
     "branching": "suckering",
-    "fruit_form": "berry"
+    "fruit_form": "berry",
+    "bark_texture": "shaggy"
   },
   {
     "common_name": "Western Wheatgrass",
@@ -19826,7 +20031,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 20.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "contracted_spike"
   },
   {
     "common_name": "Western Willow Aster",
@@ -20134,7 +20340,8 @@
     "leaf_shape": "elliptic",
     "leaf_size_cm": 2.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "White Prairie Clover",
@@ -20240,7 +20447,9 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#7b7268",
     "fall_color": "",
-    "branching": "excurrent"
+    "branching": "excurrent",
+    "bark_texture": "scaly",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "White-grained Mountain Rice Grass",
@@ -20289,7 +20498,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 15.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "open_panicle"
   },
   {
     "common_name": "Wild Bergamot",
@@ -20395,7 +20605,8 @@
     "bark_color": "#6e6254",
     "fall_color": "#c8703a",
     "branching": "multi_stem",
-    "fruit_form": "strig"
+    "fruit_form": "strig",
+    "bark_texture": "shaggy"
   },
   {
     "common_name": "Wild Blue Flax",
@@ -20608,7 +20819,8 @@
     "bark_color": "#75695c",
     "fall_color": "#c08a3a",
     "branching": "arching",
-    "fruit_form": "berry"
+    "fruit_form": "berry",
+    "bark_texture": "shaggy"
   },
   {
     "common_name": "Wild Licorice",
@@ -20719,7 +20931,8 @@
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
     "growth_form": "mat",
-    "fruit_form": "berry"
+    "fruit_form": "berry",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "Wild Mint",
@@ -20826,7 +21039,8 @@
     "bark_color": "#9a8a72",
     "fall_color": "#c08a3a",
     "branching": "arching",
-    "fruit_form": "aggregate"
+    "fruit_form": "aggregate",
+    "bark_texture": "shaggy"
   },
   {
     "common_name": "Wild Red Currant",
@@ -20882,7 +21096,8 @@
     "bark_color": "#6a5c4a",
     "fall_color": "#c05a3a",
     "branching": "arching",
-    "fruit_form": "strig"
+    "fruit_form": "strig",
+    "bark_texture": "shaggy"
   },
   {
     "common_name": "Wild Sarsaparilla",
@@ -21150,7 +21365,9 @@
     "leaf_arrangement": "alternate",
     "bark_color": "#a8a290",
     "fall_color": "",
-    "branching": "decurrent"
+    "branching": "decurrent",
+    "bark_texture": "shaggy",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Wire Rush",
@@ -21202,7 +21419,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "rush_umbel"
   },
   {
     "common_name": "Wood Betony (Bracted Lousewort)",
@@ -21367,7 +21585,8 @@
     "bark_color": "#85604a",
     "fall_color": "#c07a3a",
     "branching": "suckering",
-    "fruit_form": "hip"
+    "fruit_form": "hip",
+    "bark_texture": "smooth"
   },
   {
     "common_name": "Woolly Cinquefoil",
@@ -21419,7 +21638,8 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "clump"
+    "growth_form": "clump",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Woolly Sedge",
@@ -21471,7 +21691,8 @@
     "leaf_shape": "linear",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "tussock"
+    "growth_form": "tussock",
+    "inflorescence_form": "sedge_cluster"
   },
   {
     "common_name": "Yarrow",
@@ -21733,7 +21954,8 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "basal",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Yellow Columbine",
@@ -21789,7 +22011,8 @@
     "leaf_shape": "compound_pinnate",
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "basal",
-    "growth_form": "ferny"
+    "growth_form": "ferny",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "Yellow Flax",
@@ -21997,7 +22220,8 @@
     "leaf_shape": "elliptic",
     "leaf_size_cm": 2.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "mat"
+    "growth_form": "mat",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Yellow Owl Clover",
@@ -22150,7 +22374,8 @@
     "leaf_shape": "cordate",
     "leaf_size_cm": 30.0,
     "leaf_arrangement": "basal",
-    "growth_form": "floating"
+    "growth_form": "floating",
+    "leaf_surface": "glossy"
   },
   {
     "common_name": "Yellow Pucoon",
@@ -22510,7 +22735,8 @@
     "leaf_shape": "lanceolate",
     "leaf_size_cm": 3.0,
     "leaf_arrangement": "alternate",
-    "growth_form": "erect"
+    "growth_form": "erect",
+    "leaf_surface": "glaucous"
   },
   {
     "common_name": "Stiff Goldenrod",
@@ -22657,7 +22883,8 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 6.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "leaf_surface": "pubescent"
   },
   {
     "common_name": "Tufted Fleabane",
@@ -22706,6 +22933,7 @@
     "leaf_shape": "spatulate",
     "leaf_size_cm": 8.0,
     "leaf_arrangement": "basal",
-    "growth_form": "rosette"
+    "growth_form": "rosette",
+    "leaf_surface": "pubescent"
   }
 ]

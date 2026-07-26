@@ -24,14 +24,10 @@
     "MatWing"
    ],
    "nodes": [
-    "Body",
-    "Head",
-    "Abdomen",
-    "WingL",
-    "WingR",
-    "Band0",
-    "Band1",
-    "Band2"
+    "round",
+    "stout",
+    "slender",
+    "leafcutter"
    ],
    "nominal_size": 1.0
   },
@@ -57,12 +53,9 @@
     "MatDark"
    ],
    "nodes": [
-    "Body",
-    "Head",
-    "Beak",
-    "Tail",
-    "WingL",
-    "WingR"
+    "passerine",
+    "woodpecker",
+    "hummer"
    ],
    "nominal_size": 1.0
   },
@@ -88,11 +81,10 @@
     "MatDark"
    ],
    "nodes": [
-    "Body",
-    "Head",
-    "Abdomen",
-    "WingL",
-    "WingR"
+    "butterfly",
+    "moth",
+    "skipper",
+    "swallowtail"
    ],
    "nominal_size": 1.0
   },
@@ -112,7 +104,7 @@
    "nominal_size": 1.0
   }
  },
- "generator": "assetlib 1 / Blender 4.2.23",
+ "generator": "assetlib 1 / Blender 4.2.0",
  "plants": {
   "herb.clump": {
    "file": "herb_clump.glb",
@@ -291,26 +283,34 @@
   "layer.aquatic": {
    "file": "layer_aquatic.glb",
    "half_width": {
-    "v0": 0.41667,
-    "v1": 0.41667,
-    "v2": 0.41667
+    "v0": 0.90909,
+    "v1": 0.5,
+    "v2": 0.2809
    },
    "parts": [
     "foliage"
    ],
-   "variants": 3
+   "variant_keys": {
+    "aspect_0": 0,
+    "aspect_1": 1,
+    "aspect_2": 2
+   }
   },
   "layer.grass": {
    "file": "layer_grass.glb",
    "half_width": {
-    "v0": 0.38168,
-    "v1": 0.38168,
-    "v2": 0.38168
+    "v0": 0.46729,
+    "v1": 0.37594,
+    "v2": 0.2809
    },
    "parts": [
     "foliage"
    ],
-   "variants": 3
+   "variant_keys": {
+    "aspect_0": 0,
+    "aspect_1": 1,
+    "aspect_2": 2
+   }
   },
   "layer.groundcover": {
    "file": "layer_groundcover.glb",
@@ -343,22 +343,45 @@
   "layer.vine": {
    "file": "layer_vine.glb",
    "half_width": {
-    "v0": 0.2907,
+    "v0": 0.34014,
     "v1": 0.2907,
-    "v2": 0.2907
+    "v2": 0.16667
    },
    "parts": [
     "foliage"
    ],
-   "variants": 3
+   "variant_keys": {
+    "aspect_0": 0,
+    "aspect_1": 1,
+    "aspect_2": 2
+   }
+  },
+  "shrub.arching": {
+   "file": "shrub_arching.glb",
+   "half_width": {
+    "v0": 0.64368,
+    "v1": 0.59694,
+    "v2": 0.68083,
+    "v3": 0.69405
+   },
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "variant_keys": {
+    "broad_1": 0,
+    "compound_2": 1,
+    "cut_1": 2,
+    "cut_2": 3
+   }
   },
   "shrub.irregular": {
    "file": "shrub_irregular.glb",
    "half_width": {
-    "v0": 0.44351,
-    "v1": 0.40429,
-    "v2": 0.47682,
-    "v3": 0.47544
+    "v0": 0.53528,
+    "v1": 0.48729,
+    "v2": 0.57422,
+    "v3": 0.5704
    },
    "parts": [
     "bark",
@@ -396,20 +419,35 @@
     "narrow_2": 6
    }
   },
+  "shrub.prostrate": {
+   "file": "shrub_prostrate.glb",
+   "half_width": {
+    "v0": 0.74631,
+    "v1": 0.68981,
+    "v2": 0.72675
+   },
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "variant_keys": {
+    "broad_1": 0,
+    "compound_2": 1,
+    "narrow_0": 2
+   }
+  },
   "shrub.spreading": {
    "file": "shrub_spreading.glb",
    "half_width": {
-    "v0": 0.53847,
-    "v1": 0.50147,
-    "v10": 0.49457,
-    "v2": 0.56447,
-    "v3": 0.57412,
-    "v4": 0.41249,
-    "v5": 0.53438,
-    "v6": 0.49656,
-    "v7": 0.5546,
-    "v8": 0.55444,
-    "v9": 0.58195
+    "v0": 0.50132,
+    "v1": 0.46733,
+    "v2": 0.52544,
+    "v3": 0.53372,
+    "v4": 0.3867,
+    "v5": 0.48628,
+    "v6": 0.49729,
+    "v7": 0.49721,
+    "v8": 0.47753
    },
    "parts": [
     "bark",
@@ -421,22 +459,18 @@
     "broad_2": 2,
     "compound_0": 3,
     "compound_1": 4,
-    "compound_2": 5,
-    "cut_0": 6,
-    "cut_1": 7,
-    "narrow_0": 8,
-    "narrow_1": 9,
-    "narrow_2": 10
+    "cut_0": 5,
+    "cut_1": 6,
+    "narrow_1": 7,
+    "narrow_2": 8
    }
   },
   "shrub.thicket": {
    "file": "shrub_thicket.glb",
    "half_width": {
-    "v0": 0.49514,
-    "v1": 0.3863,
-    "v2": 0.5653,
-    "v3": 0.49414,
-    "v4": 0.42946
+    "v0": 0.47721,
+    "v1": 0.52965,
+    "v2": 0.47999
    },
    "parts": [
     "bark",
@@ -444,19 +478,32 @@
    ],
    "variant_keys": {
     "broad_1": 0,
-    "compound_2": 1,
-    "cut_0": 2,
-    "cut_1": 3,
-    "cut_2": 4
+    "cut_0": 1,
+    "cut_2": 2
+   }
+  },
+  "shrub.upright": {
+   "file": "shrub_upright.glb",
+   "half_width": {
+    "v0": 0.29765,
+    "v1": 0.34335
+   },
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "variant_keys": {
+    "broad_0": 0,
+    "broad_1": 1
    }
   },
   "shrub.vase": {
    "file": "shrub_vase.glb",
    "half_width": {
-    "v0": 0.40677,
-    "v1": 0.40393,
-    "v2": 0.37595,
-    "v3": 0.38553
+    "v0": 0.42263,
+    "v1": 0.41966,
+    "v2": 0.39012,
+    "v3": 0.40042
    },
    "parts": [
     "bark",
@@ -472,9 +519,9 @@
   "tree.apple": {
    "file": "tree_apple.glb",
    "half_width": {
-    "tier0": 0.51745,
-    "tier1": 0.469,
-    "tier2": 0.46836
+    "tier0": 0.38097,
+    "tier1": 0.41479,
+    "tier2": 0.4464
    },
    "parts": [
     "bark",
@@ -489,9 +536,9 @@
   "tree.aspen": {
    "file": "tree_aspen.glb",
    "half_width": {
-    "tier0": 0.19384,
-    "tier1": 0.16785,
-    "tier2": 0.17102
+    "tier0": 0.16806,
+    "tier1": 0.1582,
+    "tier2": 0.15946
    },
    "parts": [
     "bark",
@@ -506,9 +553,26 @@
   "tree.birch": {
    "file": "tree_birch.glb",
    "half_width": {
-    "tier0": 0.23104,
-    "tier1": 0.21525,
-    "tier2": 0.20428
+    "tier0": 0.15902,
+    "tier1": 0.16539,
+    "tier2": 0.17862
+   },
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "tiers": [
+    0,
+    1,
+    2
+   ]
+  },
+  "tree.birch_water": {
+   "file": "tree_birch_water.glb",
+   "half_width": {
+    "tier0": 0.27494,
+    "tier1": 0.28522,
+    "tier2": 0.26432
    },
    "parts": [
     "bark",
@@ -523,9 +587,26 @@
   "tree.cherry": {
    "file": "tree_cherry.glb",
    "half_width": {
-    "tier0": 0.31711,
-    "tier1": 0.27429,
-    "tier2": 0.26309
+    "tier0": 0.2766,
+    "tier1": 0.27306,
+    "tier2": 0.26733
+   },
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "tiers": [
+    0,
+    1,
+    2
+   ]
+  },
+  "tree.cherry_orchard": {
+   "file": "tree_cherry_orchard.glb",
+   "half_width": {
+    "tier0": 0.50236,
+    "tier1": 0.48044,
+    "tier2": 0.49069
    },
    "parts": [
     "bark",
@@ -557,9 +638,9 @@
   "tree.def_oval": {
    "file": "tree_def_oval.glb",
    "half_width": {
-    "tier0": 0.27965,
-    "tier1": 0.27851,
-    "tier2": 0.27835
+    "tier0": 0.27365,
+    "tier1": 0.25078,
+    "tier2": 0.27516
    },
    "parts": [
     "bark",
@@ -574,9 +655,9 @@
   "tree.def_slender": {
    "file": "tree_def_slender.glb",
    "half_width": {
-    "tier0": 0.19314,
-    "tier1": 0.1954,
-    "tier2": 0.18585
+    "tier0": 0.174,
+    "tier1": 0.17101,
+    "tier2": 0.15871
    },
    "parts": [
     "bark",
@@ -591,9 +672,26 @@
   "tree.def_spreading": {
    "file": "tree_def_spreading.glb",
    "half_width": {
-    "tier0": 0.50691,
-    "tier1": 0.4859,
-    "tier2": 0.43345
+    "tier0": 0.43446,
+    "tier1": 0.40628,
+    "tier2": 0.40968
+   },
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "tiers": [
+    0,
+    1,
+    2
+   ]
+  },
+  "tree.douglas": {
+   "file": "tree_douglas.glb",
+   "half_width": {
+    "tier0": 0.1255,
+    "tier1": 0.12351,
+    "tier2": 0.1252
    },
    "parts": [
     "bark",
@@ -608,9 +706,9 @@
   "tree.fir": {
    "file": "tree_fir.glb",
    "half_width": {
-    "tier0": 0.14695,
-    "tier1": 0.15218,
-    "tier2": 0.15207
+    "tier0": 0.17914,
+    "tier1": 0.18573,
+    "tier2": 0.18561
    },
    "parts": [
     "bark",
@@ -642,9 +740,9 @@
   "tree.oak": {
    "file": "tree_oak.glb",
    "half_width": {
-    "tier0": 0.51259,
-    "tier1": 0.49961,
-    "tier2": 0.49139
+    "tier0": 0.43821,
+    "tier1": 0.42972,
+    "tier2": 0.37866
    },
    "parts": [
     "bark",
@@ -659,9 +757,26 @@
   "tree.pine": {
    "file": "tree_pine.glb",
    "half_width": {
-    "tier0": 0.19953,
-    "tier1": 0.19725,
-    "tier2": 0.17687
+    "tier0": 0.17717,
+    "tier1": 0.15077,
+    "tier2": 0.12966
+   },
+   "parts": [
+    "bark",
+    "foliage"
+   ],
+   "tiers": [
+    0,
+    1,
+    2
+   ]
+  },
+  "tree.pine_jack": {
+   "file": "tree_pine_jack.glb",
+   "half_width": {
+    "tier0": 0.2167,
+    "tier1": 0.20792,
+    "tier2": 0.17743
    },
    "parts": [
     "bark",
@@ -676,9 +791,9 @@
   "tree.poplar": {
    "file": "tree_poplar.glb",
    "half_width": {
-    "tier0": 0.30767,
-    "tier1": 0.23407,
-    "tier2": 0.23248
+    "tier0": 0.23096,
+    "tier1": 0.21535,
+    "tier2": 0.21999
    },
    "parts": [
     "bark",
@@ -710,9 +825,9 @@
   "tree.willow": {
    "file": "tree_willow.glb",
    "half_width": {
-    "tier0": 0.28796,
-    "tier1": 0.25526,
-    "tier2": 0.28481
+    "tier0": 0.24949,
+    "tier1": 0.28398,
+    "tier2": 0.2661
    },
    "parts": [
     "bark",

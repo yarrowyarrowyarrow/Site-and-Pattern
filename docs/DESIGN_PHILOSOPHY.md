@@ -300,6 +300,29 @@ Until such consultation has taken place, references to Indigenous knowledge in t
 
 ---
 
+### 13. A native planting has to be loved to survive
+
+Nassauer's *cues to care*, Alexander's "quality without a name", and the plain evidence of every converted front yard converge on a point the ecological case alone cannot carry: **a planting that nobody finds beautiful gets removed, and one that a neighbour admires gets copied.** Ecological quality and legible human care are not opposed — a mown edge, a crisp border, a visible path and a deliberate repeat are what buy an ecologically rich planting its social licence. Beauty is not decoration layered over the ecology; it is the mechanism by which the ecology survives contact with people. The application must therefore make its designs *desirable*, not only defensible — and must help the user show them to whoever has to agree.
+
+This is not a softening of the other twelve. It is the missing half of Tallamy's own argument, which is the app's stated *why*: his strategy depends on suburban neighbours tolerating and then copying each other's yards, and that is a social mechanism, not an ecological one. A design that scores 82/100 for habitat value and gets torn out in year two has produced nothing. The honest consequence is that "make the preview beautiful" and "show the plant as it really looks" are **core work, not polish** — which is how V2.33's 3D and photography work should be read.
+
+Adopted in V2.33, on the owner's decision, from the proposal in [`ROADMAP_NEXT.md`](ROADMAP_NEXT.md). The missing citation it rests on — Joan Nassauer, *Messy Ecosystems, Orderly Frames* (Landscape Journal, 1995) — is now in [`REFERENCES.md`](REFERENCES.md).
+
+> **Where this lives in the code:** the aesthetic-composition terms in
+> [`placement_score.py`](../src/placement_score.py) (`_height_gradient`, `_cohesion`,
+> `_rhythm`) are cues-to-care logic that predates the principle; docent mode
+> ([`docent.py`](../src/docent.py)) exists explicitly to present a design to *"a neighbour, an
+> HOA board, a class"*; the lawn counterfactual is an argument aimed at a sceptic; and the
+> presentation still ([`presentation_still.py`](../src/presentation_still.py), F69) is the
+> first artefact the user can actually hand to the person whose agreement they need — including
+> a sidewalk camera at eye height, which is the view that decides whether a planting gets a
+> complaint or a question about where to buy the seeds. **State: partial** — the app can now
+> render and print the argument, but it does not yet critique a design for the moves that
+> decide whether it survives socially (roadmap F75), and it cannot yet put before / after /
+> in-five-years on one page (F76).
+
+---
+
 ## Top 10 Source Texts for Application Development
 
 Ranked by direct relevance to the application's architecture, data modeling, UX, and design methodology. (The complete bibliography is in [`REFERENCES.md`](REFERENCES.md).)

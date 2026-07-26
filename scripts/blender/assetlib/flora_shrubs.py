@@ -63,6 +63,26 @@ SHRUB_FORMS = {
     "irregular": {"stems": (3, 6), "splay": 0.5, "stem_h": (0.5, 0.98),
                   "masses": (1, 3), "start": 0.3, "mass_r": (0.12, 0.2),
                   "shape": (1.0, 1.0, 0.9), "basal": False},
+    # ── V2.33 (F64): the three silhouettes the genus table could not express.
+    # Selected by the species' own `branching` (conventions.shrub_form_for).
+    #
+    # A raspberry cane rises, arches over and roots where the tip touches down.
+    # `bow` is what makes that happen: a third cane segment that continues past
+    # the fork's tip, further out and back DOWN. Without it an arching shrub is
+    # just a thicket, which is what all five of these were drawing as.
+    "arching":   {"stems": (5, 8), "splay": 0.30, "stem_h": (0.72, 1.0),
+                  "masses": (2, 3), "start": 0.42, "mass_r": (0.12, 0.19),
+                  "shape": (1.1, 1.1, 0.85), "basal": True, "bow": 0.55},
+    # Creeping juniper and creeping Oregon-grape lie ON the ground. Stems go out
+    # almost horizontally (splay ~72 deg) and the leaves lie flat over them.
+    "prostrate": {"stems": (7, 11), "splay": 1.26, "stem_h": (0.75, 1.0),
+                  "masses": (2, 3), "start": 0.25, "mass_r": (0.13, 0.20),
+                  "shape": (1.4, 1.4, 0.5), "basal": True, "twig_tilt": 0.9},
+    # A pussy willow or a hawthorn at 6 m is a small TREE with several trunks —
+    # near-vertical stems, a clear base, and the crown up top.
+    "upright":   {"stems": (3, 5), "splay": 0.13, "stem_h": (0.86, 1.0),
+                  "masses": (2, 3), "start": 0.48, "mass_r": (0.14, 0.21),
+                  "shape": (0.85, 0.85, 1.15), "basal": False},
 }
 
 
@@ -90,17 +110,37 @@ def _canes(rng, F, n_stems):
         tip = rot @ Vector((0, 0, h))
         segs.append((base, fork, rad, rad * 0.7, False))
         segs.append((fork, tip, rad * 0.7, rad * 0.4, False))
-        # Twigs ALONG the upper cane — fork to tip — because the leaves hang on
-        # twigs and nowhere else. Sprouting them all at the fork (the first cut
-        # of this builder) left the top two thirds of a 5 m chokecherry bare: it
-        # read as dead sticks above a small green base, which is what a user's
+        # The leafy part of the cane, as a polyline. A bowing form adds a third
+        # length that continues past the tip, further out and back DOWN — a
+        # raspberry's whole posture, and where it roots again.
+        leafy = [fork, tip]
+        bow = F.get("bow", 0.0)
+        if bow:
+            out = (tip - fork)
+            out.z = 0.0
+            if out.length > 1e-6:
+                out.normalize()
+            end = tip + out * (h * bow * 0.75) - Vector((0, 0, h * bow * 0.55))
+            segs.append((tip, end, rad * 0.4, rad * 0.22, False))
+            leafy.append(end)
+        # Twigs ALONG the upper cane, because the leaves hang on twigs and
+        # nowhere else. Sprouting them all at the fork (the first cut of this
+        # builder) left the top two thirds of a 5 m chokecherry bare: it read as
+        # dead sticks above a small green base, which is what a user's
         # screenshot caught. The foliage envelope has to span the crown the same
-        # way the ellipsoid masses it replaced did (start → tip).
+        # way the ellipsoid masses it replaced did.
+        #
+        # They follow the cane's POLYLINE, not a chord from fork to its far end:
+        # on an arching cane the far end is back down near the ground, so a
+        # straight interpolation cuts under the apex of the arch and leaves the
+        # top of the plant bare — which is exactly what
+        # tests/test_model_assets.py caught (foliage to 83% of a bark that
+        # reached 100%).
         n_twig = 6 + int(rng.random() * 5)
         for k in range(n_twig):
             t = 0.12 + 0.88 * (k / max(1, n_twig - 1))
-            at = fork.lerp(tip, t)
-            spread = 0.45 + rng.random() * 0.6
+            at = _along(leafy, t)
+            spread = F.get("twig_tilt", 0.45) + rng.random() * 0.6
             twig_rot = (Matrix.Rotation(az + k * 2.39996 + rng.random() * 0.4,
                                         4, "Z")
                         @ Matrix.Rotation(splay + spread, 4, "Y"))
@@ -109,6 +149,19 @@ def _canes(rng, F, n_stems):
             segs.append((at, at + (twig_rot @ Vector((0, 0, length))),
                          rad * 0.4, rad * 0.18, True))
     return segs
+
+
+def _along(points, t):
+    """Point at fraction ``t`` of a polyline's arc length."""
+    spans = [(points[i], points[i + 1], (points[i + 1] - points[i]).length)
+             for i in range(len(points) - 1)]
+    total = sum(s[2] for s in spans) or 1e-6
+    want = max(0.0, min(1.0, t)) * total
+    for a, b, ln in spans:
+        if want <= ln or ln <= 0:
+            return a.lerp(b, (want / ln) if ln else 0.0)
+        want -= ln
+    return spans[-1][1]
 
 
 def build_shrub(form, rng, coll, name_prefix="", grain=1, leaf_shape=None,

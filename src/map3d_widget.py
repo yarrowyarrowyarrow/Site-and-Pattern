@@ -158,13 +158,25 @@ class Map3DWidget(QWebEngineView):
             return
         self.page().runJavaScript(map3d_js.capture_ortho(rect, width), callback)
 
-    def snapshot(self, callback, *, px: int = 320):
-        """Render the current scene to a JPEG data URL and hand it to
-        ``callback``. Used by the sprite gallery's contact sheet."""
+    def snapshot(self, callback, *, px: int = 320, height: int = 0,
+                 pixel_ratio: int = 0, mime: str = "", quality: float = 0.0):
+        """Render the current scene to a data URL and hand it to ``callback``.
+
+        Drives the sprite gallery's contact sheet at 320 px, and the F69
+        presentation still at print resolution — ``pixel_ratio`` multiplies the
+        drawing buffer, which is the only way to get a ~300 dpi page image out
+        of a viewport-sized capture."""
         if not self._loaded:
             callback("")
             return
-        self.page().runJavaScript(map3d_js.snapshot(px), callback)
+        self.page().runJavaScript(
+            map3d_js.snapshot(px, height=height, pixel_ratio=pixel_ratio,
+                              mime=mime, quality=quality), callback)
+
+    def set_camera_preset(self, name: str):
+        """Place the camera at a named preset ('overview' | 'orbit' | 'walk' |
+        'sidewalk')."""
+        self.run_js(map3d_js.set_camera_preset(name))
 
     def models_ready(self, callback):
         """Ask whether the baked GLB archetypes have loaded (``bool`` to

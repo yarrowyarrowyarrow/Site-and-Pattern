@@ -27,13 +27,13 @@ This project is not a generic plant-placement tool; it is built on a coherent ph
 work that ignores it tends to be technically fine but spiritually off. Before designing a
 feature, skim where it sits in that philosophy. The sources of truth:
 
-- [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md) — the twelve principles, each with a
+- [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md) — the thirteen principles, each with a
   "Where this lives in the code" note and an honest **State** marker (*strong / partial / gap*).
 - [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) — features (F1–F39) organized by the
   principle they serve, with a "Shipped" section at the top.
 - [`docs/REFERENCES.md`](docs/REFERENCES.md) — the full bibliography.
 
-**The twelve principles, in one line each:**
+**The thirteen principles, in one line each:**
 
 1. Living systems self-organize from the bottom up — encode generative rules, not fixed layouts.
 2. The best designs disappear into their context — aim for "grown, not designed".
@@ -47,6 +47,8 @@ feature, skim where it sits in that philosophy. The sources of truth:
 10. Design for relationships, not objects — plants are nodes in a network.
 11. The body and the site know things the screen does not — drive the user outside.
 12. Indigenous knowledge is honoured through relationship, not extraction.
+13. A native planting has to be loved to survive — beauty is the mechanism the ecology
+    survives contact with people by, not decoration on top of it (adopted V2.33).
 
 **HARD RULE (P12):** Do **not** incorporate Indigenous ecological knowledge, land-management
 practices, plant-use traditions, or design frameworks into the data model, recommendations, seed
@@ -58,7 +60,7 @@ with the user rather than proceeding.
 **Keep the weave intact.** When you build something strongly aligned with a principle, add the
 `Design principle P# — see docs/DESIGN_PHILOSOPHY.md` anchor at the top of the file, and keep the
 doc's State markers and the roadmap's Shipped section honest. `tests/test_philosophy.py` guards
-that the doc documents all twelve themes and that every anchor names a real principle (1–12).
+that the doc documents all thirteen themes and that every anchor names a real principle (1–13).
 
 ## Branch naming convention (READ FIRST)
 
@@ -164,6 +166,9 @@ only, doesn't affect real commits.
 | `src/analysis_panel.py` | Site analysis + Habitat Value Score breakdown. |
 | `src/learn_panel.py` | Learn side tab: Field Study quiz, guided Lessons, Present/docent mode (V2.25). |
 | `src/map_widget.py` + `html/map.html` + `html/map/*.js` | Leaflet map embedded via QWebEngineView. The JS is split into seven sequential classic scripts (V1.64, +`07-network.js` in V2.31) — shared-global model, NOT ES modules; load order matters. |
+| `html/scene3d/01b-surface.js` | **Plant surfaces + `plantMaterial` (F63, V2.33).** Ten procedural surface classes (bark smooth/furrowed/papery/shaggy/scaly, leaf matte/glossy/pubescent/glaucous, needle) sampled triplanar in object space — no UVs, no textures in the GLBs, both of which are contract. Also owns the wind shader and `applySceneWind`. |
+| `src/wind_scene.py` | The site's real seasonal wind + a rasterised shelter grid, as the 3D scene consumes it (F68, V2.33). Joins `wind.py` and `wind_shadow.py` — both years old — to the viewer that never read them. |
+| `src/presentation_still.py` | The render you put in a proposal (F69, V2.33; `Design principle P13`). Turns the docent's beats — whose `year`/`season_month`/`camera` nothing had ever read — into still specs the 3D window renders at print resolution and `pdf_export` lays out. |
 | `src/llm_design.py` | Generate Design: LLM spec → deterministic placement (scored cells, zones, keep-out, density). |
 | `src/design_critic.py` | Evaluate→revise→repair loop for generated designs (V1.62). |
 | `src/placement_score.py` | Per-cell ecological scoring + aesthetic composition terms (V1.62). |

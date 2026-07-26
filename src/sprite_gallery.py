@@ -95,7 +95,8 @@ def _plain(ptype, sci, h, c, name=""):
 # what a user sees is a menu entry called "Fireweed" with no fireweed flowers on
 # it, which reads as a bug, not as a decision. A sprite in this app is a body
 # plus a bloom, and hiding half of it hides half of what there is to judge.
-_BLOOM_FIELDS = ("flower_color", "flower_form", "bloom_period",
+_BLOOM_FIELDS = ("flower_color", "flower_form", "inflorescence_form",
+                 "bloom_period",
                  "fruit_color", "fruit_form", "fruit_period")
 
 
@@ -271,6 +272,7 @@ def _scene_for(plant, pid, name, i):
 # the app renders. The synthetic dicts stay hand-written for the dimensions the
 # gallery frames on; only the recorded morphology is borrowed.
 _MORPH_FIELDS = ("leaf_shape", "leaf_size_cm", "leaf_arrangement",
+                 "bark_texture", "leaf_surface",
                  "growth_form", "bark_color", "fall_color")
 
 

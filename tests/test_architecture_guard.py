@@ -108,9 +108,14 @@ class TestStructuralCeilings(unittest.TestCase):
         # order (shared-global classic scripts like html/map/*.js). Keep each
         # chunk under its own ceiling; the fix when one trips is a further split,
         # not a bigger number.
-        (_HTML / "scene3d.html", 400),                 # ~279 now
-        (_HTML / "scene3d" / "01-core.js", 700),       # ~403 now
-        (_HTML / "scene3d" / "02-plants.js", 700),     # ~435 now
+        (_HTML / "scene3d.html", 400),                 # ~371 now
+        (_HTML / "scene3d" / "01-core.js", 700),       # ~531 now
+        # V2.33 (F63): plantMaterial + the procedural surfaces moved OUT of
+        # 02-plants.js into their own chunk. 02-plants was at 626/700 and both
+        # the surface work and the real-wind work land in the same function, so
+        # the fix was the split the ceiling asks for rather than a bigger number.
+        (_HTML / "scene3d" / "01b-surface.js", 550),   # ~403 now
+        (_HTML / "scene3d" / "02-plants.js", 700),     # ~468 now
         (_HTML / "scene3d" / "03-herbs.js", 700),      # ~431 now
         (_HTML / "scene3d" / "04-quality.js", 900),    # ~629 now
         (_HTML / "scene3d" / "05-flowers.js", 800),    # ~565 now
@@ -120,8 +125,15 @@ class TestStructuralCeilings(unittest.TestCase):
         # V2.27: Blender GLB model assets — manifest fetch + GLTF part
         # extraction + fauna clone/tint. When this trips, split the fauna
         # half into 10-models-fauna.js.
-        (_HTML / "scene3d" / "09-models.js", 650),     # ~330 now
-        (_HTML / "scene3d" / "10-inspect.js", 600),    # ~330 now
+        (_HTML / "scene3d" / "09-models.js", 650),     # ~453 now
+        (_HTML / "scene3d" / "10-inspect.js", 600),    # ~526 now
+        # V2.33: 11-fruit.js shipped in V2.29 and was never added here, so the
+        # newest viewer chunk was the only unguarded one.
+        (_HTML / "scene3d" / "11-fruit.js", 600),      # ~231 now
+        # V2.33 (F66): the eight graminoid seed-head drawings took
+        # 05-flowers.js to 799 of its 800, so they went into their own chunk —
+        # the split this ceiling asks for rather than a bigger number.
+        (_HTML / "scene3d" / "12-seedheads.js", 400),  # ~125 now
     ]
 
     def test_module_line_ceilings(self):

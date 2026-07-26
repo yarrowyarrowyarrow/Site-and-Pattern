@@ -102,9 +102,26 @@ CREATE TABLE IF NOT EXISTS plants (
     -- those collapsed onto one generic bush. Authored in
     -- scripts/seed_non_woody_morphology.py; empty for woody plants, which use
     -- `branching` instead.
-    growth_form TEXT DEFAULT ''         -- erect|ferny|rosette|clump|grassy|mat|fern|
+    growth_form TEXT DEFAULT '',        -- erect|ferny|rosette|clump|grassy|mat|fern|
                                         -- vining|tussock|emergent|floating|cushion|
                                         -- succulent|sprawling
+    -- Surface character (schema v52, V2.33). What a species' bark and foliage
+    -- LOOK like close up, so the 3D viewer can draw a papery birch, a furrowed
+    -- oak and a glaucous sage instead of one grain for every plant in the
+    -- catalogue. Authored in scripts/seed_surface_morphology.py; empty
+    -- everywhere the character isn't known, and the viewer falls back to a
+    -- per-genus default (P9 — an honest empty, never an invented measurement).
+    bark_texture TEXT DEFAULT '',       -- smooth|furrowed|papery|shaggy|scaly
+    leaf_surface TEXT DEFAULT '',       -- matte|glossy|pubescent|glaucous
+    -- The graminoid field mark (schema v52, V2.33). 79 grass/sedge/rush species
+    -- all carried flower_form='plume' and drew the same generic spray, while an
+    -- inflorescence is most of how a grass is identified in the field — a big
+    -- bluestem is NAMED for its turkey-foot. Separate from flower_form on
+    -- purpose: that column feeds pollinator logic (bee_habitat.tongue_form_fit,
+    -- forage_calendar) where a grass is wind-pollinated and must stay 'plume'.
+    inflorescence_form TEXT DEFAULT ''  -- turkey_foot|open_panicle|contracted_spike|
+                                        -- nodding_raceme|one_sided_raceme|bristly|
+                                        -- sedge_cluster|rush_umbel|cattail_spike
 );
 
 CREATE TABLE IF NOT EXISTS companion_friends (

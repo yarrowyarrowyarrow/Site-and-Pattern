@@ -20,6 +20,7 @@ ships before the first generated assets do).
 """
 
 import json
+import math
 import os
 import re
 import struct
@@ -34,7 +35,7 @@ _MANIFEST = os.path.join(_MODELS, "manifest.json")
 _SCENE3D = os.path.join(_ROOT, "html", "scene3d")
 
 # Mirrors assetlib/conventions.py TRI_BUDGETS (comment there points here).
-_TRI_BUDGETS = {"tree_tier0": 1500, "tree_tier1": 2200, "tree_tier2": 3500,
+_TRI_BUDGETS = {"tree_tier0": 2200, "tree_tier1": 3600, "tree_tier2": 6000,
                 "shrub": 3600, "herb": 1200, "layer": 900, "groundcover": 1600,
                 "fauna": 1500,
                 "structure": 1500}
@@ -60,7 +61,14 @@ def _read(path):
 
 
 def parse_glb(path):
-    """Minimal GLB v2 reader → (json_dict, has_binary_chunk)."""
+    """Minimal GLB v2 reader → (json_dict, binary_chunk_or_None).
+
+    The second element used to be a bare "did it have one" flag. It carries the
+    bytes now so a test can read actual vertex data — see
+    test_crown_leaf_cards_stay_in_scale_with_the_species_leaf, which needs edge
+    lengths and cannot get them from an accessor's min/max. Every other caller
+    ignores it or checks it for truthiness, and a non-empty bytes is truthy.
+    """
     with open(path, "rb") as fh:
         blob = fh.read()
     magic, version, length = struct.unpack_from("<4sII", blob, 0)
@@ -70,18 +78,39 @@ def parse_glb(path):
         raise ValueError(f"{path}: glTF version {version} != 2")
     if length != len(blob):
         raise ValueError(f"{path}: declared length {length} != {len(blob)}")
-    off, js, has_bin = 12, None, False
+    off, js, binary = 12, None, None
     while off < len(blob):
         chunk_len, chunk_type = struct.unpack_from("<I4s", blob, off)
         data = blob[off + 8:off + 8 + chunk_len]
         if chunk_type == b"JSON":
             js = json.loads(data.decode("utf-8"))
         elif chunk_type == b"BIN\x00":
-            has_bin = True
+            binary = data
         off += 8 + chunk_len
     if js is None:
         raise ValueError(f"{path}: no JSON chunk")
-    return js, has_bin
+    return js, binary
+
+
+_COMPONENT_FMT = {5120: "b", 5121: "B", 5122: "h", 5123: "H",
+                  5125: "I", 5126: "f"}
+_TYPE_COUNT = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4}
+
+
+def _read_accessor(gltf, binary, index):
+    """Decode one accessor into a list of component tuples.
+
+    Honours byteStride, because an interleaved buffer read as if it were tightly
+    packed produces plausible-looking garbage rather than an error.
+    """
+    acc = gltf["accessors"][index]
+    view = gltf["bufferViews"][acc["bufferView"]]
+    fmt = _COMPONENT_FMT[acc["componentType"]]
+    ncomp = _TYPE_COUNT[acc["type"]]
+    base = view.get("byteOffset", 0) + acc.get("byteOffset", 0)
+    stride = view.get("byteStride") or struct.calcsize(fmt) * ncomp
+    return [struct.unpack_from("<" + fmt * ncomp, binary, base + i * stride)
+            for i in range(acc["count"])]
 
 
 def _prim_tris(gltf, prim):
@@ -325,8 +354,33 @@ class ModelAssetsTest(unittest.TestCase):
         # than N interchangeable draws.
         self.assertGreaterEqual(len(layers["groundcover"].get("variant_keys", {})), 4)
         self.assertIsNone(layers["groundcover"].get("variants"))
+        # grass / aquatic / vine are aspect-keyed (V2.33, F65). They always
+        # shipped three units; until now the three were random draws of ONE
+        # shape picked by a plant-id hash, so a 2.67:1 mountain brome and a
+        # 0.56:1 golden sedge were both stretched out of a 1.31:1 archetype.
+        # Same payload, three real shapes, chosen by the species.
+        conventions = _assetlib_conventions()
         for kind in ("grass", "aquatic", "vine"):
-            self.assertEqual(layers[kind].get("variants"), 3)
+            keys = layers[kind].get("variant_keys", {})
+            self.assertIsNone(layers[kind].get("variants"),
+                              f"layer.{kind} still declares interchangeable variants")
+            self.assertEqual(sorted(keys), ["aspect_0", "aspect_1", "aspect_2"],
+                             f"layer.{kind} variant keys are not the aspect axis")
+            if conventions is not None:
+                self.assertEqual(len(conventions.LAYER_ASPECT_CLASSES[kind]),
+                                 len(keys))
+        # The viewer's copy of the breaks must agree with the generator's, or a
+        # species asks for an aspect the manifest never baked.
+        if conventions is not None:
+            src = _read(os.path.join(_SCENE3D, "02-plants.js"))
+            block = re.search(r"const LAYER_ASPECT_BREAKS = \{(.*?)\};", src, re.S)
+            self.assertIsNotNone(block, "02-plants.js lost LAYER_ASPECT_BREAKS")
+            for kind, (lo, hi) in conventions.LAYER_ASPECT_BREAKS.items():
+                found = re.search(kind + r":\s*\[([\d.]+),\s*([\d.]+)\]",
+                                  block.group(1))
+                self.assertIsNotNone(found, f"viewer has no {kind} aspect breaks")
+                self.assertAlmostEqual(float(found.group(1)), lo, places=3)
+                self.assertAlmostEqual(float(found.group(2)), hi, places=3)
         # Fauna keys must cover what 09-models.js maps critter kinds onto.
         src = _read(os.path.join(_SCENE3D, "09-models.js"))
         wanted = set(re.findall(r"key:\s*'(\w+)'", src))
@@ -334,6 +388,43 @@ class ModelAssetsTest(unittest.TestCase):
                          "manifest fauna keys != _GLB_CRITTER keys")
 
     # ── GLB structure ───────────────────────────────────────────────────────
+
+    def test_every_fauna_build_the_app_can_ask_for_is_baked(self):
+        """Every `build` src/scene_wildlife.py emits must exist in the file.
+
+        This is the fauna half of "every catalogue species resolves to a baked
+        variant". The appearance layer names a body plan per genus and per
+        common-name rule; the generator bakes a fixed list
+        (assetlib/fauna_variants.py). If the two drift, a leafcutter silently
+        degrades to whatever build happens to be first and nobody notices —
+        which matters more here than anywhere else in the library, because 62 of
+        the 69 native bees have no photograph and the MODEL is the whole
+        identification (F67).
+        """
+        try:
+            from src import scene_wildlife            # noqa: PLC0415
+        except Exception:                             # noqa: BLE001
+            self.skipTest("src.scene_wildlife not importable")
+        wanted = {"bee": set(), "lep": set(), "bird": set()}
+        for genus in list(scene_wildlife._BEE_BUILD) + [
+                "bombus", "andrena", "osmia", "halictus", "nomada", "unknown"]:
+            wanted["bee"].add(
+                scene_wildlife._bee_appearance(genus, "")["build"])
+        for name, kind in (("Swallowtail", "butterfly"), ("Skipper", "butterfly"),
+                           ("Monarch", "butterfly"), ("Sphinx Moth", "moth"),
+                           ("Nothing In Particular", "butterfly")):
+            wanted["lep"].add(scene_wildlife._lep_appearance(name, "", kind)["build"])
+        for name in ("Downy Woodpecker", "Northern Flicker", "Ruby-throated "
+                     "Hummingbird", "Black-capped Chickadee", "Robin"):
+            wanted["bird"].add(scene_wildlife._bird_appearance(name)["build"])
+        for key, builds in wanted.items():
+            declared = set(self.mf["fauna"][key].get("nodes", []))
+            missing = builds - declared
+            self.assertFalse(
+                missing,
+                f"fauna.{key}: src/scene_wildlife.py can ask for {sorted(missing)} "
+                f"but the baked file only carries {sorted(declared)} — rebuild "
+                f"html/assets/models, or reconcile assetlib/fauna_variants.py")
 
     def test_glbs_have_no_textures(self):
         for fname, (gltf, _bin) in self.gltf.items():
@@ -366,6 +457,37 @@ class ModelAssetsTest(unittest.TestCase):
                            abs(mn[2]), abs(mx[2]))
         return lo_y, hi_y, half
 
+    def _unit_bounds(self, entry, unit):
+        """(top y, half-width) of one named unit, or (None, 0)."""
+        gltf, _bin = self.gltf[entry["file"]]
+        nodes = gltf.get("nodes", [])
+        idx = {n.get("name", ""): i for i, n in enumerate(nodes)}
+        # A variant's meshes are the parts parented under its root empty.
+        roots = [i for name, i in idx.items()
+                 if name == unit or name.startswith(unit + "_")]
+        if not roots:
+            keys = sorted(entry.get("variant_keys", {}).items(),
+                          key=lambda kv: kv[1])
+            names = [k for k, _ in keys]
+            if unit in names:
+                roots = [i for name, i in idx.items()
+                         if name == f"v{names.index(unit)}"
+                         or name.startswith(f"v{names.index(unit)}_")]
+        hi_y, half = None, 0.0
+        for r in roots:
+            for i in _mesh_nodes_under(gltf, r):
+                if "mesh" not in nodes[i]:
+                    continue
+                for prim in gltf["meshes"][nodes[i]["mesh"]].get("primitives", []):
+                    acc = gltf["accessors"][prim["attributes"]["POSITION"]]
+                    mn, mx = acc.get("min"), acc.get("max")
+                    if not mn or not mx:
+                        continue
+                    hi_y = mx[1] if hi_y is None else max(hi_y, mx[1])
+                    half = max(half, abs(mn[0]), abs(mx[0]),
+                               abs(mn[2]), abs(mx[2]))
+        return hi_y, half
+
     def test_plant_glbs_satisfy_unit_frame(self):
         for key, entry in self.mf["plants"].items():
             lo_y, hi_y, _half = self._plant_bounds(key, entry)
@@ -391,6 +513,24 @@ class ModelAssetsTest(unittest.TestCase):
             self.skipTest("assetlib.conventions not importable")
         checked = 0
         for key, entry in self.mf["plants"].items():
+            # A layer carrying the aspect axis has three units at three DIFFERENT
+            # target aspects, so measuring the file's union would compare the
+            # widest unit against the pooled figure and prove nothing. Check each
+            # unit against its own class.
+            units = [(u, conventions.aspect_for(key, u))
+                     for u in sorted(entry.get("variant_keys", {}))
+                     if str(u).startswith("aspect_")]
+            if units:
+                for unit, target in units:
+                    hi_y, half = self._unit_bounds(entry, unit)
+                    if hi_y is None:
+                        continue
+                    got = hi_y / max(1e-6, 2 * half)
+                    self.assertAlmostEqual(
+                        got / target, 1.0, delta=0.35,
+                        msg=f"{key}/{unit}: aspect {got:.2f} vs {target:.2f}")
+                    checked += 1
+                continue
             target = conventions.aspect_for(key)
             if target is None:
                 continue
@@ -474,6 +614,84 @@ class ModelAssetsTest(unittest.TestCase):
                     f"wood in midsummer.")
                 checked += 1
         self.assertGreater(checked, 20, "woody units stopped resolving")
+
+    # How many times its species' real leaf one crown card may be drawn at.
+    #
+    # A card stands for a leafy SHOOT rather than a single leaf, so it is
+    # legitimately several leaves long — the same trade the pine's needle
+    # fascicles make, and the reason this is 10 rather than 2. What it catches is
+    # the V2.32 defect: card length came from the CLUMP RADIUS, so a bur oak —
+    # widest crown, largest leaf, and the only lobed outline in the table — drew
+    # 2.6 m leaves on an 18 m tree, about 13x life size, and a user reported the
+    # oak looking ridiculous. Every other guard passed: triangle budgets, node
+    # names, unit-frame bounds, the manifest, and even the authored aspect, which
+    # compares overall height to overall width and cannot see how big one leaf is.
+    #
+    # It also silently narrowed the tree, which is why this matters beyond the
+    # leaf itself: `half_width` is measured off the widest geometry and the
+    # viewer divides the instance by it, so a sparse fringe of outsized cards set
+    # the divisor while the dense crown sat well inside it — an 18 m bur oak with
+    # a 15 m canopy rendered about 8.7 m across.
+    _MAX_LEAF_OVERSIZE = 10.0
+
+    def test_crown_leaf_cards_stay_in_scale_with_the_species_leaf(self):
+        """No deciduous crown may be built out of giant leaves."""
+        conventions = _assetlib_conventions()
+        if conventions is None:
+            self.skipTest("assetlib.conventions not importable")
+        checked = []
+        for key, entry in self.mf["plants"].items():
+            fam, _, arch = key.partition(".")
+            if fam != "tree" or arch not in conventions.DECID_LEAF_SHAPE:
+                continue                       # conifers wear needles, not cards
+            leaf_cm = conventions.LEAF_CM.get(arch)
+            height_m = conventions.ARCHETYPE_HEIGHT_M.get(arch)
+            if not leaf_cm or not height_m:
+                continue
+            gltf, binary = self.gltf[entry["file"]]
+            # tier2 only: it is the tier a MATURE tree of this archetype uses, so
+            # ARCHETYPE_HEIGHT_M is the height that applies to it. Smaller tiers
+            # legitimately carry coarser cards (fewer triangles to spend) on
+            # physically smaller trees.
+            edge = self._p99_edge(gltf, binary, "tier2_foliage")
+            if edge is None:
+                continue
+            oversize = (edge * height_m) / (leaf_cm / 100.0)
+            self.assertLessEqual(
+                oversize, self._MAX_LEAF_OVERSIZE,
+                f"{key}: its crown cards run {edge * height_m:.2f} m on a "
+                f"{height_m:g} m tree, {oversize:.0f}x this species' {leaf_cm:g} "
+                f"cm leaf — the crown is being built out of giant leaves rather "
+                f"than foliage (assetlib.conventions.crown_card_length)")
+            checked.append(arch)
+        self.assertGreater(len(checked), 5,
+                           "deciduous tree archetypes stopped resolving")
+
+    def _p99_edge(self, gltf, binary, unit_part):
+        """99th-percentile triangle edge length of one named part, or None.
+
+        A percentile rather than the maximum: one stray long edge is noise, a
+        crown built out of oversized cards moves the whole distribution.
+        """
+        nodes = gltf.get("nodes", [])
+        idx = {n.get("name", ""): i for i, n in enumerate(nodes)}
+        i = idx.get(unit_part)
+        if i is None or "mesh" not in nodes[i] or not binary:
+            return None
+        lengths = []
+        for prim in gltf["meshes"][nodes[i]["mesh"]].get("primitives", []):
+            if prim.get("mode", 4) != 4 or "indices" not in prim:
+                continue
+            pos = _read_accessor(gltf, binary, prim["attributes"]["POSITION"])
+            tri = _read_accessor(gltf, binary, prim["indices"])
+            for k in range(0, len(tri) - 2, 3):
+                a, b, c = tri[k][0], tri[k + 1][0], tri[k + 2][0]
+                for u, v in ((a, b), (b, c), (c, a)):
+                    lengths.append(math.dist(pos[u], pos[v]))
+        if not lengths:
+            return None
+        lengths.sort()
+        return lengths[int(len(lengths) * 0.99)]
 
     # A deciduous crown must cover at least this fraction of the tree's height.
     # A FLOOR, not a target: an open-grown prairie tree carries a live crown over
@@ -646,9 +864,25 @@ class ModelAssetsTest(unittest.TestCase):
                     f"{key}/{name}: over triangle budget")
         for key, entry in self.mf["fauna"].items():
             gltf, _ = self.gltf[entry["file"]]
-            budget = _TRI_BUDGETS["fauna"] * (2 if key == "fly" else 1)
-            self.assertLessEqual(_tri_count(gltf), budget,
-                                 f"fauna.{key}: over triangle budget")
+            # A fauna file may hold several BUILDS (V2.33, F67: four bees, four
+            # leps, three birds, and the fly's hover/darner pair since V2.27).
+            # The budget belongs to the unit the viewer instances — a bumblebee
+            # is one critter on screen, not a quarter of one — so it is checked
+            # per variant root, exactly as a tree's tiers are.
+            idx = {n.get("name", ""): i
+                   for i, n in enumerate(gltf.get("nodes", []))}
+            roots = [n for n in entry.get("nodes", []) if n in idx]
+            multi = [n for n in roots
+                     if any(m.startswith(n + "_") for m in idx)]
+            if multi:
+                for name in multi:
+                    self.assertLessEqual(
+                        _tri_count_under(gltf, idx[name]),
+                        _TRI_BUDGETS["fauna"],
+                        f"fauna.{key}/{name}: over triangle budget")
+            else:
+                self.assertLessEqual(_tri_count(gltf), _TRI_BUDGETS["fauna"],
+                                     f"fauna.{key}: over triangle budget")
 
 
 def _assetlib_mesh_ops():

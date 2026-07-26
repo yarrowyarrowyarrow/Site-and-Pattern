@@ -228,6 +228,32 @@ Everything stays procedural + instanced + archetype-cached; genus changes
 silhouette and colour, not per-frame cost. The **Detail** toggle scales build-time
 density (blade / blob / leaf / tier counts) for weak hardware.
 
+## What V2.33 added to this vocabulary
+
+The procedural set here is the permanent fallback, so it moves with the baked
+archetypes wherever the difference would be visible:
+
+- **Shrub silhouettes are eight, not five** — `arching`, `prostrate` and
+  `upright` joined the genus-derived five, and a shrub picks its silhouette from
+  its own recorded `branching` before falling back to its genus
+  (`02-plants.js shrubFormFor`). Creeping juniper and creeping Oregon-grape were
+  drawing as upright bushes; that was a correctness bug, not a refinement.
+- **Tree profiles resolve by SPECIES first** — `TREE_SPECIES_PROFILES` grew from
+  the one balsam poplar to jack pine, water birch, Evans cherry and Douglas-fir.
+- **Ten surface classes** (`01b-surface.js`) instead of one bark grain and one
+  leaf mottle, picked per species from `bark_texture` / `leaf_surface`.
+- **Eight graminoid seed heads** (`12-seedheads.js`), keyed on
+  `inflorescence_form` and drawn as oriented quads with the flower system's
+  attitude machinery, so a nodding brome nods. They are held from flowering
+  through winter rather than only in bloom, because that persistence is most of
+  what a prairie grass gives a yard from October to April.
+- **Fauna builds** — four bee body plans, four lepidopteran wing plans, three
+  bird outlines, selected by `app.build` from `src/scene_wildlife.py`. The
+  procedural critters draw the colourway only; the baked ones carry the shape.
+- **Sway follows the site's real wind** (`applySceneWind`), damped inside the
+  design's own windbreaks, with each material's wind constant acting as a
+  stiffness class.
+
 ## Regenerating the gallery & images
 
 The gallery scenes and the flower sheet are generated — re-run these if the

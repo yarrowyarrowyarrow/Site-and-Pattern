@@ -19,16 +19,17 @@ withering, and presence fades all keep working (P4, P5); silhouettes aim for
 
 | Family | Archetypes | Keyed by |
 |--------|-----------|----------|
-| Trees (×3 growth tiers each) | spruce, fir, pine, larch, def_conifer; aspen, birch, oak, willow, cherry, apple; def_slender/oval/spreading | genus profile (`02-plants.js _PROF`) / conifer kind / crown form |
-| Shrubs (31 morphology variants) | vase, spreading, mound, thicket, irregular | `SHRUB_FORMS` silhouette × leaf variant |
+| Trees (×3 growth tiers each) | spruce, fir, **douglas**, pine, **pine_jack**, larch, def_conifer; aspen, poplar, birch, **birch_water**, oak, willow, cherry, **cherry_orchard**, apple; def_slender/oval/spreading | genus profile (`02-plants.js _PROF`), **species profile** (`TREE_SPECIES_PROFILES`), conifer kind, crown form |
+| Shrubs (8 silhouettes × leaf variants) | vase, spreading, mound, thicket, irregular, **arching, prostrate, upright** | `SHRUB_FORMS` silhouette × leaf variant; silhouette from the species' own `branching` |
 | Herbs (52 morphology variants) | erect, ferny, rosette, clump, grassy, mat, fern | `HERB_FORMS` growth form × leaf variant |
-| Layers | grass ×3, aquatic ×3, vine ×3, groundcover ×2 variants | plant_type bucket |
-| Fauna | bee, lep (butterfly+moth), bird, fly (hover+darner), beetle, bat, mammal | critter kind; species looks are tints |
+| Layers | grass / aquatic / vine ×3 **aspect classes**, groundcover ×9 leaf variants | plant_type bucket; aspect from the species' height ÷ canopy |
+| Fauna | bee ×4 builds, lep ×4, bird ×3, fly ×2, beetle, bat, mammal | critter kind × **build**; species colours are tints |
 | Structures | all 15 placeables (pond, swale, rain garden, rain barrel, bee log, bee hotel, brush pile, snag, rock xeriscape, lawn patch, raised bed, compost bin, shed, fence, fire pit) | `struct_id` |
 
-52 GLBs + `manifest.json` under `html/assets/models/` — ~11 MB total, every
-**unit** (a tier or a variant, which is what gets instanced) within the triangle
-budgets in `scripts/blender/assetlib/conventions.py`.
+60 GLBs + `manifest.json` under `html/assets/models/` — ~22 MB total, 163
+instanceable plant units, every **unit** (a tier, a variant or a fauna build,
+which is what gets instanced) within the triangle budgets in
+`scripts/blender/assetlib/conventions.py`.
 
 ## The pipeline
 
@@ -119,6 +120,53 @@ Defined once in `scripts/blender/assetlib/conventions.py`; the loader side is
   (`hover_WingL`).
 - **Growth tiers:** trees ship `tier0/1/2` matching `tierFor(scale_factor)`;
   the young-tree structural simplification is authored, not decimated.
+- **A crown leaf card is sized by the SPECIES' LEAF, never by the clump**
+  (V2.33, `conventions.crown_card_length`). Until V2.32 a card's length came
+  from the foliage clump it replaced, so every broadleaf drew leaves 13-15x life
+  size and the bur oak — widest crown, largest leaf, and the only `lobed`
+  outline in the table — came out at **2.6 m per leaf on an 18 m tree**. A
+  rounded aspen blob at that error still reads as foliage; an unmistakably lobed
+  oak leaf reads as a green oven mitt, and a user reported exactly that. It also
+  silently narrowed the tree: `half_width` is measured off the widest geometry
+  and the viewer divides the instance by it, so a sparse fringe of outsized cards
+  set the divisor while the dense crown sat well inside it — an 18 m bur oak with
+  a 15 m canopy rendered about 8.7 m across. One cause, two symptoms.
+  A card now stands for a leafy SHOOT (the pine's `NEEDLE_FASCICLE_GAIN` trade,
+  from the other end): `LEAF_CLUSTER_GAIN` real leaves long, floored by a
+  legibility bound that is *solved* rather than guessed — `MIN_CROWN_COVER`
+  against the crown's surface and the tier's budget, so raising `TRI_BUDGETS`
+  automatically buys finer leaves. Guarded by
+  `test_crown_leaf_cards_stay_in_scale_with_the_species_leaf`, verified to fail
+  on 5 of 7 pre-V2.33 broadleaf archetypes.
+- **A deciduous crown is ALL leaves.** The faceted filler ellipsoids are gone.
+  They were invisible only because the oversized cards hung in front of them;
+  at life size they render lighter than the leaves and read as geometric blocks
+  in the canopy.
+- **Species profiles beat genus profiles where the genus lies** (V2.33). Jack
+  pine (15 m, `decurrent`, scraggly) against lodgepole (25 m, `excurrent`
+  spire); water birch (8 m, multi-stemmed, red-brown) against paper birch
+  (20 m, white); pin cherry against Evans; Douglas-fir against balsam fir.
+  White and black spruce are deliberately NOT split — they differ in height and
+  needle length but their recorded aspects are both 3.3, so a separate archetype
+  would be a fabricated difference rather than a recorded one (P9).
+- **A shrub's silhouette comes from its own `branching`, genus as fallback**
+  (V2.33, `conventions.shrub_form_for`) — the same demotion `treeFormFor` gave
+  `formBias`. Three of the recorded habits name silhouettes the five genus forms
+  could not express: `prostrate` (creeping juniper and Oregon-grape were drawing
+  as an UPRIGHT bush — a correctness bug), `arching` (the Rubus/Ribes canes that
+  bow to the ground), and `upright` (a 6 m pussy willow reads as a small tree).
+- **Layers carry an ASPECT axis** (V2.33, `LAYER_ASPECT_CLASSES`). grass,
+  aquatic and vine always shipped three units; until now the three were random
+  draws of one shape picked by a plant-id hash, while the catalogue's graminoids
+  run 0.56:1 to 2.67:1 against a pooled 1.31:1 archetype — up to a 2x stretch.
+  Same payload, three real shapes, chosen by the species' own height ÷ canopy.
+- **Fauna files carry BUILDS** (V2.33, `assetlib/fauna_variants.py`) under the
+  multi-variant node layout the fly established (`round_WingL`). Four bee body
+  plans, four lepidopteran wing plans, three bird outlines. This is not
+  cosmetic: 62 of the catalogue's 69 native bees have no photograph and will not
+  get one under the licence policy, so where there is no photo the MODEL carries
+  the identification. `src/scene_wildlife.py` names the build; a parity guard
+  fails if it can ask for one the file does not hold.
 - **Leaf variants (V2.29):** a herb or shrub file ships one unit per **(blade
   class × grain class)** its family's species actually use, and the manifest
   publishes the mapping as `variant_keys: {"broad_1": 0, "compound_2": 3, …}`.
@@ -231,14 +279,41 @@ a lookup into the fragment shader.
 It samples **object space**, not UVs, for two reasons that are contract rather
 than preference: the baked geometry has no texture coordinates to sample, and
 these are instanced meshes, so one per-archetype UV set would repeat identically
-across every copy anyway. A per-instance offset (taken from the instance
+across every copy anyway. Foliage takes a **triplanar** blend (V2.33) — the
+older two-plane `mix(xz, xy, 0.5)` smeared on any face pointing along the third
+axis, which on a leaf card at an arbitrary angle is most of them. A per-instance offset (taken from the instance
 matrix's translation) keeps two neighbouring aspens from being stamped with the
 same grain, and sampling in object space means the pattern rides the geometry
 rather than swimming when a plant sways.
 
 If you add another injected-shader option to `plantMaterial`, add it to
 `customProgramCacheKey` too — three.js will otherwise hand two materials with
-genuinely different shaders the same compiled program.
+genuinely different shaders the same compiled program. A UNIFORM is free: the
+surface class is a different texture on the same program, and the wind block
+below is all uniforms, which is why a month change re-aims every plant in the
+yard without recompiling anything.
+
+## Wind (V2.33, F63/F68)
+
+`windUniforms` (01-core.js) is shared by reference into every plant material.
+Sway used to be a hard-coded `(1.0, 0.7)` diagonal at a fixed amplitude, with
+every plant in the yard moving the same amount whether it stood in the open or
+behind a spruce windbreak — while `src/wind.py` had known the site's seasonal
+prevailing wind since V1.67 and `src/wind_shadow.py` its lee since V1.68.
+
+`src/wind_scene.py` puts `{from_deg, mean_kmh, season, approximate, shelter?}`
+on the scene; `01b-surface.js:applySceneWind` turns it into uniforms. The
+**shelter grid** is the piece worth knowing: `merged_shelter` returns lat/lng
+polygons and a vertex shader cannot test point-in-polygon, so they are
+rasterised Python-side into a 64×64 coverage grid over the scene bounds, which
+the viewer uploads as ONE `DataTexture` sampled by world XZ — no per-instance
+attribute, and identical for the baked and procedural paths.
+
+A material's `wind` constant is also its **stiffness class**: a trunk (0.015) is
+rigid, a spruce's needle crown (0.03) barely moves in wind that has a grass
+blade (0.11) lying flat, a broadleaf crown (0.07) tosses. Absent a known site
+wind the block is simply absent and the viewer keeps its generic sway, which is
+the honest degradation.
 
 ## Render gate
 

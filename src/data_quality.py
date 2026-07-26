@@ -123,6 +123,16 @@ BRANCHING_HABITS  = {"excurrent", "decurrent", "multi_stem", "suckering",
 GROWTH_FORMS      = {"erect", "ferny", "rosette", "clump", "grassy", "mat",
                      "fern", "vining", "tussock", "emergent", "floating",
                      "cushion", "succulent", "sprawling"}
+# Surface character (schema v52). What a species' bark and foliage look like
+# close up — the 3D viewer's procedural grain (html/scene3d/01b-surface.js).
+# Empty is meaningful and common: a per-genus bark default and a matte leaf.
+BARK_TEXTURES     = {"smooth", "furrowed", "papery", "shaggy", "scaly"}
+LEAF_SURFACES     = {"matte", "glossy", "pubescent", "glaucous"}
+# The graminoid field mark (schema v52) — separate from flower_form, which
+# stays 'plume' for every grass because that column feeds pollinator logic.
+INFLORESCENCE_FORMS = {"turkey_foot", "open_panicle", "contracted_spike",
+                       "nodding_raceme", "one_sided_raceme", "bristly",
+                       "sedge_cluster", "rush_umbel", "cattail_spike"}
 
 # ── Soft enum allowlists (drift here is a WARNING) ──────────────────────────
 
@@ -294,6 +304,9 @@ def validate_plant(
         ("leaf_arrangement",    LEAF_ARRANGEMENTS),
         ("branching",           BRANCHING_HABITS),
         ("growth_form",         GROWTH_FORMS),
+        ("bark_texture",        BARK_TEXTURES),
+        ("leaf_surface",        LEAF_SURFACES),
+        ("inflorescence_form",  INFLORESCENCE_FORMS),
     ):
         if field in _MULTI_VALUE_ENUM_FIELDS:
             for tok in condition_tokens(record.get(field)):

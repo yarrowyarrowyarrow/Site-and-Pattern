@@ -246,6 +246,46 @@ window.permaSetCinematic = function (on) {
   }
 };
 // The host sets the lower-third caption for the current beat ("Year 5", "October").
+// ── camera presets (V2.33, F69) ─────────────────────────────────────────────
+// The docent's beats have carried a `camera` field since V2.13 and nothing has
+// ever read it. These are the four it names, plus the one the roadmap calls
+// F77 — the neighbour's-eye view, which is the honest test of whether a design
+// survives socially and costs nothing once presets exist at all (P13).
+// eye = at head height on the ground; otherwise a point at [x, y, z] scaled off
+// the design's own size, so a preset frames a 6 m bed and a 40 m lot alike.
+const _CAMERA_PRESETS = {
+  overview:  { pos: (g) => [g.cx + g.r * 0.9, g.r * 0.85, g.cz + g.r * 1.1],
+               look: (g) => [g.cx, 0, g.cz] },
+  // Three-quarter, lower and closer than the overview: the designer's angle.
+  orbit:     { pos: (g) => [g.cx + g.r * 0.78, g.r * 0.44, g.cz + g.r * 0.78],
+               look: (g) => [g.cx, 0, g.cz] },
+  // Inside the planting, at eye height, looking across it.
+  walk:      { eye: (g) => [g.cx - g.w * 0.18, 1.6, g.cz + g.d * 0.22],
+               look: (g) => [g.cx, 1.4, g.cz] },
+  // F77 — the neighbour's-eye view: standing on the frontage at eye height,
+  // looking in. Not the designer's orbit but the view that actually decides
+  // whether this planting gets a complaint or a question about where to buy the
+  // seeds. The south edge, because that is the street side of a north-facing
+  // prairie lot far more often than not.
+  sidewalk:  { eye: (g) => [g.cx, 1.65, -(g.b.min_y) + Math.max(4, g.d * 0.28)],
+               look: (g) => [g.cx, 1.5, g.cz] },
+};
+
+window.permaSetCameraPreset = function (name) {
+  const b = lastBounds;
+  const P = _CAMERA_PRESETS[name] || _CAMERA_PRESETS.overview;
+  if (!b) return;
+  const w = b.max_x - b.min_x, d = b.max_y - b.min_y;
+  const g = { b, w, d, r: Math.max(w, d) * 0.75,
+              cx: (b.min_x + b.max_x) / 2, cz: -(b.min_y + b.max_y) / 2 };
+  const p = P.eye ? P.eye(g) : P.pos(g);
+  // An eye-height preset sits on the terrain rather than at an absolute height.
+  camera.position.set(p[0], P.eye ? groundAt(p[0], p[2]) + p[1] : p[1], p[2]);
+  const t = P.look(g);
+  controls.target.set(t[0], t[1], t[2]);
+  controls.update();
+};
+
 window.permaSetCinematicCaption = function (big, sub) {
   if (cinematic) setCinematicCaption(big, sub);
 };

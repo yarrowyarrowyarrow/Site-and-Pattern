@@ -7,6 +7,7 @@ against the files and against the viewer's own archetype vocabularies.
 import json
 
 from . import conventions as C
+from .fauna_variants import BEE_VARIANTS, BIRD_VARIANTS, LEP_VARIANTS
 from .flora_herbs import HERB_FORMS, LAYER_KINDS, VARIANT_LAYERS
 from .flora_shrubs import SHRUB_FORMS
 from .flora_trees import TREE_ARCHETYPES
@@ -82,15 +83,18 @@ def groundcover_variants():
 
 # Fauna: manifest key → (nodes documented for the loader, materials used).
 FAUNA_TABLE = {
+    # bee / lep / bird ship several BUILDS in one file (V2.33, F67), the
+    # multi-variant layout the fly established: the declared node names are the
+    # variant ROOTS, and each root's parts are prefixed with it
+    # ('round_WingL'), because Blender object names are unique per file.
     "bee":    {"file": "fauna_bee.glb",
-               "nodes": ["Body", "Head", "Abdomen", "WingL", "WingR",
-                         "Band0", "Band1", "Band2"],
+               "nodes": list(BEE_VARIANTS),
                "materials": [C.MAT_FUZZ, C.MAT_DARK, C.MAT_WING]},
     "lep":    {"file": "fauna_lep.glb",
-               "nodes": ["Body", "Head", "Abdomen", "WingL", "WingR"],
+               "nodes": list(LEP_VARIANTS),
                "materials": [C.MAT_FORE, C.MAT_HIND, C.MAT_EDGE, C.MAT_DARK]},
     "bird":   {"file": "fauna_bird.glb",
-               "nodes": ["Body", "Head", "Beak", "Tail", "WingL", "WingR"],
+               "nodes": list(BIRD_VARIANTS),
                "materials": [C.MAT_BODY, C.MAT_BELLY, C.MAT_WING, C.MAT_DARK]},
     "fly":    {"file": "fauna_fly.glb",
                "nodes": ["hover", "darner"],
@@ -128,7 +132,13 @@ def asset_table():
     for kind, variants in LAYER_KINDS.items():
         spec = {"kind": "layer", "file": f"layer_{kind}.glb",
                 "parts": [C.PART_FOLIAGE]}
-        if kind in VARIANT_LAYERS:
+        if kind in C.ASPECT_LAYERS:
+            # One unit per ASPECT class (F65) — the species' own height ÷ canopy
+            # picks it, instead of the three units being random draws of one
+            # shape chosen by a plant-id hash.
+            spec["variant_keys"] = {C.aspect_variant_key(i): i
+                                    for i in range(len(C.LAYER_ASPECT_CLASSES[kind]))}
+        elif kind in VARIANT_LAYERS:
             # Morphology-keyed like herbs and shrubs: this layer bakes one unit
             # per (blade class × grain class) its species actually use.
             spec["variant_keys"] = groundcover_variants()

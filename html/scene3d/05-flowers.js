@@ -13,9 +13,29 @@
 const FLOWER_FORMS = ['daisy', 'rays', 'spike', 'plume', 'umbel', 'globe',
                       'cluster', 'bell', 'trumpet', 'cattail', 'pea', 'whorl',
                       'star', 'cross', 'lily'];
+// ── graminoid seed heads (V2.33, F66) ───────────────────────────────────────
+// A grass is identified by its SEED HEAD. Every blade in the catalogue is
+// recorded `linear` and all 79 grasses, sedges and rushes carried
+// flower_form='plume', so one generic spray stood for the whole group and there
+// was nothing on screen separating a big bluestem from a wire rush. These are
+// the forms `inflorescence_form` (schema v52) records, drawn in PROFILE like
+// the spike and the cattail. `cattail_spike` reuses the cattail texture, which
+// already draws exactly that.
+const GRAMINOID_FORMS = ['turkey_foot', 'one_sided_raceme', 'open_panicle',
+                         'contracted_spike', 'nodding_raceme', 'bristly',
+                         'sedge_cluster', 'rush_umbel'];
 let FLOWER_TEX = null;
 
 function makeFlowerTexture(form) {
+  // Graminoid seed heads live in 12-seedheads.js — eight more drawings in here
+  // would have taken this file past its ceiling, and they are a coherent group
+  // with their own reason to exist (F66). It loads after this one, which is
+  // fine: makeFlowerTexture is only ever called from buildFlowers at
+  // scene-build time, never at load time.
+  if (window.makeGraminoidTexture) {
+    const gt = window.makeGraminoidTexture(form);
+    if (gt) return gt;
+  }
   const s = 64, cv = document.createElement('canvas');
   cv.width = cv.height = s;
   const g = cv.getContext('2d');
@@ -177,7 +197,13 @@ function clampPointSize(mat, px) {
 const _FLOWER_SIZE = { rays: 0.42, plume: 0.34, spike: 0.34, umbel: 0.30,
                        globe: 0.32, trumpet: 0.30, bell: 0.24, daisy: 0.24,
                        cluster: 0.26, cattail: 0.7, pea: 0.34, whorl: 0.30,
-                       star: 0.28, cross: 0.22, lily: 0.34 };
+                       star: 0.28, cross: 0.22, lily: 0.34,
+                       // Seed heads are a large fraction of a grass — a big
+                       // bluestem's turkey-foot really is a fifth of the plant.
+                       turkey_foot: 0.34, one_sided_raceme: 0.26,
+                       open_panicle: 0.36, contracted_spike: 0.30,
+                       nodding_raceme: 0.32, bristly: 0.34,
+                       sedge_cluster: 0.24, rush_umbel: 0.22 };
 // …but a head must stay a fraction of its own plant. These were fixed metres per
 // FORM, so a 0.6 m blanketflower and a 3 m sunflower both wore a 42 cm head: on
 // the small one the bloom was 70% of the plant, a floating orange blob that made
@@ -234,25 +260,50 @@ const _FLOWER_ATTITUDE = {
   // The harebell/nodding-onion hang is IN the texture, so the card that shows
   // it is the vertical one; tipping the card down as well hides the shape.
   bell:    { tilt: 1.52, jitter: 0.20, spin: true },
+  // Graminoid seed heads are all drawn in profile and stand on a culm, so they
+  // take the vertical card. The two that lean are the ones that lean in life:
+  // a brome's raceme nods and a blue grama's comb tips over.
+  turkey_foot:      { tilt: 1.50, jitter: 0.10, spin: true },
+  one_sided_raceme: { tilt: 1.32, jitter: 0.22, spin: true },
+  open_panicle:     { tilt: 1.48, jitter: 0.20, spin: true },
+  contracted_spike: { tilt: 1.54, jitter: 0.10, spin: true },
+  nodding_raceme:   { tilt: 1.30, jitter: 0.26, spin: true },
+  bristly:          { tilt: 1.50, jitter: 0.18, spin: true },
+  sedge_cluster:    { tilt: 1.50, jitter: 0.14, spin: true },
+  rush_umbel:       { tilt: 1.50, jitter: 0.14, spin: true },
 };
 const _FLOWER_ATTITUDE_DEF = { tilt: 0.5, jitter: 0.3 };
 let FLOWER_QUAD = null;              // shared 2-triangle plane, +Z is the face
 
 function buildFlowers(plants, month, terrain) {
+  const ALL_FORMS = FLOWER_FORMS.concat(GRAMINOID_FORMS);
   if (!FLOWER_TEX) {
     FLOWER_TEX = {};
-    for (const f of FLOWER_FORMS) FLOWER_TEX[f] = makeFlowerTexture(f);
+    for (const f of ALL_FORMS) FLOWER_TEX[f] = makeFlowerTexture(f);
+    // cattail_spike is the cattail drawing under the name the catalogue uses.
+    FLOWER_TEX.cattail_spike = FLOWER_TEX.cattail;
   }
-  const byForm = {}; FLOWER_FORMS.forEach(f => byForm[f] = []);
+  const byForm = {}; ALL_FORMS.forEach(f => byForm[f] = []);
   for (const p of plants || []) {
-    if (!p.flower_color || !byForm[p.flower_form]) continue;
+    // A grass's inflorescence_form (schema v52) supersedes its flower_form,
+    // which stays 'plume' for every graminoid because that column feeds the
+    // pollinator logic and a wind-pollinated grass offers a bee nothing.
+    const form = (p.inflorescence_form && p.inflorescence_form !== 'cattail_spike')
+      ? p.inflorescence_form : p.flower_form;
+    if (!p.flower_color || !byForm[form]) continue;
     if ((p.opacity ?? 1) < 0.25) continue;            // not-yet-present plants
-    const bs = p.bloom_start || 0, be = p.bloom_end || 0;
-    if (!bs || month < bs || month > be) continue;     // out of bloom this month
-    byForm[p.flower_form].push(p);
+    const bs = p.bloom_start || 0;
+    // A seed head is not a bloom: prairie grasses hold theirs from flowering
+    // right through the winter, and that persistence is most of what a grass
+    // contributes to a yard from October to April. So a graminoid's head runs
+    // to its FRUIT window's end, not its bloom's.
+    const be = p.inflorescence_form
+      ? Math.max(p.bloom_end || 0, p.fruit_end || 0, 12) : (p.bloom_end || 0);
+    if (!bs || month < bs || month > be) continue;     // out of season
+    byForm[form].push(p);
   }
   const _fc = new THREE.Color();
-  for (const form of FLOWER_FORMS) {
+  for (const form of ALL_FORMS) {
     const list = byForm[form];
     if (!list.length) continue;
     const isCattail = form === 'cattail';
@@ -499,8 +550,16 @@ window.permaSnapshot = function (opts) {
   const prev = new THREE.Vector2();
   renderer.getSize(prev);
   const prevAspect = camera.aspect;
+  // The DRAWING BUFFER is w x pixelRatio, and the ratio is pinned once at boot
+  // to min(devicePixelRatio, 1.5) — so a snapshot's real resolution has always
+  // depended on the machine it ran on, which is fine for a 320px gallery tile
+  // and useless for print. F69 sets it explicitly and restores it, which is
+  // what gets a ~300 dpi page image out of a viewport-sized capture.
+  const prevRatio = renderer.getPixelRatio();
+  const ratio = Math.max(1, Math.min(4, opts.pixelRatio || 0));
   let url = '';
   try {
+    if (ratio) renderer.setPixelRatio(ratio);
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
@@ -512,6 +571,7 @@ window.permaSnapshot = function (opts) {
   }
   // Always restore, even if toDataURL threw — a half-resized renderer would
   // leave the live view stretched for the rest of the session.
+  if (ratio) renderer.setPixelRatio(prevRatio);
   renderer.setSize(prev.x, prev.y, false);
   camera.aspect = prevAspect;
   camera.updateProjectionMatrix();
@@ -594,6 +654,10 @@ window.permaSetScene = function (sc) {
   lastMonth = sc.month || 6;
   sceneMonth = sc.month || 6;         // bloom-gating + the seasonal-tour HUD
   sceneNight = !!sc.is_night;         // set before buildPlants so flowers night-glow
+  // The site's real wind for this month, and the lee of its own windbreaks
+  // (F68). Uniforms only, so this re-aims every plant in the yard without
+  // rebuilding or recompiling anything.
+  if (window.applySceneWind) applySceneWind(sc.wind);
   lastYear = sc.year || 0;
   lastBounds = sc.bounds;
   lastTerrain = sc.terrain || null;

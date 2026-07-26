@@ -12,7 +12,7 @@ seeded reference data every project draws from.
   [`recipes.py`](../src/db/recipes.py),
   [`structures.py`](../src/db/structures.py),
   [`fauna.py`](../src/db/fauna.py)
-- **Current schema version:** `51` (`src/db/plants.py:_SCHEMA_VERSION` — the
+- **Current schema version:** `52` (`src/db/plants.py:_SCHEMA_VERSION` — the
   authoritative value; this doc's narrative may lag, the code wins)
 - **Location:**
   - Linux: `~/.local/share/Site & Pattern/permadesign.db`
@@ -52,7 +52,10 @@ One row per species. Key columns (full list in the DDL):
 | `bark_color`, `fall_color` | hex (v47). The species' real trunk colour and autumn colour; `fall_color` empty = evergreen or no colouring, an honest empty rather than a guess |
 | `branching` | excurrent \| decurrent \| multi_stem \| suckering \| arching \| prostrate \| rosette (v47) — woody habit |
 | `growth_form` | herbaceous habit (v48). The **source of truth** for which 3D archetype a non-woody plant gets; the viewer's genus table is now only a fallback |
-| `fruit_form` | fruit SHAPE (v49) — berry \| strig \| raceme \| cherry \| pome \| hip \| strawberry \| aggregate \| flat_cluster. The companion to `fruit_color`: before it, every fleshy fruit in the catalogue drew as the same sphere sprite, so a strawberry, a rose hip and a chokecherry raceme were all "red dot". Empty on dry-fruited species, which draw nothing |
+| `fruit_form` | fruit SHAPE (v49) — berry \| strig \| raceme \| cherry \| pome \| hip \| strawberry \| aggregate \| flat_cluster. The companion to `fruit_color`: before it, every fleshy fruit in the catalogue drew as the same sphere sprite |
+| `bark_texture` | smooth \| furrowed \| papery \| shaggy \| scaly (v52). Which procedural bark grain the 3D viewer draws. Bark is how a woody plant is identified in winter, and one grain served all of them; note that within *Betula* only paper birch is `papery` — the kind of difference a genus table cannot hold. Seeded in `scripts/seed_surface_morphology.py` |
+| `leaf_surface` | matte \| glossy \| pubescent \| glaucous (v52). Recorded only where the character is distinctive enough to draw — a silvery wolf-willow, a waxy bog blueberry, a glossy Oregon-grape. Empty is the common case and the honest default |
+| `inflorescence_form` | turkey_foot \| one_sided_raceme \| open_panicle \| contracted_spike \| nodding_raceme \| bristly \| sedge_cluster \| rush_umbel \| cattail_spike (v52). **The graminoid field mark.** All 79 grasses, sedges and rushes carried `flower_form: plume` and drew one generic spray, while a grass is identified by its seed head — a big bluestem is *named* for its turkey-foot. Deliberately separate from `flower_form`, which stays `plume` because it feeds pollinator logic where a wind-pollinated grass correctly offers a bee nothing. Seeded in `scripts/seed_inflorescence_morphology.py`, so a strawberry, a rose hip and a chokecherry raceme were all "red dot". Empty on dry-fruited species, which draw nothing |
 
 Morphology is authored in two companion scripts, each documenting its fields
 and where the values come from:

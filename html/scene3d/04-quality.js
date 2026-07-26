@@ -349,8 +349,13 @@ function getTreeArch(cls, prof, form, tier, sub) {
   if (!a) {
     if (cls === 'conifer') {
       const seed = 5000 + (_FORM_SEED[form] || 0) + tier * 11 + sub * 191 + (_CK_SEED[ck] || 0);
-      a = ck === 'pine' ? buildPineGeo(form, tier, mulberry32(seed))
-                        : buildConiferGeo(form, tier, mulberry32(seed), ck);
+      // Both pine kinds take the open tufted builder; everything else is a
+      // whorled cone. (The scraggly-vs-spire difference between jack pine and
+      // lodgepole is baked into the GLB; the procedural fallback draws them
+      // alike, which is the honest limit of the fallback set.)
+      a = (ck === 'pine' || ck === 'pine_jack')
+        ? buildPineGeo(form, tier, mulberry32(seed))
+        : buildConiferGeo(form, tier, mulberry32(seed), ck);
     } else {
       const cfg = decidCfg(form, tier, prof);
       const seed = 100 + (_FORM_SEED[form] || 0) + tier * 11 + sub * 191 + prof.id.charCodeAt(0);
@@ -365,6 +370,17 @@ function getTreeArch(cls, prof, form, tier, sub) {
 // Which groundcover unit a species gets: its own (blade class × grain class),
 // looked up in the manifest. Falls back to the plant-id hash when there are no
 // baked models, where the units really are interchangeable procedural draws.
+// Which aspect unit a grass / aquatic / vine gets: its own height ÷ canopy,
+// looked up in the manifest. Falls back to the plant-id hash when there are no
+// baked models — the procedural fallback really does draw three interchangeable
+// random tufts, so a hash is the honest answer there.
+function aspectBucket(p, kind) {
+  const i = window.glbLayerVariantIndex
+    ? window.glbLayerVariantIndex(kind, aspectVariantKeyFor(p, kind))
+    : null;
+  return i == null ? hashPid(p.plant_id) : i;
+}
+
 function groundcoverBucket(p) {
   const i = window.glbLayerVariantIndex
     ? window.glbLayerVariantIndex('groundcover', variantKeyFor(p, 'groundcover'))
@@ -396,12 +412,44 @@ function buildArchetypes() {
   ARCH = { ground, grass, aquatic, vine };
 }
 
+// Presets for the surfaces that vary BY SPECIES (F63). `surfaceMaterial(preset,
+// cls)` builds one material per (preset × class) on first use — a birch's papery
+// bark and an oak's furrowed bark are genuinely different shaders' worth of
+// look, and plants are already bucketed into one InstancedMesh per archetype
+// variant, so this is one lookup per bucket rather than a per-plant cost.
+const MAT_PRESETS = {
+  bark: { key: 'bark', detailKind: 'bark', roughness: 0.92, wind: 0.015,
+          vertexColors: true, detailScale: 1.0, detailAmount: 0.5 },
+  crown: { key: 'crown', detailKind: 'leaf', roughness: 0.85, wind: 0.07,
+           vertexColors: true, doubleSide: true, detailScale: 9.0,
+           detailAmount: 0.34 },
+  shrubLeaf: { key: 'shrubLeaf', detailKind: 'leaf', roughness: 0.82,
+               wind: 0.06, vertexColors: true, flatShading: true,
+               doubleSide: true, detailScale: 12.0, detailAmount: 0.30 },
+  herbLeaf: { key: 'herbLeaf', detailKind: 'leaf', roughness: 0.8, wind: 0.09,
+              vertexColors: true, doubleSide: true, detailScale: 14.0,
+              detailAmount: 0.28 },
+  // Conifers wear needles, which have one surface and no class axis — their one
+  // visible mark is the pale stomatal band running the needle's length.
+  //
+  // `wind` is also the STIFFNESS CLASS (F68). It always varied by material and
+  // nothing said why; the values are now deliberate and ordered the way the
+  // plants are: a trunk (0.015) is rigid, a mature spruce's needle crown (0.03)
+  // barely moves in wind that has a grass blade (0.11) lying flat, a broadleaf
+  // crown (0.07) tosses, and a forb leaf (0.09) flutters. Multiplied by the
+  // site's real wind speed through uWindAmp, so a calm June day and a 40 km/h
+  // chinook are visibly different weather on the same yard.
+  needle: { key: 'needle', detailKind: 'needle', roughness: 0.88, wind: 0.03,
+            vertexColors: true, doubleSide: true, detailScale: 22.0,
+            detailAmount: 0.30 },
+};
+
 function ensurePlantMats() {
   if (MATS) return;
   if (!SHADOW_TEX) SHADOW_TEX = makeShadowTexture();
   MATS = {
     branch:  plantMaterial({ roughness: 0.92, wind: 0.015,
-               detail: 'bark', detailScale: 1.0, detailAmount: 0.5 }),
+               detail: 'bark.furrowed', detailScale: 1.0, detailAmount: 0.5 }),
     // Tree crowns became part-ribbon in V2.29: the OUTERMOST clumps are now
     // rosettes of real leaf cards (assetlib/flora_trees.py) so a birch's
     // silhouette is made of birch leaves, while interior clumps stay closed
@@ -409,11 +457,9 @@ function ensurePlantMats() {
     // build with cards on FrontSide drew every broadleaf crown almost black,
     // which is the same bug the shrubs had, one archetype family later. When
     // geometry changes KIND, every material applied to it is unreviewed.
-    foliage: plantMaterial({ roughness: 0.85, wind: 0.07, vertexColors: true,
-               doubleSide: true, detail: 'leaf', detailScale: 9.0,
-               detailAmount: 0.34 }),
+    foliage: surfaceMaterial(MAT_PRESETS.crown, 'matte', true),
     shrub:   plantMaterial({ roughness: 0.85, wind: 0.06, vertexColors: true,
-               detail: 'leaf', detailScale: 11.0, detailAmount: 0.30 }),
+               detail: 'leaf.matte', detailScale: 11.0, detailAmount: 0.30 }),
     // Shrub foliage is now REAL LEAVES — flat ribbons (V2.29) — where the older
     // faceted masses were closed icosahedra. A solid can be FrontSide, which is
     // what this material was; a flat ribbon under backface culling is INVISIBLE
@@ -423,18 +469,14 @@ function ensurePlantMats() {
     // sized and positioned correctly, and simply not drawn.
     // Flat-shaded still, so the procedural fallback's faceted masses (used where
     // a species records no leaf shape) stay crisp low-poly clumps (V1.96).
-    shrubFoliage: plantMaterial({ roughness: 0.82, wind: 0.06, vertexColors: true,
-                    flatShading: true, doubleSide: true, detail: 'leaf',
-                    detailScale: 12.0, detailAmount: 0.30 }),
+    shrubFoliage: surfaceMaterial(MAT_PRESETS.shrubLeaf, 'matte', true),
     // Flat leaf blades for herbaceous plants (V1.98) — double-sided so a leaf
     // shows from both faces, gentle sway.
-    leaf:    plantMaterial({ roughness: 0.8, wind: 0.09, vertexColors: true,
-               doubleSide: true, detail: 'leaf', detailScale: 14.0,
-               detailAmount: 0.28 }),
+    leaf:    surfaceMaterial(MAT_PRESETS.herbLeaf, 'matte', true),
     // Flat grass/reed blades read from both sides and catch top light via
     // lifted normals (V1.92) — lush tufts rather than thin spindly stalks.
     blade:   plantMaterial({ roughness: 0.72, wind: 0.11, vertexColors: true,
-               doubleSide: true, detail: 'leaf', detailScale: 16.0,
+               doubleSide: true, detail: 'leaf.matte', detailScale: 16.0,
                detailAmount: 0.26 }),
     simple:  plantMaterial({ roughness: 0.9, wind: 0.06 }),
     ground:  plantMaterial({ roughness: 0.95, wind: 0.02, vertexColors: true }),
@@ -596,16 +638,23 @@ function buildHerbLayer(list, month, year, terrain) {
     // two species sharing a form but not a leaf would otherwise be instanced from
     // whichever of them the bucket happened to build first.
     const vkey = variantKeyFor(p, 'herb');
-    const bk = formName + '_' + v + '_' + vkey;
+    // Leaf surface joins the key for the same reason it does on trees: one mesh,
+    // one material. It pays off most here — the woolly and silvery forbs
+    // (pussytoes, pearly everlasting, the sages, silky lupine) are where a
+    // reader's eye actually goes looking for that character.
+    const surf = leafSurfaceFor(p);
+    const bk = formName + '_' + v + '_' + vkey + '_' + surf;
     (buckets[bk] = buckets[bk]
-      || { formName, v, vkey, morph: morphOf(p, 'herb'), items: [] }).items.push(p);
+      || { formName, v, vkey, surf, morph: morphOf(p, 'herb'), items: [] })
+      .items.push(p);
   }
   for (const key in buckets) {
-    const { formName, v, vkey, morph, items } = buckets[key];
+    const { formName, v, vkey, morph, surf, items } = buckets[key];
     const arch = getHerbArch(formName, v, vkey, morph);
     const places = items.map(p => spreadPlacements(p, year));
     const total = places.reduce((s, pl) => s + pl.length, 0);
-    const mesh = instancedMesh(arch, total, MATS.leaf);
+    const mesh = instancedMesh(arch, total,
+      surfaceMaterial(MAT_PRESETS.herbLeaf, surf, true));
     const names = new Array(total), ids = new Array(total);
     let idx = 0;
     items.forEach((p, ii) => {
@@ -636,18 +685,24 @@ function buildShrubLayer(list, month, year, terrain) {
     const prof = shrubProfileFor(p);
     const v = hashPid(p.plant_id) % SHRUB_VARIANTS;
     const vkey = variantKeyFor(p, 'shrub');
-    const bk = prof.id + '_' + v + '_' + vkey;
+    const bark = barkClassFor(p), surf = leafSurfaceFor(p);
+    const bk = prof.id + '_' + v + '_' + vkey + '_' + bark + '_' + surf;
     (buckets[bk] = buckets[bk]
-      || { prof, v, vkey, morph: morphOf(p, 'shrub'), items: [] }).items.push(p);
+      || { prof, v, vkey, bark, surf, morph: morphOf(p, 'shrub'), items: [] })
+      .items.push(p);
   }
   for (const key in buckets) {
-    const { prof, v, vkey, morph, items } = buckets[key];
+    const { prof, v, vkey, morph, bark, surf, items } = buckets[key];
     const arch = getShrubArch(prof, v, vkey, morph);
     const places = items.map(p => spreadPlacements(p, year));
     const total = places.reduce((s, pl) => s + pl.length, 0);
-    const foliage = instancedMesh(arch.foliageGeo, total, MATS.shrubFoliage);
+    const foliage = instancedMesh(arch.foliageGeo, total,
+      surfaceMaterial(MAT_PRESETS.shrubLeaf, surf));
     const stems = arch.stemGeo
-      ? instancedMesh(arch.stemGeo, total, arch.stemMat || MATS.branch) : null;
+      ? instancedMesh(arch.stemGeo, total,
+                      surfaceMaterial(MAT_PRESETS.bark, bark,
+                                      !!arch.vertexColorBark))
+      : null;
     // Woody stems take the species' own bark colour where the seed data has
     // one — which is how red-osier dogwood gets its red, generalised from the
     // genus special case that used to be the only way to say so.
@@ -721,16 +776,27 @@ function buildPlants(group, plants, month, year, terrain) {
       const t = tierFor(p);
       const sub = indHash(p) % TREE_SUBVARS;
       const ck = cls === 'conifer' ? (prof.conifer || 'standard') : 'd';
-      const key = cls + '_' + ck + '_' + prof.id + '_' + form + '_' + t + '_' + sub;
-      (buckets[key] = buckets[key] || { cls, prof, form, t, sub, items: [] }).items.push(p);
+      // Surface classes join the bucket key (F63): one InstancedMesh carries one
+      // material, so a papery-barked birch and a furrowed-barked oak cannot share
+      // a bucket even when everything else about them matches.
+      const bark = barkClassFor(p);
+      const surf = cls === 'conifer' ? 'needle' : leafSurfaceFor(p);
+      const key = cls + '_' + ck + '_' + prof.id + '_' + form + '_' + t + '_' + sub
+        + '_' + bark + '_' + surf;
+      (buckets[key] = buckets[key] || { cls, prof, form, t, sub, bark, surf, items: [] })
+        .items.push(p);
     }
     for (const key in buckets) {
-      const { cls, prof, form, t, sub, items } = buckets[key];
+      const { cls, prof, form, t, sub, bark, surf, items } = buckets[key];
       const arch = getTreeArch(cls, prof, form, t, sub);
       const places = items.map(p => spreadPlacements(p, year));
       const total = places.reduce((s, pl) => s + pl.length, 0);
-      const branch = instancedMesh(arch.branchGeo, total, arch.branchMat || MATS.branch);
-      const foliage = instancedMesh(arch.foliageGeo, total, MATS.foliage);
+      const vcBark = !!arch.vertexColorBark;
+      const branch = instancedMesh(arch.branchGeo, total,
+        surfaceMaterial(MAT_PRESETS.bark, bark, vcBark));
+      const foliage = instancedMesh(arch.foliageGeo, total,
+        surf === 'needle' ? surfaceMaterial(MAT_PRESETS.needle, '', true)
+                          : surfaceMaterial(MAT_PRESETS.crown, surf, true));
       const names = new Array(total), ids = new Array(total);
       let idx = 0;
       items.forEach((p, ii) => {
@@ -772,17 +838,20 @@ function buildPlants(group, plants, month, year, terrain) {
   // Grasses / sedges / rushes — dense flat-blade tufts (V1.92).
   buildLayer(byKind.grass, 3, MATS.blade, (v) => ARCH.grass[v],
              (p) => [Math.max(0.16, p.canopy_m), Math.max(0.3, p.height_m),
-                     Math.max(0.16, p.canopy_m)], month, year, false, terrain);
+                     Math.max(0.16, p.canopy_m)], month, year, false, terrain,
+             (p) => aspectBucket(p, 'grass'));
 
   // Aquatic / emergent marsh plants — tall erect reed/strap-leaf clumps; the
   // cattail's brown spike comes from the flower layer (V1.92).
   buildLayer(byKind.aquatic, 3, MATS.blade, (v) => ARCH.aquatic[v],
              (p) => [Math.max(0.18, p.canopy_m), Math.max(0.5, p.height_m),
-                     Math.max(0.18, p.canopy_m)], month, year, false, terrain);
+                     Math.max(0.18, p.canopy_m)], month, year, false, terrain,
+             (p) => aspectBucket(p, 'aquatic'));
   // Vines — sprawling/twining leafy stems (V1.99), not a cone.
   buildLayer(byKind.vine, 3, MATS.leaf, (v) => ARCH.vine[v],
              (p) => [Math.max(0.25, p.canopy_m), Math.max(0.2, p.height_m),
-                     Math.max(0.25, p.canopy_m)], month, year, false, terrain);
+                     Math.max(0.25, p.canopy_m)], month, year, false, terrain,
+             (p) => aspectBucket(p, 'vine'));
 
   // Groundcover — a creeping mat of REAL leaves since V2.29 (it was faceted
   // domes), so each species gets the unit carrying its own leaf outline.

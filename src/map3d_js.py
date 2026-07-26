@@ -71,7 +71,18 @@ def capture_ortho(rect: dict, width: int = 2048) -> str:
             f"{json.dumps(opts)});")
 
 
-def snapshot(px: int = 320) -> str:
+def set_camera_preset(name: str) -> str:
+    """JS placing the camera at a named preset (V2.33, F69).
+
+    'overview' | 'orbit' | 'walk' | 'sidewalk' — the docent's own camera
+    vocabulary, which its beats have carried since V2.13 and nothing has read
+    until now, plus the neighbour's-eye view (F77)."""
+    return ("window.permaSetCameraPreset && window.permaSetCameraPreset("
+            f"{json.dumps(str(name))});")
+
+
+def snapshot(px: int = 320, *, height: int = 0, pixel_ratio: int = 0,
+             mime: str = "", quality: float = 0.0) -> str:
     """JS to render the CURRENT scene from the CURRENT camera into a ``px``-square
     frame and return a JPEG data URL.
 
@@ -80,7 +91,16 @@ def snapshot(px: int = 320) -> str:
     drift from what the app renders — which is the whole point of looking at
     them side by side. Guarded with ``&&`` so it's a no-op (undefined → ``''``
     via the caller) until the viewer registers ``permaSnapshot``."""
-    opts = {"width": int(px), "height": int(px)}
+    opts = {"width": int(px), "height": int(height or px)}
+    if pixel_ratio:
+        # The drawing buffer is width x pixelRatio. Without this the capture's
+        # real resolution depends on the display the app happens to be on,
+        # which is why a print still asks for it explicitly (F69).
+        opts["pixelRatio"] = int(pixel_ratio)
+    if mime:
+        opts["mime"] = str(mime)
+    if quality:
+        opts["quality"] = float(quality)
     return ("(window.permaSnapshot ? window.permaSnapshot("
             f"{json.dumps(opts)}) : '');")
 
