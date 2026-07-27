@@ -62,7 +62,17 @@ _HTML = os.path.join(_ROOT, "html")
 FIELDS = ("flower_arch", "flower_symmetry", "petal_shape", "petal_count",
           "florets_per_head", "flower_diameter_cm", "flower_center_color",
           "flower_height_frac", "stem_branching", "basal_rosette",
-          "flowering_stems")
+          "flowering_stems", "flower_data_source")
+
+# Where a number can come from, weakest first. The bench's job is to move
+# species UP this list; the seeder can only ever write the bottom one.
+DATA_SOURCES = ("estimated", "photo", "flora", "measured")
+
+PHOTO_SLOTS = ("habit", "flower", "leaf", "fruit", "bark_stem", "winter",
+               "seedling")
+
+_PHOTOS_JSON = os.path.join(_ROOT, "data", "plant_photos.json")
+_PHOTO_DIR = os.path.join(_ROOT, "data", "photos")
 
 
 def _load():
@@ -99,12 +109,77 @@ def _species_list(records):
                "image_url": rec.get("image_url") or "",
                "image_attribution": rec.get("image_attribution") or "",
                "height_m": rec.get("mature_height_m"),
-               "notes": (rec.get("notes") or "")[:400]}
+               "notes": (rec.get("notes") or "")[:400],
+               "photos": photos_by_slot(rec.get("scientific_name") or ""),
+               "links": lookup_links(rec.get("scientific_name") or "")}
         for f in FIELDS:
             row[f] = rec.get(f)
         out.append(row)
     out.sort(key=lambda r: r["common_name"].lower())
     return out
+
+
+def _photo_index() -> dict:
+    """`data/plant_photos.json`, grouped by species. Read fresh on every request
+    so an import shows up without a restart."""
+    if not os.path.exists(_PHOTOS_JSON):
+        return {}
+    try:
+        with open(_PHOTOS_JSON, encoding="utf-8") as fh:
+            rows = json.load(fh)
+    except (OSError, ValueError):
+        return {}
+    out: dict = {}
+    for i, e in enumerate(rows):
+        e = dict(e)
+        e["_i"] = i
+        out.setdefault((e.get("scientific_name") or "").strip(), []).append(e)
+    return out
+
+
+def photos_by_slot(sci: str) -> dict:
+    """`{slot: [photo, …]}` for one species, for the bench's photo strip."""
+    rows = _photo_index().get((sci or "").strip(), [])
+    by: dict = {s: [] for s in PHOTO_SLOTS}
+    for e in rows:
+        if e.get("slot") in by:
+            by[e["slot"]].append(e)
+    return by
+
+
+def lookup_links(sci: str) -> list:
+    """Where to READ a number you cannot measure.
+
+    You are not going to grow all 434 species, and you should not have to. The
+    numbers this catalogue wants are published — Flora of North America gives
+    ray counts and laminae lengths outright, and it is free to read. It is not
+    free to bulk-copy, which is the whole reason this is a list of links and not
+    an importer: a person reading a description and typing "13 rays" is
+    recording a fact, and facts are not anybody's property.
+    """
+    sci = (sci or "").strip()
+    if not sci:
+        return []
+    from urllib.parse import quote                          # noqa: PLC0415
+    q = quote(sci)
+    under = quote(sci.replace(" ", "_"))
+    return [
+        {"name": "Flora of N. America",
+         "why": "ray counts, laminae length, head diameter — the numbers",
+         "url": f"http://www.efloras.org/browse.aspx?flora_id=1&name_str={q}"},
+        {"name": "VASCAN",
+         "why": "the accepted Canadian name, if this one has moved",
+         "url": f"https://data.canadensys.net/vascan/search?q={q}"},
+        {"name": "iNaturalist",
+         "why": "many photographs — count the rays off one",
+         "url": f"https://www.inaturalist.org/search?q={q}"},
+        {"name": "Wikipedia",
+         "why": "a quick sanity check on habit and size",
+         "url": f"https://en.wikipedia.org/wiki/{under}"},
+        {"name": "Minnesota Wildflowers",
+         "why": "excellent plain-language descriptions for prairie forbs",
+         "url": f"https://www.minnesotawildflowers.info/search?q={q}"},
+    ]
 
 
 def _scene_for(sci, records):
@@ -160,11 +235,33 @@ class _Handler(SimpleHTTPRequestHandler):
             sci = unquote(self.path[len("/api/scene/"):])
             sc = _scene_for(sci, _load())
             return self._json(sc if sc else {}, 200 if sc else 404)
+        if self.path.startswith("/photos/"):
+            # data/photos lives outside the served html/ root, so it needs its
+            # own route rather than a symlink (which Windows would not have).
+            from urllib.parse import unquote                # noqa: PLC0415
+            name = os.path.basename(unquote(self.path[len("/photos/"):]))
+            path = os.path.join(_PHOTO_DIR, name)
+            if not os.path.isfile(path):
+                self.send_error(404)
+                return None
+            self.send_response(200)
+            self.send_header("Content-Type",
+                             "image/png" if name.lower().endswith(".png")
+                             else "image/jpeg")
+            self.send_header("Content-Length", str(os.path.getsize(path)))
+            self.end_headers()
+            with open(path, "rb") as fh:
+                self.wfile.write(fh.read())
+            return None
         if self.path in ("/", "/index.html"):
             self.path = "/tune_morphology.html"
         return super().do_GET()
 
     def do_POST(self):                                      # noqa: N802
+        if self.path.startswith("/api/photo/"):
+            return self._photo_post()
+        if self.path.startswith("/api/photo-delete/"):
+            return self._photo_delete()
         if not self.path.startswith("/api/species/"):
             return self._json({"error": "not found"}, 404)
         from urllib.parse import unquote                    # noqa: PLC0415
@@ -195,6 +292,87 @@ class _Handler(SimpleHTTPRequestHandler):
         if changed:
             _save(records)
         return self._json({"saved": bool(changed), "changed": changed})
+
+
+    # ── photos ──────────────────────────────────────────────────────────────
+
+    def _photo_post(self):
+        """`POST /api/photo/<sci>/<slot>` — one raw image body, one photo added.
+
+        Raw body rather than multipart: the browser can `fetch(file)` a File
+        object directly, and parsing multipart by hand in a dev tool is a
+        pointless place to spend correctness.
+        """
+        from urllib.parse import unquote                    # noqa: PLC0415
+        parts = self.path[len("/api/photo/"):].split("/")
+        if len(parts) != 2:
+            return self._json({"error": "want /api/photo/<sci>/<slot>"}, 400)
+        sci, slot = unquote(parts[0]), unquote(parts[1])
+        if slot not in PHOTO_SLOTS:
+            return self._json({"error": f"unknown slot {slot!r}"}, 400)
+        n = int(self.headers.get("Content-Length") or 0)
+        if not n:
+            return self._json({"error": "empty body"}, 400)
+        blob = self.rfile.read(n)
+
+        credit = unquote(self.headers.get("X-Credit", "")) or ""
+        lic = self.headers.get("X-License", "cc-by-sa")
+
+        import tempfile                                     # noqa: PLC0415
+        from src.photo_import import import_photo           # noqa: PLC0415
+        tmp = tempfile.NamedTemporaryFile(suffix=".img", delete=False)
+        tmp.write(blob)
+        tmp.close()
+        try:
+            res = import_photo(tmp.name, sci, slot, _PHOTO_DIR)
+        except (OSError, ValueError) as exc:
+            return self._json({"error": str(exc)}, 400)
+        finally:
+            os.unlink(tmp.name)
+
+        rows = []
+        if os.path.exists(_PHOTOS_JSON):
+            with open(_PHOTOS_JSON, encoding="utf-8") as fh:
+                rows = json.load(fh)
+        rows.append({"scientific_name": sci, "slot": slot,
+                     "url": "data/photos/" + res["filename"],
+                     "attribution": credit or "© the project owner (own photograph)",
+                     "license": lic, "source": "owner",
+                     "taken_on": "", "rank": 0, "notes": ""})
+        with open(_PHOTOS_JSON, "w", encoding="utf-8") as fh:
+            json.dump(rows, fh, indent=2, ensure_ascii=False)
+            fh.write("\n")
+        return self._json({"ok": True, "filename": res["filename"],
+                           "bytes": res["bytes"], "stripped": res["stripped"],
+                           "note": res["note"],
+                           "photos": photos_by_slot(sci)})
+
+    def _photo_delete(self):
+        """`POST /api/photo-delete/<index>` — drop one row and its file."""
+        from urllib.parse import unquote                    # noqa: PLC0415
+        try:
+            idx = int(unquote(self.path[len("/api/photo-delete/"):]))
+        except ValueError:
+            return self._json({"error": "bad index"}, 400)
+        if not os.path.exists(_PHOTOS_JSON):
+            return self._json({"error": "no photo index"}, 404)
+        with open(_PHOTOS_JSON, encoding="utf-8") as fh:
+            rows = json.load(fh)
+        if not 0 <= idx < len(rows):
+            return self._json({"error": "out of range"}, 404)
+        gone = rows.pop(idx)
+        with open(_PHOTOS_JSON, "w", encoding="utf-8") as fh:
+            json.dump(rows, fh, indent=2, ensure_ascii=False)
+            fh.write("\n")
+        # Only remove the FILE for a photo we imported ourselves; a URL row
+        # points at somebody else's server and there is nothing local to delete.
+        url = gone.get("url") or ""
+        if url.startswith("data/photos/"):
+            path = os.path.join(_ROOT, url)
+            if os.path.isfile(path):
+                os.unlink(path)
+        return self._json({"ok": True,
+                           "photos": photos_by_slot(gone.get("scientific_name", ""))})
 
 
 def _report():

@@ -29,7 +29,7 @@ feature, skim where it sits in that philosophy. The sources of truth:
 
 - [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md) — the thirteen principles, each with a
   "Where this lives in the code" note and an honest **State** marker (*strong / partial / gap*).
-- [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) — features (F1–F39) organized by the
+- [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) — features (F1–F82) organized by the
   principle they serve, with a "Shipped" section at the top.
 - [`docs/REFERENCES.md`](docs/REFERENCES.md) — the full bibliography.
 
@@ -119,8 +119,8 @@ wipes `plants`, `planting_calendar`, `companion_friends`,
 the attribute/nursery/cache tables) and re-seeds them from the shipped
 JSON. **Add any new dependent tables to that wipe list** or they will
 accumulate stale rows across reseeds. **Never wipe a table holding
-user-authored rows**: `polycultures` / `polyculture_members` are wiped
-only where `origin='seed'` (schema v46) so builder-authored communities
+user-authored rows**: `polycultures` / `polyculture_members` and `plant_photos` are wiped
+only where `origin='seed'` (schema v46 / v55) so builder-authored communities
 survive upgrades — user member `plant_id`s are re-pointed by name after
 the plants wipe (`_remap_user_polyculture_plants`), because plant ids
 are NOT stable across reseeds.
@@ -149,6 +149,8 @@ only, doesn't affect real commits.
 | `src/controllers/` | MainWindow's extracted behaviour: map-event router, persistence/undo, mode, generation, area fill, update flow. |
 | `src/db/schema.sql` | Authoritative DDL. Loaded on every `init_db`. |
 | `src/db/plants.py` | Database access layer + migration logic + seed helpers. |
+| `src/db/photos.py` | **Photo sets with named slots (F70, V2.35).** Many photos per species — habit / flower / leaf / fruit / bark_stem / winter / seedling — keyed by `scientific_name` (ids are not stable across a reseed) with `origin='seed'` vs `'user'` deciding what a reseed destroys. `plants.image_url` is synthesized on read from the best slot, so every existing screen improves without a change at the call site. |
+| `src/photo_import.py` | Bringing a photograph in (F72, V2.35): downscale, re-encode, and **strip EXIF unconditionally** — a photo of your own yard carries your home's GPS coordinates and these get committed. The stripper is stdlib so it cannot be skipped by Pillow being absent. |
 | `src/db/fauna.py` | Query API for the fauna registry and plant↔fauna junction (V1.31+). |
 | `src/db/relationships.py` | **The unified edges layer (F7, V2.31).** One query API + one edge vocabulary (`EDGE_KINDS`) over the schema-v51 `relationship_edges` view, which unions `plant_fauna`, both companion tables and shared polyculture membership. Ask "what is connected to this plant?" here, not table by table. Every edge carries `evidence` — `documented` (seeded record + `source`) vs `derived` (computed, e.g. two plants feeding the same animal). |
 | `src/relationship_graph.py` | Relationship-web overlay core (F5, V2.31): the design as a drawable graph — species at their planting centroid, wildlife on a ring outside it. All geometry Python-side; `html/map/07-network.js` only renders. |

@@ -534,6 +534,14 @@ def validate_all() -> tuple[list[str], list[str]]:
         e, w = validate_fauna()
         errors.extend(e)
         warnings.extend(w)
+
+    # Photo COVERAGE, not just licence compliance (F70). Everything above has an
+    # opinion about whether a photo is licensed correctly and none at all about
+    # whether it exists — which is how 111 plants and 62 of 69 bees came to ship
+    # with no photograph without anything ever saying so.
+    e, w = validate_photo_coverage()
+    errors.extend(e)
+    warnings.extend(w)
     return errors, warnings
 
 
@@ -638,3 +646,98 @@ def validate_fauna_images() -> tuple[list[str], list[str]]:
             errors.append(
                 f"fauna image: {name}: {lic} photo needs a non-empty attribution")
     return errors, warnings
+
+
+# ── Photo coverage (F70, V2.35) ───────────────────────────────────────────────
+
+# The named slots, mirrored from src/db/plants.PHOTO_SLOTS. Kept as a literal so
+# this module stays importable without the DB layer (it is run by the CLI gate
+# and by tests that never open a database); tests/test_plant_photos.py asserts
+# the two lists agree.
+PHOTO_SLOTS = ("habit", "flower", "leaf", "fruit", "bark_stem", "winter",
+               "seedling")
+
+
+def photo_coverage() -> dict:
+    """Coverage of the SHIPPED photo set, read straight from the seed files.
+
+    Deliberately file-based rather than DB-based: this runs in the data gate
+    before anything is seeded, and the question it answers is "what will we
+    ship", not "what is on this machine".
+
+    Counts a species as covered by a slot if `data/plant_photos.json` gives it
+    one; the legacy single `plants.image_url` counts as a `flower`, which is
+    what those photos overwhelmingly are.
+    """
+    plants = _load_json_list(DATA_DIR / "plants_master.json")
+    shots = _load_json_list(DATA_DIR / "plant_photos.json")
+    by_name: dict[str, set] = {}
+    for e in shots:
+        sci = (e.get("scientific_name") or "").strip()
+        slot = (e.get("slot") or "").strip()
+        if sci and slot in PHOTO_SLOTS:
+            by_name.setdefault(sci, set()).add(slot)
+    for rec in plants:
+        sci = (rec.get("scientific_name") or "").strip()
+        if sci and (rec.get("image_url") or "").strip():
+            by_name.setdefault(sci, set()).add("flower")
+    names = [(r.get("scientific_name") or "").strip() for r in plants]
+    names = [n for n in names if n]
+    return {
+        "species": len(names),
+        "with_any": sum(1 for n in names if by_name.get(n)),
+        "by_slot": {s: sum(1 for n in names if s in by_name.get(n, ()))
+                    for s in PHOTO_SLOTS},
+        "missing": sorted(n for n in names if not by_name.get(n)),
+    }
+
+
+def validate_photo_coverage() -> tuple[list[str], list[str]]:
+    """Report photo coverage as WARNINGS, never errors.
+
+    A missing photograph is a gap in the work, not a defect in the data — the
+    app renders perfectly well without one, and turning it into an error would
+    make the gate red for a reason nobody can fix in a commit. What it must not
+    be is invisible.
+    """
+    warnings: list[str] = []
+    errors: list[str] = []
+    try:
+        cov = photo_coverage()
+    except FileNotFoundError:
+        return [], []
+    n = cov["species"]
+    if not n:
+        return [], []
+    missing = n - cov["with_any"]
+    if missing:
+        warnings.append(
+            f"photo coverage: {missing} of {n} species have no photograph "
+            f"at all")
+    for slot in PHOTO_SLOTS:
+        have = cov["by_slot"][slot]
+        if have < n:
+            warnings.append(
+                f"photo coverage: slot {slot!r} covers {have} of {n} species")
+    # Every photo we DO ship has to carry its credit, on the same rule the
+    # single-column photos already follow.
+    for e in _load_json_list(DATA_DIR / "plant_photos.json"):
+        sci = e.get("scientific_name") or "?"
+        slot = (e.get("slot") or "").strip()
+        if slot not in PHOTO_SLOTS:
+            errors.append(f"plant_photos: {sci}: unknown slot {slot!r}")
+        lic = (e.get("license") or "").lower().strip()
+        if lic and lic != "cc0" and not (e.get("attribution") or "").strip():
+            errors.append(
+                f"plant_photos: {sci}: {lic} photo needs a non-empty attribution")
+        if not (e.get("url") or "").strip():
+            errors.append(f"plant_photos: {sci}: empty url")
+    return errors, warnings
+
+
+def _load_json_list(path) -> list:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+    return data if isinstance(data, list) else []

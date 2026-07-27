@@ -101,7 +101,7 @@ BRANCHINGS = ("unbranched", "branched_above", "branched_throughout")
 FIELDS = ("flower_arch", "flower_symmetry", "petal_shape", "petal_count",
           "florets_per_head", "flower_diameter_cm", "flower_center_color",
           "flower_height_frac", "stem_branching", "basal_rosette",
-          "flowering_stems")
+          "flowering_stems", "flower_data_source")
 
 
 def F(arch, sym, shape, petals, florets, dia, centre,
@@ -123,7 +123,15 @@ def F(arch, sym, shape, petals, florets, dia, centre,
             "petal_count": petals, "florets_per_head": florets,
             "flower_diameter_cm": dia, "flower_center_color": centre,
             "flower_height_frac": height_frac, "stem_branching": branching,
-            "basal_rosette": rosette, "flowering_stems": stems}
+            "basal_rosette": rosette, "flowering_stems": stems,
+            # Where these numbers came from. EVERYTHING this file writes is
+            # `estimated`: genus-level botanical judgement from the standard
+            # floras' floral formulae, which is a reasonable starting point and
+            # is not a measurement. scripts/tune_morphology.py raises a species
+            # to `flora`, `photo` or `measured` as it is actually checked, so
+            # "307 of 311 described" can stop being quoted as if it meant
+            # verified (P9).
+            "flower_data_source": "estimated"}
 
 
 # ── Asteraceae ──────────────────────────────────────────────────────────────
@@ -563,7 +571,12 @@ def apply(records, check=False):
             uncovered.append(rec.get("scientific_name") or rec.get("common_name"))
             continue
         if not check:
-            rec.update(flower)
+            # A species someone has actually verified is NOT overwritten by the
+            # genus default — that would silently undo the only real numbers in
+            # the catalogue on the next re-run. `estimated` and empty are fair
+            # game; anything else is a human's answer and wins.
+            if (rec.get("flower_data_source") or "estimated") == "estimated":
+                rec.update(flower)
         applied += 1
     return applied, uncovered
 

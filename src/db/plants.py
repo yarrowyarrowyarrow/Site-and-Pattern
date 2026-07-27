@@ -32,6 +32,15 @@ _HERE        = os.path.dirname(os.path.abspath(__file__))
 # bundle (where a module's __file__ is unreliable), not just in a source tree.
 _SCHEMA_PATH = resource_path("src", "db", "schema.sql")
 
+# The photo slots (schema v55, F70), in the order `_attach_photos` prefers them
+# when it synthesizes `image_url`. `habit` leads deliberately: the whole plant
+# with something for scale is what someone deciding whether they want it — or
+# trying to find it in their own yard in May — actually needs, and it is the
+# frame iNaturalist's leading photo almost never is.
+PHOTO_SLOTS = ("habit", "flower", "leaf", "fruit", "bark_stem", "winter",
+               "seedling")
+_PLANT_PHOTOS_JSON_PATH = resource_path("data", "plant_photos.json")
+
 
 def _user_data_dir() -> pathlib.Path:
     """Return a writable per-user data directory regardless of install location.
@@ -194,7 +203,7 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # reseed wipe entry, and no second copy to drift. schema.sql DROPs and recreates
 # it on every init_db, so the definition can evolve without a migration; the
 # version bump is here because schema.sql changed, per CLAUDE.md.
-_SCHEMA_VERSION = 54
+_SCHEMA_VERSION = 55
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -454,6 +463,42 @@ def _migrate_to_v42(conn: sqlite3.Connection):
         except sqlite3.OperationalError:
             pass  # column already present
     conn.commit()
+
+
+def _migrate_to_v55(conn: sqlite3.Connection):
+    """Photo sets with named slots (V2.35, F70).
+
+    Creates the table. The BACK-FILL of existing `plants.image_url` values into
+    `flower`-slot rows lives in `_seed_plant_photos`, not here: on a fresh
+    install the migration chain runs BEFORE the reseed populates `plants`, so a
+    back-fill at this point would silently find nothing and the coverage report
+    would say every species has no photo while 328 of them plainly do.
+    """
+    conn.executescript(_photo_ddl())
+    # ...and where each flower number came from (P9). Additive and nullable;
+    # empty reads as "unknown provenance", which is honest for a DB that
+    # predates the column.
+    try:
+        conn.execute("ALTER TABLE plants ADD COLUMN flower_data_source TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass
+    conn.commit()
+
+
+def _photo_ddl() -> str:
+    """The plant_photos DDL, lifted out of schema.sql so the v55 migration can
+    run it on a DB that predates the table. schema.sql stays authoritative — this
+    reads it rather than restating it, so the two can never drift."""
+    with open(_SCHEMA_PATH, "r", encoding="utf-8") as fh:
+        sql = fh.read()
+    # Between the markers, not by regex: a `;` inside a `--` comment in the
+    # table body truncated the first attempt mid-statement, and SQLite's error
+    # for that ("near CREATE") points nowhere near the cause.
+    start = sql.find(">>> plant_photos")
+    end = sql.find("<<< plant_photos")
+    if start < 0 or end < 0:
+        raise RuntimeError("schema.sql lost its plant_photos markers")
+    return sql[sql.index("\n", start) + 1:sql.rfind("\n", start, end)]
 
 
 def _migrate_to_v54(conn: sqlite3.Connection):
@@ -736,6 +781,70 @@ def _populate_plant_uses(conn: sqlite3.Connection, entries: list[dict]) -> int:
         )
         conn.commit()
     return len(rows)
+
+
+def _seed_plant_photos(conn: sqlite3.Connection) -> int:
+    """Load ``data/plant_photos.json`` into ``plant_photos`` as origin='seed'
+    (V2.35, F70). Returns the number of rows inserted.
+
+    Runs on EVERY reseed and inserts only shipped rows, because the wipe above
+    removed only shipped rows — a person's own photographs (origin='user') are
+    still sitting in the table and must not be duplicated or disturbed.
+
+    A species the file doesn't mention keeps whatever ``plants.image_url`` the
+    fetch script gave it: ``_attach_photos`` prefers this table and falls back to
+    the column, so partial coverage degrades to the previous release rather than
+    to a blank (P9).
+    """
+    import json as _json                                 # noqa: PLC0415
+
+    if not os.path.exists(_PLANT_PHOTOS_JSON_PATH):
+        return 0
+    with open(_PLANT_PHOTOS_JSON_PATH, "r", encoding="utf-8") as fh:
+        entries = _json.load(fh)
+    rows = []
+    for e in entries:
+        sci = (e.get("scientific_name") or "").strip()
+        slot = (e.get("slot") or "").strip()
+        url = (e.get("url") or "").strip()
+        if not sci or slot not in PHOTO_SLOTS or not url:
+            continue
+        rows.append((sci, slot, url, e.get("attribution") or "",
+                     e.get("license") or "", e.get("source") or "",
+                     "seed", e.get("taken_on") or "",
+                     int(e.get("rank") or 0), e.get("notes") or ""))
+    if rows:
+        conn.executemany(
+            "INSERT INTO plant_photos (scientific_name, slot, url, attribution,"
+            " license, source, origin, taken_on, rank, notes)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?)", rows)
+
+    # Back-fill: every species that still has NO row in this table but does have
+    # the legacy single `plants.image_url` gets it as a `flower` row. That is
+    # honest about what those photos are — iNaturalist's leading photo is nearly
+    # always a flower macro, which is exactly the diagnosis behind F70 — and it
+    # makes this table the single place `coverage()` has to look. Nothing is
+    # lost by the upgrade, and the 111 species with no photo at all become a
+    # counted, visible gap instead of an invisible one.
+    cur = conn.execute(
+        "INSERT INTO plant_photos "
+        "  (scientific_name, slot, url, attribution, license, source, origin)"
+        " SELECT p.scientific_name, 'flower', p.image_url,"
+        "        COALESCE(p.image_attribution, ''), COALESCE(p.image_license, ''),"
+        "        'inaturalist', 'seed'"
+        "   FROM plants p"
+        "  WHERE p.scientific_name IS NOT NULL AND p.scientific_name <> ''"
+        "    AND p.image_url IS NOT NULL AND p.image_url <> ''"
+        # Dedupe on the PHOTO, not on the species. Scoping it to the species
+        # meant that adding one photograph of your own permanently suppressed
+        # the shipped one for that plant on the next reseed — the row was gone
+        # (wiped as origin='seed') and the back-fill then skipped the species
+        # because it "already had" a photo.
+        "    AND NOT EXISTS (SELECT 1 FROM plant_photos ph"
+        "                     WHERE ph.scientific_name = p.scientific_name"
+        "                       AND ph.url = p.image_url)")
+    conn.commit()
+    return len(rows) + (cur.rowcount or 0)
 
 
 def _seed_fauna(conn: sqlite3.Connection) -> int:
@@ -1098,6 +1207,7 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("stem_branching", ""),
             1 if p.get("basal_rosette") else 0,
             p.get("flowering_stems"),
+            p.get("flower_data_source", ""),
         ))
 
     conn.executemany(
@@ -1123,10 +1233,10 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             flower_arch, flower_symmetry, petal_shape, petal_count,
             florets_per_head, flower_diameter_cm, flower_center_color,
             flower_height_frac, stem_branching, basal_rosette,
-            flowering_stems)
+            flowering_stems, flower_data_source)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
                    ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-                   ?,?,?,?,?,?,?,?,?,?,?)""",
+                   ?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -1236,6 +1346,9 @@ def init_db() -> None:
         if current_version < 54:
             _migrate_to_v54(conn)
 
+        if current_version < 55:
+            _migrate_to_v55(conn)
+
         # Add parent_id to polycultures if missing
         try:
             conn.execute("ALTER TABLE polycultures ADD COLUMN parent_id INTEGER REFERENCES polycultures(id) ON DELETE SET NULL")
@@ -1286,6 +1399,12 @@ def init_db() -> None:
                 "DELETE FROM polyculture_members WHERE polyculture_id IN "
                 "(SELECT id FROM polycultures WHERE origin = 'seed')")
             conn.execute("DELETE FROM polycultures WHERE origin = 'seed'")
+            # Photo sets (schema v55) take the SAME rule, and it is the whole of
+            # F72: a shipped photo is re-seeded, a person's own photograph is
+            # never touched. Writing a user photo into plants.image_url instead
+            # would destroy it here on the next schema bump, which is the trap
+            # the table exists to avoid.
+            conn.execute("DELETE FROM plant_photos WHERE origin = 'seed'")
             conn.execute(
                 "UPDATE polycultures SET parent_id = NULL WHERE parent_id "
                 "IS NOT NULL AND parent_id NOT IN (SELECT id FROM polycultures)")
@@ -1321,6 +1440,9 @@ def init_db() -> None:
             _seed_from_json_file(conn, _GARDEN_JSON_PATH)    # cultivated garden plants
             from src.db.seed_data import SEED_COMPANIONS
             _insert_companions(conn, SEED_COMPANIONS)
+            # Shipped photo sets (F70). Independent of plant ids — the
+            # table is keyed by scientific_name on purpose.
+            _seed_plant_photos(conn)
             # Fauna registry + plant↔fauna links — depends on plants being
             # seeded first so we can resolve common_name → plant_id.
             _seed_fauna(conn)
@@ -1479,6 +1601,62 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
     return d
 
 
+def _attach_photos(plants: list[dict]) -> None:
+    """Synthesize ``image_url`` / ``image_attribution`` / ``image_license`` from
+    the ``plant_photos`` table (schema v55, F70), and hand the whole set over as
+    ``photos``.
+
+    The same read-side-synthesis shape ``_attach_permaculture_uses`` uses below,
+    and for the same reason: the junction is the source of truth, but every
+    existing consumer reads a single field and must keep working. The plant
+    browser, the 3D dossier card, the bee and lepidoptera panels and
+    ``photo_warm`` all get better photographs here without one line of change at
+    the call site.
+
+    Preference order is ``PHOTO_SLOTS`` — **habit first** — and a person's own
+    photograph (``origin='user'``) beats a shipped one in the same slot, because
+    a picture of the plant in THEIR yard is more use than a stranger's. Where the
+    table has nothing, the row keeps whatever ``plants.image_url`` already held,
+    so a species the photo set doesn't cover renders exactly as it did before.
+    """
+    names = [(p.get("scientific_name") or "").strip() for p in plants]
+    wanted = {n for n in names if n}
+    if not wanted:
+        return
+    conn = get_connection()
+    try:
+        # One query for the whole list, not one per plant — get_all_plants is
+        # 434 rows and render_project_to_map is called on every File→Open.
+        marks = ",".join("?" * len(wanted))
+        rows = conn.execute(
+            f"SELECT scientific_name, slot, url, attribution, license, source,"
+            f"       origin, taken_on, rank"
+            f"  FROM plant_photos WHERE scientific_name IN ({marks})"
+            f" ORDER BY rank, id", tuple(wanted)).fetchall()
+    except sqlite3.OperationalError:
+        return          # pre-v55 DB mid-migration; the column keeps working
+    finally:
+        conn.close()
+
+    by_name: dict[str, list[dict]] = {}
+    for r in rows:
+        by_name.setdefault(r["scientific_name"], []).append(dict(r))
+
+    order = {slot: i for i, slot in enumerate(PHOTO_SLOTS)}
+    for p in plants:
+        shots = by_name.get((p.get("scientific_name") or "").strip())
+        if not shots:
+            p.setdefault("photos", [])
+            continue
+        p["photos"] = shots
+        best = min(shots, key=lambda s: (order.get(s["slot"], 99),
+                                         0 if s["origin"] == "user" else 1,
+                                         s["rank"]))
+        p["image_url"] = best["url"]
+        p["image_attribution"] = best["attribution"]
+        p["image_license"] = best["license"]
+
+
 def _attach_permaculture_uses(plants: list[dict]) -> None:
     """Populate each dict's derived ``permaculture_uses`` (comma-joined, sorted)
     from the plant_uses junction. The denormalized column was dropped in schema
@@ -1501,6 +1679,7 @@ def get_all_plants() -> list[dict]:
         ).fetchall()
         result = [_row_to_dict(r) for r in rows]
         _attach_permaculture_uses(result)
+        _attach_photos(result)
         return result
     finally:
         conn.close()
@@ -1797,6 +1976,7 @@ def search_plants(
         rows = conn.execute(sql, params).fetchall()
         result = [_row_to_dict(r) for r in rows]
         _attach_permaculture_uses(result)
+        _attach_photos(result)
         return result
     finally:
         conn.close()
@@ -1821,6 +2001,7 @@ def get_companions(plant_id: int) -> dict[str, list[dict]]:
             ).fetchall()
             result = [_row_to_dict(r) for r in rows]
             _attach_permaculture_uses(result)
+            _attach_photos(result)
             return result
 
         return {

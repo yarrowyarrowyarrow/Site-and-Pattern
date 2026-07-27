@@ -1,17 +1,21 @@
 <!doctype html>
 <!--
-  html/tune_morphology.html — the flower-tuning bench (V2.34).
+  html/tune_morphology.html — the catalogue bench (V2.35).
 
-  Served by scripts/tune_morphology.py, which also provides the tiny JSON API
-  (/api/species, /api/scene/<sci>, POST /api/species/<sci>). Opening this file
-  directly will not work: it needs that server, and the viewer needs an http
-  origin anyway.
+  Served by scripts/tune_morphology.py, which also provides the JSON API
+  (/api/species, /api/scene/<sci>, POST /api/species/<sci>,
+   POST /api/photo/<sci>/<slot>, POST /api/photo-delete/<i>, /photos/<file>).
+  Opening this file directly will not work: it needs that server, and the
+  viewer needs an http origin anyway.
 
-  The left pane is the REAL viewer (scene3d.html in an iframe, fed through
-  window.permaSetScene), so what you tune is what the app draws — never a
-  preview of a preview. The right pane is the species' reference photograph,
-  which is the whole point: the numbers are only worth anything against a
-  picture of the actual plant.
+  Four panes. The left is the catalogue with triage filters. The centre is the
+  REAL viewer (scene3d.html in an iframe, fed through window.permaSetScene), so
+  what you tune is what the app draws — never a preview of a preview. Then the
+  characters. Then the PHOTOGRAPHS, in named slots, which is where most of the
+  answers actually are: petal count, symmetry, petal shape, architecture, disc
+  colour and branching are all readable off a good picture, and flowering stems
+  and bloom height come off a habit shot. Only diameter in cm genuinely needs a
+  ruler or a flora — which is what the "look it up" links are for.
 
   A DEV tool, not an app panel. The seed catalogue is the project's, not the
   end user's.
@@ -19,49 +23,86 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Flower tuning bench — Site &amp; Pattern</title>
+<title>Catalogue bench — Site &amp; Pattern</title>
 <style>
   :root { --bg:#151a15; --panel:#1e261e; --line:#33422f; --ink:#e8f0e2;
-          --dim:#9fb198; --accent:#8fce7a; }
+          --dim:#9fb198; --accent:#8fce7a; --warn:#c9a24a; }
   * { box-sizing: border-box; }
   html, body { margin:0; height:100%; background:var(--bg); color:var(--ink);
                font-family: system-ui, sans-serif; font-size:13px; }
-  #wrap { display:grid; grid-template-columns: 240px 1fr 320px 300px; height:100%; }
+  #wrap { display:grid; grid-template-columns: 250px 1fr 310px 300px; height:100%; }
   .pane { min-width:0; height:100%; overflow:auto; border-right:1px solid var(--line); }
   #list { background:var(--panel); padding:8px; }
-  #list input { width:100%; padding:6px 8px; margin-bottom:8px; background:#0e130e;
+  #list input[type=text] { width:100%; padding:6px 8px; background:#0e130e;
                 border:1px solid var(--line); color:var(--ink); border-radius:6px; }
+  #filters { display:flex; flex-wrap:wrap; gap:4px; margin:8px 0 6px; }
+  #filters button { flex:1 1 auto; padding:4px 6px; font-size:11px; cursor:pointer;
+    background:#0e130e; border:1px solid var(--line); color:var(--dim); border-radius:5px; }
+  #filters button.on { background:#33472c; color:var(--ink); border-color:#56763f; }
+  #count { color:var(--dim); font-size:11.5px; margin-bottom:6px; }
   .row { padding:5px 8px; border-radius:5px; cursor:pointer; line-height:1.3; }
   .row:hover { background:#26311f; }
   .row.on { background:#33472c; }
   .row .sci { color:var(--dim); font-style:italic; font-size:11.5px; }
-  .row.done .sci::after { content:' ✓'; color:var(--accent); font-style:normal; }
+  .badge { float:right; font-size:10px; font-style:normal; letter-spacing:.03em; }
+  .b-estimated { color:var(--warn); } .b-photo,.b-flora,.b-measured { color:var(--accent); }
+  .nophoto { color:#8a6a5a; }
   #viewer { border:0; width:100%; height:100%; }
-  #controls { background:var(--panel); padding:12px; }
-  #photo { background:#0e130e; padding:12px; border-right:0; }
-  #photo img { width:100%; border-radius:8px; display:block; }
+  #controls, #photos { background:var(--panel); padding:12px; }
+  #photos { background:#0e130e; border-right:0; }
   h2 { margin:0 0 2px; font-size:15px; }
+  h3 { margin:16px 0 4px; font-size:12px; color:var(--dim); text-transform:uppercase;
+       letter-spacing:.05em; font-weight:600; }
   .sub { color:var(--dim); margin-bottom:10px; font-style:italic; }
   label { display:block; margin:9px 0 2px; color:var(--dim); font-size:11.5px;
           text-transform:uppercase; letter-spacing:.04em; }
-  select, input[type=number], input[type=color], input[type=text] {
+  select, input[type=color], input[type=text].f {
     width:100%; padding:5px 7px; background:#0e130e; border:1px solid var(--line);
     color:var(--ink); border-radius:5px; }
   input[type=range] { width:100%; }
   .val { float:right; color:var(--accent); text-transform:none; letter-spacing:0; }
-  .btn { margin-top:14px; width:100%; padding:8px; background:#3d5c34;
+  .btn { margin-top:12px; width:100%; padding:8px; background:#3d5c34;
          border:1px solid #56763f; color:var(--ink); border-radius:6px;
          cursor:pointer; font-size:13px; }
   .btn:hover { background:#4a6d3f; }
-  .hint { color:var(--dim); line-height:1.5; margin-top:12px; font-size:11.5px; }
-  #status { color:var(--accent); min-height:16px; margin-top:6px; }
-  .miss { color:#c9a24a; }
+  .btn.thin { padding:5px; font-size:11.5px; margin-top:6px; background:#26311f;
+              border-color:var(--line); }
+  .hint { color:var(--dim); line-height:1.5; margin-top:10px; font-size:11.5px; }
+  #status { color:var(--accent); min-height:16px; margin-top:6px; font-size:12px; }
+  .miss { color:var(--warn); }
+  .slot { margin-bottom:12px; }
+  .slot .head { display:flex; justify-content:space-between; align-items:baseline; }
+  .slot .name { font-weight:600; font-size:12px; }
+  .slot .why { color:var(--dim); font-size:11px; }
+  .slot .frame { margin-top:4px; border:1px dashed var(--line); border-radius:6px;
+                 min-height:52px; display:flex; align-items:center; justify-content:center;
+                 color:#6b7d66; font-size:11px; position:relative; }
+  .slot img { width:100%; border-radius:6px; display:block; }
+  .slot .del { position:absolute; top:4px; right:4px; background:rgba(20,26,20,.85);
+    border:1px solid var(--line); color:var(--ink); border-radius:4px; cursor:pointer;
+    font-size:10px; padding:1px 5px; }
+  .slot .frame.has { border-style:solid; }
+  .links a { display:block; color:var(--accent); text-decoration:none; margin:3px 0; }
+  .links a:hover { text-decoration:underline; }
+  .links .why { color:var(--dim); font-size:10.5px; display:block; }
 </style>
 </head>
 <body>
 <div id="wrap">
-  <div class="pane" id="list"><input id="q" placeholder="Search…" autofocus></div>
+  <div class="pane" id="list">
+    <input type="text" id="q" placeholder="Search…" autofocus>
+    <div id="filters">
+      <button data-f="all" class="on">all</button>
+      <button data-f="estimated">estimated</button>
+      <button data-f="nophoto">no photo</button>
+      <button data-f="nohabit">no habit</button>
+      <button data-f="done">verified</button>
+    </div>
+    <div id="count"></div>
+  </div>
+
   <div class="pane" style="overflow:hidden"><iframe id="viewer" src="scene3d.html"></iframe></div>
+
   <div class="pane" id="controls">
     <h2 id="name">…</h2>
     <div class="sub" id="sci"></div>
@@ -114,19 +155,41 @@
       <option value="">—</option><option value="0">no</option><option value="1">yes</option>
     </select>
 
-    <button class="btn" id="save">Save to plants_master.json &nbsp;(S)</button>
+    <label>Where did these numbers come from?</label>
+    <select id="flower_data_source">
+      <option value="estimated">estimated — the seeder's genus default</option>
+      <option value="photo">photo — counted / judged off a picture</option>
+      <option value="flora">flora — read from a published description</option>
+      <option value="measured">measured — a ruler on the plant</option>
+    </select>
+
+    <button class="btn" id="save">Save &nbsp;(S)</button>
     <div id="status"></div>
+
+    <button class="btn thin" id="rule">Show a 10 cm scale rule &nbsp;(R)</button>
+    <button class="btn thin" id="copy">Copy characters from another species…</button>
+
     <div class="hint">
-      ← / → pages species. The render is the real viewer at year 6, July.
-      The four floras skip — and the four this most needs — are
-      <em>flower diameter</em>, <em>petals</em>, <em>flowering stems</em> and
-      <em>height above the foliage</em>. A tape measure and a plant in bloom
-      beat any amount of reading.
+      <code>←</code> / <code>→</code> pages species, <code>S</code> saves.
+      The render is the real viewer at year 6, in July.
+      <br><br>
+      Most of these are readable straight off a photograph — petal count,
+      symmetry, shape, architecture, disc colour, branching. Only
+      <em>diameter in cm</em> really needs a ruler or a flora.
     </div>
   </div>
-  <div class="pane" id="photo">
-    <div class="sub" id="cap">no reference photo for this species</div>
-    <img id="img" alt="" style="display:none">
+
+  <div class="pane" id="photos">
+    <h3 style="margin-top:0">Photographs</h3>
+    <div id="slots"></div>
+    <input type="file" id="pick" accept="image/jpeg,image/png" style="display:none">
+    <div class="hint">
+      Every import is downscaled and has its <strong>EXIF stripped</strong> — a
+      photo of your own yard carries your home's GPS coordinates, and these get
+      committed.
+    </div>
+    <h3>Look it up</h3>
+    <div class="links" id="links"></div>
     <div class="hint" id="notes"></div>
   </div>
 </div>
@@ -134,61 +197,103 @@
 <script>
 const FIELDS = ['flower_arch','flower_symmetry','petal_shape','petal_count',
   'florets_per_head','flower_diameter_cm','flower_center_color',
-  'flower_height_frac','stem_branching','basal_rosette','flowering_stems'];
+  'flower_height_frac','stem_branching','basal_rosette','flowering_stems',
+  'flower_data_source'];
 const RANGES = ['petal_count','florets_per_head','flower_diameter_cm',
                 'flower_height_frac','flowering_stems'];
-let SPECIES = [], shown = [], idx = 0, dirty = false;
+// What each slot is FOR — mirrored from src/db/photos.py SLOT_PURPOSE.
+const SLOTS = [
+  ['habit',     'the whole plant, with something for scale'],
+  ['flower',    'the bloom, close'],
+  ['leaf',      'foliage and how the leaves sit'],
+  ['fruit',     'fruit or seed head'],
+  ['bark_stem', 'bark, cane colour, stem'],
+  ['winter',    'the plant in January'],
+  ['seedling',  'first true leaves — what NOT to weed in May'],
+];
+
+let SPECIES = [], shown = [], idx = 0, dirty = false, filter = 'all', ruleOn = false;
+let pickSlot = null;
 
 const $ = (id) => document.getElementById(id);
 const status = (m, cls) => { $('status').textContent = m;
                              $('status').className = cls || ''; };
-
 function vwin() { const f = $('viewer'); return f && f.contentWindow; }
+function cur() { return shown[idx]; }
 
 async function boot() {
   SPECIES = await (await fetch('/api/species')).json();
   $('q').addEventListener('input', render);
+  for (const b of document.querySelectorAll('#filters button'))
+    b.onclick = () => {
+      filter = b.dataset.f;
+      for (const o of document.querySelectorAll('#filters button'))
+        o.classList.toggle('on', o === b);
+      render(); select(0);
+    };
   render();
   select(0);
 }
 
+function hasPhoto(s, slot) {
+  const p = s.photos || {};
+  return slot ? (p[slot] || []).length > 0
+              : SLOTS.some(([k]) => (p[k] || []).length > 0);
+}
+
+function passes(s) {
+  if (filter === 'estimated') return (s.flower_data_source || 'estimated') === 'estimated';
+  if (filter === 'nophoto') return !hasPhoto(s);
+  if (filter === 'nohabit') return !hasPhoto(s, 'habit');
+  if (filter === 'done') return ['photo','flora','measured'].includes(s.flower_data_source);
+  return true;
+}
+
 function render() {
   const q = ($('q').value || '').toLowerCase();
-  shown = SPECIES.filter(s => !q
+  shown = SPECIES.filter(s => passes(s) && (!q
     || s.common_name.toLowerCase().includes(q)
-    || s.scientific_name.toLowerCase().includes(q));
+    || s.scientific_name.toLowerCase().includes(q)));
+  const verified = SPECIES.filter(s =>
+    ['photo','flora','measured'].includes(s.flower_data_source)).length;
+  const withPhoto = SPECIES.filter(s => hasPhoto(s)).length;
+  const habit = SPECIES.filter(s => hasPhoto(s, 'habit')).length;
+  $('count').textContent =
+    `${shown.length} shown · ${verified}/${SPECIES.length} verified · `
+    + `${withPhoto} with a photo · ${habit} with a habit shot`;
   const list = $('list');
   [...list.querySelectorAll('.row')].forEach(n => n.remove());
   shown.forEach((s, i) => {
+    const src = s.flower_data_source || 'estimated';
     const d = document.createElement('div');
-    d.className = 'row' + (s.flower_arch ? ' done' : '') + (i === idx ? ' on' : '');
-    d.innerHTML = '<div>' + s.common_name + '</div><div class="sci">'
-      + s.scientific_name + '</div>';
+    d.className = 'row' + (i === idx ? ' on' : '');
+    d.innerHTML = '<div>' + s.common_name
+      + '<span class="badge b-' + src + '">' + src[0].toUpperCase() + '</span></div>'
+      + '<div class="sci' + (hasPhoto(s) ? '' : ' nophoto') + '">'
+      + s.scientific_name + (hasPhoto(s) ? '' : ' · no photo') + '</div>';
     d.onclick = () => select(i);
     list.appendChild(d);
   });
 }
 
 function select(i) {
-  if (!shown.length) return;
+  if (!shown.length) { $('name').textContent = 'nothing matches'; return; }
   idx = Math.max(0, Math.min(shown.length - 1, i));
-  const s = shown[idx];
+  const s = cur();
   $('name').textContent = s.common_name;
   $('sci').textContent = s.scientific_name + ' · ' + s.plant_type
     + (s.height_m ? ' · ' + s.height_m + ' m' : '');
   for (const f of FIELDS) {
     const el = $(f);
     if (f === 'flower_center_color') el.value = s[f] || '#e8c552';
+    else if (f === 'flower_data_source') el.value = s[f] || 'estimated';
     else el.value = s[f] == null ? '' : s[f];
   }
   RANGES.forEach(showVal);
-  $('cap').textContent = s.image_attribution || (s.image_url ? '' :
-    'no reference photo for this species — this is where F70–F72 pay off');
-  $('cap').className = 'sub' + (s.image_url ? '' : ' miss');
-  $('img').style.display = s.image_url ? 'block' : 'none';
-  if (s.image_url) $('img').src = s.image_url;
+  drawSlots(s);
+  drawLinks(s);
   $('notes').textContent = s.notes || '';
-  dirty = false;
+  dirty = false; status('');
   render();
   pushScene(s.scientific_name);
 }
@@ -198,16 +303,85 @@ function showVal(f) {
   if (el) el.textContent = $(f).value === '' ? '—' : $(f).value;
 }
 
+function drawSlots(s) {
+  const host = $('slots');
+  host.textContent = '';
+  for (const [slot, why] of SLOTS) {
+    const shots = (s.photos || {})[slot] || [];
+    const box = document.createElement('div');
+    box.className = 'slot';
+    box.innerHTML = '<div class="head"><span class="name">' + slot
+      + '</span><span class="why">' + why + '</span></div>';
+    const frame = document.createElement('div');
+    frame.className = 'frame' + (shots.length ? ' has' : '');
+    if (shots.length) {
+      const url = shots[0].url.startsWith('data/photos/')
+        ? '/photos/' + shots[0].url.slice('data/photos/'.length) : shots[0].url;
+      frame.innerHTML = '<img src="' + url + '" alt="">';
+      const del = document.createElement('button');
+      del.className = 'del'; del.textContent = '×';
+      del.title = 'remove this photo';
+      del.onclick = (e) => { e.stopPropagation(); removePhoto(shots[0]._i); };
+      frame.appendChild(del);
+    } else {
+      frame.textContent = 'add a photo…';
+    }
+    frame.onclick = () => { pickSlot = slot; $('pick').click(); };
+    box.appendChild(frame);
+    host.appendChild(box);
+  }
+}
+
+function drawLinks(s) {
+  const host = $('links');
+  host.textContent = '';
+  for (const l of s.links || []) {
+    const a = document.createElement('a');
+    a.href = l.url; a.target = '_blank'; a.rel = 'noopener';
+    a.innerHTML = l.name + '<span class="why">' + l.why + '</span>';
+    host.appendChild(a);
+  }
+}
+
+$('pick').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file || !pickSlot) return;
+  status('importing ' + file.name + '…');
+  const r = await fetch('/api/photo/' + encodeURIComponent(cur().scientific_name)
+                        + '/' + encodeURIComponent(pickSlot),
+    { method: 'POST', body: file });
+  const out = await r.json();
+  e.target.value = '';
+  if (out.error) { status(out.error, 'miss'); return; }
+  cur().photos = out.photos;
+  const master = SPECIES.find(x => x.scientific_name === cur().scientific_name);
+  if (master) master.photos = out.photos;
+  drawSlots(cur()); render();
+  status(out.filename + ' · ' + Math.round(out.bytes / 1024) + ' KB'
+         + (out.stripped ? ' · metadata stripped' : ''));
+  if (out.note) status(out.note, 'miss');
+};
+
+async function removePhoto(i) {
+  const r = await fetch('/api/photo-delete/' + i, { method: 'POST' });
+  const out = await r.json();
+  if (out.error) { status(out.error, 'miss'); return; }
+  // Indices shift under a delete, so re-read the whole list rather than patch it.
+  SPECIES = await (await fetch('/api/species')).json();
+  const at = SPECIES.findIndex(x => x.scientific_name === cur().scientific_name);
+  render();
+  if (at >= 0) select(shown.findIndex(x => x.scientific_name === SPECIES[at].scientific_name));
+  status('removed');
+}
+
 // Push the field values into the scene record before rendering, so a slider
 // moves the flower without a round-trip to disk. The scene itself comes from
-// the server (the real build_scene), so everything else about the plant is
-// exactly what the app would draw.
+// the server (the real build_scene), so everything else is what the app draws.
 let sceneCache = null;
 async function pushScene(sci) {
   const w = vwin();
   if (!w || !w.permaSetScene) { setTimeout(() => pushScene(sci), 150); return; }
-  const sc = await (await fetch('/api/scene/' + encodeURIComponent(sci))).json();
-  sceneCache = sc;
+  sceneCache = await (await fetch('/api/scene/' + encodeURIComponent(sci))).json();
   repaint();
 }
 
@@ -222,6 +396,7 @@ function repaint() {
     }
   }
   w.permaSetScene(sceneCache);
+  if (ruleOn && w.permaSetScaleRule) w.permaSetScaleRule(true);
 }
 
 for (const f of FIELDS) {
@@ -233,7 +408,8 @@ for (const f of FIELDS) {
 
 $('save').onclick = save;
 async function save() {
-  const s = shown[idx];
+  const s = cur();
+  if (!s) return;
   const patch = {};
   for (const f of FIELDS) {
     const raw = $(f).value;
@@ -246,17 +422,48 @@ async function save() {
   const master = SPECIES.find(x => x.scientific_name === s.scientific_name);
   if (master) Object.assign(master, patch);
   dirty = false;
-  status(out.saved ? 'saved ' + Object.keys(out.changed).join(', ')
-                   : 'no change', '');
+  status(out.saved ? 'saved ' + Object.keys(out.changed).join(', ') : 'no change');
   render();
 }
 
+$('rule').onclick = () => {
+  ruleOn = !ruleOn;
+  const w = vwin();
+  if (w && w.permaSetScaleRule) w.permaSetScaleRule(ruleOn);
+  $('rule').textContent = (ruleOn ? 'Hide' : 'Show') + ' a 10 cm scale rule  (R)';
+};
+
+// Congeners share most of these characters — nine goldenrods should not each be
+// tuned from scratch. Copies the characters only, never the photographs, and
+// leaves provenance alone: a copied number is still only as good as its source.
+$('copy').onclick = () => {
+  const from = prompt('Copy the flower characters from which species?\n'
+                      + '(scientific or common name)');
+  if (!from) return;
+  const q = from.trim().toLowerCase();
+  const src = SPECIES.find(s => s.scientific_name.toLowerCase() === q
+                             || s.common_name.toLowerCase() === q)
+           || SPECIES.find(s => s.scientific_name.toLowerCase().startsWith(q));
+  if (!src) { status('no species matches "' + from + '"', 'miss'); return; }
+  for (const f of FIELDS) {
+    if (f === 'flower_data_source') continue;
+    const el = $(f);
+    if (f === 'flower_center_color') el.value = src[f] || '#e8c552';
+    else el.value = src[f] == null ? '' : src[f];
+  }
+  RANGES.forEach(showVal);
+  dirty = true; repaint();
+  status('copied from ' + src.common_name + ' — check it, then press S', 'miss');
+};
+
 document.addEventListener('keydown', (e) => {
-  if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)
-      && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)
+                 && document.activeElement.type === 'text';
+  if (typing) return;
   if (e.key === 'ArrowRight') { select(idx + 1); e.preventDefault(); }
   else if (e.key === 'ArrowLeft') { select(idx - 1); e.preventDefault(); }
   else if (e.key === 's' || e.key === 'S') { save(); e.preventDefault(); }
+  else if (e.key === 'r' || e.key === 'R') { $('rule').click(); e.preventDefault(); }
 });
 
 window.addEventListener('beforeunload', (e) => {

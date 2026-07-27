@@ -2255,7 +2255,7 @@ def _apply_goal_feedback(project, goals, query_plants,
     Warnings live under ``properties.generation_warnings`` (a plain list on the
     project dict — no schema concept) for the GUI/CLI to surface. The key is
     only written when there is something to say. Deeper repair (e.g. filling
-    bloom gaps) waits on the data described in ``docs/data_gaps_v1.44.md``."""
+    bloom gaps) waits on the data described in ``docs/DATA_GAPS.md``."""
     from src.design_goals import (
         filters_for_goals, unbacked_goals, get_goal, caveats_for_goals,
     )

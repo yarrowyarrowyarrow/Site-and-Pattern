@@ -64,9 +64,10 @@ One row per species. Key columns (full list in the DDL):
 | `flower_diameter_cm` | ONE floret across (v53). The most valuable number the catalogue was missing: bloom size used to be derived from *canopy*, so a pasqueflower and a sunflower scaled with the plant rather than with the flower |
 | `flower_center_color` | The disc/eye (v53). A black-eyed Susan **is** its dark disc; it was a yellow blob |
 | `flower_height_frac` | How far the bloom is held above the foliage, as a fraction of height (v53) |
-| `stem_branching` | unbranched \| branched_above \| branched_throughout (v53). **Read since V2.35**: the stem is a forked skeleton, and a goldenrod's silhouette IS its two orders of branching. Only the `erect` and `clump` growth forms have a stem to fork |
+| `stem_branching` | unbranched \| branched_above \| branched_throughout (v53). **Read since V2.34**: the stem is a forked skeleton, and a goldenrod's silhouette IS its two orders of branching. Only the `erect` and `clump` growth forms have a stem to fork |
 | `basal_rosette` | 0/1 (v53) |
 | `flowering_stems` | How many inflorescences a MATURE plant carries (v54). Bloom display used to be sized off the plant's *canopy*, which is a proxy for spread and not for flowering: a pasqueflower holds three and a mature bergamot twenty-eight. **No flora records this** — the seeded values follow from the branching habit and are meant to be corrected in the field with `scripts/tune_morphology.py`. Empty falls back to a count derived from `stem_branching` |
+| `flower_data_source` | measured \| flora \| photo \| estimated (v55). **Where each flower number came from.** The seeder's values are genus-level botanical judgement, which is a reasonable start and is not a measurement; reporting "307 described" as though it meant 307 verified is what P9 forbids. Raised by `scripts/tune_morphology.py` as species are actually checked |
 
 Morphology is authored in two companion scripts, each documenting its fields
 and where the values come from:
@@ -111,6 +112,33 @@ tagged by `relationship` (`larval_host, nectar, pollen, seed_food,
 fruit_food, nesting, cover`) and `specificity` (`specialist`/`generalist`).
 Powers the wildlife column in the plant browser and the
 lepidoptera-supported count in the habitat score.
+
+### `plant_photos` (schema v55, F70)
+Many photographs per species, each in a **named slot** — `habit`, `flower`,
+`leaf`, `fruit`, `bark_stem`, `winter`, `seedling`. `plants.image_url` was one
+slot, and that single fact is most of what was wrong with the app's photography:
+`scripts/fetch_inaturalist_images.py` takes the first photo with a
+redistributable licence, and on iNaturalist that is nearly always a flower
+macro — the frame that identifies a plant to a botanist, and the least useful
+one for deciding whether you want it in your yard.
+
+Two things it is careful about:
+
+- **Keyed by `scientific_name`, never `plant_id`.** Ids are not stable across a
+  reseed, so an id-keyed photo table would silently re-point photos at the wrong
+  species on some future schema bump.
+- **`origin` decides what a reseed destroys** — the `polycultures` v46 pattern.
+  `'seed'` rows are wiped and re-seeded; `'user'` rows never are. That single
+  distinction is the whole of F72: the obvious place for a person's own
+  photograph is `plants.image_url`, and it is a trap.
+
+`plants.image_url` / `image_attribution` / `image_license` are **synthesized on
+read** from the best available slot (`src/db/plants.py:_attach_photos`), the same
+way `permaculture_uses` has been synthesized from `plant_uses` since v37 — so
+every existing consumer keeps working and gains better photographs for free. A
+person's own photo beats a shipped one in the same slot. Query API:
+`src/db/photos.py`. Coverage is reported by
+`src/data_quality.py:validate_photo_coverage`.
 
 ### `relationship_edges` — a VIEW, not a table (schema v51, F7)
 The unified edges layer. One `UNION ALL` over `plant_fauna` (kind = the

@@ -1,8 +1,18 @@
-# Site & Pattern — Feature Roadmap
+# Site & Pattern — Feature ledger
 
-A prioritized list of features for the Alberta-focused **Native Habitat Designer** — turning lawns into native plant habitat. Organized by effort/impact tiers, with the active sprint at the top.
+The effort/impact ledger: what has been built, tier by tier. It is the
+**historical** view — a record of what shipped and roughly what it cost.
 
-> For the *philosophy-driven* feature exploration (organized by design principle, complementary to this ledger), see [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) and the design philosophy it derives from, [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md).
+> **Looking for what is being worked on now?** That is
+> [`ROADMAP_NEXT.md`](ROADMAP_NEXT.md), which carries the live plan (F63–F82 and
+> beyond). For the philosophy-driven lens over both — features organized by the
+> principle they serve — see [`PHILOSOPHY_ROADMAP.md`](PHILOSOPHY_ROADMAP.md)
+> and the founding text it derives from,
+> [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md).
+
+The "Current Sprint" table below is from the V1.x reframe and is kept as the
+record of that pivot; everything in it is long done. It is not the current
+sprint and has not been since V1.5.
 
 ---
 

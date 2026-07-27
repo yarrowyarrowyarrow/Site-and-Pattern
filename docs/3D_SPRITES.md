@@ -140,10 +140,12 @@ Deep-link a single sprite with `?sprite=KEY`, e.g.
 python scripts/tune_morphology.py          # → http://127.0.0.1:8756
 ```
 
-The gallery shows you what is wrong; this is where you fix it. The real viewer
-on the left rendering the species at year 6 in July, its reference photograph on
-the right, eight sliders between them, `←`/`→` to page the catalogue and `S` to
-write straight to `data/plants_master.json`.
+The gallery shows you what is wrong; this is where you fix it. Four panes: the
+catalogue with triage filters, the **real viewer** rendering the species at year
+6 in July, the characters, and the photographs. `←`/`→` pages the catalogue,
+`S` saves straight to `data/plants_master.json`, and `R` drops a **10 cm scale
+rule** into the render so "is that bloom really 7 cm?" is answerable by eye
+instead of by faith.
 
 It exists because the preview's remaining fidelity gap is **not a code gap**: it
 is roughly ten characters × 434 species, and for most of them no single flora

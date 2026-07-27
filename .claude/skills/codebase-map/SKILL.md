@@ -195,17 +195,19 @@ scripts), `.github/workflows/release-macos.yml` and
 |---|---|
 | `docs/DESIGN_PHILOSOPHY.md` | The twelve principles + "where this lives in the code" + honest State markers. Read before designing features. |
 | `docs/PHILOSOPHY_ROADMAP.md` | Features F1–F53 ranked by principle/impact; "Shipped" section is the historical record — keep it honest. |
-| `docs/ROADMAP.md` | The effort/impact feature ledger (complementary to the philosophy roadmap). |
+| `docs/README.md` | **Index of every document here and what it is for — start with this one.** |
+| `docs/ROADMAP_NEXT.md` | The LIVE plan (F63–F82 and beyond), grouped by theme. |
+| `docs/ROADMAP.md` | The effort/impact feature ledger — historical, not live. |
 | `docs/REFERENCES.md` | Full bibliography behind the philosophy. Directional only — see the P12 hard rule in `CLAUDE.md`. |
 | `docs/AGENT_API.md` | Scripting/CLI/MCP reference (lags the code slightly — the contract test is the truth). |
 | `docs/PROJECT_FILE_FORMAT.md` | The `*.perma.geojson` format, feature `element_type`s, schema history. |
 | `docs/DATABASE_SCHEMA.md` | SQLite catalogue schema narrative. |
 | `docs/BUILD.md` | Run locally + build the 1-click installers. |
 | `docs/USER_GUIDE.md` | 5-minute tour of the controls. |
-| `docs/3D_SPRITES.md` | Catalogue of 3D plant sprites/geometry archetypes. |
+| `docs/3D_SPRITES.md` | Catalogue of procedural 3D plant sprites/archetypes, the live gallery, and the flower-tuning bench. |
+| `docs/SPRITE_AUDIT.md` | How good the sprites really are — fidelity and distinctness, scored, four passes deep. |
 | `docs/review.md` | Priorities/history primer for deep-dive code reviews. |
-| `docs/data_gaps_v1.44.md` | Known seed-data gaps for the Generate Design goals. |
-| `docs/archive/` | Historical brainstorms/handoffs — context only. |
+| `docs/DATA_GAPS.md` | Known seed-data gaps — the Generate Design goals, and the photo/provenance gaps (F70). |
 
 ## Data, scripts, tests
 

@@ -165,7 +165,19 @@ CREATE TABLE IF NOT EXISTS plants (
     -- meant to be corrected with scripts/tune_morphology.py. Empty falls back
     -- to a count derived from stem_branching + stature, which is at least a
     -- structural consequence rather than a guess.
-    flowering_stems INTEGER
+    flowering_stems INTEGER,
+    -- WHERE each flower number came from (schema v55, V2.35). The catalogue
+    -- describes 307 of 311 flowering species and has VERIFIED almost none of
+    -- them: the seeder's values are genus-level botanical judgement, which is a
+    -- reasonable starting point and is not the same thing as a measurement.
+    -- Reporting those two as one number is exactly what P9 forbids, so the
+    -- distinction is recorded rather than assumed.
+    --   measured  — someone put a ruler on the plant
+    --   flora     — read from a published description (FNA, Budd's, …)
+    --   photo     — counted or judged off a photograph
+    --   estimated — the family-first seeder's default
+    -- Set in scripts/tune_morphology.py as the catalogue is worked through.
+    flower_data_source TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS companion_friends (
@@ -485,6 +497,57 @@ CREATE VIEW relationship_edges AS
       JOIN polyculture_members m2
         ON m2.polyculture_id = m1.polyculture_id
        AND m2.plant_id > m1.plant_id;
+
+-- ── Photo sets (schema v55, V2.35 — F70) ────────────────────────────────────
+--
+-- `plants.image_url` is ONE slot, and that single fact is most of what is wrong
+-- with the app's photography. iNaturalist's leading photo is nearly always a
+-- macro of a flower — the frame that identifies a plant to a botanist and the
+-- least useful one for deciding whether you want it in your yard, or for finding
+-- it there in May. With one column, improving the photo means LOSING the other.
+-- 111 of 434 plants have no photo at all, and there was no path for the user's
+-- own.
+--
+-- So: many photos per species, each in a NAMED SLOT, and `image_url` is
+-- synthesized on read from the best available one (src/db/plants.py
+-- _attach_photos) — exactly the way `permaculture_uses` has been synthesized
+-- from the plant_uses junction since v37. Every existing consumer (the plant
+-- browser, the 3D dossier, the bee/lep panels, photo_warm) keeps working and
+-- gains better photos without a line of change.
+--
+-- KEYED BY NAME, NOT BY plant_id. Plant ids are not stable across a reseed
+-- (AUTOINCREMENT, never reset) — a photo table keyed by id would silently
+-- re-point photos at the wrong species on some future schema bump and nobody
+-- would notice for months. The worked example (F44) and the reference
+-- communities (F50) are authored as names for the same reason.
+-- >>> plant_photos  (lifted verbatim by src/db/plants.py:_photo_ddl so the
+-- v55 migration can create the table on a DB that predates it. Keep the
+-- markers.)
+CREATE TABLE IF NOT EXISTS plant_photos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    scientific_name TEXT NOT NULL,
+    slot TEXT NOT NULL,             -- habit|flower|leaf|fruit|bark_stem|winter|seedling
+    url TEXT NOT NULL,              -- http(s) URL, or a path to a local file
+    attribution TEXT DEFAULT '',    -- photographer + licence credit, shown beside the photo
+    license TEXT DEFAULT '',        -- cc0 | cc-by | cc-by-sa | …
+    source TEXT DEFAULT '',         -- inaturalist | owner | user | wikimedia
+    -- Row provenance, the polycultures v46 pattern: 'seed' = shipped (wiped and
+    -- re-seeded on every schema bump); 'user' = the person's own photograph,
+    -- NEVER wiped. That one distinction is the whole of F72 — anything written
+    -- into the seed-backed columns is destroyed on the next reseed, which is the
+    -- trap this table exists to avoid.
+    origin TEXT NOT NULL DEFAULT 'seed',
+    -- When the photo was taken, ISO date, where it is known. Nothing reads it
+    -- yet; it is here so F73 ("in my yard, on this date") is a UI change rather
+    -- than another schema bump.
+    taken_on TEXT DEFAULT '',
+    rank INTEGER DEFAULT 0,         -- ordering within a slot; lowest wins
+    notes TEXT DEFAULT ''           -- P12: the botanical/visual record ONLY
+);
+
+CREATE INDEX IF NOT EXISTS idx_plant_photos_name ON plant_photos(scientific_name);
+CREATE INDEX IF NOT EXISTS idx_plant_photos_slot ON plant_photos(scientific_name, slot);
+-- <<< plant_photos
 
 CREATE INDEX IF NOT EXISTS idx_plants_type    ON plants(plant_type);
 CREATE INDEX IF NOT EXISTS idx_plants_zone    ON plants(hardiness_zone_min, hardiness_zone_max);

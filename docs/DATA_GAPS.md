@@ -1,22 +1,71 @@
-# Data gaps & roadmap — Generate Design goals (V1.44)
+# Data gaps — what the app cannot yet do because the data isn't there
 
-The V1.44 "Generate Design" feature lets users pick **design goals** (food
-producing, pet/kid friendly, flowers all season, year-round interest, …) and
-have a local LLM — or a deterministic offline fallback — assemble a starting
-design. Goals are wired through `src/design_goals.py` (the single registry the
-GUI, CLI, and generation engine all read).
+The ledger of **seed-data debt**: things the code is ready for and the catalogue
+is not. Kept version-free on purpose (it was `data_gaps_v1.44.md` until V2.35),
+because the debt outlives any one release.
 
-The initial feature shipped with **no schema or seed-data change**; **chunk 2
-(below) has since landed** the first data chunk (schema v18 — safety + spread).
-Goals are honoured **hybrid**-style: a hard `search_plants` filter where the
-data exists (now including a *denylist* for the safety goals), an LLM prompt
-hint where it doesn't, plus a post-generation check that warns when an unbacked
-goal could only be applied as guidance — or, for a denylist goal, surfaces an
-honest "not a guarantee" caveat.
+Two sections. The first is the original one — the **Generate Design goals**
+(V1.44) that are honoured as an LLM *hint* because no column exists to filter
+on. The second, added in V2.35, is the **photography and provenance** debt that
+the 3D fidelity work exposed.
 
-This document is the **roadmap for the data work** that turns the hint-only
-goals into real, filterable, verifiable design constraints — and folds in the
-additional field ideas raised alongside the feature request.
+---
+
+## Photographs and provenance (V2.35)
+
+**Photo coverage.** `src/data_quality.py:validate_photo_coverage` counts this on
+every run of the gate, so the numbers below are live rather than a snapshot:
+
+| | |
+|---|---|
+| Plants with no photograph at all | **111 of 434** |
+| Fauna with none | **84 of 142** — including **62 of 69 bees** |
+| Species with a `habit` shot (the whole plant, with scale) | **0** |
+
+The bee number has a specific and deliberate cause: bee photos are held to a
+stricter licence bar than everything else (CC0/CC-BY only, no ShareAlike — the
+F37 decision), and most iNaturalist bee photos are NonCommercial. That is why
+the V2.33 bee models exist. It is a policy gap, not an oversight.
+
+The `habit` zero is the F70 diagnosis made countable: `plants.image_url` was one
+slot, and `scripts/fetch_inaturalist_images.py` fills it with *the first photo
+whose licence is redistributable* — which on iNaturalist is nearly always a
+flower macro. Every photo the app has is the frame that identifies a plant to a
+botanist, and none is the frame that tells you whether you want it in your yard.
+
+**Fill it with:** `scripts/import_photos.py` (a folder of your own
+`Genus_species_slot.jpg`) or the photo strip in `scripts/tune_morphology.py`.
+
+**Flower-morphology provenance.** 307 of 311 flowering species carry a described
+flower (schema v53/v54) and **almost none of it has been verified**. The
+`flower_data_source` column records the difference:
+
+| value | meaning | count today |
+|---|---|---|
+| `estimated` | the family-first seeder's genus default | **307** |
+| `photo` | counted or judged off a photograph | 0 |
+| `flora` | read from a published description | 0 |
+| `measured` | a ruler on the plant | 0 |
+
+Quoting "99% described" as though it meant 99% verified is exactly what P9
+forbids, which is why the two are now separate numbers.
+
+**Where the real numbers are.** They exist, and they are not importable: Flora
+of North America gives ray counts and laminae lengths outright (vols 19–21 cover
+most prairie forbs) and is free to *read* but copyrighted, so a bulk scrape is
+out. Budd's *Flora of the Canadian Prairie Provinces* is the regional
+equivalent. TRY and BIEN are leaf/seed/height traits — floral morphology is
+sparse there and mostly not redistributable. A person reading a description and
+typing "13 rays" is recording a fact, and facts are nobody's property; that is
+the loop `tune_morphology.py`'s "look it up" links exist to make fast.
+
+**The four numbers no flora publishes**, and so the four that need a plant in
+front of you: flower diameter in cm, petals or rays on one floret, flowering
+stems on a mature plant, and how far the bloom sits above the foliage.
+
+---
+
+## Generate Design goals (V1.44)
 
 ## How goals are backed today
 

@@ -12,10 +12,11 @@ the next move can be chosen deliberately. Each entry states **Impact / Effort / 
 the principle(s) it serves, and a concrete **how I'd build it** (the actual functions and
 files it would lean on).
 
-**Relationship to the other backlogs.** [`archive/FEATURE_BRAINSTORM.md`](archive/FEATURE_BRAINSTORM.md)
-is the engineering backlog (what's shipped, effort-tiered); [`../ROADMAP.md`](../ROADMAP.md)
-is the feature ledger. This is the *philosophical* lens over both, and is meant to be
-amended alongside them. Feature IDs (F1, F2, …) are stable handles — say "let's do F5".
+**Relationship to the other backlogs.** [`ROADMAP.md`](ROADMAP.md) is the effort/impact
+feature ledger and [`ROADMAP_NEXT.md`](ROADMAP_NEXT.md) carries the live plan. This is
+the *philosophical* lens over both, and is meant to be amended alongside them.
+(The old `archive/FEATURE_BRAINSTORM.md` was retired in V2.35 — everything still live
+in it had already been absorbed here.) Feature IDs (F1, F2, …) are stable handles — say "let's do F5".
 
 **Rating legend.**
 - **Impact** — overall value (philosophical alignment × user value × conservation outcome):

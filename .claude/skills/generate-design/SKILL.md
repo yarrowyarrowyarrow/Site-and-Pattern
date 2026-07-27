@@ -248,7 +248,7 @@ registry — adding a `Goal` is one edit. List order = checkbox order.
 Add coverage in `tests/test_design_goals.py`. A goal whose filter has no
 data backing yet should ship `backed=False` with a `prompt_hint` (the
 honest state) rather than a filter that silently matches nothing —
-`docs/data_gaps_v1.44.md` tracks what data each unbacked goal awaits.
+`docs/DATA_GAPS.md` tracks what data each unbacked goal awaits.
 
 ## Pitfalls & gotchas (real ones)
 

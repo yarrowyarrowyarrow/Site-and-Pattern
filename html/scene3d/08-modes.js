@@ -329,3 +329,41 @@ renderer.setAnimationLoop((t) => {
   updatePrecip(t);                  // falling snow in winter (no-op otherwise)
   renderer.render(scene, camera);
 });
+
+// ── Scale rule (V2.35) ──────────────────────────────────────────────────────
+// A 10 cm / 1 m rule standing at the origin, for the flower-tuning bench.
+//
+// "Is that bloom really 7 cm across?" is the question the whole floral-morphology
+// pass turns on, and until now the only way to answer it was to believe the
+// number. A render with nothing of known size in it gives the eye no purchase:
+// every plant looks plausible next to every other plant, because they are all
+// scaled by the same wrong factor if the factor is wrong. One object of known
+// height fixes that, and it is why field botanists put a ruler in the photo.
+//
+// Alternating 10 cm bands to 1 m, planted at the design origin. Deliberately
+// NOT part of the scene contract — it is a measuring instrument, not something
+// the design contains, and it must never appear in a presentation still.
+let scaleRule = null;
+
+window.permaSetScaleRule = function (on) {
+  if (!scene) return;
+  if (scaleRule) { scene.remove(scaleRule); scaleRule = null; }
+  if (!on) return;
+  scaleRule = new THREE.Group();
+  const light = new THREE.MeshBasicMaterial({ color: 0xf4f4ec });
+  const dark = new THREE.MeshBasicMaterial({ color: 0x1d2a1d });
+  for (let i = 0; i < 10; i++) {
+    const band = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.012, 0.012, 0.1, 8), i % 2 ? dark : light);
+    band.position.set(0, 0.05 + i * 0.1, 0);
+    scaleRule.add(band);
+  }
+  // A 10 cm disc at the foot, so the horizontal scale reads too — a bloom's
+  // diameter is the number being judged, and a vertical rule alone answers
+  // only half of it.
+  const disc = new THREE.Mesh(new THREE.RingGeometry(0.049, 0.05, 32), light);
+  disc.rotation.x = -Math.PI / 2;
+  disc.position.y = 0.002;
+  scaleRule.add(disc);
+  scene.add(scaleRule);
+};

@@ -116,12 +116,26 @@ still abstract in the scene then loses.
 | **F79** | **Stylised is a style, not a thinning** — level 0 skips the baked models and the surface grain, flat-shades, and builds forbs as faceted masses. Levels renamed **Stylised / Balanced / Lifelike** | `html/scene3d/13-stylised.js`, `01b-surface.js:setStylised` |
 | **F80** | **The bloom is geometry** — a floret from petal count × shape × symmetry plus a separate disc, placed by one of nine inflorescence architectures, and **lit**. 307 of 311 flowering species described | `html/scene3d/15-florets.js`, ten columns at schema v53, `scripts/seed_flower_morphology.py` |
 
-**V2.35 — the two gaps V2.34 left (F81–F82).**
+**V2.34, second increment — the two gaps the first one left (F81–F82).**
 
 | ID | What landed | Where |
 |----|-------------|-------|
 | **F81** | **Forb stems fork.** `stem_branching` was recorded at v53 and read by nothing; a goldenrod's silhouette IS its two orders of branching and it was a pole. Only the two forms with a stem take the axis; 96 units → 112 | `assetlib/flora_herbs._branch_skeleton`, `conventions.BRANCH_CLASSES`, `html/scene3d/03-herbs.js:branchSpans` |
 | **F82** | **A bloom count from the plant, not the canopy** (schema v54). `flowering_stems`, falling back to the branching habit — one head per stem, or one per branch tip — instead of to spread | `flowering_stems`, `html/scene3d/15-florets.js` |
+
+**V2.35 — Theme B, the structural half (F70 + F71's tool + F72).**
+
+| ID | What landed | Where |
+|----|-------------|-------|
+| **F70** | **Photo sets with named slots.** `plant_photos`, keyed by `scientific_name` (ids are not stable across a reseed), seven slots, `image_url` synthesised on read so the plant browser, the 3D dossier and `photo_warm` all improve with no change at the call site. `data_quality` now counts COVERAGE, not just licence compliance — which is how "0 of 434 species have a habit shot" became a number instead of a feeling | `src/db/photos.py`, schema v55, `src/data_quality.py:validate_photo_coverage` |
+| **F71** *(tool half)* | The curation loop, folded into the tuning bench: seven slots per species with import and delete, triage filters, a verified counter, and per-species deep links to the sources that actually publish these numbers | `scripts/tune_morphology.py`, `html/tune_morphology.html` |
+| **F72** | **Your photographs, first-class.** Two destinations, one mechanism: shipped (`data/photos/` + `data/plant_photos.json`) or private (the user data dir, `origin='user'`, which the reseed never touches). Every import is downscaled and has its **EXIF stripped** — a photo of your own yard carries your home's coordinates | `src/photo_import.py`, `scripts/import_photos.py` |
+| — | **Provenance on every flower number** (`flower_data_source`). 307 species are *described*; none was *verified*, and those were being quoted as the same figure | schema v55, `scripts/seed_flower_morphology.py` |
+
+**Deferred, and why:** F73 (in my yard, on this date) — the `taken_on` column is
+in place so it becomes UI-only work; F74 (the seedling sheet) — cheap to
+assemble, but it would print "no seedling photo" for essentially every species
+until that slot has content.
 
 Theme A's remaining gaps — within-silhouette shrub aspect, fern density and
 billboard fruit — are listed at the end of the sprite audit rather than
@@ -135,8 +149,11 @@ re-opened here.
 
 | ID | Feature | Impact | Effort | Risk | Principle | Status |
 |----|---------|--------|--------|------|-----------|--------|
-| F81 | Forb stems fork — `stem_branching` finally read | **High** | M | Low | P5, P9 | ✅ V2.35 |
-| F82 | Bloom count from the plant, not the canopy | Med | S | Low — schema v54 | P9 | ✅ V2.35 |
+| F70 | Photo sets per species, with named slots | **High** | M | Med — schema v55 | P5, P9 | ✅ V2.35 |
+| F71 | Habit-first sourcing + a curation tool | **High** | M | Med | P5, P9 | ⛅ tool shipped V2.35 |
+| F72 | Your own photos, first-class and reseed-proof | **High** | M | Med | P11, P5 | ✅ V2.35 |
+| F81 | Forb stems fork — `stem_branching` finally read | **High** | M | Low | P5, P9 | ✅ V2.34 |
+| F82 | Bloom count from the plant, not the canopy | Med | S | Low — schema v54 | P9 | ✅ V2.34 |
 | F78 | Herb aspect axis — the gap F65 left | **High** | S | Low | P5, P9 | ✅ V2.34 |
 | F79 | Stylised / Balanced / Lifelike — level 0 as a style | **High** | S | Low | P5, P13 | ✅ V2.34 |
 | F80 | The bloom as geometry — florets + nine architectures | **High** | L | Med — schema v53 | P5, P13 | ✅ V2.34 |

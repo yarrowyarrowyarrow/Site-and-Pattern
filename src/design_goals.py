@@ -20,7 +20,7 @@ maps to three things, used by the hybrid generation path in
                          fallback can pull in a fitting community.
 
 ``backed=False`` marks a goal we can only *hint* this release because the
-supporting plant data does not exist yet (see ``docs/data_gaps_v1.44.md``).
+supporting plant data does not exist yet (see ``docs/DATA_GAPS.md``).
 When that data lands in a later chunk, flip ``backed`` to ``True`` and add the
 ``filters`` here — every caller (GUI, CLI, LLM path, fallback) picks it up at
 once, because this module is the single source of truth.

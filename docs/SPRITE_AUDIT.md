@@ -518,7 +518,7 @@ Middle: Lifelike — lupine racemes on their stems, yarrow corymbs as flat white
 plates, black-eyed Susans at their real 7 cm with a dark disc. Bottom: Stylised,
 which is not the middle one degraded but a different answer to the same scene.*
 
-**21 · Forb stems fork (V2.35).** `stem_branching` had been recorded on every
+**21 · Forb stems fork (V2.34).** `stem_branching` had been recorded on every
 described species since v53 and **nothing read it**: `flora_herbs.build_herb`
 stamped each stem as one `rot @ Vector((0,0,h))` segment. A goldenrod's
 silhouette *is* its two orders of branching, and drawn as a single pole it
@@ -564,6 +564,77 @@ and the tuning bench exists to correct them.**
   `flowering_stems` and `flower_height_frac` are seeded from genus-level
   botanical judgement, not measured. They are the four floras skip and the four
   the generator most needs — see below.
+
+## Fifth pass — V2.35 (the photographs, and admitting what is guessed)
+
+Two things, and the second is the more important one.
+
+**23 · Photo sets with named slots (F70, schema v55).** `plants.image_url` was
+ONE slot, and `scripts/fetch_inaturalist_images.py` fills it with *the first
+photo whose licence is redistributable* — which on iNaturalist is nearly always
+a macro of a flower. So every photograph the app had was the frame that
+identifies a plant to a botanist, and **not one was the frame that tells you
+whether you want it in your yard**, or helps you find it there in May. With one
+column, fixing that meant losing the other.
+
+Seven slots now (`habit · flower · leaf · fruit · bark_stem · winter ·
+seedling`), keyed by `scientific_name` because plant ids are not stable across a
+reseed, with `image_url` synthesized on read from the best available one — so
+the plant browser, the 3D dossier card and `photo_warm` all improve without a
+line of change at the call site. `src/data_quality.py` counts **coverage** now,
+not only licence compliance, which is how this became a number:
+
+| | |
+|---|---|
+| Plants with no photograph at all | **111 of 434** |
+| Species with a `habit` shot | **0** |
+| Fauna with none | 84 of 142, including **62 of 69 bees** |
+
+**24 · Your own photographs (F72), and they cannot be lost.** `origin='seed'`
+vs `'user'` — the `polycultures` v46 pattern — so a reseed replaces the shipped
+photos and never touches yours. Every import is downscaled to 1,600 px and
+**has its EXIF stripped**, which is a privacy property rather than a nicety: a
+photo of your own yard carries your home's GPS coordinates, and the natural next
+step for a photo you are pleased with is to commit it somewhere public.
+
+**25 · Provenance on every flower number.** This is the one that matters most
+for this document's honesty. V2.34 reported "307 of 311 flowering species
+described" — and 307 of those were the family-first seeder's **genus defaults**,
+not measurements. `flower_data_source` (`estimated` / `photo` / `flora` /
+`measured`) records the difference, and the count of *verified* species starts
+at zero. Quoting the first number as though it were the second is exactly what
+P9 forbids, and this audit was doing it.
+
+### Where the numbers actually are
+
+Worth writing down, because "go measure it" is not a plan for 434 species:
+
+- **Flora of North America** has them — ray counts, laminae lengths, head
+  diameters, outright, in the description. Vols 19–21 cover most prairie
+  Asteraceae. Free to read, copyrighted, so a bulk scrape is out; a person
+  reading it and typing "13 rays" is recording a **fact**, which is nobody's
+  property. The bench links straight to it per species.
+- **Budd's *Flora of the Canadian Prairie Provinces*** is the regional
+  equivalent.
+- **TRY** and **BIEN** are leaf/seed/height traits. Floral morphology is sparse
+  to absent, and mostly not redistributable.
+- **USDA PLANTS** is public domain and stops at bloom period and colour.
+
+And the thing that changes the arithmetic: **most of these characters are
+readable off a photograph.** Petal count, symmetry, petal shape, architecture,
+disc colour, basal rosette and branching all are; flowering stems and bloom
+height come off a habit shot. Only **diameter in cm** genuinely needs a ruler or
+a flora. Which is why the photo library is not a parallel project to the
+fidelity work — it is the input to it.
+
+### Still open after the fifth pass
+
+- **F73** (in my yard, on this date) — the `taken_on` column is in place, so it
+  is UI work now rather than another schema bump.
+- **F74** (the seedling sheet) — cheap to assemble, and it would print "no
+  seedling photo" for essentially every species until that slot has content.
+- **Shrub aspect within a silhouette**, **fern density**, **billboard fruit** —
+  unchanged.
 
 ### What would move fidelity fastest from here (not code)
 

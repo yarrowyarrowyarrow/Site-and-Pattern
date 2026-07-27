@@ -6,7 +6,7 @@ Site & Pattern is a desktop application for designing landscapes with native pla
 
 > **Status:** Site & Pattern is in active development. The current focus is on UI polish, the in-app polyculture builder, map interaction (drag-to-reposition, global undo), terrain/soil data integration, and packaging as a one-click Windows installer. See [Going Forward](#going-forward) for the live development plan.
 
-> **Why it's built this way:** [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md) lays out the design philosophy — twelve principles (relationships over components, time as a design variable, ecological value made legible, Indigenous knowledge honoured through relationship not extraction, …) mapped to where each one lives in the code. See also [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) and [`docs/REFERENCES.md`](docs/REFERENCES.md).
+> **Why it's built this way:** [`docs/DESIGN_PHILOSOPHY.md`](docs/DESIGN_PHILOSOPHY.md) lays out the design philosophy — thirteen principles (relationships over components, time as a design variable, ecological value made legible, Indigenous knowledge honoured through relationship not extraction, beauty as the mechanism the ecology survives by, …) mapped to where each one lives in the code. See also [`docs/PHILOSOPHY_ROADMAP.md`](docs/PHILOSOPHY_ROADMAP.md) and [`docs/REFERENCES.md`](docs/REFERENCES.md).
 
 ---
 
@@ -189,8 +189,8 @@ Site & Pattern was built as a personal tool by Marci while studying ecological d
 - [`INSTALL.md`](INSTALL.md) — Installation guide for all platforms (one-click installers + from source), plus updating and troubleshooting
 - [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — In-app feature reference
 - [`docs/BUILD.md`](docs/BUILD.md) — Building the installers (Windows `.exe`, macOS `.dmg`, Linux zip) and the release/packaging internals
-- [`docs/ROADMAP.md`](docs/ROADMAP.md) — Feature roadmap with shipped vs. planned items
-- [`docs/archive/SESSION_HANDOFF.md`](docs/archive/SESSION_HANDOFF.md) — Archived developer session notes
+- [`docs/README.md`](docs/README.md) — **What every document in `docs/` is for** — start here
+- [`docs/ROADMAP.md`](docs/ROADMAP.md) — The effort/impact feature ledger; [`docs/ROADMAP_NEXT.md`](docs/ROADMAP_NEXT.md) carries the live plan
 - [`docs/AGENT_API.md`](docs/AGENT_API.md) — Headless scripting API, CLI, and MCP tool reference for automation & AI agents
 - [`docs/PROJECT_FILE_FORMAT.md`](docs/PROJECT_FILE_FORMAT.md) — The `.perma.geojson` project file format
 - [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) — SQLite schema, seeding, and the version-bump checklist
