@@ -154,6 +154,24 @@ the leaves and how many flowering stems a mature plant carries are exactly the
 numbers floras skip — and they are the four the generator most needs. Someone
 who knows these plants can fix a wrong value faster than anyone can look it up.
 
+**The photo pane is where most of the answers are (V2.36).** Petal count,
+symmetry, petal shape, architecture, disc colour, rosette and branching are all
+readable off a good photograph, and flowering stems and bloom height come off a
+habit shot — only diameter in cm really needs a ruler or a flora. So the strip
+does three jobs:
+
+- **Sort what is already here.** The 323 photographs the catalogue ships appear
+  in an `unsorted` bucket rather than being assumed to be flower macros; one
+  click files each into its real slot, carrying its credit across verbatim. The
+  "sorted" and "habit" counters therefore start at zero and mean something.
+- **Find more.** An empty slot pulls the species' wider openly-licensed
+  iNaturalist set (~12 photos) so a whole-plant shot can be chosen by looking.
+- **Say where a number came from.** `flower_data_source` (what kind) and
+  `flower_data_citation` (which one) travel with the values. `--flora-fetch`
+  additionally offers to read the four numbers off one published description —
+  off by default, `robots.txt`-gated, one species per click; see
+  [`DATA_SOURCES.md`](DATA_SOURCES.md) for why it is shaped that way.
+
 `--report` prints every shipped value that differs from what the family-first
 seeder (`scripts/seed_flower_morphology.py`) would produce, so hand-tuned
 species can be folded back into its `SPECIES_OVERRIDE` and survive a re-seed.

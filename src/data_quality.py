@@ -542,6 +542,45 @@ def validate_all() -> tuple[list[str], list[str]]:
     e, w = validate_photo_coverage()
     errors.extend(e)
     warnings.extend(w)
+
+    e, w = validate_flower_provenance()
+    errors.extend(e)
+    warnings.extend(w)
+    return errors, warnings
+
+
+def validate_flower_provenance() -> tuple[list[str], list[str]]:
+    """A claimed source has to name itself (schema v56).
+
+    `flower_data_source` says a number was read in a flora or measured with a
+    ruler. That is a *stronger* claim than `estimated`, and an unnamed source is
+    not one — a species reading `flora` with a blank `flower_data_citation` says
+    "somebody looked this up" and gives nobody a way to check it, which is worse
+    than the honest `estimated` it replaced.
+
+    An ERROR rather than a warning, and the asymmetry is deliberate: a missing
+    photograph is work nobody has done yet, but an uncheckable citation is a
+    claim the catalogue is already making. It is also trivially fixable — the
+    bench fills the field in automatically on the `flora` path.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    claimed = {"flora", "measured", "photo"}
+    n_claimed = 0
+    for rec in _load_json_list(DATA_DIR / "plants_master.json"):
+        src = (rec.get("flower_data_source") or "").strip().lower()
+        if src not in claimed:
+            continue
+        n_claimed += 1
+        if not (rec.get("flower_data_citation") or "").strip():
+            name = rec.get("scientific_name") or rec.get("common_name") or "?"
+            errors.append(
+                f"flower provenance: {name}: source is {src!r} but no citation "
+                f"— name the flora, the photo or the date you measured it")
+    if not n_claimed:
+        warnings.append(
+            "flower provenance: no species has been verified yet — every "
+            "flower number is the seeder's genus default (see docs/DATA_GAPS.md)")
     return errors, warnings
 
 

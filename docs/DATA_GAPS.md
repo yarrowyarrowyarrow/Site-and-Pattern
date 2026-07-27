@@ -21,6 +21,7 @@ every run of the gate, so the numbers below are live rather than a snapshot:
 | Plants with no photograph at all | **111 of 434** |
 | Fauna with none | **84 of 142** — including **62 of 69 bees** |
 | Species with a `habit` shot (the whole plant, with scale) | **0** |
+| Photographs shipped but never *sorted* into a slot (V2.36) | **323** — the triage queue |
 
 The bee number has a specific and deliberate cause: bee photos are held to a
 stricter licence bar than everything else (CC0/CC-BY only, no ShareAlike — the
@@ -36,6 +37,16 @@ botanist, and none is the frame that tells you whether you want it in your yard.
 **Fill it with:** `scripts/import_photos.py` (a folder of your own
 `Genus_species_slot.jpg`) or the photo strip in `scripts/tune_morphology.py`.
 
+**Sort what is already here first (V2.36).** The 323 shipped photographs now
+appear in the bench in an `unsorted` bucket rather than being assumed to be
+flower macros, and one click files each into its real slot. The counter's
+"sorted" and "habit" figures therefore start at **zero and mean something**,
+which the old "323 with a photo" did not. Where a slot stays empty, *find
+candidates* pulls the species' wider openly-licensed iNaturalist set (usually
+~12 photos) so a habit shot can be chosen by looking rather than by going
+outside — the only realistic route off zero, since triage cannot turn a
+catalogue of flower macros into whole-plant photographs.
+
 **Flower-morphology provenance.** 307 of 311 flowering species carry a described
 flower (schema v53/v54) and **almost none of it has been verified**. The
 `flower_data_source` column records the difference:
@@ -49,6 +60,14 @@ flower (schema v53/v54) and **almost none of it has been verified**. The
 
 Quoting "99% described" as though it meant 99% verified is exactly what P9
 forbids, which is why the two are now separate numbers.
+
+**And WHICH source (v56, V2.36).** `flower_data_source` records what *kind* of
+source a number came from; `flower_data_citation` records which one — free text,
+per species, the same shape as `safety_source`. "Read in a flora" that does not
+name the flora is not a citation, and it stops being good enough the moment
+values start coming out of published descriptions instead of genus conventions.
+Blank everywhere today, deliberately: the seeder writes no citation rather than
+naming a book nobody opened for that species.
 
 **Where the real numbers are.** They exist, and they are not importable: Flora
 of North America gives ray counts and laminae lengths outright (vols 19–21 cover

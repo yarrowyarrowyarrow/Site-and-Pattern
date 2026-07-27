@@ -68,6 +68,7 @@ One row per species. Key columns (full list in the DDL):
 | `basal_rosette` | 0/1 (v53) |
 | `flowering_stems` | How many inflorescences a MATURE plant carries (v54). Bloom display used to be sized off the plant's *canopy*, which is a proxy for spread and not for flowering: a pasqueflower holds three and a mature bergamot twenty-eight. **No flora records this** — the seeded values follow from the branching habit and are meant to be corrected in the field with `scripts/tune_morphology.py`. Empty falls back to a count derived from `stem_branching` |
 | `flower_data_source` | measured \| flora \| photo \| estimated (v55). **Where each flower number came from.** The seeder's values are genus-level botanical judgement, which is a reasonable start and is not a measurement; reporting "307 described" as though it meant 307 verified is what P9 forbids. Raised by `scripts/tune_morphology.py` as species are actually checked |
+| `flower_data_citation` | Free text (v56). **WHICH source** — `FNA vol. 21`, `Budd's 442`, `my yard 2026-07-12`. `flower_data_source` says what kind of source; "read in a flora" that does not name the flora is not a citation. Blank from the seeder on purpose: naming a book nobody opened for that species would be worse than an empty field. Same shape as `safety_source`. See [`DATA_SOURCES.md`](DATA_SOURCES.md) |
 
 Morphology is authored in two companion scripts, each documenting its fields
 and where the values come from:

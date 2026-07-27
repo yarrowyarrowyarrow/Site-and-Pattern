@@ -82,6 +82,31 @@
     border:1px solid var(--line); color:var(--ink); border-radius:4px; cursor:pointer;
     font-size:10px; padding:1px 5px; }
   .slot .frame.has { border-style:solid; }
+  .slot .frame.has img { cursor:zoom-in; }
+  .slot.unsorted { border:1px solid #6d5a2f; border-radius:8px; padding:8px;
+                   background:#1b1a12; margin-bottom:14px; }
+  .slot.unsorted .name { color:var(--warn); }
+  .assign { display:flex; flex-wrap:wrap; gap:3px; margin-top:6px; }
+  .assign button { flex:1 1 auto; padding:3px 5px; font-size:10.5px; cursor:pointer;
+    background:#26311f; border:1px solid var(--line); color:var(--ink);
+    border-radius:4px; }
+  .assign button:hover { background:#3d5c34; border-color:#56763f; }
+  .credit { color:var(--dim); font-size:10px; line-height:1.35; margin-top:4px;
+            word-break:break-word; }
+  .cands { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:6px; }
+  .cands figure { margin:0; cursor:pointer; border:1px solid var(--line);
+                  border-radius:6px; overflow:hidden; background:#0b0f0b; }
+  .cands figure:hover { border-color:#56763f; }
+  .cands img { width:100%; display:block; }
+  .cands figcaption { font-size:9.5px; color:var(--dim); padding:3px 4px;
+                      line-height:1.3; }
+  #zoom { position:fixed; inset:0; background:rgba(8,11,8,.94); z-index:50;
+          display:none; align-items:center; justify-content:center;
+          flex-direction:column; padding:24px; cursor:zoom-out; }
+  #zoom.on { display:flex; }
+  #zoom img { max-width:100%; max-height:calc(100% - 48px); border-radius:8px; }
+  #zoom .credit { max-width:820px; text-align:center; font-size:11.5px;
+                  margin-top:10px; }
   .links a { display:block; color:var(--accent); text-decoration:none; margin:3px 0; }
   .links a:hover { text-decoration:underline; }
   .links .why { color:var(--dim); font-size:10.5px; display:block; }
@@ -93,6 +118,7 @@
     <input type="text" id="q" placeholder="Search…" autofocus>
     <div id="filters">
       <button data-f="all" class="on">all</button>
+      <button data-f="unsorted">to sort</button>
       <button data-f="estimated">estimated</button>
       <button data-f="nophoto">no photo</button>
       <button data-f="nohabit">no habit</button>
@@ -163,6 +189,10 @@
       <option value="measured">measured — a ruler on the plant</option>
     </select>
 
+    <label>Which source? <span class="val" style="font-size:10.5px">names the book</span></label>
+    <input type="text" class="f" id="flower_data_citation"
+           placeholder="FNA vol. 21 · Budd's 442 · my yard 2026-07-12">
+
     <button class="btn" id="save">Save &nbsp;(S)</button>
     <div id="status"></div>
 
@@ -184,9 +214,18 @@
     <div id="slots"></div>
     <input type="file" id="pick" accept="image/jpeg,image/png" style="display:none">
     <div class="hint">
-      Every import is downscaled and has its <strong>EXIF stripped</strong> — a
-      photo of your own yard carries your home's GPS coordinates, and these get
-      committed.
+      An <strong>unsorted</strong> photo is one the catalogue already ships and
+      nobody has looked at. Say what it is and the counters on the left start
+      meaning something — until then "323 with a photo" is 323 pictures of
+      we-don't-know-what.
+      <br><br>
+      An empty slot can <strong>find candidates</strong>: the species' wider
+      openly-licensed set on iNaturalist, usually about a dozen, one of which is
+      often the whole-plant shot the catalogue has none of. Needs internet.
+      <br><br>
+      Every import of your own is downscaled and has its <strong>EXIF
+      stripped</strong> — a photo of your own yard carries your home's GPS
+      coordinates, and these get committed.
     </div>
     <h3>Look it up</h3>
     <div class="links" id="links"></div>
@@ -194,11 +233,16 @@
   </div>
 </div>
 
+<div id="zoom"><img alt=""><div class="credit"></div></div>
+
 <script>
 const FIELDS = ['flower_arch','flower_symmetry','petal_shape','petal_count',
   'florets_per_head','flower_diameter_cm','flower_center_color',
   'flower_height_frac','stem_branching','basal_rosette','flowering_stems',
-  'flower_data_source'];
+  'flower_data_source','flower_data_citation'];
+// Provenance travels with the numbers, not with the render — repaint() and the
+// copy-from-species button both skip these two.
+const PROVENANCE = ['flower_data_source','flower_data_citation'];
 const RANGES = ['petal_count','florets_per_head','flower_diameter_cm',
                 'flower_height_frac','flowering_stems'];
 // What each slot is FOR — mirrored from src/db/photos.py SLOT_PURPOSE.
@@ -235,15 +279,21 @@ async function boot() {
   select(0);
 }
 
+// `hasPhoto` counts SORTED photographs only — a picture nobody has looked at
+// yet is not coverage of anything. `hasAny` is the separate question of whether
+// the species has a picture at all.
 function hasPhoto(s, slot) {
   const p = s.photos || {};
   return slot ? (p[slot] || []).length > 0
               : SLOTS.some(([k]) => (p[k] || []).length > 0);
 }
+function unsorted(s) { return ((s.photos || {}).unsorted || []); }
+function hasAny(s) { return hasPhoto(s) || unsorted(s).length > 0; }
 
 function passes(s) {
   if (filter === 'estimated') return (s.flower_data_source || 'estimated') === 'estimated';
-  if (filter === 'nophoto') return !hasPhoto(s);
+  if (filter === 'unsorted') return unsorted(s).length > 0;
+  if (filter === 'nophoto') return !hasAny(s);
   if (filter === 'nohabit') return !hasPhoto(s, 'habit');
   if (filter === 'done') return ['photo','flora','measured'].includes(s.flower_data_source);
   return true;
@@ -256,21 +306,24 @@ function render() {
     || s.scientific_name.toLowerCase().includes(q)));
   const verified = SPECIES.filter(s =>
     ['photo','flora','measured'].includes(s.flower_data_source)).length;
-  const withPhoto = SPECIES.filter(s => hasPhoto(s)).length;
+  const sorted = SPECIES.filter(s => hasPhoto(s)).length;
+  const queue = SPECIES.filter(s => unsorted(s).length > 0).length;
   const habit = SPECIES.filter(s => hasPhoto(s, 'habit')).length;
+  const none = SPECIES.filter(s => !hasAny(s)).length;
   $('count').textContent =
     `${shown.length} shown · ${verified}/${SPECIES.length} verified · `
-    + `${withPhoto} with a photo · ${habit} with a habit shot`;
+    + `${queue} to sort · ${sorted} sorted · ${habit} habit · ${none} with no photo`;
   const list = $('list');
   [...list.querySelectorAll('.row')].forEach(n => n.remove());
   shown.forEach((s, i) => {
     const src = s.flower_data_source || 'estimated';
     const d = document.createElement('div');
     d.className = 'row' + (i === idx ? ' on' : '');
+    const tail = hasPhoto(s) ? '' : (unsorted(s).length ? ' · unsorted' : ' · no photo');
     d.innerHTML = '<div>' + s.common_name
       + '<span class="badge b-' + src + '">' + src[0].toUpperCase() + '</span></div>'
-      + '<div class="sci' + (hasPhoto(s) ? '' : ' nophoto') + '">'
-      + s.scientific_name + (hasPhoto(s) ? '' : ' · no photo') + '</div>';
+      + '<div class="sci' + (tail ? ' nophoto' : '') + '">'
+      + s.scientific_name + tail + '</div>';
     d.onclick = () => select(i);
     list.appendChild(d);
   });
@@ -287,6 +340,7 @@ function select(i) {
     const el = $(f);
     if (f === 'flower_center_color') el.value = s[f] || '#e8c552';
     else if (f === 'flower_data_source') el.value = s[f] || 'estimated';
+    else if (f === 'flower_data_citation') el.value = s[f] || '';
     else el.value = s[f] == null ? '' : s[f];
   }
   RANGES.forEach(showVal);
@@ -303,9 +357,55 @@ function showVal(f) {
   if (el) el.textContent = $(f).value === '' ? '—' : $(f).value;
 }
 
+// A photo path in plant_photos.json is repo-relative; the server exposes the
+// photo directory at /photos/. A remote URL is left exactly as it is.
+function photoSrc(p) {
+  return p.url.startsWith('data/photos/')
+    ? '/photos/' + p.url.slice('data/photos/'.length) : p.url;
+}
+
+function zoom(p) {
+  const z = $('zoom');
+  z.querySelector('img').src = photoSrc(p);
+  z.querySelector('.credit').textContent =
+    [p.attribution, p.license].filter(Boolean).join(' · ');
+  z.classList.add('on');
+}
+$('zoom').onclick = () => $('zoom').classList.remove('on');
+
 function drawSlots(s) {
   const host = $('slots');
   host.textContent = '';
+
+  // The unsorted photo first, because it is the thing to act on. This is the
+  // picture the catalogue already ships and nobody has judged — say what it is
+  // and it moves into a real slot below.
+  for (const p of unsorted(s)) {
+    const box = document.createElement('div');
+    box.className = 'slot unsorted';
+    box.innerHTML = '<div class="head"><span class="name">unsorted</span>'
+      + '<span class="why">what is this a picture of?</span></div>';
+    const frame = document.createElement('div');
+    frame.className = 'frame has';
+    frame.innerHTML = '<img src="' + photoSrc(p) + '" alt="">';
+    frame.onclick = () => zoom(p);
+    box.appendChild(frame);
+    const row = document.createElement('div');
+    row.className = 'assign';
+    for (const [slot] of SLOTS) {
+      const b = document.createElement('button');
+      b.textContent = slot;
+      b.onclick = () => assignPhoto(p, slot);
+      row.appendChild(b);
+    }
+    box.appendChild(row);
+    const cr = document.createElement('div');
+    cr.className = 'credit';
+    cr.textContent = [p.attribution, p.license].filter(Boolean).join(' · ');
+    box.appendChild(cr);
+    host.appendChild(box);
+  }
+
   for (const [slot, why] of SLOTS) {
     const shots = (s.photos || {})[slot] || [];
     const box = document.createElement('div');
@@ -315,21 +415,81 @@ function drawSlots(s) {
     const frame = document.createElement('div');
     frame.className = 'frame' + (shots.length ? ' has' : '');
     if (shots.length) {
-      const url = shots[0].url.startsWith('data/photos/')
-        ? '/photos/' + shots[0].url.slice('data/photos/'.length) : shots[0].url;
-      frame.innerHTML = '<img src="' + url + '" alt="">';
+      frame.innerHTML = '<img src="' + photoSrc(shots[0]) + '" alt="">';
       const del = document.createElement('button');
       del.className = 'del'; del.textContent = '×';
       del.title = 'remove this photo';
       del.onclick = (e) => { e.stopPropagation(); removePhoto(shots[0]._i); };
       frame.appendChild(del);
-    } else {
-      frame.textContent = 'add a photo…';
+      frame.onclick = () => zoom(shots[0]);
+      const cr = document.createElement('div');
+      cr.className = 'credit';
+      cr.textContent = [shots[0].attribution, shots[0].license]
+        .filter(Boolean).join(' · ');
+      box.appendChild(frame);
+      box.appendChild(cr);
+      host.appendChild(box);
+      continue;
     }
+    frame.textContent = 'add a photo…';
     frame.onclick = () => { pickSlot = slot; $('pick').click(); };
     box.appendChild(frame);
+    const find = document.createElement('button');
+    find.className = 'btn thin';
+    find.textContent = 'find candidates…';
+    find.title = 'openly-licensed photos of this species on iNaturalist';
+    find.onclick = () => findCandidates(s, slot, box);
+    box.appendChild(find);
     host.appendChild(box);
   }
+}
+
+function afterPhotos(out) {
+  const s = cur();
+  s.photos = out.photos;
+  const master = SPECIES.find(x => x.scientific_name === s.scientific_name);
+  if (master) master.photos = out.photos;
+  drawSlots(s); render();
+}
+
+// The species' wider openly-licensed photo set, so an empty slot can be filled
+// by looking rather than by going outside. Needs internet; says so if it fails.
+async function findCandidates(s, slot, box) {
+  let grid = box.querySelector('.cands');
+  if (grid) { grid.remove(); return; }
+  status('asking iNaturalist about ' + s.scientific_name + '…');
+  let out;
+  try {
+    out = await (await fetch('/api/candidates/'
+      + encodeURIComponent(s.scientific_name))).json();
+  } catch (err) { status('no answer — is this machine online?', 'miss'); return; }
+  if (out.error) { status(out.error, 'miss'); return; }
+  const cands = out.candidates || [];
+  if (!cands.length) { status('no openly-licensed photos found', 'miss'); return; }
+  grid = document.createElement('div');
+  grid.className = 'cands';
+  for (const c of cands) {
+    const fig = document.createElement('figure');
+    fig.innerHTML = '<img src="' + c.url + '" alt="" loading="lazy">';
+    const cap = document.createElement('figcaption');
+    cap.textContent = [c.attribution, c.license].filter(Boolean).join(' · ');
+    fig.appendChild(cap);
+    fig.title = 'file this as ' + slot;
+    fig.onclick = () => assignPhoto(c, slot);
+    grid.appendChild(fig);
+  }
+  box.appendChild(grid);
+  status(cands.length + ' candidates — click the one that is a ' + slot + ' shot');
+}
+
+async function assignPhoto(p, slot) {
+  const r = await fetch('/api/photo-assign/'
+    + encodeURIComponent(cur().scientific_name) + '/' + encodeURIComponent(slot),
+    { method: 'POST', body: JSON.stringify(p) });
+  const out = await r.json();
+  if (out.error) { status(out.error, 'miss'); return; }
+  afterPhotos(out);
+  status('filed as ' + slot);
 }
 
 function drawLinks(s) {
@@ -340,7 +500,42 @@ function drawLinks(s) {
     a.href = l.url; a.target = '_blank'; a.rel = 'noopener';
     a.innerHTML = l.name + '<span class="why">' + l.why + '</span>';
     host.appendChild(a);
+    // Opening the page is always available. Having the page read FOR you is the
+    // part that needs --flora-fetch, and it still fetches only this one species
+    // and only because you clicked.
+    if (!l.read) continue;
+    const b = document.createElement('button');
+    b.className = 'btn thin';
+    b.textContent = 'read the numbers off this page';
+    b.onclick = () => readFlora(l);
+    host.appendChild(b);
   }
+}
+
+// Fills the sliders with a PROPOSAL. Nothing reaches plants_master.json until
+// you look at it against the render and press S.
+async function readFlora(link) {
+  status('reading ' + link.name + '…');
+  let out;
+  try {
+    out = await (await fetch('/api/flora/'
+      + encodeURIComponent(link.url))).json();
+  } catch (err) { status('no answer from ' + link.name, 'miss'); return; }
+  if (out.error) { status(out.error, 'miss'); return; }
+  const patch = out.patch || {};
+  const keys = Object.keys(patch);
+  if (!keys.length) {
+    status('nothing readable on that page — type it in yourself', 'miss');
+    return;
+  }
+  for (const [f, v] of Object.entries(patch)) {
+    const el = $(f);
+    if (el) el.value = v;
+  }
+  RANGES.forEach(showVal);
+  dirty = true; repaint();
+  status('proposed ' + (out.matched || []).join(' · ')
+         + ' — check it against the render, then press S', 'miss');
 }
 
 $('pick').onchange = async (e) => {
@@ -353,10 +548,7 @@ $('pick').onchange = async (e) => {
   const out = await r.json();
   e.target.value = '';
   if (out.error) { status(out.error, 'miss'); return; }
-  cur().photos = out.photos;
-  const master = SPECIES.find(x => x.scientific_name === cur().scientific_name);
-  if (master) master.photos = out.photos;
-  drawSlots(cur()); render();
+  afterPhotos(out);
   status(out.filename + ' · ' + Math.round(out.bytes / 1024) + ' KB'
          + (out.stripped ? ' · metadata stripped' : ''));
   if (out.note) status(out.note, 'miss');
@@ -390,6 +582,7 @@ function repaint() {
   if (!w || !w.permaSetScene || !sceneCache || !sceneCache.plants) return;
   for (const p of sceneCache.plants) {
     for (const f of FIELDS) {
+      if (PROVENANCE.includes(f)) continue;
       const raw = $(f).value;
       if (raw === '') { p[f] = f.endsWith('_color') ? '' : null; continue; }
       p[f] = RANGES.includes(f) ? Number(raw) : raw;
@@ -413,6 +606,9 @@ async function save() {
   const patch = {};
   for (const f of FIELDS) {
     const raw = $(f).value;
+    // An empty citation is an empty string, not a null: "nobody has said" and
+    // "no such field" read the same in JSON and they are not the same thing.
+    if (PROVENANCE.includes(f)) { patch[f] = raw; continue; }
     patch[f] = raw === '' ? null : (RANGES.includes(f) ? Number(raw) : raw);
   }
   const r = await fetch('/api/species/' + encodeURIComponent(s.scientific_name),
@@ -446,7 +642,7 @@ $('copy').onclick = () => {
            || SPECIES.find(s => s.scientific_name.toLowerCase().startsWith(q));
   if (!src) { status('no species matches "' + from + '"', 'miss'); return; }
   for (const f of FIELDS) {
-    if (f === 'flower_data_source') continue;
+    if (PROVENANCE.includes(f)) continue;
     const el = $(f);
     if (f === 'flower_center_color') el.value = src[f] || '#e8c552';
     else el.value = src[f] == null ? '' : src[f];

@@ -118,6 +118,43 @@ class TestReseedSurvival(unittest.TestCase):
                         "the shipped photo did not come back")
         self.assertTrue([p for p in after if p["origin"] == "user"])
 
+    def test_a_slot_you_chose_beats_the_backfills_guess(self):
+        """The property the bench's sort depends on (V2.36).
+
+        The back-fill files every legacy `image_url` as `flower`, because
+        iNaturalist's leading photo nearly always is one. When somebody looks at
+        that photo in the bench and decides it is actually a habit shot, the
+        judgement is written to `data/plant_photos.json` for the SAME url — and
+        the back-fill's dedupe key is `(scientific_name, url)`, so it steps
+        aside. If it ever became a species-scoped or slot-scoped check, every
+        sorted photo would silently revert to `flower` on the next schema bump
+        and a whole evening's triage would be gone.
+        """
+        conn = get_connection()
+        row = conn.execute(
+            "SELECT url FROM plant_photos WHERE scientific_name = ?"
+            "   AND origin = 'seed' LIMIT 1", (_SCI,)).fetchone()
+        self.assertIsNotNone(row, "no shipped photo to re-file")
+        url = row["url"]
+        conn.execute(
+            "UPDATE plant_photos SET slot = 'habit' WHERE scientific_name = ?"
+            "   AND url = ?", (_SCI, url))
+        conn.commit()
+        conn.close()
+
+        rows = [dict(p) for p in photos.photos_for(_SCI) if p["url"] == url]
+        self.assertEqual([p["slot"] for p in rows], ["habit"])
+        # The back-fill must not now ADD a second, flower-slotted copy.
+        conn = get_connection()
+        _plants_mod._seed_plant_photos(conn)
+        conn.commit()
+        again = [p for p in photos.photos_for(_SCI) if p["url"] == url]
+        self.assertEqual(len(again), 1,
+                         "the back-fill duplicated a photo that had been sorted")
+        self.assertEqual(again[0]["slot"], "habit",
+                         "a slot somebody chose was overwritten by the guess")
+        conn.close()
+
     def test_repeated_reseeds_do_not_accumulate_rows(self):
         _reseed()
         n1 = len(photos.photos_for(_SCI))

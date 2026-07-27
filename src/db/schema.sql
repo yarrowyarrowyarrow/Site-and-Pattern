@@ -177,7 +177,13 @@ CREATE TABLE IF NOT EXISTS plants (
     --   photo     — counted or judged off a photograph
     --   estimated — the family-first seeder's default
     -- Set in scripts/tune_morphology.py as the catalogue is worked through.
-    flower_data_source TEXT DEFAULT ''
+    flower_data_source TEXT DEFAULT '',
+    -- ...and WHICH source (schema v56, V2.36). "Read in a flora" without naming
+    -- the flora is not a citation, and once values start coming out of published
+    -- descriptions the catalogue is making specific claims it has to be able to
+    -- attribute. Free text: "FNA vol. 21", "Budd's Flora 442", "iNat photo
+    -- 178876". Same pattern as `safety_source`.
+    flower_data_citation TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS companion_friends (

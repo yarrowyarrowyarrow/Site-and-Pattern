@@ -1,6 +1,6 @@
 # What each document here is for
 
-Sixteen files is enough that "which of these matters?" is a fair question. This
+Eighteen files is enough that "which of these matters?" is a fair question. This
 is the map. Roughly in the order a newcomer should meet them.
 
 ## Start here
@@ -20,6 +20,8 @@ is the map. Roughly in the order a newcomer should meet them.
 | [`PHILOSOPHY_ROADMAP.md`](PHILOSOPHY_ROADMAP.md) | Features organized by the *principle* they serve, with a Shipped section as the historical record. Long, and meant to be. | Asking "does this belong in this app?" |
 | [`ROADMAP.md`](ROADMAP.md) | The effort/impact ledger — what shipped, tier by tier. **Historical**, not live. | Archaeology. |
 | [`DATA_GAPS.md`](DATA_GAPS.md) | Seed-data debt: what the code is ready for and the catalogue is not. Photo coverage, flower-morphology provenance, the unbacked Generate-Design goals. | Wondering why a feature is a "hint" and not a filter. |
+| [`DATA_SOURCES.md`](DATA_SOURCES.md) | **Where every shipped fact and photograph came from, and what its licence obliges.** Includes the position on reading numbers out of a copyrighted flora. | Anyone asks "are you allowed to have that?" — or before you add a new data source. |
+| [`FNA_PERMISSION_LETTER.md`](FNA_PERMISSION_LETTER.md) | An unsent draft asking the Flora of North America Association for permission to record floral measurements. | Deciding to fill the catalogue from published descriptions. |
 | [`REFERENCES.md`](REFERENCES.md) | The bibliography behind the philosophy. | Citing, or checking a claim. |
 
 ## Reference

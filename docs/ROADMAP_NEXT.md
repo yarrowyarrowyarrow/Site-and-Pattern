@@ -132,6 +132,15 @@ still abstract in the scene then loses.
 | **F72** | **Your photographs, first-class.** Two destinations, one mechanism: shipped (`data/photos/` + `data/plant_photos.json`) or private (the user data dir, `origin='user'`, which the reseed never touches). Every import is downscaled and has its **EXIF stripped** — a photo of your own yard carries your home's coordinates | `src/photo_import.py`, `scripts/import_photos.py` |
 | — | **Provenance on every flower number** (`flower_data_source`). 307 species are *described*; none was *verified*, and those were being quoted as the same figure | schema v55, `scripts/seed_flower_morphology.py` |
 
+**V2.36 — F71 finished: the sourcing half, and the provenance to go with it.**
+
+| ID | What landed | Where |
+|----|-------------|-------|
+| **F71** *(sourcing half)* | **The 323 photographs the catalogue already had, made visible and sortable.** V2.35's slot strip read only `plant_photos.json`, which was empty, so every existing photo vanished from the bench — the tool for comparing a sprite against a photograph had no photographs. They come back in an **`unsorted`** bucket rather than being assumed to be flower macros, and one click files each into its real slot with the credit carried across verbatim. The "sorted" and "habit" counters therefore start at zero and mean something | `scripts/tune_morphology.py:photos_by_slot`, `/api/photo-assign` |
+| — | **The candidate picker.** An empty slot can pull the species' wider openly-licensed iNaturalist set (~12 photos) and a person picks the one that is actually a habit shot. The only route off "0 habit shots" — triage cannot turn flower macros into whole-plant photographs. Reuses the exact-name match and licence whitelist already in `fetch_inaturalist_images.py` (`pick_photo` → `open_candidates`) | `/api/candidates`, `scripts/fetch_inaturalist_images.py` |
+| — | **Which source, not just what kind** (`flower_data_citation`, schema v56). v55 recorded that a number was `estimated` or read `flora`; naming the flora is what makes it a citation. Blank from the seeder on purpose | schema v56, `docs/DATA_SOURCES.md` |
+| — | **The reading aid, built so it cannot become a scrape.** Four numbers off one published description, off unless `--flora-fetch`, `robots.txt` fail-closed, one species per click, no bulk path, no cache, no prose retained, and the citation filled in automatically | `src/flora_read.py`, `docs/DATA_SOURCES.md`, `docs/FNA_PERMISSION_LETTER.md` |
+
 **Deferred, and why:** F73 (in my yard, on this date) — the `taken_on` column is
 in place so it becomes UI-only work; F74 (the seedling sheet) — cheap to
 assemble, but it would print "no seedling photo" for essentially every species
@@ -150,7 +159,7 @@ re-opened here.
 | ID | Feature | Impact | Effort | Risk | Principle | Status |
 |----|---------|--------|--------|------|-----------|--------|
 | F70 | Photo sets per species, with named slots | **High** | M | Med — schema v55 | P5, P9 | ✅ V2.35 |
-| F71 | Habit-first sourcing + a curation tool | **High** | M | Med | P5, P9 | ⛅ tool shipped V2.35 |
+| F71 | Habit-first sourcing + a curation tool | **High** | M | Med | P5, P9 | ✅ V2.36 (tool V2.35, sourcing V2.36) |
 | F72 | Your own photos, first-class and reseed-proof | **High** | M | Med | P11, P5 | ✅ V2.35 |
 | F81 | Forb stems fork — `stem_branching` finally read | **High** | M | Low | P5, P9 | ✅ V2.34 |
 | F82 | Bloom count from the plant, not the canopy | Med | S | Low — schema v54 | P9 | ✅ V2.34 |
@@ -403,6 +412,15 @@ precisely what P9 forbids. So do not build a classifier.
    knows the plants rather than for a heuristic.
 3. **Ship the assignments in the seed JSON** so every install gets them; re-runnable and idempotent
    like the existing script.
+
+> **Shipped V2.36**, with one departure from the plan above: the curation loop went into the
+> existing tuning bench rather than a separate `scripts/curate_photos.py` + contact sheet. The
+> bench already had the species list, the triage filters and — crucially — the *render*, and
+> judging a photograph is much easier next to the sprite it is supposed to correct. Candidates
+> are fetched per species on a click (`/api/candidates`, reusing `open_candidates`) instead of
+> being bulk-imported as unassigned rows, which keeps the catalogue free of hundreds of
+> photographs nobody chose. The observation-photo endpoint for thin taxa is not done and remains
+> the next lever for the 111 species with nothing.
 
 **One decision belongs to the owner, not to the roadmap.** Bees are held to a stricter licence bar
 than everything else — CC0/CC-BY only, no ShareAlike (the F37 A1 decision, mirrored in

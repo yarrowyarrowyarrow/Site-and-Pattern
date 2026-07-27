@@ -203,7 +203,12 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # reseed wipe entry, and no second copy to drift. schema.sql DROPs and recreates
 # it on every init_db, so the definition can evolve without a migration; the
 # version bump is here because schema.sql changed, per CLAUDE.md.
-_SCHEMA_VERSION = 55
+# v56 (V2.36): `plants.flower_data_citation` — WHICH source a flower number came
+# from, beside v55's `flower_data_source` which records only what KIND of source
+# it was. "Read in a flora" that does not name the flora is not a citation, and
+# the catalogue is about to start carrying values read out of published
+# descriptions. Free text, per species; same shape as `safety_source`.
+_SCHEMA_VERSION = 56
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -480,6 +485,29 @@ def _migrate_to_v55(conn: sqlite3.Connection):
     # predates the column.
     try:
         conn.execute("ALTER TABLE plants ADD COLUMN flower_data_source TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass
+    conn.commit()
+
+
+def _migrate_to_v56(conn: sqlite3.Connection):
+    """Which source a flower number came from (V2.36).
+
+    `flower_data_source` records the *kind* of source — estimated, read off a
+    photo, read in a flora, measured with a ruler. It does not record *which*,
+    and "read in a flora" without naming the flora is not a citation. That was
+    tolerable while every value was the seeder's genus default and the honest
+    answer was "a general botanical convention"; it stops being tolerable the
+    moment somebody starts typing numbers out of published descriptions, because
+    then the catalogue is making a specific claim it cannot attribute.
+
+    Free text on purpose, and per species rather than per value: a person tunes
+    one species in one sitting out of one book. `apply_safety_tags.py` already
+    does exactly this with `safety_source`.
+    """
+    try:
+        conn.execute(
+            "ALTER TABLE plants ADD COLUMN flower_data_citation TEXT DEFAULT ''")
     except sqlite3.OperationalError:
         pass
     conn.commit()
@@ -1208,6 +1236,7 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             1 if p.get("basal_rosette") else 0,
             p.get("flowering_stems"),
             p.get("flower_data_source", ""),
+            p.get("flower_data_citation", ""),
         ))
 
     conn.executemany(
@@ -1233,10 +1262,10 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             flower_arch, flower_symmetry, petal_shape, petal_count,
             florets_per_head, flower_diameter_cm, flower_center_color,
             flower_height_frac, stem_branching, basal_rosette,
-            flowering_stems, flower_data_source)
+            flowering_stems, flower_data_source, flower_data_citation)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
                    ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-                   ?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   ?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -1348,6 +1377,9 @@ def init_db() -> None:
 
         if current_version < 55:
             _migrate_to_v55(conn)
+
+        if current_version < 56:
+            _migrate_to_v56(conn)
 
         # Add parent_id to polycultures if missing
         try:

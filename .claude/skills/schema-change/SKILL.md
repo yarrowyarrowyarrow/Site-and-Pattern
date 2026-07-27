@@ -19,8 +19,9 @@ Use this skill when you:
 - need a value change to reach users who already have a DB;
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
-**Current facts (verify before quoting):** branch `V2.33`,
-`_SCHEMA_VERSION = 55` (in `src/db/plants.py`) — v55 added the
+**Current facts (verify before quoting):** branch `V2.36`,
+`_SCHEMA_VERSION = 56` (in `src/db/plants.py`) — v56 added
+`flower_data_citation`; v55 added the
 `plant_photos` table and `flower_data_source`; v54 added
 `flowering_stems`; v53 added ten
 flower-morphology columns; v52 added three

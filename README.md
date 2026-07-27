@@ -218,9 +218,22 @@ If you'd like to use Site & Pattern commercially, please open an issue to discus
 
 ## Acknowledgments
 
-Plant data draws on:
-- Native plant references for Alberta and the Canadian prairies
-- Hardiness zone data from Natural Resources Canada
+Every fact and photograph this app ships, with its source and its licence, is
+listed in **[`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md)** — including what
+each licence obliges us to do and where the gaps still are. In short:
+
+- **Photographs** — [iNaturalist](https://www.inaturalist.org/) contributors,
+  CC0 / CC BY / CC BY-SA only, credited individually wherever a photo appears
+- **Hardiness zones** — Natural Resources Canada
+- **Soil** — Gridded Soil Landscapes of Canada (AAFC) and SoilGrids v2.0 (ISRIC)
+- **Buildings, geocoding and map tiles** — OpenStreetMap contributors (ODbL),
+  with CARTO, Esri and Mapbox basemap layers
+- **Climate, wind and elevation** — [Open-Meteo](https://open-meteo.com/)
+- **Plant data** — native-plant references for Alberta and the Canadian prairies
+  (see [`docs/REFERENCES.md`](docs/REFERENCES.md)), compiled for this project
+
+If a photograph of yours is here and the credit is wrong — or you would rather it
+weren't here at all — open an issue and it will be fixed or removed.
 
 Site & Pattern was developed with significant assistance from AI coding tools.
 

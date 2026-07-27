@@ -101,7 +101,7 @@ BRANCHINGS = ("unbranched", "branched_above", "branched_throughout")
 FIELDS = ("flower_arch", "flower_symmetry", "petal_shape", "petal_count",
           "florets_per_head", "flower_diameter_cm", "flower_center_color",
           "flower_height_frac", "stem_branching", "basal_rosette",
-          "flowering_stems", "flower_data_source")
+          "flowering_stems", "flower_data_source", "flower_data_citation")
 
 
 def F(arch, sym, shape, petals, florets, dia, centre,
@@ -131,7 +131,14 @@ def F(arch, sym, shape, petals, florets, dia, centre,
             # to `flora`, `photo` or `measured` as it is actually checked, so
             # "307 of 311 described" can stop being quoted as if it meant
             # verified (P9).
-            "flower_data_source": "estimated"}
+            "flower_data_source": "estimated",
+            # WHICH source (schema v56). Deliberately blank here rather than
+            # naming a flora: nothing in this file was read out of one book for
+            # one species. It is the genus convention, and the bibliography for
+            # that is this module's docstring and docs/REFERENCES.md. Writing a
+            # title in would be a citation to something nobody actually looked
+            # up, which is worse than an empty field.
+            "flower_data_citation": ""}
 
 
 # ── Asteraceae ──────────────────────────────────────────────────────────────
