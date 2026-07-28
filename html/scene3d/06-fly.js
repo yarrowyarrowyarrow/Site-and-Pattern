@@ -118,13 +118,41 @@ function makeBeeAvatar(app) {
   const abdomen = new THREE.Mesh(sphere(0.55), dark);
   abdomen.scale.set(shp[0], shp[1], shp[2]); abdomen.position.set(0, -0.03, 0.8);
   g.add(abdomen);
-  // Abdominal bands (0–3): alternating fuzz stripes down the abdomen.
-  const nb = Math.max(0, Math.min(3, app.bands | 0));
-  for (let i = 0; i < nb; i++) {
-    const band = new THREE.Mesh(sphere(0.57), fuzz);
-    band.scale.set(shp[0] * 1.02, shp[1] * 1.02, 0.34);
-    band.position.set(0, -0.03, 0.5 + i * 0.45);
-    g.add(band);
+  // Abdominal banding.
+  //
+  // `band_colours` (V2.36, schema v58) is this species' OWN tergite colours,
+  // T1..T6, already resolved to hex by src/scene_wildlife.py — the field every
+  // bumblebee key is written in, and the one that stops the catalogue's 29
+  // Bombus being one animal. Each tergite gets its own ring down the abdomen,
+  // front to back, so B. huntii's orange midriff and B. terricola's yellow one
+  // are different bees rather than the same bee twice.
+  //
+  // Falls back to the old count-of-stripes when a species has no record.
+  const cols = Array.isArray(app.band_colours) ? app.band_colours : null;
+  if (cols && cols.length) {
+    const span = shp[2] * 1.06;                   // abdomen length in local z
+    const z0 = 0.8 - span * 0.5;
+    const step = span / cols.length;
+    for (let i = 0; i < cols.length; i++) {
+      const m = new THREE.MeshStandardMaterial(Object.assign(
+        { color: new THREE.Color(cols[i]), roughness: 0.9,
+          emissive: 0x120d06, emissiveIntensity: 0.4 }, met));
+      const band = new THREE.Mesh(sphere(0.57), m);
+      // Slightly proud of the abdomen so each ring reads as a band rather
+      // than as a shading artefact, and a hair over one step long so
+      // neighbours meet with no gap of the body colour between them.
+      band.scale.set(shp[0] * 1.02, shp[1] * 1.02, (step / 0.57) * 0.62);
+      band.position.set(0, -0.03, z0 + step * (i + 0.5));
+      g.add(band);
+    }
+  } else {
+    const nb = Math.max(0, Math.min(3, app.bands | 0));
+    for (let i = 0; i < nb; i++) {
+      const band = new THREE.Mesh(sphere(0.57), fuzz);
+      band.scale.set(shp[0] * 1.02, shp[1] * 1.02, 0.34);
+      band.position.set(0, -0.03, 0.5 + i * 0.45);
+      g.add(band);
+    }
   }
   const tip = new THREE.Mesh(sphere(0.3), app.cuckoo ? fuzz : dark);
   tip.scale.set(0.9, 0.85, 1.1); tip.position.set(0, -0.04, 0.8 + shp[2] * 0.35);
@@ -205,8 +233,11 @@ function makeButterflyAvatar(moth, app) {
   g.userData.wings = wings;
   // Rest angled downward so the wings frame the lower view rather than fill it;
   // moths beat faster + shallower, butterflies a big slow graceful flap.
-  g.userData.flap = moth ? { base: -0.45, amp: 0.75, speed: 0.055 }
-                         : { base: -0.6, amp: 1.05, speed: 0.028 };
+  // `skew` > 0.5 = a long unhurried lift then a snap down, which is what a
+  // lepidopteran beat actually looks like; 0.5 is the symmetric sine every
+  // other taxon keeps. See flapWings in 07-wildlife.js.
+  g.userData.flap = moth ? { base: -0.45, amp: 0.75, speed: 0.055, skew: 0.58 }
+                         : { base: -0.6, amp: 1.05, speed: 0.028, skew: 0.64 };
   g.scale.setScalar(moth ? 0.42 : 0.46);
   return g;
 }
@@ -609,9 +640,13 @@ function beeStep(t) {
 
   // Animate the visible flyer: wingbeat (per-kind rate/amplitude) + a hover bob.
   if (beeAvatar && beeAvatar.visible) {
-    const fp = beeAvatar.userData.flap;
-    const flap = fp.base + (0.5 + 0.5 * Math.sin(t * fp.speed)) * fp.amp;
-    for (const { pivot, sign } of beeAvatar.userData.wings) pivot.rotation.z = sign * flap;
+    // Was a third inline copy of the wingbeat formula (07-wildlife.js has the
+    // real one, 09-models.js the flap params). It missed the V2.36 skewed
+    // stroke, which matters most HERE — this is the wing you are looking
+    // straight at while flying as the animal. flapWings is a global from
+    // 07-wildlife.js; it loads after this file but the call is inside the
+    // frame loop, so it is defined by the time this runs.
+    flapWings(beeAvatar, t);
     beeAvatar.position.y = (beeKind === 'bee' ? -0.42 : -0.86) + Math.sin(t * 0.006) * 0.03;
     beeAvatar.rotation.z = beeBank;
   }

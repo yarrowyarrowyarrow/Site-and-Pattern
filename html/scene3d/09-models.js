@@ -297,13 +297,16 @@ const _GLB_CRITTER = {
                node: (a) => a.build || a.shape || 'stout',
                flap: { base: 0.2, amp: 0.75, speed: 0.09 },
                scale: (a) => 0.2 * (0.82 + 0.32 * (a.size || 1)) * 0.85 },
+  // `skew` mirrors the procedural avatars in 06-fly.js — a slow lift and a
+  // quick downstroke. The two flap tables have to agree or the baked and
+  // procedural butterflies beat differently in the same scene.
   butterfly: { key: 'lep', anim: 'flier',
                node: (a) => a.build || 'butterfly',
-               flap: { base: -0.6, amp: 1.05, speed: 0.028 },
+               flap: { base: -0.6, amp: 1.05, speed: 0.028, skew: 0.64 },
                scale: () => 0.46 * 1.15 },
   moth:      { key: 'lep', anim: 'flier',
                node: (a) => a.build || 'moth',
-               flap: { base: -0.45, amp: 0.75, speed: 0.055 },
+               flap: { base: -0.45, amp: 0.75, speed: 0.055, skew: 0.58 },
                scale: () => 0.42 * 1.15 },
   bird:      { key: 'bird', anim: (a) => a.hummer ? 'hover' : 'perch',
                // Matches the procedural bird in 07-wildlife.js — a slow deep

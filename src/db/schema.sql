@@ -358,7 +358,29 @@ CREATE TABLE IF NOT EXISTS bee_attributes (
     pollen_specialist INTEGER,     -- 1 oligolectic, 0 polylectic, NULL unknown
     conservation_status TEXT,      -- free text ("Secure", "At Risk", "Data Deficient")
     source TEXT,
-    notes TEXT
+    notes TEXT,
+    -- ── Morphology (schema v58, V2.36) ──────────────────────────────────────
+    -- What the animal LOOKS like, as data. Until v58 every bee's appearance was
+    -- computed in src/scene_wildlife.py from a 12-genus table, so all 69 bees
+    -- shared 12 looks and the 29 Bombus were pixel-identical.
+    body_length_mm REAL,           -- female worker/adult length; guides print it
+    build TEXT,                    -- round | stout | slender | leafcutter
+    hair_colour TEXT,              -- #rrggbb — the pile ("fuzz" in the viewer)
+    integument_colour TEXT,        -- #rrggbb — the cuticle beneath ("dark")
+    metallic INTEGER,              -- 1 for Osmia/Agapostemon green-blue sheen
+    scopa_position TEXT,           -- hind_leg | abdomen | none (cleptoparasite)
+    wing_tint TEXT,                -- clear | smoky | amber
+    -- Thorax then T1..T6, comma-separated colour tokens
+    -- ("yellow,yellow,black,orange,orange,black,black"). THE bumblebee
+    -- character: every key works by naming these in turn. Tokens not hex,
+    -- because that is how the keys are written — see
+    -- data_quality.BAND_COLOURS / BAND_COLOUR_HEX.
+    band_pattern TEXT,
+    -- Provenance for the morphology block only, exactly as plants carries
+    -- flower_/leaf_ pairs (v56/v57). The ecological columns above keep their
+    -- own `source`; these get verified from different places at different times.
+    morph_data_source TEXT DEFAULT '',    -- measured|flora|photo|estimated
+    morph_data_citation TEXT DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_bee_attr_genus   ON bee_attributes(genus);
 CREATE INDEX IF NOT EXISTS idx_bee_attr_nesting ON bee_attributes(nesting_habit);
@@ -382,7 +404,32 @@ CREATE TABLE IF NOT EXISTS lepidoptera_attributes (
     larval_host_note TEXT,          -- plain-language summary (edges live in plant_fauna)
     conservation_status TEXT,
     source TEXT,
-    notes TEXT
+    notes TEXT,
+    -- ── Morphology (schema v58, V2.36) ──────────────────────────────────────
+    -- Until v58 a lepidopteran's look came from seventeen substring tests on
+    -- its COMMON NAME in src/scene_wildlife.py, so 31 species shared 16 looks
+    -- and a Polyphemus, a Cecropia and an Isabella Tiger Moth were one moth.
+    --
+    -- A RANGE, not a midpoint: every guide prints "45-65 mm" and inventing a
+    -- single number from it is the false precision P9 forbids. The viewer takes
+    -- the mid but the catalogue keeps what was actually published. This is also
+    -- the first real measurement the fauna data has ever had — `size` was a
+    -- hand-tuned 0.5-1.25 multiplier baked into Python.
+    wingspan_min_mm REAL,
+    wingspan_max_mm REAL,
+    forewing_colour TEXT,           -- #rrggbb (viewer: `fore`)
+    hindwing_colour TEXT,           -- #rrggbb (viewer: `hind`)
+    margin_colour TEXT,             -- #rrggbb — border/fringe (viewer: `edge`)
+    wing_shape TEXT,                -- rounded|broad|narrow|angular|falcate|tailed
+    wing_pattern TEXT,              -- plain|veined|spotted|banded|checkered|mottled|eyespots
+    eyespot_count INTEGER,          -- per forewing; the saturniid + satyr mark
+    resting_posture TEXT,           -- wings_up|wings_flat|tent|wrapped|swept
+    -- How it flies. A documented character that also DRIVES the animation
+    -- (html/scene3d/07-wildlife.js _FLIGHT_STYLE): a skipper darts, a monarch
+    -- sails, a sphinx hangs. Empty falls back to 'fluttery'.
+    flight_style TEXT,
+    morph_data_source TEXT DEFAULT '',
+    morph_data_citation TEXT DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_lep_attr_kind ON lepidoptera_attributes(kind);
 

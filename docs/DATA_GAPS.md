@@ -90,6 +90,21 @@ pair, and `verified` in the bench now means *both*. Every one of the 434 reads
 `estimated` today. See [`BOTANY_FIELD_GUIDE.md`](BOTANY_FIELD_GUIDE.md) for what
 to log, and which corrections actually change the render.
 
+**Fauna morphology (v58, V2.36) — the same problem, one taxon over.** Until v58
+an animal's appearance was computed from substrings of its common name in
+`src/scene_wildlife.py`, so it could not be sourced, checked or corrected:
+
+| | species | distinct appearances before v58 | after seeding |
+|---|---|---|---|
+| Bees | 69 | **12** (29 bumblebees identical) | 29 |
+| Lepidoptera | 31 | **16** (Polyphemus = Cecropia = Isabella Tiger Moth) | 31 |
+
+Every one of those values is now `morph_data_source: estimated` with a blank
+citation — better than before and still not *checked*. `scripts/tune_fauna.py`
+is where they get raised; see
+[`FAUNA_FIELD_GUIDE.md`](FAUNA_FIELD_GUIDE.md) for what to log. Birds (24 → 16
+looks), other insects and mammals still have no morphology columns at all.
+
 **Where the real numbers are.** They exist, and they are not importable: Flora
 of North America gives ray counts and laminae lengths outright (vols 19–21 cover
 most prairie forbs) and is free to *read* but copyrighted, so a bulk scrape is

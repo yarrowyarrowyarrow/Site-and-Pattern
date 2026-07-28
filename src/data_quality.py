@@ -149,6 +149,81 @@ FLOWER_SYMMETRIES = ("radial", "bilateral")
 PETAL_SHAPES      = ("narrow", "oval", "notched", "tubular", "lipped")
 STEM_BRANCHINGS   = ("unbranched", "branched_above", "branched_throughout")
 
+# ── Fauna morphology (schema v58, V2.36) ────────────────────────────────────
+# The animals were where the plants were before V2.33: every creature's look was
+# computed in src/scene_wildlife.py from SUBSTRINGS OF ITS COMMON NAME — a
+# 12-genus table and seventeen `if "azure" in name` tests — so 69 bees collapsed
+# into 12 appearances (29 bumblebees pixel-identical) and 31 lepidoptera into 16
+# (Polyphemus, Cecropia and Isabella Tiger Moth rendered as one moth). None of
+# it was in the database, sourced, or correctable without editing code.
+#
+# Ordered tuples for the same reason as the flower four: these are shown to a
+# person in a dropdown and in a comparison chart, and the order teaches.
+# Drawn, term by term, in html/botany/fauna.js.
+
+# How a lepidopteran flies. A real, documented character — and the one that
+# drives the 3D flight animation (html/scene3d/07-wildlife.js _FLIGHT_STYLE),
+# so recording it makes a skipper dart and a monarch sail instead of every
+# species sharing one generic wobble.
+FLIGHT_STYLES     = ("fluttery", "erratic", "darting", "gliding", "bobbing",
+                     "hovering")
+# Wing outline. `tailed` is the swallowtail mark; `falcate` the hooked forewing
+# of the marbles and some sphinxes.
+WING_SHAPES       = ("rounded", "broad", "narrow", "angular", "falcate", "tailed")
+# What is ON the wing. Ordered plain → most structured.
+WING_PATTERNS     = ("plain", "veined", "spotted", "banded", "checkered",
+                     "mottled", "eyespots")
+# How the wings are held at rest — behavioural AND visual, and the thing you
+# actually see on a perched animal. Butterflies close them over the back
+# (`wings_up`), most moths tent or wrap them, satyrs bask flat.
+RESTING_POSTURES  = ("wings_up", "wings_flat", "tent", "wrapped", "swept")
+
+# Bee body plan. Mirrors assetlib/fauna_variants.BEE_VARIANTS — the mesh the
+# viewer picks — with `leafcutter` kept because a Megachile's broad head and
+# flat scopa-bearing abdomen is what a non-specialist actually notices.
+BEE_BUILDS        = ("round", "stout", "slender", "leafcutter")
+# Where a female carries pollen. Diagnostic and cheap to see: Megachile carry it
+# under the abdomen, most others on the hind leg, cuckoo bees not at all —
+# which is *why* they are hairless, so this doubles as the cuckoo field mark.
+SCOPA_POSITIONS   = ("hind_leg", "abdomen", "none")
+WING_TINTS        = ("clear", "smoky", "amber")
+
+# Bumblebee colour banding — the single highest-value field in this whole set.
+# 29 of the catalogue's 69 bees are Bombus and they currently render as one
+# animal; every bumblebee key in existence works by naming the colour of the
+# thorax and each abdominal tergite in turn, so this is both what makes them
+# distinguishable and exactly what you are already reading off the page.
+#
+# `band_pattern` is a comma-separated list of these tokens, thorax first then
+# T1…T6 (e.g. "yellow,yellow,yellow,black,orange,orange,black"). Named tokens
+# rather than hex because that is how the keys are written; the token→hex table
+# lives beside them so there is one definition.
+BAND_COLOURS = ("black", "yellow", "orange", "red", "white", "buff", "brown",
+                "grey")
+BAND_COLOUR_HEX = {
+    "black":  "#26211c",
+    "yellow": "#f2c12e",
+    "orange": "#d8722a",
+    "red":    "#b5462e",
+    "white":  "#e8e4da",
+    "buff":   "#d8cbb0",
+    "brown":  "#6b5138",
+    "grey":   "#9a9186",
+}
+# thorax + T1..T6. Fewer is allowed (many keys only describe as far as T4);
+# more is a typo.
+BAND_SEGMENTS_MAX = 7
+
+
+def band_pattern_tokens(value) -> list:
+    """`band_pattern` as a list of colour tokens, or [] if unset.
+
+    Split-and-strip in one place so the seeder, the gate, the bench and the
+    viewer cannot disagree about whether spaces are allowed.
+    """
+    return [t.strip().lower() for t in str(value or "").split(",") if t.strip()]
+
+
 # ── Soft enum allowlists (drift here is a WARNING) ──────────────────────────
 
 GROWTH_CURVES     = {"slow_start", "steady", "fast_early"}
@@ -549,7 +624,8 @@ def validate_all() -> tuple[list[str], list[str]]:
 
     # Fauna data spine: the bee attributes (F37) and fauna photo-licence
     # compliance (A1). Both read shipped data/*.json the app reseeds from.
-    for validate_fauna in (validate_bee_attributes, validate_fauna_images):
+    for validate_fauna in (validate_bee_attributes, validate_fauna_images,
+                           validate_fauna_morphology):
         e, w = validate_fauna()
         errors.extend(e)
         warnings.extend(w)
@@ -619,6 +695,105 @@ def validate_morphology_provenance() -> tuple[list[str], list[str]]:
 # The v56 name, kept so anything importing it keeps working. The function grew
 # a second field pair in v57 and "flower" stopped being the whole story.
 validate_flower_provenance = validate_morphology_provenance
+
+
+def validate_fauna_morphology() -> tuple[list[str], list[str]]:
+    """What the animals look like, checked (schema v58).
+
+    Until v58 an animal's appearance was Python keyed off its common name, so
+    there was nothing to validate — and nothing to correct. Now that it is data
+    it gets the same treatment the plants get: enum values inside their
+    vocabulary, ranges the right way round, and a claimed source that names
+    itself.
+
+    `band_pattern` earns its own checks. It is the bumblebee character — thorax
+    then T1..T6 — and its failure mode is quiet: a mistyped colour renders as a
+    default grey segment rather than raising, and a pattern one segment too long
+    silently loses its tail.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    def _records(name):
+        try:
+            rows = json.loads((DATA_DIR / name).read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError) as exc:
+            errors.append(f"{name}: {exc}")
+            return []
+        # Both files lead with a metadata record carrying no species.
+        return [r for r in rows if isinstance(r, dict) and r.get("scientific_name")]
+
+    bees = _records("bee_attributes_master.json")
+    leps = _records("lepidoptera_attributes_master.json")
+
+    def enum(rec, field, allowed, kind):
+        val = (rec.get(field) or "").strip()
+        if val and val not in allowed:
+            errors.append(f"{kind} morphology: {rec['scientific_name']}: "
+                          f"{field}={val!r} not in {sorted(allowed)}")
+
+    for r in bees:
+        enum(r, "build", BEE_BUILDS, "bee")
+        enum(r, "scopa_position", SCOPA_POSITIONS, "bee")
+        enum(r, "wing_tint", WING_TINTS, "bee")
+        toks = band_pattern_tokens(r.get("band_pattern"))
+        if len(toks) > BAND_SEGMENTS_MAX:
+            errors.append(
+                f"bee morphology: {r['scientific_name']}: band_pattern has "
+                f"{len(toks)} segments, max is {BAND_SEGMENTS_MAX} "
+                f"(thorax + T1..T6) — the extra ones are silently dropped")
+        for t in toks:
+            if t not in BAND_COLOURS:
+                errors.append(
+                    f"bee morphology: {r['scientific_name']}: band colour "
+                    f"{t!r} not in {sorted(BAND_COLOURS)}")
+        n = r.get("body_length_mm")
+        if n is not None and not (2 <= float(n) <= 40):
+            warnings.append(f"bee morphology: {r['scientific_name']}: "
+                            f"body_length_mm {n} is outside 2-40 mm")
+
+    for r in leps:
+        enum(r, "wing_shape", WING_SHAPES, "lepidoptera")
+        enum(r, "wing_pattern", WING_PATTERNS, "lepidoptera")
+        enum(r, "resting_posture", RESTING_POSTURES, "lepidoptera")
+        enum(r, "flight_style", FLIGHT_STYLES, "lepidoptera")
+        lo, hi = r.get("wingspan_min_mm"), r.get("wingspan_max_mm")
+        if (lo is None) != (hi is None):
+            errors.append(f"lepidoptera morphology: {r['scientific_name']}: "
+                          f"half a wingspan range ({lo}, {hi}) — give both or "
+                          f"neither")
+        elif lo is not None:
+            if float(hi) < float(lo):
+                errors.append(f"lepidoptera morphology: {r['scientific_name']}: "
+                              f"wingspan range is backwards ({lo} > {hi})")
+            elif not (8 <= float(lo) <= 200):
+                warnings.append(f"lepidoptera morphology: "
+                                f"{r['scientific_name']}: wingspan {lo} mm is "
+                                f"outside 8-200 mm")
+        eyes = r.get("eyespot_count")
+        if eyes is not None and not (0 <= int(eyes) <= 8):
+            errors.append(f"lepidoptera morphology: {r['scientific_name']}: "
+                          f"eyespot_count {eyes} outside 0-8")
+
+    # Provenance, same rule as the plants': a claimed source has to name itself.
+    claimed = {"flora", "measured", "photo"}
+    for kind, rows in (("bee", bees), ("lepidoptera", leps)):
+        n_claimed = 0
+        for r in rows:
+            src = (r.get("morph_data_source") or "").strip().lower()
+            if src not in claimed:
+                continue
+            n_claimed += 1
+            if not (r.get("morph_data_citation") or "").strip():
+                errors.append(
+                    f"{kind} morphology: {r['scientific_name']}: source is "
+                    f"{src!r} but no citation — name the guide, the photo or "
+                    f"the date you measured it")
+        if rows and not n_claimed:
+            warnings.append(
+                f"{kind} morphology: nothing verified yet — every value is the "
+                f"seeder's estimate (see docs/DATA_GAPS.md)")
+    return errors, warnings
 
 
 # ── Bee attributes (F37) ──────────────────────────────────────────────────────

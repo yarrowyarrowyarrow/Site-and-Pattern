@@ -10,7 +10,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Nests on the surface or underground."
+    "notes": "Nests on the surface or underground.",
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,yellow,black,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus balteatus",
@@ -23,7 +33,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": null
+    "notes": null,
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,orange,orange,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus bifarius",
@@ -36,7 +56,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Nests usually underground, sometimes on the surface."
+    "notes": "Nests usually underground, sometimes on the surface.",
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,orange,orange,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus bohemicus",
@@ -49,7 +79,17 @@
     "pollen_specialist": null,
     "conservation_status": "At risk (COSEWIC: Endangered)",
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Social parasite of other bumble bees — builds no nest of its own."
+    "notes": "Social parasite of other bumble bees — builds no nest of its own.",
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,black,black,yellow,white,white,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus borealis",
@@ -62,7 +102,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": null
+    "notes": null,
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,yellow,yellow,buff,buff,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus centralis",
@@ -75,7 +125,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": null
+    "notes": null,
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,orange,orange,yellow,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus cryptarum",
@@ -88,7 +148,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": null
+    "notes": null,
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,black,yellow,black,white,white,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus fervidus",
@@ -101,7 +171,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Nests usually on the surface or above ground in deserted mouse nests, tall grass or haystacks."
+    "notes": "Nests usually on the surface or above ground in deserted mouse nests, tall grass or haystacks.",
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,yellow,yellow,yellow,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus flavidus",
@@ -114,7 +194,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Social parasite of other bumble bees — builds no nest of its own."
+    "notes": "Social parasite of other bumble bees — builds no nest of its own.",
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,black,yellow,yellow,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus flavifrons",
@@ -127,7 +217,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": null
+    "notes": null,
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,yellow,orange,orange,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus frigidus",
@@ -140,7 +240,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Nests often above ground, sometimes below."
+    "notes": "Nests often above ground, sometimes below.",
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,yellow,orange,orange,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus griseocollis",
@@ -153,7 +263,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Nests underground or on the surface."
+    "notes": "Nests underground or on the surface.",
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,brown,black,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus huntii",
@@ -166,7 +286,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": null
+    "notes": null,
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,orange,orange,yellow,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus insularis",
@@ -179,7 +309,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Social parasite of other bumble bees — builds no nest of its own."
+    "notes": "Social parasite of other bumble bees — builds no nest of its own.",
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,black,black,yellow,yellow,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus melanopygus",
@@ -192,7 +332,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Nests underground and above ground, sometimes in birdhouses or building insulation."
+    "notes": "Nests underground and above ground, sometimes in birdhouses or building insulation.",
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,orange,orange,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus mixtus",
@@ -205,7 +355,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Nests variable — many on the ground surface, but also above and below ground."
+    "notes": "Nests variable — many on the ground surface, but also above and below ground.",
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,yellow,black,orange,orange,orange",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus nevadensis",
@@ -218,7 +378,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": null
+    "notes": null,
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,yellow,black,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus occidentalis",
@@ -231,7 +401,17 @@
     "pollen_specialist": null,
     "conservation_status": "At risk (COSEWIC: Threatened)",
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": null
+    "notes": null,
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,black,black,yellow,white,white,white",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus pensylvanicus",
@@ -244,7 +424,17 @@
     "pollen_specialist": null,
     "conservation_status": "At risk (COSEWIC: Special Concern)",
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Nests usually on the surface in long grass, sometimes underground."
+    "notes": "Nests usually on the surface in long grass, sometimes underground.",
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "black,yellow,yellow,yellow,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus perplexus",
@@ -257,7 +447,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": null
+    "notes": null,
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,yellow,black,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus polaris",
@@ -270,7 +470,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": null
+    "notes": null,
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,orange,orange,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus rufocinctus",
@@ -283,7 +493,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Nests usually on the surface or above ground."
+    "notes": "Nests usually on the surface or above ground.",
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,orange,black,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus sitkensis",
@@ -296,7 +516,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": null
+    "notes": null,
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,yellow,orange,orange,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus suckleyi",
@@ -309,7 +539,17 @@
     "pollen_specialist": null,
     "conservation_status": "At risk (COSEWIC: Threatened)",
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Social parasite of other bumble bees — builds no nest of its own."
+    "notes": "Social parasite of other bumble bees — builds no nest of its own.",
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,black,black,yellow,orange,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus sylvicola",
@@ -322,7 +562,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Nests mostly underground, sometimes on the surface."
+    "notes": "Nests mostly underground, sometimes on the surface.",
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,yellow,orange,orange,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus ternarius",
@@ -335,7 +585,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": null
+    "notes": null,
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,orange,orange,yellow,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus terricola",
@@ -348,7 +608,17 @@
     "pollen_specialist": null,
     "conservation_status": "At risk (COSEWIC: Special Concern)",
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Nests usually underground."
+    "notes": "Nests usually underground.",
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,black,yellow,yellow,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus vagans",
@@ -361,7 +631,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Nests usually underground."
+    "notes": "Nests usually underground.",
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,yellow,black,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Anthophora bomboides",
@@ -374,7 +654,17 @@
     "pollen_specialist": 0,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": null
+    "notes": null,
+    "body_length_mm": 13.0,
+    "build": "stout",
+    "hair_colour": "#c9a06a",
+    "integument_colour": "#3a2c1e",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "clear",
+    "band_pattern": "buff,buff,black,buff,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Anthophora occidentalis",
@@ -387,7 +677,17 @@
     "pollen_specialist": 0,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": null
+    "notes": null,
+    "body_length_mm": 13.0,
+    "build": "stout",
+    "hair_colour": "#c9a06a",
+    "integument_colour": "#3a2c1e",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "clear",
+    "band_pattern": "buff,buff,black,buff,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Anthophora peritomae",
@@ -400,7 +700,17 @@
     "pollen_specialist": 1,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": null
+    "notes": null,
+    "body_length_mm": 13.0,
+    "build": "stout",
+    "hair_colour": "#c9a06a",
+    "integument_colour": "#3a2c1e",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "clear",
+    "band_pattern": "buff,buff,black,buff,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Anthophora porterae",
@@ -413,7 +723,17 @@
     "pollen_specialist": 0,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": null
+    "notes": null,
+    "body_length_mm": 13.0,
+    "build": "stout",
+    "hair_colour": "#c9a06a",
+    "integument_colour": "#3a2c1e",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "clear",
+    "band_pattern": "buff,buff,black,buff,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Anthophora terminalis",
@@ -426,7 +746,17 @@
     "pollen_specialist": 0,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Nests in pithy stems — leave standing dead stems over winter."
+    "notes": "Nests in pithy stems — leave standing dead stems over winter.",
+    "body_length_mm": 13.0,
+    "build": "stout",
+    "hair_colour": "#c9a06a",
+    "integument_colour": "#3a2c1e",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "clear",
+    "band_pattern": "buff,buff,black,buff,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Anthophora ursina",
@@ -439,7 +769,17 @@
     "pollen_specialist": 0,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": null
+    "notes": null,
+    "body_length_mm": 13.0,
+    "build": "stout",
+    "hair_colour": "#c9a06a",
+    "integument_colour": "#3a2c1e",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "clear",
+    "band_pattern": "buff,buff,black,buff,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Diadasia australis",
@@ -452,7 +792,17 @@
     "pollen_specialist": 1,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Oligolectic — needs its host plant nearby."
+    "notes": "Oligolectic — needs its host plant nearby.",
+    "body_length_mm": 11.0,
+    "build": "stout",
+    "hair_colour": "#c9a877",
+    "integument_colour": "#3a2c1e",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "clear",
+    "band_pattern": "buff,buff,white,buff,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Diadasia diminuta",
@@ -465,7 +815,17 @@
     "pollen_specialist": 1,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Oligolectic — needs its host plant nearby."
+    "notes": "Oligolectic — needs its host plant nearby.",
+    "body_length_mm": 11.0,
+    "build": "stout",
+    "hair_colour": "#c9a877",
+    "integument_colour": "#3a2c1e",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "clear",
+    "band_pattern": "buff,buff,white,buff,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Eucera fulvitarsis",
@@ -478,7 +838,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": null
+    "notes": null,
+    "body_length_mm": 12.0,
+    "build": "round",
+    "hair_colour": "#c2a274",
+    "integument_colour": "#3a2c1e",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "clear",
+    "band_pattern": "buff,white,buff,white,buff,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Nomada aquilarum",
@@ -491,7 +861,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Andrena bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Andrena bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Nomada articulata",
@@ -504,7 +884,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Andrena bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Andrena bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Nomada bella",
@@ -517,7 +907,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Andrena bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Andrena bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Nomada lehighensis",
@@ -530,7 +930,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Andrena bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Andrena bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Nomada snowii",
@@ -543,7 +953,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Andrena bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Andrena bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Nomada valida",
@@ -556,7 +976,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Andrena bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Andrena bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Nomada vincta",
@@ -569,7 +999,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Andrena bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Andrena bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Triepeolus balteatus",
@@ -582,7 +1022,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Melissodes bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Melissodes bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Triepeolus concavus",
@@ -595,7 +1045,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Melissodes bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Melissodes bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Triepeolus dacotensis",
@@ -608,7 +1068,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Melissodes bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Melissodes bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Triepeolus helianthi",
@@ -621,7 +1091,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Melissodes bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Melissodes bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Triepeolus paenepectoralis",
@@ -634,7 +1114,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Melissodes bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Melissodes bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Triepeolus subalpinus",
@@ -647,7 +1137,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Melissodes bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Melissodes bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Epeolus americanus",
@@ -660,7 +1160,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Colletes bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Colletes bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Epeolus compactus",
@@ -673,7 +1183,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Colletes bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Colletes bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Epeolus minimus",
@@ -686,7 +1206,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Colletes bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Colletes bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Melecta pacifica",
@@ -699,7 +1229,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Anthophora bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Anthophora bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Melecta separata",
@@ -712,7 +1252,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Anthophora bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Anthophora bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Xeromelecta californica",
@@ -725,7 +1275,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Anthophora bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Anthophora bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Zacosmia maculata",
@@ -738,7 +1298,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Cleptoparasite of Anthophora bees — support the host bee and this species can follow."
+    "notes": "Cleptoparasite of Anthophora bees — support the host bee and this species can follow.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#b5462e",
+    "integument_colour": "#241a16",
+    "metallic": 0,
+    "scopa_position": "none",
+    "wing_tint": "smoky",
+    "band_pattern": "red,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Bombus spp.",
@@ -751,7 +1321,17 @@
     "pollen_specialist": null,
     "conservation_status": "Mixed — several Alberta bumble bees are at risk",
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Alberta has ~28 bumble bee species; among the richest bumble bee habitat in North America."
+    "notes": "Alberta has ~28 bumble bee species; among the richest bumble bee habitat in North America.",
+    "body_length_mm": 15.0,
+    "build": "round",
+    "hair_colour": "#f2c12e",
+    "integument_colour": "#26211c",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "smoky",
+    "band_pattern": "yellow,yellow,black,yellow,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Andrena spp.",
@@ -764,7 +1344,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Mining bees — solitary ground nesters and key early-spring pollinators; many are pollen specialists."
+    "notes": "Mining bees — solitary ground nesters and key early-spring pollinators; many are pollen specialists.",
+    "body_length_mm": 10.0,
+    "build": "slender",
+    "hair_colour": "#8a7a63",
+    "integument_colour": "#2a2520",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "clear",
+    "band_pattern": "brown,black,buff,black,buff,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Osmia spp.",
@@ -777,7 +1367,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Mason bees — cavity nesters that seal cells with mud; readily use bee hotels and drilled logs."
+    "notes": "Mason bees — cavity nesters that seal cells with mud; readily use bee hotels and drilled logs.",
+    "body_length_mm": 9.0,
+    "build": "stout",
+    "hair_colour": "#3a6b63",
+    "integument_colour": "#1d2b33",
+    "metallic": 1,
+    "scopa_position": "abdomen",
+    "wing_tint": "smoky",
+    "band_pattern": "black,black,black,black,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Megachile spp.",
@@ -790,7 +1390,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Leafcutter bees — cavity nesters that line cells with cut leaf discs; use bee hotels."
+    "notes": "Leafcutter bees — cavity nesters that line cells with cut leaf discs; use bee hotels.",
+    "body_length_mm": 11.0,
+    "build": "leafcutter",
+    "hair_colour": "#d8cbb0",
+    "integument_colour": "#2a2620",
+    "metallic": 0,
+    "scopa_position": "abdomen",
+    "wing_tint": "smoky",
+    "band_pattern": "buff,white,white,white,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Halictus spp.",
@@ -803,7 +1413,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Sweat bees — ground nesters, often in bare compact soil; long adult season."
+    "notes": "Sweat bees — ground nesters, often in bare compact soil; long adult season.",
+    "body_length_mm": 8.0,
+    "build": "slender",
+    "hair_colour": "#9a8f7a",
+    "integument_colour": "#2a2622",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "clear",
+    "band_pattern": "grey,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Lasioglossum spp.",
@@ -816,7 +1436,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Small sweat bees — abundant ground nesters across the whole growing season."
+    "notes": "Small sweat bees — abundant ground nesters across the whole growing season.",
+    "body_length_mm": 6.0,
+    "build": "slender",
+    "hair_colour": "#7d7568",
+    "integument_colour": "#26231e",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "clear",
+    "band_pattern": "grey,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Melissodes spp.",
@@ -829,7 +1459,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Long-horned bees — late-summer ground nesters strongly tied to Asteraceae (sunflowers, asters, coneflowers)."
+    "notes": "Long-horned bees — late-summer ground nesters strongly tied to Asteraceae (sunflowers, asters, coneflowers).",
+    "body_length_mm": 12.0,
+    "build": "round",
+    "hair_colour": "#c2a274",
+    "integument_colour": "#3a2c1e",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "clear",
+    "band_pattern": "buff,white,buff,white,buff,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Osmia lignaria",
@@ -842,7 +1482,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Blue orchard mason bee — early-spring cavity nester; an efficient fruit-tree pollinator."
+    "notes": "Blue orchard mason bee — early-spring cavity nester; an efficient fruit-tree pollinator.",
+    "body_length_mm": 9.0,
+    "build": "stout",
+    "hair_colour": "#3a6b63",
+    "integument_colour": "#1d2b33",
+    "metallic": 1,
+    "scopa_position": "abdomen",
+    "wing_tint": "smoky",
+    "band_pattern": "black,black,black,black,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Megachile relativa",
@@ -855,7 +1505,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "A leafcutter bee — mid-summer cavity nester."
+    "notes": "A leafcutter bee — mid-summer cavity nester.",
+    "body_length_mm": 11.0,
+    "build": "leafcutter",
+    "hair_colour": "#d8cbb0",
+    "integument_colour": "#2a2620",
+    "metallic": 0,
+    "scopa_position": "abdomen",
+    "wing_tint": "smoky",
+    "band_pattern": "buff,white,white,white,black,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Agapostemon virescens",
@@ -868,7 +1528,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Bicoloured sweat bee — communal ground nester with a metallic-green head."
+    "notes": "Bicoloured sweat bee — communal ground nester with a metallic-green head.",
+    "body_length_mm": 9.0,
+    "build": "slender",
+    "hair_colour": "#3fae5a",
+    "integument_colour": "#2c6b3a",
+    "metallic": 1,
+    "scopa_position": "hind_leg",
+    "wing_tint": "clear",
+    "band_pattern": "black,yellow,black,yellow,black,yellow,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Colletes inaequalis",
@@ -881,7 +1551,17 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Spring cellophane bee — early ground nester that lines cells with a waterproof film; key willow pollinator."
+    "notes": "Spring cellophane bee — early ground nester that lines cells with a waterproof film; key willow pollinator.",
+    "body_length_mm": 11.0,
+    "build": "stout",
+    "hair_colour": "#caa878",
+    "integument_colour": "#3a2c20",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "clear",
+    "band_pattern": "buff,white,white,white,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   },
   {
     "scientific_name": "Halictus rubicundus",
@@ -894,6 +1574,16 @@
     "pollen_specialist": null,
     "conservation_status": null,
     "source": "Alberta native bee compilation (Alberta Native Bee Council); nesting & floral hosts after Sheffield, Frier & Dumesh 2014 (Bees of Canadian Grasslands) and Wilson & Carril 2015; genus spellings normalised; flight windows generalised for Alberta (P9 — coarse ranges).",
-    "notes": "Orange-legged furrow bee — a common, sometimes-social ground-nesting sweat bee."
+    "notes": "Orange-legged furrow bee — a common, sometimes-social ground-nesting sweat bee.",
+    "body_length_mm": 8.0,
+    "build": "slender",
+    "hair_colour": "#9a8f7a",
+    "integument_colour": "#2a2622",
+    "metallic": 0,
+    "scopa_position": "hind_leg",
+    "wing_tint": "clear",
+    "band_pattern": "grey,black,white,black,white,black,black",
+    "morph_data_source": "estimated",
+    "morph_data_citation": ""
   }
 ]

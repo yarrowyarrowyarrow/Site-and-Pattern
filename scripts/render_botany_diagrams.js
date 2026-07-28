@@ -20,15 +20,20 @@ const path = require('path');
 
 const ROOT = path.dirname(__dirname);
 const sandbox = {};
-// The module is a classic script assigning onto a global object, not a CommonJS
-// module — the repo's convention for browser JS. Run it with `sandbox` standing
-// in for `window`.
-new Function('window', fs.readFileSync(
-  path.join(ROOT, 'html', 'botany', 'diagrams.js'), 'utf8')
-  .replace(/\}\)\(typeof window[^;]*;\s*$/, '})(window);'))(sandbox);
+// The modules are classic scripts assigning onto a global object, not CommonJS
+// — the repo's convention for browser JS. Run each with `sandbox` standing in
+// for `window`, so both share one global exactly as they do in the browser.
+function load(file) {
+  new Function('window', fs.readFileSync(file, 'utf8')
+    .replace(/\}\)\(typeof window[^;]*;\s*$/, '})(window);'))(sandbox);
+}
+load(path.join(ROOT, 'html', 'botany', 'diagrams.js'));
+load(path.join(ROOT, 'html', 'botany', 'fauna.js'));
 
 const outDir = path.join(ROOT, 'docs', 'img', 'botany');
+const faunaDir = path.join(ROOT, 'docs', 'img', 'fauna');
 fs.mkdirSync(outDir, { recursive: true });
+fs.mkdirSync(faunaDir, { recursive: true });
 
 // ONE FILE PER TERM, and the labels live in the Markdown table beside them
 // rather than inside the picture. A combined plate with <text> labels was the
@@ -47,3 +52,32 @@ for (const vocab of ['leaf_shape', 'flower_arch', 'leaf_arrangement']) {
   console.log(vocab, '·', sandbox.botanyTerms(vocab).length, 'terms');
 }
 console.log(n + ' diagrams written to ' + path.relative(ROOT, outDir));
+
+// ── fauna (V2.36) ──────────────────────────────────────────────────────────
+let m = 0;
+for (const vocab of ['wing_shape', 'wing_pattern', 'resting_posture',
+                     'flight_style', 'bee_build', 'scopa_position']) {
+  for (const term of sandbox.faunaTerms(vocab)) {
+    const svg = sandbox.faunaDiagram(vocab, term, { size: 92 });
+    if (!svg) throw new Error('no diagram for ' + vocab + '/' + term);
+    fs.writeFileSync(path.join(faunaDir, vocab + '-' + term + '.svg'), svg + '\n');
+    m++;
+  }
+  console.log(vocab, '·', sandbox.faunaTerms(vocab).length, 'terms');
+}
+// Six worked bumblebee band patterns for the field guide — the point being
+// that six species a key describes differently now LOOK different.
+const BANDS = {
+  'huntii':        'yellow,yellow,orange,orange,yellow,black,black',
+  'terricola':     'yellow,black,yellow,yellow,black,black,black',
+  'occidentalis':  'yellow,black,black,yellow,white,white,white',
+  'vagans':        'yellow,yellow,yellow,black,black,black,black',
+  'mixtus':        'yellow,yellow,yellow,black,orange,orange,orange',
+  'griseocollis':  'yellow,yellow,brown,black,black,black,black',
+};
+for (const [name, pattern] of Object.entries(BANDS)) {
+  fs.writeFileSync(path.join(faunaDir, 'band-' + name + '.svg'),
+                   sandbox.beeBandDiagram(pattern, { size: 92 }) + '\n');
+  m++;
+}
+console.log(m + ' diagrams written to ' + path.relative(ROOT, faunaDir));

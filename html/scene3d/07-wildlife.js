@@ -33,11 +33,32 @@ function _wingMat(hex) {
 // `gain` scales the beat: 1 is full flight, 0 folds the wings to their resting
 // `base` angle. Birds use it to fold on the perch and beat while crossing the
 // yard; everything else leaves it at 1 and flaps continuously.
-function flapWings(obj, t, gain) {
+//
+// `phase` (V2.36) offsets one creature's beat from the next. Without it every
+// flier in the scene drives off the same global `t`, so six butterflies beat in
+// PERFECT UNISON — the wings were never frozen, but a synchronised swarm reads
+// as clockwork rather than as animals, and that is indistinguishable from
+// "they don't flap" in any still frame. Every critter already carries a
+// `wanderPh` used for its wander and bob; this is the same number.
+//
+// `skew` is the FRACTION OF THE BEAT SPENT RAISING THE WINGS, 0.5 being the
+// plain symmetric sine every taxon used before. A lepidopteran downstroke is
+// the power stroke and is quicker than the recovery, so butterflies want a
+// value above 0.5: a long unhurried lift, then a snap. A symmetric beat is the
+// other half of why these looked mechanical.
+function flapWings(obj, t, gain, phase) {
   const fp = obj.userData.flap;
   if (!fp || !obj.userData.wings) return;
   const g = gain == null ? 1 : gain;
-  const w = fp.base + (0.5 + 0.5 * Math.sin(t * fp.speed)) * fp.amp * g;
+  // Position within the beat, 0..1.
+  let u = ((t * fp.speed + (phase || 0)) / (Math.PI * 2)) % 1;
+  if (u < 0) u += 1;
+  const k = Math.min(0.9, Math.max(0.1, fp.skew == null ? 0.5 : fp.skew));
+  // Time-warp: the first `k` of the cycle covers the up-sweep (v: 0→0.5) and
+  // the rest covers the down-sweep (v: 0.5→1). Continuous at u=k and u=1, so
+  // the wing never jumps. k=0.5 reduces exactly to the old symmetric beat.
+  const v = u < k ? 0.5 * (u / k) : 0.5 + 0.5 * ((u - k) / (1 - k));
+  const w = fp.base + (0.5 - 0.5 * Math.cos(v * Math.PI * 2)) * fp.amp * g;
   for (const { pivot, sign } of obj.userData.wings) pivot.rotation.z = sign * w;
 }
 
@@ -283,7 +304,16 @@ function rebuildWildlife() {
     // Backref so hover can name the creature + the plant it's using.
     obj.userData.critterInfo = { name: spec.name || '', on: spec.on || '',
                                  rel: spec.rel || '', kind: spec.kind,
-                                 onId: spec.on_id };
+                                 onId: spec.on_id,
+                                 // How this species flies (V2.36) — see
+                                 // _FLIGHT_STYLE. The key matches the column
+                                 // name (lepidoptera_attributes.flight_style)
+                                 // so there is nothing to rename in between.
+                                 // Empty falls back to 'fluttery', the old
+                                 // behaviour, which is what an undescribed
+                                 // species gets.
+                                 flight: (app && app.flight_style) || '',
+                                 rest: (app && app.resting_posture) || '' };
     const flier = obj.userData.anim === 'flier' || obj.userData.anim === 'hover';
     const shadow = makeCritShadow(flier ? 0.5 : 0.4);
     shadow.position.set(anchor.x, gy + 0.02, anchor.z);
@@ -317,6 +347,38 @@ const _WILD_MOVE = {
   crawl:  { spd: 0.25, dwell: 2.5, bob: 0.0 },   // beetles: slow amble
 };
 const _WV = new THREE.Vector3();
+
+// How a lepidopteran flies (V2.36). Six documented styles — a skipper darts, a
+// monarch sails, a white flutters, a sphinx moth hangs — and until now every
+// one of them used the same single sine. `flight_style` is a real character
+// out of any butterfly guide, so the roster carries it per species
+// (lepidoptera_attributes.flight_style) and it lands here.
+//
+//   rate  how fast the wander evolves      side  metres/s of sideways weave
+//   lift  metres of vertical wander        roll  radians of bank into the weave
+const _FLIGHT_STYLE = {
+  fluttery: { rate: 1.00, side: 0.85, lift: 0.30, roll: 0.55 },  // whites, sulphurs
+  erratic:  { rate: 1.55, side: 1.25, lift: 0.38, roll: 0.75 },  // blues, crescents
+  darting:  { rate: 2.10, side: 0.70, lift: 0.16, roll: 0.35 },  // skippers
+  gliding:  { rate: 0.45, side: 0.45, lift: 0.22, roll: 0.30 },  // monarchs, swallowtails
+  bobbing:  { rate: 0.80, side: 0.40, lift: 0.55, roll: 0.25 },  // fritillaries, satyrs
+  hovering: { rate: 1.30, side: 0.22, lift: 0.10, roll: 0.12 },  // sphinx, clearwings
+};
+
+// Two out-of-phase wander channels from three incommensurate sines each.
+// Amplitude is normalised to ~±1. The rate ratios (1 : 2.37 : 4.11) are
+// irrational-ish on purpose — with harmonics the sum would repeat visibly.
+function _wander3(t, ph, rate) {
+  const s = t * 0.001 * rate;
+  return {
+    a: (Math.sin(s * 1.00 + ph) * 0.60 +
+        Math.sin(s * 2.37 + ph * 2.1) * 0.28 +
+        Math.sin(s * 4.11 + ph * 3.7) * 0.12),
+    b: (Math.cos(s * 0.83 + ph * 1.4) * 0.60 +
+        Math.cos(s * 1.94 + ph * 2.8) * 0.28 +
+        Math.cos(s * 3.62 + ph * 0.6) * 0.12),
+  };
+}
 
 // Yaw that points a critter's NOSE along (dx, dz).
 //
@@ -369,12 +431,35 @@ function animateWildlife(t) {
         // heading for. Butterflies used to be the only ones that escaped, via
         // their own bob below.
         c.pos.y += (tgt.y - c.pos.y) * Math.min(1, dt * 1.6);
-        // Butterflies/moths flutter: weave sideways off the straight line.
+        // Butterflies/moths flutter: weave off the straight line.
+        //
+        // This was ONE sine sideways and ONE sine vertically — a smooth, even
+        // S-curve, which is a paper plane rather than a butterfly. Real
+        // lepidopteran flight is the standard example of an erratic path: it
+        // is what makes them hard for a bird to catch, and it is the single
+        // most recognisable thing about how they move.
+        //
+        // Layered incommensurate sines instead. The three rates share no
+        // common multiple, so the sum never repeats on any timescale you can
+        // watch, and the second/third terms are faster and smaller — direction
+        // changes arrive at irregular intervals rather than on a beat.
+        // DETERMINISTIC on purpose (no per-frame RNG): the presentation still
+        // (F69) re-renders the same scene at the same clock and has to get the
+        // same frame back.
         if (c.anim === 'flier' && (o.userData.critterInfo &&
             (o.userData.critterInfo.kind === 'butterfly' || o.userData.critterInfo.kind === 'moth'))) {
+          const fs = _FLIGHT_STYLE[(o.userData.critterInfo.flight || '')] ||
+                     _FLIGHT_STYLE.fluttery;
           const side = new THREE.Vector3(-_WV.z, 0, _WV.x);
-          c.pos.addScaledVector(side, Math.sin(t * 0.012 + ph) * 0.6 * dt);
-          c.pos.y = tgt.y + Math.sin(t * 0.009 + ph) * 0.25;   // bob up & down
+          const wob = _wander3(t, ph, fs.rate);
+          c.pos.addScaledVector(side, wob.a * fs.side * dt);
+          // Vertical wander is a position offset from the waypoint height, not
+          // an accumulation, so a lep cannot drift into the ground.
+          c.pos.y = tgt.y + wob.b * fs.lift;
+          // Roll into the weave. A butterfly banks hard through a direction
+          // change and the flat silhouette is most of what you see, so this
+          // does more for the "erratic" read than the path itself.
+          o.rotation.z = wob.a * fs.roll;
         }
         o.position.copy(c.pos);
         o.rotation.y = critterHeading(_WV.x, _WV.z);
@@ -386,7 +471,17 @@ function animateWildlife(t) {
       o.position.x = c.pos.x + Math.sin(t * 0.0016 + ph) * wob;
       o.position.z = c.pos.z + Math.cos(t * 0.0019 + ph) * wob;
       o.position.y = (c.dwell > 0 || single ? tgt.y : o.position.y) + Math.sin(t * 0.005 + ph) * mv.bob;
-      flapWings(o, t);
+      // A settled butterfly closes its wings over its back and holds them
+      // there; only the nectaring shiver remains. `gain` already does exactly
+      // this for a perched bird — leps never asked for it, so they went on
+      // beating at full amplitude while standing still on a flower.
+      const settled = c.dwell > 0 && o.userData.critterInfo &&
+                      (o.userData.critterInfo.kind === 'butterfly' ||
+                       o.userData.critterInfo.kind === 'moth');
+      flapWings(o, t, settled ? 0.12 : 1, ph);
+      // Level out of the bank when not weaving, so a lep that arrives mid-turn
+      // does not sit on the flower tilted over.
+      if (c.dwell > 0) o.rotation.z += (0 - o.rotation.z) * Math.min(1, dt * 3);
       if (c.shadow) c.shadow.position.set(o.position.x, c.anchor.y + 0.02, o.position.z);
     } else if (c.anim === 'perch') {
       o.position.y = tgt.y + Math.sin(t * 0.003 + ph) * mv.bob;
@@ -396,7 +491,7 @@ function animateWildlife(t) {
       // the authored rest pose — sticking straight out sideways — and crossed
       // the yard without moving them, while every insect flapped. One of the
       // two independent reasons; the other was an amplitude of zero.
-      flapWings(o, t, c.dwell > 0 ? 0 : 1);
+      flapWings(o, t, c.dwell > 0 ? 0 : 1, ph);
       if (c.shadow) c.shadow.position.set(o.position.x, c.anchor.y + 0.02, o.position.z);
     } else if (c.anim === 'ground') {
       const hop = c.dwell > 0 ? 0 : Math.abs(Math.sin(t * 0.02 + ph)) * 0.06;

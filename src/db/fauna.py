@@ -152,6 +152,52 @@ def bee_flight_seasons() -> dict:
         conn.close()
 
 
+_BEE_MORPH_COLS = ("body_length_mm", "build", "hair_colour",
+                   "integument_colour", "metallic", "scopa_position",
+                   "wing_tint", "band_pattern")
+_LEP_MORPH_COLS = ("wingspan_min_mm", "wingspan_max_mm", "forewing_colour",
+                   "hindwing_colour", "margin_colour", "wing_shape",
+                   "wing_pattern", "eyespot_count", "resting_posture",
+                   "flight_style")
+
+
+def _morphology(table: str, cols: tuple) -> dict:
+    """``{fauna_id: {col: value}}`` for every row with ANY morphology recorded
+    (schema v58).
+
+    Loaded in one query and passed down, like `bee_flight_seasons` — the scene
+    builder walks up to 26 creatures and a per-creature query would be 26 round
+    trips for data that fits in a dict. Rows with nothing recorded are dropped
+    so `.get(fid)` returning None keeps meaning "not described", which is what
+    makes the viewer's genus-table fallback fire.
+    """
+    conn = get_connection()
+    try:
+        sel = ", ".join(cols)
+        rows = conn.execute(
+            f"SELECT fauna_id, {sel} FROM {table}").fetchall()
+    except Exception:                                        # noqa: BLE001
+        return {}                        # pre-v58 database: no such columns
+    finally:
+        conn.close()
+    out = {}
+    for r in rows:
+        vals = {c: r[c] for c in cols if r[c] is not None and r[c] != ""}
+        if vals:
+            out[r["fauna_id"]] = vals
+    return out
+
+
+def bee_morphology() -> dict:
+    """What each bee looks like (schema v58) — see `_morphology`."""
+    return _morphology("bee_attributes", _BEE_MORPH_COLS)
+
+
+def lep_morphology() -> dict:
+    """What each butterfly/moth looks like (schema v58) — see `_morphology`."""
+    return _morphology("lepidoptera_attributes", _LEP_MORPH_COLS)
+
+
 def lep_activity_seasons() -> dict:
     """``{fauna_id: (activity, flight_season)}`` for every lepidopteran with
     attributes — used to gate butterflies/moths by month and by day/night."""

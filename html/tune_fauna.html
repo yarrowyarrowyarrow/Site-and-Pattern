@@ -1,0 +1,604 @@
+<!doctype html>
+<!--
+  html/tune_fauna.html — the fauna bench (V2.36).
+
+  Served by scripts/tune_fauna.py, which also provides the JSON API
+  (/api/fauna, /api/vocab, POST /api/fauna/<scientific_name>). Opening this
+  file directly will not work: it needs that server.
+
+  Three panes. The list with triage filters, the characters, and the reference
+  — the drawn vocabulary and where to look this animal up. Every vocabulary
+  dropdown carries its diagram (html/botany/fauna.js) and opens the whole
+  vocabulary side by side, where clicking the picture that matches sets the
+  value.
+
+  The bee pane's centrepiece is the BAND EDITOR: thorax then T1..T6, the way
+  every bumblebee key is written, with the bee drawn from what you have typed.
+  29 of the catalogue's 69 bees are Bombus and they rendered as one animal;
+  typing a band code blind would only move that problem, so the drawing is the
+  point rather than a decoration.
+
+  A DEV tool, not an app panel.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<title>Fauna bench — Site &amp; Pattern</title>
+<style>
+  :root { --bg:#15181a; --panel:#1e2326; --line:#33403f; --ink:#e2ecec;
+          --dim:#9aaba9; --accent:#7ac8ce; --warn:#c9a24a; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--ink);
+               font-family: system-ui, sans-serif; font-size:13px; }
+  #wrap { display:grid; grid-template-columns: 270px 1fr 320px; height:100%; }
+  .pane { min-width:0; height:100%; overflow:auto; border-right:1px solid var(--line); }
+  #list { background:var(--panel); padding:8px; }
+  #list input[type=text] { width:100%; padding:6px 8px; background:#0e1112;
+                border:1px solid var(--line); color:var(--ink); border-radius:6px; }
+  #filters { display:flex; flex-wrap:wrap; gap:4px; margin:8px 0 6px; }
+  #filters button { flex:1 1 auto; padding:4px 6px; font-size:11px; cursor:pointer;
+    background:#0e1112; border:1px solid var(--line); color:var(--dim); border-radius:5px; }
+  #filters button.on { background:#2b4446; color:var(--ink); border-color:#4b7275; }
+  #count { color:var(--dim); font-size:11.5px; margin-bottom:6px; line-height:1.4; }
+  .row { padding:5px 8px; border-radius:5px; cursor:pointer; line-height:1.3; }
+  .row:hover { background:#25302f; }
+  .row.on { background:#2b4446; }
+  .row .sci { color:var(--dim); font-style:italic; font-size:11.5px; }
+  .badge { float:right; font-size:10px; letter-spacing:.03em; }
+  .b-estimated { color:var(--warn); }
+  .b-photo,.b-flora,.b-measured { color:var(--accent); }
+  #edit, #ref { background:var(--panel); padding:12px; }
+  #ref { background:#0e1112; border-right:0; }
+  h2 { margin:0 0 2px; font-size:15px; }
+  h3 { margin:16px 0 4px; font-size:12px; color:var(--dim); text-transform:uppercase;
+       letter-spacing:.05em; font-weight:600; }
+  .sub { color:var(--dim); margin-bottom:10px; font-style:italic; }
+  label { display:block; margin:9px 0 2px; color:var(--dim); font-size:11.5px;
+          text-transform:uppercase; letter-spacing:.04em; }
+  .val { float:right; color:var(--accent); text-transform:none; letter-spacing:0; }
+  select, input[type=color], input[type=text].f, input[type=number].f {
+    width:100%; padding:5px 7px; background:#0e1112; border:1px solid var(--line);
+    color:var(--ink); border-radius:5px; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .btn { margin-top:12px; width:100%; padding:8px; background:#2f5254;
+         border:1px solid #4b7275; color:var(--ink); border-radius:6px;
+         cursor:pointer; font-size:13px; }
+  .btn:hover { background:#3a6467; }
+  .btn.thin { padding:5px; font-size:11.5px; margin-top:6px; background:#232d2d;
+              border-color:var(--line); }
+  .hint { color:var(--dim); line-height:1.5; margin-top:10px; font-size:11.5px; }
+  #status { color:var(--accent); min-height:16px; margin-top:6px; font-size:12px; }
+  .miss { color:var(--warn); }
+  fieldset { border:1px solid var(--line); border-radius:8px; padding:2px 10px 12px;
+             margin:14px 0 0; min-width:0; }
+  fieldset legend { color:var(--dim); font-size:11px; text-transform:uppercase;
+                    letter-spacing:.05em; padding:0 5px; font-weight:600; }
+  fieldset[disabled] { opacity:.4; }
+  .vrow { display:flex; gap:6px; align-items:flex-start; }
+  .vrow select { flex:1 1 auto; }
+  .dia { flex:0 0 auto; width:38px; height:38px; padding:1px; cursor:pointer;
+         background:#0e1112; border:1px solid var(--line); border-radius:5px;
+         display:flex; align-items:center; justify-content:center; }
+  .dia:hover { border-color:#4b7275; background:#1a2222; }
+  .dia.empty::after { content:'?'; color:#5d6b6a; font-size:15px; }
+
+  /* ── the band editor ── */
+  #bands { display:flex; gap:10px; align-items:flex-start; margin-top:4px; }
+  #bandpreview { flex:0 0 auto; }
+  #bandrows { flex:1 1 auto; min-width:0; }
+  .bandrow { display:flex; align-items:center; gap:6px; margin-bottom:3px; }
+  .bandrow .seg { width:34px; color:var(--dim); font-size:10.5px; flex:0 0 auto; }
+  .swatches { display:flex; gap:2px; flex-wrap:wrap; }
+  .swatches button { width:17px; height:17px; border-radius:3px; cursor:pointer;
+    border:1px solid #0e1112; padding:0; }
+  .swatches button.on { outline:2px solid var(--accent); outline-offset:1px; }
+  .bandrow .clr { background:none; border:0; color:#7a6b5a; cursor:pointer;
+                  font-size:13px; padding:0 2px; }
+
+  #chart { position:fixed; inset:0; background:rgba(8,11,11,.96); z-index:60;
+           display:none; overflow:auto; padding:26px; }
+  #chart.on { display:block; }
+  #chart h2 { color:var(--accent); font-size:17px; margin:0 0 6px; }
+  #chart .close { position:fixed; top:16px; right:22px; font-size:22px;
+                  color:var(--dim); cursor:pointer; line-height:1; }
+  .botany-note { color:var(--dim); font-size:12.5px; line-height:1.6;
+                 max-width:70ch; margin:0 0 18px; }
+  .botany-grid { display:grid; gap:10px;
+                 grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); }
+  .botany-cell { margin:0; background:var(--panel); border:1px solid var(--line);
+                 border-radius:8px; padding:10px; cursor:pointer; }
+  .botany-cell:hover { border-color:#4b7275; background:#25302f; }
+  .botany-cell.is-current { border-color:var(--accent); background:#2b4446; }
+  .botany-cell svg { display:block; margin:0 auto; }
+  .botany-cell figcaption b { display:block; font-size:12.5px; margin:4px 0 2px; }
+  .botany-cell figcaption span { color:var(--dim); font-size:11px; line-height:1.45; }
+  .links a { display:block; color:var(--accent); text-decoration:none; margin:5px 0; }
+  .links a:hover { text-decoration:underline; }
+  .links .why { color:var(--dim); font-size:10.5px; display:block; }
+  #photo img { width:100%; border-radius:6px; display:block; }
+  .credit { color:var(--dim); font-size:10px; line-height:1.35; margin-top:4px;
+            word-break:break-word; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div class="pane" id="list">
+    <input type="text" id="q" placeholder="Search…" autofocus>
+    <div id="filters">
+      <button data-f="all" class="on">all</button>
+      <button data-f="bee">bees</button>
+      <button data-f="lep">butterflies</button>
+      <button data-f="bombus">bumblebees</button>
+      <button data-f="estimated">estimated</button>
+      <button data-f="done">verified</button>
+    </div>
+    <div id="count"></div>
+  </div>
+
+  <div class="pane" id="edit">
+    <h2 id="name">…</h2>
+    <div class="sub" id="sci"></div>
+
+    <!-- BEES -->
+    <fieldset id="fs-bee"><legend>Bee</legend>
+      <label>Body length, mm <span class="val" style="font-size:10.5px">female / worker</span></label>
+      <input type="number" class="f" id="body_length_mm" min="2" max="40" step="0.5">
+
+      <label>Build</label>
+      <div class="vrow">
+        <select id="build"></select>
+        <button class="dia" data-vocab="bee_build" title="see all four"></button>
+      </div>
+
+      <label>Pollen carried on</label>
+      <div class="vrow">
+        <select id="scopa_position"></select>
+        <button class="dia" data-vocab="scopa_position" title="see all three"></button>
+      </div>
+
+      <div class="two">
+        <div><label>Hair (pile)</label><input type="color" id="hair_colour"></div>
+        <div><label>Body beneath</label><input type="color" id="integument_colour"></div>
+      </div>
+
+      <label>Metallic sheen</label>
+      <select id="metallic">
+        <option value="">—</option><option value="0">no</option><option value="1">yes</option>
+      </select>
+
+      <label>Wing tint</label>
+      <select id="wing_tint"></select>
+
+      <!-- The centrepiece. Thorax then T1..T6, the order every key names them. -->
+      <label>Colour bands <span class="val" style="font-size:10.5px">thorax, then T1…T6</span></label>
+      <div id="bands">
+        <div id="bandpreview"></div>
+        <div id="bandrows"></div>
+      </div>
+      <input type="hidden" id="band_pattern">
+    </fieldset>
+
+    <!-- LEPIDOPTERA -->
+    <fieldset id="fs-lep"><legend>Butterfly / moth</legend>
+      <label>Wingspan, mm <span class="val" style="font-size:10.5px">the published range</span></label>
+      <div class="two">
+        <input type="number" class="f" id="wingspan_min_mm" min="8" max="200" step="1" placeholder="min">
+        <input type="number" class="f" id="wingspan_max_mm" min="8" max="200" step="1" placeholder="max">
+      </div>
+
+      <label>Wing shape</label>
+      <div class="vrow">
+        <select id="wing_shape"></select>
+        <button class="dia" data-vocab="wing_shape" title="see all six"></button>
+      </div>
+
+      <label>Wing pattern</label>
+      <div class="vrow">
+        <select id="wing_pattern"></select>
+        <button class="dia" data-vocab="wing_pattern" title="see all seven"></button>
+      </div>
+
+      <label>Eyespots per forewing <span class="val" id="v_eyespot_count"></span></label>
+      <input type="number" class="f" id="eyespot_count" min="0" max="8" step="1">
+
+      <div class="two">
+        <div><label>Forewing</label><input type="color" id="forewing_colour"></div>
+        <div><label>Hindwing</label><input type="color" id="hindwing_colour"></div>
+      </div>
+      <label>Margin / fringe</label>
+      <input type="color" id="margin_colour">
+
+      <label>At rest</label>
+      <div class="vrow">
+        <select id="resting_posture"></select>
+        <button class="dia" data-vocab="resting_posture" title="see all five"></button>
+      </div>
+
+      <label>Flight style <span class="val" style="font-size:10.5px">drives the 3D flight</span></label>
+      <div class="vrow">
+        <select id="flight_style"></select>
+        <button class="dia" data-vocab="flight_style" title="see all six"></button>
+      </div>
+    </fieldset>
+
+    <fieldset><legend>Where this came from</legend>
+      <label>Source</label>
+      <select id="morph_data_source"></select>
+      <label>Which one? <span class="val" style="font-size:10.5px">names the guide</span></label>
+      <input type="text" class="f" id="morph_data_citation"
+             placeholder="Williams et al. 2014 p.148 · iNat obs 91823 · my yard 2026-07-12">
+    </fieldset>
+
+    <button class="btn" id="save">Save &nbsp;(S)</button>
+    <div id="status"></div>
+    <button class="btn thin" id="copy">Copy characters from another species…</button>
+
+    <div class="hint">
+      <code>←</code> / <code>→</code> pages species, <code>S</code> saves.
+      <br><br>
+      Everything here arrived as a <strong>genus-level estimate</strong> — nothing
+      has been checked. The colour bands are the highest-value thing to correct:
+      29 of the 69 bees are <em>Bombus</em> and they are what every bumblebee key
+      keys on. <strong>Flight style</strong> is the other, because it is the one
+      character you can record from ten metres without a photograph, and it drives
+      how the animal flies in the 3D preview.
+      <br><br>
+      Click any <span style="color:var(--accent)">diagram</span> to see the whole
+      vocabulary side by side — then click the one that matches to set it.
+    </div>
+  </div>
+
+  <div class="pane" id="ref">
+    <h3 style="margin-top:0">Photograph</h3>
+    <div id="photo"></div>
+    <h3>Look it up</h3>
+    <div class="links" id="links"></div>
+    <div class="hint" id="notes"></div>
+  </div>
+</div>
+
+<div id="chart"><span class="close">×</span><h2></h2><div class="body"></div></div>
+
+<script src="/botany/fauna.js"></script>
+<script>
+const BEE_FIELDS = ['body_length_mm','build','hair_colour','integument_colour',
+  'metallic','scopa_position','wing_tint','band_pattern'];
+const LEP_FIELDS = ['wingspan_min_mm','wingspan_max_mm','forewing_colour',
+  'hindwing_colour','margin_colour','wing_shape','wing_pattern','eyespot_count',
+  'resting_posture','flight_style'];
+const PROVENANCE = ['morph_data_source','morph_data_citation'];
+const FIELDS = BEE_FIELDS.concat(LEP_FIELDS, PROVENANCE);
+const NUMERIC = ['body_length_mm','wingspan_min_mm','wingspan_max_mm',
+                 'eyespot_count','metallic'];
+const COLOURS = ['hair_colour','integument_colour','forewing_colour',
+                 'hindwing_colour','margin_colour'];
+// Which vocabulary drawing sits beside which field.
+const DIA_FOR = { build:'bee_build', scopa_position:'scopa_position',
+  wing_shape:'wing_shape', wing_pattern:'wing_pattern',
+  resting_posture:'resting_posture', flight_style:'flight_style' };
+
+let SPECIES = [], VOCAB = {}, shown = [], idx = 0, dirty = false, filter = 'all';
+
+const $ = (id) => document.getElementById(id);
+const status = (m, cls) => { $('status').textContent = m;
+                             $('status').className = cls || ''; };
+function cur() { return shown[idx]; }
+
+async function boot() {
+  [SPECIES, VOCAB] = await Promise.all([
+    fetch('/api/fauna').then(r => r.json()),
+    fetch('/api/vocab').then(r => r.json()),
+  ]);
+  fillVocabularies();
+  buildBandRows();
+  wireDiagrams();
+  $('q').addEventListener('input', render);
+  for (const b of document.querySelectorAll('#filters button'))
+    b.onclick = () => {
+      filter = b.dataset.f;
+      for (const o of document.querySelectorAll('#filters button'))
+        o.classList.toggle('on', o === b);
+      render(); select(0);
+    };
+  render();
+  select(0);
+}
+
+// Dropdowns are built from the server's lists — the HTML ships them EMPTY, so
+// it cannot offer a value the data-quality gate will reject.
+function fillVocabularies() {
+  for (const [field, terms] of Object.entries(VOCAB)) {
+    if (field.charAt(0) === '_') continue;      // palette data, not a dropdown
+    const el = $(field);
+    if (!el) continue;
+    el.textContent = '';
+    if (field !== 'morph_data_source') el.appendChild(new Option('— not described —', ''));
+    for (const t of terms) el.appendChild(new Option(t, t));
+  }
+  const why = { estimated: "estimated — the seeder's genus default",
+                photo: 'photo — judged off a picture',
+                flora: 'guide — read from a published description',
+                measured: 'measured — a specimen in the hand' };
+  for (const o of $('morph_data_source').options) o.textContent = why[o.value] || o.value;
+}
+
+// ── the band editor ────────────────────────────────────────────────────────
+// One row per segment: thorax, then T1..T6. Clicking a swatch sets that
+// segment and redraws the bee, so the pattern is checked by looking rather
+// than by reading a comma-separated string back to yourself.
+function buildBandRows() {
+  const host = $('bandrows');
+  const names = VOCAB._band_colours || [];
+  const hex = VOCAB._band_hex || {};
+  const max = VOCAB._band_max || 7;
+  host.textContent = '';
+  for (let i = 0; i < max; i++) {
+    const row = document.createElement('div');
+    row.className = 'bandrow';
+    row.innerHTML = '<span class="seg">' + (i === 0 ? 'thorax' : 'T' + i) + '</span>';
+    const sw = document.createElement('div');
+    sw.className = 'swatches';
+    for (const nm of names) {
+      const b = document.createElement('button');
+      b.style.background = hex[nm] || '#888';
+      b.title = nm;
+      b.dataset.seg = i; b.dataset.colour = nm;
+      b.onclick = () => setBand(i, nm);
+      sw.appendChild(b);
+    }
+    row.appendChild(sw);
+    const clr = document.createElement('button');
+    clr.className = 'clr'; clr.textContent = '×';
+    clr.title = 'this segment and everything after it is not described';
+    clr.onclick = () => setBand(i, null);
+    row.appendChild(clr);
+    host.appendChild(row);
+  }
+}
+
+function bandList() {
+  return ($('band_pattern').value || '').split(',')
+    .map(s => s.trim()).filter(Boolean);
+}
+
+function setBand(i, colour) {
+  const toks = bandList();
+  if (colour === null) {
+    // Clearing a segment clears the ones past it too: a bumblebee key describes
+    // an unbroken run from the thorax back, and a gap in the middle is not a
+    // thing anybody means.
+    toks.length = Math.min(toks.length, i);
+  } else {
+    while (toks.length < i) toks.push('black');
+    toks[i] = colour;
+  }
+  $('band_pattern').value = toks.join(',');
+  dirty = true;
+  paintBands();
+  status('unsaved — press S', 'miss');
+}
+
+function paintBands() {
+  const toks = bandList();
+  $('bandpreview').innerHTML = beeBandDiagram(toks.join(','), { size: 116 });
+  for (const b of $('bandrows').querySelectorAll('.swatches button')) {
+    b.classList.toggle('on', toks[+b.dataset.seg] === b.dataset.colour);
+  }
+}
+
+// ── the drawings ───────────────────────────────────────────────────────────
+function wireDiagrams() {
+  for (const b of document.querySelectorAll('.dia')) {
+    b.onclick = (e) => { e.preventDefault(); openChart(b.dataset.vocab); };
+  }
+  for (const f of Object.keys(DIA_FOR)) {
+    $(f).addEventListener('change', () => paintDia(f));
+  }
+  $('chart').querySelector('.close').onclick = closeChart;
+  $('chart').onclick = (e) => { if (e.target === $('chart')) closeChart(); };
+}
+
+function paintDia(field) {
+  const vocab = DIA_FOR[field];
+  const b = document.querySelector('.dia[data-vocab="' + vocab + '"]');
+  if (!b) return;
+  const svg = faunaDiagram(vocab, $(field).value, { size: 34 });
+  b.innerHTML = svg;
+  b.classList.toggle('empty', !svg);
+}
+
+function fieldForVocab(v) {
+  for (const [f, vv] of Object.entries(DIA_FOR)) if (vv === v) return f;
+  return null;
+}
+
+function openChart(vocab) {
+  const c = $('chart');
+  const field = fieldForVocab(vocab);
+  c.querySelector('h2').textContent = FAUNA_VOCAB_TITLES[vocab] || vocab;
+  c.querySelector('.body').innerHTML =
+    faunaChart(vocab, { size: 104, current: field ? $(field).value : '' });
+  for (const cell of c.querySelectorAll('.botany-cell')) {
+    cell.onclick = () => {
+      if (field) {
+        $(field).value = cell.dataset.term;
+        $(field).dispatchEvent(new Event('input'));
+        $(field).dispatchEvent(new Event('change'));
+      }
+      closeChart();
+    };
+  }
+  c.classList.add('on');
+}
+function closeChart() { $('chart').classList.remove('on'); }
+
+// ── list ───────────────────────────────────────────────────────────────────
+const CLAIMED = ['photo','flora','measured'];
+const verified = (s) => CLAIMED.includes(s.morph_data_source);
+
+function passes(s) {
+  if (filter === 'bee') return s.taxon === 'bee';
+  if (filter === 'lep') return s.taxon === 'lepidoptera';
+  if (filter === 'bombus') return s.genus === 'Bombus';
+  if (filter === 'estimated') return !verified(s);
+  if (filter === 'done') return verified(s);
+  return true;
+}
+
+function render() {
+  const q = ($('q').value || '').toLowerCase();
+  shown = SPECIES.filter(s => passes(s) && (!q
+    || s.common_name.toLowerCase().includes(q)
+    || s.scientific_name.toLowerCase().includes(q)));
+  const v = SPECIES.filter(verified).length;
+  const bombus = SPECIES.filter(s => s.genus === 'Bombus');
+  const bombusDone = bombus.filter(verified).length;
+  $('count').textContent =
+    `${shown.length} shown · ${v}/${SPECIES.length} verified · `
+    + `bumblebees ${bombusDone}/${bombus.length}`;
+  const list = $('list');
+  [...list.querySelectorAll('.row')].forEach(n => n.remove());
+  shown.forEach((s, i) => {
+    const src = s.morph_data_source || 'estimated';
+    const d = document.createElement('div');
+    d.className = 'row' + (i === idx ? ' on' : '');
+    d.innerHTML = '<div>' + (s.icon ? s.icon + ' ' : '') + s.common_name
+      + '<span class="badge b-' + src + '" title="' + src + '">'
+      + src[0].toUpperCase() + '</span></div>'
+      + '<div class="sci">' + s.scientific_name + '</div>';
+    d.onclick = () => select(i);
+    list.appendChild(d);
+  });
+}
+
+function select(i) {
+  if (!shown.length) { $('name').textContent = 'nothing matches'; return; }
+  idx = Math.max(0, Math.min(shown.length - 1, i));
+  const s = cur();
+  $('name').textContent = (s.icon ? s.icon + ' ' : '') + s.common_name;
+  $('sci').textContent = s.scientific_name + ' · ' + s.taxon
+    + (s.kind && s.kind !== s.taxon ? ' · ' + s.kind : '');
+  for (const f of FIELDS) {
+    const el = $(f);
+    if (!el) continue;
+    if (COLOURS.includes(f)) el.value = s[f] || '#8a7a60';
+    else if (f === 'morph_data_source') el.value = s[f] || 'estimated';
+    else if (f === 'morph_data_citation') el.value = s[f] || '';
+    else el.value = s[f] == null ? '' : s[f];
+  }
+  // A bee has no wingspan and a moth has no scopa. Grey the group out rather
+  // than hide it: a field you cannot see is one you cannot tell apart from a
+  // field nobody has filled in.
+  $('fs-bee').disabled = s.taxon !== 'bee';
+  $('fs-lep').disabled = s.taxon !== 'lepidoptera';
+  Object.keys(DIA_FOR).forEach(paintDia);
+  paintBands();
+  drawRef(s);
+  dirty = false; status('');
+  render();
+}
+
+function drawRef(s) {
+  $('photo').innerHTML = s.image_url
+    ? '<img src="' + s.image_url + '" alt=""><div class="credit">'
+      + (s.image_attribution || '') + '</div>'
+    : '<div class="hint">no photograph in the catalogue</div>';
+  const l = $('links');
+  l.textContent = '';
+  for (const link of s.links || []) {
+    const a = document.createElement('a');
+    a.href = link.url; a.target = '_blank'; a.rel = 'noopener';
+    a.innerHTML = link.name + '<span class="why">' + link.why + '</span>';
+    l.appendChild(a);
+  }
+  $('notes').textContent = s.notes || '';
+}
+
+// ── save ───────────────────────────────────────────────────────────────────
+for (const f of FIELDS) {
+  const el = $(f);
+  if (!el) continue;
+  el.addEventListener('input', () => {
+    dirty = true;
+    if (f === 'eyespot_count') $('v_eyespot_count').textContent = el.value || '—';
+    status('unsaved — press S', 'miss');
+  });
+}
+
+$('save').onclick = save;
+async function save() {
+  const s = cur();
+  if (!s) return;
+  const patch = { _taxon: s.taxon };
+  const group = s.taxon === 'bee' ? BEE_FIELDS : LEP_FIELDS;
+  for (const f of group.concat(PROVENANCE)) {
+    const el = $(f);
+    if (!el) continue;
+    const raw = el.value;
+    if (PROVENANCE.includes(f)) { patch[f] = raw; continue; }
+    patch[f] = raw === '' ? null : (NUMERIC.includes(f) ? Number(raw) : raw);
+  }
+  const r = await fetch('/api/fauna/' + encodeURIComponent(s.scientific_name),
+    { method: 'POST', body: JSON.stringify(patch) });
+  const out = await r.json();
+  // A refused value must not be written into the in-memory record, or the list
+  // would show something the file does not have.
+  if (out.error) { status(out.error, 'miss'); return; }
+  delete patch._taxon;
+  Object.assign(s, patch);
+  const master = SPECIES.find(x => x.scientific_name === s.scientific_name);
+  if (master) Object.assign(master, patch);
+  dirty = false;
+  status(out.saved ? 'saved ' + Object.keys(out.changed).join(', ') : 'no change');
+  render();
+}
+
+// Congeners share most of these — nine Andrena should not each be described
+// from scratch. Characters only, never provenance: a copied value is still
+// only as good as the source of the one it came from.
+$('copy').onclick = () => {
+  const from = prompt('Copy the characters from which species?\n'
+                      + '(scientific or common name)');
+  if (!from) return;
+  const q = from.trim().toLowerCase();
+  const src = SPECIES.find(s => s.scientific_name.toLowerCase() === q
+                             || s.common_name.toLowerCase() === q)
+           || SPECIES.find(s => s.scientific_name.toLowerCase().startsWith(q));
+  if (!src) { status('no species matches "' + from + '"', 'miss'); return; }
+  if (src.taxon !== cur().taxon) {
+    status('that is a ' + src.taxon + ' and this is a ' + cur().taxon, 'miss');
+    return;
+  }
+  for (const f of (src.taxon === 'bee' ? BEE_FIELDS : LEP_FIELDS)) {
+    const el = $(f);
+    if (!el) continue;
+    if (COLOURS.includes(f)) el.value = src[f] || '#8a7a60';
+    else el.value = src[f] == null ? '' : src[f];
+  }
+  Object.keys(DIA_FOR).forEach(paintDia);
+  paintBands();
+  dirty = true;
+  status('copied from ' + src.common_name + ' — check it, then press S', 'miss');
+};
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && $('chart').classList.contains('on')) {
+    closeChart(); e.preventDefault(); return;
+  }
+  const el = document.activeElement;
+  const typing = /^(INPUT|TEXTAREA)$/.test(el.tagName)
+                 && ['text','number'].includes(el.type);
+  if (typing) return;
+  if (e.key === 'ArrowRight') { select(idx + 1); e.preventDefault(); }
+  else if (e.key === 'ArrowLeft') { select(idx - 1); e.preventDefault(); }
+  else if (e.key === 's' || e.key === 'S') { save(); e.preventDefault(); }
+});
+
+window.addEventListener('beforeunload', (e) => {
+  if (dirty) { e.preventDefault(); e.returnValue = ''; }
+});
+
+boot();
+</script>
+</body>
+</html>

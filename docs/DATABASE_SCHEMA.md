@@ -195,6 +195,38 @@ are never touched by the reseed.
 > FK constraints are ON at runtime but disabled during the bulk reseed
 > (Python 3.14 enforces FKs at statement time, not commit time).
 
+### Fauna morphology (schema v58, V2.36)
+
+`bee_attributes` and `lepidoptera_attributes` were purely ecological — nesting
+habit, flight season, host genera. What an animal *looked like* was computed in
+`src/scene_wildlife.py` from substrings of its common name, so 69 bees rendered
+as 12 animals (29 bumblebees identical) and 31 lepidoptera as 16, none of it
+sourced or correctable without editing code. v58 puts it in the catalogue.
+
+| Table | Columns |
+|---|---|
+| `bee_attributes` | `body_length_mm`, `build`, `hair_colour`, `integument_colour`, `metallic`, `scopa_position`, `wing_tint`, **`band_pattern`** |
+| `lepidoptera_attributes` | `wingspan_min_mm` + `wingspan_max_mm`, `forewing_colour`, `hindwing_colour`, `margin_colour`, `wing_shape`, `wing_pattern`, `eyespot_count`, `resting_posture`, **`flight_style`** |
+| both | `morph_data_source`, `morph_data_citation` |
+
+**`band_pattern`** is comma-separated colour tokens for **thorax + T1…T6**
+(`yellow,yellow,orange,orange,yellow,black,black`) — named tokens rather than
+hex because that is how every bumblebee key is written; the token→hex table is
+`data_quality.BAND_COLOUR_HEX`. It is the field that makes 29 *Bombus* into 29
+animals. **The wingspan is a RANGE** because that is what guides print, and
+inventing a midpoint is the false precision P9 forbids; the viewer takes the mid
+and that collapse is a rendering decision, not a data one. It is also the fauna
+data's first real measurement — `size` was a hand-tuned 0.5–1.25 multiplier.
+
+Provenance follows the plants' rule: a claimed source with no citation is an
+**error** in the gate (`validate_fauna_morphology`). Everything ships
+`estimated`. Vocabularies live in `src/data_quality.py`; the bench is
+`scripts/tune_fauna.py`, and the terms are drawn in
+[`FAUNA_FIELD_GUIDE.md`](FAUNA_FIELD_GUIDE.md).
+
+Both tables are already wiped and repopulated with `fauna` on reseed, so v58
+needed no new wipe entry.
+
 ---
 
 ## Changing the schema (checklist)

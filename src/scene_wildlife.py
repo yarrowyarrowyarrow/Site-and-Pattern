@@ -69,8 +69,17 @@ def _hash(*parts) -> int:
 _BEE_BUILD = {"megachile": "leafcutter"}
 
 
-def _bee_appearance(genus: str, name: str) -> dict:
-    """Bee look by genus — the field marks that separate our native bees."""
+def _bee_appearance(genus: str, name: str, morph: dict = None) -> dict:
+    """Bee look — the species' OWN record first, this genus table as the
+    fallback (schema v58).
+
+    The table below is what the catalogue had before v58, and it is kept rather
+    than deleted for the same reason `03-herbs.js` keeps its genus profile
+    behind `growth_form`: it is the honest answer for a species nobody has
+    described yet, and 69 bees minus the ones anybody gets round to is a large
+    number for a long time. What changed is that a recorded value now WINS,
+    where before there was no way to record one.
+    """
     g = (genus or "").lower()
     # (fuzz, dark, bands, shape, size, metallic)
     table = {
@@ -91,18 +100,77 @@ def _bee_appearance(genus: str, name: str) -> dict:
     if g in cuckoo:
         # Cuckoo bees are nearly hairless and wasp-like — narrow, and the one
         # group where "not furry" is itself the field mark.
-        return {"kind": "bee", "fuzz": "#b5462e", "dark": "#241a16", "bands": 2,
-                "shape": "slender", "build": "slender", "size": 0.6,
-                "metallic": False, "cuckoo": True}
-    fuzz, dark, bands, shape, size, metallic = table.get(
-        g, ("#e0a92a", "#2a231c", 2, "round", 0.7, False))       # generic bee
-    return {"kind": "bee", "fuzz": fuzz, "dark": dark, "bands": bands,
-            "shape": shape, "build": _BEE_BUILD.get(g, shape), "size": size,
-            "metallic": metallic}
+        out = {"kind": "bee", "fuzz": "#b5462e", "dark": "#241a16", "bands": 2,
+               "shape": "slender", "build": "slender", "size": 0.6,
+               "metallic": False, "cuckoo": True}
+    else:
+        fuzz, dark, bands, shape, size, metallic = table.get(
+            g, ("#e0a92a", "#2a231c", 2, "round", 0.7, False))   # generic bee
+        out = {"kind": "bee", "fuzz": fuzz, "dark": dark, "bands": bands,
+               "shape": shape, "build": _BEE_BUILD.get(g, shape), "size": size,
+               "metallic": metallic}
+    return _apply_bee_morph(out, morph)
 
 
-def _lep_appearance(name: str, sci: str, kind: str) -> dict:
-    """Butterfly/moth wing colourway keyed off the well-known species."""
+def _apply_bee_morph(out: dict, morph: dict) -> dict:
+    """Overlay a species' recorded morphology onto the genus fallback."""
+    if not morph:
+        return out
+    if morph.get("hair_colour"):
+        out["fuzz"] = morph["hair_colour"]
+    if morph.get("integument_colour"):
+        out["dark"] = morph["integument_colour"]
+    if morph.get("build"):
+        out["build"] = morph["build"]
+        # `shape` is the abdomen rescale and `build` the mesh; a leafcutter has
+        # its own mesh but a stout abdomen, so they are not the same field.
+        out["shape"] = "stout" if morph["build"] == "leafcutter" else morph["build"]
+    if morph.get("metallic") is not None:
+        out["metallic"] = bool(morph["metallic"])
+    if morph.get("scopa_position"):
+        out["scopa"] = morph["scopa_position"]
+        # No pollen brush at all IS the cuckoo mark — see docs/FAUNA_FIELD_GUIDE.
+        out["cuckoo"] = morph["scopa_position"] == "none"
+    if morph.get("wing_tint"):
+        out["wing_tint"] = morph["wing_tint"]
+    if morph.get("band_pattern"):
+        # Thorax + T1..T6, resolved to HEX here rather than sent as tokens.
+        # The viewer then needs no colour vocabulary at all — the same contract
+        # `fore`/`hind`/`edge` already follow — and BAND_COLOUR_HEX stays the
+        # one definition instead of being mirrored into JS.
+        from src.data_quality import (BAND_COLOUR_HEX,  # noqa: PLC0415
+                                      band_pattern_tokens)
+        toks = band_pattern_tokens(morph["band_pattern"])
+        cols = [BAND_COLOUR_HEX.get(t) for t in toks]
+        if cols and cols[0]:
+            out["fuzz"] = cols[0]                    # thorax drives the pile
+        # An unknown token would be None; drop it rather than paint it black,
+        # so a typo shows as a missing segment instead of a plausible bee.
+        out["band_colours"] = [c for c in cols[1:] if c]
+        # How many of T1..T6 are a contrasting (non-black) colour — the number
+        # a person means by "a two-banded bee", and what the GLB's Band0/1/2
+        # toggles still key off.
+        out["bands"] = min(3, sum(1 for t in toks[1:] if t != "black"))
+    if morph.get("body_length_mm"):
+        # Real millimetres, compressed. A linear map would make a 6 mm
+        # Lasioglossum four pixels beside a 22 mm Bombus; the square root keeps
+        # the ORDER honest and every animal visible, which is the trade P9
+        # asks for when precision would be useless rather than wrong.
+        mm = float(morph["body_length_mm"])
+        out["size"] = round(min(1.6, max(0.35, (mm / 13.0) ** 0.5)), 3)
+        out["body_length_mm"] = mm
+    return out
+
+
+def _lep_appearance(name: str, sci: str, kind: str, morph: dict = None) -> dict:
+    """Butterfly/moth look — the species' OWN record first (schema v58), with
+    the name-keyed table below as the fallback.
+
+    That table is seventeen substring tests on a COMMON NAME, which collapsed 31
+    species into 16 appearances and matched `"blue" in name` for anything with
+    blue in it. It stays as the fallback for an undescribed species and is no
+    longer the only answer available.
+    """
     n = (name or "").lower()
 
     def spec(fore, hind, edge, size=1.0, build=None):
@@ -110,9 +178,15 @@ def _lep_appearance(name: str, sci: str, kind: str) -> dict:
         # `kind` stays the day/night behaviour the roster and the flight code
         # already use. A skipper flies by day like a butterfly and looks
         # nothing like one, which is exactly why they are two fields.
-        return {"kind": kind, "fore": fore, "hind": hind, "edge": edge,
-                "size": size,
-                "build": build or ("moth" if kind == "moth" else "butterfly")}
+        #
+        # The recorded morphology is overlaid HERE rather than at each of the
+        # seventeen `return spec(...)` branches below, so a species' own record
+        # wins on every path without restructuring the table.
+        return _apply_lep_morph(
+            {"kind": kind, "fore": fore, "hind": hind, "edge": edge,
+             "size": size,
+             "build": build or ("moth" if kind == "moth" else "butterfly")},
+            morph)
     if "monarch" in n:                 return spec("#e2711d", "#e2711d", "#1c140e", 1.2)
     if "swallowtail" in n:             return spec("#f2d64b", "#f2d64b", "#1c140e", 1.25, "swallowtail")
     if "mourning cloak" in n:          return spec("#5a3420", "#5a3420", "#e8d18a", 1.1)
@@ -130,6 +204,39 @@ def _lep_appearance(name: str, sci: str, kind: str) -> dict:
     if "sphinx" in n or "hawk" in n or "white-lined" in n: return spec("#7a6a4a", "#b06a4a", "#2a1c12", 1.1)
     if kind == "moth":                 return spec("#8a7a5a", "#6a5a44", "#3a3020", 1.0)
     return spec("#c88a3a", "#a8702c", "#2a1c10", 0.9)
+
+
+def _apply_lep_morph(out: dict, morph: dict) -> dict:
+    """Overlay a lepidopteran's recorded morphology onto the name-keyed
+    fallback (schema v58)."""
+    if not morph:
+        return out
+    for src, dst in (("forewing_colour", "fore"), ("hindwing_colour", "hind"),
+                     ("margin_colour", "edge")):
+        if morph.get(src):
+            out[dst] = morph[src]
+    if morph.get("wing_shape"):
+        out["wing_shape"] = morph["wing_shape"]
+        # A tailed hind wing is the one shape with its own baked silhouette.
+        if morph["wing_shape"] == "tailed":
+            out["build"] = "swallowtail"
+    for key in ("wing_pattern", "resting_posture", "flight_style"):
+        if morph.get(key):
+            out[key] = morph[key]
+    if morph.get("eyespot_count") is not None:
+        out["eyespots"] = int(morph["eyespot_count"])
+    lo, hi = morph.get("wingspan_min_mm"), morph.get("wingspan_max_mm")
+    if lo and hi:
+        # The catalogue keeps the published RANGE; the viewer has to draw one
+        # animal, so it takes the mid — the single place that collapse happens,
+        # and it is a rendering decision rather than a data one.
+        mm = (float(lo) + float(hi)) / 2.0
+        out["wingspan_mm"] = mm
+        # Compressed like the bees': true ratio would put a 22 mm azure at a
+        # sixth of a 140 mm Cecropia and lose it entirely. Square root keeps
+        # the order right and everything visible.
+        out["size"] = round(min(1.8, max(0.4, (mm / 55.0) ** 0.5)), 3)
+    return out
 
 
 # Body plan by name (assetlib/fauna_variants.BIRD_VARIANTS). A woodpecker
@@ -219,22 +326,34 @@ def appearance_for_fauna(fauna_id: int) -> Optional[dict]:
     """The per-species appearance spec for one fauna id — reused by the
     fly-through so the flown avatar looks like the chosen species (a green sweat
     bee, a leafcutter, a mining bee…). Returns None for taxa without a look."""
-    from src.db.fauna import get_fauna
+    from src.db.fauna import bee_morphology, get_fauna, lep_morphology
     row = get_fauna(fauna_id)
-    return _appearance_for(row) if row else None
+    if not row:
+        return None
+    # One creature, so fetch only the table it needs.
+    if row.get("taxon") == "bee":
+        morph = bee_morphology().get(fauna_id)
+    elif row.get("taxon") == "lepidoptera":
+        morph = lep_morphology().get(fauna_id)
+    else:
+        morph = None
+    return _appearance_for(row, morph)
 
 
-def _appearance_for(row: dict) -> Optional[dict]:
+def _appearance_for(row: dict, morph: dict = None) -> Optional[dict]:
+    """`morph` is this species' schema-v58 morphology row, or None. When it is
+    None every branch falls back to the pre-v58 name tables, which is what an
+    undescribed species — or a pre-v58 database — gets."""
     taxon = row.get("taxon")
     name = row.get("common_name", "")
     sci = row.get("scientific_name", "")
     if taxon == "bee":
         genus = sci.split(" ")[0] if sci else ""
-        return _bee_appearance(genus, name)
+        return _bee_appearance(genus, name, morph)
     if taxon == "lepidoptera":
         kind = "moth" if "moth" in name.lower() or "sphinx" in name.lower() \
             or "clearwing" in name.lower() else "butterfly"
-        return _lep_appearance(name, sci, kind)
+        return _lep_appearance(name, sci, kind, morph)
     if taxon == "bird":
         return _bird_appearance(name)
     if taxon == "other_insect":
@@ -363,11 +482,17 @@ def wildlife_for_scene(scene: dict, *,
     month = int(scene.get("month") or 0)
     is_night = bool(scene.get("is_night"))
     try:
-        from src.db.fauna import bee_flight_seasons, lep_activity_seasons
+        from src.db.fauna import (bee_flight_seasons, bee_morphology,
+                                  lep_activity_seasons, lep_morphology)
         bee_seasons = bee_flight_seasons()
         lep_seasons = lep_activity_seasons()
+        # Two queries for the whole roster (schema v58) rather than one per
+        # creature — the same shape as the season lookups above.
+        bee_morph = bee_morphology()
+        lep_morph = lep_morphology()
     except Exception:      # noqa: BLE001
         bee_seasons, lep_seasons = {}, {}
+        bee_morph, lep_morph = {}, {}
 
     # Per species, keep ALL its best-rank (plant, relationship) candidates, so a
     # species that uses several present plants can be spread across them rather
@@ -404,7 +529,10 @@ def wildlife_for_scene(scene: dict, *,
         cap = _TAXON_CAP.get(taxon, 3)
         if per_taxon.get(taxon, 0) >= cap:
             continue
-        app = _appearance_for(r)
+        _fid = r.get("id")
+        app = _appearance_for(
+            r, bee_morph.get(_fid) if taxon == "bee"
+            else lep_morph.get(_fid) if taxon == "lepidoptera" else None)
         if app is None:
             continue
         seed = _hash(r.get("id"), r.get("plant_id"))

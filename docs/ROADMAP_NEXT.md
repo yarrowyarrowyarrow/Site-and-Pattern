@@ -156,6 +156,24 @@ in place so it becomes UI-only work; F74 (the seedling sheet) — cheap to
 assemble, but it would print "no seedling photo" for essentially every species
 until that slot has content.
 
+**V2.36, third increment — the animals get the same treatment, and the
+butterflies fly.**
+
+| ID | What landed | Where |
+|----|-------------|-------|
+| **F84** | **Fauna morphology (schema v58).** Every creature's appearance was computed from SUBSTRINGS OF ITS COMMON NAME — a 12-genus bee table and seventeen `if "azure" in name` tests — so 69 bees rendered as 12 animals (29 bumblebees identical, all 20 cuckoo bees identical) and 31 lepidoptera as 16 (Polyphemus, Cecropia and Isabella Tiger Moth were one moth). None of it was in the database, sourced, or correctable without editing code. Bees gain body length, build, two colours, metallic, scopa, wing tint and the per-tergite **`band_pattern`**; leps gain a **wingspan range** — the fauna data's first real measurement — three wing colours, shape, pattern, eyespots, resting posture and **`flight_style`**. Seeded as `estimated`: 29 and 31 distinct animals | schema v58, `scripts/seed_fauna_morphology.py`, `validate_fauna_morphology` |
+| — | **The fauna bench.** `scripts/tune_fauna.py` — the companion to the flora one, with a **band editor that draws the bee as you type it**, because a band code entered blind is unverifiable and the whole point is to hold it against the plate. Shared scaffolding in `scripts/_bench_common.py`; nothing else abstracted on two examples | `scripts/tune_fauna.py`, `html/tune_fauna.html` |
+| — | **The fauna vocabulary, drawn** — six wing shapes, seven patterns, five postures, six flight styles, four bee builds, three scopa positions. The flight-style drawings are made from the *same* layered wander the viewer flies, so the picture is the behaviour | `html/botany/fauna.js`, `docs/FAUNA_FIELD_GUIDE.md` |
+| — | **The butterflies fly properly.** `flapWings` had no phase, so every flier in the scene beat off one global clock in perfect unison — the wings were never frozen, they were a metronome, which in a still frame is indistinguishable from "they don't flap". Plus a skewed stroke (the downstroke snaps at 1.78× the recovery), a layered-noise wander in place of two pure sines, and wings that close when a lep settles. `flight_style` drives it per species | `html/scene3d/07-wildlife.js` |
+
+**Deferred from F84, and why:** wing-pattern GEOMETRY — eyespots and bands as
+procedural decals. Written and removed: the marks attached to the wing pivots
+and positioned correctly but would not render, a coplanar-decal ordering problem
+that resisted polygon offset, depth-test and explicit render order inside a
+sensible budget. The data, the vocabulary, the drawings and the bench are all in
+place, so this is geometry work on a settled contract rather than a rebuild.
+Birds (24 → 16 looks), other insects and mammals keep their name tables.
+
 **F83 · Know the plant, not just the design — *not started*.** The drawn
 vocabulary, the per-species characters and the photo slots are three quarters of
 a plant-identification lesson: show a photograph, ask for the character, score

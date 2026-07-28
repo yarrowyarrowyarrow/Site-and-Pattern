@@ -215,7 +215,15 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # cannot tell a read value from a guessed one, which is the whole point of v55
 # and v56. Kept separate from the flower pair because the two get verified in
 # different sittings from different sources.
-_SCHEMA_VERSION = 57
+# v58 (V2.36): fauna morphology on `bee_attributes` + `lepidoptera_attributes`.
+# The animals were where the plants were before V2.33 — every creature's look
+# was derived in src/scene_wildlife.py from substrings of its COMMON NAME, so 69
+# bees shared 12 appearances (29 bumblebees identical) and 31 lepidoptera shared
+# 16. Bees gain body length, build, two colours, metallic, scopa, wing tint and
+# the per-tergite `band_pattern`; leps gain a wingspan RANGE (the fauna data's
+# first real measurement), three wing colours, shape, pattern, eyespots, resting
+# posture and flight_style. Both gain a morph_data_source/citation pair.
+_SCHEMA_VERSION = 58
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -542,6 +550,52 @@ def _migrate_to_v57(conn: sqlite3.Connection):
             conn.execute(f"ALTER TABLE plants ADD COLUMN {col} TEXT DEFAULT ''")
         except sqlite3.OperationalError:
             pass
+    conn.commit()
+
+
+def _migrate_to_v58(conn: sqlite3.Connection):
+    """What the animals look like, as data (V2.36).
+
+    The fauna were in the state the flora were in before V2.33, only worse
+    because nothing said so. Every creature's appearance was computed in
+    `src/scene_wildlife.py` from substrings of its common name — a twelve-genus
+    bee table and seventeen `if "azure" in name` tests — which meant:
+
+      * 69 bees rendered as 12 distinct animals; the 29 Bombus were identical
+        to one another, as were all 20 cuckoo bees;
+      * 31 lepidoptera rendered as 16; a Polyphemus, a Cecropia and an Isabella
+        Tiger Moth were the same moth;
+      * no size was a measurement — `size` was a hand-tuned 0.5-1.25 multiplier
+        in Python, so a 140 mm Cecropia and a 22 mm azure differed by a fudge
+        factor rather than by a fact.
+
+    None of it lived in the database, so none of it could be sourced, checked or
+    corrected without editing code. These columns move it into the catalogue
+    where `scripts/tune_fauna.py` can edit it and the data-quality gate can
+    validate it.
+
+    On the existing attribute tables rather than new ones: they are already 1:1
+    with `fauna`, already taxon-specific for exactly this reason (the schema
+    comment above says so), and already wiped and re-seeded with fauna, so this
+    needs no new reseed-wipe entry.
+    """
+    bee = ("body_length_mm REAL", "build TEXT", "hair_colour TEXT",
+           "integument_colour TEXT", "metallic INTEGER", "scopa_position TEXT",
+           "wing_tint TEXT", "band_pattern TEXT",
+           "morph_data_source TEXT DEFAULT ''",
+           "morph_data_citation TEXT DEFAULT ''")
+    lep = ("wingspan_min_mm REAL", "wingspan_max_mm REAL",
+           "forewing_colour TEXT", "hindwing_colour TEXT", "margin_colour TEXT",
+           "wing_shape TEXT", "wing_pattern TEXT", "eyespot_count INTEGER",
+           "resting_posture TEXT", "flight_style TEXT",
+           "morph_data_source TEXT DEFAULT ''",
+           "morph_data_citation TEXT DEFAULT ''")
+    for table, cols in (("bee_attributes", bee), ("lepidoptera_attributes", lep)):
+        for col in cols:
+            try:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
+            except sqlite3.OperationalError:
+                pass                      # already there
     conn.commit()
 
 
@@ -1003,6 +1057,18 @@ def _seed_fauna(conn: sqlite3.Connection) -> int:
     return len(link_rows)
 
 
+def _opt_int(v):
+    """`int(v)` or None. Keeps "not described" (None) distinct from a real 0 —
+    `eyespot_count` 0 is a genuine value (most butterflies have none) and
+    `metallic` 0 means "checked, and it is not"."""
+    if v is None or v == "":
+        return None
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return None
+
+
 def _seed_bee_attributes(conn: sqlite3.Connection) -> int:
     """
     Load ``data/bee_attributes_master.json`` into the ``bee_attributes`` table
@@ -1050,6 +1116,19 @@ def _seed_bee_attributes(conn: sqlite3.Connection) -> int:
             e.get("conservation_status"),
             e.get("source"),
             e.get("notes"),
+            # Morphology (v58). Absent in a record simply means "not described
+            # yet" — the columns are nullable and the viewer keeps its genus
+            # fallback, so a partly-filled catalogue degrades rather than breaks.
+            e.get("body_length_mm"),
+            e.get("build"),
+            e.get("hair_colour"),
+            e.get("integument_colour"),
+            _opt_int(e.get("metallic")),
+            e.get("scopa_position"),
+            e.get("wing_tint"),
+            e.get("band_pattern"),
+            e.get("morph_data_source") or "",
+            e.get("morph_data_citation") or "",
         ))
 
     if rows:
@@ -1057,8 +1136,12 @@ def _seed_bee_attributes(conn: sqlite3.Connection) -> int:
             "INSERT OR IGNORE INTO bee_attributes "
             "(fauna_id, genus, nesting_habit, host_genus, tongue_length, "
             " flight_season, floral_host_genera, pollen_specialist, "
-            " conservation_status, source, notes) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " conservation_status, source, notes, "
+            " body_length_mm, build, hair_colour, integument_colour, metallic, "
+            " scopa_position, wing_tint, band_pattern, "
+            " morph_data_source, morph_data_citation) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+            "        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             rows,
         )
         conn.commit()
@@ -1112,6 +1195,20 @@ def _seed_lepidoptera_attributes(conn: sqlite3.Connection) -> int:
             e.get("conservation_status"),
             e.get("source"),
             e.get("notes"),
+            # Morphology (v58) — nullable, so a partly-described catalogue
+            # degrades to the viewer's name-table fallback rather than breaking.
+            e.get("wingspan_min_mm"),
+            e.get("wingspan_max_mm"),
+            e.get("forewing_colour"),
+            e.get("hindwing_colour"),
+            e.get("margin_colour"),
+            e.get("wing_shape"),
+            e.get("wing_pattern"),
+            _opt_int(e.get("eyespot_count")),
+            e.get("resting_posture"),
+            e.get("flight_style"),
+            e.get("morph_data_source") or "",
+            e.get("morph_data_citation") or "",
         ))
 
     if rows:
@@ -1119,8 +1216,13 @@ def _seed_lepidoptera_attributes(conn: sqlite3.Connection) -> int:
             "INSERT OR IGNORE INTO lepidoptera_attributes "
             "(fauna_id, kind, activity, flight_season, overwintering_stage, "
             " voltinism, nectar_flower_genera, larval_host_note, "
-            " conservation_status, source, notes) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " conservation_status, source, notes, "
+            " wingspan_min_mm, wingspan_max_mm, forewing_colour, "
+            " hindwing_colour, margin_colour, wing_shape, wing_pattern, "
+            " eyespot_count, resting_posture, flight_style, "
+            " morph_data_source, morph_data_citation) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+            "        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             rows,
         )
         conn.commit()
@@ -1418,6 +1520,9 @@ def init_db() -> None:
 
         if current_version < 57:
             _migrate_to_v57(conn)
+
+        if current_version < 58:
+            _migrate_to_v58(conn)
 
         # Add parent_id to polycultures if missing
         try:

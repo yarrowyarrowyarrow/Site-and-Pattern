@@ -161,6 +161,25 @@ arrived pre-filled by a genus-level guess. Two consequences:
   v57) mirror the flower pair; the row badge shows two letters, leaf then
   flower, and `verified` means both.
 
+### The fauna bench (V2.36)
+
+```bash
+python scripts/tune_fauna.py          # → http://127.0.0.1:8757
+```
+
+The same tool for the animals. Until schema v58 a creature's appearance was
+computed from substrings of its common name, so **69 bees rendered as 12 animals
+and 31 lepidoptera as 16** — 29 bumblebees pixel-identical, and a Polyphemus,
+a Cecropia and an Isabella Tiger Moth all the same moth. Now it is data:
+per-tergite band patterns, real wingspans, wing shape and pattern, resting
+posture and flight style, each with its own provenance pair.
+
+The band editor is the centrepiece — thorax then T1…T6, the order every
+bumblebee key names them, **drawing the bee as you type it** so the pattern can
+be held against the plate. `flight_style` is the other one worth the time: it is
+a real character and it drives how the animal moves in the preview. See
+[`FAUNA_FIELD_GUIDE.md`](FAUNA_FIELD_GUIDE.md).
+
 **The vocabulary is drawn (V2.36).** Asking somebody to choose *corymb* or
 *cyme* from a dropdown of bare words is a coin flip with extra steps, so each
 vocabulary select carries a line drawing, and clicking it opens the whole

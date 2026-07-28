@@ -221,7 +221,12 @@ class TestCommittedDiagrams(unittest.TestCase):
             staged = os.path.join(tmp, "repo")
             os.makedirs(os.path.join(staged, "html", "botany"))
             os.makedirs(os.path.join(staged, "scripts"))
-            shutil.copy(_JS, os.path.join(staged, "html", "botany"))
+            # BOTH vocabulary modules: one generator emits the botanical and
+            # the fauna diagrams (V2.36) and loads both files, so staging only
+            # this one leaves it dying on a missing fauna.js.
+            for f in ("diagrams.js", "fauna.js"):
+                shutil.copy(os.path.join(_ROOT, "html", "botany", f),
+                            os.path.join(staged, "html", "botany"))
             shutil.copy(os.path.join(_ROOT, "scripts",
                                      "render_botany_diagrams.js"),
                         os.path.join(staged, "scripts"))
