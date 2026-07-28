@@ -194,6 +194,7 @@ A draft is in [`FNA_PERMISSION_LETTER.md`](FNA_PERMISSION_LETTER.md).
 | Climate and wind | [Open-Meteo](https://open-meteo.com/) (ERA5-Land archive + forecast) | free for non-commercial use, CC BY 4.0 |
 | Map tiles | OpenStreetMap + CARTO; Esri and Mapbox satellite layers | attributed in the Leaflet control (`html/map/01-core.js`, `05-features.js`) |
 | Fauna records and plant↔fauna links | Compiled for this project from published host-plant and pollinator literature | ours |
+| **Botanical diagrams** — the 33 leaf shapes, inflorescence architectures and leaf arrangements | Drawn as code in [`html/botany/diagrams.js`](../html/botany/diagrams.js) from the botanical definitions. **Not traced from any published figure**, which matters because good ones exist and are copyrighted: a raceme is a raceme, the term is nobody's property, and the drawing is ours. Committed to `docs/img/botany/` by `scripts/render_botany_diagrams.js` | ours |
 
 ### What is deliberately absent
 

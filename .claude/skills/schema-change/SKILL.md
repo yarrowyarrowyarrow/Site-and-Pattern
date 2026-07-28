@@ -20,8 +20,10 @@ Use this skill when you:
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
 **Current facts (verify before quoting):** branch `V2.36`,
-`_SCHEMA_VERSION = 56` (in `src/db/plants.py`) — v56 added
-`flower_data_citation`; v55 added the
+`_SCHEMA_VERSION = 57` (in `src/db/plants.py`) — v57 added
+`leaf_data_source` + `leaf_data_citation` (the flower provenance pair, for the
+leaf and habit characters the bench can now edit);
+v56 added `flower_data_citation`; v55 added the
 `plant_photos` table and `flower_data_source`; v54 added
 `flowering_stems`; v53 added ten
 flower-morphology columns; v52 added three

@@ -21,6 +21,7 @@ is the map. Roughly in the order a newcomer should meet them.
 | [`ROADMAP.md`](ROADMAP.md) | The effort/impact ledger — what shipped, tier by tier. **Historical**, not live. | Archaeology. |
 | [`DATA_GAPS.md`](DATA_GAPS.md) | Seed-data debt: what the code is ready for and the catalogue is not. Photo coverage, flower-morphology provenance, the unbacked Generate-Design goals. | Wondering why a feature is a "hint" and not a filter. |
 | [`DATA_SOURCES.md`](DATA_SOURCES.md) | **Where every shipped fact and photograph came from, and what its licence obliges.** Includes the position on reading numbers out of a copyrighted flora. | Anyone asks "are you allowed to have that?" — or before you add a new data source. |
+| [`BOTANY_FIELD_GUIDE.md`](BOTANY_FIELD_GUIDE.md) | **The drawn vocabulary** — all 33 leaf shapes, inflorescence architectures and leaf arrangements, with a definition each — plus which phrase of a flora's description lands in which field, what to skip, and which corrections actually change the render. | Working through the catalogue with a flora open. |
 | [`FNA_PERMISSION_LETTER.md`](FNA_PERMISSION_LETTER.md) | An unsent draft asking the Flora of North America Association for permission to record floral measurements. | Deciding to fill the catalogue from published descriptions. |
 | [`REFERENCES.md`](REFERENCES.md) | The bibliography behind the philosophy. | Citing, or checking a claim. |
 

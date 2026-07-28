@@ -88,15 +88,21 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
 _MASTER = os.path.join(_ROOT, "data", "plants_master.json")
 
-ARCHITECTURES = ("solitary", "raceme", "spike", "panicle", "corymb", "umbel",
-                 "head", "cyme", "whorl")
-SYMMETRIES = ("radial", "bilateral")
-PETAL_SHAPES = ("narrow", "oval", "notched", "tubular", "lipped")
-BRANCHINGS = ("unbranched", "branched_above", "branched_throughout")
+# The vocabularies live in src/data_quality.py with every other enum, so the
+# gate validates what this file writes and the tuning bench serves the same
+# lists to its dropdowns instead of retyping them into HTML.
+from src.data_quality import (                              # noqa: E402
+    FLOWER_ARCHITECTURES as ARCHITECTURES,
+    FLOWER_SYMMETRIES as SYMMETRIES,
+    PETAL_SHAPES,
+    STEM_BRANCHINGS as BRANCHINGS)
 
 FIELDS = ("flower_arch", "flower_symmetry", "petal_shape", "petal_count",
           "florets_per_head", "flower_diameter_cm", "flower_center_color",

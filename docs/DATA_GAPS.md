@@ -69,6 +69,27 @@ values start coming out of published descriptions instead of genus conventions.
 Blank everywhere today, deliberately: the seeder writes no citation rather than
 naming a book nobody opened for that species.
 
+**Leaf and habit provenance (v57, V2.36) — the bigger of the two gaps.** The
+flower columns are at least *blank* until somebody describes a species. The leaf
+and habit columns are not:
+
+| field | blank | the rest is… |
+|---|---|---|
+| `leaf_shape` | 0 / 434 | a genus-level estimate |
+| `leaf_size_cm` | 0 / 434 | a genus-level estimate |
+| `leaf_arrangement` | 0 / 434 | a genus-level estimate |
+| `mature_height_m` | 0 / 434 | a genus-level estimate |
+| `growth_form` | 69 / 434 | a genus-level estimate |
+| `leaf_surface` | 352 / 434 | authored where distinctive |
+| `branching` | 365 / 434 | woody species only |
+
+Nothing there is missing in a way anybody can see, and every one of them changes
+what the 3D viewer draws — `growth_form` picks the plant's entire body. So
+`leaf_data_source` / `leaf_data_citation` carry the same rule as the flower
+pair, and `verified` in the bench now means *both*. Every one of the 434 reads
+`estimated` today. See [`BOTANY_FIELD_GUIDE.md`](BOTANY_FIELD_GUIDE.md) for what
+to log, and which corrections actually change the render.
+
 **Where the real numbers are.** They exist, and they are not importable: Flora
 of North America gives ray counts and laminae lengths outright (vols 19–21 cover
 most prairie forbs) and is free to *read* but copyrighted, so a bulk scrape is

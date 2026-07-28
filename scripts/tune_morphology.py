@@ -74,14 +74,71 @@ _MASTER = os.path.join(_ROOT, "data", "plants_master.json")
 _HTML = os.path.join(_ROOT, "html")
 
 # The columns this tool edits. Everything else in the record is left alone.
-FIELDS = ("flower_arch", "flower_symmetry", "petal_shape", "petal_count",
-          "florets_per_head", "flower_diameter_cm", "flower_center_color",
-          "flower_height_frac", "stem_branching", "basal_rosette",
-          "flowering_stems", "flower_data_source", "flower_data_citation")
+#
+# Two groups, because they are answered from different places. The FLOWER group
+# is mostly readable off a good photograph. The LEAF AND HABIT group is what a
+# flora's description gives you — and it is the group that was missing until
+# V2.36, which made this a flower bench rather than a plant bench and left a
+# leaf length read out of Budd's with nowhere to go.
+FLOWER_FIELDS = ("flower_arch", "flower_symmetry", "petal_shape", "petal_count",
+                 "florets_per_head", "flower_diameter_cm", "flower_center_color",
+                 "flower_height_frac", "stem_branching", "basal_rosette",
+                 "flowering_stems", "flower_data_source", "flower_data_citation")
+
+# Every one of these already has a value for all 434 species — a genus-level
+# ESTIMATE from scripts/seed_*_morphology.py — and every one of them changes
+# what the 3D viewer draws. `growth_form` picks the herb body outright,
+# `leaf_size_cm` and `leaf_shape` pick the leaf-card size and blade class, and
+# `mature_height_m` scales the whole plant. Correcting these is the highest
+# fidelity-per-minute work available in the catalogue.
+LEAF_FIELDS = ("leaf_shape", "leaf_size_cm", "leaf_arrangement", "leaf_surface",
+               "growth_form", "branching", "mature_height_m",
+               "leaf_data_source", "leaf_data_citation")
+
+FIELDS = FLOWER_FIELDS + LEAF_FIELDS
 
 # Where a number can come from, weakest first. The bench's job is to move
 # species UP this list; the seeder can only ever write the bottom one.
 DATA_SOURCES = ("estimated", "photo", "flora", "measured")
+
+# Numbers, so a blank round-trips as null rather than "".
+_INT_FIELDS = ("petal_count", "florets_per_head", "basal_rosette",
+               "flowering_stems")
+_FLOAT_FIELDS = ("flower_diameter_cm", "flower_height_frac", "leaf_size_cm",
+                 "mature_height_m")
+
+
+def _vocabularies() -> dict:
+    """Every enum-valued field this tool edits, as ordered lists, read from
+    src/data_quality.py and served to the browser at /api/vocab.
+
+    The point is that the HTML does NOT contain a copy. It used to contain
+    three, hand-typed, and hand-typed copies of a vocabulary are how the V2.35
+    photo-slot list drifted out of step with the Python one. A dropdown built
+    from the gate's own allowlist cannot offer a value the gate will reject.
+
+    Sorted where the source is a set (no meaningful order to preserve), left
+    alone where it is a tuple (the flower four, ordered for teaching).
+    """
+    from src import data_quality as dq                      # noqa: PLC0415
+    def L(v):
+        return list(v) if isinstance(v, tuple) else sorted(v)
+    return {
+        "flower_arch":      L(dq.FLOWER_ARCHITECTURES),
+        "flower_symmetry":  L(dq.FLOWER_SYMMETRIES),
+        "petal_shape":      L(dq.PETAL_SHAPES),
+        "stem_branching":   L(dq.STEM_BRANCHINGS),
+        "leaf_shape":       L(dq.LEAF_SHAPES),
+        "leaf_arrangement": L(dq.LEAF_ARRANGEMENTS),
+        "leaf_surface":     L(dq.LEAF_SURFACES),
+        "growth_form":      L(dq.GROWTH_FORMS),
+        "branching":        L(dq.BRANCHING_HABITS),
+        "flower_data_source": list(DATA_SOURCES),
+        "leaf_data_source":   list(DATA_SOURCES),
+    }
+
+
+VOCABULARIES = _vocabularies()
 
 PHOTO_SLOTS = ("habit", "flower", "leaf", "fruit", "bark_stem", "winter",
                "seedling")
@@ -112,9 +169,16 @@ def _save(records):
         fh.write("\n")
 
 
-def _tunable(rec):
-    """Species this tool can show: something that flowers and is not a grass
-    (a graminoid's seed head is `inflorescence_form`, a different tool's job)."""
+def _flowering(rec):
+    """Whether the FLOWER controls apply: something that flowers and is not a
+    graminoid (a grass's seed head is `inflorescence_form`, a different job).
+
+    Until V2.36 this was a gate — 123 of the 434 species never appeared in the
+    bench at all, including every grass, sedge and rush and a dozen trees. That
+    was right while the tool only edited flowers and wrong the moment it could
+    edit leaves, because a sedge has leaves and a spruce has a growth form. It
+    is now a FILTER, on by default, and the UI can switch it off.
+    """
     if rec.get("plant_type") in ("grass", "sedge", "rush"):
         return False
     if rec.get("inflorescence_form"):
@@ -125,16 +189,14 @@ def _tunable(rec):
 def _species_list(records):
     out = []
     for rec in records:
-        if not _tunable(rec):
-            continue
         row = {"scientific_name": rec.get("scientific_name") or "",
+               "flowering": bool(_flowering(rec)),
                "common_name": rec.get("common_name") or "",
                "plant_type": rec.get("plant_type") or "",
                "flower_color": rec.get("flower_color") or "",
                "flower_form": rec.get("flower_form") or "",
                "image_url": rec.get("image_url") or "",
                "image_attribution": rec.get("image_attribution") or "",
-               "height_m": rec.get("mature_height_m"),
                "notes": (rec.get("notes") or "")[:400],
                "photos": photos_by_slot(rec.get("scientific_name") or "", rec),
                "links": lookup_links(rec.get("scientific_name") or "")}
@@ -349,6 +411,8 @@ class _Handler(SimpleHTTPRequestHandler):
     def do_GET(self):                                       # noqa: N802
         if self.path == "/api/species":
             return self._json(_species_list(_load()))
+        if self.path == "/api/vocab":
+            return self._json(VOCABULARIES)
         if self.path.startswith("/api/flora/"):
             from urllib.parse import unquote, urlparse       # noqa: PLC0415
             if not FLORA_FETCH:
@@ -427,12 +491,30 @@ class _Handler(SimpleHTTPRequestHandler):
             if f not in patch:
                 continue
             v = patch[f]
-            if f in ("petal_count", "florets_per_head", "basal_rosette",
-                     "flowering_stems"):
+            if f in _INT_FIELDS:
                 v = None if v in ("", None) else int(v)
-            elif f in ("flower_diameter_cm", "flower_height_frac"):
+            elif f in _FLOAT_FIELDS:
                 v = None if v in ("", None) else round(float(v), 3)
-            if rec.get(f) != v:
+            elif f in VOCABULARIES and v not in ("", None):
+                # A value outside the vocabulary is a typo or a stale dropdown,
+                # and writing it would fail the data-quality gate later with no
+                # clue where it came from. Refuse it here, where the person who
+                # caused it is still looking at the screen.
+                if v not in VOCABULARIES[f]:
+                    return self._json(
+                        {"error": f"{f}={v!r} is not in the vocabulary"}, 400)
+            old = rec.get(f)
+            # `mature_height_m` ships as a STRING in plants_master.json ("0.15"),
+            # so a plain != would rewrite it as a float for every species merely
+            # opened and saved — 434 lines of diff that mean nothing. Compare
+            # numerically and leave a numerically-equal value alone.
+            if f in _FLOAT_FIELDS and old is not None and v is not None:
+                try:
+                    if float(old) == float(v):
+                        continue
+                except (TypeError, ValueError):
+                    pass
+            if old != v:
                 changed[f] = v
                 rec[f] = v
         if changed:
@@ -579,13 +661,20 @@ class _Handler(SimpleHTTPRequestHandler):
 def _report():
     """Which shipped values differ from what the family-first seeder would
     produce — i.e. everything a human has tuned by hand, ready to be folded back
-    into SPECIES_OVERRIDE so it survives the next re-seed."""
+    into SPECIES_OVERRIDE so it survives the next re-seed.
+
+    FLOWER_FIELDS only: the seeder re-run below is the flower one, and it does
+    not write the leaf and habit columns at all. Diffing those against it would
+    report all 434 species as hand-tuned, which is the opposite of useful.
+    (Their equivalent lives in scripts/seed_garden_morphology.py; folding leaf
+    corrections back is a separate job with a separate seeder.)
+    """
     sys.path.insert(0, os.path.join(_ROOT, "scripts"))
     import seed_flower_morphology as seeder                 # noqa: PLC0415
     shipped = _load()
     fresh = json.loads(json.dumps(shipped))
     for r in fresh:
-        for f in FIELDS:
+        for f in FLOWER_FIELDS:
             r.pop(f, None)
     seeder.apply(fresh)
     by_sci = {r.get("scientific_name"): r for r in fresh}
@@ -594,7 +683,7 @@ def _report():
         if not r.get("flower_arch"):
             continue
         want = by_sci.get(r.get("scientific_name")) or {}
-        diff = {f: (want.get(f), r.get(f)) for f in FIELDS
+        diff = {f: (want.get(f), r.get(f)) for f in FLOWER_FIELDS
                 if want.get(f) != r.get(f)}
         if diff:
             n += 1

@@ -141,10 +141,28 @@ still abstract in the scene then loses.
 | — | **Which source, not just what kind** (`flower_data_citation`, schema v56). v55 recorded that a number was `estimated` or read `flora`; naming the flora is what makes it a citation. Blank from the seeder on purpose | schema v56, `docs/DATA_SOURCES.md` |
 | — | **The reading aid, built so it cannot become a scrape.** Four numbers off one published description, off unless `--flora-fetch`, `robots.txt` fail-closed, one species per click, no bulk path, no cache, no prose retained, and the citation filled in automatically | `src/flora_read.py`, `docs/DATA_SOURCES.md`, `docs/FNA_PERMISSION_LETTER.md` |
 
+**V2.36, second increment — the vocabulary you are asked to use, drawn; and a
+bench for the whole plant.**
+
+| ID | What landed | Where |
+|----|-------------|-------|
+| — | **The 33 terms, drawn.** The bench asked for `corymb` or `obovate` from a dropdown of bare words and gave no way to know which was which — a control nobody can use honestly, and one that had already been collecting guesses for a release. Nine inflorescence architectures, nineteen leaf shapes and five leaf arrangements as generated inline SVG, beside each dropdown and as a full comparison chart where **clicking the drawing that matches sets the value**. Eleven of the leaf shapes come from one shared profile function, because that is what the terms actually are: one shape family varying in where it is widest | `html/botany/diagrams.js`, `docs/BOTANY_FIELD_GUIDE.md` |
+| — | **The flower bench became a plant bench.** A second control group for `leaf_shape`, `leaf_size_cm`, `leaf_arrangement`, `leaf_surface`, `growth_form`, `branching`, `mature_height_m` — the group a flora's description actually gives you, and the one where the fidelity is (`growth_form` picks the plant's whole body). `_flowering` stopped being a gate that hid **123 of 434 species** and became a filter | `scripts/tune_morphology.py`, `html/tune_morphology.html` |
+| — | **Leaf provenance** (`leaf_data_source`, `leaf_data_citation`, schema v57). Needed more than the flower pair: those columns are blank until described, whereas all seven leaf/habit columns were seeded with a genus-level estimate for every record — a guess that is invisible rather than absent | schema v57, `validate_morphology_provenance` |
+| — | **One vocabulary, one definition.** The four flower enums moved into `src/data_quality.py` beside the leaf ones and joined the gate's hard-enum table — `flower_arch`, `flower_symmetry`, `petal_shape` and `stem_branching` had never been validated at all. Dropdowns are served from those sets over `/api/vocab`; the HTML's three hand-typed copies are gone | `src/data_quality.py`, `/api/vocab` |
+
 **Deferred, and why:** F73 (in my yard, on this date) — the `taken_on` column is
 in place so it becomes UI-only work; F74 (the seedling sheet) — cheap to
 assemble, but it would print "no seedling photo" for essentially every species
 until that slot has content.
+
+**F83 · Know the plant, not just the design — *not started*.** The drawn
+vocabulary, the per-species characters and the photo slots are three quarters of
+a plant-identification lesson: show a photograph, ask for the character, score
+it. What is missing is content, not code — it wants the `habit` and `leaf` slots
+filled first, and `src/learn_panel.py` already has the Field Study tab and
+`src/lesson_track.py` the progress model, so it is a feature rather than a
+rebuild. Logged here so the V2.36 work is understood as its foundation.
 
 Theme A's remaining gaps — within-silhouette shrub aspect, fern density and
 billboard fruit — are listed at the end of the sprite audit rather than

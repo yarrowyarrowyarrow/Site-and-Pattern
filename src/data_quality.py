@@ -134,6 +134,21 @@ INFLORESCENCE_FORMS = {"turkey_foot", "open_panicle", "contracted_spike",
                        "nodding_raceme", "one_sided_raceme", "bristly",
                        "sedge_cluster", "rush_umbel", "cattail_spike"}
 
+# Flower morphology (schema v53). These four lived in
+# scripts/seed_flower_morphology.py — the only place that wrote them — which
+# meant the data-quality gate never checked them and the tuning bench had to
+# retype them into its HTML. They belong here with the rest of the enums: one
+# definition, validated on every record, and served to the bench over the API.
+# Drawn, term by term, in html/botany/diagrams.js. Ordered tuples rather than
+# sets — membership tests read the same, but these four are shown to a person
+# in a dropdown and in a comparison chart, and the order is the order the terms
+# make sense in (one flower → many, simple → compound) rather than alphabetical.
+FLOWER_ARCHITECTURES = ("solitary", "raceme", "spike", "panicle", "corymb",
+                        "umbel", "head", "cyme", "whorl")
+FLOWER_SYMMETRIES = ("radial", "bilateral")
+PETAL_SHAPES      = ("narrow", "oval", "notched", "tubular", "lipped")
+STEM_BRANCHINGS   = ("unbranched", "branched_above", "branched_throughout")
+
 # ── Soft enum allowlists (drift here is a WARNING) ──────────────────────────
 
 GROWTH_CURVES     = {"slow_start", "steady", "fast_early"}
@@ -307,6 +322,10 @@ def validate_plant(
         ("bark_texture",        BARK_TEXTURES),
         ("leaf_surface",        LEAF_SURFACES),
         ("inflorescence_form",  INFLORESCENCE_FORMS),
+        ("flower_arch",         FLOWER_ARCHITECTURES),
+        ("flower_symmetry",     FLOWER_SYMMETRIES),
+        ("petal_shape",         PETAL_SHAPES),
+        ("stem_branching",      STEM_BRANCHINGS),
     ):
         if field in _MULTI_VALUE_ENUM_FIELDS:
             for tok in condition_tokens(record.get(field)):
@@ -543,14 +562,14 @@ def validate_all() -> tuple[list[str], list[str]]:
     errors.extend(e)
     warnings.extend(w)
 
-    e, w = validate_flower_provenance()
+    e, w = validate_morphology_provenance()
     errors.extend(e)
     warnings.extend(w)
     return errors, warnings
 
 
-def validate_flower_provenance() -> tuple[list[str], list[str]]:
-    """A claimed source has to name itself (schema v56).
+def validate_morphology_provenance() -> tuple[list[str], list[str]]:
+    """A claimed source has to name itself (schema v56, extended v57).
 
     `flower_data_source` says a number was read in a flora or measured with a
     ruler. That is a *stronger* claim than `estimated`, and an unnamed source is
@@ -562,26 +581,44 @@ def validate_flower_provenance() -> tuple[list[str], list[str]]:
     photograph is work nobody has done yet, but an uncheckable citation is a
     claim the catalogue is already making. It is also trivially fixable — the
     bench fills the field in automatically on the `flora` path.
+
+    v57 applies the same rule to the LEAF AND HABIT pair, which needs it more:
+    the flower columns are blank until somebody describes a species, but
+    `leaf_shape`, `leaf_size_cm`, `growth_form` and `mature_height_m` were
+    seeded with a genus-level estimate for every one of the 434 records, so a
+    guess there is invisible rather than absent.
     """
     errors: list[str] = []
     warnings: list[str] = []
     claimed = {"flora", "measured", "photo"}
-    n_claimed = 0
-    for rec in _load_json_list(DATA_DIR / "plants_master.json"):
-        src = (rec.get("flower_data_source") or "").strip().lower()
-        if src not in claimed:
-            continue
-        n_claimed += 1
-        if not (rec.get("flower_data_citation") or "").strip():
-            name = rec.get("scientific_name") or rec.get("common_name") or "?"
-            errors.append(
-                f"flower provenance: {name}: source is {src!r} but no citation "
-                f"— name the flora, the photo or the date you measured it")
-    if not n_claimed:
-        warnings.append(
-            "flower provenance: no species has been verified yet — every "
-            "flower number is the seeder's genus default (see docs/DATA_GAPS.md)")
+    records = _load_json_list(DATA_DIR / "plants_master.json")
+    for kind, src_field, cite_field in (
+        ("flower", "flower_data_source", "flower_data_citation"),
+        ("leaf", "leaf_data_source", "leaf_data_citation"),
+    ):
+        n_claimed = 0
+        for rec in records:
+            src = (rec.get(src_field) or "").strip().lower()
+            if src not in claimed:
+                continue
+            n_claimed += 1
+            if not (rec.get(cite_field) or "").strip():
+                name = rec.get("scientific_name") or rec.get("common_name") or "?"
+                errors.append(
+                    f"{kind} provenance: {name}: source is {src!r} but no "
+                    f"citation — name the flora, the photo or the date you "
+                    f"measured it")
+        if not n_claimed:
+            warnings.append(
+                f"{kind} provenance: no species has been verified yet — every "
+                f"{kind} value is the seeder's genus default "
+                f"(see docs/DATA_GAPS.md)")
     return errors, warnings
+
+
+# The v56 name, kept so anything importing it keeps working. The function grew
+# a second field pair in v57 and "flower" stopped being the whole story.
+validate_flower_provenance = validate_morphology_provenance
 
 
 # ── Bee attributes (F37) ──────────────────────────────────────────────────────

@@ -183,7 +183,18 @@ CREATE TABLE IF NOT EXISTS plants (
     -- descriptions the catalogue is making specific claims it has to be able to
     -- attribute. Free text: "FNA vol. 21", "Budd's Flora 442", "iNat photo
     -- 178876". Same pattern as `safety_source`.
-    flower_data_citation TEXT DEFAULT ''
+    flower_data_citation TEXT DEFAULT '',
+    -- The same pair again for the LEAF AND HABIT characters (schema v57,
+    -- V2.36) — leaf_shape, leaf_size_cm, leaf_arrangement, leaf_surface,
+    -- growth_form, branching, mature_height_m. Those columns are populated
+    -- for every species by a genus-level ESTIMATE (scripts/seed_*_morphology
+    -- .py) and are now editable in the bench, so the same question the flower
+    -- pair answers applies to them: is this number a guess or did somebody
+    -- read it somewhere? Separate from the flower pair rather than one shared
+    -- pair, because they get verified in different sittings from different
+    -- sources — a photograph settles petal count, a flora settles leaf length.
+    leaf_data_source TEXT DEFAULT '',
+    leaf_data_citation TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS companion_friends (

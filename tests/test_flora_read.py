@@ -192,7 +192,59 @@ class TestProvenanceGate(unittest.TestCase):
         finally:
             data_quality._load_json_list = real
         self.assertEqual(errors, [])
-        self.assertEqual(warnings, [], "a verified species still reported none")
+        self.assertEqual([w for w in warnings if "flower" in w], [],
+                         "a verified species still reported none")
+
+    # ── the same rule for the leaf and habit pair (schema v57) ──────────────
+    # It needs it MORE than the flower pair does: the flower columns are blank
+    # until somebody describes a species, but leaf_shape, leaf_size_cm,
+    # growth_form and mature_height_m were seeded with a genus-level estimate
+    # for every one of the 434 records — so a guess there is invisible rather
+    # than absent.
+
+    def test_a_claimed_leaf_source_without_a_citation_is_an_error(self):
+        from src import data_quality                         # noqa: PLC0415
+        real = data_quality._load_json_list
+        data_quality._load_json_list = lambda p: (
+            [{"scientific_name": "Testus fictus", "leaf_data_source": "flora",
+              "leaf_data_citation": ""}]
+            if "plants_master" in str(p) else real(p))
+        try:
+            errors, _ = data_quality.validate_morphology_provenance()
+        finally:
+            data_quality._load_json_list = real
+        self.assertTrue(any("leaf provenance" in e and "no citation" in e
+                            for e in errors),
+                        f"the leaf pair is ungated: {errors}")
+
+    def test_a_cited_leaf_source_passes(self):
+        from src import data_quality                         # noqa: PLC0415
+        real = data_quality._load_json_list
+        data_quality._load_json_list = lambda p: (
+            [{"scientific_name": "Testus fictus", "leaf_data_source": "flora",
+              "leaf_data_citation": "Budd's 442"}]
+            if "plants_master" in str(p) else real(p))
+        try:
+            errors, warnings = data_quality.validate_morphology_provenance()
+        finally:
+            data_quality._load_json_list = real
+        self.assertEqual(errors, [])
+        self.assertEqual([w for w in warnings if "leaf" in w], [])
+
+    def test_an_estimated_leaf_value_needs_no_citation(self):
+        """`estimated` is the honest default and must stay costless to say —
+        the gate exists to stop a STRONGER claim going unattributed."""
+        from src import data_quality                         # noqa: PLC0415
+        real = data_quality._load_json_list
+        data_quality._load_json_list = lambda p: (
+            [{"scientific_name": "Testus fictus",
+              "leaf_data_source": "estimated", "leaf_data_citation": ""}]
+            if "plants_master" in str(p) else real(p))
+        try:
+            errors, _ = data_quality.validate_morphology_provenance()
+        finally:
+            data_quality._load_json_list = real
+        self.assertEqual(errors, [])
 
     def test_the_shipped_catalogue_passes_the_gate(self):
         from src.data_quality import validate_flower_provenance  # noqa: PLC0415

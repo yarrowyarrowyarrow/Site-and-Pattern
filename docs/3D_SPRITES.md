@@ -134,7 +134,7 @@ for (`src/sprite_gallery.py:_scene_for`).
 Deep-link a single sprite with `?sprite=KEY`, e.g.
 `…/sprite_gallery.html?sprite=conifer_pine` or `?sprite=shrub_dogwood`.
 
-### The flower-tuning bench (V2.34)
+### The catalogue bench (V2.34, a plant bench since V2.36)
 
 ```bash
 python scripts/tune_morphology.py          # → http://127.0.0.1:8756
@@ -146,6 +146,31 @@ catalogue with triage filters, the **real viewer** rendering the species at year
 `S` saves straight to `data/plants_master.json`, and `R` drops a **10 cm scale
 rule** into the render so "is that bloom really 7 cm?" is answerable by eye
 instead of by faith.
+
+**It edits the whole plant, not just the flower (V2.36).** A second control
+group covers `leaf_shape`, `leaf_size_cm`, `leaf_arrangement`, `leaf_surface`,
+`growth_form`, `branching` and `mature_height_m` — which is where the fidelity
+actually is, because `growth_form` picks the plant's entire body and all seven
+arrived pre-filled by a genus-level guess. Two consequences:
+
+- **Every species is reachable.** `_flowering` was a gate that hid 123 of 434
+  records — every grass, sedge and rush, and a dozen trees. It is now a filter
+  (`flowering only`, on by default), and the flower group greys out where it
+  does not apply.
+- **Provenance per group.** `leaf_data_source` / `leaf_data_citation` (schema
+  v57) mirror the flower pair; the row badge shows two letters, leaf then
+  flower, and `verified` means both.
+
+**The vocabulary is drawn (V2.36).** Asking somebody to choose *corymb* or
+*cyme* from a dropdown of bare words is a coin flip with extra steps, so each
+vocabulary select carries a line drawing, and clicking it opens the whole
+vocabulary side by side — where clicking the one that matches sets the value.
+The drawings live in [`html/botany/diagrams.js`](../html/botany/diagrams.js),
+outside the dev tool because they are also the glossary in
+[`BOTANY_FIELD_GUIDE.md`](BOTANY_FIELD_GUIDE.md) and the raw material for a
+plant-ID lesson (F83). Every dropdown is built from `src/data_quality.py`'s own
+allowlists, served over `/api/vocab` — the HTML used to carry three hand-typed
+copies, which is how the V2.35 photo-slot list drifted.
 
 It exists because the preview's remaining fidelity gap is **not a code gap**: it
 is roughly ten characters × 434 species, and for most of them no single flora

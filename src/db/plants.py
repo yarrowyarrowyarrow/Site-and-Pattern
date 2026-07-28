@@ -208,7 +208,14 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # it was. "Read in a flora" that does not name the flora is not a citation, and
 # the catalogue is about to start carrying values read out of published
 # descriptions. Free text, per species; same shape as `safety_source`.
-_SCHEMA_VERSION = 56
+# v57 (V2.36): `plants.leaf_data_source` + `plants.leaf_data_citation` — the same
+# pair for the leaf and habit characters, which the bench can now edit. Those
+# columns were seeded by genus-level estimate for all 434 species and are about
+# to start being corrected out of a flora; without provenance the catalogue
+# cannot tell a read value from a guessed one, which is the whole point of v55
+# and v56. Kept separate from the flower pair because the two get verified in
+# different sittings from different sources.
+_SCHEMA_VERSION = 57
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -510,6 +517,31 @@ def _migrate_to_v56(conn: sqlite3.Connection):
             "ALTER TABLE plants ADD COLUMN flower_data_citation TEXT DEFAULT ''")
     except sqlite3.OperationalError:
         pass
+    conn.commit()
+
+
+def _migrate_to_v57(conn: sqlite3.Connection):
+    """The same provenance pair, for the leaf and habit characters (V2.36).
+
+    v55/v56 gave the flower columns a source and a citation because the bench
+    was about to start correcting them out of published descriptions. The bench
+    now edits `leaf_shape`, `leaf_size_cm`, `leaf_arrangement`, `leaf_surface`,
+    `growth_form`, `branching` and `mature_height_m` as well — and those are in
+    a worse position than the flower columns ever were, because they are
+    populated for ALL 434 species by a genus-level estimate rather than left
+    blank. A wrong estimate is indistinguishable from a checked value, and
+    every one of them changes what the 3D viewer draws.
+
+    Two columns rather than reusing the flower pair: leaf and flower characters
+    get verified in different sittings from different sources. A photograph
+    settles petal count; a flora settles leaf length. One shared citation would
+    have to be overwritten by whichever was checked last.
+    """
+    for col in ("leaf_data_source", "leaf_data_citation"):
+        try:
+            conn.execute(f"ALTER TABLE plants ADD COLUMN {col} TEXT DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass
     conn.commit()
 
 
@@ -1237,6 +1269,8 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             p.get("flowering_stems"),
             p.get("flower_data_source", ""),
             p.get("flower_data_citation", ""),
+            p.get("leaf_data_source", ""),
+            p.get("leaf_data_citation", ""),
         ))
 
     conn.executemany(
@@ -1262,10 +1296,11 @@ def _seed_from_json_file(conn: sqlite3.Connection, json_path: str) -> int:
             flower_arch, flower_symmetry, petal_shape, petal_count,
             florets_per_head, flower_diameter_cm, flower_center_color,
             flower_height_frac, stem_branching, basal_rosette,
-            flowering_stems, flower_data_source, flower_data_citation)
+            flowering_stems, flower_data_source, flower_data_citation,
+            leaf_data_source, leaf_data_citation)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
                    ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-                   ?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         plant_rows,
     )
     conn.commit()
@@ -1380,6 +1415,9 @@ def init_db() -> None:
 
         if current_version < 56:
             _migrate_to_v56(conn)
+
+        if current_version < 57:
+            _migrate_to_v57(conn)
 
         # Add parent_id to polycultures if missing
         try:

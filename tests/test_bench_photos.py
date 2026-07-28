@@ -169,5 +169,90 @@ class TestFloraFetchIsOffByDefault(unittest.TestCase):
                               f"flora_read.py grew a bulk path: {bad}")
 
 
+class TestLeafAndHabitFields(unittest.TestCase):
+    """V2.36 turned a flower bench into a plant bench. Three things had to
+    change together and any one of them alone is silently broken."""
+
+    def test_the_leaf_group_is_editable(self):
+        for f in ("leaf_shape", "leaf_size_cm", "leaf_arrangement",
+                  "leaf_surface", "growth_form", "branching",
+                  "mature_height_m"):
+            self.assertIn(f, bench.FIELDS,
+                          f"{f} is not editable — a value read off a page has "
+                          f"nowhere to go")
+
+    def test_leaf_provenance_travels_with_the_leaf_data(self):
+        """The whole v55/v56 argument, applied to v57. A corrected leaf length
+        with no source is a better-looking guess."""
+        self.assertIn("leaf_data_source", bench.FIELDS)
+        self.assertIn("leaf_data_citation", bench.FIELDS)
+
+    def test_the_numbers_are_coerced_not_stored_as_text(self):
+        """`leaf_size_cm` arrives from a browser number input as a string. If it
+        is written through unconverted, plants_master.json grows "7.5" beside
+        7.5 and the renderer's ratio maths silently reads NaN."""
+        self.assertIn("leaf_size_cm", bench._FLOAT_FIELDS)
+        self.assertIn("mature_height_m", bench._FLOAT_FIELDS)
+
+
+class TestEveryPlantIsReachable(unittest.TestCase):
+    def test_grasses_and_trees_are_listed(self):
+        """`_flowering` was a GATE until V2.36 and hid 123 of 434 species —
+        every grass, sedge and rush, and a dozen trees. They have no flower
+        characters; they all have leaves and a growth form."""
+        rows = bench._species_list(bench._load())
+        self.assertEqual(len(rows), len(bench._load()),
+                         "the species list is filtering, not listing")
+        kinds = {r["plant_type"] for r in rows}
+        for kind in ("grass", "sedge", "tree", "shrub"):
+            self.assertIn(kind, kinds, f"no {kind} in the bench's list")
+
+    def test_each_row_says_whether_the_flower_controls_apply(self):
+        rows = bench._species_list(bench._load())
+        self.assertTrue(all("flowering" in r for r in rows))
+        # A grass's seed head is `inflorescence_form`, a different job.
+        grasses = [r for r in rows if r["plant_type"] == "grass"]
+        self.assertTrue(grasses)
+        self.assertFalse(any(r["flowering"] for r in grasses))
+
+
+class TestVocabulariesComeFromPython(unittest.TestCase):
+    """The dropdowns are built from src/data_quality.py's own allowlists and
+    served over /api/vocab, so the bench cannot offer a value the gate will
+    later reject. Three of them used to be hand-typed into the HTML."""
+
+    def test_every_vocabulary_field_has_a_list(self):
+        for f in ("flower_arch", "flower_symmetry", "petal_shape",
+                  "stem_branching", "leaf_shape", "leaf_arrangement",
+                  "leaf_surface", "growth_form", "branching"):
+            self.assertIn(f, bench.VOCABULARIES)
+            self.assertTrue(bench.VOCABULARIES[f])
+
+    def test_they_are_the_gates_own_sets(self):
+        from src import data_quality                         # noqa: PLC0415
+        for field, const in (("leaf_shape", "LEAF_SHAPES"),
+                             ("growth_form", "GROWTH_FORMS"),
+                             ("flower_arch", "FLOWER_ARCHITECTURES"),
+                             ("branching", "BRANCHING_HABITS")):
+            self.assertEqual(set(bench.VOCABULARIES[field]),
+                             set(getattr(data_quality, const)),
+                             f"{field} drifted from data_quality.{const}")
+
+    def test_the_html_does_not_carry_its_own_copy(self):
+        """The regression this guards: a hand-typed <option> list going stale.
+        The vocabulary selects must ship EMPTY and be filled at boot."""
+        with open(os.path.join(_ROOT, "html", "tune_morphology.html"),
+                  encoding="utf-8") as fh:
+            html = fh.read()
+        import re                                            # noqa: PLC0415
+        for field in ("flower_arch", "leaf_shape", "growth_form",
+                      "petal_shape", "leaf_arrangement"):
+            m = re.search(rf'<select id="{field}">(.*?)</select>', html, re.S)
+            self.assertIsNotNone(m, f"no <select> for {field}")
+            self.assertNotIn("<option", m.group(1),
+                             f"{field} has hand-typed options in the HTML — "
+                             f"fill it from /api/vocab instead")
+
+
 if __name__ == "__main__":
     unittest.main()
