@@ -81,6 +81,29 @@ class TestPdfExport(unittest.TestCase):
         export_pdf(out, {"properties": {}, "features": []}, [], [], notes="")
         self.assertTrue(os.path.exists(out))
 
+    def test_presentation_still_page_renders(self):
+        """The F69 still page referenced `still_pixmap` and `still_caption`
+        without either being a parameter, so export_pdf raised NameError on
+        EVERY call and PDF export was dead from V2.33 until V2.37. It went
+        unnoticed because these tests skip without PyQt6, which the CI image
+        did not have. Passing a still exercises the branch that was never
+        reachable."""
+        from PyQt6.QtGui import QPixmap
+        from PyQt6.QtCore import Qt
+        from src.pdf_export import export_pdf
+        project, placed, structs = self._sample()
+        still = QPixmap(240, 160)
+        still.fill(Qt.GlobalColor.darkGreen)
+        out = os.path.join(self._tmp, "with_still.pdf")
+        export_pdf(out, project, placed, structs, notes="",
+                   still_pixmap=still, still_caption="Year 5, June")
+        self.assertTrue(os.path.exists(out))
+
+        plain = os.path.join(self._tmp, "no_still.pdf")
+        export_pdf(plain, project, placed, structs, notes="")
+        self.assertGreater(os.path.getsize(out), os.path.getsize(plain),
+                           "the still did not add a page")
+
 
 if __name__ == "__main__":
     unittest.main()

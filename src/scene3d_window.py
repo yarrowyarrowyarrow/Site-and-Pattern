@@ -303,19 +303,27 @@ class Scene3DWindow(QWidget):
         bar.addWidget(self._bake_btn)
         bar.addWidget(self._still_btn)
 
-        # Row 2 — pick a creature, then the view modes + overlays. Grouped and
-        # labelled so seven controls don't read as one undifferentiated strip.
+        # Row 2 — how you move through the scene first, then whose eyes you
+        # borrow. The old order led with "Creature: [combo]", so the strip
+        # opened by asking you to pick a bee before anything had said why you
+        # would want one; walking your own garden is the thing most people came
+        # for and it needs no setup (V2.37 user feedback: "walk the garden
+        # should be the first option, fly as creature should be second and
+        # choosing the creature should be 3rd").
+        #
+        # The grouping follows the real dependency: Walk / Flyover / Identify
+        # stand alone, while Fly / Tour / Show its plants all read the creature
+        # combo, so the combo sits with them rather than ahead of everything.
         bar2 = QHBoxLayout()
-        bar2.addWidget(QLabel("Creature:"))
-        bar2.addWidget(self._bee_combo)
-        bar2.addWidget(self._bee_btn)
-        bar2.addWidget(self._tour_btn)
-        bar2.addWidget(self._spot_btn)
-        bar2.addSpacing(16)
         bar2.addWidget(QLabel("View:"))
         bar2.addWidget(self._walk_btn)
         bar2.addWidget(self._fly_btn)
         bar2.addWidget(self._id_btn)
+        bar2.addSpacing(16)
+        bar2.addWidget(self._bee_btn)
+        bar2.addWidget(self._bee_combo)
+        bar2.addWidget(self._tour_btn)
+        bar2.addWidget(self._spot_btn)
         bar2.addStretch(1)
 
         root = QVBoxLayout(self)

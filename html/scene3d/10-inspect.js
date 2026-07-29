@@ -341,6 +341,11 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
   _downX = e.clientX; _downY = e.clientY; _downT = performance.now();
 });
 renderer.domElement.addEventListener('pointerup', (e) => {
+  // Left button only. Since V2.37 left is the PAN verb (01-core.js), so an
+  // unfiltered handler would open a plant card on the tail of any small drag,
+  // and the right button now rotates — neither gesture means "tell me about
+  // this".
+  if (e.button !== 0) return;
   if (Math.abs(e.clientX - _downX) > 4 || Math.abs(e.clientY - _downY) > 4) return;
   if (performance.now() - _downT > 700) return;
   const hit = scenePick(e.clientX, e.clientY);

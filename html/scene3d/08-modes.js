@@ -195,6 +195,9 @@ addEventListener('keydown', (e) => {
 addEventListener('keyup', (e) => { walkKeys.delete(e.code); });
 renderer.domElement.addEventListener('pointerdown', (e) => {
   if (!walkMode) return;
+  // Left button only, so drag-look here means the same thing as everywhere
+  // else and a right-drag doesn't also swing your head around.
+  if (e.button !== 0) return;
   walkDragging = true; walkLastX = e.clientX; walkLastY = e.clientY;
 });
 addEventListener('pointerup', () => { walkDragging = false; });

@@ -143,6 +143,16 @@ camera.position.set(45, 38, 55);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.maxPolarAngle = Math.PI / 2 - 0.02;   // never go underground
 controls.target.set(0, 0, 0);
+// Left drags the ground, right swings the camera around it — the Google
+// Earth / map convention most people arrive with, rather than three.js's
+// default (left = orbit, right = pan) which comes from 3D modelling tools.
+// V2.37, user feedback. Note 10-inspect.js filters click-to-inspect to button 0
+// so a small left-drag pans without also opening a plant card.
+controls.mouseButtons = {
+  LEFT: THREE.MOUSE.PAN,
+  MIDDLE: THREE.MOUSE.DOLLY,
+  RIGHT: THREE.MOUSE.ROTATE
+};
 // Put the camera in the scene graph so objects parented to it (the bee avatar in
 // "fly as a bee" mode) are traversed and rendered. Harmless for normal rendering.
 scene.add(camera);

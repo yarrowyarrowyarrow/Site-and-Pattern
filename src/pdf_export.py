@@ -48,6 +48,8 @@ def export_pdf(
     structures: list[dict],
     notes: str = "",
     map_pixmap=None,
+    still_pixmap=None,
+    still_caption: str = "",
 ) -> None:
     """
     Export the current design to a PDF file.
@@ -66,6 +68,12 @@ def export_pdf(
         Design notes text.
     map_pixmap : QPixmap or None
         Screenshot of the current map view (if available).
+    still_pixmap : QPixmap or None
+        A presentation still rendered by the 3D window (F69), or None. Optional
+        because export is synchronous while the viewer's capture is a callback,
+        so a caller that has no still simply omits the page.
+    still_caption : str
+        Caption for that still.
     """
     printer = QPrinter(QPrinter.PrinterMode.HighResolution)
     printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)

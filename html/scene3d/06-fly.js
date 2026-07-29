@@ -715,6 +715,8 @@ addEventListener('keydown', (e) => {
 addEventListener('keyup', (e) => { beeKeys.delete(e.code); });
 renderer.domElement.addEventListener('pointerdown', (e) => {
   if (!beeMode) return;
+  // Left button only — same reasoning as walk mode in 08-modes.js.
+  if (e.button !== 0) return;
   beeDragging = true; beeLastX = e.clientX; beeLastY = e.clientY;
 });
 addEventListener('pointerup', () => { beeDragging = false; });
