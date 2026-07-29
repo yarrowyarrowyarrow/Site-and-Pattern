@@ -197,8 +197,87 @@
 
     function clearSunPath() {
       if (sunPathLayer) { map.removeLayer(sunPathLayer); sunPathLayer = null; }
+      if (_sunNowLayer) { map.removeLayer(_sunNowLayer); _sunNowLayer = null; }
       _sunPathData   = null;
       _sunPathAnchor = null;
+    }
+
+    // ── The sun at a time of day (V2.37) ───────────────────────────────────
+    // The arc was drawn once and never moved: three fixed markers, no "now",
+    // and no way to sweep the day. Seeing the sun travel — and the shadow swing
+    // with it — is the whole reason to look at a sun path, and it was a Python
+    // round-trip and a full layer teardown away.
+    //
+    // This moves ONE marker and ONE shadow ray over the payload already cached
+    // for redraw-on-zoom, so scrubbing is cheap enough to be continuous.
+    var _sunNowLayer = null;
+
+    function _sunPointAt(lat, lng, pos, arcRadius) {
+      var azRad = pos.azimuth * Math.PI / 180;
+      var dist  = arcRadius * (1 - pos.altitude / 90 * 0.3);
+      return [lat + dist * Math.cos(azRad) / 111320,
+              lng + dist * Math.sin(azRad) / (111320 * Math.cos(lat * Math.PI / 180))];
+    }
+
+    function setSunPathTime(minutes) {
+      if (!_sunPathData || !_sunPathAnchor) return;
+      if (_sunNowLayer) { map.removeLayer(_sunNowLayer); _sunNowLayer = null; }
+      if (minutes === null || minutes === undefined || minutes < 0) return;
+
+      var hour = minutes / 60.0;
+      var lat = _sunPathAnchor.lat, lng = _sunPathAnchor.lng;
+      var positions = (_sunPathData.positions || []).filter(function (p) {
+        return p.altitude > 0;
+      });
+      if (!positions.length) return;
+
+      // Nearest sampled position. The path is sampled every ~20 minutes, which
+      // is finer than the eye can follow at yard scale — interpolating azimuth
+      // across the sample would be false precision, not extra accuracy (P9).
+      var best = positions[0], bestGap = Math.abs(positions[0].hour - hour);
+      for (var i = 1; i < positions.length; i++) {
+        var gap = Math.abs(positions[i].hour - hour);
+        if (gap < bestGap) { best = positions[i]; bestGap = gap; }
+      }
+      // Before sunrise or after sunset there is no sun to draw. Saying nothing
+      // is the honest answer; drawing a sun below the horizon is not.
+      if (bestGap > 0.75) return;
+
+      var autoRadius = _viewportRadiusMetres(lat);
+      var arcRadius  = _sunPathData.arc_radius
+        ? Math.max(_sunPathData.arc_radius, autoRadius) : autoRadius;
+      var pt = _sunPointAt(lat, lng, best, arcRadius);
+
+      _sunNowLayer = L.layerGroup().addTo(map);
+      // The shadow ray runs from the anchor directly away from the sun, and
+      // lengthens as the sun drops — the thing you are actually trying to see.
+      var shadowLen = arcRadius * 0.45 /
+                      Math.max(0.18, Math.tan(best.altitude * Math.PI / 180));
+      shadowLen = Math.min(shadowLen, arcRadius * 1.1);
+      var shadowAz = (best.azimuth + 180) * Math.PI / 180;
+      L.polyline([[lat, lng],
+                  [lat + shadowLen * Math.cos(shadowAz) / 111320,
+                   lng + shadowLen * Math.sin(shadowAz) /
+                         (111320 * Math.cos(lat * Math.PI / 180))]], {
+        color: '#37474f', weight: 4, opacity: 0.55, interactive: false,
+        dashArray: '2 6'
+      }).addTo(_sunNowLayer);
+
+      L.circleMarker(pt, {
+        radius: 9, color: '#fff8e1', fillColor: '#ffd54f',
+        fillOpacity: 1, weight: 2, interactive: false
+      }).addTo(_sunNowLayer);
+
+      var mm = ('0' + Math.round((best.hour % 1) * 60)).slice(-2);
+      L.marker(pt, {
+        icon: L.divIcon({
+          className: 'measure-label',
+          html: '<span style="font-size:11px;font-weight:700">☀ ' +
+                Math.floor(best.hour) + ':' + mm + ' · ' +
+                best.altitude.toFixed(0) + '°</span>',
+          iconSize: [0, 0], iconAnchor: [0, -12]
+        }), interactive: false
+      }).addTo(_sunNowLayer);
     }
 
     // ── A3: Contour lines ───────────────────────────────────────────────────

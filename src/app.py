@@ -777,6 +777,14 @@ class MainWindow(QMainWindow):
 
         # Analysis panel → map (A1-A4)
         self.analysis_panel.sun_path_requested.connect(self._on_sun_path_requested)
+        # Scrub → move the sun marker in JS over the payload it already holds.
+        self.analysis_panel.sun_time_changed.connect(
+            lambda mins: self.map_widget.set_sun_path_time(mins))
+        # Date changed → redraw at the anchor already placed, instead of making
+        # the user re-click the map to compare two solstices (V2.37).
+        self.analysis_panel.sun_redraw_requested.connect(
+            lambda cfg: (self._render_sun_path(cfg, *self._active_sun_state[1:])
+                         if getattr(self, "_active_sun_state", None) else None))
         # Clears routed through the controller so they reset the active-overlay
         # state and record an undo step (not straight to the map widget).
         self.analysis_panel.sun_path_cleared.connect(
@@ -1238,8 +1246,12 @@ class MainWindow(QMainWindow):
         )
         self._set_mode_label(f"Sun path: {config.get('date_label', d.isoformat())}")
         self._pending_sun_config = None
-        # Remember the rendered overlay so undo/redo can reproduce it.
+        # Remember the rendered overlay so undo/redo — and the date combo's
+        # redraw-in-place — can reproduce it without another map click.
         self._active_sun_state = (config, lat, lng)
+        # Hand the panel this date's real daylight so the time scrub spans
+        # sunrise→sunset, and draw the sun at its opening position.
+        self.analysis_panel.set_sun_window(sr, ss)
 
     def _on_contour_requested(self, config: dict):
         # Shim → MapEventRouter; see src/controllers/map_events.py.

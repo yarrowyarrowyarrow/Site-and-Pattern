@@ -715,6 +715,10 @@ class MapWidget(QWebEngineView):
     def clear_sun_path(self):
         self.run_js(map_js.clear_sun_path())
 
+    def set_sun_path_time(self, minutes):
+        """Move the sun marker along the drawn arc (scrub-rate; JS-only)."""
+        self.run_js(map_js.set_sun_path_time(minutes))
+
     def set_zoom_sensitivity(self, level: str):
         """Set zoom sensitivity: 'fine'|'normal'|'fast'|'coarse'."""
         self.run_js(map_js.set_zoom_sensitivity(level))

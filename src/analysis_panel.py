@@ -33,6 +33,8 @@ class AnalysisPanel(QWidget):
     # A1: Sun path
     sun_path_requested = pyqtSignal(dict)   # {lat, lng, date_key, show_shadows}
     sun_path_cleared = pyqtSignal()
+    sun_time_changed = pyqtSignal(int)      # minutes since midnight (V2.37 scrub)
+    sun_redraw_requested = pyqtSignal(dict)  # redraw at the existing anchor
 
     # A4: Wind/windbreak
     wind_requested = pyqtSignal(dict)       # {direction, speed_label, show_shelter}
@@ -136,13 +138,26 @@ class AnalysisPanel(QWidget):
             "First Frost (~Sep 23)",
             "Today",
         ])
+        self._sun_date.currentIndexChanged.connect(self._on_sun_date_changed)
         form.addRow("Date:", self._sun_date)
 
+        # Time of day. This control existed before V2.37 as a three-position
+        # morning/noon/evening slider that was connected to nothing and read by
+        # nothing — a draggable control that did not do anything, which is worse
+        # than not having one. It is now a real scrub in minutes, clamped to the
+        # selected date's actual daylight (set by set_sun_window once the path
+        # is drawn), and it moves the sun and its shadow along the arc.
         self._sun_time_slider = QSlider(Qt.Orientation.Horizontal)
-        self._sun_time_slider.setRange(0, 2)  # 0=morning, 1=noon, 2=evening
-        self._sun_time_slider.setValue(1)
-        self._sun_time_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-        self._sun_time_label = QLabel("Show: All day arc")
+        self._sun_time_slider.setRange(0, 24 * 60 - 1)
+        self._sun_time_slider.setSingleStep(15)
+        self._sun_time_slider.setPageStep(60)
+        self._sun_time_slider.setValue(12 * 60)
+        self._sun_time_slider.setEnabled(False)     # until a path is drawn
+        self._sun_time_slider.setToolTip(
+            "Drag to move the sun along its arc and swing the shadow with it.\n"
+            "Range is that date's sunrise to sunset.")
+        self._sun_time_label = QLabel("Time of day")
+        self._sun_time_slider.valueChanged.connect(self._on_sun_time_scrubbed)
         form.addRow(self._sun_time_label, self._sun_time_slider)
 
         self._sun_shadows = QCheckBox("Show shadow direction arrows")
@@ -199,7 +214,9 @@ class AnalysisPanel(QWidget):
         layout.addStretch()
         self._tabs.addTab(tab, "Sun Path")
 
-    def _on_show_sun_path(self):
+    def _sun_config(self) -> dict:
+        """The current Sun Path settings. One builder, so "place it" and
+        "redraw it where it already is" cannot drift apart."""
         from src.solar import KEY_DATES
         date_map = {
             0: "Summer Solstice",
@@ -211,21 +228,62 @@ class AnalysisPanel(QWidget):
             6: "today",
         }
         date_key = date_map.get(self._sun_date.currentIndex(), "today")
-        if date_key == "today":
-            d = date.today()
-        else:
-            d = KEY_DATES.get(date_key, date.today())
-
-        self.sun_path_requested.emit({
+        d = date.today() if date_key == "today" else KEY_DATES.get(date_key, date.today())
+        return {
             "date": d.isoformat(),
             "date_label": self._sun_date.currentText(),
             "show_shadows": self._sun_shadows.isChecked(),
             "show_shadow_length": self._sun_shadow_length.isChecked(),
             "arc_radius": self._sun_arc_radius.value(),
-        })
+        }
+
+    def _on_show_sun_path(self):
+        self.sun_path_requested.emit(self._sun_config())
 
     def set_sun_info(self, text: str):
         self._sun_info.setText(text)
+
+    # ── Time-of-day scrub (V2.37) ────────────────────────────────────────────
+
+    def set_sun_window(self, sunrise_hour: float, sunset_hour: float):
+        """Clamp the time slider to a date's real daylight, after a draw.
+
+        Mirrors what the Site panel's shade scrub already does: you cannot drag
+        the sun to 3 a.m. in June because there is no sun there, and a slider
+        that lets you ask an impossible question has to answer it with nothing.
+        """
+        lo = int(max(0, min(23 * 60 + 59, round(sunrise_hour * 60))))
+        hi = int(max(lo + 1, min(24 * 60 - 1, round(sunset_hour * 60))))
+        blocked = self._sun_time_slider.blockSignals(True)
+        self._sun_time_slider.setRange(lo, hi)
+        self._sun_time_slider.setValue(min(max(12 * 60, lo), hi))
+        self._sun_time_slider.blockSignals(blocked)
+        self._sun_time_slider.setEnabled(True)
+        self._update_sun_time_label()
+        # Draw the marker at the opening position so the control is visibly
+        # live rather than waiting to be discovered.
+        self.sun_time_changed.emit(self._sun_time_slider.value())
+
+    def _update_sun_time_label(self):
+        mins = self._sun_time_slider.value()
+        self._sun_time_label.setText(f"Time of day  {mins // 60:02d}:{mins % 60:02d}")
+
+    def _on_sun_time_scrubbed(self, minutes: int):
+        self._update_sun_time_label()
+        # No debounce: the receiver only moves one marker in JS over a payload
+        # it already holds, so this is cheap enough to follow the drag. (The
+        # Site panel's shade scrub debounces because each frame there re-runs a
+        # full grid pass on a worker thread — a different cost entirely.)
+        self.sun_time_changed.emit(int(minutes))
+
+    def _on_sun_date_changed(self, _index: int):
+        """Changing the date redraws at the anchor already placed.
+
+        It used to re-enter anchor-placement mode, so comparing the solstices —
+        the single most obvious thing to do on this tab — meant picking a date,
+        pressing a button and re-clicking the map, every time.
+        """
+        self.sun_redraw_requested.emit(self._sun_config())
 
     # ═════════════════════════════════════════════════════════════════════════
     #  A4 — Wind / Windbreak

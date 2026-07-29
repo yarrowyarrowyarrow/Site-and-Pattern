@@ -385,6 +385,16 @@ def clear_sun_path() -> str:
     return "clearSunPath();"
 
 
+def set_sun_path_time(minutes) -> str:
+    """Move the "sun now" marker + its shadow ray along the drawn arc.
+
+    Scrub-rate call: JS reuses the payload it already holds, so dragging the
+    time slider does not re-run the solar maths or rebuild the layer.
+    ``None``/negative removes the marker.
+    """
+    return f"setSunPathTime({-1 if minutes is None else int(minutes)});"
+
+
 def draw_wind_overlay(data: dict) -> str:
     return f"drawWindOverlay({_jsobj(data)});"
 
