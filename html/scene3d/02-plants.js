@@ -228,7 +228,18 @@ function terrainHeightAt(sceneX, sceneY, terrain) {
   const row = (t.max_y - sceneY) / (t.max_y - t.min_y) * (t.rows - 1);
   const c0 = Math.max(0, Math.min(t.cols - 2, Math.floor(col)));
   const r0 = Math.max(0, Math.min(t.rows - 2, Math.floor(row)));
-  const fc = col - c0, fr = row - r0;
+  // Clamp the FRACTIONS too, not just the cell indices. Outside the grid `col`
+  // and `row` run past the last cell, so an unclamped fraction turns the
+  // bilinear blend into a linear EXTRAPOLATION and the ground climbs away from
+  // the terrain it is supposed to follow. Measured on a 2 m-over-100 m slope —
+  // an utterly ordinary yard — a point 200 m outside the grid came back 6 m up,
+  // and 1 km out, 22 m: the "plants flying in the air" a tester reported
+  // (V2.38). Clamping makes a point outside the grid take the nearest EDGE
+  // height, which is also the honest answer: there is no elevation data out
+  // there, so extending the last known slope forever invents terrain we never
+  // measured (P9).
+  const fc = Math.min(1, Math.max(0, col - c0));
+  const fr = Math.min(1, Math.max(0, row - r0));
   const h00 = t.heights[r0][c0],     h01 = t.heights[r0][c0 + 1];
   const h10 = t.heights[r0 + 1][c0], h11 = t.heights[r0 + 1][c0 + 1];
   return (h00 * (1 - fc) + h01 * fc) * (1 - fr) + (h10 * (1 - fc) + h11 * fc) * fr;
