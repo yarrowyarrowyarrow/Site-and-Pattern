@@ -214,6 +214,12 @@ def export_pdf(
         if pmap is not None and pmap.placements:
             printer.newPage()
             _draw_planting_map(painter, w, h, pmap, dpi_scale)
+        elif placed_plants:
+            # Silently dropping the page taught the user nothing: they asked for
+            # a planting map, got a PDF without one, and had no way to tell
+            # whether the feature existed. Say why (V2.37).
+            printer.newPage()
+            _draw_missing_map_note(painter, w, h, dpi_scale, project)
 
         # ── Page 5: Phased conversion schedule (F17) ──────────────────────
         # Year-by-year "remove this / plant that, when" — only when there is a
@@ -665,6 +671,39 @@ def _draw_presentation_still(painter, w, h, s, pixmap, caption):
             painter.drawText(QRectF(0, y, w, 14 * s),
                              Qt.AlignmentFlag.AlignLeft, line)
             y += 13 * s
+
+
+def _draw_missing_map_note(painter, w, h, s, project) -> None:
+    """Say why the planting map is absent instead of dropping the page.
+
+    The map is a scale drawing, so it needs a property boundary to be drawn to
+    scale *within*. Without one there is nothing to measure from — but that is a
+    thing the user can fix in about thirty seconds, and they can only fix it if
+    someone tells them.
+    """
+    y = _page_title(painter, w, s, "Planting map — not drawn")
+    has_boundary = any(
+        (f.get("properties") or {}).get("element_type") == "property_boundary"
+        for f in (project.get("features") or []))
+    reason = ("This design has plants but no property boundary, and the "
+              "planting map is a scale drawing — it needs the property outline "
+              "to measure from."
+              if not has_boundary else
+              "The planting map could not be built for this design.")
+    painter.setPen(QColor("#333333"))
+    painter.setFont(_font(9.5 * s))
+    for line in _wrap(reason, 95):
+        painter.drawText(QRectF(15 * s, y, w - 30 * s, 15 * s),
+                         Qt.AlignmentFlag.AlignLeft, line)
+        y += 15 * s
+    if not has_boundary:
+        y += 8 * s
+        painter.setFont(_font(9 * s))
+        painter.setPen(QColor("#2e7d32"))
+        painter.drawText(
+            QRectF(15 * s, y, w - 30 * s, 15 * s), Qt.AlignmentFlag.AlignLeft,
+            "To get it: draw your property boundary on the map, then export "
+            "again.")
 
 
 def _draw_site_prep(painter: QPainter, w: float, h: float, prep, s: float) -> float:

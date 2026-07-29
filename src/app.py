@@ -498,8 +498,16 @@ class MainWindow(QMainWindow):
             "and a phased planting schedule, grouped by Alberta nursery source")
         act_shopping.triggered.connect(self._on_export_shopping_list)
 
-        act_pdf = file_menu.addAction("Export &PDF…")
-        act_pdf.setStatusTip("Export design as a presentation-quality PDF")
+        # Name what is in it. "Export as a presentation-quality PDF" told the
+        # user nothing about the numbered planting map, the key, the scale bar
+        # or the north arrow on page 4 — a tester asked for "a printable 2-D map
+        # of a design with legend" that had shipped in V2.31 and was simply
+        # unfindable (V2.37).
+        act_pdf = file_menu.addAction("Export &PDF (plan + planting map)…")
+        act_pdf.setStatusTip(
+            "Export the whole design as a PDF — site prep, buy list, and a "
+            "numbered planting map drawn to scale with a key, scale bar and "
+            "north arrow")
         act_pdf.triggered.connect(self._on_export_pdf)
 
         file_menu.addSeparator()
