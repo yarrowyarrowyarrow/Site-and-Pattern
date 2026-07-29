@@ -58,14 +58,19 @@ class StructurePanel(QWidget):
         # Document mode lets the bar span the full width so FillTabWidget can
         # stretch Structures/Hedgerow/Shapes edge-to-edge.
         self._tabs.setDocumentMode(True)
-        self._tabs.setStyleSheet(
-            "QTabBar::tab { padding: 4px 10px; }"
-        )
+        # This was the one strip in the app with no shared style at all — plain
+        # Qt default tabs, so it read as a different kind of control from every
+        # other sub-tab strip.
+        from src.ui_style import inner_tab_stylesheet
+        self._tabs.setStyleSheet(inner_tab_stylesheet())
 
         # ── Tab 1: Structures ─────────────────────────────────────────
         self._structures_tab = QWidget()
         self._build_structures_tab()
-        self._tabs.addTab(self._structures_tab, "Structures")
+        # "Habitat", not "Structures": this is the sub-tab of the top-level
+        # Structures tab, and a label repeating its own parent tells the user
+        # nothing about where they are.
+        self._tabs.addTab(self._structures_tab, "Habitat")
 
         # ── Tab 2: Hedgerow ───────────────────────────────────────────
         self._hedgerow_tab = QWidget()

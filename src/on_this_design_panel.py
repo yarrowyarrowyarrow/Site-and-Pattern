@@ -62,13 +62,11 @@ class OnThisDesignPanel(QWidget):
         root.setSpacing(2)
         from src.fill_tab_widget import FillTabWidget
         self._tabs = FillTabWidget()
-        self._tabs.setStyleSheet(
-            "QTabWidget::pane { border: 1px solid #2e4a2e; background: #1a2a1a; }"
-            "QTabBar::tab { background: #1e2e1e; color: #a5d6a7; "
-            "padding: 3px 10px; border: 1px solid #2e4a2e; "
-            "border-bottom: none; font-size: 11px; }"
-            "QTabBar::tab:selected { background: #2e4a2e; color: #e8f5e9; }"
-        )
+        # Third level in the tree (Plants → On This Design → here), so it takes
+        # the quietest tab style. This strip used to invent a boxed look of its
+        # own, which made the deepest level the loudest of the three.
+        from src.ui_style import leaf_tab_stylesheet
+        self._tabs.setStyleSheet(leaf_tab_stylesheet())
         root.addWidget(self._tabs)
 
         # Plants sub-tab
@@ -95,7 +93,8 @@ class OnThisDesignPanel(QWidget):
         self._plants_list.customContextMenuRequested.connect(
             self._on_plant_row_menu)
         pl.addWidget(self._plants_list, 1)
-        self._tabs.addTab(plants_widget, "Plants")
+        # "Species", not "Plants" — see the note in app.py's inner tab strip.
+        self._tabs.addTab(plants_widget, "Species")
 
         # Communities sub-tab
         communities_widget = QWidget()

@@ -226,27 +226,27 @@ class MainWindow(QMainWindow):
         self._side_tabs.addTab(self.analysis_panel, "Analysis")
         self._side_tabs.addTab(self.planning_panel, "Planning")
         self._side_tabs.addTab(self.learn_panel, "Learn")
-        # Side panel needs to be wide enough that all six tab labels can
-        # render in full ("Structures" is the widest at ~11px font). 300px
-        # is the empirical minimum with six tabs; below that labels elide.
-        self._side_tabs.setMinimumWidth(300)
+        # Side panel width. The old comment here claimed 300px was the point
+        # below which labels elide; measuring it (V2.37) showed that was never
+        # true — FillTabWidget(allow_shrink=True) gives every tab an equal
+        # share, so full labels need widest×6 ≈ 456px and the strip elided at
+        # 300px before and after. 320px is a modest floor that fits four of the
+        # six labels whole; drag the splitter (max 480) to see all six.
+        self._side_tabs.setMinimumWidth(320)
         self._side_tabs.setMaximumWidth(480)
         # Stretch the tabs to fill the whole tab strip (no empty gap to the
         # right of "Learn"); elide right on overflow instead of clipping.
         self._side_tabs.tabBar().setUsesScrollButtons(False)
         self._side_tabs.tabBar().setElideMode(Qt.TextElideMode.ElideRight)
         self._side_tabs.tabBar().setExpanding(True)
-        # Tab styling — every tab strip in the app (these top-level tabs plus
-        # the Site/Plants/Analysis/Planning sub-tabs) shares the same
-        # green-underline look so the whole UI is consistent. A subtle pane
-        # border frames the side panel.
-        from src.ui_style import inner_tab_stylesheet
+        # Tab styling — these top-level tabs get their OWN look, distinct from
+        # the sub-tabs beneath them (ui_style.top_tab_stylesheet). Until V2.37
+        # every strip in the app shared one stylesheet, so a user facing three
+        # nested strips saw three identical toolbars and no indication which was
+        # the top of the tree. See the note in ui_style.py before re-unifying.
+        from src.ui_style import top_tab_stylesheet
         self._side_tabs.setStyleSheet(
-            inner_tab_stylesheet()
-            + "QTabWidget::pane { border: 1px solid #2e4a2e; top: -1px; }"
-            # Tighter horizontal padding than the sub-tabs so all six top-level
-            # labels still render in full at the 300px minimum panel width.
-            + "QTabBar::tab { padding: 5px 7px; }"
+            top_tab_stylesheet()
             + "QWidget { background-color: #1e2a1e; color: #c8e6c9; }"
         )
 
@@ -346,7 +346,11 @@ class MainWindow(QMainWindow):
         inner.tabBar().setUsesScrollButtons(False)
         inner.tabBar().setExpanding(True)
         inner.setStyleSheet(inner_tab_stylesheet())
-        inner.addTab(self.plant_panel, "Plants")
+        # "Browse", not "Plants": this sits under the top-level Plants tab and
+        # above On This Design's own Species tab, and having the same word at
+        # three nesting levels at once is what made the strips unreadable
+        # (V2.37 user feedback). Each label now says what its level does.
+        inner.addTab(self.plant_panel, "Browse")
         inner.addTab(self.polyculture_panel, "Plant Communities")
         inner.addTab(self.on_this_design, "On This Design")
         v.addWidget(inner)
