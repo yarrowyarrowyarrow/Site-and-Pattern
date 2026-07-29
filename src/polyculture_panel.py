@@ -1174,6 +1174,7 @@ class _CreaturePickerDialog(QDialog):
 
 class PolyculturePanel(QWidget):
     placePolycultureRequested = pyqtSignal(dict)  # polyculture data with members
+    placementCancelled = pyqtSignal()             # user stood the map down (V2.37)
     fillAreaRequested = pyqtSignal(int, float, bool)  # polyculture_id, cell spacing (m), matrix (F22)
     fillCommunityMixRequested = pyqtSignal(object, float, bool)  # [{id,weight,name,polyculture}], spacing, matrix (F22)
     # Emitted when the panel creates a brand-new community (e.g. via
@@ -1183,6 +1184,10 @@ class PolyculturePanel(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        # True while the map is armed with this panel's selected community.
+        # MainWindow calls set_armed(False) when placement ends, so the chip
+        # can never claim the map is listening when it isn't.
+        self._armed = False
         self._build_ui()
         self._refresh_polyculture_list()
 
@@ -1822,7 +1827,9 @@ class PolyculturePanel(QWidget):
         self.place_btn = QPushButton("Place on Map")
         self.place_btn.setStyleSheet(_POLY_BTN_STYLE)
         self.place_btn.setEnabled(False)
-        self.place_btn.clicked.connect(self._on_place)
+        # A toggle and a status readout: selecting a community arms the map on
+        # its own, so this shows what is armed and stands it down again.
+        self.place_btn.clicked.connect(self._on_place_btn_clicked)
         parent_layout.addWidget(self.place_btn)
 
         # show_fill_spacing=False: a community/mix is placed as units (or a
@@ -1871,6 +1878,16 @@ class PolyculturePanel(QWidget):
         community, no inter-unit gap)."""
         if hasattr(self, "_spacing_box"):
             self._spacing_box.setVisible(kind != "single")
+        # Changing Row → Grid is choosing what to place, so re-arm with it;
+        # switching to Fill Area stands the map down (it draws, it doesn't arm).
+        if kind == "fill":
+            if getattr(self, "_armed", False):
+                self.placementCancelled.emit()
+            return
+        if getattr(self, "_armed", False):
+            self._auto_arm()
+        else:
+            self._update_place_btn()
 
     def _refresh_polyculture_list(self, _filter_text=None):
         self.polyculture_tree.clear()
@@ -2112,6 +2129,13 @@ class PolyculturePanel(QWidget):
         self.place_btn.setEnabled(has_selection)
         self.export_btn.setEnabled(has_selection)
         self.edit_btn.setEnabled(has_selection)
+        # Selecting a community arms the map with it (V2.37) — same reasoning as
+        # the plant list: the separate press left the map holding the previously
+        # armed community, so the wrong one got planted.
+        if has_selection:
+            self._auto_arm()
+        else:
+            self._update_place_btn()
         # Variations are only addable to top-level communities. A top-level
         # community's tree parent is either nothing (flat view) or a group
         # folder (grouped view, no id) — never another community.
@@ -2484,6 +2508,57 @@ class PolyculturePanel(QWidget):
     # via the "Edit in Builder…" button. AddMemberDialog is kept above
     # in case external code or tests still import it.
 
+    # ── Arming ────────────────────────────────────────────────────────────────
+
+    def _auto_arm(self):
+        """Re-arm the map with the selected community.
+
+        Fill Area is excluded: it enters polygon-draw mode immediately rather
+        than arming a click, so auto-arming it would hijack the map every time
+        the user arrowed through the community tree.
+        """
+        if self.placement_widget.kind == "fill":
+            return
+        if self._get_selected_polyculture_id() is None:
+            return
+        self._on_place()
+
+    def set_armed(self, armed: bool):
+        """Told by MainWindow when placement mode ends (Esc, another tool)."""
+        if getattr(self, "_armed", False) == bool(armed):
+            return
+        self._armed = bool(armed)
+        self._update_place_btn()
+
+    def _update_place_btn(self):
+        """Render the Place button as a live status chip while armed."""
+        if not hasattr(self, "place_btn"):
+            return
+        if getattr(self, "_armed", False):
+            name = ""
+            pid = self._get_selected_polyculture_id()
+            if pid is not None:
+                pc = polycultures.get_polyculture_by_id(pid) or {}
+                name = pc.get("name") or ""
+            kind = _PATTERN_WORDS.get(self.placement_widget.kind, "")
+            self.place_btn.setText(
+                f"● Placing: {name or 'community'}" + (f" · {kind}" if kind else ""))
+            self.place_btn.setStyleSheet(_POLY_BTN_ARMED_STYLE)
+            self.place_btn.setToolTip(
+                "The map is armed — click it to place.\n"
+                "Click here (or press Esc) to stop placing.")
+        else:
+            self.place_btn.setText("Place on Map")
+            self.place_btn.setStyleSheet(_POLY_BTN_STYLE)
+            self.place_btn.setToolTip("")
+
+    def _on_place_btn_clicked(self):
+        """The button toggles: arm the selection, or stand the map down."""
+        if getattr(self, "_armed", False):
+            self.placementCancelled.emit()
+            return
+        self._on_place()
+
     def _on_place(self):
         polyculture_id = self._get_selected_polyculture_id()
         if polyculture_id is None:
@@ -2515,6 +2590,8 @@ class PolyculturePanel(QWidget):
                 "params": pattern.get("params") or {},
             }
         self.placePolycultureRequested.emit(polyculture)
+        self._armed = True
+        self._update_place_btn()
 
     def _on_export(self):
         polyculture_id = self._get_selected_polyculture_id()
@@ -2580,6 +2657,27 @@ QPushButton:hover    { background: #388e3c; }
 QPushButton:pressed  { background: #1b5e20; }
 QPushButton:disabled { background: #2a3a2a; color: #4a6a4a; }
 """
+
+# Armed = amber status chip, matching plant_panel._PLACE_BTN_ARMED_STYLE. The
+# two panels arm the same map, so they must not look like different states.
+_POLY_BTN_ARMED_STYLE = """
+QPushButton {
+    background: #4a3a12;
+    color: #ffe082;
+    border: 1px solid #ffb300;
+    border-radius: 4px;
+    padding: 7px 12px;
+    font-weight: bold;
+    font-size: 13px;
+    text-align: left;
+}
+QPushButton:hover    { background: #5a4718; border-color: #ffca28; }
+QPushButton:pressed  { background: #3a2e0e; }
+"""
+
+# Pattern kind → the word shown in the armed chip.
+_PATTERN_WORDS = {"single": "Single", "row": "Row", "grid": "Grid",
+                  "circle": "Circle", "fill": "Fill Area"}
 
 # Compact, low-prominence style for the library management buttons (New /
 # Delete / Duplicate / Variation / Edit / Export / Import) — mirrors the

@@ -170,6 +170,7 @@ class PlantPanel(QWidget):
     # quantity spinner value (used when pattern["kind"]=="single"); the
     # fourth is the pattern descriptor — see MapWidget.set_mode docstring.
     place_plant_requested = pyqtSignal(int, str, int, dict)   # plant_id, common_name, quantity, pattern
+    placement_cancelled = pyqtSignal()                        # user stood the map down (V2.37)
     fill_area_requested = pyqtSignal(object, float, str, bool)  # members [(pid,weight)], spacing_m, name, matrix (F3/F22)
     color_changed = pyqtSignal(int, str)                       # plant_id, hex_color
     # Emitted when "Save as Plant Community" creates a new community from
@@ -201,6 +202,11 @@ class PlantPanel(QWidget):
         # 2-click gesture (otherwise changing the mix mid-gesture would
         # use the wrong recipe). Cleared after consumption.
         self._pending_polyculture: Optional[dict] = None
+
+        # True while the map is armed to place what this panel has selected.
+        # MainWindow calls set_armed(False) when placement ends (Esc, another
+        # tool), so the chip can never claim the map is listening when it isn't.
+        self._armed = False
 
         # Debounce timer for local search
         self._search_timer = QTimer(self)
@@ -499,11 +505,13 @@ class PlantPanel(QWidget):
         # Show the rainbow default until a plant is selected with a custom colour.
         self._update_color_btn("")
 
-        # Place on Map button
+        # Place on Map — a toggle and a status readout, not a commit button.
+        # Selecting a plant arms the map on its own (see _auto_arm); this shows
+        # what is armed and clicking it stands the map down again.
         self._place_btn = QPushButton("Place on Map")
         self._place_btn.setEnabled(False)
         self._place_btn.setToolTip("Click to enter plant-placement mode on the map")
-        self._place_btn.clicked.connect(self._on_place_clicked)
+        self._place_btn.clicked.connect(self._on_place_btn_clicked)
         self._place_btn.setStyleSheet(_PLACE_BTN_STYLE)
         place_row.addWidget(self._place_btn)
 
@@ -616,14 +624,14 @@ class PlantPanel(QWidget):
     def _on_view_current_changed(self, current: QModelIndex, _prev: QModelIndex):
         """QListView equivalent of the old QListWidget currentItemChanged.
 
-        Selecting a row enables the Place button and updates the colour-
-        picker preview. The compact-list flow doesn't surface a separate
-        bottom detail group — the inline expand chevron is the discovery
-        path.
+        Selecting a row **arms the map with that plant** and updates the
+        colour-picker preview. The compact-list flow doesn't surface a separate
+        bottom detail group — the inline expand chevron is the discovery path.
         """
         if not current.isValid():
             self._selected_plant = None
             self._place_btn.setEnabled(False)
+            self._update_place_btn()
             return
         plant = current.data(_PLANT_OBJ_ROLE)
         if not plant:
@@ -631,10 +639,69 @@ class PlantPanel(QWidget):
             # A built mix can still be Placed (incl. Fill Area) without a
             # current list selection.
             self._place_btn.setEnabled(len(self._mix_species) >= 2)
+            self._update_place_btn()
             return
         self._selected_plant = plant
         self._update_color_btn(plant.get("marker_color") or "")
         self._place_btn.setEnabled(True)
+        self._auto_arm()
+
+    # ── Arming ────────────────────────────────────────────────────────────────
+
+    def _auto_arm(self):
+        """Re-arm the map with whatever is selected now.
+
+        Selecting *is* the arming gesture (V2.37, user feedback: "selecting a
+        plant or plant community should be sufficient to then place that unit on
+        the map... often I end up placing the wrong thing (the last thing)
+        because I haven't hit the button"). The separate press meant the map
+        stayed armed with the previous choice until you pressed again, and the
+        cost of forgetting was a plant in the ground that you did not pick.
+
+        Fill Area is deliberately excluded: it does not arm a click, it enters
+        polygon-draw mode immediately, so auto-arming it would hijack the map
+        every time you arrow-key through the results list.
+        """
+        if self._current_pattern().get("kind") == "fill":
+            return
+        if not self._selected_plant and len(self._mix_species) < 2:
+            return
+        self._on_place_clicked()
+
+    def set_armed(self, armed: bool):
+        """Told by MainWindow when placement mode ends (Esc, another tool)."""
+        if self._armed == bool(armed):
+            return
+        self._armed = bool(armed)
+        self._update_place_btn()
+
+    def _update_place_btn(self):
+        """Render the button as a live status chip while armed."""
+        if not hasattr(self, "_place_btn"):
+            return
+        n = len(self._mix_species)
+        if self._armed:
+            what = ("the mix" if n >= 2
+                    else (self._selected_plant or {}).get("common_name", "plant"))
+            kind = _PATTERN_WORDS.get(self._placement.kind, "")
+            self._place_btn.setText(f"● Placing: {what}" + (f" · {kind}" if kind else ""))
+            self._place_btn.setStyleSheet(_PLACE_BTN_ARMED_STYLE)
+            self._place_btn.setToolTip(
+                "The map is armed — click it to place.\n"
+                "Click here (or press Esc) to stop placing.")
+        else:
+            self._place_btn.setText(
+                "Place Mix on Map" if n >= 2 else "Place on Map")
+            self._place_btn.setStyleSheet(_PLACE_BTN_STYLE)
+            self._place_btn.setToolTip(
+                "Click to enter plant-placement mode on the map")
+
+    def _on_place_btn_clicked(self):
+        """The button toggles: arm what's selected, or stand the map down."""
+        if self._armed:
+            self.placement_cancelled.emit()
+            return
+        self._on_place_clicked()
 
     def _on_view_double_clicked(self, index: QModelIndex):
         """Double-click: place the plant directly (Single mode)."""
@@ -748,6 +815,18 @@ class PlantPanel(QWidget):
     def _on_pattern_kind_changed(self, kind: str):
         # Burst quantity only applies in Single mode.
         self._qty_spin.setEnabled(kind == "single")
+        # Switching Row → Grid is choosing what to place, exactly like picking a
+        # different species, so it re-arms rather than leaving the map holding
+        # the old pattern. Leaving Fill Area stands the map down instead: the
+        # user is no longer drawing a polygon.
+        if kind == "fill":
+            if self._armed:
+                self.placement_cancelled.emit()
+            return
+        if self._armed:
+            self._auto_arm()
+        else:
+            self._update_place_btn()
 
     def _current_pattern(self) -> dict:
         """Build the pattern dict to pass to the map-placement signal.
@@ -909,13 +988,16 @@ class PlantPanel(QWidget):
         n = len(self._mix_species)
 
         # Place button label tracks the active mix; a built mix is placeable
-        # (incl. Fill Area) even when nothing is selected in the list.
+        # (incl. Fill Area) even when nothing is selected in the list. Changing
+        # the mix re-arms for the same reason changing the species does — the
+        # map should be holding what you are looking at.
         if hasattr(self, "_place_btn"):
-            self._place_btn.setText(
-                "Place Mix on Map" if n >= 2 else "Place on Map"
-            )
             if n >= 2:
                 self._place_btn.setEnabled(True)
+            if self._armed:
+                self._auto_arm()
+            else:
+                self._update_place_btn()
 
         if n == 0:
             self._mix_status.setText(
@@ -1219,6 +1301,8 @@ class PlantPanel(QWidget):
             self._qty_spin.value(),
             pattern,
         )
+        self._armed = True
+        self._update_place_btn()
 
     def _on_plant_context_menu(self, pos):
         """Right-click context menu for plant results list."""
@@ -1427,6 +1511,30 @@ QPushButton:hover  { background: #388e3c; }
 QPushButton:pressed { background: #1b5e20; }
 QPushButton:disabled { background: #2a3a2a; color: #4a6a4a; }
 """
+
+# The armed state reads as a live status chip rather than a button waiting to be
+# pressed: amber, so "the map is listening" is visible from across the window,
+# and it names what is armed. Selecting a plant arms placement now (V2.37), so
+# this is the only thing left answering "what am I about to place?" — losing it
+# would trade one confusing gesture for a silent one.
+_PLACE_BTN_ARMED_STYLE = """
+QPushButton {
+    background: #4a3a12;
+    color: #ffe082;
+    border: 1px solid #ffb300;
+    border-radius: 4px;
+    padding: 7px 12px;
+    font-weight: bold;
+    font-size: 13px;
+    text-align: left;
+}
+QPushButton:hover  { background: #5a4718; border-color: #ffca28; }
+QPushButton:pressed { background: #3a2e0e; }
+"""
+
+# Pattern kind → the word shown in the armed chip.
+_PATTERN_WORDS = {"single": "Single", "row": "Row", "grid": "Grid",
+                  "circle": "Circle", "fill": "Fill Area"}
 
 _QTY_SPIN_STYLE = """
 QSpinBox {

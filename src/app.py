@@ -685,6 +685,10 @@ class MainWindow(QMainWindow):
         # arrives in the 4th argument; legacy single-mode placements pass
         # {"kind": "single"}.
         self.plant_panel.place_plant_requested.connect(self._enter_plant_mode)
+        # The panel's armed chip is a claim about the map, so the map has to be
+        # able to withdraw it: clicking the chip (or anything else that ends
+        # placement) routes through the one cancel path.
+        self.plant_panel.placement_cancelled.connect(self._cancel_draw)
         self.plant_panel.color_changed.connect(self._on_plant_color_changed)
 
         # Map → remove plant marker
@@ -700,6 +704,7 @@ class MainWindow(QMainWindow):
 
         # Polyculture panel → map (polyculture placement)
         self.polyculture_panel.placePolycultureRequested.connect(self._enter_polyculture_mode)
+        self.polyculture_panel.placementCancelled.connect(self._cancel_draw)
         self.polyculture_panel.fillAreaRequested.connect(self._on_community_fill_requested)
         self.polyculture_panel.fillCommunityMixRequested.connect(self._on_community_mix_fill_requested)
         self.plant_panel.fill_area_requested.connect(self._on_plants_fill_requested)
@@ -1535,6 +1540,14 @@ class MainWindow(QMainWindow):
             self.plant_panel.clear_pending_polyculture()
         except Exception:
             pass
+        # Stand the panels' armed chips down with the map, so neither can claim
+        # placement is live after Esc or a switch to another tool.
+        for panel in (getattr(self, "plant_panel", None),
+                      getattr(self, "polyculture_panel", None)):
+            try:
+                panel.set_armed(False)
+            except (AttributeError, RuntimeError):
+                pass
         # Same idea for any community-pattern stash: dropping it on
         # cancel ensures the user starts fresh next time they hit Place.
         self._pending_community_pattern = None
