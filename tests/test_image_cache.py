@@ -6,6 +6,7 @@ network): the fetch path is exercised against a ``file://`` URL so it runs
 offline, and the schema test confirms plants/fauna carry the image columns.
 """
 
+import json
 import os
 import sys
 import tempfile
@@ -136,6 +137,121 @@ class TestCacheKeyAddressing(unittest.TestCase):
                          "Photo by A. Person · cc-by-sa")
         self.assertEqual(ic.credit_line("© Someone 2019", "GFDL"),
                          "© Someone 2019 · GFDL")
+
+
+class TestConcurrentMetadataWrites(unittest.TestCase):
+    """The index is written from worker threads by four different surfaces.
+
+    Before V2.37 it was read-modify-write with no lock and `open(path, "w")`
+    with no atomic replace, which cost two things: warmed entries vanished
+    (last writer wins), and a reader arriving mid-write got an unparseable file
+    and therefore "no photo" — non-deterministically, for a photo that was in
+    fact cached.
+    """
+
+    def setUp(self):
+        self._tmp = tempfile.mkdtemp(prefix="permadesign_imgrace_")
+        self._orig = _plants_mod._user_data_dir
+        _plants_mod._user_data_dir = lambda: pathlib.Path(self._tmp)
+        ic._meta_cache = None
+        ic._meta_stamp = None
+
+    def tearDown(self):
+        _plants_mod._user_data_dir = self._orig
+        ic._meta_cache = None
+        ic._meta_stamp = None
+
+    def test_concurrent_writers_all_survive(self):
+        import threading
+        n = 40
+        barrier = threading.Barrier(n)
+
+        def write(i):
+            barrier.wait()          # maximise overlap
+            ic._remember(f"https://example.invalid/{i}.jpg",
+                         {"filename": f"{i}.jpg",
+                          "attribution": "© Sigitas Juzėnas", "license": "CC0"})
+
+        threads = [threading.Thread(target=write, args=(i,)) for i in range(n)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        ic._meta_cache = None       # force a real re-read from disk
+        ic._meta_stamp = None
+        meta = ic._load_meta()
+        self.assertEqual(len(meta), n,
+                         "concurrent writers lost entries — the index is "
+                         "still read-modify-write without a lock")
+
+    def test_reader_never_sees_a_torn_index(self):
+        """Non-ASCII attributions are what turn a torn read into a crash, so
+        write them while a reader hammers the same file."""
+        import threading
+        stop = threading.Event()
+        failures = []
+
+        def reader():
+            while not stop.is_set():
+                try:
+                    ic._meta_cache = None      # defeat the memo, hit the file
+                    ic._meta_stamp = None
+                    ic._load_meta()
+                except Exception as exc:       # noqa: BLE001 — that's the point
+                    failures.append(exc)
+                    return
+
+        r = threading.Thread(target=reader, daemon=True)
+        r.start()
+        try:
+            for i in range(60):
+                ic._remember(f"https://example.invalid/{i}.jpg",
+                             {"filename": f"{i}.jpg",
+                              "attribution": "© Étienne Lacroix-Carignan, "
+                                             "nekatere pravice pridržane",
+                              "license": "CC BY-NC"})
+        finally:
+            stop.set()
+            r.join(timeout=5)
+        self.assertEqual(failures, [], f"reader saw a torn index: {failures}")
+
+    def test_load_meta_degrades_on_an_unreadable_index(self):
+        """Any unparseable index must read as "no cache", never propagate — the
+        readers run on paint paths and inside Qt slots, where an escaping
+        exception aborts the process rather than printing a traceback."""
+        ic._remember("https://example.invalid/a.jpg",
+                     {"filename": "a.jpg", "attribution": "© Sigitas Juzėnas",
+                      "license": "CC0"})
+        p = ic._meta_path()
+        for corrupt in (p.read_bytes()[: len(p.read_bytes()) // 2],   # truncated
+                        b"\xff\xfe\x00 not json at all",              # undecodable
+                        b"[]"):                                       # wrong shape
+            with open(p, "wb") as fh:
+                fh.write(corrupt)
+            ic._meta_cache = None
+            ic._meta_stamp = None
+            self.assertEqual(ic._load_meta(), {})   # must not raise
+
+    def test_index_is_parsed_once_per_revision(self):
+        """The read path is called once per plant per quiz question; it must
+        not re-parse the whole file every time."""
+        ic._remember("https://example.invalid/a.jpg", {"filename": "a.jpg"})
+        parses = []
+        real_load = json.load
+
+        def counting_load(fh, **kw):
+            parses.append(1)
+            return real_load(fh, **kw)
+
+        json.load = counting_load
+        try:
+            for _ in range(50):
+                ic.get_cached_image("https://example.invalid/a.jpg")
+        finally:
+            json.load = real_load
+        self.assertLessEqual(len(parses), 1,
+                             f"re-parsed the index {len(parses)} times")
 
 
 class TestImageSchema(unittest.TestCase):

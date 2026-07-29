@@ -102,5 +102,14 @@ class LearnPanel(QWidget):
             self._docent.refresh()
 
     def set_structures(self, structures: list[dict]):
-        """Update the list of placed structures (from app.py)."""
+        """Update the list of placed structures (from app.py).
+
+        Refreshes the same two readers as :meth:`set_placed_plants`: both the
+        lesson track and the docent script count structures, so dropping a bee
+        hotel used to leave them describing the design as it was beforehand.
+        """
         self._structures = structures
+        if hasattr(self, "_lesson_track"):
+            self._lesson_track.refresh()
+        if hasattr(self, "_docent"):
+            self._docent.refresh()

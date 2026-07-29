@@ -139,11 +139,16 @@ def _specialist_question(rng: random.Random, specialists: list[dict],
     fauna = rng.choice(list(by_fauna.keys()))
     info = by_fauna[fauna]
     host = rng.choice(sorted(info["hosts"]))
-    non_hosts = [p["common_name"] for p in plants
-                 if p.get("common_name") and p["common_name"] not in info["hosts"]]
+    # De-dupe BEFORE the guard: the catalogue can carry the same common name on
+    # two rows, so a list of three entries can be two distinct names, and
+    # sampling three from it raises. _identify_question:111 does it in this
+    # order for the same reason.
+    non_hosts = list({p["common_name"] for p in plants
+                      if p.get("common_name")
+                      and p["common_name"] not in info["hosts"]})
     if len(non_hosts) < 3:
         return None
-    distract = rng.sample(list(set(non_hosts)), 3)
+    distract = rng.sample(non_hosts, 3)
     opts, idx = _mc(rng, host, distract)
     kind = "caterpillar" if info["taxon"] == "lepidoptera" else "specialist"
     return {

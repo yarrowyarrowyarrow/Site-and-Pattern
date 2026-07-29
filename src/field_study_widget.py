@@ -43,6 +43,9 @@ class FieldStudyWidget(QWidget):
         self._i = 0
         self._score = 0
         self._answered = False
+        # URLs already queued for warming this session, so pressing Restart ten
+        # times doesn't re-request the same photos ten times.
+        self._warmed: set[str] = set()
         self._build()
 
     def _build(self):
@@ -131,45 +134,77 @@ class FieldStudyWidget(QWidget):
         self._warm_photo_pool()
         self._i = 0
         self._score = 0
+        self._answered = False
         self._start_btn.setText("Restart quiz")
         if not self._quiz:
+            # Leaving the previous question's buttons live here was a crash:
+            # the next click indexed an empty quiz, and an IndexError escaping a
+            # Qt slot aborts the process rather than raising.
+            self._clear_question()
             self._progress.setText("Quiz unavailable — the plant database "
                                    "couldn't be read.")
             return
         self._show()
 
+    def _clear_question(self):
+        """Take every question control off screen. Used when there is no
+        question to show, so nothing clickable outlives the quiz behind it."""
+        self._prompt.setVisible(False)
+        self._hint.setVisible(False)
+        self._photo.setVisible(False)
+        self._explain.setVisible(False)
+        self._next_btn.setVisible(False)
+        for b in self._opt_btns:
+            b.setEnabled(False)
+            b.setVisible(False)
+
     def _warm_photo_pool(self, limit: int = 8):
-        """Fetch+cache a random handful of not-yet-cached catalogue photos off
-        the UI thread (mirrors the analysis panel's gallery warm). Failures are
-        silent — a missing photo just stays out of the identify pool."""
+        """Fetch+cache a few not-yet-cached catalogue photos in the background,
+        so the identify pool grows with every quiz.
+
+        Sequential, via the shared :class:`~src.photo_warm.PhotoWarmer`, rather
+        than the eight parallel tasks this used to start on the global pool.
+        That warmer is deliberately serial with a courtesy delay because ~380 of
+        these requests go to one host, and being a single writer is also what
+        keeps the shared metadata index consistent. Failures are silent — a
+        missing photo just stays out of the pool.
+        """
         try:
             from src.db.plants import get_all_plants
             from src.image_cache import get_cached_image
-            pending = [(p["image_url"], p.get("image_attribution", ""),
-                        p.get("image_license", ""))
-                       for p in get_all_plants()
-                       if (p.get("image_url") or "").strip()
-                       and not get_cached_image(p["image_url"])]
+            from src.photo_warm import photo_rows
+            pending = [row for row in photo_rows(get_all_plants())
+                       if row[0] not in self._warmed
+                       and not get_cached_image(row[0])]
         except Exception:      # noqa: BLE001
             return
+        if not pending:
+            return
+        batch = random.sample(pending, min(limit, len(pending)))
+        # Remember before starting: a URL queued twice is wasted work, and the
+        # user can press Restart faster than a fetch completes.
+        self._warmed.update(url for url, _a, _l in batch)
+
         from PyQt6.QtCore import QRunnable, QThreadPool
 
-        class _FetchTask(QRunnable):
-            def __init__(self, url, attr, lic):
+        class _WarmTask(QRunnable):
+            def __init__(self, items):
                 super().__init__()
-                self._url, self._attr, self._lic = url, attr, lic
+                self._items = items
 
             def run(self):
                 try:
-                    from src.image_cache import resolve_image
-                    resolve_image(self._url, self._attr, self._lic)
+                    from src.photo_warm import PhotoWarmer
+                    PhotoWarmer(self._items).run()
                 except Exception:      # noqa: BLE001
                     pass
 
-        for url, attr, lic in random.sample(pending, min(limit, len(pending))):
-            QThreadPool.globalInstance().start(_FetchTask(url, attr, lic))
+        QThreadPool.globalInstance().start(_WarmTask(batch))
 
     def _show(self):
+        if not self._quiz or not 0 <= self._i < len(self._quiz):
+            self._clear_question()
+            return
         q = self._quiz[self._i]
         self._answered = False
         self._progress.setText(f"Question {self._i + 1} of {len(self._quiz)}   "
@@ -206,7 +241,10 @@ class FieldStudyWidget(QWidget):
             self._photo.setVisible(False)
 
     def _answer(self, idx: int):
-        if self._answered:
+        # Guard the index as well as the answered flag: this is a slot, and a
+        # click that arrives when the quiz is empty (a failed restart) or out of
+        # range would take an IndexError straight out of Qt and abort the app.
+        if self._answered or not self._quiz or not 0 <= self._i < len(self._quiz):
             return
         self._answered = True
         q = self._quiz[self._i]
@@ -215,12 +253,16 @@ class FieldStudyWidget(QWidget):
             self._score += 1
         for i, b in enumerate(self._opt_btns[:len(q["options"])]):
             b.setEnabled(False)
+            # NB: one closing brace. The doubled `}}` only escapes inside an
+            # f-string, and these continuation lines are plain literals — so the
+            # rule reached Qt unbalanced and the whole stylesheet was dropped,
+            # silently costing the right/wrong colouring this method exists for.
             if i == correct:
                 b.setStyleSheet(_OPT_STYLE + f"QPushButton {{ color: {_OK}; "
-                                "border-color: #43a047; font-weight: bold; }}")
+                                "border-color: #43a047; font-weight: bold; }")
             elif i == idx:
                 b.setStyleSheet(_OPT_STYLE + f"QPushButton {{ color: {_BAD}; "
-                                "border-color: #b04a4a; }}")
+                                "border-color: #b04a4a; }")
         verdict = "✓ Correct. " if idx == correct else "✗ Not quite. "
         self._explain.setText(verdict + q.get("explanation", ""))
         self._explain.setVisible(True)
