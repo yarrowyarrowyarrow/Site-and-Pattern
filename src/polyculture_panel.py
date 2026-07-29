@@ -2534,23 +2534,15 @@ class PolyculturePanel(QWidget):
         """Render the Place button as a live status chip while armed."""
         if not hasattr(self, "place_btn"):
             return
+        from src.placement_arming import apply_chip
+        name = ""
         if getattr(self, "_armed", False):
-            name = ""
             pid = self._get_selected_polyculture_id()
             if pid is not None:
-                pc = polycultures.get_polyculture_by_id(pid) or {}
-                name = pc.get("name") or ""
-            kind = _PATTERN_WORDS.get(self.placement_widget.kind, "")
-            self.place_btn.setText(
-                f"● Placing: {name or 'community'}" + (f" · {kind}" if kind else ""))
-            self.place_btn.setStyleSheet(_POLY_BTN_ARMED_STYLE)
-            self.place_btn.setToolTip(
-                "The map is armed — click it to place.\n"
-                "Click here (or press Esc) to stop placing.")
-        else:
-            self.place_btn.setText("Place on Map")
-            self.place_btn.setStyleSheet(_POLY_BTN_STYLE)
-            self.place_btn.setToolTip("")
+                name = (polycultures.get_polyculture_by_id(pid) or {}).get("name") or ""
+        apply_chip(self.place_btn, armed=getattr(self, "_armed", False),
+                   what=name or "community", kind=self.placement_widget.kind,
+                   idle_text="Place on Map", idle_style=_POLY_BTN_STYLE)
 
     def _on_place_btn_clicked(self):
         """The button toggles: arm the selection, or stand the map down."""
@@ -2658,26 +2650,8 @@ QPushButton:pressed  { background: #1b5e20; }
 QPushButton:disabled { background: #2a3a2a; color: #4a6a4a; }
 """
 
-# Armed = amber status chip, matching plant_panel._PLACE_BTN_ARMED_STYLE. The
-# two panels arm the same map, so they must not look like different states.
-_POLY_BTN_ARMED_STYLE = """
-QPushButton {
-    background: #4a3a12;
-    color: #ffe082;
-    border: 1px solid #ffb300;
-    border-radius: 4px;
-    padding: 7px 12px;
-    font-weight: bold;
-    font-size: 13px;
-    text-align: left;
-}
-QPushButton:hover    { background: #5a4718; border-color: #ffca28; }
-QPushButton:pressed  { background: #3a2e0e; }
-"""
-
-# Pattern kind → the word shown in the armed chip.
-_PATTERN_WORDS = {"single": "Single", "row": "Row", "grid": "Grid",
-                  "circle": "Circle", "fill": "Fill Area"}
+# The armed chip's look and wording live in src/placement_arming.py — shared
+# with the plant browser, which arms the same map.
 
 # Compact, low-prominence style for the library management buttons (New /
 # Delete / Duplicate / Variation / Edit / Export / Import) — mirrors the

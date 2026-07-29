@@ -1445,6 +1445,11 @@ class AnalysisPanel(QWidget):
             lines.append(
                 "  Gap months: " + ", ".join(month_names[m-1] for m in result.gap_months)
             )
+            # Name the way through (F45). Reporting the gap and leaving the user
+            # to find the plants that fill it was the complaint: "gap months are
+            # shown for a design but there is no option to choose plants that
+            # flower or fruit a particular month". There is one now.
+            lines.append("    → Plants → Browse → “Blooms in…” to fill them")
         lines.append("")
         lines.append(f"Total {result.n_total_plants} plants, {result.n_species} species")
 

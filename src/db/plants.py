@@ -1931,10 +1931,16 @@ def search_plants(
     supports_specialist: bool = False,
     soil_ph: Optional[float] = None,
     moisture: str = "",
+    bloom_months: Optional[list] = None,
+    fruit_months: Optional[list] = None,
 ) -> list[dict]:
     """
     Return plants matching all supplied filters.
     Empty string / None values for a filter means "no restriction".
+
+    ``bloom_months`` / ``fruit_months`` are lists of 1–12 month numbers; a plant
+    matches if its recorded window covers ANY of them. See ``_month_filter``
+    below for why these are applied in Python rather than SQL.
     """
     sql    = "SELECT * FROM plants WHERE 1=1"
     params: list = []
@@ -2152,9 +2158,33 @@ def search_plants(
         result = [_row_to_dict(r) for r in rows]
         _attach_permaculture_uses(result)
         _attach_photos(result)
+        result = _month_filter(result, "bloom_period", bloom_months)
+        result = _month_filter(result, "fruit_period", fruit_months)
         return result
     finally:
         conn.close()
+
+
+def _month_filter(plants: list[dict], column: str, months) -> list[dict]:
+    """Keep plants whose ``column`` window covers any of ``months`` (1–12).
+
+    Applied in Python, not SQL, because ``bloom_period`` / ``fruit_period`` are
+    free text ("June–July", "Jun-Jul", "Nov-Feb") rather than integer bounds, so
+    a LIKE cannot answer "does May–August include July?" — and the year-wrapping
+    ranges would defeat a BETWEEN even if it could. ``parse_month_range`` is the
+    parser every other consumer already shares (forage calendar, phenology,
+    habitat score), so a filter built on it can never disagree with the gap
+    months the analysis panel reports.
+
+    A plant with no recorded window is excluded rather than assumed: "we don't
+    know when this blooms" is not the same claim as "it blooms in July" (P9).
+    """
+    wanted = {int(m) for m in (months or []) if str(m).strip()}
+    if not wanted:
+        return plants
+    from src.habitat_score import parse_month_range
+    return [p for p in plants
+            if wanted & set(parse_month_range(p.get(column) or ""))]
 
 
 def get_companions(plant_id: int) -> dict[str, list[dict]]:

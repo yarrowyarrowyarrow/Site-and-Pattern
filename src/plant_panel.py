@@ -92,6 +92,15 @@ _LIFECYCLE_LABELS: dict[str, str] = {
 # Regina/Saskatoon belt adds the moist_mixedgrass key (V2.14). The constant
 # keeps its historical _AB_ name for back-compat; the province-neutral rename
 # lands in the Phase B schema refactor.
+# Month facets (V2.37). Keys are the 1–12 month numbers `parse_month_range`
+# returns, as strings because CheckableComboBox keys travel as strings; the
+# search layer coerces them back with int().
+_MONTH_LABELS: dict[str, str] = {
+    "1": "January", "2": "February", "3": "March", "4": "April",
+    "5": "May", "6": "June", "7": "July", "8": "August",
+    "9": "September", "10": "October", "11": "November", "12": "December",
+}
+
 _ECOREGION_CHOICES: list[tuple[str, str]] = [
     ("Any ecoregion",          ""),
     ("Aspen Parkland (central AB / SK)", "aspen_parkland"),
@@ -360,6 +369,29 @@ class PlantPanel(QWidget):
         row3.addWidget(self._ecoregion_combo, 1)
         top_layout.addLayout(row3)
 
+        # Row 4 — phenology (V2.37). The app has always been able to tell you
+        # WHICH months your design leaves without bloom (Analysis → Habitat,
+        # Bees, This Month all name the gap months) and never had a way to act
+        # on the answer: "gap months are shown for a design but there is no
+        # option to choose plants that flower or fruit a particular month."
+        # 428 of 434 plants record a bloom window and 287 a fruit window.
+        row4 = QHBoxLayout()
+        row4.setSpacing(4)
+        self._bloom_combo = self._make_multi_combo(
+            "Blooms in…", _MONTH_LABELS, _combo_style)
+        self._bloom_combo.setToolTip(
+            "Show only plants flowering in any of the checked months —\n"
+            "the direct way to fill a nectar gap. Plants with no recorded\n"
+            "bloom window are left out rather than guessed at.")
+        self._fruit_combo = self._make_multi_combo(
+            "Fruits in…", _MONTH_LABELS, _combo_style)
+        self._fruit_combo.setToolTip(
+            "Show only plants fruiting in any of the checked months —\n"
+            "for staggering bird food or a harvest across the season.")
+        row4.addWidget(self._bloom_combo, 1)
+        row4.addWidget(self._fruit_combo, 1)
+        top_layout.addLayout(row4)
+
         # ── Toggle filters (non-dropdown extras only, V1.85) ─────────────
         # The use-based toggles (Medicinal / N-Fixer / Pollinator / Keystone /
         # Host Plant / Bird Food) moved into the multi-select Use dropdown
@@ -608,6 +640,8 @@ class PlantPanel(QWidget):
                 ab_ecoregion    = self._ecoregion_combo.checked_keys(),
                 availability_in = self._rarity_combo.checked_keys(),
                 soil_ph         = self._soil_ph,
+                bloom_months    = self._bloom_combo.checked_keys(),
+                fruit_months    = self._fruit_combo.checked_keys(),
             )
         except Exception as exc:
             self._result_count.setText(f"Error: {exc}")
@@ -679,22 +713,16 @@ class PlantPanel(QWidget):
         """Render the button as a live status chip while armed."""
         if not hasattr(self, "_place_btn"):
             return
+        from src.placement_arming import apply_chip
         n = len(self._mix_species)
-        if self._armed:
-            what = ("the mix" if n >= 2
-                    else (self._selected_plant or {}).get("common_name", "plant"))
-            kind = _PATTERN_WORDS.get(self._placement.kind, "")
-            self._place_btn.setText(f"● Placing: {what}" + (f" · {kind}" if kind else ""))
-            self._place_btn.setStyleSheet(_PLACE_BTN_ARMED_STYLE)
-            self._place_btn.setToolTip(
-                "The map is armed — click it to place.\n"
-                "Click here (or press Esc) to stop placing.")
-        else:
-            self._place_btn.setText(
-                "Place Mix on Map" if n >= 2 else "Place on Map")
-            self._place_btn.setStyleSheet(_PLACE_BTN_STYLE)
-            self._place_btn.setToolTip(
-                "Click to enter plant-placement mode on the map")
+        apply_chip(
+            self._place_btn, armed=self._armed,
+            what=("the mix" if n >= 2
+                  else (self._selected_plant or {}).get("common_name", "")),
+            kind=self._placement.kind,
+            idle_text="Place Mix on Map" if n >= 2 else "Place on Map",
+            idle_style=_PLACE_BTN_STYLE,
+            idle_tooltip="Click to enter plant-placement mode on the map")
 
     def _on_place_btn_clicked(self):
         """The button toggles: arm what's selected, or stand the map down."""
@@ -1512,29 +1540,8 @@ QPushButton:pressed { background: #1b5e20; }
 QPushButton:disabled { background: #2a3a2a; color: #4a6a4a; }
 """
 
-# The armed state reads as a live status chip rather than a button waiting to be
-# pressed: amber, so "the map is listening" is visible from across the window,
-# and it names what is armed. Selecting a plant arms placement now (V2.37), so
-# this is the only thing left answering "what am I about to place?" — losing it
-# would trade one confusing gesture for a silent one.
-_PLACE_BTN_ARMED_STYLE = """
-QPushButton {
-    background: #4a3a12;
-    color: #ffe082;
-    border: 1px solid #ffb300;
-    border-radius: 4px;
-    padding: 7px 12px;
-    font-weight: bold;
-    font-size: 13px;
-    text-align: left;
-}
-QPushButton:hover  { background: #5a4718; border-color: #ffca28; }
-QPushButton:pressed { background: #3a2e0e; }
-"""
-
-# Pattern kind → the word shown in the armed chip.
-_PATTERN_WORDS = {"single": "Single", "row": "Row", "grid": "Grid",
-                  "circle": "Circle", "fill": "Fill Area"}
+# The armed chip's look and wording live in src/placement_arming.py — the
+# community panel shows the same state and the two must not diverge.
 
 _QTY_SPIN_STYLE = """
 QSpinBox {
