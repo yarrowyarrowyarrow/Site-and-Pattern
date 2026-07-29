@@ -195,5 +195,56 @@ class TestLearnPanelSync(unittest.TestCase):
         self.assertIn("docent", calls)
 
 
+@unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
+class TestWarmerIsCancellable(unittest.TestCase):
+    """The photo warmer is sequential with a courtesy delay, so it outlives the
+    widget that started it by seconds. A background task still running while Qt
+    tears down around it is how a nicety becomes a crash — so the widget owns a
+    cancel flag and `destroyed` sets it."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._app = QApplication.instance() or QApplication([])
+
+    def test_the_widget_owns_a_cancel_flag(self):
+        from src.field_study_widget import FieldStudyWidget
+        w = FieldStudyWidget(None)
+        self.assertFalse(w._warm_cancel.is_set())
+
+    def test_the_warmer_is_handed_that_flag(self):
+        """Not a fresh event per task — a cancel arriving before the task
+        starts has to be honoured too."""
+        import inspect
+        from src import field_study_widget
+        src = inspect.getsource(field_study_widget.FieldStudyWidget._warm_photo_pool)
+        self.assertIn("cancel_event=cancel", src)
+        self.assertIn("self._warm_cancel", src)
+
+    def test_cancelling_stops_the_warmer_between_items(self):
+        """PhotoWarmer waits on the event instead of sleeping, so a cancel
+        lands immediately rather than after the current courtesy gap."""
+        from src.field_study_widget import FieldStudyWidget
+        from src.photo_warm import PhotoWarmer
+        w = FieldStudyWidget(None)
+        w.cancel_background_work()
+        self.assertTrue(w._warm_cancel.is_set())
+
+        seen = []
+        items = [(f"u{i}", "", "") for i in range(20)]
+        result = PhotoWarmer(items, delay_s=0,
+                             cancel_event=w._warm_cancel,
+                             resolve=lambda *a: seen.append(a)).run()
+        self.assertTrue(result["cancelled"])
+        self.assertEqual(seen, [], "a cancelled warmer still fetched")
+
+    def test_teardown_is_wired_to_the_flag(self):
+        """`destroyed` fires from C++ teardown where the widget is already
+        unusable, so the connection must bind the flag, not a bound method."""
+        import inspect
+        from src import field_study_widget
+        src = inspect.getsource(field_study_widget.FieldStudyWidget.__init__)
+        self.assertIn("self.destroyed.connect", src)
+        self.assertIn("_c.set()", src)
+
 if __name__ == "__main__":
     unittest.main()

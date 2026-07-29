@@ -1669,7 +1669,10 @@ class AnalysisPanel(QWidget):
     def _warm_gallery_images(self, pending: list):
         """Fetch+cache the not-yet-cached species photos off the UI thread,
         re-rendering the strip as each lands (mirrors plant_list_view's warm)."""
-        sig = self.galleryImageReady
+        # Bind the OWNER, not its bound signal — see src/qt_safety.py. A
+        # gallery warm that lands after the panel is gone used to emit into
+        # freed memory.
+        owner = self
 
         class _FetchTask(QRunnable):
             def __init__(self, url, attr, lic):
@@ -1679,8 +1682,9 @@ class AnalysisPanel(QWidget):
             def run(self):
                 try:
                     from src.image_cache import resolve_image
+                    from src.qt_safety import emit_if_alive
                     if resolve_image(self._url, self._attr, self._lic):
-                        sig.emit()
+                        emit_if_alive(owner, "galleryImageReady")
                 except Exception:  # noqa: BLE001 — a missing photo is not an error
                     pass
 

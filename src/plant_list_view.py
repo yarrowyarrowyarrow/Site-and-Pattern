@@ -365,14 +365,20 @@ class PlantListModel(QAbstractListModel):
             return
         attribution = plant.get("image_attribution", "")
         license_str = plant.get("image_license", "")
-        signal = self.imageReady
+        # Bind the OWNER, not its bound signal. A bound signal keeps no strong
+        # claim on the object's C++ lifetime, so a fetch that finishes after the
+        # model has gone (close the panel, switch tabs, end a test) emits into
+        # freed memory — a hard crash from a nicety. `emit_if_alive` checks the
+        # wrapper before touching it.
+        owner = self
 
         class _FetchTask(QRunnable):
             def run(self):
                 try:
                     from src.image_cache import resolve_image
+                    from src.qt_safety import emit_if_alive
                     if resolve_image(url, attribution, license_str):
-                        signal.emit(pid)
+                        emit_if_alive(owner, "imageReady", pid)
                 except Exception:
                     pass
 

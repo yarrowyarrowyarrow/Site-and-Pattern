@@ -166,5 +166,64 @@ class TestHelpMenuWiring(unittest.TestCase):
         self.assertLessEqual(len(names), 140)
 
 
+@unittest.skipUnless(_qt_available(), "PyQt6 not installed in this env")
+class TestWorkerEmitSafety(unittest.TestCase):
+    """Photo warms run on the global thread pool and signal the UI when one
+    lands. The fetch outlives the widget whenever a panel closes, a tab
+    switches, or the app quits mid-flight — and emitting on a QObject whose C++
+    half is gone is a use-after-free, which surfaces as a segfault with no
+    traceback rather than an exception anything can catch.
+
+    Python-side try/except is not enough on its own: it catches the RuntimeError
+    PyQt raises when the *wrapper* knows, not the case where C++ ownership
+    deleted the object without telling Python.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        from PyQt6.QtWidgets import QApplication
+        cls._app = QApplication.instance() or QApplication([])
+
+    def test_emit_reaches_a_live_object(self):
+        from PyQt6.QtCore import QObject, pyqtSignal
+        from src.qt_safety import emit_if_alive
+
+        class Thing(QObject):
+            ping = pyqtSignal(int)
+
+        t = Thing()
+        got = []
+        t.ping.connect(got.append)
+        self.assertTrue(emit_if_alive(t, "ping", 7))
+        self.assertEqual(got, [7])
+
+    def test_emit_is_skipped_once_the_object_is_deleted(self):
+        from PyQt6.QtCore import QObject, pyqtSignal
+        from PyQt6 import sip
+        from src.qt_safety import emit_if_alive, is_alive
+
+        class Thing(QObject):
+            ping = pyqtSignal(int)
+
+        t = Thing()
+        sip.delete(t)                      # what C++ ownership does behind our back
+        self.assertFalse(is_alive(t))
+        self.assertFalse(emit_if_alive(t, "ping", 7))   # must not crash
+
+    def test_none_and_non_qt_objects_are_handled(self):
+        from src.qt_safety import emit_if_alive, is_alive
+        self.assertFalse(is_alive(None))
+        self.assertFalse(emit_if_alive(None, "ping"))
+        self.assertFalse(emit_if_alive(object(), "ping"))
+
+    def test_the_warming_workers_use_it(self):
+        """Both pre-existing warmers captured a bound signal, which keeps no
+        claim on the owner's C++ lifetime."""
+        import inspect
+        from src import analysis_panel, plant_list_view
+        for mod in (plant_list_view, analysis_panel):
+            src = inspect.getsource(mod)
+            self.assertIn("emit_if_alive", src, mod.__name__)
+
 if __name__ == "__main__":
     unittest.main()

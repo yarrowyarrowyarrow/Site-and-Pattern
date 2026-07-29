@@ -46,7 +46,24 @@ class FieldStudyWidget(QWidget):
         # URLs already queued for warming this session, so pressing Restart ten
         # times doesn't re-request the same photos ten times.
         self._warmed: set[str] = set()
+        # Stops the background photo warmer when this widget goes away. Owned
+        # here (not created per-task) so a cancel that arrives before the task
+        # starts is still honoured.
+        import threading
+        self._warm_cancel = threading.Event()
+        # `destroyed` fires from C++ teardown, where `self` is already unusable,
+        # so bind the flag itself rather than a method on the widget.
+        self.destroyed.connect(lambda *_a, _c=self._warm_cancel: _c.set())
         self._build()
+
+    def cancel_background_work(self):
+        """Stop the photo warmer. Safe to call more than once.
+
+        Called on `destroyed`, and worth calling explicitly from anything that
+        tears this widget down deliberately — Qt's destruction ordering is not
+        something to rely on for stopping a thread.
+        """
+        self._warm_cancel.set()
 
     def _build(self):
         lay = QVBoxLayout(self)
@@ -187,6 +204,15 @@ class FieldStudyWidget(QWidget):
 
         from PyQt6.QtCore import QRunnable, QThreadPool
 
+        # The warmer is sequential with a courtesy delay, so it lives for a few
+        # seconds — long enough to outlive the widget that started it if the
+        # user closes the tab, and a task still running while Qt tears down
+        # around it is how a background fetch turns into a crash. It takes a
+        # cancel event for exactly this; `destroyed` sets it, and PhotoWarmer
+        # checks it between items and waits on it instead of sleeping, so a
+        # cancel lands immediately rather than after the current gap.
+        cancel = self._warm_cancel
+
         class _WarmTask(QRunnable):
             def __init__(self, items):
                 super().__init__()
@@ -195,7 +221,7 @@ class FieldStudyWidget(QWidget):
             def run(self):
                 try:
                     from src.photo_warm import PhotoWarmer
-                    PhotoWarmer(self._items).run()
+                    PhotoWarmer(self._items, cancel_event=cancel).run()
                 except Exception:      # noqa: BLE001
                     pass
 
