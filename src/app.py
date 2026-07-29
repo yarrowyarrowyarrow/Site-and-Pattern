@@ -49,7 +49,7 @@ from src.controllers.map_events import MapEventRouter
 from src.controllers.generation import GenerationController
 from src.controllers.area_fill_controller import AreaFillController
 from src.project_store import ProjectStore
-from src import onboarding_flow
+from src import feedback_flow, onboarding_flow
 from src.scan_import_dialog import start_scan_import as _start_scan_import
 from src.scene3d_window import open_3d_view as _open_3d_view
 from src.reference_ecosystem_window import (
@@ -618,6 +618,17 @@ class MainWindow(QMainWindow):
             "score, walk in 3D, and take apart")
         act_example.triggered.connect(
             lambda: onboarding_flow.open_example(self))
+
+        help_menu.addSeparator()
+
+        # There was no way to tell the author anything from inside the app —
+        # a tester who hit the quiz crash had to already know the maintainer
+        # (V2.37). Lambda → flow function, so this costs no MainWindow method.
+        act_feedback = help_menu.addAction("Send &Feedback…")
+        act_feedback.setStatusTip(
+            "Tell the author what worked, what confused you, or what broke")
+        act_feedback.triggered.connect(
+            lambda: feedback_flow.send_feedback(self))
 
         help_menu.addSeparator()
 
