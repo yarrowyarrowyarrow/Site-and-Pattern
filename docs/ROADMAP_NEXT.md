@@ -4,12 +4,28 @@
 principle-by-principle map and the shipped record of F1–F62 — read it for *why* the app is
 shaped the way it is and what has already landed. This file is what comes next, and why.
 
-Feature IDs continue the same stable-handle sequence (F63, F64, …, F82) so "let's do F70" keeps
-working across both documents.
+Feature IDs continue the same stable-handle sequence (F63, F64, …) so "let's do F70" keeps
+working across both documents. **Next free ID: F95.**
+
+> **Collision fixed in V2.37.** F78–F82 had each been assigned *twice*: the V2.34 3D work
+> (herb aspect axis, Stylised/Balanced/Lifelike, florets, forked stems, bloom count) reused
+> the IDs Theme D's unbuilt designer-workflow entries already held, and "a task-shaped home"
+> was a third claimant on F82. The shipped assignments are kept — they are in the commit
+> history — and the five unbuilt entries were renumbered to F90–F94. "Let's do F80" is
+> unambiguous again, which is the whole point of a stable handle.
 
 ---
 
 ## Where the app actually stands
+
+> **First outside feedback landed in V2.37** — sixteen observations from a real tester, ten
+> of them fixed in that release. The record is [`USER_FEEDBACK.md`](USER_FEEDBACK.md) and the
+> remaining five are **Theme G** below. Read it before planning: it is the only document here
+> that is not the author's own view of the product, and several items were features that
+> already existed and could not be found — including one (PDF export) that had been raising
+> an exception on every call for four minor versions behind a test that skipped.
+
+
 
 An honest summary, because a roadmap that flatters the codebase is useless.
 
@@ -232,16 +248,16 @@ re-opened here.
 
 | ID | Feature | Impact | Effort | Risk | Principle |
 |----|---------|--------|--------|------|-----------|
-| F78 | Design variants + side-by-side comparison | **High** | L | Med | P9, P1 |
-| F79 | Ecological substitution — "the nursery is out" | Med | M | Low | P3, P10 |
-| F80 | An order file a nursery accepts | Med | S | Low | P8 |
-| F81 | Reusable palettes / go-to communities | Med | M | Low | P1 |
+| F90 | Design variants + side-by-side comparison | **High** | L | Med | P9, P1 |
+| F91 | Ecological substitution — "the nursery is out" | Med | M | Low | P3, P10 |
+| F92 | An order file a nursery accepts | Med | S | Low | P8 |
+| F93 | Reusable palettes / go-to communities | Med | M | Low | P1 |
 
 **Theme E — the confidence block** *(carried forward, and overdue)*
 F8 · F12 · F13 · F14 · F28 — unchanged from `PHILOSOPHY_ROADMAP.md`, still one job, still cheap.
 
 **Theme F — surface sprawl**
-F82 · A task-shaped home, or an honest tab retirement pass.
+F94 · A task-shaped home, or an honest tab retirement pass.
 
 ---
 
@@ -619,7 +635,7 @@ Nearly free once F69 lands, and it is the honest test of F75's advice.
 The app is built for the owner-occupier converting their own lawn, and does that well. A landscape
 designer using it professionally hits four walls, none of which is about ecology.
 
-### F78 · Design variants + side-by-side comparison — *Impact High · Effort L · Risk Med (P9, P1)*
+### F90 · Design variants + side-by-side comparison — *Impact High · Effort L · Risk Med (P9, P1)*
 
 **No designer presents one option.** The app holds exactly one project, so producing an Option A and
 an Option B means two files, two windows and a manual comparison.
@@ -631,7 +647,7 @@ side, with the deltas named. Every number already exists (`habitat_score`, `sour
 projects at once and diffing them. It is also philosophically on-message: presenting *options with
 their trade-offs* rather than one confident answer is P9 at the level of the whole design.
 
-### F79 · Ecological substitution — *Impact Med · Effort M · Risk Low (P3, P10)*
+### F91 · Ecological substitution — *Impact Med · Effort M · Risk Low (P3, P10)*
 
 Every plant tool has "similar plants" and they all mean *similar height and colour*. This app can do
 something none of them can: **ecologically equivalent**. Same vegetation layer, overlapping site
@@ -643,14 +659,14 @@ report the trade honestly, which is `plant_impact` run on a swap rather than a r
 
 Triggered by the real-world moment: the nursery is out of stock, or a species is out of budget.
 
-### F80 · An order file a nursery accepts — *Impact Med · Effort S · Risk Low (P8)*
+### F92 · An order file a nursery accepts — *Impact Med · Effort S · Risk Low (P8)*
 
 F40 produces the buy list as text and as a PDF page. A designer needs it as **CSV/XLSX grouped by
 supplier**, botanical names, pot size / form, quantity, unit price range, total — the thing you
 attach to an email. Small, unglamorous, and it is the last centimetre between a design and a
 purchase order.
 
-### F81 · Reusable palettes / go-to communities — *Impact Med · Effort M · Risk Low (P1)*
+### F93 · Reusable palettes / go-to communities — *Impact Med · Effort M · Risk Low (P1)*
 
 A designer repeats themselves across sites; that is craft, not laziness. Save the current selection
 as a named palette and apply it to a new site **with site-fit re-checking** — which is the part a
@@ -697,10 +713,98 @@ There is precedent for fixing this well: the Forage tab was **retired** in V2.25
 Wildlife covered the same question, and nothing was lost. That is the cheap move — an honest
 retirement pass — and it should happen before any restructure.
 
-**F82 · A task-shaped home** — *Effort L · Risk High.* The larger version: organise by what the user
+**F94 · A task-shaped home** — *Effort L · Risk High.* The larger version: organise by what the user
 is trying to do (Design · Understand · Plant · Learn) rather than by which subsystem owns the code.
 High risk, and it should not be attempted until the retirement pass shows what is genuinely
 load-bearing. Listed so it is on the record, not because it should be next.
+
+---
+
+## Theme G — what the first outside tester said (V2.37)
+
+The full record, in their words, is [`USER_FEEDBACK.md`](USER_FEEDBACK.md). Ten of the
+sixteen items shipped in V2.37; these five are what is left, and they are ranked here rather
+than in Themes A–F because they came from evidence rather than from the author's model of the
+product — which this roadmap has historically been short of.
+
+| ID | Feature | Impact | Effort | Risk | Principle |
+|----|---------|--------|--------|------|-----------|
+| F85 | The guide — a fauna companion that explains the app, starting with Site Info | **High** | L | Med — new UI surface | P5, P13 |
+| F86 | Notes that add up — one store, notes from anywhere, a document that does something | Med | M | Med | P11, P4 |
+| F87 | Game-style save/load — a saves folder and an in-app list, no OS file dialog | **High** | M | Low | P13 |
+| F88 | The Learn tab as a curriculum — the app, design, flora & fauna; gamified | Med | L | Low | P5, P7 |
+| F89 | The 3D preview's UX review — ten buttons over two rows | Med | M | Med | P5 |
+
+### F85 · The guide — *Impact High · Effort L · Risk Med (P5, P13)*
+
+*"A 'clippy' like helper (I would make it a fauna like a caterpillar or bird) that guides you
+through using the app and explains/breaks down certain things. For example Site Info is
+overwhelming to most beginner users and even long time landscape designers. The helper could
+say, this is what this means for your site, this is what growing degree days are, etc."*
+
+**Do the cheap half first, and separately.** About **12 of ~20 Site Info metrics have no
+explanation at all** — no tooltip, nothing — while `src/climate.py:96` `zone_description()`
+returns exactly the right sentence for the hardiness zone and is **called by nothing**, and
+`climate.py:112-124` holds an excellent plain-English account of GDD₅ that exists only as a
+developer comment. A Qt-free glossary module plus one `setToolTip` per metric answers the
+tester's actual example at a fraction of the cost, and gives the guide something to read out
+when it is built.
+
+**Then the companion.** Reuse: `onboarding.py`'s three-step progress model, `docent.py:102`'s
+beat shape (`id + title + narration + viewer state` — the same skeleton with a different
+payload), `onboarding_flow.on_step_clicked`'s tab/tool navigation, and
+`welcome_dialog._ChoiceButton`. Genuinely net-new: a beginner/expert flag (none exists
+anywhere), any widget-anchoring concept, tour-progress persistence, and the art — there is no
+caterpillar drawing in the repo in any format, and the only bird is a `.glb`.
+
+**The risk worth naming:** a helper that keeps people looking at the screen argues against
+**P11** (the body and the site know things the screen does not). The guide should push people
+outside, not substitute for going.
+
+### F86 · Notes that add up — *Impact Med · Effort M · Risk Med (P11, P4)*
+
+*"There should be an option to make a note from any menu or on the design itself and have all
+these notes feed a master note doc that can use this info in a functional way rather than just
+a record."*
+
+There are **five** disconnected note stores today: field notes (`properties.field_notes`, a
+closed vocabulary of 10 prompts), map annotations (GeoJSON point features, free text, no
+timestamp), the design journal (`properties.notes`, one flat string), photo notes (a DB
+column), and a display-only mirror at `planning_panel.py:1096`. `format_field_notes()` exists
+and is called from nowhere; none of it reaches the PDF except the journal. "Functional rather
+than just a record" is the hard half — start by asking what a note should be able to *do*
+(become a task, pin to a plant, date-stamp an observation) before unifying the storage.
+
+### F87 · Game-style save/load — *Impact High · Effort M · Risk Low (P13)*
+
+*"Saving a file should be more simple and similar to how game files are saved and loaded.
+There should be a folder that they automatically save to. When loading a previously saved file
+they should be listed in the app rather than opening the computer's file explorer."*
+
+The precedent is already here: the worked example builds, saves to `user_data_dir()` and opens
+through the ordinary load path with no dialog (`onboarding_flow.py:110-165`). Missing: a
+`saves/` folder, per-save metadata (date, plant count, thumbnail), an in-app browser, and a
+recent list. Worth fixing alongside: the autosave writes a **hidden dotfile in `$HOME`**
+(`persistence.py:37`) rather than the data dir, which is nobody's mental model of where their
+work lives.
+
+### F88 · The Learn tab as a curriculum — *Impact Med · Effort L · Risk Low (P5, P7)*
+
+*"Learn tab can include a range of topics from learn the app, learn landscape design/philosophy,
+learn about native flora and fauna. Can gamify this somewhat too."*
+
+`lesson_track.py` already has the shape (id / title / teaching text / live readout / status)
+but every step is about *the design*, not about the app or the discipline, and progress is not
+persisted — `LessonTrackWidget._i` resets on every refresh. **P12 applies with force here:** a
+"learn about native flora" track must not become a route to Indigenous plant-use knowledge by
+the back door.
+
+### F89 · The 3D preview's UX review — *Impact Med · Effort M · Risk Med (P5)*
+
+*"This whole 3-D preview could use an UI and UX review."* Ten buttons across two rows, plus
+three sliders and two combos. V2.37 reordered row 2 and flipped the mouse buttons; the
+structural question is untouched. Theme F's prescription applies — an honest retirement pass
+before any restructure.
 
 ---
 
@@ -728,7 +832,7 @@ a good palate-cleanser between them — a day's work for a disproportionate gain
 P13 proposal before or during this increment, so the work has a principle to answer to.
 
 ### Increment 5 — the designer
-**F80** (order file — a day) → **F79** (substitution) → **F78** (variants) → **F81** (palettes).
+**F92** (order file — a day) → **F91** (substitution) → **F90** (variants) → **F93** (palettes).
 
 ### Then
 Theme E, or an explicit decision to demote it. Theme F's retirement pass whenever a release is

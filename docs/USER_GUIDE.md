@@ -38,11 +38,15 @@ Long names automatically wrap to two lines so nothing is hidden.
 
 ## 4. Place a single plant
 
-1. Click a plant row to select it.
-2. In the **Placement Mode** strip choose **Single**.
+1. Click a plant row to select it. **That's it — the map is now armed.** The button below
+   changes to **● Placing: ‹plant› · Single** so you can always see what a map click will drop.
+2. Click anywhere on the map to place it. Click again for another.
 3. (Optional) Click the **●** button to pick a marker colour, or set **Qty** to drop a hex burst at one click.
-4. Click **Place on Map**, then click anywhere on the map.
-5. Press **Esc** to finish.
+4. Press **Esc** — or click the ● Placing chip — to stop.
+
+Changing the plant, the mix, or the placement mode re-arms with the new choice, so you can
+never place the previous one by accident. **Fill Area** is the exception: it starts drawing
+straight away, so it still waits for an explicit press.
 
 Right-click a placed marker for **Remove this plant** or **Delete group** (when the marker belongs to a multi-plant placement).
 
@@ -50,7 +54,7 @@ Right-click a placed marker for **Remove this plant** or **Delete group** (when 
 
 ## 5. Place a row, grid, or circle
 
-Pick **Row**, **Grid**, or **Circle** in the Placement Mode strip, then click **Place on Map**. Each takes two clicks:
+Pick **Row**, **Grid**, or **Circle** in the Placement Mode strip — the map re-arms as you pick. Each takes two clicks:
 
 | Mode | First click | Second click |
 |------|-------------|--------------|
@@ -75,7 +79,7 @@ To plant multiple species mixed together in one Row / Grid / Circle:
    - A **clickable colour dot** — gives that species a unique marker colour just for this mix.
    - A **ratio spinner** (1–9) — `1:1:1` is even split; `3:1:1` gives that species 60%, others 20% each.
    - A **✕** button to remove the species.
-3. Click **Place Mix on Map**, then drop a Row / Grid / Circle as usual. The recipe stays armed — click again to drop another, **Esc** to finish.
+3. Drop a Row / Grid / Circle as usual — building the mix arms it. The recipe stays armed — click again to drop another, **Esc** to finish.
 
 Distribution is deterministic and spread-optimised: same-species plants are automatically pushed apart so the bed reads as mixed, not blocky.
 
@@ -117,7 +121,7 @@ The View bar (🛰 Satellite, ⬡ Boundary, 📏 Measurement, **#** Grid, ✿ Pl
 
 ## 9. Site analysis (Analysis tab)
 
-- **Sun Path** — pick a date (Summer Solstice, Equinox, Today, …), click *Place Sun Path…*, click the map. Shows the sun arc + sunrise/sunset/daylight-hours summary.
+- **Sun Path** — pick a date (Summer Solstice, Equinox, Today, …), click *Place Sun Path…*, then click the map once to anchor it. You get the sun's arc, the sunrise/sunset/daylight summary, and a **time-of-day slider**: drag it and the sun travels its arc with the shadow swinging behind it. The slider spans that date's real daylight, so it stops at sunrise and sunset. **Changing the date redraws in place** — no need to re-place the anchor to compare two solstices.
 - **Wind** — three steps in one tab: **1** fetch this site's real wind history (Open-Meteo, cached for offline) and read the wind rose; **2** check the prevailing-direction dial (set automatically from the data — drag it to test other directions); **3** overlay the map: live wind shadow (sheltered zones behind trees/shrubs), snow catch, and the arrows + windbreak shelter-zone overlay via *Show Wind Overlay*.
 - Manual **contour drawing** lives on the Site tab (next to the automatic slope analysis).
 
@@ -178,7 +182,18 @@ relationship between it and a plant you actually placed.
 
 ---
 
-## 12. Save & share
+## 12. Getting the design out
+
+- **File → Export PDF (plan + planting map)…** — the whole document: site prep, the buy list,
+  and a **numbered planting map drawn to scale** with a key, a scale bar and a north arrow.
+  That map page is what you take outside with a tape measure. (It needs a property boundary to
+  measure from; if you have plants but no boundary the PDF says so rather than dropping the page.)
+- **File → Export Planting Plan…** — the same content as text.
+- **Help → Send Feedback…** — tell the author what worked, what confused you, or what broke.
+  It opens a prefilled report in your browser so you can read it before posting; setup details
+  are optional and shown in full first.
+
+## 13. Save & share
 
 - **File → Save** (Ctrl+S) writes a `.perma.geojson` file — the whole design.
 - **File → Open** (Ctrl+O) loads one.
@@ -189,7 +204,7 @@ relationship between it and a plant you actually placed.
 
 ---
 
-## 13. Keyboard shortcuts
+## 14. Keyboard shortcuts
 
 | Shortcut | Action |
 |----------|--------|
@@ -205,13 +220,15 @@ relationship between it and a plant you actually placed.
 
 ---
 
-## 14. Tips that aren't obvious
+## 15. Tips that aren't obvious
 
 - **Click a boundary's area label** to cycle units (m² → ha → acres → km²).
 - The expanded plant calendar's colours map to life stages: **purple** = start indoors, **teal** = direct sow, **blue** = transplant, **green** = growing, **orange** = harvest, **brown** = pruning, **grey** = dormant. The current month gets a yellow ring.
 - **Mix stays armed** across pattern clicks until **Esc** — you can drop ten mixed beds in a row with one click each.
 - **Fill (hex) circles** need a **Total** cap or they'll generate thousands of markers on big radii.
+- The **Plants** tab's sub-tabs are **Browse** (search the catalogue), **Plant Communities**, and **On This Design**.
 - **Right-click a plant in the results list** for fast actions — *Place on Map*, *Place ×5*, *Add / Remove from Mix*.
+- **“Blooms in…” / “Fruits in…”** narrow the list to plants flowering or fruiting in chosen months — the direct way to fill the nectar gap the Analysis tab names.
 - The **▶ chevron** doubles as a quick way to compare plants — multiple rows can stay expanded at once.
 
 ---
