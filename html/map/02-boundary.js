@@ -149,7 +149,12 @@
       var layer = L.polygon(pts, {
         color: c.stroke, weight: 2,
         fillColor: c.fill, fillOpacity: 0.18,
-        interactive: true
+        interactive: true,
+        // Bottom of the stack — see the pane table in 01-core.js. The boundary
+        // is a filled polygon covering the whole property, so without an
+        // explicit pane it competes with every feature drawn inside it for
+        // both z-order and hit-testing.
+        pane: 'boundaryPane'
       }).addTo(map);
 
       var labelsLayer = showLengths ? _makeBoundaryLengthLabels(pts, c.stroke) : null;
@@ -163,18 +168,22 @@
 
       // Click → enter edit mode (or toggle selection on shift/cmd+click).
       // In a placement mode, forward to onMapClick so the user can place on
-      // top of a visible boundary. Leaflet 1.9.4 makes the polygon the event
-      // target and does NOT fire the map's own click for it, so we have to
-      // run onMapClick ourselves (the layer event carries e.latlng).
+      // top of a visible boundary: Leaflet makes the polygon the event target,
+      // so we run onMapClick ourselves (the layer event carries e.latlng).
+      //
+      // ALWAYS stop the event first. Whether Leaflet also dispatches to the map
+      // depends on how the target chain resolves, and if it ever does, one
+      // physical click becomes two anchors — a row whose start and end are the
+      // same point, which is every plant on one spot. Stopping makes the
+      // dispatch deterministic instead of dependent on that.
       layer.on('click', function(e) {
         var oe = e.originalEvent;
+        L.DomEvent.stop(e);
         if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) {
-          L.DomEvent.stop(e);
           toggleSelection({ kind: 'boundary', boundaryId: id });
           return;
         }
         if (currentMode === 'none') {
-          L.DomEvent.stop(e);
           enterBoundaryEditMode(id);
           return;
         }
@@ -301,7 +310,23 @@
         iconSize: null, iconAnchor: null
       });
       var marker = L.marker([clat, clng], { icon: icon, interactive: true }).addTo(map);
-      marker.on('click', function() {
+      marker.on('click', function(e) {
+        // This label sits at the polygon CENTROID — the middle of the yard, and
+        // exactly where you start dragging a row across it. Cycling units there
+        // used to swallow a placement click outright: the anchor never
+        // registered, so the pattern collected two anchors from one later click
+        // and dropped every plant on one spot. In a placement/draw mode the
+        // label is scenery, so forward the click like the polygon does.
+        //
+        // Leaflet reports a MARKER's event latlng as the marker's own position,
+        // not the cursor's, so re-derive it from the DOM event or every plant
+        // placed over the label would snap to the centroid.
+        L.DomEvent.stop(e);
+        if (currentMode !== 'none') {
+          onMapClick({ latlng: map.mouseEventToLatLng(e.originalEvent),
+                       originalEvent: e.originalEvent });
+          return;
+        }
         boundaryAreaUnit = (boundaryAreaUnit + 1) % 4;
         // Refresh all area labels
         boundaries.forEach(function(b) {

@@ -668,21 +668,23 @@
       // plants/boundaries/structures.
       polygon.on('click', function(e) {
         var oe = e.originalEvent;
+        // Stop first, unconditionally — see the matching note in
+        // 02-boundary.js: a click that reaches both this handler and the map's
+        // gives a pattern two identical anchors and drops the whole row on one
+        // spot.
+        L.DomEvent.stop(e);
         if (oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey)) {
-          L.DomEvent.stop(e);
           if (typeof toggleSelection === 'function') {
             toggleSelection({ kind: 'shape', shapeId: id });
           }
           return;
         }
         if (currentMode === 'none') {
-          L.DomEvent.stop(e);
           enterShapeEditMode(id);
           return;
         }
-        // Placement mode → forward to onMapClick (Leaflet won't fire the map's
-        // click for a layer target) so the user can place on top of a visible
-        // shape / shade footprint.
+        // Placement mode → forward to onMapClick so the user can place on top
+        // of a visible shape / shade footprint.
         onMapClick(e);
       });
 
@@ -1058,6 +1060,10 @@
       }
     }
 
+    // Re-adding used to lift the boundary above every other feature, because
+    // an SVG layer re-enters its pane at the end of the child list. It now
+    // lives in `boundaryPane` (z 350, below overlayPane), so toggling it can no
+    // longer change what is on top of what — see the pane table in 01-core.js.
     function setBoundaryVisible(visible) {
       boundaries.forEach(function(b) {
         if (visible) {

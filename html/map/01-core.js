@@ -530,6 +530,27 @@
       map.createPane('satellitePane');
       map.getPane('satellitePane').style.zIndex = 150;
 
+      // ── The layer stack, stated once ────────────────────────────────────
+      // Everything except these panes lands in Leaflet's default overlayPane
+      // (400) / markerPane (600) and stacks by the order addTo(map) happened
+      // to run — which for interactive drawing is whatever the user did first.
+      // That is why toggling Boundary off and on used to lift it above every
+      // other feature, and why the property outline could end up as the
+      // topmost click target across the whole yard.
+      //
+      //   satellitePane   150   basemap imagery
+      //   boundaryPane    350   the property outline — the ground everything
+      //                         else is drawn ON, so it sits at the bottom
+      //   overlayPane     400   shade, contours, structures, shapes, plants
+      //   relationshipPane 385  food-web edges (below markers on purpose)
+      //   markerPane      600   labels, the site pin
+      //
+      // Boundary lowest is deliberate (V2.37, user feedback): it is context,
+      // not content. Giving it a pane also means setBoundaryVisible can re-add
+      // it without changing what is on top of what.
+      map.createPane('boundaryPane');
+      map.getPane('boundaryPane').style.zIndex = 350;
+
       satelliteLayer = L.tileLayer(
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
         { attribution: '© Esri', maxZoom: 24, maxNativeZoom: 19,

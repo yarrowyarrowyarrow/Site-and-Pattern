@@ -632,5 +632,74 @@ class TestRelationshipGraph(unittest.TestCase):
                          "clearRelationshipGraph();")
 
 
+class TestLayerStackAndClickDispatch(unittest.TestCase):
+    """Source guards for the V2.37 placement fixes.
+
+    Both invariants are the kind a reader would "tidy away" as redundant, and
+    both cost a user-visible bug when they go: a boundary that stops being the
+    bottom layer becomes the topmost click target across the whole property,
+    and a forwarded click that is not stopped can reach onMapClick twice, which
+    gives a pattern two identical anchors and stacks a whole row on one point.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        base = _HTML_PATH.parent / "map"
+        cls.src = {p.name: p.read_text(encoding="utf-8")
+                   for p in sorted(base.glob("*.js"))}
+
+    def test_boundary_is_drawn_in_its_own_low_pane(self):
+        core = self.src["01-core.js"]
+        self.assertIn("createPane('boundaryPane')", core)
+        m = re.search(r"getPane\('boundaryPane'\)\.style\.zIndex\s*=\s*(\d+)",
+                      core)
+        self.assertIsNotNone(m, "boundaryPane has no explicit zIndex")
+        z = int(m.group(1))
+        sat = int(re.search(r"getPane\('satellitePane'\)\.style\.zIndex\s*=\s*(\d+)",
+                            core).group(1))
+        self.assertLess(z, 400, "boundary must sit below Leaflet's overlayPane")
+        self.assertGreater(z, sat, "boundary must sit above the satellite tiles")
+
+    def test_the_boundary_polygon_uses_that_pane(self):
+        poly = re.search(r"L\.polygon\(pts,\s*\{.*?\}\)",
+                         self.src["02-boundary.js"], re.S)
+        self.assertIsNotNone(poly)
+        self.assertIn("pane: 'boundaryPane'", poly.group(0))
+
+    def test_every_onmapclick_forward_stops_its_event_first(self):
+        """A layer handler that forwards to onMapClick must also stop the
+        event, so one physical click can only ever produce one anchor."""
+        for name in ("02-boundary.js", "05-features.js"):
+            body = self.src[name]
+            for m in re.finditer(r"\.on\('click',\s*function\s*\([^)]*\)\s*\{",
+                                 body):
+                # Take the handler body by brace matching from the opening `{`.
+                start = m.end() - 1
+                depth, i = 0, start
+                while i < len(body):
+                    if body[i] == "{":
+                        depth += 1
+                    elif body[i] == "}":
+                        depth -= 1
+                        if depth == 0:
+                            break
+                    i += 1
+                handler = body[start:i]
+                if "onMapClick(" not in handler:
+                    continue
+                self.assertIn(
+                    "L.DomEvent.stop(e)", handler,
+                    f"{name}: a click handler forwards to onMapClick without "
+                    f"stopping the event first")
+
+    def test_pattern_click_rejects_a_coincident_second_anchor(self):
+        plants = self.src["03-plants.js"]
+        self.assertIn("_MIN_ANCHOR_GAP_M", plants)
+        handler = plants[plants.index("function _handlePatternClick"):]
+        handler = handler[:handler.index("\n    function ", 10)]
+        self.assertIn("_MIN_ANCHOR_GAP_M", handler,
+                      "the degenerate-anchor guard left _handlePatternClick")
+
+
 if __name__ == "__main__":
     unittest.main()

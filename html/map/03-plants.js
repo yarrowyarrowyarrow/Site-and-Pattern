@@ -580,12 +580,24 @@
       _patternPreview = preview;
     }
 
+    // Below anything anyone means to draw, well above the cosLat projection's
+    // ~centimetre error at yard scale.
+    var _MIN_ANCHOR_GAP_M = 0.5;
+
     // Handle a click in plant mode when a pattern is active. Each pattern
     // takes 2 clicks; the second click commits and emits onPatternPlaced.
     function _handlePatternClick(lat, lng) {
       if (!currentPlant || !currentPlant.pattern) return;
       var pat = currentPlant.pattern;
       var pp = pat.params || {};
+      // Ignore a second anchor on top of the first: coincident anchors make
+      // every pattern degenerate (row length 0, radius 0) and drop the whole
+      // planting on one spot. Wait for a distinct point — the gesture is
+      // unfinished, not wrong.
+      if (_patternAnchors.length === 1 &&
+          haversineMeters(_patternAnchors[0], [lat, lng]) < _MIN_ANCHOR_GAP_M) {
+        return;
+      }
       _patternAnchors.push([lat, lng]);
       _patternStage = _patternAnchors.length;
 
