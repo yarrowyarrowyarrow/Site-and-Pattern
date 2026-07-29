@@ -129,9 +129,13 @@ _GROUP_LAYER_ORDER = [
     ("groundcover", "Groundcover"),
     ("root",        "Root layer"),
 ]
+# Keep in step with plant_panel._ECOREGION_CHOICES — a key missing here does not
+# fail, it silently reads "Generalist", which is how `moist_mixedgrass` (the most
+# common tag in the catalogue, on 246 plants) went unlabelled until V2.37.
 _GROUP_ECOREGION = {
     "aspen_parkland":     "Aspen Parkland",
     "mixedgrass_prairie": "Mixedgrass Prairie",
+    "moist_mixedgrass":   "Moist Mixed Grassland",
     "fescue_foothills":   "Fescue / Foothills",
     "boreal_mixedwood":   "Boreal Mixedwood",
     "riparian":           "Riparian",
@@ -166,12 +170,28 @@ def _community_structure(members) -> str:
     return "Unsorted"
 
 
-def _community_habitat(members) -> str:
-    ecos = []
-    for m in members:
-        ecos += _csv_tokens(m.get("eco"))
-    dom = _dominant_token(ecos)
-    return _GROUP_ECOREGION.get(dom, "Generalist") if dom else "Generalist"
+def _community_habitat(members) -> list:
+    """Every ecoregion this community's members are documented from.
+
+    Multi-valued, like `_community_functions` and unlike sun/moisture: a plant's
+    `ecoregion` column is a comma-separated list because a species genuinely
+    grows in several, and collapsing that to the single most common token filed
+    a mixed community under one habitat and hid it from the others. Both
+    consumers already handle a list — `filter_library` intersects, and the
+    panel's group-by clones the tree item into each bucket — so the community
+    now appears under every ecoregion it actually belongs to.
+
+    Ordered by how many members carry the tag (strongest association first) so
+    the primary habitat still leads where a caller shows only one.
+    """
+    counts = collections.Counter(
+        token for m in members for token in _csv_tokens(m.get("eco")))
+    labels: list = []
+    for token, _n in counts.most_common():
+        label = _GROUP_ECOREGION.get(token)
+        if label and label not in labels:
+            labels.append(label)
+    return labels or ["Generalist"]
 
 
 def _community_sun(members) -> str:

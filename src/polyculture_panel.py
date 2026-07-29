@@ -1276,8 +1276,9 @@ class PolyculturePanel(QWidget):
         self._facet_combos["structure"].setToolTip(
             "Tallest vegetation layer the community reaches.")
         self._facet_combos["habitat"].setToolTip(
-            "Alberta ecoregion the member plants are documented from;\n"
-            "Generalist = no single home region.")
+            "Ecoregions the member plants are documented from. A community\n"
+            "belongs to every region its plants grow in, so it can appear\n"
+            "under several; Generalist = no recorded region.")
         self._facet_combos["function"].setToolTip(
             "Ecological functions the community serves (from its members'\n"
             "use tags). A community can serve several.")
@@ -1903,10 +1904,13 @@ class PolyculturePanel(QWidget):
             return
 
         # Grouped: bucket communities under bold, unselectable category nodes.
-        # The "function" lens is multi-valued (a list of labels), so a community
-        # can appear under several folders; since a QTreeWidgetItem may only have
-        # one parent, the 2nd+ folder gets a clone (clone keeps the UserRole
-        # community id + nested variations, so selection/placement still work).
+        # The "function" and "habitat" lenses are multi-valued (a list of
+        # labels), so a community can appear under several folders — a community
+        # genuinely belongs to every ecoregion its members grow in, and filing it
+        # under only the commonest one hid it from the rest (V2.37). Since a
+        # QTreeWidgetItem may only have one parent, the 2nd+ folder gets a clone
+        # (clone keeps the UserRole community id + nested variations, so
+        # selection/placement still work).
         # Buckets sort A–Z; within a bucket the active sort order holds.
         buckets: dict[str, list] = {}
         for cid, item in built:

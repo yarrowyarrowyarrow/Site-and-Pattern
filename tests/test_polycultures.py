@@ -316,14 +316,15 @@ class TestCommunityFacets(unittest.TestCase):
 
     def test_each_facet_has_all_lenses(self):
         for cid, f in polycultures.get_community_facets().items():
-            for lens in ("habitat", "structure", "sun", "moisture"):
+            for lens in ("structure", "sun", "moisture"):
                 self.assertIn(lens, f)
                 self.assertTrue(str(f[lens]).strip())
-            # The "function" lens is multi-valued: a non-empty list of labels.
-            self.assertIn("function", f)
-            self.assertIsInstance(f["function"], list)
-            self.assertTrue(f["function"])
-            self.assertTrue(all(str(x).strip() for x in f["function"]))
+            # "function" and "habitat" are multi-valued: non-empty label lists.
+            for lens in ("function", "habitat"):
+                self.assertIn(lens, f)
+                self.assertIsInstance(f[lens], list)
+                self.assertTrue(f[lens])
+                self.assertTrue(all(str(x).strip() for x in f[lens]))
 
     def test_structure_uses_tallest_layer(self):
         # A tree-anchored community groups under "Canopy".
@@ -346,6 +347,64 @@ class TestCommunityFacets(unittest.TestCase):
         self.assertIn("Keystone Species", fns("Keystone Pollinator Mound"))
         # Multi-bucket: a community serves several functions at once.
         self.assertIn("Pollination", fns("Caterpillar Host Garden"))
+
+    def test_habitat_lists_every_ecoregion_the_members_grow_in(self):
+        """User feedback (V2.37): "if a plant lives in 2 ecoregions it doesn't
+        show up in both but rather only 1".
+
+        The seed data was always multi-valued — `plants.ecoregion` is a
+        comma-separated list — but the facet collapsed it to the single most
+        common token, so a community spanning two ecoregions was filed under one
+        and invisible under the other."""
+        conn = get_connection()
+        try:
+            p1 = _add_dummy_plant(conn, "Two Region Plant")
+            p2 = _add_dummy_plant(conn, "Other Region Plant")
+            conn.execute("UPDATE plants SET ecoregion=? WHERE id=?",
+                         ("aspen_parkland,moist_mixedgrass", p1))
+            # Two members carry riparian so it would win a "dominant" vote and
+            # be the only label under the old behaviour.
+            conn.execute("UPDATE plants SET ecoregion=? WHERE id=?",
+                         ("riparian", p2))
+            conn.commit()
+        finally:
+            conn.close()
+        pid = polycultures.create_polyculture("Two Region Community", "d", p1)
+        polycultures.add_polyculture_member(pid, p1, "herbaceous", 0, 0)
+        polycultures.add_polyculture_member(pid, p2, "herbaceous", 1, 0)
+
+        habitat = polycultures.get_community_facets()[pid]["habitat"]
+        for label in ("Aspen Parkland", "Moist Mixed Grassland", "Riparian"):
+            self.assertIn(label, habitat,
+                          f"{label} missing — the facet still collapses to one")
+
+    def test_habitat_filter_matches_any_of_a_communitys_ecoregions(self):
+        """The library filter must find that community under *either* region."""
+        conn = get_connection()
+        try:
+            pid_plant = _add_dummy_plant(conn, "Filterable Region Plant")
+            conn.execute("UPDATE plants SET ecoregion=? WHERE id=?",
+                         ("boreal_mixedwood,subalpine_montane", pid_plant))
+            conn.commit()
+        finally:
+            conn.close()
+        pid = polycultures.create_polyculture("Filterable Community", "d",
+                                              pid_plant)
+        polycultures.add_polyculture_member(pid, pid_plant, "herbaceous", 0, 0)
+
+        index = polycultures.get_library_index()
+        for label in ("Boreal Mixedwood", "Subalpine / Montane"):
+            passing = polycultures.filter_library(index,
+                                                  facets={"habitat": [label]})
+            self.assertIn(pid, passing,
+                          f"filtering by {label} did not find the community")
+
+    def test_moist_mixedgrass_has_a_label(self):
+        """The most common ecoregion tag in the catalogue (246 plants) was
+        absent from the label table, so it silently read "Generalist"."""
+        self.assertIn("moist_mixedgrass", polycultures.ECOREGION_LABELS)
+        self.assertIn(polycultures.ECOREGION_LABELS["moist_mixedgrass"],
+                      polycultures.facet_filter_choices()["habitat"])
 
     def test_function_fallback_generalist(self):
         # A community whose plants carry no permaculture-use tags falls back to
