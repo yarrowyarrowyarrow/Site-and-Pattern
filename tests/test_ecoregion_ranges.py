@@ -248,9 +248,10 @@ class TestTheDerivationScript(unittest.TestCase):
                 "Nothing recordedii": [],
             }.get(name, [])
 
-        ranges, dropped, none = derive(
+        ranges, dropped, none, failed = derive(
             ["Amelanchier alnifolia", "Nothing recordedii"],
-            min_records=3, verbose=False, fetch=fake_fetch)
+            min_records=3, verbose=False, fetch=fake_fetch, throttle=_NoWait())
+        self.assertEqual(failed, [])
         self.assertEqual(list(ranges), ["Amelanchier alnifolia"])
         self.assertEqual(ranges["Amelanchier alnifolia"],
                          [{"ecoregion": "aspen_parkland", "occurrences": 30,
@@ -263,19 +264,24 @@ class TestTheDerivationScript(unittest.TestCase):
         """The item that started this: parkland records must produce a
         parkland tag. It never could before, because range was a guess."""
         from scripts.seed_ecoregion_ranges import derive
-        ranges, _dropped, _none = derive(
+        ranges, _dropped, _none, _failed = derive(
             ["Amelanchier alnifolia"], min_records=3, verbose=False,
-            fetch=lambda name, *, verbose=False: [self._EDMONTON] * 312)
+            fetch=lambda name, *, verbose=False, throttle=None:
+                [self._EDMONTON] * 312,
+            throttle=_NoWait())
         keys = [r["ecoregion"] for r in ranges["Amelanchier alnifolia"]]
         self.assertIn("aspen_parkland", keys)
 
-    def test_a_species_it_could_not_fetch_keeps_what_it_had(self):
-        """Failing to reach GBIF must not read as 'grows nowhere' — that would
-        empty a range on a network hiccup."""
+    def test_a_species_with_nothing_in_range_writes_no_rows(self):
+        """No records inside the polygons is a real finding, and it writes
+        nothing — so the species keeps the tags it already had. (The *failure*
+        case, which must not look like this, is in
+        TestRateLimitingIsNotAbsence below.)"""
         from scripts.seed_ecoregion_ranges import derive
-        ranges, _dropped, none = derive(
+        ranges, _dropped, none, _failed = derive(
             ["Unreachable sp."], min_records=3, verbose=False,
-            fetch=lambda name, *, verbose=False: [])
+            fetch=lambda name, *, verbose=False, throttle=None: [],
+            throttle=_NoWait())
         self.assertEqual(ranges, {})
         self.assertEqual(none, ["Unreachable sp."])
 
@@ -498,3 +504,106 @@ class TestTheShippedEnvelope(unittest.TestCase):
         if doc["species"]:
             self.assertTrue(doc["source"], "derived ranges with no source")
             self.assertTrue(doc["generated"], "derived ranges with no date")
+
+
+class TestRateLimitingIsNotAbsence(unittest.TestCase):
+    """The first real run's failure mode, guarded.
+
+    GBIF answered HTTP 429 after 228 species and the script recorded each
+    throttled species as having "no georeferenced records" — which reads as
+    *this plant grows nowhere*. That is the exact class of unsourced claim this
+    pipeline exists to remove, arriving through the back door.
+    """
+
+    def test_a_failed_fetch_is_reported_not_recorded_as_empty(self):
+        from scripts.seed_ecoregion_ranges import derive, FetchFailed
+
+        def flaky(name, *, verbose=False, throttle=None):
+            if name == "Throttled sp.":
+                raise FetchFailed("HTTP 429")
+            return [(53.55, -113.49)] * 20
+
+        ranges, _dropped, none, failed = derive(
+            ["Good sp.", "Throttled sp."], min_records=3, verbose=False,
+            fetch=flaky, throttle=_NoWait())
+        self.assertEqual([n for n, _why in failed], ["Throttled sp."])
+        self.assertNotIn("Throttled sp.", none,
+                         "a throttle was recorded as 'no records' — that is "
+                         "the bug this test exists for")
+        self.assertNotIn("Throttled sp.", ranges)
+        self.assertIn("Good sp.", ranges)
+
+    def test_a_genuine_absence_is_still_reported_as_one(self):
+        from scripts.seed_ecoregion_ranges import derive
+        _ranges, _dropped, none, failed = derive(
+            ["Empty sp."], min_records=3, verbose=False,
+            fetch=lambda name, *, verbose=False, throttle=None: [],
+            throttle=_NoWait())
+        self.assertEqual(none, ["Empty sp."])
+        self.assertEqual(failed, [])
+
+    def test_the_throttle_slows_down_and_stays_slow(self):
+        """A 429 means the *sustained* rate was too high, so returning to the
+        old pace would just earn another one."""
+        from scripts.seed_ecoregion_ranges import _Throttle, MAX_SLEEP
+        t = _Throttle(1.0)
+        t.rate_limited()
+        self.assertGreater(t.sleep, 1.0)
+        first = t.sleep
+        t.rate_limited()
+        self.assertGreater(t.sleep, first)
+        for _ in range(50):
+            t.rate_limited()
+        self.assertLessEqual(t.sleep, MAX_SLEEP)
+        self.assertEqual(t.limited, 52)
+
+    def test_the_query_is_bounded_to_the_polygons(self):
+        """Everything outside the polygons is discarded downstream, so asking
+        GBIF for it was pure cost — and it was most of the cost."""
+        from scripts.seed_ecoregion_ranges import polygon_bbox
+        from src.ecoregion import _load_features
+        lat_min, lat_max, lng_min, lng_max = polygon_bbox()
+        self.assertLess(lat_min, lat_max)
+        self.assertLess(lng_min, lng_max)
+        for feature in _load_features():
+            for ring in feature["geometry"]["coordinates"]:
+                for lng, lat in ring:
+                    self.assertGreaterEqual(lat, lat_min)
+                    self.assertLessEqual(lat, lat_max)
+                    self.assertGreaterEqual(lng, lng_min)
+                    self.assertLessEqual(lng, lng_max)
+
+    def test_the_bbox_is_padded_so_a_boundary_record_is_not_lost(self):
+        from scripts.seed_ecoregion_ranges import polygon_bbox
+        tight = polygon_bbox(pad=0.0)
+        padded = polygon_bbox(pad=0.5)
+        self.assertLess(padded[0], tight[0])
+        self.assertGreater(padded[1], tight[1])
+
+    def test_resume_skips_what_is_done_and_retries_what_is_not(self):
+        """A species with rows is finished. A species with none might have been
+        a genuine absence or a rate-limit casualty, and there is no way to tell
+        after the fact — so it gets retried, which makes a throttled run
+        self-healing."""
+        import scripts.seed_ecoregion_ranges as script
+        derived = script.load_existing.__doc__
+        self.assertIn("Only species with ROWS count as done", derived)
+        doc = {"version": 1, "species": {
+            "Done sp.": [{"ecoregion": "aspen_parkland", "occurrences": 9,
+                          "confidence": "medium"}],
+            "Empty sp.": []}}
+        parsed = R.parse_document(doc)
+        self.assertIn("Done sp.", parsed)
+        self.assertNotIn("Empty sp.", parsed)
+
+
+class _NoWait:
+    """A throttle that does not actually sleep, for the tests."""
+    sleep = 0.0
+    limited = 0
+
+    def wait(self):
+        pass
+
+    def rate_limited(self):
+        self.limited += 1
