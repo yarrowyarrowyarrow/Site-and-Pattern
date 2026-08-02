@@ -190,3 +190,122 @@ class TestLabelForKey(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  V2.38 — two axes, and a site that is in more than one region
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# User feedback: "I'd prefer it breakdown into the individual ecoregions it
+# exists in so when I add BC and other areas of turtle island we simply add
+# more ecoregions." That only works if the vocabulary IS the polygon file, so
+# adding a region is adding a polygon — which is what these hold down.
+
+from src import ecoregion as _eco  # noqa: E402
+
+
+class TestTheVocabularyIsTheFile(unittest.TestCase):
+    """The geographic vocabulary is read from the shipped polygons, not from a
+    list beside them that has to be remembered."""
+
+    def test_every_polygon_key_is_offered_in_the_filter(self):
+        from_file = {(f.get("properties") or {}).get("key")
+                     for f in _load_features()}
+        from_file.discard(None)
+        self.assertTrue(from_file)
+        self.assertTrue(from_file.issubset(set(_eco.geographic_keys())),
+                        "a shipped polygon exists that no dropdown offers")
+
+    def test_the_two_axes_are_separate(self):
+        """Geographic regions are places; moisture niches are conditions that
+        occur inside any of them. Mixing them is what made 'which ecoregion is
+        my site in?' and 'is this spot wet?' one control."""
+        geo = set(_eco.geographic_keys())
+        wet = {k for k, _n, _w in _eco.MOISTURE_NICHES}
+        self.assertEqual(geo & wet, set())
+        self.assertEqual(set(_eco.ecoregion_keys()), geo | wet)
+        for k in wet:
+            self.assertTrue(_eco.is_moisture_niche(k))
+        for k in geo:
+            self.assertFalse(_eco.is_moisture_niche(k))
+
+    def test_no_lookup_can_return_a_moisture_niche(self):
+        """No lat/lng puts you in 'wet ground'. If a polygon ever claimed one,
+        the site panel would assert a moisture condition from a map."""
+        for f in _load_features():
+            key = (f.get("properties") or {}).get("key")
+            self.assertFalse(_eco.is_moisture_niche(key),
+                             f"{key} is a condition, not a place")
+
+    def test_name_and_place_stay_apart(self):
+        """Packed into one label they elided mid-word in the dropdown."""
+        for key, name, where in _eco.ecoregions():
+            self.assertTrue(name, key)
+            self.assertNotIn("(", name, f"{key}: place packed into the name")
+
+    def test_the_fallback_matches_the_shipped_file(self):
+        """The hard-coded list is only for a build whose resources are broken.
+        If it drifts from the file, that build silently offers a different
+        vocabulary than the one the polygons use."""
+        self.assertEqual([k for k, _n, _w in _eco._FALLBACK_GEOGRAPHIC],
+                         list(_eco.geographic_keys()))
+        self.assertEqual(_eco._FALLBACK_GEOGRAPHIC,
+                         list(_eco.geographic_ecoregions()))
+
+    def test_display_order_is_stable_and_deduplicated(self):
+        keys = _eco.geographic_keys()
+        self.assertEqual(len(keys), len(set(keys)),
+                         "a region drawn as two lobes was offered twice")
+
+    def test_a_packed_legacy_label_still_splits(self):
+        self.assertEqual(_eco._split_label("Aspen Parkland (central AB)"),
+                         ("Aspen Parkland", "central AB"))
+        self.assertEqual(_eco._split_label("Riparian"), ("Riparian", ""))
+        # The last bracket wins, so a name with its own brackets survives.
+        self.assertEqual(_eco._split_label("Boreal (mixedwood) Plain (north)"),
+                         ("Boreal (mixedwood) Plain", "north"))
+
+
+class TestASiteCanBeInTwo(unittest.TestCase):
+    """``lookup_ecoregion`` returned the first match and stopped. A property
+    near a boundary belongs to both, and the second one is exactly the species
+    list that was going missing."""
+
+    def test_the_foothills_overlap_reports_both(self):
+        # The shipped aspen_parkland and subalpine_montane rectangles overlap
+        # in lng[-115, -114.5] x lat[52, 54] — the Rocky Mountain House /
+        # Nordegg transition, where parkland really does run into montane.
+        keys = _eco.lookup_ecoregions(53.0, -114.8)
+        self.assertIn("aspen_parkland", keys)
+        self.assertIn("subalpine_montane", keys)
+
+    def test_the_singular_shim_still_answers_one(self):
+        self.assertEqual(_eco.lookup_ecoregion(53.0, -114.8),
+                         _eco.lookup_ecoregions(53.0, -114.8)[0])
+
+    def test_an_ordinary_site_reports_exactly_one(self):
+        self.assertEqual(_eco.lookup_ecoregions(53.55, -113.49),
+                         ["aspen_parkland"])          # Edmonton
+
+    def test_two_lobes_of_one_region_count_once(self):
+        """moist_mixedgrass ships as two rectangles. Being in one of them is
+        being in the region once, not twice."""
+        keys = _eco.lookup_ecoregions(52.13, -106.67)  # Saskatoon
+        self.assertEqual(keys, ["moist_mixedgrass"])
+
+    def test_outside_everything_is_empty_not_a_guess(self):
+        self.assertEqual(_eco.lookup_ecoregions(49.28, -123.12), [])   # Vancouver
+        self.assertEqual(_eco.lookup_ecoregions(None, None), [])
+
+    def test_the_detection_payload_carries_every_match(self):
+        from src.property_data import fetch_ecoregion
+        data = fetch_ecoregion(53.0, -114.8)
+        self.assertEqual(data["keys"], _eco.lookup_ecoregions(53.0, -114.8))
+        self.assertEqual(data["key"], data["keys"][0])
+        # The readout names both, so the user can see why two are checked.
+        self.assertIn("Aspen Parkland", data["label"])
+        self.assertIn("Subalpine", data["label"])
+
+    def test_no_pin_no_payload(self):
+        from src.property_data import fetch_ecoregion
+        self.assertIsNone(fetch_ecoregion(49.28, -123.12))

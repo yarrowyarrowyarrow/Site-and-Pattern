@@ -817,21 +817,28 @@ def fetch_winter(lat: float, lng: float) -> Optional[dict]:
 # ── Ecoregion (V1.36) ───────────────────────────────────────────────────────
 
 def fetch_ecoregion(lat: float, lng: float) -> Optional[dict]:
-    """Look up the AB ecoregion for (lat, lng) via point-in-polygon.
-    Returns ``{"key": "aspen_parkland", "label": "Aspen Parkland (central AB)",
-    "source": "..."}`` or ``None`` if the point falls outside every
-    shipped polygon.
+    """Look up the ecoregion(s) for (lat, lng) via point-in-polygon.
 
-    Synchronous and local (no network) — runs instantly. Plugged into
-    the site panel's existing worker-step list for shape-uniformity
-    with the other fetchers, not because it needs the background thread."""
-    from src.ecoregion import lookup_ecoregion, label_for_key
-    key = lookup_ecoregion(lat, lng)
-    if not key:
+    Returns ``{"keys": [...], "key": <first>, "label": "...", "source": "..."}``
+    or ``None`` if the point falls outside every shipped polygon.
+
+    **``keys`` is the answer; ``key`` is the first of them**, kept because a
+    handful of single-region readouts still want one string. A site near a
+    boundary really is in two ecoregions (V2.38) — reporting one and dropping
+    the other is how a plant list quietly loses the half of its range that was
+    across the line.
+
+    Synchronous and local (no network) — runs instantly. Plugged into the site
+    panel's existing worker-step list for shape-uniformity with the other
+    fetchers, not because it needs the background thread."""
+    from src.ecoregion import lookup_ecoregions, label_for_key
+    keys = lookup_ecoregions(lat, lng)
+    if not keys:
         return None
     return {
-        "key":    key,
-        "label":  label_for_key(key),
+        "keys":   keys,
+        "key":    keys[0],
+        "label":  " + ".join(label_for_key(k) for k in keys),
         "source": "ecoregions_canada.geojson (auto)",
     }
 

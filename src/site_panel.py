@@ -219,7 +219,7 @@ class SitePanel(QWidget):
     ecoregion_detected = pyqtSignal(object)       # AB ecoregion key (str) or "" (V1.87)
     # "Browse N reference communities →" clicked; carries the ecoregion key
     # so MainWindow can open the community library pre-filtered (V2.13).
-    browse_communities_requested = pyqtSignal(str)
+    browse_communities_requested = pyqtSignal(object)  # list[str] (V2.38)
 
     # Address search (geocode + place pin). Emitted when the user has
     # selected a result; MainWindow places the pin on the map and the
@@ -535,8 +535,9 @@ class SitePanel(QWidget):
             "member plants are documented from this ecoregion.")
         self._btn_browse_comms.setVisible(False)
         self._btn_browse_comms.clicked.connect(
-            lambda: self.browse_communities_requested.emit(self._eco_key))
-        self._eco_key = ""
+            lambda: self.browse_communities_requested.emit(
+                list(getattr(self, "_eco_keys", []) or [])))
+        self._eco_keys: list[str] = []
 
         hl.addRow("Zone:",                self._lbl_zone)
         hl.addRow("Source:",              self._lbl_hard_src)
@@ -1251,7 +1252,7 @@ class SitePanel(QWidget):
         self._lbl_gdd.setText(_DASH)
         self._lbl_frost.setText(_DASH)
         self._lbl_ecoregion.setText(_DASH)
-        self._eco_key = ""
+        self._eco_keys = []
         self._btn_browse_comms.setVisible(False)
         self._lbl_info_elev.setText(_DASH)
         self._lbl_info_aspect.setText(_DASH)
@@ -1361,23 +1362,28 @@ class SitePanel(QWidget):
         self._lbl_hard_src.setText(data.get("source", ""))
 
     def _on_ecoregion(self, data):
-        """Surface the auto-detected ecoregion in the readout and push it to the
-        plant panel live (V1.87).
+        """Surface the auto-detected ecoregion(s) in the readout and push them
+        to the plant panel live (V1.87; multi-valued V2.38).
 
-        Emits ``ecoregion_detected`` with the region key so the plant library's
-        "Restoring toward…" filter updates for *this* session only — no longer
-        persisted to QSettings, so a region never sticks across unrelated
-        sessions. An empty string clears it (pin outside known regions)."""
+        Emits ``ecoregion_detected`` with the region keys so the plant
+        library's "Restoring toward…" filter updates for *this* session only —
+        not persisted to QSettings, so a region never sticks across unrelated
+        sessions. An empty list clears it (pin outside known regions).
+
+        A site near a boundary is in two ecoregions and both are sent. Sending
+        only the first is how the plant list quietly lost the half of its range
+        that was across the line."""
         if not data:
             self._lbl_ecoregion.setText("Outside known regions")
-            self._eco_key = ""
+            self._eco_keys = []
             self._btn_browse_comms.setVisible(False)
-            self.ecoregion_detected.emit("")
+            self.ecoregion_detected.emit([])
             return
         label = data.get("label") or data.get("key") or "—"
         self._lbl_ecoregion.setText(f"{label}  (auto)")
-        self._eco_key = data.get("key") or ""
-        n = self._count_reference_communities(self._eco_key)
+        self._eco_keys = list(data.get("keys")
+                              or ([data["key"]] if data.get("key") else []))
+        n = self._count_reference_communities(self._eco_keys)
         if n:
             self._btn_browse_comms.setText(
                 f"Browse {n} reference communit{'y' if n == 1 else 'ies'} "
@@ -1385,23 +1391,37 @@ class SitePanel(QWidget):
             self._btn_browse_comms.setVisible(True)
         else:
             self._btn_browse_comms.setVisible(False)
-        self.ecoregion_detected.emit(self._eco_key)
+        self.ecoregion_detected.emit(list(self._eco_keys))
+
+    @property
+    def _eco_key(self) -> str:
+        """First detected ecoregion key, or ``""``.
+
+        Back-compat for the single-key readers that predate the V2.38 move to
+        a list (the community cross-link's payload builder). Read-only —
+        detection writes ``_eco_keys``.
+        """
+        keys = getattr(self, "_eco_keys", None) or []
+        return keys[0] if keys else ""
 
     @staticmethod
-    def _count_reference_communities(eco_key: str) -> int:
-        """How many top-level saved communities have this ecoregion as their
-        dominant habitat facet — the count shown on the cross-link."""
-        if not eco_key:
+    def _count_reference_communities(eco_keys) -> int:
+        """How many top-level saved communities sit in any of these ecoregions
+        — the count shown on the cross-link."""
+        if isinstance(eco_keys, str):
+            eco_keys = [eco_keys] if eco_keys else []
+        if not eco_keys:
             return 0
         try:
             from src.db import polycultures
-            label = polycultures.ECOREGION_LABELS.get(eco_key)
-            if not label:
+            labels = {polycultures.ECOREGION_LABELS.get(k) for k in eco_keys}
+            labels.discard(None)
+            if not labels:
                 return 0
             idx = polycultures.get_library_index()
             return sum(1 for e in idx.values()
                        if e["parent_id"] is None
-                       and e["facets"].get("habitat") == label)
+                       and e["facets"].get("habitat") in labels)
         except Exception:
             return 0
 

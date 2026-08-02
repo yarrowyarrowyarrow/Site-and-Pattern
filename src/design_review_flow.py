@@ -111,12 +111,18 @@ def focus_community(main, name: str) -> None:
             f"{name}: {len(recs)} plants framed on the map", 3000)
 
 
-def browse_communities(main, eco_key: str) -> None:
+def browse_communities(main, eco_keys) -> None:
     """Site tab's ecoregion cross-link → open the Plant Community Library
-    pre-filtered to communities of that ecoregion."""
+    pre-filtered to communities of the detected ecoregion(s).
+
+    Takes a list since V2.38 (a boundary site is in more than one); a bare
+    string is still accepted, because the signal carried one until then.
+    """
+    if isinstance(eco_keys, str):
+        eco_keys = [eco_keys] if eco_keys else []
     main._side_tabs.setCurrentWidget(main._plant_poly_tab)
     main._plants_inner_tabs.setCurrentWidget(main.polyculture_panel)
-    main.polyculture_panel.set_habitat_filter([eco_key])
+    main.polyculture_panel.set_habitat_filter(list(eco_keys or []))
 
 
 def open_habitat_analysis(main) -> None:

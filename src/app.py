@@ -950,7 +950,7 @@ class MainWindow(QMainWindow):
         # ceiling), wired through thin lambdas.
         from src import design_review_flow as _drf
         self.site_panel.browse_communities_requested.connect(
-            lambda key: _drf.browse_communities(self, key))
+            lambda keys: _drf.browse_communities(self, keys))
         # On This Design rows → map (V2.13): click to locate, context menu to
         # select / remove / open in the Plant Library.
         self.on_this_design.species_focus_requested.connect(

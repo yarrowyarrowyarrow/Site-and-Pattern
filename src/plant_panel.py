@@ -251,12 +251,19 @@ class PlantPanel(QWidget):
     def set_autodetected_ecoregion(self, key):
         """Live update from a property pin dropped this session (V1.87).
 
-        ``key`` is the detected AB ecoregion id (or ``""``/``None`` when the pin
-        is cleared or sits outside known regions). Selecting it is session-only
-        — nothing is persisted, so a region never carries over to an unrelated
-        later session. Setting it silently (no ``_on_ecoregion_changed``) then
-        re-running the search keeps the list in sync without a double query."""
-        keys = [key] if key else []
+        ``key`` is the detected ecoregion id, or a *list* of them since V2.38 —
+        a site near a boundary is in more than one, and checking both is the
+        difference between seeing that region's species and not. ``""``/``None``
+        /``[]`` clears it (pin removed, or outside known regions).
+
+        Session-only: nothing is persisted, so a region never carries over to
+        an unrelated later session. Setting it silently (no
+        ``_on_ecoregion_changed``) then re-running the search keeps the list in
+        sync without a double query."""
+        if isinstance(key, (list, tuple, set)):
+            keys = [k for k in key if k]
+        else:
+            keys = [key] if key else []
         if self._ecoregion_combo.checked_keys() == keys:
             return
         self._ecoregion_combo.set_checked_keys(keys)
