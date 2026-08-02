@@ -254,3 +254,79 @@ class TestMainWindowStandsPanelsDown(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
+class TestTwoLineFacetItems(unittest.TestCase):
+    """V2.38 user feedback, with a screenshot: the ecoregion list clipped every
+    entry mid-word — "Moist Mixed Gras...ina (Saskatoon)" — because the name and
+    the geography were packed into one label in a combo that shares its row
+    50/50. The name now gets its own line and the place sits under it."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._app = QApplication.instance() or QApplication([])
+
+    def _combo(self):
+        from src.filter_widgets import CheckableComboBox
+        from src.plant_panel import _ECOREGION_CHOICES, _ECOREGION_DISPLAY
+        c = CheckableComboBox(placeholder="Restoring toward…")
+        for _label, key in _ECOREGION_CHOICES:
+            if not key:
+                continue
+            name, where = _ECOREGION_DISPLAY[key]
+            c.add_check_item(name, key, subtitle=where)
+        return c
+
+    def test_every_region_has_a_name_and_a_place(self):
+        from src.plant_panel import _ECOREGION_CHOICES, _ECOREGION_DISPLAY
+        for _label, key in _ECOREGION_CHOICES:
+            if not key:
+                continue
+            self.assertIn(key, _ECOREGION_DISPLAY)
+            name, where = _ECOREGION_DISPLAY[key]
+            self.assertTrue(name.strip(), key)
+            self.assertTrue(where.strip(), key)
+            self.assertNotIn("(", name,
+                             f"{key}: the place is still packed into the name")
+
+    def test_the_item_carries_the_subtitle_separately(self):
+        from src.filter_widgets import SUBTITLE_ROLE
+        combo = self._combo()
+        item = combo.model().item(0)
+        self.assertEqual(item.text(), "Aspen Parkland")
+        self.assertEqual(item.data(SUBTITLE_ROLE), "central AB / SK")
+
+    def test_rows_are_tall_enough_for_two_lines(self):
+        from PyQt6.QtWidgets import QStyleOptionViewItem
+        combo = self._combo()
+        delegate = combo.itemDelegate()
+        opt = QStyleOptionViewItem()
+        opt.initFrom(combo.view())
+        two = delegate.sizeHint(opt, combo.model().index(0, 0)).height()
+        self.assertGreater(two, opt.fontMetrics.height() * 1.8,
+                           "the second line has nowhere to go")
+
+    def test_the_popup_is_wider_than_the_combo_that_opens_it(self):
+        """The clipping came from the popup inheriting a half-row-wide combo."""
+        combo = self._combo()
+        self.assertGreaterEqual(combo.view().minimumWidth(), 260)
+
+    def test_many_selections_summarise_rather_than_clip(self):
+        combo = self._combo()
+        combo.set_checked_keys(["aspen_parkland", "moist_mixedgrass", "riparian"])
+        self.assertEqual(combo.lineEdit().text(), "3 selected")
+        # …but the full list stays reachable.
+        self.assertIn("Moist Mixed Grassland", combo.lineEdit().toolTip())
+
+    def test_one_or_two_selections_still_name_themselves(self):
+        combo = self._combo()
+        combo.set_checked_keys(["riparian"])
+        self.assertEqual(combo.lineEdit().text(), "Riparian")
+
+    def test_items_without_a_subtitle_are_untouched(self):
+        """Every other facet combo shares this widget and must not change."""
+        from src.filter_widgets import CheckableComboBox
+        plain = CheckableComboBox(placeholder="Any")
+        plain.add_check_item("Full Sun", "full_sun")
+        self.assertFalse(getattr(plain, "_two_line", False))

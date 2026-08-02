@@ -108,6 +108,43 @@ def lookup_ecoregion(lat: float, lng: float) -> Optional[str]:
     return None
 
 
+# ── The vocabulary ──────────────────────────────────────────────────────────
+# The canonical ecoregion keys and how they are written for a person, moved
+# here in V2.38 from plant_panel. They belong in the Qt-free module: the
+# validator wants them and had been AST-parsing plant_panel.py to avoid
+# importing PyQt6 to read a list of strings, and the coming re-derivation of
+# per-species ranges needs the same list from a script.
+#
+# Name and place are kept APART. Packed into one label they elided mid-word in
+# the filter dropdown — "Moist Mixed Gras...ina (Saskatoon)" — so neither the
+# ecoregion nor the geography survived; the two-line item painter in
+# `filter_widgets` puts the name first and whole, the place under it.
+ECOREGIONS: list[tuple[str, str, str]] = [
+    # (key, name, where it is)
+    ("aspen_parkland",     "Aspen Parkland",           "central AB / SK"),
+    ("mixedgrass_prairie", "Mixedgrass Prairie",       "south AB / SK"),
+    ("moist_mixedgrass",   "Moist Mixed Grassland",    "Regina / Saskatoon"),
+    ("fescue_foothills",   "Fescue / Foothills",       "SW Alberta"),
+    ("boreal_mixedwood",   "Boreal Mixedwood / Plain", "north AB / SK"),
+    ("riparian",           "Riparian",                 "streamside"),
+    ("wet_meadow",         "Wet Meadow / Marsh",       "wet ground"),
+    ("subalpine_montane",  "Subalpine / Montane",      "the mountains"),
+]
+
+
+def ecoregion_keys() -> list[str]:
+    """The canonical keys, in display order."""
+    return [key for key, _name, _where in ECOREGIONS]
+
+
+def ecoregion_display(key: str) -> tuple[str, str]:
+    """``(name, where)`` for a key — the two lines the filter list draws."""
+    for k, name, where in ECOREGIONS:
+        if k == key:
+            return name, where
+    return key, ""
+
+
 def label_for_key(key: Optional[str]) -> str:
     """Return the human-readable label for an ecoregion key, or '—'
     when the key is unknown. Reads the GeoJSON properties.label so the

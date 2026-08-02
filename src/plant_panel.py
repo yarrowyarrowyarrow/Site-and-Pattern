@@ -46,6 +46,7 @@ from src.filter_widgets import (  # noqa: F401  (re-export)
     COMBO_STYLE as _COMBO_STYLE,
     TOGGLE_STYLE as _TOGGLE_STYLE,
 )
+from src.ecoregion import ECOREGIONS as _ECOREGIONS
 
 # ── PlantPanel-only vocabulary labels ────────────────────────────────────────
 # V1.87: full botanical split. "herb" was a 231-plant catch-all; it's now split
@@ -101,17 +102,14 @@ _MONTH_LABELS: dict[str, str] = {
     "9": "September", "10": "October", "11": "November", "12": "December",
 }
 
-_ECOREGION_CHOICES: list[tuple[str, str]] = [
-    ("Any ecoregion",          ""),
-    ("Aspen Parkland (central AB / SK)", "aspen_parkland"),
-    ("Mixedgrass Prairie (south AB / SK)", "mixedgrass_prairie"),
-    ("Moist Mixed Grassland (Regina / Saskatoon)", "moist_mixedgrass"),
-    ("Fescue / Foothills (SW AB)",    "fescue_foothills"),
-    ("Boreal Mixedwood / Plain (north AB / SK)",   "boreal_mixedwood"),
-    ("Riparian (streamside)",         "riparian"),
-    ("Wet Meadow / Marsh",            "wet_meadow"),
-    ("Subalpine / Montane (mountains)", "subalpine_montane"),
-]
+# The vocabulary itself now lives in the Qt-free src/ecoregion.py (V2.38), so
+# the data validator and the range-derivation script can read it without
+# importing PyQt6. These keep the historical shape for existing callers.
+_ECOREGION_CHOICES: list[tuple[str, str]] = (
+    [("Any ecoregion", "")]
+    + [(f"{name} ({where})", key) for key, name, where in _ECOREGIONS])
+_ECOREGION_DISPLAY: dict[str, tuple[str, str]] = {
+    key: (name, where) for key, name, where in _ECOREGIONS}
 
 # Back-compat alias — the constant was province-scoped (_AB_ECOREGION_CHOICES)
 # before the V2.15 province-neutral rename. Kept so external imports and the
@@ -361,7 +359,8 @@ class PlantPanel(QWidget):
         _eco_labels = {key: lbl for lbl, key in _ECOREGION_CHOICES if key}
         self._ecoregion_combo = CheckableComboBox(placeholder="Restoring toward…")
         for key, lbl in _eco_labels.items():
-            self._ecoregion_combo.add_check_item(lbl, key)
+            name, where = _ECOREGION_DISPLAY.get(key, (lbl, ""))
+            self._ecoregion_combo.add_check_item(name, key, subtitle=where)
         self._ecoregion_combo.setStyleSheet(_combo_style)
         self._ecoregion_combo.setToolTip(
             "Restore toward one or more Alberta ecoregions — shows plants\n"

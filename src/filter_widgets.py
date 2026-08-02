@@ -17,9 +17,103 @@ Contents:
 
 from __future__ import annotations
 
-from PyQt6.QtWidgets import QComboBox, QSizePolicy
-from PyQt6.QtCore import Qt, QEvent, pyqtSignal
-from PyQt6.QtGui import QStandardItem, QStandardItemModel
+from PyQt6.QtWidgets import (
+    QApplication, QComboBox, QSizePolicy, QStyle, QStyledItemDelegate,
+    QStyleOptionViewItem,
+)
+from PyQt6.QtCore import Qt, QEvent, QRect, pyqtSignal
+from PyQt6.QtGui import QColor, QFont, QStandardItem, QStandardItemModel
+
+
+# A second line under an item's label — the place it is, under what it is.
+# Ecoregion names carry their geography ("Moist Mixed Grassland" / "Regina,
+# Saskatoon"), and packing both into one string is what made the list unreadable:
+# every entry elided mid-word ("Moist Mixed Gras...ina (Saskatoon)") so neither
+# half survived. Two lines let the name be whole and the place stay secondary.
+SUBTITLE_ROLE = Qt.ItemDataRole.UserRole + 1
+
+
+class _TwoLineDelegate(QStyledItemDelegate):
+    """Item painter for entries that carry a ``SUBTITLE_ROLE``.
+
+    Items without one paint exactly as before, so a combo can mix both.
+    """
+
+    def sizeHint(self, option, index):
+        size = super().sizeHint(option, index)
+        if index.data(SUBTITLE_ROLE):
+            size.setHeight(option.fontMetrics.height() * 2 + 8)
+        return size
+
+    def paint(self, painter, option, index):
+        subtitle = index.data(SUBTITLE_ROLE)
+        if not subtitle:
+            super().paint(painter, option, index)
+            return
+
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(opt, index)
+        title = opt.text
+        widget = opt.widget
+        style = widget.style() if widget else QApplication.style()
+
+        # Row background first, so both lines sit inside one highlight.
+        opt.text = ""
+        style.drawPrimitive(
+            QStyle.PrimitiveElement.PE_PanelItemViewItem, opt, painter, widget)
+
+        # The tick, drawn here rather than left to the style. Two style paths
+        # let us down: CE_ItemViewItem lays the row out from the text it is
+        # given, so blanking the text to place the lines by hand took the
+        # indicator's column with it; and PE_IndicatorItemViewItemCheck under
+        # this view's stylesheet paints nothing the eye can find on a dark
+        # ground. An empty box and a tick, in the palette the rest of the panel
+        # uses — the same two states the list showed before.
+        # NB: index.data(CheckStateRole) hands back a plain int (2), not the
+        # Qt.CheckState enum, so comparing against the enum is quietly always
+        # False — which is exactly how the tick went missing the first time.
+        checked = (index.data(Qt.ItemDataRole.CheckStateRole)
+                   == Qt.CheckState.Checked.value)
+        box = 12
+        check_rect = QRect(option.rect.left() + 5,
+                           option.rect.top() + (option.rect.height() - box) // 2,
+                           box, box)
+        painter.save()
+        painter.setRenderHint(painter.RenderHint.Antialiasing, True)
+        painter.setPen(QColor("#66bb6a" if checked else "#4a6a4a"))
+        painter.setBrush(QColor("#2e5a2e") if checked else Qt.BrushStyle.NoBrush)
+        painter.drawRoundedRect(check_rect, 2, 2)
+        if checked:
+            tick = QFont(option.font)
+            tick.setBold(True)
+            painter.setFont(tick)
+            painter.setPen(QColor("#c8e6c9"))
+            painter.drawText(check_rect,
+                             int(Qt.AlignmentFlag.AlignCenter), "✓")
+        painter.restore()
+
+        painter.save()
+        fm = option.fontMetrics
+        line_h = fm.height()
+        text_x = check_rect.right() + 7
+        width = option.rect.right() - text_x - 4
+        top = option.rect.top() + 3
+        painter.setPen(option.palette.text().color())
+        painter.drawText(
+            QRect(text_x, top, width, line_h),
+            int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter),
+            fm.elidedText(title, Qt.TextElideMode.ElideRight, width))
+
+        small = QFont(option.font)
+        small.setPointSizeF(max(6.5, option.font.pointSizeF() - 1.5))
+        painter.setFont(small)
+        painter.setPen(QColor("#78909c"))
+        sub_fm = painter.fontMetrics()
+        painter.drawText(
+            QRect(text_x, top + line_h - 1, width, sub_fm.height()),
+            int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter),
+            sub_fm.elidedText(subtitle, Qt.TextElideMode.ElideRight, width))
+        painter.restore()
 
 
 # ── Shared filter styling ─────────────────────────────────────────────────────
@@ -83,9 +177,12 @@ class CheckableComboBox(QComboBox):
             QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
         self.setMinimumContentsLength(6)
 
-    def add_check_item(self, label: str, key: str, icon=None):
+    def add_check_item(self, label: str, key: str, icon=None, subtitle: str = ""):
         item = QStandardItem(label)
         item.setData(key, Qt.ItemDataRole.UserRole)
+        if subtitle:
+            item.setData(subtitle, SUBTITLE_ROLE)
+            self._ensure_two_line_view()
         if icon is not None:
             item.setIcon(icon)
         item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsUserCheckable)
@@ -151,11 +248,32 @@ class CheckableComboBox(QComboBox):
             return True  # keep the popup open for further toggles
         return super().eventFilter(obj, event)
 
+    def _ensure_two_line_view(self):
+        """Install the two-line painter, and widen the popup past the combo.
+
+        The popup inherits the combo's width by default, and these combos share
+        a row 50/50 — which is why the full names never fit. The list is free to
+        be wider than the control that opens it.
+        """
+        if getattr(self, "_two_line", False):
+            return
+        self._two_line = True
+        self.setItemDelegate(_TwoLineDelegate(self))
+        view = self.view()
+        view.setMinimumWidth(280)
+        view.setTextElideMode(Qt.TextElideMode.ElideRight)
+
     def _refresh_text(self):
         labels = [self.model().item(i).text()
                   for i in range(self.model().rowCount())
                   if self.model().item(i).checkState() == Qt.CheckState.Checked]
-        self.lineEdit().setText(", ".join(labels))
+        # Past two, a joined list is guaranteed to elide mid-word and say less
+        # than a count would — "3 selected" is at least true and whole.
+        if len(labels) > 2:
+            self.lineEdit().setText(f"{len(labels)} selected")
+        else:
+            self.lineEdit().setText(", ".join(labels))
+        self.lineEdit().setToolTip(", ".join(labels))
 
     def _on_item_changed(self, _item):
         self._refresh_text()

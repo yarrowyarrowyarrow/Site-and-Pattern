@@ -265,10 +265,20 @@ def _load_use_keys() -> set[str]:
 
 
 def _load_ecoregion_keys() -> set[str]:
-    """Canonical AB ecoregion keys, parsed out of plant_panel.py without
-    importing it (the module pulls in PyQt6). Handles both annotated
-    (``X: list[...] = [...]``) and plain (``X = [...]``) assignment
-    forms — the current source uses the annotated form."""
+    """The canonical ecoregion keys.
+
+    Read straight from ``src.ecoregion``, which is Qt-free — the vocabulary
+    moved there in V2.38. Before that it lived in plant_panel and this had to
+    AST-parse the file rather than import PyQt6 to read a list of strings; the
+    parser is kept below as a fallback so a checkout mid-move still validates.
+    """
+    try:
+        from src.ecoregion import ecoregion_keys        # noqa: PLC0415
+        keys = set(ecoregion_keys())
+        if keys:
+            return keys
+    except ImportError:
+        pass
     src = (PROJECT_ROOT / "src" / "plant_panel.py").read_text(encoding="utf-8")
     tree = ast.parse(src)
     for node in ast.walk(tree):
