@@ -30,17 +30,30 @@ Workflow:
        of ~0.01° (~1 km — fine for plant-filter use), and writes
        a GeoJSON FeatureCollection with one feature per ecoregion.
 
-    3. Map each CEC Level III ecoregion name to a canonical key
-       in ``src/plant_panel._AB_ECOREGION_CHOICES``. The shipped
-       starter set covers five regions; the CEC data is more granular
-       (e.g. "Boreal Plain" vs "Boreal Cordillera") so you may need
-       to merge several CEC polygons into one canonical key, or
-       expand ``_AB_ECOREGION_CHOICES`` to match the CEC vocabulary.
+    3. Map each CEC Level III ecoregion name to a canonical key in
+       ``KEY_MAP`` below. Merge several CEC polygons into one key, or
+       add keys — **adding a key is now the whole job.** Since V2.38 the
+       written file IS the app's geographic ecoregion vocabulary: each
+       feature carries ``key`` / ``name`` / ``where`` / ``sort``, and
+       ``src/ecoregion.py`` reads them, so a new region appears in the
+       filter dropdown, the data validator's accepted keys and the
+       range-derivation script at once. There is no second list to edit.
 
-    4. Commit the regenerated ``data/ecoregions_canada.geojson`` and
-       any matching ``_AB_ECOREGION_CHOICES`` changes (which would
-       also need a schema bump per CLAUDE.md, since the plant
-       filter's canonical key set is used by the data validator).
+       This is what makes "when I add BC and other areas of turtle island
+       we simply add more ecoregions" true rather than aspirational.
+
+    4. Commit the regenerated ``data/ecoregions_canada.geojson`` with a
+       schema bump per CLAUDE.md — the key set is the data validator's
+       vocabulary, and per-species ecoregion rows are keyed against it.
+
+    5. Re-run ``scripts/seed_ecoregion_ranges.py`` afterwards. Species
+       ranges are derived by intersecting occurrence records with THESE
+       polygons, so new boundaries mean new counts.
+
+Note that ``riparian`` and ``wet_meadow`` are deliberately NOT in this
+file and never will be. They are site-scale moisture niches, not regions
+— no polygon can say a species grows in wet ground — and they live in
+``src/ecoregion.MOISTURE_NICHES`` instead.
 
 This script intentionally fails fast if its optional deps aren't
 installed — they're not in the user-facing requirements.txt, and
@@ -61,6 +74,36 @@ OUTPUT_PATH  = PROJECT_ROOT / "data" / "ecoregions_canada.geojson"
 
 # Alberta bbox (rough envelope, leaves some buffer for boundary polygons).
 AB_BBOX = (-120.0, 49.0, -110.0, 60.0)   # (west, south, east, north)
+
+
+# CEC Level III ecoregion name → the app's canonical key. Names are the
+# standard CEC labels for the prairie provinces; confirm against the actual
+# shapefile you download, because column names have changed across CEC
+# releases. Several CEC regions may share one key (a deliberate merge).
+#
+# ADD A REGION HERE and it exists everywhere — that is the point.
+KEY_MAP = {
+    "Boreal Plain":                        "boreal_mixedwood",
+    "Aspen Parkland":                      "aspen_parkland",
+    "Western Cordillera":                  "subalpine_montane",
+    "Montane Cordillera":                  "subalpine_montane",
+    "Temperate Prairies":                  "mixedgrass_prairie",
+    "South Central Semi-Arid Prairies":    "mixedgrass_prairie",
+    "Moist Mixed Grassland":               "moist_mixedgrass",
+    "Western Interior Forested Mountains": "fescue_foothills",
+}
+
+# How each key is written for a person: (name, where it is). Name and place
+# stay APART — see the note in the feature builder below. A key with no entry
+# falls back to a title-cased version of itself and no place.
+DISPLAY = {
+    "aspen_parkland":     ("Aspen Parkland",           "central AB / SK"),
+    "mixedgrass_prairie": ("Mixedgrass Prairie",       "south AB / SK"),
+    "moist_mixedgrass":   ("Moist Mixed Grassland",    "Regina / Saskatoon"),
+    "fescue_foothills":   ("Fescue / Foothills",       "SW Alberta"),
+    "boreal_mixedwood":   ("Boreal Mixedwood / Plain", "north AB / SK"),
+    "subalpine_montane":  ("Subalpine / Montane",      "the mountains"),
+}
 
 
 def _require_dev_deps():
@@ -128,21 +171,33 @@ def regenerate(shapefile_path: Path, key_map: dict[str, str]) -> int:
                 by_key.setdefault(canonical, []).append(clipped)
 
     features = []
-    for key, polys in by_key.items():
+    for sort, (key, polys) in enumerate(by_key.items()):
         merged = unary_union(polys)
         merged = merged.simplify(0.01, preserve_topology=True)
+        name, where = DISPLAY.get(key, (key.replace("_", " ").title(), ""))
         features.append({
             "type": "Feature",
-            "properties": {"key": key, "label": key.replace("_", " ").title()},
+            # key/name/where/sort ARE the app's vocabulary (V2.38) — name and
+            # where are kept APART on purpose: packed into one label they
+            # elided mid-word in the filter dropdown ("Moist Mixed Gras...ina
+            # (Saskatoon)"), losing both the ecoregion and the geography.
+            "properties": {
+                "key": key, "name": name, "where": where, "sort": sort,
+                "label": f"{name} ({where})" if where else name,
+            },
             "geometry": mapping(merged),
         })
 
     out = {
         "type": "FeatureCollection",
-        "name": "Alberta ecoregions (CEC Level III)",
+        "name": "Ecoregions (CEC Level III)",
         "crs":  "WGS84",
         "comment": "Generated by scripts/prepare_ecoregions.py from the "
-                   "CEC Level III Ecoregions of North America shapefile.",
+                   "CEC Level III Ecoregions of North America shapefile. "
+                   "Each feature's key/name/where/sort ARE the app's "
+                   "geographic ecoregion vocabulary (V2.38) — src/ecoregion.py "
+                   "reads them, so adding a region means adding a polygon here "
+                   "and nothing else.",
         "features": features,
     }
     OUTPUT_PATH.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
@@ -161,20 +216,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.shapefile is None:
         print(__doc__)
         return 0
-    # Map CEC Level III names → canonical _AB_ECOREGION_CHOICES keys.
-    # Names below are the standard CEC Level III labels for Alberta;
-    # confirm against the actual shapefile you download — column names
-    # have changed across CEC releases.
-    key_map = {
-        "Boreal Plain":           "boreal_mixedwood",
-        "Aspen Parkland":         "aspen_parkland",
-        "Western Cordillera":     "subalpine_montane",
-        "Montane Cordillera":     "subalpine_montane",
-        "Temperate Prairies":     "mixedgrass_prairie",
-        "South Central Semi-Arid Prairies": "mixedgrass_prairie",
-        "Western Interior Forested Mountains": "fescue_foothills",
-    }
-    return regenerate(args.shapefile, key_map)
+    return regenerate(args.shapefile, KEY_MAP)
 
 
 if __name__ == "__main__":

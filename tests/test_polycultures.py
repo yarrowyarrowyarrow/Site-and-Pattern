@@ -393,7 +393,12 @@ class TestCommunityFacets(unittest.TestCase):
         polycultures.add_polyculture_member(pid, pid_plant, "herbaceous", 0, 0)
 
         index = polycultures.get_library_index()
-        for label in ("Boreal Mixedwood", "Subalpine / Montane"):
+        # Read the labels rather than restating them (V2.38). Spelling them out
+        # here is how this test came to assert "Boreal Mixedwood" while the
+        # plant filter's dropdown said "Boreal Mixedwood / Plain" — two names
+        # for one key, which is the bug the shared vocabulary removes.
+        for key in ("boreal_mixedwood", "subalpine_montane"):
+            label = polycultures.ECOREGION_LABELS[key]
             passing = polycultures.filter_library(index,
                                                   facets={"habitat": [label]})
             self.assertIn(pid, passing,

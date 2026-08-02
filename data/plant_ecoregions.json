@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "generated": "",
+  "source": "",
+  "min_records": 3,
+  "comment": "NOT DERIVED YET. Per-species ecoregion membership goes here, derived from georeferenced occurrence records by scripts/seed_ecoregion_ranges.py — see docs/plans/V2.38-ecoregion-runbook.md. This empty envelope ships so the format is documented and the first real run produces a reviewable diff rather than an unexplained new file; an empty `species` map means every species keeps the tags in plants.ecoregion. Keyed by scientific name because plant ids are not stable across a reseed. Geographic ecoregions only — riparian and wet_meadow are site-scale moisture niches and are not derivable from a coordinate. Do not hand-edit: a range written in by hand is an unsourced number in the one table whose entire purpose is that its numbers are sourced.",
+  "species": {}
+}

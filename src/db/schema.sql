@@ -296,6 +296,32 @@ CREATE TABLE IF NOT EXISTS plant_uses (
     PRIMARY KEY (plant_id, use_id)
 );
 
+-- Per-species ecoregion range WITH ITS EVIDENCE (schema v59, V2.38).
+--
+-- plants.ecoregion holds a comma-blob of tags that were generated
+-- heuristically and never sourced; a user caught it (Saskatoon Berry, a
+-- defining Aspen Parkland shrub, carried no parkland tag). This table is the
+-- sourced replacement: one row per species per geographic ecoregion, carrying
+-- the georeferenced record count behind the claim and a confidence band, so
+-- three records and three hundred are not the same statement (P9).
+--
+-- Derived by scripts/seed_ecoregion_ranges.py from GBIF and shipped as
+-- data/plant_ecoregions.json. GEOGRAPHIC ecoregions only — riparian and
+-- wet_meadow are site-scale moisture niches and no coordinate can assert them,
+-- so those tags stay in plants.ecoregion. Until the derivation has run for a
+-- species, this table has no rows for it and the read side falls back to the
+-- column, which is why the column is still here.
+CREATE TABLE IF NOT EXISTS plant_ecoregions (
+    plant_id    INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+    ecoregion   TEXT    NOT NULL,          -- a key from ecoregions_canada.geojson
+    occurrences INTEGER NOT NULL DEFAULT 0, -- georeferenced records in the region
+    confidence  TEXT    NOT NULL DEFAULT 'low',   -- high | medium | low
+    source      TEXT    NOT NULL DEFAULT '',      -- e.g. 'GBIF, retrieved 2026-08-02'
+    PRIMARY KEY (plant_id, ecoregion)
+);
+CREATE INDEX IF NOT EXISTS idx_plant_ecoregions_region
+    ON plant_ecoregions(ecoregion);
+
 -- Fauna registry + plant ↔ fauna relationship junction (schema v13).
 -- Records which native lepidoptera, birds, and bees each plant supports,
 -- and via which biological relationship (larval host, nectar, fruit, etc.).

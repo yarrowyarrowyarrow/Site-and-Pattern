@@ -12,7 +12,7 @@ seeded reference data every project draws from.
   [`recipes.py`](../src/db/recipes.py),
   [`structures.py`](../src/db/structures.py),
   [`fauna.py`](../src/db/fauna.py)
-- **Current schema version:** `52` (`src/db/plants.py:_SCHEMA_VERSION` — the
+- **Current schema version:** `59` (`src/db/plants.py:_SCHEMA_VERSION` — the
   authoritative value; this doc's narrative may lag, the code wins)
 - **Location:**
   - Linux: `~/.local/share/Site & Pattern/permadesign.db`
@@ -109,6 +109,44 @@ Canonical permaculture-use vocabulary (`uses.key`/`label`/`category`) and
 the plant↔use junction that replaced substring matching on the legacy
 `plants.permaculture_uses` blob for filter queries.
 
+### `plant_ecoregions` (schema v59, V2.38)
+
+Where a species is actually **recorded** growing, and how well attested each
+claim is: one row per species per geographic ecoregion, carrying the
+georeferenced record count (`occurrences`), a `confidence` band
+(`high`/`medium`/`low`) and the `source` of the run.
+
+It exists because `plants.ecoregion` did not have any of that. Those tags were
+generated heuristically and never sourced, and a user caught the consequence:
+Saskatoon Berry — a defining Aspen Parkland shrub — carried only
+`mixedgrass_prairie,moist_mixedgrass`. Across the catalogue,
+`moist_mixedgrass` sat on 246 of 434 plants and `aspen_parkland` on 136, in an
+Alberta-first app centred on Edmonton, with 39 native trees and shrubs carrying
+no parkland tag at all.
+
+Derived by `scripts/seed_ecoregion_ranges.py` from GBIF occurrence records
+(dev-time, run-once, commit the result) into `data/plant_ecoregions.json`,
+which the reseed loads. The file is keyed by **scientific name**, because plant
+ids are not stable across a reseed; ids are resolved at seed time.
+
+Two rules the table encodes:
+
+- **Geographic ecoregions only.** `riparian` and `wet_meadow` are site-scale
+  moisture niches — no coordinate can assert that a species grows in wet ground
+  — so those tags stay in `plants.ecoregion` and `_attach_ecoregions` carries
+  them through untouched.
+- **The column stays.** A species the derivation has not covered keeps its
+  existing tags, so the catalogue never gets *smaller* because a download has
+  not been run. This is the opposite of the v37 `permaculture_uses` move, which
+  dropped the column outright — there, the junction covered everything on day
+  one.
+
+Read-side synthesis (`_attach_ecoregions` in `src/db/plants.py`) overlays the
+derived rows onto each plant dict's `ecoregion` string, so every existing
+consumer improves without a change at the call site, and adds
+`ecoregion_evidence` — the rows with their counts — for anything that wants to
+show how good the claim is (P9).
+
 ### `fauna` / `plant_fauna` (schema v13)
 Native lepidoptera / bird / bee registry and the plant↔fauna junction,
 tagged by `relationship` (`larval_host, nectar, pollen, seed_food,
@@ -183,9 +221,15 @@ when the row count is low or the stored schema version is older than
 - `data/garden_plants.json`
 - `data/fauna_master.json`
 - `data/plant_fauna_master.json`
+- `data/plant_ecoregions.json` (schema v59) — ships as an **empty envelope**
+  until `scripts/seed_ecoregion_ranges.py` has been run, so the format is
+  documented and the first real run produces a reviewable diff rather than an
+  unexplained new file. An empty (or missing) `species` map means "nothing
+  derived yet" and every species keeps the tags in `plants.ecoregion`.
 
 The reseed wipes and repopulates: `plants`, `planting_calendar`,
-`companion_friends`, `companion_enemies`, `uses`, `plant_uses`, `fauna`,
+`companion_friends`, `companion_enemies`, `uses`, `plant_uses`,
+`plant_ecoregions`, `fauna`,
 `plant_fauna`, `bee_attributes`, `lepidoptera_attributes`, `nurseries`,
 plus the derived caches (`climate_cache`, `wind_cache`,
 `shade_zone_cache`). `polycultures` / `polyculture_members` are wiped

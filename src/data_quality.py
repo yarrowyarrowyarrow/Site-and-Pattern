@@ -14,10 +14,12 @@ Design notes:
   * Source of truth for the canonical permaculture_uses tags is
     ``src.db.plants._USE_DEFINITIONS`` — imported, not duplicated.
   * Source of truth for the canonical ecoregion keys is
-    ``_ECOREGION_CHOICES`` in ``src/plant_panel.py`` (renamed from the
-    province-scoped ``_AB_ECOREGION_CHOICES`` in V2.15); that module
-    imports PyQt6, so the constant is read out via ``ast.literal_eval``
-    on the source text rather than via a real import.
+    ``src.ecoregion`` — which itself reads them from the shipped polygon
+    file plus the moisture-niche constant (V2.38), so adding a region to
+    ``data/ecoregions_canada.geojson`` widens what this accepts and there
+    is nothing else to remember. It used to be a list in
+    ``src/plant_panel.py`` read out via ``ast.literal_eval`` on the source
+    text, because that module imports PyQt6.
   * The enum allowlists for plant_type / water_needs / etc. match the
     set of values that *currently* appear in the data, not an
     aspirational tight set. This validator's job is to freeze the
@@ -31,7 +33,6 @@ asserts ``validate_all()`` returns no errors against the live data.
 
 from __future__ import annotations
 
-import ast
 import json
 import re
 import sys
@@ -265,43 +266,29 @@ def _load_use_keys() -> set[str]:
 
 
 def _load_ecoregion_keys() -> set[str]:
-    """The canonical ecoregion keys.
+    """The canonical ecoregion keys — the vocabulary this validator accepts.
 
-    Read straight from ``src.ecoregion``, which is Qt-free — the vocabulary
-    moved there in V2.38. Before that it lived in plant_panel and this had to
-    AST-parse the file rather than import PyQt6 to read a list of strings; the
-    parser is kept below as a fallback so a checkout mid-move still validates.
+    Read from ``src.ecoregion``, which is Qt-free and reads them from the
+    shipped polygon file plus the moisture-niche constant (V2.38). Adding a
+    region to ``data/ecoregions_canada.geojson`` therefore widens what the
+    validator accepts, with nothing else to remember.
+
+    Before V2.38 the vocabulary lived in ``plant_panel`` and this had to
+    AST-parse that file rather than import PyQt6 to read a list of strings.
+    That parser is **gone**, and deliberately: it matched a list literal, and
+    ``_ECOREGION_CHOICES`` is now a comprehension, so it would have quietly
+    returned nothing — and an empty vocabulary makes this validator accept
+    every ecoregion token in the catalogue without complaint. A silent pass is
+    worse than a loud failure in a data gate.
     """
-    try:
-        from src.ecoregion import ecoregion_keys        # noqa: PLC0415
-        keys = set(ecoregion_keys())
-        if keys:
-            return keys
-    except ImportError:
-        pass
-    src = (PROJECT_ROOT / "src" / "plant_panel.py").read_text(encoding="utf-8")
-    tree = ast.parse(src)
-    for node in ast.walk(tree):
-        target_name: str | None = None
-        value_node = None
-        if (isinstance(node, ast.Assign)
-                and len(node.targets) == 1
-                and isinstance(node.targets[0], ast.Name)):
-            target_name = node.targets[0].id
-            value_node = node.value
-        elif (isinstance(node, ast.AnnAssign)
-                and isinstance(node.target, ast.Name)
-                and node.value is not None):
-            target_name = node.target.id
-            value_node = node.value
-        # Match the canonical list (renamed _ECOREGION_CHOICES in V2.15; the
-        # legacy _AB_ECOREGION_CHOICES name is kept as an alias). Require a list
-        # literal so the alias assignment (a bare Name) is skipped.
-        if (target_name in ("_ECOREGION_CHOICES", "_AB_ECOREGION_CHOICES")
-                and isinstance(value_node, ast.List)):
-            literal = ast.literal_eval(value_node)
-            return {key for _label, key in literal if key}
-    raise RuntimeError("_ECOREGION_CHOICES not found in plant_panel.py")
+    from src.ecoregion import ecoregion_keys            # noqa: PLC0415
+    keys = set(ecoregion_keys())
+    if not keys:
+        raise RuntimeError(
+            "No ecoregion vocabulary — data/ecoregions_canada.geojson is "
+            "missing or unreadable. Refusing to validate against an empty "
+            "key set, which would accept anything.")
+    return keys
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────

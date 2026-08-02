@@ -19,8 +19,16 @@ Use this skill when you:
 - need a value change to reach users who already have a DB;
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
-**Current facts (verify before quoting):** branch `V2.36`,
-`_SCHEMA_VERSION = 58` (in `src/db/plants.py`) — v58 added fauna morphology to
+**Current facts (verify before quoting):** branch `V2.38`,
+`_SCHEMA_VERSION = 59` (in `src/db/plants.py`) — v59 added the
+`plant_ecoregions` table: per-species ecoregion range **with the evidence
+behind it** (georeferenced record count, confidence band, source), because the
+tags in `plants.ecoregion` were generated heuristically and never sourced.
+Note the shape, since it is not the v37 `permaculture_uses` move: the column
+**stays**, because a species the GBIF derivation has not covered keeps its
+existing tags, and because `riparian`/`wet_meadow` are site-scale moisture
+niches no coordinate can assert;
+v58 added fauna morphology to
 `bee_attributes` + `lepidoptera_attributes` (band pattern, wingspan range, wing
 shape/pattern, flight style … plus a `morph_data_source`/`citation` pair), which
 took creature appearance out of the name-substring tables in

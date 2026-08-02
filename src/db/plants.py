@@ -223,7 +223,17 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # the per-tergite `band_pattern`; leps gain a wingspan RANGE (the fauna data's
 # first real measurement), three wing colours, shape, pattern, eyespots, resting
 # posture and flight_style. Both gain a morph_data_source/citation pair.
-_SCHEMA_VERSION = 58
+# v59 (V2.38): the `plant_ecoregions` table — per-species ecoregion range WITH
+# the evidence behind it. `plants.ecoregion` holds tags that were generated
+# heuristically and never sourced; a user caught it (Saskatoon Berry, a
+# defining Aspen Parkland shrub, tagged only mixedgrass + moist mixedgrass).
+# Each row carries the georeferenced record count and a confidence band, so
+# three records and three hundred stop being the same claim (P9). Derived by
+# scripts/seed_ecoregion_ranges.py from GBIF into data/plant_ecoregions.json.
+# The column stays: it is the fallback for species the derivation has not run
+# for, and the only home for riparian / wet_meadow, which are site-scale
+# moisture niches no coordinate can assert.
+_SCHEMA_VERSION = 59
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -550,6 +560,32 @@ def _migrate_to_v57(conn: sqlite3.Connection):
             conn.execute(f"ALTER TABLE plants ADD COLUMN {col} TEXT DEFAULT ''")
         except sqlite3.OperationalError:
             pass
+    conn.commit()
+
+
+def _migrate_to_v59(conn: sqlite3.Connection):
+    """The evidence behind a species' ecoregion range (V2.38).
+
+    Pure additive DDL — ``schema.sql`` creates ``plant_ecoregions`` with
+    ``IF NOT EXISTS`` on every ``init_db``, so this exists mainly to be the
+    documented home of the reasoning and to be explicit for a DB that upgrades
+    without a reseed. Nothing is migrated INTO it: the existing
+    ``plants.ecoregion`` tags are unsourced, and copying them here would launder
+    a guess into a row that looks derived, which is the exact failure this table
+    is meant to end (P9). The table stays empty until
+    ``scripts/seed_ecoregion_ranges.py`` has run and its output is seeded.
+    """
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS plant_ecoregions (
+            plant_id    INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+            ecoregion   TEXT    NOT NULL,
+            occurrences INTEGER NOT NULL DEFAULT 0,
+            confidence  TEXT    NOT NULL DEFAULT 'low',
+            source      TEXT    NOT NULL DEFAULT '',
+            PRIMARY KEY (plant_id, ecoregion)
+        )""")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_plant_ecoregions_region "
+                 "ON plant_ecoregions(ecoregion)")
     conn.commit()
 
 
@@ -959,6 +995,66 @@ def _seed_plant_photos(conn: sqlite3.Connection) -> int:
         "                       AND ph.url = p.image_url)")
     conn.commit()
     return len(rows) + (cur.rowcount or 0)
+
+
+_ECOREGION_RANGES_PATH = resource_path("data", "plant_ecoregions.json")
+
+
+def _seed_plant_ecoregions(conn: sqlite3.Connection) -> int:
+    """Populate ``plant_ecoregions`` from ``data/plant_ecoregions.json``.
+
+    Keyed by scientific name in the file (plant ids are not stable across a
+    reseed) and resolved to ids here, the same shape ``_seed_fauna`` uses for
+    its links. Returns the number of rows inserted.
+
+    A missing or empty file is not an error and never will be: the derivation
+    is a dev-time GBIF run (``scripts/seed_ecoregion_ranges.py``) that has not
+    necessarily happened for every species, and a species with no derived rows
+    keeps the tags in ``plants.ecoregion``. Failing here would take the whole
+    catalogue down over a file whose entire job is to be optional.
+    """
+    import json as _json                                 # noqa: PLC0415
+    try:
+        with open(_ECOREGION_RANGES_PATH, "r", encoding="utf-8") as f:
+            raw = _json.load(f)
+    except (FileNotFoundError, _json.JSONDecodeError, OSError):
+        return 0
+    if not isinstance(raw, dict):
+        return 0
+
+    from src.ecoregion_ranges import parse_document
+    from src.ecoregion import geographic_keys
+
+    ranges = parse_document(raw)
+    if not ranges:
+        return 0
+    source = str(raw.get("source") or "")
+    # A key that is not in the shipped polygon vocabulary would be invisible in
+    # every filter — drop it here rather than storing a row nothing can select.
+    valid = set(geographic_keys())
+    name_to_id = {
+        (row["scientific_name"] or "").strip(): row["id"]
+        for row in conn.execute(
+            "SELECT id, scientific_name FROM plants").fetchall()
+    }
+    rows = []
+    for name, entries in ranges.items():
+        plant_id = name_to_id.get(name)
+        if plant_id is None:
+            continue
+        for entry in entries:
+            if entry["ecoregion"] not in valid:
+                continue
+            rows.append((plant_id, entry["ecoregion"], entry["occurrences"],
+                         entry["confidence"], source))
+    if not rows:
+        return 0
+    conn.executemany(
+        "INSERT OR REPLACE INTO plant_ecoregions "
+        "(plant_id, ecoregion, occurrences, confidence, source) "
+        "VALUES (?, ?, ?, ?, ?)", rows)
+    conn.commit()
+    return len(rows)
 
 
 def _seed_fauna(conn: sqlite3.Connection) -> int:
@@ -1524,6 +1620,9 @@ def init_db() -> None:
         if current_version < 58:
             _migrate_to_v58(conn)
 
+        if current_version < 59:
+            _migrate_to_v59(conn)
+
         # Add parent_id to polycultures if missing
         try:
             conn.execute("ALTER TABLE polycultures ADD COLUMN parent_id INTEGER REFERENCES polycultures(id) ON DELETE SET NULL")
@@ -1559,6 +1658,7 @@ def init_db() -> None:
             conn.execute("DELETE FROM lepidoptera_attributes")   # child of fauna
             conn.execute("DELETE FROM plant_fauna")
             conn.execute("DELETE FROM plant_uses")
+            conn.execute("DELETE FROM plant_ecoregions")   # reseeded from JSON
             conn.execute("DELETE FROM fauna")
             conn.execute("DELETE FROM uses")
             conn.execute("DELETE FROM companion_friends")
@@ -1618,6 +1718,10 @@ def init_db() -> None:
             # Shipped photo sets (F70). Independent of plant ids — the
             # table is keyed by scientific_name on purpose.
             _seed_plant_photos(conn)
+            # Derived ecoregion ranges (schema v59) — depends on plants being
+            # seeded so scientific_name resolves to a plant id. Absent file =
+            # nothing seeded = the read side keeps using plants.ecoregion.
+            _seed_plant_ecoregions(conn)
             # Fauna registry + plant↔fauna links — depends on plants being
             # seeded first so we can resolve common_name → plant_id.
             _seed_fauna(conn)
@@ -1832,6 +1936,76 @@ def _attach_photos(plants: list[dict]) -> None:
         p["image_license"] = best["license"]
 
 
+def ecoregion_ranges_for_ids(plant_ids: list[int]) -> dict[int, list[dict]]:
+    """``{plant_id: [{ecoregion, occurrences, confidence, source}, …]}``.
+
+    The sourced half of a plant's range. Strongest evidence first, so a caller
+    showing one line shows the best-attested region.
+    """
+    if not plant_ids:
+        return {}
+    conn = get_connection()
+    try:
+        marks = ",".join("?" * len(plant_ids))
+        rows = conn.execute(
+            f"SELECT plant_id, ecoregion, occurrences, confidence, source "
+            f"  FROM plant_ecoregions WHERE plant_id IN ({marks}) "
+            f" ORDER BY occurrences DESC, ecoregion", list(plant_ids)).fetchall()
+    finally:
+        conn.close()
+    out: dict[int, list[dict]] = {}
+    for r in rows:
+        out.setdefault(r["plant_id"], []).append({
+            "ecoregion":   r["ecoregion"],
+            "occurrences": r["occurrences"],
+            "confidence":  r["confidence"],
+            "source":      r["source"],
+        })
+    return out
+
+
+def _attach_ecoregions(plants: list[dict]) -> None:
+    """Overlay derived ecoregion ranges onto each plant dict (schema v59).
+
+    The same read-side-synthesis shape ``_attach_permaculture_uses`` uses, with
+    one difference that matters: the junction does **not** replace the column
+    wholesale, it replaces the *geographic* half of it.
+
+    ``plants.ecoregion`` mixes two kinds of claim. The geographic tags were
+    generated heuristically and never sourced — those are what the GBIF
+    derivation supersedes. ``riparian`` and ``wet_meadow`` are site-scale
+    moisture niches that no coordinate can assert, so they are carried through
+    untouched from the column.
+
+    A species the derivation has not covered keeps its column value entirely,
+    so the catalogue never gets *smaller* because a download has not been run.
+    Each plant also gains ``ecoregion_evidence`` — the rows with their counts —
+    for anything that wants to show how good the claim is (P9).
+    """
+    ids = [p["id"] for p in plants if p.get("id") is not None]
+    if not ids:
+        return
+    try:
+        derived = ecoregion_ranges_for_ids(ids)
+    except sqlite3.Error:
+        return                      # pre-v59 DB mid-migration: keep the column
+    if not derived:
+        return
+    from src.ecoregion import is_moisture_niche
+    for p in plants:
+        rows = derived.get(p.get("id"))
+        p["ecoregion_evidence"] = rows or []
+        if not rows:
+            continue
+        existing = [t.strip() for t in (p.get("ecoregion") or "").split(",")
+                    if t.strip()]
+        niches = [t for t in existing if is_moisture_niche(t)]
+        geographic = [r["ecoregion"] for r in rows]
+        merged = geographic + [n for n in niches if n not in geographic]
+        p["ecoregion"] = ",".join(merged)
+        p["ab_ecoregion"] = p["ecoregion"]      # frozen agent-API alias (v42)
+
+
 def _attach_permaculture_uses(plants: list[dict]) -> None:
     """Populate each dict's derived ``permaculture_uses`` (comma-joined, sorted)
     from the plant_uses junction. The denormalized column was dropped in schema
@@ -1854,6 +2028,7 @@ def get_all_plants() -> list[dict]:
         ).fetchall()
         result = [_row_to_dict(r) for r in rows]
         _attach_permaculture_uses(result)
+        _attach_ecoregions(result)
         _attach_photos(result)
         return result
     finally:
@@ -2047,11 +2222,25 @@ def search_plants(
     # (legacy) or a list (V1.85). The ``ab_ecoregion`` parameter is the
     # pre-v42 name, kept for back-compat (frozen MCP contract); ``ecoregion`` is
     # the province-neutral name — either (or both) may be supplied.
+    #
+    # Since schema v59 the filter also reads the derived `plant_ecoregions`
+    # junction, and it MUST: the read side overlays derived ranges onto the
+    # column *after* the query, so a filter that looked only at the column would
+    # still hide the species the derivation just corrected. That is the reported
+    # bug — Saskatoon Berry, whose column says mixedgrass but whose occurrence
+    # records say parkland — surviving its own fix.
     ecoregions = _as_filter_list(ecoregion) + _as_filter_list(ab_ecoregion)
     if ecoregions:
-        sql += " AND (" + " OR ".join(
-            "(',' || COALESCE(ecoregion,'') || ',') LIKE ?" for _ in ecoregions) + ")"
+        marks = ",".join("?" * len(ecoregions))
+        clauses = ["(',' || COALESCE(ecoregion,'') || ',') LIKE ?"
+                   for _ in ecoregions]
+        clauses.append(
+            f"EXISTS (SELECT 1 FROM plant_ecoregions pe "
+            f"         WHERE pe.plant_id = plants.id "
+            f"           AND pe.ecoregion IN ({marks}))")
+        sql += " AND (" + " OR ".join(clauses) + ")"
         params += [f"%,{e},%" for e in ecoregions]
+        params += list(ecoregions)
 
     # native_province (v42): keep only plants native to the given province code
     # (e.g. "SK"). The province-aware generalization of the native_only flag,
@@ -2157,6 +2346,7 @@ def search_plants(
         rows = conn.execute(sql, params).fetchall()
         result = [_row_to_dict(r) for r in rows]
         _attach_permaculture_uses(result)
+        _attach_ecoregions(result)
         _attach_photos(result)
         result = _month_filter(result, "bloom_period", bloom_months)
         result = _month_filter(result, "fruit_period", fruit_months)
@@ -2206,6 +2396,7 @@ def get_companions(plant_id: int) -> dict[str, list[dict]]:
             ).fetchall()
             result = [_row_to_dict(r) for r in rows]
             _attach_permaculture_uses(result)
+            _attach_ecoregions(result)
             _attach_photos(result)
             return result
 

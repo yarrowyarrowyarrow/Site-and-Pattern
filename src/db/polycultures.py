@@ -129,19 +129,24 @@ _GROUP_LAYER_ORDER = [
     ("groundcover", "Groundcover"),
     ("root",        "Root layer"),
 ]
-# Keep in step with plant_panel._ECOREGION_CHOICES — a key missing here does not
-# fail, it silently reads "Generalist", which is how `moist_mixedgrass` (the most
-# common tag in the catalogue, on 246 plants) went unlabelled until V2.37.
-_GROUP_ECOREGION = {
-    "aspen_parkland":     "Aspen Parkland",
-    "mixedgrass_prairie": "Mixedgrass Prairie",
-    "moist_mixedgrass":   "Moist Mixed Grassland",
-    "fescue_foothills":   "Fescue / Foothills",
-    "boreal_mixedwood":   "Boreal Mixedwood",
-    "riparian":           "Riparian",
-    "wet_meadow":         "Wet Meadow / Marsh",
-    "subalpine_montane":  "Subalpine / Montane",
-}
+def _ecoregion_labels() -> dict:
+    """Ecoregion key → habitat-facet label, read from the vocabulary (V2.38).
+
+    This used to be a hand-kept copy that had to be remembered separately, and
+    a key missing from it did not fail — it silently read "Generalist", which
+    is how `moist_mixedgrass` (the most common tag in the catalogue, on 246
+    plants) went unlabelled until V2.37. Reading `src.ecoregion` means a region
+    added to the polygon file is labelled here for free, and the class of bug
+    is gone rather than fixed once.
+    """
+    try:
+        from src.ecoregion import ecoregions
+        return {key: name for key, name, _where in ecoregions()}
+    except Exception:      # noqa: BLE001 — a label table must never break a query
+        return {}
+
+
+_GROUP_ECOREGION = _ecoregion_labels()
 _GROUP_SUN = {
     "full_sun":      "Full Sun",
     "partial_shade": "Partial Shade",

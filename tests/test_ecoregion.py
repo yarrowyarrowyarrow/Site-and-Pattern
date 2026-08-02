@@ -309,3 +309,62 @@ class TestASiteCanBeInTwo(unittest.TestCase):
     def test_no_pin_no_payload(self):
         from src.property_data import fetch_ecoregion
         self.assertIsNone(fetch_ecoregion(49.28, -123.12))
+
+
+class TestOneVocabularyEverywhere(unittest.TestCase):
+    """Every list of ecoregions in the app must be the same list.
+
+    Before V2.38 there were four hand-kept copies — the plant filter, the data
+    validator, the community-library habitat labels, and the polygon file — and
+    a key missing from one of them did not fail. It went quiet: an ecoregion
+    with no label silently read "Generalist", which is how `moist_mixedgrass`,
+    the commonest tag in the catalogue at 246 plants, went unlabelled for two
+    minor versions.
+    """
+
+    def test_the_validator_accepts_exactly_the_vocabulary(self):
+        from src.data_quality import _load_ecoregion_keys
+        self.assertEqual(_load_ecoregion_keys(), set(_eco.ecoregion_keys()))
+
+    def test_the_validator_refuses_an_empty_vocabulary(self):
+        """A silent pass is worse than a loud failure in a data gate: an empty
+        key set makes every ecoregion token in the catalogue valid."""
+        import src.ecoregion as mod
+        from src.data_quality import _load_ecoregion_keys
+        original = mod.ecoregion_keys
+        mod.ecoregion_keys = lambda: []
+        try:
+            with self.assertRaises(RuntimeError):
+                _load_ecoregion_keys()
+        finally:
+            mod.ecoregion_keys = original
+
+    def test_the_community_habitat_labels_cover_the_vocabulary(self):
+        from src.db import polycultures
+        self.assertEqual(set(polycultures.ECOREGION_LABELS),
+                         set(_eco.ecoregion_keys()))
+        for key, name, _where in _eco.ecoregions():
+            self.assertEqual(polycultures.ECOREGION_LABELS[key], name)
+
+    def test_the_plant_filter_offers_the_vocabulary(self):
+        """AST-only — plant_panel imports PyQt6, and this must hold on a bare
+        container too."""
+        import ast
+        import pathlib
+        src = (pathlib.Path(__file__).resolve().parent.parent
+               / "src" / "plant_panel.py").read_text(encoding="utf-8")
+        tree = ast.parse(src)
+        imported = any(
+            isinstance(n, ast.ImportFrom)
+            and n.module == "src.ecoregion"
+            and any(a.name == "ECOREGIONS" for a in n.names)
+            for n in ast.walk(tree))
+        self.assertTrue(imported,
+                        "plant_panel no longer builds its choices from the "
+                        "shared vocabulary — that is a second list to keep")
+
+    def test_every_key_appears_in_the_habitat_facet_choices(self):
+        from src.db import polycultures
+        choices = polycultures.facet_filter_choices()["habitat"]
+        for _key, name, _where in _eco.ecoregions():
+            self.assertIn(name, choices)
