@@ -501,6 +501,36 @@ class TestSnapshotUndoExhaustive(unittest.TestCase):
         self.w._do_redo()
         self.assertIsNotNone(self.w._active_sun_state)
 
+    def test_sun_path_from_the_site_pin_round_trips_too(self):
+        """V2.38: 'Show sun path' draws on the property instead of demanding a
+        map click, so there are now two ways to an arc — and both have to be
+        undoable, or the easy one produces something Ctrl+Z cannot remove."""
+        self.w._clear_undo()
+        sc = self.w._project["properties"].setdefault("site_config", {})
+        sc["latitude"], sc["longitude"] = 53.5, -113.5
+        self.w._map_events._on_sun_path_requested(
+            {"date": "2026-06-21", "date_label": "Jun 21"})
+        self.assertIsNotNone(self.w._active_sun_state,
+                             "the arc did not draw without a map click")
+        self.assertEqual(self.w._active_sun_state[1:], (53.5, -113.5))
+        self._assert_snapshot_top()
+        self.w._do_undo()
+        self.assertIsNone(self.w._active_sun_state)
+        self.w._do_redo()
+        self.assertIsNotNone(self.w._active_sun_state)
+
+    def test_a_scrub_does_not_start_a_shade_run_of_its_own(self):
+        """The clock is shared with the shade map since V2.38. Dragging it to
+        move the sun must not compute — or record — a shade overlay nobody
+        asked for."""
+        self.w._clear_undo()
+        self.w._shade_overlay_active = False
+        before = len(self.w._undo_stack)
+        self.w._map_events._on_shade_requested(
+            {"when": (6, 21, 14, 0), "only_if_active": True})
+        self.assertFalse(getattr(self.w, "_shade_overlay_active", False))
+        self.assertEqual(len(self.w._undo_stack), before)
+
     def test_site_pin_round_trip(self):
         self.w._clear_undo()
 

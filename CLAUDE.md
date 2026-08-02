@@ -159,6 +159,26 @@ apt-get update && apt-get install -y --no-install-recommends libegl1
 The wheel alone is not enough (`ImportError: libEGL.so.1`), and the apt install
 404s without the `update` first. A skipped test proves nothing — check the skip
 count, not just the OK.
+
+**And that is still not everything (found V2.38).** Without `PyQt6-WebEngine`
+*every* test that drives a real `MainWindow` skips — 47 of them across
+`test_undo_redo.py` and `test_app_smoke.py`, including the whole undo/redo
+characterisation suite and the only tests that execute `app.py`'s signal
+wiring. They skip with a message that reads like an environment limitation
+(`No module named 'PyQt6.QtWebEngineWidgets'`) rather than a gap:
+
+```bash
+pip install PyQt6-WebEngine        # +47 tests actually run
+```
+
+With it installed the process **exits 139 (segfault) at teardown**, after the
+summary — `Release of profile requested but WebEnginePage still not deleted`.
+It fires even on a run where zero tests execute, so it is WebEngine shutdown,
+not test code. **Read the `Ran N tests … OK` line, not the exit code** — and do
+not confuse it with the V2.37 segfault, which was a real use-after-free
+(worker threads emitting into deleted widgets, fixed in `src/qt_safety.py`) and
+appeared *mid*-run.
+
 Each test module redirects the DB to a `tempfile.mkdtemp` directory so
 tests never touch the real user DB at `~/.local/share/Site & Pattern/`.
 

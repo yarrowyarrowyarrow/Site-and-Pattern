@@ -242,13 +242,10 @@ class SitePanel(QWidget):
     # One-time offline soil-pack download (Gridded SLC, V1.67).
     download_soil_requested = pyqtSignal()
 
-    # Shade overlay (V1.51): show/clear, live opacity, and a (month, day, hour)
-    # time selection for the time-of-day / season view.
-    shade_requested = pyqtSignal(dict)    # {"when": (month, day, hour) | None}
-    shade_cleared   = pyqtSignal()
-    shade_opacity   = pyqtSignal(float)   # 0..1, live slider
-    shade_zones_requested = pyqtSignal()  # classify planting zones → tag cache
-    shade_zones_visible_changed = pyqtSignal(bool)  # show/hide the zone grid
+    # The shade overlay's controls moved to Analysis -> Sun & Shade in V2.38
+    # (one date and one clock for the arc and the shadows both); its signals
+    # went with them and now live on AnalysisPanel. What stays here is the
+    # capture of what is already on the ground, below.
 
     # Import existing trees/buildings from OpenStreetMap (V1.51).
     osm_import_requested = pyqtSignal()
@@ -354,9 +351,7 @@ class SitePanel(QWidget):
 
         self._build_info_page(self._add_scroll_page(tabs, "Site Info"))
         self._build_slope_page(self._add_scroll_page(tabs, "Slope"))
-        # "&&" — a single "&" is a Qt mnemonic marker and vanishes from view.
-        self._build_shade_page(
-            self._add_scroll_page(tabs, "Features && Shade"))
+        self._build_features_page(self._add_scroll_page(tabs, "Features"))
         self._build_field_notes_page(self._add_scroll_page(tabs, "Field Notes"))
 
     def _add_scroll_page(self, tabs, title):
@@ -1085,14 +1080,16 @@ class SitePanel(QWidget):
 
         layout.addStretch()
 
-    def _build_shade_page(self, layout):
-        """Existing Features & Shade sub-tab, in workflow order (V2.13):
-        capture what's already on the site (import, then by hand) BEFORE the
-        shade map — shade is only as real as the casters feeding it. The
-        satellite-alignment nudge stays last (cosmetic)."""
+    def _build_features_page(self, layout):
+        """What is already on the site: import it, then add what the import
+        missed by hand. The satellite-alignment nudge stays last (cosmetic).
+
+        This was "Features && Shade" until V2.38, and it was two things under
+        one label — capturing existing trees and buildings is data entry, and
+        the shade they cast is analysis. The shade map now lives on
+        Analysis → Sun & Shade, next to the sun that casts it."""
         self._build_osm_section(layout)
         self._build_existing_features_section(layout)
-        self._build_shade_section(layout)
         self._build_imagery_align_section(layout)
         layout.addStretch()
 
@@ -1169,9 +1166,6 @@ class SitePanel(QWidget):
             self._lbl_label.setText(self._label)
         else:
             self._lbl_label.setText("(custom pin)")
-        # Re-clamp the shade time slider to this location's daylight window.
-        if hasattr(self, "_shade_season"):
-            self._on_shade_season_changed(self._shade_season.currentIndex())
         self._reset_data_rows()
         if fetch:
             self._start_fetch()
@@ -1639,23 +1633,12 @@ class SitePanel(QWidget):
         """Called from MainWindow with progress / queue / result info."""
         self._auto_status.setText(text)
 
-    # ── Shade overlay (V1.51) ──────────────────────────────────────────────
-
-    @staticmethod
-    def _nearest_key_date_index() -> int:
-        """Index into solar.KEY_DATES of the key date closest to today, by
-        circular day-of-year distance — so the shade view opens in the season
-        the user is actually standing in (V2.13)."""
-        from datetime import date
-        from src.solar import KEY_DATES
-        today = date.today().timetuple().tm_yday
-        best_i, best_d = 0, 400
-        for i, d in enumerate(KEY_DATES.values()):
-            doy = d.timetuple().tm_yday
-            dist = min(abs(doy - today), 365 - abs(doy - today))
-            if dist < best_d:
-                best_i, best_d = i, dist
-        return best_i
+    # ── The caster inventory ───────────────────────────────────────────────
+    # The shade *map* moved to Analysis → Sun & Shade in V2.38. This line
+    # stayed, because it belongs where the casters are entered: it answers
+    # "did my import land?" the moment you press the button, not one tab away.
+    # Analysis shows the same line from the same formatter, where it answers
+    # the other question — "will the shade I am about to draw be real?".
 
     def update_caster_summary(self, project_dict: dict):
         """Refresh the 'Casting shade: …' inventory line from the project's
@@ -1664,226 +1647,13 @@ class SitePanel(QWidget):
         lbl = getattr(self, "_caster_summary", None)
         if lbl is None:
             return
-        trees = buildings = 0
-        for f in (project_dict or {}).get("features") or []:
-            props = f.get("properties") or {}
-            et = props.get("element_type")
-            if et == "existing_tree":
-                trees += 1
-            elif et == "existing_building":
-                buildings += 1
-            elif (et == "canopy_footprint"
-                  or (et == "custom_shape" and props.get("cast_shade"))):
-                if props.get("caster_kind") == "tree":
-                    trees += 1
-                else:
-                    buildings += 1
-        if trees == 0 and buildings == 0:
-            lbl.setText("No existing features yet — import or draw them "
-                        "above so the shade is real.")
-            lbl.setStyleSheet("color: #ffcc80; font-size: 11px;")
-        else:
-            lbl.setText(
-                f"Casting shade: {buildings} building"
-                f"{'s' if buildings != 1 else ''} · {trees} tree"
-                f"{'s' if trees != 1 else ''} (+ your placed plants, "
-                "automatically).")
-            lbl.setStyleSheet("color: #a5d6a7; font-size: 11px;")
-
-    def _build_shade_section(self, parent_layout):
-        """Show-shade button + opacity, plus season & time-of-day selectors that
-        drive the time-aware shade overlay (src/shade.py + ShadeWorker)."""
-        from src.solar import KEY_DATES
-        box = QGroupBox("Shade map")
-        box.setToolTip("Cast shade from existing trees/buildings and the "
-                       "design's own canopy, at a chosen season and time of day.")
-        v = QVBoxLayout(box)
-        v.setContentsMargins(6, 6, 6, 6)
-        v.setSpacing(4)
-
-        # Caster inventory (V2.13): tells the user whether the shade below
-        # will be real BEFORE they click — refreshed by update_caster_summary.
-        self._caster_summary = QLabel(
-            "No existing features yet — import or draw them above so the "
-            "shade is real.")
-        self._caster_summary.setWordWrap(True)
-        self._caster_summary.setStyleSheet("color: #90a4ae; font-size: 11px;")
-        v.addWidget(self._caster_summary)
-
-        season_row = QHBoxLayout()
-        season_row.addWidget(QLabel("Season:"))
-        self._shade_season = QComboBox()
-        # data = (month, day). V1.58: the overlay always shows a crisp single
-        # instant (a real date + the time slider) so shadows track the sun and
-        # match each building's outline — no season-averaged "blob". Planting-zone
-        # classification still uses the season average internally (separate path).
-        for label, d in KEY_DATES.items():
-            self._shade_season.addItem(label, (d.month, d.day))
-        # Default to the key date nearest today (V2.13) — opening in July
-        # should show July-ish sun, not whatever happens to be listed first.
-        self._shade_season.setCurrentIndex(self._nearest_key_date_index())
-        self._shade_season.currentIndexChanged.connect(self._on_shade_season_changed)
-        season_row.addWidget(self._shade_season)
-        v.addLayout(season_row)
-
-        time_row = QHBoxLayout()
-        time_row.addWidget(QLabel("Time:"))
-        self._shade_hour = QSlider(Qt.Orientation.Horizontal)
-        # Minutes since midnight in 15-min steps, so shadows sweep smoothly
-        # rather than jumping by whole hours. 5 AM – 9 PM local solar by default.
-        self._shade_hour.setRange(5 * 60, 21 * 60)
-        self._shade_hour.setSingleStep(15)
-        self._shade_hour.setPageStep(60)
-        self._shade_hour.setValue(15 * 60)      # mid-afternoon: long, clearly
-                                                # directional shadows by default
-        self._shade_hour_lbl = QLabel("15:00")
-        self._shade_hour.valueChanged.connect(
-            lambda v: self._shade_hour_lbl.setText(f"{v // 60:02d}:{v % 60:02d}"))
-        # Scrub the slider to sweep shadows across the day. A short debounce
-        # coalesces rapid drags into one recompute, and only a real day (not
-        # "Typical") drives a live overlay — the averaged view has no time.
-        self._shade_scrub = QTimer(self)
-        self._shade_scrub.setSingleShot(True)
-        self._shade_scrub.setInterval(180)
-        self._shade_scrub.timeout.connect(self._emit_shade_for_scrub)
-        self._shade_hour.valueChanged.connect(self._on_shade_hour_scrubbed)
-        time_row.addWidget(self._shade_hour)
-        time_row.addWidget(self._shade_hour_lbl)
-        v.addLayout(time_row)
-
-        opa_row = QHBoxLayout()
-        opa_row.addWidget(QLabel("Opacity:"))
-        self._shade_opacity = QSlider(Qt.Orientation.Horizontal)
-        self._shade_opacity.setRange(0, 100)
-        self._shade_opacity.setValue(50)
-        self._shade_opacity.valueChanged.connect(
-            lambda val: self.shade_opacity.emit(val / 100.0))
-        opa_row.addWidget(self._shade_opacity)
-        v.addLayout(opa_row)
-
-        btn_row = QHBoxLayout()
-        btn_show = QPushButton("Show shade")
-        btn_show.setStyleSheet(_BTN_PRIMARY)
-        btn_show.clicked.connect(self._on_show_shade)
-        btn_row.addWidget(btn_show)
-        btn_clear = QPushButton("Clear")
-        btn_clear.setStyleSheet(_BTN_SECONDARY)
-        btn_clear.clicked.connect(self.shade_cleared.emit)
-        btn_row.addWidget(btn_clear)
-        v.addLayout(btn_row)
-
-        # Classify each planting cell as full sun / partial / full shade from
-        # the season-average grid and cache the tags (src/db/shade_zones.py) so
-        # plant matching can read them without recomputing.
-        btn_classify = QPushButton("Classify planting zones")
-        btn_classify.setStyleSheet(_BTN_SECONDARY)
-        btn_classify.setToolTip(
-            "Tag every spot full sun / partial shade / full shade from the "
-            "season-average shade, and cache it for plant matching.")
-        btn_classify.clicked.connect(self.shade_zones_requested.emit)
-        v.addWidget(btn_classify)
-
-        # Show-on-map toggle + colour legend for the classified zones.
-        zrow = QHBoxLayout()
-        self._zones_show_cb = QCheckBox("Show on map")
-        self._zones_show_cb.setChecked(True)
-        self._zones_show_cb.setToolTip(
-            "Show/hide the classified planting zones on the map.")
-        self._zones_show_cb.toggled.connect(self.shade_zones_visible_changed.emit)
-        zrow.addWidget(self._zones_show_cb)
-        legend = QLabel(
-            '<span style="color:#ffd54f">■</span> Full sun&nbsp;&nbsp;'
-            '<span style="color:#fb8c00">■</span> Partial&nbsp;&nbsp;'
-            '<span style="color:#5c6bc0">■</span> Full shade')
-        legend.setStyleSheet("font-size: 11px;")
-        zrow.addWidget(legend)
-        zrow.addStretch()
-        v.addLayout(zrow)
-
-        self._shade_zone_status = QLabel("")
-        self._shade_zone_status.setWordWrap(True)
-        self._shade_zone_status.setStyleSheet("color: #a5d6a7; font-size: 11px;")
-        v.addWidget(self._shade_zone_status)
-
-        # Leaf-off honesty note (V2.13): shown for leaf-off dates so the
-        # lighter shadows under tagged deciduous trees aren't read as a bug.
-        self._shade_leafoff_note = QLabel(
-            "🍂 Deciduous trees are shown leaf-off for this date — bare "
-            "branches cast ~30% shade. Trees marked without a type still "
-            "cast full shade.")
-        self._shade_leafoff_note.setWordWrap(True)
-        self._shade_leafoff_note.setStyleSheet(
-            "color: #90a4ae; font-size: 10px;")
-        self._shade_leafoff_note.setVisible(False)
-        v.addWidget(self._shade_leafoff_note)
-
-        parent_layout.addWidget(box)
-
-    def mark_zones_shown(self):
-        """Re-check the 'Show on map' box (without re-emitting) after a classify
-        run draws the zones, so the toggle reflects what's on the map."""
-        self._zones_show_cb.blockSignals(True)
-        self._zones_show_cb.setChecked(True)
-        self._zones_show_cb.blockSignals(False)
-
-    def set_shade_zone_status(self, text: str):
-        """Show a short result line under the Classify button."""
-        if hasattr(self, "_shade_zone_status"):
-            self._shade_zone_status.setText(text)
-
-    def _on_show_shade(self):
-        season = self._shade_season.currentData()    # (month, day) or None
-        when = None
-        if season is not None:
-            v = self._shade_hour.value()             # minutes since midnight
-            when = (season[0], season[1], v // 60, v % 60)
-            # Hand the keyboard to the Time slider (V2.13): ←/→ scrub the
-            # shadows across the day immediately after showing them (the
-            # live-scrub debounce recomputes the overlay per step).
-            self._shade_hour.setFocus(Qt.FocusReason.OtherFocusReason)
-        self.shade_requested.emit({"when": when})
-
-    def _on_shade_season_changed(self, _idx):
-        """Clamp the time slider to the chosen day's sunrise→sunset so the user
-        scrubs only through real daylight, and label the ends. Falls back to the
-        generic 5 AM–9 PM range until a site location is known."""
-        season = self._shade_season.currentData()
-        # Leaf-off note for dates when deciduous crowns are bare (Oct–Apr).
-        if hasattr(self, "_shade_leafoff_note"):
-            from src.shade import _LEAF_OFF_MONTHS
-            self._shade_leafoff_note.setVisible(
-                season is not None and season[0] in _LEAF_OFF_MONTHS)
-        if season is None or self._lat is None or self._lng is None:
-            self._shade_hour.setRange(5 * 60, 21 * 60)
-            return
-        try:
-            from datetime import date
-            from src.solar import sunrise_sunset
-            sr, ss = sunrise_sunset(self._lat, self._lng,
-                                    date(2025, season[0], season[1]))
-            lo = max(0, int(sr * 60))                  # floor sunrise (minutes)
-            hi = min(24 * 60 - 1, int(ss * 60) + 15)   # a touch past sunset
-            if hi <= lo:
-                lo, hi = 5 * 60, 21 * 60
-        except Exception:  # noqa: BLE001 — fall back to the generic window
-            lo, hi = 5 * 60, 21 * 60
-        cur = self._shade_hour.value()
-        self._shade_hour.setRange(lo, hi)
-        self._shade_hour.setValue(min(max(cur, lo), hi))
-
-    def _on_shade_hour_scrubbed(self, _h):
-        """Slider moved — debounce a live overlay recompute (real days only)."""
-        if self._shade_season.currentData() is None:
-            return                          # averaged view has no time-of-day
-        self._shade_scrub.start()           # (re)arm the debounce
-
-    def _emit_shade_for_scrub(self):
-        season = self._shade_season.currentData()
-        if season is None:
-            return
-        v = self._shade_hour.value()                 # minutes since midnight
-        self.shade_requested.emit(
-            {"when": (season[0], season[1], v // 60, v % 60)})
+        from src import sun_shade
+        buildings, trees = sun_shade.caster_counts(project_dict)
+        text, have = sun_shade.caster_summary(
+            buildings, trees, where="this tab")
+        lbl.setText(text)
+        lbl.setStyleSheet(
+            f"color: {'#a5d6a7' if have else '#ffcc80'}; font-size: 11px;")
 
     # ── Existing shade casters: mark/draw trees & buildings ────────────────
     # Relocated from the Structures panel (V1.59) so all shade casters — drawn,
@@ -1908,6 +1678,15 @@ class SitePanel(QWidget):
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
         vb.addWidget(hint)
+
+        # Running total of what will cast shade, refreshed by
+        # update_caster_summary — so an import that found nothing says so here,
+        # where you would go to fix it.
+        self._caster_summary = QLabel("")
+        self._caster_summary.setWordWrap(True)
+        self._caster_summary.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self.update_caster_summary(None)
+        vb.addWidget(self._caster_summary)
 
         dims = QHBoxLayout()
         dims.addWidget(QLabel("Height (m):"))
@@ -2038,15 +1817,16 @@ class SitePanel(QWidget):
     def _build_osm_section(self, parent_layout):
         box = QGroupBox("Existing features — import")
         box.setToolTip("Start here: pull what's already on and around the "
-                       "site from OpenStreetMap so the shade map below has "
-                       "real casters to work with. Anything missing can be "
-                       "drawn or marked by hand in the next section.")
+                       "site from OpenStreetMap so the shade map (Analysis → "
+                       "Sun & Shade) has real casters to work with. Anything "
+                       "missing can be drawn or marked by hand in the next "
+                       "section.")
         v = QVBoxLayout(box)
         v.setContentsMargins(6, 6, 6, 6)
         hint = QLabel("Captures what's already there using your drawn "
                       "property boundary (plus the neighbour margin below); "
                       "with no boundary it searches ≈60 m around the pin. "
-                      "The shade map below is only as real as these features.")
+                      "The shade map is only as real as these features.")
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #90a4ae; font-size: 11px;")
         v.addWidget(hint)

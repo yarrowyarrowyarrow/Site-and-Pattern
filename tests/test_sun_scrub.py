@@ -82,11 +82,19 @@ class TestSunScrubPanel(unittest.TestCase):
         panel._sun_time_slider.setValue(15 * 60)
         self.assertIn(15 * 60, seen)
 
-    def test_the_slider_is_dead_until_a_path_exists(self):
-        """There is no sun to move before an arc has been drawn, and an
-        enabled control that cannot do anything is the original bug."""
+    def test_the_clock_is_live_from_the_start(self):
+        """V2.38 reversed this deliberately.
+
+        Until the merge the slider was disabled until an arc existed, because
+        moving a sun that had not been drawn was meaningless. The clock now
+        belongs to the *tab*, not to the arc: it is also the time the shade map
+        is cast for, and the shade needs no arc. A scrub with nothing on the map
+        is a no-op at both receivers — ``setSunPathTime`` returns early without
+        a cached payload, and the shade request carries ``only_if_active`` — so
+        the control is honest rather than dead.
+        """
         panel = self._panel()
-        self.assertFalse(panel._sun_time_slider.isEnabled())
+        self.assertTrue(panel._sun_time_slider.isEnabled())
 
     def test_the_range_is_that_dates_real_daylight(self):
         """You cannot drag the sun to 3 a.m. in June, because it is not there."""

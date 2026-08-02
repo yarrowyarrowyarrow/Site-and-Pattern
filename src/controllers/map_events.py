@@ -1043,6 +1043,13 @@ class MapEventRouter:
         elevation grid. Falls back to the raster ShadeWorker without shapely."""
         from src.shade import ShadeWorker, _HAVE_SHAPELY
 
+        # V2.38: the clock is shared with the sun path, so a scrub arrives here
+        # whether or not shade is showing. "Only if active" means the drag
+        # sweeps an overlay you already asked for and never conjures one.
+        if (config or {}).get("only_if_active") and not getattr(
+                self._main, "_shade_overlay_active", False):
+            return
+
         sc = dict(self._main._project.get("properties", {})
                   .get("site_config", {}) or {})
         boundary = self._project_boundary_latlng()
@@ -1054,10 +1061,13 @@ class MapEventRouter:
         when = _when_from_config(config)    # (month, day, hour[, minute]) local
 
         # Remember the request so an outline/height edit can recompute the same
-        # view in place (see _refresh_shade_if_active).
-        self._main._last_shade_config = dict(config or {})
+        # view in place (see _refresh_shade_if_active). The transient scrub flag
+        # is not part of the view.
+        cfg = dict(config or {})
+        cfg.pop("only_if_active", None)
+        self._main._last_shade_config = cfg
         self._main._shade_opacity = (
-            self._main.site_panel._shade_opacity.value() / 100.0)
+            self._main.analysis_panel._shade_opacity.value() / 100.0)
         # Open the shade undo step now; the worker's ready callback commits it
         # (and only records when the overlay actually turns ON).
         self._main._persistence.begin_shade_undo()
@@ -1151,17 +1161,17 @@ class MapEventRouter:
                   .get("site_config", {}) or {})
         boundary = self._project_boundary_latlng()
         if boundary is None and sc.get("latitude") is None:
-            self._main.site_panel.set_shade_zone_status(
+            self._main.analysis_panel.set_shade_zone_status(
                 "Drop a property pin or draw a boundary first.")
             return
 
-        self._main.site_panel.set_shade_zone_status("Classifying planting zones…")
+        self._main.analysis_panel.set_shade_zone_status("Classifying planting zones…")
         self._run_worker(ShadeZoneWorker(self._main._project, boundary, sc),
                          self._on_shade_zones_ready, "shade_zone")
 
     def _on_shade_zones_ready(self, rows):
         if not rows:
-            self._main.site_panel.set_shade_zone_status(
+            self._main.analysis_panel.set_shade_zone_status(
                 "Couldn't classify — no terrain grid for this site yet.")
             return
         from src.db import shade_zones
@@ -1177,7 +1187,7 @@ class MapEventRouter:
         except Exception:  # noqa: BLE001 — feedback is best-effort
             mismatches = []
         counts = shade_zones.tag_counts(pk)
-        self._main.site_panel.set_shade_zone_status(
+        self._main.analysis_panel.set_shade_zone_status(
             shade_zones.format_classification_status(len(rows), counts, mismatches))
         # Mirror the mix into the Analysis tab's read-only breakdown.
         try:
@@ -1194,7 +1204,7 @@ class MapEventRouter:
             d_lng = self._grid_spacing([r["centroid_lng"] for r in rows]) or 0.00006
             if cells:
                 self._main.map_widget.draw_shade_zones(cells, d_lat, d_lng)
-                self._main.site_panel.mark_zones_shown()
+                self._main.analysis_panel.mark_zones_shown()
         except Exception:  # noqa: BLE001 — visualisation is best-effort
             pass
         self._main.statusBar().showMessage("Planting zones classified.", 3000)
@@ -1376,8 +1386,33 @@ class MapEventRouter:
 
     # ── Sun / contour / wind analysis-overlay request slots ─────────────────
 
+    @undoable("sun path")
     def _on_sun_path_requested(self, config: dict):
-        """A1: Enter anchor-placement mode; render after user clicks the map."""
+        """A1: draw the arc on the property, or enter anchor-placement mode.
+
+        Until V2.38 this *always* entered anchor mode: the arc would not appear
+        until you had also found and clicked the right bit of map. For a
+        feature whose answer is nearly always "the middle of my yard", that is
+        a toll gate rather than a control. The centre now defaults to the
+        boundary centroid (else the site pin), and picking a spot by hand is
+        the "Move…" button — still there, no longer compulsory.
+        """
+        from src import sun_shade
+
+        if not (config or {}).get("pick_anchor"):
+            sc = (self._main._project.get("properties", {})
+                  .get("site_config", {}) or {})
+            anchor = sun_shade.default_anchor(self._main._project, sc)
+            if anchor is not None:
+                self._main._render_sun_path(config, anchor[0], anchor[1])
+                return
+            # Nothing to centre on yet — say so rather than silently opening a
+            # click mode the user didn't ask for.
+            self._main.statusBar().showMessage(
+                "Drop a property pin or draw a boundary first — or use "
+                "‘Move…’ to click the centre yourself.", 5000)
+            return
+
         self._main._pending_sun_config = config
         self._main._pending_sun_anchor = None
         self._main.map_widget.enter_sun_anchor_mode()

@@ -164,7 +164,8 @@ class StructurePanel(QWidget):
         self._btn_place.clicked.connect(self._on_place_clicked)
         layout.addWidget(self._btn_place)
 
-        # Existing on-site trees/buildings moved to Site → Shade (V1.59), where
+        # Existing on-site trees/buildings moved to Site → Features (V1.59;
+        # the tab was 'Features && Shade' until the V2.38 sun/shade merge), where
         # they sit alongside the shade map and OSM import.
 
         self._populate_structures()

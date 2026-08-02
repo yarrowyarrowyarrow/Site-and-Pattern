@@ -129,7 +129,10 @@ Brand's shearing layers, Weaner's succession planting, Bridges' transition psych
 Yong's Umwelt research, Deutscher's linguistic relativity, Berger's visual culture theory, Norman's affordances, and pain science all demonstrate that what an observer notices depends on what they have been trained to notice. The application is fundamentally a perception tool: it should help users *see* ecological relationships they currently cannot — pollinator pathways, mycorrhizal connections, successional trajectories, and habitat value that are invisible to the untrained eye.
 
 > **Where this lives in the code:** the site-analysis overlays in `src/analysis_panel.py`
-> and `html/map/06-overlays.js` (sun path, wind shelter zones, shade), plus sector analysis,
+> and `html/map/06-overlays.js` (sun path, wind shelter zones, shade) — one **Sun & Shade**
+> surface since V2.38 (`src/sun_shade.py`), because the sun's arc and the shadow it throws
+> are one perception and were two tabs with two clocks; drag the clock and the sun moves
+> and the shade sweeps with it — plus sector analysis,
 > the seasonal view toggle (roadmap F16, shipped) that lets the eye read leaf-on vs.
 > leaf-off and bloom, the **site photo underlay** (`src/site_photo.py`, roadmap F24) that
 > puts the user's real yard under the design, and the **snow-catch microsite overlay**

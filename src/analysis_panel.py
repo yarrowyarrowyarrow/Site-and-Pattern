@@ -23,8 +23,16 @@ from PyQt6.QtWidgets import (
     QFormLayout, QSlider, QCheckBox,
     QGroupBox, QFrame, QTextEdit, QDial, QScrollArea,
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QThreadPool, QRunnable
+from PyQt6.QtCore import Qt, pyqtSignal, QThreadPool, QRunnable, QTimer
 from PyQt6.QtGui import QPixmap
+
+
+# Quiet companion to the orange primary on the Sun & Shade tab.
+_SUN_BTN_SECONDARY = (
+    "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
+    "border-radius: 4px; padding: 6px; }"
+    "QPushButton:hover { background: #455a64; }"
+)
 
 
 class AnalysisPanel(QWidget):
@@ -35,6 +43,14 @@ class AnalysisPanel(QWidget):
     sun_path_cleared = pyqtSignal()
     sun_time_changed = pyqtSignal(int)      # minutes since midnight (V2.37 scrub)
     sun_redraw_requested = pyqtSignal(dict)  # redraw at the existing anchor
+
+    # A1 (V2.38): the cast-shade half, moved here from SitePanel so one date
+    # and one clock drive the arc and the shadows together.
+    shade_requested = pyqtSignal(dict)    # {"when": (month, day, hour, minute)}
+    shade_cleared   = pyqtSignal()
+    shade_opacity   = pyqtSignal(float)   # 0..1, live slider
+    shade_zones_requested = pyqtSignal()  # classify planting zones → tag cache
+    shade_zones_visible_changed = pyqtSignal(bool)  # show/hide the zone grid
 
     # A4: Wind/windbreak
     wind_requested = pyqtSignal(dict)       # {direction, speed_label, show_shelter}
@@ -70,6 +86,10 @@ class AnalysisPanel(QWidget):
         self._last_habitat_result = None          # for the species gallery re-render
         self._gallery_warmed: set[str] = set()    # image urls already fetched once
         self._lawn_conversion: dict | None = None  # for the F10 counterfactual
+        # Sun & Shade: the site's location, so the clock can span this site's
+        # real daylight before anything has been drawn.
+        self._sun_lat: float | None = None
+        self._sun_lng: float | None = None
         self._build_ui()
 
     def _build_ui(self):
@@ -112,53 +132,140 @@ class AnalysisPanel(QWidget):
     # ═════════════════════════════════════════════════════════════════════════
 
     def _build_sun_tab(self):
+        """Sun & Shade — one date, one clock, both answers (V2.38).
+
+        This was two tabs. Analysis → Sun Path drew the arc from its own date
+        combo, after a button press and a map click. Site → Features & Shade
+        cast the shadows from a *different* date combo and a different clock,
+        one tab across. They were computing the same instant from the same
+        ``solar`` module and could not be made to agree without setting both.
+        Now the date and the time are asked once, and the answer is the sun
+        where it is and the shadow it throws.
+
+        The existing-features *import* stayed on the Site tab: entering what is
+        already on the ground is data capture, not analysis, and folding the
+        two together is what made "Features & Shade" two things under one
+        label.
+        """
+        page = QScrollArea()
+        page.setWidgetResizable(True)
+        page.setFrameShape(QFrame.Shape.NoFrame)
         tab = QWidget()
+        page.setWidget(tab)
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(8)
 
         info = QLabel(
-            "Show the sun's arc across the sky and shadow direction arrows "
-            "for the selected date. Helps place shade-sensitive crops."
+            "Where the light falls, and what stands in its way. Pick a date, "
+            "drag the clock: the sun moves along its arc and the shadows sweep "
+            "with it."
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #90a4ae; font-size: 11px;")
         layout.addWidget(info)
 
+        self._build_sun_when_group(layout)
+        self._build_sun_arc_group(layout)
+        self._build_shade_group(layout)
+        self._build_shade_zones_group(layout)
+        # Wired last, in one place: every one of these handlers reads controls
+        # from more than one group, so connecting inside a builder would make
+        # the tab's construction order load-bearing.
+        self._sun_date.currentIndexChanged.connect(self._on_sun_date_changed)
+        self._sun_time_slider.valueChanged.connect(self._on_sun_time_scrubbed)
+        self._sun_shadows.toggled.connect(self._on_sun_option_changed)
+        self._sun_shadow_length.toggled.connect(self._on_sun_option_changed)
+        # Bring the clock and the leaf-off note in line with the opening date
+        # without emitting a redraw for an arc nobody has drawn yet.
+        self._apply_date_to_controls()
+
+        # Results area
+        self._sun_info = QLabel("")
+        self._sun_info.setWordWrap(True)
+        self._sun_info.setStyleSheet("color: #ffcc80; font-size: 11px; padding: 4px;")
+        layout.addWidget(self._sun_info)
+
+        layout.addStretch()
+        self._tabs.addTab(page, "Sun && Shade")
+
+    def _build_sun_when_group(self, layout):
+        """The single date + single clock that drive both the arc and the shade."""
+        from src import sun_shade
+
+        box = QGroupBox("When")
+        box.setStyleSheet(self._GROUP_STYLE)
+        v = QVBoxLayout(box)
+        v.setContentsMargins(6, 6, 6, 6)
+        v.setSpacing(4)
+
         form = QFormLayout()
         form.setContentsMargins(0, 0, 0, 0)
 
         self._sun_date = QComboBox()
-        self._sun_date.addItems([
-            "Summer Solstice (Jun 21)",
-            "Winter Solstice (Dec 21)",
-            "Spring Equinox (Mar 20)",
-            "Fall Equinox (Sep 22)",
-            "Last Frost (~May 7)",
-            "First Frost (~Sep 23)",
-            "Today",
-        ])
-        self._sun_date.currentIndexChanged.connect(self._on_sun_date_changed)
+        for label, data in sun_shade.date_choices():
+            self._sun_date.addItem(label, data)
+        # Open in the season the user is standing in — the Site panel's shade
+        # combo already did this and the sun path did not, so the two disagreed
+        # from the first frame.
+        self._sun_date.setCurrentIndex(sun_shade.nearest_key_date_index())
         form.addRow("Date:", self._sun_date)
 
         # Time of day. This control existed before V2.37 as a three-position
         # morning/noon/evening slider that was connected to nothing and read by
         # nothing — a draggable control that did not do anything, which is worse
         # than not having one. It is now a real scrub in minutes, clamped to the
-        # selected date's actual daylight (set by set_sun_window once the path
-        # is drawn), and it moves the sun and its shadow along the arc.
+        # selected date's actual daylight, and it moves the sun, its shadow ray
+        # and the cast shade together.
         self._sun_time_slider = QSlider(Qt.Orientation.Horizontal)
-        self._sun_time_slider.setRange(0, 24 * 60 - 1)
+        self._sun_time_slider.setRange(*sun_shade.DEFAULT_WINDOW)
         self._sun_time_slider.setSingleStep(15)
         self._sun_time_slider.setPageStep(60)
-        self._sun_time_slider.setValue(12 * 60)
-        self._sun_time_slider.setEnabled(False)     # until a path is drawn
+        self._sun_time_slider.setValue(15 * 60)   # mid-afternoon: long, clearly
+                                                  # directional shadows to start
         self._sun_time_slider.setToolTip(
-            "Drag to move the sun along its arc and swing the shadow with it.\n"
-            "Range is that date's sunrise to sunset.")
-        self._sun_time_label = QLabel("Time of day")
-        self._sun_time_slider.valueChanged.connect(self._on_sun_time_scrubbed)
+            "Drag to move the sun along its arc and swing the shadows with it.\n"
+            "Range is that date's sunrise to sunset.\n\n"
+            "This is SUN time, not clock time: 12:00 is when the sun is "
+            "highest.\nIn Alberta that lands about 1½ hours before noon on a "
+            "summer clock\n(daylight saving plus the distance to the "
+            "time-zone meridian).")
+        self._sun_time_label = QLabel("Sun time  15:00")
         form.addRow(self._sun_time_label, self._sun_time_slider)
+        v.addLayout(form)
+
+        # Two update rates, deliberately. The sun marker is JS-only over a
+        # payload the map already holds, so it follows the drag at full rate.
+        # The shade recompute re-runs an elevation grid plus a full polygon
+        # pass on a worker thread, so it waits for the drag to settle.
+        self._shade_scrub = QTimer(self)
+        self._shade_scrub.setSingleShot(True)
+        self._shade_scrub.setInterval(180)
+        self._shade_scrub.timeout.connect(self._emit_shade_for_scrub)
+
+        # Leaf-off honesty note (V2.13): shown for leaf-off dates so the
+        # lighter shadows under tagged deciduous trees aren't read as a bug.
+        self._shade_leafoff_note = QLabel(
+            "🍂 Deciduous trees are shown leaf-off for this date — bare "
+            "branches cast ~30% shade. Trees marked without a type still "
+            "cast full shade.")
+        self._shade_leafoff_note.setWordWrap(True)
+        self._shade_leafoff_note.setStyleSheet("color: #90a4ae; font-size: 10px;")
+        self._shade_leafoff_note.setVisible(False)
+        v.addWidget(self._shade_leafoff_note)
+
+        layout.addWidget(box)
+
+    def _build_sun_arc_group(self, layout):
+        """The sun's arc across the sky, drawn on the map."""
+        box = QGroupBox("The sun's arc")
+        box.setStyleSheet(self._GROUP_STYLE)
+        v = QVBoxLayout(box)
+        v.setContentsMargins(6, 6, 6, 6)
+        v.setSpacing(4)
+
+        form = QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
 
         self._sun_shadows = QCheckBox("Show shadow direction arrows")
         self._sun_shadows.setChecked(True)
@@ -181,12 +288,18 @@ class AnalysisPanel(QWidget):
         arc_row.addWidget(self._sun_arc_radius)
         arc_row.addStretch()
         form.addRow(arc_row)
-
-        layout.addLayout(form)
+        v.addLayout(form)
 
         btn_row = QHBoxLayout()
-        btn_show = QPushButton("Place Sun Path…")
-        btn_show.setToolTip("Click this then click the map to place the sun path anchor")
+        # V2.38: this used to read "Place Sun Path…" and mean it — the arc
+        # would not draw until you had also found and clicked the right bit of
+        # map. The centre is now the boundary centroid (or the site pin) unless
+        # you say otherwise, so the common case costs one click instead of two
+        # plus aim.
+        btn_show = QPushButton("Show sun path")
+        btn_show.setToolTip(
+            "Draw the sun's arc centred on your property.\n"
+            "Use 'Move…' to centre it somewhere specific instead.")
         btn_show.setStyleSheet(
             "QPushButton { background: #e65100; color: #fff3e0; border: 1px solid #ff6d00; "
             "border-radius: 4px; padding: 6px; font-weight: bold; }"
@@ -195,40 +308,115 @@ class AnalysisPanel(QWidget):
         btn_show.clicked.connect(self._on_show_sun_path)
         btn_row.addWidget(btn_show)
 
+        btn_move = QPushButton("Move…")
+        btn_move.setToolTip(
+            "Click this, then click the map to centre the arc on a "
+            "particular bed or tree.")
+        btn_move.setStyleSheet(_SUN_BTN_SECONDARY)
+        btn_move.clicked.connect(self._on_move_sun_path)
+        btn_row.addWidget(btn_move)
+
         btn_clear = QPushButton("Clear")
-        btn_clear.setStyleSheet(
-            "QPushButton { background: #37474f; color: #b0bec5; border: 1px solid #546e7a; "
-            "border-radius: 4px; padding: 6px; }"
-            "QPushButton:hover { background: #455a64; }"
-        )
+        btn_clear.setStyleSheet(_SUN_BTN_SECONDARY)
         btn_clear.clicked.connect(self.sun_path_cleared.emit)
         btn_row.addWidget(btn_clear)
-        layout.addLayout(btn_row)
+        v.addLayout(btn_row)
 
-        # Results area
-        self._sun_info = QLabel("")
-        self._sun_info.setWordWrap(True)
-        self._sun_info.setStyleSheet("color: #ffcc80; font-size: 11px; padding: 4px;")
-        layout.addWidget(self._sun_info)
+        layout.addWidget(box)
 
-        layout.addStretch()
-        self._tabs.addTab(tab, "Sun Path")
+    def _build_shade_group(self, layout):
+        """The shade the site's trees and buildings actually cast, at that hour."""
+        box = QGroupBox("Cast shade")
+        box.setStyleSheet(self._GROUP_STYLE)
+        box.setToolTip("Cast shade from existing trees/buildings and the "
+                       "design's own canopy, at the date and time above.")
+        v = QVBoxLayout(box)
+        v.setContentsMargins(6, 6, 6, 6)
+        v.setSpacing(4)
+
+        # Caster inventory (V2.13): tells the user whether the shade below
+        # will be real BEFORE they click — refreshed by update_caster_summary.
+        self._caster_summary = QLabel("")
+        self._caster_summary.setWordWrap(True)
+        self._caster_summary.setStyleSheet("color: #90a4ae; font-size: 11px;")
+        self.update_caster_summary(None)
+        v.addWidget(self._caster_summary)
+
+        opa_row = QHBoxLayout()
+        opa_row.addWidget(QLabel("Opacity:"))
+        self._shade_opacity = QSlider(Qt.Orientation.Horizontal)
+        self._shade_opacity.setRange(0, 100)
+        self._shade_opacity.setValue(50)
+        self._shade_opacity.valueChanged.connect(
+            lambda val: self.shade_opacity.emit(val / 100.0))
+        opa_row.addWidget(self._shade_opacity)
+        v.addLayout(opa_row)
+
+        btn_row = QHBoxLayout()
+        btn_show = QPushButton("Show shade")
+        btn_show.setStyleSheet(
+            "QPushButton { background: #37474f; color: #eceff1; "
+            "border: 1px solid #607d8b; border-radius: 4px; padding: 6px; "
+            "font-weight: bold; } QPushButton:hover { background: #455a64; }")
+        btn_show.clicked.connect(self._on_show_shade)
+        btn_row.addWidget(btn_show)
+        btn_clear = QPushButton("Clear")
+        btn_clear.setStyleSheet(_SUN_BTN_SECONDARY)
+        btn_clear.clicked.connect(self.shade_cleared.emit)
+        btn_row.addWidget(btn_clear)
+        v.addLayout(btn_row)
+
+        layout.addWidget(box)
+
+    def _build_shade_zones_group(self, layout):
+        """Classify every planting spot full sun / partial / full shade."""
+        box = QGroupBox("Planting zones")
+        box.setStyleSheet(self._GROUP_STYLE)
+        v = QVBoxLayout(box)
+        v.setContentsMargins(6, 6, 6, 6)
+        v.setSpacing(4)
+
+        # Classify each planting cell from the season-average grid and cache
+        # the tags (src/db/shade_zones.py) so plant matching can read them
+        # without recomputing.
+        btn_classify = QPushButton("Classify planting zones")
+        btn_classify.setStyleSheet(_SUN_BTN_SECONDARY)
+        btn_classify.setToolTip(
+            "Tag every spot full sun / partial shade / full shade from the "
+            "season-average shade, and cache it for plant matching.")
+        btn_classify.clicked.connect(self.shade_zones_requested.emit)
+        v.addWidget(btn_classify)
+
+        zrow = QHBoxLayout()
+        self._zones_show_cb = QCheckBox("Show on map")
+        self._zones_show_cb.setChecked(True)
+        self._zones_show_cb.setToolTip(
+            "Show/hide the classified planting zones on the map.")
+        self._zones_show_cb.toggled.connect(self.shade_zones_visible_changed.emit)
+        zrow.addWidget(self._zones_show_cb)
+        legend = QLabel(
+            '<span style="color:#ffd54f">■</span> Full sun&nbsp;&nbsp;'
+            '<span style="color:#fb8c00">■</span> Partial&nbsp;&nbsp;'
+            '<span style="color:#5c6bc0">■</span> Full shade')
+        legend.setStyleSheet("font-size: 11px;")
+        zrow.addWidget(legend)
+        zrow.addStretch()
+        v.addLayout(zrow)
+
+        self._shade_zone_status = QLabel("")
+        self._shade_zone_status.setWordWrap(True)
+        self._shade_zone_status.setStyleSheet("color: #a5d6a7; font-size: 11px;")
+        v.addWidget(self._shade_zone_status)
+
+        layout.addWidget(box)
+
+    # ── Reading the two controls ─────────────────────────────────────────────
 
     def _sun_config(self) -> dict:
         """The current Sun Path settings. One builder, so "place it" and
         "redraw it where it already is" cannot drift apart."""
-        from src.solar import KEY_DATES
-        date_map = {
-            0: "Summer Solstice",
-            1: "Winter Solstice",
-            2: "Spring Equinox",
-            3: "Fall Equinox",
-            4: "Last Frost (~May 7)",
-            5: "First Frost (~Sep 23)",
-            6: "today",
-        }
-        date_key = date_map.get(self._sun_date.currentIndex(), "today")
-        d = date.today() if date_key == "today" else KEY_DATES.get(date_key, date.today())
+        from src import sun_shade
+        d = sun_shade.resolve_date(self._sun_date.currentData())
         return {
             "date": d.isoformat(),
             "date_label": self._sun_date.currentText(),
@@ -237,26 +425,52 @@ class AnalysisPanel(QWidget):
             "arc_radius": self._sun_arc_radius.value(),
         }
 
+    def _shade_when(self) -> tuple[int, int, int, int]:
+        """``(month, day, hour, minute)`` — the same instant the arc is drawn
+        for, read from the same two controls."""
+        from src import sun_shade
+        d = sun_shade.resolve_date(self._sun_date.currentData())
+        mins = self._sun_time_slider.value()
+        return (d.month, d.day, mins // 60, mins % 60)
+
     def _on_show_sun_path(self):
         self.sun_path_requested.emit(self._sun_config())
+        # Hand the keyboard to the clock so ←/→ sweep the day immediately.
+        self._sun_time_slider.setFocus(Qt.FocusReason.OtherFocusReason)
+
+    def _on_move_sun_path(self):
+        """Re-centre the arc by clicking the map (the old default)."""
+        cfg = dict(self._sun_config())
+        cfg["pick_anchor"] = True
+        self.sun_path_requested.emit(cfg)
+
+    def _on_show_shade(self):
+        self.shade_requested.emit({"when": self._shade_when()})
+        self._sun_time_slider.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def set_sun_info(self, text: str):
         self._sun_info.setText(text)
 
-    # ── Time-of-day scrub (V2.37) ────────────────────────────────────────────
+    # ── Time-of-day scrub (V2.37; drives the shade too since V2.38) ──────────
 
     def set_sun_window(self, sunrise_hour: float, sunset_hour: float):
         """Clamp the time slider to a date's real daylight, after a draw.
 
-        Mirrors what the Site panel's shade scrub already does: you cannot drag
-        the sun to 3 a.m. in June because there is no sun there, and a slider
-        that lets you ask an impossible question has to answer it with nothing.
+        You cannot drag the sun to 3 a.m. in June because there is no sun
+        there, and a slider that lets you ask an impossible question has to
+        answer it with nothing.
         """
         lo = int(max(0, min(23 * 60 + 59, round(sunrise_hour * 60))))
         hi = int(max(lo + 1, min(24 * 60 - 1, round(sunset_hour * 60))))
+        self._apply_time_window(lo, hi)
+
+    def _apply_time_window(self, lo: int, hi: int):
+        """Set the clock's range, keeping the current reading where it can be
+        kept — re-dating should not throw away the hour you were looking at."""
+        cur = self._sun_time_slider.value()
         blocked = self._sun_time_slider.blockSignals(True)
         self._sun_time_slider.setRange(lo, hi)
-        self._sun_time_slider.setValue(min(max(12 * 60, lo), hi))
+        self._sun_time_slider.setValue(max(lo, min(hi, cur)))
         self._sun_time_slider.blockSignals(blocked)
         self._sun_time_slider.setEnabled(True)
         self._update_sun_time_label()
@@ -264,26 +478,108 @@ class AnalysisPanel(QWidget):
         # live rather than waiting to be discovered.
         self.sun_time_changed.emit(self._sun_time_slider.value())
 
+    def set_site_location(self, lat, lng):
+        """Remember where the site is, so the clock can span its real daylight
+        before anything has been drawn.
+
+        Called from ``_mark_modified``, i.e. on every feature mutation, so it
+        returns early when nothing moved — re-clamping emits, and emitting
+        crosses into JS."""
+        if (lat, lng) == (self._sun_lat, self._sun_lng):
+            return
+        self._sun_lat, self._sun_lng = lat, lng
+        self._reclamp_time_to_date()
+
+    def _reclamp_time_to_date(self):
+        from src import sun_shade
+        d = sun_shade.resolve_date(self._sun_date.currentData())
+        lo, hi = sun_shade.daylight_window(
+            getattr(self, "_sun_lat", None), getattr(self, "_sun_lng", None), d)
+        self._apply_time_window(lo, hi)
+
     def _update_sun_time_label(self):
-        mins = self._sun_time_slider.value()
-        self._sun_time_label.setText(f"Time of day  {mins // 60:02d}:{mins % 60:02d}")
+        from src import sun_shade
+        # "Sun time", not "Time": solar.sunrise_sunset and solar.sun_position
+        # both work in local *solar* time — noon is when the sun is highest —
+        # and the shade worker consumes the same convention. Labelling it as
+        # clock time would be a quiet ~1½-hour lie on an Alberta summer day
+        # (P9: say what the model actually computes).
+        self._sun_time_label.setText(
+            f"Sun time  {sun_shade.clock(self._sun_time_slider.value())}")
 
     def _on_sun_time_scrubbed(self, minutes: int):
         self._update_sun_time_label()
-        # No debounce: the receiver only moves one marker in JS over a payload
-        # it already holds, so this is cheap enough to follow the drag. (The
-        # Site panel's shade scrub debounces because each frame there re-runs a
-        # full grid pass on a worker thread — a different cost entirely.)
+        # Immediate: the receiver only moves one marker in JS over a payload it
+        # already holds, so this follows the drag.
         self.sun_time_changed.emit(int(minutes))
+        # Debounced: the shade recompute is a worker-thread grid pass.
+        self._shade_scrub.start()
+
+    def _emit_shade_for_scrub(self):
+        """Fire the debounced shade recompute — but only if shade is on screen.
+
+        Merging the two controls means the clock now belongs to both features,
+        and a scrub meant for the arc must not conjure a shade overlay nobody
+        asked for. ``only_if_active`` asks the main window, which is the one
+        thing that knows: the flag lives there, survives undo/redo and project
+        load, and a copy of it here would be a second truth to keep in step.
+        """
+        self.shade_requested.emit(
+            {"when": self._shade_when(), "only_if_active": True})
+
+    def _on_sun_option_changed(self, _checked=False):
+        """An arrow/length toggle only matters to an arc already on the map."""
+        self.sun_redraw_requested.emit(self._sun_config())
+
+    def _apply_date_to_controls(self):
+        """Re-clamp the clock to the selected date and show/hide the leaf-off
+        note. No signals out — this is the part that is safe to run at build."""
+        from src import sun_shade
+        data = self._sun_date.currentData()
+        month = sun_shade.resolve_date(data).month if data is not None else None
+        self._shade_leafoff_note.setVisible(sun_shade.is_leaf_off(month))
+        self._reclamp_time_to_date()
 
     def _on_sun_date_changed(self, _index: int):
-        """Changing the date redraws at the anchor already placed.
+        """Changing the date re-clamps the clock, redraws the arc where it
+        already is, and re-casts the shade for the new day.
 
         It used to re-enter anchor-placement mode, so comparing the solstices —
         the single most obvious thing to do on this tab — meant picking a date,
         pressing a button and re-clicking the map, every time.
         """
+        self._apply_date_to_controls()
         self.sun_redraw_requested.emit(self._sun_config())
+        self._shade_scrub.start()
+
+    # ── The caster inventory, shown here and on the Site tab ────────────────
+
+    def update_caster_summary(self, project_dict: dict | None):
+        """Refresh the 'Casting shade: …' line from the project's existing
+        features. Same formatter as the Site tab's copy — that one answers
+        "did my import land?", this one answers "will this shade be real?"."""
+        lbl = getattr(self, "_caster_summary", None)
+        if lbl is None:
+            return
+        from src import sun_shade
+        buildings, trees = sun_shade.caster_counts(project_dict)
+        text, have = sun_shade.caster_summary(
+            buildings, trees, where="Site → Features")
+        lbl.setText(text)
+        lbl.setStyleSheet(
+            f"color: {'#a5d6a7' if have else '#ffcc80'}; font-size: 11px;")
+
+    def mark_zones_shown(self):
+        """Re-check the 'Show on map' box (without re-emitting) after a classify
+        run draws the zones, so the toggle reflects what's on the map."""
+        self._zones_show_cb.blockSignals(True)
+        self._zones_show_cb.setChecked(True)
+        self._zones_show_cb.blockSignals(False)
+
+    def set_shade_zone_status(self, text: str):
+        """Show a short result line under the Classify button."""
+        if hasattr(self, "_shade_zone_status"):
+            self._shade_zone_status.setText(text)
 
     # ═════════════════════════════════════════════════════════════════════════
     #  A4 — Wind / Windbreak
@@ -727,16 +1023,16 @@ class AnalysisPanel(QWidget):
         layout.addWidget(self._habitat_tips)
 
         # Shade-zone breakdown — read-only summary of the cached shade tags
-        # (Site tab → "Classify planting zones"). Shown here so the light mix is
-        # visible alongside habitat value without recomputing the shade grid.
+        # (Sun & Shade → "Classify planting zones"). Shown here so the light
+        # mix is visible alongside habitat value without recomputing the grid.
         shade_label = QLabel("Light / shade mix")
         shade_label.setStyleSheet(
             "color: #a5d6a7; font-size: 12px; font-weight: bold; padding: 4px 0 2px 0;")
         layout.addWidget(shade_label)
 
         self._shade_breakdown = QLabel(
-            "Run 'Classify planting zones' on the Site tab to see the\n"
-            "full-sun / partial-shade / full-shade mix.")
+            "Run 'Classify planting zones' on the Sun & Shade tab to see\n"
+            "the full-sun / partial-shade / full-shade mix.")
         self._shade_breakdown.setWordWrap(True)
         self._shade_breakdown.setStyleSheet(
             "color: #c8e6c9; font-size: 11px; padding: 6px; "
@@ -1325,8 +1621,8 @@ class AnalysisPanel(QWidget):
         total = sum((counts or {}).values())
         if not total:
             self._shade_breakdown.setText(
-                "Run 'Classify planting zones' on the Site tab to see the\n"
-                "full-sun / partial-shade / full-shade mix.")
+                "Run 'Classify planting zones' on the Sun & Shade tab to see\n"
+                "the full-sun / partial-shade / full-shade mix.")
             return
 
         def _pct(n):

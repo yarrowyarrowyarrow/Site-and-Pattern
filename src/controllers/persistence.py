@@ -69,11 +69,18 @@ class PersistenceController:
         self._main._modified = True
         if not self._main.windowTitle().endswith(' *'):
             self._main.setWindowTitle(self._main.windowTitle() + ' *')
-        # Shade-tab caster inventory (V2.13): every feature mutation lands
-        # here, so the "Casting shade: …" line stays live after imports,
-        # marks, draws, removals and undo. Cheap pure feature scan.
+        # Caster inventory (V2.13): every feature mutation lands here, so the
+        # "Casting shade: …" line stays live after imports, marks, draws,
+        # removals and undo. Cheap pure feature scan. Both surfaces show it
+        # (V2.38) — Site → Features, where the casters are entered, and
+        # Analysis → Sun & Shade, where they are about to be used.
         try:
             self._main.site_panel.update_caster_summary(self._main._project)
+            self._main.analysis_panel.update_caster_summary(self._main._project)
+            sc = (self._main._project.get("properties", {})
+                  .get("site_config", {}) or {})
+            self._main.analysis_panel.set_site_location(
+                sc.get("latitude"), sc.get("longitude"))
         except Exception:  # noqa: BLE001 — a status line must never block a save flag
             pass
         # Getting-started guidance (F44): the same reasoning — every feature

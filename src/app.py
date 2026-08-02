@@ -804,13 +804,16 @@ class MainWindow(QMainWindow):
         # Straight to the controller (MainWindow at its method ceiling).
         self.site_panel.download_soil_requested.connect(
             self._map_events._on_download_soil_requested)
-        # Shade overlay + OSM import (V1.51).
-        self.site_panel.shade_requested.connect(self._on_shade_requested)
-        self.site_panel.shade_cleared.connect(self._on_shade_cleared)
-        self.site_panel.shade_opacity.connect(self._on_shade_opacity)
-        self.site_panel.shade_zones_requested.connect(self._on_shade_zones_requested)
-        self.site_panel.shade_zones_visible_changed.connect(
+        # Shade overlay (V1.51) — on the Analysis panel since V2.38, sharing
+        # its date and clock with the sun path.
+        self.analysis_panel.shade_requested.connect(self._on_shade_requested)
+        self.analysis_panel.shade_cleared.connect(self._on_shade_cleared)
+        self.analysis_panel.shade_opacity.connect(self._on_shade_opacity)
+        self.analysis_panel.shade_zones_requested.connect(
+            self._on_shade_zones_requested)
+        self.analysis_panel.shade_zones_visible_changed.connect(
             self.map_widget.set_shade_zones_visible)
+        # OSM import (V1.51) — the casters stay on the Site tab.
         self.site_panel.osm_import_requested.connect(self._on_osm_import_requested)
         # Tree crowns from the satellite photo (V2.26) — wired straight to the
         # flow module via a lambda (MainWindow is at its method ceiling).
@@ -2022,10 +2025,14 @@ class MainWindow(QMainWindow):
 
     def _sync_planning_panel(self):
         """Push current placed plants and structures to planning + analysis panels."""
-        # Shade-tab caster inventory (V2.13) — cheap feature scan, and this
-        # sync already runs on every design mutation, project load, and after
-        # OSM imports/feature marks.
+        # Caster inventory (V2.13) — cheap feature scan, and this sync already
+        # runs on every design mutation, project load, and after OSM
+        # imports/feature marks. Shown on both surfaces since V2.38.
         self.site_panel.update_caster_summary(self._project)
+        self.analysis_panel.update_caster_summary(self._project)
+        sc = (self._project.get("properties", {}).get("site_config", {}) or {})
+        self.analysis_panel.set_site_location(sc.get("latitude"),
+                                              sc.get("longitude"))
         enriched = []
         for p in self._placed_plants:
             entry = dict(p)

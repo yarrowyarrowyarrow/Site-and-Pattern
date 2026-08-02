@@ -71,3 +71,35 @@ next round of feedback is likelier to be about *reach* than about capability.
   feature existed and did not work.
 - **Silent fallbacks hide missing data.** `moist_mixedgrass` reading
   "Generalist" was a lookup-table default doing exactly what it was told.
+
+---
+
+## 2026-08 — second round, from testing the first round
+
+The same tester went back through the app with V2.37 in hand and sent six more
+observations. The shape of this round is different and worth naming: **half of
+it is regression or bug, and one of the bugs is mine** — the auto-arm from
+item 5 above read the placement pattern at *selection* time, so a count typed
+afterwards was ignored. Shipping fixes creates its own feedback.
+
+The other half is a data problem the first round had only glimpsed. Round 1
+said ecoregions "are not inclusive"; the fix made the *filter* multi-valued,
+which was true and insufficient — the underlying per-species tags were
+generated heuristically and never sourced. Round 2 named a specific casualty.
+
+### Fixed in V2.38
+
+| # | What they said | Verdict | What it was |
+|---|---|---|---|
+| 17 | *"some plants are flying in the air rather than being on the ground lol."* | 🐞 | `terrainHeightAt` clamped the elevation grid's *indices* but not the interpolation *fractions*, so any point outside the fetched grid got a linear **extrapolation** instead of the nearest edge height: 2 m of fall over 100 m became 22 m of climb a kilometre out. One function; six callers fixed at once. |
+| 18 | *"I manually increased the number using the arrows from auto to 11. When I placed it it was only 3 plants instead of 11."* | 🐞 | **My regression, V2.37.** `PlacementControlsWidget` emitted a signal for the pattern *kind* and for nothing else — count, rows, columns, stagger, drift and fill were silent. Harmless while "Place on Map" was pressed after setup; fatal once selection armed the map early. Every parameter now re-arms, debounced. |
+| 19 | *"I want the full ecoregion name and below in smaller writing for the geographic area to be listed in brackets."* | 🕳 | The names were packed into one line and elided mid-word — "Moist Mixed Gras…ina (Saskatoon)" lost both the ecoregion *and* the place. Two-line items now, name first and whole. |
+| 20 | Sun and shade should be one thing — raised again after testing V2.37, which had only done half of round 1's item 11: *"mix this with the shade so you can see the sun casting the shadows across the day"* | 🕳 | The arc and the cast shade were two tabs with two date pickers and two clocks, computing the same instant from the same module. Merged into **Analysis → Sun & Shade**: one date, one clock, and the arc now centres on your property instead of demanding a map click first. |
+
+### Still open
+
+| # | What they said | Where it went |
+|---|---|---|
+| 21 | *"Saskatoon Berry shows up for mixed grassland and moist mixed grassland but fails to show up for aspen parkland which it is a chief plant of."* | The full data rebuild — see [`plans/V2.38-ecoregion-rebuild.md`](plans/V2.38-ecoregion-rebuild.md). Measured: `moist_mixedgrass` is on 246 plants and `aspen_parkland` on **136**, in an Alberta-first app centred on Edmonton, and 39 native trees and shrubs carry no parkland tag at all. |
+| 22 | *"I'd prefer it breakdown into the individual ecoregions it exists in so when I add BC and other areas of turtle island we simply add more ecoregions."* | Same rebuild. CEC Level III as the vocabulary, because it covers Canada, the US and Mexico — adding a region becomes adding polygons. |
+| — | Feedback should reach the author by email, not only the clipboard | Blocked on a form-relay access key. The send path is being built and tested against a stub so dropping the key in is the last step. |
