@@ -125,6 +125,20 @@ survive upgrades — user member `plant_id`s are re-pointed by name after
 the plants wipe (`_remap_user_polyculture_plants`), because plant ids
 are NOT stable across reseeds.
 
+## Save the plan (READ THIS BEFORE STARTING WORK)
+
+**Every increment leaves a plan behind**, in `docs/plans/`, named
+`V<major>.<minor>-<short-slug>.md` — version first, matching the branch
+convention above, so plans sort in release order and pair with the branch that
+carried them out. Write it before the work, amend it as investigation changes
+your mind, and commit it alongside the code.
+
+A plan records the *reasoning*: what was measured, what was decided and why,
+what was deliberately left alone, and what could not be verified. The commit log
+already says what changed. See [`docs/plans/README.md`](docs/plans/README.md)
+for the house style and the index of past plans — and **add a row to that index
+table** when you add a plan.
+
 ## Running tests
 
 ```bash
@@ -132,6 +146,19 @@ python -m unittest discover -s tests
 ```
 
 There is no `pytest` configuration; the suite uses stdlib `unittest`.
+
+**The suite needs PyQt6 *and* the Qt runtime libs**, or ~156 widget tests skip
+*silently* — which is how a `NameError` on every PDF export survived four minor
+versions behind a green suite. On a bare container:
+
+```bash
+pip install PyQt6
+apt-get update && apt-get install -y --no-install-recommends libegl1
+```
+
+The wheel alone is not enough (`ImportError: libEGL.so.1`), and the apt install
+404s without the `update` first. A skipped test proves nothing — check the skip
+count, not just the OK.
 Each test module redirects the DB to a `tempfile.mkdtemp` directory so
 tests never touch the real user DB at `~/.local/share/Site & Pattern/`.
 
