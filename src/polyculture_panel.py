@@ -1188,6 +1188,8 @@ class PolyculturePanel(QWidget):
         # MainWindow calls set_armed(False) when placement ends, so the chip
         # can never claim the map is listening when it isn't.
         self._armed = False
+        from src.placement_arming import rearm_timer
+        self._rearm_timer = rearm_timer(self, self._auto_arm)
         self._build_ui()
         self._refresh_polyculture_list()
 
@@ -1841,6 +1843,8 @@ class PolyculturePanel(QWidget):
             show_fill_spacing=False,
             title="Placement Mode",
         )
+        self.placement_widget.patternChanged.connect(
+            self._on_pattern_params_changed)
         self.placement_widget.patternKindChanged.connect(
             self._on_placement_kind_changed)
         parent_layout.addWidget(self.placement_widget)
@@ -2509,6 +2513,10 @@ class PolyculturePanel(QWidget):
     # in case external code or tests still import it.
 
     # ── Arming ────────────────────────────────────────────────────────────────
+
+    def _on_pattern_params_changed(self):
+        from src.placement_arming import request_rearm
+        request_rearm(self)
 
     def _auto_arm(self):
         """Re-arm the map with the selected community.

@@ -47,6 +47,39 @@ ARMED_TOOLTIP = ("The map is armed — click it to place.\n"
                  "Click here (or press Esc) to stop placing.")
 
 
+# How long to wait after a placement parameter moves before re-arming the map.
+# Every re-arm is a round trip to the map, and these are spinners and a slider:
+# holding an arrow emits per tick. Long enough to coalesce a drag, short enough
+# that letting go feels immediate.
+REARM_DELAY_MS = 150
+
+
+def rearm_timer(owner, on_timeout):
+    """A single-shot debounce timer for re-arming, owned by ``owner``.
+
+    Here rather than in each panel so both wait the same amount — two panels
+    arming the same map at different rates would be a difference the user can
+    feel and nobody chose.
+    """
+    from PyQt6.QtCore import QTimer          # noqa: PLC0415 — keep Qt lazy
+    timer = QTimer(owner)
+    timer.setSingleShot(True)
+    timer.setInterval(REARM_DELAY_MS)
+    timer.timeout.connect(on_timeout)
+    return timer
+
+
+def request_rearm(panel) -> None:
+    """A placement parameter moved: re-arm, once the user stops moving it.
+
+    Does nothing while the map is not armed — fiddling with the controls before
+    choosing a plant must not seize the map.
+    """
+    if not getattr(panel, "_armed", False):
+        return
+    panel._rearm_timer.start()
+
+
 def chip_text(what: str, kind: str = "") -> str:
     """"● Placing: Wild Bergamot · Row" — what is armed, and how it will land."""
     word = PATTERN_WORDS.get(kind, "")

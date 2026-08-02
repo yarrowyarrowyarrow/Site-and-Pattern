@@ -217,6 +217,9 @@ class PlantPanel(QWidget):
         # tool), so the chip can never claim the map is listening when it isn't.
         self._armed = False
 
+        from src.placement_arming import rearm_timer
+        self._rearm_timer = rearm_timer(self, self._auto_arm)
+
         # Debounce timer for local search
         self._search_timer = QTimer(self)
         self._search_timer.setSingleShot(True)
@@ -493,6 +496,7 @@ class PlantPanel(QWidget):
         from src.placement_controls import PlacementControlsWidget
         self._placement = PlacementControlsWidget(show_canopy_base=True)
         self._placement.patternKindChanged.connect(self._on_pattern_kind_changed)
+        self._placement.patternChanged.connect(self._on_pattern_params_changed)
         bot_layout.addWidget(self._placement)
         self._build_polyculture_controls(bot_layout)
 
@@ -681,6 +685,10 @@ class PlantPanel(QWidget):
         self._auto_arm()
 
     # ── Arming ────────────────────────────────────────────────────────────────
+
+    def _on_pattern_params_changed(self):
+        from src.placement_arming import request_rearm
+        request_rearm(self)
 
     def _auto_arm(self):
         """Re-arm the map with whatever is selected now.

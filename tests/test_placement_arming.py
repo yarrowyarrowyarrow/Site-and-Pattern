@@ -100,6 +100,87 @@ class TestPlantPanelArming(unittest.TestCase):
         self.assertEqual(armed[-1], "row",
                          "switching to Row left the map armed with the old pattern")
 
+    def test_setting_the_count_after_arming_reaches_the_map(self):
+        """The V2.38 regression report: "I manually increased the number using
+        the arrows from auto to 11. When I placed it it was only 3 plants."
+
+        Auto-arming reads the pattern at SELECTION time. Only the pattern KIND
+        announced itself, so a Count set afterwards never reached the map and it
+        placed the `auto` count derived from spacing instead.
+        """
+        panel = self._panel()
+        armed = []
+        panel.place_plant_requested.connect(
+            lambda pid, name, qty, pat: armed.append(pat))
+
+        panel._selected_plant = self._plants[0]
+        panel._placement.set_kind("row")
+        panel._auto_arm()
+        self.assertIsNone(armed[-1]["params"].get("count") or None)
+
+        panel._placement._row_count.setValue(11)
+        panel._rearm_timer.stop()          # fire the debounce now, not in 150 ms
+        panel._on_pattern_params_changed()
+        panel._rearm_timer.stop()
+        panel._auto_arm()
+
+        self.assertEqual(armed[-1]["params"].get("count"), 11,
+                         "the map is still armed with the old count")
+
+    def test_every_placement_parameter_announces_itself(self):
+        """The root cause was one un-emitted signal, so the guard is that no
+        control feeding current_pattern() stays silent. A new spinner added
+        without a connection fails here rather than in someone's garden."""
+        panel = self._panel()
+        controls = panel._placement
+        watched = [
+            (controls._row_count, 7), (controls._grid_rows, 4),
+            (controls._grid_cols, 3), (controls._circle_count, 9),
+            (controls._fill_spacing, 2.5), (controls._overlap_slider, 20),
+        ]
+        for control, value in watched:
+            with self.subTest(control=control.objectName() or type(control).__name__):
+                seen = []
+                controls.patternChanged.connect(lambda: seen.append(1))
+                control.setValue(value)
+                self.assertTrue(seen, f"{control} changed without announcing it")
+                controls.patternChanged.disconnect()
+
+        for box in (controls._row_drift, controls._grid_stagger,
+                    controls._circle_fill, controls._fill_matrix,
+                    controls._canopy_base_checkbox):
+            with self.subTest(box=box.text()):
+                seen = []
+                controls.patternChanged.connect(lambda: seen.append(1))
+                box.toggle()
+                self.assertTrue(seen, f"{box.text()!r} toggled silently")
+                controls.patternChanged.disconnect()
+
+    def test_parameter_changes_are_debounced(self):
+        """Each re-arm is a round trip to the map; holding a spinner arrow
+        emits per tick. Without the delay that is the lag the tester felt."""
+        panel = self._panel()
+        panel._selected_plant = self._plants[0]
+        panel._auto_arm()
+        armed = []
+        panel.place_plant_requested.connect(lambda *a: armed.append(a))
+
+        for n in range(2, 12):             # holding the up-arrow
+            panel._placement._row_count.setValue(n)
+
+        self.assertEqual(armed, [], "re-armed mid-drag instead of waiting")
+        self.assertTrue(panel._rearm_timer.isActive())
+
+    def test_a_parameter_change_while_disarmed_does_not_arm(self):
+        """Fiddling with the controls before choosing a plant must not seize
+        the map."""
+        panel = self._panel()
+        armed = []
+        panel.place_plant_requested.connect(lambda *a: armed.append(a))
+        panel._placement._row_count.setValue(5)
+        self.assertEqual(armed, [])
+        self.assertFalse(panel._rearm_timer.isActive())
+
     def test_fill_area_still_needs_an_explicit_press(self):
         """Fill Area enters polygon-draw mode immediately rather than arming a
         click, so auto-arming it would hijack the map during list navigation."""
