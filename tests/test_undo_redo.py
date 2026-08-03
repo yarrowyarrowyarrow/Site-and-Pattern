@@ -49,6 +49,12 @@ def _make_window():
 
 try:
     _APP, _WIN_PROBE = _make_window()
+    # The one teardown here that does NOT go through close(), so closeEvent's
+    # thread join never runs for it. A QThread destroyed while still running
+    # aborts the process, and this probe is built at import time — before any
+    # test could report what happened.
+    from src.qt_safety import stop_threads
+    stop_threads(_WIN_PROBE)
     _WIN_PROBE.deleteLater()
     _HAVE_WINDOW = True
     _SKIP_REASON = ""
