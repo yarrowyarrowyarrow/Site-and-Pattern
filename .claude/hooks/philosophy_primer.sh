@@ -33,7 +33,7 @@ else
   PY=""
 fi
 if [ -n "$PY" ]; then
-  if ( cd "$ROOT" && "$PY" -m unittest discover -s tests -p test_philosophy.py ) >/dev/null 2>&1; then
+  if ( cd "$ROOT" && "$PY" -m unittest discover -s tests -t . -p test_philosophy.py ) >/dev/null 2>&1; then
     echo "[philosophy] weave intact — tests/test_philosophy passes."
   else
     echo "[philosophy] WARNING: tests/test_philosophy is failing — the doc<->code weave has drifted; reconcile docs/DESIGN_PHILOSOPHY.md and the P# anchors before relying on them."

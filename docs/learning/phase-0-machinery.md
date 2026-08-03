@@ -86,7 +86,7 @@ fear* — every experiment in this curriculum ends with "run the tests."
 test module on its own.
 
 **Steps:**
-1. From the repo folder run: `python -m unittest discover -s tests`
+1. From the repo folder run: `python -m unittest discover -s tests -t .`
    It takes ~10 minutes. Let it run; watch the dots and letters stream by
    (`.` = pass, `s` = skipped, `F` = failure, `E` = error).
 2. Read the final three lines. You should see something like

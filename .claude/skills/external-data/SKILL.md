@@ -232,7 +232,7 @@ python -m unittest tests.test_wind tests.test_climate_cache tests.test_image_cac
     tests.test_ssl_bootstrap tests.test_osm_features tests.test_hrdem -v
 
 # Full suite before done (stdlib unittest only — no pytest):
-python -m unittest discover -s tests
+python -m unittest discover -s tests -t .
 ```
 
 The `unittest` command above was run in this session and passes (`OK`, one

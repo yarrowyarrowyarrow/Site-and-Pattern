@@ -113,7 +113,7 @@ this phase depends on it.
    `INSTALL.md` / `docs/BUILD.md`). Place a plant. Draw a boundary.
 2. Run the whole test suite and watch it pass:
    ```bash
-   python -m unittest discover -s tests
+   python -m unittest discover -s tests -t .
    ```
    That command is your seatbelt for the entire journey. Everything you ever
    change gets checked by it.

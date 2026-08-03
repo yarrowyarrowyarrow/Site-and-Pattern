@@ -287,7 +287,7 @@ From `CLAUDE.md` — follow exactly so existing installs pick up changes:
    `_seed_fauna` pattern.
 5. Add tests under `tests/` using the temp-DB pattern from
    `test_polycultures.py` / `test_uses_junction.py`.
-6. Run `python -m unittest discover -s tests`.
+6. Run `python -m unittest discover -s tests -t .`.
 
 Forgetting step 2 means existing installs silently keep the old schema —
 no new tables, no new rows.
