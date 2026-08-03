@@ -154,6 +154,17 @@ guard lives. Run it bare and the guard silently does not install, so the tests
 go back to reaching the internet. `tests/test_ecoregion_ranges.py` fails loudly
 with the right command when that happens.
 
+**`rasterio` and `pyproj` unlock 42 more (found V2.38).** Without them the
+raster paths — HRDEM elevation sampling, the offline soil pack — skip. That is
+how `hrdem._rasterio_sampler` shipped unable to open a *local* GeoTIFF: it
+prefixed GDAL's `/vsicurl/` HTTP reader onto file paths, so its test failed on
+every machine with rasterio and skipped, therefore passed, on every machine
+without.
+
+```bash
+pip install rasterio pyproj    # +42 tests actually run
+```
+
 **The suite is offline.** A measured run made **771 live requests** — 465 to
 `api.open-meteo.com` from the design generator fetching a real elevation grid,
 306 to iNaturalist from the photo warmer — and *nothing needed any of them*:

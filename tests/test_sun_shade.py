@@ -529,3 +529,63 @@ class TestTheWelcomeTimerSurvivesADeletedWindow(unittest.TestCase):
         sip.delete(w)
         _welcome_if_alive(w)          # must simply return
         _welcome_if_alive(None)
+
+
+class TestWorkersAreJoinedOnClose(unittest.TestCase):
+    """A QThread destroyed while still running is qFatal() — a process abort.
+
+    The window starts workers in ten places (terrain fetch, region download,
+    shade, shade zones, generation, soil, buildings, wind, tree detection) and
+    until V2.38 stopped none of them on close, so quitting mid-fetch aborted
+    on the way out. It surfaced as a test suite dying after its final test with
+    "QThread: Destroyed while thread '' is still running" — same event, seen
+    from the other side.
+    """
+
+    def test_close_event_joins_them(self):
+        src = (_SRC / "app.py").read_text(encoding="utf-8")
+        tree = ast.parse(src)
+        fn = next(n for n in ast.walk(tree)
+                  if isinstance(n, ast.FunctionDef) and n.name == "closeEvent")
+        self.assertIn("stop_threads", ast.dump(fn),
+                      "closeEvent no longer joins its workers — quitting "
+                      "mid-fetch will abort instead of exiting")
+
+    def test_it_never_terminates_a_thread(self):
+        """Killing a worker mid-statement can leave a SQLite write half
+        applied. Corrupting the catalogue to make an exit tidy is a bad
+        trade."""
+        src = (_SRC / "qt_safety.py").read_text(encoding="utf-8")
+        tree = ast.parse(src)
+        fn = next(n for n in ast.walk(tree)
+                  if isinstance(n, ast.FunctionDef) and n.name == "stop_threads")
+        for node in ast.walk(fn):
+            if (isinstance(node, ast.Call)
+                    and isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "terminate"):
+                self.fail("stop_threads calls terminate()")
+
+    @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
+    def test_a_running_worker_is_waited_for(self):
+        from PyQt6.QtCore import QThread
+        from PyQt6.QtWidgets import QWidget
+        _app = QApplication.instance() or QApplication([])
+        from src.qt_safety import stop_threads
+
+        owner = QWidget()
+        thread = QThread(owner)
+        thread.start()
+        self.assertTrue(thread.isRunning())
+        self.assertEqual(stop_threads(owner, timeout_ms=5000), [])
+        self.assertFalse(thread.isRunning(), "the worker was not joined")
+
+    @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
+    def test_a_dead_owner_is_a_no_op(self):
+        from PyQt6.QtWidgets import QWidget
+        import PyQt6.sip as sip
+        _app = QApplication.instance() or QApplication([])
+        from src.qt_safety import stop_threads
+        w = QWidget()
+        sip.delete(w)
+        self.assertEqual(stop_threads(w), [])
+        self.assertEqual(stop_threads(None), [])

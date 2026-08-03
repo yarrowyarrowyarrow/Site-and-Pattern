@@ -476,9 +476,14 @@ class TestSeedingIntoTheCatalogue(unittest.TestCase):
 
 
 class TestTheShippedEnvelope(unittest.TestCase):
-    """The file ships empty until the GBIF run happens. That is a state worth
-    guarding: an empty envelope is "not derived yet", and it must not quietly
-    become a place someone hand-writes ranges into."""
+    """The shipped file, in whichever state it is in.
+
+    It ships empty until the GBIF run happens, and populated afterwards. These
+    have to hold for BOTH — the first version asserted the file was empty,
+    which broke the moment the derivation actually ran. A test that only passes
+    while a feature is unfinished is worse than no test: it fails as a reward
+    for doing the work.
+    """
 
     def _shipped(self):
         import pathlib
@@ -495,7 +500,29 @@ class TestTheShippedEnvelope(unittest.TestCase):
         self.assertIsInstance(doc["species"], dict)
 
     def test_an_empty_envelope_parses_to_nothing_rather_than_failing(self):
-        self.assertEqual(R.parse_document(self._shipped()), {})
+        """The 'not derived yet' state must be a no-op, not a crash — a missing
+        or empty file means every species keeps the tags it already had."""
+        self.assertEqual(R.parse_document({"version": 1, "species": {}}), {})
+        self.assertEqual(R.parse_document({}), {})
+
+    def test_the_shipped_file_parses_to_whatever_it_holds(self):
+        parsed = R.parse_document(self._shipped())
+        self.assertEqual(set(parsed), set(self._shipped()["species"]))
+        for name, rows in parsed.items():
+            self.assertTrue(rows, f"{name} has an empty row list")
+            for row in rows:
+                self.assertIn(row["confidence"], R.CONFIDENCE_ORDER)
+                self.assertGreaterEqual(row["occurrences"], 0)
+
+    def test_every_derived_key_is_a_real_geographic_ecoregion(self):
+        """A key outside the polygon vocabulary would be a row no filter can
+        select — and riparian/wet_meadow must never appear, since no coordinate
+        can assert wet ground."""
+        from src.ecoregion import geographic_keys
+        valid = set(geographic_keys())
+        for name, rows in R.parse_document(self._shipped()).items():
+            for row in rows:
+                self.assertIn(row["ecoregion"], valid, name)
 
     def test_a_populated_file_must_carry_its_provenance(self):
         """The moment it has species in it, it has to say where they came from
@@ -659,3 +686,63 @@ class TestTheSuiteStaysOffline(unittest.TestCase):
         ever sees."""
         from src.http_utils import http_get_json
         self.assertIsNone(http_get_json("https://api.gbif.org/v1/occurrence/search"))
+
+
+class TestTheFilterAgreesWithTheCard(unittest.TestCase):
+    """A plant returned by the parkland filter must say parkland on its card.
+
+    The first version of the derived-range filter ORed the junction with the
+    column, while the read side lets the junction SUPERSEDE the column. So a
+    species whose stale tags said parkland but whose occurrence records say
+    otherwise came back from the parkland filter showing a range that did not
+    include parkland. Reported as a test failure the moment the real GBIF data
+    landed, which is the only time it could have shown up.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        # Against the REAL shipped ranges, not a fixture: the disagreement this
+        # class exists for only appears once actual derived data is present.
+        # (TestSeedingIntoTheCatalogue tears the DB down after itself, and runs
+        # first alphabetically, so this rebuilds one.)
+        if os.path.exists(_plants_mod._DB_PATH):
+            os.remove(_plants_mod._DB_PATH)
+        _plants_mod.invalidate_plant_cache()
+        _plants_mod.init_db()
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.exists(_plants_mod._DB_PATH):
+            os.remove(_plants_mod._DB_PATH)
+        _plants_mod.invalidate_plant_cache()
+
+    def test_every_result_claims_the_region_it_was_found_under(self):
+        for key in ("aspen_parkland", "boreal_mixedwood", "mixedgrass_prairie"):
+            for p in _plants_mod.search_plants(ecoregion=[key]):
+                tags = (p.get("ecoregion") or "").split(",")
+                self.assertIn(key, tags,
+                              f"{p['common_name']} came back under {key} but "
+                              f"its range reads {p.get('ecoregion')!r}")
+
+    def test_a_multi_select_is_the_union_of_its_parts(self):
+        a = {p["id"] for p in _plants_mod.search_plants(ecoregion=["aspen_parkland"])}
+        b = {p["id"] for p in _plants_mod.search_plants(ecoregion=["boreal_mixedwood"])}
+        both = {p["id"] for p in _plants_mod.search_plants(
+            ecoregion=["aspen_parkland", "boreal_mixedwood"])}
+        self.assertEqual(a | b, both)
+
+    def test_a_moisture_niche_still_filters_off_the_column(self):
+        """riparian and wet_meadow are never derived, so they must keep
+        reading the column even for species that DO have derived rows."""
+        for key in ("riparian", "wet_meadow"):
+            hits = _plants_mod.search_plants(ecoregion=[key])
+            self.assertTrue(hits, f"{key} matched nothing")
+            for p in hits:
+                self.assertIn(key, (p.get("ecoregion") or "").split(","))
+
+    def test_geography_and_moisture_combine_as_a_union(self):
+        geo = {p["id"] for p in _plants_mod.search_plants(ecoregion=["aspen_parkland"])}
+        wet = {p["id"] for p in _plants_mod.search_plants(ecoregion=["riparian"])}
+        both = {p["id"] for p in _plants_mod.search_plants(
+            ecoregion=["aspen_parkland", "riparian"])}
+        self.assertEqual(geo | wet, both)

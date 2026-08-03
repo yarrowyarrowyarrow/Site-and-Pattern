@@ -20,7 +20,9 @@ Use this skill when you:
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
 **Current facts (verify before quoting):** branch `V2.38`,
-`_SCHEMA_VERSION = 59` (in `src/db/plants.py`) — v59 added the
+`_SCHEMA_VERSION = 60` (in `src/db/plants.py`) — v60 is a data-only bump: no DDL,
+reseed to pick up `data/plant_ecoregions.json`, 427 species of GBIF-derived range.
+v59 added the
 `plant_ecoregions` table: per-species ecoregion range **with the evidence
 behind it** (georeferenced record count, confidence band, source), because the
 tags in `plants.ecoregion` were generated heuristically and never sourced.

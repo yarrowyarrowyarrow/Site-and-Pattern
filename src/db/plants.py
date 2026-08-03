@@ -2244,16 +2244,41 @@ def search_plants(
     # records say parkland — surviving its own fix.
     ecoregions = _as_filter_list(ecoregion) + _as_filter_list(ab_ecoregion)
     if ecoregions:
-        marks = ",".join("?" * len(ecoregions))
-        clauses = ["(',' || COALESCE(ecoregion,'') || ',') LIKE ?"
-                   for _ in ecoregions]
-        clauses.append(
-            f"EXISTS (SELECT 1 FROM plant_ecoregions pe "
-            f"         WHERE pe.plant_id = plants.id "
-            f"           AND pe.ecoregion IN ({marks}))")
+        from src.ecoregion import is_moisture_niche          # noqa: PLC0415
+        geographic = [e for e in ecoregions if not is_moisture_niche(e)]
+        moisture   = [e for e in ecoregions if is_moisture_niche(e)]
+        clauses, geo_params, wet_params = [], [], []
+
+        # Geographic regions: the derived rows SUPERSEDE the column for any
+        # species that has them, exactly as `_attach_ecoregions` does on the
+        # read side. ORing the two instead was wrong and visibly so — a plant
+        # whose stale column said parkland but whose occurrence records say
+        # otherwise came back from the parkland filter while its own card
+        # (rendered from the derived rows) did not say parkland. The filter and
+        # the thing it filters have to agree about what a plant's range is.
+        if geographic:
+            marks = ",".join("?" * len(geographic))
+            clauses.append(
+                f"(CASE WHEN EXISTS (SELECT 1 FROM plant_ecoregions pe "
+                f"                    WHERE pe.plant_id = plants.id) "
+                f"      THEN EXISTS (SELECT 1 FROM plant_ecoregions pe "
+                f"                    WHERE pe.plant_id = plants.id "
+                f"                      AND pe.ecoregion IN ({marks})) "
+                f"      ELSE (" + " OR ".join(
+                    "(',' || COALESCE(ecoregion,'') || ',') LIKE ?"
+                    for _ in geographic) + ") END)")
+            geo_params = list(geographic) + [f"%,{e},%" for e in geographic]
+
+        # Moisture niches are never derived — no coordinate can assert "wet
+        # ground" — so they are always read from the column, for every species.
+        if moisture:
+            clauses.append("(" + " OR ".join(
+                "(',' || COALESCE(ecoregion,'') || ',') LIKE ?"
+                for _ in moisture) + ")")
+            wet_params = [f"%,{e},%" for e in moisture]
+
         sql += " AND (" + " OR ".join(clauses) + ")"
-        params += [f"%,{e},%" for e in ecoregions]
-        params += list(ecoregions)
+        params += geo_params + wet_params
 
     # native_province (v42): keep only plants native to the given province code
     # (e.g. "SK"). The province-aware generalization of the native_only flag,

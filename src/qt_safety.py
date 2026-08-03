@@ -52,3 +52,41 @@ def emit_if_alive(owner, signal_name: str, *args) -> bool:
         # The object went away between the check and the emit, which is exactly
         # the race this exists for — losing the update is the correct outcome.
         return False
+
+
+def stop_threads(owner, timeout_ms: int = 5000) -> list[str]:
+    """Quit and join every ``QThread`` parented to ``owner``. Returns the names
+    of any that would not stop.
+
+    Qt's response to a ``QThread`` object being destroyed while its thread is
+    still running is ``qFatal()`` — the process aborts. The window creates
+    worker threads in ten places (terrain fetch, region download, shade, shade
+    zones, generation, soil, buildings, wind, tree detection) and until V2.38
+    stopped **none** of them on close, so quitting mid-fetch aborted instead of
+    exiting. It showed up first as a test suite dying after its last test with
+    "QThread: Destroyed while thread '' is still running", which is the same
+    event: the window goes away, a worker is still going.
+
+    **No ``terminate()``.** Killing a thread mid-statement can leave a SQLite
+    write half-applied, and corrupting the user's catalogue to make an exit
+    tidy is a bad trade. A worker that will not stop inside the timeout is
+    reported and left alone.
+    """
+    if not is_alive(owner):
+        return []
+    try:
+        from PyQt6.QtCore import QThread
+    except ImportError:                      # pragma: no cover — no PyQt6
+        return []
+    stubborn: list[str] = []
+    for thread in owner.findChildren(QThread):
+        try:
+            if not thread.isRunning():
+                continue
+            thread.quit()
+            if not thread.wait(timeout_ms):
+                stubborn.append(thread.objectName() or thread.__class__.__name__)
+        except RuntimeError:
+            # Already destroyed between findChildren and here — nothing to do.
+            continue
+    return stubborn

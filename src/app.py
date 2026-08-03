@@ -2208,6 +2208,14 @@ class MainWindow(QMainWindow):
         # map (offscreen tests) can't delete a real session's recovery file.
         if getattr(self._persistence, "_recovery_checked", False):
             self._persistence.clear_autosave()
+        # Join the background workers before the window (their parent) goes
+        # away. A QThread destroyed while still running is a qFatal abort, not
+        # an exception — so without this, quitting during a terrain download or
+        # a wind fetch crashes on the way out instead of closing. See
+        # qt_safety.stop_threads for why it never terminate()s one.
+        from src.qt_safety import stop_threads
+        for name in stop_threads(self):
+            _log.warning("worker %s did not stop before exit", name)
         event.accept()
 
     # ── Keyboard shortcuts ────────────────────────────────────────────────────
