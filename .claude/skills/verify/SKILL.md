@@ -126,6 +126,6 @@ Minimum bar before commit:
 
 ```bash
 python3 -m unittest tests.test_<the_module_you_touched> -v   # targeted
-python3 -m unittest discover -s tests                        # full, once (slow)
+python3 -m unittest discover -s tests -t .                        # full, once (slow)
 ```
 plus the type-specific probe above.

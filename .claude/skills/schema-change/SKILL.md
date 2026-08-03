@@ -285,7 +285,7 @@ python -m unittest tests.test_uses_junction tests.test_data_quality tests.test_p
 python scripts/check_plant_data.py --quiet
 
 # Full suite before you call it done (stdlib unittest — there is NO pytest here):
-python -m unittest discover -s tests
+python -m unittest discover -s tests -t .
 ```
 
 All three were run in this session and pass (the first reports `OK`, the CLI

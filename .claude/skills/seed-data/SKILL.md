@@ -162,7 +162,7 @@ key plus `_comment`/`_disclaimer`/`_provenance` metadata. Each nursery: `name`
 4. **Bump `_SCHEMA_VERSION`** and add a changelog line.
 5. `python scripts/check_plant_data.py` must show **0 errors** (warnings ok).
 6. Add/extend a temp-DB test asserting the plant (and any fauna links) seed in.
-7. `python -m unittest discover -s tests`.
+7. `python -m unittest discover -s tests -t .`.
 
 ## Provenance / safety / sourcing scripts
 
@@ -237,7 +237,7 @@ python scripts/check_plant_data.py --quiet
 python -m unittest tests.test_data_quality tests.test_uses_junction tests.test_fauna tests.test_nurseries -v
 
 # Full suite before done (stdlib unittest only — no pytest):
-python -m unittest discover -s tests
+python -m unittest discover -s tests -t .
 ```
 
 `check_plant_data.py --quiet` and the `unittest` commands were run in this

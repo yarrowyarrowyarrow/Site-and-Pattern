@@ -182,7 +182,7 @@ bump — then fully reverted, with a journal explanation of the mechanism.
 3. The bump: in `src/db/plants.py`, find `_SCHEMA_VERSION` near the top
    and increase it by 1. (Read the comment block around it — it says
    exactly what you're triggering.)
-4. Run the suite (`python -m unittest discover -s tests` — the seeding
+4. Run the suite (`python -m unittest discover -s tests -t .` — the seeding
    tests exercise your change against a temp database), then launch the
    app, open your plant's details, and find your sentence. That's the
    reseed doing its one-time job on *your real* database.

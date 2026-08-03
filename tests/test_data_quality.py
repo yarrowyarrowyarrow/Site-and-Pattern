@@ -2,7 +2,7 @@
 tests/test_data_quality.py
 
 Wraps src.data_quality.validate_all() in the unit-test harness so
-`python -m unittest discover -s tests` fails if anyone introduces a
+`python -m unittest discover -s tests -t .` fails if anyone introduces a
 typo, unknown tag, or duplicate scientific name into the shipped
 plant JSON. Also exercises the per-error pathway by feeding deliberately
 malformed records to ``validate_records`` directly.

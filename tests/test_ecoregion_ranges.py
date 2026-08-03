@@ -607,3 +607,55 @@ class _NoWait:
 
     def rate_limited(self):
         self.limited += 1
+
+
+class TestTheSuiteStaysOffline(unittest.TestCase):
+    """A measured 771 live internet requests per run, needed by nothing.
+
+    Every fetcher in this app degrades gracefully when offline — that is the
+    design — so those downloads bought nothing and cost a slow, flaky suite
+    that burns a public API's quota. A user on Windows started getting HTTP 429
+    back from Open-Meteo during an ordinary test run, which is how it surfaced.
+    """
+
+    def test_the_guard_is_installed(self):
+        """Also catches the wrong invocation, which is how this was found.
+
+        ``python -m unittest discover -s tests`` makes ``tests/`` the top-level
+        directory, so its modules import as top-level names and
+        ``tests/__init__.py`` — where the guard lives — never runs. ``-t .``
+        keeps ``tests`` a package. A guard that silently does not install is
+        worse than no guard, so this fails loudly and says which command.
+        """
+        import urllib.request
+        self.assertNotEqual(
+            urllib.request.urlopen.__name__, "urlopen",
+            "The offline guard did not install. Run the suite as:\n"
+            "    python -m unittest discover -s tests -t .\n"
+            "(without -t, tests/__init__.py is never imported). If the "
+            "command was right, the guard in tests/__init__.py is gone.")
+
+    def test_reaching_the_internet_raises_offline(self):
+        import urllib.error, urllib.request
+        with self.assertRaises(urllib.error.URLError):
+            urllib.request.urlopen("https://api.open-meteo.com/v1/elevation")
+
+    def test_localhost_and_file_urls_still_work(self):
+        """test_web_assets runs its own server; several tests serve fixtures
+        from file://. Neither is the internet."""
+        import tempfile, urllib.request, pathlib
+        with tempfile.NamedTemporaryFile("wb", suffix=".txt", delete=False) as fh:
+            fh.write(b"local")
+            path = fh.name
+        try:
+            with urllib.request.urlopen(pathlib.Path(path).as_uri()) as resp:
+                self.assertEqual(resp.read(), b"local")
+        finally:
+            os.unlink(path)
+
+    def test_a_blocked_fetch_looks_like_being_offline(self):
+        """URLError, not a bespoke exception — so the code under test takes the
+        same path a real offline user takes, rather than a path only the suite
+        ever sees."""
+        from src.http_utils import http_get_json
+        self.assertIsNone(http_get_json("https://api.gbif.org/v1/occurrence/search"))

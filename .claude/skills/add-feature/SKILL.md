@@ -218,7 +218,7 @@ python -m unittest tests.test_architecture_guard tests.test_controller_shims tes
 python -m unittest tests.test_project_store -v
 
 # Full suite (what CI runs; Qt tests self-skip headless):
-python -m unittest discover -s tests
+python -m unittest discover -s tests -t .
 ```
 
 All must pass with `OK`. Then actually run the feature (GUI or via the

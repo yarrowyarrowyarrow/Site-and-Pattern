@@ -12,7 +12,7 @@ Run with:
 
 NB (V2.37): every test here is a module-level ``test_*`` function, which
 ``unittest`` does not collect — so for a long time this whole file ran zero
-tests under ``python -m unittest discover -s tests``, the project's only test
+tests under ``python -m unittest discover -s tests -t .``, the project's only test
 command, while the docstring pointed at a pytest that has no config in this
 repo. ``TestPatternGeometry`` at the bottom now adopts them all as subTests so
 they actually guard something. Keep new cases in the same plain-function style;

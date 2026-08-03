@@ -142,10 +142,26 @@ table** when you add a plan.
 ## Running tests
 
 ```bash
-python -m unittest discover -s tests
+python -m unittest discover -s tests -t .
 ```
 
 There is no `pytest` configuration; the suite uses stdlib `unittest`.
+
+**The `-t .` is load-bearing (V2.38).** Without it `unittest discover` makes
+`tests/` the top-level directory, its modules import as top-level names, and
+`tests/__init__.py` is **never imported** — which is where the suite's offline
+guard lives. Run it bare and the guard silently does not install, so the tests
+go back to reaching the internet. `tests/test_ecoregion_ranges.py` fails loudly
+with the right command when that happens.
+
+**The suite is offline.** A measured run made **771 live requests** — 465 to
+`api.open-meteo.com` from the design generator fetching a real elevation grid,
+306 to iNaturalist from the photo warmer — and *nothing needed any of them*:
+every fetcher already degrades gracefully. It made the suite slow, flaky and
+dependent on somebody else's uptime, and a user on Windows started getting
+`HTTP 429` back mid-run. `tests/__init__.py` now raises `URLError` for anything
+past the machine (`file://` and localhost still work, since neither is the
+internet). `SITEANDPATTERN_ALLOW_NETWORK=1` lifts it; nothing needs it today.
 
 **The suite needs PyQt6 *and* the Qt runtime libs**, or ~156 widget tests skip
 *silently* — which is how a `NameError` on every PDF export survived four minor
@@ -286,7 +302,7 @@ only, doesn't affect real commits.
    `_seed_uses_lookup` / `_seed_fauna` pattern.
 5. Add tests under `tests/` using the temp-DB pattern from
    `test_polycultures.py` / `test_uses_junction.py`.
-6. Run `python -m unittest discover -s tests`.
+6. Run `python -m unittest discover -s tests -t .`.
 
 ## Do not
 

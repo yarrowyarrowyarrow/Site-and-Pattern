@@ -261,7 +261,7 @@ python -m unittest tests.test_map_js tests.test_bridge_contract -v   # bridge co
 python -m unittest tests.test_architecture_guard                     # line/method ceilings
 python tests/test_map_features.py                                    # JS-mirror geometry (script-style runner)
 python -m unittest tests.test_wind_shadow                            # if you touched the wind-shadow exemplar
-python -m unittest discover -s tests                                 # full suite before finishing
+python -m unittest discover -s tests -t .                                 # full suite before finishing
 ```
 
 All of the above pass headlessly (Qt-dependent tests self-skip). After any JS

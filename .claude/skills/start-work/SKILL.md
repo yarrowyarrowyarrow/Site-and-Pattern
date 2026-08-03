@@ -82,7 +82,7 @@ user explicitly asks (CLAUDE.md → Do not).
 
 Before you push, confirm:
 
-1. **Tests green.** `python3 -m unittest discover -s tests` passes (slow,
+1. **Tests green.** `python3 -m unittest discover -s tests -t .` passes (slow,
    ~7 min; expect optional-dep skips — see `testing`). During iteration run
    the touched module + guard tests, full suite once before push.
 2. **Schema/seed bump if data changed.** Any change to `src/db/schema.sql` or

@@ -322,7 +322,7 @@ python3 -m unittest tests.test_llm_design tests.test_design_critic \
 python3 -m src.cli generate --no-llm --goal native_only --goal pollinator \
   --lat 53.5461 --lng -113.4938 --out /tmp/gen_check.perma.geojson
 
-python3 -m unittest discover -s tests   # full suite before pushing
+python3 -m unittest discover -s tests -t .   # full suite before pushing
 ```
 
 The Qt dialog/controller layer only gets offscreen smoke coverage — for

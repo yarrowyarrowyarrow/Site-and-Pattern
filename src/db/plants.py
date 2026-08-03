@@ -1936,15 +1936,23 @@ def _attach_photos(plants: list[dict]) -> None:
         p["image_license"] = best["license"]
 
 
-def ecoregion_ranges_for_ids(plant_ids: list[int]) -> dict[int, list[dict]]:
+def ecoregion_ranges_for_ids(plant_ids: list[int],
+                             conn: Optional[sqlite3.Connection] = None
+                             ) -> dict[int, list[dict]]:
     """``{plant_id: [{ecoregion, occurrences, confidence, source}, …]}``.
 
     The sourced half of a plant's range. Strongest evidence first, so a caller
     showing one line shows the best-attested region.
+
+    Pass ``conn`` when you already have one open — ``get_all_plants`` and
+    ``search_plants`` both do, and opening a second connection inside a query
+    they are already inside is pure churn on the hottest read path in the app
+    (``render_project_to_map`` calls it on every File→Open and every undo).
     """
     if not plant_ids:
         return {}
-    conn = get_connection()
+    own = conn is None
+    conn = conn or get_connection()
     try:
         marks = ",".join("?" * len(plant_ids))
         rows = conn.execute(
@@ -1952,7 +1960,8 @@ def ecoregion_ranges_for_ids(plant_ids: list[int]) -> dict[int, list[dict]]:
             f"  FROM plant_ecoregions WHERE plant_id IN ({marks}) "
             f" ORDER BY occurrences DESC, ecoregion", list(plant_ids)).fetchall()
     finally:
-        conn.close()
+        if own:
+            conn.close()
     out: dict[int, list[dict]] = {}
     for r in rows:
         out.setdefault(r["plant_id"], []).append({
@@ -1964,7 +1973,8 @@ def ecoregion_ranges_for_ids(plant_ids: list[int]) -> dict[int, list[dict]]:
     return out
 
 
-def _attach_ecoregions(plants: list[dict]) -> None:
+def _attach_ecoregions(plants: list[dict],
+                       conn: Optional[sqlite3.Connection] = None) -> None:
     """Overlay derived ecoregion ranges onto each plant dict (schema v59).
 
     The same read-side-synthesis shape ``_attach_permaculture_uses`` uses, with
@@ -1986,7 +1996,7 @@ def _attach_ecoregions(plants: list[dict]) -> None:
     if not ids:
         return
     try:
-        derived = ecoregion_ranges_for_ids(ids)
+        derived = ecoregion_ranges_for_ids(ids, conn)
     except sqlite3.Error:
         return                      # pre-v59 DB mid-migration: keep the column
     if not derived:
@@ -2028,7 +2038,7 @@ def get_all_plants() -> list[dict]:
         ).fetchall()
         result = [_row_to_dict(r) for r in rows]
         _attach_permaculture_uses(result)
-        _attach_ecoregions(result)
+        _attach_ecoregions(result, conn)
         _attach_photos(result)
         return result
     finally:
@@ -2346,7 +2356,7 @@ def search_plants(
         rows = conn.execute(sql, params).fetchall()
         result = [_row_to_dict(r) for r in rows]
         _attach_permaculture_uses(result)
-        _attach_ecoregions(result)
+        _attach_ecoregions(result, conn)
         _attach_photos(result)
         result = _month_filter(result, "bloom_period", bloom_months)
         result = _month_filter(result, "fruit_period", fruit_months)
@@ -2396,7 +2406,7 @@ def get_companions(plant_id: int) -> dict[str, list[dict]]:
             ).fetchall()
             result = [_row_to_dict(r) for r in rows]
             _attach_permaculture_uses(result)
-            _attach_ecoregions(result)
+            _attach_ecoregions(result, conn)
             _attach_photos(result)
             return result
 

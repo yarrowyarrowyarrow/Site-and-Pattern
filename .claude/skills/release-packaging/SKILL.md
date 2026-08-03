@@ -134,7 +134,7 @@ a silently-missing release asset. See `run` (deps) and `offline-packs`.
 2. Launch from the shortcut / Applications folder.
 3. Confirm the plant browser and community panels are populated, the Leaflet
    map loads, and no error dialogs appear.
-4. Without a spare machine, `python3 -m unittest discover -s tests` includes a
+4. Without a spare machine, `python3 -m unittest discover -s tests -t .` includes a
    frozen-build resource-resolution simulation (`tests/test_resource_path.py`).
 
 ## Troubleshooting build/release failures

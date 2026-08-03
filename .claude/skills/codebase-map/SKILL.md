@@ -218,7 +218,7 @@ scripts), `.github/workflows/release-macos.yml` and
 - `scripts/` — offline data tooling (catalogue checks `check_plant_data.py`,
   flora/fauna expanders, sprite renderers, DOCX export) + `scripts/packaging/`.
 - `tests/` — stdlib `unittest` only. Run everything:
-  `python -m unittest discover -s tests`. Qt-dependent tests self-skip
+  `python -m unittest discover -s tests -t .`. Qt-dependent tests self-skip
   headless. Every DB test redirects `src.db.plants._DATA_DIR`/`_DB_PATH` to a
   tempdir BEFORE importing consumers. The suite doubles as the architecture's
   enforcement: guard tests fail builds on ceiling/contract/path violations.

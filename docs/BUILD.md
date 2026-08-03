@@ -257,7 +257,7 @@ To sanity-check bundled-resource resolution without a separate machine, run the
 test suite — it includes a frozen-build simulation:
 
 ```bash
-python -m unittest discover -s tests
+python -m unittest discover -s tests -t .
 ```
 
 ---

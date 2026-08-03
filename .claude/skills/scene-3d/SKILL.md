@@ -344,7 +344,7 @@ python -m unittest tests.test_scene_contract tests.test_scene3d tests.test_splat
 python -m unittest tests.test_map3d_js tests.test_scene3d_assets tests.test_scene_wildlife tests.test_sprite_gallery tests.test_splat_flow tests.test_scan_import
 python -m unittest tests.test_bridge_contract          # perma* hook contract, both directions
 python -m unittest tests.test_scene3d_window           # Qt-gated (skips headless)
-python -m unittest discover -s tests                   # full suite before finishing
+python -m unittest discover -s tests -t .                   # full suite before finishing
 ```
 
 All of the above pass headlessly (numpy/shapely/Qt-gated cases self-skip when
