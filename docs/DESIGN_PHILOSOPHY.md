@@ -313,7 +313,11 @@ Adopted in V2.33, on the owner's decision, from the proposal in [`ROADMAP_NEXT.m
 
 > **Where this lives in the code:** the aesthetic-composition terms in
 > [`placement_score.py`](../src/placement_score.py) (`_height_gradient`, `_cohesion`,
-> `_rhythm`) are cues-to-care logic that predates the principle; docent mode
+> `_rhythm`) are cues-to-care logic that predates the principle; the **saves folder and
+> in-app design list** ([`saves.py`](../src/saves.py), F87, V2.39) belong here too and not
+> only under "usability" — a design a person cannot find again is a design that does not get
+> revisited, and revisiting is the whole of stewardship. Naming the ceremony around the work
+> as part of whether the work happens is the same argument as the one about beauty; docent mode
 > ([`docent.py`](../src/docent.py)) exists explicitly to present a design to *"a neighbour, an
 > HOA board, a class"*; the lawn counterfactual is an argument aimed at a sceptic; and the
 > presentation still ([`presentation_still.py`](../src/presentation_still.py), F69) is the

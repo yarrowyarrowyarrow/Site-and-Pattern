@@ -731,7 +731,7 @@ product — which this roadmap has historically been short of.
 |----|---------|--------|--------|------|-----------|
 | F85 | The guide — a fauna companion that explains the app, starting with Site Info | **High** | L | Med — new UI surface | P5, P13 |
 | F86 | Notes that add up — one store, notes from anywhere, a document that does something | Med | M | Med | P11, P4 |
-| F87 | Game-style save/load — a saves folder and an in-app list, no OS file dialog | **High** | M | Low | P13 |
+| ~~F87~~ | ~~Game-style save/load~~ — **shipped V2.39**: `user_data_dir()/saves`, Save stops asking, File → Open lists your designs (name · when · plants · species · site), and the crash-recovery autosave moved out of the `$HOME` dotfile | **High** | M | Low | P13 |
 | F88 | The Learn tab as a curriculum — the app, design, flora & fauna; gamified | Med | L | Low | P5, P7 |
 | F89 | The 3D preview's UX review — ten buttons over two rows | Med | M | Med | P5 |
 

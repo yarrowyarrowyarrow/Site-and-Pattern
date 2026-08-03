@@ -24,7 +24,7 @@ from typing import Optional
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QSplitter,
     QStatusBar, QLabel, QMessageBox, QFileDialog, QSizePolicy,
-    QInputDialog, QTabWidget,
+    QInputDialog, QTabWidget, QDialog,
 )
 from PyQt6.QtCore import Qt, QTimer, QThread, QEvent
 from PyQt6.QtGui import QAction, QKeySequence, QShortcut
@@ -1827,16 +1827,37 @@ class MainWindow(QMainWindow):
         onboarding_flow.refresh(self)
 
     def _on_open(self):
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Open Design", "",
-            "Site & Pattern Files (*.perma.geojson);;GeoJSON (*.geojson);;All files (*)"
-        )
+        """Open a design — from the in-app list first (F87, V2.39).
+
+        *"When loading a previously saved file they should be listed in the app
+        rather than opening the computer's file explorer."* The OS dialog is
+        still one button away, because a design kept somewhere else is a real
+        thing; it is the second option now instead of the only one.
+        """
+        from src.saves_dialog import SavesDialog, BROWSE
+        dlg = SavesDialog(self)
+        result = dlg.exec()
+        if result == BROWSE:
+            path = self._ask_for_design_file()
+        elif result == QDialog.DialogCode.Accepted:
+            path = dlg.chosen()
+        else:
+            return
         if not path:
             return
         try:
             self._load_from_path(path)
         except Exception as exc:
             QMessageBox.critical(self, "Open failed", str(exc))
+
+    def _ask_for_design_file(self) -> str:
+        """The OS file dialog, for a design that lives outside the saves
+        folder."""
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Open Design", "",
+            "Site & Pattern Files (*.perma.geojson);;GeoJSON (*.geojson);;All files (*)"
+        )
+        return path or ""
 
     def _load_from_path(self, path: str):
         proj = project_io.load_project(path)

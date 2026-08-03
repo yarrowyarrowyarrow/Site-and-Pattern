@@ -34,12 +34,55 @@ from src.log import get_logger
 _log = get_logger(__name__)
 
 
+_LEGACY_AUTOSAVE = os.path.join(
+    os.path.expanduser("~"), ".site-and-pattern_autosave.perma.geojson")
+
+
 def autosave_path() -> str:
     """The single crash-recovery autosave file. Fixed path (not per-project)
     so the startup recovery check knows where to look; the design's real
-    path is stamped inside (``properties._autosave_source_path``)."""
-    return os.path.join(os.path.expanduser("~"),
-                        ".site-and-pattern_autosave.perma.geojson")
+    path is stamped inside (``properties._autosave_source_path``).
+
+    Lives in the app's data dir since V2.39. It used to be a **hidden dotfile
+    in the home directory**, which is nobody's mental model of where their work
+    lives — and the one moment it matters is the moment a user is most upset.
+    """
+    from src.user_paths import user_data_dir
+    return os.path.join(user_data_dir(), "autosave.perma.geojson")
+
+
+def migrate_legacy_autosave() -> bool:
+    """Move a pre-V2.39 home-directory autosave into the data dir. Once.
+
+    Copy, verify, then unlink — never a bare rename. A person hitting this is
+    by definition mid-recovery from a crash, and losing the recovery file to a
+    refactor would be the worst possible moment for a clever one-liner. If
+    anything goes wrong the legacy file is left exactly where it was, so the
+    worst case is that this runs again next launch.
+
+    Returns whether anything moved. Same shape, and the same reasoning, as
+    ``user_paths.migrate_legacy_into`` for the data folder itself.
+    """
+    target = autosave_path()
+    if os.path.exists(target) or not os.path.exists(_LEGACY_AUTOSAVE):
+        return False
+    try:
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        with open(_LEGACY_AUTOSAVE, "rb") as src:
+            payload = src.read()
+        with open(target, "wb") as dst:
+            dst.write(payload)
+            dst.flush()
+            os.fsync(dst.fileno())
+        if os.path.getsize(target) != len(payload):
+            return False                     # keep the original; try next time
+        os.unlink(_LEGACY_AUTOSAVE)
+        _log.info("moved the crash-recovery autosave into the data dir")
+        return True
+    except OSError:
+        _log.warning("could not move the legacy autosave — leaving it in place",
+                     exc_info=True)
+        return False
 
 
 class PersistenceController:
@@ -95,10 +138,29 @@ class PersistenceController:
     # ── Save / Save As ────────────────────────────────────────────────────────
 
     def _on_save(self):
+        """Save, without asking where (F87, V2.39).
+
+        A design with no path used to open the OS file dialog, so every first
+        save was a decision about folders that nobody wanted to make and few
+        could retrace. It now goes to the saves folder under a name derived
+        from the project, and the browser lists it. ``Save As…`` still opens
+        the dialog for anyone who wants their designs somewhere specific — this
+        adds a default, it does not remove the choice.
+        """
         if self._main._project_path:
             self._save_to_path(self._main._project_path)
-        else:
+            return
+        from src import saves
+        try:
+            directory = saves.ensure_saves_dir()
+        except OSError:
+            # No writable data dir (a locked-down machine, a full disk): fall
+            # back to asking rather than failing silently.
             self._on_save_as()
+            return
+        name = (self._main._project.get("properties", {})
+                .get("project_name") or "Untitled Design")
+        self._save_to_path(saves.unique_save_path(name, directory))
 
     def _on_save_as(self):
         path, _ = QFileDialog.getSaveFileName(
@@ -168,6 +230,9 @@ class PersistenceController:
         if getattr(self, "_recovery_checked", False):
             return
         self._recovery_checked = True
+        # A pre-V2.39 autosave still sits in the home directory. Move it before
+        # looking, or the one launch that most needs it would find nothing.
+        migrate_legacy_autosave()
         path = autosave_path()
         if not os.path.exists(path):
             return
