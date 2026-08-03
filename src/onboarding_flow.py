@@ -61,8 +61,29 @@ def maybe_show_welcome(main) -> None:
         # a previous session, which would have set the flag — but a wiped
         # QSettings over a surviving data dir gets here.)
         return
-    QTimer.singleShot(_WELCOME_DELAY_MS,
-                      lambda: show_welcome(main, mark_seen=True))
+    QTimer.singleShot(_WELCOME_DELAY_MS, lambda: _welcome_if_alive(main))
+
+
+def _welcome_if_alive(main) -> None:
+    """Open the welcome, unless the window went away in the meantime (V2.38).
+
+    The 150 ms delay is a window in which the MainWindow can be destroyed —
+    rare in normal use (quit within a sixth of a second of launch) but routine
+    in the test suite, which builds a probe window and deletes it immediately.
+    Constructing a dialog parented to a deleted C++ object raises RuntimeError
+    *inside a Qt slot*, and an exception escaping a Qt slot calls ``qFatal()``:
+    a process abort. On Windows that killed the test run before it could print
+    its summary; on Linux it printed a traceback and carried on, which is worse
+    in a way — the same latent bug reading as harmless noise.
+
+    ``qt_safety.is_alive`` is the check that actually answers this. A plain
+    try/except catches the case where PyQt's wrapper knows the object is gone,
+    but not the one where C++ ownership deleted it without telling Python.
+    """
+    from src.qt_safety import is_alive
+    if not is_alive(main):
+        return
+    show_welcome(main, mark_seen=True)
 
 
 def _autosave_pending() -> bool:

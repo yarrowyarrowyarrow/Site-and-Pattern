@@ -475,3 +475,57 @@ class TestDrawingTheArcIsUndoable(unittest.TestCase):
             decorators = [ast.dump(d) for d in fn.decorator_list]
             self.assertTrue(any("undoable" in d for d in decorators),
                             f"{name} is not @undoable")
+
+
+class TestTheWelcomeTimerSurvivesADeletedWindow(unittest.TestCase):
+    """V2.38 — the welcome dialog is scheduled 150 ms after launch, and in that
+    window the MainWindow can be gone.
+
+    Rare in normal use (quit within a sixth of a second), routine in the test
+    suite, which builds a probe window and deletes it immediately. Parenting a
+    dialog to a deleted C++ object raises RuntimeError inside a Qt slot, and an
+    exception escaping a Qt slot calls qFatal() — a process abort. On Windows
+    that killed the whole test run before it could print its summary.
+    """
+
+    def test_the_deferred_welcome_checks_the_window_is_still_there(self):
+        src = (_SRC / "onboarding_flow.py").read_text(encoding="utf-8")
+        tree = ast.parse(src)
+        fn = next((n for n in ast.walk(tree)
+                   if isinstance(n, ast.FunctionDef)
+                   and n.name == "_welcome_if_alive"), None)
+        self.assertIsNotNone(fn, "the guarded entry point is gone")
+        dump = ast.dump(fn)
+        self.assertIn("is_alive", dump)
+        # The guard must come before the dialog is opened, or it guards nothing.
+        guard = next(n.lineno for n in ast.walk(fn)
+                     if isinstance(n, ast.Name) and n.id == "is_alive")
+        opened = next(n.lineno for n in ast.walk(fn)
+                      if isinstance(n, ast.Call)
+                      and isinstance(n.func, ast.Name)
+                      and n.func.id == "show_welcome")
+        self.assertLess(guard, opened)
+
+    def test_the_timer_does_not_call_show_welcome_directly(self):
+        """A bare lambda straight to show_welcome is the shape of the bug."""
+        src = (_SRC / "onboarding_flow.py").read_text(encoding="utf-8")
+        tree = ast.parse(src)
+        fn = next(n for n in ast.walk(tree)
+                  if isinstance(n, ast.FunctionDef)
+                  and n.name == "maybe_show_welcome")
+        for node in ast.walk(fn):
+            if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                    and node.func.id == "show_welcome"):
+                self.fail("maybe_show_welcome schedules show_welcome without "
+                          "the is_alive guard")
+
+    @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
+    def test_a_dead_window_is_a_no_op_rather_than_a_crash(self):
+        from PyQt6.QtWidgets import QWidget
+        _app = QApplication.instance() or QApplication([])
+        from src.onboarding_flow import _welcome_if_alive
+        w = QWidget()
+        import PyQt6.sip as sip
+        sip.delete(w)
+        _welcome_if_alive(w)          # must simply return
+        _welcome_if_alive(None)
