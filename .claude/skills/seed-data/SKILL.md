@@ -179,6 +179,32 @@ JSON in place (review the diff, then bump the schema version).
 | `scripts/check_community_coverage.py` | Read-only: reports which retail-native plants are missing from seeded communities and flags any community member name that won't resolve. |
 | `scripts/expand_fauna.py`, `scripts/expand_fauna_sk.py`, `scripts/expand_prairie_flora.py` | Bulk roster expanders for fauna / prairie flora. |
 
+## Correcting a morphology value by hand (the bench)
+
+`scripts/tune_morphology.py` (plants) and `scripts/tune_fauna.py` (animals) are
+the benches. **A correction there is refused unless it says where it came
+from** — and understanding why saves a confusing afternoon:
+
+The `seed_*_morphology.py` seeders overwrite any species whose `*_data_source`
+still reads `estimated`. That is deliberate — it stops a genus-level default
+from erasing the only real numbers in the catalogue. The corollary is easy to
+miss: **changing a number and leaving the source at `estimated` produces an edit
+the next seeder run deletes.** It happened (a `florets_per_head` corrected 24 →
+1) and surfaced only weeks later, as `test_the_seeder_is_idempotent` failing
+with a message that names neither the species nor the cause.
+
+So the save endpoint now refuses it, while the person is still looking at the
+screen (`_provenance_gap`). To make a correction stick, set **in the same
+save**:
+
+| field | value |
+|---|---|
+| `flower_data_source` / `leaf_data_source` | `photo`, `flora` or `measured` — never leave `estimated` |
+| `flower_data_citation` / `leaf_data_citation` | *which* source: `FNA vol. 21`, `Budd's 442`, `my yard 2026-08-03` |
+
+The refusal is deliberately not an auto-fill: inventing a source would assert
+provenance nobody supplied, which is worse than the bug (P9).
+
 ## Data-quality validation gate
 
 `src/data_quality.py:validate_all()` is the gate. It returns `(errors,

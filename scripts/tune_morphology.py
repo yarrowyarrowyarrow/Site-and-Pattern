@@ -52,6 +52,14 @@ Provenance travels with the numbers: `flower_data_source` says what KIND of
 source a value came from and `flower_data_citation` says which one. See
 docs/DATA_SOURCES.md — including for why `--flora-fetch` is off by default.
 
+**A correction with no provenance is REFUSED** (V2.38). The seeders overwrite
+any species whose `*_data_source` still reads `estimated`, so changing a number
+without also saying where it came from produces an edit the next seeder run
+silently deletes. That happened: a florets_per_head fixed from 24 to 1, saved,
+and revealed only weeks later by a test noticing the shipped file no longer
+matched what the seeder would produce. Set the source to `photo` / `flora` /
+`measured` and fill in the citation, in the same save, and it sticks forever.
+
 P12: nothing here asks for or stores traditional, cultural or Indigenous
 knowledge of a plant. It records the botanical description of a flower.
 """
@@ -96,6 +104,16 @@ LEAF_FIELDS = ("leaf_shape", "leaf_size_cm", "leaf_arrangement", "leaf_surface",
                "leaf_data_source", "leaf_data_citation")
 
 FIELDS = FLOWER_FIELDS + LEAF_FIELDS
+
+# Which provenance pair owns which group of numbers. The save endpoint uses
+# this to refuse a correction that does not say where it came from — see
+# _provenance_gap.
+PROVENANCE_GROUPS = (
+    ("flower_data_source", "flower_data_citation",
+     tuple(f for f in FLOWER_FIELDS if not f.startswith("flower_data_"))),
+    ("leaf_data_source", "leaf_data_citation",
+     tuple(f for f in LEAF_FIELDS if not f.startswith("leaf_data_"))),
+)
 
 # Where a number can come from, weakest first. The bench's job is to move
 # species UP this list; the seeder can only ever write the bottom one.
@@ -167,6 +185,46 @@ def _save(records):
     with open(_MASTER, "w", encoding="utf-8") as fh:
         json.dump(records, fh, indent=2, ensure_ascii=False)
         fh.write("\n")
+
+
+def _provenance_gap(rec, changed: dict, patch: dict) -> str | None:
+    """Why this save would be undone, or ``None`` if it will stick.
+
+    ``scripts/seed_*_morphology.py`` overwrites any species whose
+    ``*_data_source`` still reads ``estimated`` — that is the rule that stops a
+    genus default from erasing the only real numbers in the catalogue. The
+    corollary nobody could see: **correcting a number without also saying where
+    the correction came from produces an edit the next seeder run deletes.**
+
+    It bit a user exactly that way — a florets_per_head fixed from 24 to 1,
+    saved, and revealed weeks later only because `test_the_seeder_is_idempotent`
+    noticed the shipped file no longer matched what the seeder would produce.
+    A bench that accepts a change it knows to be temporary is the same fault as
+    a control that looks live and is not.
+
+    So the save is refused instead, while the person is still looking at the
+    screen. It is refused rather than auto-filled on purpose: inventing a
+    source would be worse than the bug, because it would assert provenance
+    nobody supplied (P9).
+    """
+    for source_field, citation_field, value_fields in PROVENANCE_GROUPS:
+        touched = [f for f in changed if f in value_fields]
+        if not touched:
+            continue
+        # A source set in this same patch counts — the ordinary case is
+        # correcting the number and naming the source together.
+        source = patch.get(source_field, rec.get(source_field)) or "estimated"
+        if source != "estimated":
+            continue
+        return (
+            f"{', '.join(sorted(touched))} changed, but {source_field} still "
+            f"reads 'estimated' — the seeder owns estimated values and would "
+            f"put its genus default back on the next run. Set "
+            f"{source_field} to one of "
+            f"{', '.join(x for x in DATA_SOURCES if x != 'estimated')} "
+            f"and fill in {citation_field}, then save again."
+        )
+    return None
 
 
 def _flowering(rec):
@@ -518,6 +576,9 @@ class _Handler(SimpleHTTPRequestHandler):
                 changed[f] = v
                 rec[f] = v
         if changed:
+            gap = _provenance_gap(rec, changed, patch)
+            if gap:
+                return self._json({"error": gap}, 400)
             _save(records)
         return self._json({"saved": bool(changed), "changed": changed})
 
