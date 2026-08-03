@@ -103,4 +103,5 @@ generated heuristically and never sourced. Round 2 named a specific casualty.
 
 | # | What they said | Where it went |
 |---|---|---|
+| — | *"I'd like to have a start menu where the option to load a previous design or start a new one appears."* | **Shipped V2.40.** The first-run welcome became a start menu shown every launch, growing three rows as they become true: recover unsaved work, continue the design you were last in (named), and open the saves list. A first-time user still sees exactly the original three doors — a row that can only lead to an empty room is not drawn. |
 | — | Feedback should reach the author by email, not only the clipboard | Blocked on a form-relay access key. The send path is written and tested against a stub, so dropping the key in is the last step. |

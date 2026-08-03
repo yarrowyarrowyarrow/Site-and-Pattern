@@ -38,6 +38,13 @@ def _settings():
 # ── The welcome ──────────────────────────────────────────────────────────────
 
 def should_show_welcome() -> bool:
+    """Whether the start menu opens on launch.
+
+    Until V2.40 this meant "has never been seen", and the dialog was a
+    first-run greeting. It is now a start menu — every launch, unless the user
+    has explicitly turned it off — so the key means "asked not to see this
+    again" rather than "has seen it once".
+    """
     if not _HAVE_QT:
         return False
     return not bool(_settings().value(SEEN_WELCOME_KEY, False, type=bool))
@@ -51,15 +58,17 @@ _WELCOME_DELAY_MS = 150
 
 
 def maybe_show_welcome(main) -> None:
-    """Show the welcome once, on the first launch."""
+    """Open the start menu on launch, unless the user has turned it off.
+
+    Crash recovery used to be a *second* modal, fired separately on map_ready,
+    and this function returned early whenever one was pending purely to keep
+    two dialogs from stacking. Since V2.40 recovery is the menu's top row, so
+    the two no longer compete — but see ``PersistenceController.
+    maybe_offer_autosave_recovery``: when the menu is turned off, the
+    standalone prompt still fires. Unsaved work is not conditional on a
+    preference about greetings.
+    """
     if not should_show_welcome():
-        return
-    if _autosave_pending():
-        # Crash recovery asks a more urgent question and fires on map_ready.
-        # Two modal dialogs stacking on launch is worse than deferring the
-        # welcome by one session. (Normally unreachable — an autosave implies
-        # a previous session, which would have set the flag — but a wiped
-        # QSettings over a surviving data dir gets here.)
         return
     QTimer.singleShot(_WELCOME_DELAY_MS, lambda: _welcome_if_alive(main))
 
@@ -83,7 +92,43 @@ def _welcome_if_alive(main) -> None:
     from src.qt_safety import is_alive
     if not is_alive(main):
         return
-    show_welcome(main, mark_seen=True)
+    # NOT mark_seen: this fires on every launch now, and marking it seen here
+    # would suppress the start menu after the first one — the exact behaviour
+    # V2.40 replaced. Only the checkbox turns it off.
+    show_welcome(main)
+
+
+def _pending_recovery_name(main) -> str:
+    """The design name inside a surviving autosave, or ``""``.
+
+    Read rather than assumed, so the row can say *which* design has unsaved
+    work — "a previous session" is a worse question to answer than "your Back
+    Yard design". An unreadable autosave offers no row: the standalone recovery
+    path discards it with its own message, and a button that leads to that is
+    just a longer way to the same place.
+    """
+    if not _autosave_pending():
+        return ""
+    try:
+        from src.controllers.persistence import autosave_path
+        from src.project import load_project
+        props = (load_project(autosave_path()).get("properties") or {})
+        return props.get("project_name") or "Untitled Design"
+    except Exception:                                      # noqa: BLE001
+        return ""
+
+
+def _open_last_design(main) -> None:
+    """Reopen the design from the last session, through the ordinary path."""
+    from src import saves
+    path = saves.last_design()
+    if not path:
+        return
+    try:
+        main._load_from_path(path)
+    except Exception as exc:                               # noqa: BLE001
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.critical(main, "Open failed", str(exc))
 
 
 def _autosave_pending() -> bool:
@@ -95,23 +140,46 @@ def _autosave_pending() -> bool:
 
 
 def show_welcome(main, *, mark_seen: bool = False) -> None:
-    """Open the welcome dialog and act on the choice. Also the Help-menu
-    entry point, which is why ``mark_seen`` is opt-in: choosing to re-read the
-    welcome should not change whether it appears next launch."""
-    from src.welcome_dialog import BLANK, EXAMPLE, GENERATE, WelcomeDialog
+    """Open the start menu and act on the choice. Also the Help-menu entry
+    point.
 
-    dlg = WelcomeDialog(main)
+    ``mark_seen`` is a no-op kept for callers; **only the "don't show this
+    again" checkbox** turns the menu off now. It used to be that dismissing the
+    dialog counted as an answer — reasonable for a one-time greeting, wrong for
+    a start menu, where closing it means "I will start from the blank map",
+    not "never show me this again".
+    """
+    from src.welcome_dialog import (BLANK, CONTINUE, EXAMPLE, GENERATE, OPEN,
+                                    RECOVER, WelcomeDialog)
+    from src import saves
+
+    last_path = saves.last_design()
+    last_name = ""
+    if last_path:
+        entry = saves.describe(last_path)
+        last_name = "" if entry.get("error") else entry["name"]
+
+    recover_name = _pending_recovery_name(main)
+    dlg = WelcomeDialog(main, last_design=last_name, recover=recover_name,
+                        has_saves=bool(saves.list_saves()),
+                        first_run=not last_name and not recover_name)
     result = dlg.exec()
-    if mark_seen or dlg.suppressed():
-        # Dismissing IS an answer: a user who closed the welcome does not want
-        # it again next launch. The "don't show again" box additionally covers
-        # the re-opened-from-Help case.
+    if dlg.suppressed():
         _settings().setValue(SEEN_WELCOME_KEY, True)
     if result != QDialog.DialogCode.Accepted:
         return
 
     choice = dlg.choice()
-    if choice == GENERATE:
+    if choice == RECOVER:
+        # Tell the controller this is the menu asking, so its "the menu will
+        # handle it" guard stands aside.
+        main._persistence._recovery_from_menu = True
+        main._persistence.maybe_offer_autosave_recovery()
+    elif choice == CONTINUE:
+        _open_last_design(main)
+    elif choice == OPEN:
+        main._on_open()
+    elif choice == GENERATE:
         main._on_generate_design()
     elif choice == EXAMPLE:
         open_example(main)

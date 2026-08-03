@@ -177,6 +177,8 @@ class PersistenceController:
             project_io.save_project(self._main._project, path)
             self._main._project_path = path
             self._main._modified     = False
+            from src import saves
+            saves.remember_last_design(path)
             name = self._main._project["properties"].get("project_name", "Design")
             self._main.setWindowTitle(f"{APP_NAME} — {name}")
             self._main.statusBar().showMessage(f"Saved: {path}", 3000)
@@ -229,6 +231,18 @@ class PersistenceController:
         declining means the user chose the on-disk version."""
         if getattr(self, "_recovery_checked", False):
             return
+        # When the start menu is on it offers recovery as its top row, so this
+        # standalone prompt would be the second dialog of the launch. When the
+        # menu is OFF it is the only offer there is — unsaved work must not be
+        # conditional on a preference about greetings (V2.40). Called directly
+        # by the menu's Recover row, which sets the flag itself first.
+        try:
+            from src.onboarding_flow import should_show_welcome
+            if should_show_welcome() and not getattr(
+                    self, "_recovery_from_menu", False):
+                return
+        except Exception:                                  # noqa: BLE001
+            pass
         self._recovery_checked = True
         # A pre-V2.39 autosave still sits in the home directory. Move it before
         # looking, or the one launch that most needs it would find nothing.

@@ -221,3 +221,40 @@ def when(entry: dict, now: Optional[float] = None) -> str:
         n = int(delta // 86400)
         return f"{n} day{'s' if n != 1 else ''} ago"
     return time.strftime("%d %b %Y", time.localtime(stamp))
+
+
+# ── Which design you were last in ───────────────────────────────────────────
+#
+# Nothing recorded this before V2.40, so a start menu had nothing to offer as
+# "continue". Kept in the JSON config rather than QSettings so this module stays
+# Qt-free and testable on a bare container.
+
+_LAST_KEY = "last_design_path"
+
+
+def remember_last_design(path: str) -> None:
+    """Note the design the user is now in. Never raises — failing to remember
+    a path must not fail the save or load that just succeeded."""
+    try:
+        from src import settings
+        config = settings.load_config()
+        config[_LAST_KEY] = os.path.abspath(path) if path else ""
+        settings.save_config(config)
+    except Exception:                        # noqa: BLE001 — see docstring
+        pass
+
+
+def last_design() -> str:
+    """The last design's path, or ``""`` if there is none **or it is gone**.
+
+    Checking existence here rather than at the call site is the point: a
+    "Continue" button that opens a file the user has since deleted or moved is
+    a dead control, and this project has shipped two of those already. No path,
+    no row.
+    """
+    try:
+        from src import settings
+        path = (settings.load_config() or {}).get(_LAST_KEY) or ""
+    except Exception:                        # noqa: BLE001
+        return ""
+    return path if path and os.path.exists(path) else ""

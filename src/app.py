@@ -1865,6 +1865,9 @@ class MainWindow(QMainWindow):
         self._project_path = path
         self._modified     = False
         self._clear_undo()
+        # So the start menu can offer "Continue" next launch (F87/V2.40).
+        from src import saves
+        saves.remember_last_design(path)
 
         # Redraw the whole map from the project's features (boundaries,
         # plants, structures, hedgerows, shapes, contours, annotations,

@@ -1,11 +1,25 @@
 """
-welcome_dialog.py — the first thing a new user sees (F44).
+welcome_dialog.py — the start menu (F44, promoted in V2.40).
 
 Three doors, because a blank map is not a choice — it is an absence of one:
 
   * **Generate a design** — the fastest path to something on screen.
   * **Start from my yard** — pin, boundary, plant it yourself.
   * **Open the example** — a worked design to look at and pull apart.
+
+Until V2.40 that was the whole of it, shown **once**, on first launch. It was a
+good dialog aimed at the wrong moment: a greeting for someone who has never used
+the app, which a returning user never saw again. It is now a start menu, shown
+every launch, and it grows three more rows as they become true:
+
+  * **Recover unsaved work** — a previous session died with changes in it.
+  * **Continue — “<name>”** — the design you were last in, still on disk.
+  * **Open a design** — the saves list (V2.39).
+
+Each appears only when it has something to offer, so a first-time user sees
+exactly the original three and a returning one sees their own work first. A row
+that cannot do anything is worse than a missing row; this project has shipped
+two of those.
 
 Presentation only. The copy that describes the path comes from
 :mod:`src.onboarding` so the welcome, the step bar and the Site panel cannot
@@ -28,6 +42,10 @@ from src.onboarding import STEPS
 GENERATE = "generate"
 BLANK = "blank"
 EXAMPLE = "example"
+#: V2.40 — the rows that only exist when there is something behind them.
+RECOVER = "recover"
+CONTINUE = "continue"
+OPEN = "open"
 
 _CHOICES = (
     (GENERATE, "✨", "Generate a design",
@@ -87,9 +105,12 @@ class WelcomeDialog(QDialog):
     """Ask what the user wants to do first. ``choice()`` is one of
     ``GENERATE`` / ``BLANK`` / ``EXAMPLE``, or ``""`` if they closed it."""
 
-    def __init__(self, parent: QWidget | None = None):
+    def __init__(self, parent: QWidget | None = None, *,
+                 last_design: str = "", recover: str = "",
+                 has_saves: bool = False, first_run: bool = True):
         super().__init__(parent)
-        self.setWindowTitle(f"Welcome to {APP_NAME}")
+        self.setWindowTitle(
+            f"Welcome to {APP_NAME}" if first_run else APP_NAME)
         self.setMinimumWidth(520)
         self._choice = ""
 
@@ -108,8 +129,46 @@ class WelcomeDialog(QDialog):
         blurb.setStyleSheet("color: #a5c8a5; font-size: 12px;")
         layout.addWidget(blurb)
 
+        # ── Pick up where you left off ──────────────────────────────────────
+        # Conditional, and in urgency order: unsaved work from a crash first,
+        # because it is the only row with a deadline on it.
+        resume = []
+        if recover:
+            resume.append((
+                RECOVER, "⏱", "Recover unsaved work",
+                f"A previous session ended with unsaved changes to "
+                f"“{recover}”. Open them, or start fresh and they are gone."))
+        if last_design:
+            resume.append((
+                CONTINUE, "↩", f"Continue — “{last_design}”",
+                "Reopen the design you were last working on."))
+        if has_saves or last_design:
+            # Nothing saved yet means this row can only open an empty list.
+            # It would explain itself, but a first-time user does not need a
+            # door to an empty room on the screen that is meant to get them
+            # started.
+            resume.append((
+                OPEN, "📂", "Open a design",
+                "Your saved designs, newest first — with what is in each one."))
+
+        for i, (key, icon, head, detail) in enumerate(resume):
+            btn = _ChoiceButton(icon, head, detail, i == 0 and bool(recover),
+                                self)
+            btn.clicked.connect(lambda _checked=False, k=key: self._pick(k))
+            layout.addWidget(btn)
+
+        if resume:
+            sep = QFrame()
+            sep.setFrameShape(QFrame.Shape.HLine)
+            sep.setStyleSheet("color: #2e4a2e;")
+            layout.addWidget(sep)
+
+        # ── Or start something ──────────────────────────────────────────────
         for key, icon, head, detail, primary in _CHOICES:
-            btn = _ChoiceButton(icon, head, detail, primary, self)
+            # Only the top row of the whole dialog gets the primary treatment;
+            # two "obvious" buttons is none.
+            btn = _ChoiceButton(icon, head, detail,
+                                primary and not (recover or last_design), self)
             btn.clicked.connect(lambda _checked=False, k=key: self._pick(k))
             layout.addWidget(btn)
 
