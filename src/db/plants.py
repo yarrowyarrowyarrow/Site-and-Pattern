@@ -233,7 +233,10 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # The column stays: it is the fallback for species the derivation has not run
 # for, and the only home for riparian / wet_meadow, which are site-scale
 # moisture niches no coordinate can assert.
-_SCHEMA_VERSION = 59
+# v60 (V2.38): no DDL — reseed to pick up data/plant_ecoregions.json, the
+# GBIF-derived per-species ecoregion ranges. 427 species now carry a sourced
+# range with an occurrence count behind it.
+_SCHEMA_VERSION = 60
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
