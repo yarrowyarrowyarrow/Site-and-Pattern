@@ -66,7 +66,7 @@ class TestSunPathJsContract(unittest.TestCase):
 class TestSunScrubPanel(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls._app = QApplication.instance() or QApplication([])
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
     def _panel(self):
         from src.analysis_panel import AnalysisPanel

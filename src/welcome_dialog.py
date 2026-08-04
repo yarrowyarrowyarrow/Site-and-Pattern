@@ -37,6 +37,7 @@ from PyQt6.QtWidgets import (
 
 from src.branding import APP_NAME, APP_TAGLINE
 from src.onboarding import STEPS
+from src.ui_style import BASE_SURFACE
 
 #: Values returned by :meth:`WelcomeDialog.choice`.
 GENERATE = "generate"
@@ -113,6 +114,13 @@ class WelcomeDialog(QDialog):
             f"Welcome to {APP_NAME}" if first_run else APP_NAME)
         self.setMinimumWidth(520)
         self._choice = ""
+        # Carried, not inherited. Opened from the Help menu this dialog is a
+        # child of the MainWindow and picks the theme up from its stylesheet;
+        # opened as the start menu it is a top-level window that exists before
+        # the MainWindow does, and the pale-green text below would be sitting
+        # on the platform's default light dialog. The rows and labels set their
+        # own colours, so this only paints the ground under them.
+        self.setStyleSheet(BASE_SURFACE)
 
         layout = QVBoxLayout(self)
         layout.setSpacing(10)

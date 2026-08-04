@@ -35,7 +35,7 @@ import src.db.plants as _plants_mod                  # noqa: E402
 class TestFieldStudyWidgetFlow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls._app = QApplication.instance() or QApplication([])
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
         cls._tmp = tempfile.mkdtemp(prefix="permadesign_fsw_")
         _plants_mod._DATA_DIR = cls._tmp
         _plants_mod._DB_PATH = os.path.join(cls._tmp, "t.db")
@@ -182,7 +182,7 @@ class TestLearnPanelSync(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls._app = QApplication.instance() or QApplication([])
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
     def test_set_structures_refreshes_the_readers(self):
         from src.learn_panel import LearnPanel
@@ -204,7 +204,7 @@ class TestWarmerIsCancellable(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls._app = QApplication.instance() or QApplication([])
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
     def test_the_widget_owns_a_cancel_flag(self):
         from src.field_study_widget import FieldStudyWidget

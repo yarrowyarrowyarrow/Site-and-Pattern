@@ -52,7 +52,7 @@ class PolycultureColumnBudgetTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from PyQt6.QtWidgets import QApplication
-        cls.app = QApplication.instance() or QApplication([])
+        cls.app = QApplication.instance() or QApplication(["permadesign-tests"])
 
     def _panel(self):
         from src.polyculture_panel import PolyculturePanel

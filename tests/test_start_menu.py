@@ -36,7 +36,7 @@ except Exception:                                          # noqa: BLE001
 class TestWhatTheMenuOffers(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls._app = QApplication.instance() or QApplication([])
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
     def _rows(self, **kwargs):
         from src.welcome_dialog import WelcomeDialog
@@ -99,7 +99,7 @@ class TestWhatTheMenuOffers(unittest.TestCase):
         src = (pathlib.Path(__file__).resolve().parent.parent
                / "src" / "onboarding_flow.py").read_text(encoding="utf-8")
         fn = next(n for n in ast.walk(ast.parse(src))
-                  if isinstance(n, ast.FunctionDef) and n.name == "show_welcome")
+                  if isinstance(n, ast.FunctionDef) and n.name == "_dispatch")
         handled = ast.dump(fn)
         for name in ("RECOVER", "CONTINUE", "OPEN", "GENERATE", "BLANK",
                      "EXAMPLE"):
@@ -113,25 +113,28 @@ class TestItActuallyStaysAStartMenu(unittest.TestCase):
     would suppress the menu after the first one — exactly the behaviour V2.40
     replaces."""
 
-    def test_the_launch_path_does_not_mark_it_seen(self):
+    @classmethod
+    def setUpClass(cls):
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
+
+    def _flow_fn(self, name):
         import ast
         import pathlib
         src = (pathlib.Path(__file__).resolve().parent.parent
                / "src" / "onboarding_flow.py").read_text(encoding="utf-8")
-        fn = next(n for n in ast.walk(ast.parse(src))
-                  if isinstance(n, ast.FunctionDef)
-                  and n.name == "_welcome_if_alive")
-        self.assertNotIn("mark_seen", ast.dump(fn),
-                         "the launch path marks the menu seen — it will show "
-                         "once and never again")
+        return next(n for n in ast.walk(ast.parse(src))
+                    if isinstance(n, ast.FunctionDef) and n.name == name)
+
+    def test_the_launch_path_does_not_mark_it_seen(self):
+        import ast
+        for name in ("choose_start_action", "_open_menu"):
+            self.assertNotIn("mark_seen", ast.dump(self._flow_fn(name)),
+                             f"{name} marks the menu seen — it will show once "
+                             f"and never again")
 
     def test_only_the_checkbox_suppresses_it(self):
         import ast
-        import pathlib
-        src = (pathlib.Path(__file__).resolve().parent.parent
-               / "src" / "onboarding_flow.py").read_text(encoding="utf-8")
-        fn = next(n for n in ast.walk(ast.parse(src))
-                  if isinstance(n, ast.FunctionDef) and n.name == "show_welcome")
+        fn = self._flow_fn("_open_menu")
         setter = next((n for n in ast.walk(fn)
                        if isinstance(n, ast.Call)
                        and isinstance(n.func, ast.Attribute)
@@ -144,12 +147,208 @@ class TestItActuallyStaysAStartMenu(unittest.TestCase):
         self.assertNotIn("mark_seen", guard,
                          "dismissing the menu still counts as 'never again'")
 
+    def test_both_entry_points_offer_the_same_rows(self):
+        """The launch sequence and Help → Welcome build the menu from one body.
+        Two copies of "which rows exist" become two answers to it within a
+        release or two."""
+        import ast
+        for name in ("choose_start_action", "show_welcome"):
+            dump = ast.dump(self._flow_fn(name))
+            self.assertIn("_open_menu", dump, name)
+            self.assertNotIn("WelcomeDialog", dump,
+                             f"{name} builds its own menu instead of sharing "
+                             f"_open_menu")
+
     def test_the_checkbox_is_still_there(self):
         from src.welcome_dialog import WelcomeDialog
         from PyQt6.QtWidgets import QCheckBox
         dlg = WelcomeDialog()
         boxes = [c.text() for c in dlg.findChildren(QCheckBox)]
         self.assertTrue(any("again" in b for b in boxes), boxes)
+
+
+class TestItOpensBeforeTheMap(unittest.TestCase):
+    """*"I want an actual window to open (ahead of seeing the map) which will
+    be the 'start menu'. I'm not seeing that."*
+
+    V2.40's first cut scheduled the menu 150 ms after ``MainWindow.__init__``
+    returned, so the map painted first and the menu arrived as a modal on top
+    of it — a greeting, not a start screen. The fix is an ordering, and an
+    ordering is exactly the kind of thing that gets quietly undone, so it is
+    pinned here rather than left to the eye.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        if _HAVE_QT:
+            cls._app = (QApplication.instance()
+                        or QApplication(["permadesign-tests"]))
+
+    def _tree(self, relpath):
+        import ast
+        import pathlib
+        src = (pathlib.Path(__file__).resolve().parent.parent
+               / relpath).read_text(encoding="utf-8")
+        return ast.parse(src)
+
+    def test_main_asks_before_it_builds_the_window(self):
+        import ast
+        tree = self._tree("main.py")
+        asked = built = None
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            if isinstance(node.func, ast.Attribute) and \
+                    node.func.attr == "choose_start_action":
+                asked = node.lineno
+            if isinstance(node.func, ast.Name) and node.func.id == "MainWindow":
+                built = node.lineno
+        self.assertIsNotNone(asked, "main.py never opens the start menu")
+        self.assertIsNotNone(built, "main.py never builds the MainWindow")
+        self.assertLess(asked, built,
+                        "the start menu opens after the map is built — it is a "
+                        "greeting over the app again, not a start screen")
+
+    def test_the_answer_is_acted_on_after_the_window_exists(self):
+        import ast
+        tree = self._tree("main.py")
+        acted = next((n.lineno for n in ast.walk(tree)
+                      if isinstance(n, ast.Call)
+                      and isinstance(n.func, ast.Attribute)
+                      and n.func.attr == "act_on_start_choice"), None)
+        built = next(n.lineno for n in ast.walk(tree)
+                     if isinstance(n, ast.Call)
+                     and isinstance(n.func, ast.Name)
+                     and n.func.id == "MainWindow")
+        self.assertIsNotNone(acted, "the user's choice is read and dropped")
+        self.assertGreater(acted, built)
+
+    def test_the_window_no_longer_opens_it_itself(self):
+        """Two menus on one launch is worse than the problem being fixed.
+        Help → Welcome may still open it; ``MainWindow.__init__`` may not."""
+        import ast
+        cls = next(n for n in ast.walk(self._tree("src/app.py"))
+                   if isinstance(n, ast.ClassDef) and n.name == "MainWindow")
+        init = next(n for n in cls.body
+                    if isinstance(n, ast.FunctionDef) and n.name == "__init__")
+        opens = {"show_welcome", "maybe_show_welcome", "choose_start_action",
+                 "_open_menu"}
+        for node in ast.walk(init):
+            if (isinstance(node, ast.Call)
+                    and isinstance(node.func, ast.Attribute)
+                    and node.func.attr in opens):
+                self.fail(f"MainWindow.__init__ opens the start menu "
+                          f"({node.func.attr}) — a launch would show two")
+
+    def test_the_menu_needs_no_mainwindow_to_open(self):
+        """It reads what it offers from disk. If it ever grows a `main`
+        argument, the ordering above becomes impossible."""
+        import ast
+        fn = next(n for n in ast.walk(self._tree("src/onboarding_flow.py"))
+                  if isinstance(n, ast.FunctionDef)
+                  and n.name == "choose_start_action")
+        self.assertEqual([a.arg for a in fn.args.args], [],
+                         "choose_start_action takes an argument — it can no "
+                         "longer run before the MainWindow exists")
+
+    @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
+    def test_it_is_a_real_top_level_window(self):
+        """Parented to a MainWindow it is a sheet over an app. Parentless it is
+        a window of its own — which is what "an actual window opens" means."""
+        from src.welcome_dialog import WelcomeDialog
+        dlg = WelcomeDialog(None)
+        self.assertIsNone(dlg.parent())
+        self.assertTrue(dlg.isWindow())
+
+    @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
+    def test_it_paints_its_own_background(self):
+        """The dark theme lives on MainWindow's stylesheet and used to reach
+        this dialog by inheritance. Opening first means there is nothing to
+        inherit from, and pale-green text on the platform's default light
+        dialog is close to unreadable."""
+        from src.welcome_dialog import WelcomeDialog
+        self.assertIn("background-color", WelcomeDialog(None).styleSheet())
+
+    @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
+    def test_choosing_a_row_before_any_window_exists_returns_that_choice(self):
+        """The end-to-end shape of the launch: no MainWindow anywhere, a real
+        dialog opens, a row is clicked, and the answer comes back to be carried
+        into the window that has not been built yet."""
+        from PyQt6.QtCore import QTimer
+        from src import onboarding_flow, welcome_dialog
+
+        self._isolate()
+        seen = {}
+
+        def _click():
+            # activeModalWidget, not "any WelcomeDialog in topLevelWidgets" —
+            # earlier tests leave un-exec'd dialogs lying around, and clicking
+            # one of those hangs this test on the modal that is really open.
+            dlg = QApplication.activeModalWidget()
+            seen["dlg"] = dlg
+            if not isinstance(dlg, welcome_dialog.WelcomeDialog):
+                return
+            seen["parent"] = dlg.parent()
+            btn = next(b for b in dlg.findChildren(QPushButton)
+                       if any("Generate a design" in l.text()
+                              for l in b.findChildren(QLabel)))
+            btn.click()
+
+        def _watchdog():
+            # A hanging test is far worse than a failing one.
+            dlg = QApplication.activeModalWidget()
+            if dlg is not None:
+                dlg.reject()
+
+        QTimer.singleShot(0, _click)
+        QTimer.singleShot(4000, _watchdog)
+        choice = onboarding_flow.choose_start_action()
+
+        self.assertIsInstance(seen.get("dlg"), welcome_dialog.WelcomeDialog,
+                              "no start menu window opened")
+        self.assertIsNone(seen["parent"], "the menu is parented to something")
+        self.assertEqual(choice, welcome_dialog.GENERATE)
+
+    @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
+    def test_a_suppressed_menu_opens_nothing_and_answers_nothing(self):
+        from src import onboarding_flow
+        fake = self._isolate()
+        fake.d[onboarding_flow.SEEN_WELCOME_KEY] = True
+        self.assertEqual(onboarding_flow.choose_start_action(), "")
+
+    def _isolate(self):
+        """Point the menu's three sources of truth — the suppress flag, the
+        saves folder, the autosave — at nothing, so the test neither reads nor
+        writes the machine it is running on."""
+        from src import onboarding_flow, saves
+        import src.settings as settings_mod
+
+        class _FakeSettings:
+            def __init__(self):
+                self.d = {}
+
+            def value(self, key, default=None, type=None):
+                return self.d.get(key, default)
+
+            def setValue(self, key, value):
+                self.d[key] = value
+
+        fake = _FakeSettings()
+        self.addCleanup(setattr, onboarding_flow, "_settings",
+                        onboarding_flow._settings)
+        onboarding_flow._settings = lambda: fake
+
+        tmp = tempfile.mkdtemp(prefix="sp_menu_")
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        self.addCleanup(setattr, saves, "saves_dir", saves.saves_dir)
+        saves.saves_dir = lambda: tmp
+        self.addCleanup(setattr, settings_mod, "_CONFIG_PATH",
+                        settings_mod._CONFIG_PATH)
+        settings_mod._CONFIG_PATH = os.path.join(tmp, "config.json")
+        self.addCleanup(setattr, onboarding_flow, "_autosave_pending",
+                        onboarding_flow._autosave_pending)
+        onboarding_flow._autosave_pending = lambda: False
+        return fake
 
 
 class TestRecoveryIsNotConditionalOnAPreference(unittest.TestCase):
@@ -172,13 +371,54 @@ class TestRecoveryIsNotConditionalOnAPreference(unittest.TestCase):
         self.assertIn("should_show_welcome", dump)
         self.assertIn("_recovery_from_menu", dump)
 
+    def _recovery_fn(self):
+        import ast
+        import pathlib
+        src = (pathlib.Path(__file__).resolve().parent.parent / "src"
+               / "controllers" / "persistence.py").read_text(encoding="utf-8")
+        return next(n for n in ast.walk(ast.parse(src))
+                    if isinstance(n, ast.FunctionDef)
+                    and n.name == "maybe_offer_autosave_recovery")
+
+    def test_an_unreadable_autosave_is_discarded_whatever_the_menu_does(self):
+        """The menu draws no Recover row for a file it could not read, so a
+        controller that stands aside for the menu here leaves a corrupt autosave
+        that nothing ever cleans up. Shipped that way in V2.40's first cut."""
+        import ast
+        fn = self._recovery_fn()
+        # The method deletes the autosave in two places (unreadable, and after
+        # a restore or a decline); it is the *first* that has to come early —
+        # before the "the menu will offer it" early return, or it is
+        # unreachable while the menu is on.
+        discard = min(n.lineno for n in ast.walk(fn)
+                      if isinstance(n, ast.Call)
+                      and isinstance(n.func, ast.Attribute)
+                      and n.func.attr == "clear_autosave")
+        stand_aside = min(n.lineno for n in ast.walk(fn)
+                          if isinstance(n, ast.Name)
+                          and n.id == "should_show_welcome")
+        self.assertLess(discard, stand_aside)
+
+    def test_the_legacy_autosave_is_migrated_before_the_menu_asks(self):
+        """V2.40 moved the menu ahead of the MainWindow, which is where the
+        migration used to be triggered. A user upgrading from before V2.39 gets
+        no Recover row unless the menu migrates first."""
+        import ast
+        import pathlib
+        src = (pathlib.Path(__file__).resolve().parent.parent
+               / "src" / "onboarding_flow.py").read_text(encoding="utf-8")
+        fn = next(n for n in ast.walk(ast.parse(src))
+                  if isinstance(n, ast.FunctionDef)
+                  and n.name == "_autosave_pending")
+        self.assertIn("migrate_legacy_autosave", ast.dump(fn))
+
     def test_the_menu_tells_the_controller_it_is_asking(self):
         import ast
         import pathlib
         src = (pathlib.Path(__file__).resolve().parent.parent
                / "src" / "onboarding_flow.py").read_text(encoding="utf-8")
         fn = next(n for n in ast.walk(ast.parse(src))
-                  if isinstance(n, ast.FunctionDef) and n.name == "show_welcome")
+                  if isinstance(n, ast.FunctionDef) and n.name == "_dispatch")
         self.assertIn("_recovery_from_menu", ast.dump(fn))
 
 

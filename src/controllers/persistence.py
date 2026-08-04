@@ -231,11 +231,34 @@ class PersistenceController:
         declining means the user chose the on-disk version."""
         if getattr(self, "_recovery_checked", False):
             return
-        # When the start menu is on it offers recovery as its top row, so this
-        # standalone prompt would be the second dialog of the launch. When the
-        # menu is OFF it is the only offer there is — unsaved work must not be
-        # conditional on a preference about greetings (V2.40). Called directly
-        # by the menu's Recover row, which sets the flag itself first.
+        # A pre-V2.39 autosave still sits in the home directory. Move it before
+        # looking, or the one launch that most needs it would find nothing.
+        migrate_legacy_autosave()
+        path = autosave_path()
+        if not os.path.exists(path):
+            self._recovery_checked = True
+            return
+        try:
+            data = project_io.load_project(path)
+            props = data.get("properties") or {}
+            source = props.pop("_autosave_source_path", "") or ""
+            name = props.get("project_name", "Untitled Design")
+        except Exception:
+            # Discarded here whatever the start menu is doing, because this
+            # branch asks the user nothing. The menu draws no Recover row for a
+            # file it could not read, so standing aside for it would leave a
+            # corrupt autosave that nothing ever cleans up.
+            _log.warning("unreadable autosave file — discarding", exc_info=True)
+            self._recovery_checked = True
+            self.clear_autosave()
+            return
+        # Past here a *dialog* is involved, and that is the only part the start
+        # menu competes with: when the menu is on it offers recovery as its top
+        # row, so this prompt would be the second dialog of the launch. Stand
+        # aside — without marking the check done, so the menu's Recover row can
+        # still call back in. When the menu is OFF this is the only offer there
+        # is; unsaved work must not be conditional on a preference about
+        # greetings (V2.40).
         try:
             from src.onboarding_flow import should_show_welcome
             if should_show_welcome() and not getattr(
@@ -244,21 +267,6 @@ class PersistenceController:
         except Exception:                                  # noqa: BLE001
             pass
         self._recovery_checked = True
-        # A pre-V2.39 autosave still sits in the home directory. Move it before
-        # looking, or the one launch that most needs it would find nothing.
-        migrate_legacy_autosave()
-        path = autosave_path()
-        if not os.path.exists(path):
-            return
-        try:
-            data = project_io.load_project(path)
-            props = data.get("properties") or {}
-            source = props.pop("_autosave_source_path", "") or ""
-            name = props.get("project_name", "Untitled Design")
-        except Exception:
-            _log.warning("unreadable autosave file — discarding", exc_info=True)
-            self.clear_autosave()
-            return
         r = QMessageBox.question(
             self._main, "Restore autosaved design?",
             f"Site & Pattern closed without saving last time.\n\n"

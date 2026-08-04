@@ -21,6 +21,18 @@ these instead (site_panel.py migrated in V2.13).
 from __future__ import annotations
 
 
+# The app's base surface — dark green ground, pale text. It normally reaches a
+# widget by inheritance from `app.py:_APP_STYLE`, which is set on the
+# MainWindow. A window that opens *before* the MainWindow exists (the V2.40
+# start menu) has nothing to inherit from and lands on the platform's default
+# light palette, where this app's pale-green text is close to invisible. Such a
+# window carries this itself. Mirrors the first block of `_APP_STYLE` — if that
+# palette moves, move it here too.
+BASE_SURFACE = (
+    "QWidget { background-color: #1a2a1a; color: #c8e6c9; "
+    "font-family: 'Segoe UI', 'Arial', sans-serif; font-size: 13px; }"
+)
+
 GROUP_STYLE = (
     "QGroupBox { border: 1px solid #2e4a2e; border-radius: 4px; "
     "margin-top: 10px; padding-top: 12px; }"

@@ -30,6 +30,7 @@ from PyQt6.QtCore import Qt, QtMsgType, qInstallMessageHandler
 from PyQt6.QtWebEngineWidgets import QWebEngineView  # noqa: F401
 
 from src.app import MainWindow
+from src import onboarding_flow
 
 
 def _qt_message_filter(msg_type, context, message):
@@ -66,8 +67,18 @@ def main():
     app.setApplicationVersion("1.0.0")
     app.setOrganizationName("PermaDesign")
 
+    # The start menu, ahead of the map (V2.40). Everything it offers is read
+    # from disk — the saves folder, the design you were last in, an autosave
+    # that survived a crash — so it needs no MainWindow, and running it first
+    # is the whole difference between a start screen and a dialog laid over an
+    # app you can already see. Returns "" when it is turned off or dismissed,
+    # which means "start me on the blank map".
+    choice = onboarding_flow.choose_start_action()
+
     window = MainWindow()
     window.show()
+    # Acted on once the map can render, not now — see act_on_start_choice.
+    onboarding_flow.act_on_start_choice(window, choice)
 
     sys.exit(app.exec())
 

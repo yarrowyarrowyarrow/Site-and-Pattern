@@ -295,7 +295,7 @@ except Exception:                                          # noqa: BLE001
 class TestTheBrowser(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls._app = QApplication.instance() or QApplication([])
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
     def setUp(self):
         self.dir = tempfile.mkdtemp(prefix="sp_saves_")

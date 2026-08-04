@@ -173,11 +173,12 @@ class MainWindow(QMainWindow):
         self._connect_signals()
         self._start_autosave()
 
-        # Cold start (F44): paint the three-step strip for the empty project,
-        # then offer the welcome on the first launch only. Both are flow
-        # functions — see src/onboarding_flow.py.
+        # Cold start (F44): paint the three-step strip for the empty project.
+        # The start menu is NOT opened here any more — main.py runs it before
+        # this window exists (V2.40), so the first thing a user sees is the
+        # choice rather than a modal over an already-painted map. Help →
+        # "Welcome / Getting Started" reopens it; see src/onboarding_flow.py.
         onboarding_flow.refresh(self)
-        onboarding_flow.maybe_show_welcome(self)
 
     # ── UI construction ───────────────────────────────────────────────────────
 
@@ -2232,6 +2233,17 @@ class MainWindow(QMainWindow):
         # map (offscreen tests) can't delete a real session's recovery file.
         if getattr(self._persistence, "_recovery_checked", False):
             self._persistence.clear_autosave()
+        # The 3D preview is a *top-level* window (Scene3DWindow.__init__ passes
+        # parent None), so stop_threads below cannot see it — findChildren only
+        # walks the object tree. It owns two workers of its own, including the
+        # photo warmer, and its closeEvent stops both. Close it first rather
+        # than teaching stop_threads about a second root.
+        win3d = getattr(self, "_scene3d_window", None)
+        if win3d is not None:
+            try:
+                win3d.close()
+            except RuntimeError:                 # already destroyed
+                pass
         # Join the background workers before the window (their parent) goes
         # away. A QThread destroyed while still running is a qFatal abort, not
         # an exception — so without this, quitting during a terrain download or

@@ -206,6 +206,44 @@ not confuse it with the V2.37 segfault, which was a real use-after-free
 (worker threads emitting into deleted widgets, fixed in `src/qt_safety.py`) and
 appeared *mid*-run.
 
+**As root in a container, add `--no-sandbox`** or QtWebEngine's zygote refuses
+to start and takes the process with it, with no summary line:
+
+```bash
+QTWEBENGINE_CHROMIUM_FLAGS=--no-sandbox python -m unittest discover -s tests -t .
+```
+
+### When the run dies with no summary at all (V2.40)
+
+Three distinct process aborts hid behind each other here, each printing in a
+*later* module than the one at fault and naming no test. Two are now guarded by
+`tests/test_architecture_guard.py:TestTheTestSuiteCanReachItsOwnSummary` — when
+one fires, read the guard, not the abort.
+
+| What you see | Cause |
+|---|---|
+| `Argument list is empty, the program name is not passed to QCoreApplication` | Some module built `QApplication([])`. The first one wins for the whole process, and the next `QWebEngineView` anywhere aborts. Pass a name. |
+| `Running as root without --no-sandbox is not supported` | The env var above. |
+| `QThread: Destroyed while thread '' is still running` | A teardown called `deleteLater()` on a window without `close()`, so `closeEvent` never stopped its workers. Nothing happens until the *next* event loop runs — some unrelated later test opening a dialog. |
+
+`python -X faulthandler -m unittest …` is what actually locates these: it prints
+the Python frame the abort came from, including the parked worker's stack.
+
+**The one that is not fixable in code:** with the three above cleared,
+`tests/test_undo_redo.py` segfaults (139) *mid-run* in its own `tearDown`, at
+`processEvents()` after `deleteLater()` — Chromium tearing a `QWebEngineView`
+down in a GPU-less, dbus-less container, once per test. Reproduces identically
+on a stashed tree, so it is the environment, not the diff. To get a number out
+of a container, run everything else:
+
+```bash
+MODS=$(ls tests/test_*.py | sed 's#tests/##; s#\.py##' \
+       | grep -v '^test_undo_redo$' | sed 's/^/tests./' | tr '\n' ' ')
+QTWEBENGINE_CHROMIUM_FLAGS=--no-sandbox python -m unittest $MODS
+```
+
+and run `tests.test_undo_redo` on a real desktop.
+
 Each test module redirects the DB to a `tempfile.mkdtemp` directory so
 tests never touch the real user DB at `~/.local/share/Site & Pattern/`.
 

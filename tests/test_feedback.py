@@ -116,7 +116,7 @@ class TestFeedbackDialog(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from PyQt6.QtWidgets import QApplication
-        cls._app = QApplication.instance() or QApplication([])
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
     def _dialog(self):
         from src.feedback_dialog import FeedbackDialog
@@ -182,7 +182,7 @@ class TestWorkerEmitSafety(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from PyQt6.QtWidgets import QApplication
-        cls._app = QApplication.instance() or QApplication([])
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
     def test_emit_reaches_a_live_object(self):
         from PyQt6.QtCore import QObject, pyqtSignal

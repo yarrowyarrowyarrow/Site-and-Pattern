@@ -410,5 +410,66 @@ class TestAgentApiContract(unittest.TestCase):
         )
 
 
+class TestTheTestSuiteCanReachItsOwnSummary(unittest.TestCase):
+    """Guards against two ways a module has aborted the whole run rather than
+    failing a test. Both cost hours to find, because the abort happens in a
+    *later* module than the one at fault and prints no test name."""
+
+    def test_no_module_builds_a_qapplication_with_an_empty_argv(self):
+        """``QApplication([])`` leaves Chromium without an ``argv[0]``.
+
+        Whichever module constructs the QApplication first decides this for the
+        whole process, and the next ``QWebEngineView`` anywhere in the run dies
+        with *"Argument list is empty, the program name is not passed to
+        QCoreApplication"* — a process abort, in a module that did nothing
+        wrong. Pass a name.
+        """
+        offenders = []
+        for path in sorted(Path(__file__).resolve().parent.glob("test_*.py")):
+            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+                if (isinstance(node, ast.Call)
+                        and isinstance(node.func, ast.Name)
+                        and node.func.id == "QApplication"
+                        and len(node.args) == 1
+                        and isinstance(node.args[0], ast.List)
+                        and not node.args[0].elts):
+                    offenders.append(f"{path.name}:{node.lineno}")
+        self.assertEqual(
+            offenders, [],
+            "QApplication([]) aborts any later QWebEngineView in the run — "
+            'pass a program name, e.g. QApplication(["permadesign-tests"])')
+
+    def test_every_window_teardown_closes_before_it_deletes(self):
+        """A ``QThread`` destroyed while running is ``qFatal()``.
+
+        Windows stop their workers in ``closeEvent``, so a teardown that calls
+        ``deleteLater()`` without ``close()`` leaves live threads on the
+        deferred-delete queue. Nothing happens until the next event loop runs —
+        which is some unrelated later test opening a dialog, where the process
+        aborts with ``QThread: Destroyed while thread '' is still running``.
+        ``qt_safety.stop_threads`` is the alternative when a real ``close()``
+        is not wanted.
+        """
+        offenders = []
+        for path in sorted(Path(__file__).resolve().parent.glob("test_*.py")):
+            lines = path.read_text(encoding="utf-8").splitlines()
+            for i, line in enumerate(lines):
+                if ".deleteLater()" not in line:
+                    continue
+                target = line.strip().split(".deleteLater")[0]
+                window = "\n".join(lines[max(0, i - 6):i])
+                if (f"{target}.close()" in window
+                        or f"stop_threads({target})" in window):
+                    continue
+                # Dialogs and plain widgets own no workers; only the window
+                # variables that might.
+                if any(w in target for w in ("win", "w1", "_win", "main")):
+                    offenders.append(f"{path.name}:{i + 1}  {line.strip()}")
+        self.assertEqual(
+            offenders, [],
+            "deleteLater() on a window without close() or stop_threads() "
+            "first — its workers outlive it and abort the run later")
+
+
 if __name__ == "__main__":
     unittest.main()

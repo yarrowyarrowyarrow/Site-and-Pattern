@@ -39,7 +39,7 @@ import src.db.plants as _plants_mod                  # noqa: E402
 class TestPlantPanelArming(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls._app = QApplication.instance() or QApplication([])
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
         cls._tmp = tempfile.mkdtemp(prefix="permadesign_arm_")
         _plants_mod._DATA_DIR = cls._tmp
         _plants_mod._DB_PATH = os.path.join(cls._tmp, "t.db")
@@ -265,7 +265,7 @@ class TestTwoLineFacetItems(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls._app = QApplication.instance() or QApplication([])
+        cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
     def _combo(self):
         from src.filter_widgets import CheckableComboBox

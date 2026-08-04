@@ -50,55 +50,111 @@ def should_show_welcome() -> bool:
     return not bool(_settings().value(SEEN_WELCOME_KEY, False, type=bool))
 
 
-#: Deferral before the welcome appears. Long enough for the main window to
-#: paint — a modal dialog over an unpainted window reads as a crash — and short
-#: enough not to feel like a lag. A zero-timer is NOT enough: it can fire ahead
-#: of the paint events show() queued.
+#: Fallback deferral for acting on a start-menu choice when there is no map
+#: bridge to wait on. Long enough for the main window to paint — a modal over an
+#: unpainted window reads as a crash — and short enough not to feel like a lag.
+#: A zero-timer is NOT enough: it can fire ahead of the paint events show()
+#: queued.
 _WELCOME_DELAY_MS = 150
 
 
-def maybe_show_welcome(main) -> None:
-    """Open the start menu on launch, unless the user has turned it off.
+def choose_start_action() -> str:
+    """Open the start menu **before the main window exists**, and return the
+    choice (V2.40).
 
-    Crash recovery used to be a *second* modal, fired separately on map_ready,
-    and this function returned early whenever one was pending purely to keep
-    two dialogs from stacking. Since V2.40 recovery is the menu's top row, so
-    the two no longer compete — but see ``PersistenceController.
-    maybe_offer_autosave_recovery``: when the menu is turned off, the
-    standalone prompt still fires. Unsaved work is not conditional on a
-    preference about greetings.
+    The menu used to be a modal over an already-painted map: you saw the app,
+    then a dialog on top of it, which is a greeting rather than a start screen.
+    Running it first — with no parent, so it is a window of its own rather than
+    a sheet over something — means the first thing you see is the choice, and
+    the map appears already carrying it.
+
+    Needs no MainWindow, which is what makes the ordering possible: everything
+    on the menu is read from disk (the saves folder, the last-design path, a
+    surviving autosave). Acting on the answer is :func:`act_on_start_choice`,
+    once there is a window to act on.
+
+    Returns ``""`` when the menu is turned off or dismissed.
     """
-    if not should_show_welcome():
-        return
-    QTimer.singleShot(_WELCOME_DELAY_MS, lambda: _welcome_if_alive(main))
+    if not _HAVE_QT or not should_show_welcome():
+        return ""
+    return _open_menu(None)
 
 
-def _welcome_if_alive(main) -> None:
-    """Open the welcome, unless the window went away in the meantime (V2.38).
+def _open_menu(parent) -> str:
+    """Build the menu against what is on disk, show it, and return the row the
+    user picked (``""`` if they closed it).
 
-    The 150 ms delay is a window in which the MainWindow can be destroyed —
-    rare in normal use (quit within a sixth of a second of launch) but routine
-    in the test suite, which builds a probe window and deletes it immediately.
-    Constructing a dialog parented to a deleted C++ object raises RuntimeError
-    *inside a Qt slot*, and an exception escaping a Qt slot calls ``qFatal()``:
-    a process abort. On Windows that killed the test run before it could print
-    its summary; on Linux it printed a traceback and carried on, which is worse
-    in a way — the same latent bug reading as harmless noise.
-
-    ``qt_safety.is_alive`` is the check that actually answers this. A plain
-    try/except catches the case where PyQt's wrapper knows the object is gone,
-    but not the one where C++ ownership deleted it without telling Python.
+    One body for both entry points — the launch sequence and Help → Welcome —
+    because *which rows exist* is the whole feature, and two copies of that
+    decision would be two answers to it within a release or two.
     """
-    from src.qt_safety import is_alive
-    if not is_alive(main):
+    from src.welcome_dialog import WelcomeDialog
+    from src import saves
+
+    last_path = saves.last_design()
+    last_name = ""
+    if last_path:
+        entry = saves.describe(last_path)
+        last_name = "" if entry.get("error") else entry["name"]
+    recover_name = _pending_recovery_name()
+
+    dlg = WelcomeDialog(parent, last_design=last_name, recover=recover_name,
+                        has_saves=bool(saves.list_saves()),
+                        first_run=not last_name and not recover_name)
+    result = dlg.exec()
+    # Only the checkbox turns the menu off. Closing it used to count as an
+    # answer — reasonable for a one-time greeting, wrong for a start menu,
+    # where closing means "I'll start from the blank map".
+    if dlg.suppressed():
+        _settings().setValue(SEEN_WELCOME_KEY, True)
+    if result != QDialog.DialogCode.Accepted:
+        return ""
+    return dlg.choice()
+
+
+def act_on_start_choice(main, choice: str) -> None:
+    """Carry out a start-menu choice, once the map can render.
+
+    Deferred to ``map_ready`` rather than run at once: opening a design calls
+    ``render_project_to_map``, and a render into a WebEngine view that has not
+    finished loading draws nothing. The crash-recovery prompt has been wired
+    this way since it shipped, for the same reason.
+
+    Two things the deferral costs, both paid for here:
+
+    * **The window can be gone by then** — rare in normal use, routine in the
+      test suite, which builds a probe window and deletes it immediately.
+      Touching a deleted C++ object raises RuntimeError *inside a Qt slot*, and
+      an exception escaping a Qt slot calls ``qFatal()``: a process abort. On
+      Windows that killed a whole test run before it could print its summary
+      (V2.38). ``qt_safety.is_alive`` is the check that actually answers it —
+      a plain try/except misses the case where C++ ownership deleted the object
+      without telling Python.
+    * **``map_ready`` fires again on every page load.** Without the disconnect
+      below, reloading the map would re-open the example, or re-open the last
+      design over whatever the user had done since.
+    """
+    if not choice:
         return
-    # NOT mark_seen: this fires on every launch now, and marking it seen here
-    # would suppress the start menu after the first one — the exact behaviour
-    # V2.40 replaced. Only the checkbox turns it off.
-    show_welcome(main)
+
+    def _go():
+        from src.qt_safety import is_alive
+        try:
+            main.map_widget.bridge.map_ready.disconnect(_go)
+        except Exception:                                  # noqa: BLE001
+            pass
+        if is_alive(main):
+            _dispatch(main, choice)
+
+    try:
+        main.map_widget.bridge.map_ready.connect(_go)
+    except Exception:                                      # noqa: BLE001
+        # No bridge to wait on (headless, or a test double). Fall back to the
+        # timer rather than dropping the user's choice on the floor.
+        QTimer.singleShot(_WELCOME_DELAY_MS, _go)
 
 
-def _pending_recovery_name(main) -> str:
+def _pending_recovery_name() -> str:
     """The design name inside a surviving autosave, or ``""``.
 
     Read rather than assumed, so the row can say *which* design has unsaved
@@ -132,8 +188,19 @@ def _open_last_design(main) -> None:
 
 
 def _autosave_pending() -> bool:
+    """Whether a previous session left unsaved work behind.
+
+    Runs the legacy-location migration first. Since V2.40 the start menu is the
+    **first** thing in the process to ask this question — ahead of the
+    MainWindow, which is where the migration used to be triggered — so asking it
+    without migrating would mean a user upgrading from before V2.39 is offered
+    no Recover row on precisely the launch that needs one. The migration is
+    copy-verify-unlink and a no-op once done.
+    """
     try:
-        from src.controllers.persistence import autosave_path
+        from src.controllers.persistence import (autosave_path,
+                                                 migrate_legacy_autosave)
+        migrate_legacy_autosave()
         return os.path.exists(autosave_path())
     except Exception:                                      # noqa: BLE001
         return False
@@ -149,27 +216,16 @@ def show_welcome(main, *, mark_seen: bool = False) -> None:
     a start menu, where closing it means "I will start from the blank map",
     not "never show me this again".
     """
-    from src.welcome_dialog import (BLANK, CONTINUE, EXAMPLE, GENERATE, OPEN,
-                                    RECOVER, WelcomeDialog)
-    from src import saves
+    _dispatch(main, _open_menu(main))
 
-    last_path = saves.last_design()
-    last_name = ""
-    if last_path:
-        entry = saves.describe(last_path)
-        last_name = "" if entry.get("error") else entry["name"]
 
-    recover_name = _pending_recovery_name(main)
-    dlg = WelcomeDialog(main, last_design=last_name, recover=recover_name,
-                        has_saves=bool(saves.list_saves()),
-                        first_run=not last_name and not recover_name)
-    result = dlg.exec()
-    if dlg.suppressed():
-        _settings().setValue(SEEN_WELCOME_KEY, True)
-    if result != QDialog.DialogCode.Accepted:
+def _dispatch(main, choice: str) -> None:
+    """Act on a start-menu choice. Shared by the Help menu and the launch
+    sequence, so the two can never drift about what a row does."""
+    if not choice:
         return
-
-    choice = dlg.choice()
+    from src.welcome_dialog import (BLANK, CONTINUE, EXAMPLE, GENERATE, OPEN,
+                                    RECOVER)
     if choice == RECOVER:
         # Tell the controller this is the menu asking, so its "the menu will
         # handle it" guard stands aside.

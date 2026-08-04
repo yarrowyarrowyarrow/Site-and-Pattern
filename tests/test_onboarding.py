@@ -382,9 +382,9 @@ class TestWiringContract(unittest.TestCase):
 
     def test_flow_exposes_what_app_and_menus_call(self):
         from src import onboarding_flow
-        for name in ("refresh", "maybe_show_welcome", "show_welcome",
-                     "open_example", "on_step_clicked", "set_step_bar_hidden",
-                     "step_bar_hidden", "example_path"):
+        for name in ("refresh", "choose_start_action", "act_on_start_choice",
+                     "show_welcome", "open_example", "on_step_clicked",
+                     "set_step_bar_hidden", "step_bar_hidden", "example_path"):
             self.assertTrue(hasattr(onboarding_flow, name), name)
 
     def test_no_new_mainwindow_methods(self):

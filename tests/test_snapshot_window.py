@@ -70,6 +70,7 @@ class TestSnapshotWindow(unittest.TestCase):
         self.assertEqual(len(boxes), 1)
         for c in win._canvases:
             self.assertIsNotNone(c._scene)
+        win.close()          # closeEvent stops its workers
         win.deleteLater()
 
     def test_empty_project_sets_status_and_clears(self):
@@ -79,6 +80,7 @@ class TestSnapshotWindow(unittest.TestCase):
         win = SnapshotWindow(main)
         win.refresh()
         self.assertIn("No plants", win._status.text())
+        win.close()          # closeEvent stops its workers
         win.deleteLater()
 
     def test_open_snapshot_view_singleton(self):
