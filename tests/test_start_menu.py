@@ -65,25 +65,29 @@ class TestWhatTheMenuOffers(unittest.TestCase):
         """V2.41: the Load row used to be hidden until you had a save. A screen
         whose structure changes between your first and second launch is harder
         to learn than one honest empty room — and the row says so."""
-        self.assertEqual(self._rows(), self._rows(has_saves=True))
+        self.assertEqual(self._rows(), self._rows(saves_count=3))
         empty = self._details()
-        stocked = self._details(has_saves=True)
-        self.assertTrue(any("Nothing saved yet" in d for d in empty), empty)
-        self.assertFalse(any("Nothing saved yet" in d for d in stocked))
+        stocked = self._details(saves_count=3)
+        self.assertTrue(any("nothing saved yet" in d for d in empty), empty)
+        self.assertFalse(any("nothing saved yet" in d for d in stocked))
 
     def test_having_saves_does_not_add_a_continue_row(self):
         """Saved designs and *the one you were last in* are different facts."""
-        rows = self._rows(has_saves=True)
+        rows = self._rows(saves_count=3)
         self.assertFalse(any("Continue" in r for r in rows))
 
     def test_a_last_design_adds_continue_and_names_it(self):
-        rows = self._rows(last_design="Back Yard", has_saves=True)
-        self.assertTrue(any("Continue" in r and "Back Yard" in r for r in rows))
+        """The name sits in the note column beside "Continue", not inside the
+        title. Same shape as every other row, so the eye finds the changing
+        part in the same place each time."""
+        pairs = list(zip(self._rows(last_design="Back Yard", saves_count=3),
+                         self._details(last_design="Back Yard", saves_count=3)))
+        self.assertIn(("Continue", "Back Yard"), pairs)
 
     def test_unsaved_work_is_the_top_row(self):
         """The only row with a deadline on it goes where the eye lands."""
         rows = self._rows(last_design="Back Yard", recover="Back Yard",
-                          has_saves=True)
+                          saves_count=3)
         self.assertIn("Recover", rows[0])
 
     def test_the_recovery_row_names_the_design(self):
@@ -92,19 +96,44 @@ class TestWhatTheMenuOffers(unittest.TestCase):
         detail = " ".join(l.text() for l in dlg.findChildren(QLabel))
         self.assertIn("Back Yard", detail)
 
-    def test_the_title_stops_saying_welcome_once_you_have_work(self):
+    def test_it_says_what_it_is_and_then_stops_talking(self):
+        """Krug: happy talk must die, and so must instructions.
+
+        The first cut opened with a sentence of mission statement above the
+        controls and closed with the three-step path below them. Neither is
+        read twice, and both push the choice further down the screen. The name
+        and the tagline answer "what is this"; the rows answer "what can I do";
+        nothing else is prose.
+        """
         from src.start_screen import StartScreen
-        self.assertIn("Welcome", StartScreen().windowTitle())
-        self.assertNotIn(
-            "Welcome",
-            StartScreen(last_design="Back Yard", first_run=False).windowTitle())
+        from src.branding import APP_NAME, APP_TAGLINE
+        dlg = StartScreen()
+        loose = [l.text() for l in dlg.findChildren(QLabel)
+                 if not isinstance(l.parent(), QPushButton)]
+        self.assertIn(APP_NAME, loose)
+        self.assertIn(APP_TAGLINE, loose)
+        for text in loose:
+            self.assertLessEqual(
+                len(text.split()), 8,
+                f"prose on the start screen: {text!r}")
+
+    def test_a_row_says_a_fact_about_you_not_a_description_of_itself(self):
+        """Krug: get rid of half the words, then half of what is left. The
+        second line used to restate the title ("Load a design / Your saved
+        designs, newest first, with what is in each one"). It now carries the
+        one thing the title cannot: how many you have."""
+        details = self._details(saves_count=3, species_count=434)
+        self.assertIn("3 saved", details)
+        self.assertIn("434 native species", details)
+        for d in details:
+            self.assertLessEqual(len(d.split()), 5, d)
 
     def test_exactly_one_row_is_the_obvious_one(self):
         """Two primary buttons is none."""
         from src.start_screen import StartScreen
-        for kwargs in ({}, {"has_saves": True},
-                       {"last_design": "X", "has_saves": True},
-                       {"last_design": "X", "recover": "X", "has_saves": True}):
+        for kwargs in ({}, {"saves_count": 3},
+                       {"last_design": "X", "saves_count": 3},
+                       {"last_design": "X", "recover": "X", "saves_count": 3}):
             dlg = StartScreen(**kwargs)
             primary = [b for b in dlg.findChildren(QPushButton)
                        if "#66bb6a" in (b.styleSheet() or "")]
@@ -161,20 +190,51 @@ class TestItActuallyStaysAStartMenu(unittest.TestCase):
                              f"{name} marks the menu seen — it will show once "
                              f"and never again")
 
-    def test_only_the_checkbox_suppresses_it(self):
+    def test_the_checkbox_turns_the_screen_back_on_as_well_as_off(self):
+        """It shipped one-way in V2.40: `if dlg.suppressed(): setValue(True)`,
+        which could switch the app's front door off and never on. The only
+        route back was hand-editing PermaDesign.conf. The write must be
+        unconditional so unticking is an answer too."""
         import ast
         fn = self._flow_fn("_open_menu")
         setter = next((n for n in ast.walk(fn)
                        if isinstance(n, ast.Call)
                        and isinstance(n.func, ast.Attribute)
                        and n.func.attr == "setValue"), None)
-        self.assertIsNotNone(setter)
-        guard = ast.dump(next(n for n in ast.walk(fn)
-                              if isinstance(n, ast.If)
-                              and "suppressed" in ast.dump(n)))
-        self.assertIn("suppressed", guard)
-        self.assertNotIn("mark_seen", guard,
-                         "dismissing the menu still counts as 'never again'")
+        self.assertIsNotNone(setter, "nothing records the preference")
+        self.assertIn("suppressed", ast.dump(setter),
+                      "the stored value is not the checkbox's state")
+        for node in ast.walk(fn):
+            if isinstance(node, ast.If) and "setValue" in ast.dump(node):
+                self.fail("the preference is written only under a condition — "
+                          "unticking the box will not turn the screen back on")
+
+    def test_the_screen_reflects_the_stored_preference(self):
+        """A checkbox that does not show its current state is a guess."""
+        from src.start_screen import StartScreen
+        from PyQt6.QtWidgets import QCheckBox
+        for hidden in (True, False):
+            box = StartScreen(hidden=hidden).findChildren(QCheckBox)[0]
+            self.assertEqual(box.isChecked(), hidden)
+
+    def test_the_dead_key_is_not_read_any_more(self):
+        """V2.31 wrote `onboarding/welcome_seen` itself, the first time the
+        welcome ever appeared, meaning "has been seen". V2.40 reused the key
+        for "asked not to see this again" without migrating it, so every
+        install older than V2.40 started up with the screen already off. The
+        fix is a new key, not a reinterpretation of a value nobody set."""
+        import ast
+        import pathlib
+        src = (pathlib.Path(__file__).resolve().parent.parent
+               / "src" / "onboarding_flow.py").read_text(encoding="utf-8")
+        fn = next(n for n in ast.walk(ast.parse(src))
+                  if isinstance(n, ast.FunctionDef)
+                  and n.name == "should_show_welcome")
+        # Names it *reads*, not names its docstring mentions — the docstring is
+        # where the dead key is explained and has to be able to say so.
+        read = {n.id for n in ast.walk(fn) if isinstance(n, ast.Name)}
+        self.assertNotIn("SEEN_WELCOME_KEY", read)
+        self.assertIn("START_SCREEN_OFF_KEY", read)
 
     def test_both_entry_points_offer_the_same_rows(self):
         """The launch sequence and Help → Welcome build the menu from one body.
@@ -193,7 +253,7 @@ class TestItActuallyStaysAStartMenu(unittest.TestCase):
         from PyQt6.QtWidgets import QCheckBox
         dlg = StartScreen()
         boxes = [c.text() for c in dlg.findChildren(QCheckBox)]
-        self.assertTrue(any("again" in b for b in boxes), boxes)
+        self.assertTrue(any("Skip this screen" in b for b in boxes), boxes)
 
 
 class TestItOpensBeforeTheMap(unittest.TestCase):
@@ -341,7 +401,7 @@ class TestItOpensBeforeTheMap(unittest.TestCase):
                 return
             seen["parent"] = dlg.parent()
             btn = next(b for b in dlg.findChildren(QPushButton)
-                       if any("Explore the plant directory" in l.text()
+                       if any("Plant directory" in l.text()
                               for l in b.findChildren(QLabel)))
             btn.click()
 
@@ -364,7 +424,7 @@ class TestItOpensBeforeTheMap(unittest.TestCase):
     def test_a_suppressed_menu_opens_nothing_and_answers_nothing(self):
         from src import onboarding_flow
         fake = self._isolate()
-        fake.d[onboarding_flow.SEEN_WELCOME_KEY] = True
+        fake.d[onboarding_flow.START_SCREEN_OFF_KEY] = True
         self.assertEqual(onboarding_flow.choose_start_action(), "")
 
     def _isolate(self):

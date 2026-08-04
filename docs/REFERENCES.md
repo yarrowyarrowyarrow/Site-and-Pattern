@@ -93,7 +93,10 @@ Ranked by direct relevance to the application's architecture, data modeling, UX,
 ### Software Architecture & UX
 - John Ousterhout — *A Philosophy of Software Design* (2018)
 - Don Norman — *The Design of Everyday Things* (2013)
-- Steve Krug — *Don't Make Me Think* (2014)
+- Steve Krug — *Don't Make Me Think, Revisited* (3rd ed., 2014); and
+  *Rocket Surgery Made Easy* (2009) on testing it cheaply.
+  **Worked through for this codebase in [`UI_PRINCIPLES.md`](UI_PRINCIPLES.md)**,
+  which is the operative document; this line is the citation.
 - Adam Wathan & Steve Schoger — *Refactoring UI* (2018)
 - Charles Petzold — *Code* (1999)
 - David Thomas & Andrew Hunt — *The Pragmatic Programmer* (2019)

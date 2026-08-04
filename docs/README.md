@@ -8,6 +8,7 @@ is the map. Roughly in the order a newcomer should meet them.
 | Document | What it is | Read it when |
 |---|---|---|
 | [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md) | **The founding text.** Thirteen principles, each with a "where this lives in the code" note and an honest *strong / partial / gap* marker. | Before designing anything. `tests/test_philosophy.py` guards it. |
+| [`UI_PRINCIPLES.md`](UI_PRINCIPLES.md) | **The usability counterpart.** Steve Krug applied to this app: the three laws, how people actually use software, the two things that must die, and a checklist for any screen. `DESIGN_PHILOSOPHY.md` is what a feature should mean; this is whether anyone can work it. | Before laying out any panel, dialog or screen. |
 | [`USER_GUIDE.md`](USER_GUIDE.md) | Every feature, from the user's side. | You want to know what the app does. |
 | [`../README.md`](../README.md) | The project's front door. | First contact. |
 | [`../CLAUDE.md`](../CLAUDE.md) | Conventions that are easy to miss — branch naming, schema bumps, the single write path. | Before your first commit. |

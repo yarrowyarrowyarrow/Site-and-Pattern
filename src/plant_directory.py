@@ -474,15 +474,33 @@ def in_bloom_now(*, month: Optional[int] = None,
 
 
 def bloom_line(summary: dict) -> str:
-    """The footer sentence. Says "across the catalogue" when it has no location,
-    because "14 species are in bloom" reads as a local claim and would not be
-    one."""
+    """The footer link, in as few words as it can be said in.
+
+    Names its scope either way. "41 species flowering now" reads as a claim
+    about *here*, and without a known ecoregion it would not be one (P9), so
+    the catalogue-wide case says so rather than staying silent.
+    """
     count = int(summary.get("count") or 0)
     if not count:
         return ""
-    scope = summary.get("where") or "across the catalogue"
-    return (f"{count} species {'is' if count == 1 else 'are'} in bloom this "
-            f"{summary.get('month_name', 'month')} {scope}")
+    scope = summary.get("where") or "catalogue-wide"
+    return f"{count} species flowering now, {scope}"
+
+
+def catalogue_size(count_fn: Optional[Callable] = None) -> int:
+    """How many species the catalogue holds, for the start screen's directory
+    row. Never raises: a front door must not fail to open over a count."""
+    if count_fn is not None:
+        return int(count_fn())
+    try:
+        from src.db.plants import get_connection             # noqa: PLC0415
+        conn = get_connection()
+        try:
+            return int(conn.execute("SELECT COUNT(*) FROM plants").fetchone()[0])
+        finally:
+            conn.close()
+    except Exception:                                        # noqa: BLE001
+        return 0
 
 
 _MONTH_NAMES = ("January", "February", "March", "April", "May", "June", "July",

@@ -24,7 +24,22 @@ except ImportError:                    # pragma: no cover — headless
 
 #: QSettings key. Namespaced under the legacy org/app name like every other
 #: setting in this app (see src/branding.py on why that name stays).
+#:
+#: **Dead since V2.41. Do not read it.** From V2.31 to V2.40 this meant "the
+#: welcome has been shown once", and the auto-show path wrote it itself
+#: (``show_welcome(main, mark_seen=True)``) the first time the dialog ever
+#: appeared. V2.40 turned the welcome into a start menu and quietly redefined
+#: the same key as "asked not to see this again". Both readings are reasonable;
+#: the value on disk was written under the first one. So every install older
+#: than V2.40 came up with the start screen already switched off, by a flag its
+#: owner never set, and no control in the app could turn it back on.
 SEEN_WELCOME_KEY = "onboarding/welcome_seen"
+
+#: What actually decides it now. A **new key**, because the fix for a key whose
+#: meaning changed is never to reinterpret the old value: nobody stored a
+#: preference here, so nobody's preference is being discarded. Absent means
+#: show, which is the right default for a screen that is the app's front door.
+START_SCREEN_OFF_KEY = "onboarding/start_screen_off"
 #: Separate key: hiding the strip is not the same decision as having seen the
 #: welcome, and conflating them made the strip vanish for people who had only
 #: dismissed the dialog.
@@ -38,16 +53,16 @@ def _settings():
 # ── The welcome ──────────────────────────────────────────────────────────────
 
 def should_show_welcome() -> bool:
-    """Whether the start menu opens on launch.
+    """Whether the start screen opens on launch.
 
-    Until V2.40 this meant "has never been seen", and the dialog was a
-    first-run greeting. It is now a start menu — every launch, unless the user
-    has explicitly turned it off — so the key means "asked not to see this
-    again" rather than "has seen it once".
+    Reads :data:`START_SCREEN_OFF_KEY` only. The old
+    :data:`SEEN_WELCOME_KEY` is deliberately not consulted and not migrated:
+    see its comment. Off by default means every install gets the front door
+    back, including the ones that lost it to the V2.40 key reuse.
     """
     if not _HAVE_QT:
         return False
-    return not bool(_settings().value(SEEN_WELCOME_KEY, False, type=bool))
+    return not bool(_settings().value(START_SCREEN_OFF_KEY, False, type=bool))
 
 
 #: Fallback deferral for acting on a start-menu choice when there is no map
@@ -99,15 +114,16 @@ def _open_menu(parent) -> str:
     recover_name = _pending_recovery_name()
 
     dlg = StartScreen(parent, last_design=last_name, recover=recover_name,
-                      has_saves=bool(saves.list_saves()),
+                      saves_count=len(saves.list_saves()),
+                      species_count=_species_count(),
                       bloom_line=_bloom_line(), version=_version_line(),
-                      first_run=not last_name and not recover_name)
+                      hidden=not should_show_welcome())
     result = dlg.exec()
-    # Only the checkbox turns the menu off. Closing it used to count as an
-    # answer — reasonable for a one-time greeting, wrong for a start menu,
-    # where closing means "I'll start from the blank map".
-    if dlg.suppressed():
-        _settings().setValue(SEEN_WELCOME_KEY, True)
+    # Written every time, not only when ticked. A checkbox that can be turned
+    # on and never off is a trapdoor, and this app shipped one: the only way
+    # back was hand-editing PermaDesign.conf. Closing the screen is still not
+    # an answer to it — that means "I'll start from the blank map".
+    _settings().setValue(START_SCREEN_OFF_KEY, dlg.suppressed())
     if result != QDialog.DialogCode.Accepted:
         return ""
     return dlg.choice()
@@ -291,6 +307,16 @@ def _open_directory(main, *, bloom: bool = False) -> None:
 def _open_reference(main) -> None:
     from src.reference_ecosystem_window import open_reference_ecosystem
     _safely(lambda: open_reference_ecosystem(main))
+
+
+def _species_count() -> int:
+    """How big the catalogue is, for the directory row. Silent on failure: the
+    row then reads "look up any native species", which is true either way."""
+    try:
+        from src.plant_directory import catalogue_size
+        return catalogue_size()
+    except Exception:                                      # noqa: BLE001
+        return 0
 
 
 def _bloom_line() -> str:

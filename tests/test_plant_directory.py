@@ -241,7 +241,7 @@ class TestWhatIsInBloomNow(unittest.TestCase):
         from src import plant_directory as pd
         line = pd.bloom_line(pd.in_bloom_now(
             month=6, search_fn=lambda **_k: [{"common_name": "A"}]))
-        self.assertIn("across the catalogue", line)
+        self.assertIn("catalogue-wide", line)
         self.assertNotIn("in None", line)
 
     def test_with_a_region_it_names_it(self):
@@ -249,18 +249,27 @@ class TestWhatIsInBloomNow(unittest.TestCase):
         out = pd.in_bloom_now(month=6, ecoregion="aspen_parkland",
                               search_fn=lambda **_k: [{"common_name": "A"}])
         self.assertIn("Aspen", pd.bloom_line(out))
-        self.assertNotIn("across the catalogue", pd.bloom_line(out))
+        self.assertNotIn("catalogue-wide", pd.bloom_line(out))
 
     def test_nothing_in_bloom_draws_no_line(self):
         from src import plant_directory as pd
         self.assertEqual(pd.bloom_line(pd.in_bloom_now(
             month=1, search_fn=lambda **_k: [])), "")
 
+    def test_the_line_is_short_enough_to_be_a_link(self):
+        """It sits in a footer beside a version string. The first cut read
+        "41 species are in bloom this August across the catalogue", which is a
+        sentence where a label belongs."""
+        from src import plant_directory as pd
+        line = pd.bloom_line(pd.in_bloom_now(
+            month=6, search_fn=lambda **_k: [{"common_name": "A"}] * 41))
+        self.assertLessEqual(len(line.split()), 6, line)
+
     def test_one_species_reads_as_one(self):
         from src import plant_directory as pd
         line = pd.bloom_line(pd.in_bloom_now(
             month=6, search_fn=lambda **_k: [{"common_name": "A"}]))
-        self.assertIn("1 species is in bloom", line)
+        self.assertIn("1 species flowering now", line)
 
 
 class TestItCostsThePickerNothing(unittest.TestCase):
