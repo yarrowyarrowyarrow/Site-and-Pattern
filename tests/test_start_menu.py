@@ -39,22 +39,41 @@ class TestWhatTheMenuOffers(unittest.TestCase):
         cls._app = QApplication.instance() or QApplication(["permadesign-tests"])
 
     def _rows(self, **kwargs):
-        from src.welcome_dialog import WelcomeDialog
-        dlg = WelcomeDialog(**kwargs)
-        return [b.findChildren(QLabel)[1].text()
+        """The row *titles*."""
+        return [labels[1].text() for labels in self._row_labels(**kwargs)]
+
+    def _details(self, **kwargs):
+        """The second line under each row title."""
+        return [labels[2].text() for labels in self._row_labels(**kwargs)
+                if len(labels) > 2]
+
+    def _row_labels(self, **kwargs):
+        from src.start_screen import StartScreen
+        dlg = StartScreen(**kwargs)
+        return [b.findChildren(QLabel)
                 for b in dlg.findChildren(QPushButton) if b.findChildren(QLabel)]
 
     def test_a_first_time_user_sees_only_the_three_doors(self):
-        """Nothing saved, nothing to continue, nothing to recover — so nothing
-        about opening or resuming, which would only lead to an empty room."""
+        """Nothing saved, nothing to continue, nothing to recover — so the
+        three doors and nothing about resuming."""
         rows = self._rows()
         self.assertEqual(len(rows), 3)
-        for word in ("Recover", "Continue", "Open a design"):
+        for word in ("Recover", "Continue"):
             self.assertFalse(any(word in r for r in rows), word)
 
-    def test_having_saves_adds_the_open_row(self):
+    def test_the_three_doors_do_not_rearrange_between_launches(self):
+        """V2.41: the Load row used to be hidden until you had a save. A screen
+        whose structure changes between your first and second launch is harder
+        to learn than one honest empty room — and the row says so."""
+        self.assertEqual(self._rows(), self._rows(has_saves=True))
+        empty = self._details()
+        stocked = self._details(has_saves=True)
+        self.assertTrue(any("Nothing saved yet" in d for d in empty), empty)
+        self.assertFalse(any("Nothing saved yet" in d for d in stocked))
+
+    def test_having_saves_does_not_add_a_continue_row(self):
+        """Saved designs and *the one you were last in* are different facts."""
         rows = self._rows(has_saves=True)
-        self.assertTrue(any("Open a design" in r for r in rows))
         self.assertFalse(any("Continue" in r for r in rows))
 
     def test_a_last_design_adds_continue_and_names_it(self):
@@ -68,25 +87,25 @@ class TestWhatTheMenuOffers(unittest.TestCase):
         self.assertIn("Recover", rows[0])
 
     def test_the_recovery_row_names_the_design(self):
-        from src.welcome_dialog import WelcomeDialog
-        dlg = WelcomeDialog(recover="Back Yard")
+        from src.start_screen import StartScreen
+        dlg = StartScreen(recover="Back Yard")
         detail = " ".join(l.text() for l in dlg.findChildren(QLabel))
         self.assertIn("Back Yard", detail)
 
     def test_the_title_stops_saying_welcome_once_you_have_work(self):
-        from src.welcome_dialog import WelcomeDialog
-        self.assertIn("Welcome", WelcomeDialog().windowTitle())
+        from src.start_screen import StartScreen
+        self.assertIn("Welcome", StartScreen().windowTitle())
         self.assertNotIn(
             "Welcome",
-            WelcomeDialog(last_design="Back Yard", first_run=False).windowTitle())
+            StartScreen(last_design="Back Yard", first_run=False).windowTitle())
 
     def test_exactly_one_row_is_the_obvious_one(self):
         """Two primary buttons is none."""
-        from src.welcome_dialog import WelcomeDialog
+        from src.start_screen import StartScreen
         for kwargs in ({}, {"has_saves": True},
                        {"last_design": "X", "has_saves": True},
                        {"last_design": "X", "recover": "X", "has_saves": True}):
-            dlg = WelcomeDialog(**kwargs)
+            dlg = StartScreen(**kwargs)
             primary = [b for b in dlg.findChildren(QPushButton)
                        if "#66bb6a" in (b.styleSheet() or "")]
             self.assertLessEqual(len(primary), 1, kwargs)
@@ -95,16 +114,26 @@ class TestWhatTheMenuOffers(unittest.TestCase):
         """A row whose key nothing acts on is a button that does nothing."""
         import ast
         import pathlib
-        from src import welcome_dialog as wd
+        from src import start_screen as wd
         src = (pathlib.Path(__file__).resolve().parent.parent
                / "src" / "onboarding_flow.py").read_text(encoding="utf-8")
         fn = next(n for n in ast.walk(ast.parse(src))
                   if isinstance(n, ast.FunctionDef) and n.name == "_dispatch")
         handled = ast.dump(fn)
-        for name in ("RECOVER", "CONTINUE", "OPEN", "GENERATE", "BLANK",
-                     "EXAMPLE"):
+        for name in ("RECOVER", "CONTINUE", "OPEN", "NEW", "DIRECTORY",
+                     "EXAMPLE", "REFERENCE", "BLOOM", "UPDATE"):
             self.assertTrue(hasattr(wd, name), name)
             self.assertIn(name, handled, f"{name} is offered but never acted on")
+
+    def test_generate_is_not_a_row(self):
+        """V2.41, on the author's call: Generate a design was the *primary*
+        button and comes off entirely. It is not ready to lead with, and a
+        start screen that opens with "let the AI do it" teaches the wrong thing
+        about what this app is. It keeps File → Generate Design… and Ctrl+G."""
+        from src import start_screen
+        self.assertFalse(hasattr(start_screen, "GENERATE"))
+        rows = self._rows()
+        self.assertFalse(any("Generate" in r for r in rows), rows)
 
 
 @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
@@ -155,14 +184,14 @@ class TestItActuallyStaysAStartMenu(unittest.TestCase):
         for name in ("choose_start_action", "show_welcome"):
             dump = ast.dump(self._flow_fn(name))
             self.assertIn("_open_menu", dump, name)
-            self.assertNotIn("WelcomeDialog", dump,
-                             f"{name} builds its own menu instead of sharing "
+            self.assertNotIn("StartScreen", dump,
+                             f"{name} builds its own screen instead of sharing "
                              f"_open_menu")
 
     def test_the_checkbox_is_still_there(self):
-        from src.welcome_dialog import WelcomeDialog
+        from src.start_screen import StartScreen
         from PyQt6.QtWidgets import QCheckBox
-        dlg = WelcomeDialog()
+        dlg = StartScreen()
         boxes = [c.text() for c in dlg.findChildren(QCheckBox)]
         self.assertTrue(any("again" in b for b in boxes), boxes)
 
@@ -191,37 +220,59 @@ class TestItOpensBeforeTheMap(unittest.TestCase):
                / relpath).read_text(encoding="utf-8")
         return ast.parse(src)
 
-    def test_main_asks_before_it_builds_the_window(self):
+    def test_nothing_is_shown_before_the_start_screen(self):
+        """The invariant, stated as what the user actually experiences.
+
+        It used to read "choose_start_action comes before MainWindow(…)", which
+        V2.41 made false in the letter while keeping it in the spirit: the
+        window is now *constructed* first, deliberately, on a zero-timer that
+        runs inside the screen's own modal loop so the Leaflet load overlaps
+        with the seconds you spend reading. Construction is invisible. What
+        must not happen before the screen is a `show()`.
+        """
         import ast
         tree = self._tree("main.py")
-        asked = built = None
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
-                continue
-            if isinstance(node.func, ast.Attribute) and \
-                    node.func.attr == "choose_start_action":
-                asked = node.lineno
-            if isinstance(node.func, ast.Name) and node.func.id == "MainWindow":
-                built = node.lineno
-        self.assertIsNotNone(asked, "main.py never opens the start menu")
-        self.assertIsNotNone(built, "main.py never builds the MainWindow")
-        self.assertLess(asked, built,
-                        "the start menu opens after the map is built — it is a "
-                        "greeting over the app again, not a start screen")
+        asked = next((n.lineno for n in ast.walk(tree)
+                      if isinstance(n, ast.Call)
+                      and isinstance(n.func, ast.Attribute)
+                      and n.func.attr == "choose_start_action"), None)
+        self.assertIsNotNone(asked, "main.py never opens the start screen")
+        shown = [n.lineno for n in ast.walk(tree)
+                 if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+                 and n.func.attr == "show"]
+        self.assertTrue(shown, "main.py never shows the main window")
+        self.assertGreater(min(shown), asked,
+                           "something is shown before the start screen — it is "
+                           "a greeting over the app again, not a start screen")
 
-    def test_the_answer_is_acted_on_after_the_window_exists(self):
+    def test_the_window_is_warmed_behind_the_screen(self):
+        """Construction has to be deferred into the screen's event loop, or the
+        map starts loading only *after* a door is picked and the screen becomes
+        a straight regression in perceived speed."""
+        import ast
+        tree = self._tree("main.py")
+        warmed = [n for n in ast.walk(tree)
+                  if isinstance(n, ast.Call)
+                  and isinstance(n.func, ast.Attribute)
+                  and n.func.attr == "singleShot"
+                  and "MainWindow" in ast.dump(n)]
+        self.assertTrue(warmed,
+                        "MainWindow is not built behind the start screen — "
+                        "picking a door will then wait on the map")
+
+    def test_the_answer_is_acted_on_after_the_window_is_shown(self):
         import ast
         tree = self._tree("main.py")
         acted = next((n.lineno for n in ast.walk(tree)
                       if isinstance(n, ast.Call)
                       and isinstance(n.func, ast.Attribute)
                       and n.func.attr == "act_on_start_choice"), None)
-        built = next(n.lineno for n in ast.walk(tree)
-                     if isinstance(n, ast.Call)
-                     and isinstance(n.func, ast.Name)
-                     and n.func.id == "MainWindow")
         self.assertIsNotNone(acted, "the user's choice is read and dropped")
-        self.assertGreater(acted, built)
+        shown = min(n.lineno for n in ast.walk(tree)
+                    if isinstance(n, ast.Call)
+                    and isinstance(n.func, ast.Attribute)
+                    and n.func.attr == "show")
+        self.assertGreater(acted, shown)
 
     def test_the_window_no_longer_opens_it_itself(self):
         """Two menus on one launch is worse than the problem being fixed.
@@ -255,8 +306,8 @@ class TestItOpensBeforeTheMap(unittest.TestCase):
     def test_it_is_a_real_top_level_window(self):
         """Parented to a MainWindow it is a sheet over an app. Parentless it is
         a window of its own — which is what "an actual window opens" means."""
-        from src.welcome_dialog import WelcomeDialog
-        dlg = WelcomeDialog(None)
+        from src.start_screen import StartScreen
+        dlg = StartScreen(None)
         self.assertIsNone(dlg.parent())
         self.assertTrue(dlg.isWindow())
 
@@ -266,8 +317,8 @@ class TestItOpensBeforeTheMap(unittest.TestCase):
         this dialog by inheritance. Opening first means there is nothing to
         inherit from, and pale-green text on the platform's default light
         dialog is close to unreadable."""
-        from src.welcome_dialog import WelcomeDialog
-        self.assertIn("background-color", WelcomeDialog(None).styleSheet())
+        from src.start_screen import StartScreen
+        self.assertIn("background-color", StartScreen(None).styleSheet())
 
     @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
     def test_choosing_a_row_before_any_window_exists_returns_that_choice(self):
@@ -275,22 +326,22 @@ class TestItOpensBeforeTheMap(unittest.TestCase):
         dialog opens, a row is clicked, and the answer comes back to be carried
         into the window that has not been built yet."""
         from PyQt6.QtCore import QTimer
-        from src import onboarding_flow, welcome_dialog
+        from src import onboarding_flow, start_screen
 
         self._isolate()
         seen = {}
 
         def _click():
-            # activeModalWidget, not "any WelcomeDialog in topLevelWidgets" —
-            # earlier tests leave un-exec'd dialogs lying around, and clicking
+            # activeModalWidget, not "any StartScreen in topLevelWidgets" —
+            # earlier tests leave un-exec'd screens lying around, and clicking
             # one of those hangs this test on the modal that is really open.
             dlg = QApplication.activeModalWidget()
             seen["dlg"] = dlg
-            if not isinstance(dlg, welcome_dialog.WelcomeDialog):
+            if not isinstance(dlg, start_screen.StartScreen):
                 return
             seen["parent"] = dlg.parent()
             btn = next(b for b in dlg.findChildren(QPushButton)
-                       if any("Generate a design" in l.text()
+                       if any("Explore the plant directory" in l.text()
                               for l in b.findChildren(QLabel)))
             btn.click()
 
@@ -304,10 +355,10 @@ class TestItOpensBeforeTheMap(unittest.TestCase):
         QTimer.singleShot(4000, _watchdog)
         choice = onboarding_flow.choose_start_action()
 
-        self.assertIsInstance(seen.get("dlg"), welcome_dialog.WelcomeDialog,
-                              "no start menu window opened")
-        self.assertIsNone(seen["parent"], "the menu is parented to something")
-        self.assertEqual(choice, welcome_dialog.GENERATE)
+        self.assertIsInstance(seen.get("dlg"), start_screen.StartScreen,
+                              "no start screen window opened")
+        self.assertIsNone(seen["parent"], "the screen is parented to something")
+        self.assertEqual(choice, start_screen.DIRECTORY)
 
     @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
     def test_a_suppressed_menu_opens_nothing_and_answers_nothing(self):

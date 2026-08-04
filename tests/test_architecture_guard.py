@@ -70,8 +70,13 @@ class TestStructuralCeilings(unittest.TestCase):
     # split script), never raising the number without a split plan.
     _HTML = _SRC.parent / "html"
     LINE_CEILINGS = [
-        (_SRC / "app.py", 2600),                       # ~2208 now
-        (_SRC / "plant_panel.py", 1600),               # ~1467 now
+        (_SRC / "app.py", 2600),                       # 2402 now
+        # V2.41: 1600/1600 — NO headroom. The plant directory was built as its
+        # own surface partly for this reason: a reference work's worth of
+        # controls cannot land here. The next thing that needs a line from this
+        # file must extract the placement/polyculture-mix half first, which is
+        # roughly 55% of it and has wanted separating since Chunk 4.
+        (_SRC / "plant_panel.py", 1600),               # 1600 now — AT CEILING
         # V1.81: @undoable on every feature + overlay-toggle handler (exhaustive
         # undo) and the wind/sun/sector/pin/shade undo wiring.
         # V2.22: headroom restored (was 2 lines!) — new handlers still belong
@@ -83,6 +88,13 @@ class TestStructuralCeilings(unittest.TestCase):
         (_SRC / "polyculture_panel.py", 2900),         # ~2527 now
         (_SRC / "site_panel.py", 2700),                # ~2240 now
         (_SRC / "analysis_panel.py", 2450),            # ~2214 now
+        # V2.41 — the plant directory (F90). Opted in on arrival rather than
+        # when they first hurt: a ceiling added late is a ceiling set around
+        # whatever shape the file drifted into.
+        (_SRC / "plant_directory.py", 600),            # 489 now
+        (_SRC / "plant_directory_window.py", 640),     # 518 now
+        (_SRC / "start_screen.py", 380),               # 292 now
+        (_SRC / "onboarding_flow.py", 620),            # 496 now
         # V1.64: the former 4,900-line map.html monolith — keep the shell
         # thin and the split files from regrowing into a new monolith.
         (_HTML / "map.html", 400),                     # ~235 now

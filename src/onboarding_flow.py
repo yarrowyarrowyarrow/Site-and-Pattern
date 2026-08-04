@@ -81,14 +81,14 @@ def choose_start_action() -> str:
 
 
 def _open_menu(parent) -> str:
-    """Build the menu against what is on disk, show it, and return the row the
-    user picked (``""`` if they closed it).
+    """Build the screen against what is on disk, show it, and return the row
+    the user picked (``""`` if they closed it).
 
     One body for both entry points — the launch sequence and Help → Welcome —
     because *which rows exist* is the whole feature, and two copies of that
     decision would be two answers to it within a release or two.
     """
-    from src.welcome_dialog import WelcomeDialog
+    from src.start_screen import StartScreen
     from src import saves
 
     last_path = saves.last_design()
@@ -98,9 +98,10 @@ def _open_menu(parent) -> str:
         last_name = "" if entry.get("error") else entry["name"]
     recover_name = _pending_recovery_name()
 
-    dlg = WelcomeDialog(parent, last_design=last_name, recover=recover_name,
-                        has_saves=bool(saves.list_saves()),
-                        first_run=not last_name and not recover_name)
+    dlg = StartScreen(parent, last_design=last_name, recover=recover_name,
+                      has_saves=bool(saves.list_saves()),
+                      bloom_line=_bloom_line(), version=_version_line(),
+                      first_run=not last_name and not recover_name)
     result = dlg.exec()
     # Only the checkbox turns the menu off. Closing it used to count as an
     # answer — reasonable for a one-time greeting, wrong for a start menu,
@@ -110,6 +111,13 @@ def _open_menu(parent) -> str:
     if result != QDialog.DialogCode.Accepted:
         return ""
     return dlg.choice()
+
+
+#: Rows that put a project on the map, so they must wait until it can render.
+#: Everything else — the directory, a reference ecosystem, the update check —
+#: runs the moment the window exists. Kept as a set rather than an ``if`` chain
+#: so a new row's author has to decide which it is.
+_NEEDS_MAP = frozenset({"recover", "continue", "open", "example"})
 
 
 def act_on_start_choice(main, choice: str) -> None:
@@ -133,8 +141,15 @@ def act_on_start_choice(main, choice: str) -> None:
     * **``map_ready`` fires again on every page load.** Without the disconnect
       below, reloading the map would re-open the example, or re-open the last
       design over whatever the user had done since.
+
+    Only the rows that *draw a project* wait. Opening the plant directory or a
+    reference ecosystem touches no map, and making those sit through a Leaflet
+    load would be a delay bought for nothing.
     """
     if not choice:
+        return
+    if choice not in _NEEDS_MAP:
+        _dispatch(main, choice)
         return
 
     def _go():
@@ -220,34 +235,124 @@ def show_welcome(main, *, mark_seen: bool = False) -> None:
 
 
 def _dispatch(main, choice: str) -> None:
-    """Act on a start-menu choice. Shared by the Help menu and the launch
+    """Act on a start-screen choice. Shared by the Help menu and the launch
     sequence, so the two can never drift about what a row does."""
     if not choice:
         return
-    from src.welcome_dialog import (BLANK, CONTINUE, EXAMPLE, GENERATE, OPEN,
-                                    RECOVER)
+    from src.start_screen import (BLOOM, CONTINUE, DIRECTORY, EXAMPLE, NEW,
+                                  OPEN, RECOVER, REFERENCE, UPDATE)
     if choice == RECOVER:
-        # Tell the controller this is the menu asking, so its "the menu will
-        # handle it" guard stands aside.
+        # Tell the controller this is the screen asking, so its "the screen
+        # will handle it" guard stands aside.
         main._persistence._recovery_from_menu = True
         main._persistence.maybe_offer_autosave_recovery()
     elif choice == CONTINUE:
         _open_last_design(main)
     elif choice == OPEN:
         main._on_open()
-    elif choice == GENERATE:
-        main._on_generate_design()
     elif choice == EXAMPLE:
         open_example(main)
-    elif choice == BLANK:
+    elif choice in (DIRECTORY, BLOOM):
+        _open_directory(main, bloom=(choice == BLOOM))
+    elif choice == REFERENCE:
+        _open_reference(main)
+    elif choice == UPDATE:
+        _safely(lambda: main._on_check_for_updates())
+    elif choice == NEW:
         # Nothing to build — just point at step one and put the cursor where
         # the user has to act.
-        try:
-            main._side_tabs.setCurrentWidget(main.site_panel)
-            main.site_panel.focus_address_search()
-        except Exception:                                  # noqa: BLE001
-            pass
+        _safely(lambda: (main._side_tabs.setCurrentWidget(main.site_panel),
+                         main.site_panel.focus_address_search()))
     refresh(main)
+
+
+def _safely(fn) -> None:
+    """Run a dispatch action without letting it take the launch with it. A row
+    that fails should leave the user on a working blank map, not on a
+    traceback."""
+    try:
+        fn()
+    except Exception:                                      # noqa: BLE001
+        pass
+
+
+def _open_directory(main, *, bloom: bool = False) -> None:
+    """Open the plant directory (F90), optionally already filtered to what is
+    flowering this month — which is what the start screen's in-bloom line is a
+    link to."""
+    from src.plant_directory_window import open_plant_directory
+    criteria = None
+    if bloom:
+        import datetime
+        criteria = {"bloom_months": [str(datetime.date.today().month)]}
+    _safely(lambda: open_plant_directory(main, criteria))
+
+
+def _open_reference(main) -> None:
+    from src.reference_ecosystem_window import open_reference_ecosystem
+    _safely(lambda: open_reference_ecosystem(main))
+
+
+def _bloom_line() -> str:
+    """The footer's living number. Never raises and returns ``""`` when it has
+    nothing to say — a start screen must not fail to open because a count
+    could not be computed."""
+    try:
+        from src.plant_directory import bloom_line, in_bloom_now
+        return bloom_line(in_bloom_now(ecoregion=_last_ecoregion()))
+    except Exception:                                      # noqa: BLE001
+        return ""
+
+
+def _last_ecoregion() -> str:
+    """The ecoregion of the design you were last in, if any.
+
+    The start screen runs before any project is open, so this is the only
+    location it can honestly claim. With nothing here the bloom line says
+    "across the catalogue" rather than implying a regional count (P9).
+    """
+    try:
+        from src import saves
+        from src.project import load_project
+        path = saves.last_design()
+        if not path:
+            return ""
+        props = (load_project(path).get("properties") or {})
+        regions = (props.get("site_config") or {}).get("ecoregion") or ""
+        if isinstance(regions, (list, tuple)):
+            return regions[0] if regions else ""
+        return str(regions).split(",")[0].strip()
+    except Exception:                                      # noqa: BLE001
+        return ""
+
+
+def _version_line() -> str:
+    """What build this is.
+
+    A frozen build knows from its stamped ``version.txt``. A source checkout's
+    version *is* its V-branch, and the only thing that can answer that is git —
+    ``UpdateFlowController._current_branch_name`` asks it the same way, but
+    that is a controller method and this runs before any controller exists.
+    So: one short, timed-out ``rev-parse``, only on the path where the stamp is
+    absent, and blank rather than a guess if anything about it fails.
+    """
+    try:
+        from src.app_version import build_version
+        stamped = build_version()
+        if stamped:
+            return stamped
+    except Exception:                                      # noqa: BLE001
+        pass
+    try:
+        import subprocess
+        repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        out = subprocess.run(
+            ["git", "-C", repo, "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True, text=True, timeout=3)
+        branch = (out.stdout or "").strip().split("/")[-1]
+        return branch if branch.startswith("V") else ""
+    except Exception:                                      # noqa: BLE001
+        return ""
 
 
 # ── The worked example ───────────────────────────────────────────────────────

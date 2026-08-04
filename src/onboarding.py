@@ -75,10 +75,15 @@ STEPS: tuple[dict, ...] = (
     {
         "key": "plants",
         "short": "Add plants",
-        "title": "Generate a design — or plant it yourself",
-        "detail": "✨ Generate Design fills the boundary from your goals "
-                  "and you edit from there. Or pick plants from the Plants tab "
-                  "and click to place them.",
+        # V2.41: the two halves swapped. The manual path leads because that is
+        # what the app is for; Generate is a shortcut offered second, not the
+        # headline. Same change of emphasis as taking Generate off the start
+        # screen — `short` has always said "Add plants", so this is the title
+        # catching up with the label beside it.
+        "title": "Add your plants — or let the app draft it",
+        "detail": "Pick plants from the Plants tab and click to place them. "
+                  "Or use ✨ Generate Design to fill the boundary from your "
+                  "goals and edit from there.",
     },
 )
 

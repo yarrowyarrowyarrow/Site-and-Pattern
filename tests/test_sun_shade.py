@@ -492,22 +492,45 @@ class TestTheDeferredStartChoiceSurvivesADeletedWindow(unittest.TestCase):
     """
 
     def test_the_deferred_choice_checks_the_window_is_still_there(self):
+        """The guard belongs to the **deferred callback**, not to the function
+        that installs it.
+
+        V2.41 split the rows: only the ones that draw a project wait for
+        `map_ready`, and the rest are dispatched synchronously from a live
+        window, where there is no interval in which it can die. That made the
+        old proxy — "is_alive appears above the first _dispatch in the whole
+        function" — false while the property it stood for stayed true. So look
+        inside the callback, which is where the hazard actually lives.
+        """
         src = (_SRC / "onboarding_flow.py").read_text(encoding="utf-8")
         tree = ast.parse(src)
-        fn = next((n for n in ast.walk(tree)
-                   if isinstance(n, ast.FunctionDef)
-                   and n.name == "act_on_start_choice"), None)
-        self.assertIsNotNone(fn, "the guarded entry point is gone")
-        self.assertIn("is_alive", ast.dump(fn))
-        # The guard must come before the project is touched, or it guards
-        # nothing.
-        guard = next(n.lineno for n in ast.walk(fn)
+        outer = next((n for n in ast.walk(tree)
+                      if isinstance(n, ast.FunctionDef)
+                      and n.name == "act_on_start_choice"), None)
+        self.assertIsNotNone(outer, "the guarded entry point is gone")
+        deferred = next((n for n in ast.walk(outer)
+                         if isinstance(n, ast.FunctionDef) and n is not outer),
+                        None)
+        self.assertIsNotNone(deferred, "nothing is deferred any more")
+        self.assertIn("is_alive", ast.dump(deferred))
+        guard = next(n.lineno for n in ast.walk(deferred)
                      if isinstance(n, ast.Name) and n.id == "is_alive")
-        acted = next(n.lineno for n in ast.walk(fn)
+        acted = next(n.lineno for n in ast.walk(deferred)
                      if isinstance(n, ast.Call)
                      and isinstance(n.func, ast.Name)
                      and n.func.id == "_dispatch")
         self.assertLess(guard, acted)
+
+    def test_the_synchronous_rows_never_wait_on_the_map(self):
+        """The other half of that split. Opening the plant directory touches no
+        map; making it sit through a Leaflet load would be a delay bought for
+        nothing."""
+        from src import onboarding_flow
+        from src.start_screen import DIRECTORY, EXAMPLE, OPEN, REFERENCE
+        for key in (OPEN, EXAMPLE):
+            self.assertIn(key, onboarding_flow._NEEDS_MAP, key)
+        for key in (DIRECTORY, REFERENCE):
+            self.assertNotIn(key, onboarding_flow._NEEDS_MAP, key)
 
     def test_nothing_schedules_a_bare_call_into_the_window(self):
         """A lambda straight to _dispatch is the shape of the bug."""

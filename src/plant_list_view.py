@@ -347,6 +347,17 @@ class PlantListModel(QAbstractListModel):
             idx = self.index(row)
             self.dataChanged.emit(idx, idx, [_PLANT_EXPANDED_ROLE])
 
+    def warm_photo(self, plant: dict):
+        """Start caching one plant's photo now.
+
+        Public since V2.41, because the prefetch had exactly one trigger —
+        expanding a row — and the plant directory's species page is a second
+        consumer that never expands anything. Without this its photo panel says
+        "not downloaded yet" for the whole session on every species the user
+        never happened to expand in the list.
+        """
+        self._prefetch_image(plant)
+
     def _prefetch_image(self, plant: dict):
         """Kick a one-time background fetch of a plant's photo into the local
         cache (I1). Off the UI thread; emits ``imageReady`` when done so the row

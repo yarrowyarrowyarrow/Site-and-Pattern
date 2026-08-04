@@ -305,24 +305,25 @@ class TestFirstStepBar(unittest.TestCase):
 
 
 @unittest.skipUnless(_qt_available(), "PyQt6 not installed in this env")
-class TestWelcomeDialog(unittest.TestCase):
+class TestStartScreen(unittest.TestCase):
+    """V2.41 — ``welcome_dialog.py`` became ``start_screen.py``. One start
+    surface, not two, so the Help menu and the launch path cannot drift."""
 
     @classmethod
     def setUpClass(cls):
         from PyQt6.QtWidgets import QApplication
         cls._app = QApplication.instance() or QApplication(["tests"])
 
-    def test_offers_all_three_doors(self):
-        from src.welcome_dialog import BLANK, EXAMPLE, GENERATE, _CHOICES
-        self.assertEqual({c[0] for c in _CHOICES},
-                         {GENERATE, BLANK, EXAMPLE})
+    def test_offers_the_three_doors(self):
+        from src.start_screen import DIRECTORY, NEW, OPEN, _DOORS
+        self.assertEqual([d[0] for d in _DOORS], [NEW, OPEN, DIRECTORY])
 
     def test_choice_is_empty_until_picked(self):
-        from src.welcome_dialog import EXAMPLE, WelcomeDialog
-        dlg = WelcomeDialog()
-        self.assertEqual(dlg.choice(), "")
-        dlg._pick(EXAMPLE)
-        self.assertEqual(dlg.choice(), EXAMPLE)
+        from src.start_screen import DIRECTORY, StartScreen
+        screen = StartScreen()
+        self.assertEqual(screen.choice(), "")
+        screen._pick(DIRECTORY)
+        self.assertEqual(screen.choice(), DIRECTORY)
 
 
 class TestWiringContract(unittest.TestCase):

@@ -157,13 +157,23 @@ Yong's Umwelt research, Deutscher's linguistic relativity, Berger's visual cultu
 > (`src/relationship_graph.py` + `html/map/07-network.js`, roadmap F5 — see principle #3) puts the
 > design's food web on the real map, and F15's pollinator-pathway idea was merged into it as a month
 > filter rather than shipped as a third overlay saying the same thing.
+> Since V2.41 the catalogue itself is a place you can stand in: the **plant directory**
+> (`src/plant_directory.py` + `src/plant_directory_window.py`, roadmap F90) opens *before any
+> design exists* and gives every species a page — photograph and credit, conditions, season,
+> morphology in plain English, the sourced range **with its occurrence counts and confidence
+> band**, every documented animal with the specialists flagged, companions, sourcing. It is the
+> first surface in the app that treats the data as something to *read* rather than something to
+> place, and it made thirteen filters pressable that had worked for years with no control
+> attached to them.
 > **State: strong** — site forces, seasonality, the real site, winter snow microsites, a single
-> bee's world, the food web itself, active recall, a guided course and a presentable tour are all
-> made visible. What is *not* yet visible is the thing the eye judges first: the app can show you
-> what a design **means** far better than it can show you what it will **look like**. The 3D preview
-> resolves 434 species into ~75 distinguishable looks (`docs/SPRITE_AUDIT.md`) and each species
-> carries a single photograph chosen by licence order rather than usefulness — so the ecology is
-> legible and the *place* is not (roadmap F63–F74 in [`ROADMAP_NEXT.md`](ROADMAP_NEXT.md)).
+> bee's world, the food web itself, active recall, a guided course, a presentable tour and now the
+> catalogue as a reference work are all made visible. What is *not* yet visible is the thing the
+> eye judges first: the app can show you what a design **means** far better than it can show you
+> what it will **look like**. The 3D preview resolves 434 species into ~75 distinguishable looks
+> (`docs/SPRITE_AUDIT.md`), and 111 of 434 species have no photograph at all while the named
+> photo-slot table (F70) ships empty — the directory now makes that gap *visible* rather than
+> merely true, which is the honest first step toward closing it (roadmap F63–F74 in
+> [`ROADMAP_NEXT.md`](ROADMAP_NEXT.md)).
 
 ### 6. Conventional value metrics miss ecological value
 
