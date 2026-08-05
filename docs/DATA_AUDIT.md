@@ -218,7 +218,116 @@ Safety data is the other bright spot: **49 / 49** toxicity-tagged plants carry a
 
 ---
 
-## 6 · What this audit could not verify
+## 6 · Closing the coverage gap without inventing anything
+
+22.6% is the weakest number in this audit, and it is not defensible on the
+grounds that what *is* there is well cited. This section measures how far
+coverage can be raised using only claims **already present in the shipped,
+sourced data** — no new ecological assertions.
+
+### Lever A — promote genus-level host records to edges
+
+`bee_attributes_master.json` carries `floral_host_genera` (a comma list of plant
+genera) on 69 bees; `lepidoptera_attributes_master.json` carries
+`nectar_flower_genera` on 31 leps. Both files carry work-level `source` strings
+crediting the Alberta Native Bee Council, Sheffield et al. 2014, Wilson &
+Carril 2015, Acorn & Sheldon 2006, Pohl et al. 2010 and Bird et al. 1995.
+`src/bee_habitat.py` already infers from `floral_host_genera` at runtime for one
+panel — the graph simply never learns about it.
+
+Expanding those genus lists against the 235 genera in the catalogue:
+
+| | Before | After |
+|---|---:|---:|
+| Edges | 361 | 361 + **1072 derived** |
+| Plants with any edge | 99 / 439 (22.6%) | **200 / 439 (45.6%)** |
+| Fauna with any edge | 86 / 142 (60.6%) | **111 / 142 (78.2%)** |
+| Orphan fauna | 56 | **31** |
+
+**Coverage doubles.** Nothing is invented: each edge restates a host record the
+attribute file already makes, at the resolution the literature made it.
+
+269 genus references resolve; 57 do not — mostly introduced species correctly
+absent from a native catalogue (*Trifolium* 13, *Melilotus* 11, *Taraxacum* 3,
+*Medicago*, *Centaurea*, *Linaria*). See Lever D for the ones that are a real gap.
+
+### Lever B — congeneric transfer, forage relationships only
+
+If a documented edge says a bee takes nectar from *Symphyotrichum laeve*, and
+the catalogue also ships nine other *Symphyotrichum*, a genus-level forage claim
+is defensible — host records in this literature are frequently genus-level to
+begin with.
+
+**It is not defensible for larval hosts.** Specialist herbivory is often
+species-specific, and transferring a `larval_host` edge across a genus
+manufactures precisely the false precision P9 forbids. So this lever is
+restricted to `nectar` / `pollen` / `fruit_food` / `seed_food` / `cover`, and
+excludes any edge marked `specialist`:
+
+- Available congeneric transfers: 1171
+- **Excluded: 350 `larval_host` + 25 `nesting` + 99 specialist-derived**
+- **Kept: 633**, of which 424 are additional to Lever A
+
+Combined **A + B: 1496 derived edges → 225/439 plants (51.3%)**.
+
+The transfer surface is 93 genera holding 297 plants — *Carex* (15),
+*Symphyotrichum* (10), *Solidago* (9), *Penstemon* (8), *Ribes* (7).
+
+### Lever C — the 24 cuckoo bees are a schema gap, not a data gap
+
+Of the 31 fauna still orphaned after Lever A, **24 are cleptoparasitic or social
+parasitic bees**, and `host_genus` on those records is **not a plant** — it is
+the host *bee* genus:
+
+```
+Nomada      → Andrena     (7)      Melecta/Xeromelecta/Zacosmia → Anthophora (4)
+Triepeolus  → Melissodes  (6)      Bombus (cuckoo)              → Bombus     (4)
+Epeolus     → Colletes    (3)
+```
+
+These species will *never* stop being orphans under a plant↔fauna-only model,
+because their defining relationship is to another animal. The schema has no
+fauna↔fauna edge type. Adding one takes orphans **31 → 7** and is ecologically
+the most interesting edge in the file: a cuckoo bee is a top-of-food-web
+indicator — *Nomada* present means a healthy *Andrena* population, which is
+exactly the invisible ecology P5 asks the app to make visible.
+
+### Lever D — the fauna data is a coverage test for the flora
+
+Four genera the bee records cite as hosts are absent from the plant catalogue
+entirely, and are neither introduced nor marginal in Alberta:
+
+| Genus | Refs | Note |
+|---|---:|---|
+| ***Epilobium* / *Chamerion*** | 7 | Fireweed — among the most important native bee forage plants in boreal and montane Alberta. Absent under both names. |
+| *Senecio* | 3 | Native groundsels/ragworts. |
+| *Salvia* | 2 | |
+| *Polygonum* | 1 | |
+
+Read the other way round: **the fauna file is telling us which plants the
+catalogue is missing.** That check costs nothing to run and should be permanent.
+
+### Summary of available lift
+
+| Step | Edges | Plant coverage | Orphan fauna |
+|---|---:|---:|---:|
+| Today (documented) | 361 | 22.6% | 56 |
+| + A · genus-host promotion | +1072 | **45.6%** | **31** |
+| + B · congeneric forage only | +424 | **51.3%** | 31 |
+| + C · fauna↔fauna parasite edges | +24 | 51.3% | **7** |
+
+**Non-negotiable conditions.** Derived edges are only honest if they are
+distinguishable, so this depends on the three-state `evidence` in §4 landing
+first (`documented` / `recorded` / `derived`), on `html/map/07-network.js`'s
+existing dashed rendering being extended rather than replaced, and on a
+**decision about the Habitat Value Score**: if derived edges feed it unchanged,
+every existing project's headline number moves overnight. The safe default is
+to exclude derived edges from the score and surface them as context, then
+revisit deliberately.
+
+---
+
+## 7 · What this audit could not verify
 
 The **contents of the six cited works**. Everything above is a reading of the
 citation *strings* and their internal consistency, not a check that Acorn &
