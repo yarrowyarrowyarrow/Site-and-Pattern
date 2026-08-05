@@ -236,7 +236,7 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # v60 (V2.38): no DDL — reseed to pick up data/plant_ecoregions.json, the
 # GBIF-derived per-species ecoregion ranges. 427 species now carry a sourced
 # range with an occurrence count behind it.
-_SCHEMA_VERSION = 60
+_SCHEMA_VERSION = 61
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -563,6 +563,32 @@ def _migrate_to_v57(conn: sqlite3.Connection):
             conn.execute(f"ALTER TABLE plants ADD COLUMN {col} TEXT DEFAULT ''")
         except sqlite3.OperationalError:
             pass
+    conn.commit()
+
+
+def _migrate_to_v61(conn: sqlite3.Connection):
+    """Sourcing columns on the companion tables (V2.42).
+
+    The new tables in v61 (``plant_fauna_derived``, ``fauna_fauna``) need no
+    migration — ``schema.sql`` creates them with ``IF NOT EXISTS`` on every
+    ``init_db``. The companion tables DO: ``CREATE TABLE IF NOT EXISTS`` is a
+    no-op against an existing table, so an install upgrading from v60 would keep
+    two-column ``companion_friends``/``companion_enemies`` while the recreated
+    ``relationship_edges`` view selects ``cf.source`` — and every relationship
+    query would fail with "no such column" on a DB that had merely been used
+    before.
+
+    Deliberately additive and empty. A companion pairing with no source reads
+    ``recorded`` rather than ``documented``, which is the honest state for data
+    nobody has cited; filling these in is how a pairing earns the stronger word.
+    """
+    for table in ("companion_friends", "companion_enemies"):
+        for col in ("source", "notes"):
+            try:
+                conn.execute(
+                    f"ALTER TABLE {table} ADD COLUMN {col} TEXT DEFAULT ''")
+            except sqlite3.OperationalError:
+                pass                      # column already present
     conn.commit()
 
 
@@ -1128,6 +1154,7 @@ def _seed_fauna(conn: sqlite3.Connection) -> int:
     }
 
     link_rows: list[tuple] = []
+    unresolved: list[str] = []
     for entry in link_entries:
         # Skip metadata records (those without a 'plant' / 'fauna' key).
         if "plant" not in entry or "fauna" not in entry:
@@ -1135,6 +1162,14 @@ def _seed_fauna(conn: sqlite3.Connection) -> int:
         pid = name_to_pid.get(entry["plant"])
         fid = sci_to_fid.get(entry["fauna"])
         if pid is None or fid is None:
+            # V2.42: this used to be a bare `continue`. A typo in a plant or
+            # fauna name deleted an edge with no error, no count and no way to
+            # notice — the data-quality gate never opened this file either, so
+            # the loss was invisible from both ends. The gate now resolves these
+            # names (validate_plant_fauna), and a survivor here is reported so
+            # a reseed cannot quietly shrink the graph.
+            missing = "plant" if pid is None else "fauna"
+            unresolved.append(f"{entry['plant']} ↔ {entry['fauna']} ({missing})")
             continue
         link_rows.append((
             pid,
@@ -1144,6 +1179,11 @@ def _seed_fauna(conn: sqlite3.Connection) -> int:
             entry.get("source"),
             entry.get("notes"),
         ))
+
+    if unresolved:
+        print(f"[seed] WARNING: {len(unresolved)} plant↔fauna link(s) dropped — "
+              f"name did not resolve: {'; '.join(unresolved[:5])}"
+              + (" …" if len(unresolved) > 5 else ""))
 
     if link_rows:
         conn.executemany(
@@ -1326,6 +1366,92 @@ def _seed_lepidoptera_attributes(conn: sqlite3.Connection) -> int:
         )
         conn.commit()
     return len(rows)
+
+
+def _seed_derived_edges(conn: sqlite3.Connection) -> tuple[int, int]:
+    """
+    Materialise the derived relationship edges (schema v61, V2.42).
+
+    Two products, both computed by ``src.db.derived_edges`` from data already
+    shipped and already cited:
+
+    * ``plant_fauna_derived`` — genus-level host records (``floral_host_genera``
+      on bees, ``nectar_flower_genera`` on lepidoptera) expanded onto the
+      catalogue's members of each genus. Takes plant coverage from 22.6% to
+      ~46%, which is the difference between the relationship features working
+      and not.
+    * ``fauna_fauna`` — the cuckoo bees, whose ``host_genus`` is another BEE and
+      who are therefore unreachable in a plant↔fauna-only graph.
+
+    Must run AFTER ``_seed_bee_attributes`` / ``_seed_lepidoptera_attributes``
+    (it reads the JSON, but the fauna ids it resolves against come from
+    ``_seed_fauna``). Returns ``(plant_edges, fauna_edges)``.
+
+    Nothing here invents a relationship: every row carries the citation of the
+    record it was expanded from, plus the genus it matched on and a confidence
+    band, so a reader can see exactly what was claimed and what this app did
+    with it. See docs/DATA_AUDIT.md §6.
+    """
+    import json as _json
+    from src.db.derived_edges import (           # noqa: PLC0415
+        bee_genus_host_edges, lepidoptera_genus_host_edges, cleptoparasite_edges,
+    )
+
+    def _load(path):
+        if not os.path.exists(path):
+            return []
+        with open(path, "r", encoding="utf-8") as f:
+            return [r for r in _json.load(f)
+                    if isinstance(r, dict) and "_comment" not in r]
+
+    bees = _load(_BEE_ATTR_JSON_PATH)
+    leps = _load(_LEP_ATTR_JSON_PATH)
+    if not bees and not leps:
+        return (0, 0)
+
+    plants = [dict(r) for r in conn.execute(
+        "SELECT common_name, scientific_name FROM plants").fetchall()]
+    name_to_pid = {
+        row["common_name"]: row["id"]
+        for row in conn.execute("SELECT id, common_name FROM plants").fetchall()
+    }
+    sci_to_fid = {
+        row["scientific_name"]: row["id"]
+        for row in conn.execute(
+            "SELECT id, scientific_name FROM fauna").fetchall()
+    }
+
+    edges = (bee_genus_host_edges(plants, bees)[0]
+             + lepidoptera_genus_host_edges(plants, leps)[0])
+    rows = []
+    for e in edges:
+        pid = name_to_pid.get(e["plant"])
+        fid = sci_to_fid.get(e["fauna"])
+        if pid is None or fid is None:
+            continue
+        rows.append((pid, fid, e["relationship"], e["derivation"],
+                     e["basis"], e["confidence"], e["source"]))
+    if rows:
+        conn.executemany(
+            "INSERT OR IGNORE INTO plant_fauna_derived "
+            "(plant_id, fauna_id, relationship, derivation, basis, "
+            " confidence, source) VALUES (?, ?, ?, ?, ?, ?, ?)", rows)
+
+    ff_rows = []
+    for e in cleptoparasite_edges(bees):
+        a = sci_to_fid.get(e["fauna_a"])
+        b = sci_to_fid.get(e["fauna_b"])
+        if a is None or b is None:
+            continue
+        ff_rows.append((a, b, e["relationship"], e["evidence"],
+                        e["confidence"], e["basis"], e["source"], e["notes"]))
+    if ff_rows:
+        conn.executemany(
+            "INSERT OR IGNORE INTO fauna_fauna "
+            "(fauna_id_a, fauna_id_b, relationship, evidence, confidence, "
+            " basis, source, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", ff_rows)
+    conn.commit()
+    return (len(rows), len(ff_rows))
 
 
 def _seed_nurseries(conn: sqlite3.Connection) -> int:
@@ -1626,6 +1752,16 @@ def init_db() -> None:
         if current_version < 59:
             _migrate_to_v59(conn)
 
+        # schema.sql has already recreated relationship_edges by this point, and
+        # that view selects the columns this migration adds. It works because
+        # SQLite binds a view's column references lazily — CREATE VIEW succeeds
+        # against columns that do not exist yet, and only a SELECT would fail.
+        # This must therefore land before anything queries the view, which it
+        # does: nothing reads relationships during init_db. Verified by
+        # tests/test_derived_edges.py:TestUpgradeFromV60.
+        if current_version < 61:
+            _migrate_to_v61(conn)
+
         # Add parent_id to polycultures if missing
         try:
             conn.execute("ALTER TABLE polycultures ADD COLUMN parent_id INTEGER REFERENCES polycultures(id) ON DELETE SET NULL")
@@ -1660,6 +1796,11 @@ def init_db() -> None:
             conn.execute("DELETE FROM bee_attributes")   # child of fauna — wipe first
             conn.execute("DELETE FROM lepidoptera_attributes")   # child of fauna
             conn.execute("DELETE FROM plant_fauna")
+            # schema v61 (V2.42): derived edges are recomputed from the attribute
+            # files on every reseed, so they must be wiped like any other seeded
+            # table or they accumulate rows pointing at stale plant/fauna ids.
+            conn.execute("DELETE FROM plant_fauna_derived")
+            conn.execute("DELETE FROM fauna_fauna")
             conn.execute("DELETE FROM plant_uses")
             conn.execute("DELETE FROM plant_ecoregions")   # reseeded from JSON
             conn.execute("DELETE FROM fauna")
@@ -1733,6 +1874,10 @@ def init_db() -> None:
             _seed_bee_attributes(conn)
             # Lepidoptera attributes (F37 "fly as a butterfly") — same dependency.
             _seed_lepidoptera_attributes(conn)
+            # Derived edges (V2.42) — must run after BOTH attribute seeders and
+            # after _seed_fauna, since it expands their genus lists against the
+            # seeded plants and resolves fauna ids.
+            _seed_derived_edges(conn)
             # Native-plant nursery directory (V2.18) — independent of plants/fauna.
             _seed_nurseries(conn)
             # Re-point surviving user communities at the reseeded plant rows
@@ -1852,13 +1997,19 @@ def _insert_companions(conn: sqlite3.Connection,
         elif rel == "enemy":
             enemies.append((lo, hi))
 
+    # Columns named explicitly (schema v61 added source/notes): a positional
+    # INSERT here breaks the moment the table grows, and these pairings are
+    # deliberately seeded WITHOUT a source — that is what makes them read
+    # `recorded` rather than `documented` in relationship_edges.
     if friends:
         conn.executemany(
-            "INSERT OR IGNORE INTO companion_friends VALUES (?,?)", friends
+            "INSERT OR IGNORE INTO companion_friends (plant_id_a, plant_id_b) "
+            "VALUES (?,?)", friends
         )
     if enemies:
         conn.executemany(
-            "INSERT OR IGNORE INTO companion_enemies VALUES (?,?)", enemies
+            "INSERT OR IGNORE INTO companion_enemies (plant_id_a, plant_id_b) "
+            "VALUES (?,?)", enemies
         )
     conn.commit()
 

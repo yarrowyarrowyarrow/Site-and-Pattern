@@ -638,6 +638,17 @@ def validate_all() -> tuple[list[str], list[str]]:
     e, w = validate_morphology_provenance()
     errors.extend(e)
     warnings.extend(w)
+
+    # Biological sourcing (V2.42). The relationships file had never been read by
+    # this gate at all; plant photo credits and safety provenance were enforced
+    # only by the care of whoever last edited them. docs/DATA_AUDIT.md.
+    for validate_provenance in (validate_sources, validate_plant_fauna,
+                                validate_plant_images,
+                                validate_safety_provenance,
+                                validate_host_genus_coverage):
+        e, w = validate_provenance()
+        errors.extend(e)
+        warnings.extend(w)
     return errors, warnings
 
 
@@ -867,6 +878,11 @@ def validate_bee_attributes() -> tuple[list[str], list[str]]:
 # Bees use only commercial-safe CC licences (F37 A1 decision: CC0 + CC-BY).
 _BEE_IMAGE_LICENSES = {"", "cc0", "cc-by"}
 
+#: Plant photos take the whole CC whitelist. Bees are held to the stricter
+#: CC0/CC-BY bar above because bee imagery is the app's most-reused asset;
+#: SA on a plant photo is fine where it is only ever displayed with its credit.
+_PLANT_IMAGE_LICENSES = {"cc0", "cc-by", "cc-by-sa"}
+
 
 def validate_fauna_images() -> tuple[list[str], list[str]]:
     """Validate bee photo licences in ``data/fauna_master.json`` (F37 A1): a bee
@@ -894,6 +910,272 @@ def validate_fauna_images() -> tuple[list[str], list[str]]:
             errors.append(
                 f"fauna image: {name}: {lic} photo needs a non-empty attribution")
     return errors, warnings
+
+
+# ── Biological sourcing (V2.42) ───────────────────────────────────────────────
+#
+# The gate had never opened plant_fauna_master.json. That all 361 edges carried
+# a real citation was an accident of how they were authored, not an invariant —
+# nothing would have caught the next bulk import arriving bare, and the seeder
+# dropped unresolvable names silently on top of that. These four checks make the
+# sourcing an enforced property. See docs/DATA_AUDIT.md.
+
+def _load_source_keys() -> tuple[set, dict]:
+    """Canonical bibliography keys + alias→key map from sources_master.json."""
+    path = DATA_DIR / "sources_master.json"
+    try:
+        blob = json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return set(), {}
+    keys, aliases = set(), {}
+    for rec in blob.get("sources", []):
+        key = (rec.get("key") or "").strip()
+        if not key:
+            continue
+        keys.add(key)
+        for alias in rec.get("aliases", []):
+            aliases[alias.strip()] = key
+    return keys, aliases
+
+
+def validate_sources() -> tuple[list[str], list[str]]:
+    """The bibliography itself: keys unique, required fields present, and the
+    record_confidence vocabulary respected. An entry may be ``unverified`` — that
+    is the honest state for most of them — but it may not be silently missing."""
+    errors: list[str] = []
+    warnings: list[str] = []
+    path = DATA_DIR / "sources_master.json"
+    try:
+        blob = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return [f"{path.name}: not found"], []
+    except json.JSONDecodeError as e:
+        return [f"{path.name}: JSON parse error: {e}"], []
+
+    seen: set = set()
+    unverified = 0
+    for rec in blob.get("sources", []):
+        key = (rec.get("key") or "").strip()
+        if not key:
+            errors.append("sources: a record has no key")
+            continue
+        if key in seen:
+            errors.append(f"sources: duplicate key {key!r}")
+        seen.add(key)
+        # A NOT_A_WORK entry is a holding pen for edges whose original source
+        # string named no work (see unattributed_prairie_pollination). It has no
+        # authors by definition; requiring them would force somebody to invent
+        # one, which is the failure this whole file exists to prevent. It is
+        # surfaced as a warning below instead of being quietly exempted.
+        is_work = (rec.get("kind") or "").strip() != "NOT_A_WORK"
+        required = ("authors", "title") if is_work else ("title",)
+        for field in required:
+            if not (rec.get(field) or "").strip():
+                errors.append(f"sources: {key}: missing {field}")
+        if not is_work:
+            warnings.append(
+                f"bibliography: {key} is a placeholder, not a work — every "
+                "edge citing it is effectively uncited and needs re-sourcing")
+        conf = (rec.get("record_confidence") or "").strip()
+        if conf not in ("verified", "unverified"):
+            errors.append(
+                f"sources: {key}: record_confidence {conf!r} not "
+                "'verified'/'unverified'")
+        if conf == "unverified":
+            unverified += 1
+    if unverified:
+        warnings.append(
+            f"bibliography: {unverified} of {len(seen)} source records are "
+            "unverified — real works with genuine citations, but their "
+            "bibliographic details have not been checked against the works "
+            "(see data/sources_master.json)")
+    return errors, warnings
+
+
+def validate_plant_fauna() -> tuple[list[str], list[str]]:
+    """The relationships file the gate never used to read.
+
+    Enforces the four things that make an edge checkable rather than merely
+    present: it names a plant and an animal that exist, it declares a
+    relationship in the schema's vocabulary, it carries a source, and that
+    source resolves to a work in the canonical bibliography.
+
+    Name resolution is the one that matters most operationally. ``_seed_fauna``
+    resolves these names at seed time and used to drop a miss with a bare
+    ``continue`` — an edge deleted by a typo, with no error anywhere. Failing
+    here means that can no longer reach a build."""
+    errors: list[str] = []
+    warnings: list[str] = []
+    path = DATA_DIR / "plant_fauna_master.json"
+    try:
+        records = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return [f"{path.name}: not found"], []
+    except json.JSONDecodeError as e:
+        return [f"{path.name}: JSON parse error: {e}"], []
+
+    plant_names: set = set()
+    for cat in ("plants_master.json", "garden_plants.json"):
+        try:
+            for r in json.loads((DATA_DIR / cat).read_text(encoding="utf-8")):
+                if isinstance(r, dict) and r.get("common_name"):
+                    plant_names.add(r["common_name"])
+        except (FileNotFoundError, json.JSONDecodeError):
+            pass
+    fauna_names: set = set()
+    try:
+        for r in json.loads(
+                (DATA_DIR / "fauna_master.json").read_text(encoding="utf-8")):
+            if isinstance(r, dict) and r.get("scientific_name"):
+                fauna_names.add(r["scientific_name"])
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass
+
+    source_keys, aliases = _load_source_keys()
+    valid_rel = {"larval_host", "nectar", "pollen", "seed_food",
+                 "fruit_food", "nesting", "cover"}
+    no_notes = 0
+    for rec in records:
+        if not isinstance(rec, dict) or "plant" not in rec or "fauna" not in rec:
+            continue                      # metadata header
+        plant, animal = rec.get("plant", "?"), rec.get("fauna", "?")
+        label = f"plant_fauna: {plant} ↔ {animal}"
+        if plant_names and plant not in plant_names:
+            errors.append(f"{label}: plant name does not resolve — edge would "
+                          "be dropped silently at seed time")
+        if fauna_names and animal not in fauna_names:
+            errors.append(f"{label}: fauna name does not resolve — edge would "
+                          "be dropped silently at seed time")
+        rel = (rec.get("relationship") or "").strip()
+        if rel not in valid_rel:
+            errors.append(f"{label}: relationship {rel!r} not in the schema "
+                          "vocabulary")
+        spec = (rec.get("specificity") or "").strip()
+        if spec and spec not in ("specialist", "generalist"):
+            errors.append(f"{label}: specificity {spec!r} not "
+                          "'specialist'/'generalist'")
+        source = (rec.get("source") or "").strip()
+        if not source:
+            errors.append(f"{label}: no source — every ecological claim this "
+                          "app ships has to say where it came from")
+        elif source_keys:
+            # A claim may rest on more than one work — the bee attributes cite
+            # three. A comma-separated key list is the canonical form for that;
+            # every member has to resolve.
+            unknown = [part for part in
+                       (p.strip() for p in source.split(",")) if part
+                       and part not in source_keys and part not in aliases]
+            if unknown:
+                errors.append(
+                    f"{label}: source {', '.join(repr(u) for u in unknown)} is "
+                    "not in the canonical bibliography "
+                    "(data/sources_master.json) — add the work or use one of "
+                    "its recorded aliases")
+        if not (rec.get("notes") or "").strip():
+            no_notes += 1
+    if no_notes:
+        warnings.append(
+            f"plant_fauna: {no_notes} of {len(records) - 1} edges carry no "
+            "notes — the citation says which book, nothing says what the book "
+            "actually reported")
+    return errors, warnings
+
+
+def validate_plant_images() -> tuple[list[str], list[str]]:
+    """Plant photo credits — the check docs/DATA_SOURCES.md already claimed the
+    gate performed. It credited ``validate_fauna_images`` with covering
+    ``plants.image_url``; that function filters ``taxon != 'bee'`` over
+    fauna_master.json and never touches plants. The plant photos happen to be
+    clean (323/323 attributed and licensed), which is exactly how a missing
+    check stays missing."""
+    errors: list[str] = []
+    warnings: list[str] = []
+    for name in ("plants_master.json", "garden_plants.json"):
+        path = DATA_DIR / name
+        try:
+            records = json.loads(path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            continue
+        for rec in records:
+            if not isinstance(rec, dict) or not (rec.get("image_url") or ""):
+                continue
+            who = rec.get("common_name") or rec.get("scientific_name") or "?"
+            lic = (rec.get("image_license") or "").lower().strip()
+            if not lic:
+                errors.append(f"plant image: {who}: photo has no licence")
+            elif lic not in _PLANT_IMAGE_LICENSES:
+                errors.append(
+                    f"plant image: {who}: licence {lic!r} is not in the "
+                    f"permitted set {sorted(_PLANT_IMAGE_LICENSES)}")
+            if lic and lic != "cc0" and not (
+                    rec.get("image_attribution") or "").strip():
+                errors.append(
+                    f"plant image: {who}: {lic} photo needs a non-empty "
+                    "attribution")
+    return errors, warnings
+
+
+def validate_safety_provenance() -> tuple[list[str], list[str]]:
+    """A toxicity rating must say where it came from.
+
+    49 of 49 tagged plants comply today, by authorship rather than by rule. This
+    is the one class of claim in the app where being wrong is not an academic
+    matter, so it gets a hard check rather than a warning."""
+    errors: list[str] = []
+    for name in ("plants_master.json", "garden_plants.json"):
+        path = DATA_DIR / name
+        try:
+            records = json.loads(path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            continue
+        for rec in records:
+            if not isinstance(rec, dict):
+                continue
+            rated = ((rec.get("toxicity_pets") or "").strip()
+                     or (rec.get("toxicity_humans") or "").strip())
+            if rated and not (rec.get("safety_source") or "").strip():
+                who = rec.get("common_name") or rec.get("scientific_name") or "?"
+                errors.append(
+                    f"safety: {who}: carries a toxicity rating with no "
+                    "safety_source")
+    return errors, []
+
+
+def validate_host_genus_coverage() -> tuple[list[str], list[str]]:
+    """Host genera the fauna cite that the plant catalogue cannot supply.
+
+    Read one way this is a data-integrity check; read the other way round it is
+    the most useful catalogue-gap finder in the repo — the animals are naming
+    the plants we do not ship. It is a warning, not an error: an introduced
+    species (*Melilotus*, *Taraxacum*) is correctly absent from a native
+    catalogue, and only a human can tell that apart from a real omission."""
+    warnings: list[str] = []
+    try:
+        from src.db.derived_edges import (            # noqa: PLC0415
+            bee_genus_host_edges, lepidoptera_genus_host_edges)
+        plants = []
+        for cat in ("plants_master.json", "garden_plants.json"):
+            plants += [r for r in json.loads(
+                (DATA_DIR / cat).read_text(encoding="utf-8"))
+                if isinstance(r, dict)]
+        def _load(n):
+            return [r for r in json.loads(
+                (DATA_DIR / n).read_text(encoding="utf-8"))
+                if isinstance(r, dict) and "_comment" not in r]
+        bees = _load("bee_attributes_master.json")
+        leps = _load("lepidoptera_attributes_master.json")
+    except (FileNotFoundError, json.JSONDecodeError, ImportError):
+        return [], []
+    _, unmatched_b = bee_genus_host_edges(plants, bees)
+    _, unmatched_l = lepidoptera_genus_host_edges(plants, leps)
+    unmatched = sorted(set(unmatched_b) | set(unmatched_l))
+    if unmatched:
+        warnings.append(
+            f"host genera: {len(unmatched)} genus/genera cited as hosts are "
+            f"absent from the plant catalogue: {', '.join(unmatched)} — each is "
+            "either a plant worth adding or a taxonomic synonym worth teaching "
+            "src/db/derived_edges.GENUS_SYNONYMS")
+    return [], warnings
 
 
 # ── Photo coverage (F70, V2.35) ───────────────────────────────────────────────

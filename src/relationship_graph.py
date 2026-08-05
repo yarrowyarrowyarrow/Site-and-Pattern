@@ -371,6 +371,11 @@ def _stats(plant_nodes: dict, fauna_nodes: dict, edges: list,
         "dropped_fauna": dropped,
         "kinds": list(kinds),
         "derived_edges": sum(1 for e in edges if e["evidence"] == "derived"),
+        # V2.42: `evidence` gained a third state, so "not derived" stopped
+        # meaning "documented". These are counted rather than subtracted.
+        "documented_edges": sum(
+            1 for e in edges if e["evidence"] == "documented"),
+        "recorded_edges": sum(1 for e in edges if e["evidence"] == "recorded"),
     }
 
 
@@ -411,14 +416,22 @@ def summary_lines(graph: dict) -> list[str]:
     s = graph.get("stats") or {}
     if not s.get("species"):
         return ["Place some plants to see the design's relationship web."]
-    # Don't call the whole edge count "documented" — when derived links are on,
-    # some of it isn't, and the very next line says so.
-    documented = s["edges"] - s.get("derived_edges", 0)
+    # V2.42: this used to be `edges - derived_edges`, which was right while
+    # `evidence` had two states and became an overstatement the moment it had
+    # three — companion pairings ship uncited and would have been counted as
+    # documented records. Count the state, don't infer it by subtraction.
+    documented = s.get("documented_edges",
+                       s["edges"] - s.get("derived_edges", 0))
     lines = [
         f"{s['species']} species · {s['wildlife']} wildlife species · "
         f"{documented} documented relationship"
         f"{'' if documented == 1 else 's'}"
     ]
+    if s.get("recorded_edges"):
+        lines.append(
+            f"{s['recorded_edges']} further link"
+            f"{'' if s['recorded_edges'] == 1 else 's'} are recorded in the "
+            f"catalogue but carry no citation — mostly companion pairings")
     if s.get("specialists"):
         lines.append(
             f"{s['specialists']} specialist"
@@ -430,9 +443,15 @@ def summary_lines(graph: dict) -> list[str]:
             f"{s['single_support']} wildlife species {'is' if one else 'are'} "
             f"held up by a single plant in this design")
     if s.get("derived_edges"):
+        # Was "plant-to-plant links (two plants feeding the same animal)", which
+        # described shared_fauna — the only derived kind until V2.42. Derived
+        # now also covers genus-level host records expanded onto this species,
+        # so the wording can no longer name one mechanism.
         lines.append(
-            f"{s['derived_edges']} inferred plant-to-plant links (two plants "
-            f"feeding the same animal) — shown dashed, not documented records")
+            f"{s['derived_edges']} inferred link"
+            f"{'' if s['derived_edges'] == 1 else 's'} — shown dashed. Either "
+            f"two plants feeding the same animal, or a host record published "
+            f"for the genus rather than this species. Not documented records.")
     if s.get("isolated"):
         shown = ", ".join(s["isolated"][:4])
         more = f" +{len(s['isolated']) - 4} more" if len(s["isolated"]) > 4 else ""

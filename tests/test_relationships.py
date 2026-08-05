@@ -90,16 +90,38 @@ class TestViewAgainstSeedData(unittest.TestCase):
                         f"{kinds - set(R.DOCUMENTED_KINDS)}")
 
     def test_view_row_counts_match_the_source_tables(self):
+        """The view must not invent or lose plant→fauna edges.
+
+        V2.42: the view gained a second plant→fauna arm (`plant_fauna_derived`),
+        so this is now a per-evidence identity rather than a single total. That
+        split is the point — the documented count must stay *exactly*
+        `plant_fauna`, or derived edges have leaked into the documented
+        population.
+        """
         conn = get_connection()
         try:
-            src_n = conn.execute(
+            documented_src = conn.execute(
+                "SELECT COUNT(*) FROM plant_fauna "
+                "WHERE COALESCE(source,'') <> ''").fetchone()[0]
+            documented_view = conn.execute(
+                "SELECT COUNT(*) FROM relationship_edges "
+                "WHERE b_type = 'fauna' AND evidence = 'documented'"
+            ).fetchone()[0]
+            derived_src = conn.execute(
+                "SELECT COUNT(*) FROM plant_fauna_derived").fetchone()[0]
+            derived_view = conn.execute(
+                "SELECT COUNT(*) FROM relationship_edges "
+                "WHERE b_type = 'fauna' AND evidence = 'derived'").fetchone()[0]
+            total_src = conn.execute(
                 "SELECT COUNT(*) FROM plant_fauna").fetchone()[0]
-            view_n = conn.execute(
+            total_view = conn.execute(
                 "SELECT COUNT(*) FROM relationship_edges "
                 "WHERE b_type = 'fauna'").fetchone()[0]
         finally:
             conn.close()
-        self.assertEqual(src_n, view_n)
+        self.assertEqual(documented_src, documented_view)
+        self.assertEqual(derived_src, derived_view)
+        self.assertEqual(total_src + derived_src, total_view)
 
     def test_co_planted_pairs_are_unordered_and_self_free(self):
         conn = get_connection()
@@ -131,8 +153,17 @@ class TestViewAgainstSeedData(unittest.TestCase):
         host = next(g for g in n["groups"] if g["kind"] == "larval_host")
         self.assertTrue(any("Monarch" in it["name"] for it in host["items"]),
                         f"monarch not among milkweed's hosts: {host['items']}")
-        self.assertTrue(all(it["evidence"] == "documented"
-                            for it in host["items"]))
+        # V2.42: `evidence` has three states, so "all documented" is no longer
+        # the invariant — a neighbourhood legitimately mixes cited records with
+        # derived genus-level ones. What must hold is that every item declares
+        # one of the three, and that the monarch↔milkweed edge — the app's
+        # best-attested relationship — is still a documented record.
+        for it in host["items"]:
+            self.assertIn(it["evidence"], ("documented", "recorded", "derived"))
+        monarch = next(it for it in host["items"] if "Monarch" in it["name"])
+        self.assertEqual(monarch["evidence"], "documented")
+        self.assertTrue(monarch.get("source"),
+                        "a documented edge has to say where it came from")
 
 
 def _pid(common_name: str):

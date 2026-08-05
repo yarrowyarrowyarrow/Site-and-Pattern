@@ -240,9 +240,14 @@ Ecological succession, Buddhist impermanence, Taleb's antifragility, Carse's inf
 > **precipitation-timing split** in `src/precip_split.py` — which separates immediately-available
 > growing-season rain from delayed snowmelt water (both as honest liquid-water equivalent, with
 > *no* false snow-depth precision) rather than letting one "precipitation" number imply more
-> growing-season water than a site gets. **State: strong** (language); **partial** (placement is
-> still point-wise/deterministic once generated — see roadmap F14, the establishment-likelihood
-> band).
+> growing-season water than a site gets. Since V2.42 it also lives in the **provenance** of the
+> biological data itself: `evidence` on every relationship edge distinguishes `documented` (cited)
+> from `recorded` (in a table, uncited) from `derived` (computed), each derived edge carries a
+> coarse `confidence` band — never a probability — plus the genus it was expanded from, and
+> `data/sources_master.json` marks each bibliographic entry `verified`/`unverified` so the app
+> can say where a claim came from without implying anyone has checked it. **State: strong**
+> (language, and now provenance); **partial** (placement is still point-wise/deterministic once
+> generated — see roadmap F14, the establishment-likelihood band).
 
 ### 10. Design for relationships, not objects
 

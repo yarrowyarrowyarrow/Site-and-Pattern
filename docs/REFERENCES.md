@@ -127,3 +127,64 @@ Ranked by direct relevance to the application's architecture, data modeling, UX,
 - James Carse — *Finite and Infinite Games* (1986)
 - Nassim Nicholas Taleb — *Antifragile* (2012)
 - Cal Newport — *Slow Productivity* (2024)
+
+---
+
+## Biological data sources
+
+Everything above is a **philosophy** bibliography — books that shaped how the app
+thinks. This section is different in kind: these are the works the shipped
+ecological data actually **cites**, edge by edge and record by record. Until
+V2.42 this document had no floras and no entomology at all, while
+[`DATA_SOURCES.md`](DATA_SOURCES.md) pointed readers here for exactly that — so a
+user who wanted to check a claim about a butterfly and its host plant had
+nowhere to go.
+
+The machine-readable registry is [`data/sources_master.json`](../data/sources_master.json).
+Every `source` field in the biological seed data resolves to a key there, and
+`src/data_quality.py:validate_plant_fauna` fails the build on a citation that
+does not. Full coverage numbers are in [`DATA_AUDIT.md`](DATA_AUDIT.md).
+
+**A caution that belongs with the list (P9).** Each entry is marked
+`record_confidence` in the registry, and at the time of writing **all of them
+read `unverified`**. That does *not* mean the citations are doubtful — the works
+are real and the seed data genuinely cites them. It means the bibliographic
+details below (an edition year, a publisher, an author list) were transcribed
+from the shorthand citations already in the data and have **not** been checked
+against the works themselves. Nor has anyone confirmed that a given work
+supports the specific claim citing it. The app can say where a claim came from;
+it does not certify the claim.
+
+### Lepidoptera
+- John Acorn & Ian Sheldon — *Butterflies of Alberta* (Lone Pine, cited as 2006)
+- G.R. Pohl, J.-F. Landry, B.C. Schmidt et al. — *Annotated Checklist of the
+  Moths and Butterflies (Lepidoptera) of Canada and Alaska* (Pensoft, 2018)
+- G.R. Pohl, G.G. Anweiler, B.C. Schmidt & N.G. Kondla — *An annotated list of
+  the Lepidoptera of Alberta, Canada* (ZooKeys, 2010)
+- C.D. Bird, G.J. Hilchie, N.G. Kondla, E.M. Pike & F.A.H. Sperling —
+  *Alberta Butterflies* (Provincial Museum of Alberta, 1995)
+
+### Bees & other invertebrates
+- Joseph S. Wilson & Olivia Messinger Carril — *The Bees in Your Backyard*
+  (Princeton University Press, 2015)
+- C.S. Sheffield, S.D. Frier & S. Dumesh — *The bees of the Prairies Ecozone*,
+  in *Arthropods of Canadian Grasslands* (Biological Survey of Canada, 2014)
+- Laurence Packer — *Bees of Canada* — **the least resolved entry in the
+  registry**: the seed citation gives author and short title only, and the
+  specific work is not established. Highest-priority citation to pin down.
+- Alberta Native Bee Council — Alberta native bee compilation
+- John Acorn — *Bugs of Alberta* (Lone Pine)
+
+### Birds & mammals
+- Cornell Lab of Ornithology — *Birds of the World* — <https://birdsoftheworld.org/>
+  (a continuously revised database, not a fixed edition; a proper citation needs
+  an access date and a species account, and the current data records neither)
+- Donald Pattie & Chris Fisher — *Mammals of Alberta* (Lone Pine)
+
+### Not a source
+- `unattributed_prairie_pollination` — 16 plant↔fauna edges were seeded with the
+  string *"Prairie-composite pollination literature; Acorn & Sheldon 2006"*,
+  whose first half names no work. They are parked under an explicit placeholder
+  key rather than quietly promoted to the Acorn & Sheldon citation, because the
+  original author cited two things and only one can be checked. Re-sourcing
+  those 16 edges is the single highest-value citation task in the repository.

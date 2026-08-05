@@ -324,6 +324,16 @@ class PlantDirectoryWindow(QWidget):
             else:
                 bits.append(f"{r['name']} (no occurrence data)")
         self._section("Found in", "\n".join(bits))
+        # `source` has been on these rows since schema v59 and was never shown.
+        # An occurrence count without its provenance is a number the reader has
+        # no way to weigh.
+        origins = []
+        for r in rows:
+            src = (r.get("source") or "").strip()
+            if src and src not in origins:
+                origins.append(src)
+        if origins:
+            self._section("", "Range data: " + "; ".join(origins), dim=True)
 
     def _wildlife_block(self, entry: dict):
         w = entry.get("wildlife") or {}
@@ -346,6 +356,39 @@ class PlantDirectoryWindow(QWidget):
                      f"{'is a specialist' if w['specialists'] == 1 else 'are specialists'} "
                      f"with nowhere else to go (⚑)")
         self._section(head, "\n".join(lines))
+        self._citation_block(w)
+
+    def _citation_block(self, wildlife: dict):
+        """Where the wildlife relationships came from.
+
+        Every one of these edges has always carried a real citation, and until
+        V2.42 no screen in the app displayed one — the field reached this view
+        model and was dropped here. A user could not tell a sourced record from
+        an invention, which makes well-sourced data worth nothing to them.
+        """
+        from src.citations import (                          # noqa: PLC0415
+            format_citation, is_placeholder)
+        keys: list = []
+        unattributed = 0
+        for group in wildlife.get("groups") or []:
+            for item in group.get("items") or []:
+                for key in (k.strip() for k in
+                            (item.get("source") or "").split(",")):
+                    if not key:
+                        continue
+                    if is_placeholder(key):
+                        unattributed += 1
+                    elif key not in keys:
+                        keys.append(key)
+        if not keys and not unattributed:
+            return
+        lines = [f"· {format_citation(k)}" for k in keys]
+        if unattributed:
+            lines.append(
+                f"· {unattributed} of these relationships were seeded without "
+                "naming a specific work, and are not yet attributable.")
+        self._section("Where these relationships came from",
+                      "\n".join(lines), dim=True)
 
     def _companion_block(self, entry: dict):
         groups = (entry.get("relationships") or {}).get("groups") or []

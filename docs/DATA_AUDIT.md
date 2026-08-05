@@ -174,7 +174,15 @@ Safety data is the other bright spot: **49 / 49** toxicity-tagged plants carry a
 
 ## 4 · What is not enforced
 
-`scripts/check_plant_data.py` today: **0 errors, 20 warnings.**
+> **Resolved in V2.42.** Every item in this section is now checked by
+> `scripts/check_plant_data.py`, which reports **0 errors, 24 warnings** —
+> the four new warnings being the ones this audit argues should be visible
+> rather than fixed by fiat (unverified bibliography, the placeholder source,
+> the notes gap, and the unmatched host genera). The section is kept as written
+> because the *shape* of the failure is the lesson: every one of these was a
+> claim nobody could have falsified.
+
+`scripts/check_plant_data.py` before this increment: **0 errors, 20 warnings.**
 
 - **The gate never opens `plant_fauna_master.json`.** `validate_all()`
   (`src/data_quality.py:580`) checks the plant catalogues, bee attributes, fauna
@@ -203,18 +211,20 @@ Safety data is the other bright spot: **49 / 49** toxicity-tagged plants carry a
 
 ---
 
-## 5 · Ranked gaps
+## 5 · Ranked gaps, and what V2.42 did about them
 
-| # | Gap | Why it ranks here |
+| # | Gap | Status |
 |---|---|---|
-| 1 | **Sources invisible in the UI** | The data is defensible and the user cannot tell. Directly blocks "know that it's legitimate". Cheapest fix on the list — the strings are already at the call site. |
-| 2 | **77% of plants have no fauna edge** | Silently weakens every P3/P10 feature and the Habitat Value Score. |
-| 3 | **No enforcement on relationship sourcing** | Today's 100% is luck. Without a gate it decays on the next bulk add. |
-| 4 | **`evidence` conflates cited and uncited** | The app makes a provenance claim it cannot support, on its folklore-prone data. |
-| 5 | **11 strings for 6 works; 2 of 6 undeclared** | Blocks any citation rendering or cross-reference until normalized. |
-| 6 | **No page/DOI-level citation** | The ceiling on verifiability. Expensive — needs the books. |
-| 7 | **`leaf_data_source` absent everywhere** | A validator branch wired to nothing, plus an inaccurate line in `DATA_GAPS.md`. |
-| 8 | **`notes` on 20% of edges** | The 51-edge block shows what good looks like. |
+| 1 | **Sources invisible in the UI** | ✅ **Fixed.** `src/citations.py` + the species page's *"Where these relationships came from"* block + Help → *"Where This Data Came From…"*. Smooth Aster's page now shows 6 real citations behind its 21 relationships. |
+| 2 | **77% of plants have no fauna edge** | ✅ **Halved.** 22.6% → **46.5%** via genus-host promotion; orphan fauna 56 → 3. |
+| 3 | **No enforcement on relationship sourcing** | ✅ **Fixed.** `validate_plant_fauna` + `validate_sources` + `validate_plant_images` + `validate_safety_provenance` + `validate_host_genus_coverage`, all in `validate_all()`. |
+| 4 | **`evidence` conflates cited and uncited** | ✅ **Fixed.** Three states computed in the SQL view; companion tables gained `source`/`notes`. |
+| 5 | **11 strings for 6 works; 2 of 6 undeclared** | ✅ **Fixed.** `data/sources_master.json` — 12 canonical keys, all 361 edges normalized, legacy strings kept as resolvable aliases. |
+| 6 | **No page/DOI-level citation** | ⬜ **Open.** The ceiling on verifiability, and it needs the books. Start with the 31 specialist edges. |
+| 7 | **`leaf_data_source` absent everywhere** | ⬜ **Documented, not fixed.** `DATA_GAPS.md` corrected; the field still needs populating before its validator branch can fire. |
+| 8 | **`notes` on 20% of edges** | ⬜ **Open, now counted.** The gate warns on every run (288 of 361). |
+| 9 | **16 edges cite no actual work** | ⬜ **Open, now visible.** Held under an explicit `NOT_A_WORK` key rather than promoted to a real citation; warned on every run. Highest-value citation task in the repo. |
+| 10 | **Predator fauna have no expressible edge** | ⬜ **New finding.** The 3 remaining orphans are a kestrel, a magpie and a bat. Needs a predator↔prey edge kind. |
 
 ---
 
@@ -294,36 +304,85 @@ exactly the invisible ecology P5 asks the app to make visible.
 
 ### Lever D — the fauna data is a coverage test for the flora
 
-Four genera the bee records cite as hosts are absent from the plant catalogue
-entirely, and are neither introduced nor marginal in Alberta:
+**Correction (made while implementing).** The first draft of this section listed
+*Epilobium*/*Chamerion*, *Senecio* and *Polygonum* as absent from the plant
+catalogue. They are not. The catalogue carries them under their **current**
+names, and the audit had matched on superseded ones:
 
-| Genus | Refs | Note |
-|---|---:|---|
-| ***Epilobium* / *Chamerion*** | 7 | Fireweed — among the most important native bee forage plants in boreal and montane Alberta. Absent under both names. |
-| *Senecio* | 3 | Native groundsels/ragworts. |
-| *Salvia* | 2 | |
-| *Polygonum* | 1 | |
+| Cited by fauna | Actually in the catalogue as | |
+|---|---|---|
+| *Epilobium* | ***Chamaenerion angustifolium*** (Fireweed), *C. latifolium* | a third spelling — not the *Chamerion* that was checked |
+| *Senecio* | *Packera cana* | most NA ragworts moved to *Packera* |
+| *Polygonum* | *Persicaria amphibia*, *Bistorta vivipara* | genus split |
+| *Aster* | *Symphyotrichum* ×10, *Eurybia* ×2, and a genuine *Aster alpinus* | |
+
+This was a **matching failure, not a catalogue gap** — and a costly one, since
+fireweed is among the most important native bee forage plants in boreal Alberta
+and the derivation was silently dropping all 7 of its references. Fixed by
+`GENUS_SYNONYMS` in `src/db/derived_edges.py`, which treats these as *segregate*
+relationships rather than equivalences: a synonym match is real but weaker than a
+literal one, so it costs a confidence band.
+
+The lesson generalises past this repo: **a host record written against a
+20th-century flora uses the genus name of its day, and matching it literally
+against a modern catalogue loses real edges silently.** Any audit of biological
+data that does not account for synonymy will over-report gaps.
+
+After the fix, 13 cited genera remain unmatched, and they divide cleanly:
+
+- **Correctly absent** — introduced or agricultural species that do not belong in
+  a native catalogue: *Trifolium* (13 refs), *Melilotus* (11), *Taraxacum* (3),
+  *Medicago*, *Centaurea*, *Linaria*, *Crocus*.
+- **Genuine gaps or out-of-range** — *Haplopappus* (3 refs; its segregates
+  *Pyrrocoma*/*Stenotus*/*Tonestus* are all absent too), *Monardella* (5),
+  *Phyllodoce* (2), *Lythrum* (2), *Salvia* (2), *Mentzelia* (1).
 
 Read the other way round: **the fauna file is telling us which plants the
-catalogue is missing.** That check costs nothing to run and should be permanent.
+catalogue is missing.** `validate_host_genus_coverage` now reports this on every
+run — as a warning, because only a human can tell an introduced species from a
+real omission.
 
-### Summary of available lift
+### What shipped in V2.42, measured after the fact
 
-| Step | Edges | Plant coverage | Orphan fauna |
-|---|---:|---:|---:|
-| Today (documented) | 361 | 22.6% | 56 |
-| + A · genus-host promotion | +1072 | **45.6%** | **31** |
-| + B · congeneric forage only | +424 | **51.3%** | 31 |
-| + C · fauna↔fauna parasite edges | +24 | 51.3% | **7** |
+| Step | Edges | Plant coverage | Orphan fauna | Status |
+|---|---:|---:|---:|---|
+| Documented | 361 | 22.6% | 56 | unchanged |
+| **A · genus-host promotion** | **+1131** | **46.5%** | 31 | **shipped** |
+| **C · fauna↔fauna parasite edges** | **+140** | 46.5% | **3** | **shipped** |
+| B · congeneric forage only | +633 | 51.3% | — | **not done — see below** |
 
-**Non-negotiable conditions.** Derived edges are only honest if they are
-distinguishable, so this depends on the three-state `evidence` in §4 landing
-first (`documented` / `recorded` / `derived`), on `html/map/07-network.js`'s
-existing dashed rendering being extended rather than replaced, and on a
-**decision about the Habitat Value Score**: if derived edges feed it unchanged,
-every existing project's headline number moves overnight. The safe default is
-to exclude derived edges from the score and surface them as context, then
-revisit deliberately.
+Both shipped numbers came out *above* the estimate (1131 vs 1072; orphans 3 vs
+the predicted 7) because the synonym fix above recovered edges the estimate had
+already written off, and because parasite edges connect hosts as well as
+parasites.
+
+**The three remaining orphans are honest.** *Falco sparverius* (kestrel),
+*Pica hudsonia* (magpie) and *Eptesicus fuscus* (big brown bat) are predators.
+Their trophic level — animal eats animal — is not something this data model
+expresses at all, and giving them a plant edge to clear the number would be
+exactly the false precision the rest of this audit argues against. A
+predator↔prey edge kind is the honest fix, and it is a separate piece of work.
+
+**Lever B was measured and deliberately not implemented.** It is the one lever
+that breaks a standing rule in `src/db/relationships.py` — *"Nothing is inferred
+from taxonomy or 'plants like this usually…'"*. Lever A does not break it
+(expanding a published genus-level record restates a claim at the resolution its
+source made it); Lever B does (it invents genus-level scope for a claim a source
+made about a single species). Six points of coverage is not worth the rule, and
+transferring a `larval_host` edge across a genus is unsafe on its own terms —
+specialist herbivory is frequently species-specific. The `congeneric_forage`
+value is reserved in the schema's `derivation` vocabulary so a future increment
+can add it without a migration, but it needs an explicit decision on the
+philosophy rule, not just an implementation.
+
+**Conditions that were met.** Derived edges are only honest if they are
+distinguishable, so three-state `evidence` (§4) landed first. The Habitat Value
+Score turned out to be safe for free: every scoring consumer
+(`habitat_score.py`, `placement_score.py`, `scene_dossier.py`, `db/fauna.py`)
+queries `plant_fauna` directly and only `relationships.py` reads the view — so
+no headline number moved. That is now pinned by
+`tests/test_derived_edges.py:TestDerivedEdgesStayOutOfTheScores` rather than
+left as a happy accident.
 
 ---
 

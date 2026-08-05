@@ -49,7 +49,7 @@ from src.controllers.map_events import MapEventRouter
 from src.controllers.generation import GenerationController
 from src.controllers.area_fill_controller import AreaFillController
 from src.project_store import ProjectStore
-from src import feedback_flow, onboarding_flow
+from src import data_sources_flow, feedback_flow, onboarding_flow
 from src.scan_import_dialog import start_scan_import as _start_scan_import
 from src.scene3d_window import open_3d_view as _open_3d_view
 from src.reference_ecosystem_window import (
@@ -642,6 +642,17 @@ class MainWindow(QMainWindow):
             "Tell the author what worked, what confused you, or what broke")
         act_feedback.triggered.connect(
             lambda: feedback_flow.send_feedback(self))
+
+        # V2.42: the app's sourcing and licensing position lived only in
+        # docs/ — reachable from code comments and by a user never. A person
+        # deciding whether to trust a planting recommendation should be able to
+        # see where it came from without cloning the repository.
+        act_sources = help_menu.addAction("Where This &Data Came From…")
+        act_sources.setStatusTip(
+            "The works the plant and wildlife data cites, how confident each "
+            "relationship is, and how the photographs are licensed")
+        act_sources.triggered.connect(
+            lambda: data_sources_flow.show_data_sources(self))
 
         help_menu.addSeparator()
 

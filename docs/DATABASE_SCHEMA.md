@@ -239,6 +239,50 @@ are never touched by the reseed.
 > FK constraints are ON at runtime but disabled during the bulk reseed
 > (Python 3.14 enforces FKs at statement time, not commit time).
 
+### Derived edges and three-state evidence (schema v61, V2.42)
+
+The relationship layer made a provenance claim it could not support. The
+`relationship_edges` view hardcoded an empty `source` for the companion tables —
+which have no sourcing columns — and `src/db/relationships.py` then labelled
+*every* row it produced `documented`. A cited Monarch↔milkweed record and an
+uncited companion-planting folk pairing were indistinguishable, on the app's most
+folklore-prone data.
+
+Separately, 361 documented edges reached 99 of 439 plants (**22.6%**) and left
+56 animals connected to nothing, so every P3/P10 feature ran on a
+three-quarters-empty graph and reported plants as ecologically inert when nobody
+had simply written their edges yet.
+
+| Table / column | What changed |
+|---|---|
+| `companion_friends`, `companion_enemies` | `+ source TEXT`, `+ notes TEXT`. Deliberately left **empty** — an empty source reads `recorded`, which is the truth. Filling one is how a pairing earns `documented`. |
+| `plant_fauna_derived` | New. Genus-level host records (`floral_host_genera` on 69 bees, `nectar_flower_genera` on 31 lepidoptera) expanded onto the catalogue. `derivation` / `basis` / `confidence` / `source` are all `NOT NULL`. |
+| `fauna_fauna` | New. Cleptoparasite and social-parasite edges between animals. 24 cuckoo bees whose `host_genus` is another *bee* were structurally unreachable in a plant↔fauna-only graph. |
+| `relationship_edges` | `+ evidence`, `+ confidence`. `evidence` is now computed per source table, not assumed by the caller. |
+
+**`evidence` is three-state:** `documented` (in a table **and** cited),
+`recorded` (in a table, uncited — an authored fact, not a sourced one),
+`derived` (computed, never hand-entered).
+
+Derived edges are kept in their **own table** rather than mixed into
+`plant_fauna` on purpose: a documented record and an expansion of one are
+different epistemic objects, and no query should be able to blur them by
+accident. Expanding a genus record is not a new ecological claim — pollinator
+host records are *published* at genus resolution — but it is not a record about
+that species either, so `src/db/relationships.py` discounts derived edges by
+confidence band and they can never out-rank a documented edge of the same kind.
+
+**Every scoring consumer reads `plant_fauna` directly and must keep doing so.**
+The Habitat Value Score and the "hosts N caterpillars" labels count documented
+records only; if they started reading the view, every existing project's headline
+number would move overnight. Pinned by
+`tests/test_derived_edges.py:TestDerivedEdgesStayOutOfTheScores`.
+
+Result: plant coverage **22.6% → 46.5%**, orphan fauna **56 → 3**. The three
+that remain are a kestrel, a magpie and a bat — predators whose trophic level
+this model genuinely does not express, and inventing them a plant edge would be
+worse than leaving them orphaned. See [`DATA_AUDIT.md`](DATA_AUDIT.md) §6.
+
 ### Fauna morphology (schema v58, V2.36)
 
 `bee_attributes` and `lepidoptera_attributes` were purely ecological — nesting

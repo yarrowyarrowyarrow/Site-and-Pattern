@@ -197,15 +197,29 @@ CREATE TABLE IF NOT EXISTS plants (
     leaf_data_citation TEXT DEFAULT ''
 );
 
+-- Companion pairings (schema v61: + source/notes).
+--
+-- Data honesty (P9): companion planting is the most folklore-prone data in the
+-- app, and until v61 it was also the least attributed — these tables had no
+-- sourcing columns at all, and `relationship_edges` hardcoded an empty source
+-- for them, which the query layer then labelled 'documented'. A cited
+-- Monarch↔milkweed record and an uncited folk pairing read identically.
+-- The columns exist now and are deliberately left empty: an empty source makes
+-- the edge read `recorded` (in a table, nobody cited it), which is the truth.
+-- Populating them is how a pairing earns `documented`.
 CREATE TABLE IF NOT EXISTS companion_friends (
     plant_id_a INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
     plant_id_b INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+    source TEXT DEFAULT '',
+    notes  TEXT DEFAULT '',
     PRIMARY KEY (plant_id_a, plant_id_b)
 );
 
 CREATE TABLE IF NOT EXISTS companion_enemies (
     plant_id_a INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
     plant_id_b INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+    source TEXT DEFAULT '',
+    notes  TEXT DEFAULT '',
     PRIMARY KEY (plant_id_a, plant_id_b)
 );
 
@@ -355,6 +369,81 @@ CREATE TABLE IF NOT EXISTS plant_fauna (
     source TEXT,
     notes TEXT,
     PRIMARY KEY (plant_id, fauna_id, relationship)
+);
+
+-- Derived plant↔fauna edges (schema v61, V2.42 — Lever A of docs/DATA_AUDIT.md §6).
+--
+-- WHY A SEPARATE TABLE. 361 documented edges covered 99 of 439 plants (22.6%)
+-- and left 56 animals connected to nothing, so three quarters of the catalogue
+-- read as ecologically inert in every P3/P10 feature. Meanwhile the shipped
+-- attribute files already carried genus-level host records — `floral_host_genera`
+-- on 69 bees, `nectar_flower_genera` on 31 lepidoptera — that the graph never
+-- read. src/bee_habitat.py has been making exactly this inference at runtime for
+-- one panel the whole time.
+--
+-- Expanding a genus record onto the catalogue's species is NOT a new ecological
+-- claim: the literature made the claim at genus resolution, and this restates it
+-- at that resolution. That is why these rows are kept physically apart from
+-- plant_fauna rather than mixed in — a documented record and an expansion of one
+-- are different epistemic objects, and no query should be able to blur them by
+-- accident. `relationship_edges` labels these `derived`.
+--
+-- Honesty columns (P9), all NOT NULL on purpose:
+--   derivation  — which rule produced the row, so it can be recomputed or retired
+--   basis       — the exact genus the rule matched on, so a reader can trace it
+--   confidence  — coarse band; NEVER a probability. See src/db/derived_edges.py
+--   source      — inherited from the attribute record that made the genus claim,
+--                 so a derived edge still points at a real work
+CREATE TABLE IF NOT EXISTS plant_fauna_derived (
+    plant_id INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+    fauna_id INTEGER NOT NULL REFERENCES fauna(id) ON DELETE CASCADE,
+    relationship TEXT NOT NULL CHECK (relationship IN (
+        'larval_host', 'nectar', 'pollen', 'seed_food',
+        'fruit_food', 'nesting', 'cover'
+    )),
+    derivation TEXT NOT NULL CHECK (derivation IN (
+        'genus_host',        -- attribute file named this plant's genus as a host
+        'congeneric_forage'  -- transferred from a documented forage edge (unused)
+    )),
+    basis      TEXT NOT NULL,
+    confidence TEXT NOT NULL CHECK (confidence IN ('high', 'moderate', 'low')),
+    source     TEXT NOT NULL,
+    PRIMARY KEY (plant_id, fauna_id, relationship, derivation)
+);
+
+-- Fauna ↔ fauna edges (schema v61, V2.42 — Lever C of docs/DATA_AUDIT.md §6).
+--
+-- 24 of the 31 animals still orphaned after Lever A are cuckoo bees, and the
+-- `host_genus` column on their attribute records is NOT a plant — it is the host
+-- BEE genus (Nomada→Andrena, Triepeolus→Melissodes, Epeolus→Colletes,
+-- Melecta/Xeromelecta/Zacosmia→Anthophora, cuckoo Bombus→Bombus). Their defining
+-- ecological relationship is to another animal, so under a plant↔fauna-only model
+-- they were structurally unreachable: no amount of plant data would ever connect
+-- them.
+--
+-- Worth the table beyond the coverage number (P5 — make invisible ecology
+-- visible): a cleptoparasite is a top-of-food-web indicator. Nomada present means
+-- a *healthy Andrena population*, which is a far stronger statement about a yard
+-- than any single plant↔pollinator edge, and the app could not say it at all.
+CREATE TABLE IF NOT EXISTS fauna_fauna (
+    fauna_id_a INTEGER NOT NULL REFERENCES fauna(id) ON DELETE CASCADE,
+    fauna_id_b INTEGER NOT NULL REFERENCES fauna(id) ON DELETE CASCADE,
+    relationship TEXT NOT NULL CHECK (relationship IN (
+        'cleptoparasite',   -- a steals provisioned food from b's nest
+        'social_parasite'   -- a usurps b's colony
+    )),
+    evidence TEXT NOT NULL DEFAULT 'derived'
+        CHECK (evidence IN ('documented', 'recorded', 'derived')),
+    -- Same honesty contract as plant_fauna_derived: the parasitism is recorded
+    -- at genus level, so which catalogue species hosts which is an expansion and
+    -- is banded accordingly. A cuckoo bumblebee against a genus holding a dozen
+    -- Bombus is a weaker statement than Diadasia against a monotypic host.
+    confidence TEXT NOT NULL DEFAULT 'low'
+        CHECK (confidence IN ('high', 'moderate', 'low')),
+    basis  TEXT NOT NULL DEFAULT '',
+    source TEXT NOT NULL DEFAULT '',
+    notes  TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (fauna_id_a, fauna_id_b, relationship)
 );
 
 -- Bee attributes (schema v39, F37 "see what a bee sees"). One row per fauna row
@@ -557,6 +646,13 @@ CREATE INDEX IF NOT EXISTS idx_shade_zone_project ON shade_zone_cache(project_ke
 -- `kind` is the vocabulary in src/db/relationships.py:EDGE_KINDS. `directed`
 -- marks plant→fauna edges, which read one way ("nectar for"); plant↔plant edges
 -- are symmetric and stored once per unordered pair.
+-- schema v61: `evidence` is computed here rather than assumed by the caller.
+-- It used to be hardcoded to 'documented' in src/db/relationships.py for every
+-- row this view produced, which meant a cited plant_fauna record and an uncited
+-- companion pairing made the same provenance claim. Three states now:
+--   documented — in a table AND carries a citation
+--   recorded   — in a table, nobody cited it (an authored fact, not a sourced one)
+--   derived    — computed, never hand-entered
 DROP VIEW IF EXISTS relationship_edges;
 CREATE VIEW relationship_edges AS
     SELECT pf.relationship            AS kind,
@@ -566,23 +662,39 @@ CREATE VIEW relationship_edges AS
            pf.fauna_id                AS b_id,
            1                          AS directed,
            COALESCE(pf.specificity, '') AS detail,
-           COALESCE(pf.source, '')      AS source
+           COALESCE(pf.source, '')      AS source,
+           CASE WHEN COALESCE(pf.source, '') <> ''
+                THEN 'documented' ELSE 'recorded' END AS evidence,
+           ''                         AS confidence
       FROM plant_fauna pf
     UNION ALL
+    -- Lever A (V2.42): genus-level host records expanded onto the catalogue.
+    -- Always 'derived' — the source column says which work made the genus claim,
+    -- but the species-level edge is this app's expansion of it, not a record.
+    SELECT pfd.relationship, 'plant', pfd.plant_id, 'fauna', pfd.fauna_id,
+           1, pfd.basis, pfd.source, 'derived', pfd.confidence
+      FROM plant_fauna_derived pfd
+    UNION ALL
     SELECT 'companion_friend', 'plant', cf.plant_id_a, 'plant', cf.plant_id_b,
-           0, '', ''
+           0, '', COALESCE(cf.source, ''),
+           CASE WHEN COALESCE(cf.source, '') <> ''
+                THEN 'documented' ELSE 'recorded' END, ''
       FROM companion_friends cf
     UNION ALL
     SELECT 'companion_enemy', 'plant', ce.plant_id_a, 'plant', ce.plant_id_b,
-           0, '', ''
+           0, '', COALESCE(ce.source, ''),
+           CASE WHEN COALESCE(ce.source, '') <> ''
+                THEN 'documented' ELSE 'recorded' END, ''
       FROM companion_enemies ce
     UNION ALL
     -- Co-membership in an authored plant community. m2.plant_id > m1.plant_id
     -- keeps one row per unordered pair and drops self-pairs; DISTINCT collapses
     -- a pair that appears in several communities into one edge (the community
     -- names are re-gathered by the query API when a caller wants them).
+    -- 'recorded': somebody authored the community, which is a real fact about
+    -- this catalogue, but it is not a citation to anything.
     SELECT DISTINCT 'co_planted', 'plant', m1.plant_id, 'plant', m2.plant_id,
-           0, '', 'polyculture'
+           0, '', 'polyculture', 'recorded', ''
       FROM polyculture_members m1
       JOIN polyculture_members m2
         ON m2.polyculture_id = m1.polyculture_id

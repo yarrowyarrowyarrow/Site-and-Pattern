@@ -309,11 +309,29 @@ design (plant↔plant edges need *both* ends placed; plant→fauna edges need on
 returns it grouped and name-resolved for a panel or the API
 (`permadesign_api.plant_relationships`).
 
-Two honesty rules are structural (P9). Every edge carries `evidence`: `documented` means a seeded
-record with a citable `source`, `derived` means this module computed it. And `strength` is a
-coarse drawing/ranking weight, never a claimed interaction rate — a *specialist* edge outranks a
-generalist one on the same kind because the specialist has nowhere else to go, which is a fact
-about the record rather than a guess.
+Two honesty rules are structural (P9). Every edge carries `evidence`, and
+`strength` is a coarse drawing/ranking weight, never a claimed interaction rate — a *specialist*
+edge outranks a generalist one on the same kind because the specialist has nowhere else to go,
+which is a fact about the record rather than a guess.
+
+> **V2.42 — the `evidence` rule was not actually true as written, and is now.** It had two states
+> and `documented` was **hardcoded** in `_edge_from_row` for every row the view produced. So a
+> cited larval-host record and an *uncited companion-planting folk pairing* made the same
+> provenance claim — on the app's most folklore-prone data, whose tables had no sourcing columns
+> at all. There are three states now, computed per source table in the view: `documented` (in a
+> table **and** cited), `recorded` (in a table, uncited), `derived` (computed).
+>
+> The same increment doubled what the layer can see. 361 documented edges reached **22.6%** of the
+> catalogue and left 56 animals connected to nothing, so every feature built on this layer was
+> running on a three-quarters-empty graph. Genus-level host records already shipped in the bee and
+> lepidoptera attribute files — and already inferred at runtime by `bee_habitat.py` for one panel —
+> are now materialised into `plant_fauna_derived` (**46.5%** coverage), and a new `fauna_fauna`
+> table reaches the cuckoo bees, whose host is another *bee* and who were structurally
+> unreachable here (**orphans 56 → 3**). See [`DATA_AUDIT.md`](DATA_AUDIT.md) §6.
+>
+> Congeneric transfer was measured (+633 edges, 51.3%) and **declined**: it breaks this module's
+> standing rule that nothing is inferred from taxonomy. Expanding a *published genus-level record*
+> does not break it; inventing genus scope for a single-species record does.
 
 The layer also sees something **no individual table holds**: `shared_fauna` — two plants tied
 together because they feed the same animal. That is the food web's actual topology, and it only

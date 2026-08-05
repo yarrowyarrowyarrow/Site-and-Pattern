@@ -86,8 +86,16 @@ and habit columns are not:
 Nothing there is missing in a way anybody can see, and every one of them changes
 what the 3D viewer draws — `growth_form` picks the plant's entire body. So
 `leaf_data_source` / `leaf_data_citation` carry the same rule as the flower
-pair, and `verified` in the bench now means *both*. Every one of the 434 reads
-`estimated` today. See [`BOTANY_FIELD_GUIDE.md`](BOTANY_FIELD_GUIDE.md) for what
+pair, and `verified` in the bench now means *both*.
+
+> **Corrected in V2.42.** This said "every one of the 434 reads `estimated`
+> today". It does not: `leaf_data_source` is **absent from all 434 records**, so
+> a reseed writes the schema default `''` rather than `estimated`. The
+> difference matters because `validate_morphology_provenance`'s error branch —
+> the one that catches a record claiming `flora` with a blank citation — can
+> never fire for leaves. It is a tripwire wired to nothing until the field is
+> actually populated. The flower half of the pair *is* populated (307 records
+> read `estimated`) and its check works. See [`BOTANY_FIELD_GUIDE.md`](BOTANY_FIELD_GUIDE.md) for what
 to log, and which corrections actually change the render.
 
 **Fauna morphology (v58, V2.36) — the same problem, one taxon over.** Until v58

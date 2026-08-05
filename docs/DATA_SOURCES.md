@@ -9,6 +9,20 @@ several of the terms below are easier to satisfy for a noncommercial project tha
 they would be for a product, and a few of the choices only make sense in that
 light.
 
+> **This document is now reachable from inside the app** (V2.42) —
+> **Help → "Where This Data Came From…"**, built by `src/data_sources_flow.py`
+> from the live database and `data/sources_master.json`, so its numbers cannot
+> go stale. It had been referenced only from code comments, which meant the
+> careful answer below was invisible to the people it was written for: a user
+> could not tell a sourced record from an invention, and well-sourced data that
+> nobody can check is worth nothing to them.
+>
+> The machine-readable bibliography is
+> [`data/sources_master.json`](../data/sources_master.json) — every `source`
+> field in the biological seed data resolves to a key there, enforced by
+> `src/data_quality.py:validate_plant_fauna`. Coverage and gap numbers are in
+> [`DATA_AUDIT.md`](DATA_AUDIT.md).
+
 ---
 
 ## The short version
@@ -47,9 +61,18 @@ exists precisely because three call sites once built that string separately and
 one of them dropped the licence.
 
 **Enforced, not just intended:** `src/data_quality.py` fails validation if any
-non-CC0 photo has an empty attribution — for the legacy `plants.image_url`
-column (`validate_fauna_images`) and for the `plant_photos` table
+non-CC0 photo has an empty attribution — for plant photos
+(`validate_plant_images`), for fauna photos with the stricter CC0/CC-BY bar on
+bees (`validate_fauna_images`), and for the `plant_photos` table
 (`validate_photo_coverage`). It is a build error, not a warning.
+
+> **Corrected in V2.42.** This paragraph previously credited
+> `validate_fauna_images` with covering `plants.image_url`. It does not — that
+> function filters `taxon != "bee"` over `fauna_master.json` and never opens the
+> plant catalogues. Plant photo credits were unenforced for as long as the claim
+> stood, and were clean only because whoever added them was careful: 323 of 323
+> attributed and licensed. `validate_plant_images` is the check the sentence
+> described, written in V2.42 to make the claim true.
 
 **On ShareAlike.** CC BY-SA obliges you to license *adaptations* under the same
 terms. The photos are shown alongside the app, not modified into it — a mere

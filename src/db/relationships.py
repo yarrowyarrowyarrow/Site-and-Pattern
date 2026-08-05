@@ -23,14 +23,32 @@ drift out of date and nothing new for the reseed to wipe.
 
 Honesty rules (P9):
 
-  * Every edge carries ``evidence``. ``'documented'`` means a seeded record with
-    a citable ``source``; ``'derived'`` means this module computed it (two plants
-    that feed the same animal are related, but nobody wrote that down).
+  * Every edge carries ``evidence``, in three states since V2.42:
+
+      ``documented`` — a seeded record that carries a citable ``source``
+      ``recorded``   — a seeded record with no citation. An authored fact about
+                       this catalogue, not a sourced one. Companion pairings and
+                       community co-membership live here.
+      ``derived``    — computed rather than read: this module's ``shared_fauna``
+                       edges, and the genus-level expansions in
+                       ``src.db.derived_edges``.
+
+    Before V2.42 there were two states and ``documented`` was *hardcoded* for
+    everything the SQL view produced, so an uncited companion pairing made
+    exactly the same provenance claim as a cited larval-host record. The view
+    computes it now, per source table.
   * ``strength`` is a coarse 0–1 weight for drawing and ranking, never a claim
     of measured interaction rate. The kind's own semantics dominate: a
     specialist's larval host outranks a generalist's nectar stop because the
     specialist has nowhere else to go, and that is a fact about the record.
-  * Nothing is inferred from taxonomy or "plants like this usually…".
+    Derived edges are discounted by confidence band so they can never out-rank
+    a documented edge of the same kind.
+  * **Nothing is inferred from taxonomy** — no "plants like this usually…".
+    V2.42 did not relax this. Expanding a published *genus-level* host record
+    onto that genus's members restates a claim at the resolution its source
+    made it; inventing genus-level scope for a record about a single species
+    would be the thing this rule forbids, and is why congeneric transfer is
+    measured but not implemented (see ``src/db/derived_edges.py``).
 
 Qt-free, connection-injectable, JSON-serialisable.
 """
@@ -121,9 +139,10 @@ class Edge:
     b_id: int
     directed: bool         # True for plant → fauna ("nectar for")
     strength: float        # 0–1, coarse weight for drawing/ranking
-    evidence: str          # 'documented' | 'derived'
+    evidence: str          # 'documented' | 'recorded' | 'derived'
     detail: str = ""       # 'specialist' / a community name / a shared species
     source: str = ""       # citation for documented edges
+    confidence: str = ""   # derived edges only: 'high' | 'moderate' | 'low'
 
     @property
     def a_type(self) -> str:
@@ -165,21 +184,59 @@ def _specialist_strength(kind: str, detail: str) -> float:
     return base
 
 
+#: How far a derived edge is discounted against a documented one of the same
+#: kind. A derived edge restates a genus-level record at the resolution it was
+#: published (see src/db/derived_edges.py); it is real, but it is not a record
+#: about *this species*, and it must never out-draw or out-rank one that is.
+_DERIVED_DISCOUNT: dict[str, float] = {
+    "high": 0.60,
+    "moderate": 0.45,
+    "low": 0.30,
+}
+
+
+def _derived_strength(base: float, confidence: str) -> float:
+    """Discount a derived edge by its confidence band.
+
+    Deliberately multiplicative rather than a flat subtraction: the kind's own
+    semantics still dominate (a derived pollen edge should still outweigh a
+    derived cover edge), while the whole derived population sits below the
+    documented one. P9 — the ordering is the claim, the number is not.
+    """
+    return round(base * _DERIVED_DISCOUNT.get(confidence, 0.30), 4)
+
+
 def _edge_from_row(row: dict) -> Optional[Edge]:
     kind = row.get("kind") or ""
     if kind not in EDGE_KINDS:
         return None                     # unknown vocabulary — never guess
     detail = row.get("detail") or ""
+    # V2.42: `evidence` is computed by the `relationship_edges` view, not assumed
+    # here. It used to be hardcoded to 'documented' for every row this function
+    # saw, which meant a cited plant_fauna record and an uncited companion
+    # pairing made the same provenance claim — on the app's most folklore-prone
+    # data. The view now distinguishes documented / recorded / derived; the
+    # fallback below only applies to a caller passing a hand-built row.
+    # A row from the view carries `evidence`. A hand-built row (tests, callers
+    # constructing edges directly) does not, so fall back to the SAME rule the
+    # view applies rather than a blind default: a citation makes it documented.
+    evidence = row.get("evidence") or (
+        "documented" if (row.get("source") or "").strip() else "recorded")
+    confidence = row.get("confidence") or ""
+    strength = _specialist_strength(kind, detail)
+    if evidence == "derived":
+        strength = _derived_strength(strength, confidence)
     return Edge(
         kind=kind,
         a_id=int(row["a_id"]),
         b_type=row.get("b_type") or "plant",
         b_id=int(row["b_id"]),
         directed=bool(row.get("directed")),
-        strength=_specialist_strength(kind, detail),
-        evidence="documented",
+        strength=strength,
+        evidence=evidence,
         detail=detail,
         source=row.get("source") or "",
+        confidence=confidence,
     )
 
 
@@ -212,7 +269,8 @@ def edges_among(plant_ids: Iterable[int], *,
         try:
             rows = _rows(
                 connect,
-                f"""SELECT kind, a_id, b_type, b_id, directed, detail, source
+                f"""SELECT kind, a_id, b_type, b_id, directed, detail, source,
+                       evidence, confidence
                       FROM relationship_edges
                      WHERE kind IN ({kph})
                        AND (a_id IN ({ph}) OR (b_type = 'plant'
@@ -381,7 +439,8 @@ def edges_for_plant(plant_id: int, *,
     try:
         rows = _rows(
             connect,
-            f"""SELECT kind, a_id, b_type, b_id, directed, detail, source
+            f"""SELECT kind, a_id, b_type, b_id, directed, detail, source,
+                       evidence, confidence
                   FROM relationship_edges
                  WHERE kind IN ({kph})
                    AND (a_id = ? OR (b_type = 'plant' AND b_id = ?))""",
@@ -425,6 +484,11 @@ def neighbourhood(plant_id: int, *,
             "detail": e.detail,
             "strength": round(e.strength, 2),
             "evidence": e.evidence,
+            # V2.42: `source` reached the DB, the view and the Edge, and was
+            # dropped right here — which is why no screen in the app has ever
+            # shown a citation for its ecology. Carrying it costs one line.
+            "source": e.source,
+            "confidence": e.confidence,
         })
 
     groups = []
