@@ -19,8 +19,16 @@ Use this skill when you:
 - need a value change to reach users who already have a DB;
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
-**Current facts (verify before quoting):** branch `V2.38`,
-`_SCHEMA_VERSION = 60` (in `src/db/plants.py`) — v60 is a data-only bump: no DDL,
+**Current facts (verify before quoting):** branch `V2.42`,
+`_SCHEMA_VERSION = 61` (in `src/db/plants.py`) — v61 adds `plant_fauna_derived`
+(genus-level host records expanded onto the catalogue, taking plant↔fauna
+coverage 22.6% → 46.5%), `fauna_fauna` (cleptoparasite edges, reaching 24 cuckoo
+bees a plant-only graph could never connect), `source`/`notes` on both companion
+tables, and a three-state `evidence` column on the `relationship_edges` view.
+Note `_migrate_to_v61`: `CREATE TABLE IF NOT EXISTS` does not add columns to an
+existing table, so the companion columns need a real `ALTER` — a fresh install
+passed while every existing install would have broken on "no such column".
+v60 was a data-only bump: no DDL,
 reseed to pick up `data/plant_ecoregions.json`, 427 species of GBIF-derived range.
 v59 added the
 `plant_ecoregions` table: per-species ecoregion range **with the evidence

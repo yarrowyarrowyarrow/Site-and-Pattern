@@ -33,7 +33,17 @@ version is older than `_SCHEMA_VERSION` (or the plant count is `< 100`), so
 without a bump existing installs never pick up your rows. Do the bump and add a
 one-line changelog comment above the constant (the file's history is full of
 "no DDL — reseed to pick up …" entries). See the `schema-change` skill for the
-full protocol. Current value in this session: `_SCHEMA_VERSION = 60`.
+full protocol. Current value in this session: `_SCHEMA_VERSION = 61`.
+
+**Sourcing is enforced (V2.42).** Every `source` field in
+`plant_fauna_master.json`, `bee_attributes_master.json` and
+`lepidoptera_attributes_master.json` must resolve to a key in
+`data/sources_master.json` — a free-text citation is now a build error, not a
+style preference. A claim resting on several works uses a comma-separated key
+list. Adding an edge without a source, or with a name that does not resolve
+against the catalogues, fails `validate_plant_fauna`; the seeder used to drop
+unresolvable names silently. Do not invent bibliographic detail to satisfy the
+gate: entries carry `record_confidence: unverified` precisely so nobody has to.
 
 ## Which file flows into which table
 
