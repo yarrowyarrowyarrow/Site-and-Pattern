@@ -261,11 +261,21 @@ class StylisedModeTest(unittest.TestCase):
                       "wearing veined leaf shaders")
 
     def test_the_app_offers_the_style_by_name(self):
-        """'Low' told the user it was worse. It is a choice."""
-        with open(os.path.join(_ROOT, "src", "scene3d_window.py"),
-                  encoding="utf-8") as fh:
-            src = fh.read()
-        self.assertIn('_DETAIL_LABELS = ["Stylised", "Balanced", "Lifelike"]', src)
+        """'Low' told the user it was worse. It is a choice.
+
+        V2.44: the labels moved to ``src/scene3d_toolbar.py`` when the
+        reference window started building its controls from the same widget —
+        two windows drive one viewer and the author asked for their controls to
+        match, so the list has one home. Asserted on the **value** rather than
+        one file's source text, which is what the test was always about and
+        holds wherever the constant lives.
+        """
+        from src.scene3d_toolbar import DETAIL_LABELS
+        self.assertEqual(DETAIL_LABELS, ["Stylised", "Balanced", "Lifelike"])
+        # And the window that shows them still gets them from there, rather
+        # than re-declaring a copy that can drift.
+        from src import scene3d_window
+        self.assertEqual(scene3d_window._DETAIL_LABELS, DETAIL_LABELS)
 
 
 def _read_js(name):
