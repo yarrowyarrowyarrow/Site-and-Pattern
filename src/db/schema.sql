@@ -751,6 +751,41 @@ CREATE INDEX IF NOT EXISTS idx_plant_photos_name ON plant_photos(scientific_name
 CREATE INDEX IF NOT EXISTS idx_plant_photos_slot ON plant_photos(scientific_name, slot);
 -- <<< plant_photos
 
+-- >>> learn progress (schema v62, V2.43) ------------------------------------
+-- The species-discovery ledger behind Learn mode's collection loop, and a
+-- small key/value store for where the learner is up to.
+--
+-- BOTH TABLES ARE USER-AUTHORED AND MUST NEVER BE ADDED TO THE RESEED WIPE
+-- LIST in plants.py:init_db. A reseed destroys and rebuilds the catalogue;
+-- it must not destroy the record of what the person has found in it. There is
+-- no origin='seed' split here because nothing in these tables ships — every
+-- row is something the user did.
+--
+-- Keyed by scientific_name, NEVER by plant_id/fauna_id: ids are not stable
+-- across a reseed, so an id-keyed ledger would silently re-point at different
+-- species on the next schema bump. Names are the only stable handle we have.
+CREATE TABLE IF NOT EXISTS discovered_species (
+    kind            TEXT NOT NULL CHECK (kind IN ('plant', 'fauna')),
+    scientific_name TEXT NOT NULL,
+    first_seen_at   TEXT NOT NULL,      -- ISO8601 UTC
+    last_seen_at    TEXT NOT NULL DEFAULT '',
+    -- How it was found: 'inspected' (clicked in a 3D scene), 'planted',
+    -- 'caught' (reserved for the net), 'directory'. Kept so a future
+    -- achievement can tell "walked past it" from "went and looked".
+    how             TEXT NOT NULL DEFAULT 'inspected',
+    times_seen      INTEGER NOT NULL DEFAULT 1,
+    -- Where it was found, when that is known: an ecoregion/community key.
+    -- P11: the honest hook for "seen in the field" later.
+    where_seen      TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (kind, scientific_name)
+);
+
+CREATE TABLE IF NOT EXISTS learn_state (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL DEFAULT ''
+);
+-- <<< learn progress
+
 CREATE INDEX IF NOT EXISTS idx_plants_type    ON plants(plant_type);
 CREATE INDEX IF NOT EXISTS idx_plants_zone    ON plants(hardiness_zone_min, hardiness_zone_max);
 CREATE INDEX IF NOT EXISTS idx_plants_native  ON plants(native_to_alberta);

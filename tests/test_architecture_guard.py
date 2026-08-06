@@ -94,7 +94,21 @@ class TestStructuralCeilings(unittest.TestCase):
         (_SRC / "plant_directory.py", 600),            # 489 now
         (_SRC / "plant_directory_window.py", 640),     # 518 now
         (_SRC / "start_screen.py", 380),               # 292 now
-        (_SRC / "onboarding_flow.py", 620),            # 496 now
+        (_SRC / "onboarding_flow.py", 620),            # ~551 now
+        # V2.43 — Learn mode. Opted in on arrival, the V2.41 precedent: a
+        # ceiling added late is a ceiling set around whatever shape the file
+        # drifted into. learn_flow.py exists *because* this guard fired — the
+        # Learn wiring took onboarding_flow.py to 646/620 and the honest fix
+        # was the split it asks for, not a bigger number.
+        (_SRC / "learn_flow.py", 260),                 # 129 now
+        (_SRC / "learn_menu.py", 300),                 # 144 now
+        (_SRC / "app_mode.py", 200),                   # 124 now
+        (_SRC / "reference_edit.py", 340),             # 297 now
+        (_SRC / "db" / "progress.py", 320),            # 275 now
+        # V2.43: the reference window went from a read-only diorama (163
+        # lines) to an editable sandbox. When this trips, the split is the
+        # edit half — the bridge slots and the trowel — into its own _flow.
+        (_SRC / "reference_ecosystem_window.py", 450),  # 420 now
         # V1.64: the former 4,900-line map.html monolith — keep the shell
         # thin and the split files from regrowing into a new monolith.
         (_HTML / "map.html", 400),                     # ~235 now
@@ -156,6 +170,11 @@ class TestStructuralCeilings(unittest.TestCase):
         # inflorescence architectures. 05-flowers.js was at 737 of its
         # 800 and this is a different thing from a canvas drawing.
         (_HTML / "scene3d" / "15-florets.js", 500),    # ~429 now
+        # V2.43: click-to-plant + the viewer's first QWebChannel. Geometry in,
+        # coordinates out — if this file grows past its ceiling the cause is
+        # almost certainly placement logic that belongs in
+        # src/reference_edit.py, where the single write path is.
+        (_HTML / "scene3d" / "16-editing.js", 300),    # 174 now
     ]
 
     def test_module_line_ceilings(self):

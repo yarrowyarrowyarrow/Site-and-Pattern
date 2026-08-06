@@ -248,3 +248,16 @@ def set_quality(level: int) -> str:
     registers ``window.permaSetQuality``."""
     return ("window.permaSetQuality && window.permaSetQuality("
             f"{int(level)});")
+
+
+def set_edit_mode(mode: str, pick: dict = None) -> str:
+    """JS to put the trowel in the user's hand (V2.43, ``16-editing.js``).
+
+    ``mode`` is ``'plant'``, ``'pull'`` or ``''`` (off); ``pick`` is the
+    ``{plant_id, common_name}`` on the trowel, needed only for ``'plant'``.
+    Guarded with ``&&`` so it's a no-op until the viewer registers
+    ``window.permaSetEditMode`` — and permanently a no-op in the web3d/dist
+    fork build, which does not carry that chunk.
+    """
+    return ("window.permaSetEditMode && window.permaSetEditMode("
+            f"{json.dumps(str(mode or ''))}, {json.dumps(pick or None)});")

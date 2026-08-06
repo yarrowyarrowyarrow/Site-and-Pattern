@@ -19,8 +19,13 @@ Use this skill when you:
 - need a value change to reach users who already have a DB;
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
-**Current facts (verify before quoting):** branch `V2.42`,
-`_SCHEMA_VERSION = 61` (in `src/db/plants.py`) — v61 adds `plant_fauna_derived`
+**Current facts (verify before quoting):** branch `V2.43`,
+`_SCHEMA_VERSION = 62` (in `src/db/plants.py`) — v62 adds `discovered_species`
+and `learn_state`, the Learn-mode species ledger. Both are **user-authored and
+must never be added to the reseed wipe list**: a reseed rebuilds the catalogue,
+and rebuilding the catalogue must not delete the record of what somebody found
+in it. They are keyed by `scientific_name`, never by id, because ids are not
+stable across a reseed. v61 adds `plant_fauna_derived`
 (genus-level host records expanded onto the catalogue, taking plant↔fauna
 coverage 22.6% → 46.5%), `fauna_fauna` (cleptoparasite edges, reaching 24 cuckoo
 bees a plant-only graph could never connect), `source`/`notes` on both companion

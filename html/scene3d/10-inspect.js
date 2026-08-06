@@ -348,6 +348,11 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   if (e.button !== 0) return;
   if (Math.abs(e.clientX - _downX) > 4 || Math.abs(e.clientY - _downY) > 4) return;
   if (performance.now() - _downT > 700) return;
+  // V2.43: while the trowel is out, a click means "plant here" or "pull that",
+  // not "tell me about this" — see 16-editing.js. Checked as a global because
+  // that chunk loads after this one and cannot intercept a listener that is
+  // already registered.
+  if (window.__permaEditMode) return;
   const hit = scenePick(e.clientX, e.clientY);
   if (!hit) { clearSelection(); return; }
   const entry = hit.type === 'fauna'

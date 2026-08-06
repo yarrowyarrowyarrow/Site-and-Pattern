@@ -23,11 +23,51 @@ from __future__ import annotations
 import os
 from datetime import datetime
 
-from PyQt6.QtCore import QUrl
+from PyQt6.QtCore import QObject, QUrl, pyqtSignal, pyqtSlot
+from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtWebEngineCore import QWebEngineSettings
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
 from src import map3d_js
+
+
+class Scene3DBridge(QObject):
+    """JS → Python for the built-in viewer (V2.43).
+
+    The 3D viewer had no channel until now, and that was deliberate: the
+    inspect dossier is pre-pushed so a click costs no round trip. Editing the
+    scene needs the other direction, so this mirrors the long-proven bridge in
+    ``src/map_widget.MapBridge`` rather than inventing a second mechanism (a
+    ``runJavaScript`` poll was the alternative and would have been a poll).
+
+    Three signals, deliberately dumb — the viewer reports *what happened
+    where*, in scene metres, and every decision about it is made in Python.
+    ``src/reference_edit.py`` turns the coordinates into a placement; the
+    project dict keeps its single write path.
+    """
+
+    #: (x_east_m, y_north_m, plant_id, common_name)
+    plant_requested = pyqtSignal(float, float, int, str)
+    #: (x_east_m, y_north_m)
+    pull_requested = pyqtSignal(float, float)
+    #: (kind, key) — kind is 'plant' (key is a plant id) or 'fauna' (a name).
+    #: NOT named ``inspected``: QWebChannel exposes signals and slots in one
+    #: namespace, and a signal sharing a slot's name shadows it on the JS side
+    #: with a connect/disconnect object that is not callable. The viewer calls
+    #: ``bridge.inspected(...)``, so that name has to belong to the slot.
+    species_inspected = pyqtSignal(str, str)
+
+    @pyqtSlot(float, float, int, str)
+    def plantAt(self, x: float, y: float, plant_id: int, common_name: str):
+        self.plant_requested.emit(x, y, plant_id, common_name)
+
+    @pyqtSlot(float, float)
+    def pullAt(self, x: float, y: float):
+        self.pull_requested.emit(x, y)
+
+    @pyqtSlot(str, str)
+    def inspected(self, kind: str, key: str):
+        self.species_inspected.emit(kind, key)
 
 
 def _repo_path(*parts) -> str:
@@ -72,6 +112,18 @@ class Map3DWidget(QWebEngineView):
         self._pending_js: list[str] = []
         self._loaded = False
         self.loadFinished.connect(self._on_load_finished)
+
+        # JS → Python (V2.43). Only for the built-in viewer: the web3d/dist
+        # fork is a separate app that does not carry 16-editing.js, so a
+        # channel there would register an object nothing ever calls. Wired
+        # before load() so the page cannot finish loading ahead of it.
+        self.bridge = None
+        self._channel = None
+        if self.mode == "builtin":
+            self.bridge = Scene3DBridge(self)
+            self._channel = QWebChannel(self.page())
+            self._channel.registerObject("bridge", self.bridge)
+            self.page().setWebChannel(self._channel)
 
         # The built-in viewer fetches three.js + Spark from a CDN and, for the
         # Gaussian-splat backdrop, loads a local .ply via a file:// URL — both
@@ -218,6 +270,13 @@ class Map3DWidget(QWebEngineView):
     def set_walk_mode(self, on: bool):
         """Enter/leave third-person "walk the garden" mode (V2.12)."""
         self.run_js(map3d_js.set_walk_mode(on))
+
+    def set_edit_mode(self, mode: str, pick: dict = None):
+        """Put the trowel in the user's hand — ``'plant'``, ``'pull'`` or
+        ``''`` (V2.43). Answers on ``bridge.plant_requested`` /
+        ``bridge.pull_requested``; a no-op in the fork build, which has no
+        bridge and no editing chunk."""
+        self.run_js(map3d_js.set_edit_mode(mode, pick))
 
     def set_cinematic(self, on: bool):
         """Toggle the cinematic flyover (V2.13)."""

@@ -30,7 +30,7 @@ from PyQt6.QtCore import Qt, QtMsgType, QTimer, qInstallMessageHandler
 from PyQt6.QtWebEngineWidgets import QWebEngineView  # noqa: F401
 
 from src.app import MainWindow
-from src import onboarding_flow
+from src import app_mode, onboarding_flow
 
 
 def _qt_message_filter(msg_type, context, message):
@@ -86,9 +86,22 @@ def main():
     choice = onboarding_flow.choose_start_action()
 
     window = built.get("window") or MainWindow()
-    window.show()
+    # V2.43 — the Learn door does not open the design app. Its surfaces are
+    # standalone windows (a walkable landscape, the Field Guide, the lessons),
+    # and *not showing the map and the six side tabs* is the whole of the
+    # simplification the feedback asked for. The window is still built — it is
+    # what the Learn windows hang their singletons off, and it makes stepping
+    # into Design later instant — it is simply never shown.
+    if app_mode.opens_main_window(choice):
+        window.show()
     # Rows that draw a project wait for map_ready; the rest run at once.
     onboarding_flow.act_on_start_choice(window, choice)
+
+    # Safety net: if a Learn door failed to open its window, Qt would quit the
+    # moment this function returns, with nothing on screen and no error. A
+    # working app on the wrong screen beats a silent exit.
+    if not any(w.isVisible() for w in app.topLevelWidgets()):
+        window.show()
 
     sys.exit(app.exec())
 

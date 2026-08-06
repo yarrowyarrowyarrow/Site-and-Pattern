@@ -124,7 +124,12 @@ class TestWhatTheMenuOffers(unittest.TestCase):
         one thing the title cannot: how many you have."""
         details = self._details(saves_count=3, species_count=434)
         self.assertIn("3 saved", details)
-        self.assertIn("434 native species", details)
+        # V2.43: the catalogue size moved behind the Learn door with the plant
+        # directory itself, and the Learn row says the fact the *learner* owns
+        # instead — how much of it they have found.
+        self.assertIn("434 species to find", details)
+        self.assertIn("37 of 581 species discovered",
+                      self._details(discovery_line="37 of 581 species discovered"))
         for d in details:
             self.assertLessEqual(len(d.split()), 5, d)
 
@@ -149,7 +154,7 @@ class TestWhatTheMenuOffers(unittest.TestCase):
         fn = next(n for n in ast.walk(ast.parse(src))
                   if isinstance(n, ast.FunctionDef) and n.name == "_dispatch")
         handled = ast.dump(fn)
-        for name in ("RECOVER", "CONTINUE", "OPEN", "NEW", "DIRECTORY",
+        for name in ("RECOVER", "CONTINUE", "OPEN", "DESIGN", "DIRECTORY",
                      "EXAMPLE", "REFERENCE", "BLOOM", "UPDATE"):
             self.assertTrue(hasattr(wd, name), name)
             self.assertIn(name, handled, f"{name} is offered but never acted on")
@@ -243,10 +248,14 @@ class TestItActuallyStaysAStartMenu(unittest.TestCase):
         import ast
         for name in ("choose_start_action", "show_welcome"):
             dump = ast.dump(self._flow_fn(name))
-            self.assertIn("_open_menu", dump, name)
+            # V2.43: both go through _menu_loop, which is the one body that
+            # calls _open_menu — and which also owns the Learn menu behind the
+            # first door, so Back has somewhere to go from either entry point.
+            self.assertIn("_menu_loop", dump, name)
             self.assertNotIn("StartScreen", dump,
                              f"{name} builds its own screen instead of sharing "
-                             f"_open_menu")
+                             f"_menu_loop")
+        self.assertIn("_open_menu", ast.dump(self._flow_fn("_menu_loop")))
 
     def test_the_checkbox_is_still_there(self):
         from src.start_screen import StartScreen
@@ -401,7 +410,7 @@ class TestItOpensBeforeTheMap(unittest.TestCase):
                 return
             seen["parent"] = dlg.parent()
             btn = next(b for b in dlg.findChildren(QPushButton)
-                       if any("Plant directory" in l.text()
+                       if any("Open a design" in l.text()
                               for l in b.findChildren(QLabel)))
             btn.click()
 
@@ -418,7 +427,7 @@ class TestItOpensBeforeTheMap(unittest.TestCase):
         self.assertIsInstance(seen.get("dlg"), start_screen.StartScreen,
                               "no start screen window opened")
         self.assertIsNone(seen["parent"], "the screen is parented to something")
-        self.assertEqual(choice, start_screen.DIRECTORY)
+        self.assertEqual(choice, start_screen.OPEN)
 
     @unittest.skipUnless(_HAVE_QT, "PyQt6 not installed in this env")
     def test_a_suppressed_menu_opens_nothing_and_answers_nothing(self):

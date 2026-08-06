@@ -315,8 +315,10 @@ class TestStartScreen(unittest.TestCase):
         cls._app = QApplication.instance() or QApplication(["tests"])
 
     def test_offers_the_three_doors(self):
-        from src.start_screen import DIRECTORY, NEW, OPEN, _DOORS
-        self.assertEqual([d[0] for d in _DOORS], [NEW, OPEN, DIRECTORY])
+        from src.start_screen import DESIGN, LEARN, OPEN, _DOORS
+        # V2.43: Learn leads, then Design, then the design you already have.
+        # The plant directory moved behind the Learn door.
+        self.assertEqual([d[0] for d in _DOORS], [LEARN, DESIGN, OPEN])
 
     def test_choice_is_empty_until_picked(self):
         from src.start_screen import DIRECTORY, StartScreen

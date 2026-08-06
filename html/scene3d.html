@@ -259,6 +259,13 @@ The bundled 3D engine failed to load. The 2D map is unaffected.</div></div>
 <div id="cine-cap"><div class="big"></div><div class="sub"></div></div>
 <div id="inspect-card"></div>
 
+<!-- Qt WebChannel (V2.43) — the viewer's first Python channel, used by
+     scene3d/16-editing.js to report a click back. The qrc: URL only resolves
+     inside QtWebEngine; in a plain browser this 404s and 16-editing.js's
+     guards turn every bridge call into a no-op, which is the intended
+     degraded behaviour rather than an error. -->
+<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+
 <script type="importmap">
 {
   "imports": {
@@ -358,6 +365,10 @@ window._pinglog && window._pinglog('module-eval-start (three OK)');
     'scene3d/13-stylised.js',
     'scene3d/14-layers.js',
     'scene3d/15-florets.js',
+    // V2.43: click-to-plant in the reference sandboxes, and the QWebChannel
+    // the viewer never had. Last on purpose — its pointer handlers must
+    // register after 10-inspect.js's so both see the same click.
+    'scene3d/16-editing.js',
   ];
   let i = 0;
   (function next() {

@@ -236,7 +236,11 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # v60 (V2.38): no DDL — reseed to pick up data/plant_ecoregions.json, the
 # GBIF-derived per-species ecoregion ranges. 427 species now carry a sourced
 # range with an occurrence count behind it.
-_SCHEMA_VERSION = 61
+# v62 (V2.43): +discovered_species, +learn_state — the Learn-mode species
+# ledger. Both are USER-AUTHORED and are deliberately absent from the reseed
+# wipe block below; see their comment in schema.sql. The bump exists only so
+# the CREATE TABLEs reach existing installs.
+_SCHEMA_VERSION = 62
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the

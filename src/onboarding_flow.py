@@ -92,7 +92,31 @@ def choose_start_action() -> str:
     """
     if not _HAVE_QT or not should_show_welcome():
         return ""
-    return _open_menu(None)
+    return _menu_loop(None)
+
+
+def _menu_loop(parent) -> str:
+    """The start screen, plus the Learn menu behind its first door (V2.43).
+
+    A loop rather than two calls, because **Back has to go somewhere**. The
+    Learn menu is a second screen, not a dead end: closing it or pressing Back
+    returns to the start screen, so a person who opens the wrong door is not
+    dropped into an app they did not choose. Without the loop the only way out
+    of Learn would be to quit.
+
+    Returns the choice to act on once there is a window — which may be a
+    Learn-side key (see :func:`src.app_mode.opens_main_window`, which is what
+    decides whether the MainWindow is shown at all).
+    """
+    from src import app_mode, learn_flow
+    while True:
+        choice = _open_menu(parent)
+        if choice != app_mode.LEARN:
+            return choice
+        sub = learn_flow.open_learn_menu(parent)
+        if sub and sub != app_mode.BACK:
+            return sub
+        # Back, or closed. Round again to the start screen.
 
 
 def _open_menu(parent) -> str:
@@ -104,7 +128,7 @@ def _open_menu(parent) -> str:
     decision would be two answers to it within a release or two.
     """
     from src.start_screen import StartScreen
-    from src import saves
+    from src import learn_flow, saves
 
     last_path = saves.last_design()
     last_name = ""
@@ -117,6 +141,7 @@ def _open_menu(parent) -> str:
                       saves_count=len(saves.list_saves()),
                       species_count=_species_count(),
                       bloom_line=_bloom_line(), version=_version_line(),
+                      discovery_line=learn_flow.discovery_line(),
                       hidden=not should_show_welcome())
     result = dlg.exec()
     # Written every time, not only when ticked. A checkbox that can be turned
@@ -247,7 +272,7 @@ def show_welcome(main, *, mark_seen: bool = False) -> None:
     a start menu, where closing it means "I will start from the blank map",
     not "never show me this again".
     """
-    _dispatch(main, _open_menu(main))
+    _dispatch(main, _menu_loop(main))
 
 
 def _dispatch(main, choice: str) -> None:
@@ -255,7 +280,8 @@ def _dispatch(main, choice: str) -> None:
     sequence, so the two can never drift about what a row does."""
     if not choice:
         return
-    from src.start_screen import (BLOOM, CONTINUE, DIRECTORY, EXAMPLE, NEW,
+    from src.app_mode import STUDIO
+    from src.start_screen import (BLOOM, CONTINUE, DESIGN, DIRECTORY, EXAMPLE,
                                   OPEN, RECOVER, REFERENCE, UPDATE)
     if choice == RECOVER:
         # Tell the controller this is the screen asking, so its "the screen
@@ -272,9 +298,12 @@ def _dispatch(main, choice: str) -> None:
         _open_directory(main, bloom=(choice == BLOOM))
     elif choice == REFERENCE:
         _open_reference(main)
+    elif choice == STUDIO:
+        from src import learn_flow
+        learn_flow.open_studio(main)
     elif choice == UPDATE:
         _safely(lambda: main._on_check_for_updates())
-    elif choice == NEW:
+    elif choice == DESIGN:
         # Nothing to build — just point at step one and put the cursor where
         # the user has to act.
         _safely(lambda: (main._side_tabs.setCurrentWidget(main.site_panel),

@@ -211,6 +211,37 @@ On `plants(plant_type)`, `plants(zone range)`, `plants(native_to_alberta)`,
 
 ---
 
+### `discovered_species` / `learn_state` (schema v62, V2.43)
+
+The Learn-mode species ledger, and a small key/value store for where the
+learner is up to (which sandbox they were last in, and — reserved — which
+companion they picked).
+
+```sql
+discovered_species(kind, scientific_name, first_seen_at, last_seen_at,
+                   how, times_seen, where_seen)   -- PK (kind, scientific_name)
+learn_state(key, value)
+```
+
+Two properties matter and both are guarded by `tests/test_learn_mode.py`:
+
+* **Never wiped by the reseed.** Every other table here is either shipped data
+  or has an `origin` column splitting shipped rows from authored ones. These
+  hold *nothing* shipped: every row is something the user did. A reseed
+  rebuilds the catalogue, and rebuilding the catalogue must not delete the
+  record of what somebody found in it. There is a text-level test that fails
+  the moment a `DELETE FROM discovered_species` is typed into `init_db`.
+* **Keyed by `scientific_name`, never by id.** Plant and fauna ids are not
+  stable across a reseed. An id-keyed ledger would come back after an upgrade
+  pointing at *different* species — worse than losing it, because nothing
+  would look wrong.
+
+`how` is a closed vocabulary — `inspected` / `planted` / `caught` /
+`directory` — so a later achievement can tell "walked past it in a scene" from
+"went out and identified it", which is the P11 distinction that makes an
+outdoor achievement mean anything. Re-seeing a species bumps `times_seen` and
+`last_seen_at` but never rewrites `first_seen_at` or `how`.
+
 ## Seeding & reseed
 
 `init_db` (in `src/db/plants.py`) creates the tables, then **reseeds**

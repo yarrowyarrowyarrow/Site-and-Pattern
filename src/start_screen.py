@@ -55,14 +55,25 @@ from src.branding import APP_NAME, APP_TAGLINE
 from src.ui_style import BASE_SURFACE
 
 #: Values returned by :meth:`StartScreen.choice`.
-NEW = "new"
+#:
+#: ``LEARN`` and ``DESIGN`` are the V2.43 front doors (see :mod:`src.app_mode`
+#: for why the split is a door at boot rather than the mid-session toggle V2.42
+#: argued against). ``DESIGN`` replaced the old ``NEW`` key outright: it did and
+#: does exactly one thing — open the app on step one — and two names for that
+#: would be two things to keep in step.
+LEARN = "learn"
+DESIGN = "design"
 OPEN = "open"
-DIRECTORY = "directory"
 #: Rows that only exist when there is something behind them.
 RECOVER = "recover"
 CONTINUE = "continue"
 #: The quiet second tier.
 EXAMPLE = "example"
+#: Still real choices, still dispatched — but offered from the Learn menu now
+#: rather than from here. A reference work and a walkable wild community are
+#: things you go to in order to *learn*; putting them behind the Learn door is
+#: what makes that door worth opening.
+DIRECTORY = "directory"
 REFERENCE = "reference"
 #: The footer.
 BLOOM = "bloom"
@@ -71,10 +82,14 @@ UPDATE = "update"
 #: The three doors: ``(key, icon, title)``. The note beside each is computed,
 #: because a fact about the user's own situation beats a description of the
 #: button every time.
+#:
+#: Learn leads. That is the V2.43 ordering decision and it is deliberate: the
+#: person who needs the front door most is the one who does not yet know what
+#: this app is for, and the professional side loses nothing by being second.
 _DOORS = (
-    (NEW, "🌱", "New design"),
+    (LEARN, "🌿", "Learn"),
+    (DESIGN, "📐", "Design"),
     (OPEN, "📂", "Open a design"),
-    (DIRECTORY, "📖", "Plant directory"),
 )
 
 
@@ -143,7 +158,7 @@ class StartScreen(QDialog):
                  last_design: str = "", recover: str = "",
                  saves_count: int = 0, species_count: int = 0,
                  bloom_line: str = "", version: str = "",
-                 hidden: bool = False):
+                 discovery_line: str = "", hidden: bool = False):
         super().__init__(parent)
         self.setWindowTitle(APP_NAME)
         self.setMinimumWidth(560)
@@ -184,31 +199,29 @@ class StartScreen(QDialog):
 
         # ── The three doors ─────────────────────────────────────────────────
         notes = {
-            NEW: "start from your address",
+            LEARN: (discovery_line or (f"{species_count} species to find"
+                                       if species_count else "start here")),
+            DESIGN: "start from your address",
             OPEN: (f"{saves_count} saved" if saves_count
                    else "nothing saved yet"),
-            DIRECTORY: (f"{species_count} native species" if species_count
-                        else "look up any native species"),
         }
         for key, icon, title in _DOORS:
             # One obvious starting point, and only one. When there is work to
             # resume, that is the obvious one and none of these is.
             self._add_row(layout, key, icon, title, notes[key],
-                          primary=(key == NEW and not resume))
+                          primary=(key == LEARN and not resume))
 
         layout.addSpacing(2)
 
         # ── Worth knowing about ─────────────────────────────────────────────
-        # Both already shipped and both were buried in menus.
+        # "Walk a wild plant community" used to sit here too. It is the first
+        # door on the Learn menu now — a quiet link under the doors was the
+        # wrong weight for the best thing in the app to look at.
         quiet = QHBoxLayout()
         quiet.setSpacing(16)
         quiet.addWidget(self._link(
             EXAMPLE, "See a finished design",
             "A front-yard lawn conversion you can open and take apart."))
-        quiet.addWidget(self._link(
-            REFERENCE, "Walk a wild plant community",
-            "Walk the natural community your ecoregion is reaching toward, "
-            "in 3D."))
         quiet.addStretch()
         layout.addLayout(quiet)
 
