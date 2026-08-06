@@ -88,6 +88,56 @@
       return t.join('<br>');
     }
 
+    // Clicking a node answers the question the picture provokes: "supported by
+    // WHAT?" Hover gave a tooltip with counts and faded the unrelated lines,
+    // which tells you how many and not which — leaving the reader to trace
+    // lines by eye across a ring of up to sixty chips. All of this comes from
+    // the payload; the renderer still decides no ecology.
+    function _relNodePopup(n) {
+      var h = '<div style="font-family:system-ui,sans-serif;font-size:12px;' +
+              'min-width:190px;max-width:280px;">';
+      if (n.type === 'fauna') {
+        h += '<b>' + (n.mark || '') + ' ' + escH(n.label || '') + '</b>';
+        if (n.scientific_name) {
+          h += '<br><i style="color:#7a8a7a;">' + escH(n.scientific_name) + '</i>';
+        }
+        if (n.specialist) {
+          h += '<br><span style="color:#e57373;"><b>Specialist</b> — it can ' +
+               'only use these plants, nowhere else to go.</span>';
+        }
+        var by = n.supported_by || [];
+        h += '<div style="margin-top:6px;padding-top:5px;' +
+             'border-top:1px solid #cfd8cf;">' +
+             '<b>Supported here by ' + by.length + ' plant' +
+             (by.length === 1 ? '' : 's') + ':</b><br>' +
+             by.map(escH).join('<br>') + '</div>';
+        if (n.only_source) {
+          h += '<div style="margin-top:5px;color:#bf5f3f;">' +
+               'Remove that plant and this animal loses everything it has ' +
+               'in this design.</div>';
+        }
+      } else {
+        h += '<b>' + escH(n.label || '') + '</b>';
+        if (n.count > 1) h += ' <span style="color:#7a8a7a;">× ' + n.count + '</span>';
+        var sup = n.supports || [];
+        if (!sup.length) {
+          h += '<div style="margin-top:6px;color:#7a8a7a;">No recorded animal ' +
+               'relationships yet — unrecorded, not necessarily absent.</div>';
+        } else {
+          h += '<div style="margin-top:6px;padding-top:5px;' +
+               'border-top:1px solid #cfd8cf;"><b>Supports ' + sup.length +
+               ':</b><br>' + sup.map(function(s) {
+                 return (s.mark || '') + ' ' + escH(s.name) +
+                        ' <span style="color:#7a8a7a;">' + escH(s.how) + '</span>' +
+                        (s.specialist ? ' <b style="color:#bf5f3f;">specialist</b>' : '') +
+                        (s.evidence === 'derived'
+                          ? ' <i style="color:#8a8a8a;">inferred</i>' : '');
+               }).join('<br>') + '</div>';
+        }
+      }
+      return h + '</div>';
+    }
+
     // Hovering a node fades everything it does not touch, so a single web
     // becomes readable one species at a time.
     function _relSetFocus(nodeId) {
@@ -117,16 +167,40 @@
                'margin-right:5px;"></span>' + escH(l.label) + ' <span ' +
                'style="color:#8fa68f;">' + l.count + '</span>';
       });
+      // What the marks mean. Without this the ring is a row of unexplained
+      // emoji — only specialists carry their name, so most chips said nothing.
+      var key = payload.taxon_key || [];
+      var keyHtml = '';
+      if (key.length) {
+        keyHtml = '<div style="margin-top:5px;padding-top:5px;' +
+          'border-top:1px solid #3e5c3e;">' +
+          key.map(function(k) {
+            return '<span style="margin-right:8px;white-space:nowrap;">' +
+                   k.mark + ' ' + escH(k.label) +
+                   ' <span style="color:#8fa68f;">' + k.count + '</span></span>';
+          }).join('') + '</div>';
+      }
+
       var s = payload.stats || {};
       var foot = '<div style="margin-top:5px;padding-top:5px;' +
         'border-top:1px solid #3e5c3e;color:#a5c8a5;">' +
         'Animals sit on a ring — a diagram, not a place.';
+      // The concentric rings look like they encode something. They do not:
+      // they are spillover lanes so chips at similar bearings stop colliding.
+      // Saying so is cheaper than a reader inventing a meaning for them.
+      if ((payload.ring || {}).lanes > 1) {
+        foot += '<br><b>Rings carry no meaning</b> — extra rings are only ' +
+                'spacing so crowded labels do not overlap.';
+      }
       if (s.derived_edges) foot += '<br>Dashed = inferred, not a record.';
+      foot += '<br><b>!</b> = the only thing here supporting it.';
+      foot += '<br><i>Click any plant or animal for detail.</i>';
       if (s.dropped_fauna) {
         foot += '<br>' + s.dropped_fauna + ' more supported species not drawn.';
       }
       foot += '</div>';
-      el.innerHTML = '<b>🕸 Relationship web</b><br>' + rows.join('<br>') + foot;
+      el.innerHTML = '<b>🕸 Relationship web</b><br>' + rows.join('<br>')
+                   + keyHtml + foot;
       el.style.display = 'block';
     }
 
@@ -192,9 +266,14 @@
         var n = nodes[j];
         var m = _relNodeMarker(n);
         m.bindTooltip(_relNodeTooltip(n), { direction: 'top', sticky: true });
+        m.bindPopup(_relNodePopup(n), { maxWidth: 300, autoPan: true });
         (function(id) {
           m.on('mouseover', function() { _relSetFocus(id); });
           m.on('mouseout', function() { _relSetFocus(null); });
+          // Keep the node's own web lit while its popup is open, so the popup
+          // and the picture are describing the same thing.
+          m.on('popupopen', function() { _relSetFocus(id); });
+          m.on('popupclose', function() { _relSetFocus(null); });
         })(n.id);
         m.addTo(relationshipLayer);
       }

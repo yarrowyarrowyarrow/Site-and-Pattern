@@ -313,3 +313,101 @@ class TestPanelLayerTable(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestClickThroughDetail(unittest.TestCase):
+    """V2.42 — what the overlay could not answer.
+
+    The first user to open the web reported three things: they could not tell
+    what the concentric rings meant, could not tell what the icons meant, and
+    could not click anything to find out. The first is a legend fix and the
+    other two need the payload to carry names, because the renderer is
+    deliberately dumb — it draws what Python worked out and looks nothing up.
+
+    Tracing a line by eye across a ring of up to sixty chips is not an
+    interaction, and hover only ever gave counts.
+    """
+
+    def _graph(self):
+        placed = [_placed(1, "Milkweed"), _placed(2, "Goldenrod", dlat=0.0002)]
+        edges = [_edge("larval_host", 1, "fauna", 10, detail="specialist"),
+                 _edge("nectar", 1, "fauna", 11),
+                 _edge("nectar", 2, "fauna", 11)]
+        return build_relationship_graph(
+            placed, edges_provider=_provider(edges), fauna_lookup=_fauna)
+
+    def test_a_fauna_node_names_the_plants_supporting_it(self):
+        g = self._graph()
+        shared = next(n for n in g["nodes"]
+                      if n["type"] == "fauna" and n["fauna_id"] == 11)
+        self.assertEqual(shared["supported_by"], ["Goldenrod", "Milkweed"])
+
+    def test_a_single_source_animal_names_its_one_plant(self):
+        g = self._graph()
+        lone = next(n for n in g["nodes"]
+                    if n["type"] == "fauna" and n["fauna_id"] == 10)
+        self.assertEqual(lone["supported_by"], ["Milkweed"])
+        self.assertTrue(lone["only_source"])
+
+    def test_a_plant_node_says_what_it_supports_and_how(self):
+        g = self._graph()
+        milkweed = next(n for n in g["nodes"]
+                        if n["type"] == "plant" and n["label"] == "Milkweed")
+        hows = {s["name"]: s["how"] for s in milkweed["supports"]}
+        self.assertEqual(hows["Animal 10"], "caterpillar host for")
+        self.assertEqual(hows["Animal 11"], "nectar for")
+
+    def test_plant_support_entries_flag_specialists_and_evidence(self):
+        g = self._graph()
+        milkweed = next(n for n in g["nodes"]
+                        if n["type"] == "plant" and n["label"] == "Milkweed")
+        host = next(s for s in milkweed["supports"] if s["name"] == "Animal 10")
+        self.assertTrue(host["specialist"])
+        self.assertEqual(host["evidence"], "documented")
+
+    def test_a_plant_with_no_animals_has_no_supports_key_to_render(self):
+        g = build_relationship_graph(
+            [_placed(1, "Lonely")], edges_provider=_provider([]),
+            fauna_lookup=_fauna)
+        lonely = next(n for n in g["nodes"] if n["type"] == "plant")
+        self.assertEqual(lonely.get("supports", []), [])
+
+
+class TestTaxonKey(unittest.TestCase):
+    """The ring draws animals as emoji and names only the specialists, so most
+    chips are an unexplained mark. The legend explained the *line* colours and
+    left 🪲 to the reader's imagination."""
+
+    def _mixed(self):
+        placed = [_placed(1, "Host")]
+        edges = [_edge("nectar", 1, "fauna", i) for i in (10, 11, 12)]
+        taxa = {10: "bee", 11: "bee", 12: "bird"}
+        def lookup(ids):
+            return {i: {"id": i, "common_name": f"Animal {i}",
+                        "scientific_name": "", "taxon": taxa[i]} for i in ids}
+        return build_relationship_graph(
+            placed, edges_provider=_provider(edges), fauna_lookup=lookup)
+
+    def test_key_explains_every_mark_on_screen(self):
+        g = self._mixed()
+        marks_drawn = {n["mark"] for n in g["nodes"] if n["type"] == "fauna"}
+        marks_keyed = {k["mark"] for k in g["taxon_key"]}
+        self.assertEqual(marks_drawn, marks_keyed)
+
+    def test_key_gives_a_readable_label_not_a_database_token(self):
+        g = self._mixed()
+        labels = {k["label"] for k in g["taxon_key"]}
+        self.assertIn("bees", labels)
+        self.assertIn("birds", labels)
+        self.assertNotIn("other_insect", labels)
+
+    def test_key_counts_and_sorts_by_prevalence(self):
+        g = self._mixed()
+        self.assertEqual(g["taxon_key"][0]["label"], "bees")
+        self.assertEqual(g["taxon_key"][0]["count"], 2)
+
+    def test_key_names_only_taxa_actually_drawn(self):
+        """Same rule as the edge legend — a key naming mammals when no mammal
+        is drawn sends the reader hunting for one."""
+        g = self._mixed()
+        self.assertNotIn("mammals", {k["label"] for k in g["taxon_key"]})

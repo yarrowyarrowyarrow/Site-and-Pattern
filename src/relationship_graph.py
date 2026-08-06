@@ -291,6 +291,13 @@ def build_relationship_graph(placed_plants: list, *,
             "count": len(supporters.get(fid, ())),
             "degree": 0, "on_ring": True,
             "specialist": bool(specialist_for.get(fid)),
+            # V2.42: the plants in THIS design that support this animal, by
+            # name. The overlay could previously only be read by tracing lines
+            # by eye — there was no way to click a chip and ask "supported by
+            # what?", which is the first question the picture provokes.
+            "supported_by": sorted(
+                plant_nodes[pid]["label"]
+                for pid in supporters.get(fid, ()) if pid in plant_nodes),
             # The single fact that makes an edge urgent: pull this plant and
             # this animal loses everything it has here (P3, and the same
             # reading src/plant_impact.py gives the user in words).
@@ -318,6 +325,13 @@ def build_relationship_graph(placed_plants: list, *,
         meta = EDGE_KINDS[e.kind]
         a["degree"] += 1
         b["degree"] += 1
+        # V2.42: what a plant does, in words, for the click-through panel —
+        # "nectar for Painted Lady" rather than a line the reader has to trace.
+        if e.b_type == "fauna":
+            a.setdefault("supports", []).append(
+                {"name": b["label"], "how": meta.phrase, "mark": b.get("mark", "•"),
+                 "specialist": e.detail == "specialist",
+                 "evidence": e.evidence})
         out_edges.append({
             "a": a["id"], "b": b["id"], "kind": e.kind,
             "label": meta.label, "phrase": meta.phrase,
@@ -336,11 +350,44 @@ def build_relationship_graph(placed_plants: list, *,
         "nodes": nodes,
         "edges": out_edges,
         "legend": _legend(out_edges, EDGE_KINDS),
+        "taxon_key": _taxon_key(fauna_nodes),
         "ring": {"lat": round(c_lat, 7), "lng": round(c_lng, 7),
                  "radius_m": round(radius, 2),
                  "lanes": lanes, "lane_step_m": _LANE_STEP_M},
         "stats": _stats(plant_nodes, fauna_nodes, out_edges, dropped, wanted),
     }
+
+
+#: What each ring mark means, in words. The overlay draws animals as emoji and
+#: names only the specialists, so most of the ring is unlabelled marks — which
+#: is fine as a density decision and useless without a key. There wasn't one:
+#: the legend explained the *line* colours and left the reader to guess whether
+#: 🪲 meant a beetle or "other". Reported by the first user to open the overlay.
+_TAXON_LABEL = {
+    "bee": "bees", "lepidoptera": "butterflies & moths", "bird": "birds",
+    "other_insect": "other insects", "mammal": "mammals",
+}
+
+
+def _taxon_key(fauna_nodes: dict) -> list:
+    """The mark → meaning key, for the taxa this design actually draws.
+
+    Same rule as :func:`_legend`: only what is on screen. A key naming mammals
+    when no mammal is drawn sends the reader hunting for one.
+    """
+    counts: dict = {}
+    for n in fauna_nodes.values():
+        counts.setdefault((n.get("mark") or "•", n.get("taxon") or ""),
+                          []).append(n)
+    out = []
+    for (mark, taxon), group in counts.items():
+        out.append({
+            "mark": mark,
+            "taxon": taxon,
+            "label": _TAXON_LABEL.get(taxon, taxon or "other"),
+            "count": len(group),
+        })
+    return sorted(out, key=lambda r: (-r["count"], r["label"]))
 
 
 def _legend(edges: list, kind_meta: dict) -> list:

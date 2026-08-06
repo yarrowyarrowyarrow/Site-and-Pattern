@@ -1537,10 +1537,25 @@ class AnalysisPanel(QWidget):
     # ── Pull-a-plant impact simulator (F46) ───────────────────────────────
 
     def _populate_pull_combo(self):
-        """Fill the pull-a-plant selector with the design's distinct species."""
+        """Fill the pull-a-plant selector with the design's distinct species.
+
+        V2.42: this used to run **only** from ``_calc_habitat_score``, which is
+        wired to a button. So the list was a snapshot of whatever was planted
+        the last time somebody pressed *Calculate* — it did not follow the
+        design, and after a few edits it listed species that were no longer
+        placed while missing the ones that were. It read as an arbitrary list
+        because that is what it had become. It is now also called from
+        :meth:`set_placed_plants`, so it follows every edit.
+
+        The selection is preserved across a refresh (rebuilding a combo the
+        user has already chosen from is its own bug — it would silently reset
+        their choice on every plant placed), and dropped only when the species
+        it names actually leaves the design.
+        """
         combo = getattr(self, "_pull_combo", None)
         if combo is None:
             return
+        previous = combo.currentData()
         combo.blockSignals(True)
         combo.clear()
         by_id: dict = {}
@@ -1551,14 +1566,28 @@ class AnalysisPanel(QWidget):
         if not by_id:
             combo.addItem("Place plants first", userData=None)
             combo.setEnabled(False)
+            combo.blockSignals(False)
             self._pull_result.setVisible(False)
-        else:
-            combo.setEnabled(True)
-            combo.addItem("— pick a plant to test —", userData=None)
-            for pid, name in sorted(by_id.items(), key=lambda kv: kv[1].lower()):
-                combo.addItem(name, userData=pid)
+            return
+
+        combo.setEnabled(True)
+        combo.addItem("— pick a plant to test —", userData=None)
+        for pid, name in sorted(by_id.items(), key=lambda kv: kv[1].lower()):
+            combo.addItem(name, userData=pid)
+        restored = False
+        if previous is not None and previous in by_id:
+            idx = combo.findData(previous)
+            if idx >= 0:
+                combo.setCurrentIndex(idx)
+                restored = True
         combo.blockSignals(False)
-        self._pull_result.setVisible(False)
+        if restored:
+            # The design changed under a live answer, so the answer is stale
+            # too — recompute it rather than leave a number that no longer
+            # describes anything.
+            self._on_pull_plant()
+        else:
+            self._pull_result.setVisible(False)
 
     def _on_pull_plant(self, *_):
         """Render the impact of removing the selected plant (F46)."""
@@ -1651,6 +1680,10 @@ class AnalysisPanel(QWidget):
         # The relationship web is a view of the design, so it follows every
         # edit — placing a keystone shrub should visibly grow the network (F5).
         self._refresh_relationship_web()
+        # Pull-a-plant is a view of the design too, and was not following it:
+        # its list was only rebuilt when the habitat score was recalculated by
+        # hand, so it drifted out of step with what was actually planted.
+        self._populate_pull_combo()
 
     def set_structures(self, structures: list[dict]):
         """Update the list of placed structures (from app.py)."""

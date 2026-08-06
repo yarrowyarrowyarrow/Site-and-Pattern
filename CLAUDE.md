@@ -139,6 +139,39 @@ already says what changed. See [`docs/plans/README.md`](docs/plans/README.md)
 for the house style and the index of past plans — and **add a row to that index
 table** when you add a plan.
 
+## Hand back a test plan (DO THIS AT THE END OF EVERY INCREMENT)
+
+A green test suite tells the *author* the code works. It tells the **user**
+nothing, because they cannot see it, and "I added a relationship web" is not
+something a person can go and check. Every increment therefore ends with a
+short **How to test this** section in the final reply — not in a doc, in the
+reply, where it will actually be read.
+
+For each user-visible thing that was added or changed, give:
+
+1. **Where it is.** The literal click path from a cold start.
+   *"Open the app → right panel → Analysis tab → Relationships sub-tab →
+   tick 'Relationship web'."* Not "in the analysis panel".
+2. **What you need first.** The preconditions, stated plainly — a design with
+   plants placed, a boundary drawn, a site pin, an internet connection. Most
+   "it doesn't work" reports are an unmet precondition.
+3. **What you should see** when it works, concretely enough to disagree with.
+   *"A ring of animal chips appears outside the planting, with lines running
+   to the plants that support them."*
+4. **What tells you it is broken.** The failure mode that is easy to mistake
+   for "working but empty" — an empty list, a stale list, a silent skip.
+5. **The fastest way to check it without the GUI**, when one exists — a
+   `python3 -c` one-liner against `src/permadesign_api.py`, a script in
+   `scripts/`, a single test module. Give the command, ready to paste.
+
+Also say plainly **what you could not test yourself** and why (no display, no
+network, needs a real desktop, needs data nobody has yet). An untested claim
+labelled as tested is worse than an admitted gap.
+
+Keep it to the things a person can actually see. Internal refactors, schema
+bumps and guard tests do not need a click path — say in one line what would
+have broken if it went wrong, and move on.
+
 ## Running tests
 
 ```bash
