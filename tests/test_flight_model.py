@@ -327,3 +327,179 @@ class TestTheDataFile(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestTheWingsCanActuallyBeFound(unittest.TestCase):
+    """The bug that made this whole increment invisible on screen.
+
+    ``flapWings`` returns immediately unless ``obj.userData.wings`` is set, and
+    ``09-models.js`` only sets it if it can find nodes called ``WingL`` /
+    ``WingR``. Inside a MULTI-VARIANT fauna GLB the nodes are prefixed with the
+    build name (``passerine_WingL``), and the prefix is only applied when the
+    creature's spec carries a ``node`` picker.
+
+    ``bird`` had no ``node``. So every baked bird was drawn as passerine +
+    woodpecker + hummer superimposed, with no wing pivots at all — and no
+    amount of correct wingbeat physics could move them. It was invisible from
+    Python, invisible in the scene JSON, and on screen only an absence.
+
+    These tests read the actual .glb files, so they fail if a model is
+    re-exported with different node names as well.
+    """
+
+    @staticmethod
+    def _glb_nodes(path):
+        import json
+        import struct
+        data = path.read_bytes()
+        off = 12                                   # skip the 12-byte header
+        while off < len(data):
+            clen, ctype = struct.unpack_from("<II", data, off)
+            if ctype == 0x4E4F534A:                # 'JSON'
+                doc = json.loads(data[off + 8:off + 8 + clen].decode("utf-8"))
+                names = [n.get("name", "") for n in doc.get("nodes", [])]
+                scene = (doc.get("scenes") or [{}])[0].get("nodes", [])
+                return names, [names[i] for i in scene]
+            off += 8 + clen + ((4 - clen % 4) % 4)
+        return [], []
+
+    def _models_dir(self):
+        import pathlib
+        return (pathlib.Path(__file__).resolve().parent.parent
+                / "html" / "assets" / "models")
+
+    def _specs(self):
+        """`_GLB_CRITTER` read as text — the table is JS, and parsing it with a
+        regex is still better than trusting a comment about it."""
+        import pathlib
+        import re
+        src = (pathlib.Path(__file__).resolve().parent.parent / "html"
+               / "scene3d" / "09-models.js").read_text(encoding="utf-8")
+        body = src[src.index("const _GLB_CRITTER = {"):]
+        body = body[:body.index("\n};")]
+        out = {}
+        for m in re.finditer(r"^\s{2}(\w+):\s*\{", body, re.M):
+            kind = m.group(1)
+            entry = body[m.end():]
+            nxt = re.search(r"^\s{2}\w+:\s*\{", entry, re.M)
+            entry = entry[:nxt.start()] if nxt else entry
+            out[kind] = {
+                "key": (re.search(r"key:\s*'(\w+)'", entry) or [None, ""])[1],
+                "has_node": "node:" in entry,
+                "flaps": "flap: null" not in entry and "flap:" in entry,
+            }
+        return out
+
+    def test_the_spec_table_parsed(self):
+        specs = self._specs()
+        self.assertIn("bird", specs)
+        self.assertIn("butterfly", specs)
+        self.assertTrue(specs["bird"]["flaps"])
+
+    def test_a_multi_variant_model_must_have_a_node_picker(self):
+        """The rule the bird broke, stated generally: if the wing nodes are
+        prefixed, the spec needs a `node` or the prefix is never applied and
+        `byName('WingL')` cannot resolve."""
+        models = self._models_dir()
+        if not models.exists():                    # pragma: no cover
+            self.skipTest("model assets not present in this checkout")
+        problems = []
+        for kind, spec in self._specs().items():
+            if not spec["flaps"] or not spec["key"]:
+                continue
+            glb = models / f"fauna_{spec['key']}.glb"
+            if not glb.exists():
+                continue
+            names, roots = self._glb_nodes(glb)
+            wings = [n for n in names if "Wing" in n]
+            if not wings:
+                continue
+            prefixed = all("_Wing" in w for w in wings)
+            if prefixed and not spec["has_node"]:
+                problems.append(
+                    f"{kind}: {glb.name} has prefixed wing nodes "
+                    f"({wings[0]}) but the spec has no `node` picker, so "
+                    f"userData.wings is never set and it cannot flap")
+        self.assertFalse(problems, "\n".join(problems))
+
+    def test_every_flapping_creature_can_reach_a_wing(self):
+        """End to end: for each kind that flaps, at least one resolvable wing
+        node exists in its model."""
+        models = self._models_dir()
+        if not models.exists():                    # pragma: no cover
+            self.skipTest("model assets not present in this checkout")
+        for kind, spec in self._specs().items():
+            if not spec["flaps"] or not spec["key"]:
+                continue
+            glb = models / f"fauna_{spec['key']}.glb"
+            if not glb.exists():
+                continue
+            names, _roots = self._glb_nodes(glb)
+            self.assertTrue([n for n in names if n.endswith("WingL")],
+                            f"{kind}: {glb.name} has no WingL node at all")
+
+    def test_the_bird_builds_match_the_model(self):
+        """`_bird_appearance` picks a build name; the GLB has to carry it, or
+        the lookup falls back to the first variant and every woodpecker is a
+        passerine."""
+        models = self._models_dir()
+        if not (models / "fauna_bird.glb").exists():   # pragma: no cover
+            self.skipTest("model assets not present in this checkout")
+        _names, roots = self._glb_nodes(models / "fauna_bird.glb")
+        from src.scene_wildlife import _BIRD_BUILD_WORDS
+        builds = {plan for _word, plan in _BIRD_BUILD_WORDS} | {"passerine"}
+        self.assertFalse(builds - set(roots),
+                         f"builds with no model variant: {builds - set(roots)}")
+
+    def test_every_appearance_build_has_a_model_variant(self):
+        """The same class of bug as the bird, generalised: a `build` the GLB
+        does not carry degrades silently to the first variant, so every
+        woodpecker would render as a passerine and nobody would be told.
+
+        Only birds were actually broken — lep builds (butterfly / skipper /
+        swallowtail) and bee builds (round / stout / slender / leafcutter) all
+        matched. This is here so the next drift between
+        `src/scene_wildlife.py` and the exported models fails a test instead of
+        quietly changing what an animal looks like.
+        """
+        models = self._models_dir()
+        if not models.exists():                    # pragma: no cover
+            self.skipTest("model assets not present in this checkout")
+        import json
+        import pathlib
+        root = pathlib.Path(__file__).resolve().parent.parent
+        fauna = json.loads((root / "data" / "fauna_master.json")
+                           .read_text(encoding="utf-8"))
+        from src.scene_wildlife import (_bee_appearance, _bird_appearance,
+                                        _lep_appearance)
+        wanted = {"bird": set(), "lep": set(), "bee": set()}
+        for r in fauna:
+            name = r.get("common_name", "")
+            sci = r.get("scientific_name", "") or " "
+            if r.get("taxon") == "bird":
+                wanted["bird"].add(_bird_appearance(name).get("build"))
+            elif r.get("taxon") == "lepidoptera":
+                wanted["lep"].add(
+                    _lep_appearance(name, sci, "butterfly", None).get("build"))
+            elif r.get("taxon") == "bee":
+                wanted["bee"].add(
+                    _bee_appearance(sci.split(" ")[0], name, None).get("build"))
+        for key, builds in wanted.items():
+            glb = models / f"fauna_{key}.glb"
+            if not glb.exists():
+                continue
+            _names, roots = self._glb_nodes(glb)
+            missing = {b for b in builds if b} - set(roots)
+            self.assertFalse(
+                missing,
+                f"fauna_{key}.glb has no variant for builds {missing} — "
+                f"they will silently render as {roots[0] if roots else '?'}")
+
+    def test_the_diagnostic_hook_exists(self):
+        """`permaFlightReport()` answers "why isn't this flapping?" in one
+        call. It exists because doing it from the outside took a session."""
+        import pathlib
+        js = (pathlib.Path(__file__).resolve().parent.parent / "html"
+              / "scene3d" / "18-flight.js").read_text(encoding="utf-8")
+        self.assertIn("window.permaFlightReport", js)
+        self.assertIn("hasWings", js)

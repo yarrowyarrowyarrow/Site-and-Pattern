@@ -308,7 +308,23 @@ const _GLB_CRITTER = {
                node: (a) => a.build || 'moth',
                flap: { base: -0.45, amp: 0.75, speed: 0.055, skew: 0.58 },
                scale: () => 0.42 * 1.15 },
-  bird:      { key: 'bird', anim: (a) => a.hummer ? 'hover' : 'perch',
+  // `node` was MISSING here until V2.45, and it is why birds never flapped.
+  //
+  // Without it `root` stayed the whole multi-variant file rather than one
+  // build, so (a) every bird was drawn as passerine + woodpecker + hummer
+  // superimposed, and (b) `prefix` below stayed empty — so `byName('WingL')`
+  // looked for a bare `WingL` in a file whose nodes are `passerine_WingL`,
+  // found nothing, and left `userData.wings` unset. `flapWings` returns early
+  // without it, so the baked bird could not move its wings no matter what
+  // frequency it was given. The procedural fallback set wings correctly, which
+  // is why this only showed up once the GLBs were loading.
+  //
+  // The build names match src/scene_wildlife._BIRD_BUILD_WORDS exactly
+  // (woodpecker / hummer / passerine); `tests/test_flight_model.py` now fails
+  // if a multi-variant fauna GLB has a spec with no `node`.
+  bird:      { key: 'bird',
+               node: (a) => a.hummer ? 'hummer' : (a.build || 'passerine'),
+               anim: (a) => a.hummer ? 'hover' : 'perch',
                // Matches the procedural bird in 07-wildlife.js — a slow deep
                // beat, folded on the perch by animateWildlife's gain. Was
                // amp 0.0 here too, so the baked bird was as motionless as the

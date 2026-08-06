@@ -165,3 +165,46 @@ function flightLabel(c) {
   if (f.render === 'blur') s += ' · too fast to draw, shown as a blur';
   return s;
 }
+
+// ── Diagnostic ───────────────────────────────────────────────────────────────
+
+// `window.permaFlightReport()` — what every creature in the scene is actually
+// doing with its wings, right now.
+//
+// This exists because "the birds still aren't flapping" took a session to
+// diagnose from the outside, and the answer turned out to be that
+// `userData.wings` was never set on the baked bird — a fact invisible from the
+// Python side, invisible in the scene JSON, and invisible on screen except as
+// an absence. One call now answers it.
+window.permaFlightReport = function () {
+  const out = [];
+  const list = (typeof wildlifeCritters !== 'undefined') ? wildlifeCritters : [];
+  const now = (typeof performance !== 'undefined') ? performance.now() : 0;
+  for (const c of list) {
+    const o = c.obj, ud = (o && o.userData) || {};
+    const info = ud.critterInfo || {};
+    out.push({
+      name: info.name || '',
+      kind: info.kind || '',
+      anim: c.anim,
+      // The three things that have to ALL be true for a wing to move.
+      hasWings: !!(ud.wings && ud.wings.length),
+      hasFlap: !!ud.flap,
+      flapSpeed: ud.flap ? Number(ud.flap.speed.toFixed(4)) : null,
+      // …and the two that decide how far it moves right now.
+      hz: c.flight ? c.flight.true_hz : null,
+      render: c.flight ? c.flight.render : null,
+      gain: Number(beatGain(c, now).toFixed(2)),
+      dwelling: c.dwell > 0,
+    });
+  }
+  return out;
+};
+
+// A one-line summary for the console: the creatures that CANNOT flap, and why.
+window.permaFlightProblems = function () {
+  return window.permaFlightReport()
+    .filter((r) => !r.hasWings || !r.hasFlap)
+    .map((r) => r.name + ' (' + r.kind + '): '
+         + (!r.hasWings ? 'no wing pivots' : 'no flap params'));
+};
