@@ -185,8 +185,28 @@ class TestInsects(unittest.TestCase):
 
 class TestTheRenderLimit(unittest.TestCase):
 
-    def test_nyquist_is_half_the_frame_rate(self):
-        self.assertEqual(NYQUIST_HZ, 30.0)
+    def test_the_visible_limit_is_not_nyquist(self):
+        """The V2.45b correction. Nyquist reconstructs a signal; it does not
+        let you SEE one. Two samples per beat reads as strobing, which is why
+        every bird looked motionless while the maths was moving its wings."""
+        from src.flight_model import (RENDER_FPS, SLOWED_HZ, VISIBLE_HZ,
+                                      VISIBLE_FRAMES_PER_CYCLE)
+        self.assertEqual(NYQUIST_HZ, RENDER_FPS / 2)
+        self.assertLess(VISIBLE_HZ, NYQUIST_HZ,
+                        "the visible limit must be stricter than Nyquist")
+        self.assertEqual(VISIBLE_HZ, RENDER_FPS / VISIBLE_FRAMES_PER_CYCLE)
+        self.assertLessEqual(SLOWED_HZ, VISIBLE_HZ)
+
+    def test_everything_animates_at_a_rate_that_can_be_seen(self):
+        """The property that actually matters: whatever we animate, there are
+        at least six frames per cycle to show it in."""
+        from src.flight_model import RENDER_FPS, VISIBLE_FRAMES_PER_CYCLE
+        for hz in (2, 5, 5.2, 9, 11.5, 21, 26.8, 53, 166, 400):
+            frames = RENDER_FPS / animation_hz(hz)
+            self.assertGreaterEqual(
+                frames, VISIBLE_FRAMES_PER_CYCLE - 0.01,
+                f"{hz} Hz animates at {animation_hz(hz)} Hz — only "
+                f"{frames:.1f} frames per cycle, which strobes")
 
     def test_a_bee_is_never_animated_at_its_true_rate(self):
         """160 Hz on a 60 fps display is the wagon-wheel effect: a slow
@@ -200,9 +220,27 @@ class TestTheRenderLimit(unittest.TestCase):
         self.assertEqual(f["render"], "discrete")
         self.assertAlmostEqual(animation_hz(f["hz"]["mid"]), f["hz"]["mid"])
 
-    def test_the_boundary(self):
-        self.assertEqual(render_mode(29.9), "discrete")
-        self.assertEqual(render_mode(30.1), "blur")
+    def test_a_songbird_is_slowed_rather_than_strobed(self):
+        """21 Hz cannot be drawn on any ordinary display. Slowed keeps the
+        rhythm, the bout and the stroke shape — all of it recognisable —
+        where strobing keeps nothing."""
+        from src.flight_model import SLOWED_HZ
+        f = bird_flight(13, 225, style=BOUNDING)
+        self.assertEqual(f["render"], "slowed")
+        self.assertEqual(animation_hz(f["hz"]["mid"]), SLOWED_HZ)
+
+    def test_the_boundaries(self):
+        from src.flight_model import BLUR_ABOVE_HZ, VISIBLE_HZ
+        self.assertEqual(render_mode(VISIBLE_HZ - 0.1), "discrete")
+        self.assertEqual(render_mode(VISIBLE_HZ + 0.1), "slowed")
+        self.assertEqual(render_mode(BLUR_ABOVE_HZ - 0.1), "slowed")
+        self.assertEqual(render_mode(BLUR_ABOVE_HZ + 0.1), "blur")
+
+    def test_a_slowed_beat_says_so(self):
+        """P9: the screen is not showing this rate and the label must admit
+        it, the same way an estimate admits it is an estimate."""
+        text = describe(bird_flight(13, 225, style=BOUNDING))
+        self.assertIn("slowed", text)
 
 
 class TestBoutStructure(unittest.TestCase):
@@ -494,6 +532,28 @@ class TestTheWingsCanActuallyBeFound(unittest.TestCase):
                 missing,
                 f"fauna_{key}.glb has no variant for builds {missing} — "
                 f"they will silently render as {roots[0] if roots else '?'}")
+
+    def test_birds_travel_at_constant_speed_not_an_exponential_ease(self):
+        """`pos.lerp(tgt, dt * k)` launches a bird at enormous speed and
+        decelerates into the perch. Nothing alive moves like that, and it is
+        half of "the birds move too fast for me to see what they are doing".
+        A real bird holds a roughly steady airspeed and brakes at the end."""
+        import pathlib
+        src = (pathlib.Path(__file__).resolve().parent.parent / "html"
+               / "scene3d" / "07-wildlife.js").read_text(encoding="utf-8")
+        code = "\n".join(ln for ln in src.splitlines()
+                         if not ln.lstrip().startswith("//"))
+        self.assertNotIn("c.pos.lerp(tgt", code,
+                         "a travel branch is easing exponentially again")
+
+    def test_the_wingbeat_stays_exact_even_though_travel_is_slowed(self):
+        """Bird travel speed is a legibility choice and says so; the wingbeat
+        is physics and must not be quietly tuned for looks. If someone ever
+        "fixes" the flap by editing the model, this is the tripwire."""
+        from src.flight_model import bird_flight, BOUNDING
+        band = bird_flight(11, 203, style=BOUNDING)["hz"]
+        self.assertTrue(19 <= band["lo"] and band["hi"] <= 28,
+                        f"chickadee band drifted to {band}")
 
     def test_the_diagnostic_hook_exists(self):
         """`permaFlightReport()` answers "why isn't this flapping?" in one

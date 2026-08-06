@@ -236,8 +236,14 @@ function makeButterflyAvatar(moth, app) {
   // `skew` > 0.5 = a long unhurried lift then a snap down, which is what a
   // lepidopteran beat actually looks like; 0.5 is the symmetric sine every
   // other taxon keeps. See flapWings in 07-wildlife.js.
-  g.userData.flap = moth ? { base: -0.45, amp: 0.75, speed: 0.055, skew: 0.58 }
-                         : { base: -0.6, amp: 1.05, speed: 0.028, skew: 0.64 };
+  // V2.45b: amplitude roughly doubled. The authored sweep was ~60 deg,
+  // centred near horizontal — so a butterfly read as a flat cut-out
+  // gliding along even while the maths was moving its wings correctly.
+  // A real lepidopteran brings its wings from near-vertical above the
+  // body to near-vertical below: ~140 deg, and the up-position is what
+  // makes the shape recognisable at any distance.
+  g.userData.flap = moth ? { base: -0.75, amp: 1.55, speed: 0.055, skew: 0.58 }
+                         : { base: -1.05, amp: 2.20, speed: 0.028, skew: 0.64 };
   g.scale.setScalar(moth ? 0.42 : 0.46);
   return g;
 }

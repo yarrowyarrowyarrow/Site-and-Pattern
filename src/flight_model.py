@@ -116,11 +116,45 @@ from typing import Optional
 _G = 9.81            # m/s²
 _RHO = 1.23          # kg/m³, sea-level air at 15 °C
 
-#: Frames the viewer can manage. 60 is the cap in 08-modes.js for the modes
-#: where creatures matter (walk / fly); the ambient orbit view runs at 30.
+#: What the viewer runs at when there is something moving worth watching.
+#: `08-modes.js` capped the ambient orbit view at 30 fps to spare weak GPUs —
+#: a sensible default set before anything in the scene beat its wings. V2.45b
+#: lifts it to 60 whenever the wildlife group is visible, because 30 fps cannot
+#: show a wingbeat at all (see VISIBLE_HZ), and the creatures are the thing
+#: people are looking at when they are on screen.
 RENDER_FPS = 60.0
-#: Nyquist. Above this a beat cannot be sampled without aliasing into nonsense.
+#: Nyquist — the *theoretical* sampling limit.
 NYQUIST_HZ = RENDER_FPS / 2.0
+
+#: …and the limit that actually matters, which is not Nyquist.
+#:
+#: **V2.45b correction, from the author watching it: "the birds move too fast
+#: for me to see what they are doing".** Two mistakes in the first cut, both
+#: mine:
+#:
+#: 1. It assumed 60 fps. The view creatures are usually watched in runs at 30.
+#: 2. It used Nyquist. Two samples per cycle is enough to *reconstruct* a
+#:    signal mathematically; it is nowhere near enough to *see* one. A wing
+#:    caught twice per beat reads as strobing, not flapping.
+#:
+#: Six frames per cycle is about where a repeating motion starts reading as
+#: motion rather than as noise. At the old 30 fps that put the honest ceiling
+#: at 5 Hz — below almost every bird in this catalogue, and the real reason
+#: nothing looked like it was flapping. At 60 fps it is 10 Hz, which covers the
+#: butterflies outright and leaves the songbirds needing the slowed treatment.
+VISIBLE_FRAMES_PER_CYCLE = 6.0
+VISIBLE_HZ = RENDER_FPS / VISIBLE_FRAMES_PER_CYCLE          # 10 Hz
+
+#: The fastest we will animate anything as a moving wing — exactly VISIBLE_HZ,
+#: i.e. as fast as can still be seen. Above it the beat is shown SLOWED and
+#: labelled, because a slowed beat still carries the rhythm, the bout and the
+#: shape of the stroke — everything recognisable about how an animal flies —
+#: whereas a strobing one carries nothing at all.
+SLOWED_HZ = 10.0
+
+#: Past this there is no wing to show at any speed: a bee's wings are a blur to
+#: the naked eye too, so drawing one is the falsehood, not the blur.
+BLUR_ABOVE_HZ = 45.0
 
 # ── Flight styles ────────────────────────────────────────────────────────────
 #
@@ -440,26 +474,48 @@ def lepidoptera_flight(wingspan_mm: float, *, kind: str = "butterfly",
 # ── Rendering honesty ────────────────────────────────────────────────────────
 
 def render_mode(hz: float) -> str:
-    """``'discrete'`` if the beat can be drawn, ``'blur'`` if it cannot.
+    """How this beat can honestly be shown: ``discrete`` / ``slowed`` / ``blur``.
 
-    Above Nyquist a wing animated at its true rate aliases into a slow
-    backwards flutter — the wagon-wheel effect — which is *worse* than not
-    animating it, because it is confidently wrong. The blur arc is both the
-    honest render and what a human actually sees.
+    Three regimes, because there are genuinely three:
+
+    * **discrete** (≤ 5 Hz) — slow enough to draw at its true rate. Butterflies,
+      big moths, hawks, magpies.
+    * **slowed** (≤ 45 Hz) — a real wingbeat that no ordinary display can show.
+      Animated at :data:`SLOWED_HZ` and **labelled as slowed**, because the
+      rhythm, the bout and the shape of the stroke all survive being slowed and
+      none of them survive strobing. Most songbirds land here.
+    * **blur** (> 45 Hz) — bees and hummingbirds. There is no wing to draw at
+      any speed; the blur is what a human eye sees too.
+
+    The first cut had only two regimes and put the boundary at Nyquist for
+    60 fps. That made every songbird "discrete" at a rate the renderer could
+    not show, which is why they appeared not to flap at all.
     """
-    return "discrete" if float(hz) <= NYQUIST_HZ else "blur"
+    f = float(hz)
+    if f <= VISIBLE_HZ:
+        return "discrete"
+    return "slowed" if f <= BLUR_ABOVE_HZ else "blur"
 
 
 def animation_hz(hz: float) -> float:
-    """The rate to actually animate at.
+    """The rate to actually animate at — never faster than can be seen.
 
-    Below Nyquist, the real frequency. Above it, the wing stops being animated
-    as a wing (the viewer draws a blur), and this returns the rate to shimmer
-    that blur at instead — fast enough to read as motion, slow enough to
-    sample. Never returns something the renderer cannot show.
+    Returns the true frequency when it is showable, the slowed rate when it is
+    not, and a low shimmer for a blur. The true number is never lost: it rides
+    alongside in ``true_hz`` and is what :func:`describe` reports.
     """
     f = float(hz)
-    return f if f <= NYQUIST_HZ else min(NYQUIST_HZ, 18.0)
+    if f <= VISIBLE_HZ:
+        return f
+    if f <= BLUR_ABOVE_HZ:
+        return SLOWED_HZ
+    return 6.0                       # a blur only has to shimmer
+
+
+def is_slowed(hz: float) -> bool:
+    """Whether the viewer is showing this beat slower than it really is — the
+    thing the label has to admit to."""
+    return render_mode(hz) == "slowed"
 
 
 def describe(flight: dict) -> str:
@@ -475,6 +531,9 @@ def describe(flight: dict) -> str:
             "extrapolated": "extrapolated — beyond measured sizes"}.get(
                 basis, basis)
     out = f"{lo:g}–{hi:g} wingbeats per second ({word})"
+    if flight.get("render") == "slowed":
+        # P9 again: the screen is not showing this rate and must not imply it.
+        out += " — shown slowed, too fast to draw at speed"
     burst = flight.get("burst_beats") or {}
     if burst.get("hi"):
         out += (f", in bursts of {burst.get('lo'):g}–{burst.get('hi'):g} "

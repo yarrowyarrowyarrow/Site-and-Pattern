@@ -162,6 +162,8 @@ function flightLabel(c) {
               : f.basis === 'extrapolated' ? 'extrapolated' : 'estimated';
   let s = f.true_hz + ' wingbeats/sec (' + basis + ')';
   if (f.burst) s += ' · ' + f.burst + ' beats then a glide';
+  // The screen is not showing this rate, and must not imply that it is (P9).
+  if (f.render === 'slowed') s += ' · shown slowed — too fast to draw at speed';
   if (f.render === 'blur') s += ' · too fast to draw, shown as a blur';
   return s;
 }

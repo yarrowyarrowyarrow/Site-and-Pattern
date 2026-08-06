@@ -107,7 +107,10 @@ function makeBirdCritter(app) {
     // flapWings either, it meant a bird's wings never moved at all. Both had to
     // change. animateWildlife folds them to `base` on the perch by passing
     // gain 0, so the settled pose the old config wanted is still there.
-    g.userData.flap = { base: -0.15, amp: 0.9, speed: 0.22 };
+    // V2.45b: matches _GLB_CRITTER.bird in 09-models.js — the two flap
+    // tables have to agree or the baked and procedural birds beat
+    // differently in the same scene.
+    g.userData.flap = { base: -0.55, amp: 1.7, speed: 0.22 };
     g.userData.anim = 'perch';
   }
   g.scale.setScalar(0.9 * (app.size || 1));
@@ -348,7 +351,10 @@ function rebuildWildlife() {
 const _WILD_MOVE = {
   flier:  { spd: 1.6, dwell: 1.6, bob: 0.05 },   // bees: cruise, land & sip
   hover:  { spd: 1.2, dwell: 1.1, bob: 0.06 },   // hummingbird/dragonfly darts
-  perch:  { spd: 4.5, dwell: 3.2, bob: 0.02 },   // birds: quick hop, long sit
+  // V2.45b: 4.5 m/s crossed a 20 m yard in under three seconds, and with
+  // the old exponential ease most of that happened in the first half
+  // second. Halved so a bird can actually be watched.
+  perch:  { spd: 2.2, dwell: 3.2, bob: 0.02 },   // birds: fly, then a long sit
   ground: { spd: 2.2, dwell: 1.4, bob: 0.0 },    // mammals: scurry then freeze
   crawl:  { spd: 0.25, dwell: 2.5, bob: 0.0 },   // beetles: slow amble
 };
@@ -420,8 +426,24 @@ function animateWildlife(t) {
       if (flat < 0.25) {                          // arrived → dwell
         c.dwell = mv.dwell * (0.6 + (c.seed % 40) / 50);
       } else if (c.anim === 'perch') {
-        // Birds fly between perches: a quick direct flight, then a long sit.
-        c.pos.lerp(tgt, Math.min(1, dt * 3.0));
+        // Birds fly between perches: a direct flight, then a long sit.
+        //
+        // V2.45b — CONSTANT SPEED, not a lerp. `c.pos.lerp(tgt, dt * 3.0)` is
+        // an exponential ease: it launches the bird at enormous speed and
+        // decelerates into the perch. Nothing alive moves like that, and it is
+        // the other half of the author's report — *"the birds move too fast for
+        // me to see what they are doing"* and *"their flight still does not
+        // resemble a natural flight for a bird"*. A real bird holds a roughly
+        // steady airspeed and stops by braking at the end.
+        //
+        // The speed is also halved (see _WILD_MOVE.perch): a chickadee really
+        // does cross ten metres in about a second, but a yard is only twenty
+        // metres wide and a creature that is gone before you can look at it
+        // teaches nothing (P5). This is a deliberate legibility choice, not a
+        // claim about airspeed — unlike the wingbeat, which stays exact.
+        _WV.multiplyScalar(1 / flat);
+        c.pos.addScaledVector(_WV, Math.min(flat, mv.spd * c.speed * dt));
+        c.pos.y += (tgt.y - c.pos.y) * Math.min(1, dt * 2.2);
         o.position.copy(c.pos);
         // Face the way it is going. Every other travel branch does this; this
         // one never did, so a bird crossed the yard sideways — a gap the V2.29

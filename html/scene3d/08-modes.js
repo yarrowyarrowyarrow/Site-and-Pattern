@@ -319,7 +319,15 @@ addEventListener('resize', () => {
 let _lastFrame = 0;
 const _FRAME_MS = 1000 / 30;
 renderer.setAnimationLoop((t) => {
-  const frameMs = (beeMode || walkMode || cinematic) ? 1000 / 60 : _FRAME_MS;
+  // V2.45b: 60 fps whenever there is WILDLIFE to watch, not just in the
+  // first-person modes. The 30 fps cap was set before anything in the
+  // scene beat its wings, and at 30 fps a wingbeat cannot be shown at
+  // all — six frames per cycle is roughly where repeating motion starts
+  // reading as motion, which at 30 fps caps out at 5 Hz, below almost
+  // every bird here. See src/flight_model.VISIBLE_HZ.
+  const watching = wildlifeGroup && wildlifeGroup.visible;
+  const frameMs = (beeMode || walkMode || cinematic || watching)
+    ? 1000 / 60 : _FRAME_MS;
   if (document.hidden || (t - _lastFrame) < frameMs) return;
   _lastFrame = t;
   windUniforms.uTime.value = clock.getElapsedTime();
