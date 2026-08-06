@@ -555,6 +555,97 @@ class TestTheWingsCanActuallyBeFound(unittest.TestCase):
         self.assertTrue(19 <= band["lo"] and band["hi"] <= 28,
                         f"chickadee band drifted to {band}")
 
+    def test_a_wing_pivot_must_actually_contain_geometry(self):
+        """The bug that made butterflies "horizontal and flat" (V2.45b).
+
+        Birds, bees and flies carry the wing mesh on the ``WingL``/``WingR``
+        node itself. **Lepidoptera do not**: theirs are EMPTY grouping nodes
+        and the geometry is in six siblings — ``ForeL/HindL/RimL`` per side.
+        So the pivot rotated an empty node at exactly the right frequency
+        while the meshes that are actually the wings sat untouched.
+
+        Finding the node is not the same as finding the wing, and this is the
+        test that knows the difference. It reads the real .glb files and, for
+        every variant that flaps, asserts that some geometry is reachable under
+        each side once the adoption rule in 09-models.js has been applied.
+        """
+        models = self._models_dir()
+        if not models.exists():                    # pragma: no cover
+            self.skipTest("model assets not present in this checkout")
+        import json
+        import struct
+
+        def doc(path):
+            data = path.read_bytes()
+            off = 12
+            while off < len(data):
+                clen, ctype = struct.unpack_from("<II", data, off)
+                if ctype == 0x4E4F534A:
+                    return json.loads(
+                        data[off + 8:off + 8 + clen].decode("utf-8"))
+                off += 8 + clen + ((4 - clen % 4) % 4)
+            return {}
+
+        # The parts 09-models.js adopts into a wing pivot when the wing node
+        # itself is empty — READ FROM THE CODE, not restated here. A copy in
+        # the test would keep passing after somebody deleted the adoption loop,
+        # which is exactly the failure this test exists to prevent (and is what
+        # the first cut of it did).
+        import pathlib
+        import re
+        js = (pathlib.Path(__file__).resolve().parent.parent / "html"
+              / "scene3d" / "09-models.js").read_text(encoding="utf-8")
+        m = re.search(r"for \(const part of \[([^\]]*)\]\)", js)
+        ADOPTED = tuple(re.findall(r"'(\w+)'", m.group(1))) if m else ()
+        problems = []
+        for kind, spec in self._specs().items():
+            if not spec["flaps"] or not spec["key"]:
+                continue
+            glb = models / f"fauna_{spec['key']}.glb"
+            if not glb.exists():
+                continue
+            j = doc(glb)
+            nodes = j.get("nodes", [])
+            named = {n.get("name", ""): n for n in nodes}
+
+            def has_geom(node):
+                if node is None:
+                    return False
+                if "mesh" in node:
+                    return True
+                return any(has_geom(nodes[c]) for c in node.get("children", []))
+
+            for wing in [n for n in named if n.endswith("WingL")]:
+                variant = wing[:-5]              # strip 'WingL'
+                side = "L"
+                reachable = has_geom(named.get(wing))
+                if not reachable:
+                    reachable = any(has_geom(named.get(variant + p + side))
+                                    for p in ADOPTED)
+                if not reachable:
+                    problems.append(
+                        f"{kind}: {glb.name} → {wing} has no geometry and no "
+                        f"{'/'.join(variant + p + side for p in ADOPTED)} to "
+                        f"adopt, so its pivot rotates nothing")
+        self.assertFalse(problems, "\n".join(problems))
+
+    def test_the_lep_models_are_the_case_that_needs_adoption(self):
+        """Pins WHY the adoption rule exists, so nobody deletes it as dead
+        code: the lep wing nodes really are empty in the shipped model."""
+        models = self._models_dir()
+        glb = models / "fauna_lep.glb"
+        if not glb.exists():                       # pragma: no cover
+            self.skipTest("model assets not present in this checkout")
+        names, _roots = self._glb_nodes(glb)
+        for part in ("butterfly_ForeL", "butterfly_HindL", "butterfly_RimL"):
+            self.assertIn(part, names,
+                          "the lep wing parts moved — update the adoption "
+                          "list in 09-models.js to match")
+        import pathlib
+        js = (pathlib.Path(__file__).resolve().parent.parent / "html"
+              / "scene3d" / "09-models.js").read_text(encoding="utf-8")
+        self.assertIn("['Fore', 'Hind', 'Rim']", js)
+
     def test_the_diagnostic_hook_exists(self):
         """`permaFlightReport()` answers "why isn't this flapping?" in one
         call. It exists because doing it from the outside took a session."""

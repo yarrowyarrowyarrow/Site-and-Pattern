@@ -454,6 +454,27 @@ function glbCritter(kind, app) {
     node.position.set(0, 0, 0);
     node.quaternion.identity();
     pivot.add(node);
+    // LEPIDOPTERA: WingL/WingR are EMPTY grouping nodes, and the wing geometry
+    // is their SIBLINGS — ForeL/HindL/RimL per side (V2.45b). Birds, bees and
+    // flies carry the mesh on WingL/WingR itself, so this loop finds nothing
+    // extra for them and costs nothing.
+    //
+    // This is why butterflies were reported "horizontal and flat and just
+    // glide along": the pivot was rotating an empty node at the correct rate
+    // while the six meshes that are actually the wings sat untouched in their
+    // authored pose. It matched the procedural avatar's own structure all
+    // along — 06-fly.js does `pivot.add(fore, hind, rim)` — which is exactly
+    // why the fallback butterfly flapped and the baked one did not.
+    const side = n.slice(-1);                     // 'L' | 'R'
+    for (const part of ['Fore', 'Hind', 'Rim']) {
+      const m = byName(part + side);
+      if (!m || m === node) continue;
+      // three.js `add` does not preserve world transform, and a pivot with a
+      // non-zero offset would otherwise shift the part it adopts. Zero for the
+      // leps, but the compensation keeps this correct for any future model.
+      m.position.sub(pivot.position);
+      pivot.add(m);
+    }
     wings.push({ pivot, sign });
   }
   if (wings.length) g.userData.wings = wings;
