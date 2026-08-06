@@ -5,7 +5,7 @@ principle-by-principle map and the shipped record of F1–F62 — read it for *w
 shaped the way it is and what has already landed. This file is what comes next, and why.
 
 Feature IDs continue the same stable-handle sequence (F63, F64, …) so "let's do F70" keeps
-working across both documents. **Next free ID: F95.**
+working across both documents. **Next free ID: F107.**
 
 > **Collision fixed in V2.37.** F78–F82 had each been assigned *twice*: the V2.34 3D work
 > (herb aspect axis, Stylised/Balanced/Lifelike, florets, forked stems, bloom count) reused
@@ -805,6 +805,97 @@ the back door.
 three sliders and two combos. V2.37 reordered row 2 and flipped the mouse buttons; the
 structural question is untouched. Theme F's prescription applies — an honest retirement pass
 before any restructure.
+
+---
+
+## Theme H — the Learn side (V2.43 → )
+
+Recorded here in V2.45 at the author's request, so it stops living only inside plan
+documents. V2.43 split the app into **Learn** and **Design** at boot; V2.44 made the
+sandbox a place you can work in; V2.45 gave the animals real flight. What follows is
+the rest of it, in the order I would take it.
+
+**Shipped so far:** F96 two doors · F97 editable reference landscapes · F98 species
+ledger · F99 per-plant age + nursery stock · F100 edit animations + the net · F101
+split view · F102 one 3D toolbar · F103 flight physics.
+
+### F104 · Undo in the sandbox, and the graduation path — *Impact High / Effort M / Risk Low*
+
+Two gaps V2.43 left, and the first is the more embarrassing:
+
+* **The sandbox has no undo at all.** Design mode has full undo/redo; Learn mode — the
+  side built for people who do not know what they are doing yet — makes every misclick
+  permanent. That is exactly backwards.
+* **There is no bridge between the two doors.** "Take this landscape into Design" —
+  turn the fen you built into a real design at your address — is what would make Learn
+  *lead* somewhere instead of being a side room. Mostly a coordinate transform: the
+  sandbox is already a real project (`src/reference_edit.py`).
+
+### F105 · Challenges and achievements — *Impact High / Effort M / Risk Med*
+
+Briefs with win conditions over the sandbox: *"support 5 bee species on 20 m²"*,
+*"keep something in bloom every week April→October"*. Scored by machinery that already
+exists — `habitat_score.py`, `forage_calendar.py`, `habitat_nudges()`. **F13**
+(reference-community fidelity) drops to effort S now that F50 resolves the community,
+and is the natural win condition for "rebuild the parkland from memory".
+
+**Bank achievements for going outside.** This is the P11 counterweight and it is not
+optional: a game that rewards screen time argues against the principle the app is
+built on. F32 (printable field checklist) and F33 (observation journal) are the hooks —
+an achievement for logging a first bloom date beats one for clicking a button.
+
+Also here: the ledger's `how` column records only the *first* sighting's method, so
+catching something you had already glimpsed still reads as "inspected". An achievement
+tier wants that upgraded; it is a deliberate hold from V2.44, not an oversight.
+
+### F106 · The companion, and the glossary half of it — *Impact Med / Effort L / Risk Med*
+
+Pick a native bee, butterfly or chickadee at first boot; it explains things as you go.
+Reuses `docent.py`'s beat shape and `learn_state` (schema v62) for the choice.
+**The art does not exist in this repo in any form**, so this is mostly a drawing
+problem, not a code one — budget accordingly.
+
+**Do the cheap half first and separately.** ~12 of ~20 Site Info metrics have no
+explanation anywhere, and `src/climate.py:zone_description()` returns exactly the right
+sentence and is called by nothing. A Qt-free glossary module plus one `setToolTip` per
+metric answers the tester's actual complaint at a fraction of the cost, and gives the
+companion something to read out later.
+
+**Risk on file (P11):** a helper that keeps people looking at the screen argues against
+the principle. Mitigate by having it push you outside.
+
+### The curriculum, and plant ID — *see F88 and F83*
+
+Four tracks: the plants, the ecosystem, design principles, the app itself.
+`lesson_track.py` already has the shape and `learn_state` can now persist position.
+**F83 is three-quarters built already** — 33 botanical and 31 zoological drawn SVGs
+exist in `html/botany/`, served over `/api/vocab`, with a working "click the drawing
+that matches" interaction in the tuning bench. What is missing is content, not code.
+
+**P12 applies with force here.** A "learn about native flora" track must not become a
+back door to Indigenous plant-use knowledge. There is already a test scanning labels
+and headings for ethnobotanical vocabulary; any new learning surface must be added to
+its scan.
+
+### Smaller, cheap, high-value — carried from the V2.43 backlog
+
+* **Citations in the UI (F12).** The V2.42 audit found all 361 edges properly cited and
+  *not one citation visible anywhere*. The V2.45 hover tip finally shows one number's
+  basis; the other 361 are still invisible.
+* **Ornamental → native swap card (F49)** — a 25-row starter list proves it.
+* **Better creature models.** The bee is spheres plus two flat discs; the bird is
+  spheres, a cone beak and a box tail. V2.45 made them *move* correctly, which raises
+  rather than lowers the value of making them *look* correct. Blender work through
+  `scripts/blender/assetlib/fauna.py`; the morphology to drive it now exists for all
+  three flying taxa.
+* **Photo coverage** — 111/434 plants and 84/142 fauna have no photograph, which caps
+  how good the net's species page can be.
+* **Verify the bird morphology** (V2.45). All 24 rows ship `verified = 0`: they were
+  entered from published literature in a session with no network access. A session with
+  egress should re-derive them from AVONET (Tobias et al. 2022, CC BY 4.0) and Dunning's
+  *CRC Handbook of Avian Body Masses*, then flip the flag. **Wing area is null for every
+  row** — the one bird measurement not routinely published, currently inferred from span
+  and a per-style aspect ratio.
 
 ---
 

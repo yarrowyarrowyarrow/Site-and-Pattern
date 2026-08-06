@@ -211,6 +211,38 @@ On `plants(plant_type)`, `plants(zone range)`, `plants(native_to_alberta)`,
 
 ---
 
+### `bird_morphology` (schema v63, V2.45)
+
+Mass, wingspan and flight style for the 24 birds — the input to
+`src/flight_model.py`, which computes wingbeat frequency from them.
+
+```sql
+bird_morphology(fauna_id PK → fauna, mass_g, wingspan_mm, wing_area_cm2,
+                flight_style, morph_data_source, morph_data_citation,
+                verified, notes)
+```
+
+Birds were the **only flying taxon with no attributes table at all**: bees have
+`body_length_mm` (69/69) and Lepidoptera have wingspan + `flight_style` (31/31).
+That gap is why the 3D viewer's wingbeats were hardcoded per-taxon constants
+until V2.45.
+
+* **Wiped and re-seeded with `fauna`**, like `bee_attributes` and
+  `lepidoptera_attributes` — it is shipped data, not user data, and belongs in
+  the reseed block (unlike the v62 learn tables).
+* **`flight_style` is a constrained vocabulary**, not free text, because one
+  value in it — whether the wings *fold* between beats — changes the predicted
+  frequency by a factor of two or more. See `flight_model._FOLDS_WINGS`.
+* **`wing_area_cm2` is null for every row.** It is the one bird measurement not
+  routinely published; the model infers it from span and a per-style aspect
+  ratio and will use a real figure the moment one is entered.
+* **`verified` ships 0 on every row (P9).** The values were entered from
+  published literature in a session with no network access, so they are honest
+  but unchecked. A session with egress should re-derive them from AVONET
+  (Tobias et al. 2022, CC BY 4.0) and Dunning's *CRC Handbook of Avian Body
+  Masses* (2nd ed., 2008), then flip the flag. `tests/test_flight_model.py`
+  asserts that nothing currently claims verification.
+
 ### `discovered_species` / `learn_state` (schema v62, V2.43)
 
 The Learn-mode species ledger, and a small key/value store for where the

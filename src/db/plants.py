@@ -67,6 +67,7 @@ _GARDEN_JSON_PATH       = resource_path("data", "garden_plants.json")
 _FAUNA_JSON_PATH        = resource_path("data", "fauna_master.json")
 _PLANT_FAUNA_JSON_PATH  = resource_path("data", "plant_fauna_master.json")
 _BEE_ATTR_JSON_PATH     = resource_path("data", "bee_attributes_master.json")
+_BIRD_MORPH_JSON_PATH   = resource_path("data", "bird_morphology_master.json")
 _LEP_ATTR_JSON_PATH     = resource_path("data", "lepidoptera_attributes_master.json")
 _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 
@@ -240,7 +241,12 @@ _NURSERIES_JSON_PATH    = resource_path("data", "nurseries_master.json")
 # ledger. Both are USER-AUTHORED and are deliberately absent from the reseed
 # wipe block below; see their comment in schema.sql. The bump exists only so
 # the CREATE TABLEs reach existing installs.
-_SCHEMA_VERSION = 62
+# v63 (V2.45): +bird_morphology — mass, wingspan and flight style for the 24
+# birds, seeded from data/bird_morphology_master.json. Birds were the only
+# flying taxon with no attributes table, which is why the viewer's wingbeats
+# were hardcoded constants. Child of `fauna`, so it is wiped and repopulated
+# with the other two attribute tables on every reseed.
+_SCHEMA_VERSION = 63
 
 # Tolerance (pH units) added at each end of a plant's soil-pH bracket when
 # matching against a site's (often coarse, regional) pH estimate. See the
@@ -1291,6 +1297,65 @@ def _seed_bee_attributes(conn: sqlite3.Connection) -> int:
     return len(rows)
 
 
+def _seed_bird_morphology(conn: sqlite3.Connection) -> int:
+    """
+    Load ``data/bird_morphology_master.json`` into ``bird_morphology``
+    (schema v63, V2.45) — mass, wingspan and flight style for the 24 birds, so
+    :mod:`src.flight_model` can compute wingbeat frequency instead of the
+    viewer using a hardcoded constant.
+
+    Mirrors :func:`_seed_bee_attributes` exactly, including the dependency:
+    must run *after* ``_seed_fauna`` so scientific_name resolves to fauna_id.
+    Birds not in the fauna registry are skipped rather than inserted orphaned.
+
+    ``verified`` rides along per row (P9). Every row ships 0 — the values are
+    from published literature but were entered without network access to check
+    them against the primary sources, and a number nobody has verified must not
+    be presented as one that has been.
+    """
+    import json as _json
+
+    if not os.path.exists(_BIRD_MORPH_JSON_PATH):
+        return 0
+
+    with open(_BIRD_MORPH_JSON_PATH, "r", encoding="utf-8") as f:
+        entries = _json.load(f)
+
+    sci_to_fid = {
+        row["scientific_name"]: row["id"]
+        for row in conn.execute(
+            "SELECT id, scientific_name FROM fauna WHERE taxon = 'bird'"
+        ).fetchall()
+    }
+
+    rows: list[tuple] = []
+    for e in entries:
+        if "scientific_name" not in e:
+            continue
+        fid = sci_to_fid.get(e["scientific_name"])
+        if fid is None:
+            continue
+        rows.append((
+            fid,
+            e.get("mass_g"),
+            e.get("wingspan_mm"),
+            e.get("wing_area_cm2"),
+            e.get("flight_style") or "unknown",
+            e.get("morph_data_source") or "",
+            e.get("morph_data_citation") or "",
+            1 if e.get("verified") else 0,
+            e.get("notes") or "",
+        ))
+
+    if rows:
+        conn.executemany(
+            "INSERT OR IGNORE INTO bird_morphology "
+            "  (fauna_id, mass_g, wingspan_mm, wing_area_cm2, flight_style, "
+            "   morph_data_source, morph_data_citation, verified, notes) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", rows)
+    return len(rows)
+
+
 def _seed_lepidoptera_attributes(conn: sqlite3.Connection) -> int:
     """
     Load ``data/lepidoptera_attributes_master.json`` into the
@@ -1799,6 +1864,7 @@ def init_db() -> None:
             # they still inform the order we'd want when FK is back on).
             conn.execute("DELETE FROM bee_attributes")   # child of fauna — wipe first
             conn.execute("DELETE FROM lepidoptera_attributes")   # child of fauna
+            conn.execute("DELETE FROM bird_morphology")   # child of fauna
             conn.execute("DELETE FROM plant_fauna")
             # schema v61 (V2.42): derived edges are recomputed from the attribute
             # files on every reseed, so they must be wiped like any other seeded
@@ -1878,6 +1944,8 @@ def init_db() -> None:
             _seed_bee_attributes(conn)
             # Lepidoptera attributes (F37 "fly as a butterfly") — same dependency.
             _seed_lepidoptera_attributes(conn)
+            # Bird morphology (V2.45) — same dependency; feeds flight_model.
+            _seed_bird_morphology(conn)
             # Derived edges (V2.42) — must run after BOTH attribute seeders and
             # after _seed_fauna, since it expands their genus lists against the
             # seeded plants and resolves fauna ids.

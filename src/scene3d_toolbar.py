@@ -165,9 +165,9 @@ class Scene3DToolBar(QWidget):
         self._walk_btn = QPushButton("🚶 Walk")
         self._walk_btn.setCheckable(True)
         self._walk_btn.setToolTip(
-            "Stroll through in third person — WASD/arrows to walk, drag to "
-            "look around — and meet the creatures the plants support. Toggle "
-            "off for the overview.")
+            "Stroll through in third person — WASD/arrows to walk, "
+            "right-drag to look around — and meet the creatures the plants "
+            "support. Toggle off for the overview.")
         self._walk_btn.toggled.connect(self.walk_toggled.emit)
         row.addWidget(self._walk_btn)
 

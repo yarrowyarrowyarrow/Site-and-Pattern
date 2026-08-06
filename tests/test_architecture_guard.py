@@ -105,6 +105,10 @@ class TestStructuralCeilings(unittest.TestCase):
         (_SRC / "app_mode.py", 200),                   # 124 now
         (_SRC / "reference_edit.py", 340),             # 297 now
         (_SRC / "db" / "progress.py", 320),            # 275 now
+        # V2.45: the wingbeat physics. Mostly derivation and sourcing notes —
+        # the numbers are short and the reasoning is not, which is the right
+        # ratio for a file whose job is to be argued with.
+        (_SRC / "flight_model.py", 620),               # 519 now
         # V2.43: the reference window went from a read-only diorama (163
         # lines) to an editable sandbox. When this trips, the split is the
         # edit half — the bridge slots and the trowel — into its own _flow.
@@ -185,6 +189,11 @@ class TestStructuralCeilings(unittest.TestCase):
         # this outgrows its ceiling the cause is almost certainly a fourth
         # animation that wants its own chunk, not a bigger number here.
         (_HTML / "scene3d" / "17-anim.js", 340),       # 239 now
+        # V2.45: the flight model's viewer half — real hertz, the bout
+        # envelope, and the body offset that comes out of it. The physics and
+        # every number live in src/flight_model.py; if this file grows past its
+        # ceiling the cause is almost certainly allometry that belongs there.
+        (_HTML / "scene3d" / "18-flight.js", 300),     # 168 now
     ]
 
     def test_module_line_ceilings(self):

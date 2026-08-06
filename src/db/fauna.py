@@ -159,6 +159,10 @@ _LEP_MORPH_COLS = ("wingspan_min_mm", "wingspan_max_mm", "forewing_colour",
                    "hindwing_colour", "margin_colour", "wing_shape",
                    "wing_pattern", "eyespot_count", "resting_posture",
                    "flight_style")
+#: Schema v63 (V2.45). Birds were the only flying taxon with no attributes
+#: table at all, which is why the viewer's wingbeats were hardcoded.
+_BIRD_MORPH_COLS = ("mass_g", "wingspan_mm", "wing_area_cm2", "flight_style",
+                    "verified")
 
 
 def _morphology(table: str, cols: tuple) -> dict:
@@ -196,6 +200,12 @@ def bee_morphology() -> dict:
 def lep_morphology() -> dict:
     """What each butterfly/moth looks like (schema v58) — see `_morphology`."""
     return _morphology("lepidoptera_attributes", _LEP_MORPH_COLS)
+
+
+def bird_morphology() -> dict:
+    """How much each bird weighs and how it flies (schema v63) — the input to
+    :mod:`src.flight_model`. See `_morphology`."""
+    return _morphology("bird_morphology", _BIRD_MORPH_COLS)
 
 
 def lep_activity_seasons() -> dict:

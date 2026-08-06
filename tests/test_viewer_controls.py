@@ -287,6 +287,67 @@ class TestSplitView(unittest.TestCase):
         self.assertNotIn("split_view", learn)
 
 
+
+class TestTheMouseButtons(unittest.TestCase):
+    """LEFT is the action button, RIGHT is the camera (V2.45, user feedback).
+
+    V2.37 made LEFT pan — the Google Earth convention — which cost nothing
+    while a left click only opened an information card. V2.43/V2.44 gave the
+    left button real work (plant, pull, net), and a gesture that both pans the
+    view and puts a tree in the ground is one you cannot use confidently.
+    """
+
+    def test_left_has_no_camera_verb(self):
+        core = _read("html", "scene3d", "01-core.js")
+        self.assertIn("LEFT: null", core)
+        self.assertNotIn("LEFT: THREE.MOUSE.PAN", core)
+
+    def test_right_rotates_and_middle_pans(self):
+        core = _read("html", "scene3d", "01-core.js")
+        self.assertIn("RIGHT: THREE.MOUSE.ROTATE", core)
+        self.assertIn("MIDDLE: THREE.MOUSE.PAN", core)
+
+    def test_panning_is_still_reachable_without_a_middle_button(self):
+        """Trackpads. Arrow-key panning is the second home so the middle
+        button is a convenience rather than a requirement."""
+        core = _read("html", "scene3d", "01-core.js")
+        self.assertIn("listenToKeyEvents", core)
+
+    def test_the_context_menu_is_suppressed_in_every_mode(self):
+        """OrbitControls only suppresses it while it is ENABLED, and walk mode
+        and bee mode both disable it — which is exactly where a right-drag
+        would otherwise pop a browser menu mid-look."""
+        core = _read("html", "scene3d", "01-core.js")
+        self.assertIn("'contextmenu'", core)
+        self.assertIn("preventDefault", core)
+
+    def test_look_around_is_the_right_button_in_every_mode(self):
+        """The camera verb has to mean the same thing everywhere, or the rule
+        is not a rule."""
+        for chunk, flag in (("08-modes.js", "walkMode"), ("06-fly.js", "beeMode")):
+            src = _read("html", "scene3d", chunk)
+            # Anchor on the POINTERDOWN handler. Both chunks also have a
+            # keydown handler opening with the same `if (!mode) return;`, and
+            # matching the first occurrence tests the wrong block.
+            i = src.index("renderer.domElement.addEventListener('pointerdown'")
+            window = src[i:i + 600]
+            self.assertIn(f"if (!{flag}) return;", window, chunk)
+            self.assertIn("e.button !== 2", window,
+                          f"{chunk} still looks around on the left button")
+
+    def test_actions_are_still_the_left_button(self):
+        for chunk in ("10-inspect.js", "16-editing.js"):
+            self.assertIn("e.button !== 0", _read("html", "scene3d", chunk),
+                          f"{chunk} no longer filters actions to the left button")
+
+    def test_the_hints_tell_the_truth(self):
+        """A hint that says "drag to look" after the button changed is worse
+        than no hint."""
+        for chunk in ("08-modes.js", "06-fly.js"):
+            src = _read("html", "scene3d", chunk)
+            if "to look" in src:
+                self.assertIn("right-drag to look", src, chunk)
+
 @unittest.skipUnless(_HAVE_WEBENGINE, "PyQt6-WebEngine not installed")
 class TestSplitViewReparenting(unittest.TestCase):
     """The one piece of this increment with real bugs available.

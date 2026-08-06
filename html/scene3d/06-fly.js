@@ -458,7 +458,7 @@ function updateBeeHud(t) {
   if (beeMsg && (t ?? performance.now()) < beeMsgUntil) { h.innerHTML = beeMsg; return; }
   const icon = _CREATURE_ICON[beeKind] || '🐝';
   const who = _esc(beeLabel) || 'this pollinator';
-  const controls = 'WASD fly · Q/E up-down · drag to look · click a plant to learn';
+  const controls = 'WASD fly · Q/E up-down · right-drag to look · left-click a plant to learn';
   const hostHint = beeHosts.length ? ' · 🌿 green = caterpillar host' : '';
   const total = beeBeacons.length;
   const got = beeBeacons.filter(b => b.visited).length;
@@ -715,8 +715,9 @@ addEventListener('keydown', (e) => {
 addEventListener('keyup', (e) => { beeKeys.delete(e.code); });
 renderer.domElement.addEventListener('pointerdown', (e) => {
   if (!beeMode) return;
-  // Left button only — same reasoning as walk mode in 08-modes.js.
-  if (e.button !== 0) return;
+  // RIGHT button since V2.45 — same reasoning as walk mode in 08-modes.js:
+  // the camera verb is the right button everywhere, the left is for actions.
+  if (e.button !== 2) return;
   beeDragging = true; beeLastX = e.clientX; beeLastY = e.clientY;
 });
 addEventListener('pointerup', () => { beeDragging = false; });

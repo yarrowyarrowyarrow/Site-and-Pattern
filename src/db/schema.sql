@@ -751,6 +751,50 @@ CREATE INDEX IF NOT EXISTS idx_plant_photos_name ON plant_photos(scientific_name
 CREATE INDEX IF NOT EXISTS idx_plant_photos_slot ON plant_photos(scientific_name, slot);
 -- <<< plant_photos
 
+-- >>> bird morphology (schema v63, V2.45) -----------------------------------
+-- What a bird weighs and how wide its wings are, so src/flight_model.py can
+-- compute how fast they beat instead of the viewer guessing.
+--
+-- Birds were the only flying taxon in this catalogue with NO attributes table:
+-- bees have body_length_mm (69/69) and Lepidoptera have wingspan + flight_style
+-- (31/31), and the birds had nothing at all. Seeded from
+-- data/bird_morphology_master.json, wiped and repopulated with `fauna` on every
+-- reseed like the other two attribute tables.
+--
+-- `wing_area_cm2` is nullable and is null for every row today: it is the one
+-- bird measurement that is not routinely published. flight_model infers it from
+-- span and a per-style aspect ratio, and will use a real figure the moment one
+-- is entered here.
+--
+-- P9: `verified` says whether the row has been checked against its primary
+-- source. Every row ships FALSE — the values were entered from published
+-- literature in a session with no network access, so they are honest but
+-- unchecked. Nothing should present an unverified number as a measurement.
+CREATE TABLE IF NOT EXISTS bird_morphology (
+    fauna_id      INTEGER PRIMARY KEY REFERENCES fauna(id) ON DELETE CASCADE,
+    mass_g        REAL,
+    wingspan_mm   REAL,
+    wing_area_cm2 REAL,
+    -- How it flies, which decides whether the wings FOLD between beats. That
+    -- single fact changes the predicted frequency by a factor of two or more
+    -- (see flight_model._FOLDS_WINGS), so it is a constrained vocabulary
+    -- rather than free text.
+    flight_style  TEXT CHECK (flight_style IN (
+        'bounding',    -- wings fold between bursts; small passerines
+        'flap_glide',  -- wings stay extended through the glide
+        'soaring',     -- long glides on extended wings; raptors
+        'burst',       -- explosive burst then a flat glide; grouse
+        'hovering',    -- holds station; hummingbirds
+        'continuous',
+        'unknown'
+    )),
+    morph_data_source   TEXT DEFAULT '',
+    morph_data_citation TEXT DEFAULT '',
+    verified      INTEGER NOT NULL DEFAULT 0,
+    notes         TEXT DEFAULT ''
+);
+-- <<< bird morphology
+
 -- >>> learn progress (schema v62, V2.43) ------------------------------------
 -- The species-discovery ledger behind Learn mode's collection loop, and a
 -- small key/value store for where the learner is up to.

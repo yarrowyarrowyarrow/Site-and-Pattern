@@ -332,6 +332,12 @@ function rebuildWildlife() {
       speed: (0.7 + ((spec.seed || 0) % 50) / 45),   // m/s scale per animal
       wanderPh: ((spec.seed || 0) % 628) / 100,
     });
+    // Real wingbeat physics for this species (V2.45, 18-flight.js). Guarded
+    // with `typeof` because that chunk loads after this one; without it the
+    // authored constants stay in place and the viewer behaves as before.
+    if (typeof initFlight === 'function') {
+      initFlight(wildlifeCritters[wildlifeCritters.length - 1], spec.flight);
+    }
     wildlifeGroup.add(obj);
   }
   wildlifeGroup.visible = !beeMode;   // hidden while flying as one creature
@@ -478,7 +484,13 @@ function animateWildlife(t) {
       const settled = c.dwell > 0 && o.userData.critterInfo &&
                       (o.userData.critterInfo.kind === 'butterfly' ||
                        o.userData.critterInfo.kind === 'moth');
-      flapWings(o, t, settled ? 0.12 : 1, ph);
+      // The bout envelope: full amplitude through the burst, closed through
+      // the glide (V2.45). `settled` still wins — a butterfly on a flower has
+      // its wings over its back regardless of where its bout was.
+      flapWings(o, t, settled ? 0.12
+                : (typeof beatGain === 'function' ? beatGain(c, t) : 1), ph);
+      // ...and the body answers to it. A gliding lep sinks between bursts.
+      if (typeof boundOffset === 'function') o.position.y += boundOffset(c, t);
       // Level out of the bank when not weaving, so a lep that arrives mid-turn
       // does not sit on the flower tilted over.
       if (c.dwell > 0) o.rotation.z += (0 - o.rotation.z) * Math.min(1, dt * 3);
@@ -491,7 +503,16 @@ function animateWildlife(t) {
       // the authored rest pose — sticking straight out sideways — and crossed
       // the yard without moving them, while every insect flapped. One of the
       // two independent reasons; the other was an amplitude of zero.
-      flapWings(o, t, c.dwell > 0 ? 0 : 1, ph);
+      flapWings(o, t, c.dwell > 0 ? 0
+                : (typeof beatGain === 'function' ? beatGain(c, t) : 1), ph);
+      // THE ZIPLINE FIX (V2.45). The horizontal path is still the lerp above,
+      // but the height now comes from the wingbeat: a bounding bird climbs on
+      // the burst and drops ballistically while its wings are folded. Nothing
+      // else in this function made the body answer to the wings at all, which
+      // is why a chickadee crossed the yard like a cable car.
+      if (c.dwell <= 0 && typeof boundOffset === 'function') {
+        o.position.y += boundOffset(c, t);
+      }
       if (c.shadow) c.shadow.position.set(o.position.x, c.anchor.y + 0.02, o.position.z);
     } else if (c.anim === 'ground') {
       const hop = c.dwell > 0 ? 0 : Math.abs(Math.sin(t * 0.02 + ph)) * 0.06;

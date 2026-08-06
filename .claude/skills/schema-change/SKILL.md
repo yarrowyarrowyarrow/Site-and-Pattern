@@ -20,7 +20,10 @@ Use this skill when you:
 - are writing a `_migrate_to_vNN` helper or editing the reseed block.
 
 **Current facts (verify before quoting):** branch `V2.43`,
-`_SCHEMA_VERSION = 62` (in `src/db/plants.py`) — v62 adds `discovered_species`
+`_SCHEMA_VERSION = 63` (in `src/db/plants.py`) — v63 adds `bird_morphology`
+(mass, wingspan and flight style for the 24 birds, feeding `src/flight_model.py`;
+child of `fauna`, so it IS wiped and re-seeded with the other attribute tables,
+unlike the v62 pair below). v62 adds `discovered_species`
 and `learn_state`, the Learn-mode species ledger. Both are **user-authored and
 must never be added to the reseed wipe list**: a reseed rebuilds the catalogue,
 and rebuilding the catalogue must not delete the record of what somebody found

@@ -143,16 +143,34 @@ camera.position.set(45, 38, 55);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.maxPolarAngle = Math.PI / 2 - 0.02;   // never go underground
 controls.target.set(0, 0, 0);
-// Left drags the ground, right swings the camera around it — the Google
-// Earth / map convention most people arrive with, rather than three.js's
-// default (left = orbit, right = pan) which comes from 3D modelling tools.
-// V2.37, user feedback. Note 10-inspect.js filters click-to-inspect to button 0
-// so a small left-drag pans without also opening a plant card.
+// LEFT IS THE ACTION BUTTON. RIGHT IS THE CAMERA. (V2.45, user feedback:
+// *"I want the L click to be the action button (catch, plant, remove, identify,
+// etc.) the R button should be the rotate the view (camera control) button"*.)
+//
+// V2.37 made left PAN — the Google Earth convention — back when a left click
+// only opened an information card, so the two verbs sharing a button cost
+// nothing. V2.43/V2.44 gave the left button real work (plant, pull, net), and
+// a gesture that both pans the view and puts a tree in the ground is a gesture
+// you cannot use confidently. So left drops its camera verb entirely.
+//
+// Panning keeps two homes so it is never unreachable: the middle button, and
+// the arrow keys (below) for anyone on a trackpad without one.
 controls.mouseButtons = {
-  LEFT: THREE.MOUSE.PAN,
-  MIDDLE: THREE.MOUSE.DOLLY,
+  LEFT: null,                    // reserved for actions — see 16-editing.js
+  MIDDLE: THREE.MOUSE.PAN,
   RIGHT: THREE.MOUSE.ROTATE
 };
+// Arrow-key panning, so the middle button is a convenience rather than a
+// requirement. Safe to bind globally: walk mode disables `controls` outright
+// and takes the arrow keys for walking (08-modes.js).
+controls.keys = { LEFT: 'ArrowLeft', UP: 'ArrowUp',
+                  RIGHT: 'ArrowRight', BOTTOM: 'ArrowDown' };
+controls.listenToKeyEvents(window);
+// Right-drag is now a camera gesture in EVERY mode, so the browser's context
+// menu has to stay out of the way in every mode. OrbitControls suppresses it
+// only while it is enabled — and walk mode and bee mode both disable it, which
+// is exactly where a right-drag would otherwise pop a menu mid-look.
+renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
 // Put the camera in the scene graph so objects parented to it (the bee avatar in
 // "fly as a bee" mode) are traversed and rendered. Harmless for normal rendering.
 scene.add(camera);
@@ -260,7 +278,11 @@ renderer.domElement.addEventListener('pointermove', (ev) => {
     const info = hit.info;
     const verb = _REL_WORDS[info.rel] || 'uses';
     html = '🐾 <b>' + info.name + '</b>'
-      + (info.on ? ' · ' + verb + ' ' + info.on : '');
+      + (info.on ? ' · ' + verb + ' ' + info.on : '')
+      // V2.45: the wingbeat, banded and labelled with its basis. A number
+      // nobody can see teaches nothing (P5), and "measured" vs "estimated" is
+      // a distinction the tip has to keep (P9).
+      + (info.beat ? '<br><span style="opacity:.75">' + info.beat + '</span>' : '');
   } else if (hit) {
     html = hit.name || '';
   }

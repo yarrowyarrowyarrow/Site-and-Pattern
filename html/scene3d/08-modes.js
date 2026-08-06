@@ -112,7 +112,7 @@ function setWalkHintUI(on) {
   if (!h) return;
   h.style.display = on ? 'block' : 'none';
   if (on) h.innerHTML = '🚶 <b>Walk the garden</b> — WASD / arrows to walk · '
-    + 'drag to look around · <b>click a plant</b> to learn about it · '
+    + 'right-drag to look around · <b>left-click a plant</b> to learn about it · '
     + 'the creatures are the wildlife your plants support';
 }
 
@@ -195,9 +195,11 @@ addEventListener('keydown', (e) => {
 addEventListener('keyup', (e) => { walkKeys.delete(e.code); });
 renderer.domElement.addEventListener('pointerdown', (e) => {
   if (!walkMode) return;
-  // Left button only, so drag-look here means the same thing as everywhere
-  // else and a right-drag doesn't also swing your head around.
-  if (e.button !== 0) return;
+  // RIGHT button, since V2.45 — the camera verb is the right button
+  // everywhere (01-core.js), and the left button is reserved for actions.
+  // Looking around while walking is a camera move, and it used to be on the
+  // left, which meant every attempt to plant something also swung your head.
+  if (e.button !== 2) return;
   walkDragging = true; walkLastX = e.clientX; walkLastY = e.clientY;
 });
 addEventListener('pointerup', () => { walkDragging = false; });

@@ -298,6 +298,61 @@ def _mammal_appearance(name: str) -> dict:
     return {"kind": "mammal", "body": "#8a6f52", "form": "mouse", "size": 0.5}
 
 
+def _flight_for(row: dict, bee_m: dict = None, lep_m: dict = None,
+                bird_m: dict = None) -> dict:
+    """Flight parameters for one creature, in the shape the viewer wants.
+
+    Thin: :mod:`src.flight_model` owns every number and every band; this only
+    picks which morphology row to hand it. Never raises — a creature with no
+    morphology still flies, just on a wider band, and a scene must not fail to
+    render because an allometry could not be evaluated.
+    """
+    try:
+        from src.flight_model import animation_hz, flight_for
+    except Exception:      # noqa: BLE001
+        return {}
+    taxon = (row.get("taxon") or "").strip().lower()
+    sci = row.get("scientific_name") or ""
+    name = (row.get("common_name") or "").lower()
+    try:
+        if taxon == "lepidoptera":
+            lo = (lep_m or {}).get("wingspan_min_mm") or 0
+            hi = (lep_m or {}).get("wingspan_max_mm") or 0
+            span = (float(lo) + float(hi)) / 2.0 if (lo or hi) else 0
+            kind = ("moth" if ("moth" in name or "sphinx" in name
+                               or "clearwing" in name) else "butterfly")
+            f = flight_for("lepidoptera", scientific_name=sci,
+                           wingspan_mm=span or None, kind=kind,
+                           flight_style=(lep_m or {}).get("flight_style") or "")
+        elif taxon == "bee":
+            f = flight_for("bee", scientific_name=sci,
+                           body_length_mm=(bee_m or {}).get("body_length_mm"))
+        elif taxon == "bird":
+            bm = bird_m or {}
+            f = flight_for("bird", scientific_name=sci,
+                           mass_g=bm.get("mass_g"),
+                           span_mm=bm.get("wingspan_mm"),
+                           wing_area_cm2=bm.get("wing_area_cm2"),
+                           style=bm.get("flight_style") or "")
+        else:
+            f = flight_for(taxon, scientific_name=sci)
+    except Exception:      # noqa: BLE001
+        return {}
+    hz = (f.get("hz") or {}).get("mid") or 0
+    return {
+        # What to animate at — never above Nyquist, so a wing is either drawn
+        # truthfully or drawn as the blur a human actually sees.
+        "hz": round(animation_hz(hz), 2),
+        "true_hz": round(hz, 1),
+        "render": f.get("render", "discrete"),
+        "style": f.get("style", ""),
+        "basis": f.get("basis", ""),
+        "burst": int((f.get("burst_beats") or {}).get("mid") or 0),
+        "pause_s": round((f.get("pause_s") or {}).get("mid") or 0.0, 2),
+        "dip_m": round((f.get("bound_dip_m") or {}).get("mid") or 0.0, 3),
+    }
+
+
 def support_by_taxon(plant_ids: list) -> dict:
     """``{taxon: distinct-species-count}`` of native fauna the given plants
     support — the design's total ecological reach, shown as the 3D roster's
@@ -490,9 +545,12 @@ def wildlife_for_scene(scene: dict, *,
         # creature — the same shape as the season lookups above.
         bee_morph = bee_morphology()
         lep_morph = lep_morphology()
+        # V2.45: mass + wingspan + flight style, the input to flight_model.
+        from src.db.fauna import bird_morphology
+        bird_morph = bird_morphology()
     except Exception:      # noqa: BLE001
         bee_seasons, lep_seasons = {}, {}
-        bee_morph, lep_morph = {}, {}
+        bee_morph, lep_morph, bird_morph = {}, {}, {}
 
     # Per species, keep ALL its best-rank (plant, relationship) candidates, so a
     # species that uses several present plants can be spread across them rather
@@ -607,6 +665,12 @@ def wildlife_for_scene(scene: dict, *,
             "rel": r.get("relationship", ""),
             "seed": seed % 100000,
             "app": app,
+            # How this species' wings actually move (V2.45). Real hertz from
+            # published allometry, the bout structure they beat in, and whether
+            # the beat is renderable at all — see src/flight_model.py. The
+            # viewer had hardcoded per-taxon constants before this.
+            "flight": _flight_for(r, bee_morph.get(_fid),
+                                  lep_morph.get(_fid), bird_morph.get(_fid)),
             "route": route,
             "_ax": p["x"], "_ay": p["y"],
         })
