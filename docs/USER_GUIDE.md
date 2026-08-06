@@ -156,6 +156,17 @@ The 3D preview is where the design stops being a plan and starts being a place.
   canopy shades past their tolerance decline and drop out, and self-seeding
   natives fill the gaps, so a late year shows the community that actually
   survives rather than everything you ever planted.
+  Since V2.44 **each plant ages from the year you planted it**, not from the
+  design's year — so something you add at year 12 shows up as a young plant
+  among grown ones and catches up over the following seasons. Trees go in at
+  nursery size (about five years old) and shrubs at about three, because nobody
+  plants those from seed; herbs and grasses start from plugs as before.
+  Designs made before V2.44 carry no planting dates and render exactly as they
+  always did.
+- **Split view (View → Split view, or Ctrl+Shift+3)** — the 3D scene under the
+  map, both showing the same design and both editable. The map answers *where*;
+  the 3D answers *what it will be like*. Close it and the map takes the whole
+  column back.
 - **Time of year** — foliage colour, bloom, berries and snow all follow the
   month. Each species turns its own autumn colour.
 - **Time of day** — drives the sun and the shadows (the same engine as the 2D

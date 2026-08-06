@@ -97,6 +97,7 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
 
 renderer.domElement.addEventListener('pointermove', (e) => {
   if (!_editMode) { hideGhost(); return; }
+  if (_editMode === 'net') { hideGhost(); return; }   // the cursor IS the net
   if (_editMode === 'pull') {
     // In pull mode the ghost marks what would go, not where something lands.
     const hit = scenePick(e.clientX, e.clientY);
@@ -127,16 +128,45 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   }
 
   if (!_editMode || !_bridge) return;
+
+  // V2.44 — every verb below ANIMATES FIRST and calls the bridge as the
+  // animation's completion callback. Python rebuilds the whole scene on each
+  // edit, which would wipe an animation already in flight, so the ordering is
+  // the mechanism (see 17-anim.js). Every branch must reach its bridge call on
+  // every path, or the edit is silently dropped.
+
+  if (_editMode === 'net') {
+    const critter = (typeof critterObjectAt === 'function')
+      ? critterObjectAt(e.clientX, e.clientY) : null;
+    const info = critter && critter.userData && critter.userData.critterInfo;
+    if (!critter || !info || !info.name) return;
+    const send = () => _bridge.caught(String(info.name));
+    if (typeof animateCatch === 'function') animateCatch(critter, send);
+    else send();
+    return;
+  }
+
   if (_editMode === 'pull') {
     if (!hit || hit.type !== 'plant') return;
     const pt = groundPointAt(e.clientX, e.clientY);
-    if (pt) _bridge.pullAt(pt.x, pt.y);
+    if (!pt) return;
+    const send = () => _bridge.pullAt(pt.x, pt.y);
+    // Animate the exact instance under the cursor. scenePick returns the plant
+    // *id*, which several instances share; pickInstance keeps the instanceId.
+    const inst = (typeof pickInstance === 'function')
+      ? pickInstance(e.clientX, e.clientY) : null;
+    if (inst && typeof animatePull === 'function') animatePull(inst, send);
+    else send();
     return;
   }
+
   const pt = groundPointAt(e.clientX, e.clientY);
   if (!pt || !_editPick) return;
-  _bridge.plantAt(pt.x, pt.y, Number(_editPick.plant_id) || 0,
-                  String(_editPick.common_name || ''));
+  const pid = Number(_editPick.plant_id) || 0;
+  const name = String(_editPick.common_name || '');
+  const send = () => _bridge.plantAt(pt.x, pt.y, pid, name);
+  if (typeof animatePlant === 'function') animatePlant(pt.x, pt.y, send);
+  else send();
 });
 
 // ── Hooks Python drives ──────────────────────────────────────────────────────
@@ -147,8 +177,10 @@ renderer.domElement.addEventListener('pointerup', (e) => {
 // intercepted from here.
 window.__permaEditMode = false;
 
+const _MODES = ['plant', 'pull', 'net'];
+
 window.permaSetEditMode = function (mode, pick) {
-  _editMode = (mode === 'plant' || mode === 'pull') ? mode : '';
+  _editMode = _MODES.indexOf(mode) >= 0 ? mode : '';
   _editPick = pick || null;
   window.__permaEditMode = !!_editMode;
   if (!_editMode) hideGhost();

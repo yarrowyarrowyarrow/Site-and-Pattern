@@ -51,6 +51,12 @@ _OPTIONAL_FIELDS = (
     "polyculture_center_lng",
     "placement_group_id",
     "feature_id",
+    # V2.44: the timeline year this plant went in the ground, so it can be
+    # drawn at its own age instead of the design's (src/scene3d.effective_age).
+    # Project data, not catalogue data — it rides in the GeoJSON feature and
+    # needs no schema bump. Absent on everything made before V2.44, which is
+    # exactly what keeps those designs rendering unchanged.
+    "planted_year",
 )
 
 
@@ -216,7 +222,8 @@ class ProjectStore:
                   polyculture_center_lng=None,
                   pattern_kind: str = "",
                   quantity: int = 1,
-                  feature_id: str = "") -> dict:
+                  feature_id: str = "",
+                  planted_year=None) -> dict:
         """Append one placed plant to both structures. Returns the index
         record (callers feed it to the map widget / panels).
 
@@ -225,6 +232,12 @@ class ProjectStore:
         identical-looking new one. Anything holding the old id (a selection, a
         pending edit) would otherwise dangle after an undo/redo round-trip.
         Omit it for genuine placements.
+
+        ``planted_year`` (V2.44) is the timeline year this went in, so it can
+        be drawn at its own age rather than the design's. Like ``feature_id``
+        it must be **restored** on redo, not re-stamped: a plant put back by an
+        undo is the same plant, and re-dating it would make it younger every
+        time the user changed their mind.
         """
         record = {
             "plant_id": plant_id, "common_name": common_name,
@@ -232,6 +245,8 @@ class ProjectStore:
         }
         if feature_id:
             record["feature_id"] = feature_id
+        if planted_year is not None:
+            record["planted_year"] = int(planted_year)
         if polyculture_name:
             record["polyculture_name"] = polyculture_name
         if polyculture_center_lat is not None:

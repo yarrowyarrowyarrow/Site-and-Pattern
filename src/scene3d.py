@@ -19,8 +19,67 @@ Growth params and successional role come from the plant record + ``src.successio
 from __future__ import annotations
 
 import math
+from typing import Optional
 
 from src.succession import successional_role, presence_factor, years_to_maturity
+
+# ── Per-plant age (V2.44) ────────────────────────────────────────────────────
+#
+# Design principle P4 (time is the most undervalued design variable) — see
+# docs/DESIGN_PHILOSOPHY.md.
+#
+# Until V2.44 every plant in a design was the same age: one global timeline year
+# drove all of them. Add a tree to a grown parkland and it appeared instantly
+# full-size, indistinguishable from the ones that had been there twelve years.
+# The author's report: *"I'd like it for a plant planted at any year to start as
+# a young small plant not immediately at the same age as all the others."*
+#
+# **Nursery stock, not seed.** The other half of the same report: *"trees and
+# shrubs should start as small versions (3 years for shrubs, 5 years for trees
+# as noone will be planting these from seed)."* That is right, and it matters
+# because a tree drawn from age 0 is a twig nobody would ever plant. Herbs,
+# grasses and groundcovers keep age 0 — plugs and seed genuinely are how those
+# go in.
+NURSERY_AGE_YEARS = {"tree": 5, "shrub": 3}
+
+#: What the nursery ages actually produce, against the real catalogue:
+#:
+#:   trees   ytm 15–25 → 5/20  ≈ 25%  — a whip, unmistakably new
+#:   shrubs  ytm 3–6   → 3/5   ≈ 60%  — a #2-pot serviceberry
+#:
+#: The fast shrubs (ytm 3) come out already mature at planting. That is left
+#: alone deliberately rather than fudged: a three-year-old red-osier dogwood
+#: *is* a full-size shrub, and inventing a smaller number to force visible
+#: growth would be false precision about a real horticultural fact (P9).
+
+
+def nursery_age(plant: dict) -> int:
+    """How old this plant is on the day it goes in the ground."""
+    return NURSERY_AGE_YEARS.get((plant.get("plant_type") or "").lower(), 0)
+
+
+def effective_age(plant: dict, scene_year: int,
+                  planted_year: Optional[int] = None) -> int:
+    """How old to *draw* this plant when the timeline is at ``scene_year``.
+
+    Two escape hatches, and both are load-bearing:
+
+    * **``planted_year is None`` → the global year, exactly as before V2.44.**
+      Nothing in an existing saved design carries a planting date, so every
+      design made before this feature renders byte-identically. The curated
+      reference communities deliberately carry none either — they are meant to
+      read as an established community, which is the contrast a newly planted
+      sapling shows up against.
+    * **``scene_year <= 0`` → the global year, for everyone.** Year 0 has meant
+      "the design at maturity" since the growth timeline shipped
+      (:func:`growth_scale_factor` returns 1.0 there), and that is the view a
+      designer reaches for when they want to see the endpoint they are aiming
+      at. Per-plant ages apply from year 1 on, so the 0 position keeps its
+      meaning and dragging the slider is what reveals real ages.
+    """
+    if planted_year is None or scene_year is None or int(scene_year) <= 0:
+        return scene_year
+    return max(0, int(scene_year) - int(planted_year)) + nursery_age(plant)
 
 
 def growth_scale_factor(year: int, ytm: int, curve: str) -> float:
@@ -83,13 +142,24 @@ _DEFAULT_CANOPY_M = {"tree": 5.0, "shrub": 1.5, "herb": 0.4,
                      "groundcover": 0.5, "vine": 1.0, "root": 0.3}
 
 
-def plant_3d_state(plant: dict, lat: float, lng: float, year: int) -> dict:
+def plant_3d_state(plant: dict, lat: float, lng: float, year: int, *,
+                   planted_year: Optional[int] = None) -> dict:
     """Per-plant 3D state at ``year``: position + scaled height/canopy + the
-    growth scale factor + the succession presence opacity."""
+    growth scale factor + the succession presence opacity.
+
+    ``planted_year`` (V2.44) makes the age *this plant's own* rather than the
+    design's — see :func:`effective_age`. Omit it and the behaviour is
+    identical to every version before it.
+    """
     ptype = (plant.get("plant_type") or "").lower()
     ytm = years_to_maturity(plant)
     curve = plant.get("growth_curve") or "steady"
     role = successional_role(plant)
+    # One age, used for all three time-varying properties below. Growth, colony
+    # spread and successional presence are all answers to "how long has this
+    # plant been here", so feeding two of them the design's age and one the
+    # plant's would put a young plant in an old plant's succession arc.
+    year = effective_age(plant, year, planted_year)
     factor = growth_scale_factor(year, ytm, curve)
     # Woody plants (trees & shrubs) don't scatter a visible clonal colony in the
     # scene: a "spreading" tree or shrub reads as the yard filling with
@@ -152,7 +222,8 @@ def placed_plants_3d_state(placed_plants, year: int, get_plant=None) -> list:
         if rec is None:
             rec = get_plant(pid) or {}
             cache[pid] = rec
-        st = plant_3d_state(rec, p["lat"], p["lng"], year)
+        st = plant_3d_state(rec, p["lat"], p["lng"], year,
+                            planted_year=p.get("planted_year"))
         st["plant_id"] = pid
         out.append(st)
     return out

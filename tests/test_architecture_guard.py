@@ -108,7 +108,13 @@ class TestStructuralCeilings(unittest.TestCase):
         # V2.43: the reference window went from a read-only diorama (163
         # lines) to an editable sandbox. When this trips, the split is the
         # edit half — the bridge slots and the trowel — into its own _flow.
-        (_SRC / "reference_ecosystem_window.py", 450),  # 420 now
+        (_SRC / "reference_ecosystem_window.py", 450),  # 414 now
+        # V2.44: the edit half, extracted when the toolbar and the net took the
+        # window past 450. The ceiling comment above had named this exact seam
+        # in advance, which is the guard working as intended.
+        (_SRC / "reference_edit_flow.py", 260),        # 142 now
+        (_SRC / "scene3d_toolbar.py", 340),            # 259 now
+        (_SRC / "controllers" / "split_view.py", 320),  # 253 now
         # V1.64: the former 4,900-line map.html monolith — keep the shell
         # thin and the split files from regrowing into a new monolith.
         (_HTML / "map.html", 400),                     # ~235 now
@@ -134,7 +140,7 @@ class TestStructuralCeilings(unittest.TestCase):
         # order (shared-global classic scripts like html/map/*.js). Keep each
         # chunk under its own ceiling; the fix when one trips is a further split,
         # not a bigger number.
-        (_HTML / "scene3d.html", 400),                 # ~371 now
+        (_HTML / "scene3d.html", 400),                 # 391 now — 9 LEFT
         (_HTML / "scene3d" / "01-core.js", 700),       # ~531 now
         # V2.33 (F63): plantMaterial + the procedural surfaces moved OUT of
         # 02-plants.js into their own chunk. 02-plants was at 626/700 and both
@@ -174,7 +180,11 @@ class TestStructuralCeilings(unittest.TestCase):
         # coordinates out — if this file grows past its ceiling the cause is
         # almost certainly placement logic that belongs in
         # src/reference_edit.py, where the single write path is.
-        (_HTML / "scene3d" / "16-editing.js", 300),    # 174 now
+        (_HTML / "scene3d" / "16-editing.js", 300),    # 206 now
+        # V2.44: the tween registry and the plant/pull/catch animations. If
+        # this outgrows its ceiling the cause is almost certainly a fourth
+        # animation that wants its own chunk, not a bigger number here.
+        (_HTML / "scene3d" / "17-anim.js", 340),       # 239 now
     ]
 
     def test_module_line_ceilings(self):

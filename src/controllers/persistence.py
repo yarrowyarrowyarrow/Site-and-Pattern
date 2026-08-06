@@ -112,6 +112,16 @@ class PersistenceController:
         self._main._modified = True
         if not self._main.windowTitle().endswith(' *'):
             self._main.setWindowTitle(self._main.windowTitle() + ' *')
+        # V2.44: keep the split view's 3D pane in step. Every feature mutation
+        # in the app lands here, which is exactly why it is the hook — a
+        # per-call-site wiring would miss one within a release. Debounced
+        # inside, and a no-op when the split is closed, so a plant drag pays
+        # nothing extra.
+        try:
+            from src.controllers import split_view
+            split_view.request_sync(self._main)
+        except Exception:                                  # noqa: BLE001
+            pass
         # Caster inventory (V2.13): every feature mutation lands here, so the
         # "Casting shade: …" line stays live after imports, marks, draws,
         # removals and undo. Cheap pure feature scan. Both surfaces show it

@@ -369,6 +369,10 @@ window._pinglog && window._pinglog('module-eval-start (three OK)');
     // the viewer never had. Last on purpose — its pointer handlers must
     // register after 10-inspect.js's so both see the same click.
     'scene3d/16-editing.js',
+    // V2.44: the tween registry and the plant / pull / catch animations.
+    // 16-editing.js only calls into these at click time, long after every
+    // chunk has loaded, so it does not need to load first.
+    'scene3d/17-anim.js',
   ];
   let i = 0;
   (function next() {

@@ -43,7 +43,14 @@ from PyQt6.QtWidgets import (
 )
 
 from src.map3d_widget import Map3DWidget
+from src import reference_edit_flow as edit_flow
+from src.scene3d_toolbar import Scene3DToolBar
 from src.branding import APP_NAME
+
+#: Which toolbar sections the sandbox shows. Everything the 3D preview has
+#: *about the viewer* — time, detail, camera, walk, identify — and nothing it
+#: has about a design, because there is no design here to act on.
+_TOOLBAR_GROUPS = ("time", "detail", "view")
 
 # (label, ecoregion key) for the curated communities, in a natural west→north
 # order. Labels mirror plant_panel._AB_ECOREGION_CHOICES.
@@ -60,13 +67,19 @@ _CHOICES = [
 _HINT = ("Pick a species and click the ground to plant it. "
          "Switch to Pull to take one out.")
 
+#: The timeline year a sandbox opens at. F50 picked 12 so the curated
+#: communities read as grown in; V2.44 gives it a second job, as the date
+#: stamped on anything you plant.
+_DEFAULT_YEAR = 12
+
 
 class ReferenceEcosystemWindow(QWidget):
     """A walkable — and plantable — 3D view of an ecoregion's reference
     community."""
 
     def __init__(self, ecoregion: Optional[str] = None,
-                 center: Optional[tuple] = None):
+                 center: Optional[tuple] = None,
+                 toolbar_groups=_TOOLBAR_GROUPS):
         super().__init__(None)   # top-level window
         self.setWindowTitle(f"{APP_NAME}: Reference Ecosystem")
         self.resize(960, 700)
@@ -74,6 +87,11 @@ class ReferenceEcosystemWindow(QWidget):
         self._project: dict = {}
         self._community = ""
         self._palette: list = []
+        # The timeline year the sandbox is showing. 12 is old enough that every
+        # curated community reads as grown in (F50 chose it for that), and it
+        # is also what a plant you add is dated to — so a new sapling is young
+        # against a mature backdrop rather than instantly matching it.
+        self._year = _DEFAULT_YEAR
 
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
@@ -105,6 +123,22 @@ class ReferenceEcosystemWindow(QWidget):
         self.viewer = Map3DWidget(self)
         lay.addWidget(self.viewer, 1)
 
+        # The same controls the 3D preview has (V2.44). Not a copy of them —
+        # the same widget, told which sections to show, so the two windows
+        # cannot drift apart again. The design-specific half (refresh, bake a
+        # yard photo, presentation still, bee mode) is deliberately absent: a
+        # wild community has no design to refresh from.
+        self.toolbar = Scene3DToolBar(self, groups=toolbar_groups,
+                                      year=self._year, month=6, hour=13)
+        self.toolbar.time_changed.connect(self._on_time_changed)
+        self.toolbar.detail_changed.connect(self.viewer.set_quality)
+        self.toolbar.reset_view.connect(
+            lambda: self.viewer.run_js(
+                "window.permaResetView && window.permaResetView();"))
+        self.toolbar.walk_toggled.connect(self.viewer.set_walk_mode)
+        self.toolbar.identify_toggled.connect(self.viewer.set_wildlife_labels)
+        lay.addWidget(self.toolbar)
+
         lay.addLayout(self._build_tools())
 
         # The consequence line. It is the reason the editing exists, so it gets
@@ -115,6 +149,10 @@ class ReferenceEcosystemWindow(QWidget):
         self._say.setStyleSheet(
             "color: #cfe8d2; font-size: 12px; padding: 4px 10px 8px 10px;")
         lay.addWidget(self._say)
+
+        # Still opens on your feet inside the community — that is the whole
+        # point of F50 — but now the button says so and can be turned off.
+        self.toolbar.set_walking(True)
 
         self._connect_bridge()
         self._push(self._combo.currentData())
@@ -153,10 +191,22 @@ class ReferenceEcosystemWindow(QWidget):
         self._pull_btn.clicked.connect(lambda: self._set_mode("pull"))
         bar.addWidget(self._pull_btn)
 
+        # The net (V2.44). Catch, look at, release — the creature is put back
+        # when the animation finishes, which is both real field practice and
+        # the only version of this that does not teach a child to take
+        # pollinators out of a habitat (P11).
+        self._net_btn = QPushButton("🥅 Net")
+        self._net_btn.setCheckable(True)
+        self._net_btn.setToolTip(
+            "Catch a creature to record it in your field guide, then let it "
+            "go. Caught counts for more than seen.")
+        self._net_btn.clicked.connect(lambda: self._set_mode("net"))
+        bar.addWidget(self._net_btn)
+
         reset = QPushButton("↺ Reset")
         reset.setToolTip("Throw away your changes and restore the wild "
                          "community as it ships.")
-        reset.clicked.connect(self._on_reset)
+        reset.clicked.connect(lambda: edit_flow.on_reset(self))
         bar.addWidget(reset)
         bar.addStretch()
         return bar
@@ -174,9 +224,17 @@ class ReferenceEcosystemWindow(QWidget):
             self._editable = False
             return
         self._editable = True
-        bridge.plant_requested.connect(self._on_plant_requested)
-        bridge.pull_requested.connect(self._on_pull_requested)
-        bridge.species_inspected.connect(self._on_inspected)
+        # → src/reference_edit_flow.py. Lambdas rather than methods, the same
+        # reason app.py uses them: the handlers are a flow module's job and the
+        # window stays a layout.
+        bridge.plant_requested.connect(
+            lambda x, y, pid, nm: edit_flow.on_plant_requested(self, x, y, pid, nm))
+        bridge.pull_requested.connect(
+            lambda x, y: edit_flow.on_pull_requested(self, x, y))
+        bridge.species_inspected.connect(
+            lambda kind, key: edit_flow.on_inspected(self, kind, key))
+        bridge.species_caught.connect(
+            lambda name: edit_flow.on_caught(self, name))
 
     # ── Community switching ─────────────────────────────────────────────────
 
@@ -223,9 +281,16 @@ class ReferenceEcosystemWindow(QWidget):
         which would be a second definition of how a project becomes geometry
         and would drift from ``scene_contract.build_scene`` within a release.
         """
+        from datetime import datetime
         from src.scene_contract import build_scene
+        # Season and time of day reach the scene through `when`, the same way
+        # Scene3DWindow does it — the 21st is the solstice/equinox-ish midpoint
+        # of the month, which is what makes the sun angle honest.
         try:
-            scene = build_scene(self._project, year=12)
+            scene = build_scene(
+                self._project, year=self._year,
+                when=datetime(2025, self.toolbar.month(), 21,
+                              self.toolbar.hour(), 0))
         except Exception:      # noqa: BLE001
             return
         self.viewer.apply_scene(scene)
@@ -237,32 +302,49 @@ class ReferenceEcosystemWindow(QWidget):
                                      support_by_taxon(pids))
         except Exception:      # noqa: BLE001
             self.viewer.set_wildlife([])
-        self.viewer.set_walk_mode(True)
+        # Follow the toolbar rather than forcing walk mode on. Before V2.44
+        # this line was an unconditional ``set_walk_mode(True)``, re-run on
+        # every rebuild — so the user was put back on their feet after every
+        # single plant, and had no control that could say otherwise.
+        self.viewer.set_walk_mode(self.toolbar.is_walking())
         self._reassert_mode()
+
+    def _on_time_changed(self):
+        """A time slider moved: re-date the sandbox and rebuild.
+
+        The year is also what a newly planted plant is stamped with, so moving
+        this slider forward and planting is how you watch a sapling you put in
+        at year 12 catch up with the community around it.
+        """
+        self._year = self.toolbar.year()
+        self._render()
 
     # ── The trowel ──────────────────────────────────────────────────────────
 
+    #: The three verbs, and what the status line says while each is held.
+    _VERBS = (
+        ("plant", "_plant_btn", "Click the ground to plant."),
+        ("pull", "_pull_btn", "Click a plant to pull it."),
+        ("net", "_net_btn", "Click a creature to catch it."),
+    )
+
     def _mode(self) -> str:
-        if self._plant_btn.isChecked():
-            return "plant"
-        return "pull" if self._pull_btn.isChecked() else ""
+        for name, attr, _hint in self._VERBS:
+            if getattr(self, attr).isChecked():
+                return name
+        return ""
 
     def _set_mode(self, which: str):
-        """Two checkable buttons acting as one exclusive choice, because
-        clicking the active one has to turn it *off* — a QButtonGroup would
-        make the trowel impossible to put down."""
-        if which == "plant":
-            self._pull_btn.setChecked(False)
-        else:
-            self._plant_btn.setChecked(False)
+        """Checkable buttons acting as one exclusive choice, because clicking
+        the active one has to turn it *off* — a QButtonGroup would make the
+        trowel impossible to put down."""
+        for name, attr, _hint in self._VERBS:
+            if name != which:
+                getattr(self, attr).setChecked(False)
         self._reassert_mode()
         mode = self._mode()
-        if mode == "plant":
-            self._say.setText("Click the ground to plant.")
-        elif mode == "pull":
-            self._say.setText("Click a plant to pull it.")
-        else:
-            self._say.setText(_HINT)
+        hint = next((h for n, _a, h in self._VERBS if n == mode), _HINT)
+        self._say.setText(hint)
 
     def _reassert_mode(self):
         """Re-push the mode after a scene rebuild — the viewer keeps it in a
@@ -278,94 +360,6 @@ class ReferenceEcosystemWindow(QWidget):
         return data if isinstance(data, dict) else None
 
     # ── Edits ───────────────────────────────────────────────────────────────
-
-    def _on_plant_requested(self, x: float, y: float,
-                            plant_id: int, common_name: str):
-        from src.reference_edit import plant_at, plant_consequence
-        pick = self._current_pick()
-        pid = int(plant_id) or int((pick or {}).get("plant_id") or 0)
-        if not pid or not self._project:
-            return
-        name = common_name or (pick or {}).get("common_name") or "plant"
-        try:
-            record = plant_at(self._project, pid, name, self._center, x, y)
-        except Exception:      # noqa: BLE001
-            return
-        self._say.setText(plant_consequence(record))
-        self._record_seen_plant(pid)
-        self._save()
-        self._render()
-
-    def _on_pull_requested(self, x: float, y: float):
-        from src.project_store import ProjectStore
-        from src.reference_edit import nearest_plant, pull_at, pull_consequence
-        if not self._project:
-            return
-        target = nearest_plant(self._project, self._center, x, y)
-        if target is None:
-            self._say.setText("Nothing there to pull — click closer to a plant.")
-            return
-        # The verdict has to be computed BEFORE the removal: pull_plant_impact
-        # simulates the pull itself and returns None for a plant already gone.
-        placed = ProjectStore(self._project).placed_plants
-        line = pull_consequence(placed, target["plant_id"])
-        removed = pull_at(self._project, target["plant_id"],
-                          target["lat"], target["lng"],
-                          feature_id=target.get("feature_id", ""))
-        if removed is None:
-            return
-        self._say.setText(line or f"Pulled {target.get('common_name', 'it')}.")
-        self._save()
-        self._render()
-
-    def _on_reset(self):
-        from src.reference_edit import reset_sandbox
-        reset_sandbox(self._community)
-        self._push(self._community)
-        self._say.setText("Back to the community as it ships.")
-
-    def _save(self):
-        from src.reference_edit import save_sandbox
-        try:
-            save_sandbox(self._community, self._project)
-        except Exception:      # noqa: BLE001
-            pass
-
-    # ── The discovery ledger ────────────────────────────────────────────────
-
-    def _on_inspected(self, kind: str, key: str):
-        """Clicking a creature or a plant in the scene discovers it.
-
-        Keyed by scientific name in the ledger, so a plant id has to be
-        resolved first — ids are not stable across a reseed and a ledger of
-        them would silently re-point after an upgrade.
-        """
-        try:
-            from src.db import progress
-        except Exception:      # noqa: BLE001
-            return
-        if kind == "fauna":
-            progress.record_seen(progress.FAUNA, key,
-                                 how=progress.HOW_INSPECTED,
-                                 where=self._community)
-            return
-        try:
-            self._record_seen_plant(int(key), how=progress.HOW_INSPECTED)
-        except (TypeError, ValueError):
-            pass
-
-    def _record_seen_plant(self, plant_id: int, how: str = ""):
-        try:
-            from src.db import progress
-            from src.db.plants import get_plant
-            row = get_plant(int(plant_id)) or {}
-            name = row.get("scientific_name") or ""
-            if name:
-                progress.record_seen(
-                    progress.PLANT, name,
-                    how=how or progress.HOW_PLANTED, where=self._community)
-        except Exception:      # noqa: BLE001
-            pass
 
 
 def _project_center(project: dict) -> Optional[tuple]:

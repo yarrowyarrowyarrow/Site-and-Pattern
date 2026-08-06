@@ -56,10 +56,19 @@ class Scene3DBridge(QObject):
     #: with a connect/disconnect object that is not callable. The viewer calls
     #: ``bridge.inspected(...)``, so that name has to belong to the slot.
     species_inspected = pyqtSignal(str, str)
+    #: (scientific_or_common name) — the net (V2.44). Separate from
+    #: ``species_inspected`` because *caught* and *walked past* are different
+    #: claims about how well somebody knows a species, and the ledger stores
+    #: which it was.
+    species_caught = pyqtSignal(str)
 
     @pyqtSlot(float, float, int, str)
     def plantAt(self, x: float, y: float, plant_id: int, common_name: str):
         self.plant_requested.emit(x, y, plant_id, common_name)
+
+    @pyqtSlot(str)
+    def caught(self, name: str):
+        self.species_caught.emit(name)
 
     @pyqtSlot(float, float)
     def pullAt(self, x: float, y: float):

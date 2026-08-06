@@ -52,6 +52,7 @@ from src.project_store import ProjectStore
 from src import data_sources_flow, feedback_flow, onboarding_flow
 from src.scan_import_dialog import start_scan_import as _start_scan_import
 from src.scene3d_window import open_3d_view as _open_3d_view
+from src.controllers import split_view as _split_view
 from src.reference_ecosystem_window import (
     open_reference_ecosystem as _open_reference_ecosystem)
 from src.snapshot_window import open_snapshot_view as _open_snapshot_view
@@ -547,6 +548,20 @@ class MainWindow(QMainWindow):
                 self, not checked))
 
         view_menu.addSeparator()
+
+        # V2.44: both views of the design at once — the map answers *where*,
+        # the 3D answers *what it will be like*, and until now answering one
+        # meant losing sight of the other. Lambda → controller shim, so this
+        # costs MainWindow no methods (src/controllers/split_view.py).
+        self._act_split = view_menu.addAction("S&plit view (map + 3D)")
+        self._act_split.setCheckable(True)
+        self._act_split.setShortcut("Ctrl+Shift+3")
+        self._act_split.setStatusTip(
+            "Show the 3D scene under the map and keep the two in step — edit "
+            "in either one")
+        self._act_split.triggered.connect(
+            lambda checked: _split_view.toggle(self, checked))
+
         act_3d = view_menu.addAction("&3D Preview…")
         act_3d.setStatusTip(
             "Open the 3D view of this design — growth timeline, sun "

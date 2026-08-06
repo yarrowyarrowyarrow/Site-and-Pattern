@@ -33,19 +33,29 @@ from src.map3d_widget import Map3DWidget
 from src.scene_contract import build_scene
 from src.branding import APP_NAME
 
-_MAX_YEAR = 25
+# V2.44: these three now live in src/scene3d_toolbar.py, which is the module
+# the *reference* window builds its controls from. Two windows drive one viewer
+# and the author asked for their controls to match — so the numbers and labels
+# have exactly one home, and `tests/test_scene3d_toolbar.py` fails the build if
+# the two windows stop offering the same viewer controls.
+#
+# This window keeps its own hand-built bar rather than embedding the widget:
+# `self._year` / `self._month` / `self._hour` / `self._detail` are read from a
+# dozen places here (`_when`, `_push_scene`, `_update_labels`, the flyover's
+# month stepping), and swapping them for the widget is a mechanical but wide
+# change to a working 868-line file that this increment does not need to make.
+# The guard test is what stops the two drifting; the extraction is available
+# when this file next needs splitting anyway.
+from src.scene3d_toolbar import (
+    MAX_YEAR as _MAX_YEAR,
+    DETAIL_KEY as _DETAIL_KEY,
+    DETAIL_LABELS as _DETAIL_LABELS,
+)
+
 _MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 _MONTH_FULL = ["January", "February", "March", "April", "May", "June",
                "July", "August", "September", "October", "November", "December"]
-# 0 Stylised · 1 Balanced · 2 Lifelike (shared with the sprite gallery).
-# Renamed from Low/Medium/High in V2.34: level 0 stopped being a thinned copy
-# of the same look and became a coherent low-poly STYLE — faceted foliage
-# masses, no baked models, no surface grain — so "Low" was telling the user
-# it was worse when it is a choice. The stored VALUE is unchanged, so an
-# existing setting carries over.
-_DETAIL_KEY = "viewer3d/detail"
-_DETAIL_LABELS = ["Stylised", "Balanced", "Lifelike"]
 
 
 class _TerrainWorker(QObject):

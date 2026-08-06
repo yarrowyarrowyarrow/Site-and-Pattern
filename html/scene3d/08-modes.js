@@ -329,6 +329,11 @@ renderer.setAnimationLoop((t) => {
   // 10-inspect.js loads after this chunk, and the loop is already running by
   // then — same forward-reference hazard as wildlifeGroup in 01-core.js.
   if (typeof stepThreads === 'function') stepThreads(t);   // food-web threads
+  // V2.44 edit animations. Same `typeof` guard and same reason: 17-anim.js
+  // loads after this chunk and the loop is already running by then. These
+  // tweens own the bridge callback that performs the edit, so a frame that
+  // skipped them would drop the user's action, not just its animation.
+  if (typeof stepTweens === 'function') stepTweens(t);
   updatePrecip(t);                  // falling snow in winter (no-op otherwise)
   renderer.render(scene, camera);
 });

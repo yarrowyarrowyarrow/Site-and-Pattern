@@ -496,7 +496,10 @@ def build_scene(project: dict, *, year: int = 0,
         rec = plant_record_from_feature(f)
         if rec is not None:
             plant = _plant_rec(rec["plant_id"])
-            st = plant_3d_state(plant, rec["lat"], rec["lng"], year)
+            # V2.44: the plant's own age when it carries a planting year, the
+            # design's age when it does not (which is everything from before).
+            st = plant_3d_state(plant, rec["lat"], rec["lng"], year,
+                                planted_year=rec.get("planted_year"))
             x, y = proj.to_xy(rec["lat"], rec["lng"])
             # Fold succession health into visibility: a plant shaded to death by
             # the closing canopy drops out (opacity 0 → the viewer culls it),

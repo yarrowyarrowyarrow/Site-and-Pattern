@@ -166,18 +166,25 @@ def local_offset(lat: float, lng: float,
 
 
 def plant_at(project: dict, plant_id: int, common_name: str,
-             center: tuple, dx_m: float, dy_m: float) -> dict:
+             center: tuple, dx_m: float, dy_m: float, *,
+             planted_year: Optional[int] = None) -> dict:
     """Place one plant at a point given in scene-local metres.
 
     Returns the placed record. The mutation goes through ``ProjectStore``, and
     the plant is tagged ``pattern_kind='user'`` so a later reset can tell it
     from the curated community.
+
+    ``planted_year`` (V2.44) is the timeline year showing when the user
+    planted it, which is what makes a new sapling read as new against the
+    established community around it. The curated plants carry none, on purpose
+    — they are the mature backdrop the new one is measured against.
     """
     from src.project_store import ProjectStore
     lat, lng = offset_latlng(center[0], center[1], dx_m, dy_m)
     store = ProjectStore(project)
     record = store.add_plant(int(plant_id), common_name or "plant", lat, lng,
-                             pattern_kind=USER_KIND)
+                             pattern_kind=USER_KIND,
+                             planted_year=planted_year)
     return record
 
 
