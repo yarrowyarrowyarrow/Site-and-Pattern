@@ -169,7 +169,12 @@ class TestStructuralCeilings(unittest.TestCase):
         (_HTML / "scene3d" / "05-flowers.js", 800),    # ~565 now
         (_HTML / "scene3d" / "06-fly.js", 950),        # ~732 now
         (_HTML / "scene3d" / "07-wildlife.js", 800),   # ~550 now
-        (_HTML / "scene3d" / "08-modes.js", 600),      # ~286 now
+        (_HTML / "scene3d" / "08-modes.js", 600),      # ~496 now
+        # V2.46b: the walker's body and his held net, extracted when the net
+        # took 08-modes.js to 625/600. The seam was chosen for load order as
+        # much as for size: nothing in here is called from the animation
+        # loop, which is what the 19-roster.js split got wrong.
+        (_HTML / "scene3d" / "20-walker.js", 400),     # ~159 now
         # V2.27: Blender GLB model assets — manifest fetch + GLTF part
         # extraction + fauna clone/tint. When this trips, split the fauna
         # half into 10-models-fauna.js.

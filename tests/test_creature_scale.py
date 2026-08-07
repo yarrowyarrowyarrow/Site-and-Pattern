@@ -43,6 +43,18 @@ def _code(name: str) -> str:
                      if not ln.lstrip().startswith("//"))
 
 
+def _all_code() -> str:
+    """Every viewer chunk's code, concatenated.
+
+    For properties that are about *the viewer* rather than about a particular
+    file — "the walker carries a net" is true regardless of which chunk builds
+    him. Naming a file in those assertions makes them break on the next split
+    for no reason, which is exactly what happened when the held net moved to
+    ``20-walker.js``: two tests failed and neither had found a real defect.
+    """
+    return "\n".join(_code(p.name) for p in sorted(_SCENE3D.glob("*.js")))
+
+
 class TestHowBigTheyAre(unittest.TestCase):
     """Life size comes from morphology, and the viewer measures rather than
     assumes."""
@@ -372,7 +384,10 @@ class TestTheNetIsHeld(unittest.TestCase):
     """"I want to be able to … catch a bug in a net the guy holds." """
 
     def test_the_walker_carries_one(self):
-        code = _code("08-modes.js")
+        # Chunk-agnostic on purpose: which file builds him is a housekeeping
+        # decision (he moved to 20-walker.js at V2.46b); that he carries a
+        # net on the arm pivot is the actual claim.
+        code = _all_code()
         self.assertIn("function makeNet", code)
         self.assertIn("g.userData.net", code,
                       "the net is not attached to the walker")
@@ -384,7 +399,7 @@ class TestTheNetIsHeld(unittest.TestCase):
         """A held net has a reach — that is the whole difference between a net
         and a cursor. A miss has to reach the user, or the click just looks
         broken."""
-        code = _code("08-modes.js")
+        code = _all_code()
         m = re.search(r"NET_REACH_M = ([\d.]+)", code)
         self.assertIsNotNone(m, "the net's reach is gone")
         self.assertTrue(1.0 <= float(m.group(1)) <= 5.0,
@@ -561,6 +576,98 @@ def _glb_variant_extents(path: pathlib.Path) -> dict:
         out[nodes[root_i].get("name", f"node{root_i}")] = {
             "x": hi[0] - lo[0], "y": hi[1] - lo[1], "z": hi[2] - lo[2]}
     return out
+
+
+class TestTheRenderLoopSurvivesItself(unittest.TestCase):
+    """The regression that blanked the whole 3D window (V2.46b).
+
+    Splitting ``19-roster.js`` out of ``07-wildlife.js`` moved
+    ``stepSpotlight`` from a chunk that loads *before* ``08-modes.js`` to one
+    that loads *after* it. The animation loop's unguarded call threw
+    ``ReferenceError`` on the first frame — and three.js re-schedules its
+    ``requestAnimationFrame`` **after** invoking the callback, so a throw does
+    not skip a frame, it ends the loop forever.
+
+    On screen that is a blank sky-coloured window with a completely correct
+    HUD on top of it, because the HUD is DOM and was written before the loop
+    ever ran. It reads like "the scene failed to build", which is the opposite
+    of what happened, and it cost a whole release to spot.
+
+    Two rules, both mechanical, so the next chunk split cannot repeat it.
+    """
+
+    #: Load order, from the bootstrap in ``html/scene3d.html``.
+    @staticmethod
+    def _order():
+        html = (_ROOT / "html" / "scene3d.html").read_text(encoding="utf-8")
+        return re.findall(r"'scene3d/([\w.\-]+\.js)'", html)
+
+    @staticmethod
+    def _loop_body():
+        src = _js("08-modes.js")
+        i = src.index("renderer.setAnimationLoop")
+        return src[i:src.index("\n});", i)]
+
+    def test_every_step_the_loop_calls_is_loaded_or_guarded(self):
+        """The specific rule: a function called from the animation loop must
+        either live in a chunk that loads BEFORE 08-modes.js, or be reached
+        through a ``typeof … === 'function'`` guard."""
+        order = self._order()
+        self.assertIn("08-modes.js", order, "load order not parsed")
+        cut = order.index("08-modes.js")
+
+        # Where each top-level function/binding is declared.
+        home = {}
+        for name in order:
+            path = _SCENE3D / name
+            if not path.exists():
+                continue
+            for line in path.read_text(encoding="utf-8").splitlines():
+                m = re.match(r"^(?:function\s+([A-Za-z_$][\w$]*)"
+                             r"|(?:let|const|var)\s+([A-Za-z_$][\w$]*))", line)
+                if m:
+                    home.setdefault(m.group(1) or m.group(2), name)
+
+        body = self._loop_body()
+        offenders = []
+        for callee in sorted(set(re.findall(r"\b([A-Za-z_$][\w$]*)\s*\(", body))):
+            chunk = home.get(callee)
+            if chunk is None or chunk not in order:
+                continue
+            if order.index(chunk) <= cut:
+                continue                       # already loaded — safe
+            if f"typeof {callee} === 'function'" in body:
+                continue                       # guarded — safe
+            offenders.append(f"{callee}() lives in {chunk}, which loads after "
+                             f"08-modes.js, and is called unguarded")
+        self.assertEqual([], offenders, "\n".join(offenders))
+
+    def test_the_loop_body_is_wrapped_so_one_throw_is_not_fatal(self):
+        """The general rule. The guard above only catches the load-order
+        version of this mistake; the wrapper catches every other one, and the
+        cost of NOT having it is a permanently dead viewer."""
+        body = self._loop_body()
+        self.assertIn("try {", body,
+                      "08-modes.js: the animation loop body is not wrapped — a "
+                      "single throw in any step function will end the loop "
+                      "permanently and blank the viewer")
+        self.assertIn("_loopFault", body,
+                      "08-modes.js: the loop catches but does not report; a "
+                      "silent catch turns a dead animation into a mystery")
+
+    def test_render_stays_outside_the_catch(self):
+        """A broken step function should leave a scene that still DRAWS —
+        frozen and inspectable — rather than a black window. That only holds
+        if `renderer.render` is not inside the try."""
+        body = self._loop_body()
+        try_at = body.index("try {")
+        catch_at = body.index("} catch")
+        render_at = body.rindex("renderer.render(")
+        self.assertFalse(try_at < render_at < catch_at,
+                         "08-modes.js: renderer.render is inside the try — a "
+                         "throw in a step would stop the scene being drawn at "
+                         "all, which is the failure this wrapper exists to "
+                         "prevent")
 
 
 if __name__ == "__main__":                         # pragma: no cover

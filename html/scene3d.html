@@ -377,6 +377,10 @@ window._pinglog && window._pinglog('module-eval-start (three OK)');
     // V2.46: the roster / labels / spotlight, split out of 07-wildlife.js when
     // life-size scaling and creature collision took it past its ceiling.
     'scene3d/19-roster.js',
+    // V2.46b: the walker's body and his net, split out of 08-modes.js when the
+    // held net took it past its ceiling. Nothing here is called from the
+    // animation loop — see the load-order note in the file.
+    'scene3d/20-walker.js',
   ];
   let i = 0;
   (function next() {
