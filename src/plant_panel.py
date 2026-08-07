@@ -46,75 +46,15 @@ from src.filter_widgets import (  # noqa: F401  (re-export)
     COMBO_STYLE as _COMBO_STYLE,
     TOGGLE_STYLE as _TOGGLE_STYLE,
 )
-from src.ecoregion import ECOREGIONS as _ECOREGIONS
 
-# ── PlantPanel-only vocabulary labels ────────────────────────────────────────
-# V1.87: full botanical split. "herb" was a 231-plant catch-all; it's now split
-# into Wildflower (flowering forbs) and Herb / Foliage (foliage / medicinal),
-# grasses/sedges/rushes/ferns/aquatics get their own colours + filter entries,
-# and the dead "Root / Bulb" (0 plants) is retired. Order: woody → forbs →
-# graminoids → ground/fern/water. Each key matches a plant_type colour swatch
-# (the dropdown doubles as the map legend).
-_TYPE_LABELS: dict[str, str] = {
-    "tree":        "Tree",
-    "shrub":       "Shrub",
-    "vine":        "Vine",
-    "wildflower":  "Wildflower",
-    "herb":        "Herb / Foliage",
-    "groundcover": "Groundcover",
-    "grass":       "Grass",
-    "sedge":       "Sedge",
-    "rush":        "Rush",
-    "fern":        "Fern",
-    "aquatic":     "Aquatic / Wetland",
-}
-
-_DECIDUOUS_LABELS: dict[str, str] = {
-    "deciduous":  "Deciduous",
-    "evergreen":  "Evergreen",
-    "herbaceous": "Herbaceous (dies back)",
-}
-
-_LIFECYCLE_LABELS: dict[str, str] = {
-    "perennial": "Perennial",
-    "annual":    "Annual",
-    "biennial":  "Biennial",
-}
-
-
-# ── Alberta ecoregion choices (Reference Ecosystem picker, N1) ────────────────
-# Order matches the dropdown; the empty-string id is "any ecoregion" (no
-# filter).  Keep the ids in sync with the comma-separated tags stored in
-# plants.ab_ecoregion (see data/plants_master.json + src/db/plants.py
-# heuristic tagging pass).
-#
-# Ecoregion keys are shared across the prairie provinces where the ecoregion is
-# the same (Design principle P1/P2 — nature does not respect borders); the SK
-# Regina/Saskatoon belt adds the moist_mixedgrass key (V2.14). The constant
-# keeps its historical _AB_ name for back-compat; the province-neutral rename
-# lands in the Phase B schema refactor.
-# Month facets (V2.37). Keys are the 1–12 month numbers `parse_month_range`
-# returns, as strings because CheckableComboBox keys travel as strings; the
-# search layer coerces them back with int().
-_MONTH_LABELS: dict[str, str] = {
-    "1": "January", "2": "February", "3": "March", "4": "April",
-    "5": "May", "6": "June", "7": "July", "8": "August",
-    "9": "September", "10": "October", "11": "November", "12": "December",
-}
-
-# The vocabulary itself now lives in the Qt-free src/ecoregion.py (V2.38), so
-# the data validator and the range-derivation script can read it without
-# importing PyQt6. These keep the historical shape for existing callers.
-_ECOREGION_CHOICES: list[tuple[str, str]] = (
-    [("Any ecoregion", "")]
-    + [(f"{name} ({where})", key) for key, name, where in _ECOREGIONS])
-_ECOREGION_DISPLAY: dict[str, tuple[str, str]] = {
-    key: (name, where) for key, name, where in _ECOREGIONS}
-
-# Back-compat alias — the constant was province-scoped (_AB_ECOREGION_CHOICES)
-# before the V2.15 province-neutral rename. Kept so external imports and the
-# data_quality key loader's fallback keep resolving.
-_AB_ECOREGION_CHOICES = _ECOREGION_CHOICES
+# ── Facet vocabularies ───────────────────────────────────────────────────────
+# Moved to the Qt-free src/plant_facets.py (V2.46) when the architecture guard
+# fired on this file — the same move src/ecoregion.py was for the same reason.
+# Re-exported here so every existing importer keeps resolving.
+from src.plant_facets import (      # noqa: E402  (re-export, not a use)
+    _TYPE_LABELS, _DECIDUOUS_LABELS, _LIFECYCLE_LABELS, _MONTH_LABELS,
+    _ECOREGION_CHOICES, _ECOREGION_DISPLAY, _AB_ECOREGION_CHOICES,
+)
 
 
 # NOTE: calendar constants, plant list-item roles, compact row geometry
@@ -768,6 +708,15 @@ class PlantPanel(QWidget):
             return ([(int(self._selected_plant["id"]), 1.0)],
                     self._selected_plant.get("common_name", ""))
         return [], ""
+
+    def selected_plant(self) -> Optional[dict]:
+        """The species currently selected here, or ``None``.
+
+        Public since V2.46 so the 3D preview can plant *the same* selection the
+        map's Place button uses, rather than carrying a second species picker
+        that could disagree with this one.
+        """
+        return self._selected_plant
 
     # ── Place on map ──────────────────────────────────────────────────────────
 

@@ -97,7 +97,9 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
 
 renderer.domElement.addEventListener('pointermove', (e) => {
   if (!_editMode) { hideGhost(); return; }
-  if (_editMode === 'net') { hideGhost(); return; }   // the cursor IS the net
+  // No ground ghost for the net — you are aiming at a creature, not a spot,
+  // and in walk mode the net in his hand is the pointer (V2.46).
+  if (_editMode === 'net') { hideGhost(); return; }
   if (_editMode === 'pull') {
     // In pull mode the ghost marks what would go, not where something lands.
     const hit = scenePick(e.clientX, e.clientY);
@@ -140,6 +142,16 @@ renderer.domElement.addEventListener('pointerup', (e) => {
       ? critterObjectAt(e.clientX, e.clientY) : null;
     const info = critter && critter.userData && critter.userData.critterInfo;
     if (!critter || !info || !info.name) return;
+    // V2.46: with the net in his hand, it has a REACH. A creature across the
+    // yard is not caught by clicking it — you walk over there. That is the
+    // difference between a net and a cursor, and it is the thing that makes
+    // this a game rather than a list (P11).
+    if (typeof walkerHasNet === 'function' && walkerHasNet()
+        && typeof walkerCanReach === 'function'
+        && !walkerCanReach(critter.position)) {
+      _bridge.outOfReach && _bridge.outOfReach(String(info.name));
+      return;
+    }
     const send = () => _bridge.caught(String(info.name));
     if (typeof animateCatch === 'function') animateCatch(critter, send);
     else send();
@@ -176,6 +188,10 @@ renderer.domElement.addEventListener('pointerup', (e) => {
 // rather than a call because that handler registered first and cannot be
 // intercepted from here.
 window.__permaEditMode = false;
+// The verb itself, not just "is one on" — 08-modes.js reads it when the walker
+// is built, because the walker is created lazily on entering walk mode and can
+// therefore be born after the Net button was already pressed (V2.46).
+window.__permaEditVerb = '';
 
 const _MODES = ['plant', 'pull', 'net'];
 
@@ -183,7 +199,13 @@ window.permaSetEditMode = function (mode, pick) {
   _editMode = _MODES.indexOf(mode) >= 0 ? mode : '';
   _editPick = pick || null;
   window.__permaEditMode = !!_editMode;
+  window.__permaEditVerb = _editMode;
   if (!_editMode) hideGhost();
+  // Put the net in (or take it out of) the walker's hand (V2.46, 08-modes.js).
+  if (typeof setWalkerNet === 'function') setWalkerNet(_editMode === 'net');
+  // …and refresh the walk hint, which now names the net's reach.
+  if (typeof walkMode !== 'undefined' && walkMode
+      && typeof setWalkHintUI === 'function') setWalkHintUI(true);
 };
 
 window.permaEditReady = function () { return !!_bridge; };

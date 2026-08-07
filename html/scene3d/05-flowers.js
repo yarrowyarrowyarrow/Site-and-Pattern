@@ -701,6 +701,10 @@ window.permaSetScene = function (sc) {
   if (beeMode) rebuildBeacons();
   // Refresh walk obstacles (plants grow/shift with year & season).
   if (walkMode) buildWalkObstacles();
+  // The animals' obstacles are rebuilt ALWAYS, not only while walking: the
+  // wildlife flies in the orbit view too, and that is where you watch it
+  // (V2.46).
+  if (typeof buildCritterObstacles === 'function') buildCritterObstacles();
 
   const n = (sc.plants || []).length;
   document.getElementById('hud').innerHTML =

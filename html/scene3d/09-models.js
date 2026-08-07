@@ -302,11 +302,11 @@ const _GLB_CRITTER = {
   // procedural butterflies beat differently in the same scene.
   butterfly: { key: 'lep', anim: 'flier',
                node: (a) => a.build || 'butterfly',
-               flap: { base: -1.05, amp: 2.20, speed: 0.028, skew: 0.64 },
+               flap: { base: -1.05, amp: 2.20, speed: 0.028, skew: 0.64, hold: 0.18 },
                scale: () => 0.46 * 1.15 },
   moth:      { key: 'lep', anim: 'flier',
                node: (a) => a.build || 'moth',
-               flap: { base: -0.75, amp: 1.55, speed: 0.055, skew: 0.58 },
+               flap: { base: -0.75, amp: 1.55, speed: 0.055, skew: 0.58, hold: 0.10 },
                scale: () => 0.42 * 1.15 },
   // `node` was MISSING here until V2.45, and it is why birds never flapped.
   //
@@ -332,8 +332,11 @@ const _GLB_CRITTER = {
                // V2.45b: a songbird's downstroke goes well below horizontal
                // and the recovery well above it; 0.9 rad centred near flat
                // was a shrug, not a wingbeat.
+               // `hold: 0` (V2.46) is the extended glide pose — wings out
+               // level. A BOUNDING passerine never reaches it (it folds to
+               // `base`); a soaring or flap-gliding bird rides on it.
                flap: (a) => a.hummer ? { base: 0, amp: 1.1, speed: 0.4 }
-                                     : { base: -0.55, amp: 1.7, speed: 0.22 },
+                                     : { base: -0.55, amp: 1.7, speed: 0.22, hold: 0.0 },
                scale: (a) => 0.9 * (a.size || 1) },
   fly:       { key: 'fly', node: (a) => a.elongate ? 'darner' : 'hover',
                anim: (a) => a.elongate ? 'hover' : 'flier',

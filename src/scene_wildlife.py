@@ -353,6 +353,81 @@ def _flight_for(row: dict, bee_m: dict = None, lep_m: dict = None,
     }
 
 
+# ── Real size (V2.46) ────────────────────────────────────────────────────────
+#
+# Author's report: *"the relative size of the bees, butterflies, birds to the
+# person that walks the scene is all wrong."* Measured against the models, it
+# was not slightly wrong:
+#
+#     bee        0.54 m rendered   vs ~0.02 m real   —  27x too big
+#     butterfly  0.83 m            vs ~0.10 m        —   8x
+#     bird       0.74 m            vs ~0.13 m        —   6x
+#     hoverfly   0.47 m            vs ~0.012 m       —  39x
+#
+# A bee was being drawn the size of a cat beside a 1.75 m walker. The scales
+# came from per-kind constants in the viewer (`0.9 * size`, `0.46 * 1.15`) that
+# were chosen by eye before there was any morphology to check them against.
+#
+# There is morphology now — bee `body_length_mm` (69/69), lep wingspan (31/31)
+# and, since schema v63, bird `wingspan_mm` (24/24). So a creature is scaled to
+# the size it actually is, and the viewer no longer decides how big an animal
+# is (P9, and the realism half of P13).
+#
+# Each kind names WHICH axis of its model carries the measurement, because the
+# models are not all built the same way — a bee's length runs down Z, a
+# butterfly's wingspan across X. Measured from the shipped .glb files; see
+# tests/test_creature_scale.py, which re-measures them.
+_SIZE_AXIS = {
+    "bee": "z",          # body length, nose to sting
+    "butterfly": "x",    # wingspan, tip to tip
+    "moth": "x",
+    "bird": "x",         # wingspan — the model's Z is body+tail, which is
+                         # authored long relative to a real passerine
+    "fly": "x",
+    "beetle": "z",
+    "bat": "x",
+    "mammal": "z",
+}
+
+#: Fallback real sizes, metres, for creatures with no measurement. Deliberately
+#: small and honest rather than "visible": a hoverfly IS 12 mm.
+_SIZE_FALLBACK_M = {
+    "bee": 0.011, "butterfly": 0.045, "moth": 0.040, "bird": 0.230,
+    "fly": 0.015, "beetle": 0.008, "bat": 0.250, "mammal": 0.200,
+}
+
+
+def _size_for(row: dict, app: dict, bee_m: dict = None, lep_m: dict = None,
+              bird_m: dict = None) -> dict:
+    """``{m, axis}`` — how big this animal really is, and along which model
+    axis to measure that.
+
+    Never raises and never returns zero: a creature with no morphology gets its
+    kind's fallback, which is still far closer to life than the constant it
+    replaces.
+    """
+    kind = (app or {}).get("kind") or ""
+    taxon = (row.get("taxon") or "").strip().lower()
+    m = None
+    try:
+        if taxon == "bee":
+            v = (bee_m or {}).get("body_length_mm")
+            m = float(v) / 1000.0 if v else None
+        elif taxon == "lepidoptera":
+            lo = (lep_m or {}).get("wingspan_min_mm") or 0
+            hi = (lep_m or {}).get("wingspan_max_mm") or 0
+            if lo or hi:
+                m = ((float(lo) + float(hi)) / 2.0) / 1000.0
+        elif taxon == "bird":
+            v = (bird_m or {}).get("wingspan_mm")
+            m = float(v) / 1000.0 if v else None
+    except (TypeError, ValueError):
+        m = None
+    if not m or m <= 0:
+        m = _SIZE_FALLBACK_M.get(kind, 0.05)
+    return {"m": round(m, 4), "axis": _SIZE_AXIS.get(kind, "z")}
+
+
 def support_by_taxon(plant_ids: list) -> dict:
     """``{taxon: distinct-species-count}`` of native fauna the given plants
     support — the design's total ecological reach, shown as the 3D roster's
@@ -671,6 +746,11 @@ def wildlife_for_scene(scene: dict, *,
             # viewer had hardcoded per-taxon constants before this.
             "flight": _flight_for(r, bee_morph.get(_fid),
                                   lep_morph.get(_fid), bird_morph.get(_fid)),
+            # How big it really is (V2.46). The viewer scales the built model
+            # so this axis measures this many metres — so it no longer decides
+            # how big an animal is from a constant chosen by eye.
+            "size": _size_for(r, app, bee_morph.get(_fid),
+                              lep_morph.get(_fid), bird_morph.get(_fid)),
             "route": route,
             "_ax": p["x"], "_ay": p["y"],
         })

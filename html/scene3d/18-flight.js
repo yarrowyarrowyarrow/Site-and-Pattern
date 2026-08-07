@@ -123,8 +123,12 @@ function beatGain(c, t) {
   const g = -p;                                    // 0..1 through the pause
   const closing = Math.min(1, g / 0.18);           // fold over the first 18%
   const opening = Math.min(1, (1 - g) / 0.18);     // and unfold at the end
-  const folded = c.flight.style === 'bounding' ? 0.0 : 0.22;   // gliders hold a V
-  return folded + (1 - folded) * (1 - Math.min(closing, opening));
+  // V2.46: this used to bottom out at 0.22 for gliding styles, meaning a
+  // "gliding" butterfly kept beating at 22% of full sweep AT FULL RATE — a
+  // fast little tremble, which is the opposite of a glide and is what the
+  // author saw as *"too fast and unnatural… visually distracting"*. The V is
+  // now a HELD POSE (`fp.hold`, see flapWings), so the beat really does stop.
+  return 1 - Math.min(closing, opening);
 }
 
 // **The zipline fix.** Metres to add to this animal's height right now,

@@ -181,6 +181,21 @@ function animatePull(hit, done) {
 function animateCatch(critter, done) {
   if (!critter) { if (done) done(); return; }
 
+  // V2.46: when he is actually holding one, HE swings it — the hoop in his hand
+  // sweeps through the creature and there is no second hoop flying in from the
+  // camera. Outside walk mode you are a god's-eye observer with no hands, so
+  // the flying hoop below stays as the gesture for that view.
+  if (typeof walkerHasNet === 'function' && walkerHasNet()) {
+    if (typeof swingNet === 'function') swingNet(ANIM_CATCH_MS);
+    const s0 = critter.scale.clone();
+    addTween(ANIM_CATCH_MS, (k) => {
+      // Taken as the hoop arrives, at the same fraction of the swing as below.
+      const c = Math.max(0, (k - 0.45) / 0.55);
+      critter.scale.set(s0.x * (1 - c), s0.y * (1 - c), s0.z * (1 - c));
+    }, () => { critter.scale.copy(s0); if (done) done(); });
+    return;
+  }
+
   const hoop = new THREE.Mesh(
     new THREE.TorusGeometry(0.28, 0.02, 8, 24),
     new THREE.MeshBasicMaterial({ color: 0xf4f4ec, transparent: true,

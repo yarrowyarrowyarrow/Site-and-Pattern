@@ -43,6 +43,77 @@ function buildWalkObstacles() {
     walkObstacles.push({ x: cx, z: -cy, r: r * 0.9 });
   }
 }
+// ── Solid things, for the animals too (V2.46) ────────────────────────────────
+//
+// Author's report: *"The guy doesn't go through trees or buildings now but the
+// creatures still do."* Exactly right — `walkObstacles` was built for the
+// walker, built ONLY while walking, and never consulted by `animateWildlife`,
+// so every bird crossed the yard straight through the house.
+//
+// Two things a flying animal needs that a walker does not:
+//
+//   · **A height.** A bird flying over the roof is not colliding with it, and a
+//     bee at 3 m clears the fence. A walker is always at ground level, so
+//     `walkObstacles` never needed one; a critter list without one would bounce
+//     swifts off buildings they are legitimately above.
+//   · **An exemption for the thing it is heading for.** A chickadee's whole
+//     route is *perch in that tree*. Blanket collision would push it out of
+//     every tree it was sent to and leave it circling the trunk forever, which
+//     is a worse bug than the one being fixed.
+//
+// Trees block at the TRUNK, not the canopy — a bird lands in foliage, it does
+// not bounce off it — which is the same call `buildWalkObstacles` makes and for
+// the same reason.
+let critterObstacles = [];              // {x, z, r, top}
+
+function buildCritterObstacles() {
+  critterObstacles = [];
+  const sc = lastSceneObj;
+  if (!sc) return;
+  for (const p of sc.plants || []) {
+    const h = p.height_m || 0;
+    if (p.plant_type === 'tree') critterObstacles.push({ x: p.x, z: -p.y, r: 0.32, top: Math.max(1, h) });
+    else if (p.plant_type === 'shrub' && h > 1.2) critterObstacles.push({ x: p.x, z: -p.y, r: 0.3, top: h });
+  }
+  for (const b of sc.buildings || []) {
+    const ring = b.ring || [];
+    if (ring.length < 3) continue;
+    let cx = 0, cy = 0;
+    for (const pt of ring) { cx += pt[0]; cy += pt[1]; }
+    cx /= ring.length; cy /= ring.length;
+    let r = 0;
+    for (const pt of ring) r = Math.max(r, Math.hypot(pt[0] - cx, pt[1] - cy));
+    // The full footprint, not a trunk: nothing flies through a house.
+    critterObstacles.push({ x: cx, z: -cy, r: r * 0.9, top: (b.height_m || 4) });
+  }
+}
+
+// Push a flying/walking animal out of anything solid it has entered, in place
+// on `pos`. `target` is where it is trying to get to; obstacles that overlap
+// the target are skipped, because that is the plant it was sent to.
+function resolveCritterCollision(pos, radius, target) {
+  if (!critterObstacles.length) return;
+  const rad = radius || 0.05;
+  for (let pass = 0; pass < 2; pass++) {
+    for (const o of critterObstacles) {
+      if (pos.y > o.top) continue;                 // clearing it from above
+      if (target) {
+        const tx = target.x - o.x, tz = target.z - o.z;
+        // Its destination is inside/against this obstacle → it belongs there.
+        if (tx * tx + tz * tz < (o.r + 0.7) * (o.r + 0.7)) continue;
+      }
+      const dx = pos.x - o.x, dz = pos.z - o.z;
+      const rr = o.r + rad;
+      const d2 = dx * dx + dz * dz;
+      if (d2 < rr * rr) {
+        const d = Math.sqrt(d2) || 1e-4;
+        pos.x = o.x + (dx / d) * rr;
+        pos.z = o.z + (dz / d) * rr;
+      }
+    }
+  }
+}
+
 // Push a proposed (x,z) out of any obstacle it lands inside (a couple of passes
 // so a corner between two trunks still resolves). Returns [x, z].
 function resolveWalkCollision(x, z) {
@@ -93,7 +164,108 @@ function makeWalker() {
     armPivot.add(arm); g.add(armPivot); arms.push({ pivot: armPivot, sign: s });
   }
   g.userData.legs = legs; g.userData.arms = arms;
+  // The net goes in his right hand (V2.46) — see makeNet. Hidden until the Net
+  // verb is on, so he is not permanently carrying one.
+  const rightArm = arms.find((a) => a.sign === 1);
+  if (rightArm) {
+    const net = makeNet();
+    net.visible = false;
+    rightArm.pivot.add(net);
+    g.userData.net = net;
+    g.userData.netArm = rightArm.pivot;
+    g.userData.netSwing = 0;
+  }
   return g;
+}
+
+// ── The net, held (V2.46) ────────────────────────────────────────────────────
+//
+// Author: *"I want to be able to … catch a bug in a net the guy holds, to make
+// it more like a game."* Until now the net was a hoop that flew in from the
+// camera on a click — a cursor effect, not a tool anybody was carrying.
+//
+// Built in the ARM PIVOT's frame so it swings with him for free: the walk cycle
+// already rotates that pivot, so a walking figure carries the net properly with
+// no extra code, and the catch is one more rotation on the same joint.
+//
+// Sized to a real aerial net — a 38 cm hoop on a metre of handle. That number
+// now MEANS something: since the creatures are drawn life size, an 8 cm
+// swallowtail is genuinely a fifth of the hoop it goes into.
+const NET_HOOP_R = 0.19;
+
+function makeNet() {
+  const net = new THREE.Group();
+  const wood = _cmat('#a1794c', { flat: true });
+  const rim = new THREE.MeshStandardMaterial({ color: 0xdfe4d6, roughness: 0.6,
+                                               metalness: 0.2, flatShading: true });
+  const gauze = new THREE.MeshStandardMaterial({
+    color: 0xf2f6ec, roughness: 0.9, transparent: true, opacity: 0.34,
+    side: THREE.DoubleSide, depthWrite: false });
+
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, 1.0, 6), wood);
+  handle.position.y = 0.5;
+  const hoop = new THREE.Mesh(new THREE.TorusGeometry(NET_HOOP_R, 0.012, 6, 20), rim);
+  hoop.position.y = 1.0 + NET_HOOP_R;
+  hoop.rotation.x = Math.PI / 2;                 // the mouth faces the way it points
+  // The bag: an open cone whose BASE sits on the hoop and whose apex points
+  // away from the handle. ConeGeometry spans -h/2..+h/2, so the offset is half
+  // the depth — put the apex at the hand end instead and it reads as a funnel
+  // pointing at his fist.
+  const BAG_DEPTH = 0.42;
+  const bag = new THREE.Mesh(
+    new THREE.ConeGeometry(NET_HOOP_R, BAG_DEPTH, 14, 1, true), gauze);
+  bag.position.y = 1.0 + NET_HOOP_R + BAG_DEPTH / 2;
+  net.add(handle, hoop, bag);
+
+  // Held out and forward rather than shouldered: the mouth of the net is what
+  // the user is aiming, so it has to be where they can see it.
+  net.position.set(0, -0.5, 0);
+  net.rotation.x = -1.05;
+  net.rotation.z = -0.18;
+  return net;
+}
+
+// Show/hide the net in his hand. Safe before the walker exists — the mode can
+// be set while the window is still in the orbit view.
+function setWalkerNet(on) {
+  if (!walkAvatar || !walkAvatar.userData.net) return;
+  walkAvatar.userData.net.visible = !!on;
+}
+
+function walkerHasNet() {
+  return !!(walkMode && walkAvatar && walkAvatar.userData.net
+            && walkAvatar.userData.net.visible);
+}
+
+// How far he can reach with it. A creature further than this is not caught —
+// you walk up to it, which is the whole difference between a net and a click
+// (P11: the body knows things the screen does not).
+const NET_REACH_M = 2.4;
+
+function walkerCanReach(worldPos) {
+  if (!walkAvatar || !worldPos) return false;
+  const dx = worldPos.x - walkAvatar.position.x;
+  const dz = worldPos.z - walkAvatar.position.z;
+  const dy = worldPos.y - (walkAvatar.position.y + 1.4);
+  return dx * dx + dz * dz + dy * dy <= NET_REACH_M * NET_REACH_M;
+}
+
+// One swing of the arm the net is on. Additive: `walkStep` writes the walk
+// cycle into that pivot every frame, so the swing rides on top of it rather
+// than fighting it (which is what a direct rotation write would do).
+function swingNet(ms) {
+  if (!walkAvatar) return;
+  const dur = ms || 460;
+  const t0 = performance.now();
+  const tick = () => {
+    const k = Math.min(1, (performance.now() - t0) / dur);
+    // Up and over: a quick cock backwards, then the sweep through.
+    walkAvatar.userData.netSwing =
+      k < 0.3 ? -1.1 * (k / 0.3) : -1.1 + 2.3 * ((k - 0.3) / 0.7);
+    if (k < 1) requestAnimationFrame(tick);
+    else walkAvatar.userData.netSwing = 0;
+  };
+  tick();
 }
 
 function groundAt(x, z) { return terrainHeightAt(x, -z, lastTerrain); }
@@ -113,13 +285,24 @@ function setWalkHintUI(on) {
   h.style.display = on ? 'block' : 'none';
   if (on) h.innerHTML = '🚶 <b>Walk the garden</b> — WASD / arrows to walk · '
     + 'right-drag to look around · <b>left-click a plant</b> to learn about it · '
-    + 'the creatures are the wildlife your plants support';
+    + 'the creatures are the wildlife your plants support'
+    // V2.46: the net is held, and it has a reach. Say so here, because
+    // "I clicked the butterfly and nothing happened" is otherwise the
+    // first thing that happens.
+    + (window.__permaEditVerb === 'net'
+       ? ' · 🥅 <b>net out</b> — walk within arm\'s reach of a creature, '
+         + 'then left-click it'
+       : '');
 }
 
 function enterWalkMode() {
   controls.enabled = false;
   if (!walkAvatar) { walkAvatar = makeWalker(); scene.add(walkAvatar); }
   walkAvatar.visible = true;
+  // The walker is built lazily, so the Net verb may already have been on
+  // before he existed (V2.46). Re-read it rather than trusting a setter that
+  // ran against nothing.
+  setWalkerNet(window.__permaEditVerb === 'net');
   buildWalkObstacles();
   walkSpawn();
   if (wildlifeGroup) wildlifeGroup.visible = true;
@@ -174,6 +357,10 @@ function walkStep(t) {
   walkAvatar.userData._sw = sw;
   for (const { pivot, sign } of walkAvatar.userData.legs) pivot.rotation.x = sw * sign;
   for (const { pivot, sign } of walkAvatar.userData.arms) pivot.rotation.x = -sw * sign;
+  // The net arm carries the swing on top of the walk cycle (V2.46).
+  if (walkAvatar.userData.netArm && walkAvatar.userData.netSwing) {
+    walkAvatar.userData.netArm.rotation.x += walkAvatar.userData.netSwing;
+  }
 
   // Follow camera: orbit behind the walker at (walkYaw, walkPitch).
   const head = walkAvatar.position.clone().add(new THREE.Vector3(0, 1.5, 0));

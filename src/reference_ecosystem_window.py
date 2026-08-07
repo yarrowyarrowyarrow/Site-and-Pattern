@@ -137,6 +137,8 @@ class ReferenceEcosystemWindow(QWidget):
                 "window.permaResetView && window.permaResetView();"))
         self.toolbar.walk_toggled.connect(self.viewer.set_walk_mode)
         self.toolbar.identify_toggled.connect(self.viewer.set_wildlife_labels)
+        self.toolbar.creature_scale_changed.connect(
+            self.viewer.set_creature_scale)
         lay.addWidget(self.toolbar)
 
         lay.addLayout(self._build_tools())
@@ -235,6 +237,11 @@ class ReferenceEcosystemWindow(QWidget):
             lambda kind, key: edit_flow.on_inspected(self, kind, key))
         bridge.species_caught.connect(
             lambda name: edit_flow.on_caught(self, name))
+        # V2.46: the net is held now, and a held net has a reach — a miss has
+        # to say so or the click looks broken.
+        bridge.out_of_reach.connect(
+            lambda name: self._say.setText(
+                f"{name} is out of reach — walk closer and swing again."))
 
     # ── Community switching ─────────────────────────────────────────────────
 
@@ -302,6 +309,9 @@ class ReferenceEcosystemWindow(QWidget):
                                      support_by_taxon(pids))
         except Exception:      # noqa: BLE001
             self.viewer.set_wildlife([])
+        # The magnification lives in the viewer and resets to life size on a
+        # fresh page, so a remembered choice has to be re-pushed (V2.46).
+        self.viewer.set_creature_scale(Scene3DToolBar.stored_creature_scale())
         # Follow the toolbar rather than forcing walk mode on. Before V2.44
         # this line was an unconditional ``set_walk_mode(True)``, re-run on
         # every rebuild — so the user was put back on their feet after every

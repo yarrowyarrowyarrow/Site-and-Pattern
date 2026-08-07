@@ -180,6 +180,20 @@ be held against the plate. `flight_style` is the other one worth the time: it is
 a real character and it drives how the animal moves in the preview. See
 [`FAUNA_FIELD_GUIDE.md`](FAUNA_FIELD_GUIDE.md).
 
+**Two more fields now change what you see** (V2.45/V2.46). `wingspan_min_mm` /
+`wingspan_max_mm` and the bees' `body_length_mm` are no longer only data: the
+viewer draws every creature at **life size** from them, so a wrong wingspan is
+now a visibly wrong animal standing next to a 1.75 m person. And
+`flight_style` picks the *bout* — how many beats before the glide, and how long
+the glide lasts — so `gliding` really does sail and `darting` really does buzz.
+Both are the same argument as the band editor: the value is worth entering
+because it is visible.
+
+**What this bench does not do yet is painting.** A per-species wing *texture* —
+the author drawing a monarch's veins rather than choosing three colours — is
+F107 in [`ROADMAP_NEXT.md`](ROADMAP_NEXT.md), and it is a real piece of work
+because the fauna GLBs ship with no UVs and no textures by design.
+
 **The vocabulary is drawn (V2.36).** Asking somebody to choose *corymb* or
 *cyme* from a dropdown of bare words is a coin flip with extra steps, so each
 vocabulary select carries a line drawing, and clicking it opens the whole

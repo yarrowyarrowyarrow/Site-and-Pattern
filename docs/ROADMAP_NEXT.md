@@ -5,7 +5,7 @@ principle-by-principle map and the shipped record of F1–F62 — read it for *w
 shaped the way it is and what has already landed. This file is what comes next, and why.
 
 Feature IDs continue the same stable-handle sequence (F63, F64, …) so "let's do F70" keeps
-working across both documents. **Next free ID: F107.**
+working across both documents. **Next free ID: F110.**
 
 > **Collision fixed in V2.37.** F78–F82 had each been assigned *twice*: the V2.34 3D work
 > (herb aspect axis, Stylised/Balanced/Lifelike, florets, forked stems, bloom count) reused
@@ -817,7 +817,41 @@ the rest of it, in the order I would take it.
 
 **Shipped so far:** F96 two doors · F97 editable reference landscapes · F98 species
 ledger · F99 per-plant age + nursery stock · F100 edit animations + the net · F101
-split view · F102 one 3D toolbar · F103 flight physics.
+split view · F102 one 3D toolbar · F103 flight physics · F108 life-size creatures +
+flap-flap-glide + creature collision · F109 the same three verbs in the 3D preview,
+and a net that is held and has a reach.
+
+### F107 · Hand-painted lepidoptera wings — *Impact High / Effort L / Risk Med*
+
+> *"I also want the butterflies and bees in particular to accurately reflect reality
+> with their sprites, a generic butterfly does nothing… With lepidoptera I would even
+> be willing to digitally draw/paint the wings to make this happen."*
+
+**Half of this already exists and the author should be pointed at it first.**
+`scripts/tune_fauna.py` (`http://127.0.0.1:8757`, documented in `docs/3D_SPRITES.md`)
+is the character editor being described — per species, it already edits bee build,
+abdomen shape, **band count and band colours**, fuzz and metallic sheen; and lep
+wingspan, forewing / hindwing / margin colours, wing shape, wing pattern, resting
+posture and flight style, each with a drawn SVG vocabulary beside the dropdown. The
+"7 bands of colour" memory is real: that is the bee band editor, shipped in V2.36.
+
+**What genuinely does not exist is the painting**, and it is a real piece of work
+rather than a bench extension:
+
+* The fauna GLBs ship with **no UVs and no textures, by design** — a contract stated in
+  `html/scene3d/01b-surface.js` and relied on by every procedural surface. A painted
+  wing breaks it for one taxon, so the lep material needs its own path in
+  `09-models.js` rather than a global change.
+* Needs a **wing template** — an unwrapped fore/hind outline the author paints against
+  — and a decision about whether one image covers both sides.
+* Needs an **import path**, which should reuse `src/photo_import.py`: downscale,
+  re-encode, and strip EXIF unconditionally. (A scan of a specimen photographed in a
+  yard carries that yard's GPS coordinates.)
+* Needs a schema slot with `origin='seed'` vs `'user'` semantics, like `plant_photos`
+  (schema v55), so a reseed does not destroy work the author did by hand.
+
+Scoped in V2.46 and deliberately not started: it wants its own increment and a
+conversation about what the template looks like before any code.
 
 ### F104 · Undo in the sandbox, and the graduation path — *Impact High / Effort M / Risk Low*
 

@@ -164,10 +164,23 @@ BLUR_ABOVE_HZ = 45.0
 
 CONTINUOUS = "continuous"    # bees, hummingbirds — wings never stop
 BOUNDING = "bounding"        # small passerines, woodpeckers — flap, fold, dip
-FLAP_GLIDE = "flap_glide"    # butterflies, corvids, larger birds
+FLAP_GLIDE = "flap_glide"    # corvids, larger birds, skippers
 SOARING = "soaring"          # raptors — long glides, occasional beats
 BURST = "burst"              # grouse — explosive, then a long flat glide
 HOVERING = "hovering"        # hummingbirds holding station
+#: **Butterflies get their own two** (V2.46). They were sharing ``FLAP_GLIDE``
+#: with crows, which gave them a 3–8 beat burst and a quarter-second pause — a
+#: near-continuous flutter, and the author's report was exact:
+#:
+#:     *"The butterfly wings flap now but it is too fast and unnatural. A
+#:     butterfly will flap-flap-glide… As it is the flapping is visually
+#:     distracting."*
+#:
+#: A crow's bout and a butterfly's are not the same shape and never were. The
+#: separation is what lets the monarch sail without turning every corvid into
+#: one.
+FLUTTER_GLIDE = "flutter_glide"   # most butterflies: a few beats, then a sail
+SAIL = "sail"                     # monarchs, swallowtails — long glides
 
 #: **Styles where the wings FOLD during the pause**, and therefore where the
 #: 1/√d correction applies.
@@ -197,6 +210,13 @@ _STYLES = {
     SOARING:    (0.10, 0.30, 2, 6, 1.50, 6.00),
     BURST:      (0.30, 0.55, 6, 14, 0.60, 2.50),
     HOVERING:   (1.00, 1.00, 0, 0, 0.00, 0.00),
+    # Lepidoptera (V2.46). Two to four beats then a glide is the canonical
+    # butterfly bout — literally the author's *"flap-flap-glide"* — and for the
+    # big sailing nymphalids and papilionids the glide dominates the cycle
+    # outright. Given as bands, like everything else here: a cabbage white on a
+    # windy day is not a monarch on a thermal.
+    FLUTTER_GLIDE: (0.35, 0.60, 2, 5, 0.35, 1.10),
+    SAIL:          (0.20, 0.40, 2, 4, 0.90, 2.60),
 }
 
 #: Wing aspect ratio (span² / area) when a species has no measured wing area —
@@ -247,12 +267,14 @@ _LEP_EXP = 1.0
 #: known vocabulary fails loudly instead — and this column has been reaching
 #: the viewer since V2.36 with nothing reading it.
 _LEP_STYLE = {
-    "hovering": (1.60, CONTINUOUS),   # hawkmoths holding station at a flower
+    "hovering": (1.60, CONTINUOUS),      # hawkmoths holding station at a flower
+    # Skippers keep the busiest bout: they really do buzz between perches, and
+    # that buzziness is how you tell a skipper from a butterfly in the field.
     "darting":  (1.35, FLAP_GLIDE),
-    "fluttery": (1.20, FLAP_GLIDE),
-    "erratic":  (1.15, FLAP_GLIDE),
-    "bobbing":  (1.00, FLAP_GLIDE),   # the classic butterfly rise-and-fall
-    "gliding":  (0.80, FLAP_GLIDE),   # long sails between beats
+    "fluttery": (1.20, FLUTTER_GLIDE),
+    "erratic":  (1.15, FLUTTER_GLIDE),
+    "bobbing":  (1.00, FLUTTER_GLIDE),   # the classic butterfly rise-and-fall
+    "gliding":  (0.80, SAIL),            # long sails between beats
 }
 
 
@@ -465,9 +487,12 @@ def lepidoptera_flight(wingspan_mm: float, *, kind: str = "butterfly",
         "pause_s": _band(pause_lo, pause_hi, 2),
         "render": render_mode(hz["mid"]),
         # A gliding butterfly sinks rather than dips — much gentler than a
-        # bounding bird, and it is why they read as drifting.
-        "bound_dip_m": _band(0.02, 0.12, 3) if style == FLAP_GLIDE
-        else _band(0.0, 0.0, 3),
+        # bounding bird, and it is why they read as drifting. A sailing monarch
+        # holds its glide for a second and a half, so it sinks further.
+        "bound_dip_m": (_band(0.05, 0.25, 3) if style == SAIL
+                        else _band(0.02, 0.12, 3)
+                        if style in (FLAP_GLIDE, FLUTTER_GLIDE)
+                        else _band(0.0, 0.0, 3)),
     }
 
 

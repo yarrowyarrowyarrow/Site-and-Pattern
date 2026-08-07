@@ -250,6 +250,25 @@ def set_quality(level: int) -> str:
             f"{int(level)});")
 
 
+def set_creature_scale(mult: float) -> str:
+    """JS to magnify the ambient wildlife (V2.46, ``07-wildlife.js``).
+
+    ``1.0`` is **life size**, which is the default and the truth: since V2.46
+    every creature is scaled from its real measurement, so an 11 mm bee is 11 mm
+    and a few pixels across from three metres — exactly what a bee is.
+
+    That is the realism half of the ask and it fights the education half, so the
+    exaggeration exists as a control **with a number on it** rather than as a
+    lie baked into the models. Floored at 1.0 in the viewer, so this can never
+    reproduce the bug it replaced (a bee drawn at the size of a cat).
+
+    Guarded with ``&&`` so it's a no-op until the viewer registers
+    ``window.permaSetCreatureScale``.
+    """
+    return ("window.permaSetCreatureScale && window.permaSetCreatureScale("
+            f"{float(mult):g});")
+
+
 def set_edit_mode(mode: str, pick: dict = None) -> str:
     """JS to put the trowel in the user's hand (V2.43, ``16-editing.js``).
 

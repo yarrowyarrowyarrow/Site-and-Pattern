@@ -119,6 +119,18 @@ class TestStructuralCeilings(unittest.TestCase):
         (_SRC / "reference_edit_flow.py", 260),        # 142 now
         (_SRC / "scene3d_toolbar.py", 340),            # 259 now
         (_SRC / "controllers" / "split_view.py", 320),  # 253 now
+        # V2.46: plant / remove / net in the *design*, not just the sandbox.
+        # A separate module from reference_edit_flow on purpose — a design edit
+        # goes on the undo stack, redraws the map and moves the score, and
+        # collapsing the two would mean one of those happening quietly in the
+        # wrong place. When this trips, the seam is the widget half
+        # (build_tools/set_mode) away from the bridge handlers.
+        (_SRC / "scene3d_edit_flow.py", 400),          # 312 now
+        # V2.46: opted in on arrival, like learn_flow.py before it. This file
+        # hand-rolls the toolbar the V2.44 extraction was meant to share (the
+        # note at the import explains why that swap was deferred), so the
+        # ceiling is set where it is to make the next growth pay for it.
+        (_SRC / "scene3d_window.py", 950),             # 911 now
         # V1.64: the former 4,900-line map.html monolith — keep the shell
         # thin and the split files from regrowing into a new monolith.
         (_HTML / "map.html", 400),                     # ~235 now
@@ -194,6 +206,11 @@ class TestStructuralCeilings(unittest.TestCase):
         # every number live in src/flight_model.py; if this file grows past its
         # ceiling the cause is almost certainly allometry that belongs there.
         (_HTML / "scene3d" / "18-flight.js", 300),     # 168 now
+        # V2.46: the roster, the always-on labels and the "show its plants"
+        # spotlight — split out of 07-wildlife.js when life-size scaling and
+        # creature collision took it to 852 of its 800. The line the split
+        # follows: 07 is the animals, 19 is how they are explained to a person.
+        (_HTML / "scene3d" / "19-roster.js", 300),     # 177 now
     ]
 
     def test_module_line_ceilings(self):

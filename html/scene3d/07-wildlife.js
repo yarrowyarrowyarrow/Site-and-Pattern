@@ -46,7 +46,22 @@ function _wingMat(hex) {
 // the power stroke and is quicker than the recovery, so butterflies want a
 // value above 0.5: a long unhurried lift, then a snap. A symmetric beat is the
 // other half of why these looked mechanical.
-function flapWings(obj, t, gain, phase) {
+//
+// `hold` (V2.46) is WHERE THE WING SITS when the beat stops, and it is the
+// difference between a glide and a small fast tremble.
+//
+// Until now `gain` scaled the amplitude, so a gliding butterfly went on
+// oscillating at 22% of full sweep *at full rate* — a rapid shiver, which is
+// the least butterfly-like thing a butterfly can do, and half of the author's
+// report that the flapping is *"too fast and unnatural… visually
+// distracting"*. A gliding lepidopteran holds its wings still, in a shallow V
+// above the body, and sails.
+//
+// So `gain` now interpolates the wing between the beat and a held pose rather
+// than shrinking the beat. `hold` defaults to `base` — the authored rest angle,
+// which is a folded wing — so a perched bird is unchanged, and at gain 1 the
+// result is bit-identical to before.
+function flapWings(obj, t, gain, phase, extended) {
   const fp = obj.userData.flap;
   if (!fp || !obj.userData.wings) return;
   const g = gain == null ? 1 : gain;
@@ -58,7 +73,11 @@ function flapWings(obj, t, gain, phase) {
   // the rest covers the down-sweep (v: 0.5→1). Continuous at u=k and u=1, so
   // the wing never jumps. k=0.5 reduces exactly to the old symmetric beat.
   const v = u < k ? 0.5 * (u / k) : 0.5 + 0.5 * ((u - k) / (1 - k));
-  const w = fp.base + (0.5 - 0.5 * Math.cos(v * Math.PI * 2)) * fp.amp * g;
+  const beat = fp.base + (0.5 - 0.5 * Math.cos(v * Math.PI * 2)) * fp.amp;
+  // Extended glide (a sailing butterfly, a soaring hawk) holds `fp.hold`;
+  // a folded pause (a bounding chickadee) holds the authored rest angle.
+  const hold = (extended && fp.hold != null) ? fp.hold : fp.base;
+  const w = hold + (beat - hold) * g;
   for (const { pivot, sign } of obj.userData.wings) pivot.rotation.z = sign * w;
 }
 
@@ -110,7 +129,7 @@ function makeBirdCritter(app) {
     // V2.45b: matches _GLB_CRITTER.bird in 09-models.js — the two flap
     // tables have to agree or the baked and procedural birds beat
     // differently in the same scene.
-    g.userData.flap = { base: -0.55, amp: 1.7, speed: 0.22 };
+    g.userData.flap = { base: -0.55, amp: 1.7, speed: 0.22, hold: 0.0 };
     g.userData.anim = 'perch';
   }
   g.scale.setScalar(0.9 * (app.size || 1));
@@ -284,6 +303,66 @@ function makeCritShadow(r) {
   return sh;
 }
 
+// ── Life size (V2.46) ────────────────────────────────────────────────────────
+//
+// Author's report: *"the relative size of the bees, butterflies, birds to the
+// person that walks the scene is all wrong. The calligrapher bee seems to be
+// the only one rendered smaller/more correctly."*
+//
+// It was not slightly wrong. Every builder above ends with a hand-chosen
+// constant — `g.scale.setScalar(0.9 * (app.size || 1))` — picked by eye in
+// V2.12, before there was any morphology to check it against. Measured:
+//
+//     bee        0.54 m drawn   vs 0.011 m real    27x
+//     butterfly  0.83 m         vs 0.079 m          8x
+//     bird       0.74 m         vs 0.225 m          6x
+//     hoverfly   0.47 m         vs 0.015 m         39x
+//
+// A bee the size of a cat, beside a 1.75 m walker. There is morphology now —
+// bee `body_length_mm`, lep wingspan, and since schema v63 bird `wingspan_mm` —
+// so `src/scene_wildlife.py` sends `size: {m, axis}` per creature and the
+// viewer stops deciding how big an animal is (P9).
+//
+// **Measured, not assumed.** The model is scaled by its own bounding box along
+// the named axis, so this is correct for the baked GLBs *and* the procedural
+// fallbacks without a table of per-kind fudge factors — and it stays correct if
+// somebody re-exports a model at a different size.
+let CRITTER_MAGNIFY = 1;      // 1 = life size; see permaSetCreatureScale
+
+function _extentAlong(obj, axis) {
+  obj.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(obj);
+  if (box.isEmpty()) return 0;
+  const s = box.getSize(new THREE.Vector3());
+  return axis === 'x' ? s.x : (axis === 'y' ? s.y : s.z);
+}
+
+// Returns the factor applied (1 = left alone), so a caller can size a shadow
+// or a label to match.
+function scaleCritterToLife(obj, size) {
+  if (!obj || !size || !(size.m > 0)) return 1;
+  const have = _extentAlong(obj, size.axis || 'z');
+  if (!(have > 1e-6)) return 1;                  // no geometry to measure
+  const k = (size.m * CRITTER_MAGNIFY) / have;
+  obj.scale.multiplyScalar(k);
+  obj.userData.lifeSize = size;
+  obj.userData.lifeScale = k;
+  return k;
+}
+
+// The honest magnifier. Life size is the default and the truth; a 11 mm bee is
+// a few pixels across from three metres, which is exactly what a bee is. But
+// this window is also for teaching (P5), and "show me that bee" is a fair thing
+// to ask, so the exaggeration is a control with a NUMBER ON IT rather than a
+// lie baked into the model.
+window.permaSetCreatureScale = function (mult) {
+  const k = Math.max(1, Math.min(20, Number(mult) || 1));
+  if (k === CRITTER_MAGNIFY) return;
+  CRITTER_MAGNIFY = k;
+  rebuildWildlife();
+  if (wildLabelsOn) { buildWildLabels(); updateRoster(); }
+};
+
 function rebuildWildlife() {
   disposeWildlife();
   if (!WILDLIFE.length) return;
@@ -295,6 +374,8 @@ function rebuildWildlife() {
     try { obj = (window.glbCritter && window.glbCritter(spec.kind, app)) || (make && make(app)); }
     catch (e) { continue; }
     if (!obj) continue;
+    // Life size, before anything measures or positions it (V2.46).
+    scaleCritterToLife(obj, spec.size);
     // At night, lift each critter's self-illumination so the moths & bats read
     // against the dark instead of disappearing.
     if (sceneNight) obj.traverse(o => {
@@ -318,7 +399,14 @@ function rebuildWildlife() {
                                  flight: (app && app.flight_style) || '',
                                  rest: (app && app.resting_posture) || '' };
     const flier = obj.userData.anim === 'flier' || obj.userData.anim === 'hover';
-    const shadow = makeCritShadow(flier ? 0.5 : 0.4);
+    // The contact shadow follows the animal's real size too — a half-metre
+    // smudge under an 11 mm bee is the same mistake in a second place, and it
+    // was doing most of the work of making the insects look enormous.
+    const drawn = obj.userData.lifeSize
+      ? obj.userData.lifeSize.m * CRITTER_MAGNIFY : 0;
+    const shadow = makeCritShadow(drawn > 0
+      ? Math.max(0.05, Math.min(flier ? 0.5 : 0.4, drawn * 2.2))
+      : (flier ? 0.5 : 0.4));
     shadow.position.set(anchor.x, gy + 0.02, anchor.z);
     wildlifeGroup.add(shadow);
     // Route: the plants this species uses, as world targets (x, ground+perchH, z).
@@ -332,6 +420,10 @@ function rebuildWildlife() {
       obj, shadow, anchor, h: spec.h || 0.3, seed: (spec.seed || 0) % 1000,
       anim: obj.userData.anim, route, ri: 0, dwell: 0,
       pos: obj.position.clone(),
+      // Collision radius (V2.46). Half the animal, floored — a bee is 11 mm and
+      // a sub-centimetre radius makes the obstacle test worthless numerically
+      // without making it visibly wrong.
+      bodyR: Math.max(0.04, drawn * 0.5),
       speed: (0.7 + ((spec.seed || 0) % 50) / 45),   // m/s scale per animal
       wanderPh: ((spec.seed || 0) % 628) / 100,
     });
@@ -444,6 +536,11 @@ function animateWildlife(t) {
         _WV.multiplyScalar(1 / flat);
         c.pos.addScaledVector(_WV, Math.min(flat, mv.spd * c.speed * dt));
         c.pos.y += (tgt.y - c.pos.y) * Math.min(1, dt * 2.2);
+        // Not through the house (V2.46). Resolved on the PATH, not on the drawn
+        // position, or the bird would keep pushing into the wall and be shoved
+        // back out every frame — a jitter instead of a detour.
+        if (typeof resolveCritterCollision === 'function')
+          resolveCritterCollision(c.pos, c.bodyR, tgt);
         o.position.copy(c.pos);
         // Face the way it is going. Every other travel branch does this; this
         // one never did, so a bird crossed the yard sideways — a gap the V2.29
@@ -489,6 +586,8 @@ function animateWildlife(t) {
           // does more for the "erratic" read than the path itself.
           o.rotation.z = wob.a * fs.roll;
         }
+        if (typeof resolveCritterCollision === 'function')
+          resolveCritterCollision(c.pos, c.bodyR, tgt);
         o.position.copy(c.pos);
         o.rotation.y = critterHeading(_WV.x, _WV.z);
       }
@@ -506,11 +605,14 @@ function animateWildlife(t) {
       const settled = c.dwell > 0 && o.userData.critterInfo &&
                       (o.userData.critterInfo.kind === 'butterfly' ||
                        o.userData.critterInfo.kind === 'moth');
-      // The bout envelope: full amplitude through the burst, closed through
-      // the glide (V2.45). `settled` still wins — a butterfly on a flower has
-      // its wings over its back regardless of where its bout was.
+      // The bout envelope: full amplitude through the burst, and through the
+      // glide the wings go STILL in a shallow V (V2.46 — they used to keep
+      // trembling at 22%). `settled` still wins: a butterfly on a flower has
+      // its wings over its back regardless of where its bout was, and it folds
+      // them, so that one is deliberately not `extended`.
       flapWings(o, t, settled ? 0.12
-                : (typeof beatGain === 'function' ? beatGain(c, t) : 1), ph);
+                : (typeof beatGain === 'function' ? beatGain(c, t) : 1),
+                ph, !settled);
       // ...and the body answers to it. A gliding lep sinks between bursts.
       if (typeof boundOffset === 'function') o.position.y += boundOffset(c, t);
       // Level out of the bank when not weaving, so a lep that arrives mid-turn
@@ -525,8 +627,12 @@ function animateWildlife(t) {
       // the authored rest pose — sticking straight out sideways — and crossed
       // the yard without moving them, while every insect flapped. One of the
       // two independent reasons; the other was an amplitude of zero.
+      // A BOUNDING bird folds its wings between bursts; a soaring or
+      // flap-gliding one holds them out and rides (V2.46). `extended` picks
+      // which pose the pause settles into — perched is always folded.
       flapWings(o, t, c.dwell > 0 ? 0
-                : (typeof beatGain === 'function' ? beatGain(c, t) : 1), ph);
+                : (typeof beatGain === 'function' ? beatGain(c, t) : 1), ph,
+                c.dwell <= 0 && !!(c.flight && c.flight.style !== 'bounding'));
       // THE ZIPLINE FIX (V2.45). The horizontal path is still the lerp above,
       // but the height now comes from the wingbeat: a bounding bird climbs on
       // the burst and drops ballistically while its wings are folded. Nothing
@@ -554,7 +660,12 @@ function animateWildlife(t) {
         c.label.visible = true;
         const hh = 0.02 * Math.max(1.5, d);
         c.label.scale.set((c.label.userData.aspect || 4) * hh, hh, 1);
-        c.label.position.set(o.position.x, o.position.y + 0.28 + hh * 0.7, o.position.z);
+        // Sit the label just clear of the animal, not 28 cm over a bee's head
+        // pointing at empty air (V2.46).
+        const clear = o.userData.lifeSize
+          ? Math.max(0.05, Math.min(0.28, o.userData.lifeSize.m * CRITTER_MAGNIFY * 1.2))
+          : 0.28;
+        c.label.position.set(o.position.x, o.position.y + clear + hh * 0.7, o.position.z);
         c.label.material.opacity = Math.max(0.25, Math.min(0.95, (13 - d) / 6));
       }
     }
@@ -577,165 +688,9 @@ window.permaSetWildlife = function (list, summary) {
 };
 let WILD_SUMMARY = null;
 
-// ── "Who lives here": roster + always-on labels (V2.13) ──────────────────────
-// One toggle answers "what is what" without hovering: a corner roster grouped
-// by kind, and a small name label floating over each creature.
+// The roster, the always-on labels and the "show its plants" spotlight are in
+// 19-roster.js (split out at V2.46 when this file hit its ceiling). They are
+// *presentation over* the wildlife; everything above is the wildlife itself.
+// `wildLabelsOn` and `WILD_SUMMARY` stay declared here because this file
+// writes them; 19-roster.js reads them and owns the drawing.
 let wildLabelsOn = false;
-const _KIND_LABEL = { bee: '🐝 Bees', butterfly: '🦋 Butterflies', moth: '🌙 Moths',
-  bird: '🐦 Birds', fly: '🪰 Flies & dragonflies', beetle: '🐞 Beetles',
-  mammal: '🦇 Mammals' };
-const _KIND_ORDER = ['bee', 'butterfly', 'moth', 'fly', 'beetle', 'bird', 'mammal'];
-const _TAXON_WORD = { bee: 'bees', lepidoptera: 'butterflies & moths',
-  bird: 'birds', other_insect: 'other insects', mammal: 'mammals' };
-
-function updateRoster() {
-  const el = document.getElementById('wild-roster');
-  if (!el) return;
-  if (!wildLabelsOn || !WILDLIFE.length) { el.style.display = 'none'; return; }
-  const byKind = {};
-  for (const c of WILDLIFE) (byKind[c.kind] = byKind[c.kind] || []).push(c);
-  let html = '<h4>🌿 Who lives here — ' + WILDLIFE.length + ' out now</h4>';
-  // Headline the design's total ecological reach (the score's wildlife tally):
-  // "supports N wildlife species" so the count behind the Habitat Value Score
-  // is legible right beside the creatures it represents.
-  if (WILD_SUMMARY) {
-    const total = Object.values(WILD_SUMMARY).reduce((a, b) => a + (b | 0), 0);
-    if (total) {
-      const parts = _KIND_ORDER.map(k => {
-        const tax = k === 'butterfly' || k === 'moth' ? 'lepidoptera'
-          : k === 'fly' || k === 'beetle' ? 'other_insect' : k;
-        return [tax, k];
-      });
-      const seen = {}, bits = [];
-      for (const [tax] of parts) {
-        if (seen[tax] || !WILD_SUMMARY[tax]) continue;
-        seen[tax] = 1;
-        bits.push(WILD_SUMMARY[tax] + ' ' + (_TAXON_WORD[tax] || tax));
-      }
-      html += '<div class="reach">🌎 Your plants support <b>' + total
-        + ' wildlife species</b>' + (bits.length ? ' · ' + bits.join(', ') : '')
-        + '</div>';
-    }
-  }
-  for (const k of _KIND_ORDER) {
-    const list = byKind[k]; if (!list || !list.length) continue;
-    html += '<div class="grp">' + (_KIND_LABEL[k] || k) + ' · ' + list.length + '</div>';
-    for (const c of list)
-      html += '<div class="row">' + _escHtml(c.name)
-        + (c.on ? ' <span class="on">· ' + _escHtml(c.on) + '</span>' : '') + '</div>';
-  }
-  el.innerHTML = html;
-  el.style.display = 'block';
-}
-function _escHtml(s) {
-  return String(s || '').replace(/[&<>]/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-}
-
-function buildWildLabels() {
-  clearWildLabels();
-  if (!wildlifeGroup) return;
-  for (const c of wildlifeCritters) {
-    const lab = makeTextSprite(); setSpriteText(lab, c.obj.userData.critterInfo.name || '?');
-    lab.material.depthTest = true;      // occlude behind plants → less clutter
-    lab.renderOrder = 5;
-    wildlifeGroup.add(lab); c.label = lab;
-  }
-}
-function clearWildLabels() {
-  for (const c of wildlifeCritters) {
-    if (c.label) {
-      wildlifeGroup && wildlifeGroup.remove(c.label);
-      if (c.label.material.map) c.label.material.map.dispose();
-      c.label.material.dispose(); c.label = null;
-    }
-  }
-}
-
-window.permaSetWildlifeLabels = function (on) {
-  wildLabelsOn = !!on;
-  if (wildLabelsOn) { buildWildLabels(); updateRoster(); }
-  else { clearWildLabels(); const el = document.getElementById('wild-roster'); if (el) el.style.display = 'none'; }
-};
-
-// ── "Show its plants" spotlight (V2.12) ──────────────────────────────────────
-// An orbit/walk overlay that answers "which of my plants does this creature
-// benefit from?": a glowing column + name label rises over each plant the
-// chosen creature uses, and one of that creature tours them, visiting each in
-// turn. Both illuminate AND visit. Cleared by pushing an empty list.
-let SPOT = [], spotGroup = null, spotCritter = null, spotIdx = 0, spotPause = 0;
-
-function disposeSpot() {
-  if (spotGroup) {
-    scene.remove(spotGroup);
-    spotGroup.traverse(o => {
-      if (o.geometry && !o.isSprite) o.geometry.dispose();   // sprites share geo
-      const m = o.material;
-      if (m) for (const mm of (Array.isArray(m) ? m : [m])) {
-        if (mm && mm.map && mm.map !== GLOW_TEX && mm.map !== SHADOW_TEX) mm.map.dispose();
-        if (mm) mm.dispose();
-      }
-    });
-  }
-  spotGroup = null; spotCritter = null; SPOT = []; spotIdx = 0; spotPause = 0;
-}
-
-window.permaSetPlantSpotlight = function (items, appearance) {
-  disposeSpot();
-  const list = Array.isArray(items) ? items : [];
-  if (!list.length) return;
-  if (beeMode) window.permaSetBeeMode(false);   // an orbit/walk overlay, not fly
-  if (!GLOW_TEX) GLOW_TEX = makeGlowTexture();
-  spotGroup = new THREE.Group();
-  for (const it of list) {
-    const gy = terrainHeightAt(it.x, it.y, lastTerrain);
-    const ph = Math.max(0.8, it.h || 1);
-    const top = gy + ph;
-    const beam = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.06, 0.18, ph + 1.4, 8, 1, true),
-      new THREE.MeshBasicMaterial({ color: 0xbfe98a, transparent: true, opacity: 0.16,
-        side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }));
-    beam.position.set(it.x, gy + (ph + 1.4) / 2, -it.y);
-    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW_TEX,
-      color: 0xd8f0a0, transparent: true, opacity: 0.85,
-      blending: THREE.AdditiveBlending, depthWrite: false }));
-    glow.position.set(it.x, top, -it.y); glow.scale.setScalar(1.7);
-    const label = makeTextSprite(); setSpriteText(label, it.name || 'plant');
-    const lh = 1.05; label.scale.set((label.userData.aspect || 4) * lh, lh, 1);
-    label.position.set(it.x, top + 1.0, -it.y);
-    spotGroup.add(beam, glow, label);
-    it._top = new THREE.Vector3(it.x, top, -it.y);
-  }
-  const app = appearance || { kind: 'bee' };
-  spotCritter = (app.kind === 'butterfly' || app.kind === 'moth')
-    ? makeButterflyCritter(app) : makeBeeCritter(app);
-  spotCritter.scale.multiplyScalar(1.8);
-  spotCritter.position.copy(list[0]._top);
-  spotGroup.add(spotCritter);
-  SPOT = list; spotIdx = 0; spotPause = 0;
-  scene.add(spotGroup);
-};
-
-let _spotPrevT = 0;
-function stepSpotlight(t) {
-  if (!spotGroup || !SPOT.length || !spotCritter) { _spotPrevT = t; return; }
-  const dt = _spotPrevT ? Math.min(0.05, (t - _spotPrevT) / 1000) : 0.016;
-  _spotPrevT = t;
-  const tgt = SPOT[spotIdx]._top;
-  if (spotPause > 0) {
-    spotPause -= dt;
-    if (spotPause <= 0) spotIdx = (spotIdx + 1) % SPOT.length;
-  } else {
-    const d = new THREE.Vector3().subVectors(tgt, spotCritter.position);
-    const dist = d.length();
-    if (dist < 0.35) { spotPause = 1.3; }        // pause and sip at each flower
-    else {
-      spotCritter.position.addScaledVector(d.multiplyScalar(1 / dist),
-                                           Math.min(dist, (BEE_SPEED * 0.8) * dt));
-      spotCritter.rotation.y = critterHeading(d.x, d.z);
-    }
-  }
-  spotCritter.position.y = tgt.y + Math.sin(t * 0.005 + spotIdx) * 0.06;
-  flapWings(spotCritter, t);
-}
-

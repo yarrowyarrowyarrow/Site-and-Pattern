@@ -374,6 +374,9 @@ window._pinglog && window._pinglog('module-eval-start (three OK)');
     // chunk has loaded, so it does not need to load first.
     'scene3d/17-anim.js',
     'scene3d/18-flight.js',   // V2.45: real wingbeats (src/flight_model.py)
+    // V2.46: the roster / labels / spotlight, split out of 07-wildlife.js when
+    // life-size scaling and creature collision took it past its ceiling.
+    'scene3d/19-roster.js',
   ];
   let i = 0;
   (function next() {

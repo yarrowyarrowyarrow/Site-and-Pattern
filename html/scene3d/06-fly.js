@@ -242,8 +242,11 @@ function makeButterflyAvatar(moth, app) {
   // A real lepidopteran brings its wings from near-vertical above the
   // body to near-vertical below: ~140 deg, and the up-position is what
   // makes the shape recognisable at any distance.
-  g.userData.flap = moth ? { base: -0.75, amp: 1.55, speed: 0.055, skew: 0.58 }
-                         : { base: -1.05, amp: 2.20, speed: 0.028, skew: 0.64 };
+  // `hold` (V2.46) is where the wings sit through a GLIDE: a shallow V a little
+  // above horizontal, held still. It is not `base` — base is the bottom of the
+  // downstroke, and parking a sailing monarch there reads as a dead butterfly.
+  g.userData.flap = moth ? { base: -0.75, amp: 1.55, speed: 0.055, skew: 0.58, hold: 0.10 }
+                         : { base: -1.05, amp: 2.20, speed: 0.028, skew: 0.64, hold: 0.18 };
   g.scale.setScalar(moth ? 0.42 : 0.46);
   return g;
 }

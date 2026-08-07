@@ -61,6 +61,11 @@ class Scene3DBridge(QObject):
     #: claims about how well somebody knows a species, and the ledger stores
     #: which it was.
     species_caught = pyqtSignal(str)
+    #: (name) — swung at, and missed because it was too far away (V2.46). The
+    #: net in the walker's hand has a reach; a creature beyond it is a *miss*,
+    #: not a catch, and the difference has to reach the user or the click just
+    #: appears not to have worked.
+    out_of_reach = pyqtSignal(str)
 
     @pyqtSlot(float, float, int, str)
     def plantAt(self, x: float, y: float, plant_id: int, common_name: str):
@@ -77,6 +82,10 @@ class Scene3DBridge(QObject):
     @pyqtSlot(str, str)
     def inspected(self, kind: str, key: str):
         self.species_inspected.emit(kind, key)
+
+    @pyqtSlot(str)
+    def outOfReach(self, name: str):
+        self.out_of_reach.emit(name)
 
 
 def _repo_path(*parts) -> str:
@@ -279,6 +288,10 @@ class Map3DWidget(QWebEngineView):
     def set_walk_mode(self, on: bool):
         """Enter/leave third-person "walk the garden" mode (V2.12)."""
         self.run_js(map3d_js.set_walk_mode(on))
+
+    def set_creature_scale(self, mult: float):
+        """Magnify the ambient wildlife; ``1.0`` is life size (V2.46)."""
+        self.run_js(map3d_js.set_creature_scale(mult))
 
     def set_edit_mode(self, mode: str, pick: dict = None):
         """Put the trowel in the user's hand — ``'plant'``, ``'pull'`` or

@@ -347,21 +347,39 @@ class TestOneVocabularyEverywhere(unittest.TestCase):
             self.assertEqual(polycultures.ECOREGION_LABELS[key], name)
 
     def test_the_plant_filter_offers_the_vocabulary(self):
-        """AST-only — plant_panel imports PyQt6, and this must hold on a bare
-        container too."""
+        """AST-only for ``plant_panel`` (it imports PyQt6, and this must hold
+        on a bare container too); a real import for the facet module, which is
+        Qt-free precisely so that a test like this can just read it.
+
+        V2.46: the facet vocabularies moved to ``src/plant_facets.py`` when the
+        architecture guard fired on ``plant_panel``. What matters is unchanged —
+        the choices are still *derived* from the one shared vocabulary and are
+        not a second list — so the assertion follows the code rather than
+        pinning the old address.
+        """
         import ast
         import pathlib
-        src = (pathlib.Path(__file__).resolve().parent.parent
-               / "src" / "plant_panel.py").read_text(encoding="utf-8")
-        tree = ast.parse(src)
-        imported = any(
+        root = pathlib.Path(__file__).resolve().parent.parent
+        facets = (root / "src" / "plant_facets.py").read_text(encoding="utf-8")
+        built_from_shared = any(
             isinstance(n, ast.ImportFrom)
             and n.module == "src.ecoregion"
             and any(a.name == "ECOREGIONS" for a in n.names)
-            for n in ast.walk(tree))
-        self.assertTrue(imported,
-                        "plant_panel no longer builds its choices from the "
+            for n in ast.walk(ast.parse(facets)))
+        self.assertTrue(built_from_shared,
+                        "plant_facets no longer builds its choices from the "
                         "shared vocabulary — that is a second list to keep")
+        # …and the panel still gets them from there rather than re-declaring.
+        panel = (root / "src" / "plant_panel.py").read_text(encoding="utf-8")
+        re_exports = any(
+            isinstance(n, ast.ImportFrom) and n.module == "src.plant_facets"
+            and any(a.name == "_ECOREGION_CHOICES" for a in n.names)
+            for n in ast.walk(ast.parse(panel)))
+        self.assertTrue(re_exports,
+                        "plant_panel has grown its own ecoregion choices back")
+        from src.plant_facets import _ECOREGION_CHOICES
+        self.assertEqual({k for _lbl, k in _ECOREGION_CHOICES if k},
+                         set(_eco.ecoregion_keys()))
 
     def test_every_key_appears_in_the_habitat_facet_choices(self):
         from src.db import polycultures
